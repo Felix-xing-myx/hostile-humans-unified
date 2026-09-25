@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-本模组由原模组 **Hostile Humans** 修改衍生，并整合了 **Human Gunner** 的枪械相关内容，形成独立维护版本。它可以单独安装使用，不需要另外安装原版 Hostile Humans 或 Human Gunner。本版本由第三方维护，并非原作者发布的官方更新。
+本模组由原模组 **Hostile Humans** 修改衍生，并整合了 **Human Gunner** 的相关内容。同时，本模组也加入了一些原创的新内容。它可以单独安装使用，不需要另外安装原版 Hostile Humans 或 Human Gunner。本版本由第三方维护，并非原作者发布的官方更新。
 
 面向 Minecraft 1.20.1 / Forge 47.4.16 / Java 17。运行时只需安装一个整合版 JAR；TaCZ 和 Curios 为可选兼容项：TaCZ 提供枪械支持，Curios 提供专属身份牌饰品栏。
 
