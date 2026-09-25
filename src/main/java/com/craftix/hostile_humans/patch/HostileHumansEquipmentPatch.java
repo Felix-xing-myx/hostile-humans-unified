@@ -80,7 +80,7 @@ public final class HostileHumansEquipmentPatch {
         return false;
     }
 
-    /** Applies the pack's exact shield cost without Unbreaking or a cooldown. */
+    /** Wild shields keep their old cost; hired shields use player-style durability. */
     public static void damageShield(Human human, float blockedDamage) {
         if (blockedDamage <= 0.0F) {
             return;
@@ -90,6 +90,18 @@ public final class HostileHumansEquipmentPatch {
         if (shield.isEmpty()
                 || !shield.canPerformAction(ToolActions.SHIELD_BLOCK)
                 || !shield.isDamageableItem()) {
+            return;
+        }
+        if (human.hasOwner()) {
+            if (blockedDamage >= 3.0F) {
+                EquipmentSlot slot = hand == InteractionHand.MAIN_HAND
+                        ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
+                shield.hurtAndBreak(1 + (int) blockedDamage, human,
+                        broken -> human.broadcastBreakEvent(slot));
+                if (shield.isEmpty()) {
+                    human.stopUsingItem();
+                }
+            }
             return;
         }
         int durabilityCost = 10 + (int) Math.ceil(blockedDamage * 2.0F);

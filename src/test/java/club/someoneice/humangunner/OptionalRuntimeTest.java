@@ -20,7 +20,7 @@ public final class OptionalRuntimeTest {
             for (Path file : paths.filter(p -> p.toString().endsWith(".class")).sorted().toList()) {
                 String name = root.relativize(file).toString().replace('\\', '.').replace('/', '.').replaceAll("\\.class$", "");
                 // These adapters are deliberately loadable only with their dependency installed.
-                if (name.matches(".*\\.(GunnerGoal|TaczIntegration|TaczMaidIntegration|TouhouMaidCompat|TravelersBackpack|HumanBackpackLayer|CuriosBadgeAccess)(\\$.*)?")) continue;
+                if (name.matches(".*\\.(GunnerGoal|TaczIntegration|TaczReloadSoundClient|TaczMaidIntegration|TouhouMaidCompat|TravelersBackpack|HumanBackpackLayer|CuriosBadgeAccess)(\\$.*)?")) continue;
                 Class<?> type = Class.forName(name, false, loader);
                 type.getDeclaredFields();
                 type.getDeclaredMethods();

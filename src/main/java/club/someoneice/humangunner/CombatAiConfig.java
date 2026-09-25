@@ -25,7 +25,9 @@ public record CombatAiConfig(
         int combatJumpIntervalMin,
         int combatJumpIntervalMax,
         double combatJumpChance,
-        boolean itemRecoveryEnabled
+        boolean itemRecoveryEnabled,
+        double foodUseSpeedMultiplier,
+        double shieldUseSpeedMultiplier
 ) {
     private static final String PATH = "hostile_humans_unified.json: ai";
     private static volatile CombatAiConfig instance;
@@ -44,10 +46,17 @@ public record CombatAiConfig(
     }
 
     private static CombatAiConfig load() {
-        CombatAiConfig defaults = defaults();
         try {
-            JsonObject root = UnifiedConfig.get().ai();
-            return new CombatAiConfig(
+            return parse(UnifiedConfig.get().ai());
+        } catch (Exception exception) {
+            HumanGunner.LOGGER.error("Could not read {}; using defaults", PATH, exception);
+            return defaults();
+        }
+    }
+
+    static CombatAiConfig parse(JsonObject root) {
+        CombatAiConfig defaults = defaults();
+        return new CombatAiConfig(
                     bool(root, "enabled", defaults.enabled),
                     bounded(root, "retreat_health_ratio", defaults.retreatHealthRatio, 0.1D, 0.9D),
                     bounded(root, "critical_health_ratio", defaults.criticalHealthRatio, 0.05D, 0.75D),
@@ -68,12 +77,10 @@ public record CombatAiConfig(
                     integer(root, "combat_jump_interval_min", defaults.combatJumpIntervalMin, 4, 40),
                     integer(root, "combat_jump_interval_max", defaults.combatJumpIntervalMax, 5, 60),
                     bounded(root, "combat_jump_chance", defaults.combatJumpChance, 0.0D, 1.0D),
-                    bool(root, "item_recovery_enabled", defaults.itemRecoveryEnabled)
-            ).normalized();
-        } catch (Exception exception) {
-            HumanGunner.LOGGER.error("Could not read {}; using defaults", PATH, exception);
-            return defaults;
-        }
+                    bool(root, "item_recovery_enabled", defaults.itemRecoveryEnabled),
+                    bounded(root, "food_use_speed_multiplier", defaults.foodUseSpeedMultiplier, 0.1D, 1.0D),
+                    bounded(root, "shield_use_speed_multiplier", defaults.shieldUseSpeedMultiplier, 0.1D, 1.0D)
+        ).normalized();
     }
 
     private CombatAiConfig normalized() {
@@ -102,7 +109,9 @@ public record CombatAiConfig(
                 combatJumpIntervalMin,
                 Math.max(combatJumpIntervalMin + 1, combatJumpIntervalMax),
                 combatJumpChance,
-                itemRecoveryEnabled
+                itemRecoveryEnabled,
+                foodUseSpeedMultiplier,
+                shieldUseSpeedMultiplier
         );
     }
 
@@ -128,7 +137,9 @@ public record CombatAiConfig(
                 12,
                 22,
                 0.60D,
-                true
+                true,
+                0.7D,
+                0.2D
         );
     }
 

@@ -63,6 +63,11 @@ final class TaczIntegration implements GunSupport {
         return stack;
     }
     public Goal goal(Human human) { return new GunnerGoal<>(human); }
+    public boolean isReloading(Human human) {
+        IGunOperator operator = IGunOperator.fromLivingEntity(human);
+        return operator.getDataHolder().reloadStateType.isReloading()
+                || operator.getSynReloadState().getStateType().isReloading();
+    }
     public void tickIdleReload(Human human) {
         // A staggered one-second check avoids a reload attempt on every tick
         // for every gunner. GunCustody has already restored an idle backpack

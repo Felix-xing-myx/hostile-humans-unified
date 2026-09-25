@@ -29,9 +29,9 @@ public final class TierThreeLoadout {
     private TierThreeLoadout() {
     }
 
-    public static void configureOnce(Human human) {
+    public static boolean configureOnce(Human human) {
         if (!TierThreeHuman.isTierThree(human) || human.getPersistentData().getBoolean(GENERATED)) {
-            return;
+            return false;
         }
         human.getPersistentData().putBoolean(GENERATED, true);
         human.getPersistentData().putBoolean(TierThreeHuman.MARKER, true);
@@ -69,6 +69,29 @@ public final class TierThreeLoadout {
         human.setDropChance(EquipmentSlot.OFFHAND, 0.0F);
         preservePreviousShields(human, data, preservedShields);
         human.setCombatTask();
+        return true;
+    }
+
+    /** Fill the new elite loadout after optional Spartan weapons have been rolled. */
+    public static void ensureRangedWeapon(Human human) {
+        HumanData data = human.getData();
+        if (!TierThreeHuman.isTierThree(human) || data == null
+                || RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem())
+                || RangedWeaponCustody.isBowOrCrossbow(human.getOffhandItem())) {
+            return;
+        }
+        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            if (RangedWeaponCustody.isBowOrCrossbow(data.getInventoryItem(i))) {
+                return;
+            }
+        }
+
+        Item item = human.getRandom().nextBoolean() ? Items.BOW : Items.CROSSBOW;
+        ItemStack ranged = enchanted(human, item, 34, 44);
+        RangedWeaponCustody.registerPreferred(human, ranged);
+        if (!HumanLootManager.storeWithEviction(human, ranged)) {
+            HumanGunner.LOGGER.warn("Could not store guaranteed ranged weapon for tier-three human {}", human.getUUID());
+        }
     }
 
     private static void preservePreviousShields(

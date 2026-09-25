@@ -60,4 +60,13 @@ final class CombatPressurePolicy {
     ) {
         return ownsGun && crowdPressureActive && hasLineOfSight && distanceSqr <= 784.0D;
     }
+
+    static boolean shouldUseRetreatCounterfire(
+            double distanceSqr, int retreatTicks, double minimumRange, double maximumRange,
+            int minimumRetreatTicks
+    ) {
+        return retreatTicks >= minimumRetreatTicks
+                && distanceSqr > minimumRange * minimumRange
+                && distanceSqr <= maximumRange * maximumRange;
+    }
 }

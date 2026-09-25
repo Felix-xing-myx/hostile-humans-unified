@@ -13,36 +13,37 @@ public final class UnifiedConfigTest {
         check(config.taczEnabled(), "auto enable when installed");
         check(config.tier("roamer").healthMin() == 50, "legacy health min");
         check(config.tier("tier3").healthMax() == 100, "legacy health max");
-        check(config.tier("roamer").gunSpreadDegrees() == 2.5D
-                        && config.tier("tier1").gunSpreadDegrees() == 2.0D
-                        && config.tier("tier2").gunSpreadDegrees() == 1.5D
-                        && config.tier("tier3").gunSpreadDegrees() == 1.0D,
-                "per-tier firearm spread defaults");
-        for (String type : List.of("sniper", "rifle", "mg", "smg", "pistol", "shotgun")) {
+        check(config.tier("roamer").baseMovementSpeed() == .095D
+                        && config.tier("tier3").baseMovementSpeed() == .095D,
+                "new per-tier base speed defaults preserve current movement");
+        check(config.tier("roamer").gunSpreadDegrees("rifle") == 2.5D
+                        && config.tier("tier1").gunSpreadDegrees("rifle") == 2.0D
+                        && config.tier("tier2").gunSpreadDegrees("rifle") == 1.5D
+                        && config.tier("tier3").gunSpreadDegrees("rifle") == 1.0D,
+                "per-tier rifle spread defaults");
+        for (String type : GunSpreadPolicy.supportedTypes()) {
             double previous = Double.POSITIVE_INFINITY;
             for (String tier : List.of("roamer", "tier1", "tier2", "tier3")) {
-                double spread = GunSpreadPolicy.degrees(config.tier(tier).gunSpreadDegrees(), type);
+                double spread = config.tier(tier).gunSpreadDegrees(type);
                 if (previous != Double.POSITIVE_INFINITY) {
                     check(previous - spread == 0.5D, type + " has a half-degree tier step");
                 }
                 previous = spread;
             }
         }
-        check(GunSpreadPolicy.degrees(config.tier("tier3").gunSpreadDegrees(), "sniper") == 0.5D
-                        && GunSpreadPolicy.degrees(config.tier("tier3").gunSpreadDegrees(), "rifle") == 1.0D
-                        && GunSpreadPolicy.degrees(config.tier("tier3").gunSpreadDegrees(), "mg") == 1.5D
-                        && GunSpreadPolicy.degrees(config.tier("tier3").gunSpreadDegrees(), "pistol") == 2.0D
-                        && GunSpreadPolicy.degrees(config.tier("tier3").gunSpreadDegrees(), "shotgun") == 2.5D,
+        check(config.tier("tier3").gunSpreadDegrees("sniper") == 0.5D
+                        && config.tier("tier3").gunSpreadDegrees("rifle") == 1.0D
+                        && config.tier("tier3").gunSpreadDegrees("mg") == 1.5D
+                        && config.tier("tier3").gunSpreadDegrees("pistol") == 2.0D
+                        && config.tier("tier3").gunSpreadDegrees("shotgun") == 2.5D,
                 "each weapon family reaches its intended top-tier accuracy floor");
         double previousBow = Double.POSITIVE_INFINITY;
         double previousCrossbow = Double.POSITIVE_INFINITY;
         for (String tier : List.of("roamer", "tier1", "tier2", "tier3")) {
-            double bow = RangedAccuracy.projectileSpreadDegrees(
-                    config.tier(tier).projectileSpreadDegrees(), false);
-            double crossbow = RangedAccuracy.projectileSpreadDegrees(
-                    config.tier(tier).projectileSpreadDegrees(), true);
+            double bow = config.tier(tier).projectileSpreadDegrees("bow");
+            double crossbow = config.tier(tier).projectileSpreadDegrees("crossbow");
             check(Math.abs(bow - crossbow - 0.5D) < 1.0E-9D,
-                    "crossbow is half a degree more accurate than bow and trident");
+                    "the default crossbow is half a degree more accurate than bow and trident");
             if (previousBow != Double.POSITIVE_INFINITY) {
                 check(Math.abs(previousBow - bow - 0.3D) < 1.0E-9D
                                 && Math.abs(previousCrossbow - crossbow - 0.3D) < 1.0E-9D,
@@ -54,6 +55,8 @@ public final class UnifiedConfigTest {
         check(Math.abs(previousBow - 1.5D) < 1.0E-9D
                         && Math.abs(previousCrossbow - 1.0D) < 1.0E-9D,
                 "top-tier bow and trident reach 1.5 degrees, crossbow reaches 1 degree");
+        check(config.tier("tier3").projectileSpreadDegrees("trident") == 1.5D,
+                "trident has its own spread setting with the existing default");
         check(config.spawn().admissionChance() == .08, "legacy spawn chance");
         check(config.tier("tier3").spawnMultiplier() == .04, "legacy rare tier");
         check(config.recruitmentLimit(0) == 12 && config.recruitmentLimit(1) == 10
@@ -68,14 +71,47 @@ public final class UnifiedConfigTest {
                 "human firearm damage is half the TaCZ base before tier-specific scaling");
 
         JsonObject accuracyOverride = JsonParser.parseString("""
-                {"tiers":{"roamer":{"gun_spread_degrees":0.75},
-                           "tier1":{"gun_spread_degrees":1.25}}}
+                {"tiers":{"tier2":{"weapon_spread_degrees":{
+                  "firearms":{"sniper":4.25,"rifle":3.75,"pistol":2.25},
+                  "projectiles":{"bow":6.5,"crossbow":7.25,"trident":8.0}}}}}
                 """).getAsJsonObject();
         UnifiedConfig adjustableAccuracy = new UnifiedConfig(accuracyOverride);
-        check(adjustableAccuracy.tier("roamer").gunSpreadDegrees() == 0.75D
-                        && adjustableAccuracy.tier("tier1").gunSpreadDegrees() == 1.25D
-                        && adjustableAccuracy.tier("tier2").gunSpreadDegrees() == 1.5D,
-                "per-tier firearm spread is independently adjustable with other tiers retaining defaults");
+        check(adjustableAccuracy.tier("tier2").gunSpreadDegrees("sniper") == 4.25D
+                        && adjustableAccuracy.tier("tier2").gunSpreadDegrees("rifle") == 3.75D
+                        && adjustableAccuracy.tier("tier2").gunSpreadDegrees("pistol") == 2.25D
+                        && adjustableAccuracy.tier("tier2").gunSpreadDegrees("smg") == 2.5D
+                        && adjustableAccuracy.tier("tier1").gunSpreadDegrees("rifle") == 2.0D
+                        && adjustableAccuracy.tier("tier2").projectileSpreadDegrees("bow") == 6.5D
+                        && adjustableAccuracy.tier("tier2").projectileSpreadDegrees("crossbow") == 7.25D
+                        && adjustableAccuracy.tier("tier2").projectileSpreadDegrees("trident") == 8.0D,
+                "each firearm and projectile type is independently adjustable without changing other values");
+        JsonObject legacyAccuracy = JsonParser.parseString("""
+                {"tiers":{"tier1":{"health_min":55,"normal_movement_speed":0.42,
+                  "gun_spread_degrees":1.25,"projectile_spread_degrees":3.0}}}
+                """).getAsJsonObject();
+        UnifiedConfig legacyConfig = new UnifiedConfig(legacyAccuracy);
+        check(legacyConfig.tier("tier1").healthMin() == 55
+                        && legacyConfig.tier("tier1").baseMovementSpeed() == .095D
+                        && legacyConfig.tier("tier1").gunSpreadDegrees("rifle") == 1.25D
+                        && legacyConfig.tier("tier1").gunSpreadDegrees("sniper") == 0.75D
+                        && legacyConfig.tier("tier1").gunSpreadDegrees("shotgun") == 2.75D
+                        && legacyConfig.tier("tier1").projectileSpreadDegrees("bow") == 3.0D
+                        && legacyConfig.tier("tier1").projectileSpreadDegrees("crossbow") == 2.5D,
+                "legacy speed setting is ignored while legacy spread settings keep their prior behavior");
+
+        UnifiedConfig movementConfig = new UnifiedConfig(JsonParser.parseString("""
+                {"tiers":{"roamer":{"movement":{"base_speed":0.08}},
+                 "tier2":{"movement":{"base_speed":0.11}}},
+                 "ai":{"food_use_speed_multiplier":0.7,"shield_use_speed_multiplier":0.35}}
+                """).getAsJsonObject());
+        check(movementConfig.tier("roamer").baseMovementSpeed() == .08D
+                        && movementConfig.tier("tier1").baseMovementSpeed() == .095D
+                        && movementConfig.tier("tier2").baseMovementSpeed() == .11D,
+                "new movement formula exposes independently adjustable tier base speeds");
+        CombatAiConfig actionSpeeds = CombatAiConfig.parse(movementConfig.ai());
+        check(actionSpeeds.foodUseSpeedMultiplier() == .7D
+                        && actionSpeeds.shieldUseSpeedMultiplier() == .35D,
+                "food and shield action speed multipliers are configurable");
 
         JsonObject guns = JsonParser.parseString("""
                 {"globe":0.9,"guns":{"test:keep":7,"test:zero":0,"banned:gun":100,"test:black":2},
@@ -87,7 +123,9 @@ public final class UnifiedConfigTest {
                 """).getAsJsonObject();
         JsonObject migrated = UnifiedConfig.migrate(guns.deepCopy(), ai);
         config = new UnifiedConfig(migrated);
-        check(config.tier("tier2").normalSpeed() == .42, "migrate all tier speeds");
+        check(config.tier("tier2").baseMovementSpeed() == .095D
+                        && !config.ai().has("normal_movement_speed"),
+                "legacy speed migration is discarded in favor of new base-speed defaults");
         check(config.ai().get("recovery_damage_tolerance_ratio").getAsDouble() == .2, "legacy absolute tolerance");
         check(config.damage("human_melee_damage_multiplier", 1) == 2.75, "legacy damage");
         check(config.blacklisted("test:black"), "blacklist migration");
@@ -117,7 +155,7 @@ public final class UnifiedConfigTest {
         check(HumanGunnerConfig.parse(disabled).humanGunDamageMultiplier() == 2.5, "gun multipliers above one allowed");
 
         JsonObject bad = JsonParser.parseString("""
-                {"tiers":{"roamer":{"health_min":900,"health_max":5,"normal_movement_speed":"NaN",
+                {"tiers":{"roamer":{"health_min":900,"health_max":5,"movement":{"base_speed":"NaN"},
                  "attack_damage":-30,"incoming_damage_multiplier":10000}},"spawning":{
                  "enabled":false,"admission_chance":2,"encounter_cooldown_ticks":-3,"density_divisor":0},
                  "recruitment":{"max_hired_by_tier":{"roamer":-3,"tier3":20000},
@@ -125,7 +163,7 @@ public final class UnifiedConfigTest {
                 """).getAsJsonObject();
         config = new UnifiedConfig(bad);
         check(config.tier("roamer").healthMin() == 5 && config.tier("roamer").healthMax() == 900, "normalize reversed health range");
-        check(config.tier("roamer").normalSpeed() == .1, "NaN fallback");
+        check(config.tier("roamer").baseMovementSpeed() == .095D, "NaN base movement speed fallback");
         check(config.tier("roamer").attackDamage() == 0, "negative attack clamp");
         check(config.tier("roamer").incomingDamage() == 10, "damage clamp");
         check(!config.spawn().enabled() && config.spawn().admissionChance() == 1, "spawn disable and clamp");

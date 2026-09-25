@@ -8,10 +8,6 @@ import java.util.UUID;
 
 /** Keep one walking base speed and let vanilla sprint and effect modifiers compose normally. */
 public final class MovementSpeedController {
-    // Human#setSpeed supplies full movement input instead of Mob's attribute-
-    // scaled input. Slightly below the player's 0.1 baseline, so unbuffed
-    // walking and sprinting both remain a little slower than a player.
-    private static final double HUMAN_WALK_SPEED = 0.09D;
     private static final UUID SPRINT_COMPENSATION_ID =
             UUID.fromString("82624020-1000-4000-8000-000000000302");
 
@@ -19,15 +15,15 @@ public final class MovementSpeedController {
     }
 
     public static void normal(Human human) {
-        apply(human, HUMAN_WALK_SPEED, false);
+        apply(human, TierAttributes.of(human).baseMovementSpeed(), false);
     }
 
     public static void combat(Human human, boolean sprinting) {
-        apply(human, HUMAN_WALK_SPEED, sprinting);
+        apply(human, TierAttributes.of(human).baseMovementSpeed(), sprinting);
     }
 
     public static void retreat(Human human, boolean sprinting) {
-        apply(human, HUMAN_WALK_SPEED, sprinting);
+        apply(human, TierAttributes.of(human).baseMovementSpeed(), sprinting);
     }
 
     private static void apply(Human human, double absoluteSpeed, boolean sprinting) {

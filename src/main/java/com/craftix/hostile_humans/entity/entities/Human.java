@@ -59,6 +59,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.DifficultyInstance;
@@ -107,6 +108,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.SplashPotionItem;
 import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.item.UseAnim;
@@ -147,6 +149,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private Goal humanGunner$gunnerGoal;
+    private boolean humanGunner$projectileShieldAllowance;
 
     private BowAttack<Human> humanGunner$enhancedBowGoal;
 
@@ -271,7 +274,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (!action) { super.playSound(sound, volume, pitch); return; }
         if (!level().isClientSide && !isSilent())
             level().playSound(null, getX(), getY(), getZ(), sound, SoundSource.PLAYERS,
-                    volume * (animation == UseAnim.EAT ? 1.5F : 5.0F), pitch);
+                    volume * 1.5F, pitch);
     }
     public boolean needCheckAmmo() { return false; }
     public boolean consumesAmmoOrNot() { return true; }
@@ -280,9 +283,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public static final ItemStack[] PRE_ATTACK_BUFF_ITEMS = new ItemStack[]{Items.GOLDEN_APPLE.getDefaultInstance(), PotionUtils.setPotion((ItemStack)Items.POTION.getDefaultInstance(), (Potion)Potions.STRENGTH), PotionUtils.setPotion((ItemStack)Items.POTION.getDefaultInstance(), (Potion)Potions.REGENERATION), PotionUtils.setPotion((ItemStack)Items.POTION.getDefaultInstance(), (Potion)Potions.SWIFTNESS)};
     public static final ItemStack[] MID_FIGHT_BUFF_ITEMS = new ItemStack[]{Items.GOLDEN_APPLE.getDefaultInstance(), PotionUtils.setPotion((ItemStack)Items.POTION.getDefaultInstance(), (Potion)Potions.STRONG_REGENERATION)};
     private static final UUID MODIFIER_UUID = UUID.fromString("7a0811af-4025-4691-ba75-2d638d4ab3f4");
-    private static final AttributeModifier SHIELD_USE_SPEED_PENALTY = new AttributeModifier(MODIFIER_UUID, "Shield use speed penalty", -0.8, AttributeModifier.Operation.MULTIPLY_TOTAL);
-    // Eating retains 70% of movement speed; drinking has no added penalty.
-    private static final AttributeModifier FOOD_USE_SPEED_PENALTY = new AttributeModifier(MODIFIER_UUID, "Food use speed penalty", -0.3, AttributeModifier.Operation.MULTIPLY_TOTAL);
+    // Eating/shield movement multipliers are configurable through the unified AI settings.
     private static final Map<String, ResourceLocation> TEXTURE_BY_VARIANT = (Map)Util.make(Maps.newHashMap(), hashMap -> {
         for (int i = 1; i <= 37; ++i) {
             String name = "skin" + i;
@@ -345,6 +346,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public Human(EntityType<? extends HumanEntity> entityType, Level level, HumanTier type) {
         super(entityType, level);
         this.setPathfindingMalus(BlockPathTypes.WATER, 0.0f);
+        // Make normal path selection strongly prefer routes around lava, while
+        // keeping lava nodes traversable so the emergency escape goal can path out.
+        this.setPathfindingMalus(BlockPathTypes.LAVA, 16.0f);
         this.setCanPickUpLoot(true);
         this.setTier(type);
         this.initTeam(type);
@@ -371,7 +375,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public static AttributeSupplier.Builder createAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.09D).add(Attributes.MAX_HEALTH, 60.0).add(Attributes.ATTACK_DAMAGE, 1.0).add((Attribute)ForgeMod.ENTITY_REACH.get(), 3.0).add(Attributes.FOLLOW_RANGE, 40.0);
+        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.095D).add(Attributes.MAX_HEALTH, 60.0).add(Attributes.ATTACK_DAMAGE, 1.0).add((Attribute)ForgeMod.ENTITY_REACH.get(), 3.0).add(Attributes.FOLLOW_RANGE, 40.0);
     }
 
     @Override
@@ -409,7 +413,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         Entity equipmentSlotArray = damageSource.getEntity();
         LivingEntity attacker = equipmentSlotArray instanceof LivingEntity living && living != this
                 ? living : null;
-        if (amount > 1.0f) {
+        // Wild humans retain the original rare whole-piece break. Hired gear
+        // instead wears down through hurtArmor, like equipment worn by a player.
+        if (amount > 1.0f && !this.hasOwner()) {
             EquipmentSlot[] slots;
             for (EquipmentSlot equipmentslot : slots = EquipmentSlot.values()) {
                 ItemStack item;
@@ -428,6 +434,25 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             this.setTarget(attacker);
         }
         return damaged;
+    }
+
+    @Override
+    protected void hurtArmor(DamageSource source, float amount) {
+        super.hurtArmor(source, amount);
+        if (!this.hasOwner() || amount <= 0.0F) {
+            return;
+        }
+        int durabilityCost = Math.max(1, (int)(amount / 4.0F));
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            if (slot.getType() != EquipmentSlot.Type.ARMOR) {
+                continue;
+            }
+            ItemStack armor = this.getItemBySlot(slot);
+            if (armor.getItem() instanceof ArmorItem
+                    && !(source.is(DamageTypeTags.IS_FIRE) && armor.getItem().isFireResistant())) {
+                armor.hurtAndBreak(durabilityCost, this, broken -> this.broadcastBreakEvent(slot));
+            }
+        }
     }
 
     public UUID getPersistentAngerTarget() {
@@ -556,7 +581,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         ItemStack requested = human.getItemInHand(hand);
         boolean holdingGun = club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())
                 || club.someoneice.humangunner.GunSupport.get().isGun(human.getOffhandItem());
-        if (holdingGun && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)) {
+        if (holdingGun && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)
+                && !humanGunner$projectileShieldAllowance) {
             return;
         }
     
@@ -568,9 +594,28 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             AttributeInstance modifiableattributeinstance = this.getAttribute(Attributes.MOVEMENT_SPEED);
             if (modifiableattributeinstance != null) {
                 modifiableattributeinstance.removeModifier(MODIFIER_UUID);
-                modifiableattributeinstance.addTransientModifier(
-                        shield ? SHIELD_USE_SPEED_PENALTY : FOOD_USE_SPEED_PENALTY);
+                double multiplier = shield
+                        ? club.someoneice.humangunner.CombatAiConfig.get().shieldUseSpeedMultiplier()
+                        : club.someoneice.humangunner.CombatAiConfig.get().foodUseSpeedMultiplier();
+                if (multiplier < 1.0D) {
+                    modifiableattributeinstance.addTransientModifier(new AttributeModifier(MODIFIER_UUID,
+                            shield ? "Shield use speed penalty" : "Food use speed penalty",
+                            multiplier - 1.0D, AttributeModifier.Operation.MULTIPLY_TOTAL));
+                }
             }
+        }
+    }
+
+    /** A brief, goal-owned exception for an incoming arrow; ordinary gun use still wins. */
+    public void humanGunner$startProjectileShield() {
+        if (!club.someoneice.humangunner.SpartanEquipmentCompat.isShield(getOffhandItem())) {
+            return;
+        }
+        humanGunner$projectileShieldAllowance = true;
+        try {
+            startUsingItem(InteractionHand.OFF_HAND);
+        } finally {
+            humanGunner$projectileShieldAllowance = false;
         }
     }
 

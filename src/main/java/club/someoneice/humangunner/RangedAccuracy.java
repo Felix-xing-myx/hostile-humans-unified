@@ -11,16 +11,16 @@ public final class RangedAccuracy {
     private RangedAccuracy() {}
 
     public static double gunSpreadDegrees(Human human, ItemStack weapon) {
-        return GunSpreadPolicy.degrees(TierAttributes.of(human).gunSpreadDegrees(),
-                GunSupport.get().gunType(weapon));
+        return TierAttributes.of(human).gunSpreadDegrees(GunSupport.get().gunType(weapon));
     }
 
     public static double projectileSpreadDegrees(Human human, boolean crossbow) {
-        return projectileSpreadDegrees(TierAttributes.of(human).projectileSpreadDegrees(), crossbow);
+        return projectileSpreadDegrees(human, crossbow, false);
     }
 
-    static double projectileSpreadDegrees(double bowSpread, boolean crossbow) {
-        return Math.max(0.0D, bowSpread - (crossbow ? 0.5D : 0.0D));
+    public static double projectileSpreadDegrees(Human human, boolean crossbow, boolean trident) {
+        return TierAttributes.of(human).projectileSpreadDegrees(
+                trident ? "trident" : crossbow ? "crossbow" : "bow");
     }
 
     public static Vec3 applyAngularSpread(Vec3 direction, double degrees, RandomSource random) {

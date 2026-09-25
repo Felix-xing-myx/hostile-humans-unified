@@ -9,9 +9,7 @@
     { "item": "minecraft:iron_sword", "weight": 3 },
     { "item": "minecraft:stone_sword", "weight": 3 },
     { "item": "minecraft:diamond_sword", "weight": 1 },
-    { "item": "minecraft:diamond_axe", "weight": 1 },
-    { "item": "minecraft:crossbow", "weight": 1 },
-    { "item": "minecraft:bow", "weight": 1 }
+    { "item": "minecraft:diamond_axe", "weight": 1 }
   ],
   "ranged_mainhand": [
     { "item": "minecraft:crossbow", "weight": 1 },

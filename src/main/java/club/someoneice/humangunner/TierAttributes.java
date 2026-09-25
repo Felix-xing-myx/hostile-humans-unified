@@ -17,6 +17,7 @@ public final class TierAttributes {
     public static UnifiedConfig.Tier of(Human human) { return UnifiedConfig.get().tier(key(human)); }
     public static void apply(Human human) {
         var tier = of(human);
+        set(human, Attributes.MOVEMENT_SPEED, tier.baseMovementSpeed());
         set(human, Attributes.ATTACK_DAMAGE, tier.attackDamage());
         set(human, Attributes.ARMOR, tier.armor());
         set(human, Attributes.ARMOR_TOUGHNESS, tier.armorToughness());

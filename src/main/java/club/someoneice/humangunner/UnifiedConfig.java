@@ -17,12 +17,21 @@ public final class UnifiedConfig {
     private final Spawn spawn;
     private final Recruitment recruitment;
 
-    public record Tier(int healthMin, int healthMax, double normalSpeed, double combatSpeed,
-            double retreatSpeed, double attackDamage, double armor, double armorToughness,
+    public record Tier(int healthMin, int healthMax, double baseMovementSpeed,
+            double attackDamage, double armor, double armorToughness,
             double knockbackResistance, double followRange, double meleeDamage, double bowDamage,
             double tridentDamage, double incomingDamage, double spawnMultiplier,
-            double gunSpreadDegrees, double projectileSpreadDegrees,
-            int meleeCooldownMin, int meleeCooldownMax) {}
+            Map<String, Double> firearmSpreadDegrees, Map<String, Double> projectileSpreadDegrees,
+            int meleeCooldownMin, int meleeCooldownMax) {
+        public double gunSpreadDegrees(String rawType) {
+            return firearmSpreadDegrees.getOrDefault(
+                    GunSpreadPolicy.category(rawType), firearmSpreadDegrees.getOrDefault("other", 0.0D));
+        }
+
+        public double projectileSpreadDegrees(String type) {
+            return projectileSpreadDegrees.getOrDefault(type, projectileSpreadDegrees.getOrDefault("bow", 0.0D));
+        }
+    }
     public record Spawn(boolean enabled, double admissionChance, double battleChance, int legacyRoll,
             int cooldownTicks, int horizontalRadius, int verticalRadius, double densityDivisor) {}
     public record Recruitment(int roamerLimit, int tier1Limit, int tier2Limit, int tier3Limit,
@@ -44,28 +53,56 @@ public final class UnifiedConfig {
         Map<String, Tier> values = new LinkedHashMap<>();
         for (String key : List.of("roamer", "tier1", "tier2", "tier3")) {
             JsonObject t = object(object(root, "tiers"), key);
+            JsonObject configuredTier = object(object(configured, "tiers"), key);
             JsonObject d = defaults.getAsJsonObject("tiers").getAsJsonObject(key);
-            int low = (int) number(t, "health_min", d.get("health_min").getAsDouble(), 1, 1024);
-            int high = (int) number(t, "health_max", d.get("health_max").getAsDouble(), 1, 1024);
-            int meleeCooldownLow = (int) number(t, "melee_cooldown_min",
-                    d.get("melee_cooldown_min").getAsDouble(), 1, 200);
-            int meleeCooldownHigh = (int) number(t, "melee_cooldown_max",
-                    d.get("melee_cooldown_max").getAsDouble(), 1, 200);
+            JsonObject defaultAttributes = object(d, "attributes");
+            JsonObject defaultDamage = object(d, "damage_multipliers");
+            JsonObject defaultCombat = object(d, "combat");
+            JsonObject defaultSpawning = object(d, "spawning");
+            int low = (int) tierNumber(configuredTier, t, "attributes", "health_min",
+                    defaultAttributes.get("health_min").getAsDouble(), 1, 1024);
+            int high = (int) tierNumber(configuredTier, t, "attributes", "health_max",
+                    defaultAttributes.get("health_max").getAsDouble(), 1, 1024);
+            int meleeCooldownLow = (int) tierNumber(configuredTier, t, "combat", "melee_cooldown_min",
+                    defaultCombat.get("melee_cooldown_min").getAsDouble(), 1, 200);
+            int meleeCooldownHigh = (int) tierNumber(configuredTier, t, "combat", "melee_cooldown_max",
+                    defaultCombat.get("melee_cooldown_max").getAsDouble(), 1, 200);
+            Map<String, Double> firearmSpreads = new LinkedHashMap<>();
+            JsonObject defaultFirearms = object(object(d, "weapon_spread_degrees"), "firearms");
+            for (String type : GunSpreadPolicy.supportedTypes()) {
+                firearmSpreads.put(type, firearmSpread(configuredTier, t, type,
+                        defaultFirearms.get(type).getAsDouble()));
+            }
+            Map<String, Double> projectileSpreads = new LinkedHashMap<>();
+            JsonObject defaultProjectiles = object(object(d, "weapon_spread_degrees"), "projectiles");
+            for (String type : List.of("bow", "crossbow", "trident")) {
+                projectileSpreads.put(type, projectileSpread(configuredTier, t, type,
+                        defaultProjectiles.get(type).getAsDouble()));
+            }
             values.put(key, new Tier(Math.min(low, high), Math.max(low, high),
-                    number(t, "normal_movement_speed", .1, .01, 2),
-                    number(t, "combat_movement_speed", .1, .01, 2),
-                    number(t, "retreat_movement_speed", .1, .01, 2),
-                    number(t, "attack_damage", 1, 0, 2048), number(t, "armor", 0, 0, 30),
-                    number(t, "armor_toughness", 0, 0, 20),
-                    number(t, "knockback_resistance", key.equals("tier3") ? .15 : 0, 0, 1),
-                    number(t, "follow_range", key.equals("tier3") ? 48 : 40, 8, 128),
-                    number(t, "melee_damage_multiplier", 1, 0, 10),
-                    number(t, "bow_damage_multiplier", 1, 0, 10),
-                    number(t, "trident_damage_multiplier", 1, 0, 10),
-                    number(t, "incoming_damage_multiplier", 1, 0, 10),
-                    number(t, "spawn_multiplier", d.get("spawn_multiplier").getAsDouble(), 0, 100),
-                    number(t, "gun_spread_degrees", d.get("gun_spread_degrees").getAsDouble(), 0, 45),
-                    number(t, "projectile_spread_degrees", d.get("projectile_spread_degrees").getAsDouble(), 0, 45),
+                    number(object(t, "movement"), "base_speed",
+                            number(object(d, "movement"), "base_speed", .095D, .01D, .2D), .01D, .2D),
+                    tierNumber(configuredTier, t, "attributes", "attack_damage",
+                            defaultAttributes.get("attack_damage").getAsDouble(), 0, 2048),
+                    tierNumber(configuredTier, t, "attributes", "armor",
+                            defaultAttributes.get("armor").getAsDouble(), 0, 30),
+                    tierNumber(configuredTier, t, "attributes", "armor_toughness",
+                            defaultAttributes.get("armor_toughness").getAsDouble(), 0, 20),
+                    tierNumber(configuredTier, t, "attributes", "knockback_resistance",
+                            defaultAttributes.get("knockback_resistance").getAsDouble(), 0, 1),
+                    tierNumber(configuredTier, t, "attributes", "follow_range",
+                            defaultAttributes.get("follow_range").getAsDouble(), 8, 128),
+                    tierNumber(configuredTier, t, "damage_multipliers", "melee_damage_multiplier",
+                            defaultDamage.get("melee_damage_multiplier").getAsDouble(), 0, 10),
+                    tierNumber(configuredTier, t, "damage_multipliers", "bow_damage_multiplier",
+                            defaultDamage.get("bow_damage_multiplier").getAsDouble(), 0, 10),
+                    tierNumber(configuredTier, t, "damage_multipliers", "trident_damage_multiplier",
+                            defaultDamage.get("trident_damage_multiplier").getAsDouble(), 0, 10),
+                    tierNumber(configuredTier, t, "damage_multipliers", "incoming_damage_multiplier",
+                            defaultDamage.get("incoming_damage_multiplier").getAsDouble(), 0, 10),
+                    tierNumber(configuredTier, t, "spawning", "spawn_multiplier",
+                            defaultSpawning.get("spawn_multiplier").getAsDouble(), 0, 100),
+                    Map.copyOf(firearmSpreads), Map.copyOf(projectileSpreads),
                     Math.min(meleeCooldownLow, meleeCooldownHigh),
                     Math.max(meleeCooldownLow, meleeCooldownHigh)));
         }
@@ -168,10 +205,12 @@ public final class UnifiedConfig {
             else tacz.add(entry.getKey(), entry.getValue().deepCopy());
         }
         for (var entry : ai.entrySet()) {
-            if (Set.of("normal_movement_speed", "combat_movement_speed", "retreat_movement_speed").contains(entry.getKey())) {
-                for (JsonElement tier : data.getAsJsonObject("tiers").asMap().values())
-                    tier.getAsJsonObject().add(entry.getKey(), entry.getValue().deepCopy());
-            } else data.getAsJsonObject("ai").add(entry.getKey(), entry.getValue().deepCopy());
+            // Deprecated speed fields belonged to the old path/combat/retreat
+            // controller and do not map to the current base-speed formula.
+            if (!Set.of("normal_movement_speed", "combat_movement_speed", "retreat_movement_speed")
+                    .contains(entry.getKey())) {
+                data.getAsJsonObject("ai").add(entry.getKey(), entry.getValue().deepCopy());
+            }
         }
         if (ai.has("recovery_damage_tolerance") && !ai.has("recovery_damage_tolerance_ratio"))
             data.getAsJsonObject("ai").addProperty("recovery_damage_tolerance_ratio",
@@ -207,6 +246,52 @@ public final class UnifiedConfig {
         }
         return result;
     }
+    private static double tierNumber(JsonObject configuredTier, JsonObject mergedTier,
+            String group, String key, double fallback, double min, double max) {
+        JsonObject configuredGroup = object(configuredTier, group);
+        if (configuredGroup.has(key)) return number(configuredGroup, key, fallback, min, max);
+        if (configuredTier.has(key)) return number(configuredTier, key, fallback, min, max);
+        JsonObject mergedGroup = object(mergedTier, group);
+        if (mergedGroup.has(key)) return number(mergedGroup, key, fallback, min, max);
+        return number(mergedTier, key, fallback, min, max);
+    }
+
+    private static double firearmSpread(JsonObject configuredTier, JsonObject mergedTier,
+            String type, double fallback) {
+        JsonObject configuredWeaponSpreads = object(configuredTier, "weapon_spread_degrees");
+        JsonObject configuredFirearmGroup = object(configuredWeaponSpreads, "firearms");
+        if (configuredFirearmGroup.has(type)) return number(configuredFirearmGroup, type, fallback, 0, 45);
+        if (configuredTier.has("gun_spread_degrees")) {
+            double legacyBase = number(configuredTier, "gun_spread_degrees", fallback, 0, 45);
+            return GunSpreadPolicy.legacyAdjustedDegrees(legacyBase, type);
+        }
+        JsonObject mergedFirearmGroup = object(object(mergedTier, "weapon_spread_degrees"), "firearms");
+        if (mergedFirearmGroup.has(type)) return number(mergedFirearmGroup, type, fallback, 0, 45);
+        if (mergedTier.has("gun_spread_degrees")) {
+            double legacyBase = number(mergedTier, "gun_spread_degrees", fallback, 0, 45);
+            return GunSpreadPolicy.legacyAdjustedDegrees(legacyBase, type);
+        }
+        return fallback;
+    }
+
+    private static double projectileSpread(JsonObject configuredTier, JsonObject mergedTier,
+            String type, double fallback) {
+        JsonObject configuredProjectiles = object(
+                object(configuredTier, "weapon_spread_degrees"), "projectiles");
+        if (configuredProjectiles.has(type)) return number(configuredProjectiles, type, fallback, 0, 45);
+        if (configuredTier.has("projectile_spread_degrees")) {
+            double legacyBase = number(configuredTier, "projectile_spread_degrees", fallback, 0, 45);
+            return GunSpreadPolicy.legacyProjectileDegrees(legacyBase, type);
+        }
+        JsonObject mergedProjectiles = object(object(mergedTier, "weapon_spread_degrees"), "projectiles");
+        if (mergedProjectiles.has(type)) return number(mergedProjectiles, type, fallback, 0, 45);
+        if (mergedTier.has("projectile_spread_degrees")) {
+            double legacyBase = number(mergedTier, "projectile_spread_degrees", fallback, 0, 45);
+            return GunSpreadPolicy.legacyProjectileDegrees(legacyBase, type);
+        }
+        return fallback;
+    }
+
     static JsonObject object(JsonObject data, String key) {
         return data.has(key) && data.get(key).isJsonObject() ? data.getAsJsonObject(key) : new JsonObject();
     }

@@ -52,7 +52,7 @@ public final class SpartanEquipmentCompat {
         if (weaponryLoaded && human.getRandom().nextFloat() < profile.weaponChance()) {
             createWeapon(human, profile);
         }
-        if (weaponryLoaded && human.getRandom().nextFloat() < profile.rangedChance()) {
+        if (weaponryLoaded && human.getRandom().nextFloat() < RangedSpawnChance.forHuman(human)) {
             createRangedWeapon(human, profile);
         }
         if (shieldsLoaded && human.getRandom().nextFloat() < profile.shieldChance()) {
@@ -172,7 +172,7 @@ public final class SpartanEquipmentCompat {
             item = resolve("spartanweaponry", "wooden_" + type);
         }
         if (item == Items.AIR) {
-            return;
+            item = type.equals("longbow") ? Items.BOW : Items.CROSSBOW;
         }
         ItemStack ranged = new ItemStack(item);
         if (profile.enchantMaximum() > 0) {
@@ -237,17 +237,17 @@ public final class SpartanEquipmentCompat {
 
     private static Profile profileFor(Human human) {
         if (TierThreeHuman.isTierThree(human)) {
-            return new Profile(1.0F, 0.55F, 0.85F, 0.65F,
+            return new Profile(1.0F, 0.85F, 0.65F,
                     List.of("diamond", "netherite", "netherite"), 34, 44, true);
         }
         return switch (human.getTier()) {
-            case LEVEL2 -> new Profile(0.62F, 0.38F, 0.48F, 0.45F,
+            case LEVEL2 -> new Profile(0.62F, 0.48F, 0.45F,
                     List.of("iron", "diamond", "diamond"), 18, 28, true);
-            case LEVEL1 -> new Profile(0.42F, 0.25F, 0.30F, 0.25F,
+            case LEVEL1 -> new Profile(0.42F, 0.30F, 0.25F,
                     List.of("stone", "copper", "iron", "iron"), 8, 16, false);
-            case ROAMER -> new Profile(0.28F, 0.18F, 0.18F, 0.12F,
+            case ROAMER -> new Profile(0.28F, 0.18F, 0.12F,
                     List.of("wooden", "stone", "copper", "copper"), 3, 9, false);
-            default -> new Profile(0.0F, 0.0F, 0.0F, 0.0F, List.of("stone"), 0, 0, false);
+            default -> new Profile(0.0F, 0.0F, 0.0F, List.of("stone"), 0, 0, false);
         };
     }
 
@@ -271,7 +271,6 @@ public final class SpartanEquipmentCompat {
 
     private record Profile(
             float weaponChance,
-            float rangedChance,
             float shieldChance,
             float towerShieldChance,
             List<String> materials,

@@ -1,93 +1,258 @@
 {
   "schema_version": 1,
-  "_说明": "修改后完整重启生效。roamer/tier1/tier2/tier3 对应流浪者/一阶/二阶/三阶。血量单位为生命值，2 点=1颗心；移动速度统一采用玩家式步行/疾跑及原版加速效果，下面三个旧速度字段仅为兼容旧配置保留，不再决定实际速度。tiers.<等级>.gun_spread_degrees 是该阶步枪的散布基准（度）；同阶狙击枪减0.5度，机枪加0.5度，手枪/冲锋枪加1度，霰弹枪加1.5度。projectile_spread_degrees 是弓和三叉戟的散布基准（度），弩比它低0.5度；部分阶级的弩可能比步枪更准。枪械白名单等设置在末尾 tacz。",
+  "_说明_中文": "Hostile Humans Unified 配置。修改后完整重启游戏生效。每阶属性集中在 tiers；武器散布按阶级和武器类型分别设置，角度单位为度。旧版 tiers 中的平铺字段仍可读取；旧的 gun_spread_degrees / projectile_spread_degrees 会按旧规则作为散布回退值。速度使用新的基础速度计算项，旧 normal/combat/retreat 速度字段不再生效。",
+  "_description_en": "Hostile Humans Unified configuration. Fully restart the game after editing. Tier settings are grouped under tiers; spread is independently configurable for each weapon type and tier, in degrees. Legacy flat tier fields remain readable; legacy gun_spread_degrees / projectile_spread_degrees values are used as fallbacks with their former offsets. Movement now uses the new base-speed formula; legacy normal/combat/retreat speed fields are ignored.",
   "tiers": {
+    "_说明_中文": "各阶人类的属性、新式移动速度、伤害倍率、武器散布、近战冷却和自然生成倍率。roamer/tier1/tier2/tier3 分别对应流浪者/一阶/二阶/三阶。",
+    "_description_en": "Per-tier attributes, new movement-speed settings, damage multipliers, weapon spread, melee cooldown and natural-spawn multiplier. roamer/tier1/tier2/tier3 correspond to Roamer/Tier 1/Tier 2/Tier 3.",
     "roamer": {
-      "health_min": 50,
-      "health_max": 70,
-      "normal_movement_speed": 0.1,
-      "combat_movement_speed": 0.1,
-      "retreat_movement_speed": 0.1,
-      "attack_damage": 1,
-      "armor": 0,
-      "armor_toughness": 0,
-      "knockback_resistance": 0,
-      "follow_range": 40,
-      "melee_damage_multiplier": 1,
-      "bow_damage_multiplier": 1,
-      "trident_damage_multiplier": 1,
-      "incoming_damage_multiplier": 1,
-      "spawn_multiplier": 1,
-      "gun_spread_degrees": 2.5,
-      "projectile_spread_degrees": 2.4,
-      "melee_cooldown_min": 20,
-      "melee_cooldown_max": 32
+      "_说明_中文": "流浪者参数。",
+      "_description_en": "Roamer settings.",
+      "attributes": {
+        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；护甲、韧性、击退抗性、跟随范围和基础攻击属性。",
+        "_description_en": "Health bounds use health points (2 points = 1 heart); also sets armor, toughness, knockback resistance, follow range and base attack damage.",
+        "health_min": 50,
+        "health_max": 70,
+        "attack_damage": 1,
+        "armor": 0,
+        "armor_toughness": 0,
+        "knockback_resistance": 0,
+        "follow_range": 40
+      },
+      "movement": {
+        "_说明_中文": "新速度公式的基础移动速度（默认 0.095，可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
+        "_description_en": "Base movement attribute for the new speed formula (default 0.095; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
+        "base_speed": 0.095
+      },
+      "damage_multipliers": {
+        "_说明_中文": "本阶人类近战、弓箭、三叉戟伤害倍率及受到伤害倍率。",
+        "_description_en": "This tier's melee, bow and trident damage multipliers, plus its incoming-damage multiplier.",
+        "melee_damage_multiplier": 1,
+        "bow_damage_multiplier": 1,
+        "trident_damage_multiplier": 1,
+        "incoming_damage_multiplier": 1
+      },
+      "weapon_spread_degrees": {
+        "_说明_中文": "该阶每一种枪械和弹射武器的独立瞄准散布角度；数值越小越精准。",
+        "_description_en": "Independent aiming spread angles for every firearm and projectile weapon used by this tier; lower values are more accurate.",
+        "firearms": {
+          "_说明_中文": "枪械分类散布。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他/无法识别类型。",
+          "_description_en": "Firearm spread by category: sniper, rifle, mg (machine gun), pistol, smg, shotgun, and other (unrecognized types).",
+          "sniper": 2.0,
+          "rifle": 2.5,
+          "mg": 3.0,
+          "pistol": 3.5,
+          "smg": 3.5,
+          "shotgun": 4.0,
+          "other": 3.0
+        },
+        "projectiles": {
+          "_说明_中文": "弹射武器散布。bow=弓，crossbow=弩，trident=三叉戟；三类可分别设置。",
+          "_description_en": "Projectile spread: bow, crossbow and trident are configured independently.",
+          "bow": 2.4,
+          "crossbow": 1.9,
+          "trident": 2.4
+        }
+      },
+      "combat": {
+        "_说明_中文": "近战攻击冷却随机范围，单位为游戏 tick（20 tick=1 秒）。",
+        "_description_en": "Random melee attack cooldown range in game ticks (20 ticks = 1 second).",
+        "melee_cooldown_min": 20,
+        "melee_cooldown_max": 32
+      },
+      "spawning": {
+        "_说明_中文": "该阶相对于默认值的自然生成倍率；0 表示不自然生成。",
+        "_description_en": "Natural-spawn multiplier for this tier; 0 disables its natural spawning.",
+        "spawn_multiplier": 1
+      }
     },
     "tier1": {
-      "health_min": 60,
-      "health_max": 80,
-      "normal_movement_speed": 0.1,
-      "combat_movement_speed": 0.1,
-      "retreat_movement_speed": 0.1,
-      "attack_damage": 1,
-      "armor": 0,
-      "armor_toughness": 0,
-      "knockback_resistance": 0,
-      "follow_range": 40,
-      "melee_damage_multiplier": 1,
-      "bow_damage_multiplier": 1,
-      "trident_damage_multiplier": 1,
-      "incoming_damage_multiplier": 1,
-      "spawn_multiplier": 1,
-      "gun_spread_degrees": 2,
-      "projectile_spread_degrees": 2.1,
-      "melee_cooldown_min": 16,
-      "melee_cooldown_max": 28
+      "_说明_中文": "一阶人类参数。",
+      "_description_en": "Tier 1 settings.",
+      "attributes": {
+        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；护甲、韧性、击退抗性、跟随范围和基础攻击属性。",
+        "_description_en": "Health bounds use health points (2 points = 1 heart); also sets armor, toughness, knockback resistance, follow range and base attack damage.",
+        "health_min": 60,
+        "health_max": 80,
+        "attack_damage": 1,
+        "armor": 0,
+        "armor_toughness": 0,
+        "knockback_resistance": 0,
+        "follow_range": 40
+      },
+      "movement": {
+        "_说明_中文": "新速度公式的基础移动速度（默认 0.095，可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
+        "_description_en": "Base movement attribute for the new speed formula (default 0.095; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
+        "base_speed": 0.095
+      },
+      "damage_multipliers": {
+        "_说明_中文": "本阶人类近战、弓箭、三叉戟伤害倍率及受到伤害倍率。",
+        "_description_en": "This tier's melee, bow and trident damage multipliers, plus its incoming-damage multiplier.",
+        "melee_damage_multiplier": 1,
+        "bow_damage_multiplier": 1,
+        "trident_damage_multiplier": 1,
+        "incoming_damage_multiplier": 1
+      },
+      "weapon_spread_degrees": {
+        "_说明_中文": "该阶每一种枪械和弹射武器的独立瞄准散布角度；数值越小越精准。",
+        "_description_en": "Independent aiming spread angles for every firearm and projectile weapon used by this tier; lower values are more accurate.",
+        "firearms": {
+          "_说明_中文": "枪械分类散布。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他/无法识别类型。",
+          "_description_en": "Firearm spread by category: sniper, rifle, mg (machine gun), pistol, smg, shotgun, and other (unrecognized types).",
+          "sniper": 1.5,
+          "rifle": 2.0,
+          "mg": 2.5,
+          "pistol": 3.0,
+          "smg": 3.0,
+          "shotgun": 3.5,
+          "other": 2.5
+        },
+        "projectiles": {
+          "_说明_中文": "弹射武器散布。bow=弓，crossbow=弩，trident=三叉戟；三类可分别设置。",
+          "_description_en": "Projectile spread: bow, crossbow and trident are configured independently.",
+          "bow": 2.1,
+          "crossbow": 1.6,
+          "trident": 2.1
+        }
+      },
+      "combat": {
+        "_说明_中文": "近战攻击冷却随机范围，单位为游戏 tick（20 tick=1 秒）。",
+        "_description_en": "Random melee attack cooldown range in game ticks (20 ticks = 1 second).",
+        "melee_cooldown_min": 16,
+        "melee_cooldown_max": 28
+      },
+      "spawning": {
+        "_说明_中文": "该阶相对于默认值的自然生成倍率；0 表示不自然生成。",
+        "_description_en": "Natural-spawn multiplier for this tier; 0 disables its natural spawning.",
+        "spawn_multiplier": 1
+      }
     },
     "tier2": {
-      "health_min": 70,
-      "health_max": 90,
-      "normal_movement_speed": 0.1,
-      "combat_movement_speed": 0.1,
-      "retreat_movement_speed": 0.1,
-      "attack_damage": 1,
-      "armor": 0,
-      "armor_toughness": 0,
-      "knockback_resistance": 0,
-      "follow_range": 40,
-      "melee_damage_multiplier": 1,
-      "bow_damage_multiplier": 1,
-      "trident_damage_multiplier": 1,
-      "incoming_damage_multiplier": 1,
-      "spawn_multiplier": 0.2,
-      "gun_spread_degrees": 1.5,
-      "projectile_spread_degrees": 1.8,
-      "melee_cooldown_min": 12,
-      "melee_cooldown_max": 24
+      "_说明_中文": "二阶人类参数。",
+      "_description_en": "Tier 2 settings.",
+      "attributes": {
+        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；护甲、韧性、击退抗性、跟随范围和基础攻击属性。",
+        "_description_en": "Health bounds use health points (2 points = 1 heart); also sets armor, toughness, knockback resistance, follow range and base attack damage.",
+        "health_min": 70,
+        "health_max": 90,
+        "attack_damage": 1,
+        "armor": 0,
+        "armor_toughness": 0,
+        "knockback_resistance": 0,
+        "follow_range": 40
+      },
+      "movement": {
+        "_说明_中文": "新速度公式的基础移动速度（默认 0.095，可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
+        "_description_en": "Base movement attribute for the new speed formula (default 0.095; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
+        "base_speed": 0.095
+      },
+      "damage_multipliers": {
+        "_说明_中文": "本阶人类近战、弓箭、三叉戟伤害倍率及受到伤害倍率。",
+        "_description_en": "This tier's melee, bow and trident damage multipliers, plus its incoming-damage multiplier.",
+        "melee_damage_multiplier": 1,
+        "bow_damage_multiplier": 1,
+        "trident_damage_multiplier": 1,
+        "incoming_damage_multiplier": 1
+      },
+      "weapon_spread_degrees": {
+        "_说明_中文": "该阶每一种枪械和弹射武器的独立瞄准散布角度；数值越小越精准。",
+        "_description_en": "Independent aiming spread angles for every firearm and projectile weapon used by this tier; lower values are more accurate.",
+        "firearms": {
+          "_说明_中文": "枪械分类散布。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他/无法识别类型。",
+          "_description_en": "Firearm spread by category: sniper, rifle, mg (machine gun), pistol, smg, shotgun, and other (unrecognized types).",
+          "sniper": 1.0,
+          "rifle": 1.5,
+          "mg": 2.0,
+          "pistol": 2.5,
+          "smg": 2.5,
+          "shotgun": 3.0,
+          "other": 2.0
+        },
+        "projectiles": {
+          "_说明_中文": "弹射武器散布。bow=弓，crossbow=弩，trident=三叉戟；三类可分别设置。",
+          "_description_en": "Projectile spread: bow, crossbow and trident are configured independently.",
+          "bow": 1.8,
+          "crossbow": 1.3,
+          "trident": 1.8
+        }
+      },
+      "combat": {
+        "_说明_中文": "近战攻击冷却随机范围，单位为游戏 tick（20 tick=1 秒）。",
+        "_description_en": "Random melee attack cooldown range in game ticks (20 ticks = 1 second).",
+        "melee_cooldown_min": 12,
+        "melee_cooldown_max": 24
+      },
+      "spawning": {
+        "_说明_中文": "该阶相对于默认值的自然生成倍率；0 表示不自然生成。",
+        "_description_en": "Natural-spawn multiplier for this tier; 0 disables its natural spawning.",
+        "spawn_multiplier": 0.2
+      }
     },
     "tier3": {
-      "health_min": 80,
-      "health_max": 100,
-      "normal_movement_speed": 0.1,
-      "combat_movement_speed": 0.1,
-      "retreat_movement_speed": 0.1,
-      "attack_damage": 1,
-      "armor": 0,
-      "armor_toughness": 0,
-      "knockback_resistance": 0.15,
-      "follow_range": 48,
-      "melee_damage_multiplier": 1,
-      "bow_damage_multiplier": 1,
-      "trident_damage_multiplier": 1,
-      "incoming_damage_multiplier": 1,
-      "spawn_multiplier": 0.04,
-      "gun_spread_degrees": 1,
-      "projectile_spread_degrees": 1.5,
-      "melee_cooldown_min": 10,
-      "melee_cooldown_max": 20
+      "_说明_中文": "三阶人类参数。",
+      "_description_en": "Tier 3 settings.",
+      "attributes": {
+        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；护甲、韧性、击退抗性、跟随范围和基础攻击属性。",
+        "_description_en": "Health bounds use health points (2 points = 1 heart); also sets armor, toughness, knockback resistance, follow range and base attack damage.",
+        "health_min": 80,
+        "health_max": 100,
+        "attack_damage": 1,
+        "armor": 0,
+        "armor_toughness": 0,
+        "knockback_resistance": 0.15,
+        "follow_range": 48
+      },
+      "movement": {
+        "_说明_中文": "新速度公式的基础移动速度（默认 0.095，可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
+        "_description_en": "Base movement attribute for the new speed formula (default 0.095; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
+        "base_speed": 0.095
+      },
+      "damage_multipliers": {
+        "_说明_中文": "本阶人类近战、弓箭、三叉戟伤害倍率及受到伤害倍率。",
+        "_description_en": "This tier's melee, bow and trident damage multipliers, plus its incoming-damage multiplier.",
+        "melee_damage_multiplier": 1,
+        "bow_damage_multiplier": 1,
+        "trident_damage_multiplier": 1,
+        "incoming_damage_multiplier": 1
+      },
+      "weapon_spread_degrees": {
+        "_说明_中文": "该阶每一种枪械和弹射武器的独立瞄准散布角度；数值越小越精准。",
+        "_description_en": "Independent aiming spread angles for every firearm and projectile weapon used by this tier; lower values are more accurate.",
+        "firearms": {
+          "_说明_中文": "枪械分类散布。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他/无法识别类型。",
+          "_description_en": "Firearm spread by category: sniper, rifle, mg (machine gun), pistol, smg, shotgun, and other (unrecognized types).",
+          "sniper": 0.5,
+          "rifle": 1.0,
+          "mg": 1.5,
+          "pistol": 2.0,
+          "smg": 2.0,
+          "shotgun": 2.5,
+          "other": 1.5
+        },
+        "projectiles": {
+          "_说明_中文": "弹射武器散布。bow=弓，crossbow=弩，trident=三叉戟；三类可分别设置。",
+          "_description_en": "Projectile spread: bow, crossbow and trident are configured independently.",
+          "bow": 1.5,
+          "crossbow": 1.0,
+          "trident": 1.5
+        }
+      },
+      "combat": {
+        "_说明_中文": "近战攻击冷却随机范围，单位为游戏 tick（20 tick=1 秒）。",
+        "_description_en": "Random melee attack cooldown range in game ticks (20 ticks = 1 second).",
+        "melee_cooldown_min": 10,
+        "melee_cooldown_max": 20
+      },
+      "spawning": {
+        "_说明_中文": "该阶相对于默认值的自然生成倍率；0 表示不自然生成。",
+        "_description_en": "Natural-spawn multiplier for this tier; 0 disables its natural spawning.",
+        "spawn_multiplier": 0.04
+      }
     }
   },
   "damage": {
+    "_说明_中文": "全局伤害倍率，用于调整各类人类攻击、弹道速度伤害、跳跃攻击，以及人类近战对已驯服女仆造成的伤害。tamed_maid_melee_damage_multiplier 只削减人类对女仆的近战伤害，不控制女仆对人类的伤害。",
+    "_description_en": "Global damage multipliers for human attacks, projectile-speed scaling, jump attacks, and human melee damage dealt to tamed maids. tamed_maid_melee_damage_multiplier reduces human melee damage to maids; it does not control maid damage to humans.",
     "human_melee_damage_multiplier": 1.7,
     "human_bow_damage_multiplier": 1.008,
     "human_trident_damage_multiplier": 0.84,
@@ -98,6 +263,8 @@
     "tamed_maid_melee_damage_multiplier": 0.25
   },
   "spawning": {
+    "_说明_中文": "自然遭遇生成总开关、遭遇出现概率、流浪者旧式随机判定、遭遇冷却、搜索半径和附近人类密度限制。概率范围为 0 到 1。",
+    "_description_en": "Controls natural encounters: master toggle, admission chances, legacy roamer roll, encounter cooldown, search radii and local human-density scaling. Chances range from 0 to 1.",
     "enabled": true,
     "admission_chance": 0.08,
     "battle_admission_chance": 0.08,
@@ -108,6 +275,10 @@
     "density_divisor": 4
   },
   "ai": {
+    "_说明_中文": "战斗 AI、逃跑与恢复、举盾、战术走位、队友间距、跳跃、物品恢复和动作速度修正。时长和间隔单位为 tick（20 tick=1 秒）；概率为 0 到 1，动作倍率为 0.1 到 1。",
+    "_description_en": "Combat AI, retreat and recovery, shield timing, tactical movement, ally spacing, jumping, item recovery and action speed modifiers. Durations and intervals are in ticks (20 ticks = 1 second); chances range from 0 to 1 and action multipliers from 0.1 to 1.",
+    "_说明_动作速度倍率_中文": "food_use_speed_multiplier 和 shield_use_speed_multiplier 分别设置进食、举盾时的移速修正（允许 0.1–1）。默认值 0.7 表示进食时附加 -30% 的速度属性修正；举盾默认 0.2，即附加 -80%。喝药不额外施加移速惩罚。",
+    "_description_action_speed_multipliers_en": "food_use_speed_multiplier and shield_use_speed_multiplier set the movement modifier while eating and blocking (range 0.1–1). The default 0.7 adds a -30% movement attribute modifier while eating; the default 0.2 adds -80% while blocking. Drinking adds no extra movement penalty.",
     "enabled": true,
     "retreat_health_ratio": 0.3,
     "critical_health_ratio": 0.12,
@@ -119,10 +290,12 @@
     "gradual_heal_interval_ticks": 10,
     "food_recovery_min_health": 2,
     "food_recovery_max_health": 12,
+    "food_use_speed_multiplier": 0.7,
     "shield_block_duration_min_ticks": 6,
     "shield_block_duration_max_ticks": 160,
     "shield_block_cooldown_ticks": 5,
     "shield_block_chance_after_hit": 0.65,
+    "shield_use_speed_multiplier": 0.2,
     "tactical_reposition_interval": 26,
     "ally_spacing_radius": 3.5,
     "combat_jump_interval_min": 12,
@@ -131,8 +304,11 @@
     "item_recovery_enabled": true
   },
   "recruitment": {
-    "_说明": "四项分别限制每位玩家可正式雇佣的各阶人类数量。开启 PvP 伤害后，雇佣人类可在战斗模式授权的战斗中伤害其他玩家及其雇佣人类；自己的主人和同一主人的单位始终受保护。",
+    "_说明_中文": "雇佣管理。max_hired_by_tier 分别限制每位玩家正式雇佣的各阶数量。allow_hired_pvp_damage 开启后，雇佣人类可伤害其他玩家及其雇佣人类；主人及同一主人的单位仍受保护。",
+    "_description_en": "Recruitment settings. max_hired_by_tier sets each player's permanent hire limit per tier. When allow_hired_pvp_damage is enabled, hired humans can damage other players and their recruits; their owner and same-owner units remain protected.",
     "max_hired_by_tier": {
+      "_说明_中文": "每位玩家各阶正式雇佣人数上限。",
+      "_description_en": "Maximum permanent hires per player for each tier.",
       "roamer": 12,
       "tier1": 10,
       "tier2": 6,
@@ -141,6 +317,10 @@
     "allow_hired_pvp_damage": false
   },
   "tacz": {
+    "_说明_中文": "TaCZ 枪械兼容与枪手设置。枪械出现概率/掉落概率及伤害倍率均为倍率或概率值；枪械分类权重决定抽取构成；白名单控制可生成/可装备枪械，黑名单优先排除。",
+    "_description_en": "TaCZ firearm integration and gunner settings. Spawn/drop chances and damage values are probabilities or multipliers; type weights control weapon distribution; whitelists control eligible guns and the blacklist excludes guns first.",
+    "_说明_枪械生成_中文": "各阶枪械出现概率、强制远程人类枪械概率、枪械掉落概率、自动收录新枪及自动收录权重/排除规则。",
+    "_description_gun_generation_en": "Per-tier firearm chances, forced-ranged gun chance, gun drop chance, automatic inclusion of new guns, and its weights/exclusions.",
     "enabled": true,
     "tier1_gun_chance": 0.1,
     "tier2_gun_chance": 0.4,
@@ -148,15 +328,19 @@
     "roamer_gun_chance": 0.08,
     "forced_ranged_gun_chance": 0.33,
     "gun_drop_chance": 0.01,
+    "excluded_gun_namespaces": [],
+    "_说明_枪械伤害_中文": "TaCZ 人类枪械基础伤害、掠夺者枪械伤害，以及按阶伤害倍率。",
+    "_description_gun_damage_en": "Base firearm damage for humans and pillagers, plus per-tier firearm damage multipliers.",
     "human_gun_damage_multiplier": 0.5,
     "pillager_gun_damage_multiplier": 0.4,
-    "gunner_spread_degrees": 0.6,
-    "auto_add_new_guns": true,
-    "auto_added_gun_weight": 5,
-    "excluded_auto_gun_types": [
-      "rpg"
-    ],
-    "excluded_gun_namespaces": [],
+    "tier_damage_multipliers": {
+      "roamer": 1,
+      "tier1": 1,
+      "tier2": 1,
+      "tier3": 1
+    },
+    "_说明_枪械分布_中文": "各阶随机枪械类型的相对权重；权重不是概率，某阶所有类型权重会共同决定抽取比例。",
+    "_description_gun_type_weights_en": "Relative weights for randomly selected firearm types per tier; these are not probabilities and jointly determine the distribution.",
     "tier_gun_type_weights": {
       "roamer": {
         "pistol": 60,
@@ -186,16 +370,22 @@
         "shotgun": 25
       }
     },
+    "_说明_枪械名单_中文": "两个白名单均为 JSON 对象，键是枪械注册ID（命名空间:路径，不是背包物品ID）。本说明字段内附有可复制的 JSON 格式示例；示例中的枪械ID需替换为枪包实际注册ID。JSON 键需用双引号括起，键和值之间用冒号，不同条目用英文逗号分隔，最后一项后不要加逗号。gun_whitelist 用于野生枪手：正整数是同类枪械内的相对抽取权重，权重总和无需等于100，系统会按比例抽取；0 明确排除该枪。auto_add_new_guns 紧邻此项：开启时，未列出的可用枪械会按 auto_added_gun_weight 加入野生抽选池；若严格只要名单中的枪械，请关闭它。hired_gun_additional_whitelist 仅允许额外枪械被放入已雇佣人类背包，任意正整数即允许，数值大小不影响允许结果。基础 gun_whitelist 为空时，雇佣单位可接受所有可识别枪械；非空时接受基础名单或追加名单里的正权重枪械。gun_blacklist 是独立字符串数组，列出的枪械ID会被排除。格式示例：{\"gun_whitelist\":{\"tacz:example_rifle_a\":5,\"some_gunpack:example_rifle_b\":2},\"auto_add_new_guns\":false,\"hired_gun_additional_whitelist\":{\"some_gunpack:example_sniper\":1}}。从本说明复制示例到实际配置时，请删除每个双引号前的反斜杠转义符，只保留普通双引号；反斜杠仅用于本说明字符串的外层 JSON 转义。",
+    "_description_gun_lists_en": "Both whitelists are JSON objects keyed by registered gun IDs (namespace:path, not the inventory item ID). A copyable JSON syntax example is included in this description; replace its sample gun IDs with IDs actually registered by your gun packs. JSON keys must be double-quoted, a colon separates each key from its value, entries are separated by English commas, and there must be no trailing comma. gun_whitelist is used for wild gunner selection: positive integers are relative weights among guns of the same category. Their sum does not need to equal 100; selection is proportional to the weights. A value of 0 explicitly excludes that gun. auto_add_new_guns is placed beside this list: when enabled, unlisted eligible guns enter the wild selection pool with auto_added_gun_weight. Disable it to restrict wild spawns to listed guns. hired_gun_additional_whitelist only allows extra guns to be inserted into hired humans' inventories; any positive integer allows the gun, and its size does not affect permission. If the base gun_whitelist is empty, hired units can accept any recognized gun; otherwise they accept positive entries from either list. gun_blacklist is a separate string array of excluded gun IDs. Example: {\"gun_whitelist\":{\"tacz:example_rifle_a\":5,\"some_gunpack:example_rifle_b\":2},\"auto_add_new_guns\":false,\"hired_gun_additional_whitelist\":{\"some_gunpack:example_sniper\":1}}. When copying the example from this description into the actual config, remove the backslash escape before each quote and keep ordinary double quotes; those escapes are required only because the example is embedded in this JSON description string.",
     "gun_whitelist": {},
+    "auto_add_new_guns": true,
+    "auto_added_gun_weight": 5,
+    "excluded_auto_gun_types": [
+      "rpg"
+    ],
     "hired_gun_additional_whitelist": {},
     "gun_blacklist": [],
-    "tier_damage_multipliers": {
-      "roamer": 1,
-      "tier1": 1,
-      "tier2": 1,
-      "tier3": 1
-    },
+    "_说明_枪械承伤与盾牌_中文": "shield_damage_multiplier 控制人类举盾格挡 TaCZ 子弹后剩余的生命伤害比例（0.3 表示承受原伤害的 30%，即减伤 70%）；tamed_maid_damage_multiplier 控制已驯服女仆受到的 TaCZ 子弹伤害比例（默认 0.15）。女仆伤害倍率不区分攻击者，所以人类枪械攻击女仆时也会应用；此时还会先应用人类枪械基础倍率和阶级倍率。人类对女仆的近战伤害另由 damage.tamed_maid_melee_damage_multiplier 控制。",
+    "_description_gun_damage_taken_en": "shield_damage_multiplier controls the health damage a Human takes after blocking a TaCZ bullet (0.3 means 30% damage remains, i.e. 70% reduction). tamed_maid_damage_multiplier controls TaCZ bullet damage received by tamed maids (default 0.15). It does not filter by attacker, so it also applies when a Human shoots a maid; Human gun base and tier multipliers are applied beforehand. Human melee damage to maids is controlled separately by damage.tamed_maid_melee_damage_multiplier.",
     "shield_damage_multiplier": 0.3,
-    "tamed_maid_damage_multiplier": 0.15
+    "tamed_maid_damage_multiplier": 0.15,
+    "_说明_兼容字段_中文": "仅供非 Hostile Humans 实体使用的枪手散布回退值；Hostile Humans 人类枪手使用 tiers 中逐阶、逐枪械类型的 weapon_spread_degrees。",
+    "_description_compat_fields_en": "Fallback gunner spread for non-Hostile-Humans entities only. Hostile Humans gunners use per-tier, per-firearm weapon_spread_degrees under tiers.",
+    "gunner_spread_degrees": 0.6
   }
 }

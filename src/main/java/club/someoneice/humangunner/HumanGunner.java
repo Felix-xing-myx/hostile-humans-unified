@@ -77,10 +77,8 @@ public final class HumanGunner {
     private static final Set<Human> SOLDIER_ORDERS_CONFIGURED = Collections.newSetFromMap(new WeakHashMap<>());
     private static final Set<Human> INITIALIZED_HUMANS = Collections.newSetFromMap(new WeakHashMap<>());
     private static final double ARROW_AIR_DRAG = 0.99D;
-    // Vanilla applies 0.05 gravity. Solve against the configured stronger 0.07
-    // compensation so long-range shots retain substantial vertical clearance
-    // after rounding, target movement and modded projectile variance.
-    private static final double ARROW_AIM_GRAVITY = 0.07D;
+    // Vanilla arrows and Spartan Weaponry bolts use 0.05 gravity.
+    private static final double ARROW_AIM_GRAVITY = 0.05D;
     private static final double BALLISTIC_SEARCH_STEP = 0.25D;
     private static final double BALLISTIC_MAX_TICKS = 60.0D;
     public static final String ADAPTIVE_BALLISTICS_APPLIED =
@@ -330,11 +328,14 @@ public final class HumanGunner {
             return false;
         }
         RandomizedHumanHealth.applyOnce(human);
-        TierThreeLoadout.configureOnce(human);
+        boolean newTierThreeLoadout = TierThreeLoadout.configureOnce(human);
         TierAttributes.apply(human);
         MovementSpeedController.normal(human);
         InventoryTotemProtection.stowOffhandTotem(human);
         SpartanEquipmentCompat.applyOnce(human);
+        if (newTierThreeLoadout) {
+            TierThreeLoadout.ensureRangedWeapon(human);
+        }
         GuaranteedShieldLoadout.applyOnce(human);
         ShieldEnchantmentRoll.applyOnce(human);
         configureTierRivalry(human);
@@ -644,7 +645,7 @@ public final class HumanGunner {
                 || shooter.getMainHandItem().getItem() instanceof CrossbowItem
                 || (!(shooter.getMainHandItem().getItem() instanceof BowItem)
                 && shooter.getOffhandItem().getItem() instanceof CrossbowItem));
-        double spreadDegrees = RangedAccuracy.projectileSpreadDegrees(shooter, crossbow);
+        double spreadDegrees = RangedAccuracy.projectileSpreadDegrees(shooter, crossbow, trident);
         Vec3 origin = projectile.position();
         // Aim high through the upper torso. The stronger gravity bias adds the
         // requested long-range clearance on top of this 85%-height target point.
@@ -899,6 +900,8 @@ public final class HumanGunner {
         // Item search must briefly outrank the hired-order idle movement lock;
         // its own predicate keeps it disabled unless the owner opted in.
         human.addCombatGoal(-7, new ValuableItemPickupGoal(human));
+        // Emergency lava escape must override combat and all hired movement orders.
+        human.addCombatGoal(-12, new LavaEscapeGoal(human));
         human.addCombatGoal(1, new IdleLeaveWaterGoal(human));
     }
 

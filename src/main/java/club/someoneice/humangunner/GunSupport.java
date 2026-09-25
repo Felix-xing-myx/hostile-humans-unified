@@ -28,6 +28,7 @@ public interface GunSupport {
     default Goal goal(Human human) { return new Goal() { public boolean canUse() { return false; } }; }
     default Control control(Human human) { return Control.NONE; }
     default void tickIdleReload(Human human) {}
+    default boolean isReloading(Human human) { return false; }
     default void registerEvents() {}
 
     interface Control {

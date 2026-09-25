@@ -6,6 +6,8 @@ import com.craftix.hostile_humans.compat.TravelersBackpack;
 import com.craftix.hostile_humans.entity.entities.Human;
 import com.craftix.hostile_humans.entity.entities.HumanTier;
 import com.craftix.hostile_humans.entity.loadout.HumanLoadoutManager;
+import club.someoneice.humangunner.RangedSpawnChance;
+import club.someoneice.humangunner.TierThreeHuman;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -23,7 +25,7 @@ public class HumanInventoryGenerator {
         HumanLoadoutManager.ArmorSetEntry armorSet;
         ItemStack backupWeapon;
         ItemStack offhand;
-        RandomSource random;
+        RandomSource random = human.getRandom();
         if (human.getData() == null) {
             if (!human.level().isClientSide) {
                 human.getPersistentData().putBoolean("hostile_humans:pending_loadout", true);
@@ -36,8 +38,15 @@ public class HumanInventoryGenerator {
             HumanInventoryGenerator.applyFallbackInventory(human, forceRanged);
             return;
         }
-        HumanLoadoutManager.ItemPool mainhandPool = forceRanged && !loadout.rangedMainhand.isEmpty() ? loadout.rangedMainhand : loadout.mainhand;
-        ItemStack mainhand = HumanInventoryGenerator.createStack((HumanLoadoutManager.ItemEntry)mainhandPool.roll(random = human.getRandom()), human, loadout.rules.damagePercentMin, loadout.rules.damagePercentMax);
+        // Spartan Weaponry supplies its own ranged roll later. Without it,
+        // choose vanilla bows/crossbows explicitly instead of relying on the
+        // melee pool's weights. Tier-three equipment is finalized separately.
+        boolean useRanged = forceRanged || (!ModList.get().isLoaded("spartanweaponry")
+                && !TierThreeHuman.isTierThree(human)
+                && random.nextFloat() < RangedSpawnChance.forHuman(human));
+        HumanLoadoutManager.ItemPool mainhandPool = useRanged && !loadout.rangedMainhand.isEmpty()
+                ? loadout.rangedMainhand : loadout.mainhand;
+        ItemStack mainhand = HumanInventoryGenerator.createStack((HumanLoadoutManager.ItemEntry)mainhandPool.roll(random), human, loadout.rules.damagePercentMin, loadout.rules.damagePercentMax);
         if (mainhand.isEmpty()) {
             HumanInventoryGenerator.applyFallbackInventory(human, forceRanged);
             return;
@@ -58,7 +67,9 @@ public class HumanInventoryGenerator {
             if (equipmentSlot.getType() != EquipmentSlot.Type.ARMOR) continue;
             human.applySpawnedArmorEnchantments(random, loadout.rules.enchantChance, equipmentSlot);
         }
-        if (random.nextFloat() < loadout.bonusMainhand.chance && !(bonusMainhand = HumanInventoryGenerator.createStack((HumanLoadoutManager.ItemEntry)loadout.bonusMainhand.roll(random), human, loadout.rules.damagePercentMin, loadout.rules.damagePercentMax)).isEmpty()) {
+        if (!HumanUtil.isRangedWeapon(human.getMainHandItem())
+                && random.nextFloat() < loadout.bonusMainhand.chance
+                && !(bonusMainhand = HumanInventoryGenerator.createStack((HumanLoadoutManager.ItemEntry)loadout.bonusMainhand.roll(random), human, loadout.rules.damagePercentMin, loadout.rules.damagePercentMax)).isEmpty()) {
             human.setItemSlot(EquipmentSlot.MAINHAND, bonusMainhand);
         }
         if (ModList.get().isLoaded("travelersbackpack") && ModList.get().isLoaded("curios")) {

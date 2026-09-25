@@ -10,6 +10,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
+import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ProjectileWeaponItem;
@@ -22,7 +23,9 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayDeque;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -50,6 +53,9 @@ public final class AdaptiveCombatGoal extends Goal {
     private record IncomingHit(LivingEntity attacker, int hitAtTick) {
     }
 
+    private record IncomingArrow(AbstractArrow projectile, LivingEntity shooter, double ticksToImpact) {
+    }
+
     private static final int THREAT_MEMORY_TICKS = 20 * 30;
     private static final int MAX_REMEMBERED_THREATS = 4;
     private static final double MAX_REMEMBERED_THREAT_DISTANCE_SQR = 64.0D * 64.0D;
@@ -74,6 +80,9 @@ public final class AdaptiveCombatGoal extends Goal {
     private int defensePressureTick;
     private int defenseObservedHurtTimestamp = Integer.MIN_VALUE;
     private int defenseObservedGunfireUntil;
+    private int projectileDefenseUntil;
+    private int nextProjectileGuardTick;
+    private boolean defendingProjectile;
     private int lastShieldTriggerHurtTimestamp = Integer.MIN_VALUE;
     private int lastShieldTriggerGunfireUntil;
     private int nextMeleePredictionTick;
@@ -87,6 +96,7 @@ public final class AdaptiveCombatGoal extends Goal {
     private int retreatStagnantTicks;
     private int retreatJumpTick;
     private int nextRetreatMeleeTick;
+    private int nextRetreatTridentTick;
     private int stationaryChecks;
     private int lastProcessedHurtTimestamp = Integer.MIN_VALUE;
     private int lastThreatTick = Integer.MIN_VALUE / 2;
@@ -96,6 +106,8 @@ public final class AdaptiveCombatGoal extends Goal {
     private Vec3 lastRetreatPosition;
     private final ArrayDeque<RememberedThreat> threatMemory = new ArrayDeque<>();
     private final ArrayDeque<IncomingHit> incomingHits = new ArrayDeque<>();
+    // The same arrow remains visible for several ticks. Never reroll a miss.
+    private final Map<UUID, Boolean> arrowDefenseDecisions = new LinkedHashMap<>();
 
     public AdaptiveCombatGoal(Human human) {
         this.human = human;
@@ -115,15 +127,19 @@ public final class AdaptiveCombatGoal extends Goal {
         if (!config.enabled() || human.level().isClientSide || !human.isAlive()) {
             return false;
         }
+        IncomingArrow incomingArrow = findIncomingArrow();
         // Hold position forbids ordinary tactical movement, but not a
-        // life-saving retreat. SoldierOrder suspends the anchor leash while
-        // isFleeing is set and returns the recruit after the retreat ends.
+        // life-saving retreat or blocking a projectile headed into its post.
         if (SoldierOrder.isHoldingPosition(human)
-                && !RetreatRecoveryPolicy.shouldForceRetreat(healthRatio())) {
+                && !RetreatRecoveryPolicy.shouldForceRetreat(healthRatio())
+                && incomingArrow == null) {
             return false;
         }
 
         LivingEntity currentThreat = resolveThreat();
+        if (currentThreat == null && incomingArrow != null && isValidThreat(incomingArrow.shooter())) {
+            currentThreat = incomingArrow.shooter();
+        }
         if (currentThreat == null) {
             resetCombatSession();
             return false;
@@ -149,7 +165,15 @@ public final class AdaptiveCombatGoal extends Goal {
             return true;
         }
 
-        if (canBlockWithShield() && human.tickCount >= nextDefenseTick) {
+        if ((canBlockWithShield() && human.tickCount >= nextDefenseTick)
+                || incomingArrow != null) {
+            if (incomingArrow != null) {
+                projectileDefenseUntil = human.tickCount
+                        + ProjectileShieldPolicy.guardWindowTicks(
+                        isDedicatedRangedCombatant(), incomingArrow.ticksToImpact());
+                pendingPhase = Phase.DEFEND;
+                return true;
+            }
             int gunfireUntil = HumanGunner.recentGunfireUntil(human);
             int hurtTimestamp = human.getLastHurtByMobTimestamp();
             boolean freshGunfire = CombatPressurePolicy.isRecentGunfire(human.tickCount, gunfireUntil)
@@ -230,7 +254,9 @@ public final class AdaptiveCombatGoal extends Goal {
         if (threat == null || !threat.isAlive() || !human.isAlive()) {
             return false;
         }
-        if (human.distanceToSqr(threat) > 4096.0D || phaseTicks <= 0) {
+        if ((human.distanceToSqr(threat) > 4096.0D
+                && !(phase == Phase.DEFEND && human.tickCount < projectileDefenseUntil))
+                || phaseTicks <= 0) {
             return false;
         }
         return switch (phase) {
@@ -251,7 +277,11 @@ public final class AdaptiveCombatGoal extends Goal {
         activePath = null;
         switch (phase) {
             case DEFEND -> {
-                phaseTicks = rollShieldBlockDuration();
+                defendingProjectile = human.tickCount < projectileDefenseUntil;
+                int projectileWindow = projectileDefenseUntil - human.tickCount;
+                phaseTicks = defendingProjectile && isDedicatedRangedCombatant()
+                        ? Math.max(1, projectileWindow)
+                        : Math.max(rollShieldBlockDuration(), projectileWindow);
                 defenseStartTick = human.tickCount;
                 defensePressureTick = human.tickCount;
                 defenseObservedHurtTimestamp = human.getLastHurtByMobTimestamp();
@@ -266,6 +296,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 retreatStartedTick = human.tickCount;
                 retreatStagnantTicks = 0;
                 retreatJumpTick = human.tickCount + human.getRandom().nextInt(8, 15);
+                nextRetreatTridentTick = human.tickCount + 12;
                 lastRetreatPosition = human.position();
                 prepareCrowdRetreatGun();
                 setFleeing(true);
@@ -312,6 +343,11 @@ public final class AdaptiveCombatGoal extends Goal {
                 reblockDelay = Math.max(reblockDelay, 24);
             }
             nextDefenseTick = human.tickCount + reblockDelay;
+            if (defendingProjectile && isDedicatedRangedCombatant()) {
+                nextProjectileGuardTick = human.tickCount + (isCrossbowCombatant() ? 32 : 24);
+            }
+            defendingProjectile = false;
+            projectileDefenseUntil = 0;
         }
         cancelRecoveryUse();
         restoreRetreatGun();
@@ -381,7 +417,18 @@ public final class AdaptiveCombatGoal extends Goal {
 
     private void tickDefend() {
         MovementSpeedController.combat(human, false);
-        if (!canBlockWithShield()) {
+        if (!canBlockWithShield()
+                && !(defendingProjectile && canPreemptivelyBlockProjectile())) {
+            if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
+                human.stopUsingItem();
+            }
+            phaseTicks = 0;
+            return;
+        }
+
+        if (human.tickCount < projectileDefenseUntil
+                && (isCloseMeleeEngagement() || shouldDeferRangedProjectileGuard())) {
+            projectileDefenseUntil = 0;
             if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
                 human.stopUsingItem();
             }
@@ -390,10 +437,34 @@ public final class AdaptiveCombatGoal extends Goal {
         }
 
         updateDefensePressure();
+        IncomingArrow incomingArrow = findIncomingArrow();
+        if (incomingArrow != null) {
+            defendingProjectile = true;
+            projectileDefenseUntil = human.tickCount
+                    + ProjectileShieldPolicy.guardWindowTicks(
+                    isDedicatedRangedCombatant(), incomingArrow.ticksToImpact());
+            human.getLookControl().setLookAt(incomingArrow.projectile(), 90.0F, 90.0F);
+        }
+        boolean awaitingProjectile = human.tickCount < projectileDefenseUntil;
+        if (awaitingProjectile) {
+            phaseTicks = Math.max(phaseTicks, projectileDefenseUntil - human.tickCount);
+            defensePressureTick = human.tickCount;
+        }
         int heldTicks = human.tickCount - defenseStartTick;
         int quietTicks = human.tickCount - defensePressureTick;
         boolean canCounterFromCurrentRange = canCounterFromCurrentRange();
-        if (CombatPressurePolicy.shouldOpenCounterWindow(
+        if (defendingProjectile && isDedicatedRangedCombatant()
+                && incomingArrow == null && heldTicks >= 6) {
+            if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
+                human.stopUsingItem();
+            }
+            phaseTicks = 0;
+            return;
+        }
+        // Keep the shield through the incoming shot, but give a combatant that
+        // can actually answer at this range a firing window between volleys.
+        if ((!awaitingProjectile || (incomingArrow == null && canCounterFromCurrentRange))
+                && CombatPressurePolicy.shouldOpenCounterWindow(
                 heldTicks, quietTicks, canCounterFromCurrentRange
         )) {
             if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
@@ -408,7 +479,7 @@ public final class AdaptiveCombatGoal extends Goal {
             return;
         }
 
-        if (CombatPressurePolicy.shouldReleaseForPursuit(
+        if (!awaitingProjectile && CombatPressurePolicy.shouldReleaseForPursuit(
                 heldTicks, quietTicks, !isRangedThreat(threat),
                 human.distanceToSqr(threat), radialApproachSpeed(threat)
         )) {
@@ -420,7 +491,12 @@ public final class AdaptiveCombatGoal extends Goal {
             return;
         }
 
-        if (RangedWeaponCustody.controlsMainHand(human)) {
+        if (defendingProjectile && isDedicatedRangedCombatant()
+                && !SoldierOrder.isHoldingPosition(human)) {
+            // Keep a gunner or archer's existing withdrawal path; this brief
+            // shield use must not issue a new path toward the target.
+        } else if (awaitingProjectile || SoldierOrder.isHoldingPosition(human)
+                || RangedWeaponCustody.controlsMainHand(human)) {
             // A shield may interrupt the shot, but it must not replace the
             // archer's retreat path with a path straight toward the attacker.
             human.getNavigation().stop();
@@ -447,6 +523,134 @@ public final class AdaptiveCombatGoal extends Goal {
             lastShieldTriggerGunfireUntil = gunfireUntil;
             defensePressureTick = human.tickCount;
         }
+    }
+
+    /** Predict an arrow crossing the defender's future collision box, not merely a nearby shot. */
+    private IncomingArrow findIncomingArrow() {
+        if (!canPreemptivelyBlockProjectile() || isCloseMeleeEngagement()
+                || (isDedicatedRangedCombatant() && human.tickCount < nextProjectileGuardTick)) {
+            return null;
+        }
+        IncomingArrow closest = null;
+        double earliestImpact = Double.MAX_VALUE;
+        AABB search = human.getBoundingBox().inflate(20.0D, 8.0D, 20.0D);
+        for (AbstractArrow arrow : human.level().getEntitiesOfClass(AbstractArrow.class, search)) {
+            if (!arrow.isAlive() || arrow.getOwner() == human
+                    || (arrow.getOwner() instanceof LivingEntity shooter
+                    && HumanRelations.allied(human, shooter))) {
+                continue;
+            }
+            Vec3 velocity = arrow.getDeltaMovement();
+            double speedSqr = velocity.lengthSqr();
+            if (speedSqr < 0.04D) {
+                continue;
+            }
+            double ticksToImpact = human.getBoundingBox().getCenter()
+                    .subtract(arrow.position()).dot(velocity) / speedSqr;
+            if (ticksToImpact < 0.0D || ticksToImpact > 12.0D
+                    || ticksToImpact >= earliestImpact) {
+                continue;
+            }
+            if (isDedicatedRangedCombatant()
+                    && !ProjectileShieldPolicy.shouldGuardRangedUser(ticksToImpact)) {
+                continue;
+            }
+            if (shouldDeferRangedProjectileGuard()) {
+                continue;
+            }
+            // Approximate vanilla arrow gravity and the defender's present motion.
+            // The enlarged box tolerates trajectory variance without reacting to
+            // arrows that are merely passing through the same nearby area.
+            Vec3 impact = arrow.position().add(velocity.scale(ticksToImpact))
+                    .add(0.0D, -0.025D * ticksToImpact * ticksToImpact, 0.0D);
+            AABB futureBox = human.getBoundingBox()
+                    .move(human.getDeltaMovement().scale(ticksToImpact))
+                    .inflate(0.8D, 0.6D, 0.8D);
+            if (!futureBox.contains(impact)
+                    || human.level().clip(new ClipContext(arrow.position(), impact,
+                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, human)).getType()
+                    != HitResult.Type.MISS) {
+                continue;
+            }
+            UUID projectileId = arrow.getUUID();
+            Boolean shouldBlock = arrowDefenseDecisions.get(projectileId);
+            if (shouldBlock == null) {
+                shouldBlock = human.getRandom().nextFloat() < projectileDefenseChance();
+                arrowDefenseDecisions.put(projectileId, shouldBlock);
+                if (arrowDefenseDecisions.size() > 128) {
+                    arrowDefenseDecisions.remove(arrowDefenseDecisions.keySet().iterator().next());
+                }
+            }
+            if (!shouldBlock) {
+                continue;
+            }
+            closest = new IncomingArrow(arrow,
+                    arrow.getOwner() instanceof LivingEntity shooter ? shooter : null,
+                    ticksToImpact);
+            earliestImpact = ticksToImpact;
+        }
+        return closest;
+    }
+
+    private float projectileDefenseChance() {
+        if (TierThreeHuman.isTierThree(human)) {
+            return 0.80F;
+        }
+        return switch (human.getTier()) {
+            case ROAMER -> 0.40F;
+            case LEVEL1 -> 0.55F;
+            case LEVEL2 -> 0.70F;
+        };
+    }
+
+    private boolean isCloseMeleeEngagement() {
+        if (!HumanUtil.isMeleeWeapon(human.getMainHandItem())) {
+            return false;
+        }
+        LivingEntity current = human.getTarget();
+        LivingEntity attacker = human.getLastHurtByMob();
+        return (isValidThreat(current) && human.distanceToSqr(current) <= 36.0D)
+                || (isValidThreat(attacker) && human.distanceToSqr(attacker) <= 36.0D);
+    }
+
+    private boolean isDedicatedRangedCombatant() {
+        return GunCustody.hasOwnedGun(human)
+                || RangedWeaponCustody.controlsMainHand(human)
+                || isRangedCombat()
+                || human.getMainHandItem().getItem() instanceof TridentItem
+                || human.getOffhandItem().getItem() instanceof TridentItem;
+    }
+
+    private boolean isCrossbowCombatant() {
+        return RangedWeaponCustody.isCrossbowWeapon(human.getMainHandItem())
+                || RangedWeaponCustody.isCrossbowWeapon(human.getOffhandItem());
+    }
+
+    private boolean canPreemptivelyBlockProjectile() {
+        if (!hasShieldInHands()) {
+            return false;
+        }
+        return !isHoldingTaczGun()
+                || SpartanEquipmentCompat.isShield(human.getOffhandItem());
+    }
+
+    private boolean shouldDeferRangedProjectileGuard() {
+        if (!isDedicatedRangedCombatant()) {
+            return false;
+        }
+        if (human.isFleeing
+                || (GunCustody.hasOwnedGun(human) && GunSupport.get().isReloading(human))
+                || (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem()))) {
+            return true;
+        }
+        LivingEntity target = human.getTarget();
+        double dangerRange = isCrossbowCombatant() ? 16.0D : 12.0D;
+        if (GunSupport.get().isGun(human.getMainHandItem())) {
+            dangerRange = Math.min(12.0D, GunRangePolicy.forType(
+                    GunSupport.get().gunType(human.getMainHandItem())).minimum());
+        }
+        double dangerRangeSqr = dangerRange * dangerRange;
+        return isValidThreat(target) && human.distanceToSqr(target) <= dangerRangeSqr;
     }
 
     private boolean predictsIncomingMelee(LivingEntity attacker) {
@@ -533,7 +737,6 @@ public final class AdaptiveCombatGoal extends Goal {
     private boolean tickRetreatCounterattack() {
         if (threat == null
                 || !threat.isAlive()
-                || human.isUsingItem()
                 || !human.getSensing().hasLineOfSight(threat)) {
             setRetreatBackpedaling(false);
             gunOperator.aim(false);
@@ -541,6 +744,16 @@ public final class AdaptiveCombatGoal extends Goal {
             return false;
         }
         double distanceSqr = human.distanceToSqr(threat);
+        if (human.isUsingItem()) {
+            boolean closeShieldBlock = SpartanEquipmentCompat.isShield(human.getUseItem())
+                    && distanceSqr <= 16.0D;
+            boolean staleTridentUse = human.getUseItem().getItem() instanceof TridentItem;
+            if (closeShieldBlock || staleTridentUse) {
+                human.stopUsingItem();
+            } else {
+                return false;
+            }
+        }
         boolean crowdCounterfire = CombatPressurePolicy.shouldUseCrowdCounterfire(
                 GunCustody.hasOwnedGun(human), crowdPressureActive(),
                 human.getSensing().hasLineOfSight(threat), distanceSqr
@@ -562,18 +775,38 @@ public final class AdaptiveCombatGoal extends Goal {
             retreatAimTicks = 0;
             if (club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())) {
                 switchToRetreatMelee();
+                ItemStack fallback = human.getMainHandItem();
+                if (club.someoneice.humangunner.GunSupport.get().isGun(fallback)) {
+                    // Some loadouts have no melee fallback; do not turn a
+                    // point-blank pursuer into a reason to stop returning fire.
+                    return tickRetreatGunfire(fallback);
+                }
             }
             performRetreatMeleeCounter();
             return false;
         }
 
         ItemStack weapon = human.getMainHandItem();
-        if (distanceSqr >= 64.0D
-                && distanceSqr <= 64.0D * 64.0D
-                && human.tickCount - retreatStartedTick >= 12
-                && club.someoneice.humangunner.GunSupport.get().isGun(weapon)) {
-            // Shoot while following the escape path. The old counterfire
-            // stopped navigation and caused the short-retreat/attack loop.
+        int retreatTicks = human.tickCount - retreatStartedTick;
+        if (weapon.getItem() instanceof TridentItem
+                && human.tickCount >= nextRetreatTridentTick
+                && CombatPressurePolicy.shouldUseRetreatCounterfire(
+                distanceSqr, retreatTicks, 2.0D, 36.0D, 12
+        )) {
+            float distanceFactor = Mth.clamp(
+                    (float) (Math.sqrt(distanceSqr) / 36.0D), 0.1F, 1.0F
+            );
+            human.performRangedAttackTrident(threat, distanceFactor);
+            nextRetreatTridentTick = human.tickCount + 14;
+            return true;
+        }
+
+        if (club.someoneice.humangunner.GunSupport.get().isGun(weapon)
+                && CombatPressurePolicy.shouldUseRetreatCounterfire(
+                distanceSqr, retreatTicks, 2.0D, 64.0D, 12
+        )) {
+            // Keep firing while the attacker closes instead of leaving the
+            // two-to-eight-block gap as a silent, uninterrupted retreat.
             return tickRetreatGunfire(weapon);
         }
 
@@ -1024,7 +1257,7 @@ public final class AdaptiveCombatGoal extends Goal {
         if (threat == null || !human.getSensing().hasLineOfSight(threat)) {
             return false;
         }
-        if (isRangedCombat()) {
+        if (isRangedCombat() || RangedWeaponCustody.controlsMainHand(human)) {
             return human.distanceToSqr(threat) <= 784.0D;
         }
         double reachSqr = human.getBbWidth() * 3.0F * human.getBbWidth() * 3.0F
@@ -1361,7 +1594,14 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void startShieldBlockIfAvailable() {
-        if (human.isUsingItem() || isHoldingTaczGun()) {
+        if (human.isUsingItem()) {
+            return;
+        }
+        if (isHoldingTaczGun()) {
+            if (defendingProjectile && human.tickCount < projectileDefenseUntil
+                    && SpartanEquipmentCompat.isShield(human.getOffhandItem())) {
+                human.humanGunner$startProjectileShield();
+            }
             return;
         }
         if (SpartanEquipmentCompat.isShield(human.getOffhandItem())) {

@@ -4,6 +4,15 @@ public final class CombatPressurePolicyTest {
     private static int checks;
 
     public static void main(String[] args) {
+        check(ProjectileShieldPolicy.shouldGuardRangedUser(0.5D)
+                        && ProjectileShieldPolicy.shouldGuardRangedUser(2.5D)
+                        && !ProjectileShieldPolicy.shouldGuardRangedUser(2.51D)
+                        && !ProjectileShieldPolicy.shouldGuardRangedUser(8.0D),
+                "ranged projectile defense waits until an arrow is within the immediate impact window");
+        check(ProjectileShieldPolicy.guardWindowTicks(true, 2.5D) == 3
+                        && ProjectileShieldPolicy.guardWindowTicks(true, 0.5D) == 2
+                        && ProjectileShieldPolicy.guardWindowTicks(false, 20.0D) == 32,
+                "ranged shield interruption lasts only through the imminent shot while other defenders retain their window");
         check(!CombatPressurePolicy.shouldOpenCounterWindow(5, 0, true),
                 "shield remains up through the effective block wind-up");
         check(CombatPressurePolicy.shouldOpenCounterWindow(6, 0, true),
@@ -36,6 +45,11 @@ public final class CombatPressurePolicyTest {
         check(RetreatRecoveryPolicy.shouldForceRetreat(0.25D)
                         && !RetreatRecoveryPolicy.shouldForceRetreat(0.2501D),
                 "one-quarter health always triggers escape without a chance reroll");
+        check(CombatPressurePolicy.shouldUseRetreatCounterfire(5.0D * 5.0D, 12, 2.0D, 64.0D, 12)
+                        && CombatPressurePolicy.shouldUseRetreatCounterfire(5.0D * 5.0D, 12, 2.0D, 36.0D, 12)
+                        && !CombatPressurePolicy.shouldUseRetreatCounterfire(1.5D * 1.5D, 12, 2.0D, 64.0D, 12)
+                        && !CombatPressurePolicy.shouldUseRetreatCounterfire(5.0D * 5.0D, 11, 2.0D, 64.0D, 12),
+                "gunners and trident users counterattack during retreat once outside melee range, including the former close-range dead zone");
         check(!RetreatRecoveryPolicy.safeToReturn(20.0D * 20.0D, 80, 80)
                         && !RetreatRecoveryPolicy.safeToReturn(24.0D * 24.0D, 39, 80)
                         && !RetreatRecoveryPolicy.safeToReturn(24.0D * 24.0D, 80, 39)
