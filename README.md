@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-本模组由原模组 **Hostile Humans** 修改衍生，并整合了 **Human Gunner** 的相关内容。同时，本模组也加入了一些原创的新内容。它可以单独安装使用，不需要另外安装原版 Hostile Humans 或 Human Gunner。本版本由第三方维护，并非原作者发布的官方更新。
+本模组由原模组 **Hostile Humans** 修改衍生，并整合了 **Human Gunner** 的相关内容。同时，本模组也加入了一些原创的新内容。它可以单独安装使用，不需要另外安装原版 Hostile Humans 或 Human Gunner。本模组的修改与构建过程中使用了 GPT 辅助。本版本由第三方维护，并非原作者发布的官方更新。
 
 面向 Minecraft 1.20.1 / Forge 47.4.16 / Java 17。运行时只需安装一个整合版 JAR；TaCZ 和 Curios 为可选兼容项：TaCZ 提供枪械支持，Curios 提供专属身份牌饰品栏。
 
@@ -22,60 +22,14 @@
 
 Waystones 等结构联动开关仍位于单独的 `config/hostile_humans.toml`，不会由统一 JSON 替代。完整字段说明见 [`CONFIGURATION.md`](CONFIGURATION.md)。
 
-## 当前维护与发布状态
+## 维护说明
 
-- 本地维护版本号见 build.gradle；下文 3.1.1–3.1.3 的章节为历史说明，不代表当前功能清单或验收状态。
-- 此工程此前已有 Java 17 构建与离线策略测试记录，但每次源码修改后仍须重新构建和实机验收；不能用历史结果代替当前发布验证。
+- 维护版本号以 `build.gradle` 为准。源码每次修改后都需要重新构建并进行适当的验收；既有测试记录不能替代当前版本的验证。
+- 兼容基线为 Minecraft 1.20.1、Forge 47.4.16 和 Java 17。TaCZ 与 Curios 是可选集成；没有 TaCZ 时使用普通武器 AI。
+- 主配置为 `config/hostile_humans_unified.json`；旧版本体或附属模组不会读取此统一配置。Waystones 等结构联动设置仍位于 `config/hostile_humans.toml`。
+- 配置默认值位于 `src/main/resources/defaults/hostile_humans_unified.json`；逐字段说明见 [`CONFIGURATION.md`](CONFIGURATION.md)。
 - 来源信息与第三方声明见 `provenance.json`、`NOTICE.md` 和 `src/main/resources/THIRD_PARTY_NOTICES.md`。
-- 不要把本地 build/、.gradle/、logs/、存档或整合包复制到公开仓库；本工程的 .gitignore 已排除常见生成物。
-- config/hostile_humans_unified.json 由 3.1 系列读取；旧本体/附属版本不读取它。
-
-## 历史记录：3.1.3 盾牌反击与枪手受围突围
-
-持盾人类完成最短有效格挡后，只要当前武器能从现有距离反击，就立即放下盾牌并打开反击窗口；
-近战武器会当场执行一次受原近战冷却接管的攻击。持续受压可以在短冷却后再次举盾，但不能刷新并无限延长当前格挡。
-
-拥有主枪的人类在三格内检测到至少三名有效敌人时，群体压力优先于盾牌防御：退出格挡、从保管槽恢复主枪并进入撤退。
-有安全后退步时边退边射；没有安全后退步但仍有视线时，也允许在近距离直接开火，不再强制切换近战武器和盾牌。
-
-## 3.1.2：雇佣追击与费用修复
-
-雇佣上限：流浪者 12、一阶人类 10、二阶人类 6、三阶人类 3；费用仍为 8/24/72/216 颗原版绿宝石。
-创造模式跳过背包余额检查且不消耗合同；生存/冒险在服务器线程检查主背包（含快捷栏）全部余额，
-足够才跨堆扣款并消耗一份合同，不足不扣。身份牌资格、已有主人和分级上限检查仍然有效。
-
-雇佣兵目标距自身不得超过 48 格；跟随目标还须在主人 48 格内，驻守/巡逻目标须在部署点水平 48/32 格内。
-连续 400 游戏刻（20 TPS 时 20 秒）未造成有效伤害时清除目标，200 刻内不重选同一目标。
-远距离跟随传送前清理旧仇恨、反击记忆、导航与正在使用的物品状态，避免回身追旧目标。
-目标选择和每刻追击共用范围限制，非雇佣野生人类不受此改动影响。
-新增 RecruitmentCombatTest 的 2589 项离线回归；实际卡墙、传送和背包交互仍需用户游戏内验收。
-
-## 3.1.1：可选结构联动修复
-
-补回此前整合遗漏的 7 个内部数据包。联动条件集中判断：Waystones 仅在安装且
-config/hostile_humans.toml 的 no_waystones=false 时启用；农夫乐事以及 Quark + mctb
-按安装组合选取一个结构覆盖包。缺失或损坏的可选包记录错误并回退，不再主动抛错阻止加载。
-
-清理 16 份非 Waystones 联动结构中的传送石碑残留；另将 2 份基础结构和 6 份基础战利品表
-中的农夫乐事引用改为原版内容。安装对应联动时仍保留原来的模组内容。
-仅影响之后的资源加载与新结构生成，不改写已生成建筑。
-全部 7 个包、32 种组合、133 份联动结构、27 份基础结构纳入离线回归。
-旧 3.0.0 / 3.1.0 产物都有遗漏内部数据包的问题，仅作历史归档，不应继续安装。
-
-## 3.1：独立运行与统一配置
-
-当前维护基线为 Minecraft 1.20.1 + Forge 47.4.16 + Java 17，不需要 TaCZ、
-Curios、女仆或斯巴达模组。这不是能在无 Forge 的纯净客户端加载的插件。
-安装兼容 TaCZ（最低 1.1.8）且 tacz.enabled=true 时自动启用枪手；否则使用普通武器 AI。
-普通战斗、渲染、装备和配置不再直接引用 TaCZ API；接口 GunSupport 只有 Minecraft/JDK 类型，
-TaCZ 事件和操作器仅由受安装状态保护的 Adapter 加载。
-
-新配置：config/hostile_humans_unified.json。四级属性、普通伤害、刷新、AI、TaCZ 按此顺序排列，
-TaCZ 始终在末尾。原 humangunner.json 与 humangunner_ai.json 在新文件不存在时迁移，
-旧文件不删除、不改写；之后新文件为唯一数值来源，修改需要两端完整重启。
-原 hostile_humans.toml 中的建筑生成等非本次整合设置继续保留。
-配置默认值见 `src/main/resources/defaults/hostile_humans_unified.json`；
-维护工作区的详细配置说明位于上层《配置说明.md》，不属于此源码目录。
+- 不要将本地 `build/`、`.gradle/`、`logs/`、存档或整合包复制到公开仓库；常见生成物已由 `.gitignore` 排除。
 
 ## 为什么还保留两个 modId
 
