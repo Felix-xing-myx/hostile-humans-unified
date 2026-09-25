@@ -3,6 +3,7 @@ package com.craftix.hostile_humans.entity.ai.goal;
 import com.craftix.hostile_humans.entity.HumanEntity;
 import com.craftix.hostile_humans.entity.HumanMobEntityData;
 import com.craftix.hostile_humans.entity.entities.Human;
+import club.someoneice.humangunner.RangedFiringPosition;
 import club.someoneice.humangunner.SoldierOrder;
 import java.util.EnumSet;
 import net.minecraft.core.BlockPos;
@@ -17,11 +18,14 @@ import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 
 public class CrossbowGoal<T extends HumanEntity & CrossbowAttackMob>
 extends Goal {
     public static final UniformInt PATHFINDING_DELAY_RANGE = TimeUtil.rangeOfSeconds((int)1, (int)2);
+    private static final int SHOT_DELAY_MIN = 32;
+    private static final int SHOT_DELAY_VARIANCE = 32;
     private final T mob;
     private final double speedModifier;
     private final float attackRadiusSqr;
@@ -29,6 +33,7 @@ extends Goal {
     private int seeTime;
     private int attackDelay;
     private int updatePathDelay;
+    private int nextFiringPositionTick;
     private boolean pursuingTarget;
     private boolean strafingClockwise;
     private int strafingTime;
@@ -91,6 +96,12 @@ extends Goal {
         return true;
     }
 
+    @Override
+    public void start() {
+        super.start();
+        this.nextFiringPositionTick = this.mob.tickCount;
+    }
+
     public void tick() {
         if (mob instanceof Human) {
             ItemStack active = mob.isUsingItem() ? mob.getUseItem() : mob.getMainHandItem();
@@ -129,6 +140,37 @@ extends Goal {
                 }
                 this.updatePathDelay = 0;
                 this.strafingTime = 0;
+            } else if (!flag && !retreating && d0 <= (double)this.attackRadiusSqr) {
+                // A blocked firing lane is not a reason to circle blindly.
+                // Find an accessible nearby shot instead; the fleeing branch
+                // above returns before this offensive repositioning logic.
+                if (this.pursuingTarget) {
+                    this.mob.getNavigation().stop();
+                    this.updatePathDelay = 0;
+                    this.pursuingTarget = false;
+                }
+                if ((this.mob.getNavigation().isDone() || this.mob.getNavigation().isStuck())
+                        && this.mob.tickCount >= this.nextFiringPositionTick) {
+                    Path firingPath = this.mob instanceof Human human
+                            ? RangedFiringPosition.findVisiblePath(
+                                    human, livingentity, Math.sqrt(RETREAT_DISTANCE_SQR),
+                                    Math.sqrt(this.attackRadiusSqr), 10, 12)
+                            : null;
+                    if (firingPath != null) {
+                        this.mob.getNavigation().moveTo(firingPath,
+                                this.canRun() ? this.speedModifier : this.speedModifier * 0.65D);
+                    } else {
+                        this.mob.getNavigation().stop();
+                    }
+                    this.nextFiringPositionTick = this.mob.tickCount + 10;
+                }
+                this.strafingTime = 0;
+                this.mob.getMoveControl().strafe(0.0F, 0.0F);
+                this.mob.setZza(0.0F);
+                this.mob.setXxa(0.0F);
+                this.mob.getLookControl().setLookAt(livingentity, 30.0F, 30.0F);
+                tickShot(livingentity, false, false);
+                return;
             } else if (retreating) {
                 if (this.pursuingTarget) {
                     this.mob.getNavigation().stop();
@@ -169,21 +211,12 @@ extends Goal {
                     this.updatePathDelay = 0;
                     this.pursuingTarget = false;
                 }
-                --this.updatePathDelay;
-                if (this.updatePathDelay <= 0) {
-                    // Reposition without creating a direct path into melee.
-                    Vec3 angle = DefaultRandomPos.getPosAway(this.mob, 10, 4, livingentity.position());
-                    if (angle != null && livingentity.distanceToSqr(angle) >= RETREAT_DISTANCE_SQR) {
-                        this.mob.getNavigation().moveTo(angle.x, angle.y, angle.z,
-                                this.canRun() ? this.speedModifier : this.speedModifier * 0.65D);
-                    } else {
-                        this.mob.getNavigation().stop();
-                        this.mob.getMoveControl().strafe(0.0F,
-                                this.strafingClockwise ? 0.35F : -0.35F);
-                    }
-                    this.updatePathDelay = 8;
-                }
+                // The target is visible; keep this firing lane while the
+                // five-tick visibility confirmation accumulates. Blindly
+                // stepping away here could put a newly found angle behind cover.
+                this.mob.getNavigation().stop();
                 this.strafingTime = 0;
+                this.mob.getMoveControl().strafe(0.0F, 0.0F);
             } else {
                 this.pursuingTarget = false;
                 this.updatePathDelay = 0;
@@ -242,7 +275,13 @@ extends Goal {
                     this.crossbowState = CrossbowState.CHARGED;
                     if (mob instanceof Human && club.someoneice.humangunner.SpartanRangedCompat.isHeavyCrossbow(itemstack))
                         club.someoneice.humangunner.SpartanRangedCompat.markChargedForNpc(itemstack);
-                    this.attackDelay = 16 + this.mob.getRandom().nextInt(16);
+                    // Charging and the loaded-crossbow wait are both advanced
+                    // faster than real time below. Doubling this internal wait
+                    // makes the complete shot cycle about 1/0.7 as long, so the
+                    // actual firing rate falls by roughly 30% for light and
+                    // heavy crossbows alike.
+                    this.attackDelay = SHOT_DELAY_MIN
+                            + this.mob.getRandom().nextInt(SHOT_DELAY_VARIANCE);
                     ((CrossbowAttackMob)this.mob).setChargingCrossbow(false);
                     T t = this.mob;
                     if (t instanceof Human) {

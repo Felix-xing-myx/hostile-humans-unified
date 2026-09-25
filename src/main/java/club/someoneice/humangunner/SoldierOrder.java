@@ -20,7 +20,8 @@ public enum SoldierOrder {
     private static final String RETURNING_FROM_RETREAT = "humangunner:returning_from_retreat";
     private static final double FOLLOW_COMBAT_RANGE_SQR = 48.0D * 48.0D;
     private static final double PATROL_RANGE_SQR = 32.0D * 32.0D;
-    private static final double PATROL_WALK_NAVIGATION_SPEED = 1.0D;
+    // Match the native idle stroll goals instead of using combat/return speed.
+    private static final double PATROL_WALK_NAVIGATION_SPEED = 0.65D;
     private static final double HOLD_RETURN_DISTANCE_SQR = 0.8D * 0.8D;
 
     public static SoldierOrder get(Human human) {

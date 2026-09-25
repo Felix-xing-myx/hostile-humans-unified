@@ -2,13 +2,17 @@ package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -57,6 +61,56 @@ final class NavigationSupport {
             }
         }
         return opened;
+    }
+
+    static boolean hasOneBlockObstacleAhead(Human human, Vec3 pathDirection) {
+        Vec3 forward = pathDirection.multiply(1.0D, 0.0D, 1.0D);
+        if (forward.lengthSqr() < 0.01D) {
+            return false;
+        }
+        forward = forward.normalize();
+        int feetY = BlockPos.containing(human.getX(), human.getY() + 0.05D, human.getZ()).getY();
+        AABB mobBounds = human.getBoundingBox();
+
+        // Probe ahead of the body, not at its leading collision edge. This gives
+        // the jump controller time to clear an ordinary one-block step before
+        // vanilla horizontal collision pins the entity against it.
+        for (int probeIndex = 0; probeIndex < 3; probeIndex++) {
+            double distance = 0.75D + probeIndex * 0.25D;
+            Vec3 probe = human.position().add(forward.scale(distance));
+            BlockPos obstacle = BlockPos.containing(probe.x, feetY, probe.z);
+            if (obstacle.getX() == human.blockPosition().getX()
+                    && obstacle.getZ() == human.blockPosition().getZ()) {
+                continue;
+            }
+
+            BlockState state = human.level().getBlockState(obstacle);
+            if (state.is(BlockTags.DOORS) || state.is(BlockTags.FENCES)
+                    || state.is(BlockTags.WALLS) || state.is(BlockTags.CLIMBABLE)) {
+                continue;
+            }
+            VoxelShape shape = state.getCollisionShape(human.level(), obstacle);
+            double obstacleHeight = shape.isEmpty() ? 0.0D : shape.max(Direction.Axis.Y);
+            if (obstacleHeight < 0.9D || obstacleHeight > 1.01D
+                    || !human.level().getBlockState(obstacle.above())
+                            .getCollisionShape(human.level(), obstacle.above()).isEmpty()
+                    || !human.level().getBlockState(obstacle.above(2))
+                            .getCollisionShape(human.level(), obstacle.above(2)).isEmpty()) {
+                continue;
+            }
+
+            AABB blockBounds = new AABB(obstacle);
+            double gapX = Math.max(0.0D, Math.max(
+                    blockBounds.minX - mobBounds.maxX, mobBounds.minX - blockBounds.maxX));
+            double gapZ = Math.max(0.0D, Math.max(
+                    blockBounds.minZ - mobBounds.maxZ, mobBounds.minZ - blockBounds.maxZ));
+            double horizontalGapSqr = gapX * gapX + gapZ * gapZ;
+            if (horizontalGapSqr > 1.5625D || horizontalGapSqr < 0.0025D) {
+                continue;
+            }
+            return true;
+        }
+        return false;
     }
 
     static Vec3 horizontalDirection(Vec3 from, Vec3 to) {

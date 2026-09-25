@@ -21,7 +21,6 @@ import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
@@ -44,14 +43,21 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private final T mob;
     private final IGunOperator operator;
     private int aimTicks;
-    private int tacticalMoveCooldown;
     private int nextCloseMeleeAttackTick;
     private int nextCloseRetreatPathTick;
     private int nextRangeRetreatPathTick;
+    private int nextFiringPositionTick;
+    private int nextStrafeRepositionTick;
+    private int manualStrafeUntilTick;
+    private float strafeDirection = 1.0F;
     private int retreatFailureTicks;
     private double lastThreatDistance = Double.POSITIVE_INFINITY;
     private boolean retreatingForSpace;
     private boolean approachingTarget;
+    private boolean strafing;
+    private boolean strafePathActive;
+    private boolean seekingFiringPosition;
+    private LivingEntity movementTarget;
 
     public GunnerGoal(T mob) {
         this.mob = mob;
@@ -104,7 +110,14 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         lastThreatDistance = Double.POSITIVE_INFINITY;
         retreatingForSpace = false;
         approachingTarget = false;
-        tacticalMoveCooldown = mob.getRandom().nextInt(12, 25);
+        strafing = false;
+        strafePathActive = false;
+        manualStrafeUntilTick = 0;
+        seekingFiringPosition = false;
+        strafeDirection = mob.getRandom().nextBoolean() ? 1.0F : -1.0F;
+        nextStrafeRepositionTick = mob.tickCount;
+        nextFiringPositionTick = mob.tickCount;
+        movementTarget = mob.getTarget();
         if (isGun(mob.getMainHandItem())) {
             operator.draw(mob::getMainHandItem);
         }
@@ -112,12 +125,18 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     @Override
     public void stop() {
+        stopLateralMovement();
         aimTicks = 0;
         retreatingForSpace = false;
         approachingTarget = false;
+        seekingFiringPosition = false;
+        strafePathActive = false;
+        manualStrafeUntilTick = 0;
+        movementTarget = null;
         operator.aim(false);
         if (mob instanceof Human human) {
             MovementSpeedController.combat(human, false);
+            GunAttackMovementState.clear(human);
         }
         clearNpcSprintLock(mob, operator);
     }
@@ -129,6 +148,11 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     @Override
     public void tick() {
+        if (mob instanceof Human human) {
+            // PlayerLikeMovementGoal runs at a lower goal priority and reads
+            // this short-lived hint to suppress combat hops while aiming.
+            GunAttackMovementState.clear(human);
+        }
         LivingEntity target = mob.getTarget();
         ItemStack weapon = mob.getMainHandItem();
         boolean closeDefense = mob instanceof Human human
@@ -136,6 +160,15 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         if (target == null || !target.isAlive()
                 || (!isGun(weapon) && !closeDefense)) {
             return;
+        }
+        if (movementTarget != target) {
+            stopLateralMovement();
+            mob.getNavigation().stop();
+            movementTarget = target;
+            approachingTarget = false;
+            seekingFiringPosition = false;
+            retreatingForSpace = false;
+            aimTicks = 0;
         }
 
         double distance = mob.distanceTo(target);
@@ -172,9 +205,10 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         }
 
         if (mob instanceof Human human) {
-            // TaCZ refuses every shot while sprintTimeS is positive. Gun users
-            // still move at the configured combat attribute, but never retain
-            // the vanilla sprint flag while this firing goal is active.
+            // Clear sprint and TaCZ's independent sprint timer before combat
+            // processing. Pursuit branches may re-enable sprint only when
+            // they return without aiming or firing.
+            clearNpcSprintLock(mob, operator);
             MovementSpeedController.combat(human, false);
         }
 
@@ -189,10 +223,12 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // not turn the beacon's pursuit range into extra weapon reach.
             aimTicks = 0;
             operator.aim(false);
+            stopLateralMovement();
             if (mob.getNavigation().isDone() || mob.tickCount % 10 == 0) {
                 mob.getNavigation().moveTo(target, 1.0D);
                 approachingTarget = true;
             }
+            enablePursuitSprint(human, target);
             return;
         }
         if (!mob.getSensing().hasLineOfSight(target)) {
@@ -205,10 +241,14 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 return;
             }
             moveForFiringPosition(target, distance, range, true);
+            if (mob instanceof Human human) {
+                enablePursuitSprint(human, target);
+            }
             return;
         }
 
         if (holdingPosition) {
+            stopLateralMovement();
             if (!SoldierOrder.isReturningToHoldPosition((Human)mob)) {
                 mob.getNavigation().stop();
             }
@@ -217,6 +257,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         }
 
         operator.aim(true);
+        if (mob instanceof Human human) {
+            GunAttackMovementState.markAttackActive(human);
+        }
         if (distance <= RETREAT_RANGE) {
             // Close pressure must not turn the gun into a silent prop. TaCZ
             // retains draw/melee/sprint locks independently from the held
@@ -248,6 +291,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private void tickCloseMeleeDefense(Human human, LivingEntity target, double distance) {
         operator.aim(false);
         aimTicks = 0;
+        stopLateralMovement();
         clearNpcSprintLock(mob, operator);
         human.getLookControl().setLookAt(target, 45.0F, 35.0F);
         human.getPersistentData().putString(
@@ -530,12 +574,65 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     private void moveForFiringPosition(LivingEntity target, double distance,
                                        GunRangePolicy.Band range, boolean obscured) {
+        if (obscured) {
+            stopLateralMovement();
+            if (distance > range.maximum() + 12.0D) {
+                // The firing-lane search is local. Close most of the gap first
+                // instead of repeatedly searching a 12-block neighborhood
+                // that cannot possibly reach the configured firing band.
+                if (seekingFiringPosition) {
+                    mob.getNavigation().stop();
+                    approachingTarget = false;
+                }
+                seekingFiringPosition = false;
+                if (!approachingTarget || mob.getNavigation().isDone()
+                        || mob.getNavigation().isStuck() || mob.tickCount % 10 == 0) {
+                    mob.getNavigation().moveTo(target, 1.0D);
+                    approachingTarget = true;
+                }
+                return;
+            }
+            if (!seekingFiringPosition) {
+                // Cancel a stale straight-to-target path once cover blocks the
+                // shot. The replacement path must end at a verified firing lane.
+                if (approachingTarget || !mob.getNavigation().isDone()) {
+                    mob.getNavigation().stop();
+                    approachingTarget = false;
+                }
+            }
+            if ((mob.getNavigation().isDone() || mob.getNavigation().isStuck())
+                    && mob.tickCount >= nextFiringPositionTick
+                    && mob instanceof Human human) {
+                Path firingPath = RangedFiringPosition.findVisiblePath(
+                        human,
+                        target,
+                        range.minimum(),
+                        range.maximum(),
+                        12,
+                        16
+                );
+                if (firingPath != null) {
+                    mob.getNavigation().moveTo(firingPath, 1.0D);
+                    approachingTarget = true;
+                    seekingFiringPosition = true;
+                } else {
+                    mob.getNavigation().stop();
+                    approachingTarget = false;
+                    seekingFiringPosition = false;
+                }
+                nextFiringPositionTick = mob.tickCount + 10;
+            }
+            return;
+        }
+        seekingFiringPosition = false;
+
         if (distance < range.minimum()) {
             retreatingForSpace = true;
         } else if (distance >= range.retreatResume()) {
             retreatingForSpace = false;
         }
         if (retreatingForSpace) {
+            stopLateralMovement();
             approachingTarget = false;
             if (mob.tickCount >= nextRangeRetreatPathTick
                     || mob.getNavigation().isDone()
@@ -546,6 +643,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             return;
         }
         if (distance > range.maximum()) {
+            stopLateralMovement();
             if (!approachingTarget || mob.getNavigation().isDone()
                     || mob.tickCount % 10 == 0) {
                 mob.getNavigation().moveTo(target, 1.0D);
@@ -557,12 +655,30 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // A direct chase path must not keep running after reaching gun range.
             mob.getNavigation().stop();
             approachingTarget = false;
-            tacticalMoveCooldown = 6;
         }
-        if (--tacticalMoveCooldown <= 0) {
-            strafeAround(target, range);
-            tacticalMoveCooldown = (obscured ? 8 : CombatAiConfig.get().tacticalRepositionInterval())
-                    + mob.getRandom().nextInt(8);
+        strafeAround(target, range);
+    }
+
+    /** Sprint on a gunner's non-firing approach path, never during a shot attempt. */
+    private void enablePursuitSprint(Human human, LivingEntity target) {
+        if (human.isFleeing
+                || human.isUsingItem()
+                || (human.hasOwner() && SoldierOrder.isHoldingPosition(human))
+                || !approachingTarget) {
+            return;
+        }
+        Path path = human.getNavigation().getPath();
+        if (path == null || path.isDone() || human.getNavigation().isDone()) {
+            return;
+        }
+        Vec3 pathDirection = NavigationSupport.horizontalDirection(
+                human.position(), Vec3.atCenterOf(path.getNextNodePos())
+        );
+        Vec3 targetDirection = NavigationSupport.horizontalDirection(human.position(), target.position());
+        if (pathDirection.lengthSqr() > 0.01D
+                && targetDirection.lengthSqr() > 0.01D
+                && pathDirection.dot(targetDirection) >= 0.55D) {
+            MovementSpeedController.combat(human, true);
         }
     }
 
@@ -589,30 +705,76 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     private void strafeAround(LivingEntity target, GunRangePolicy.Band range) {
-        Vec3 radial = mob.position().subtract(target.position()).multiply(1.0D, 0.0D, 1.0D);
-        if (radial.lengthSqr() < 0.01D) {
-            radial = new Vec3(1.0D, 0.0D, 0.0D);
-        } else {
-            radial = radial.normalize();
+        mob.lookAt(target, 30.0F, 30.0F);
+
+        if (strafePathActive) {
+            if (!mob.getNavigation().isDone() && !mob.getNavigation().isStuck()) {
+                return;
+            }
+            strafePathActive = false;
+            strafing = false;
+            strafeDirection = -strafeDirection;
+            nextStrafeRepositionTick = mob.tickCount + 10;
+            mob.getMoveControl().strafe(0.0F, 0.0F);
+            mob.setZza(0.0F);
+            mob.setXxa(0.0F);
+            return;
         }
-        double side = mob.getRandom().nextBoolean() ? 1.0D : -1.0D;
-        Vec3 lateral = new Vec3(-radial.z, 0.0D, radial.x).scale(5.0D * side);
-        double distance = mob.distanceTo(target);
-        // Orbit within the band; do not let every side-step pull the gunner
-        // inward toward a target that is already at a safe firing distance.
-        double radialAdjustment = distance < range.minimum()
-                ? range.retreatResume() - distance
-                : Math.min(0.0D, range.maximum() - distance);
-        Vec3 correction = radial.scale(radialAdjustment);
-        Vec3 candidate = mob.position().add(lateral).add(correction);
-        Path path = mob.getNavigation().createPath(BlockPos.containing(candidate), 0);
-        if (path == null) {
-            candidate = mob.position().subtract(lateral).add(correction);
-            path = mob.getNavigation().createPath(BlockPos.containing(candidate), 0);
+
+        if (manualStrafeUntilTick > 0) {
+            if (mob.tickCount < manualStrafeUntilTick) {
+                mob.getMoveControl().strafe(0.0F, 0.85F * strafeDirection);
+                strafing = true;
+                return;
+            }
+            manualStrafeUntilTick = 0;
+            strafing = false;
+            strafeDirection = -strafeDirection;
+            nextStrafeRepositionTick = mob.tickCount + 10;
+            mob.getMoveControl().strafe(0.0F, 0.0F);
+            mob.setZza(0.0F);
+            mob.setXxa(0.0F);
+            return;
         }
-        if (path != null) {
-            mob.getNavigation().moveTo(path, 1.0D);
+
+        if (mob.tickCount < nextStrafeRepositionTick) {
+            return;
         }
+
+        Path lateralPath = mob instanceof Human human
+                ? RangedFiringPosition.findLateralPath(
+                        human, target, range.minimum(), range.maximum(), (int) strafeDirection)
+                : null;
+        if (lateralPath != null
+                && mob.getNavigation().moveTo(lateralPath, 1.15D)) {
+            strafePathActive = true;
+            strafing = true;
+            return;
+        }
+
+        // If terrain prevents a full flank route, use a brief stronger
+        // back-and-forth strafe instead of silently falling back to a tiny
+        // 0.28 input. Continue aiming and firing throughout the movement.
+        mob.getNavigation().stop();
+        mob.getMoveControl().strafe(0.0F, 0.85F * strafeDirection);
+        strafing = true;
+        manualStrafeUntilTick = mob.tickCount + 12;
+        nextStrafeRepositionTick = manualStrafeUntilTick;
+    }
+
+    private void stopLateralMovement() {
+        if (!strafing && !strafePathActive && manualStrafeUntilTick == 0) {
+            return;
+        }
+        if (strafePathActive) {
+            mob.getNavigation().stop();
+        }
+        mob.getMoveControl().strafe(0.0F, 0.0F);
+        mob.setZza(0.0F);
+        mob.setXxa(0.0F);
+        strafing = false;
+        strafePathActive = false;
+        manualStrafeUntilTick = 0;
     }
 
     private static boolean isGun(ItemStack stack) {

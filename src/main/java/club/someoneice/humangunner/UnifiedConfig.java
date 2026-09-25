@@ -81,7 +81,7 @@ public final class UnifiedConfig {
             }
             values.put(key, new Tier(Math.min(low, high), Math.max(low, high),
                     number(object(t, "movement"), "base_speed",
-                            number(object(d, "movement"), "base_speed", .095D, .01D, .2D), .01D, .2D),
+                            number(object(d, "movement"), "base_speed", .105D, .01D, .2D), .01D, .2D),
                     tierNumber(configuredTier, t, "attributes", "attack_damage",
                             defaultAttributes.get("attack_damage").getAsDouble(), 0, 2048),
                     tierNumber(configuredTier, t, "attributes", "armor",

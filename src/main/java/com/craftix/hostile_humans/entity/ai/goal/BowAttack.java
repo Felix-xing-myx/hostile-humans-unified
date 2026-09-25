@@ -4,6 +4,7 @@ import com.craftix.hostile_humans.entity.HumanEntity;
 import com.craftix.hostile_humans.entity.HumanMobEntityData;
 import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.BowRangePolicy;
+import club.someoneice.humangunner.RangedFiringPosition;
 import club.someoneice.humangunner.SoldierOrder;
 import java.util.EnumSet;
 import net.minecraft.core.BlockPos;
@@ -14,6 +15,7 @@ import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.BowItem;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 
 public class BowAttack<T extends HumanEntity>
@@ -27,6 +29,7 @@ extends Goal {
     private boolean strafingClockwise;
     private int strafingTime = -1;
     private int updatePathDelay;
+    private int nextFiringPositionTick;
 
     public BowAttack(T p_25792_, double p_25793_, int interval, float p_25795_) {
         this.mob = p_25792_;
@@ -59,6 +62,7 @@ extends Goal {
     public void start() {
         super.start();
         this.mob.setAggressive(true);
+        this.nextFiringPositionTick = this.mob.tickCount;
     }
 
     public void stop() {
@@ -119,6 +123,10 @@ extends Goal {
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
             boolean retreating = !holdingPosition && BowRangePolicy.shouldPathRetreat(d0);
+            boolean blockedWhileEngaging = !flag
+                    && !retreating
+                    && !holdingPosition
+                    && !BowRangePolicy.shouldPursue(d0, this.attackRadiusSqr);
             if (holdingPosition) {
                 if (!SoldierOrder.isReturningToHoldPosition((Human)this.mob)) {
                     this.mob.getNavigation().stop();
@@ -141,6 +149,32 @@ extends Goal {
                     this.updatePathDelay = 6 + this.mob.getRandom().nextInt(5);
                 }
                 this.strafingTime = -1;
+            } else if (blockedWhileEngaging) {
+                // Orbiting blindly can carry the archer behind cover. While
+                // still in attack posture, pause lateral input and seek a
+                // reachable point with a verified firing lane instead.
+                if (this.mob.getNavigation().isDone() || this.mob.getNavigation().isStuck()) {
+                    if (this.mob.tickCount >= this.nextFiringPositionTick) {
+                        Path firingPath = this.mob instanceof Human human
+                                ? RangedFiringPosition.findVisiblePath(
+                                        human, livingentity, 14.0D,
+                                        Math.sqrt(this.attackRadiusSqr), 10, 12)
+                                : null;
+                        if (firingPath != null) {
+                            this.mob.getNavigation().moveTo(firingPath, this.speedModifier);
+                            this.updatePathDelay = 0;
+                        } else {
+                            this.mob.getNavigation().stop();
+                            this.updatePathDelay = 0;
+                        }
+                        this.nextFiringPositionTick = this.mob.tickCount + 10;
+                    }
+                }
+                this.strafingTime = -1;
+                clearStrafeInput();
+                this.mob.getLookControl().setLookAt(livingentity, 30.0F, 30.0F);
+                tickShot(livingentity, false);
+                return;
             } else if (!BowRangePolicy.shouldPursue(d0, this.attackRadiusSqr)) {
                 // Losing sight inside shooting range is not permission to
                 // charge. Orbit to change the angle while preserving spacing.

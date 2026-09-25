@@ -100,18 +100,10 @@ public final class EquipmentBreakSounds {
         }
         ticks.put(slot, human.tickCount);
 
-        SoundEvent sound;
-        float volume;
-        if (SpartanEquipmentCompat.isShield(broken)) {
-            sound = SoundEvents.ANVIL_LAND;
-            volume = 6.0F;
-        } else if (isArmorSlot(slot)) {
-            sound = SoundEvents.LANTERN_BREAK;
-            volume = 8.0F;
-        } else {
-            sound = SoundEvents.ITEM_BREAK;
-            volume = 4.0F;
-        }
+        SoundEvent sound = SoundEvents.ITEM_BREAK;
+        float volume = SpartanEquipmentCompat.isShield(broken) || isArmorSlot(slot)
+                ? 1.0F
+                : 4.0F;
         // The authoritative callback and the direct-clear fallback share this
         // per-slot/tick gate, so one break can never create two sound packets.
         human.level().playSound(

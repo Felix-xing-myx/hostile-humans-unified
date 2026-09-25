@@ -80,6 +80,7 @@ public final class AdaptiveCombatGoal extends Goal {
     private int defensePressureTick;
     private int defenseObservedHurtTimestamp = Integer.MIN_VALUE;
     private int defenseObservedGunfireUntil;
+    private LivingEntity defenseMovementTarget;
     private int projectileDefenseUntil;
     private int nextProjectileGuardTick;
     private boolean defendingProjectile;
@@ -94,7 +95,6 @@ public final class AdaptiveCombatGoal extends Goal {
     private int retreatAimTicks;
     private int retreatStartedTick;
     private int retreatStagnantTicks;
-    private int retreatJumpTick;
     private int nextRetreatMeleeTick;
     private int nextRetreatTridentTick;
     private int stationaryChecks;
@@ -212,7 +212,12 @@ public final class AdaptiveCombatGoal extends Goal {
         }
 
         updateStationaryState();
-        if (!RangedWeaponCustody.controlsMainHand(human)
+        // A gunner holding its configured firing band is expected to pause
+        // between lateral relocations. Do not let this higher-priority MOVE
+        // goal interpret that deliberate firing stance as a navigation stall;
+        // GunnerGoal owns both range control and its new flank paths.
+        if (!isUsingTaczGun()
+                && !RangedWeaponCustody.controlsMainHand(human)
                 && stationaryChecks >= 6 && human.distanceToSqr(currentThreat) > 9.0D) {
             pendingPhase = Phase.UNSTUCK;
             return true;
@@ -277,6 +282,7 @@ public final class AdaptiveCombatGoal extends Goal {
         activePath = null;
         switch (phase) {
             case DEFEND -> {
+                defenseMovementTarget = null;
                 defendingProjectile = human.tickCount < projectileDefenseUntil;
                 int projectileWindow = projectileDefenseUntil - human.tickCount;
                 phaseTicks = defendingProjectile && isDedicatedRangedCombatant()
@@ -288,14 +294,13 @@ public final class AdaptiveCombatGoal extends Goal {
                 defenseObservedGunfireUntil = HumanGunner.recentGunfireUntil(human);
                 lastShieldTriggerHurtTimestamp = defenseObservedHurtTimestamp;
                 lastShieldTriggerGunfireUntil = defenseObservedGunfireUntil;
-                startShieldBlockIfAvailable();
+                startShieldBlockIfAvailable(shouldAdvanceToMeleeThreat());
             }
             case RETREAT -> {
                 phaseTicks = 200;
                 retreatAimTicks = 0;
                 retreatStartedTick = human.tickCount;
                 retreatStagnantTicks = 0;
-                retreatJumpTick = human.tickCount + human.getRandom().nextInt(8, 15);
                 nextRetreatTridentTick = human.tickCount + 12;
                 lastRetreatPosition = human.position();
                 prepareCrowdRetreatGun();
@@ -355,6 +360,7 @@ public final class AdaptiveCombatGoal extends Goal {
         gunOperator.aim(false);
         retreatAimTicks = 0;
         activePath = null;
+        defenseMovementTarget = null;
         if (human.getTarget() == null) {
             MovementSpeedController.normal(human);
         } else {
@@ -453,6 +459,7 @@ public final class AdaptiveCombatGoal extends Goal {
         int heldTicks = human.tickCount - defenseStartTick;
         int quietTicks = human.tickCount - defensePressureTick;
         boolean canCounterFromCurrentRange = canCounterFromCurrentRange();
+        boolean advancingMelee = shouldAdvanceToMeleeThreat();
         if (defendingProjectile && isDedicatedRangedCombatant()
                 && incomingArrow == null && heldTicks >= 6) {
             if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
@@ -495,18 +502,36 @@ public final class AdaptiveCombatGoal extends Goal {
                 && !SoldierOrder.isHoldingPosition(human)) {
             // Keep a gunner or archer's existing withdrawal path; this brief
             // shield use must not issue a new path toward the target.
-        } else if (awaitingProjectile || SoldierOrder.isHoldingPosition(human)
-                || RangedWeaponCustody.controlsMainHand(human)) {
+        } else if (SoldierOrder.isHoldingPosition(human)
+                || (RangedWeaponCustody.controlsMainHand(human)
+                && HumanUtil.isRangedWeapon(human.getMainHandItem()))) {
             // A shield may interrupt the shot, but it must not replace the
             // archer's retreat path with a path straight toward the attacker.
             human.getNavigation().stop();
+        } else if (advancingMelee) {
+            // A recent hit may raise the shield, but it must not pin a melee
+            // fighter just outside its reach. Keep closing while guarded and
+            // let the normal counter window interrupt the block once in range.
+            if (defenseMovementTarget != threat
+                    || human.getNavigation().isDone() || human.getNavigation().isStuck()
+                    || human.tickCount % 8 == 0) {
+                human.getNavigation().moveTo(threat, 1.0D);
+            }
+            defenseMovementTarget = threat;
+            MovementSpeedController.combat(human, true);
+        } else if (awaitingProjectile) {
+            // Melee units keep pressing the active threat while briefly
+            // blocking a predicted projectile instead of freezing in place.
+            if (human.getNavigation().isDone() || human.getNavigation().isStuck()) {
+                human.getNavigation().moveTo(threat, 1.0D);
+            }
         } else if (human.distanceToSqr(threat) > 12.25D) {
             human.getNavigation().moveTo(threat, 1.0D);
         } else {
             human.getNavigation().stop();
         }
         if (!human.isUsingItem()) {
-            startShieldBlockIfAvailable();
+            startShieldBlockIfAvailable(advancingMelee);
         }
     }
 
@@ -717,9 +742,6 @@ public final class AdaptiveCombatGoal extends Goal {
                 && (!counterfiring || retreatStagnantTicks >= 10)) {
             planRetreat();
         }
-        if (!counterfiring) {
-            jumpWhileRetreating();
-        }
     }
 
     private boolean retreatSafe() {
@@ -817,6 +839,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private boolean tickRetreatGunfire(ItemStack weapon) {
+        GunAttackMovementState.markAttackActive(human);
         boolean safeBackpedal = hasSafeBackpedalStep();
         if (safeBackpedal) {
             setRetreatBackpedaling(true);
@@ -1257,12 +1280,28 @@ public final class AdaptiveCombatGoal extends Goal {
         if (threat == null || !human.getSensing().hasLineOfSight(threat)) {
             return false;
         }
-        if (isRangedCombat() || RangedWeaponCustody.controlsMainHand(human)) {
+        if (GunSupport.get().isGun(human.getMainHandItem())
+                || HumanUtil.isRangedWeapon(human.getMainHandItem())
+                || HumanUtil.isTrident(human.getMainHandItem())) {
             return human.distanceToSqr(threat) <= 784.0D;
         }
-        double reachSqr = human.getBbWidth() * 3.0F * human.getBbWidth() * 3.0F
-                + threat.getBbWidth();
-        return human.distanceToSqr(threat) <= reachSqr;
+        return human.distanceToSqr(threat) <= meleeAttackReachSqr(threat);
+    }
+
+    private double meleeAttackReachSqr(LivingEntity target) {
+        double reach = human.getBbWidth() * 3.0D;
+        return reach * reach + target.getBbWidth();
+    }
+
+    private boolean shouldAdvanceToMeleeThreat() {
+        return threat != null
+                && threat.isAlive()
+                && !GunCustody.hasOwnedGun(human)
+                && !GunSupport.get().isGun(human.getMainHandItem())
+                && !HumanUtil.isRangedWeapon(human.getMainHandItem())
+                && !HumanUtil.isTrident(human.getMainHandItem())
+                && !SoldierOrder.isHoldingPosition(human)
+                && human.distanceToSqr(threat) > meleeAttackReachSqr(threat);
     }
 
     private boolean performShieldCounterattack() {
@@ -1568,46 +1607,19 @@ public final class AdaptiveCombatGoal extends Goal {
         }
     }
 
-    private void jumpWhileRetreating() {
-        if (!human.onGround()
-                || human.isUsingItem()
-                || human.isInWater()
-                || human.isInLava()
-                || human.getPersistentData().getBoolean("humangunner:retreat_backpedaling")) {
-            return;
-        }
-        if (jumpIfBlocked()) {
-            return;
-        }
-        if (human.tickCount < retreatJumpTick || human.getNavigation().isDone()) {
-            return;
-        }
-        Path path = human.getNavigation().getPath();
-        Vec3 desiredAway = NavigationSupport.horizontalDirection(threat.position(), human.position());
-        boolean confidentlyEscaping = path != null
-                && NavigationSupport.pathStartsGenerallyToward(path, human.position(), desiredAway)
-                && human.getDeltaMovement().horizontalDistanceSqr() > 0.0064D;
-        if (confidentlyEscaping && human.getRandom().nextDouble() < 0.45D) {
-            human.getJumpControl().jump();
-        }
-        retreatJumpTick = human.tickCount + human.getRandom().nextInt(10, 19);
-    }
-
-    private void startShieldBlockIfAvailable() {
-        if (human.isUsingItem()) {
-            return;
-        }
-        if (isHoldingTaczGun()) {
-            if (defendingProjectile && human.tickCount < projectileDefenseUntil
-                    && SpartanEquipmentCompat.isShield(human.getOffhandItem())) {
-                human.humanGunner$startProjectileShield();
-            }
-            return;
-        }
-        if (SpartanEquipmentCompat.isShield(human.getOffhandItem())) {
-            human.startUsingItem(InteractionHand.OFF_HAND);
-        } else if (SpartanEquipmentCompat.isShield(human.getMainHandItem())) {
-            human.startUsingItem(InteractionHand.MAIN_HAND);
+    private void startShieldBlockIfAvailable(boolean movingToMelee) {
+        if (human.isUsingItem()) return;
+        InteractionHand shieldHand = SpartanEquipmentCompat.isShield(human.getOffhandItem())
+                ? InteractionHand.OFF_HAND
+                : SpartanEquipmentCompat.isShield(human.getMainHandItem())
+                ? InteractionHand.MAIN_HAND : null;
+        if (shieldHand == null) return;
+        if (defendingProjectile && human.tickCount < projectileDefenseUntil) {
+            human.humanGunner$startProjectileShield(shieldHand);
+        } else if (movingToMelee) {
+            human.humanGunner$startMovementShield(shieldHand);
+        } else {
+            human.startUsingItem(shieldHand);
         }
     }
 

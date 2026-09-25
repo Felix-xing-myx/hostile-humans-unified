@@ -92,7 +92,6 @@ import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
 import net.minecraft.world.entity.animal.AbstractSchoolingFish;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.Bee;
-import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.CrossbowAttackMob;
 import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.monster.RangedAttackMob;
@@ -149,7 +148,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private Goal humanGunner$gunnerGoal;
-    private boolean humanGunner$projectileShieldAllowance;
+    private boolean humanGunner$movementShieldAllowance;
 
     private BowAttack<Human> humanGunner$enhancedBowGoal;
 
@@ -166,7 +165,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         Human human = this;
         GoalSelector goals = this.goalSelector;
         humanGunner$gunnerGoal = club.someoneice.humangunner.GunSupport.get().goal(human);
-        humanGunner$enhancedBowGoal = new BowAttack<>(human, 1.0D, 8, 36.0F);
+        // The Human bow goal advances its use timer faster than real time and
+        // consumes this cooldown in two places per tick. Raising the interval
+        // to 17 keeps that compatibility behavior while lowering the resulting
+        // shot cadence by about 30% overall (not merely increasing the counter
+        // by 30%).
+        humanGunner$enhancedBowGoal = new BowAttack<>(human, 1.0D, 17, 36.0F);
         humanGunner$enhancedCrossbowGoal = new CrossbowGoal<>(human, 1.0D, 48.0F);
         humanGunner$tridentHybridGoal = new TridentHybridGoal(human);
         humanGunner$rangedHybridMeleeGoal = new RangedHybridMeleeGoal(human);
@@ -356,6 +360,11 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.setPathfindingMalus(BlockPathTypes.WATER, 0.0f);
         this.waterNavigation = new WaterBoundPathNavigation((Mob)this, level);
         this.groundNavigation = new com.craftix.hostile_humans.entity.ai.HumanNavigation((Mob)this, level);
+        // HumanEntity enables floating on the navigation created by the
+        // superclass, but this constructor replaces that navigator. Apply the
+        // setting to the actual ground and water navigators as well.
+        this.waterNavigation.setCanFloat(true);
+        this.groundNavigation.setCanFloat(true);
         this.groundNavigation.setCanOpenDoors(true);
         this.groundNavigation.setCanPassDoors(true);
         this.groundNavigation.setMaxVisitedNodesMultiplier(2.0f);
@@ -375,7 +384,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public static AttributeSupplier.Builder createAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.095D).add(Attributes.MAX_HEALTH, 60.0).add(Attributes.ATTACK_DAMAGE, 1.0).add((Attribute)ForgeMod.ENTITY_REACH.get(), 3.0).add(Attributes.FOLLOW_RANGE, 40.0);
+        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.105D).add(Attributes.MAX_HEALTH, 60.0).add(Attributes.ATTACK_DAMAGE, 1.0).add((Attribute)ForgeMod.ENTITY_REACH.get(), 3.0).add(Attributes.FOLLOW_RANGE, 40.0);
     }
 
     @Override
@@ -423,7 +432,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 double d = this.random.nextFloat();
                 double d2 = this.getTier() == HumanTier.LEVEL1 ? 0.0025 : 0.00125;
                 if (!(d < d2) || (item = this.getItemBySlot(equipmentslot)).isEmpty()) continue;
-                this.playSound(SoundEvents.ITEM_BREAK, 1.0f, 1.0f);
+                // Route through the shared break-sound gate: the equipment
+                // change listener can observe the same removal synchronously.
+                club.someoneice.humangunner.EquipmentBreakSounds.playNow(this, equipmentslot);
                 this.setItemSlot(equipmentslot, Items.AIR.getDefaultInstance());
             }
         }
@@ -491,8 +502,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             if (target instanceof EnderMan) {
                 return false;
             }
-            return club.someoneice.humangunner.HumanTargeting.isAutonomousPlayerEnemy(this, target)
-                    && (!(target instanceof Creeper) || HumanUtil.shouldFightCreeper((LivingEntity)this));
+            return club.someoneice.humangunner.HumanTargeting.isAutonomousPlayerEnemy(this, target);
         }));
     }
 
@@ -582,7 +592,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         boolean holdingGun = club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())
                 || club.someoneice.humangunner.GunSupport.get().isGun(human.getOffhandItem());
         if (holdingGun && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)
-                && !humanGunner$projectileShieldAllowance) {
+                && !humanGunner$movementShieldAllowance) {
             return;
         }
     
@@ -594,9 +604,16 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             AttributeInstance modifiableattributeinstance = this.getAttribute(Attributes.MOVEMENT_SPEED);
             if (modifiableattributeinstance != null) {
                 modifiableattributeinstance.removeModifier(MODIFIER_UUID);
-                double multiplier = shield
-                        ? club.someoneice.humangunner.CombatAiConfig.get().shieldUseSpeedMultiplier()
-                        : club.someoneice.humangunner.CombatAiConfig.get().foodUseSpeedMultiplier();
+                double multiplier;
+                if (shield) {
+                    double configuredShieldMultiplier =
+                            club.someoneice.humangunner.CombatAiConfig.get().shieldUseSpeedMultiplier();
+                    multiplier = humanGunner$movementShieldAllowance
+                            ? Math.max(0.4D, configuredShieldMultiplier)
+                            : configuredShieldMultiplier;
+                } else {
+                    multiplier = club.someoneice.humangunner.CombatAiConfig.get().foodUseSpeedMultiplier();
+                }
                 if (multiplier < 1.0D) {
                     modifiableattributeinstance.addTransientModifier(new AttributeModifier(MODIFIER_UUID,
                             shield ? "Shield use speed penalty" : "Food use speed penalty",
@@ -606,17 +623,22 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
     }
 
-    /** A brief, goal-owned exception for an incoming arrow; ordinary gun use still wins. */
-    public void humanGunner$startProjectileShield() {
-        if (!club.someoneice.humangunner.SpartanEquipmentCompat.isShield(getOffhandItem())) {
+    /** Start a mobile defensive block without the ordinary shield speed penalty. */
+    public void humanGunner$startMovementShield(InteractionHand hand) {
+        if (!club.someoneice.humangunner.SpartanEquipmentCompat.isShield(getItemInHand(hand))) {
             return;
         }
-        humanGunner$projectileShieldAllowance = true;
+        humanGunner$movementShieldAllowance = true;
         try {
-            startUsingItem(InteractionHand.OFF_HAND);
+            startUsingItem(hand);
         } finally {
-            humanGunner$projectileShieldAllowance = false;
+            humanGunner$movementShieldAllowance = false;
         }
+    }
+
+    /** Start a predicted-projectile block while preserving mobile shield movement. */
+    public void humanGunner$startProjectileShield(InteractionHand hand) {
+        humanGunner$startMovementShield(hand);
     }
 
     public void stopUsingItem() {
@@ -938,7 +960,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         // carries the same trajectory that the server will simulate.
         if (projectile instanceof AbstractArrow arrow) {
             arrow.getPersistentData().putBoolean(HumanGunner.NPC_CROSSBOW_PROJECTILE, true);
-            HumanGunner.applyFirstTickArrowBallistics(this, arrow);
+            HumanGunner.applyFirstTickArrowBallistics(this, arrow, target);
         }
     }
 
@@ -975,7 +997,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // Do this before addFreshEntity: changing velocity on the first
             // server tick is too late for the client spawn packet and creates
             // a visibly low phantom trajectory despite a correct server hit.
-            HumanGunner.applyFirstTickArrowBallistics(this, mobArrow);
+            HumanGunner.applyFirstTickArrowBallistics(this, mobArrow, target);
             this.playSound(SoundEvents.SKELETON_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
             this.level().addFreshEntity((Entity)mobArrow);
         }
@@ -1016,6 +1038,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                     14.0F - human.level().getDifficulty().getId() * 4.0F
             );
             projectile.setOwner(human);
+            HumanGunner.applyTridentBallistics(human, projectile, target);
             human.level().addFreshEntity(projectile);
             human.level().playSound(
                     null, human.getX(), human.getY(), human.getZ(),
@@ -1121,7 +1144,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         LivingEntity target = this.getTarget();
         boolean pursuingUnderwaterTarget = target != null
                 && !this.isFleeing
-                && this.getAirSupply() >= this.getMaxAirSupply() * 3 / 4
+                // Keep the water navigator active for the full chase instead
+                // of dropping to ground navigation as soon as air falls below
+                // 75%. The breath-recovery flag takes over at the low-air
+                // threshold and then makes surfacing the priority.
+                && !this.shouldCatchBreath
+                && this.getAirSupply() > this.getMaxAirSupply() / 8
                 && !this.isInShallowWater()
                 && target.getY() < this.getY() - 0.5D;
         if (pursuingUnderwaterTarget) {
@@ -1259,7 +1287,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             }
             LivingEntity livingentity = this.human.getTarget();
             if (this.human.shouldUseWaterMovement()) {
-                if (this.waterExitJumpCooldown == 0
+                if (this.operation == MoveControl.Operation.MOVE_TO
+                        && !this.human.getNavigation().isDone()
+                        && this.waterExitJumpCooldown == 0
                         && this.human.shouldJumpOutOfWaterToward(this.wantedX, this.wantedY, this.wantedZ)
                         && this.human.hasDetectedExitY()
                         && this.human.getY() < this.human.getDetectedExitY() + 0.25D) {
@@ -1267,37 +1297,99 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                     this.human.setDeltaMovement(this.human.getDeltaMovement().add(0.0, 0.18, 0.0));
                     this.waterExitJumpCooldown = 6;
                 }
-                if (this.human.shouldCatchBreath) {
+                // Rise only until the eyes clear the surface. Continuing to
+                // inject upward velocity during the whole recovery timer made
+                // Humans bob at the surface and prevented horizontal combat
+                // movement from settling.
+                if (this.human.shouldCatchBreath
+                        && this.human.isEyeInFluid(FluidTags.WATER)) {
                     this.human.setDeltaMovement(this.human.getDeltaMovement().add(0.0, 0.02, 0.0));
-                } else if (livingentity != null && livingentity.getY() > this.human.getY()) {
+                } else if (livingentity != null
+                        && this.human.isEyeInFluid(FluidTags.WATER)
+                        && livingentity.getY() > this.human.getY()) {
                     this.human.setDeltaMovement(this.human.getDeltaMovement().add(0.0, 0.002, 0.0));
+                }
+
+                if (this.operation == MoveControl.Operation.STRAFE) {
+                    applyWaterStrafe();
+                    this.operation = MoveControl.Operation.WAIT;
+                    return;
                 }
                 if (this.operation != MoveControl.Operation.MOVE_TO || this.human.getNavigation().isDone()) {
                     this.human.setSpeed(0.0f);
+                    this.human.setZza(0.0F);
+                    this.human.setXxa(0.0F);
+                    if (this.operation == MoveControl.Operation.MOVE_TO) {
+                        this.operation = MoveControl.Operation.WAIT;
+                    }
                     return;
                 }
                 double d0 = this.wantedX - this.human.getX();
                 double d1 = this.wantedY - this.human.getY();
                 double d2 = this.wantedZ - this.human.getZ();
                 double d3 = Math.sqrt(d0 * d0 + d1 * d1 + d2 * d2);
-                if (d3 < 1.0E-4D) {
+                if (d3 < 0.05D) {
                     this.human.setSpeed(0.0F);
+                    this.human.setZza(0.0F);
+                    this.human.setXxa(0.0F);
+                    this.operation = MoveControl.Operation.WAIT;
                     return;
                 }
-                d1 = Mth.clamp(d1 / d3, -0.25D, 0.25D);
-                float f = (float)(Mth.atan2((double)d2, (double)d0) * 57.2957763671875) - 90.0f;
-                this.human.setYRot(this.rotlerp(this.human.getYRot(), f, 90.0f));
-                this.human.yBodyRot = this.human.getYRot();
-                float f1 = (float)(this.speedModifier * this.human.getAttributeValue(Attributes.MOVEMENT_SPEED)) * 2.0f;
-                float f2 = Mth.lerp((float)0.125f, (float)this.human.getSpeed(), (float)f1);
-                this.human.setSpeed(f2);
-                this.human.setDeltaMovement(this.human.getDeltaMovement().add((double)f2 * d0 * 0.005, (double)f2 * d1 * 0.1, (double)f2 * d2 * 0.005));
+                double horizontalDistance = Math.sqrt(d0 * d0 + d2 * d2);
+                if (horizontalDistance > 1.0E-4D) {
+                    float yaw = (float)(Mth.atan2(d2, d0) * 57.2957763671875) - 90.0F;
+                    this.human.setYRot(this.rotlerp(this.human.getYRot(), yaw, 90.0F));
+                    this.human.yBodyRot = this.human.getYRot();
+                }
+                double verticalDirection = Mth.clamp(d1 / d3, -0.25D, 0.25D);
+                this.applyWaterImpulse(d0 / Math.max(1.0E-4D, horizontalDistance),
+                        verticalDirection, d2 / Math.max(1.0E-4D, horizontalDistance));
             } else {
                 if (!this.human.onGround()) {
                     this.human.setDeltaMovement(this.human.getDeltaMovement().add(0.0, -0.008, 0.0));
                 }
                 super.tick();
             }
+        }
+
+        /**
+         * Water navigation used to multiply acceleration by the remaining
+         * waypoint distance. Since water paths are made of short node-to-node
+         * steps, this produced almost no velocity; normalize the steering
+         * vector and apply a stable water-speed impulse instead.
+         */
+        private void applyWaterStrafe() {
+            float forward = this.strafeForwards;
+            float right = this.strafeRight;
+            float inputLength = Mth.sqrt(forward * forward + right * right);
+            if (inputLength > 1.0F) {
+                forward /= inputLength;
+                right /= inputLength;
+            }
+            float yawRadians = this.human.getYRot() * ((float)Math.PI / 180.0F);
+            float sin = Mth.sin(yawRadians);
+            float cos = Mth.cos(yawRadians);
+            double directionX = forward * cos - right * sin;
+            double directionZ = right * cos + forward * sin;
+            this.applyWaterImpulse(directionX, 0.0D, directionZ);
+        }
+
+        private void applyWaterImpulse(double directionX, double directionY, double directionZ) {
+            float movementSpeed = (float)(this.speedModifier
+                    * this.human.getAttributeValue(Attributes.MOVEMENT_SPEED));
+            this.human.setSpeed(movementSpeed);
+            // travel() still runs moveRelative while swimming; zero the inputs
+            // because the normalized impulse below is the single movement
+            // owner for this frame.
+            this.human.setZza(0.0F);
+            this.human.setXxa(0.0F);
+            double horizontalAcceleration = movementSpeed * 0.06D;
+            double verticalAcceleration = movementSpeed * 0.20D;
+            this.human.setDeltaMovement(this.human.getDeltaMovement().add(
+                    directionX * horizontalAcceleration,
+                    directionY * verticalAcceleration,
+                    directionZ * horizontalAcceleration
+            ));
         }
     }
 }

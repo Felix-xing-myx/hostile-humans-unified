@@ -15,6 +15,12 @@ extends Goal {
     }
 
     public boolean canUse() {
+        // Breath recovery is handled by HumanMoveControl's direct upward
+        // steering. Do not let this high-priority JUMP-only idle goal compete
+        // with combat movement while a Human is pursuing or fighting a target.
+        if (this.mob.getTarget() != null) {
+            return false;
+        }
         if (!this.mob.prefersToFloat()) {
             return false;
         }

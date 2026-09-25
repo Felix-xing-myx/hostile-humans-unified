@@ -77,8 +77,8 @@ public final class HumanGunner {
     private static final Set<Human> SOLDIER_ORDERS_CONFIGURED = Collections.newSetFromMap(new WeakHashMap<>());
     private static final Set<Human> INITIALIZED_HUMANS = Collections.newSetFromMap(new WeakHashMap<>());
     private static final double ARROW_AIR_DRAG = 0.99D;
-    // Vanilla arrows and Spartan Weaponry bolts use 0.05 gravity.
-    private static final double ARROW_AIM_GRAVITY = 0.05D;
+    // Use 0.06 gravity compensation when aiming; the projectiles' physical gravity remains 0.05.
+    private static final double ARROW_AIM_GRAVITY = 0.06D;
     private static final double BALLISTIC_SEARCH_STEP = 0.25D;
     private static final double BALLISTIC_MAX_TICKS = 60.0D;
     public static final String ADAPTIVE_BALLISTICS_APPLIED =
@@ -285,12 +285,12 @@ public final class HumanGunner {
         if (event.getLevel().isClientSide) {
             return;
         }
-        // Tridents keep their separate hybrid trajectory. Ordinary arrows and
-        // Spartan bolts are finalized at the head of their first server tick:
-        // applying here is too early and launch initialization can overwrite it.
+        // Internal launchers apply ballistics before insertion with their
+        // explicit target. This join hook is a fallback for externally-created
+        // Human tridents, whose separate trajectory is finalized on join.
         if (event.getEntity() instanceof ThrownTrident arrow
                 && arrow.getOwner() instanceof Human shooter) {
-            improveHumanProjectile(shooter, arrow);
+            applyTridentBallistics(shooter, arrow, shooter.getTarget());
             return;
         }
         if (!(event.getEntity() instanceof Human human)) {
@@ -623,16 +623,49 @@ public final class HumanGunner {
     }
 
     public static void applyFirstTickArrowBallistics(Human shooter, AbstractArrow projectile) {
-        if (projectile instanceof ThrownTrident
-                || projectile.getPersistentData().getBoolean(ADAPTIVE_BALLISTICS_APPLIED)) {
+        // Fallback for projectiles created by launchers that cannot pass their
+        // selected target directly into the launch-time hook.
+        applyFirstTickArrowBallistics(shooter, projectile, shooter.getTarget());
+    }
+
+    /**
+     * Applies launch-time ballistics using the target supplied by the firing
+     * routine. Do not re-read Human#getTarget here: goal state can change or be
+     * cleared between selecting a target and constructing its projectile.
+     */
+    public static void applyFirstTickArrowBallistics(
+            Human shooter, AbstractArrow projectile,
+            net.minecraft.world.entity.LivingEntity target
+    ) {
+        if (projectile instanceof ThrownTrident) {
+            return;
+        }
+        applyProjectileBallistics(shooter, projectile, target);
+    }
+
+    /** Applies the trident-specific trajectory using the attack's actual target. */
+    public static void applyTridentBallistics(
+            Human shooter, ThrownTrident projectile,
+            net.minecraft.world.entity.LivingEntity target
+    ) {
+        applyProjectileBallistics(shooter, projectile, target);
+    }
+
+    private static void applyProjectileBallistics(
+            Human shooter, AbstractArrow projectile,
+            net.minecraft.world.entity.LivingEntity target
+    ) {
+        if (projectile.getPersistentData().getBoolean(ADAPTIVE_BALLISTICS_APPLIED)) {
             return;
         }
         projectile.getPersistentData().putBoolean(ADAPTIVE_BALLISTICS_APPLIED, true);
-        improveHumanProjectile(shooter, projectile);
+        improveHumanProjectile(shooter, projectile, target);
     }
 
-    private static void improveHumanProjectile(Human shooter, AbstractArrow projectile) {
-        net.minecraft.world.entity.LivingEntity target = shooter.getTarget();
+    private static void improveHumanProjectile(
+            Human shooter, AbstractArrow projectile,
+            net.minecraft.world.entity.LivingEntity target
+    ) {
         if (target == null || !target.isAlive()
                 || (target instanceof Human other && areCombatAllies(shooter, other))) {
             return;
@@ -701,8 +734,8 @@ public final class HumanGunner {
 
     /**
      * Solves the low ballistic arc used by AbstractArrow. Unlike the former
-     * horizontal-distance multiplier, this accounts for both 0.99 air drag
-     * and the 0.05 downward acceleration applied after every arrow tick.
+     * horizontal-distance multiplier, this accounts for 0.99 air drag and
+     * applies the configured 0.06 aim compensation for vanilla's 0.05 gravity.
      */
     private static Vec3 solveArrowBallistics(
             Vec3 origin, Vec3 targetPoint, Vec3 targetMotion, double launchSpeed

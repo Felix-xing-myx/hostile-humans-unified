@@ -17,7 +17,7 @@
 
 - `attributes.health_min`、`attributes.health_max`：生命值范围。2 点生命值相当于 1 颗心。
 - `attributes.attack_damage`、`armor`、`armor_toughness`、`knockback_resistance`、`follow_range`：基础攻击伤害、防护属性和目标探测距离。
-- `movement.base_speed`：本阶人类的基础移动速度，默认 `0.095`，允许范围 `0.01–0.2`。疾跑与迅捷等效果继续沿用原版属性修正；自定义动作减速也作为属性修正参与计算。
+- `movement.base_speed`：本阶人类的基础移动速度，默认 `0.105`，即普通玩家基础移速 `0.1` 的 1.05 倍；允许范围 `0.01–0.2`。疾跑与迅捷等效果继续沿用原版属性修正；自定义动作减速也作为属性修正参与计算。
 - `damage_multipliers.melee_damage_multiplier`、`bow_damage_multiplier`、`trident_damage_multiplier`、`incoming_damage_multiplier`：本阶造成或承受的伤害倍率。
 - `spawning.spawn_multiplier`：本阶自然生成准入倍率。设为 0 可关闭对应的普通自然生成入口；不影响结构固定生成和信号装置召唤。
 - `combat.melee_cooldown_min`、`melee_cooldown_max`：近战攻击冷却范围，单位为 tick。
@@ -25,7 +25,7 @@
 - `weapon_spread_degrees.projectiles`：本阶 `bow`（弓）、`crossbow`（弩）、`trident`（三叉戟）的独立散布值，互不联动，单位为度。
 - 旧配置中的 `gun_spread_degrees` 和 `projectile_spread_degrees` 仍可读取；若对应的新分类值未填写，旧字段会按原来的差值规则提供回退值。
 
-旧配置中的 `normal_movement_speed`、`combat_movement_speed` 和 `retreat_movement_speed` 不再参与计算；请改用各阶的 `movement.base_speed`。`ai.food_use_speed_multiplier` 与 `ai.shield_use_speed_multiplier` 的范围为 `0.1–1`，分别控制进食和举盾时叠加的速度属性修正；默认 `0.7` 即进食时附加 `-30%` 修正，默认 `0.2` 即举盾时附加 `-80%` 修正。喝药不额外施加移速惩罚。
+旧配置中的 `normal_movement_speed`、`combat_movement_speed` 和 `retreat_movement_speed` 不再参与计算；请改用各阶的 `movement.base_speed`。`ai.food_use_speed_multiplier` 与 `ai.shield_use_speed_multiplier` 的范围为 `0.1–1`，分别控制进食和普通举盾时叠加的速度属性修正；默认 `0.7` 即进食时附加 `-30%` 修正，默认 `0.2` 即普通举盾时附加 `-80%` 修正。预判格挡来袭弹射物时，举盾移速至少保留 `0.7` 倍，以便继续移动。喝药不额外施加移速惩罚。
 
 ## `damage`：通用伤害倍率
 
@@ -43,7 +43,7 @@
 
 ## `ai`：战斗行为与动作速度
 
-可调整增强战斗 AI 的开关、撤退与恢复血量阈值、寻找掩体范围、恢复动作间隔、盾牌格挡时长与概率、战术走位和战斗跳跃等行为。`item_recovery_enabled` 控制 AI 是否使用可用恢复物品。`food_use_speed_multiplier` 和 `shield_use_speed_multiplier` 分别设置进食与举盾时使用的速度修正倍率。关闭增强 AI 不会关闭实体、雇佣关系或基本战斗。
+可调整增强战斗 AI 的开关、撤退与恢复血量阈值、寻找掩体范围、恢复动作间隔、盾牌格挡时长与概率、战术走位和战斗跳跃等行为。`item_recovery_enabled` 控制 AI 是否使用可用恢复物品。`food_use_speed_multiplier` 和 `shield_use_speed_multiplier` 分别设置进食与普通举盾时使用的速度修正倍率；预判弹射物的短暂格挡会保留至少 `0.7` 倍移速。关闭增强 AI 不会关闭实体、雇佣关系或基本战斗。
 
 ## `recruitment`：雇佣上限与玩家间伤害
 

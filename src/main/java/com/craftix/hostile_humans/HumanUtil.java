@@ -128,8 +128,5 @@ public class HumanUtil {
         return (double)human.getHealth() < (double)human.getMaxHealth() * (Double)Config.fleeHpPercent.get();
     }
 
-    public static boolean shouldFightCreeper(LivingEntity human) {
-        return String.valueOf(human.getId()).hashCode() % 100 < 20;
-    }
 }
 

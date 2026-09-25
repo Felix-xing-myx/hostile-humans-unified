@@ -71,7 +71,7 @@ public final class SpartanRangedCompat {
         );
         // Apply tier accuracy before entity insertion so the client spawn
         // packet and server simulation begin with the same bolt trajectory.
-        HumanGunner.applyFirstTickArrowBallistics(human, projectile);
+        HumanGunner.applyFirstTickArrowBallistics(human, projectile, target);
         human.level().addFreshEntity(projectile);
 
         EquipmentSlot slot = hand == InteractionHand.MAIN_HAND

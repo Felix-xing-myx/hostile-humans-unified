@@ -1,6 +1,6 @@
 package com.craftix.hostile_humans.entity.ai.goal;
 
-import com.craftix.hostile_humans.HumanUtil;
+import club.someoneice.humangunner.HumanTargeting;
 import com.craftix.hostile_humans.entity.entities.Human;
 import java.util.EnumSet;
 import java.util.List;
@@ -49,28 +49,47 @@ extends Goal {
         Creeper t = null;
         for (Creeper t1 : p_45983_) {
             double d1 = t1.distanceToSqr(p_45986_, p_45987_, p_45988_);
-            if (d0 != -1.0 && !(d1 < d0)) continue;
-            d0 = d1;
-            t = t1;
+            boolean candidatePrimed = t1.swell > 0;
+            boolean selectedPrimed = t != null && t.swell > 0;
+            if (t == null || (candidatePrimed && !selectedPrimed)
+                    || (candidatePrimed == selectedPrimed && d1 < d0)) {
+                d0 = d1;
+                t = t1;
+            }
         }
         return t;
     }
 
     public boolean canUse() {
-        if (this.mob instanceof Human human
-                && club.someoneice.humangunner.SoldierOrder.isHoldingPosition(human)) return false;
         this.toAvoid = this.getNearestEntity(this.mob.level().getEntitiesOfClass(Creeper.class, this.mob.getBoundingBox().inflate((double)this.maxDist, 10.0, (double)this.maxDist)), this.mob.getX(), this.mob.getY(), this.mob.getZ());
         if (this.toAvoid == null) {
             return false;
         }
-        if (HumanUtil.shouldFightCreeper((LivingEntity)this.mob) && this.toAvoid.swell == 0) {
-            return false;
+        if (this.toAvoid.swell == 0 && this.mob instanceof Human human) {
+            boolean autonomousAttack = HumanTargeting.isAutonomousPlayerEnemy(human, this.toAvoid);
+            boolean authorizedDefense = human.getTarget() == this.toAvoid
+                    && human.canAttack(this.toAvoid);
+            if (autonomousAttack || authorizedDefense) {
+                return false;
+            }
         }
-        Vec3 vec3 = DefaultRandomPos.getPosAway((PathfinderMob)this.mob, (int)16, (int)7, (Vec3)this.toAvoid.position());
+        double currentDistanceSqr = this.toAvoid.distanceToSqr((Entity)this.mob);
+        double minimumEscapeDistanceSqr = this.toAvoid.swell > 0
+                ? Math.max(currentDistanceSqr, 36.0D)
+                : currentDistanceSqr;
+        Vec3 vec3 = null;
+        for (int attempt = 0; attempt < 8; attempt++) {
+            Vec3 candidate = DefaultRandomPos.getPosAway(
+                    (PathfinderMob)this.mob, 16, 7, this.toAvoid.position()
+            );
+            if (candidate != null
+                    && this.toAvoid.distanceToSqr(candidate.x, candidate.y, candidate.z)
+                    >= minimumEscapeDistanceSqr) {
+                vec3 = candidate;
+                break;
+            }
+        }
         if (vec3 == null) {
-            return false;
-        }
-        if (this.toAvoid.distanceToSqr(vec3.x, vec3.y, vec3.z) < this.toAvoid.distanceToSqr((Entity)this.mob)) {
             return false;
         }
         this.path = this.mob.getNavigation().createPath(vec3.x, vec3.y, vec3.z, 0);
@@ -78,9 +97,7 @@ extends Goal {
     }
 
     public boolean canContinueToUse() {
-        return (!(this.mob instanceof Human human)
-                || !club.someoneice.humangunner.SoldierOrder.isHoldingPosition(human))
-                && !this.mob.getNavigation().isDone();
+        return !this.mob.getNavigation().isDone();
     }
 
     public void start() {

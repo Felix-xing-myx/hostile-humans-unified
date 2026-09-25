@@ -76,10 +76,14 @@ public final class CombatPressurePolicyTest {
         check(GunRangePolicy.forType("sniper").minimum() == 32.0D
                         && GunRangePolicy.forType("rifle").minimum() == 16.0D
                         && GunRangePolicy.forType("rifle").maximum() == 24.0D
-                        && GunRangePolicy.forType("smg").minimum() == 12.0D
-                        && GunRangePolicy.forType("pistol").maximum() == 20.0D
-                        && GunRangePolicy.forType("shotgun").minimum() == 6.0D
-                        && GunRangePolicy.forType("shotgun").maximum() == 12.0D,
+                        && GunRangePolicy.forType("mg").minimum() == 16.0D
+                        && GunRangePolicy.forType("mg").maximum() == 24.0D
+                        && GunRangePolicy.forType("smg").minimum() == 8.0D
+                        && GunRangePolicy.forType("smg").maximum() == 16.0D
+                        && GunRangePolicy.forType("pistol").minimum() == 6.0D
+                        && GunRangePolicy.forType("pistol").maximum() == 12.0D
+                        && GunRangePolicy.forType("shotgun").minimum() == 3.0D
+                        && GunRangePolicy.forType("shotgun").maximum() == 8.0D,
                 "each gun family uses the requested spacing band");
         check(GunRangePolicy.forType("shotgun").fireRange() >= 40.0D
                         && GunRangePolicy.forType("rifle").fireRange() >= 40.0D

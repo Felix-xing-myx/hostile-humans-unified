@@ -13,29 +13,35 @@ public final class UnifiedConfigTest {
         check(config.taczEnabled(), "auto enable when installed");
         check(config.tier("roamer").healthMin() == 50, "legacy health min");
         check(config.tier("tier3").healthMax() == 100, "legacy health max");
-        check(config.tier("roamer").baseMovementSpeed() == .095D
-                        && config.tier("tier3").baseMovementSpeed() == .095D,
+        check(config.tier("roamer").baseMovementSpeed() == .105D
+                        && config.tier("tier3").baseMovementSpeed() == .105D,
                 "new per-tier base speed defaults preserve current movement");
-        check(config.tier("roamer").gunSpreadDegrees("rifle") == 2.5D
-                        && config.tier("tier1").gunSpreadDegrees("rifle") == 2.0D
-                        && config.tier("tier2").gunSpreadDegrees("rifle") == 1.5D
-                        && config.tier("tier3").gunSpreadDegrees("rifle") == 1.0D,
+        check(config.tier("roamer").gunSpreadDegrees("rifle") == 1.4D
+                        && config.tier("tier1").gunSpreadDegrees("rifle") == 1.1D
+                        && config.tier("tier2").gunSpreadDegrees("rifle") == 0.8D
+                        && config.tier("tier3").gunSpreadDegrees("rifle") == 0.5D,
                 "per-tier rifle spread defaults");
+        Map<String, Double> firearmTierSteps = Map.of(
+                "sniper", 0.2D, "rifle", 0.3D, "mg", 0.4D, "pistol", 0.4D,
+                "smg", 0.4D, "shotgun", 0.5D, "other", 0.3D);
         for (String type : GunSpreadPolicy.supportedTypes()) {
             double previous = Double.POSITIVE_INFINITY;
             for (String tier : List.of("roamer", "tier1", "tier2", "tier3")) {
                 double spread = config.tier(tier).gunSpreadDegrees(type);
                 if (previous != Double.POSITIVE_INFINITY) {
-                    check(previous - spread == 0.5D, type + " has a half-degree tier step");
+                    check(Math.abs(previous - spread - firearmTierSteps.get(type)) < 1.0E-9D,
+                            type + " uses its configured per-tier spread step");
                 }
                 previous = spread;
             }
         }
-        check(config.tier("tier3").gunSpreadDegrees("sniper") == 0.5D
-                        && config.tier("tier3").gunSpreadDegrees("rifle") == 1.0D
-                        && config.tier("tier3").gunSpreadDegrees("mg") == 1.5D
-                        && config.tier("tier3").gunSpreadDegrees("pistol") == 2.0D
-                        && config.tier("tier3").gunSpreadDegrees("shotgun") == 2.5D,
+        check(config.tier("tier3").gunSpreadDegrees("sniper") == 0.2D
+                        && config.tier("tier3").gunSpreadDegrees("rifle") == 0.5D
+                        && config.tier("tier3").gunSpreadDegrees("mg") == 0.8D
+                        && config.tier("tier3").gunSpreadDegrees("pistol") == 1.0D
+                        && config.tier("tier3").gunSpreadDegrees("smg") == 1.2D
+                        && config.tier("tier3").gunSpreadDegrees("shotgun") == 0.5D
+                        && config.tier("tier3").gunSpreadDegrees("other") == 1.0D,
                 "each weapon family reaches its intended top-tier accuracy floor");
         double previousBow = Double.POSITIVE_INFINITY;
         double previousCrossbow = Double.POSITIVE_INFINITY;
@@ -79,8 +85,8 @@ public final class UnifiedConfigTest {
         check(adjustableAccuracy.tier("tier2").gunSpreadDegrees("sniper") == 4.25D
                         && adjustableAccuracy.tier("tier2").gunSpreadDegrees("rifle") == 3.75D
                         && adjustableAccuracy.tier("tier2").gunSpreadDegrees("pistol") == 2.25D
-                        && adjustableAccuracy.tier("tier2").gunSpreadDegrees("smg") == 2.5D
-                        && adjustableAccuracy.tier("tier1").gunSpreadDegrees("rifle") == 2.0D
+                        && adjustableAccuracy.tier("tier2").gunSpreadDegrees("smg") == 1.6D
+                        && adjustableAccuracy.tier("tier1").gunSpreadDegrees("rifle") == 1.1D
                         && adjustableAccuracy.tier("tier2").projectileSpreadDegrees("bow") == 6.5D
                         && adjustableAccuracy.tier("tier2").projectileSpreadDegrees("crossbow") == 7.25D
                         && adjustableAccuracy.tier("tier2").projectileSpreadDegrees("trident") == 8.0D,
@@ -91,7 +97,7 @@ public final class UnifiedConfigTest {
                 """).getAsJsonObject();
         UnifiedConfig legacyConfig = new UnifiedConfig(legacyAccuracy);
         check(legacyConfig.tier("tier1").healthMin() == 55
-                        && legacyConfig.tier("tier1").baseMovementSpeed() == .095D
+                        && legacyConfig.tier("tier1").baseMovementSpeed() == .105D
                         && legacyConfig.tier("tier1").gunSpreadDegrees("rifle") == 1.25D
                         && legacyConfig.tier("tier1").gunSpreadDegrees("sniper") == 0.75D
                         && legacyConfig.tier("tier1").gunSpreadDegrees("shotgun") == 2.75D
@@ -105,7 +111,7 @@ public final class UnifiedConfigTest {
                  "ai":{"food_use_speed_multiplier":0.7,"shield_use_speed_multiplier":0.35}}
                 """).getAsJsonObject());
         check(movementConfig.tier("roamer").baseMovementSpeed() == .08D
-                        && movementConfig.tier("tier1").baseMovementSpeed() == .095D
+                        && movementConfig.tier("tier1").baseMovementSpeed() == .105D
                         && movementConfig.tier("tier2").baseMovementSpeed() == .11D,
                 "new movement formula exposes independently adjustable tier base speeds");
         CombatAiConfig actionSpeeds = CombatAiConfig.parse(movementConfig.ai());
@@ -123,7 +129,7 @@ public final class UnifiedConfigTest {
                 """).getAsJsonObject();
         JsonObject migrated = UnifiedConfig.migrate(guns.deepCopy(), ai);
         config = new UnifiedConfig(migrated);
-        check(config.tier("tier2").baseMovementSpeed() == .095D
+        check(config.tier("tier2").baseMovementSpeed() == .105D
                         && !config.ai().has("normal_movement_speed"),
                 "legacy speed migration is discarded in favor of new base-speed defaults");
         check(config.ai().get("recovery_damage_tolerance_ratio").getAsDouble() == .2, "legacy absolute tolerance");
@@ -163,7 +169,7 @@ public final class UnifiedConfigTest {
                 """).getAsJsonObject();
         config = new UnifiedConfig(bad);
         check(config.tier("roamer").healthMin() == 5 && config.tier("roamer").healthMax() == 900, "normalize reversed health range");
-        check(config.tier("roamer").baseMovementSpeed() == .095D, "NaN base movement speed fallback");
+        check(config.tier("roamer").baseMovementSpeed() == .105D, "NaN base movement speed fallback");
         check(config.tier("roamer").attackDamage() == 0, "negative attack clamp");
         check(config.tier("roamer").incomingDamage() == 10, "damage clamp");
         check(!config.spawn().enabled() && config.spawn().admissionChance() == 1, "spawn disable and clamp");
