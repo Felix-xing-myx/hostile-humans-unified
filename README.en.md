@@ -14,6 +14,16 @@ Identity badges work from any inventory slot. With Curios installed, they can al
 
 Hired humans can be ordered to follow, guard an area, hold their position, or patrol. Their combat behavior can be set to Aggressive, Passive Protection, or Fully Neutral (self-defense only). You can open a hired human's inventory to manage equipment, choose whether they actively pick up items, or dismiss them.
 
+### Screenshots
+
+**Hired human command panel**
+
+![Hired human command panel with movement orders, combat modes, and the active pickup setting](docs/images/en/soldier-commands.png)
+
+**Hired human inventory and equipment screen**
+
+![Hired human inventory and equipment screen](docs/images/en/soldier-inventory.png)
+
 Humans can fight with melee weapons, shields, bows, crossbows, tridents, and—when TaCZ is installed and enabled—compatible firearms. Ranged units adjust their combat behavior to their weapon. Hired companions may retreat to recover at low health and warn their owner when critically injured.
 
 ## Signal Items
