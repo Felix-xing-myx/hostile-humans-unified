@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | [English](README.en.md)
 
-This mod is derived from the original [**Hostile Humans**](https://www.curseforge.com/minecraft/mc-mods/hostile-humans) mod and integrates content from **Human Gunner**. It also introduces original content created specifically for this mod. GPT assisted with modifying and building this mod. It is a standalone mod and can be installed on its own; the original Hostile Humans and Human Gunner JARs are not required. This is a third-party maintained version, not an official update from the original author.
+This mod is derived from the original [**Hostile Humans**](https://www.curseforge.com/minecraft/mc-mods/hostile-humans) mod and integrates content from **Human Gunner**. It also introduces original content created specifically for this mod. GPT assisted with modifying and building this mod. It is a standalone mod and can be installed on its own; the original Hostile Humans and Human Gunner JARs are not required. This is a third-party maintained version, not an official update from the original author. Most stats and mechanics of hostile humans have been strengthened, so the mod may be challenging in a mostly vanilla environment. Playing it alongside other mods or as part of a modpack is recommended.
 
 Designed for **Minecraft 1.20.1, Forge 47.4.16, and Java 17**. Install one unified mod JAR. TaCZ and Curios are optional integrations: TaCZ enables firearm support, while Curios adds a dedicated accessory slot for identity badges.
 
