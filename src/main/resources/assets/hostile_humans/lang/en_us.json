@@ -1,0 +1,20 @@
+{
+  "entity.hostile_humans.hh": "Human",
+  "key.hostile_humans.category": "Hostile Humans Keys",
+  "key.hostile_humans.control": "Stay / Follow (used with right click)",
+  "key.hostile_humans.aggression": "Set aggression level",
+  "key.hostile_humans.open_menu": "Open menu",
+  "item.hostile_humans.human_tier1_spawn_egg": "Human I Spawn Egg",
+  "item.hostile_humans.human_tier2_spawn_egg": "Human II Spawn Egg",
+  "item.hostile_humans.human_tier3_spawn_egg": "Human III Spawn Egg",
+  "item.hostile_humans.human_roamer_spawn_egg": "Roamer Spawn Egg",
+  "itemGroup.hostile_humans": "Hostile Humans",
+  "entity.hostile_humans.human_group": "Human Group",
+  "entity.hostile_humans.human_roamer": "Human Roamer",
+  "entity.hostile_humans.human_tier1": "Human Tier I",
+  "entity.hostile_humans.human_tier2": "Human Tier II",
+  "entity.hostile_humans.human_tier3": "Human Tier III",
+  "death.attack.human": "%1$s was slain by a Human",
+  "death.attack.human_with_name": "%1$s was slain by %2$s",
+  "error.disabled": "Structure disabled: %s"
+}

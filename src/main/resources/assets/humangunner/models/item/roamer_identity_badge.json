@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "humangunner:item/roamer_identity_badge"
+  }
+}

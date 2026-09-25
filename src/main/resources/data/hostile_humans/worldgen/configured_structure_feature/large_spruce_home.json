@@ -1,0 +1,10 @@
+{
+  "config": {
+    "start_pool": "hostile_humans:large_spruce_home_pool",
+    "size": 3
+  },
+  "biomes": "#hostile_humans:has_structure/large_spruce_home",
+  "adapt_noise": true,
+  "spawn_overrides": {},
+  "type": "minecraft:village"
+}

@@ -1,0 +1,46 @@
+{
+  "mappings": {
+    "com/craftix/hostile_humans/mixin/BlockMixin": {
+      "playerWillDestroy": "Lnet/minecraft/world/level/block/Block;m_5707_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V",
+      "setPlacedBy": "Lnet/minecraft/world/level/block/Block;m_6402_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;)V"
+    },
+    "com/craftix/hostile_humans/mixin/MonsterMobsMixin": {
+      "registerGoals": "m_8099_()V"
+    },
+    "com/craftix/hostile_humans/mixin/ChunkGeneratorMix": {
+      "tryGenerateStructure": "Lnet/minecraft/world/level/chunk/ChunkGenerator;m_223104_(Lnet/minecraft/world/level/levelgen/structure/StructureSet$StructureSelectionEntry;Lnet/minecraft/world/level/StructureManager;Lnet/minecraft/core/RegistryAccess;Lnet/minecraft/world/level/levelgen/RandomState;Lnet/minecraft/world/level/levelgen/structure/templatesystem/StructureTemplateManager;JLnet/minecraft/world/level/chunk/ChunkAccess;Lnet/minecraft/world/level/ChunkPos;Lnet/minecraft/core/SectionPos;)Z"
+    },
+    "com/craftix/hostile_humans/mixin/BeardifierMix": {
+      "forStructuresInChunk": "Lnet/minecraft/world/level/levelgen/Beardifier;m_223937_(Lnet/minecraft/world/level/StructureManager;Lnet/minecraft/world/level/ChunkPos;)Lnet/minecraft/world/level/levelgen/Beardifier;"
+    },
+    "com/craftix/hostile_humans/mixin/DamageSourceMix": {
+      "mobAttack": "Lnet/minecraft/world/damagesource/DamageSources;m_269333_(Lnet/minecraft/world/entity/LivingEntity;)Lnet/minecraft/world/damagesource/DamageSource;"
+    },
+    "com/craftix/hostile_humans/mixin/DoorMixin": {
+      "use": "m_6227_(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;"
+    }
+  },
+  "data": {
+    "searge": {
+      "com/craftix/hostile_humans/mixin/BlockMixin": {
+        "playerWillDestroy": "Lnet/minecraft/world/level/block/Block;m_5707_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/player/Player;)V",
+        "setPlacedBy": "Lnet/minecraft/world/level/block/Block;m_6402_(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;)V"
+      },
+      "com/craftix/hostile_humans/mixin/MonsterMobsMixin": {
+        "registerGoals": "m_8099_()V"
+      },
+      "com/craftix/hostile_humans/mixin/ChunkGeneratorMix": {
+        "tryGenerateStructure": "Lnet/minecraft/world/level/chunk/ChunkGenerator;m_223104_(Lnet/minecraft/world/level/levelgen/structure/StructureSet$StructureSelectionEntry;Lnet/minecraft/world/level/StructureManager;Lnet/minecraft/core/RegistryAccess;Lnet/minecraft/world/level/levelgen/RandomState;Lnet/minecraft/world/level/levelgen/structure/templatesystem/StructureTemplateManager;JLnet/minecraft/world/level/chunk/ChunkAccess;Lnet/minecraft/world/level/ChunkPos;Lnet/minecraft/core/SectionPos;)Z"
+      },
+      "com/craftix/hostile_humans/mixin/BeardifierMix": {
+        "forStructuresInChunk": "Lnet/minecraft/world/level/levelgen/Beardifier;m_223937_(Lnet/minecraft/world/level/StructureManager;Lnet/minecraft/world/level/ChunkPos;)Lnet/minecraft/world/level/levelgen/Beardifier;"
+      },
+      "com/craftix/hostile_humans/mixin/DamageSourceMix": {
+        "mobAttack": "Lnet/minecraft/world/damagesource/DamageSources;m_269333_(Lnet/minecraft/world/entity/LivingEntity;)Lnet/minecraft/world/damagesource/DamageSource;"
+      },
+      "com/craftix/hostile_humans/mixin/DoorMixin": {
+        "use": "m_6227_(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;"
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["ABA", "BCB", "ABA"],
+  "key": {
+    "A": {"item": "minecraft:netherite_block"},
+    "B": {"item": "minecraft:redstone"},
+    "C": {"item": "minecraft:firework_star"}
+  },
+  "result": {"item": "humangunner:tier_three_signal_flare"}
+}

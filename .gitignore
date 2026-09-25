@@ -1,0 +1,27 @@
+# Local Gradle/Forge outputs and caches
+.gradle/
+build/
+out/
+run/
+
+# Local game and diagnostic data
+logs/
+crash-reports/
+*.log
+*.log.gz
+
+# Editor and operating-system files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Local credentials and environment overrides
+.env
+.env.*
+!*.example
+local.properties
+
+# Local pre-publication working notes
+PUBLICATION_AUDIT.md

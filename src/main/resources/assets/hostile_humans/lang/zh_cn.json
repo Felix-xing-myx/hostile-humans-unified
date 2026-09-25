@@ -1,0 +1,20 @@
+{
+  "entity.hostile_humans.hh": "人类",
+  "entity.hostile_humans.human_roamer": "流浪人类",
+  "entity.hostile_humans.human_tier1": "一阶人类",
+  "entity.hostile_humans.human_tier2": "二阶人类",
+  "entity.hostile_humans.human_tier3": "三阶人类",
+  "entity.hostile_humans.human_group": "人类小队生成器",
+  "key.hostile_humans.category": "敌对人类按键",
+  "key.hostile_humans.control": "停留/跟随（右键使用）",
+  "key.hostile_humans.aggression": "设置攻击性等级",
+  "key.hostile_humans.open_menu": "打开菜单",
+  "item.hostile_humans.human_roamer_spawn_egg": "流浪人类刷怪蛋",
+  "item.hostile_humans.human_tier1_spawn_egg": "一阶人类刷怪蛋",
+  "item.hostile_humans.human_tier2_spawn_egg": "二阶人类刷怪蛋",
+  "item.hostile_humans.human_tier3_spawn_egg": "三阶人类刷怪蛋",
+  "itemGroup.hostile_humans": "敌对人类",
+  "death.attack.human": "%1$s 被人类杀死",
+  "death.attack.human_with_name": "%1$s 被 %2$s 杀死",
+  "error.disabled": "结构已禁用：%s"
+}

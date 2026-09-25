@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "rules": {
+    "enchant_chance": 1.0,
+    "damage_percent_min": 0.0,
+    "damage_percent_max": 0.85
+  },
+  "mainhand": [
+    { "item": "minecraft:iron_sword", "weight": 3 },
+    { "item": "minecraft:stone_sword", "weight": 3 },
+    { "item": "minecraft:diamond_sword", "weight": 1 },
+    { "item": "minecraft:diamond_axe", "weight": 1 },
+    { "item": "minecraft:crossbow", "weight": 1 },
+    { "item": "minecraft:bow", "weight": 1 }
+  ],
+  "ranged_mainhand": [
+    { "item": "minecraft:crossbow", "weight": 1 },
+    { "item": "minecraft:bow", "weight": 1 }
+  ],
+  "offhand": {
+    "chance": 0.4,
+    "entries": [
+      { "item": "minecraft:shield", "weight": 9 },
+      { "item": "minecraft:totem_of_undying", "weight": 1 }
+    ]
+  },
+  "inventory": [
+    { "item": "minecraft:iron_sword", "weight": 2 },
+    { "item": "minecraft:stone_sword", "weight": 2 }
+  ],
+  "bonus_mainhand": {
+    "chance": 0.05,
+    "entries": [
+      { "item": "minecraft:trident", "weight": 1 }
+    ]
+  },
+  "armor_sets": [
+    {
+      "weight": 2,
+      "head": "minecraft:iron_helmet",
+      "chest": "minecraft:iron_chestplate",
+      "legs": "minecraft:iron_leggings",
+      "feet": "minecraft:iron_boots"
+    },
+    {
+      "weight": 1,
+      "head": "minecraft:diamond_helmet",
+      "chest": "minecraft:diamond_chestplate",
+      "legs": "minecraft:diamond_leggings",
+      "feet": "minecraft:diamond_boots"
+    },
+    {
+      "weight": 1,
+      "head": "minecraft:chainmail_helmet",
+      "chest": "minecraft:chainmail_chestplate",
+      "legs": "minecraft:chainmail_leggings",
+      "feet": "minecraft:chainmail_boots"
+    },
+    {
+      "weight": 1,
+      "requires_mod": "immersive_armors",
+      "head": "immersive_armors:slime_helmet",
+      "chest": "immersive_armors:slime_chestplate",
+      "legs": "immersive_armors:slime_leggings",
+      "feet": "immersive_armors:slime_boots"
+    },
+    {
+      "weight": 1,
+      "requires_mod": "immersive_armors",
+      "head": "immersive_armors:prismarine_helmet",
+      "chest": "immersive_armors:prismarine_chestplate",
+      "legs": "immersive_armors:prismarine_leggings",
+      "feet": "immersive_armors:prismarine_boots"
+    },
+    {
+      "weight": 1,
+      "requires_mod": "immersive_armors",
+      "head": "immersive_armors:steampunk_helmet",
+      "chest": "immersive_armors:steampunk_chestplate",
+      "legs": "immersive_armors:steampunk_leggings",
+      "feet": "immersive_armors:steampunk_boots"
+    }
+  ]
+}

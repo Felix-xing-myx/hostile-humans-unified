@@ -1,0 +1,10 @@
+{
+  "config": {
+    "start_pool": "hostile_humans:tiny_igloo_pool",
+    "size": 3
+  },
+  "biomes": "#hostile_humans:has_structure/tiny_igloo",
+  "adapt_noise": true,
+  "spawn_overrides": {},
+  "type": "minecraft:village"
+}

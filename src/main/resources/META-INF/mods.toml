@@ -1,0 +1,60 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="Mixed; see THIRD_PARTY_NOTICES.md"
+logoFile="logo.png"
+
+[[mods]]
+modId="hostile_humans"
+version="${file.jarVersion}"
+displayName="Hostile Humans Unified"
+authors="Craft1x; AmarokIce; TAVO2 local maintenance"
+description='''Source-built local integration of Hostile Humans and Human Gunner. Preserves existing registry and save identifiers. No original mod jar is required or embedded.'''
+
+[[mods]]
+modId="humangunner"
+version="${file.jarVersion}"
+displayName="Hostile Humans Unified — legacy namespace"
+authors="AmarokIce; TAVO2 local maintenance"
+description='''Compatibility registration identity inside Hostile Humans Unified; not a separate addon or runtime patch layer.'''
+
+[[dependencies.hostile_humans]]
+modId="forge"
+mandatory=true
+versionRange="[47.3.32,48)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.hostile_humans]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.hostile_humans]]
+modId="tacz"
+mandatory=false
+versionRange="[1.1.8,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.humangunner]]
+modId="hostile_humans"
+mandatory=true
+versionRange="[3.0.0-unified,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.humangunner]]
+modId="touhou_little_maid"
+mandatory=false
+versionRange="[1.5.3,)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.hostile_humans]]
+modId="curios"
+mandatory=false
+versionRange="[5.14,6)"
+ordering="AFTER"
+side="BOTH"

@@ -1,0 +1,114 @@
+{
+  "structures": [
+    {
+      "structure": "hostile_humans:cottage",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:cozy_spruce_house",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:desert_house_2",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:desert_house_3",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:desert_house_4",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:desert_house",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:farmhouse",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:fortress",
+      "weight": 10
+    },
+    {
+      "structure": "hostile_humans:igloo",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:large_desert_house",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:large_spruce_home",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:oak_house_2",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:oak_house_3",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:oak_house_4",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:oak_house_5",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:oak_house",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:savanna_house_2",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:spruce_cottage",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:spruce_fort",
+      "weight": 11
+    },
+    {
+      "structure": "hostile_humans:spruce_house",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:thin_spruce",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:tiny_acacia",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:tiny_igloo",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:tiny_spruce_house",
+      "weight": 15
+    },
+    {
+      "structure": "hostile_humans:tower",
+      "weight": 13
+    },
+    {
+      "structure": "hostile_humans:warehouse",
+      "weight": 15
+    }
+  ],
+  "placement": {
+    "salt": 6435296,
+    "spacing": 28,
+    "separation": 25,
+    "type": "minecraft:random_spread"
+  }
+}

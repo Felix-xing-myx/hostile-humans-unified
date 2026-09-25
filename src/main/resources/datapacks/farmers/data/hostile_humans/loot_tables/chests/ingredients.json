@@ -1,0 +1,49 @@
+{
+  "pools": [
+    {
+      "rolls": 10,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "minecraft:potato"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "minecraft:carrot"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:onion"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:cabbage"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:tomato"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 40,
+          "name": "farmersdelight:pumpkin_slice"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 40,
+          "name": "farmersdelight:cabbage_leaf"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 40,
+          "name": "minecraft:beetroot"
+        }
+      ]
+    }
+  ]
+}

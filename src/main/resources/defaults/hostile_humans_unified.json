@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "_说明": "修改后完整重启生效。roamer/tier1/tier2/tier3 对应流浪者/一阶/二阶/三阶。血量单位为生命值，2 点=1颗心；移动速度统一采用玩家式步行/疾跑及原版加速效果，下面三个旧速度字段仅为兼容旧配置保留，不再决定实际速度。tiers.<等级>.gun_spread_degrees 是该阶步枪的散布基准（度）；同阶狙击枪减0.5度，机枪加0.5度，手枪/冲锋枪加1度，霰弹枪加1.5度。projectile_spread_degrees 是弓和三叉戟的散布基准（度），弩比它低0.5度；部分阶级的弩可能比步枪更准。枪械白名单等设置在末尾 tacz。",
+  "tiers": {
+    "roamer": {
+      "health_min": 50,
+      "health_max": 70,
+      "normal_movement_speed": 0.1,
+      "combat_movement_speed": 0.1,
+      "retreat_movement_speed": 0.1,
+      "attack_damage": 1,
+      "armor": 0,
+      "armor_toughness": 0,
+      "knockback_resistance": 0,
+      "follow_range": 40,
+      "melee_damage_multiplier": 1,
+      "bow_damage_multiplier": 1,
+      "trident_damage_multiplier": 1,
+      "incoming_damage_multiplier": 1,
+      "spawn_multiplier": 1,
+      "gun_spread_degrees": 2.5,
+      "projectile_spread_degrees": 2.4,
+      "melee_cooldown_min": 20,
+      "melee_cooldown_max": 32
+    },
+    "tier1": {
+      "health_min": 60,
+      "health_max": 80,
+      "normal_movement_speed": 0.1,
+      "combat_movement_speed": 0.1,
+      "retreat_movement_speed": 0.1,
+      "attack_damage": 1,
+      "armor": 0,
+      "armor_toughness": 0,
+      "knockback_resistance": 0,
+      "follow_range": 40,
+      "melee_damage_multiplier": 1,
+      "bow_damage_multiplier": 1,
+      "trident_damage_multiplier": 1,
+      "incoming_damage_multiplier": 1,
+      "spawn_multiplier": 1,
+      "gun_spread_degrees": 2,
+      "projectile_spread_degrees": 2.1,
+      "melee_cooldown_min": 16,
+      "melee_cooldown_max": 28
+    },
+    "tier2": {
+      "health_min": 70,
+      "health_max": 90,
+      "normal_movement_speed": 0.1,
+      "combat_movement_speed": 0.1,
+      "retreat_movement_speed": 0.1,
+      "attack_damage": 1,
+      "armor": 0,
+      "armor_toughness": 0,
+      "knockback_resistance": 0,
+      "follow_range": 40,
+      "melee_damage_multiplier": 1,
+      "bow_damage_multiplier": 1,
+      "trident_damage_multiplier": 1,
+      "incoming_damage_multiplier": 1,
+      "spawn_multiplier": 0.2,
+      "gun_spread_degrees": 1.5,
+      "projectile_spread_degrees": 1.8,
+      "melee_cooldown_min": 12,
+      "melee_cooldown_max": 24
+    },
+    "tier3": {
+      "health_min": 80,
+      "health_max": 100,
+      "normal_movement_speed": 0.1,
+      "combat_movement_speed": 0.1,
+      "retreat_movement_speed": 0.1,
+      "attack_damage": 1,
+      "armor": 0,
+      "armor_toughness": 0,
+      "knockback_resistance": 0.15,
+      "follow_range": 48,
+      "melee_damage_multiplier": 1,
+      "bow_damage_multiplier": 1,
+      "trident_damage_multiplier": 1,
+      "incoming_damage_multiplier": 1,
+      "spawn_multiplier": 0.04,
+      "gun_spread_degrees": 1,
+      "projectile_spread_degrees": 1.5,
+      "melee_cooldown_min": 10,
+      "melee_cooldown_max": 20
+    }
+  },
+  "damage": {
+    "human_melee_damage_multiplier": 1.7,
+    "human_bow_damage_multiplier": 1.008,
+    "human_trident_damage_multiplier": 0.84,
+    "bow_velocity_damage_multiplier": 1.5,
+    "trident_velocity_damage_multiplier": 1.5,
+    "trident_stab_damage_multiplier": 0.42,
+    "jump_attack_damage_multiplier": 1.5,
+    "tamed_maid_melee_damage_multiplier": 0.25
+  },
+  "spawning": {
+    "enabled": true,
+    "admission_chance": 0.08,
+    "battle_admission_chance": 0.08,
+    "roamer_legacy_roll": 200,
+    "encounter_cooldown_ticks": 2400,
+    "nearby_horizontal_radius": 48,
+    "nearby_vertical_radius": 16,
+    "density_divisor": 4
+  },
+  "ai": {
+    "enabled": true,
+    "retreat_health_ratio": 0.3,
+    "critical_health_ratio": 0.12,
+    "resume_health_ratio": 0.65,
+    "cover_search_radius": 18,
+    "cover_search_attempts": 10,
+    "recovery_damage_tolerance_ratio": 0.1666666667,
+    "recovery_commit_ticks": 14,
+    "gradual_heal_interval_ticks": 10,
+    "food_recovery_min_health": 2,
+    "food_recovery_max_health": 12,
+    "shield_block_duration_min_ticks": 6,
+    "shield_block_duration_max_ticks": 160,
+    "shield_block_cooldown_ticks": 5,
+    "shield_block_chance_after_hit": 0.65,
+    "tactical_reposition_interval": 26,
+    "ally_spacing_radius": 3.5,
+    "combat_jump_interval_min": 12,
+    "combat_jump_interval_max": 22,
+    "combat_jump_chance": 0.6,
+    "item_recovery_enabled": true
+  },
+  "recruitment": {
+    "_说明": "四项分别限制每位玩家可正式雇佣的各阶人类数量。开启 PvP 伤害后，雇佣人类可在战斗模式授权的战斗中伤害其他玩家及其雇佣人类；自己的主人和同一主人的单位始终受保护。",
+    "max_hired_by_tier": {
+      "roamer": 12,
+      "tier1": 10,
+      "tier2": 6,
+      "tier3": 3
+    },
+    "allow_hired_pvp_damage": false
+  },
+  "tacz": {
+    "enabled": true,
+    "tier1_gun_chance": 0.1,
+    "tier2_gun_chance": 0.4,
+    "tier3_gun_chance": 0.7,
+    "roamer_gun_chance": 0.08,
+    "forced_ranged_gun_chance": 0.33,
+    "gun_drop_chance": 0.01,
+    "human_gun_damage_multiplier": 0.5,
+    "pillager_gun_damage_multiplier": 0.4,
+    "gunner_spread_degrees": 0.6,
+    "auto_add_new_guns": true,
+    "auto_added_gun_weight": 5,
+    "excluded_auto_gun_types": [
+      "rpg"
+    ],
+    "excluded_gun_namespaces": [],
+    "tier_gun_type_weights": {
+      "roamer": {
+        "pistol": 60,
+        "smg": 30,
+        "shotgun": 10
+      },
+      "tier1": {
+        "pistol": 30,
+        "smg": 40,
+        "shotgun": 20,
+        "sniper": 10
+      },
+      "tier2": {
+        "pistol": 20,
+        "smg": 25,
+        "shotgun": 15,
+        "rifle": 20,
+        "mg": 10,
+        "sniper": 10
+      },
+      "tier3": {
+        "pistol": 0,
+        "smg": 10,
+        "rifle": 40,
+        "sniper": 5,
+        "mg": 20,
+        "shotgun": 25
+      }
+    },
+    "gun_whitelist": {},
+    "hired_gun_additional_whitelist": {},
+    "gun_blacklist": [],
+    "tier_damage_multipliers": {
+      "roamer": 1,
+      "tier1": 1,
+      "tier2": 1,
+      "tier3": 1
+    },
+    "shield_damage_multiplier": 0.3,
+    "tamed_maid_damage_multiplier": 0.15
+  }
+}

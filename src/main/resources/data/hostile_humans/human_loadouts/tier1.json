@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "rules": {
+    "enchant_chance": 0.3,
+    "damage_percent_min": 0.0,
+    "damage_percent_max": 0.85
+  },
+  "mainhand": [
+    { "item": "minecraft:iron_sword", "weight": 2 },
+    { "item": "minecraft:stone_sword", "weight": 2 },
+    { "item": "minecraft:crossbow", "weight": 1 },
+    { "item": "minecraft:bow", "weight": 1 }
+  ],
+  "ranged_mainhand": [
+    { "item": "minecraft:crossbow", "weight": 1 },
+    { "item": "minecraft:bow", "weight": 1 }
+  ],
+  "offhand": {
+    "chance": 0.2,
+    "entries": [
+      { "item": "minecraft:shield", "weight": 1 }
+    ]
+  },
+  "inventory": [
+    { "item": "minecraft:iron_sword", "weight": 1 },
+    { "item": "minecraft:stone_sword", "weight": 1 }
+  ],
+  "bonus_mainhand": {
+    "chance": 0.0,
+    "entries": []
+  },
+  "armor_sets": [
+    {
+      "weight": 1,
+      "head": "minecraft:leather_helmet",
+      "chest": "minecraft:leather_chestplate",
+      "legs": "minecraft:leather_leggings",
+      "feet": "minecraft:leather_boots"
+    },
+    {
+      "weight": 1,
+      "head": "minecraft:chainmail_helmet",
+      "chest": "minecraft:chainmail_chestplate",
+      "legs": "minecraft:chainmail_leggings",
+      "feet": "minecraft:chainmail_boots"
+    },
+    {
+      "weight": 1,
+      "head": "minecraft:iron_helmet",
+      "chest": "minecraft:iron_chestplate",
+      "legs": "minecraft:iron_leggings",
+      "feet": "minecraft:iron_boots"
+    },
+    {
+      "weight": 1,
+      "head": "minecraft:golden_helmet",
+      "chest": "minecraft:golden_chestplate",
+      "legs": "minecraft:golden_leggings",
+      "feet": "minecraft:golden_boots"
+    },
+    {
+      "weight": 1,
+      "requires_mod": "immersive_armors",
+      "head": "immersive_armors:wooden_helmet",
+      "chest": "immersive_armors:wooden_chestplate",
+      "legs": "immersive_armors:wooden_leggings",
+      "feet": "immersive_armors:wooden_boots"
+    },
+    {
+      "weight": 1,
+      "requires_mod": "immersive_armors",
+      "head": "immersive_armors:bone_helmet",
+      "chest": "immersive_armors:bone_chestplate",
+      "legs": "immersive_armors:bone_leggings",
+      "feet": "immersive_armors:bone_boots"
+    },
+    {
+      "weight": 1,
+      "requires_mod": "immersive_armors",
+      "head": "immersive_armors:robe_helmet",
+      "chest": "immersive_armors:robe_chestplate",
+      "legs": "immersive_armors:robe_leggings",
+      "feet": "immersive_armors:robe_boots"
+    }
+  ]
+}

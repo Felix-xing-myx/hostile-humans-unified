@@ -1,0 +1,18 @@
+{
+  "upstream_sha256": "3bed06fdac817070c9345e190f144b74db1480a4a75f6ac79768f8078240dc53",
+  "recovered_java_files": 98,
+  "source_method": "CFR 0.152, official 1.20.1 SRG token map",
+  "upstream_license": "CurseForge still lists All Rights Reserved, but its linked 1.20.1 source repository contains GPL-2.0 and its author publicly allows others to port using the public source. Exact binary-derived files and retained artwork still require scope review before publication.",
+  "addon_license": "MPL-2.0",
+  "addon_input": "humangunner-1.20.1-2.0.0-taov2.jar",
+  "addon_sha256": "de5ace4923a4d518ea9058eeb3861f3ab5cab65004247271a2dc91ea9b02a0c2",
+  "historical_output_version": "3.1.3-unified",
+  "historical_output_sha256": "b2616df0d8fb75a114f512392b1ee309b886340b3e97e63dd01143a882109473",
+  "maintained_source_version": "3.1.25-unified",
+  "tacz_runtime_optional": true,
+  "minecraft": "1.20.1",
+  "forge": "47.4.16",
+  "jdk": 17,
+  "binary_dependencies_on_original_mods": false,
+  "historical_output_runtime_tested": false
+}

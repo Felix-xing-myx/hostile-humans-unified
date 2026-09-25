@@ -1,0 +1,84 @@
+{
+  "pools": [
+    {
+      "rolls": 6,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:dumplings"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:cabbage_rolls"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 30,
+          "name": "minecraft:sweet_berries"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 10,
+          "name": "minecraft:glow_berries"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 20,
+          "name": "farmersdelight:melon_juice"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 10,
+          "name": "farmersdelight:milk_bottle"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "minecraft:baked_potato"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 1,
+          "name": "farmersdelight:melon_popsicle"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 30,
+          "name": "minecraft:mushroom_stew"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 30,
+          "name": "farmersdelight:stuffed_potato"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 30,
+          "name": "farmersdelight:fruit_salad"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 30,
+          "name": "farmersdelight:vegetable_soup"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 30,
+          "name": "farmersdelight:fried_rice"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 30,
+          "name": "farmersdelight:mixed_salad"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "minecraft:bread"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+plugins {
+    id 'java'
+    id 'net.minecraftforge.gradle' version '6.0.54'
+}
+version = '3.1.25-unified'
+group = 'dev.felix.hostilehumans'
+base { archivesName = 'hostile-humans-unified-1.20.1' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+minecraft {
+    mappings channel: mapping_channel, version: mapping_version
+    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+}
+repositories { mavenCentral() }
+
+def workspaceRootDir = file('../..')
+def baselineModsDir = new File(workspaceRootDir, 'versions/Create-Delight-Remake/mods')
+def legacyModsDir = new File(workspaceRootDir, '最初二创内容/mods')
+// Public clones do not contain this maintenance workspace's modpack. Supply
+// these API-only JARs with -PtaczApiJar=..., -PcuriosApiJar=..., and
+// -PmaidApiJar=...; the local defaults preserve the established workflow.
+def taczApiJar = file(findProperty('taczApiJar') ?: new File(baselineModsDir, 'tacz-1.20.1-1.1.8-hotfix.jar'))
+def curiosApiJar = file(findProperty('curiosApiJar') ?: new File(baselineModsDir, 'curios-forge-5.14.1+1.20.1.jar'))
+def maidApiJar = file(findProperty('maidApiJar') ?: new File(legacyModsDir, '[车万女仆]touhoulittlemaid-1.5.3-modified-all.jar'))
+[
+        taczApiJar: taczApiJar,
+        curiosApiJar: curiosApiJar,
+        maidApiJar: maidApiJar
+].each { label, apiJar ->
+    if (!apiJar.isFile()) {
+        throw new GradleException("Missing ${label} at ${apiJar}. Supply -P${label}=<path-to-jar>; see README.md.")
+    }
+}
+
+dependencies {
+    compileOnly files(curiosApiJar)
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    compileOnly files(taczApiJar)
+    // Create Delight Remake currently has no Touhou Little Maid. Keep the exact
+    // legacy API JAR as a compile-only compatibility input; it is not packaged.
+    compileOnly files(maidApiJar)
+}
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xmaxerrs', '300']
+}
+tasks.withType(JavaExec).configureEach {
+    def isolatedWorkingDir = file("$buildDir/javaexec/${name}")
+    workingDir isolatedWorkingDir
+    doFirst { isolatedWorkingDir.mkdirs() }
+}
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+tasks.named('jar', Jar).configure {
+    manifest { attributes('Implementation-Version': project.version,
+        'Implementation-Title': 'Hostile Humans Unified',
+        'MixinConfigs': 'humangunner.mixins.json,mixins.hostile_humans.json') }
+    finalizedBy 'reobfJar'
+}
+tasks.register('encounterPolicyTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.EncounterCooldownTest'
+}
+tasks.register('runtimePoliciesTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.felix.hostilehumans.core.RuntimePoliciesTest'
+}
+tasks.named('check').configure {
+    dependsOn tasks.named('encounterPolicyTest'), tasks.named('runtimePoliciesTest')
+}
+
+tasks.register('optionalRuntimeTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.OptionalRuntimeTest'
+    args sourceSets.main.output.classesDirs.singleFile.absolutePath
+}
+tasks.register('unifiedConfigTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.UnifiedConfigTest'
+}
+tasks.named('check').configure {
+    dependsOn tasks.named('optionalRuntimeTest'), tasks.named('unifiedConfigTest')
+}
+
+tasks.register('structureCompatTest', JavaExec) {
+    dependsOn tasks.named('testClasses'), tasks.named('reobfJar')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.craftix.hostile_humans.StructureCompatTest'
+    def scratchDir = file("$buildDir/tmp/structure-compat")
+    doFirst { scratchDir.mkdirs() }
+    args tasks.named('jar', Jar).get().archiveFile.get().asFile.absolutePath,
+            scratchDir.absolutePath
+}
+tasks.named('check').configure { dependsOn tasks.named('structureCompatTest') }
+
+tasks.register('recruitmentCombatTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.RecruitmentCombatTest'
+}
+tasks.named('check').configure { dependsOn tasks.named('recruitmentCombatTest') }
+
+tasks.register('combatPressurePolicyTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.CombatPressurePolicyTest'
+}
+tasks.named('check').configure { dependsOn tasks.named('combatPressurePolicyTest') }
+
+tasks.register('soldierCombatModeTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.SoldierCombatModeTest'
+}
+tasks.named('check').configure { dependsOn tasks.named('soldierCombatModeTest') }
+
+// Explicit maintenance action; never runs during build/check.
+tasks.register('sanitizeStructureWaystones', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.craftix.hostile_humans.StructureWaystoneSanitizer'
+    args file('src/main/resources').absolutePath
+    if (project.hasProperty('applyStructureRepair')) args '--apply'
+}

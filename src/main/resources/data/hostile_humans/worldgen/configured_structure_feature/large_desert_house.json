@@ -1,0 +1,10 @@
+{
+  "config": {
+    "start_pool": "hostile_humans:large_desert_house_pool",
+    "size": 3
+  },
+  "biomes": "#hostile_humans:has_structure/large_desert_house",
+  "adapt_noise": true,
+  "spawn_overrides": {},
+  "type": "minecraft:village"
+}

@@ -1,0 +1,10 @@
+{
+  "config": {
+    "start_pool": "hostile_humans:spruce_fort_pool",
+    "size": 3
+  },
+  "biomes": "#hostile_humans:has_structure/spruce_fort",
+  "adapt_noise": true,
+  "spawn_overrides": {},
+  "type": "minecraft:village"
+}

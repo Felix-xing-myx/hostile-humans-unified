@@ -1,0 +1,54 @@
+{
+  "pools": [
+    {
+      "rolls": 12,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:cod_roll"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:salmon_roll"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:cooked_cod_slice"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 20,
+          "name": "farmersdelight:apple_cider"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:cooked_salmon_slice"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:kelp_roll_slice"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 50,
+          "name": "farmersdelight:kelp_roll"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 20,
+          "name": "farmersdelight:fish_stew"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 20,
+          "name": "farmersdelight:baked_cod_stew"
+        }
+      ]
+    }
+  ]
+}

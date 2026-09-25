@@ -1,0 +1,10 @@
+{
+  "config": {
+    "start_pool": "hostile_humans:oak_house_2_pool",
+    "size": 3
+  },
+  "biomes": "#hostile_humans:has_structure/oak_house_2",
+  "adapt_noise": true,
+  "spawn_overrides": {},
+  "type": "minecraft:village"
+}

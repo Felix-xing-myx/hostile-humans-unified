@@ -1,0 +1,29 @@
+{
+  "package": "com.craftix.hostile_humans.mixin",
+  "minVersion": "0.6",
+  "required": true,
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "BeardifierMix",
+    "HumanCombatCompatMix",
+    "ChunkGeneratorMix",
+    "DamageSourceMix",
+    "DoorInteractMixin",
+    "LocateMixin",
+    "MonsterMobsMixin",
+    "PathNavMix",
+    "ThrownTridentMix",
+    "WalkNodeMix",
+    "BlockMixin",
+    "DoorMixin",
+    "ChestBlockEnityMixin",
+    "HostileHumanSpawnCategoryMixin",
+    "HumanGroupSpawnCategoryMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "maxShiftBy": 10,
+    "defaultRequire": 1
+  },
+  "refmap": "mixins.hostile_humans.refmap.json"
+}

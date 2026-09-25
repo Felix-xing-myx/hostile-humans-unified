@@ -1,0 +1,59 @@
+{
+  "pools": [
+    {
+      "rolls": 4,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "weight": 20,
+          "name": "farmersdelight:apple_cider"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 20,
+          "name": "farmersdelight:melon_juice"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:barbecue_stick"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:bacon_sandwich"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:hamburger"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:mutton_wrap"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:chicken_sandwich"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 100,
+          "name": "farmersdelight:egg_sandwich"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 50,
+          "name": "farmersdelight:chicken_soup"
+        },
+        {
+          "type": "minecraft:item",
+          "weight": 50,
+          "name": "farmersdelight:beef_stew"
+        }
+      ]
+    }
+  ]
+}

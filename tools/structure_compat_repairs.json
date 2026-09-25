@@ -1,0 +1,142 @@
+{
+  "datapacks/craftin_farmers/data/hostile_humans/structures/spruce_fort.nbt": {
+    "upstream_sha256": "496b8ff8b26885ef2c0c77f2fc70552ada31552e47bb217822b15835b1a07b22",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 4,
+    "repaired_sha256": "bf315b204cbdd749a3ddde10f950b62ee8e42936bda0c41046ce8bd2d862671c"
+  },
+  "datapacks/farmers/data/hostile_humans/structures/cozy_spruce_house.nbt": {
+    "upstream_sha256": "ca752e8e55a9198a2a68c7088a4eb593572e63f2336d40464853de61a5961758",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "35ea70506b997954b927ad73a3187ec456fdc359cd259a5dd2e82a66835faf1a"
+  },
+  "datapacks/farmers/data/hostile_humans/structures/desert_house_2.nbt": {
+    "upstream_sha256": "3b6566048c2f5f62a2ce8541cf85850854d512df773ef2d6541cb14d82df92a4",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "fab93663696b561aad3bf4d5ab0bf5387e38a1a38cef4c0200e9dd72c25afa0c"
+  },
+  "datapacks/farmers/data/hostile_humans/structures/desert_house_4.nbt": {
+    "upstream_sha256": "f82603839d5833e8b22631019c65080818de1dd7948e93151ea9868cd1b76010",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "457fc232c0826bceca3d5431493113ababd669bfdc372e4ee82c37349a8d3485"
+  },
+  "datapacks/farmers/data/hostile_humans/structures/large_desert_house.nbt": {
+    "upstream_sha256": "16dfcf620bba4ca358c77aec9ce0a5707c977dcd95becd148e310bb256c5e652",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "b92140206db63de3e46b3b28307e18fd923ba89ba2507384811c6130ef5b317e"
+  },
+  "datapacks/farmers/data/hostile_humans/structures/oak_house_2.nbt": {
+    "upstream_sha256": "11b668c3b21c418e35048ee40bb42332a064aa94b3769967735b12f681cfb377",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "57c7acd679d245bab50c8c3e6daa9052e826a800917c880744ed3937d5c8c1ca"
+  },
+  "datapacks/farmers/data/hostile_humans/structures/oak_house_4.nbt": {
+    "upstream_sha256": "5140fa2f05c0d871a9ae0f6d8e747238975d86cef783c57116b5da11e26dde24",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "059f427182d47ea061c926d3e31582d83f1bfc5f825d5949c4a07251fd788495"
+  },
+  "datapacks/farmers/data/hostile_humans/structures/oak_house_5.nbt": {
+    "upstream_sha256": "b3e96d4374eebca738359aa4849db38c9b93ed7a3306c83c96c922aada84f508",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "fd014e42ed5519dca9aff1b10dac004945d875ec95847b8c88427f60ba93a9c0"
+  },
+  "datapacks/farmers/data/hostile_humans/structures/spruce_cottage.nbt": {
+    "upstream_sha256": "d3724cd11d6cb9ccf91648c067ffc5ba8e8b21cc72a6db43fce4b8817e57ac39",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "e8338ced2c33d868262076192bcc1470c9dd1518339d4061e854c767a038298d"
+  },
+  "datapacks/farmers/data/hostile_humans/structures/tower.nbt": {
+    "upstream_sha256": "0ff4e3902fe8bf7c7eb6bfbd093c8cbfdb43d43fb1e079a5cc369a3c25bfd2a9",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "708845461d6fa09a7c88df189e4c6bbdff0fe4d2d90f749c90646687d9ebe9d4"
+  },
+  "data/hostile_humans/structures/igloo.nbt": {
+    "upstream_sha256": "7100c9ad0bec3c83ba55e7a95a39a2020b53b02ce691fa988812018882b7fd9c",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "5d5304e01a24429fefbab999ecab65491dd78e425958d0adeeff5bf72dc3b6cd"
+  },
+  "data/hostile_humans/structures/large_desert_house.nbt": {
+    "upstream_sha256": "b967ac368315a39ce8b032c211189b4e0bf07cb8e1a280c17bc9d718bc44e014",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "14b1e9b9d059f54665c821464c97b4ec820207d6112d766d2a8fb36088879c50"
+  },
+  "data/hostile_humans/structures/oak_house.nbt": {
+    "upstream_sha256": "3680d6f0b393f24cff4c4bf84ca179e39f06a572e5966f516a3c80f87e80371c",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "b605e9eb3d3c5e9d36b87ea9d0ff88db05c18ce983161b07ec2bd2178f7ffd58"
+  },
+  "data/hostile_humans/structures/oak_house_2.nbt": {
+    "upstream_sha256": "1b2c0af70cb36d71f5356e3c8866796af62f258e12656dd63dd91cb2502275b2",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "75edda6dcdf2843d22cb9a1b5b80ac356cd49e55593b0dedda59555821daef48"
+  },
+  "data/hostile_humans/structures/oak_house_5.nbt": {
+    "upstream_sha256": "b2749cd824f18e901867b5f7d0786c6904bd29ac7cc168896f33665386adbecd",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "e5920540c25fda22095b547cf349cbd8b2ef4887afdd9e36ad70020e5f8c2939"
+  },
+  "data/hostile_humans/structures/tower.nbt": {
+    "upstream_sha256": "41655b7117f22277c8571c7feb45852bf73ddb19171367f111be430a2d4bddde",
+    "palette_entries_replaced_with_air": 2,
+    "waystone_block_entities_removed": 2,
+    "repaired_sha256": "e1b290a82a335244ee06779095d134f6d4f71d7e0c2e4019adc37a144a893b4c"
+  },
+  "data/hostile_humans/structures/cozy_spruce_house.nbt": {
+    "upstream_sha256": "d17d1a4bad35e30e8c10bdc1204ef485099d7360c10a74f4a56330d09f0e7ec3",
+    "palette_entries_replaced_with_air": 0,
+    "waystone_block_entities_removed": 0,
+    "farmer_palette_states_mapped_to_vanilla": 5,
+    "repaired_sha256": "75392e88682f8a4050f702724095e8605ed9d7c060c5c6aa4d33b30ef6ba2cb3"
+  },
+  "data/hostile_humans/structures/desert_house_4.nbt": {
+    "upstream_sha256": "00cbdf3bbcf79d20e2913342deb0649ce12b0f538d0f5d790ec53c84186db92c",
+    "palette_entries_replaced_with_air": 0,
+    "waystone_block_entities_removed": 0,
+    "farmer_palette_states_mapped_to_vanilla": 6,
+    "repaired_sha256": "6e5fbfa92faac65dcee3c777783e0e97cd7ff07c6c57eb63819acc216e991765"
+  },
+  "data/hostile_humans/loot_tables/chests/ingredients.json": {
+    "upstream_sha256": "bcdb4c2bba016c0030b5118a1780b25703c5c2fe33302c8dcebdaca0ef8d37fe",
+    "repaired_sha256": "96941caa334a30e60ecab2c9b5fe4ba0014a44bdde02a7f773e1faeeae22cce7",
+    "reason": "Vanilla fallback; original Farmer loot retained in all four Farmer overlays"
+  },
+  "data/hostile_humans/loot_tables/chests/seafood.json": {
+    "upstream_sha256": "82799c260c483b237ad82522568de7253a71d8f50ab7941c036f684e43d1a86e",
+    "repaired_sha256": "1ec563f630408b3f3557e0c2ad9b69ef7ea1b0326f2ac71d70f0bd05aaef4a72",
+    "reason": "Vanilla fallback; original Farmer loot retained in all four Farmer overlays"
+  },
+  "data/hostile_humans/loot_tables/chests/vegetarian.json": {
+    "upstream_sha256": "828f053b3a6836f54199b9bef0806f6e294afc4807410dbe770efd3e34f51277",
+    "repaired_sha256": "1c8a88980da263e3d6dfb0f7c645ca0a625e8da3a83e04cd54d8877130f17387",
+    "reason": "Vanilla fallback; original Farmer loot retained in all four Farmer overlays"
+  },
+  "data/hostile_humans/loot_tables/chests/meat_sandwitches.json": {
+    "upstream_sha256": "5f4145adc583759dd5449200f608fccacab1daef097479f27493add5fe59586b",
+    "repaired_sha256": "e34bebdaa8c860cd0570137b7a8df3e44ddb1d9e12939cc818d487f375bcd1e4",
+    "reason": "Vanilla fallback; original Farmer loot retained in all four Farmer overlays"
+  },
+  "data/hostile_humans/loot_tables/chests/kitchen_tools.json": {
+    "upstream_sha256": "d884e3b2be3dc9f693fe2db0c2cab6a63caced8251e06d877493a6f3523f7d09",
+    "repaired_sha256": "b4612c55b22f996c1c0c5a71f931e1452b8fb246cc23671de5df7243a212a1b9",
+    "reason": "Vanilla fallback; original Farmer loot retained in all four Farmer overlays"
+  },
+  "data/hostile_humans/loot_tables/chests/sandwitches.json": {
+    "upstream_sha256": "b0f9d035eeb8a3877b5a41eadfd0aeacd8f571354211e209fca5d2d1ff58992c",
+    "repaired_sha256": "669110cc28cbf3dbb567a56cec151adff0b623e74a7a9ce5571274ee1ebbad58",
+    "reason": "Vanilla fallback; original Farmer loot retained in all four Farmer overlays"
+  }
+}

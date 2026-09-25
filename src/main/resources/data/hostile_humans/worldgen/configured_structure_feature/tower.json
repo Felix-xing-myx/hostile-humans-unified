@@ -1,0 +1,10 @@
+{
+  "config": {
+    "start_pool": "hostile_humans:tower_pool",
+    "size": 3
+  },
+  "biomes": "#hostile_humans:has_structure/tower",
+  "adapt_noise": true,
+  "spawn_overrides": {},
+  "type": "minecraft:village"
+}

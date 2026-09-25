@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["NSN", "NTN", "NON"],
+  "key": {
+    "N": {"item": "minecraft:netherite_block"},
+    "S": {"item": "minecraft:nether_star"},
+    "T": {"item": "humangunner:tier_three_identity_badge"},
+    "O": {"item": "minecraft:totem_of_undying"}
+  },
+  "result": {"item": "humangunner:ultimate_identity_badge"}
+}

@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "humangunner:roamer_identity_badge",
+    "humangunner:tier_one_identity_badge",
+    "humangunner:tier_two_identity_badge",
+    "humangunner:tier_three_identity_badge",
+    "humangunner:ultimate_identity_badge"
+  ]
+}

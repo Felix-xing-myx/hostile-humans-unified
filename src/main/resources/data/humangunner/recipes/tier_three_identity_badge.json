@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["NDN", "DBD", "NDN"],
+  "key": {
+    "N": {"item": "minecraft:netherite_ingot"},
+    "D": {"item": "minecraft:diamond_block"},
+    "B": {"item": "humangunner:tier_two_identity_badge"}
+  },
+  "result": {"item": "humangunner:tier_three_identity_badge"}
+}
