@@ -27,6 +27,13 @@ public final class CombatPressurePolicyTest {
                         && ShoreSeekingPolicy.isShoreTransitionActive(false, true)
                         && !ShoreSeekingPolicy.isShoreTransitionActive(false, false),
                 "ranged attacks retain their active state while shore seeking suppresses competing combat movement");
+        check(!ShoreSeekingPolicy.shouldMoveTowardCombatTarget(true)
+                        && ShoreSeekingPolicy.shouldMoveTowardCombatTarget(false)
+                        && ShoreSeekingPolicy.shouldSteerTowardFallback(true, true, true)
+                        && !ShoreSeekingPolicy.shouldSteerTowardFallback(true, false, true)
+                        && !ShoreSeekingPolicy.shouldSteerTowardFallback(false, true, true)
+                        && !ShoreSeekingPolicy.shouldSteerTowardFallback(true, true, false),
+                "combat pursuit yields to shore movement and unreachable routes keep steering toward a dry fallback");
         check(ShoreSeekingPolicy.waterPathMalus(true, true)
                         > ShoreSeekingPolicy.waterPathMalus(true, false)
                         && ShoreSeekingPolicy.waterPathMalus(true, false) > 0.0F

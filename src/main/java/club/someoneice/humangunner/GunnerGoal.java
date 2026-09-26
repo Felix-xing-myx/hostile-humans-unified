@@ -174,7 +174,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             return;
         }
         if (movementTarget != target) {
-            if (isShoreSeeking()) {
+            if (!ShoreSeekingPolicy.shouldMoveTowardCombatTarget(isShoreSeeking())) {
                 clearLateralInputPreservingNavigation();
             } else {
                 stopLateralMovement();
@@ -241,6 +241,13 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // not turn the beacon's pursuit range into extra weapon reach.
             aimTicks = 0;
             operator.aim(false);
+            if (!ShoreSeekingPolicy.shouldMoveTowardCombatTarget(isShoreSeeking())) {
+                // The environmental MOVE lease must remain pointed at dry
+                // ground; this special beacon pursuit used to replace it with
+                // a path straight toward the player, often deeper into water.
+                clearLateralInputPreservingNavigation();
+                return;
+            }
             stopLateralMovement();
             if (mob.getNavigation().isDone() || mob.tickCount % 10 == 0) {
                 mob.getNavigation().moveTo(target, 1.0D);

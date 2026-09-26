@@ -20,6 +20,17 @@ public final class ShoreSeekingPolicy {
         return seekingShore || transitionPending;
     }
 
+    /** Combat approach goals must not replace the active route to dry ground. */
+    public static boolean shouldMoveTowardCombatTarget(boolean seekingShore) {
+        return !seekingShore;
+    }
+
+    /** Keep a direct bank-steering fallback when navigation has no usable path. */
+    public static boolean shouldSteerTowardFallback(boolean seekingShore,
+            boolean hasDryDestination, boolean navigationDone) {
+        return seekingShore && hasDryDestination && navigationDone;
+    }
+
     public static boolean shouldContinueSeekingShore(boolean inWater, boolean inLava) {
         // Keep the environmental movement lease while submerged even if one
         // search cycle cannot currently produce a reachable shore path.

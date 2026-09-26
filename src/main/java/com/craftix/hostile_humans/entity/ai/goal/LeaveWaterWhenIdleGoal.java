@@ -127,6 +127,9 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
         boolean pathNeedsRefresh = this.shorePath == null
                 || this.human.getNavigation().isDone()
                 || this.stuckTicks >= STUCK_REPATH_TICKS;
+        if (this.shorePath == null || this.human.getNavigation().isDone()) {
+            this.human.continueSeekingShoreWithoutPath(MOVE_SPEED);
+        }
         if (pathNeedsRefresh && this.human.tickCount >= this.nextPathAttemptTick) {
             LivingEntity retreatThreat = this.retreatThreat();
             Path nextPath = this.human.findNearestShorePath(
@@ -142,7 +145,7 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
                 this.lastDestination = null;
                 this.stuckTicks = 0;
                 this.rememberPosition();
-                this.human.pauseSeekingShore();
+                this.human.continueSeekingShoreWithoutPath(MOVE_SPEED);
                 this.nextPathAttemptTick = this.human.tickCount + FAILED_PATH_RETRY_TICKS;
                 return;
             }

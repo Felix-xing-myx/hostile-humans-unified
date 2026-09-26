@@ -331,6 +331,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public int breathRecoveryTicks;
     private boolean seekingShore;
     private boolean shorePathUsesWaterNavigation;
+    @Nullable
+    private BlockPos shoreFallbackTarget;
     private int shoreTransitionPendingTick = Integer.MIN_VALUE;
     protected final WaterBoundPathNavigation waterNavigation;
     protected final GroundPathNavigation groundNavigation;
@@ -406,7 +408,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public Path findNearestShorePath(@Nullable BlockPos avoidDestination,
             @Nullable LivingEntity retreatThreat) {
         this.shorePathUsesWaterNavigation = false;
+        this.shoreFallbackTarget = null;
         BlockPos origin = this.blockPosition();
+        double fallbackDistanceSqr = Double.POSITIVE_INFINITY;
         double startAngle = this.getRandom().nextDouble() * Math.PI * 2.0D;
         // Check nearby banks first, then expand in coarser rings. The former
         // 16-block limit often left swimmers trapped in wide rivers or lakes.
@@ -436,6 +440,11 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 BlockPos candidate = new BlockPos(x, y, z);
                 if (!this.isDryStandingPosition(candidate)) {
                     continue;
+                }
+                double fallbackCandidateDistanceSqr = origin.distSqr(candidate);
+                if (fallbackCandidateDistanceSqr < fallbackDistanceSqr) {
+                    this.shoreFallbackTarget = candidate.immutable();
+                    fallbackDistanceSqr = fallbackCandidateDistanceSqr;
                 }
                 if (avoidDestination != null && candidate.equals(avoidDestination)) {
                     continue;
@@ -514,6 +523,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public void startSeekingShore(Path path, double speed) {
         this.shoreTransitionPendingTick = Integer.MIN_VALUE;
         this.seekingShore = true;
+        this.shoreFallbackTarget = path.getTarget().immutable();
         this.navigation.stop();
         this.selectShoreNavigation();
         this.setSwimming(!this.isNearWaterSurface());
@@ -527,11 +537,33 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.navigation.stop();
         this.selectShoreNavigation();
         this.setSwimming(!this.isNearWaterSurface());
+        this.continueSeekingShoreWithoutPath(1.0D);
     }
 
     public void continueSeekingShore(Path path, double speed) {
+        this.shoreFallbackTarget = path.getTarget().immutable();
         this.selectShoreNavigation();
         this.navigation.moveTo(path, speed);
+    }
+
+    /**
+     * A complete path can be temporarily unavailable for unloaded chunks or
+     * unusual underwater terrain. Keep moving toward a known dry bank rather
+     * than leaving the swimmer stationary until the next path-search retry.
+     */
+    public void continueSeekingShoreWithoutPath(double speed) {
+        if (!this.seekingShore || this.shoreFallbackTarget == null
+                || !ShoreSeekingPolicy.shouldSteerTowardFallback(
+                this.seekingShore, true, this.navigation.isDone())) {
+            return;
+        }
+        BlockPos destination = this.shoreFallbackTarget;
+        this.getMoveControl().setWantedPosition(
+                destination.getX() + 0.5D,
+                destination.getY(),
+                destination.getZ() + 0.5D,
+                speed
+        );
     }
 
     public void pauseSeekingShore() {
@@ -543,6 +575,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public void stopSeekingShore() {
         this.shoreTransitionPendingTick = Integer.MIN_VALUE;
         this.seekingShore = false;
+        this.shoreFallbackTarget = null;
         this.navigation.stop();
     }
 
@@ -1527,7 +1560,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                     this.operation = MoveControl.Operation.WAIT;
                     return;
                 }
-                if (this.operation != MoveControl.Operation.MOVE_TO || this.human.getNavigation().isDone()) {
+                boolean directShoreFallback = ShoreSeekingPolicy.shouldSteerTowardFallback(
+                        this.human.seekingShore,
+                        this.human.shoreFallbackTarget != null,
+                        this.human.getNavigation().isDone());
+                if (this.operation != MoveControl.Operation.MOVE_TO
+                        || (this.human.getNavigation().isDone() && !directShoreFallback)) {
                     this.human.setSpeed(0.0f);
                     this.human.setZza(0.0F);
                     this.human.setXxa(0.0F);
