@@ -12,6 +12,7 @@
   - 修复寻岸范围不足及贴岸时无法上岸的问题，并限制助跳只在岸边触发，避免在水中被抛向高空。
   - 搜索范围扩展至 128 格并加密岸边方向采样；无可达路线时仍保持寻岸优先级并定期重试，不再把移动控制交回可能继续深入水中的战斗寻路。
   - 战斗、闲暇和撤退时都会寻岸；撤退选点可优先选择远离威胁的岸边，寻岸移动也会更强烈地避开不必要的水路。
+  - 正在寻岸时，水下较低处的敌人不再压过上岸目标、把人类拉回深水；只有没有寻岸、逃跑或恢复氧气需求时，才会继续追踪水下目标。
   - 枪械、弓、弩、三叉戟用户寻岸时保留瞄准与攻击，但不会用战术走位覆盖寻岸导航；只有具备射界时才进行远程攻击。
 - **验证**
   - Java 17 下执行 `gradlew clean build --offline` 成功；项目配置的 Gradle `check` 检查通过。
@@ -26,6 +27,7 @@
   - Fixes shore-search and shore-exit issues, and confines the small pop to the bank to prevent Humans from being launched high into the air while in water.
   - Shore searches now cover 128 blocks with denser directional sampling. If no route is reachable, shore-seeking retains movement priority and retries instead of handing control back to combat pathing that may lead farther into water.
   - Humans seek shore while idle, fighting, or retreating; retreat route selection can favor a bank farther from the threat, and pathfinding more strongly avoids unnecessary water routes.
+  - While shore seeking, a lower underwater enemy can no longer override the exit goal and pull the Human deeper; underwater pursuit resumes only when there is no shore, retreat, or breath-recovery priority.
   - Gun, bow, crossbow, and trident users keep aiming and attacking while shore navigation controls movement; ranged attacks fire when a clear shot is available, without tactical strafing overriding the shore path.
 - **Validation**
   - `gradlew clean build --offline` succeeded on Java 17; the project's Gradle `check` tasks passed.

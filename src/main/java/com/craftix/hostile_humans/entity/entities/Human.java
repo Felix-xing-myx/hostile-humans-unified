@@ -1319,12 +1319,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     private boolean isPursuingLowerWaterTarget() {
         LivingEntity target = this.getTarget();
-        return target != null
-                && target.isAlive()
-                && target.isInWater()
-                && target.getY() < this.getY() - 0.5D
-                && !this.isFleeing
-                && !this.shouldCatchBreath;
+        return ShoreSeekingPolicy.shouldPursueLowerWaterTarget(
+                this.seekingShore,
+                target != null && target.isAlive() && target.isInWater(),
+                target != null && target.getY() < this.getY() - 0.5D,
+                this.isFleeing,
+                this.shouldCatchBreath);
     }
 
     private boolean isNearWaterSurface() {

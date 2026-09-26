@@ -14,6 +14,11 @@ public final class CombatPressurePolicyTest {
                         && !ShoreSeekingPolicy.shouldContinueSeekingShore(false, false)
                         && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, true),
                 "shore movement retains priority across failed path searches until water is exited or lava is entered");
+        check(ShoreSeekingPolicy.shouldPursueLowerWaterTarget(false, true, true, false, false)
+                        && !ShoreSeekingPolicy.shouldPursueLowerWaterTarget(true, true, true, false, false)
+                        && !ShoreSeekingPolicy.shouldPursueLowerWaterTarget(false, true, true, true, false)
+                        && !ShoreSeekingPolicy.shouldPursueLowerWaterTarget(false, true, true, false, true),
+                "shore seeking and survival priorities prevent combat from pulling Humans deeper after a submerged target");
         check(ShoreSeekingPolicy.GOAL_PRIORITY < -30
                         && ShoreSeekingPolicy.GOAL_PRIORITY < -10
                         && ShoreSeekingPolicy.GOAL_PRIORITY < -8,

@@ -26,6 +26,13 @@ public final class ShoreSeekingPolicy {
         return inWater && !inLava;
     }
 
+    public static boolean shouldPursueLowerWaterTarget(boolean seekingShore,
+            boolean targetInWater, boolean targetIsLower, boolean fleeing, boolean catchingBreath) {
+        // A lower underwater target may influence swimming only when there is
+        // no stronger shore-exit, retreat, or breath-recovery objective.
+        return !seekingShore && targetInWater && targetIsLower && !fleeing && !catchingBreath;
+    }
+
     public static float waterPathMalus(boolean inWater, boolean seekingShore) {
         // Keep water traversable when it is unavoidable, but make all combat
         // paths prefer land and make shore-exit routes strongly avoid needless
