@@ -15,6 +15,10 @@ public final class ShoreSeekingPolicy {
         return serverSide && effectiveAi && inWater && !inLava;
     }
 
+    public static boolean shouldSearchForShorePath(int currentTick, int nextSearchTick) {
+        return currentTick >= nextSearchTick;
+    }
+
     /** The ranged goal yields movement to shore navigation but keeps aiming and attacking. */
     public static boolean isShoreTransitionActive(boolean seekingShore, boolean transitionPending) {
         return seekingShore || transitionPending;

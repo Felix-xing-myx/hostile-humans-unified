@@ -10,6 +10,10 @@ public final class CombatPressurePolicyTest {
                         && !ShoreSeekingPolicy.shouldAttemptShore(true, true, false, false)
                         && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, true),
                 "shore seeking is active for every server-side water state, regardless of combat or orders");
+        check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false)
+                        && !ShoreSeekingPolicy.shouldSearchForShorePath(9, 10)
+                        && ShoreSeekingPolicy.shouldSearchForShorePath(10, 10),
+                "path-search staggering is independent from acquiring the immediate shore movement lease");
         check(ShoreSeekingPolicy.shouldContinueSeekingShore(true, false)
                         && !ShoreSeekingPolicy.shouldContinueSeekingShore(false, false)
                         && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, true),

@@ -401,6 +401,42 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     /**
+     * Cheap fallback scan used to acquire the shore movement lease immediately
+     * while expensive path searches are staggered across nearby Humans.
+     */
+    @Nullable
+    public BlockPos findNearestDryShoreTarget() {
+        BlockPos origin = this.blockPosition();
+        double startAngle = this.getRandom().nextDouble() * Math.PI * 2.0D;
+        int[] searchRadii = {4, 8, 12, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128};
+        BlockPos nearest = null;
+        double nearestDistanceSqr = Double.POSITIVE_INFINITY;
+        for (int radius : searchRadii) {
+            for (int direction = 0; direction < 16; direction++) {
+                double angle = startAngle + direction * (Math.PI / 8.0D);
+                int x = origin.getX() + (int)Math.round(Math.cos(angle) * radius);
+                int z = origin.getZ() + (int)Math.round(Math.sin(angle) * radius);
+                BlockPos column = new BlockPos(x, origin.getY(), z);
+                if (!this.level().hasChunkAt(column)) {
+                    continue;
+                }
+                BlockPos candidate = new BlockPos(x,
+                        this.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+                if (!this.isDryStandingPosition(candidate)) {
+                    continue;
+                }
+                double distanceSqr = origin.distSqr(candidate);
+                if (distanceSqr < nearestDistanceSqr) {
+                    nearest = candidate.immutable();
+                    nearestDistanceSqr = distanceSqr;
+                }
+            }
+        }
+        this.shoreFallbackTarget = nearest;
+        return nearest;
+    }
+
+    /**
      * Find a reachable dry position. Retreating Humans may accept a short
      * detour when it exits the water farther from the threat.
      */

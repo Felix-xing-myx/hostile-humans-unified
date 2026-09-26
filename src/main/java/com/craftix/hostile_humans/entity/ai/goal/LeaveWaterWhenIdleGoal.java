@@ -48,15 +48,22 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
                     !this.human.level().isClientSide,
                     this.human.isEffectiveAi(),
                     this.human.isInWater(),
-                    this.human.isInLava())
-                || this.human.tickCount < this.nextPathAttemptTick) {
+                    this.human.isInLava())) {
             return false;
         }
 
-        this.shorePath = this.human.findNearestShorePath(null, this.retreatThreat());
-        this.nextPathAttemptTick = this.human.tickCount + (this.shorePath == null
-                ? FAILED_PATH_RETRY_TICKS
-                : REPATH_DELAY_TICKS);
+        if (ShoreSeekingPolicy.shouldSearchForShorePath(
+                this.human.tickCount, this.nextPathAttemptTick)) {
+            this.shorePath = this.human.findNearestShorePath(null, this.retreatThreat());
+            this.nextPathAttemptTick = this.human.tickCount + (this.shorePath == null
+                    ? FAILED_PATH_RETRY_TICKS
+                    : REPATH_DELAY_TICKS);
+        } else {
+            // Claim MOVE/JUMP immediately on entering water. Only delay the
+            // expensive path calculation, not the decision to leave water.
+            this.shorePath = null;
+            this.human.findNearestDryShoreTarget();
+        }
         // Keep shore seeking active even when a path cannot be found on this
         // attempt. Otherwise combat movement takes over for the retry delay and
         // can send the Human deeper into water or leave it stuck in place.

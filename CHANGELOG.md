@@ -14,6 +14,7 @@
   - 战斗、闲暇和撤退时都会寻岸；撤退选点可优先选择远离威胁的岸边，寻岸移动也会更强烈地避开不必要的水路。
   - 正在寻岸时，水下较低处的敌人不再压过上岸目标、把人类拉回深水；只有没有寻岸、逃跑或恢复氧气需求时，才会继续追踪水下目标。
   - 修复水下战斗目标移动覆盖寻岸路线的问题；若暂时找不到完整可达路径，人类会持续朝最近的已加载干燥岸点移动，并在抵达/受阻后重试寻路，而不是停在水中等待。
+  - 入水后立即取得寻岸移动优先权；错峰只延迟完整路径计算，不再让战斗 AI 在等待期间继续把单位带入深水。
   - 枪械、弓、弩、三叉戟用户寻岸时保留瞄准与攻击，但不会用战术走位覆盖寻岸导航；只有具备射界时才进行远程攻击。
 - **验证**
   - Java 17 下执行 `gradlew clean build --offline` 成功；项目配置的 Gradle `check` 检查通过。
@@ -30,6 +31,7 @@
   - Humans seek shore while idle, fighting, or retreating; retreat route selection can favor a bank farther from the threat, and pathfinding more strongly avoids unnecessary water routes.
   - While shore seeking, a lower underwater enemy can no longer override the exit goal and pull the Human deeper; underwater pursuit resumes only when there is no shore, retreat, or breath-recovery priority.
   - Prevents combat target movement from overwriting an active shore route. If no complete route is currently available, Humans keep steering toward the nearest loaded dry bank and retry pathfinding after reaching or stalling near it instead of waiting motionless in water.
+  - Shore movement takes priority immediately upon entering water; staggering affects only full path calculations and no longer lets combat AI pull Humans deeper while waiting.
   - Gun, bow, crossbow, and trident users keep aiming and attacking while shore navigation controls movement; ranged attacks fire when a clear shot is available, without tactical strafing overriding the shore path.
 - **Validation**
   - `gradlew clean build --offline` succeeded on Java 17; the project's Gradle `check` tasks passed.
