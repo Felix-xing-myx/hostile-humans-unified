@@ -4,29 +4,36 @@ public final class CombatPressurePolicyTest {
     private static int checks;
 
     public static void main(String[] args) {
-        check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false)
-                        && !ShoreSeekingPolicy.shouldAttemptShore(false, true, true, false)
-                        && !ShoreSeekingPolicy.shouldAttemptShore(true, false, true, false)
-                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, false, false)
-                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, true),
-                "shore seeking is active for every server-side water state, regardless of combat or orders");
-        check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false)
+        check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(false, true, true, false, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, false, true, false, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, false, false, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, true, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, true, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, true),
+                "shore assistance runs only for server-side idle Humans in water, not during combat or retreat");
+        check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, false)
                         && !ShoreSeekingPolicy.shouldSearchForShorePath(9, 10)
                         && ShoreSeekingPolicy.shouldSearchForShorePath(10, 10),
-                "path-search staggering is independent from acquiring the immediate shore movement lease");
-        check(ShoreSeekingPolicy.shouldContinueSeekingShore(true, false)
-                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(false, false)
-                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, true),
-                "shore movement retains priority across failed path searches until water is exited or lava is entered");
+                "path-search staggering limits work without interrupting the combat movement owner");
+        check(ShoreSeekingPolicy.MAX_SHORE_BLOCK_PROBES_PER_SEARCH == 64
+                        && ShoreSeekingPolicy.MAX_SHORE_PATH_PROBES_PER_SEARCH == 2,
+                "shore searches have strict per-search world-scan and A-star budgets");
+        check(ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, false, false)
+                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(false, false, false, false)
+                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, true, false, false)
+                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, true, false)
+                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, false, true),
+                "shore assistance yields as soon as combat or retreat begins");
         check(ShoreSeekingPolicy.shouldPursueLowerWaterTarget(false, true, true, false, false)
                         && !ShoreSeekingPolicy.shouldPursueLowerWaterTarget(true, true, true, false, false)
                         && !ShoreSeekingPolicy.shouldPursueLowerWaterTarget(false, true, true, true, false)
                         && !ShoreSeekingPolicy.shouldPursueLowerWaterTarget(false, true, true, false, true),
                 "shore seeking and survival priorities prevent combat from pulling Humans deeper after a submerged target");
-        check(ShoreSeekingPolicy.GOAL_PRIORITY < -30
-                        && ShoreSeekingPolicy.GOAL_PRIORITY < -10
-                        && ShoreSeekingPolicy.GOAL_PRIORITY < -8,
-                "shore exit pre-empts chest, hazard, and combat movement goals");
+        check(ShoreSeekingPolicy.GOAL_PRIORITY > -8
+                        && ShoreSeekingPolicy.GOAL_PRIORITY < -6
+                        && ShoreSeekingPolicy.GOAL_PRIORITY < 8,
+                "combat movement outranks shore assistance while idle orders and wandering yield to it");
         check(ShoreSeekingPolicy.isShoreTransitionActive(true, false)
                         && ShoreSeekingPolicy.isShoreTransitionActive(false, true)
                         && !ShoreSeekingPolicy.isShoreTransitionActive(false, false),
@@ -38,11 +45,13 @@ public final class CombatPressurePolicyTest {
                         && !ShoreSeekingPolicy.shouldSteerTowardFallback(false, true, true)
                         && !ShoreSeekingPolicy.shouldSteerTowardFallback(true, true, false),
                 "combat pursuit yields to shore movement and unreachable routes keep steering toward a dry fallback");
-        check(ShoreSeekingPolicy.waterPathMalus(true, true)
-                        > ShoreSeekingPolicy.waterPathMalus(true, false)
-                        && ShoreSeekingPolicy.waterPathMalus(true, false) > 0.0F
-                        && ShoreSeekingPolicy.waterPathMalus(false, false) < 0.0F,
-                "water remains traversable when unavoidable while normal and active-shore paths strongly prefer land");
+        check(ShoreSeekingPolicy.waterPathMalus(true, true, false)
+                        > ShoreSeekingPolicy.waterPathMalus(true, false, false)
+                        && ShoreSeekingPolicy.waterPathMalus(true, false, false) > 0.0F
+                        && ShoreSeekingPolicy.waterPathMalus(true, false, true) == 0.0F
+                        && ShoreSeekingPolicy.waterPathMalus(false, false, true) == 0.0F
+                        && ShoreSeekingPolicy.waterPathMalus(false, false, false) < 0.0F,
+                "combat paths can cross water from either bank, while idle and active-shore paths prefer dry land");
         check(ShoreSeekingPolicy.shouldPreferSaferShorePath(12, 18, true)
                         && !ShoreSeekingPolicy.shouldPreferSaferShorePath(12, 19, true)
                         && !ShoreSeekingPolicy.shouldPreferSaferShorePath(12, 13, false),

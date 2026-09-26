@@ -1,18 +1,27 @@
 package club.someoneice.humangunner;
 
-/** Pure decisions shared by water-exit movement and combat handoff. */
+/** Pure decisions shared by water-exit assistance and combat movement. */
 public final class ShoreSeekingPolicy {
-    public static final int GOAL_PRIORITY = -40;
+    // Adaptive combat/retreat (priority -8 and below) wins; idle orders and
+    // wandering (priority -6 and above) yield while an idle Human exits water.
+    public static final int GOAL_PRIORITY = -7;
+    /** Hard budget for synchronous shoreline candidate inspection per search. */
+    public static final int MAX_SHORE_BLOCK_PROBES_PER_SEARCH = 64;
+    /** Two destinations per search; navigation may test ground and water for each. */
+    public static final int MAX_SHORE_PATH_PROBES_PER_SEARCH = 2;
     private static final float SUBMERGED_WATER_PATH_MALUS = 8.0F;
     private static final float ACTIVE_SHORE_WATER_PATH_MALUS = 16.0F;
+    private static final float COMBAT_WATER_PATH_MALUS = 0.0F;
     private static final int MAX_SAFE_SHORE_DETOUR_NODES = 6;
 
     private ShoreSeekingPolicy() {
     }
 
     public static boolean shouldAttemptShore(boolean serverSide, boolean effectiveAi,
-            boolean inWater, boolean inLava) {
-        return serverSide && effectiveAi && inWater && !inLava;
+            boolean inWater, boolean inLava, boolean hasCombatTarget, boolean fleeing) {
+        // Shore assistance is an idle fallback, never a competing combat goal.
+        return serverSide && effectiveAi && inWater && !inLava
+                && !hasCombatTarget && !fleeing;
     }
 
     public static boolean shouldSearchForShorePath(int currentTick, int nextSearchTick) {
@@ -35,10 +44,10 @@ public final class ShoreSeekingPolicy {
         return seekingShore && hasDryDestination && navigationDone;
     }
 
-    public static boolean shouldContinueSeekingShore(boolean inWater, boolean inLava) {
-        // Keep the environmental movement lease while submerged even if one
-        // search cycle cannot currently produce a reachable shore path.
-        return inWater && !inLava;
+    public static boolean shouldContinueSeekingShore(boolean inWater, boolean inLava,
+            boolean hasCombatTarget, boolean fleeing) {
+        // Yield immediately if combat or retreat takes ownership of movement.
+        return inWater && !inLava && !hasCombatTarget && !fleeing;
     }
 
     public static boolean shouldPursueLowerWaterTarget(boolean seekingShore,
@@ -48,14 +57,21 @@ public final class ShoreSeekingPolicy {
         return !seekingShore && targetInWater && targetIsLower && !fleeing && !catchingBreath;
     }
 
-    public static float waterPathMalus(boolean inWater, boolean seekingShore) {
-        // Keep water traversable when it is unavoidable, but make all combat
-        // paths prefer land and make shore-exit routes strongly avoid needless
-        // loops through water.
+    public static float waterPathMalus(boolean inWater, boolean seekingShore,
+            boolean hasCombatTarget) {
+        // Combat paths must be able to choose a direct river crossing instead
+        // of being routed around the entire body of water. Idle paths still
+        // prefer land, and shore assistance strongly avoids looping in water.
         if (seekingShore) {
             return ACTIVE_SHORE_WATER_PATH_MALUS;
         }
-        return inWater ? SUBMERGED_WATER_PATH_MALUS : -1.0F;
+        if (hasCombatTarget) {
+            return COMBAT_WATER_PATH_MALUS;
+        }
+        if (!inWater) {
+            return -1.0F;
+        }
+        return SUBMERGED_WATER_PATH_MALUS;
     }
 
     public static boolean shouldPreferSaferShorePath(int shortestPathNodes,

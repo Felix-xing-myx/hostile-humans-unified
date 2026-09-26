@@ -202,7 +202,8 @@ public final class HumanGunner {
                     Player owner = human.level().getPlayerByUUID(
                             human.getPersistentData().getUUID(HumanRelations.TEMP_OWNER));
                     if (owner != null && human.distanceToSqr(owner) > 100.0D
-                            && human.getTarget() == null && human.tickCount % 20 == 0) {
+                            && human.getTarget() == null && !human.isSeekingShore()
+                            && human.tickCount % 20 == 0) {
                         human.getNavigation().moveTo(owner, 1.15D);
                     }
                 }

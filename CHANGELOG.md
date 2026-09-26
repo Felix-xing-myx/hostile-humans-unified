@@ -10,14 +10,13 @@
 - **水中姿势与移动**
   - 大多数浅水及接近水面的移动不再维持游泳姿势；只有需要持续游泳时才使用游泳姿势。
   - 修复寻岸范围不足及贴岸时无法上岸的问题，并限制助跳只在岸边触发，避免在水中被抛向高空。
-  - 搜索范围扩展至 128 格并加密岸边方向采样；无可达路线时仍保持寻岸优先级并定期重试，不再把移动控制交回可能继续深入水中的战斗寻路。
-  - 战斗、闲暇和撤退时都会寻岸；撤退选点可优先选择远离威胁的岸边，寻岸移动也会更强烈地避开不必要的水路。
-  - 正在寻岸时，水下较低处的敌人不再压过上岸目标、把人类拉回深水；只有没有寻岸、逃跑或恢复氧气需求时，才会继续追踪水下目标。
-  - 修复水下战斗目标移动覆盖寻岸路线的问题；若暂时找不到完整可达路径，人类会持续朝最近的已加载干燥岸点移动，并在抵达/受阻后重试寻路，而不是停在水中等待。
-  - 入水后立即取得寻岸移动优先权；错峰只延迟完整路径计算，不再让战斗 AI 在等待期间继续把单位带入深水。
-  - 枪械、弓、弩、三叉戟用户寻岸时保留瞄准与攻击，但不会用战术走位覆盖寻岸导航；只有具备射界时才进行远程攻击。
+  - 搜索范围扩展至 128 格并按多个方向分环采样；闲暇时即使暂时找不到完整路径，也会朝最近的干燥落脚点移动并定期重试。
+  - 闲暇时主动寻岸；战斗与撤退由各自 AI 主导移动。战斗寻路可把水视为可通行路线，允许为追击河对岸目标而渡水，也能沿战斗路径踏上岸边。
+  - 岸边辅助不再抢占战斗的 MOVE 控制；出现战斗目标或逃跑状态时立即让出导航，避免不同 AI 反复覆盖路径。闲置的人类仍可优先于跟随/巡逻等待命移动离开水域。
+  - 给岸边搜索设置硬预算：每次最多检查 64 个方块列、只尝试 2 个候选路径，并按单位错峰；避免同步寻路长时间占用集成服务器 tick 线程、拖慢全世界生物。
+  - 枪械、弓、弩、三叉戟的战斗仍可正常瞄准、攻击与移动；闲暇寻岸时才由岸边辅助控制导航。
 - **验证**
-  - Java 17 下执行 `gradlew clean build --offline` 成功；项目配置的 Gradle `check` 检查通过。
+  - Java 17 下执行 `gradlew clean build --offline` 成功；项目配置的 Gradle `check` 检查通过，包括 62 项战斗压力策略检查和 10,332 项运行策略检查。
   - 未启动 Minecraft 进行游戏内测试。
 
 ### English
@@ -27,14 +26,13 @@
 - **Water posture and movement**
   - Humans no longer retain the swimming pose in most shallow-water and near-surface movement; the pose remains for situations that require sustained swimming.
   - Fixes shore-search and shore-exit issues, and confines the small pop to the bank to prevent Humans from being launched high into the air while in water.
-  - Shore searches now cover 128 blocks with denser directional sampling. If no route is reachable, shore-seeking retains movement priority and retries instead of handing control back to combat pathing that may lead farther into water.
-  - Humans seek shore while idle, fighting, or retreating; retreat route selection can favor a bank farther from the threat, and pathfinding more strongly avoids unnecessary water routes.
-  - While shore seeking, a lower underwater enemy can no longer override the exit goal and pull the Human deeper; underwater pursuit resumes only when there is no shore, retreat, or breath-recovery priority.
-  - Prevents combat target movement from overwriting an active shore route. If no complete route is currently available, Humans keep steering toward the nearest loaded dry bank and retry pathfinding after reaching or stalling near it instead of waiting motionless in water.
-  - Shore movement takes priority immediately upon entering water; staggering affects only full path calculations and no longer lets combat AI pull Humans deeper while waiting.
-  - Gun, bow, crossbow, and trident users keep aiming and attacking while shore navigation controls movement; ranged attacks fire when a clear shot is available, without tactical strafing overriding the shore path.
+  - Shore searches cover up to 128 blocks with ring-based directional sampling. While idle, Humans keep moving toward a dry fallback and retry periodically if a complete route is temporarily unavailable.
+  - Humans seek shore while idle; combat and retreat AI retain movement ownership. Combat pathfinding treats water as traversable, allowing pursuit across rivers and movement onto shore along the combat route.
+  - Shore assistance no longer claims combat MOVE control and yields as soon as a combat target or retreat is active, preventing competing goals from repeatedly replacing each other's navigation. Idle Humans can still leave water ahead of follow/patrol movement.
+  - Shore searches have a hard budget of 64 inspected block columns and two path candidates per attempt, staggered per Human. This prevents synchronous pathfinding from monopolizing the integrated-server tick and stalling all entities.
+  - Gun, bow, crossbow, and trident users keep their normal combat aiming, attacking, and movement; shore assistance controls navigation only while idle.
 - **Validation**
-  - `gradlew clean build --offline` succeeded on Java 17; the project's Gradle `check` tasks passed.
+  - `gradlew clean build --offline` succeeded on Java 17; Gradle `check` passed, including 62 combat-pressure policy checks and 10,332 runtime-policy checks.
   - Minecraft was not launched for in-game testing.
 
 ## 3.1.34 — 2026-09-26

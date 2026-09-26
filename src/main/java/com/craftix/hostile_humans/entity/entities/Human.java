@@ -383,7 +383,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     public float getPathfindingMalus(BlockPathTypes nodeType) {
         if (nodeType == BlockPathTypes.WATER || nodeType == BlockPathTypes.WATER_BORDER) {
-            return ShoreSeekingPolicy.waterPathMalus(this.isInWater(), this.seekingShore);
+            LivingEntity target = this.getTarget();
+            boolean pursuingCombatTarget = target != null && target.isAlive() && !this.isFleeing;
+            return ShoreSeekingPolicy.waterPathMalus(
+                    this.isInWater(), this.seekingShore, pursuingCombatTarget);
         }
         return super.getPathfindingMalus(nodeType);
     }
@@ -411,8 +414,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         int[] searchRadii = {4, 8, 12, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128};
         BlockPos nearest = null;
         double nearestDistanceSqr = Double.POSITIVE_INFINITY;
+        int inspectedColumns = 0;
+        search:
         for (int radius : searchRadii) {
-            for (int direction = 0; direction < 16; direction++) {
+            for (int direction = 0; direction < 16; direction += 4) {
+                if (inspectedColumns >= ShoreSeekingPolicy.MAX_SHORE_BLOCK_PROBES_PER_SEARCH) {
+                    break search;
+                }
+                inspectedColumns++;
                 double angle = startAngle + direction * (Math.PI / 8.0D);
                 int x = origin.getX() + (int)Math.round(Math.cos(angle) * radius);
                 int z = origin.getZ() + (int)Math.round(Math.sin(angle) * radius);
@@ -430,6 +439,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                     nearest = candidate.immutable();
                     nearestDistanceSqr = distanceSqr;
                 }
+            }
+            // The fallback only needs the nearest ring with any dry footing.
+            // Searching every larger ring on every entry into water made this
+            // scan needlessly expensive on the integrated server thread.
+            if (nearest != null) {
+                break;
             }
         }
         this.shoreFallbackTarget = nearest;
@@ -457,14 +472,21 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         Path saferPath = null;
         int saferNodeCount = Integer.MAX_VALUE;
         boolean saferUsesWaterNavigation = false;
+        int pathProbeCount = 0;
+        int inspectedColumns = 0;
         double currentThreatDistance = retreatThreat != null && retreatThreat.isAlive()
                 ? Math.sqrt(retreatThreat.distanceToSqr(this))
                 : Double.NaN;
+        search:
         for (int radius : searchRadii) {
             Path bestPath = null;
             int bestNodeCount = Integer.MAX_VALUE;
             boolean bestUsesWaterNavigation = false;
-            for (int direction = 0; direction < 16; direction++) {
+            for (int direction = 0; direction < 16; direction += 4) {
+                if (inspectedColumns >= ShoreSeekingPolicy.MAX_SHORE_BLOCK_PROBES_PER_SEARCH) {
+                    break search;
+                }
+                inspectedColumns++;
                 double angle = startAngle + direction * (Math.PI / 8.0D);
                 int x = origin.getX() + (int)Math.round(Math.cos(angle) * radius);
                 int z = origin.getZ() + (int)Math.round(Math.sin(angle) * radius);
@@ -485,6 +507,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 if (avoidDestination != null && candidate.equals(avoidDestination)) {
                     continue;
                 }
+                if (pathProbeCount >= ShoreSeekingPolicy.MAX_SHORE_PATH_PROBES_PER_SEARCH) {
+                    break search;
+                }
+                pathProbeCount++;
 
                 // Shore destinations are dry. Prefer the ground navigator so
                 // its walk evaluator can finish the last shallow-water/shore
@@ -570,6 +596,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.shoreTransitionPendingTick = Integer.MIN_VALUE;
         this.seekingShore = true;
         this.shorePathUsesWaterNavigation = true;
+        if (this.shoreFallbackTarget == null) {
+            this.findNearestDryShoreTarget();
+        }
         this.navigation.stop();
         this.selectShoreNavigation();
         this.setSwimming(!this.isNearWaterSurface());
@@ -745,8 +774,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     protected void registerGoals() {
         super.registerGoals();
         this.goalSelector.addGoal(-10, (Goal)new HumanFloatGoal(this));
-        // Water exit is an environmental movement priority. It must also
-        // pre-empt chest seeking and active combat/retreat movement.
+        // Shore exit is an idle movement fallback. Combat and retreat goals
+        // keep ownership of movement whenever a threat is active.
         this.goalSelector.addGoal(ShoreSeekingPolicy.GOAL_PRIORITY, new LeaveWaterWhenIdleGoal(this));
         this.goalSelector.addGoal(-10, (Goal)new AvoidCreeperGoal((PathfinderMob)this, 10.0f, 1.0, 1.2));
         this.goalSelector.addGoal(-5, (Goal)new OpenDoorsGoal((Mob)this, true));

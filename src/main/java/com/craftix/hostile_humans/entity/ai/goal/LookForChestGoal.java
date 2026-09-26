@@ -42,6 +42,9 @@ extends Goal {
 
     public boolean canUse() {
         if (club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this.mob)) return false;
+        // Chest searching is an idle land activity. Do not let this high-
+        // priority goal claim navigation while shore assistance is active.
+        if (this.mob.isInWater()) return false;
         if (!(mob.level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
         this.cleanupExpiredState();
         if (this.mob.lookForChestCooldown > 0) {
@@ -86,7 +89,8 @@ extends Goal {
 
     public boolean canContinueToUse() {
         if (club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this.mob)
-                || this.pos == UNREACHABLE || this.mob.getTarget() != null || this.mob.isSleeping() || this.mob.isFleeing) {
+                || this.mob.isInWater() || this.pos == UNREACHABLE
+                || this.mob.getTarget() != null || this.mob.isSleeping() || this.mob.isFleeing) {
             return false;
         }
         if (this.mob.blockPosition().distSqr((Vec3i)this.pos) < 5.0) {

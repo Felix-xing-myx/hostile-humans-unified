@@ -68,6 +68,10 @@ public enum SoldierOrder {
 
     static void tick(Human human) {
         if (!human.hasOwner() || !(human.level() instanceof ServerLevel level)) return;
+        // The shore goal already owns idle water movement. This lifecycle
+        // callback runs outside GoalSelector arbitration, so it must not
+        // replace the shore route with a follow/guard/patrol path.
+        if (human.isSeekingShore()) return;
         // Survival navigation owns movement until the retreat has actually
         // ended; neither an anchor leash nor owner-follow may pull it back.
         if (human.isFleeing) return;
