@@ -337,6 +337,7 @@ public final class AdaptiveCombatGoal extends Goal {
 
     @Override
     public void stop() {
+        boolean shoreTransitionPending = human.isShoreTransitionPending();
         boolean endedRetreat = phase == Phase.RETREAT || phase == Phase.RECOVER;
         if (phase == Phase.DEFEND) {
             int reblockDelay = config.shieldBlockCooldownTicks();
@@ -366,11 +367,15 @@ public final class AdaptiveCombatGoal extends Goal {
         } else {
             MovementSpeedController.combat(human, false);
         }
-        if (ownsFleeFlag) {
+        if (ShoreSeekingPolicy.shouldClearFleeingAfterCombatStop(
+                ownsFleeFlag, shoreTransitionPending)) {
             human.isFleeing = false;
+        }
+        if (ownsFleeFlag) {
             ownsFleeFlag = false;
         }
-        if (endedRetreat && human.hasOwner()) {
+        if (human.hasOwner() && ShoreSeekingPolicy.shouldReturnToOwnerAfterCombatStop(
+                endedRetreat, shoreTransitionPending)) {
             SoldierOrder.beginReturnFromRetreat(human);
         }
         if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {

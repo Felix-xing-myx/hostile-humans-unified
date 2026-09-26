@@ -10,7 +10,7 @@ Designed for **Minecraft 1.20.1, Forge 47.4.16, and Java 17**. Install one unifi
 
 ## Overview
 
-The mod adds human units in four ranks: Roamers, Tier I, Tier II, and Tier III. Their relationship with players depends on rank, identity badges, and recruitment status. Wild humans may be hostile, neutral, or protective, while eligible humans can be hired as companions.
+The mod adds human units in four ranks: Roamers, Tier I, Tier II, and Tier III. Their relationship with players depends on rank, identity badges, and recruitment status. Wild humans may be hostile, neutral, or protective, while eligible humans can be hired as companions. Humans in water keep seeking reachable shore while idle, fighting, or retreating; ranged units can continue attacking when they have a clear shot, and pathfinding more strongly favors dry routes.
 
 Identity badges work from any inventory slot. With Curios installed, they can also be placed in the dedicated badge slot. Higher-level badges affect more ranks, and the Ultimate Identity Badge makes all human ranks protect its holder.
 

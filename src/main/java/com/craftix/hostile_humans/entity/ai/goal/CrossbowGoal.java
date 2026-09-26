@@ -7,6 +7,7 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.RangedFiringPosition;
 import club.someoneice.humangunner.RangedWeaponCustody;
 import club.someoneice.humangunner.SoldierOrder;
+import club.someoneice.humangunner.ShoreSeekingPolicy;
 import java.util.EnumSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.TimeUtil;
@@ -131,6 +132,16 @@ extends Goal {
             }
             this.seeTime = flag ? ++this.seeTime : --this.seeTime;
             double d0 = this.mob.distanceToSqr((Entity)livingentity);
+            boolean shoreSeeking = this.mob instanceof Human human
+                    && ShoreSeekingPolicy.isShoreTransitionActive(
+                            human.isSeekingShore(), human.isShoreTransitionPending());
+            if (shoreSeeking) {
+                // Continue charging/firing while the shore goal owns navigation.
+                this.mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
+                tickShot(livingentity, flag,
+                        d0 <= (double)this.attackRadiusSqr && this.seeTime >= 5);
+                return;
+            }
             if (this.mob instanceof Human human && human.isFleeing) {
                 if (this.mob.isUsingItem()
                         && !(this.mob.getUseItem().getItem() instanceof CrossbowItem)) return;
@@ -255,9 +266,16 @@ extends Goal {
 
     @Override
     public EnumSet<Goal.Flag> getFlags() {
-        return this.mob instanceof Human human && human.isFleeing
-                ? EnumSet.noneOf(Goal.Flag.class)
-                : EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK);
+        if (this.mob instanceof Human human) {
+            if (human.isFleeing) {
+                return EnumSet.noneOf(Goal.Flag.class);
+            }
+            if (ShoreSeekingPolicy.isShoreTransitionActive(
+                    human.isSeekingShore(), human.isShoreTransitionPending())) {
+                return EnumSet.of(Goal.Flag.LOOK);
+            }
+        }
+        return EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK);
     }
 
     private void tickShot(LivingEntity livingentity, boolean visible, boolean canEngage) {

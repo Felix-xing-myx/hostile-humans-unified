@@ -62,6 +62,10 @@ public enum SoldierOrder {
         human.forgetSoldierTarget();
     }
 
+    public static boolean isReturningFromRetreat(Human human) {
+        return human.getPersistentData().getBoolean(RETURNING_FROM_RETREAT);
+    }
+
     static void tick(Human human) {
         if (!human.hasOwner() || !(human.level() instanceof ServerLevel level)) return;
         // Survival navigation owns movement until the retreat has actually

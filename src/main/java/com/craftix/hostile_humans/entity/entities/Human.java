@@ -5,6 +5,7 @@ import club.someoneice.humangunner.HumanGunner;
 import net.minecraft.world.entity.ai.goal.Goal;
 import club.someoneice.humangunner.RangedHybridMeleeGoal;
 import club.someoneice.humangunner.RangedWeaponCustody;
+import club.someoneice.humangunner.ShoreSeekingPolicy;
 import club.someoneice.humangunner.SpartanRangedCompat;
 import club.someoneice.humangunner.StaticCombatGoalHost;
 import club.someoneice.humangunner.TargetPreservingConditionalGoal;
@@ -330,6 +331,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public int breathRecoveryTicks;
     private boolean seekingShore;
     private boolean shorePathUsesWaterNavigation;
+    private int shoreTransitionPendingTick = Integer.MIN_VALUE;
     protected final WaterBoundPathNavigation waterNavigation;
     protected final GroundPathNavigation groundNavigation;
 
@@ -379,10 +381,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     public float getPathfindingMalus(BlockPathTypes nodeType) {
         if (nodeType == BlockPathTypes.WATER || nodeType == BlockPathTypes.WATER_BORDER) {
-            // Dry Humans must route around water. Once their body is actually
-            // in water, allow water nodes so they can still
-            // path back out instead of becoming trapped by a negative malus.
-            return this.isInWater() || this.seekingShore ? 0.0F : -1.0F;
+            return ShoreSeekingPolicy.waterPathMalus(this.isInWater(), this.seekingShore);
         }
         return super.getPathfindingMalus(nodeType);
     }
@@ -396,17 +395,37 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     /** Find a reachable dry position, optionally avoiding the previous stalled destination. */
     @Nullable
     public Path findNearestShorePath(@Nullable BlockPos avoidDestination) {
+        return this.findNearestShorePath(avoidDestination, null);
+    }
+
+    /**
+     * Find a reachable dry position. Retreating Humans may accept a short
+     * detour when it exits the water farther from the threat.
+     */
+    @Nullable
+    public Path findNearestShorePath(@Nullable BlockPos avoidDestination,
+            @Nullable LivingEntity retreatThreat) {
         this.shorePathUsesWaterNavigation = false;
         BlockPos origin = this.blockPosition();
         double startAngle = this.getRandom().nextDouble() * Math.PI * 2.0D;
         // Check nearby banks first, then expand in coarser rings. The former
         // 16-block limit often left swimmers trapped in wide rivers or lakes.
-        int[] searchRadii = {4, 8, 12, 16, 24, 32, 40, 48};
+        int[] searchRadii = {4, 8, 12, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128};
+        Path shortestPath = null;
+        int shortestNodeCount = Integer.MAX_VALUE;
+        boolean shortestUsesWaterNavigation = false;
+        Path saferPath = null;
+        int saferNodeCount = Integer.MAX_VALUE;
+        boolean saferUsesWaterNavigation = false;
+        double currentThreatDistance = retreatThreat != null && retreatThreat.isAlive()
+                ? Math.sqrt(retreatThreat.distanceToSqr(this))
+                : Double.NaN;
         for (int radius : searchRadii) {
             Path bestPath = null;
             int bestNodeCount = Integer.MAX_VALUE;
-            for (int direction = 0; direction < 8; direction++) {
-                double angle = startAngle + direction * (Math.PI / 4.0D);
+            boolean bestUsesWaterNavigation = false;
+            for (int direction = 0; direction < 16; direction++) {
+                double angle = startAngle + direction * (Math.PI / 8.0D);
                 int x = origin.getX() + (int)Math.round(Math.cos(angle) * radius);
                 int z = origin.getZ() + (int)Math.round(Math.sin(angle) * radius);
                 BlockPos column = new BlockPos(x, origin.getY(), z);
@@ -435,14 +454,45 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 if (path != null && path.canReach() && path.getNodeCount() < bestNodeCount) {
                     bestPath = path;
                     bestNodeCount = path.getNodeCount();
-                    this.shorePathUsesWaterNavigation = usesWaterNavigation;
+                    bestUsesWaterNavigation = usesWaterNavigation;
+                }
+
+                if (path != null && path.canReach()) {
+                    if (path.getNodeCount() < shortestNodeCount) {
+                        shortestPath = path;
+                        shortestNodeCount = path.getNodeCount();
+                        shortestUsesWaterNavigation = usesWaterNavigation;
+                    }
+                    if (retreatThreat != null && retreatThreat.isAlive()) {
+                        BlockPos pathTarget = path.getTarget();
+                        double exitThreatDistance = Math.sqrt(retreatThreat.distanceToSqr(
+                                pathTarget.getX() + 0.5D,
+                                pathTarget.getY(),
+                                pathTarget.getZ() + 0.5D));
+                        if (exitThreatDistance >= currentThreatDistance + 3.0D
+                                && path.getNodeCount() < saferNodeCount) {
+                            saferPath = path;
+                            saferNodeCount = path.getNodeCount();
+                            saferUsesWaterNavigation = usesWaterNavigation;
+                        }
+                    }
                 }
             }
-            if (bestPath != null) {
+            if (bestPath != null && (retreatThreat == null || !retreatThreat.isAlive())) {
+                this.shorePathUsesWaterNavigation = bestUsesWaterNavigation;
                 return bestPath;
             }
         }
-        return null;
+
+        if (ShoreSeekingPolicy.shouldPreferSaferShorePath(
+                shortestNodeCount,
+                saferNodeCount,
+                saferPath != null)) {
+            this.shorePathUsesWaterNavigation = saferUsesWaterNavigation;
+            return saferPath;
+        }
+        this.shorePathUsesWaterNavigation = shortestUsesWaterNavigation;
+        return shortestPath;
     }
 
     private boolean isDryStandingPosition(BlockPos feetPos) {
@@ -462,6 +512,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public void startSeekingShore(Path path, double speed) {
+        this.shoreTransitionPendingTick = Integer.MIN_VALUE;
         this.seekingShore = true;
         this.navigation.stop();
         this.selectShoreNavigation();
@@ -469,14 +520,42 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.navigation.moveTo(path, speed);
     }
 
+    public void startSeekingShoreWithoutPath() {
+        this.shoreTransitionPendingTick = Integer.MIN_VALUE;
+        this.seekingShore = true;
+        this.shorePathUsesWaterNavigation = true;
+        this.navigation.stop();
+        this.selectShoreNavigation();
+        this.setSwimming(!this.isNearWaterSurface());
+    }
+
     public void continueSeekingShore(Path path, double speed) {
         this.selectShoreNavigation();
         this.navigation.moveTo(path, speed);
     }
 
+    public void pauseSeekingShore() {
+        if (this.seekingShore) {
+            this.navigation.stop();
+        }
+    }
+
     public void stopSeekingShore() {
+        this.shoreTransitionPendingTick = Integer.MIN_VALUE;
         this.seekingShore = false;
         this.navigation.stop();
+    }
+
+    public void requestShoreTransition() {
+        this.shoreTransitionPendingTick = this.tickCount;
+    }
+
+    public boolean isShoreTransitionPending() {
+        return this.shoreTransitionPendingTick == this.tickCount;
+    }
+
+    public boolean isSeekingShore() {
+        return this.seekingShore;
     }
 
     private void selectShoreNavigation() {
@@ -597,7 +676,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     protected void registerGoals() {
         super.registerGoals();
         this.goalSelector.addGoal(-10, (Goal)new HumanFloatGoal(this));
-        this.goalSelector.addGoal(-9, new LeaveWaterWhenIdleGoal(this));
+        // Water exit is an environmental movement priority. It must also
+        // pre-empt chest seeking and active combat/retreat movement.
+        this.goalSelector.addGoal(ShoreSeekingPolicy.GOAL_PRIORITY, new LeaveWaterWhenIdleGoal(this));
         this.goalSelector.addGoal(-10, (Goal)new AvoidCreeperGoal((PathfinderMob)this, 10.0f, 1.0, 1.2));
         this.goalSelector.addGoal(-5, (Goal)new OpenDoorsGoal((Mob)this, true));
         this.goalSelector.addGoal(-5, (Goal)new OpenFenceGoal((Mob)this, true));

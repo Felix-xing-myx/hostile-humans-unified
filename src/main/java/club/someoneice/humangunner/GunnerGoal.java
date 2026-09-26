@@ -67,6 +67,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     @Override
     public boolean canUse() {
+        boolean shoreSeeking = isShoreSeeking();
         LivingEntity target = mob.getTarget();
         if (mob instanceof Human human
                 && target instanceof Player player
@@ -86,7 +87,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 || (!isGun(mob.getMainHandItem()) && !closeDefense)) {
             return false;
         }
-        if (mob instanceof Human human && human.isFleeing) {
+        if (mob instanceof Human human && human.isFleeing && !shoreSeeking) {
             return false;
         }
         double distanceSqr = mob.distanceToSqr(target);
@@ -125,7 +126,11 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     @Override
     public void stop() {
-        stopLateralMovement();
+        if (isShoreSeeking()) {
+            clearLateralInputPreservingNavigation();
+        } else {
+            stopLateralMovement();
+        }
         aimTicks = 0;
         retreatingForSpace = false;
         approachingTarget = false;
@@ -147,6 +152,13 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     @Override
+    public EnumSet<Flag> getFlags() {
+        return isShoreSeeking()
+                ? EnumSet.of(Flag.LOOK)
+                : EnumSet.of(Flag.MOVE, Flag.LOOK);
+    }
+
+    @Override
     public void tick() {
         if (mob instanceof Human human) {
             // PlayerLikeMovementGoal runs at a lower goal priority and reads
@@ -162,8 +174,12 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             return;
         }
         if (movementTarget != target) {
-            stopLateralMovement();
-            mob.getNavigation().stop();
+            if (isShoreSeeking()) {
+                clearLateralInputPreservingNavigation();
+            } else {
+                stopLateralMovement();
+                mob.getNavigation().stop();
+            }
             movementTarget = target;
             approachingTarget = false;
             seekingFiringPosition = false;
@@ -209,7 +225,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // processing. Pursuit branches may re-enable sprint only when
             // they return without aiming or firing.
             clearNpcSprintLock(mob, operator);
-            MovementSpeedController.combat(human, false);
+            if (!isShoreSeeking()) {
+                MovementSpeedController.combat(human, false);
+            }
         }
 
         mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
@@ -234,6 +252,10 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         if (!mob.getSensing().hasLineOfSight(target)) {
             aimTicks = 0;
             operator.aim(false);
+            if (isShoreSeeking()) {
+                clearLateralInputPreservingNavigation();
+                return;
+            }
             if (holdingPosition) {
                 if (!SoldierOrder.isReturningToHoldPosition((Human)mob)) {
                     mob.getNavigation().stop();
@@ -247,7 +269,11 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             return;
         }
 
-        if (holdingPosition) {
+        if (isShoreSeeking()) {
+            // LeaveWaterWhenIdleGoal owns navigation until the Human is dry.
+            // Keep aiming and shooting below active without replacing its path.
+            clearLateralInputPreservingNavigation();
+        } else if (holdingPosition) {
             stopLateralMovement();
             if (!SoldierOrder.isReturningToHoldPosition((Human)mob)) {
                 mob.getNavigation().stop();
@@ -291,14 +317,21 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private void tickCloseMeleeDefense(Human human, LivingEntity target, double distance) {
         operator.aim(false);
         aimTicks = 0;
-        stopLateralMovement();
+        boolean shoreSeeking = isShoreSeeking();
+        if (shoreSeeking) {
+            clearLateralInputPreservingNavigation();
+        } else {
+            stopLateralMovement();
+        }
         clearNpcSprintLock(mob, operator);
         human.getLookControl().setLookAt(target, 45.0F, 35.0F);
         human.getPersistentData().putString(
                 "humangunner:ai_phase", "gun_close_melee_defense"
         );
 
-        if (SoldierOrder.isHoldingPosition(human)) {
+        if (shoreSeeking) {
+            // Preserve the shore route while still allowing an in-range melee response.
+        } else if (SoldierOrder.isHoldingPosition(human)) {
             if (!SoldierOrder.isReturningToHoldPosition(human)) {
                 human.getNavigation().stop();
             }
@@ -775,6 +808,21 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         strafing = false;
         strafePathActive = false;
         manualStrafeUntilTick = 0;
+    }
+
+    private void clearLateralInputPreservingNavigation() {
+        // Do not issue even a zero-valued STRAFE command here. HumanMoveControl
+        // treats STRAFE as an exclusive water-movement operation, which can
+        // consume the same tick the shore navigator needs to advance its path.
+        strafing = false;
+        strafePathActive = false;
+        manualStrafeUntilTick = 0;
+    }
+
+    private boolean isShoreSeeking() {
+        return mob instanceof Human human
+                && ShoreSeekingPolicy.isShoreTransitionActive(
+                        human.isSeekingShore(), human.isShoreTransitionPending());
     }
 
     private static boolean isGun(ItemStack stack) {

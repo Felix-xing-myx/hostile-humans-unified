@@ -4,6 +4,38 @@ public final class CombatPressurePolicyTest {
     private static int checks;
 
     public static void main(String[] args) {
+        check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(false, true, true, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, false, true, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, true),
+                "shore seeking is active for every server-side water state, regardless of combat or orders");
+        check(ShoreSeekingPolicy.shouldContinueSeekingShore(true, false)
+                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(false, false)
+                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, true),
+                "shore movement retains priority across failed path searches until water is exited or lava is entered");
+        check(ShoreSeekingPolicy.GOAL_PRIORITY < -30
+                        && ShoreSeekingPolicy.GOAL_PRIORITY < -10
+                        && ShoreSeekingPolicy.GOAL_PRIORITY < -8,
+                "shore exit pre-empts chest, hazard, and combat movement goals");
+        check(ShoreSeekingPolicy.isShoreTransitionActive(true, false)
+                        && ShoreSeekingPolicy.isShoreTransitionActive(false, true)
+                        && !ShoreSeekingPolicy.isShoreTransitionActive(false, false),
+                "ranged attacks retain their active state while shore seeking suppresses competing combat movement");
+        check(ShoreSeekingPolicy.waterPathMalus(true, true)
+                        > ShoreSeekingPolicy.waterPathMalus(true, false)
+                        && ShoreSeekingPolicy.waterPathMalus(true, false) > 0.0F
+                        && ShoreSeekingPolicy.waterPathMalus(false, false) < 0.0F,
+                "water remains traversable when unavoidable while normal and active-shore paths strongly prefer land");
+        check(ShoreSeekingPolicy.shouldPreferSaferShorePath(12, 18, true)
+                        && !ShoreSeekingPolicy.shouldPreferSaferShorePath(12, 19, true)
+                        && !ShoreSeekingPolicy.shouldPreferSaferShorePath(12, 13, false),
+                "retreats choose a safer bank only when the shore detour remains bounded");
+        check(!ShoreSeekingPolicy.shouldClearFleeingAfterCombatStop(true, true)
+                        && ShoreSeekingPolicy.shouldClearFleeingAfterCombatStop(true, false)
+                        && !ShoreSeekingPolicy.shouldReturnToOwnerAfterCombatStop(true, true)
+                        && ShoreSeekingPolicy.shouldReturnToOwnerAfterCombatStop(true, false),
+                "a shore handoff does not cancel retreat state or prematurely start owner-return behavior");
         check(ProjectileShieldPolicy.shouldGuardRangedUser(0.5D)
                         && ProjectileShieldPolicy.shouldGuardRangedUser(2.5D)
                         && !ProjectileShieldPolicy.shouldGuardRangedUser(2.51D)

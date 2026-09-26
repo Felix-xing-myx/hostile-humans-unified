@@ -1,7 +1,9 @@
 package com.craftix.hostile_humans.entity.ai.goal;
 
 import com.craftix.hostile_humans.entity.entities.Human;
+import club.someoneice.humangunner.MovementSpeedController;
 import club.someoneice.humangunner.SoldierOrder;
+import club.someoneice.humangunner.ShoreSeekingPolicy;
 import java.util.EnumSet;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
@@ -9,11 +11,11 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.level.pathfinder.Path;
 
-/** Guides Humans to dry ground while preserving combat targets and safety orders. */
+/** Gives water exit priority over combat and idle movement until the Human is ashore. */
 public final class LeaveWaterWhenIdleGoal extends Goal {
-    private static final int FAILED_PATH_RETRY_TICKS = 100;
+    private static final int FAILED_PATH_RETRY_TICKS = 40;
     private static final int REPATH_DELAY_TICKS = 12;
-    private static final int STUCK_REPATH_TICKS = 60;
+    private static final int STUCK_REPATH_TICKS = 40;
     private static final double MOVE_SPEED = 1.0D;
     private static final double MIN_PROGRESS_SQUARED = 0.0004D;
 
@@ -22,6 +24,9 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
     private Path shorePath;
     @Nullable
     private LivingEntity interruptedCombatTarget;
+    @Nullable
+    private LivingEntity interruptedFleeTarget;
+    private boolean interruptedFleeing;
     @Nullable
     private BlockPos lastDestination;
     private int nextPathAttemptTick;
@@ -32,50 +37,40 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
 
     public LeaveWaterWhenIdleGoal(Human human) {
         this.human = human;
+        // Stagger expensive shore searches when a wave enters water together.
+        this.nextPathAttemptTick = human.tickCount + Math.floorMod(human.getId(), REPATH_DELAY_TICKS);
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.JUMP));
     }
 
     @Override
     public boolean canUse() {
-        boolean emergencyEscape = this.isCriticalBreathEmergency();
-        LivingEntity target = this.human.getTarget();
-        boolean targetNeedsShore = this.isShoreCombatTarget(target);
-        if (this.human.level().isClientSide
-                || !this.human.isEffectiveAi()
-                // A land target must not keep the combat goal in charge of
-                // water navigation: let the shore route take movement until
-                // the Human reaches dry ground, then combat resumes there.
-                || target != null && !emergencyEscape && !targetNeedsShore
-                || this.human.isFleeing && !emergencyEscape
-                || this.shouldRemainAtPost() && !emergencyEscape
-                || this.isFollowingOwnerInWater() && !emergencyEscape
-                || !this.human.isInWater()
-                || this.human.isInLava()
-                || this.human.isUsingItem()
+        if (!ShoreSeekingPolicy.shouldAttemptShore(
+                    !this.human.level().isClientSide,
+                    this.human.isEffectiveAi(),
+                    this.human.isInWater(),
+                    this.human.isInLava())
                 || this.human.tickCount < this.nextPathAttemptTick) {
             return false;
         }
 
-        this.shorePath = this.human.findNearestShorePath();
+        this.shorePath = this.human.findNearestShorePath(null, this.retreatThreat());
         this.nextPathAttemptTick = this.human.tickCount + (this.shorePath == null
                 ? FAILED_PATH_RETRY_TICKS
                 : REPATH_DELAY_TICKS);
-        this.interruptedCombatTarget = this.shorePath != null && targetNeedsShore ? target : null;
-        return this.shorePath != null;
+        // Keep shore seeking active even when a path cannot be found on this
+        // attempt. Otherwise combat movement takes over for the retry delay and
+        // can send the Human deeper into water or leave it stuck in place.
+        this.interruptedCombatTarget = this.human.getTarget();
+        this.interruptedFleeing = this.human.isFleeing;
+        this.interruptedFleeTarget = this.human.toAvoid;
+        this.human.requestShoreTransition();
+        return true;
     }
 
     @Override
     public boolean canContinueToUse() {
-        boolean emergencyEscape = this.isCriticalBreathEmergency();
-        LivingEntity target = this.human.getTarget();
-        return this.shorePath != null
-                && (target == null || emergencyEscape || this.isShoreCombatTarget(target))
-                && (!this.human.isFleeing || emergencyEscape)
-                && (!this.shouldRemainAtPost() || emergencyEscape)
-                && (!this.isFollowingOwnerInWater() || emergencyEscape)
-                && this.human.isInWater()
-                && !this.human.isInLava()
-                && !this.human.isUsingItem();
+        return ShoreSeekingPolicy.shouldContinueSeekingShore(
+                this.human.isInWater(), this.human.isInLava());
     }
 
     @Override
@@ -83,16 +78,37 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
         // Conflicting combat movement goals may clear their target from stop().
         // Preserve it across the short shore approach so the Human resumes the
         // same fight once it has reached land.
-        if (this.interruptedCombatTarget != null
+        boolean returningToOwner = this.human.hasOwner()
+                && SoldierOrder.isReturningFromRetreat(this.human);
+        if (!returningToOwner
+                && this.interruptedCombatTarget != null
                 && this.interruptedCombatTarget.isAlive()
-                && this.human.getTarget() == null) {
+                && (this.human.getTarget() == null || !this.human.getTarget().isAlive())) {
             this.human.setTarget(this.interruptedCombatTarget);
+        }
+        if (!returningToOwner && this.interruptedFleeing) {
+            LivingEntity fleeTarget = this.interruptedFleeTarget != null
+                    && this.interruptedFleeTarget.isAlive()
+                    ? this.interruptedFleeTarget
+                    : this.interruptedCombatTarget != null && this.interruptedCombatTarget.isAlive()
+                    ? this.interruptedCombatTarget
+                    : null;
+            if (fleeTarget != null) {
+                this.human.toAvoid = fleeTarget;
+                this.human.isFleeing = true;
+                MovementSpeedController.retreat(this.human, true);
+            }
         }
         if (this.shorePath != null) {
             this.stuckTicks = 0;
             this.rememberPosition();
             this.lastDestination = this.shorePath.getTarget();
             this.human.startSeekingShore(this.shorePath, MOVE_SPEED);
+        } else {
+            this.stuckTicks = 0;
+            this.rememberPosition();
+            this.lastDestination = null;
+            this.human.startSeekingShoreWithoutPath();
         }
     }
 
@@ -108,19 +124,25 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
             this.stuckTicks++;
         }
 
-        boolean pathNeedsRefresh = this.human.getNavigation().isDone()
+        boolean pathNeedsRefresh = this.shorePath == null
+                || this.human.getNavigation().isDone()
                 || this.stuckTicks >= STUCK_REPATH_TICKS;
         if (pathNeedsRefresh && this.human.tickCount >= this.nextPathAttemptTick) {
-            Path nextPath = this.human.findNearestShorePath(this.stuckTicks >= STUCK_REPATH_TICKS
-                    ? this.lastDestination
-                    : null);
+            LivingEntity retreatThreat = this.retreatThreat();
+            Path nextPath = this.human.findNearestShorePath(
+                    this.stuckTicks >= STUCK_REPATH_TICKS ? this.lastDestination : null,
+                    retreatThreat);
             if (nextPath == null && this.stuckTicks >= STUCK_REPATH_TICKS) {
                 // If every alternate dry point failed, retry the previous
                 // destination once rather than abandoning a still-usable path.
-                nextPath = this.human.findNearestShorePath();
+                nextPath = this.human.findNearestShorePath(null, retreatThreat);
             }
             if (nextPath == null) {
                 this.shorePath = null;
+                this.lastDestination = null;
+                this.stuckTicks = 0;
+                this.rememberPosition();
+                this.human.pauseSeekingShore();
                 this.nextPathAttemptTick = this.human.tickCount + FAILED_PATH_RETRY_TICKS;
                 return;
             }
@@ -137,6 +159,8 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
     public void stop() {
         this.shorePath = null;
         this.interruptedCombatTarget = null;
+        this.interruptedFleeTarget = null;
+        this.interruptedFleeing = false;
         this.lastDestination = null;
         this.stuckTicks = 0;
         this.human.stopSeekingShore();
@@ -147,37 +171,22 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
         return true;
     }
 
-    private boolean isFollowingOwnerInWater() {
-        if (!this.human.hasOwner() || SoldierOrder.get(this.human) != SoldierOrder.FOLLOW) {
-            return false;
-        }
-        LivingEntity owner = this.human.getOwner();
-        return owner != null && owner.isInWater();
-    }
-
     private void rememberPosition() {
         this.lastX = this.human.getX();
         this.lastY = this.human.getY();
         this.lastZ = this.human.getZ();
     }
 
-    private boolean shouldRemainAtPost() {
-        if (this.human.isOrderedToSit()) {
-            return true;
+    @Nullable
+    private LivingEntity retreatThreat() {
+        if (!this.human.isFleeing) {
+            return null;
         }
-        if (!this.human.hasOwner()) {
-            return false;
+        if (this.human.toAvoid != null && this.human.toAvoid.isAlive()) {
+            return this.human.toAvoid;
         }
-        SoldierOrder order = SoldierOrder.get(this.human);
-        return order == SoldierOrder.HOLD_POSITION || order == SoldierOrder.GUARD;
+        LivingEntity target = this.human.getTarget();
+        return target != null && target.isAlive() ? target : null;
     }
 
-    private boolean isCriticalBreathEmergency() {
-        return this.human.shouldCatchBreath
-                && this.human.getAirSupply() <= this.human.getMaxAirSupply() / 4;
-    }
-
-    private boolean isShoreCombatTarget(@Nullable LivingEntity target) {
-        return target != null && target.isAlive() && !target.isInWater();
-    }
 }

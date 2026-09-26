@@ -7,6 +7,7 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.BowRangePolicy;
 import club.someoneice.humangunner.RangedFiringPosition;
 import club.someoneice.humangunner.RangedWeaponCustody;
+import club.someoneice.humangunner.ShoreSeekingPolicy;
 import club.someoneice.humangunner.SoldierOrder;
 import java.util.EnumSet;
 import net.minecraft.core.BlockPos;
@@ -110,7 +111,10 @@ extends Goal {
             clearStrafeInput();
             return;
         }
-        if (this.mob instanceof Human human && human.isFleeing) {
+        boolean shoreSeeking = this.mob instanceof Human human
+                && ShoreSeekingPolicy.isShoreTransitionActive(
+                        human.isSeekingShore(), human.isShoreTransitionPending());
+        if ((this.mob instanceof Human human && human.isFleeing) || shoreSeeking) {
             if (this.mob.isUsingItem() && !(this.mob.getUseItem().getItem() instanceof BowItem)) return;
             boolean visible = this.mob.getSensing().hasLineOfSight(livingentity);
             this.seeTime = visible ? Math.max(1, this.seeTime + 1) : Math.min(-1, this.seeTime - 1);
@@ -225,9 +229,16 @@ extends Goal {
 
     @Override
     public EnumSet<Goal.Flag> getFlags() {
-        return this.mob instanceof Human human && human.isFleeing
-                ? EnumSet.noneOf(Goal.Flag.class)
-                : EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK);
+        if (this.mob instanceof Human human) {
+            if (human.isFleeing) {
+                return EnumSet.noneOf(Goal.Flag.class);
+            }
+            if (ShoreSeekingPolicy.isShoreTransitionActive(
+                    human.isSeekingShore(), human.isShoreTransitionPending())) {
+                return EnumSet.of(Goal.Flag.LOOK);
+            }
+        }
+        return EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK);
     }
 
     private void tickShot(LivingEntity target, boolean visible) {

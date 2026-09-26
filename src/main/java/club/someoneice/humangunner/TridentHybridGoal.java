@@ -36,16 +36,20 @@ public final class TridentHybridGoal extends Goal {
     @Override
     public boolean canUse() {
         LivingEntity candidate = human.getTarget();
+        boolean shoreSeeking = isShoreSeeking();
         return isHoldingTrident()
                 && isValidTarget(candidate)
-                && (!human.isFleeing || human.distanceToSqr(candidate) <= ENTER_MELEE_DISTANCE_SQR);
+                && (!human.isFleeing || shoreSeeking
+                || human.distanceToSqr(candidate) <= ENTER_MELEE_DISTANCE_SQR);
     }
 
     @Override
     public boolean canContinueToUse() {
+        boolean shoreSeeking = isShoreSeeking();
         return isHoldingTrident()
                 && isValidTarget(human.getTarget())
-                && (!human.isFleeing || human.distanceToSqr(human.getTarget()) <= ENTER_MELEE_DISTANCE_SQR);
+                && (!human.isFleeing || shoreSeeking
+                || human.distanceToSqr(human.getTarget()) <= ENTER_MELEE_DISTANCE_SQR);
     }
 
     @Override
@@ -72,6 +76,13 @@ public final class TridentHybridGoal extends Goal {
     @Override
     public boolean requiresUpdateEveryTick() {
         return true;
+    }
+
+    @Override
+    public EnumSet<Flag> getFlags() {
+        return isShoreSeeking()
+                ? EnumSet.of(Flag.LOOK)
+                : EnumSet.of(Flag.MOVE, Flag.LOOK);
     }
 
     @Override
@@ -103,13 +114,17 @@ public final class TridentHybridGoal extends Goal {
         }
 
         if (meleeMode) {
-            tickMelee(distanceSqr);
+            tickMelee(distanceSqr, isShoreSeeking());
         } else {
-            tickRanged(distanceSqr, visible);
+            tickRanged(distanceSqr, visible, isShoreSeeking());
         }
     }
 
-    private void tickMelee(double distanceSqr) {
+    private void tickMelee(double distanceSqr, boolean shoreSeeking) {
+        if (shoreSeeking) {
+            attackMeleeIfReady(distanceSqr);
+            return;
+        }
         if (SoldierOrder.isHoldingPosition(human)) {
             if (!SoldierOrder.isReturningToHoldPosition(human)) {
                 human.getNavigation().stop();
@@ -118,6 +133,10 @@ public final class TridentHybridGoal extends Goal {
             human.getNavigation().moveTo(target, 1.0D);
             pathCooldown = 4 + human.getRandom().nextInt(3);
         }
+        attackMeleeIfReady(distanceSqr);
+    }
+
+    private void attackMeleeIfReady(double distanceSqr) {
         if (distanceSqr <= meleeReachSqr(target) && attackCooldown <= 0) {
             human.swing(InteractionHand.MAIN_HAND);
             human.doHurtTarget(target);
@@ -125,18 +144,16 @@ public final class TridentHybridGoal extends Goal {
         }
     }
 
-    private void tickRanged(double distanceSqr, boolean visible) {
+    private void tickRanged(double distanceSqr, boolean visible, boolean shoreSeeking) {
+        if (shoreSeeking) {
+            throwTridentIfReady(distanceSqr, visible);
+            return;
+        }
         if (SoldierOrder.isHoldingPosition(human)) {
             if (!SoldierOrder.isReturningToHoldPosition(human)) {
                 human.getNavigation().stop();
             }
-            if (visible && attackCooldown <= 0 && distanceSqr <= MAX_THROW_DISTANCE_SQR) {
-                float distanceFactor = Mth.clamp(
-                        (float) (Math.sqrt(distanceSqr) / 36.0D), 0.1F, 1.0F
-                );
-                human.performRangedAttackTrident(target, distanceFactor);
-                attackCooldown = 14;
-            }
+            throwTridentIfReady(distanceSqr, visible);
             return;
         }
         if (!visible || distanceSqr > MAX_THROW_DISTANCE_SQR) {
@@ -148,13 +165,19 @@ public final class TridentHybridGoal extends Goal {
         }
 
         human.getNavigation().stop();
-        if (unseenTicks == 0 && attackCooldown <= 0) {
-            float distanceFactor = Mth.clamp(
-                    (float) (Math.sqrt(distanceSqr) / 36.0D), 0.1F, 1.0F
-            );
-            human.performRangedAttackTrident(target, distanceFactor);
-            attackCooldown = 14;
+        throwTridentIfReady(distanceSqr, visible);
+    }
+
+    private void throwTridentIfReady(double distanceSqr, boolean visible) {
+        if (!visible || unseenTicks != 0 || attackCooldown > 0
+                || distanceSqr > MAX_THROW_DISTANCE_SQR) {
+            return;
         }
+        float distanceFactor = Mth.clamp(
+                (float) (Math.sqrt(distanceSqr) / 36.0D), 0.1F, 1.0F
+        );
+        human.performRangedAttackTrident(target, distanceFactor);
+        attackCooldown = 14;
     }
 
     private double meleeReachSqr(LivingEntity victim) {
@@ -164,6 +187,11 @@ public final class TridentHybridGoal extends Goal {
 
     private boolean isHoldingTrident() {
         return human.getMainHandItem().getItem() instanceof TridentItem;
+    }
+
+    private boolean isShoreSeeking() {
+        return ShoreSeekingPolicy.isShoreTransitionActive(
+                human.isSeekingShore(), human.isShoreTransitionPending());
     }
 
     private boolean isValidTarget(LivingEntity candidate) {
