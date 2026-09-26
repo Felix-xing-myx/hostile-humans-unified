@@ -935,7 +935,6 @@ public final class HumanGunner {
         human.addCombatGoal(-7, new ValuableItemPickupGoal(human));
         // Emergency lava escape must override combat and all hired movement orders.
         human.addCombatGoal(-12, new LavaEscapeGoal(human));
-        human.addCombatGoal(1, new IdleLeaveWaterGoal(human));
     }
 
     private static void configureSoldierOrders(Human human) {

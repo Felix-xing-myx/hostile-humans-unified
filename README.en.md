@@ -1,6 +1,8 @@
-# Hostile Humans Unified 3.1.28
+# Hostile Humans Unified 3.2.0
 
 [简体中文](README.md) | [English](README.en.md)
+
+**Automatic compatibility:** When installed, Humans automatically recognize and use compatible weapons from **Spartan Weaponry**, shields from **Spartan Shields**, and armor from **Immersive Armors**. No extra configuration is needed. These are optional integrations, not required dependencies.
 
 This mod is derived from the original [**Hostile Humans**](https://www.curseforge.com/minecraft/mc-mods/hostile-humans) mod and integrates content from **Human Gunner**. It also introduces original content created specifically for this mod. GPT assisted with modifying and building this mod. It is a standalone mod and can be installed on its own; the original Hostile Humans and Human Gunner JARs are not required. This is a third-party maintained version, not an official update from the original author. Most stats and mechanics of hostile humans have been strengthened, so the mod may be challenging in a mostly vanilla environment. Playing it alongside other mods or as part of a modpack is recommended.
 

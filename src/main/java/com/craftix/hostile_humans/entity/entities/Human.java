@@ -22,11 +22,11 @@ import com.craftix.hostile_humans.entity.ai.goal.AvoidCreeperGoal;
 import com.craftix.hostile_humans.entity.ai.goal.AvoidTNTGoal;
 import com.craftix.hostile_humans.entity.ai.goal.BowAttack;
 import com.craftix.hostile_humans.entity.ai.goal.CrossbowGoal;
-import com.craftix.hostile_humans.entity.ai.goal.FindWaterOnFireGoal;
 import com.craftix.hostile_humans.entity.ai.goal.HumanFloatGoal;
 import com.craftix.hostile_humans.entity.ai.goal.HumanLookAtPlayerGoal;
 import com.craftix.hostile_humans.entity.ai.goal.InvestigateSoundGoal;
 import com.craftix.hostile_humans.entity.ai.goal.LadderClimbGoal;
+import com.craftix.hostile_humans.entity.ai.goal.LeaveWaterWhenIdleGoal;
 import com.craftix.hostile_humans.entity.ai.goal.LookForChestGoal;
 import com.craftix.hostile_humans.entity.ai.goal.MeleeAttackGoal;
 import com.craftix.hostile_humans.entity.ai.goal.NearestAttackableTargetGoalCustom;
@@ -117,12 +117,14 @@ import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.common.ToolActions;
@@ -196,6 +198,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
     private static boolean humanGunner$isCrossbowMode(Human human) {
         return !RangedWeaponCustody.hasGunPriority(human)
+                && !RangedWeaponCustody.isActive(human)
+                && !HumanUtil.isMeleeWeapon(human.getMainHandItem())
                 && !(human.getMainHandItem().getItem() instanceof TridentItem)
                 && (RangedWeaponCustody.isCrossbowWeapon(human.getMainHandItem())
                 || RangedWeaponCustody.isCrossbowWeapon(human.getOffhandItem()));
@@ -203,6 +207,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     private static boolean humanGunner$isBowMode(Human human) {
         return !RangedWeaponCustody.hasGunPriority(human)
+                && !RangedWeaponCustody.isActive(human)
+                && !HumanUtil.isMeleeWeapon(human.getMainHandItem())
                 && !(human.getMainHandItem().getItem() instanceof TridentItem)
                 && !RangedWeaponCustody.isCrossbowWeapon(human.getMainHandItem())
                 && (RangedWeaponCustody.isBowWeapon(human.getMainHandItem())
@@ -212,6 +218,11 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private static boolean humanGunner$isMeleeMode(Human human) {
         ItemStack mainHand = human.getMainHandItem();
         ItemStack offHand = human.getOffhandItem();
+        if (!club.someoneice.humangunner.GunSupport.get().isGun(mainHand)
+                && !RangedWeaponCustody.isActive(human)
+                && HumanUtil.isMeleeWeapon(mainHand)) {
+            return true;
+        }
         return !club.someoneice.humangunner.GunSupport.get().isGun(mainHand)
                 && !RangedWeaponCustody.isActive(human)
                 && !(mainHand.getItem() instanceof TridentItem)
@@ -297,7 +308,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private final MeleeAttackGoal meleeAttackGoal = new MeleeAttackGoal(this, 1.05, true);
     public int shieldCoolDown;
     public int shieldUpTicks;
-    public int ticksEyesOutOfWater;
     public int switchingWeaponCoolDown;
     public int meleeFlurryHitsRemaining;
     public int meleeFlurryDamageTicks;
@@ -318,11 +328,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public static final EntityDimensions SWIMMING_DIMENSIONS = EntityDimensions.scalable((float)0.6f, (float)0.6f);
     public boolean shouldCatchBreath;
     public int breathRecoveryTicks;
-    private double lastDetectedExitY = Double.NaN;
-    private int swimHoldTicks;
-    private boolean latchedWaterMovement;
-    private int waterMovementLockTicks;
-    private int waterMovementLatchTick = -1;
+    private boolean seekingShore;
+    private boolean shorePathUsesWaterNavigation;
     protected final WaterBoundPathNavigation waterNavigation;
     protected final GroundPathNavigation groundNavigation;
 
@@ -349,7 +356,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     public Human(EntityType<? extends HumanEntity> entityType, Level level, HumanTier type) {
         super(entityType, level);
-        this.setPathfindingMalus(BlockPathTypes.WATER, 0.0f);
         // Make normal path selection strongly prefer routes around lava, while
         // keeping lava nodes traversable so the emergency escape goal can path out.
         this.setPathfindingMalus(BlockPathTypes.LAVA, 16.0f);
@@ -357,7 +363,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.setTier(type);
         this.initTeam(type);
         this.moveControl = new HumanMoveControl(this);
-        this.setPathfindingMalus(BlockPathTypes.WATER, 0.0f);
         this.waterNavigation = new WaterBoundPathNavigation((Mob)this, level);
         this.groundNavigation = new com.craftix.hostile_humans.entity.ai.HumanNavigation((Mob)this, level);
         // HumanEntity enables floating on the navigation created by the
@@ -369,6 +374,121 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.groundNavigation.setCanPassDoors(true);
         this.groundNavigation.setMaxVisitedNodesMultiplier(2.0f);
         this.navigation = this.groundNavigation;
+    }
+
+    @Override
+    public float getPathfindingMalus(BlockPathTypes nodeType) {
+        if (nodeType == BlockPathTypes.WATER || nodeType == BlockPathTypes.WATER_BORDER) {
+            // Dry Humans must route around water. Once their body is actually
+            // in water, allow water nodes so they can still
+            // path back out instead of becoming trapped by a negative malus.
+            return this.isInWater() || this.seekingShore ? 0.0F : -1.0F;
+        }
+        return super.getPathfindingMalus(nodeType);
+    }
+
+    /** Find a reachable dry standing position, preferring the nearest shoreline. */
+    @Nullable
+    public Path findNearestShorePath() {
+        return this.findNearestShorePath(null);
+    }
+
+    /** Find a reachable dry position, optionally avoiding the previous stalled destination. */
+    @Nullable
+    public Path findNearestShorePath(@Nullable BlockPos avoidDestination) {
+        this.shorePathUsesWaterNavigation = false;
+        BlockPos origin = this.blockPosition();
+        double startAngle = this.getRandom().nextDouble() * Math.PI * 2.0D;
+        // Check nearby banks first, then expand in coarser rings. The former
+        // 16-block limit often left swimmers trapped in wide rivers or lakes.
+        int[] searchRadii = {4, 8, 12, 16, 24, 32, 40, 48};
+        for (int radius : searchRadii) {
+            Path bestPath = null;
+            int bestNodeCount = Integer.MAX_VALUE;
+            for (int direction = 0; direction < 8; direction++) {
+                double angle = startAngle + direction * (Math.PI / 4.0D);
+                int x = origin.getX() + (int)Math.round(Math.cos(angle) * radius);
+                int z = origin.getZ() + (int)Math.round(Math.sin(angle) * radius);
+                BlockPos column = new BlockPos(x, origin.getY(), z);
+                if (!this.level().hasChunkAt(column)) {
+                    continue;
+                }
+                int y = this.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                BlockPos candidate = new BlockPos(x, y, z);
+                if (!this.isDryStandingPosition(candidate)) {
+                    continue;
+                }
+                if (avoidDestination != null && candidate.equals(avoidDestination)) {
+                    continue;
+                }
+
+                // Shore destinations are dry. Prefer the ground navigator so
+                // its walk evaluator can finish the last shallow-water/shore
+                // step; water navigation is only a fallback for routes the
+                // ground navigator cannot reach.
+                Path path = this.groundNavigation.createPath(candidate, 0);
+                boolean usesWaterNavigation = false;
+                if (path == null || !path.canReach()) {
+                    path = this.waterNavigation.createPath(candidate, 0);
+                    usesWaterNavigation = path != null && path.canReach();
+                }
+                if (path != null && path.canReach() && path.getNodeCount() < bestNodeCount) {
+                    bestPath = path;
+                    bestNodeCount = path.getNodeCount();
+                    this.shorePathUsesWaterNavigation = usesWaterNavigation;
+                }
+            }
+            if (bestPath != null) {
+                return bestPath;
+            }
+        }
+        return null;
+    }
+
+    private boolean isDryStandingPosition(BlockPos feetPos) {
+        BlockPos headPos = feetPos.above();
+        BlockPos floorPos = feetPos.below();
+        if (this.level().getFluidState(feetPos).is(FluidTags.WATER)
+                || this.level().getFluidState(feetPos).is(FluidTags.LAVA)
+                || this.level().getFluidState(headPos).is(FluidTags.WATER)
+                || this.level().getFluidState(headPos).is(FluidTags.LAVA)
+                || this.level().getFluidState(floorPos).is(FluidTags.WATER)
+                || this.level().getFluidState(floorPos).is(FluidTags.LAVA)
+                || !this.level().getBlockState(feetPos).getCollisionShape(this.level(), feetPos).isEmpty()
+                || !this.level().getBlockState(headPos).getCollisionShape(this.level(), headPos).isEmpty()) {
+            return false;
+        }
+        return this.level().getBlockState(floorPos).isFaceSturdy(this.level(), floorPos, Direction.UP);
+    }
+
+    public void startSeekingShore(Path path, double speed) {
+        this.seekingShore = true;
+        this.navigation.stop();
+        this.selectShoreNavigation();
+        this.setSwimming(!this.isNearWaterSurface());
+        this.navigation.moveTo(path, speed);
+    }
+
+    public void continueSeekingShore(Path path, double speed) {
+        this.selectShoreNavigation();
+        this.navigation.moveTo(path, speed);
+    }
+
+    public void stopSeekingShore() {
+        this.seekingShore = false;
+        this.navigation.stop();
+    }
+
+    private void selectShoreNavigation() {
+        if (this.shorePathUsesWaterNavigation) {
+            if (this.navigation != this.waterNavigation) {
+                this.navigation.stop();
+                this.navigation = this.waterNavigation;
+            }
+        } else if (this.navigation != this.groundNavigation) {
+            this.navigation.stop();
+            this.navigation = this.groundNavigation;
+        }
     }
 
     @Override
@@ -477,12 +597,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     protected void registerGoals() {
         super.registerGoals();
         this.goalSelector.addGoal(-10, (Goal)new HumanFloatGoal(this));
+        this.goalSelector.addGoal(-9, new LeaveWaterWhenIdleGoal(this));
         this.goalSelector.addGoal(-10, (Goal)new AvoidCreeperGoal((PathfinderMob)this, 10.0f, 1.0, 1.2));
         this.goalSelector.addGoal(-5, (Goal)new OpenDoorsGoal((Mob)this, true));
         this.goalSelector.addGoal(-5, (Goal)new OpenFenceGoal((Mob)this, true));
         this.goalSelector.addGoal(-5, (Goal)new OpenTrapdoorGoal((Mob)this, true));
         this.goalSelector.addGoal(-5, (Goal)new LadderClimbGoal((Mob)this));
-        this.goalSelector.addGoal(0, (Goal)new FindWaterOnFireGoal((PathfinderMob)this, 1.2));
         this.goalSelector.addGoal(0, (Goal)new RunFromTarget(this, 6.0f, 1.0, 1.2));
         this.goalSelector.addGoal(0, (Goal)new AvoidTNTGoal((PathfinderMob)this, 6.0f, 1.0, 1.2));
         this.goalSelector.addGoal(0, (Goal)new InvestigateSoundGoal((Mob)this, 1.0));
@@ -771,7 +891,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 this.shouldFleeThisCombat = false;
             }
         }
-        this.ticksEyesOutOfWater = this.wasEyeInWater ? 0 : ++this.ticksEyesOutOfWater;
         if (this.level().isNight() && !this.hasDecidedToSleepTonight()) {
             this.setSleepingThisNight(this.random.nextFloat() < 0.3f);
             this.setHasDecidedToSleepTonight(true);
@@ -784,7 +903,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 this.stopSleeping();
             }
         } else if (this.shouldUseWaterMovement()) {
-            this.setPose(Pose.SWIMMING);
+            this.setPose(this.isNearWaterSurface() ? Pose.STANDING : Pose.SWIMMING);
         } else if (this.getPose() == Pose.SWIMMING) {
             this.setPose(Pose.STANDING);
         }
@@ -816,7 +935,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (this.level().isClientSide || this.isSleeping()) {
             return;
         }
-        if (this.getAirSupply() <= this.getMaxAirSupply() / 8 && !this.shouldCatchBreath) {
+        // Begin surfacing with a real safety margin. The old 1/8 threshold
+        // often left less air than the time needed to rise from deep water.
+        if (this.getAirSupply() <= this.getMaxAirSupply() / 2 && !this.shouldCatchBreath) {
             this.shouldCatchBreath = true;
             this.breathRecoveryTicks = this.getRandom().nextInt(60, 101);
         }
@@ -1075,7 +1196,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public boolean isVisuallySwimming() {
-        return super.isVisuallySwimming() || this.shouldUseWaterMovement() && this.isEyeInFluid(FluidTags.WATER);
+        return !this.isNearWaterSurface()
+                && (super.isVisuallySwimming() || this.shouldUseWaterMovement() && this.isEyeInFluid(FluidTags.WATER));
     }
 
     public EntityDimensions getDimensions(Pose p_36166_) {
@@ -1083,13 +1205,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             return SWIMMING_DIMENSIONS;
         }
         return super.getDimensions(p_36166_);
-    }
-
-    public boolean prefersToFloat() {
-        if (this.shouldCatchBreath || this.breathRecoveryTicks > 0) {
-            return true;
-        }
-        return this.getTarget() == null && this.feetInWater() && !this.isInShallowWater();
     }
 
     public boolean wantsToSwim() {
@@ -1100,141 +1215,157 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         return this.level().getFluidState(this.blockPosition()).is(FluidTags.WATER);
     }
 
-    public BlockPos findWadeFloor() {
-        BlockPos pos = this.blockPosition();
-        for (int depth = 0; depth < 2; depth++) {
-            pos = pos.below();
-            if (!this.level().getFluidState(pos).is(FluidTags.WATER)) {
-                return this.level().getBlockState(pos).isFaceSturdy(this.level(), pos, Direction.UP) ? pos : null;
-            }
-        }
-        return null;
-    }
-
-    public boolean isInShallowWater() {
-        return this.feetInWater() && this.findWadeFloor() != null;
-    }
-
-    public boolean hasSwimmingClearance() {
-        BlockPos feetPos = this.blockPosition();
-        BlockPos upperPos = feetPos.above();
-        return this.level().getFluidState(feetPos).is(FluidTags.WATER) && this.level().getFluidState(upperPos).is(FluidTags.WATER) && this.level().getBlockState(upperPos).getCollisionShape((BlockGetter)this.level(), upperPos).isEmpty();
-    }
-
     public boolean shouldUseWaterMovement() {
         return this.computeShouldUseWaterMovement();
     }
 
     private boolean computeShouldUseWaterMovement() {
         if (!this.isInWater()) {
-            this.latchedWaterMovement = false;
-            this.waterMovementLockTicks = 0;
+            this.seekingShore = false;
             return false;
         }
 
-        boolean emergencySurface = this.prefersToFloat()
-                && this.getAirSupply() <= this.getMaxAirSupply() / 4
-                && this.isEyeInFluid(FluidTags.WATER);
-        if (emergencySurface) {
-            this.latchedWaterMovement = true;
-            this.waterMovementLockTicks = 20;
+        if (this.seekingShore) {
             return true;
         }
 
-        LivingEntity target = this.getTarget();
-        boolean pursuingUnderwaterTarget = target != null
-                && !this.isFleeing
-                // Keep the water navigator active for the full chase instead
-                // of dropping to ground navigation as soon as air falls below
-                // 75%. The breath-recovery flag takes over at the low-air
-                // threshold and then makes surfacing the priority.
-                && !this.shouldCatchBreath
-                && this.getAirSupply() > this.getMaxAirSupply() / 8
-                && !this.isInShallowWater()
-                && target.getY() < this.getY() - 0.5D;
-        if (pursuingUnderwaterTarget) {
-            this.latchedWaterMovement = true;
-            this.waterMovementLockTicks = 20;
-            return true;
-        }
-
-        if (this.prefersToFloat() && this.isEyeInFluid(FluidTags.WATER)
-                || !this.feetInWater() && this.swimHoldTicks <= 0) {
-            this.latchedWaterMovement = false;
-            this.waterMovementLockTicks = 0;
-            return false;
-        }
-
-        if (this.tickCount != this.waterMovementLatchTick) {
-            this.waterMovementLatchTick = this.tickCount;
-            if (this.waterMovementLockTicks > 0) {
-                this.waterMovementLockTicks--;
-            } else {
-                boolean wantsWaterMovement = this.isEyeInFluid(FluidTags.WATER)
-                        && (this.swimHoldTicks <= 0 || this.feetInWater() && !this.isInShallowWater());
-                if (wantsWaterMovement != this.latchedWaterMovement) {
-                    this.latchedWaterMovement = wantsWaterMovement;
-                    this.waterMovementLockTicks = 20;
-                }
-            }
-        }
-        return this.latchedWaterMovement;
+        // Keep aquatic movement latched through the surface boundary while
+        // the body is still in water. Switching to ground movement the instant
+        // the eyes clear the surface applies gravity again and can make the
+        // Human bob below the surface instead of breathing steadily.
+        return this.isEyeInFluid(FluidTags.WATER) || this.isNearWaterSurface();
     }
 
-    public boolean shouldJumpOutOfWaterToward(double wantedX, double wantedY, double wantedZ) {
-        if (!this.feetInWater() && !this.isInWater()) {
-            this.lastDetectedExitY = Double.NaN;
-            return false;
-        }
-        this.lastDetectedExitY = Double.NaN;
+    private boolean isPursuingLowerWaterTarget() {
         LivingEntity target = this.getTarget();
-        boolean targetLeavingWater = target != null && !target.isInWater()
-                && target.getY() >= this.getY() - 0.5D;
-        if (!targetLeavingWater && wantedY <= this.getY() + 0.6D) {
+        return target != null
+                && target.isAlive()
+                && target.isInWater()
+                && target.getY() < this.getY() - 0.5D
+                && !this.isFleeing
+                && !this.shouldCatchBreath;
+    }
+
+    private boolean isNearWaterSurface() {
+        if (!this.isInWater()) {
             return false;
         }
-        double dx = wantedX - this.getX();
-        double dz = wantedZ - this.getZ();
-        double horizontalDistanceSqr = dx * dx + dz * dz;
-        if (horizontalDistanceSqr < 0.04) {
-            return false;
-        }
-        double horizontalDistance = Math.sqrt(horizontalDistanceSqr);
-        double stepX = dx / horizontalDistance * 0.6;
-        double stepZ = dz / horizontalDistance * 0.6;
-        int baseY = Mth.floor(this.getY());
+
+        BlockPos origin = this.blockPosition();
         for (int yOffset = -1; yOffset <= 2; yOffset++) {
-            BlockPos frontPos = BlockPos.containing(this.getX() + stepX, baseY + yOffset, this.getZ() + stepZ);
-            BlockPos climbPos = frontPos.above();
-            BlockPos headPos = climbPos.above();
-            BlockState frontState = this.level().getBlockState(frontPos);
-            BlockState climbState = this.level().getBlockState(climbPos);
-            BlockState headState = this.level().getBlockState(headPos);
-            boolean canStepOnto = !frontState.getCollisionShape(this.level(), frontPos).isEmpty()
-                    && climbState.getCollisionShape(this.level(), climbPos).isEmpty()
-                    && headState.getCollisionShape(this.level(), headPos).isEmpty();
-            if (canStepOnto) {
-                this.lastDetectedExitY = frontPos.getY() + 1.0D;
+            BlockPos fluidPos = origin.offset(0, yOffset, 0);
+            var fluid = this.level().getFluidState(fluidPos);
+            if (!fluid.is(FluidTags.WATER)) {
+                continue;
+            }
+
+            double surfaceY = fluidPos.getY() + fluid.getHeight(this.level(), fluidPos);
+            double distanceToSurface = surfaceY - this.getY();
+            if (distanceToSurface < -0.05D || distanceToSurface > 2.0D) {
+                continue;
+            }
+
+            EntityDimensions standing = this.getDimensions(Pose.STANDING);
+            AABB standingBox = new AABB(
+                    this.getX() - standing.width / 2.0D, this.getY(), this.getZ() - standing.width / 2.0D,
+                    this.getX() + standing.width / 2.0D, this.getY() + standing.height, this.getZ() + standing.width / 2.0D
+            );
+            return this.level().noCollision(this, standingBox);
+        }
+        return false;
+    }
+
+    private boolean isWaterSurfaceCloseForShorePop() {
+        if (!this.isInWater()) {
+            return false;
+        }
+
+        BlockPos origin = this.blockPosition();
+        for (int yOffset = -1; yOffset <= 2; yOffset++) {
+            BlockPos fluidPos = origin.offset(0, yOffset, 0);
+            var fluid = this.level().getFluidState(fluidPos);
+            if (!fluid.is(FluidTags.WATER)) {
+                continue;
+            }
+
+            double surfaceY = fluidPos.getY() + fluid.getHeight(this.level(), fluidPos);
+            double distanceToSurface = surfaceY - this.getY();
+            // Unlike isNearWaterSurface(), this check intentionally ignores
+            // standing-box collision with the bank: that collision is exactly
+            // what the short shore-pop helps the Human clear.
+            if (distanceToSurface >= -0.1D && distanceToSurface <= 1.25D) {
                 return true;
             }
         }
         return false;
     }
 
-    public boolean hasDetectedExitY() {
-        return !Double.isNaN(this.lastDetectedExitY);
+    private boolean isFollowingHigherShoreWaypoint() {
+        return this.seekingShore
+                && this.moveControl instanceof HumanMoveControl humanMoveControl
+                && humanMoveControl.wantsHigherWaypoint();
     }
 
-    public double getDetectedExitY() {
-        return this.lastDetectedExitY;
+    private boolean hasHigherDryLandingAhead(double directionX, double directionZ) {
+        if (!this.seekingShore) {
+            return false;
+        }
+
+        double directionLength = Math.sqrt(directionX * directionX + directionZ * directionZ);
+        if (directionLength < 1.0E-4D) {
+            return false;
+        }
+        directionX /= directionLength;
+        directionZ /= directionLength;
+
+        int minY = Mth.floor(this.getY() + 0.1D);
+        int maxY = Mth.floor(this.getY() + 2.05D);
+        for (int forwardIndex = 0; forwardIndex < 3; forwardIndex++) {
+            double forward = 0.4D + forwardIndex * 0.35D;
+            for (int sideIndex = -1; sideIndex <= 1; sideIndex++) {
+                double side = sideIndex * 0.3D;
+                int x = Mth.floor(this.getX() + directionX * forward - directionZ * side);
+                int z = Mth.floor(this.getZ() + directionZ * forward + directionX * side);
+                for (int y = minY; y <= maxY; y++) {
+                    if (this.isDryStandingPosition(new BlockPos(x, y, z))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public void travel(Vec3 p_32394_) {
         if (this.isEffectiveAi() && this.shouldUseWaterMovement()) {
             this.moveRelative(0.01f, p_32394_);
-            this.move(MoverType.SELF, this.getDeltaMovement());
+            Vec3 motion = this.getDeltaMovement();
+            if (this.isEyeInFluid(FluidTags.WATER) && !this.isPursuingLowerWaterTarget()) {
+                boolean nearSurface = this.isNearWaterSurface();
+                boolean climbingShore = this.isFollowingHigherShoreWaypoint();
+                // Shore paths can contain lower waypoints. Do not let those
+                // path instructions cancel the buoyancy needed to reach air.
+                // A higher shore waypoint gets a controlled climb assist so
+                // the standing model can step over the final shallow bank.
+                double minimumRise = climbingShore
+                        ? (this.shouldCatchBreath ? 0.12D : 0.08D)
+                        : (this.shouldCatchBreath
+                        ? (nearSurface ? 0.06D : 0.12D)
+                        : (nearSurface ? 0.04D : 0.06D));
+                double ascentLimit = this.getWaterAscentSpeedLimit(nearSurface);
+                double verticalMotion = Math.max(motion.y, minimumRise);
+                motion = new Vec3(motion.x, Math.min(ascentLimit, verticalMotion), motion.z);
+            } else if (this.isNearWaterSurface()
+                    && !this.isFollowingHigherShoreWaypoint()
+                    && !this.isPursuingLowerWaterTarget()) {
+                // Once the eyes are clear, hold a calm surface stance instead
+                // of carrying swim momentum into a hop above the water.
+                motion = new Vec3(motion.x, Mth.clamp(motion.y, -0.02D, 0.02D), motion.z);
+            }
+            this.setDeltaMovement(motion);
+            this.move(MoverType.SELF, motion);
             this.setDeltaMovement(this.getDeltaMovement().scale(0.9));
-            this.setPose(Pose.SWIMMING);
+            this.setPose(this.isNearWaterSurface() ? Pose.STANDING : Pose.SWIMMING);
         } else {
             if (this.getPose() == Pose.SWIMMING) {
                 this.setPose(Pose.STANDING);
@@ -1243,20 +1374,36 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
     }
 
+    private double getWaterAscentSpeedLimit(boolean nearSurface) {
+        if (this.moveControl instanceof HumanMoveControl humanMoveControl
+                && humanMoveControl.isShorePopActive()) {
+            return 0.20D;
+        }
+        if (this.isFollowingHigherShoreWaypoint()) {
+            return this.shouldCatchBreath ? 0.18D : 0.14D;
+        }
+        // Smooth per-tick velocities, not jump impulses. Keep enough upward
+        // force near the surface to finish surfacing without launching out.
+        return this.shouldCatchBreath
+                ? (nearSurface ? 0.08D : 0.16D)
+                : (nearSurface ? 0.06D : 0.08D);
+    }
+
     public void updateSwimming() {
         if (!this.level().isClientSide) {
-            if (this.feetInWater() && this.hasSwimmingClearance()
-                    && !this.prefersToFloat() && !this.isInShallowWater()) {
-                this.swimHoldTicks = 15;
-            } else if (this.swimHoldTicks > 0) {
-                this.swimHoldTicks = Math.max(0, this.swimHoldTicks - (this.feetInWater() ? 1 : 3));
-            }
             if (this.isEffectiveAi() && this.shouldUseWaterMovement()) {
-                if (this.navigation != this.waterNavigation) {
-                    this.navigation.stop();
+                if (this.seekingShore && !this.shorePathUsesWaterNavigation) {
+                    if (this.navigation != this.groundNavigation) {
+                        this.navigation.stop();
+                    }
+                    this.navigation = this.groundNavigation;
+                } else {
+                    if (this.navigation != this.waterNavigation) {
+                        this.navigation.stop();
+                    }
+                    this.navigation = this.waterNavigation;
                 }
-                this.navigation = this.waterNavigation;
-                this.setSwimming(true);
+                this.setSwimming(!this.isNearWaterSurface());
             } else {
                 if (this.navigation != this.groundNavigation) {
                     this.navigation.stop();
@@ -1269,8 +1416,13 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     static class HumanMoveControl
     extends MoveControl {
+        private static final int SHORE_POP_COOLDOWN_TICKS = 20;
+        private static final int SHORE_POP_DURATION_TICKS = 2;
+        private static final double SHORE_POP_SPEED = 0.20D;
+
         private final Human human;
-        private int waterExitJumpCooldown;
+        private int shorePopCooldownTicks;
+        private int shorePopTicks;
 
         public HumanMoveControl(Human p_32433_) {
             super((Mob)p_32433_);
@@ -1278,38 +1430,17 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
 
         public void tick() {
+            if (this.shorePopCooldownTicks > 0) {
+                this.shorePopCooldownTicks--;
+            }
+            if (this.shorePopTicks > 0) {
+                this.shorePopTicks--;
+            }
             // Path goals may request 1.1-1.2 speed. Cap the control input at
             // normal walking pace; sprint and potion modifiers are applied
             // separately by vanilla MOVEMENT_SPEED, just as for a player.
             this.speedModifier = Math.min(this.speedModifier, 1.0D);
-            if (this.waterExitJumpCooldown > 0) {
-                this.waterExitJumpCooldown--;
-            }
-            LivingEntity livingentity = this.human.getTarget();
             if (this.human.shouldUseWaterMovement()) {
-                if (this.operation == MoveControl.Operation.MOVE_TO
-                        && !this.human.getNavigation().isDone()
-                        && this.waterExitJumpCooldown == 0
-                        && this.human.shouldJumpOutOfWaterToward(this.wantedX, this.wantedY, this.wantedZ)
-                        && this.human.hasDetectedExitY()
-                        && this.human.getY() < this.human.getDetectedExitY() + 0.25D) {
-                    this.human.getJumpControl().jump();
-                    this.human.setDeltaMovement(this.human.getDeltaMovement().add(0.0, 0.18, 0.0));
-                    this.waterExitJumpCooldown = 6;
-                }
-                // Rise only until the eyes clear the surface. Continuing to
-                // inject upward velocity during the whole recovery timer made
-                // Humans bob at the surface and prevented horizontal combat
-                // movement from settling.
-                if (this.human.shouldCatchBreath
-                        && this.human.isEyeInFluid(FluidTags.WATER)) {
-                    this.human.setDeltaMovement(this.human.getDeltaMovement().add(0.0, 0.02, 0.0));
-                } else if (livingentity != null
-                        && this.human.isEyeInFluid(FluidTags.WATER)
-                        && livingentity.getY() > this.human.getY()) {
-                    this.human.setDeltaMovement(this.human.getDeltaMovement().add(0.0, 0.002, 0.0));
-                }
-
                 if (this.operation == MoveControl.Operation.STRAFE) {
                     applyWaterStrafe();
                     this.operation = MoveControl.Operation.WAIT;
@@ -1341,6 +1472,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                     this.human.setYRot(this.rotlerp(this.human.getYRot(), yaw, 90.0F));
                     this.human.yBodyRot = this.human.getYRot();
                 }
+                this.tryShorePop(d0, d2);
                 double verticalDirection = Mth.clamp(d1 / d3, -0.25D, 0.25D);
                 this.applyWaterImpulse(d0 / Math.max(1.0E-4D, horizontalDistance),
                         verticalDirection, d2 / Math.max(1.0E-4D, horizontalDistance));
@@ -1383,13 +1515,75 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // owner for this frame.
             this.human.setZza(0.0F);
             this.human.setXxa(0.0F);
-            double horizontalAcceleration = movementSpeed * 0.06D;
-            double verticalAcceleration = movementSpeed * 0.20D;
-            this.human.setDeltaMovement(this.human.getDeltaMovement().add(
-                    directionX * horizontalAcceleration,
-                    directionY * verticalAcceleration,
-                    directionZ * horizontalAcceleration
-            ));
+            // Counter the swimming drag (0.9 in travel()) so a full steering
+            // input produces at least normal walking speed instead of a slow
+            // drift. This impulse remains normalized and independent of the
+            // short water-navigation waypoint distance.
+            double horizontalAcceleration = movementSpeed * 0.20D;
+            double verticalAcceleration = movementSpeed * 0.30D;
+            Vec3 motion = this.human.getDeltaMovement();
+            double nextVertical = motion.y + directionY * verticalAcceleration;
+            boolean surfacePriority = !this.human.isPursuingLowerWaterTarget();
+            boolean nearSurface = this.human.isNearWaterSurface();
+            boolean climbingShore = this.human.isFollowingHigherShoreWaypoint();
+            boolean shorePopActive = this.isShorePopActive();
+            if (climbingShore) {
+                nextVertical = Math.max(nextVertical, this.human.shouldCatchBreath ? 0.12D : 0.08D);
+            }
+            if (shorePopActive) {
+                nextVertical = Math.max(nextVertical, SHORE_POP_SPEED);
+            }
+            double verticalLimit = nearSurface && !this.human.isEyeInFluid(FluidTags.WATER)
+                    && !climbingShore
+                    ? 0.02D
+                    : this.human.getWaterAscentSpeedLimit(nearSurface);
+            if (shorePopActive) {
+                verticalLimit = Math.max(verticalLimit, SHORE_POP_SPEED);
+            }
+            nextVertical = surfacePriority
+                    ? Mth.clamp(nextVertical, 0.0D, verticalLimit)
+                    : Mth.clamp(nextVertical, -0.05D, verticalLimit);
+            double horizontalShoreKick = shorePopActive ? 0.02D : 0.0D;
+            this.human.setDeltaMovement(
+                    motion.x + directionX * (horizontalAcceleration + horizontalShoreKick),
+                    nextVertical,
+                    motion.z + directionZ * (horizontalAcceleration + horizontalShoreKick)
+            );
+        }
+
+        private void tryShorePop(double directionX, double directionZ) {
+            if (this.shorePopCooldownTicks > 0
+                    || this.shorePopTicks > 0
+                    || !this.human.seekingShore
+                    || !this.human.isInWater()
+                    || !this.human.isWaterSurfaceCloseForShorePop()
+                    || this.human.getDeltaMovement().y > 0.08D
+                    || !this.human.hasHigherDryLandingAhead(directionX, directionZ)) {
+                return;
+            }
+
+            // A brief, low impulse only when a dry higher landing is within a
+            // step of the current shore path. Never launch swimmers in open water.
+            this.shorePopTicks = SHORE_POP_DURATION_TICKS;
+            this.shorePopCooldownTicks = SHORE_POP_COOLDOWN_TICKS;
+        }
+
+        private boolean isShorePopActive() {
+            return this.shorePopTicks > 0;
+        }
+
+        private boolean wantsHigherWaypoint() {
+            if (this.operation != MoveControl.Operation.MOVE_TO
+                    || this.human.getNavigation().isDone()) {
+                return false;
+            }
+            if (this.wantedY > this.human.getY() + 0.1D) {
+                return true;
+            }
+
+            double dx = this.wantedX - this.human.getX();
+            double dz = this.wantedZ - this.human.getZ();
+            return this.human.hasHigherDryLandingAhead(dx, dz);
         }
     }
 }

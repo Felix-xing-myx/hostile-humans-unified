@@ -15,19 +15,9 @@ extends Goal {
     }
 
     public boolean canUse() {
-        // Breath recovery is handled by HumanMoveControl's direct upward
-        // steering. Do not let this high-priority JUMP-only idle goal compete
-        // with combat movement while a Human is pursuing or fighting a target.
-        if (this.mob.getTarget() != null) {
-            return false;
-        }
-        if (!this.mob.prefersToFloat()) {
-            return false;
-        }
-        if (!this.mob.hasSwimmingClearance()) {
-            return false;
-        }
-        return this.mob.isInWater() || this.mob.isInLava();
+        // Water ascent is steered smoothly by HumanMoveControl. Repeatedly
+        // calling jump() under water caused an upward launch every few ticks.
+        return this.mob.getTarget() == null && this.mob.isInLava();
     }
 
     public boolean requiresUpdateEveryTick() {

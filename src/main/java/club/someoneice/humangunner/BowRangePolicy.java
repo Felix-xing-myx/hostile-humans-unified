@@ -29,6 +29,6 @@ public final class BowRangePolicy {
     }
 
     public static float orbitSideInput(double distanceSqr) {
-        return distanceSqr < ORBIT_BUFFER_SQR ? 0.50F : 0.72F;
+        return distanceSqr < ORBIT_BUFFER_SQR ? 0.80F : 0.95F;
     }
 }

@@ -1,9 +1,11 @@
 package com.craftix.hostile_humans.entity.ai.goal;
 
+import com.craftix.hostile_humans.HumanUtil;
 import com.craftix.hostile_humans.entity.HumanEntity;
 import com.craftix.hostile_humans.entity.HumanMobEntityData;
 import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.RangedFiringPosition;
+import club.someoneice.humangunner.RangedWeaponCustody;
 import club.someoneice.humangunner.SoldierOrder;
 import java.util.EnumSet;
 import net.minecraft.core.BlockPos;
@@ -54,6 +56,11 @@ extends Goal {
     }
 
     private boolean isHoldingCrossbow() {
+        if (this.mob instanceof Human human
+                && (RangedWeaponCustody.isActive(human)
+                || HumanUtil.isMeleeWeapon(human.getMainHandItem()))) {
+            return false;
+        }
         return this.mob.isHolding(is -> is.getItem() instanceof CrossbowItem);
     }
 
@@ -71,6 +78,7 @@ extends Goal {
         this.mob.setAggressive(false);
         this.seeTime = 0;
         this.pursuingTarget = false;
+        this.strafingTime = 0;
         if (this.mob.isUsingItem() && this.mob.getUseItem().getItem() instanceof CrossbowItem) {
             ItemStack used = this.mob.getUseItem();
             this.mob.stopUsingItem();
@@ -100,6 +108,8 @@ extends Goal {
     public void start() {
         super.start();
         this.nextFiringPositionTick = this.mob.tickCount;
+        this.strafingTime = 0;
+        this.pursuingTarget = false;
     }
 
     public void tick() {
@@ -187,7 +197,7 @@ extends Goal {
                         );
                     } else {
                         this.mob.getNavigation().stop();
-                        this.mob.getMoveControl().strafe(-0.80F, this.strafingClockwise ? 0.20F : -0.20F);
+                        this.mob.getMoveControl().strafe(-0.80F, this.strafingClockwise ? 0.45F : -0.45F);
                     }
                     this.updatePathDelay = 7 + this.mob.getRandom().nextInt(6);
                 }
@@ -228,14 +238,15 @@ extends Goal {
                         }
                         this.strafingTime = 0;
                     }
-                    // Deliberately much weaker than the bow user's circling.
-                    this.mob.getMoveControl().strafe(0.0F, this.strafingClockwise ? 0.25F : -0.25F);
+                    // Crossbow users move laterally more decisively than before,
+                    // while remaining less agile than bow users.
+                    this.mob.getMoveControl().strafe(0.0F, this.strafingClockwise ? 0.65F : -0.65F);
                 } else {
                     this.strafingTime = 0;
                 }
             }
             if (retreating && this.mob.getNavigation().isDone()) {
-                this.mob.getMoveControl().strafe(-0.80F, this.strafingClockwise ? 0.20F : -0.20F);
+                this.mob.getMoveControl().strafe(-0.80F, this.strafingClockwise ? 0.45F : -0.45F);
             }
             this.mob.getLookControl().setLookAt((Entity)livingentity, 30.0f, 30.0f);
             tickShot(livingentity, flag, canEngage);

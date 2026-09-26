@@ -1,6 +1,8 @@
-# Hostile Humans Unified 3.1.28
+# Hostile Humans Unified 3.2.0
 
 [简体中文](README.md) | [English](README.en.md)
+
+**自动兼容：**安装 **Spartan Weaponry**、**Spartan Shields** 或 **Immersive Armors** 后，人类会自动识别并使用兼容的斯巴达武器和盾牌，也可使用 **Immersive Armors** 的盔甲，无需额外配置。它们均为可选模组，不是运行本模组的必需依赖。
 
 本模组由原模组 [**Hostile Humans**](https://www.curseforge.com/minecraft/mc-mods/hostile-humans) 修改衍生，并整合了 **Human Gunner** 的相关内容。同时，本模组也加入了一些原创的新内容。它可以单独安装使用，不需要另外安装原版 Hostile Humans 或 Human Gunner。本模组的修改与构建过程中使用了 GPT 辅助。本版本由第三方维护，并非原作者发布的官方更新。本模组强化了敌对人类的大部分数值与机制，因此在以原版内容为主的环境中游玩时可能会有较高难度，建议搭配其他模组或整合包使用。
 
@@ -111,7 +113,7 @@ $env:JAVA_HOME = 'D:/Java/17'
 Touhou Little Maid 1.5.3 的兼容 API JAR，分别传入 `-PtaczApiJar=<路径>`、
 `-PcuriosApiJar=<路径>`、`-PmaidApiJar=<路径>`；这三份 JAR 仅用于编译，不打入产物。
 当前本地维护工作区仍可使用原有默认路径。产物文件名以 build.gradle 的 version 为准，
-当前为 build/libs/hostile-humans-unified-1.20.1-3.1.28.jar。
+当前构建产物为 build/libs/hostile-humans-unified-1.20.1-3.2.0.jar。
 
 check 会运行 EncounterCooldownTest、RuntimePoliciesTest、UnifiedConfigTest、OptionalRuntimeTest
 和 StructureCompatTest、RecruitmentCombatTest。OptionalRuntimeTest 在不含 TaCZ / Curios / 女仆的真实 JVM classpath 上加载核心类并解析签名，

@@ -1,10 +1,12 @@
 package com.craftix.hostile_humans.entity.ai.goal;
 
+import com.craftix.hostile_humans.HumanUtil;
 import com.craftix.hostile_humans.entity.HumanEntity;
 import com.craftix.hostile_humans.entity.HumanMobEntityData;
 import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.BowRangePolicy;
 import club.someoneice.humangunner.RangedFiringPosition;
+import club.someoneice.humangunner.RangedWeaponCustody;
 import club.someoneice.humangunner.SoldierOrder;
 import java.util.EnumSet;
 import net.minecraft.core.BlockPos;
@@ -49,6 +51,11 @@ extends Goal {
     }
 
     protected boolean isHoldingBow() {
+        if (this.mob instanceof Human human
+                && (RangedWeaponCustody.isActive(human)
+                || HumanUtil.isMeleeWeapon(human.getMainHandItem()))) {
+            return false;
+        }
         return this.mob.isHolding(is -> is.getItem() instanceof BowItem);
     }
 
@@ -63,6 +70,7 @@ extends Goal {
         super.start();
         this.mob.setAggressive(true);
         this.nextFiringPositionTick = this.mob.tickCount;
+        this.strafingTime = -1;
     }
 
     public void stop() {
@@ -70,6 +78,7 @@ extends Goal {
         this.mob.setAggressive(false);
         this.seeTime = 0;
         this.attackTime = -1;
+        this.strafingTime = -1;
         if (this.mob.isUsingItem() && this.mob.getUseItem().getItem() instanceof BowItem) {
             this.mob.stopUsingItem();
         }
@@ -143,7 +152,7 @@ extends Goal {
                     } else {
                         this.mob.getNavigation().stop();
                         this.mob.getMoveControl().strafe(
-                                -1.0F, this.strafingClockwise ? 0.20F : -0.20F
+                                -1.0F, this.strafingClockwise ? 0.45F : -0.45F
                         );
                     }
                     this.updatePathDelay = 6 + this.mob.getRandom().nextInt(5);
@@ -205,7 +214,7 @@ extends Goal {
             } else if (retreating && this.mob.getNavigation().isDone()) {
                 // Pathfinding can fail in cramped terrain; keep backpedalling
                 // and firing instead of freezing beside the attacker.
-                this.mob.getMoveControl().strafe(-1.0F, this.strafingClockwise ? 0.20F : -0.20F);
+                this.mob.getMoveControl().strafe(-1.0F, this.strafingClockwise ? 0.45F : -0.45F);
                 this.mob.lookAt((Entity)livingentity, 30.0F, 30.0F);
             } else {
                 this.mob.getLookControl().setLookAt((Entity)livingentity, 30.0f, 30.0f);

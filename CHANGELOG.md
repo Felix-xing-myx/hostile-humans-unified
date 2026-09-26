@@ -1,5 +1,162 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.2.0 — 2026-09-26
+
+### 简体中文
+
+- **贴岸上岸助跳**
+  - 只有寻岸路径前方存在近距离的干燥高岸，且生物接近水面时，才触发短促、限高的上推和向岸助力。
+  - 助跳持续时间与触发冷却受限，深水中不会触发，避免再次从水中异常跃出。
+- **水中姿势与移动**
+  - 大多数浅水及接近水面的移动不再维持游泳姿势；只有需要持续游泳时才使用游泳姿势。
+  - 修复寻岸范围不足及贴岸时无法上岸的问题，并限制助跳只在岸边触发，避免在水中被抛向高空。
+  - 有仇恨且目标位于陆地时，允许寻岸导航暂时接管移动；保留原有战斗目标，上岸后继续战斗。
+- **验证**
+  - Java 17 下执行 `gradlew build --offline` 成功；项目配置的 Gradle `check` 检查通过。
+  - 未启动 Minecraft 进行游戏内测试。
+
+### English
+
+- **Controlled shore pop**
+  - A brief, capped upward impulse and small forward push now trigger only near the surface when a nearby dry, higher landing lies ahead on the shore route.
+- **Water posture and movement**
+  - Humans no longer retain the swimming pose in most shallow-water and near-surface movement; the pose remains for situations that require sustained swimming.
+  - Fixes shore-search and shore-exit issues, and confines the small pop to the bank to prevent Humans from being launched high into the air while in water.
+  - When a Human has an aggro target on land, shoreline navigation can temporarily take over movement while preserving the combat target; combat resumes after reaching land.
+- **Validation**
+  - `gradlew build --offline` succeeded on Java 17; the project's Gradle `check` tasks passed.
+  - Minecraft was not launched for in-game testing.
+
+## 3.1.34 — 2026-09-26
+
+### 简体中文
+
+- **扩展主动寻岸**
+  - 将寻岸搜索范围从 16 格扩展到 48 格，优先选择可达的干燥落脚点。
+  - 寻岸导航长时间没有进展时，会重新搜索路线并尝试不同岸边落点。
+  - 不再因普通导航正在移动或刚受过伤而阻止闲置单位寻岸；战斗、逃跑、驻守以及跟随水中玩家的优先级保持不变。
+- **验证**
+  - Java 17 下执行 `gradlew build --offline` 成功；项目配置的 Gradle `check` 检查通过。
+  - 未启动 Minecraft 进行游戏内测试。
+
+### English
+
+- **Expanded autonomous shoreline seeking**
+  - Expanded shore searches from 16 to 48 blocks, prioritizing reachable dry standing positions.
+  - Shore navigation now searches for a different route or bank position when progress stalls.
+  - Ordinary navigation and recent damage no longer prevent idle Humans from seeking shore; combat, fleeing, guard orders, and following an owner who is still in water retain priority.
+- **Validation**
+  - `gradlew build --offline` succeeded on Java 17; the project's Gradle `check` tasks passed.
+  - Minecraft was not launched for in-game testing.
+
+## 3.1.33 — 2026-09-26
+
+### 简体中文
+
+- **修复寻岸卡滩**
+  - 寻找干燥岸边时优先使用地面导航，水中导航作为无法到达时的备用方案。
+  - 仅当寻岸路径指向更高的岸边节点时，增加平滑的爬升辅助，让直立状态下的人类能够越过浅滩最后一级；普通上浮仍受原有限速控制。
+- **验证**
+  - Java 17 下执行 `gradlew clean build --offline` 成功；Gradle `check` 及项目行为、招募、兼容性、配置和结构数据检查通过。
+  - 未启动 Minecraft 进行游戏内测试。
+
+### English
+
+- **Shoreline pathing fix**
+  - Shore searches now prefer ground navigation for dry destinations, with water navigation as a fallback.
+  - A smooth climb assist is enabled only when the shore route's next waypoint is higher, helping upright Humans clear the final shallow bank while normal surfacing remains capped.
+- **Validation**
+  - `gradlew clean build --offline` succeeded on Java 17; Gradle `check` and the project's behavior, recruitment, compatibility, configuration, and structure-data checks passed.
+  - Minecraft was not launched for in-game testing.
+
+## 3.1.32 — 2026-09-26
+
+### 简体中文
+
+- **水中行为补全**
+  - 提前启动缺氧上浮，并恢复足够的持续上升速度，避免接近水面时被过低的速度上限卡住。
+  - 角色露出水面后继续保持稳定的水面移动状态，抑制惯性导致的跃出水面和反复沉浮。
+  - 严重缺氧且无法直接上浮时，允许寻岸行为优先于战斗、驻守等移动指令。
+  - 已在水中的角色可以沿水路脱离浅水或水岸；陆地寻路仍会避开水域。
+- **验证**
+  - Java 17 下执行 `gradlew clean build --offline` 成功；Gradle `check` 及项目行为、招募、兼容性、配置和结构数据检查通过。
+  - 未启动 Minecraft 进行游戏内测试。
+
+### English
+
+- **Water behavior improvements**
+  - Surface ascent now starts earlier and retains enough upward speed to avoid stalling near the surface.
+  - Humans maintain controlled movement at the surface after their eyes emerge, reducing momentum-driven hops and repeated submerging.
+  - During critical low-air emergencies, shore-seeking can override combat and guard movement when direct ascent is insufficient.
+  - Humans already in water can path out through shallow water or shore routes; land navigation continues to avoid water.
+- **Validation**
+  - `gradlew clean build --offline` succeeded on Java 17; Gradle `check` and the project's behavior, recruitment, compatibility, configuration, and structure-data checks passed.
+  - Minecraft was not launched for in-game testing.
+
+## 3.1.31 — 2026-09-26
+
+### 简体中文
+
+- **水中行为修复**
+  - 陆地寻路不再主动选择水域；已经潜入水中的人类仍可正常进行水下寻路。
+  - 修正上浮控制，并提高水中移动速度；移除水中主动跳出水面的逻辑。
+  - 接近水面约两格且站立空间足够时，提前切换为直立姿势。
+- **验证**
+  - Java 17 下执行 `gradlew build --offline` 成功，Gradle `check` 及项目内的配置、招募、战斗策略、兼容性和结构数据检查均通过。
+  - 未启动 Minecraft 做游戏内测试。
+
+### English
+
+- **Water behavior fixes**
+  - Land-based pathfinding no longer selects water nodes; already-submerged Humans can still navigate underwater.
+  - Corrected ascent control, increased underwater movement speed, and removed the logic that actively jumped Humans out of water.
+  - Humans switch to an upright pose about two blocks below the surface when there is enough standing clearance.
+- **Validation**
+  - `gradlew build --offline` succeeded on Java 17. Gradle `check` and the project's configuration, recruitment, combat-policy, compatibility, and structure-data checks passed.
+  - Minecraft was not launched for in-game testing.
+
+## 3.1.30 — 2026-09-26
+
+### 简体中文
+
+- **水中移动修复**
+  - 移除缺氧时反复触发的水下跳跃，改为平缓且限速的上浮；缺氧恢复期间保持水中移动，直到头部离开水面。
+  - 不再把水底方块误判为岸边台阶，避免在海床附近反复跳跃。
+  - 寻岸路径由生成它的导航器执行，修复地面路径被水中导航器接管后卡住的问题。
+- **验证**
+  - Java 17 下执行 `gradlew build --offline` 成功；Gradle `check` 的配置、兼容、招募、战斗策略及结构数据检查均通过。
+  - 未启动 Minecraft 做游戏内测试。编译器仍输出通用的旧 API / unchecked 摘要提示；详细 deprecation/removal lint 已关闭。
+
+### English
+
+- **Swimming fixes**
+  - Removed repeated underwater jumps during breath emergencies and replaced them with smooth, capped ascent. Swimming control remains active until the Human's head clears the surface.
+  - Seabed blocks are no longer mistaken for shoreline steps, preventing repeated hopping near the bottom.
+  - Shore paths are now executed by the navigation system that created them, avoiding stalls when a ground path was handed to water navigation.
+- **Validation**
+  - `gradlew build --offline` succeeded on Java 17; the configuration, compatibility, recruitment, combat-policy, and structure-data checks under Gradle `check` passed.
+  - Minecraft was not launched for in-game testing. The compiler still prints generic deprecated-API/unchecked summary notes; detailed deprecation/removal lint is disabled.
+
+## 3.1.29 — 2026-09-26
+
+### 简体中文
+
+- **水中移动与寻路**
+  - 提高游泳时的水平推进力，抵消水中阻尼造成的速度损失。
+  - 提高水域寻路代价，让人类优先绕行陆地；水仍然可通行，以便在没有陆路时通过。
+  - 闲暇且无需恢复呼吸时会主动寻找可达岸边；战斗、逃跑、使用物品和紧急浮出水面逻辑优先。
+- **验证**
+  - Java 17 下完成编译与重映射打包；未运行 Gradle `check` 或游戏内测试。
+
+### English
+
+- **Swimming and pathfinding**
+  - Increased horizontal swimming acceleration to counter water drag.
+  - Raised water pathfinding cost so Humans prefer land routes while keeping water traversable when necessary.
+  - Idle Humans now seek reachable shore when not recovering breath; combat, fleeing, item use, and emergency surfacing retain priority.
+- **Validation**
+  - Compilation and remapped packaging completed with Java 17; Gradle `check` and in-game testing were not run.
+
 ## 3.1.28 — 2026-09-25
 
 ### 简体中文

@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.1.28'
+version = '3.2.0'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -41,7 +41,9 @@ dependencies {
 }
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.compilerArgs += ['-Xmaxerrs', '300']
+    // Keep other compiler diagnostics visible while silencing the legacy API
+    // deprecation and for-removal notices in the maintained upstream code.
+    options.compilerArgs += ['-Xmaxerrs', '300', '-Xlint:-deprecation', '-Xlint:-removal']
 }
 tasks.withType(JavaExec).configureEach {
     def isolatedWorkingDir = file("$buildDir/javaexec/${name}")
