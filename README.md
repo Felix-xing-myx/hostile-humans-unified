@@ -1,4 +1,4 @@
-# Hostile Humans Unified 3.3.12
+# Hostile Humans Unified
 
 [简体中文](README.md) | [English](README.en.md)
 
@@ -118,8 +118,8 @@ $env:JAVA_HOME = 'D:/Java/17'
 独立克隆不包含本地整合包的编译依赖。请自行合法取得 TaCZ 1.1.8、Curios 5.14 和
 Touhou Little Maid 1.5.3 的兼容 API JAR，分别传入 `-PtaczApiJar=<路径>`、
 `-PcuriosApiJar=<路径>`、`-PmaidApiJar=<路径>`；这三份 JAR 仅用于编译，不打入产物。
-当前本地维护工作区仍可使用原有默认路径。产物文件名以 build.gradle 的 version 为准，
-当前版本的构建产物文件名为 `build/libs/hostile-humans-unified-1.20.1-3.3.12.jar`。
+当前本地维护工作区仍可使用原有默认路径。产物位于 `build/libs/`，
+文件名以 `build.gradle` 中的 `version` 为准。
 
 check 会运行 EncounterCooldownTest、RuntimePoliciesTest、UnifiedConfigTest、OptionalRuntimeTest
 和 StructureCompatTest、RecruitmentCombatTest。OptionalRuntimeTest 在不含 TaCZ / Curios / 女仆的真实 JVM classpath 上加载核心类并解析签名，

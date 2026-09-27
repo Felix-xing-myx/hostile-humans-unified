@@ -1,5 +1,19 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.3.13 — 2026-09-27
+
+### 简体中文
+
+- 已雇佣人类受到一次伤害时，每件符合条件的护甲最多消耗 1 点耐久，不再随该次伤害量增加磨损。
+- 野生人类原有的护甲破损机制与盾牌耐久机制不变。
+- 自动检查不等同于游戏内的受击与装备耐久验收。
+
+### English
+
+- Each eligible armor piece worn by a hired Human now loses at most one durability point per damaging hit, regardless of the hit's damage amount.
+- Wild Humans' armor-break behavior and shield durability behavior are unchanged.
+- Automated checks do not replace in-game validation of damage and equipment wear.
+
 ## 3.3.12 — 2026-09-27
 
 ### 简体中文

@@ -974,11 +974,15 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     @Override
     protected void hurtArmor(DamageSource source, float amount) {
-        super.hurtArmor(source, amount);
-        if (!this.hasOwner() || amount <= 0.0F) {
+        if (!this.hasOwner()) {
+            super.hurtArmor(source, amount);
             return;
         }
-        int durabilityCost = Math.max(1, (int)(amount / 4.0F));
+        if (amount <= 0.0F) {
+            return;
+        }
+        // A hired Human's armor can lose at most one point per damaging hit,
+        // regardless of the hit's raw damage. Avoid a second wear path here.
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             if (slot.getType() != EquipmentSlot.Type.ARMOR) {
                 continue;
@@ -986,7 +990,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             ItemStack armor = this.getItemBySlot(slot);
             if (armor.getItem() instanceof ArmorItem
                     && !(source.is(DamageTypeTags.IS_FIRE) && armor.getItem().isFireResistant())) {
-                armor.hurtAndBreak(durabilityCost, this, broken -> this.broadcastBreakEvent(slot));
+                armor.hurtAndBreak(1, this, broken -> this.broadcastBreakEvent(slot));
             }
         }
     }

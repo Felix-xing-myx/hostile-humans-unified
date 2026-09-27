@@ -1,4 +1,4 @@
-# Hostile Humans Unified 3.3.12
+# Hostile Humans Unified
 
 [简体中文](README.md) | [English](README.en.md)
 
@@ -119,7 +119,7 @@ The `check` task runs `EncounterCooldownTest`, `RuntimePoliciesTest`, `UnifiedCo
 
 The maintenance helper `sanitizeStructureWaystones` is read-only by default. Applying reviewed structure transformations requires the explicit `-PapplyStructureRepair` option and is not part of the routine build.
 
-The output file for version 3.3.12 is `build/libs/hostile-humans-unified-1.20.1-3.3.12.jar`.
+The output JAR is in `build/libs/`; its filename follows the `version` in `build.gradle`.
 
 ## Installation, Rollback, and Acceptance
 
