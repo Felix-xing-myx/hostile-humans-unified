@@ -1,4 +1,4 @@
-# Hostile Humans Unified 3.3.1
+# Hostile Humans Unified 3.3.5
 
 [简体中文](README.md) | [English](README.en.md)
 
@@ -113,7 +113,7 @@ $env:JAVA_HOME = 'D:/Java/17'
 Touhou Little Maid 1.5.3 的兼容 API JAR，分别传入 `-PtaczApiJar=<路径>`、
 `-PcuriosApiJar=<路径>`、`-PmaidApiJar=<路径>`；这三份 JAR 仅用于编译，不打入产物。
 当前本地维护工作区仍可使用原有默认路径。产物文件名以 build.gradle 的 version 为准，
-当前构建产物为 build/libs/hostile-humans-unified-1.20.1-3.3.1.jar。
+当前构建产物为 build/libs/hostile-humans-unified-1.20.1-3.3.5.jar。
 
 check 会运行 EncounterCooldownTest、RuntimePoliciesTest、UnifiedConfigTest、OptionalRuntimeTest
 和 StructureCompatTest、RecruitmentCombatTest。OptionalRuntimeTest 在不含 TaCZ / Curios / 女仆的真实 JVM classpath 上加载核心类并解析签名，

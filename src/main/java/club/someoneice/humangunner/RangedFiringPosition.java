@@ -100,6 +100,20 @@ public final class RangedFiringPosition {
             double maximumRange,
             int sideDirection
     ) {
+        return findLateralPath(human, target, minimumRange, maximumRange,
+                sideDirection, human.getX(), human.getZ(), Double.MAX_VALUE);
+    }
+
+    public static Path findLateralPath(
+            Human human,
+            LivingEntity target,
+            double minimumRange,
+            double maximumRange,
+            int sideDirection,
+            double anchorX,
+            double anchorZ,
+            double anchorRadius
+    ) {
         if (human.isFleeing || SoldierOrder.isHoldingPosition(human)
                 || human.level().isClientSide || target == null || !target.isAlive()) {
             return null;
@@ -114,8 +128,7 @@ public final class RangedFiringPosition {
         double margin = Math.min(2.0D, Math.max(0.0D, (maximumRange - minimumRange) * 0.2D));
         double lowerRange = minimumRange + margin;
         double upperRange = Math.max(lowerRange, maximumRange - margin);
-        double preferredRange = Math.max(lowerRange,
-                Math.min(upperRange, human.distanceTo(target)));
+        double preferredRange = (lowerRange + upperRange) * 0.5D;
         double minimumRangeSqr = minimumRange * minimumRange;
         double maximumRangeSqr = maximumRange * maximumRange;
         Path bestPath = null;
@@ -131,6 +144,11 @@ public final class RangedFiringPosition {
             Vec3 candidate = target.position()
                     .add(outward.scale(radialDistance))
                     .add(lateral.scale(lateralDistance));
+            double anchorDx = candidate.x - anchorX;
+            double anchorDz = candidate.z - anchorZ;
+            if (anchorDx * anchorDx + anchorDz * anchorDz > anchorRadius * anchorRadius) {
+                continue;
+            }
             BlockPos candidateBlock = BlockPos.containing(candidate.x, human.getY(), candidate.z);
             if (candidateBlock.distSqr(human.blockPosition()) < 16.0D) {
                 continue;
@@ -141,6 +159,12 @@ public final class RangedFiringPosition {
             }
 
             Vec3 destination = Vec3.atBottomCenterOf(path.getTarget());
+            double destinationDx = destination.x - anchorX;
+            double destinationDz = destination.z - anchorZ;
+            if (destinationDx * destinationDx + destinationDz * destinationDz
+                    > anchorRadius * anchorRadius) {
+                continue;
+            }
             double targetDistanceSqr = target.distanceToSqr(destination);
             double travelDistanceSqr = human.position().distanceToSqr(destination);
             if (targetDistanceSqr < minimumRangeSqr || targetDistanceSqr > maximumRangeSqr

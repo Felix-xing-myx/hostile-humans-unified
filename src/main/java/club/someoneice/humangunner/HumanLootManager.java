@@ -3,6 +3,8 @@ package club.someoneice.humangunner;
 import com.craftix.hostile_humans.HumanUtil;
 import com.craftix.hostile_humans.entity.data.HumanData;
 import com.craftix.hostile_humans.entity.entities.Human;
+import net.minecraft.core.BlockPos;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -21,7 +23,7 @@ import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 
-import java.util.Comparator;
+import java.util.List;
 
 final class HumanLootManager {
     private static final double MIN_PICKUP_VALUE = 24.0D;
@@ -128,16 +130,44 @@ final class HumanLootManager {
     }
 
     static ItemEntity findBestNearby(Human human, double radius) {
-        return human.level().getEntitiesOfClass(
-                        ItemEntity.class,
-                        human.getBoundingBox().inflate(radius, 4.0D, radius),
-                        item -> item.isAlive()
-                                && !item.getItem().isEmpty()
-                                && benefit(human, item.getItem()) > 0.0D
-                ).stream()
-                .max(Comparator.comparingDouble(item ->
-                        benefit(human, item.getItem()) * 4.0D - human.distanceTo(item)))
-                .orElse(null);
+        List<ItemEntity> nearby = human.level().getEntitiesOfClass(
+                ItemEntity.class,
+                human.getBoundingBox().inflate(radius, 4.0D, radius),
+                item -> item.isAlive() && !item.getItem().isEmpty());
+        ItemEntity best = null;
+        double bestScore = Double.NEGATIVE_INFINITY;
+        for (ItemEntity item : nearby) {
+            if (!isReachableWithoutDiving(item)) {
+                continue;
+            }
+            double value = benefit(human, item.getItem());
+            if (value <= 0.0D) {
+                continue;
+            }
+            double score = value * 4.0D - human.distanceTo(item);
+            if (score > bestScore) {
+                bestScore = score;
+                best = item;
+            }
+        }
+        return best;
+    }
+
+    static boolean isReachableWithoutDiving(ItemEntity item) {
+        if (!item.isInWater()) {
+            return true;
+        }
+        BlockPos itemBlock = item.blockPosition();
+        // A surface-bound Human cannot collect an item at the bottom of a
+        // deep column. Bound this probe to four loaded blocks per candidate.
+        for (int offset = 1; offset <= 4; offset++) {
+            BlockPos above = itemBlock.above(offset);
+            if (!item.level().getFluidState(above).is(FluidTags.WATER)) {
+                return ShoreSeekingPolicy.isSurfaceLootReachable(
+                        above.getY(), item.getY());
+            }
+        }
+        return false;
     }
 
     static boolean collect(Human human, ItemEntity entity) {

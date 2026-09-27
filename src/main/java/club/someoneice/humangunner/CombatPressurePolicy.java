@@ -8,6 +8,7 @@ final class CombatPressurePolicy {
     static final int GUNFIRE_MEMORY_TICKS = 40;
     static final int CROWD_THREAT_COUNT = 3;
     static final int CROWD_PRESSURE_MEMORY_TICKS = 20;
+    static final int NEARBY_THREAT_DAMAGE_WINDOW_TICKS = 60;
 
     private CombatPressurePolicy() {
     }
@@ -53,6 +54,16 @@ final class CombatPressurePolicy {
 
     static boolean shouldPrioritizeGunnerRetreat(boolean ownsGun, int closeThreatCount) {
         return ownsGun && closeThreatCount >= CROWD_THREAT_COUNT;
+    }
+
+    static boolean shouldPrioritizeCloserThreat(double currentDistanceSqr,
+                                                 double candidateDistanceSqr,
+                                                 float recentCurrentDamage,
+                                                 float maximumHealth) {
+        return candidateDistanceSqr <= 36.0D
+                && candidateDistanceSqr + 9.0D < currentDistanceSqr
+                && candidateDistanceSqr * 2.0D < currentDistanceSqr
+                && recentCurrentDamage < maximumHealth * 0.15F;
     }
 
     static boolean shouldUseCrowdCounterfire(

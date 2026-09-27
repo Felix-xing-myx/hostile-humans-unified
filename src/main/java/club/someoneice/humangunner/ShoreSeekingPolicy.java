@@ -5,8 +5,10 @@ import java.util.WeakHashMap;
 
 /** Pure decisions shared by water-exit assistance and combat movement. */
 public final class ShoreSeekingPolicy {
-    // Adaptive combat/retreat (priority -8 and below) wins; idle orders and
-    // wandering (priority -6 and above) yield while an idle Human exits water.
+    // Combat, water-loot pickup, and idle shore seeking must have distinct
+    // MOVE priorities; a same-priority goal cannot reliably preempt another.
+    public static final int COMBAT_GOAL_PRIORITY = -9;
+    public static final int WATER_LOOT_GOAL_PRIORITY = -8;
     public static final int GOAL_PRIORITY = -7;
     /** Hard budget for synchronous shoreline candidate inspection per search. */
     public static final int MAX_SHORE_BLOCK_PROBES_PER_SEARCH = 64;
@@ -19,6 +21,8 @@ public final class ShoreSeekingPolicy {
     private static final float ACTIVE_SHORE_WATER_PATH_MALUS = 16.0F;
     private static final float COMBAT_WATER_PATH_MALUS = 0.0F;
     private static final int MAX_SAFE_SHORE_DETOUR_NODES = 6;
+    /** Feet remain about half a block below the surface while idling afloat. */
+    public static final double SURFACE_STANCE_DEPTH = 0.55D;
 
     private ShoreSeekingPolicy() {
     }
@@ -61,11 +65,25 @@ public final class ShoreSeekingPolicy {
 
     public static boolean shouldRiseTowardSurface(boolean eyesInWater,
             double feetToRealSurface) {
-        return eyesInWater || feetToRealSurface > 0.35D;
+        return eyesInWater || feetToRealSurface > SURFACE_STANCE_DEPTH;
+    }
+
+    public static double surfaceAscentLimit(double feetToRealSurface, double ordinaryLimit) {
+        return Math.min(ordinaryLimit,
+                Math.max(0.0D, (feetToRealSurface - SURFACE_STANCE_DEPTH) * 0.5D));
     }
 
     public static boolean isNearRealSurfaceForShorePop(double feetToRealSurface) {
         return feetToRealSurface >= -0.1D && feetToRealSurface <= 1.25D;
+    }
+
+    /** One dry block above the water block, including partially filled flowing water. */
+    public static double oneBlockShoreLandingLimit(double actualSurfaceY) {
+        return Math.ceil(actualSurfaceY) + 1.0D;
+    }
+
+    public static boolean isSurfaceLootReachable(double surfaceY, double itemY) {
+        return surfaceY - itemY <= 1.5D;
     }
 
     public static boolean shouldContinueSeekingShore(boolean inWater, boolean inLava,
@@ -75,15 +93,15 @@ public final class ShoreSeekingPolicy {
     }
 
     public static float waterPathMalus(boolean inWater, boolean seekingShore,
-            boolean hasCombatTarget) {
+            boolean hasCombatTarget, boolean pursuingWaterLoot) {
         // Combat paths must be able to choose a direct river crossing instead
         // of being routed around the entire body of water. Idle paths still
         // prefer land, and shore assistance strongly avoids looping in water.
+        if (hasCombatTarget || pursuingWaterLoot) {
+            return COMBAT_WATER_PATH_MALUS;
+        }
         if (seekingShore) {
             return ACTIVE_SHORE_WATER_PATH_MALUS;
-        }
-        if (hasCombatTarget) {
-            return COMBAT_WATER_PATH_MALUS;
         }
         if (!inWater) {
             return -1.0F;

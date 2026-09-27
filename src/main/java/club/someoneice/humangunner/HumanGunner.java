@@ -496,7 +496,7 @@ public final class HumanGunner {
             // LivingDamageEvent carries the final post-armour, post-enchantment
             // amount. Counting it avoids treating blocked or mitigated attack
             // input as health actually lost.
-            RecentDamageTracker.record(human, event.getAmount());
+            RecentDamageTracker.record(human, event.getAmount(), event.getSource().getEntity());
             if (event.getSource().getEntity() instanceof Player player
                     && HumanRelations.isOwnedBy(human, player)
                     && RecruitmentPolicy.betrayed(human.getHealth() - event.getAmount(), human.getMaxHealth())) {
@@ -926,14 +926,18 @@ public final class HumanGunner {
 
         // Survival must be able to pre-empt the hired-order idle MOVE lock
         // (priority -6), even when that order briefly clears the attack target.
-        human.addCombatGoal(-8, new AdaptiveCombatGoal(human));
+        human.addCombatGoal(ShoreSeekingPolicy.COMBAT_GOAL_PRIORITY,
+                new AdaptiveCombatGoal(human));
         human.addCombatGoal(-3, new PlayerLikeMovementGoal(human));
         human.addCombatGoal(-3, new CombatConsumableGoal(human));
         human.addCombatGoal(-2, new CombatFoodRecoveryGoal(human));
         human.addCombatGoal(-2, new IdleRecoveryGoal(human));
         // Item search must briefly outrank the hired-order idle movement lock;
         // its own predicate keeps it disabled unless the owner opted in.
-        human.addCombatGoal(-7, new ValuableItemPickupGoal(human));
+        // Valuable water loot may preempt idle shore seeking (-7), but yields
+        // as soon as combat or retreat acquires a target.
+        human.addCombatGoal(ShoreSeekingPolicy.WATER_LOOT_GOAL_PRIORITY,
+                new ValuableItemPickupGoal(human));
         // Emergency lava escape must override combat and all hired movement orders.
         human.addCombatGoal(-12, new LavaEscapeGoal(human));
     }

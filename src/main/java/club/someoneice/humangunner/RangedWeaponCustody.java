@@ -56,8 +56,16 @@ public final class RangedWeaponCustody {
         }
         return isActive(human)
                 || isBowOrCrossbow(human.getMainHandItem())
-                || findBestStoredRangedSlot(human, true) >= 0
-                || findBestStoredRangedSlot(human, false) >= 0;
+                || hasStoredRangedWeapon(human);
+    }
+
+    private static boolean hasStoredRangedWeapon(Human human) {
+        HumanData data = human.getData();
+        if (data == null) return false;
+        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            if (isBowOrCrossbow(data.getInventoryItem(i))) return true;
+        }
+        return false;
     }
 
     static void registerPreferred(Human human, ItemStack ranged) {
@@ -79,6 +87,19 @@ public final class RangedWeaponCustody {
                 // restoration. Drop stale lease metadata before evaluating
                 // the five-block transition again.
                 clearLease(human);
+            }
+        }
+
+        if (isActive(human) && human.isUsingItem()
+                && SpartanEquipmentCompat.isShield(human.getUseItem())) {
+            boolean returningToRanged = shouldReturnToRanged(human);
+            boolean defenseActive = "defend".equals(human.getPersistentData()
+                    .getString("humangunner:ai_phase"));
+            if (shouldReleaseReturnShield(returningToRanged, defenseActive,
+                    human.getTicksUsingItem(), CombatAiConfig.get().shieldBlockDurationMaxTicks())) {
+                // A lingering off-hand block must not hold the melee lease
+                // forever after its target dies or leaves close range.
+                human.stopUsingItem();
             }
         }
 
@@ -275,6 +296,12 @@ public final class RangedWeaponCustody {
     private static boolean shouldReturnToRanged(Human human) {
         LivingTarget state = targetState(human);
         return !state.valid() || state.distanceSqr() >= RANGED_RETURN_DISTANCE_SQR;
+    }
+
+    static boolean shouldReleaseReturnShield(boolean returningToRanged, boolean defenseActive,
+                                             int shieldUseTicks, int configuredMaxBlockTicks) {
+        return returningToRanged && (!defenseActive
+                || shieldUseTicks > configuredMaxBlockTicks + 20);
     }
 
     private static LivingTarget targetState(Human human) {

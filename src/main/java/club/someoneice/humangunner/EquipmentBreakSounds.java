@@ -54,7 +54,7 @@ public final class EquipmentBreakSounds {
             play(human, slot, previous);
         }
         LAST_EQUIPMENT.computeIfAbsent(human, ignored -> snapshot(human))
-                .put(slot, current.copy());
+                .put(slot, current.isDamageableItem() ? current.copy() : ItemStack.EMPTY);
     }
 
     public static void playNow(Human human, EquipmentSlot slot) {
@@ -123,7 +123,10 @@ public final class EquipmentBreakSounds {
     private static EnumMap<EquipmentSlot, ItemStack> snapshot(Human human) {
         EnumMap<EquipmentSlot, ItemStack> result = new EnumMap<>(EquipmentSlot.class);
         for (EquipmentSlot slot : EquipmentSlot.values()) {
-            result.put(slot, human.getItemBySlot(slot).copy());
+            ItemStack stack = human.getItemBySlot(slot);
+            // Only damageable stacks can satisfy isBrokenTransition. Avoid
+            // copying food, ammo and NBT-heavy non-damageable guns every tick.
+            result.put(slot, stack.isDamageableItem() ? stack.copy() : ItemStack.EMPTY);
         }
         return result;
     }

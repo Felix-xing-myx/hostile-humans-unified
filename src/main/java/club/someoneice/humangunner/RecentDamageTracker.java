@@ -1,14 +1,16 @@
 package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
+import net.minecraft.world.entity.Entity;
 
 import java.util.ArrayDeque;
 import java.util.Map;
+import java.util.UUID;
 import java.util.WeakHashMap;
 
 /** Tracks final post-mitigation health damage for burst-damage retreats. */
 final class RecentDamageTracker {
-    private record DamageSample(int tick, float amount) {
+    private record DamageSample(int tick, float amount, UUID attacker) {
     }
 
     private static final class DamageWindow {
@@ -23,7 +25,7 @@ final class RecentDamageTracker {
     private RecentDamageTracker() {
     }
 
-    static void record(Human human, float actualDamage) {
+    static void record(Human human, float actualDamage, Entity attacker) {
         if (actualDamage <= 0.0F || human.level().isClientSide) {
             return;
         }
@@ -31,8 +33,25 @@ final class RecentDamageTracker {
         prune(human, window);
         window.samples.addLast(new DamageSample(
                 human.tickCount,
-                Math.min(actualDamage, Math.max(0.0F, human.getHealth()))
+                Math.min(actualDamage, Math.max(0.0F, human.getHealth())),
+                attacker == null ? null : attacker.getUUID()
         ));
+    }
+
+    static float recentDamageFrom(Human human, Entity attacker, int ageTicks) {
+        if (attacker == null) return 0.0F;
+        DamageWindow window = WINDOWS.get(human);
+        if (window == null) return 0.0F;
+        prune(human, window);
+        UUID attackerId = attacker.getUUID();
+        float total = 0.0F;
+        for (DamageSample sample : window.samples) {
+            if (human.tickCount - sample.tick() <= ageTicks
+                    && attackerId.equals(sample.attacker())) {
+                total += sample.amount();
+            }
+        }
+        return total;
     }
 
     static boolean consumeRetreatTrigger(Human human) {

@@ -32,6 +32,8 @@ extends Goal {
     protected BlockPos pos = UNREACHABLE;
     protected int timer = 0;
     private boolean chestOpened;
+    private int failedNavigationTicks;
+    private int nextPathAttemptTick;
     public static final BlockPos UNREACHABLE = new BlockPos(0, -9999, 0);
 
     public LookForChestGoal(Human pMob, double pSpeedModifier) {
@@ -88,6 +90,14 @@ extends Goal {
     }
 
     public boolean canContinueToUse() {
+        if (this.failedNavigationTicks >= 80) {
+            this.timer = 0;
+            return false;
+        }
+        if (this.mob.wasNavigationGoalAbandoned(this.pos)) {
+            this.timer = 0;
+            return false;
+        }
         if (club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this.mob)
                 || this.mob.isInWater() || this.pos == UNREACHABLE
                 || this.mob.getTarget() != null || this.mob.isSleeping() || this.mob.isFleeing) {
@@ -101,6 +111,8 @@ extends Goal {
 
     public void start() {
         this.chestOpened = false;
+        this.failedNavigationTicks = 0;
+        this.nextPathAttemptTick = this.mob.tickCount;
         this.reserveChest();
     }
 
@@ -140,7 +152,16 @@ extends Goal {
                 }
             }
         } else {
-            this.mob.getNavigation().moveTo((double)this.pos.getX(), (double)this.pos.getY(), (double)this.pos.getZ(), this.speedModifier);
+            if (this.mob.getNavigation().isDone()) {
+                ++this.failedNavigationTicks;
+                if (this.mob.tickCount >= this.nextPathAttemptTick) {
+                    this.mob.getNavigation().moveTo(this.pos.getX(), this.pos.getY(),
+                            this.pos.getZ(), this.speedModifier);
+                    this.nextPathAttemptTick = this.mob.tickCount + 10;
+                }
+            } else {
+                this.failedNavigationTicks = 0;
+            }
         }
     }
 

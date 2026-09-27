@@ -64,6 +64,12 @@ extends HumanGoal {
         if (this.path != null) {
             return true;
         }
+        if (this.mob instanceof Human human && human.shouldUseWaterMovement()) {
+            // A water navigator may not produce a complete path to a target
+            // on the opposite bank. Keep the combat goal active so its direct
+            // water fallback can continue the crossing.
+            return true;
+        }
         return this.getAttackReachSqr(livingEntity) >= this.mob.distanceToSqr(livingEntity.getX(), livingEntity.getY(), livingEntity.getZ());
     }
 
@@ -126,7 +132,13 @@ extends HumanGoal {
             this.ticksUntilNextPathRecalculation = Math.max(this.ticksUntilNextPathRecalculation - 1, 0);
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
-            if (!holdingPosition && (this.followingTargetEvenIfNotSeen || this.mob.getSensing().hasLineOfSight((Entity)livingEntity)) && this.ticksUntilNextPathRecalculation <= 0 && (this.pathedTargetX == 0.0 && this.pathedTargetY == 0.0 && this.pathedTargetZ == 0.0 || livingEntity.distanceToSqr(this.pathedTargetX, this.pathedTargetY, this.pathedTargetZ) >= 1.0 || this.mob.getRandom().nextFloat() < 0.05f)) {
+            if (!holdingPosition
+                    && (this.followingTargetEvenIfNotSeen || this.mob.getSensing().hasLineOfSight((Entity)livingEntity))
+                    && this.ticksUntilNextPathRecalculation <= 0
+                    && (this.mob.getNavigation().isDone()
+                    || this.pathedTargetX == 0.0 && this.pathedTargetY == 0.0 && this.pathedTargetZ == 0.0
+                    || livingEntity.distanceToSqr(this.pathedTargetX, this.pathedTargetY, this.pathedTargetZ) >= 1.0
+                    || this.mob.getRandom().nextFloat() < 0.05f)) {
                 this.pathedTargetX = livingEntity.getX();
                 this.pathedTargetY = livingEntity.getY();
                 this.pathedTargetZ = livingEntity.getZ();
@@ -141,6 +153,10 @@ extends HumanGoal {
                     this.ticksUntilNextPathRecalculation += 15;
                 }
                 this.ticksUntilNextPathRecalculation = this.adjustedTickDelay(this.ticksUntilNextPathRecalculation);
+            }
+            if (!holdingPosition && this.mob instanceof Human human) {
+                human.approachCombatTargetInWater(livingEntity,
+                        Math.sqrt(this.getAttackReachSqr(livingEntity)), this.speedModifier);
             }
             this.ticksUntilNextAttack = Math.max(this.ticksUntilNextAttack - 1, 0);
             this.checkAndPerformAttack(livingEntity, distance);

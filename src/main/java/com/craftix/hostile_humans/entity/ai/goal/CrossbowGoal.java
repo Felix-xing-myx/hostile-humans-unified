@@ -6,6 +6,7 @@ import com.craftix.hostile_humans.entity.HumanMobEntityData;
 import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.RangedFiringPosition;
 import club.someoneice.humangunner.RangedWeaponCustody;
+import club.someoneice.humangunner.RangedStrafeSpeed;
 import club.someoneice.humangunner.SoldierOrder;
 import club.someoneice.humangunner.ShoreSeekingPolicy;
 import java.util.EnumSet;
@@ -40,10 +41,12 @@ extends Goal {
     private boolean pursuingTarget;
     private boolean strafingClockwise;
     private int strafingTime;
-    // Sixteen blocks is the danger boundary; keep backing off through a
-    // four-block buffer so a single step toward the enemy does not re-enter it.
-    private static final double RETREAT_DISTANCE_SQR = 20.0D * 20.0D;
+    // Start retreating at 16 blocks, but keep retreating until 20 blocks so
+    // a single step does not repeatedly switch between orbit and retreat.
+    private static final double RETREAT_DISTANCE_SQR = 16.0D * 16.0D;
+    private static final double RETREAT_RESUME_DISTANCE_SQR = 20.0D * 20.0D;
     private static final double HOLD_DISTANCE_SQR = 24.0D * 24.0D;
+    private boolean retreatingForSpace;
 
     public CrossbowGoal(T p_25814_, double p_25815_, float p_25816_) {
         this.mob = p_25814_;
@@ -76,10 +79,12 @@ extends Goal {
     public void stop() {
         boolean isSit;
         super.stop();
+        setOrbitSpeed(false);
         this.mob.setAggressive(false);
         this.seeTime = 0;
         this.pursuingTarget = false;
         this.strafingTime = 0;
+        this.retreatingForSpace = false;
         if (this.mob.isUsingItem() && this.mob.getUseItem().getItem() instanceof CrossbowItem) {
             ItemStack used = this.mob.getUseItem();
             this.mob.stopUsingItem();
@@ -111,6 +116,7 @@ extends Goal {
         this.nextFiringPositionTick = this.mob.tickCount;
         this.strafingTime = 0;
         this.pursuingTarget = false;
+        this.retreatingForSpace = false;
     }
 
     public void tick() {
@@ -136,6 +142,7 @@ extends Goal {
                     && ShoreSeekingPolicy.isShoreTransitionActive(
                             human.isSeekingShore(), human.isShoreTransitionPending());
             if (shoreSeeking) {
+                setOrbitSpeed(false);
                 // Continue charging/firing while the shore goal owns navigation.
                 this.mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
                 tickShot(livingentity, flag,
@@ -143,6 +150,7 @@ extends Goal {
                 return;
             }
             if (this.mob instanceof Human human && human.isFleeing) {
+                setOrbitSpeed(false);
                 if (this.mob.isUsingItem()
                         && !(this.mob.getUseItem().getItem() instanceof CrossbowItem)) return;
                 this.mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
@@ -151,9 +159,17 @@ extends Goal {
             }
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
-            boolean retreating = !holdingPosition && d0 < RETREAT_DISTANCE_SQR;
+            if (d0 < RETREAT_DISTANCE_SQR) {
+                this.retreatingForSpace = true;
+            } else if (d0 >= RETREAT_RESUME_DISTANCE_SQR) {
+                this.retreatingForSpace = false;
+            }
+            boolean retreating = !holdingPosition && this.retreatingForSpace;
             boolean needsShootingAngle = this.seeTime < 5;
             boolean canEngage = d0 <= (double)this.attackRadiusSqr && this.seeTime >= 5;
+            setOrbitSpeed(!holdingPosition && !retreating && !needsShootingAngle
+                    && flag && d0 <= HOLD_DISTANCE_SQR
+                    && d0 <= (double)this.attackRadiusSqr);
             if (holdingPosition) {
                 this.pursuingTarget = false;
                 if (!SoldierOrder.isReturningToHoldPosition((Human)this.mob)) {
@@ -161,7 +177,9 @@ extends Goal {
                 }
                 this.updatePathDelay = 0;
                 this.strafingTime = 0;
-            } else if (!flag && !retreating && d0 <= (double)this.attackRadiusSqr) {
+            } else if (!flag && !retreating && d0 <= (double)this.attackRadiusSqr
+                    && !(this.mob instanceof Human human && human.shouldUseWaterMovement()
+                    && d0 > HOLD_DISTANCE_SQR)) {
                 // A blocked firing lane is not a reason to circle blindly.
                 // Find an accessible nearby shot instead; the fleeing branch
                 // above returns before this offensive repositioning logic.
@@ -213,17 +231,24 @@ extends Goal {
                     this.updatePathDelay = 7 + this.mob.getRandom().nextInt(6);
                 }
                 this.strafingTime = 0;
-            } else if (d0 > (double)this.attackRadiusSqr) {
+            } else if (d0 > (double)this.attackRadiusSqr
+                    || (this.mob instanceof Human human && human.shouldUseWaterMovement()
+                    && d0 > HOLD_DISTANCE_SQR)) {
                 --this.updatePathDelay;
                 if (this.updatePathDelay <= 0) {
-                    // Only close the gap from beyond sniper range. A blocked
-                    // shooting angle inside that range is handled below.
+                    // On land, close only beyond firing reach. In water,
+                    // continue toward the 24-block tactical band even while
+                    // the target remains within crossbow firing reach.
                     this.mob.getNavigation().moveTo(
                             (Entity)livingentity,
                             this.canRun() ? this.speedModifier : this.speedModifier * 0.5D
                     );
                     this.pursuingTarget = true;
                     this.updatePathDelay = PATHFINDING_DELAY_RANGE.sample(this.mob.getRandom());
+                }
+                if (this.mob instanceof Human human) {
+                    human.approachCombatTargetInWater(livingentity,
+                            Math.sqrt(HOLD_DISTANCE_SQR), this.speedModifier);
                 }
                 this.strafingTime = 0;
             } else if (needsShootingAngle) {
@@ -249,9 +274,9 @@ extends Goal {
                         }
                         this.strafingTime = 0;
                     }
-                    // Crossbow users move laterally more decisively than before,
-                    // while remaining less agile than bow users.
-                    this.mob.getMoveControl().strafe(0.0F, this.strafingClockwise ? 0.65F : -0.65F);
+                    // Crossbow users orbit inside the 16-24 block band at a
+                    // lower lateral speed than bow users.
+                    this.mob.getMoveControl().strafe(0.0F, this.strafingClockwise ? 0.75F : -0.75F);
                 } else {
                     this.strafingTime = 0;
                 }
@@ -261,6 +286,14 @@ extends Goal {
             }
             this.mob.getLookControl().setLookAt((Entity)livingentity, 30.0f, 30.0f);
             tickShot(livingentity, flag, canEngage);
+        } else {
+            setOrbitSpeed(false);
+        }
+    }
+
+    private void setOrbitSpeed(boolean orbiting) {
+        if (this.mob instanceof Human human) {
+            RangedStrafeSpeed.setCrossbow(human, orbiting);
         }
     }
 

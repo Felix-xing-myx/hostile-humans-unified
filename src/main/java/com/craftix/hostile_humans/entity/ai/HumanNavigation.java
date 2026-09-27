@@ -11,15 +11,31 @@ import net.minecraft.world.level.pathfinder.*;
 
 /** Human-only navigation. Other mobs' fence/door classification is untouched. */
 public final class HumanNavigation extends GroundPathNavigation {
+    private BlockPos temporarilyBlockedNode;
+    private long blockedUntilTick;
+
     public HumanNavigation(Mob mob, Level level) { super(mob, level); }
+
+    /** Exclude a waypoint that repeatedly traps this human from the next path search. */
+    public void avoidWaypoint(BlockPos node, long untilTick) {
+        temporarilyBlockedNode = node.immutable();
+        blockedUntilTick = untilTick;
+    }
+
+    private boolean isAvoided(BlockPos pos) {
+        return temporarilyBlockedNode != null && level.getGameTime() < blockedUntilTick
+                && temporarilyBlockedNode.equals(pos);
+    }
+
     @Override protected PathFinder createPathFinder(int budget) {
         nodeEvaluator = new HumanNodeEvaluator();
         nodeEvaluator.setCanPassDoors(true);
         return new PathFinder(nodeEvaluator, budget);
     }
-    private static final class HumanNodeEvaluator extends WalkNodeEvaluator {
+    private final class HumanNodeEvaluator extends WalkNodeEvaluator {
         @Override public BlockPathTypes getBlockPathType(BlockGetter getter, int x, int y, int z) {
             BlockPos pos = new BlockPos(x, y, z);
+            if (isAvoided(pos)) return BlockPathTypes.BLOCKED;
             var state = getter.getBlockState(pos);
             if (state.getBlockPathType(getter, pos, mob) == null && state.getBlock() instanceof FenceGateBlock)
                 return BlockPathTypes.DOOR_IRON_CLOSED;

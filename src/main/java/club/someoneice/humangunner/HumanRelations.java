@@ -220,7 +220,8 @@ public final class HumanRelations {
                     player == null ? Double.POSITIVE_INFINITY : human.distanceToSqr(player));
             if (activeRetaliation) {
                 if (human.getTarget() != attacker) human.setTarget(attacker);
-            } else if (returnToPlayer && human.getTarget() != player) {
+            } else if (returnToPlayer && human.getTarget() != player
+                    && !hasImmediateTacticalThreat(human)) {
                 human.setTarget(player);
             }
         }
@@ -230,5 +231,14 @@ public final class HumanRelations {
                 human.getPersistentData().getUUID(GUARD_TARGET))) human.setTarget(null);
         human.getPersistentData().remove(GUARD_TARGET);
         human.getPersistentData().remove(GUARD_UNTIL);
+    }
+
+    private static boolean hasImmediateTacticalThreat(Human human) {
+        LivingEntity current = human.getTarget();
+        return current != null && current.isAlive()
+                && current.level() == human.level()
+                && human.distanceToSqr(current) <= 36.0D
+                && human.canAttack(current)
+                && HumanTargeting.isAutonomousPlayerEnemy(human, current);
     }
 }

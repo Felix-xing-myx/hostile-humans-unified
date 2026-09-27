@@ -7,6 +7,7 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.BowRangePolicy;
 import club.someoneice.humangunner.RangedFiringPosition;
 import club.someoneice.humangunner.RangedWeaponCustody;
+import club.someoneice.humangunner.RangedStrafeSpeed;
 import club.someoneice.humangunner.ShoreSeekingPolicy;
 import club.someoneice.humangunner.SoldierOrder;
 import java.util.EnumSet;
@@ -33,6 +34,7 @@ extends Goal {
     private int strafingTime = -1;
     private int updatePathDelay;
     private int nextFiringPositionTick;
+    private int nextWaterApproachPathTick;
 
     public BowAttack(T p_25792_, double p_25793_, int interval, float p_25795_) {
         this.mob = p_25792_;
@@ -71,11 +73,13 @@ extends Goal {
         super.start();
         this.mob.setAggressive(true);
         this.nextFiringPositionTick = this.mob.tickCount;
+        this.nextWaterApproachPathTick = this.mob.tickCount;
         this.strafingTime = -1;
     }
 
     public void stop() {
         super.stop();
+        setOrbitSpeed(false);
         this.mob.setAggressive(false);
         this.seeTime = 0;
         this.attackTime = -1;
@@ -107,6 +111,7 @@ extends Goal {
         }
         LivingEntity livingentity = this.mob.getTarget();
         if (livingentity == null || !livingentity.isAlive()) {
+            setOrbitSpeed(false);
             this.mob.getNavigation().stop();
             clearStrafeInput();
             return;
@@ -115,6 +120,7 @@ extends Goal {
                 && ShoreSeekingPolicy.isShoreTransitionActive(
                         human.isSeekingShore(), human.isShoreTransitionPending());
         if ((this.mob instanceof Human human && human.isFleeing) || shoreSeeking) {
+            setOrbitSpeed(false);
             if (this.mob.isUsingItem() && !(this.mob.getUseItem().getItem() instanceof BowItem)) return;
             boolean visible = this.mob.getSensing().hasLineOfSight(livingentity);
             this.seeTime = visible ? Math.max(1, this.seeTime + 1) : Math.min(-1, this.seeTime - 1);
@@ -135,11 +141,17 @@ extends Goal {
             this.seeTime = flag ? ++this.seeTime : --this.seeTime;
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
+            boolean waterApproach = this.mob instanceof Human human
+                    && human.shouldUseWaterMovement() && d0 > 22.0D * 22.0D;
+            boolean pursuing = BowRangePolicy.shouldPursue(d0, this.attackRadiusSqr)
+                    || waterApproach;
             boolean retreating = !holdingPosition && BowRangePolicy.shouldPathRetreat(d0);
             boolean blockedWhileEngaging = !flag
                     && !retreating
                     && !holdingPosition
-                    && !BowRangePolicy.shouldPursue(d0, this.attackRadiusSqr);
+                    && !pursuing;
+            setOrbitSpeed(!holdingPosition && !retreating
+                    && !blockedWhileEngaging && !pursuing);
             if (holdingPosition) {
                 if (!SoldierOrder.isReturningToHoldPosition((Human)this.mob)) {
                     this.mob.getNavigation().stop();
@@ -188,14 +200,20 @@ extends Goal {
                 this.mob.getLookControl().setLookAt(livingentity, 30.0F, 30.0F);
                 tickShot(livingentity, false);
                 return;
-            } else if (!BowRangePolicy.shouldPursue(d0, this.attackRadiusSqr)) {
+            } else if (!pursuing) {
                 // Losing sight inside shooting range is not permission to
                 // charge. Orbit to change the angle while preserving spacing.
                 this.mob.getNavigation().stop();
                 this.updatePathDelay = 0;
                 ++this.strafingTime;
             } else {
-                this.mob.getNavigation().moveTo((Entity)livingentity, this.speedModifier);
+                if (!waterApproach || this.mob.tickCount >= this.nextWaterApproachPathTick) {
+                    this.mob.getNavigation().moveTo((Entity)livingentity, this.speedModifier);
+                    this.nextWaterApproachPathTick = this.mob.tickCount + 12;
+                }
+                if (waterApproach && this.mob instanceof Human human) {
+                    human.approachCombatTargetInWater(livingentity, 22.0D, this.speedModifier);
+                }
                 this.updatePathDelay = 0;
                 this.strafingTime = -1;
             }
@@ -262,6 +280,12 @@ extends Goal {
         this.mob.getMoveControl().strafe(0.0F, 0.0F);
         this.mob.setZza(0.0F);
         this.mob.setXxa(0.0F);
+    }
+
+    private void setOrbitSpeed(boolean orbiting) {
+        if (this.mob instanceof Human human) {
+            RangedStrafeSpeed.setBow(human, orbiting);
+        }
     }
 }
 

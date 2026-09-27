@@ -334,6 +334,13 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Nullable
     private BlockPos shoreFallbackTarget;
     private int shoreTransitionPendingTick = Integer.MIN_VALUE;
+    private int directWaterCombatSteeringTick = Integer.MIN_VALUE;
+    @Nullable private UUID waterCombatTarget;
+    private int waterCombatProgressTick;
+    private int waterCombatDirectUntilTick;
+    private double waterCombatDistance;
+    private int directWaterLootSteeringTick = Integer.MIN_VALUE;
+    private boolean pursuingWaterLoot;
     private boolean waterKnockbackModifierApplied;
     private int surfaceCheckTick = Integer.MIN_VALUE;
     private double surfaceCheckX;
@@ -348,8 +355,76 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private double dryLandingDirectionX;
     private double dryLandingDirectionZ;
     private boolean cachedDryLandingAhead;
+    private double cachedDryLandingFeetY;
     protected final WaterBoundPathNavigation waterNavigation;
     protected final GroundPathNavigation groundNavigation;
+    @Nullable
+    private PathNavigation watchedNavigation;
+    @Nullable
+    private BlockPos watchedPathGoal;
+    @Nullable
+    private BlockPos watchedWaypoint;
+    private double bestWaypointDistance = Double.MAX_VALUE;
+    private int lastWaypointProgressTick;
+    @Nullable
+    private BlockPos abandonedNavigationGoal;
+    private int abandonedNavigationGoalUntil;
+
+    public boolean wasNavigationGoalAbandoned(BlockPos goal) {
+        return goal != null && goal.equals(abandonedNavigationGoal)
+                && tickCount < abandonedNavigationGoalUntil;
+    }
+
+    private void recoverStalledNavigation() {
+        Path path = navigation.getPath();
+        if (path == null || path.isDone()) {
+            // Keep the observation across a short vanilla stuck-stop/retry.
+            // Otherwise a goal that recreates the same path every few ticks
+            // could reset this watchdog forever.
+            if (tickCount - lastWaypointProgressTick > 200) {
+                watchedNavigation = null;
+                watchedPathGoal = null;
+                watchedWaypoint = null;
+            }
+            return;
+        }
+        BlockPos goal = path.getTarget();
+        BlockPos waypoint = path.getNextNodePos();
+        double distance = position().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(waypoint));
+        if (navigation != watchedNavigation || !goal.equals(watchedPathGoal)
+                || !waypoint.equals(watchedWaypoint)) {
+            watchedNavigation = navigation;
+            watchedPathGoal = goal;
+            watchedWaypoint = waypoint;
+            bestWaypointDistance = distance;
+            lastWaypointProgressTick = tickCount;
+            return;
+        }
+        if (isUsingItem()) {
+            // Drawing a bow/crossbow, eating and blocking can deliberately
+            // pause movement. Do not blacklist a valid waypoint because the
+            // combat or recovery goal temporarily chose to stand still.
+            lastWaypointProgressTick = tickCount;
+            return;
+        }
+        if (distance < bestWaypointDistance - 0.5D) {
+            bestWaypointDistance = distance;
+            lastWaypointProgressTick = tickCount;
+            return;
+        }
+        // A path that makes no progress for four seconds is worse than
+        // abandoning one waypoint and letting the owning goal choose again.
+        if (tickCount - lastWaypointProgressTick < 80) return;
+        abandonedNavigationGoal = goal.immutable();
+        abandonedNavigationGoalUntil = tickCount + 100;
+        if (navigation instanceof com.craftix.hostile_humans.entity.ai.HumanNavigation ground) {
+            ground.avoidWaypoint(waypoint, level().getGameTime() + 100L);
+        }
+        navigation.stop();
+        watchedNavigation = null;
+        watchedPathGoal = null;
+        watchedWaypoint = null;
+    }
 
     public BlockPos investigateSound() {
         return this.investigateSound;
@@ -400,7 +475,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             LivingEntity target = this.getTarget();
             boolean pursuingCombatTarget = target != null && target.isAlive() && !this.isFleeing;
             return ShoreSeekingPolicy.waterPathMalus(
-                    this.isInWater(), this.seekingShore, pursuingCombatTarget);
+                    this.isInWater(), this.seekingShore,
+                    pursuingCombatTarget, this.pursuingWaterLoot);
         }
         return super.getPathfindingMalus(nodeType);
     }
@@ -684,6 +760,59 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     public boolean isSeekingShore() {
         return this.seekingShore;
+    }
+
+    /** Fall back to direct water steering when a live path makes no progress toward combat range. */
+    public void approachCombatTargetInWater(LivingEntity target, double maximumRange, double speed) {
+        if (!this.level().isClientSide && this.shouldUseWaterMovement()
+                && target != null && target.isAlive() && !this.isFleeing
+                && !this.seekingShore
+                && this.distanceToSqr(target) > maximumRange * maximumRange) {
+            double distance = this.distanceTo(target);
+            if (!target.getUUID().equals(this.waterCombatTarget)
+                    || this.tickCount - this.waterCombatProgressTick > 30) {
+                this.waterCombatTarget = target.getUUID();
+                this.waterCombatDistance = distance;
+                this.waterCombatProgressTick = this.tickCount;
+                this.waterCombatDirectUntilTick = 0;
+            } else if (this.tickCount - this.waterCombatProgressTick >= 12) {
+                if (distance >= this.waterCombatDistance - 0.5D) {
+                    this.waterCombatDirectUntilTick = this.tickCount + 16;
+                }
+                this.waterCombatDistance = distance;
+                this.waterCombatProgressTick = this.tickCount;
+            }
+            if (this.getNavigation().isDone() || this.getNavigation().isStuck()
+                    || this.tickCount < this.waterCombatDirectUntilTick) {
+                this.directWaterCombatSteeringTick = this.tickCount;
+                this.getMoveControl().setWantedPosition(
+                        target.getX(), target.getY(), target.getZ(), speed);
+            }
+        }
+    }
+
+    public void setPursuingWaterLoot(boolean pursuingWaterLoot) {
+        if (pursuingWaterLoot && this.seekingShore) {
+            this.stopSeekingShore();
+        }
+        this.pursuingWaterLoot = pursuingWaterLoot;
+    }
+
+    public void approachWaterLoot(net.minecraft.world.entity.item.ItemEntity item, double speed) {
+        if (this.level().isClientSide || !this.pursuingWaterLoot || this.seekingShore
+                || item == null || !item.isAlive() || !item.isInWater()
+                || !this.getNavigation().isDone() || this.distanceToSqr(item) <= 2.25D) {
+            return;
+        }
+        if (this.shouldUseWaterMovement()) {
+            this.directWaterLootSteeringTick = this.tickCount;
+            this.getMoveControl().setWantedPosition(item.getX(), item.getY(), item.getZ(), speed);
+        } else if (Math.abs(this.getY() - item.getY()) <= 2.0D
+                && this.getSensing().hasLineOfSight(item)) {
+            // Ground navigation sometimes refuses a water-item endpoint. A
+            // visible, shallow item can still be approached from its bank.
+            this.getMoveControl().setWantedPosition(item.getX(), item.getY(), item.getZ(), speed);
+        }
     }
 
     private void selectShoreNavigation() {
@@ -1091,6 +1220,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
 
         super.tick();
+        if (!level().isClientSide && !isNoAi()) {
+            recoverStalledNavigation();
+        }
         if (this.lookForChestCooldown > 0) {
             --this.lookForChestCooldown;
         }
@@ -1457,6 +1589,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             this.seekingShore = false;
             return false;
         }
+        LivingEntity combatTarget = this.getTarget();
+        if (this.seekingShore && combatTarget != null && combatTarget.isAlive()) {
+            // The idle shore goal has yielded to combat. Release its route
+            // immediately, even before GoalSelector runs its next stop pass.
+            this.stopSeekingShore();
+        }
         // A shoreline collision can make isNearWaterSurface() false while the
         // eyes are already above water. Switching navigators at that boundary
         // stops the current path and makes combat goals calculate it again.
@@ -1543,10 +1681,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private boolean hasHigherDryLandingAhead(double directionX, double directionZ) {
-        if (!this.seekingShore) {
-            return false;
-        }
-
         double directionLength = Math.sqrt(directionX * directionX + directionZ * directionZ);
         if (directionLength < 1.0E-4D) {
             return false;
@@ -1569,9 +1703,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.dryLandingDirectionX = directionX;
         this.dryLandingDirectionZ = directionZ;
         this.cachedDryLandingAhead = false;
+        this.cachedDryLandingFeetY = Double.NEGATIVE_INFINITY;
 
         int minY = Mth.floor(this.getY() + 0.1D);
-        int maxY = Mth.floor(this.getY() + 2.05D);
+        int maxY = Mth.floor(this.getY() + 2.65D);
+        double surfaceDistance = this.distanceToActualWaterSurface();
+        double oneBlockLandingLimit = Double.isFinite(surfaceDistance)
+                ? ShoreSeekingPolicy.oneBlockShoreLandingLimit(this.getY() + surfaceDistance)
+                : Double.POSITIVE_INFINITY;
         for (int forwardIndex = 0; forwardIndex < 3; forwardIndex++) {
             double forward = 0.4D + forwardIndex * 0.35D;
             for (int sideIndex = -1; sideIndex <= 1; sideIndex++) {
@@ -1579,14 +1718,41 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 int x = Mth.floor(this.getX() + directionX * forward - directionZ * side);
                 int z = Mth.floor(this.getZ() + directionZ * forward + directionX * side);
                 for (int y = minY; y <= maxY; y++) {
-                    if (this.isDryStandingPosition(new BlockPos(x, y, z))) {
+                    if (y > this.getY() + 0.35D
+                            && y <= this.getY() + 2.55D
+                            && y <= oneBlockLandingLimit
+                            && this.isDryStandingPosition(new BlockPos(x, y, z))) {
                         this.cachedDryLandingAhead = true;
+                        this.cachedDryLandingFeetY = y;
                         return true;
                     }
                 }
             }
         }
         return false;
+    }
+
+    private Direction findAdjacentDryLandingDirection() {
+        double surfaceDistance = this.distanceToActualWaterSurface();
+        if (!Double.isFinite(surfaceDistance)) return null;
+        double oneBlockLandingLimit = ShoreSeekingPolicy.oneBlockShoreLandingLimit(
+                this.getY() + surfaceDistance);
+        int minY = Mth.floor(this.getY() + 0.1D);
+        int maxY = Mth.floor(this.getY() + 2.65D);
+        for (Direction direction : new Direction[]{
+                Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}) {
+            int x = Mth.floor(this.getX() + direction.getStepX() * 0.85D);
+            int z = Mth.floor(this.getZ() + direction.getStepZ() * 0.85D);
+            for (int y = minY; y <= maxY; y++) {
+                if (y > this.getY() + 0.35D && y <= this.getY() + 2.55D
+                        && y <= oneBlockLandingLimit
+                        && this.isDryStandingPosition(new BlockPos(x, y, z))) {
+                    this.cachedDryLandingFeetY = y;
+                    return direction;
+                }
+            }
+        }
+        return null;
     }
 
     public void travel(Vec3 p_32394_) {
@@ -1609,13 +1775,21 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                         ? (nearSurface ? 0.06D : 0.12D)
                         : (nearSurface ? 0.04D : 0.06D));
                 double ascentLimit = this.getWaterAscentSpeedLimit(nearSurface);
+                if (!climbingShore && !(this.moveControl instanceof HumanMoveControl humanMoveControl
+                        && humanMoveControl.isShorePopActive())) {
+                    ascentLimit = ShoreSeekingPolicy.surfaceAscentLimit(surfaceDistance, ascentLimit);
+                }
                 double verticalMotion = Math.max(motion.y, minimumRise);
                 motion = new Vec3(motion.x, Math.min(ascentLimit, verticalMotion), motion.z);
-            } else if (surfaceDistance <= 0.35D
-                    && !this.isFollowingHigherShoreWaypoint()) {
-                // Once the eyes are clear, hold a calm surface stance instead
-                // of carrying swim momentum into a hop above the water.
-                motion = new Vec3(motion.x, Mth.clamp(motion.y, -0.02D, 0.02D), motion.z);
+            } else if (surfaceDistance <= ShoreSeekingPolicy.SURFACE_STANCE_DEPTH
+                    && !this.isFollowingHigherShoreWaypoint()
+                    && !(this.moveControl instanceof HumanMoveControl humanMoveControl
+                    && humanMoveControl.isShorePopActive())) {
+                // Settle a little deeper than before, without changing the
+                // separate bank-step and shore-pop clearance requirements.
+                double settle = surfaceDistance < ShoreSeekingPolicy.SURFACE_STANCE_DEPTH - 0.05D
+                        ? -0.015D : 0.0D;
+                motion = new Vec3(motion.x, Mth.clamp(motion.y, -0.02D, settle), motion.z);
             }
             this.setDeltaMovement(motion);
             this.move(MoverType.SELF, motion);
@@ -1672,29 +1846,76 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     static class HumanMoveControl
     extends MoveControl {
         private static final int SHORE_POP_COOLDOWN_TICKS = 20;
-        private static final int SHORE_POP_DURATION_TICKS = 2;
+        private static final int MAX_SHORE_POP_DURATION_TICKS = 16;
         private static final double SHORE_POP_SPEED = 0.20D;
 
         private final Human human;
         private int shorePopCooldownTicks;
+        private int nextShorePopProbeTick;
         private int shorePopTicks;
+        private double shorePopTargetY;
+        private double shorePopDirectionX;
+        private double shorePopDirectionZ;
+        private int combatStrafeTick = Integer.MIN_VALUE;
+        private float combatStrafeForward;
+        private float combatStrafeRight;
 
         public HumanMoveControl(Human p_32433_) {
             super((Mob)p_32433_);
             this.human = p_32433_;
         }
 
+        @Override
+        public void strafe(float forward, float right) {
+            super.strafe(forward, right);
+            this.combatStrafeTick = this.human.tickCount;
+            this.combatStrafeForward = forward;
+            this.combatStrafeRight = right;
+        }
+
         public void tick() {
             if (this.shorePopCooldownTicks > 0) {
                 this.shorePopCooldownTicks--;
             }
-            if (this.shorePopTicks > 0) {
+            if (this.shorePopTicks > 0
+                    && this.human.onGround()
+                    && this.human.getY() >= this.shorePopTargetY - 0.05D) {
+                this.shorePopTicks = 0;
+                Vec3 motion = this.human.getDeltaMovement();
+                if (motion.y > 0.05D) {
+                    this.human.setDeltaMovement(motion.x, 0.05D, motion.z);
+                }
+            } else if (this.shorePopTicks > 0) {
                 this.shorePopTicks--;
             }
             // Path goals may request 1.1-1.2 speed. Cap the control input at
             // normal walking pace; sprint and potion modifiers are applied
             // separately by vanilla MOVEMENT_SPEED, just as for a player.
             this.speedModifier = Math.min(this.speedModifier, 1.0D);
+            // Navigation runs after goals and can replace their STRAFE operation
+            // with MOVE_TO. Keep the combat strafe requested this tick independent
+            // of that operation, but never override a retreat or shore route.
+            if (this.combatStrafeTick == this.human.tickCount
+                    && (this.combatStrafeForward != 0.0F || this.combatStrafeRight != 0.0F)
+                    && !this.human.isFleeing && !this.human.seekingShore) {
+                if (this.human.shouldUseWaterMovement()) {
+                    this.strafeForwards = this.combatStrafeForward;
+                    this.strafeRight = this.combatStrafeRight;
+                    // MoveControl.strafe defaults to quarter speed; that is
+                    // inappropriate for an explicit combat movement input.
+                    this.speedModifier = 1.0D;
+                    applyWaterStrafe();
+                } else {
+                    float length = Mth.sqrt(this.combatStrafeForward * this.combatStrafeForward
+                            + this.combatStrafeRight * this.combatStrafeRight);
+                    float normalizer = Math.max(1.0F, length);
+                    this.human.setSpeed((float) this.human.getAttributeValue(Attributes.MOVEMENT_SPEED));
+                    this.human.setZza(this.combatStrafeForward / normalizer);
+                    this.human.setXxa(this.combatStrafeRight / normalizer);
+                }
+                this.operation = MoveControl.Operation.WAIT;
+                return;
+            }
             if (this.human.shouldUseWaterMovement()) {
                 if (this.operation == MoveControl.Operation.STRAFE) {
                     applyWaterStrafe();
@@ -1705,8 +1926,36 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                         this.human.seekingShore,
                         this.human.shoreFallbackTarget != null,
                         this.human.getNavigation().isDone());
+                boolean directCombatFallback = this.human.directWaterCombatSteeringTick
+                        == this.human.tickCount && this.human.getTarget() != null
+                        && this.human.getTarget().isAlive() && !this.human.isFleeing;
+                if (directCombatFallback) {
+                    LivingEntity target = this.human.getTarget();
+                    this.wantedX = target.getX();
+                    this.wantedY = target.getY();
+                    this.wantedZ = target.getZ();
+                    this.speedModifier = 1.0D;
+                    this.operation = MoveControl.Operation.MOVE_TO;
+                }
+                boolean directLootFallback = this.human.directWaterLootSteeringTick
+                        == this.human.tickCount && this.human.pursuingWaterLoot
+                        && this.human.getTarget() == null;
                 if (this.operation != MoveControl.Operation.MOVE_TO
-                        || (this.human.getNavigation().isDone() && !directShoreFallback)) {
+                        || (this.human.getNavigation().isDone()
+                        && !directShoreFallback && !directCombatFallback
+                        && !directLootFallback)) {
+                    if (this.human.horizontalCollision) {
+                        BlockPos waterPos = this.human.blockPosition();
+                        Vec3 flow = this.human.level().getFluidState(waterPos)
+                                .getFlow(this.human.level(), waterPos);
+                        Vec3 motion = this.human.getDeltaMovement();
+                        double directionX = flow.horizontalDistanceSqr() > 0.0001D
+                                ? flow.x : motion.x;
+                        double directionZ = flow.horizontalDistanceSqr() > 0.0001D
+                                ? flow.z : motion.z;
+                        this.tryShorePop(directionX, directionZ);
+                    }
+                    if (this.isShorePopActive()) this.applyShorePopImpulse();
                     this.human.setSpeed(0.0f);
                     this.human.setZza(0.0F);
                     this.human.setXxa(0.0F);
@@ -1720,6 +1969,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 double d2 = this.wantedZ - this.human.getZ();
                 double d3 = Math.sqrt(d0 * d0 + d1 * d1 + d2 * d2);
                 if (d3 < 0.05D) {
+                    if (this.isShorePopActive()) this.applyShorePopImpulse();
                     this.human.setSpeed(0.0F);
                     this.human.setZza(0.0F);
                     this.human.setXxa(0.0F);
@@ -1737,11 +1987,24 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 this.applyWaterImpulse(d0 / Math.max(1.0E-4D, horizontalDistance),
                         verticalDirection, d2 / Math.max(1.0E-4D, horizontalDistance));
             } else {
-                if (!this.human.onGround()) {
+                if (this.isShorePopActive() && !this.human.onGround()) {
+                    // Crossing the waterline is not the same as reaching the
+                    // dry block. Finish the bounded bank step in air too.
+                    this.applyShorePopImpulse();
+                } else if (!this.human.onGround()) {
                     this.human.setDeltaMovement(this.human.getDeltaMovement().add(0.0, -0.008, 0.0));
                 }
                 super.tick();
             }
+        }
+
+        private void applyShorePopImpulse() {
+            Vec3 motion = this.human.getDeltaMovement();
+            this.human.setDeltaMovement(
+                    motion.x + this.shorePopDirectionX * 0.035D,
+                    Math.min(SHORE_POP_SPEED,
+                            Math.max(0.0D, this.shorePopTargetY - this.human.getY())),
+                    motion.z + this.shorePopDirectionZ * 0.035D);
         }
 
         /**
@@ -1761,8 +2024,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             float yawRadians = this.human.getYRot() * ((float)Math.PI / 180.0F);
             float sin = Mth.sin(yawRadians);
             float cos = Mth.cos(yawRadians);
-            double directionX = forward * cos - right * sin;
-            double directionZ = right * cos + forward * sin;
+            // At yaw zero Minecraft faces +Z, so forward must steer +Z and
+            // right must steer +X (the old transform was rotated 90 degrees).
+            double directionX = right * cos - forward * sin;
+            double directionZ = forward * cos + right * sin;
             this.applyWaterImpulse(directionX, 0.0D, directionZ);
         }
 
@@ -1790,40 +2055,73 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 nextVertical = Math.max(nextVertical, this.human.shouldCatchBreath ? 0.12D : 0.08D);
             }
             if (shorePopActive) {
-                nextVertical = Math.max(nextVertical, SHORE_POP_SPEED);
+                nextVertical = Math.max(nextVertical,
+                        Math.min(SHORE_POP_SPEED,
+                                Math.max(0.0D, this.shorePopTargetY - this.human.getY())));
             }
-            double verticalLimit = nearSurface
-                    && this.human.distanceToActualWaterSurface() <= 0.35D
-                    && !climbingShore
-                    ? 0.02D
-                    : this.human.getWaterAscentSpeedLimit(nearSurface);
+            double verticalLimit = this.human.getWaterAscentSpeedLimit(nearSurface);
+            if (!climbingShore && !shorePopActive) {
+                verticalLimit = ShoreSeekingPolicy.surfaceAscentLimit(
+                        this.human.distanceToActualWaterSurface(), verticalLimit);
+            }
             if (shorePopActive) {
                 verticalLimit = Math.max(verticalLimit, SHORE_POP_SPEED);
             }
             nextVertical = Mth.clamp(nextVertical, 0.0D, verticalLimit);
-            double horizontalShoreKick = shorePopActive ? 0.02D : 0.0D;
+            if (shorePopActive) {
+                nextVertical = Math.min(nextVertical,
+                        Math.max(0.0D, this.shorePopTargetY - this.human.getY()));
+            }
             this.human.setDeltaMovement(
-                    motion.x + directionX * (horizontalAcceleration + horizontalShoreKick),
+                    motion.x + directionX * horizontalAcceleration
+                            + (shorePopActive ? this.shorePopDirectionX * 0.035D : 0.0D),
                     nextVertical,
-                    motion.z + directionZ * (horizontalAcceleration + horizontalShoreKick)
+                    motion.z + directionZ * horizontalAcceleration
+                            + (shorePopActive ? this.shorePopDirectionZ * 0.035D : 0.0D)
             );
         }
 
         private void tryShorePop(double directionX, double directionZ) {
             if (this.shorePopCooldownTicks > 0
                     || this.shorePopTicks > 0
-                    || !this.human.seekingShore
+                    || this.human.tickCount < this.nextShorePopProbeTick
+                    || !this.human.horizontalCollision
                     || !this.human.isInWater()
                     || !this.human.isWaterSurfaceCloseForShorePop()
-                    || this.human.getDeltaMovement().y > 0.08D
-                    || !this.human.hasHigherDryLandingAhead(directionX, directionZ)) {
+                    || this.human.getDeltaMovement().y > 0.18D) {
                 return;
             }
 
-            // A brief, low impulse only when a dry higher landing is within a
-            // step of the current shore path. Never launch swimmers in open water.
-            this.shorePopTicks = SHORE_POP_DURATION_TICKS;
+            double landingDirectionX = directionX;
+            double landingDirectionZ = directionZ;
+            if (!this.human.hasHigherDryLandingAhead(landingDirectionX, landingDirectionZ)) {
+                BlockPos waterPos = this.human.blockPosition();
+                Vec3 flow = this.human.level().getFluidState(waterPos)
+                        .getFlow(this.human.level(), waterPos);
+                landingDirectionX = flow.x;
+                landingDirectionZ = flow.z;
+                if (!this.human.hasHigherDryLandingAhead(landingDirectionX, landingDirectionZ)) {
+                    Direction adjacent = this.human.findAdjacentDryLandingDirection();
+                    if (adjacent == null) {
+                        this.nextShorePopProbeTick = this.human.tickCount + 5;
+                        return;
+                    }
+                    landingDirectionX = adjacent.getStepX();
+                    landingDirectionZ = adjacent.getStepZ();
+                }
+            }
+
+            // A bounded step only at a collided dry bank, whether navigation
+            // or a flowing current brought the Human there. Never pop in open water.
+            this.shorePopTicks = Math.min(MAX_SHORE_POP_DURATION_TICKS,
+                    Mth.ceil((this.human.cachedDryLandingFeetY - this.human.getY())
+                            / SHORE_POP_SPEED) + 2);
             this.shorePopCooldownTicks = SHORE_POP_COOLDOWN_TICKS;
+            this.shorePopTargetY = this.human.cachedDryLandingFeetY;
+            double directionLength = Math.sqrt(landingDirectionX * landingDirectionX
+                    + landingDirectionZ * landingDirectionZ);
+            this.shorePopDirectionX = landingDirectionX / directionLength;
+            this.shorePopDirectionZ = landingDirectionZ / directionLength;
         }
 
         private boolean isShorePopActive() {

@@ -1,5 +1,69 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.3.5 — 2026-09-27
+
+### 简体中文
+
+- 将弓手射击侧移的整体速度从上一版降低 30%。
+- 修复弩手仅在 20–24 格狭窄距离内侧移的问题：敌人进入 16 格内才后撤，退到 20 格后恢复侧移，以避免边界抖动。
+- 弩手侧移速度低于弓手；弩手的远距离狙击、失去射界后的重新选位和紧急撤退仍维持原有优先级。
+- 构建与策略检查不等同于游戏内验收，实际走位效果仍需测试。
+
+### English
+
+- Reduces the bow user's overall firing-strafe speed by 30% from the previous release.
+- Fixes crossbow strafing being limited to a narrow 20–24-block band: retreat now starts inside 16 blocks and strafing resumes at 20 blocks to avoid boundary oscillation.
+- Crossbow users strafe more slowly than bow users while retaining long-range shots, firing-lane repositioning, and emergency retreat priorities.
+- Build and policy checks do not replace in-game movement testing.
+
+## 3.3.4 — 2026-09-27
+
+### 简体中文
+
+- 改进弓手与弩手的射击侧移：提高侧移加成，并修正地面与水中侧移控制被寻路或低速系数覆盖的问题。
+- 枪手在限定的交战区域内拉开身位、回摆及调整射角；侧移时同步修正与目标的距离，避免持续绕向同一侧或频繁左右抖动。
+- 水中战斗路径长期无法缩短目标距离时启用短时直接推进，使枪手仍会尝试进入对应武器的优势射程。
+- 继续修正水中战斗、拾取和岸边移动的优先级；本版本的实际侧移速度与复杂水域行为仍需游戏内验收。
+
+### English
+
+- Improves bow and crossbow firing strafes with a stronger speed bonus and fixes land/water strafe inputs being overridden by navigation or low-speed control factors.
+- Gunners reposition and return within a bounded combat area, adjusting their distance and firing angle instead of circling endlessly or rapidly twitching left and right.
+- When a water-combat path fails to close the gap for an extended period, Humans briefly steer toward the target so gunners can reach their weapon-specific preferred range.
+- Further refines water-combat, pickup, and shore-movement priorities. Actual strafe speed and complex water scenarios still require in-game validation.
+
+## 3.3.3 — 2026-09-27
+
+### 简体中文
+
+- 将人类在水面的站位略微下调，让身体更多地浸入水中；上岸助跳仍使用独立的岸面高度判定。
+- 弓手与弩手在射击侧移时获得临时的 50% 移速提升，不改变追击和撤退速度。
+- 改进浅层流动水中的上岸辅助：识别一格高的干燥落脚点、按高度延长受限助跳，并避免刚离开水面就过早停止向岸边移动。
+- 构建及静态检查不等同于游戏内验收，仍需测试流动水、源头水和不同高度的岸边。
+
+### English
+
+- Lowers the Human's resting position slightly in water so more of the body is submerged; bank-step assistance retains separate landing-height checks.
+- Grants bow and crossbow users a temporary 50% movement-speed increase while firing and strafing, without changing pursuit or retreat speed.
+- Improves shallow flowing-water exits by identifying dry one-block ledges, extending a height-limited bank step as needed, and continuing the shoreward push after crossing the waterline.
+- Build and static checks do not replace in-game validation of flowing water, source blocks, and different bank heights.
+
+## 3.3.2 — 2026-09-27
+
+### 简体中文
+
+- 优化水中战斗、寻岸和浅水拾取的优先级；改进导航卡点恢复，并减少不必要的路径与方块探测。
+- 修复远程人类在战斗结束后可能一直保持近战武器和举盾状态的问题；调整装备破损音效。
+- 战斗中会重新评估近处合法敌人：远处目标近期威胁较低时优先处理明显更近的目标，同时保留雇佣模式的仇恨授权限制。
+- 本版本仍需在游戏中验证目标切换、水中移动和不同武器的实际行为。
+
+### English
+
+- Refines priorities for water combat, shore seeking, and shallow-water loot; improves recovery from stalled navigation while reducing unnecessary path and block probes.
+- Fixes ranged Humans sometimes remaining on melee weapons and shield use after combat; adjusts equipment-break sounds.
+- Re-evaluates nearby eligible enemies during combat: a significantly closer threat can take priority when the distant target has dealt little recent damage, without bypassing hired-unit authorization rules.
+- In-game validation is still needed for target switching, water movement, and weapon behavior.
+
 ## 3.3.1 — 2026-09-27
 
 ### 简体中文

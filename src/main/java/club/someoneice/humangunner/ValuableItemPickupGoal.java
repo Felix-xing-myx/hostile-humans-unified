@@ -39,6 +39,7 @@ final class ValuableItemPickupGoal extends Goal {
         return targetItem != null
                 && targetItem.isAlive()
                 && !targetItem.getItem().isEmpty()
+                && HumanLootManager.isReachableWithoutDiving(targetItem)
                 && human.getTarget() == null
                 && !human.isFleeing
                 && SoldierPickupPolicy.isEnabled(human)
@@ -49,6 +50,7 @@ final class ValuableItemPickupGoal extends Goal {
     @Override
     public void start() {
         nextRepathTick = 0;
+        human.setPursuingWaterLoot(targetItem != null && targetItem.isInWater());
         moveToItem();
     }
 
@@ -57,15 +59,18 @@ final class ValuableItemPickupGoal extends Goal {
         if (targetItem == null) {
             return;
         }
+        human.setPursuingWaterLoot(targetItem.isInWater());
         human.getLookControl().setLookAt(targetItem, 25.0F, 25.0F);
         if (human.distanceToSqr(targetItem) <= 2.25D) {
             HumanLootManager.collect(human, targetItem);
             targetItem = null;
+            human.setPursuingWaterLoot(false);
             return;
         }
-        if (human.tickCount >= nextRepathTick || human.getNavigation().isDone()) {
+        if (human.tickCount >= nextRepathTick) {
             moveToItem();
         }
+        human.approachWaterLoot(targetItem, 0.9D);
         if (human.horizontalCollision) {
             NavigationSupport.openBlockingPassage(human);
         }
@@ -74,6 +79,7 @@ final class ValuableItemPickupGoal extends Goal {
     @Override
     public void stop() {
         targetItem = null;
+        human.setPursuingWaterLoot(false);
         human.getNavigation().stop();
     }
 

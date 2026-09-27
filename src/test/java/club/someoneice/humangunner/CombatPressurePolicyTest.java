@@ -27,11 +27,17 @@ public final class CombatPressurePolicyTest {
                 "shore searches have a global per-server-tick budget");
         check(ShoreSeekingPolicy.shouldRiseTowardSurface(true, 0.2D)
                         && ShoreSeekingPolicy.shouldRiseTowardSurface(false, 1.2D)
+                        && ShoreSeekingPolicy.shouldRiseTowardSurface(false, 0.65D)
+                        && !ShoreSeekingPolicy.shouldRiseTowardSurface(false, 0.50D)
                         && !ShoreSeekingPolicy.shouldRiseTowardSurface(false, 0.2D)
                         && !ShoreSeekingPolicy.shouldRiseTowardSurface(false, -0.2D)
+                        && ShoreSeekingPolicy.surfaceAscentLimit(0.50D, 0.08D) == 0.0D
+                        && ShoreSeekingPolicy.surfaceAscentLimit(0.65D, 0.08D) < 0.08D
                         && ShoreSeekingPolicy.isNearRealSurfaceForShorePop(0.5D)
                         && !ShoreSeekingPolicy.isNearRealSurfaceForShorePop(1.5D)
-                        && !ShoreSeekingPolicy.isNearRealSurfaceForShorePop(-0.5D),
+                        && !ShoreSeekingPolicy.isNearRealSurfaceForShorePop(-0.5D)
+                        && ShoreSeekingPolicy.oneBlockShoreLandingLimit(63.2D) == 65.0D
+                        && ShoreSeekingPolicy.oneBlockShoreLandingLimit(64.0D) == 65.0D,
                 "surface ascent and shore pop use the real waterline relative to the feet");
         check(ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, false, false)
                         && !ShoreSeekingPolicy.shouldContinueSeekingShore(false, false, false, false)
@@ -39,10 +45,18 @@ public final class CombatPressurePolicyTest {
                         && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, true, false)
                         && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, false, true),
                 "shore assistance yields as soon as combat or retreat begins");
-        check(ShoreSeekingPolicy.GOAL_PRIORITY > -8
+        check(ShoreSeekingPolicy.isSurfaceLootReachable(65.0D, 64.0D)
+                        && ShoreSeekingPolicy.isSurfaceLootReachable(65.0D, 63.5D)
+                        && !ShoreSeekingPolicy.isSurfaceLootReachable(65.0D, 63.0D),
+                "surface-bound Humans only pursue shallow water loot they can physically reach");
+        check(ShoreSeekingPolicy.COMBAT_GOAL_PRIORITY
+                        < ShoreSeekingPolicy.WATER_LOOT_GOAL_PRIORITY
+                        && ShoreSeekingPolicy.WATER_LOOT_GOAL_PRIORITY
+                        < ShoreSeekingPolicy.GOAL_PRIORITY
+                        && ShoreSeekingPolicy.GOAL_PRIORITY > -8
                         && ShoreSeekingPolicy.GOAL_PRIORITY < -6
                         && ShoreSeekingPolicy.GOAL_PRIORITY < 8,
-                "combat movement outranks shore assistance while idle orders and wandering yield to it");
+                "combat outranks water loot, which outranks idle shore seeking and ordinary orders");
         check(ShoreSeekingPolicy.isShoreTransitionActive(true, false)
                         && ShoreSeekingPolicy.isShoreTransitionActive(false, true)
                         && !ShoreSeekingPolicy.isShoreTransitionActive(false, false),
@@ -54,13 +68,17 @@ public final class CombatPressurePolicyTest {
                         && !ShoreSeekingPolicy.shouldSteerTowardFallback(false, true, true)
                         && !ShoreSeekingPolicy.shouldSteerTowardFallback(true, true, false),
                 "combat pursuit yields to shore movement and unreachable routes keep steering toward a dry fallback");
-        check(ShoreSeekingPolicy.waterPathMalus(true, true, false)
-                        > ShoreSeekingPolicy.waterPathMalus(true, false, false)
-                        && ShoreSeekingPolicy.waterPathMalus(true, false, false) > 0.0F
-                        && ShoreSeekingPolicy.waterPathMalus(true, false, true) == 0.0F
-                        && ShoreSeekingPolicy.waterPathMalus(false, false, true) == 0.0F
-                        && ShoreSeekingPolicy.waterPathMalus(false, false, false) < 0.0F,
-                "combat paths can cross water from either bank, while idle and active-shore paths prefer dry land");
+        check(ShoreSeekingPolicy.waterPathMalus(true, true, false, false)
+                        > ShoreSeekingPolicy.waterPathMalus(true, false, false, false)
+                        && ShoreSeekingPolicy.waterPathMalus(true, false, false, false) > 0.0F
+                        && ShoreSeekingPolicy.waterPathMalus(true, false, true, false) == 0.0F
+                        && ShoreSeekingPolicy.waterPathMalus(false, false, true, false) == 0.0F
+                        && ShoreSeekingPolicy.waterPathMalus(false, false, false, true) == 0.0F
+                        && ShoreSeekingPolicy.waterPathMalus(true, false, false, true) == 0.0F
+                        && ShoreSeekingPolicy.waterPathMalus(true, true, true, false) == 0.0F
+                        && ShoreSeekingPolicy.waterPathMalus(true, true, false, true) == 0.0F
+                        && ShoreSeekingPolicy.waterPathMalus(false, false, false, false) < 0.0F,
+                "combat and worthwhile loot can enter water, while idle and active-shore paths prefer dry land");
         check(ShoreSeekingPolicy.shouldPreferSaferShorePath(12, 18, true)
                         && !ShoreSeekingPolicy.shouldPreferSaferShorePath(12, 19, true)
                         && !ShoreSeekingPolicy.shouldPreferSaferShorePath(12, 13, false),
@@ -196,6 +214,20 @@ public final class CombatPressurePolicyTest {
                 "three nearby threats force an armed gunner to retreat");
         check(!CombatPressurePolicy.shouldPrioritizeGunnerRetreat(false, 6),
                 "ordinary melee humans keep their normal pressure behavior");
+        check(CombatPressurePolicy.shouldPrioritizeCloserThreat(20.0D * 20.0D,
+                        3.0D * 3.0D, 2.0F, 60.0F)
+                        && CombatPressurePolicy.shouldPrioritizeCloserThreat(5.0D * 5.0D,
+                        2.0D * 2.0D, 0.0F, 60.0F),
+                "an unhurt nearby enemy can displace a low-pressure distant target");
+        check(!CombatPressurePolicy.shouldPrioritizeCloserThreat(20.0D * 20.0D,
+                        3.0D * 3.0D, 10.0F, 60.0F)
+                        && !CombatPressurePolicy.shouldPrioritizeCloserThreat(20.0D * 20.0D,
+                        7.0D * 7.0D, 0.0F, 60.0F)
+                        && !CombatPressurePolicy.shouldPrioritizeCloserThreat(8.0D * 8.0D,
+                        7.0D * 7.0D, 0.0F, 60.0F)
+                        && !CombatPressurePolicy.shouldPrioritizeCloserThreat(3.0D * 3.0D,
+                        2.0D * 2.0D, 0.0F, 60.0F),
+                "serious recent damage, out-of-range and marginal proximity do not cause target thrashing");
         check(CombatPressurePolicy.shouldUseCrowdCounterfire(true, true, true, 1.0D),
                 "surrounded gunner may fire at point-blank range");
         check(!CombatPressurePolicy.shouldUseCrowdCounterfire(true, true, false, 1.0D),

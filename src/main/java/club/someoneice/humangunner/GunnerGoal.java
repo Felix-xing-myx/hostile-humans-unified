@@ -47,8 +47,17 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private int nextCloseRetreatPathTick;
     private int nextRangeRetreatPathTick;
     private int nextFiringPositionTick;
+    private int nextApproachPathTick;
     private int nextStrafeRepositionTick;
     private int manualStrafeUntilTick;
+    private int strafeLegStartTick;
+    private double strafeLegStartX;
+    private double strafeLegStartZ;
+    private double strafeAnchorX;
+    private double strafeAnchorZ;
+    private double strafeAnchorTargetX;
+    private double strafeAnchorTargetZ;
+    private boolean strafeAnchorSet;
     private float strafeDirection = 1.0F;
     private int retreatFailureTicks;
     private double lastThreatDistance = Double.POSITIVE_INFINITY;
@@ -114,10 +123,15 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         strafing = false;
         strafePathActive = false;
         manualStrafeUntilTick = 0;
+        strafeAnchorSet = false;
         seekingFiringPosition = false;
         strafeDirection = mob.getRandom().nextBoolean() ? 1.0F : -1.0F;
         nextStrafeRepositionTick = mob.tickCount;
+        strafeLegStartTick = mob.tickCount;
+        strafeLegStartX = mob.getX();
+        strafeLegStartZ = mob.getZ();
         nextFiringPositionTick = mob.tickCount;
+        nextApproachPathTick = mob.tickCount;
         movementTarget = mob.getTarget();
         if (isGun(mob.getMainHandItem())) {
             operator.draw(mob::getMainHandItem);
@@ -137,6 +151,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         seekingFiringPosition = false;
         strafePathActive = false;
         manualStrafeUntilTick = 0;
+        strafeAnchorSet = false;
         movementTarget = null;
         operator.aim(false);
         if (mob instanceof Human human) {
@@ -184,6 +199,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             approachingTarget = false;
             seekingFiringPosition = false;
             retreatingForSpace = false;
+            strafeAnchorSet = false;
             aimTicks = 0;
         }
 
@@ -249,10 +265,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 return;
             }
             stopLateralMovement();
-            if (mob.getNavigation().isDone() || mob.tickCount % 10 == 0) {
-                mob.getNavigation().moveTo(target, 1.0D);
-                approachingTarget = true;
-            }
+            approachTarget(target, range);
             enablePursuitSprint(human, target);
             return;
         }
@@ -616,7 +629,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                                        GunRangePolicy.Band range, boolean obscured) {
         if (obscured) {
             stopLateralMovement();
-            if (distance > range.maximum() + 12.0D) {
+            if (distance > range.maximum() + 12.0D
+                    || (mob instanceof Human human && human.shouldUseWaterMovement()
+                    && distance > range.maximum())) {
                 // The firing-lane search is local. Close most of the gap first
                 // instead of repeatedly searching a 12-block neighborhood
                 // that cannot possibly reach the configured firing band.
@@ -625,11 +640,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                     approachingTarget = false;
                 }
                 seekingFiringPosition = false;
-                if (!approachingTarget || mob.getNavigation().isDone()
-                        || mob.getNavigation().isStuck() || mob.tickCount % 10 == 0) {
-                    mob.getNavigation().moveTo(target, 1.0D);
-                    approachingTarget = true;
-                }
+                approachTarget(target, range);
                 return;
             }
             if (!seekingFiringPosition) {
@@ -684,11 +695,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         }
         if (distance > range.maximum()) {
             stopLateralMovement();
-            if (!approachingTarget || mob.getNavigation().isDone()
-                    || mob.tickCount % 10 == 0) {
-                mob.getNavigation().moveTo(target, 1.0D);
-                approachingTarget = true;
-            }
+            approachTarget(target, range);
             return;
         }
         if (approachingTarget) {
@@ -697,6 +704,18 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             approachingTarget = false;
         }
         strafeAround(target, range);
+    }
+
+    private void approachTarget(LivingEntity target, GunRangePolicy.Band range) {
+        // A water navigator cannot always path to a target standing on the far
+        // bank. Do not retry A-star every tick or abandon the weapon's range.
+        if (mob.tickCount >= nextApproachPathTick) {
+            approachingTarget = mob.getNavigation().moveTo(target, 1.0D);
+            nextApproachPathTick = mob.tickCount + 12;
+        }
+        if (mob instanceof Human human) {
+            human.approachCombatTargetInWater(target, range.maximum(), 1.0D);
+        }
     }
 
     /** Sprint on a gunner's non-firing approach path, never during a shot attempt. */
@@ -746,6 +765,22 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     private void strafeAround(LivingEntity target, GunRangePolicy.Band range) {
         mob.lookAt(target, 30.0F, 30.0F);
+        double anchorRadius = Math.max(6.0D,
+                Math.min(9.0D, (range.maximum() - range.minimum()) * 0.9D));
+        if (!strafeAnchorSet
+                || target.position().distanceToSqr(strafeAnchorTargetX, target.getY(),
+                        strafeAnchorTargetZ) > 36.0D
+                || strafeAnchorDistanceSqr() > anchorRadius * anchorRadius * 4.0D) {
+            if (strafePathActive) mob.getNavigation().stop();
+            strafePathActive = false;
+            manualStrafeUntilTick = 0;
+            strafeAnchorX = mob.getX();
+            strafeAnchorZ = mob.getZ();
+            strafeAnchorTargetX = target.getX();
+            strafeAnchorTargetZ = target.getZ();
+            strafeAnchorSet = true;
+            nextStrafeRepositionTick = mob.tickCount;
+        }
 
         if (strafePathActive) {
             if (!mob.getNavigation().isDone() && !mob.getNavigation().isStuck()) {
@@ -753,8 +788,10 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             }
             strafePathActive = false;
             strafing = false;
+            // A completed flank should lead to a return leg, not another
+            // path farther around the same side of the target.
             strafeDirection = -strafeDirection;
-            nextStrafeRepositionTick = mob.tickCount + 10;
+            nextStrafeRepositionTick = mob.tickCount + 16;
             mob.getMoveControl().strafe(0.0F, 0.0F);
             mob.setZza(0.0F);
             mob.setXxa(0.0F);
@@ -763,14 +800,23 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
         if (manualStrafeUntilTick > 0) {
             if (mob.tickCount < manualStrafeUntilTick) {
-                mob.getMoveControl().strafe(0.0F, 0.85F * strafeDirection);
+                if (mob.tickCount - strafeLegStartTick >= 8
+                        && (strafeAnchorDistanceSqr() >= anchorRadius * anchorRadius
+                        || mob.horizontalCollision
+                        || strafeLegDisplacementSqr() < 0.16D)) {
+                    strafeDirection = -strafeDirection;
+                    strafeLegStartTick = mob.tickCount;
+                    strafeLegStartX = mob.getX();
+                    strafeLegStartZ = mob.getZ();
+                }
+                mob.getMoveControl().strafe(radialStrafeInput(target, range), strafeDirection);
                 strafing = true;
                 return;
             }
             manualStrafeUntilTick = 0;
             strafing = false;
             strafeDirection = -strafeDirection;
-            nextStrafeRepositionTick = mob.tickCount + 10;
+            nextStrafeRepositionTick = mob.tickCount + 12;
             mob.getMoveControl().strafe(0.0F, 0.0F);
             mob.setZza(0.0F);
             mob.setXxa(0.0F);
@@ -781,9 +827,15 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             return;
         }
 
-        Path lateralPath = mob instanceof Human human
+        strafeLegStartTick = mob.tickCount;
+        strafeLegStartX = mob.getX();
+        strafeLegStartZ = mob.getZ();
+        // Water paths are for crossing/closing distance; use a committed
+        // manual lateral leg while afloat so aiming does not stall the flank.
+        Path lateralPath = mob instanceof Human human && !human.shouldUseWaterMovement()
                 ? RangedFiringPosition.findLateralPath(
-                        human, target, range.minimum(), range.maximum(), (int) strafeDirection)
+                        human, target, range.minimum(), range.maximum(), (int) strafeDirection,
+                        strafeAnchorX, strafeAnchorZ, anchorRadius)
                 : null;
         if (lateralPath != null
                 && mob.getNavigation().moveTo(lateralPath, 1.15D)) {
@@ -792,17 +844,36 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             return;
         }
 
-        // If terrain prevents a full flank route, use a brief stronger
-        // back-and-forth strafe instead of silently falling back to a tiny
-        // 0.28 input. Continue aiming and firing throughout the movement.
+        // Commit to a visible flank rather than a twelve-tick left/right wobble.
         mob.getNavigation().stop();
-        mob.getMoveControl().strafe(0.0F, 0.85F * strafeDirection);
+        mob.getMoveControl().strafe(radialStrafeInput(target, range), strafeDirection);
         strafing = true;
-        manualStrafeUntilTick = mob.tickCount + 12;
+        manualStrafeUntilTick = mob.tickCount + 32;
         nextStrafeRepositionTick = manualStrafeUntilTick;
     }
 
+    private double strafeLegDisplacementSqr() {
+        double dx = mob.getX() - strafeLegStartX;
+        double dz = mob.getZ() - strafeLegStartZ;
+        return dx * dx + dz * dz;
+    }
+
+    private double strafeAnchorDistanceSqr() {
+        double dx = mob.getX() - strafeAnchorX;
+        double dz = mob.getZ() - strafeAnchorZ;
+        return dx * dx + dz * dz;
+    }
+
+    private float radialStrafeInput(LivingEntity target, GunRangePolicy.Band range) {
+        double ideal = (range.minimum() + range.maximum()) * 0.5D;
+        double distance = mob.distanceTo(target);
+        if (distance > ideal + 1.0D) return 0.4F;
+        if (distance < ideal - 1.0D) return -0.4F;
+        return 0.0F;
+    }
+
     private void stopLateralMovement() {
+        strafeAnchorSet = false;
         if (!strafing && !strafePathActive && manualStrafeUntilTick == 0) {
             return;
         }
@@ -821,6 +892,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         // Do not issue even a zero-valued STRAFE command here. HumanMoveControl
         // treats STRAFE as an exclusive water-movement operation, which can
         // consume the same tick the shore navigator needs to advance its path.
+        strafeAnchorSet = false;
         strafing = false;
         strafePathActive = false;
         manualStrafeUntilTick = 0;

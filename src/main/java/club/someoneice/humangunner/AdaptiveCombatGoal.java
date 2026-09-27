@@ -558,13 +558,19 @@ public final class AdaptiveCombatGoal extends Goal {
 
     /** Predict an arrow crossing the defender's future collision box, not merely a nearby shot. */
     private IncomingArrow findIncomingArrow() {
-        if (!canPreemptivelyBlockProjectile() || isCloseMeleeEngagement()
-                || (isDedicatedRangedCombatant() && human.tickCount < nextProjectileGuardTick)) {
+        if (!canPreemptivelyBlockProjectile() || isCloseMeleeEngagement()) {
+            return null;
+        }
+        boolean dedicatedRanged = isDedicatedRangedCombatant();
+        if (dedicatedRanged && human.tickCount < nextProjectileGuardTick) {
             return null;
         }
         IncomingArrow closest = null;
         double earliestImpact = Double.MAX_VALUE;
-        AABB search = human.getBoundingBox().inflate(20.0D, 8.0D, 20.0D);
+        AABB bounds = human.getBoundingBox();
+        Vec3 center = bounds.getCenter();
+        AABB search = bounds.inflate(20.0D, 8.0D, 20.0D);
+        Boolean deferRangedGuard = null;
         for (AbstractArrow arrow : human.level().getEntitiesOfClass(AbstractArrow.class, search)) {
             if (!arrow.isAlive() || arrow.getOwner() == human
                     || (arrow.getOwner() instanceof LivingEntity shooter
@@ -576,26 +582,26 @@ public final class AdaptiveCombatGoal extends Goal {
             if (speedSqr < 0.04D) {
                 continue;
             }
-            double ticksToImpact = human.getBoundingBox().getCenter()
-                    .subtract(arrow.position()).dot(velocity) / speedSqr;
+            double ticksToImpact = center.subtract(arrow.position()).dot(velocity) / speedSqr;
             if (ticksToImpact < 0.0D || ticksToImpact > 12.0D
                     || ticksToImpact >= earliestImpact) {
                 continue;
             }
-            if (isDedicatedRangedCombatant()
-                    && !ProjectileShieldPolicy.shouldGuardRangedUser(ticksToImpact)) {
+            if (dedicatedRanged && !ProjectileShieldPolicy.shouldGuardRangedUser(ticksToImpact)) {
                 continue;
             }
-            if (shouldDeferRangedProjectileGuard()) {
-                continue;
+            if (deferRangedGuard == null) {
+                deferRangedGuard = shouldDeferRangedProjectileGuard();
+            }
+            if (deferRangedGuard) {
+                return null;
             }
             // Approximate vanilla arrow gravity and the defender's present motion.
             // The enlarged box tolerates trajectory variance without reacting to
             // arrows that are merely passing through the same nearby area.
             Vec3 impact = arrow.position().add(velocity.scale(ticksToImpact))
                     .add(0.0D, -0.025D * ticksToImpact * ticksToImpact, 0.0D);
-            AABB futureBox = human.getBoundingBox()
-                    .move(human.getDeltaMovement().scale(ticksToImpact))
+            AABB futureBox = bounds.move(human.getDeltaMovement().scale(ticksToImpact))
                     .inflate(0.8D, 0.6D, 0.8D);
             if (!futureBox.contains(impact)
                     || human.level().clip(new ClipContext(arrow.position(), impact,
@@ -1040,8 +1046,7 @@ public final class AdaptiveCombatGoal extends Goal {
 
             LivingEntity locked = activeFocusedThreat();
             if (locked != null) {
-                keepTarget(locked);
-                return locked;
+                return applySurroundingThreatPriority(locked);
             }
             if (shouldStartFocusLock()) {
                 LivingEntity nearest = nearestFocusCandidate(current, threat, attacker);
@@ -1058,8 +1063,7 @@ public final class AdaptiveCombatGoal extends Goal {
 
         LivingEntity locked = activeFocusedThreat();
         if (locked != null) {
-            keepTarget(locked);
-            return locked;
+            return applySurroundingThreatPriority(locked);
         }
 
         if (isValidThreat(current)) {
@@ -1085,48 +1089,60 @@ public final class AdaptiveCombatGoal extends Goal {
         return applySurroundingThreatPriority(remembered);
     }
 
-    /**
-     * Preserves nearest-target behaviour when at least three threats are within
-     * three blocks. Armed gunners also remember this as a short crowd-pressure
-     * window so their higher-priority survival layer can restore the gun and
-     * retreat instead of settling into shield-only close defense.
-     */
+    /** Reconsider a low-pressure distant target when an eligible enemy closes in. */
     private LivingEntity applySurroundingThreatPriority(LivingEntity fallback) {
         LivingEntity locked = activeFocusedThreat();
-        if (locked != null) {
-            keepTarget(locked);
-            return locked;
+        LivingEntity current = locked != null ? locked : fallback;
+        if (current == null) {
+            // Ordinary target selectors own initial acquisition. This scan
+            // only reorders a fight already in progress.
+            return null;
         }
         if (human.tickCount < nextCrowdScanTick) {
-            return fallback;
+            if (locked != null) keepTarget(locked);
+            return current;
         }
         nextCrowdScanTick = human.tickCount + 6;
         List<LivingEntity> closeEnemies = human.level().getEntitiesOfClass(
                 LivingEntity.class,
-                human.getBoundingBox().inflate(3.0D),
+                human.getBoundingBox().inflate(6.0D, 4.0D, 6.0D),
                 this::isCrowdEnemy
         );
-        if (closeEnemies.size() < 3) {
-            return fallback;
+        LivingEntity nearest = null;
+        double nearestDistanceSqr = Double.MAX_VALUE;
+        int immediateThreats = 0;
+        for (LivingEntity candidate : closeEnemies) {
+            double distanceSqr = human.distanceToSqr(candidate);
+            if (distanceSqr <= 9.0D) immediateThreats++;
+            if (distanceSqr < nearestDistanceSqr && distanceSqr <= 36.0D
+                    && isProactiveNearbyEnemy(candidate)) {
+                nearest = candidate;
+                nearestDistanceSqr = distanceSqr;
+            }
         }
-        if (CombatPressurePolicy.shouldPrioritizeGunnerRetreat(
-                GunCustody.hasOwnedGun(human), closeEnemies.size()
-        )) {
+        if (immediateThreats >= CombatPressurePolicy.CROWD_THREAT_COUNT
+                && CombatPressurePolicy.shouldPrioritizeGunnerRetreat(
+                GunCustody.hasOwnedGun(human), immediateThreats)) {
             crowdPressureUntil = Math.max(
                     crowdPressureUntil,
                     human.tickCount + CombatPressurePolicy.CROWD_PRESSURE_MEMORY_TICKS
             );
         }
-        LivingEntity nearest = closeEnemies.stream()
-                .min(java.util.Comparator.comparingDouble(human::distanceToSqr))
-                .orElse(fallback);
-        if (nearest != null && nearest != human.getTarget()) {
-            if (isValidThreat(human.getTarget())) {
-                rememberThreat(human.getTarget());
-            }
-            human.setTarget(nearest);
+        boolean urgentCrowd = immediateThreats >= CombatPressurePolicy.CROWD_THREAT_COUNT
+                && locked == null;
+        float currentDamage = RecentDamageTracker.recentDamageFrom(
+                human, current, CombatPressurePolicy.NEARBY_THREAT_DAMAGE_WINDOW_TICKS);
+        if (!human.isFleeing && nearest != null && nearest != current
+                && (urgentCrowd
+                || CombatPressurePolicy.shouldPrioritizeCloserThreat(
+                human.distanceToSqr(current), nearestDistanceSqr,
+                currentDamage, human.getMaxHealth()))) {
+            if (locked != null) clearFocusLock();
+            keepTarget(nearest);
+            return nearest;
         }
-        return nearest;
+        if (locked != null) keepTarget(locked);
+        return current;
     }
 
     private boolean isCrowdEnemy(LivingEntity entity) {
@@ -1136,13 +1152,35 @@ public final class AdaptiveCombatGoal extends Goal {
         if (entity == human.getTarget() || entity == human.getLastHurtByMob()) {
             return true;
         }
+        // Passive/neutral recruits can have several previously authorized
+        // threats. They may reprioritize those, but must not acquire new ones.
+        if (SoldierCombatMode.isExplicitlyAuthorizedAgainst(human, entity)) {
+            return true;
+        }
         if (entity instanceof Player player) {
             return !player.isCreative() && !player.isSpectator();
         }
         if (entity instanceof Human) {
             return true;
         }
-        if (entity instanceof Mob mob && mob.getTarget() == human) {
+        if (entity instanceof Mob mob && (mob.getTarget() == human
+                || HumanTargeting.isAutonomousPlayerEnemy(human, mob))) {
+            return true;
+        }
+        return entity.getLastHurtMob() == human
+                && entity.tickCount - entity.getLastHurtMobTimestamp() <= 80;
+    }
+
+    private boolean isProactiveNearbyEnemy(LivingEntity entity) {
+        if (entity == human.getTarget() || entity == human.getLastHurtByMob()
+                || SoldierCombatMode.isExplicitlyAuthorizedAgainst(human, entity)) {
+            return true;
+        }
+        if (entity instanceof Player player) {
+            return human.isAngryAt(player);
+        }
+        if (entity instanceof Mob mob && (mob.getTarget() == human || human.isAngryAt(mob)
+                || HumanTargeting.isAutonomousPlayerEnemy(human, mob))) {
             return true;
         }
         return entity.getLastHurtMob() == human

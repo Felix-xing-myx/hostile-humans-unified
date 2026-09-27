@@ -133,6 +133,10 @@ public final class TridentHybridGoal extends Goal {
             human.getNavigation().moveTo(target, 1.0D);
             pathCooldown = 4 + human.getRandom().nextInt(3);
         }
+        if (!SoldierOrder.isHoldingPosition(human)) {
+            human.approachCombatTargetInWater(target,
+                    Math.sqrt(meleeReachSqr(target)), 1.0D);
+        }
         attackMeleeIfReady(distanceSqr);
     }
 
@@ -156,11 +160,15 @@ public final class TridentHybridGoal extends Goal {
             throwTridentIfReady(distanceSqr, visible);
             return;
         }
-        if (!visible || distanceSqr > MAX_THROW_DISTANCE_SQR) {
+        boolean waterApproach = human.shouldUseWaterMovement()
+                && distanceSqr > 22.0D * 22.0D;
+        if (!visible || distanceSqr > MAX_THROW_DISTANCE_SQR || waterApproach) {
             if (pathCooldown <= 0) {
                 human.getNavigation().moveTo(target, 1.0D);
                 pathCooldown = 5 + human.getRandom().nextInt(4);
             }
+            human.approachCombatTargetInWater(target, waterApproach ? 22.0D : 4.0D, 1.0D);
+            throwTridentIfReady(distanceSqr, visible);
             return;
         }
 

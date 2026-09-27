@@ -17,6 +17,8 @@ extends Goal {
     protected BlockPos pos = BlockPos.ZERO;
     private int calmDown;
     private boolean isRunning;
+    private int failedNavigationTicks;
+    private int nextPathAttemptTick;
 
     public InvestigateSoundGoal(Mob pMob, double pSpeedModifier) {
         this.mob = pMob;
@@ -49,10 +51,17 @@ extends Goal {
     }
 
     public boolean canContinueToUse() {
+        if (this.failedNavigationTicks >= 80) {
+            return false;
+        }
+        if (this.mob instanceof Human human && human.wasNavigationGoalAbandoned(this.pos)) {
+            return false;
+        }
         if (this.mob.blockPosition().distSqr((Vec3i)this.pos) < 5.0 && this.hasInvestigated) {
             return false;
         }
-        return this.canUse();
+        return !this.mob.isSleeping() && this.mob.getTarget() == null
+                && this.mob.blockPosition().distSqr((Vec3i)this.pos) < 1000.0;
     }
 
     public void start() {
@@ -65,6 +74,8 @@ extends Goal {
             }
         }
         this.hasInvestigated = false;
+        this.failedNavigationTicks = 0;
+        this.nextPathAttemptTick = this.mob.tickCount;
     }
 
     public void stop() {
@@ -84,7 +95,16 @@ extends Goal {
             this.mob.getNavigation().stop();
             this.hasInvestigated = true;
         } else {
-            this.mob.getNavigation().moveTo((double)this.pos.getX(), (double)this.pos.getY(), (double)this.pos.getZ(), this.speedModifier);
+            if (this.mob.getNavigation().isDone()) {
+                ++this.failedNavigationTicks;
+                if (this.mob.tickCount >= this.nextPathAttemptTick) {
+                    this.mob.getNavigation().moveTo(this.pos.getX(), this.pos.getY(),
+                            this.pos.getZ(), this.speedModifier);
+                    this.nextPathAttemptTick = this.mob.tickCount + 10;
+                }
+            } else {
+                this.failedNavigationTicks = 0;
+            }
         }
     }
 
