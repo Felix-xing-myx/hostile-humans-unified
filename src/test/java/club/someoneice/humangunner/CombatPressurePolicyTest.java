@@ -4,15 +4,16 @@ public final class CombatPressurePolicyTest {
     private static int checks;
 
     public static void main(String[] args) {
-        check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, false)
-                        && !ShoreSeekingPolicy.shouldAttemptShore(false, true, true, false, false, false)
-                        && !ShoreSeekingPolicy.shouldAttemptShore(true, false, true, false, false, false)
-                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, false, false, false, false)
-                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, true, false, false)
-                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, true, false)
-                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, true),
-                "shore assistance runs only for server-side idle Humans in water, not during combat or retreat");
-        check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, false)
+        check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(false, true, true, false, false, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, false, true, false, false, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, false, false, false, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, true, false, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, true, false, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, true, false)
+                        && !ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, false, true),
+                "shore assistance runs only while idle, not during combat, retreat or water-loot pursuit");
+        check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, false, false)
                         && !ShoreSeekingPolicy.shouldSearchForShorePath(9, 10)
                         && ShoreSeekingPolicy.shouldSearchForShorePath(10, 10),
                 "path-search staggering limits work without interrupting the combat movement owner");
@@ -39,12 +40,13 @@ public final class CombatPressurePolicyTest {
                         && ShoreSeekingPolicy.oneBlockShoreLandingLimit(63.2D) == 65.0D
                         && ShoreSeekingPolicy.oneBlockShoreLandingLimit(64.0D) == 65.0D,
                 "surface ascent and shore pop use the real waterline relative to the feet");
-        check(ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, false, false)
-                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(false, false, false, false)
-                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, true, false, false)
-                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, true, false)
-                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, false, true),
-                "shore assistance yields as soon as combat or retreat begins");
+        check(ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, false, false, false)
+                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(false, false, false, false, false)
+                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, true, false, false, false)
+                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, true, false, false)
+                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, false, true, false)
+                        && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, false, false, true),
+                "shore assistance yields as soon as combat, retreat or water-loot pursuit begins");
         check(ShoreSeekingPolicy.isSurfaceLootReachable(65.0D, 64.0D)
                         && ShoreSeekingPolicy.isSurfaceLootReachable(65.0D, 63.5D)
                         && !ShoreSeekingPolicy.isSurfaceLootReachable(65.0D, 63.0D),

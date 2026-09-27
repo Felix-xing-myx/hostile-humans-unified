@@ -22,10 +22,13 @@ import net.minecraft.world.item.TieredItem;
 import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
-final class HumanLootManager {
+public final class HumanLootManager {
     private static final double MIN_PICKUP_VALUE = 24.0D;
 
     private HumanLootManager() {
@@ -129,28 +132,61 @@ final class HumanLootManager {
         return equipmentScore(stack, EquipmentSlot.MAINHAND);
     }
 
-    static ItemEntity findBestNearby(Human human, double radius) {
+    static ItemEntity findBestNearby(Human human, double radius, Vec3 preferredPile,
+                                     Predicate<ItemEntity> skip, Consumer<ItemEntity> reject) {
         List<ItemEntity> nearby = human.level().getEntitiesOfClass(
                 ItemEntity.class,
                 human.getBoundingBox().inflate(radius, 4.0D, radius),
                 item -> item.isAlive() && !item.getItem().isEmpty());
+        if (preferredPile != null) {
+            ItemEntity bestInPile = bestCandidate(human, nearby, preferredPile, true, skip, reject);
+            if (bestInPile != null) {
+                return bestInPile;
+            }
+        }
+        return bestCandidate(human, nearby, preferredPile, false, skip, reject);
+    }
+
+    private static ItemEntity bestCandidate(Human human, List<ItemEntity> nearby, Vec3 preferredPile,
+                                            boolean pileOnly, Predicate<ItemEntity> skip,
+                                            Consumer<ItemEntity> reject) {
         ItemEntity best = null;
         double bestScore = Double.NEGATIVE_INFINITY;
         for (ItemEntity item : nearby) {
+            if (pileOnly && item.position().distanceToSqr(preferredPile) > 16.0D) continue;
+            if (skip.test(item)) continue;
             if (!isReachableWithoutDiving(item)) {
+                reject.accept(item);
                 continue;
             }
             double value = benefit(human, item.getItem());
             if (value <= 0.0D) {
+                reject.accept(item);
                 continue;
             }
-            double score = value * 4.0D - human.distanceTo(item);
+            // Value determines whether an item is useful; distance should
+            // dominate the choice between two otherwise viable piles.
+            double score = value * 0.25D - human.distanceTo(item) * 2.0D;
             if (score > bestScore) {
                 bestScore = score;
                 best = item;
             }
         }
         return best;
+    }
+
+    static boolean isWorthCollecting(Human human, ItemEntity item) {
+        return item.isAlive() && !item.getItem().isEmpty()
+                && isReachableWithoutDiving(item)
+                && benefit(human, item.getItem()) > 0.0D;
+    }
+
+    /** Keep the legacy nearby pickup ability on the same value policy as active searching. */
+    public static boolean tryCollectNearby(Human human, ItemEntity item) {
+        return human.isAlive() && !human.isDeadOrDying()
+                && human.distanceToSqr(item) <= 6.25D
+                && isWorthCollecting(human, item)
+                && collect(human, item);
     }
 
     static boolean isReachableWithoutDiving(ItemEntity item) {
@@ -217,7 +253,8 @@ final class HumanLootManager {
     }
 
     private static double benefit(Human human, ItemStack stack) {
-        if (stack.isEmpty() || stack.getItem() instanceof IdentityBadgeItem) {
+        if (stack.isEmpty() || stack.getItem() instanceof IdentityBadgeItem
+                || !HumanGunAcceptance.accepts(stack)) {
             return 0.0D;
         }
         EquipmentSlot slot = preferredEquipmentSlot(stack);

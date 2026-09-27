@@ -45,7 +45,8 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
                     this.human.isInWater(),
                     this.human.isInLava(),
                     this.hasLivingCombatTarget(),
-                    this.human.isFleeing)) {
+                    this.human.isFleeing,
+                    this.human.isPursuingWaterLoot())) {
             return false;
         }
 
@@ -69,7 +70,8 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
     public boolean canContinueToUse() {
         return ShoreSeekingPolicy.shouldContinueSeekingShore(
                 this.human.isInWater(), this.human.isInLava(),
-                this.hasLivingCombatTarget(), this.human.isFleeing);
+                this.hasLivingCombatTarget(), this.human.isFleeing,
+                this.human.isPursuingWaterLoot());
     }
 
     @Override

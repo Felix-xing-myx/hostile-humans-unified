@@ -140,6 +140,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     @Override
     public void stop() {
+        if (mob instanceof Human human && human.isCombatFiringShore()) {
+            human.stopSeekingShore();
+        }
         if (isShoreSeeking()) {
             clearLateralInputPreservingNavigation();
         } else {
@@ -168,9 +171,10 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     @Override
     public EnumSet<Flag> getFlags() {
-        return isShoreSeeking()
-                ? EnumSet.of(Flag.LOOK)
-                : EnumSet.of(Flag.MOVE, Flag.LOOK);
+        if (isShoreSeeking() && mob instanceof Human human && !human.isCombatFiringShore()) {
+            return EnumSet.of(Flag.LOOK);
+        }
+        return EnumSet.of(Flag.MOVE, Flag.LOOK);
     }
 
     @Override
@@ -187,6 +191,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         if (target == null || !target.isAlive()
                 || (!isGun(weapon) && !closeDefense)) {
             return;
+        }
+        if (mob instanceof Human human) {
+            human.updateCombatFiringShore(target, 1.0D);
         }
         if (movementTarget != target) {
             if (!ShoreSeekingPolicy.shouldMoveTowardCombatTarget(isShoreSeeking())) {
@@ -667,11 +674,15 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                     approachingTarget = true;
                     seekingFiringPosition = true;
                 } else {
-                    mob.getNavigation().stop();
+                    if (human.isInWater()) {
+                        human.beginCombatFiringShore(target, 1.0D);
+                    } else {
+                        mob.getNavigation().stop();
+                    }
                     approachingTarget = false;
                     seekingFiringPosition = false;
                 }
-                nextFiringPositionTick = mob.tickCount + 10;
+                nextFiringPositionTick = mob.tickCount + (firingPath == null ? 40 : 10);
             }
             return;
         }

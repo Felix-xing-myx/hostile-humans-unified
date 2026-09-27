@@ -79,6 +79,9 @@ extends Goal {
     public void stop() {
         boolean isSit;
         super.stop();
+        if (this.mob instanceof Human human && human.isCombatFiringShore()) {
+            human.stopSeekingShore();
+        }
         setOrbitSpeed(false);
         this.mob.setAggressive(false);
         this.seeTime = 0;
@@ -130,6 +133,9 @@ extends Goal {
         }
         LivingEntity livingentity = this.mob.getTarget();
         if (livingentity != null) {
+            if (this.mob instanceof Human human) {
+                human.updateCombatFiringShore(livingentity, this.speedModifier);
+            }
             boolean flag1;
             boolean flag = this.mob.getSensing().hasLineOfSight((Entity)livingentity);
             boolean bl = flag1 = this.seeTime > 0;
@@ -164,7 +170,8 @@ extends Goal {
             } else if (d0 >= RETREAT_RESUME_DISTANCE_SQR) {
                 this.retreatingForSpace = false;
             }
-            boolean retreating = !holdingPosition && this.retreatingForSpace;
+            boolean retreating = !holdingPosition && this.retreatingForSpace
+                    && (flag || !(this.mob instanceof Human human && human.isInWater()));
             boolean needsShootingAngle = this.seeTime < 5;
             boolean canEngage = d0 <= (double)this.attackRadiusSqr && this.seeTime >= 5;
             setOrbitSpeed(!holdingPosition && !retreating && !needsShootingAngle
@@ -177,9 +184,7 @@ extends Goal {
                 }
                 this.updatePathDelay = 0;
                 this.strafingTime = 0;
-            } else if (!flag && !retreating && d0 <= (double)this.attackRadiusSqr
-                    && !(this.mob instanceof Human human && human.shouldUseWaterMovement()
-                    && d0 > HOLD_DISTANCE_SQR)) {
+            } else if (!flag && !retreating && d0 <= (double)this.attackRadiusSqr) {
                 // A blocked firing lane is not a reason to circle blindly.
                 // Find an accessible nearby shot instead; the fleeing branch
                 // above returns before this offensive repositioning logic.
@@ -199,9 +204,14 @@ extends Goal {
                         this.mob.getNavigation().moveTo(firingPath,
                                 this.canRun() ? this.speedModifier : this.speedModifier * 0.65D);
                     } else {
-                        this.mob.getNavigation().stop();
+                        if (this.mob instanceof Human human && human.isInWater()) {
+                            human.beginCombatFiringShore(livingentity, this.speedModifier);
+                        } else {
+                            this.mob.getNavigation().stop();
+                        }
                     }
-                    this.nextFiringPositionTick = this.mob.tickCount + 10;
+                    this.nextFiringPositionTick = this.mob.tickCount
+                            + (firingPath == null ? 40 : 10);
                 }
                 this.strafingTime = 0;
                 this.mob.getMoveControl().strafe(0.0F, 0.0F);
@@ -305,7 +315,9 @@ extends Goal {
             }
             if (ShoreSeekingPolicy.isShoreTransitionActive(
                     human.isSeekingShore(), human.isShoreTransitionPending())) {
-                return EnumSet.of(Goal.Flag.LOOK);
+                return human.isCombatFiringShore()
+                        ? EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK)
+                        : EnumSet.of(Goal.Flag.LOOK);
             }
         }
         return EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK);

@@ -79,6 +79,9 @@ extends Goal {
 
     public void stop() {
         super.stop();
+        if (this.mob instanceof Human human && human.isCombatFiringShore()) {
+            human.stopSeekingShore();
+        }
         setOrbitSpeed(false);
         this.mob.setAggressive(false);
         this.seeTime = 0;
@@ -116,6 +119,9 @@ extends Goal {
             clearStrafeInput();
             return;
         }
+        if (this.mob instanceof Human human) {
+            human.updateCombatFiringShore(livingentity, this.speedModifier);
+        }
         boolean shoreSeeking = this.mob instanceof Human human
                 && ShoreSeekingPolicy.isShoreTransitionActive(
                         human.isSeekingShore(), human.isShoreTransitionPending());
@@ -145,11 +151,13 @@ extends Goal {
                     && human.shouldUseWaterMovement() && d0 > 22.0D * 22.0D;
             boolean pursuing = BowRangePolicy.shouldPursue(d0, this.attackRadiusSqr)
                     || waterApproach;
-            boolean retreating = !holdingPosition && BowRangePolicy.shouldPathRetreat(d0);
+            boolean retreating = !holdingPosition && BowRangePolicy.shouldPathRetreat(d0)
+                    && (flag || !(this.mob instanceof Human human && human.isInWater()));
             boolean blockedWhileEngaging = !flag
                     && !retreating
                     && !holdingPosition
-                    && !pursuing;
+                    && (!pursuing || (this.mob instanceof Human human && human.isInWater()
+                    && d0 <= this.attackRadiusSqr));
             setOrbitSpeed(!holdingPosition && !retreating
                     && !blockedWhileEngaging && !pursuing);
             if (holdingPosition) {
@@ -189,10 +197,15 @@ extends Goal {
                             this.mob.getNavigation().moveTo(firingPath, this.speedModifier);
                             this.updatePathDelay = 0;
                         } else {
-                            this.mob.getNavigation().stop();
+                            if (this.mob instanceof Human human && human.isInWater()) {
+                                human.beginCombatFiringShore(livingentity, this.speedModifier);
+                            } else {
+                                this.mob.getNavigation().stop();
+                            }
                             this.updatePathDelay = 0;
                         }
-                        this.nextFiringPositionTick = this.mob.tickCount + 10;
+                        this.nextFiringPositionTick = this.mob.tickCount
+                                + (firingPath == null ? 40 : 10);
                     }
                 }
                 this.strafingTime = -1;
@@ -253,7 +266,9 @@ extends Goal {
             }
             if (ShoreSeekingPolicy.isShoreTransitionActive(
                     human.isSeekingShore(), human.isShoreTransitionPending())) {
-                return EnumSet.of(Goal.Flag.LOOK);
+                return human.isCombatFiringShore()
+                        ? EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK)
+                        : EnumSet.of(Goal.Flag.LOOK);
             }
         }
         return EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK);

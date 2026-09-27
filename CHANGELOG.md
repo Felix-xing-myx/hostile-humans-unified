@@ -1,5 +1,21 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.3.6 — 2026-09-27
+
+### 简体中文
+
+- 水中拾取时由拾取目标暂时占用移动控制；同一堆有用物品拾取完毕后，才恢复闲置上岸策略，避免在水中原地反复转向。
+- 优先清理当前物品堆；短时间记住不值得拾取、无法到达或拾取失败的物品，并在物品移动或内容变化后重新评估，减少来回奔走及重复筛选。
+- 弓、弩、枪和三叉戟在水中失去射界时优先寻找可到达的射击位置；找不到时限时尝试上岸，恢复射界或开始逃跑后交还移动控制。
+- 构建和自动检查不能替代实际游戏中的复杂水域、岸高及战斗验收。
+
+### English
+
+- Water-loot pursuit temporarily owns movement until useful items in the current pile are collected, then yields to idle shore seeking instead of repeatedly turning in place.
+- Prefer finishing the current loot pile and temporarily remember unwanted, unreachable, or failed items; re-evaluate when an item moves or changes to reduce ping-pong movement and repeated scoring.
+- Bow, crossbow, gun, and trident users seek a reachable firing lane when sight is blocked in water, then make a time-limited shore attempt if none is found. Movement control is released when sight returns or retreat begins.
+- Build and automated checks do not replace in-game validation around complex water, shoreline heights, and combat.
+
 ## 3.3.5 — 2026-09-27
 
 ### 简体中文

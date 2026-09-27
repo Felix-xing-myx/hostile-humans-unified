@@ -341,6 +341,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private double waterCombatDistance;
     private int directWaterLootSteeringTick = Integer.MIN_VALUE;
     private boolean pursuingWaterLoot;
+    private boolean activelyCollectingLoot;
+    private boolean combatFiringShore;
+    private UUID combatFiringShoreTarget;
+    private int combatFiringShoreUntilTick;
     private boolean waterKnockbackModifierApplied;
     private int surfaceCheckTick = Integer.MIN_VALUE;
     private double surfaceCheckX;
@@ -744,10 +748,18 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public void stopSeekingShore() {
+        boolean wasSeekingShore = this.seekingShore;
         this.shoreTransitionPendingTick = Integer.MIN_VALUE;
         this.seekingShore = false;
         this.shoreFallbackTarget = null;
-        this.navigation.stop();
+        this.combatFiringShore = false;
+        this.combatFiringShoreTarget = null;
+        // The pickup goal may already have released shore seeking and started
+        // its own route before the old shore goal receives stop(). A second
+        // stop must not erase that newly owned navigation path.
+        if (wasSeekingShore) {
+            this.navigation.stop();
+        }
     }
 
     public void requestShoreTransition() {
@@ -760,6 +772,37 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     public boolean isSeekingShore() {
         return this.seekingShore;
+    }
+
+    public boolean isCombatFiringShore() {
+        return this.combatFiringShore && this.seekingShore;
+    }
+
+    /** Last-resort ranged movement when no reachable water firing lane was found. */
+    public void beginCombatFiringShore(LivingEntity target, double speed) {
+        if (!this.isInWater() || this.isFleeing || this.combatFiringShore
+                || target == null || !target.isAlive()) return;
+        Path path = this.findNearestShorePath(null);
+        if (path != null) {
+            this.startSeekingShore(path, speed);
+        } else {
+            this.startSeekingShoreWithoutPath();
+        }
+        this.combatFiringShore = true;
+        this.combatFiringShoreTarget = target.getUUID();
+        this.combatFiringShoreUntilTick = this.tickCount + 100;
+    }
+
+    public void updateCombatFiringShore(LivingEntity target, double speed) {
+        if (!this.combatFiringShore) return;
+        if (!this.isInWater() || this.isFleeing || target == null || !target.isAlive()
+                || !target.getUUID().equals(this.combatFiringShoreTarget)
+                || this.getSensing().hasLineOfSight(target)
+                || this.tickCount >= this.combatFiringShoreUntilTick) {
+            this.stopSeekingShore();
+        } else if (this.navigation.isDone()) {
+            this.continueSeekingShoreWithoutPath(speed);
+        }
     }
 
     /** Fall back to direct water steering when a live path makes no progress toward combat range. */
@@ -796,6 +839,18 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             this.stopSeekingShore();
         }
         this.pursuingWaterLoot = pursuingWaterLoot;
+    }
+
+    public boolean isPursuingWaterLoot() {
+        return this.pursuingWaterLoot;
+    }
+
+    public void setActivelyCollectingLoot(boolean collecting) {
+        this.activelyCollectingLoot = collecting;
+    }
+
+    public boolean isActivelyCollectingLoot() {
+        return this.activelyCollectingLoot;
     }
 
     public void approachWaterLoot(net.minecraft.world.entity.item.ItemEntity item, double speed) {
@@ -1590,7 +1645,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             return false;
         }
         LivingEntity combatTarget = this.getTarget();
-        if (this.seekingShore && combatTarget != null && combatTarget.isAlive()) {
+        if (this.seekingShore && combatTarget != null && combatTarget.isAlive()
+                && (!this.combatFiringShore || this.isFleeing)) {
             // The idle shore goal has yielded to combat. Release its route
             // immediately, even before GoalSelector runs its next stop pass.
             this.stopSeekingShore();

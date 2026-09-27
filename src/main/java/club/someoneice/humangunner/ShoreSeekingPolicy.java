@@ -28,10 +28,11 @@ public final class ShoreSeekingPolicy {
     }
 
     public static boolean shouldAttemptShore(boolean serverSide, boolean effectiveAi,
-            boolean inWater, boolean inLava, boolean hasCombatTarget, boolean fleeing) {
+            boolean inWater, boolean inLava, boolean hasCombatTarget,
+            boolean fleeing, boolean pursuingWaterLoot) {
         // Shore assistance is an idle fallback, never a competing combat goal.
         return serverSide && effectiveAi && inWater && !inLava
-                && !hasCombatTarget && !fleeing;
+                && !hasCombatTarget && !fleeing && !pursuingWaterLoot;
     }
 
     public static boolean shouldSearchForShorePath(int currentTick, int nextSearchTick) {
@@ -87,9 +88,9 @@ public final class ShoreSeekingPolicy {
     }
 
     public static boolean shouldContinueSeekingShore(boolean inWater, boolean inLava,
-            boolean hasCombatTarget, boolean fleeing) {
+            boolean hasCombatTarget, boolean fleeing, boolean pursuingWaterLoot) {
         // Yield immediately if combat or retreat takes ownership of movement.
-        return inWater && !inLava && !hasCombatTarget && !fleeing;
+        return inWater && !inLava && !hasCombatTarget && !fleeing && !pursuingWaterLoot;
     }
 
     public static float waterPathMalus(boolean inWater, boolean seekingShore,

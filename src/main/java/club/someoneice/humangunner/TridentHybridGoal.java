@@ -6,6 +6,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.item.TridentItem;
+import net.minecraft.world.level.pathfinder.Path;
 
 import java.util.EnumSet;
 
@@ -27,6 +28,7 @@ public final class TridentHybridGoal extends Goal {
     private int attackCooldown;
     private int pathCooldown;
     private int unseenTicks;
+    private int nextFiringPositionTick;
 
     public TridentHybridGoal(Human human) {
         this.human = human;
@@ -59,12 +61,16 @@ public final class TridentHybridGoal extends Goal {
         attackCooldown = 0;
         pathCooldown = 0;
         unseenTicks = 0;
+        nextFiringPositionTick = human.tickCount;
         clearStuckUseState();
         human.setAggressive(true);
     }
 
     @Override
     public void stop() {
+        if (human.isCombatFiringShore()) {
+            human.stopSeekingShore();
+        }
         human.getNavigation().stop();
         clearStuckUseState();
         human.setAggressive(false);
@@ -80,7 +86,7 @@ public final class TridentHybridGoal extends Goal {
 
     @Override
     public EnumSet<Flag> getFlags() {
-        return isShoreSeeking()
+        return isShoreSeeking() && !human.isCombatFiringShore()
                 ? EnumSet.of(Flag.LOOK)
                 : EnumSet.of(Flag.MOVE, Flag.LOOK);
     }
@@ -91,6 +97,7 @@ public final class TridentHybridGoal extends Goal {
         if (!isValidTarget(target)) {
             return;
         }
+        human.updateCombatFiringShore(target, 1.0D);
 
         clearStuckUseState();
         if (attackCooldown > 0) {
@@ -162,6 +169,20 @@ public final class TridentHybridGoal extends Goal {
         }
         boolean waterApproach = human.shouldUseWaterMovement()
                 && distanceSqr > 22.0D * 22.0D;
+        if (!visible && human.isInWater() && distanceSqr <= MAX_THROW_DISTANCE_SQR) {
+            if ((human.getNavigation().isDone() || human.getNavigation().isStuck())
+                    && human.tickCount >= nextFiringPositionTick) {
+                Path firingPath = RangedFiringPosition.findVisiblePath(
+                        human, target, 4.0D, 36.0D, 10, 12);
+                if (firingPath != null) {
+                    human.getNavigation().moveTo(firingPath, 1.0D);
+                } else {
+                    human.beginCombatFiringShore(target, 1.0D);
+                }
+                nextFiringPositionTick = human.tickCount + (firingPath == null ? 40 : 10);
+            }
+            return;
+        }
         if (!visible || distanceSqr > MAX_THROW_DISTANCE_SQR || waterApproach) {
             if (pathCooldown <= 0) {
                 human.getNavigation().moveTo(target, 1.0D);
