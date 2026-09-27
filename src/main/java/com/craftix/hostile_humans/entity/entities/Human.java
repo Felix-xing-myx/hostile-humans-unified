@@ -168,12 +168,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         Human human = this;
         GoalSelector goals = this.goalSelector;
         humanGunner$gunnerGoal = club.someoneice.humangunner.GunSupport.get().goal(human);
-        // The Human bow goal advances its use timer faster than real time and
-        // consumes this cooldown in two places per tick. Raising the interval
-        // to 17 keeps that compatibility behavior while lowering the resulting
-        // shot cadence by about 30% overall (not merely increasing the counter
-        // by 30%).
-        humanGunner$enhancedBowGoal = new BowAttack<>(human, 1.0D, 17, 36.0F);
+        // The bow goal advances draw time and consumes its idle cooldown in
+        // two places per tick. 32 yields roughly 70% of the previous full
+        // draw-and-wait shot cadence (which used an interval of 17).
+        humanGunner$enhancedBowGoal = new BowAttack<>(human, 1.0D, 32, 36.0F);
         humanGunner$enhancedCrossbowGoal = new CrossbowGoal<>(human, 1.0D, 48.0F);
         humanGunner$tridentHybridGoal = new TridentHybridGoal(human);
         humanGunner$rangedHybridMeleeGoal = new RangedHybridMeleeGoal(human);

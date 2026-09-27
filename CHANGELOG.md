@@ -1,5 +1,21 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.3.7 — 2026-09-27
+
+### 简体中文
+
+- 弓、弩和三叉戟的完整射击周期再次延长，使持续射速约为 3.3.6 的 70%；三叉戟近战攻击冷却不变。
+- 各阶弓的默认散布改为 1.5°、1.2°、0.9°、0.6°；弩改为 1.2°、0.9°、0.6°、0.3°，阶差仍为 0.3°。三叉戟散布不变。
+- 弓与弩的箭矢伤害倍率再提高 20%；三叉戟伤害维持不变。
+- 已存在的实例配置不会仅因更新 JAR 而自动覆盖，测试实例中的旧默认散布需同步更新；实战射速和命中效果仍需游戏内验收。
+
+### English
+
+- Lengthens the full bow, crossbow, and trident firing cycles again, targeting about 70% of version 3.3.6's sustained fire rate. Trident melee cooldown is unchanged.
+- Default bow spread is now 1.5°, 1.2°, 0.9°, and 0.6° by tier; crossbow spread is 1.2°, 0.9°, 0.6°, and 0.3°. The 0.3° tier step remains, and trident spread is unchanged.
+- Raises bow and crossbow projectile damage by another 20%; trident damage is unchanged.
+- Existing instance configurations are not automatically overwritten by a JAR update; old default spread values in the test instance must also be updated. In-game firing rate and accuracy still need validation.
+
 ## 3.3.6 — 2026-09-27
 
 ### 简体中文

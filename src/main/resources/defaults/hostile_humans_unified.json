@@ -49,8 +49,8 @@
         "projectiles": {
           "_说明_中文": "弹射武器散布。bow=弓，crossbow=弩，trident=三叉戟；三类可分别设置。",
           "_description_en": "Projectile spread: bow, crossbow and trident are configured independently.",
-          "bow": 2.4,
-          "crossbow": 1.9,
+          "bow": 1.5,
+          "crossbow": 1.2,
           "trident": 2.4
         }
       },
@@ -110,8 +110,8 @@
         "projectiles": {
           "_说明_中文": "弹射武器散布。bow=弓，crossbow=弩，trident=三叉戟；三类可分别设置。",
           "_description_en": "Projectile spread: bow, crossbow and trident are configured independently.",
-          "bow": 2.1,
-          "crossbow": 1.6,
+          "bow": 1.2,
+          "crossbow": 0.9,
           "trident": 2.1
         }
       },
@@ -171,8 +171,8 @@
         "projectiles": {
           "_说明_中文": "弹射武器散布。bow=弓，crossbow=弩，trident=三叉戟；三类可分别设置。",
           "_description_en": "Projectile spread: bow, crossbow and trident are configured independently.",
-          "bow": 1.8,
-          "crossbow": 1.3,
+          "bow": 0.9,
+          "crossbow": 0.6,
           "trident": 1.8
         }
       },
@@ -232,8 +232,8 @@
         "projectiles": {
           "_说明_中文": "弹射武器散布。bow=弓，crossbow=弩，trident=三叉戟；三类可分别设置。",
           "_description_en": "Projectile spread: bow, crossbow and trident are configured independently.",
-          "bow": 1.5,
-          "crossbow": 1.0,
+          "bow": 0.6,
+          "crossbow": 0.3,
           "trident": 1.5
         }
       },
@@ -254,7 +254,7 @@
     "_说明_中文": "全局伤害倍率，用于调整各类人类攻击、弹道速度伤害、跳跃攻击，以及人类近战对已驯服女仆造成的伤害。tamed_maid_melee_damage_multiplier 只削减人类对女仆的近战伤害，不控制女仆对人类的伤害。",
     "_description_en": "Global damage multipliers for human attacks, projectile-speed scaling, jump attacks, and human melee damage dealt to tamed maids. tamed_maid_melee_damage_multiplier reduces human melee damage to maids; it does not control maid damage to humans.",
     "human_melee_damage_multiplier": 1.7,
-    "human_bow_damage_multiplier": 1.008,
+    "human_bow_damage_multiplier": 1.2096,
     "human_trident_damage_multiplier": 0.84,
     "bow_velocity_damage_multiplier": 1.5,
     "trident_velocity_damage_multiplier": 1.5,

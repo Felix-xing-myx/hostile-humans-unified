@@ -48,19 +48,19 @@ public final class UnifiedConfigTest {
         for (String tier : List.of("roamer", "tier1", "tier2", "tier3")) {
             double bow = config.tier(tier).projectileSpreadDegrees("bow");
             double crossbow = config.tier(tier).projectileSpreadDegrees("crossbow");
-            check(Math.abs(bow - crossbow - 0.5D) < 1.0E-9D,
-                    "the default crossbow is half a degree more accurate than bow and trident");
+            check(Math.abs(bow - crossbow - 0.3D) < 1.0E-9D,
+                    "the default crossbow is 0.3 degrees more accurate than bow");
             if (previousBow != Double.POSITIVE_INFINITY) {
                 check(Math.abs(previousBow - bow - 0.3D) < 1.0E-9D
                                 && Math.abs(previousCrossbow - crossbow - 0.3D) < 1.0E-9D,
-                        "bow, crossbow and trident improve by 0.3 degrees per tier");
+                        "bow and crossbow improve by 0.3 degrees per tier");
             }
             previousBow = bow;
             previousCrossbow = crossbow;
         }
-        check(Math.abs(previousBow - 1.5D) < 1.0E-9D
-                        && Math.abs(previousCrossbow - 1.0D) < 1.0E-9D,
-                "top-tier bow and trident reach 1.5 degrees, crossbow reaches 1 degree");
+        check(Math.abs(previousBow - 0.6D) < 1.0E-9D
+                        && Math.abs(previousCrossbow - 0.3D) < 1.0E-9D,
+                "top-tier bow reaches 0.6 degrees and crossbow reaches 0.3 degrees");
         check(config.tier("tier3").projectileSpreadDegrees("trident") == 1.5D,
                 "trident has its own spread setting with the existing default");
         check(config.spawn().admissionChance() == .08, "legacy spawn chance");
@@ -69,10 +69,10 @@ public final class UnifiedConfigTest {
                 && config.recruitmentLimit(2) == 6 && config.recruitmentLimit(3) == 3,
                 "legacy recruitment limits retained as defaults");
         check(!config.allowHiredPvpDamage(), "hired PvP damage defaults off");
-        check(Math.abs(config.damage("human_bow_damage_multiplier", 0) / 1.44D - 0.7D) < 1.0E-9D
+        check(Math.abs(config.damage("human_bow_damage_multiplier", 0) / 1.44D - 0.84D) < 1.0E-9D
                         && Math.abs(config.damage("human_trident_damage_multiplier", 0) / 1.2D - 0.7D) < 1.0E-9D
                         && Math.abs(config.damage("trident_stab_damage_multiplier", 0) / 0.6D - 0.7D) < 1.0E-9D,
-                "human arrows, thrown tridents and trident stabs each lose thirty percent damage");
+                "human arrows gain twenty percent from the prior default while trident damage stays unchanged");
         check(HumanGunnerConfig.parse(config.gunConfig()).humanGunDamageMultiplier() == 0.5D,
                 "human firearm damage is half the TaCZ base before tier-specific scaling");
 

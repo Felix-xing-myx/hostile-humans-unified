@@ -471,7 +471,7 @@ public final class HumanGunner {
                         * UnifiedConfig.get().damage("trident_velocity_damage_multiplier", 1.5)));
             } else if (directEntity instanceof AbstractArrow) {
                 event.setAmount(event.getAmount()
-                        * (float) (UnifiedConfig.get().damage("human_bow_damage_multiplier", 1.008)
+                        * (float) (UnifiedConfig.get().damage("human_bow_damage_multiplier", 1.2096)
                         * TierAttributes.of(humanAttacker).bowDamage()
                         * UnifiedConfig.get().damage("bow_velocity_damage_multiplier", 1.5)));
             }

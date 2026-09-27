@@ -26,6 +26,7 @@ public final class TridentHybridGoal extends Goal {
     private LivingEntity target;
     private boolean meleeMode;
     private int attackCooldown;
+    private int nextThrowTick;
     private int pathCooldown;
     private int unseenTicks;
     private int nextFiringPositionTick;
@@ -199,6 +200,7 @@ public final class TridentHybridGoal extends Goal {
 
     private void throwTridentIfReady(double distanceSqr, boolean visible) {
         if (!visible || unseenTicks != 0 || attackCooldown > 0
+                || human.tickCount < nextThrowTick
                 || distanceSqr > MAX_THROW_DISTANCE_SQR) {
             return;
         }
@@ -207,6 +209,7 @@ public final class TridentHybridGoal extends Goal {
         );
         human.performRangedAttackTrident(target, distanceFactor);
         attackCooldown = 14;
+        nextThrowTick = human.tickCount + 20;
     }
 
     private double meleeReachSqr(LivingEntity victim) {

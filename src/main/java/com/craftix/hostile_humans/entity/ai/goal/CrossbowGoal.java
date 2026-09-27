@@ -28,7 +28,7 @@ import net.minecraft.world.phys.Vec3;
 public class CrossbowGoal<T extends HumanEntity & CrossbowAttackMob>
 extends Goal {
     public static final UniformInt PATHFINDING_DELAY_RANGE = TimeUtil.rangeOfSeconds((int)1, (int)2);
-    private static final int SHOT_DELAY_MIN = 32;
+    private static final int SHOT_DELAY_MIN = 72;
     private static final int SHOT_DELAY_VARIANCE = 32;
     private final T mob;
     private final double speedModifier;
@@ -349,11 +349,10 @@ extends Goal {
                     this.crossbowState = CrossbowState.CHARGED;
                     if (mob instanceof Human && club.someoneice.humangunner.SpartanRangedCompat.isHeavyCrossbow(itemstack))
                         club.someoneice.humangunner.SpartanRangedCompat.markChargedForNpc(itemstack);
-                    // Charging and the loaded-crossbow wait are both advanced
-                    // faster than real time below. Doubling this internal wait
-                    // makes the complete shot cycle about 1/0.7 as long, so the
-                    // actual firing rate falls by roughly 30% for light and
-                    // heavy crossbows alike.
+                    // Charging and the loaded-crossbow wait both advance faster
+                    // than real time. Increasing the internal wait by 40 from
+                    // the previous release lengthens the complete shot cycle
+                    // to roughly 1/0.7 for both light and heavy crossbows.
                     this.attackDelay = SHOT_DELAY_MIN
                             + this.mob.getRandom().nextInt(SHOT_DELAY_VARIANCE);
                     ((CrossbowAttackMob)this.mob).setChargingCrossbow(false);
