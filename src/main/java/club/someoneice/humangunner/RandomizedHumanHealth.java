@@ -1,7 +1,6 @@
 package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
-import com.craftix.hostile_humans.entity.entities.HumanTier;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
@@ -18,10 +17,9 @@ public final class RandomizedHumanHealth {
     }
 
     /**
-     * Repairs late attribute overwrites made after EntityJoinLevelEvent. C2ME's
-     * entity loading path and old saved Hostile Humans can restore their former
-     * 50/60-health base after the join callback, so the persistent roll alone
-     * is not proof that the live attribute was applied.
+     * Repairs a late restore of the original 50/60-health base, but does not
+     * overwrite a different base supplied by another mod. Health decisions
+     * read getMaxHealth(), so an external base change must remain effective.
      */
     public static void ensureApplied(Human human) {
         AttributeInstance maximumHealth = human.getAttribute(Attributes.MAX_HEALTH);
@@ -32,7 +30,9 @@ public final class RandomizedHumanHealth {
         HealthRange range = rangeFor(human);
         if (!human.getPersistentData().getBoolean(TIER_RANGE_SCHEMA)
                 || rolled < range.minimum() || rolled > range.maximum()
-                || Math.abs(maximumHealth.getBaseValue() - rolled) > 0.001D) {
+                || (Math.abs(maximumHealth.getBaseValue() - rolled) > 0.001D
+                && MaxHealthCompatibilityPolicy.shouldApplyRoll(
+                        maximumHealth.getBaseValue(), rolled, originalBase(human)))) {
             applyAndRepair(human);
         }
     }
@@ -44,6 +44,7 @@ public final class RandomizedHumanHealth {
         }
 
         int rolled = human.getPersistentData().getInt(ROLLED_HEALTH);
+        int previousRoll = rolled;
         HealthRange range = rangeFor(human);
         double previousMaximum = Math.max(1.0D, human.getMaxHealth());
         double currentRatio = Math.max(0.0D, Math.min(1.0D, human.getHealth() / previousMaximum));
@@ -54,7 +55,9 @@ public final class RandomizedHumanHealth {
             human.getPersistentData().putBoolean(TIER_RANGE_SCHEMA, true);
         }
 
-        if (Math.abs(maximumHealth.getBaseValue() - rolled) <= 0.001D) {
+        if (Math.abs(maximumHealth.getBaseValue() - rolled) <= 0.001D
+                || !MaxHealthCompatibilityPolicy.shouldApplyRoll(
+                        maximumHealth.getBaseValue(), previousRoll, originalBase(human))) {
             return;
         }
         maximumHealth.setBaseValue(rolled);
@@ -67,6 +70,10 @@ public final class RandomizedHumanHealth {
     private static HealthRange rangeFor(Human human) {
         var tier = TierAttributes.of(human);
         return new HealthRange(tier.healthMin(), tier.healthMax());
+    }
+
+    private static double originalBase(Human human) {
+        return TierThreeHuman.isTierThree(human) ? 50.0D : 60.0D;
     }
 
     private record HealthRange(int minimum, int maximum) {

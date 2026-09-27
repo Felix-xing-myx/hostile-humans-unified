@@ -4,6 +4,12 @@ public final class CombatPressurePolicyTest {
     private static int checks;
 
     public static void main(String[] args) {
+        check(MaxHealthCompatibilityPolicy.shouldApplyRoll(60.0D, 75, 60.0D)
+                        && MaxHealthCompatibilityPolicy.shouldApplyRoll(75.0D, 75, 60.0D)
+                        && !MaxHealthCompatibilityPolicy.shouldApplyRoll(500.0D, 75, 60.0D)
+                        && !MaxHealthCompatibilityPolicy.shouldApplyRoll(500.0D, 0, 60.0D)
+                        && MaxHealthCompatibilityPolicy.shouldApplyRoll(50.0D, 90, 50.0D),
+                "tier health repairs only its own roll or an original base, not another mod's maximum health");
         check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, false, false)
                         && !ShoreSeekingPolicy.shouldAttemptShore(false, true, true, false, false, false, false)
                         && !ShoreSeekingPolicy.shouldAttemptShore(true, false, true, false, false, false, false)

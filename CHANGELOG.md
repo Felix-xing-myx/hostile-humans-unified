@@ -1,5 +1,19 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.3.12 — 2026-09-27
+
+### 简体中文
+
+- 阶级随机血量只修复本模组生成的血量值或原始 50/60 血基础值，不再每刻覆盖其他模组设置的最大生命值基础值。
+- 逃跑、恢复、近期伤害压力和雇佣单位低血量警告继续依据实体当前的最大生命值计算比例；例如当前最大生命值为 500 时，30% 对应 150 血，而不是原始基础血量的 30%。
+- 加入外部设置 500 血不会被阶级随机血量覆盖的策略检查。仍需在安装相关血量修改模组的游戏环境中验收。
+
+### English
+
+- Tier health rolls now repair only this mod's rolled value or the original 50/60-health base, rather than overwriting another mod's maximum-health base every tick.
+- Retreat, recovery, recent-damage pressure, and hired-unit low-health warnings continue to use the entity's current maximum health. At a live maximum of 500, for example, 30% means 150 health rather than 30% of the original base.
+- Adds a policy check ensuring an external 500-health base is preserved. In-game validation with the relevant health-modifying mod is still needed.
+
 ## 3.3.11 — 2026-09-27
 
 ### 简体中文
