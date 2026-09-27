@@ -1,5 +1,29 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.3.0 — 2026-09-27
+
+### 简体中文
+
+- 人类在水中保持直立，不再为了追逐较低的目标下潜；依据真正的水面高度上浮，脚部接近水面后平稳停住。
+- 入水时临时提高击退抗性，离水后撤销；受到箭矢等攻击时不再被反复推离目标。
+- 战斗与逃跑继续由战斗 AI 主导，可以渡河、还击和选择干燥岸边作为战术位置；闲暇时主动寻岸，不强制战斗单位上岸。
+- 水陆交界不再因眼睛入水或站立碰撞结果反复切换导航并中断路径。
+- 上岸路径搜索增加每服务器 tick 的总配额，限制完整寻路的距离；远岸仍可作为方向引导。缩小大批人类同时入水时的即时岸边扫描。
+- 远程射界搜索先排除明显不合适的候选点；战术侧移先用分数上界过滤，再运行完整寻路，保持原有可达候选的选择规则。
+- 避免已死亡并从数据索引移除的人类在最后一次 tick 中反复产生误导性警告。
+- 已完成编译与策略检查；尚需用户在游戏内验证水面、渡河、上岸和大量单位交战时的实际表现。
+
+### English
+
+- Humans remain upright in water and no longer dive after lower underwater targets. Buoyancy now uses the actual top of the water column and settles when the feet approach the surface.
+- A temporary knockback-resistance modifier applies in water and is removed on land, preventing repeated arrow hits from pushing combatants back indefinitely.
+- Combat and retreat keep movement ownership: Humans can cross water, fight, and prefer a dry tactical position when available. Idle Humans seek shore without forcing combatants to do so.
+- Waterline navigation no longer repeatedly switches and cancels paths based on eye submersion or shoreline standing clearance.
+- Shore pathfinding has a per-server-tick budget and a bounded full-path distance; distant banks remain available for directional steering. Immediate scans are smaller when many Humans enter water together.
+- Ranged firing-position search rejects obviously unsuitable candidates before pathfinding. Tactical repositioning uses score upper bounds to avoid paths that cannot win, preserving the reachable-candidate selection rule.
+- Prevents misleading missing-index warnings from removed Humans during their final tick.
+- Compilation and policy checks are complete; in-game verification of surfacing, crossing, shore exits, and large battles remains with the player.
+
 ## 3.2.0 — 2026-09-26
 
 ### 简体中文

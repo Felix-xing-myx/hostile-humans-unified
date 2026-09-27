@@ -1,5 +1,8 @@
 package club.someoneice.humangunner;
 
+import java.util.Map;
+import java.util.WeakHashMap;
+
 /** Pure decisions shared by water-exit assistance and combat movement. */
 public final class ShoreSeekingPolicy {
     // Adaptive combat/retreat (priority -8 and below) wins; idle orders and
@@ -9,6 +12,9 @@ public final class ShoreSeekingPolicy {
     public static final int MAX_SHORE_BLOCK_PROBES_PER_SEARCH = 64;
     /** Two destinations per search; navigation may test ground and water for each. */
     public static final int MAX_SHORE_PATH_PROBES_PER_SEARCH = 2;
+    /** Pathfinding runs on the server thread; stagger Humans as well as probes. */
+    public static final int MAX_SHORE_PATH_DISTANCE = 40;
+    private static final Map<Object, Integer> LAST_SHORE_SEARCH_TICK = new WeakHashMap<>();
     private static final float SUBMERGED_WATER_PATH_MALUS = 8.0F;
     private static final float ACTIVE_SHORE_WATER_PATH_MALUS = 16.0F;
     private static final float COMBAT_WATER_PATH_MALUS = 0.0F;
@@ -28,6 +34,15 @@ public final class ShoreSeekingPolicy {
         return currentTick >= nextSearchTick;
     }
 
+    public static boolean reserveShorePathSearch(Object server, int serverTick) {
+        Integer lastTick = LAST_SHORE_SEARCH_TICK.get(server);
+        if (lastTick != null && lastTick == serverTick) {
+            return false;
+        }
+        LAST_SHORE_SEARCH_TICK.put(server, serverTick);
+        return true;
+    }
+
     /** The ranged goal yields movement to shore navigation but keeps aiming and attacking. */
     public static boolean isShoreTransitionActive(boolean seekingShore, boolean transitionPending) {
         return seekingShore || transitionPending;
@@ -44,17 +59,19 @@ public final class ShoreSeekingPolicy {
         return seekingShore && hasDryDestination && navigationDone;
     }
 
+    public static boolean shouldRiseTowardSurface(boolean eyesInWater,
+            double feetToRealSurface) {
+        return eyesInWater || feetToRealSurface > 0.35D;
+    }
+
+    public static boolean isNearRealSurfaceForShorePop(double feetToRealSurface) {
+        return feetToRealSurface >= -0.1D && feetToRealSurface <= 1.25D;
+    }
+
     public static boolean shouldContinueSeekingShore(boolean inWater, boolean inLava,
             boolean hasCombatTarget, boolean fleeing) {
         // Yield immediately if combat or retreat takes ownership of movement.
         return inWater && !inLava && !hasCombatTarget && !fleeing;
-    }
-
-    public static boolean shouldPursueLowerWaterTarget(boolean seekingShore,
-            boolean targetInWater, boolean targetIsLower, boolean fleeing, boolean catchingBreath) {
-        // A lower underwater target may influence swimming only when there is
-        // no stronger shore-exit, retreat, or breath-recovery objective.
-        return !seekingShore && targetInWater && targetIsLower && !fleeing && !catchingBreath;
     }
 
     public static float waterPathMalus(boolean inWater, boolean seekingShore,

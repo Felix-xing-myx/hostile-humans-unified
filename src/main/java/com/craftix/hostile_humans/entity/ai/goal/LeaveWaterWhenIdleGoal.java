@@ -49,8 +49,7 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
             return false;
         }
 
-        if (ShoreSeekingPolicy.shouldSearchForShorePath(
-                this.human.tickCount, this.nextPathAttemptTick)) {
+        if (this.maySearchForShorePath()) {
             this.shorePath = this.human.findNearestShorePath(null);
             this.nextPathAttemptTick = this.human.tickCount + (this.shorePath == null
                     ? FAILED_PATH_RETRY_TICKS
@@ -106,7 +105,7 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
         if (this.shorePath == null || this.human.getNavigation().isDone()) {
             this.human.continueSeekingShoreWithoutPath(MOVE_SPEED);
         }
-        if (pathNeedsRefresh && this.human.tickCount >= this.nextPathAttemptTick) {
+        if (pathNeedsRefresh && this.maySearchForShorePath()) {
             Path nextPath = this.human.findNearestShorePath(
                     this.stuckTicks >= STUCK_REPATH_TICKS ? this.lastDestination : null);
             if (nextPath == null) {
@@ -149,6 +148,13 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
     private boolean hasLivingCombatTarget() {
         LivingEntity target = this.human.getTarget();
         return target != null && target.isAlive();
+    }
+
+    private boolean maySearchForShorePath() {
+        return ShoreSeekingPolicy.shouldSearchForShorePath(
+                this.human.tickCount, this.nextPathAttemptTick)
+                && ShoreSeekingPolicy.reserveShorePathSearch(
+                this.human.getServer(), this.human.getServer().getTickCount());
     }
 
 }

@@ -3,6 +3,7 @@ package club.someoneice.humangunner;
 import com.craftix.hostile_humans.HumanUtil;
 import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
@@ -1457,6 +1458,10 @@ public final class AdaptiveCombatGoal extends Goal {
                     + (sightBroken ? 24.0D : 0.0D)
                     - path.getNodeCount() * 0.65D
                     - Math.abs(reachableEnd.y - human.getY()) * 2.0D;
+            if (human.isInWater()
+                    && !human.level().getFluidState(path.getTarget()).is(FluidTags.WATER)) {
+                score += 24.0D;
+            }
             if (best == null || score > best.score()) {
                 best = new PlannedPath(path, reachableEnd, score);
             }
@@ -1526,18 +1531,34 @@ public final class AdaptiveCombatGoal extends Goal {
             if (candidate == null) {
                 continue;
             }
-            Path path = navigation.createPath(BlockPos.containing(candidate), 0);
-            if (path == null) {
+            double candidateThreatDistance = threat.distanceToSqr(candidate);
+            double baseScore = candidateThreatDistance * 0.015D
+                    - Math.abs(candidate.y - human.getY()) * 2.0D;
+            // A clear lane adds at most 45 points, plus at most 24 for a dry
+            // landing while wet. Ally spacing can only reduce the score.
+            if (best != null && baseScore + 45.0D
+                    + (human.isInWater() ? 24.0D : 0.0D) <= best.score()) {
                 continue;
             }
-            double candidateThreatDistance = threat.distanceToSqr(candidate);
             boolean firingLane = hasClearRay(candidate.add(0.0D, human.getEyeHeight(), 0.0D), threat.getEyePosition());
-            double score = candidateThreatDistance * 0.015D;
-            score += firingLane ? 45.0D : 0.0D;
-            score -= Math.abs(candidate.y - human.getY()) * 2.0D;
+            double score = baseScore + (firingLane ? 45.0D : 0.0D);
             score -= countAlliesNear(candidate, config.allySpacingRadius()) * 18.0D;
-            if (best == null || score > best.score()) {
-                best = new PlannedPath(path, candidate, score);
+            BlockPos destination = BlockPos.containing(candidate);
+            if (best != null && score + (human.isInWater() ? 24.0D : 0.0D)
+                    <= best.score()) {
+                continue;
+            }
+            Path path = navigation.createPath(destination, 0);
+            if (path != null) {
+                // A dry bank is a preference during combat, never a
+                // compulsory shore goal that overrides pursuit or retreat.
+                if (human.isInWater()
+                        && !human.level().getFluidState(path.getTarget()).is(FluidTags.WATER)) {
+                    score += 24.0D;
+                }
+                if (best == null || score > best.score()) {
+                    best = new PlannedPath(path, candidate, score);
+                }
             }
         }
         return best;

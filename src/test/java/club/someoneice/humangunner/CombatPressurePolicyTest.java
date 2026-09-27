@@ -17,19 +17,28 @@ public final class CombatPressurePolicyTest {
                         && ShoreSeekingPolicy.shouldSearchForShorePath(10, 10),
                 "path-search staggering limits work without interrupting the combat movement owner");
         check(ShoreSeekingPolicy.MAX_SHORE_BLOCK_PROBES_PER_SEARCH == 64
-                        && ShoreSeekingPolicy.MAX_SHORE_PATH_PROBES_PER_SEARCH == 2,
+                        && ShoreSeekingPolicy.MAX_SHORE_PATH_PROBES_PER_SEARCH == 2
+                        && ShoreSeekingPolicy.MAX_SHORE_PATH_DISTANCE <= 40,
                 "shore searches have strict per-search world-scan and A-star budgets");
+        Object server = new Object();
+        check(ShoreSeekingPolicy.reserveShorePathSearch(server, 11)
+                        && !ShoreSeekingPolicy.reserveShorePathSearch(server, 11)
+                        && ShoreSeekingPolicy.reserveShorePathSearch(server, 12),
+                "shore searches have a global per-server-tick budget");
+        check(ShoreSeekingPolicy.shouldRiseTowardSurface(true, 0.2D)
+                        && ShoreSeekingPolicy.shouldRiseTowardSurface(false, 1.2D)
+                        && !ShoreSeekingPolicy.shouldRiseTowardSurface(false, 0.2D)
+                        && !ShoreSeekingPolicy.shouldRiseTowardSurface(false, -0.2D)
+                        && ShoreSeekingPolicy.isNearRealSurfaceForShorePop(0.5D)
+                        && !ShoreSeekingPolicy.isNearRealSurfaceForShorePop(1.5D)
+                        && !ShoreSeekingPolicy.isNearRealSurfaceForShorePop(-0.5D),
+                "surface ascent and shore pop use the real waterline relative to the feet");
         check(ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, false, false)
                         && !ShoreSeekingPolicy.shouldContinueSeekingShore(false, false, false, false)
                         && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, true, false, false)
                         && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, true, false)
                         && !ShoreSeekingPolicy.shouldContinueSeekingShore(true, false, false, true),
                 "shore assistance yields as soon as combat or retreat begins");
-        check(ShoreSeekingPolicy.shouldPursueLowerWaterTarget(false, true, true, false, false)
-                        && !ShoreSeekingPolicy.shouldPursueLowerWaterTarget(true, true, true, false, false)
-                        && !ShoreSeekingPolicy.shouldPursueLowerWaterTarget(false, true, true, true, false)
-                        && !ShoreSeekingPolicy.shouldPursueLowerWaterTarget(false, true, true, false, true),
-                "shore seeking and survival priorities prevent combat from pulling Humans deeper after a submerged target");
         check(ShoreSeekingPolicy.GOAL_PRIORITY > -8
                         && ShoreSeekingPolicy.GOAL_PRIORITY < -6
                         && ShoreSeekingPolicy.GOAL_PRIORITY < 8,

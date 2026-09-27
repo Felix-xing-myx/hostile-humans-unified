@@ -2,6 +2,7 @@ package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.level.ClipContext;
@@ -39,6 +40,15 @@ public final class RangedFiringPosition {
             if (candidate == null) {
                 continue;
             }
+            // Reject obviously out-of-band positions before synchronous A*.
+            // A reachable path can end slightly off the sampled block, hence
+            // the two-block tolerance around the requested firing band.
+            double sampledRange = Math.sqrt(target.distanceToSqr(candidate));
+            if (sampledRange < Math.max(0.0D, minimumRange - 2.0D)
+                    || sampledRange > maximumRange + 2.0D
+                    || candidate.distanceToSqr(human.position()) < 1.0D) {
+                continue;
+            }
             Path path = human.getNavigation().createPath(BlockPos.containing(candidate), 0);
             if (path == null || !path.canReach() || path.getNodeCount() < 2) {
                 continue;
@@ -63,6 +73,12 @@ public final class RangedFiringPosition {
                     + travelDistance * 0.35D
                     + path.getNodeCount() * 0.55D
                     + verticalChange * 2.0D;
+            if (human.isInWater()
+                    && !human.level().getFluidState(path.getTarget()).is(FluidTags.WATER)) {
+                // A clear dry firing lane is preferable, but never mandatory:
+                // an archer can still shoot while crossing a river.
+                score -= 12.0D;
+            }
             if (score < bestScore) {
                 bestScore = score;
                 bestPath = path;
@@ -116,6 +132,9 @@ public final class RangedFiringPosition {
                     .add(outward.scale(radialDistance))
                     .add(lateral.scale(lateralDistance));
             BlockPos candidateBlock = BlockPos.containing(candidate.x, human.getY(), candidate.z);
+            if (candidateBlock.distSqr(human.blockPosition()) < 16.0D) {
+                continue;
+            }
             Path path = human.getNavigation().createPath(candidateBlock, 0);
             if (path == null || !path.canReach() || path.getNodeCount() < 2) {
                 continue;
