@@ -1,4 +1,4 @@
-# Hostile Humans Unified 3.3.0
+# Hostile Humans Unified 3.3.1
 
 [简体中文](README.md) | [English](README.en.md)
 

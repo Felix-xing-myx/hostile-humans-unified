@@ -341,6 +341,13 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private double surfaceCheckZ;
     private boolean cachedNearWaterSurface;
     private double cachedDistanceToWaterSurface;
+    private int dryLandingCheckTick = Integer.MIN_VALUE;
+    private double dryLandingCheckX;
+    private double dryLandingCheckY;
+    private double dryLandingCheckZ;
+    private double dryLandingDirectionX;
+    private double dryLandingDirectionZ;
+    private boolean cachedDryLandingAhead;
     protected final WaterBoundPathNavigation waterNavigation;
     protected final GroundPathNavigation groundNavigation;
 
@@ -1547,6 +1554,22 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         directionX /= directionLength;
         directionZ /= directionLength;
 
+        if (this.dryLandingCheckTick == this.tickCount
+                && this.dryLandingCheckX == this.getX()
+                && this.dryLandingCheckY == this.getY()
+                && this.dryLandingCheckZ == this.getZ()
+                && this.dryLandingDirectionX == directionX
+                && this.dryLandingDirectionZ == directionZ) {
+            return this.cachedDryLandingAhead;
+        }
+        this.dryLandingCheckTick = this.tickCount;
+        this.dryLandingCheckX = this.getX();
+        this.dryLandingCheckY = this.getY();
+        this.dryLandingCheckZ = this.getZ();
+        this.dryLandingDirectionX = directionX;
+        this.dryLandingDirectionZ = directionZ;
+        this.cachedDryLandingAhead = false;
+
         int minY = Mth.floor(this.getY() + 0.1D);
         int maxY = Mth.floor(this.getY() + 2.05D);
         for (int forwardIndex = 0; forwardIndex < 3; forwardIndex++) {
@@ -1557,6 +1580,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 int z = Mth.floor(this.getZ() + directionZ * forward + directionX * side);
                 for (int y = minY; y <= maxY; y++) {
                     if (this.isDryStandingPosition(new BlockPos(x, y, z))) {
+                        this.cachedDryLandingAhead = true;
                         return true;
                     }
                 }

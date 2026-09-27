@@ -1,5 +1,19 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.3.1 — 2026-09-27
+
+### 简体中文
+
+- 贴岸移动时，同一 tick、同一位置及方向的干燥落脚点检测只运行一次；位置或方向改变后立即重新检测，减少反复读取方块与流体状态。
+- Java 17 下完整 `clean build --offline` 与项目 `check` 通过；未启动游戏进行实测。
+- 这是 3.3.0 发布后的性能审查修正；尚未取得游戏内主线程采样，不能据此认定所有生物卡顿已完全消除。
+
+### English
+
+- Reuses the dry-landing probe result for the same Human, tick, position, and movement direction; any position or direction change triggers an immediate fresh probe, reducing repeated block and fluid reads near shore.
+- The full Java 17 `clean build --offline` and project `check` passed; Minecraft was not launched for live testing.
+- This is a post-3.3.0 performance-audit fix. An in-game main-thread profile is still needed before claiming that all-entity stutter is fully resolved.
+
 ## 3.3.0 — 2026-09-27
 
 ### 简体中文
