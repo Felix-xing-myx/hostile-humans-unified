@@ -1,5 +1,6 @@
 package club.someoneice.humangunner;
 
+import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -43,6 +44,10 @@ public final class TargetPreservingConditionalGoal extends Goal {
 
     @Override
     public void start() {
+        if (owner instanceof Human human) {
+            RangedStrafeSpeed.clear(human);
+            human.clearRangedStrafeMotion();
+        }
         delegate.start();
     }
 

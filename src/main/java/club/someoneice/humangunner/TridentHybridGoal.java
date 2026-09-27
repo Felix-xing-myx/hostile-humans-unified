@@ -157,6 +157,9 @@ public final class TridentHybridGoal extends Goal {
     }
 
     private void tickRanged(double distanceSqr, boolean visible, boolean shoreSeeking) {
+        if (visible && distanceSqr <= MAX_THROW_DISTANCE_SQR) {
+            human.markRangedFacing(target);
+        }
         if (shoreSeeking) {
             throwTridentIfReady(distanceSqr, visible);
             return;

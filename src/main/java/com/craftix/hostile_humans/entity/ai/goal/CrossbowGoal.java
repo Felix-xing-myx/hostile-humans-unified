@@ -104,7 +104,11 @@ extends Goal {
                     this.mob.position().x(), this.mob.position().y(), this.mob.position().z(), 0.0D
             );
         }
-        this.mob.getMoveControl().strafe(0.0F, 0.0F);
+        if (this.mob instanceof Human human) {
+            human.clearRangedStrafeMotion();
+        } else {
+            this.mob.getMoveControl().strafe(0.0F, 0.0F);
+        }
         this.mob.setZza(0.0F);
         this.mob.setXxa(0.0F);
     }
@@ -324,6 +328,10 @@ extends Goal {
     }
 
     private void tickShot(LivingEntity livingentity, boolean visible, boolean canEngage) {
+            if (visible && (canEngage || this.crossbowState == CrossbowState.READY_TO_ATTACK)
+                    && this.mob instanceof Human human) {
+                human.markRangedFacing(livingentity);
+            }
             if (this.crossbowState == CrossbowState.UNCHARGED) {
                 if (canEngage) {
                     this.mob.startUsingItem(ProjectileUtil.getWeaponHoldingHand(this.mob, item -> item instanceof CrossbowItem));

@@ -36,6 +36,11 @@ public final class RangedHybridMeleeGoal extends Goal {
     public void start() {
         attackCooldown = 0;
         pathCooldown = 0;
+        // A bow/crossbow orbit can have issued movement later in the same
+        // tick. Hand the controller and speed back to melee before moving.
+        RangedStrafeSpeed.clear(human);
+        human.clearRangedStrafeMotion();
+        human.getNavigation().stop();
         human.setAggressive(true);
     }
 
@@ -76,14 +81,11 @@ public final class RangedHybridMeleeGoal extends Goal {
                     && human.getNavigation().moveTo(away.x, away.y, away.z, 1.0D)) {
                 // Continue along a route which actually grows the gap.
             } else {
+                // A failed route is not a reason to keep the old ranged
+                // strafing movement active while the melee weapon is held.
                 human.getNavigation().stop();
-                human.getMoveControl().strafe(-0.8F, 0.0F);
             }
             pathCooldown = 3 + human.getRandom().nextInt(3);
-        } else if (human.getNavigation().isDone()) {
-            // A failed/short path must not strand the melee lease at 4-5
-            // blocks, below the six-block ranged-weapon return threshold.
-            human.getMoveControl().strafe(-0.8F, 0.0F);
         }
         if (human.distanceToSqr(target) <= meleeReachSqr(target) && attackCooldown <= 0) {
             human.swing(InteractionHand.MAIN_HAND);

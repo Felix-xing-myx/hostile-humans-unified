@@ -312,6 +312,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         operator.aim(true);
         if (mob instanceof Human human) {
             GunAttackMovementState.markAttackActive(human);
+            human.markRangedFacing(target);
         }
         if (distance <= RETREAT_RANGE) {
             // Close pressure must not turn the gun into a silent prop. TaCZ

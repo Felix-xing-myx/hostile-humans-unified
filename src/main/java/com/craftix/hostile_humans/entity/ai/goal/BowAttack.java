@@ -275,6 +275,9 @@ extends Goal {
     }
 
     private void tickShot(LivingEntity target, boolean visible) {
+        if (visible && this.mob instanceof Human human) {
+            human.markRangedFacing(target);
+        }
         if (this.mob.isUsingItem()) {
             int usedTicks;
             if (!visible && this.seeTime < -60) {
@@ -292,7 +295,11 @@ extends Goal {
     }
 
     private void clearStrafeInput() {
-        this.mob.getMoveControl().strafe(0.0F, 0.0F);
+        if (this.mob instanceof Human human) {
+            human.clearRangedStrafeMotion();
+        } else {
+            this.mob.getMoveControl().strafe(0.0F, 0.0F);
+        }
         this.mob.setZza(0.0F);
         this.mob.setXxa(0.0F);
     }

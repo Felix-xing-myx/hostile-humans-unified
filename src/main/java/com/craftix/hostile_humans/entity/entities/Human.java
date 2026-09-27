@@ -152,6 +152,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     private Goal humanGunner$gunnerGoal;
     private boolean humanGunner$movementShieldAllowance;
+    private int rangedFacingTick = Integer.MIN_VALUE;
+    private LivingEntity rangedFacingTarget;
+
+    /** The firing goal requests a final facing update after navigation has moved. */
+    public void markRangedFacing(LivingEntity target) {
+        this.rangedFacingTick = this.tickCount;
+        this.rangedFacingTarget = target;
+    }
 
     private BowAttack<Human> humanGunner$enhancedBowGoal;
 
@@ -908,6 +916,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
     }
 
+    /** Drop the lateral command from a ranged goal before melee takes over. */
+    public void clearRangedStrafeMotion() {
+        if (this.moveControl instanceof HumanMoveControl control) {
+            control.clearCombatStrafe();
+        }
+        this.setXxa(0.0F);
+    }
+
     public void applySpawnedWeaponEnchantments(RandomSource random, float enchantChance) {
         this.enchantSpawnedWeapon(random, enchantChance);
     }
@@ -1273,6 +1289,22 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
 
         super.tick();
+        if (!level().isClientSide && rangedFacingTick == tickCount
+                && rangedFacingTarget != null
+                && rangedFacingTarget == getTarget() && rangedFacingTarget.isAlive()) {
+            // MoveControl can turn the body toward its next path node after the
+            // firing goal aims. Restore target-facing yaw only for an active
+            // shot, without replacing the movement path or strafe input.
+            double dx = rangedFacingTarget.getX() - getX();
+            double dz = rangedFacingTarget.getZ() - getZ();
+            if (dx * dx + dz * dz > 1.0E-6D) {
+                float yaw = (float) (Mth.atan2(dz, dx) * (180.0D / Math.PI)) - 90.0F;
+                setYRot(yaw);
+                setYHeadRot(yaw);
+                yBodyRot = yaw;
+            }
+        }
+        rangedFacingTarget = null;
         if (!level().isClientSide && !isNoAi()) {
             recoverStalledNavigation();
         }
@@ -1927,6 +1959,17 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             this.combatStrafeRight = right;
         }
 
+        private void clearCombatStrafe() {
+            this.combatStrafeTick = Integer.MIN_VALUE;
+            this.combatStrafeForward = 0.0F;
+            this.combatStrafeRight = 0.0F;
+            this.strafeForwards = 0.0F;
+            this.strafeRight = 0.0F;
+            if (this.operation == MoveControl.Operation.STRAFE) {
+                this.operation = MoveControl.Operation.WAIT;
+            }
+        }
+
         public void tick() {
             if (this.shorePopCooldownTicks > 0) {
                 this.shorePopCooldownTicks--;
@@ -1949,6 +1992,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // Navigation runs after goals and can replace their STRAFE operation
             // with MOVE_TO. Keep the combat strafe requested this tick independent
             // of that operation, but never override a retreat or shore route.
+            if (HumanUtil.isMeleeWeapon(this.human.getMainHandItem())
+                    && this.combatStrafeRight != 0.0F) {
+                clearCombatStrafe();
+            }
             if (this.combatStrafeTick == this.human.tickCount
                     && (this.combatStrafeForward != 0.0F || this.combatStrafeRight != 0.0F)
                     && !this.human.isFleeing && !this.human.seekingShore) {
@@ -2048,6 +2095,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 } else if (!this.human.onGround()) {
                     this.human.setDeltaMovement(this.human.getDeltaMovement().add(0.0, -0.008, 0.0));
                 }
+                // MOVE_TO and WAIT do not clear the side input that the last
+                // ranged STRAFE wrote. Clear it before normal path movement.
+                this.human.setXxa(0.0F);
                 super.tick();
             }
         }

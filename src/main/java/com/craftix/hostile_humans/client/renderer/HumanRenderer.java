@@ -22,14 +22,13 @@ import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TridentItem;
+import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -42,7 +41,7 @@ import org.jetbrains.annotations.Nullable;
 public class HumanRenderer
 extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     public HumanRenderer(EntityRendererProvider.Context context) {
-        super(context, new PlayerModel<>(context.bakeLayer(ModelLayers.PLAYER), false), 0.5f);
+        super(context, new HumanPlayerModel(context.bakeLayer(ModelLayers.PLAYER)), 0.5f);
         this.addLayer((RenderLayer)new HumanoidArmorLayer((RenderLayerParent)this, new HumanoidModel(context.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)), new HumanoidModel(context.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)), context.getModelManager()));
         this.addLayer((RenderLayer)new ArrowLayer(context, (LivingEntityRenderer)this));
         this.addLayer((RenderLayer)new CustomHeadLayer((RenderLayerParent)this, context.getModelSet(), context.getItemInHandRenderer()));
@@ -73,6 +72,7 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     }
 
     protected void setupRotations(Human p_117802_, PoseStack p_117803_, float p_117804_, float p_117805_, float p_117806_) {
+        float stanceYaw = ((HumanPlayerModel)this.model).updateStance(p_117802_, p_117806_);
         float f = p_117802_.getSwimAmount(p_117806_);
         if (p_117802_.isFallFlying()) {
             super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_);
@@ -101,6 +101,9 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         } else {
             super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_);
         }
+        // Turn the model as one player-like unit: shoulders, torso, legs,
+        // armor and held items share the same smoothly interpolated yaw.
+        p_117803_.mulPose(Axis.YP.rotationDegrees(-stanceYaw));
     }
 
     @NotNull
@@ -109,54 +112,50 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     }
 
     public void render(Human human, float pEntityYaw, float pPartialTicks, @NotNull PoseStack pMatrixStack, @NotNull MultiBufferSource pBuffer, int pPackedLight) {
-        ItemStack stack2;
-        ((PlayerModel)this.model).leftArmPose = HumanoidModel.ArmPose.EMPTY;
-        ((PlayerModel)this.model).rightArmPose = HumanoidModel.ArmPose.EMPTY;
-        ItemStack stack = human.getMainHandItem();
-        if (!stack.isEmpty()) {
-            if (stack.getItem() instanceof CrossbowItem) {
-                if (human.isChargingCrossbow()) {
-                    this.setHandPose(human, HumanoidModel.ArmPose.CROSSBOW_CHARGE);
-                } else {
-                    this.setHandPose(human, HumanoidModel.ArmPose.CROSSBOW_HOLD);
-                }
-            } else if (stack.getItem() instanceof BowItem && human.isAggressive()) {
-                this.setHandPose(human, HumanoidModel.ArmPose.BOW_AND_ARROW);
-            } else if (stack.getItem() instanceof TridentItem && human.isUsingItem() && human.getUseItemRemainingTicks() > 10) {
-                this.setHandPose(human, HumanoidModel.ArmPose.THROW_SPEAR);
-            } else {
-                this.setHandPose(human, HumanoidModel.ArmPose.ITEM);
-            }
+        PlayerModel<Human> playerModel = this.model;
+        playerModel.crouching = human.isCrouching();
+        HumanoidModel.ArmPose mainPose = getArmPose(human, InteractionHand.MAIN_HAND);
+        HumanoidModel.ArmPose offPose = getArmPose(human, InteractionHand.OFF_HAND);
+        if (mainPose.isTwoHanded() && offPose != HumanoidModel.ArmPose.BLOCK) {
+            offPose = human.getOffhandItem().isEmpty()
+                    ? HumanoidModel.ArmPose.EMPTY : HumanoidModel.ArmPose.ITEM;
         }
-        if (!(stack2 = human.getOffhandItem()).isEmpty()) {
-            if (stack2.getItem().canPerformAction(human.getOffhandItem(), ToolActions.SHIELD_BLOCK)) {
-                if (human.isBlocking()) {
-                    this.setOffHandPose(human, HumanoidModel.ArmPose.BLOCK);
-                }
-            } else {
-                this.setOffHandPose(human, HumanoidModel.ArmPose.ITEM);
-            }
-        }
-        if (club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())) {
-            setHandPose(human, HumanoidModel.ArmPose.BOW_AND_ARROW);
+        if (human.getMainArm() == HumanoidArm.RIGHT) {
+            playerModel.rightArmPose = mainPose;
+            playerModel.leftArmPose = offPose;
+        } else {
+            playerModel.leftArmPose = mainPose;
+            playerModel.rightArmPose = offPose;
         }
         super.render(human, pEntityYaw, pPartialTicks, pMatrixStack, pBuffer, pPackedLight);
     }
 
-    private void setHandPose(Human entity, HumanoidModel.ArmPose pose) {
-        if (entity.getMainArm() == HumanoidArm.RIGHT) {
-            ((PlayerModel)this.model).rightArmPose = pose;
-        } else {
-            ((PlayerModel)this.model).leftArmPose = pose;
+    private static HumanoidModel.ArmPose getArmPose(Human human, InteractionHand hand) {
+        ItemStack stack = human.getItemInHand(hand);
+        if (stack.isEmpty()) return HumanoidModel.ArmPose.EMPTY;
+        if (human.isUsingItem() && human.getUsedItemHand() == hand
+                && human.getUseItemRemainingTicks() > 0) {
+            UseAnim use = stack.getUseAnimation();
+            if (use == UseAnim.BLOCK || stack.getItem().canPerformAction(stack, ToolActions.SHIELD_BLOCK)) {
+                return HumanoidModel.ArmPose.BLOCK;
+            }
+            if (use == UseAnim.BOW) return HumanoidModel.ArmPose.BOW_AND_ARROW;
+            if (use == UseAnim.CROSSBOW) return HumanoidModel.ArmPose.CROSSBOW_CHARGE;
+            if (use == UseAnim.SPEAR) return HumanoidModel.ArmPose.THROW_SPEAR;
+            if (use == UseAnim.SPYGLASS) return HumanoidModel.ArmPose.SPYGLASS;
+            if (use == UseAnim.TOOT_HORN) return HumanoidModel.ArmPose.TOOT_HORN;
+            if (use == UseAnim.BRUSH) return HumanoidModel.ArmPose.BRUSH;
         }
-    }
-
-    private void setOffHandPose(Human entity, HumanoidModel.ArmPose pose) {
-        if (entity.getMainArm() != HumanoidArm.RIGHT) {
-            ((PlayerModel)this.model).rightArmPose = pose;
-        } else {
-            ((PlayerModel)this.model).leftArmPose = pose;
+        if (hand == InteractionHand.MAIN_HAND
+                && club.someoneice.humangunner.GunSupport.get().isGun(stack)) {
+            // Vanilla has no firearm arm pose; retain the mod's two-handed aim.
+            return HumanoidModel.ArmPose.BOW_AND_ARROW;
         }
+        if (stack.getItem() instanceof CrossbowItem && CrossbowItem.isCharged(stack)
+                && !human.swinging) {
+            return HumanoidModel.ArmPose.CROSSBOW_HOLD;
+        }
+        return HumanoidModel.ArmPose.ITEM;
     }
 }
 

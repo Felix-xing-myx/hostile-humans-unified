@@ -27,6 +27,10 @@ public final class RangedStrafeSpeed {
         set(human, orbiting, CROSSBOW_BONUS);
     }
 
+    public static void clear(Human human) {
+        set(human, false, 0.0D);
+    }
+
     private static void set(Human human, boolean orbiting, double bonus) {
         AttributeInstance speed = human.getAttribute(Attributes.MOVEMENT_SPEED);
         if (speed == null) return;
