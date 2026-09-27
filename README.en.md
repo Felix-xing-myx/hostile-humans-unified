@@ -1,4 +1,4 @@
-# Hostile Humans Unified 3.3.5
+# Hostile Humans Unified 3.3.11
 
 [简体中文](README.md) | [English](README.en.md)
 
@@ -10,7 +10,7 @@ Designed for **Minecraft 1.20.1, Forge 47.4.16, and Java 17**. Install one unifi
 
 ## Overview
 
-The mod adds human units in four ranks: Roamers, Tier I, Tier II, and Tier III. Their relationship with players depends on rank, identity badges, and recruitment status. Wild humans may be hostile, neutral, or protective, while eligible humans can be hired as companions. Humans in water keep seeking reachable shore while idle, fighting, or retreating; ranged units can continue attacking when they have a clear shot, and pathfinding more strongly favors dry routes.
+The mod adds human units in four ranks: Roamers, Tier I, Tier II, and Tier III. Their relationship with players depends on rank, identity badges, and recruitment status. Wild humans may be hostile, neutral, or protective, while eligible humans can be hired as companions. Idle humans in water try to find reachable shore; combat and retreat retain their own movement priorities, including crossing water to pursue a target. Ranged units with no clear shot in water try to reposition and can seek a way ashore when needed.
 
 Identity badges work from any inventory slot. With Curios installed, they can also be placed in the dedicated badge slot. Higher-level badges affect more ranks, and the Ultimate Identity Badge makes all human ranks protect its holder.
 
@@ -82,6 +82,8 @@ Internal mixins have been moved into the maintained source tree. The project ret
 
 ## Key Changes
 
+- Switching from a ranged weapon to melee clears leftover strafe control; ranged attackers face their target again after movement updates.
+- The client-side ranged movement pose turns the player-like body, shoulders, legs, and equipment together, with smooth transitions and a 45° limit.
 - Removed startup network downloads of name lists. Existing local name files are read in a limited manner; the mod makes no outbound request for them and does not rewrite the cache.
 - Changed the ownership index to instance-scoped saved data. Owner changes remove stale entries, and deletion no longer scans every player.
 - Preserve the original NBT for damaged or unsupported individual records instead of discarding the entire data file when one record fails.
@@ -116,6 +118,8 @@ The `check` task runs `EncounterCooldownTest`, `RuntimePoliciesTest`, `UnifiedCo
 `tools/verify_package.py` requires Python 3.11+, the built package, both original mod JARs, the Forge SRG JAR, and a JDK 17 path. It performs read-only checks and does not launch the game. By default it resolves optional compatibility dependencies next to the original mod JARs; when those are archived elsewhere, pass the current mods directory with `--compat-mods`. These dependencies are not bundled. The audit also checks datapacks; its 24 intentional changes must match the before/after hashes in `tools/structure_compat_repairs.json`. `StructureCompatTest` reads real package metadata and NBT from the final JAR and injects missing/corrupt-package cases; the corresponding error logs are expected test output.
 
 The maintenance helper `sanitizeStructureWaystones` is read-only by default. Applying reviewed structure transformations requires the explicit `-PapplyStructureRepair` option and is not part of the routine build.
+
+The output file for version 3.3.11 is `build/libs/hostile-humans-unified-1.20.1-3.3.11.jar`.
 
 ## Installation, Rollback, and Acceptance
 

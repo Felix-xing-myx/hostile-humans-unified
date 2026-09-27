@@ -1,5 +1,21 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.3.11 — 2026-09-27
+
+### 简体中文
+
+- 修复弓、弩等远程单位切换近战武器后残留侧移指令的问题，避免近战时继续横向漂移。
+- 远程单位射击时在移动控制更新后重新面向目标，不改变原有寻路与侧移命令。
+- 调整远程走位的客户端动作表现：躯干、肩部、双腿和装备整体平滑偏转，最大偏转角度为 45°；切换近战武器后退出该姿态。
+- 构建与自动检查已通过；实际动画、命中表现及多人同步仍需游戏内验证。
+
+### English
+
+- Clears leftover ranged-strafe commands when bow, crossbow, and other ranged users switch to melee weapons, preventing lateral drift during melee combat.
+- Restores target-facing yaw after movement control updates during ranged attacks without replacing the active path or strafe command.
+- Smooths the client-side ranged movement pose: torso, shoulders, legs, and equipment turn together, with a maximum 45° offset. Switching to melee exits this pose.
+- The build and automated checks passed; animation, hit behavior, and multiplayer synchronization still need in-game validation.
+
 ## 3.3.7 — 2026-09-27
 
 ### 简体中文

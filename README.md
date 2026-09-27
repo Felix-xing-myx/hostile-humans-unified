@@ -1,4 +1,4 @@
-# Hostile Humans Unified 3.3.5
+# Hostile Humans Unified 3.3.11
 
 [简体中文](README.md) | [English](README.en.md)
 
@@ -10,7 +10,7 @@
 
 ## 模组简介
 
-模组加入流浪者、一阶、二阶和三阶人类单位，以及身份牌、雇佣合同、士兵指挥界面和信号装置。野生人类会依据阶级、玩家身份和双方关系采取敌对、中立或保护行动；玩家也可以招募符合条件的人类作为随从，并管理他们的装备、作战方式和行动区域。人类无论闲暇、战斗还是撤退，只要落入水中都会持续寻找可达岸边；远程单位寻岸时仍可在有射界时攻击，寻路也会更强烈地偏向干燥路线。
+模组加入流浪者、一阶、二阶和三阶人类单位，以及身份牌、雇佣合同、士兵指挥界面和信号装置。野生人类会依据阶级、玩家身份和双方关系采取敌对、中立或保护行动；玩家也可以招募符合条件的人类作为随从，并管理他们的装备、作战方式和行动区域。闲暇时，水中的人类会尝试寻找可达岸边；战斗和撤退仍以各自目标为主，可以涉水追击。远程单位在水中失去射界时会尝试重新选位，必要时寻找上岸位置。
 
 身份牌放在背包任意格即可生效；安装 Curios 后，也可以将身份牌放入专属饰品栏。雇佣人类可以设置跟随、区域驻守、原地驻守和巡逻，并在主动攻击、被动保护与完全中立模式间切换。玩家还可以打开其背包管理装备、设置主动拾取或解除雇佣。
 
@@ -77,6 +77,8 @@ MIT 许可证仅适用于原创核心模块 `src/main/java/dev/felix/hostilehuma
 
 ## 重点变化
 
+- 远程单位切换为近战后清除残留的侧移控制，避免继续横向漂移；远程射击时在移动更新后重新面向目标。
+- 远程走位的客户端姿态以玩家模型为基础：身体、肩部、双腿和装备整体平滑偏转，角度限制为 45°。
 - 取消启动时联网下载名单；仅限量读取已有本地名字文件，不向外发请求或改写缓存。
 - 存档索引改为实例数据；主人变更会移除旧索引，删除不再扫描所有玩家。
 - 损坏/不支持的单条记录保留原始 NBT，不因为某条记录失败丢弃整个数据文件。
@@ -117,7 +119,7 @@ $env:JAVA_HOME = 'D:/Java/17'
 Touhou Little Maid 1.5.3 的兼容 API JAR，分别传入 `-PtaczApiJar=<路径>`、
 `-PcuriosApiJar=<路径>`、`-PmaidApiJar=<路径>`；这三份 JAR 仅用于编译，不打入产物。
 当前本地维护工作区仍可使用原有默认路径。产物文件名以 build.gradle 的 version 为准，
-当前构建产物为 build/libs/hostile-humans-unified-1.20.1-3.3.5.jar。
+当前版本的构建产物文件名为 `build/libs/hostile-humans-unified-1.20.1-3.3.11.jar`。
 
 check 会运行 EncounterCooldownTest、RuntimePoliciesTest、UnifiedConfigTest、OptionalRuntimeTest
 和 StructureCompatTest、RecruitmentCombatTest。OptionalRuntimeTest 在不含 TaCZ / Curios / 女仆的真实 JVM classpath 上加载核心类并解析签名，
