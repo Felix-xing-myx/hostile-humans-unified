@@ -34,6 +34,10 @@
 
 Waystones 等结构联动开关仍位于单独的 `config/hostile_humans.toml`，不会由统一 JSON 替代。完整字段说明见 [`CONFIGURATION.md`](CONFIGURATION.md)。
 
+## 许可证
+
+MIT 许可证仅适用于原创核心模块 `src/main/java/dev/felix/hostilehumans/core/OwnerIndex.java` 与 `BudgetedUpdates.java`，许可证文本见 [`LICENSES/MIT-Original-Core.txt`](LICENSES/MIT-Original-Core.txt)。仓库的其他代码、资源与整合内容不因此转为 MIT，仍按各自来源适用的许可证和声明使用；详见 `src/main/resources/NOTICE.md`、`src/main/resources/THIRD_PARTY_NOTICES.md` 与 `provenance.json`。因此，MIT 不代表整个仓库或整合版 JAR 均可按 MIT 再授权。
+
 ## 维护说明
 
 - 维护版本号以 `build.gradle` 为准。源码每次修改后都需要重新构建并进行适当的验收；既有测试记录不能替代当前版本的验证。

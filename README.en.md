@@ -40,6 +40,10 @@ The main configuration file is `config/hostile_humans_unified.json`. It covers r
 
 The detailed field-by-field configuration guide is currently available in [Chinese](CONFIGURATION.md).
 
+## License
+
+The MIT License applies only to the original core modules `src/main/java/dev/felix/hostilehumans/core/OwnerIndex.java` and `BudgetedUpdates.java`. See [`LICENSES/MIT-Original-Core.txt`](LICENSES/MIT-Original-Core.txt). Other code, assets, and integrated components are not relicensed by this notice and remain subject to their respective applicable licenses and notices; see `src/main/resources/NOTICE.md`, `src/main/resources/THIRD_PARTY_NOTICES.md`, and `provenance.json`. The MIT grant therefore does not apply to the repository or unified mod JAR as a whole.
+
 ## Compatibility
 
 This unified version runs as a standalone Forge mod and does not require the original Hostile Humans or Human Gunner mod JARs. TaCZ and Curios are optional. The mod targets Minecraft 1.20.1 and Forge 47.4.16.

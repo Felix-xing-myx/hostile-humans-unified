@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Felix-xing-myx
 package dev.felix.hostilehumans.core;
 
 import java.util.*;

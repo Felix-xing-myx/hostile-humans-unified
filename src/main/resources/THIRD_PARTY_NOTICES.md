@@ -21,8 +21,11 @@ This artifact is a local source integration, not an official upstream release.
 - New local framework modules: dev/felix/hostilehumans/core.
 - Minecraft/Forge/TaCZ/Curios/Touhou Little Maid dependencies are NOT bundled.
 
-The complete package is NOT relicensed as MPL-2.0, GPL-2.0 or MIT. Resolve
-component-specific terms, retained asset scope, and redistribution notices
-before public redistribution. Source lineage
-and input hashes are recorded in provenance.json accompanying the maintained
-source project.
+The original local framework modules
+`dev/felix/hostilehumans/core/OwnerIndex.java` and
+`dev/felix/hostilehumans/core/BudgetedUpdates.java` are licensed under MIT;
+the license text is provided in `LICENSES/MIT-Original-Core.txt` in the source
+repository. This limited grant does not relicense the complete package or JAR
+as MIT, MPL-2.0, or GPL-2.0. Other components retain their applicable
+component-specific terms. Source lineage and input hashes are recorded in
+provenance.json accompanying the maintained source project.
