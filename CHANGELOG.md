@@ -5,6 +5,7 @@
 ### 简体中文
 
 - 延续 3.3.14 的独立创造模式选项卡：统一展示模组物品，并按类别排列。
+- 对讲机士兵列表和详情为四种阶级显示不同颜色与文字徽章，便于直接辨认阶级；徽章配色保持低饱和度，并保留原有状态与血量信息。
 - 和平模式仅清除野生人类；已雇佣士兵保留，但停止战斗。处理和平模式切换及重新加载时的名册状态。
 - 对讲机改为像素风格名册界面，支持逐名查看状态、单独召回、调整指令、手动刷新、排序和滚动浏览；未加载士兵的状态可查看，但操作按钮锁定。批量召回移入界面，避免下蹲右键误触。
 - 优化对讲机列表的悬停预览、空白区域点击及排序操作，减少指针经过士兵按钮间隙时的信息闪烁；士兵指令界面采用相近风格，并支持 Esc 返回上一级。
@@ -15,6 +16,7 @@
 ### English
 
 - Carries forward the 3.3.14 dedicated Creative Mode tab, grouping the mod's items by category.
+- Adds distinct muted-color, labeled tier badges to the radio's soldier list and detail view, keeping status and health information visible.
 - Peaceful difficulty removes wild Humans but retains hired soldiers in a non-combat state, including roster handling across difficulty changes and reloads.
 - Reworks the radio as a pixel-style roster with individual status, recall and orders, manual refresh, sorting, and scrolling. Unloaded soldiers remain visible while their order controls are disabled. Recall-all moves into the UI to prevent accidental sneak-right-click recalls.
 - Improves roster hover previews, blank-area clicks, and ordering so crossing gaps between soldier rows does not flicker the overview. The soldier command screen shares the visual style and Esc returns to the previous menu.

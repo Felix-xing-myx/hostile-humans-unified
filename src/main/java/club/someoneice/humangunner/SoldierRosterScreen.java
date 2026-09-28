@@ -135,6 +135,34 @@ public final class SoldierRosterScreen extends Screen {
         };
     }
 
+    private static int tierColor(int tier) {
+        return switch (tier) {
+            case 0 -> 0xFFB2B9BE; // Roamer: neutral stone
+            case 1 -> 0xFFD2B47C; // Tier I: bronze
+            case 2 -> 0xFF87BED5; // Tier II: blue
+            case 3 -> 0xFFC29CD6; // Tier III: violet
+            default -> MUTED;
+        };
+    }
+
+    private static int tierSurface(int tier) {
+        return switch (tier) {
+            case 0 -> 0xFF303940;
+            case 1 -> 0xFF40372B;
+            case 2 -> 0xFF263B46;
+            case 3 -> 0xFF3C3048;
+            default -> SURFACE;
+        };
+    }
+
+    private void tierBadge(GuiGraphics graphics, int tier, int x, int y) {
+        frame(graphics, x, y, 52, 14, tierSurface(tier));
+        graphics.fill(x + 2, y + 2, x + 4, y + 12, tierColor(tier));
+        graphics.drawCenteredString(font,
+                font.plainSubstrByWidth(tierName(tier).getString(), 43),
+                x + 27, y + 3, tierColor(tier));
+    }
+
     private void frame(GuiGraphics graphics, int x, int y, int w, int h, int fill) {
         graphics.fill(x, y, x + w, y + h, 0xFF070B10);
         graphics.fill(x + 1, y + 1, x + w - 1, y + h - 1, EDGE);
@@ -188,9 +216,10 @@ public final class SoldierRosterScreen extends Screen {
             boolean hovered = hit(mx, my, bx, by, 242, 26);
             frame(graphics, bx, by, 242, 26, hovered ? HOVER : SURFACE);
             graphics.fill(bx + 3, by + 3, bx + 5, by + 23, statusColor(entry.status()));
+            tierBadge(graphics, entry.tier(), bx + 9, by + 4);
             String name = entry.name().isBlank()
                     ? tr("screen.humangunner.roster.unnamed").getString() : entry.name();
-            graphics.drawString(font, font.plainSubstrByWidth(name, 124), bx + 9, by + 4, TEXT, false);
+            graphics.drawString(font, font.plainSubstrByWidth(name, 65), bx + 66, by + 4, TEXT, false);
             healthBar(graphics, entry, bx + 9, by + 20, 122);
             if (hovered) {
                 button(graphics, tr("screen.humangunner.roster.recall_short"), bx + 177, by + 4,
@@ -260,7 +289,7 @@ public final class SoldierRosterScreen extends Screen {
         String name = entry.name().isBlank()
                 ? tr("screen.humangunner.roster.unnamed").getString() : entry.name();
         graphics.drawString(font, font.plainSubstrByWidth(name, 126), x, y + 16, TEXT, false);
-        graphics.drawString(font, tierName(entry.tier()), x, y + 30, MUTED, false);
+        graphics.drawString(font, tierName(entry.tier()), x, y + 30, tierColor(entry.tier()), false);
         graphics.drawString(font, statusName(entry.status()), x, y + 44,
                 statusColor(entry.status()), false);
         if (entry.health() >= 0) {
@@ -285,7 +314,8 @@ public final class SoldierRosterScreen extends Screen {
         int x = left(), y = top(), lx = x + 9, rx = x + 209;
         String name = entry.name().isBlank()
                 ? tr("screen.humangunner.roster.unnamed").getString() : entry.name();
-        graphics.drawString(font, font.plainSubstrByWidth(name, 200), x + 10, y + 32, TEXT, false);
+        tierBadge(graphics, entry.tier(), x + 10, y + 30);
+        graphics.drawString(font, font.plainSubstrByWidth(name, 140), x + 67, y + 32, TEXT, false);
         graphics.drawString(font, statusName(entry.status()), x + 218, y + 32,
                 statusColor(entry.status()), false);
         graphics.drawString(font, font.plainSubstrByWidth(entry.dimension(), 190),
