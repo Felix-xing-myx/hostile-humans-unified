@@ -73,6 +73,12 @@ public class HumanData {
         return this.name;
     }
 
+    /** Last saved command state, without copying the entire entity inventory NBT. */
+    public CompoundTag getPersistedCommandData() {
+        return this.entityData == null ? new CompoundTag()
+                : this.entityData.getCompound("ForgeData").copy();
+    }
+
     public UUID getOwnerUUID() {
         if (this.ownerUUID == null) {
             return null;
@@ -152,7 +158,9 @@ public class HumanData {
     public void load(HumanEntity humanMob) {
         this.humanRef = new java.lang.ref.WeakReference<>(humanMob);
         this.humanMobUUID = humanMob.getUUID();
-        this.name = humanMob.getCustomHumanMobName();
+        // Name tags update vanilla CustomName, not the older DATA_NAME field.
+        this.name = humanMob.hasCustomName()
+                ? humanMob.getCustomName().getString() : humanMob.getCustomHumanMobName();
         this.ownerUUID = null;
         this.ownerName = "";
         this.hasOwner = humanMob.hasOwner();
@@ -221,7 +229,13 @@ public class HumanData {
     }
 
     public CompoundTag save(CompoundTag compoundTag, boolean includeData) {
-        HumanEntity humanEntity;
+        HumanEntity humanEntity = this.getHHFollowerEntity();
+        if (humanEntity != null && humanEntity.isAlive()) {
+            // A name tag changes CustomName without necessarily queuing a
+            // HumanServerData refresh before the next world save.
+            this.name = humanEntity.hasCustomName()
+                    ? humanEntity.getCustomName().getString() : humanEntity.getCustomHumanMobName();
+        }
         compoundTag.putUUID(UUID_TAG, this.humanMobUUID);
         compoundTag.putString(NAME_TAG, this.name);
         compoundTag.put(POSITION_TAG, (Tag)NbtUtils.writeBlockPos((BlockPos)this.blockPos));
@@ -233,7 +247,6 @@ public class HumanData {
         if (entityTypeId != null) {
             compoundTag.putString(ENTITY_TYPE_TAG, entityTypeId.toString());
         }
-        humanEntity = this.getHHFollowerEntity();
         if (includeData && humanEntity != null && humanEntity.isAlive()) {
             this.entityData = humanEntity.serializeNBT();
         }

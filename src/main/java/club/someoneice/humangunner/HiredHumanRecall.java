@@ -21,6 +21,7 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.server.ServerStoppedEvent;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -81,7 +82,28 @@ final class HiredHumanRecall {
 
     static void onServerStopped(ServerStoppedEvent event) {
         PLAYER_LOCATIONS.remove(event.getServer());
-        PENDING_RECALLS.remove(event.getServer());
+        cancelAll(event.getServer());
+    }
+
+    static void cancelPending(MinecraftServer server, UUID human) {
+        Map<UUID, PendingRecall> pending = PENDING_RECALLS.get(server);
+        if (pending == null) return;
+        PendingRecall removed = pending.remove(human);
+        if (removed != null) releaseTicket(server.getLevel(removed.dimension()), removed);
+        if (pending.isEmpty()) PENDING_RECALLS.remove(server);
+    }
+
+    static void cancelAll(MinecraftServer server) {
+        Map<UUID, PendingRecall> pending = PENDING_RECALLS.remove(server);
+        if (pending == null) return;
+        for (PendingRecall request : pending.values()) {
+            releaseTicket(server.getLevel(request.dimension()), request);
+        }
+    }
+
+    static boolean hasPending(MinecraftServer server, UUID human) {
+        Map<UUID, PendingRecall> pending = PENDING_RECALLS.get(server);
+        return pending != null && pending.containsKey(human);
     }
 
     static void onServerTick(TickEvent.ServerTickEvent event) {
@@ -90,6 +112,7 @@ final class HiredHumanRecall {
         Map<UUID, PendingRecall> pending = PENDING_RECALLS.get(server);
         if (pending == null || pending.isEmpty()) return;
         int processed = 0;
+        Set<ServerPlayer> refreshed = new HashSet<>();
         Iterator<PendingRecall> iterator = pending.values().iterator();
         while (iterator.hasNext() && processed++ < MAX_PENDING_PER_TICK) {
             PendingRecall request = iterator.next();
@@ -112,23 +135,41 @@ final class HiredHumanRecall {
             if (moveToOwner(owner, human, pending.size())) {
                 releaseTicket(source, request);
                 iterator.remove();
+                refreshed.add(owner);
             }
         }
         if (pending.isEmpty()) PENDING_RECALLS.remove(server);
+        for (ServerPlayer player : refreshed) SoldierRosterNetwork.refreshIfOpen(player);
     }
 
     static int recallAll(ServerPlayer owner) {
         return recall(owner, false);
     }
 
+    static boolean recallOne(ServerPlayer owner, UUID id) {
+        if (!RecruitmentLedger.get(owner.server).isOwnedRecord(id, owner.getUUID())) return false;
+        for (ServerLevel level : owner.server.getAllLevels()) {
+            if (level.getEntity(id) instanceof Human live && live.isAlive()
+                    && HumanRelations.isOwnedBy(live, owner)) {
+                return moveToOwner(owner, live, 0);
+            }
+        }
+        HumanServerData data = HumanServerData.get();
+        HumanData stored = data == null ? null : data.getHumanMob(id);
+        if (stored == null || !owner.getUUID().equals(stored.getOwnerUUID())) return false;
+        return schedule(owner, stored, false);
+    }
+
     private static int recall(ServerPlayer owner, boolean followersOnly) {
         HumanServerData serverData = HumanServerData.get();
         if (serverData == null) return 0;
-        RecruitmentLedger.get(owner.server).refreshLoadedIndex(owner.server, owner.getUUID());
+        RecruitmentLedger ledger = RecruitmentLedger.get(owner.server);
+        ledger.refreshLoadedIndex(owner.server, owner.getUUID());
         int recalled = 0;
         int placementIndex = 0;
         // Copy the stable view because dimension transfer updates HumanServerData.
         for (HumanData stored : Set.copyOf(serverData.getHumanMobs(owner.getUUID()))) {
+            if (!ledger.isOwnedRecord(stored.getUUID(), owner.getUUID())) continue;
             Human human = resolve(owner.server, stored);
             if (human == null) {
                 if (schedule(owner, stored, followersOnly)) recalled++;

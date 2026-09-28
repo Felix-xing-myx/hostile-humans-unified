@@ -14,7 +14,7 @@ public enum SoldierOrder {
     FOLLOW,
     PATROL;
 
-    private static final String ORDER = "humangunner:soldier_order";
+    static final String ORDER = "humangunner:soldier_order";
     private static final String ANCHOR = "humangunner:order_anchor";
     private static final String NEXT_PATROL = "humangunner:next_patrol_move";
     private static final String RETURNING_FROM_RETREAT = "humangunner:returning_from_retreat";

@@ -4,6 +4,7 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import com.craftix.hostile_humans.entity.data.HumanServerData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -97,7 +98,14 @@ public final class HumanRelations {
     }
 
     static void dismiss(ServerPlayer owner, Human human) {
-        RecruitmentLedger.get(owner.server).dismiss(human.getUUID());
+        dismiss(owner.server, human);
+    }
+
+    static void dismiss(MinecraftServer server, Human human) {
+        RecruitmentLedger.get(server).dismiss(human.getUUID());
+        human.setTarget(null);
+        human.forgetSoldierTarget();
+        human.getNavigation().stop();
         human.setOwnerUUID(null);
         human.setTame(false);
         human.setOrderedToSit(false);
@@ -114,7 +122,10 @@ public final class HumanRelations {
         SoldierPickupPolicy.clear(human);
         OwnerOfflinePolicy.clearForDismiss(human);
         HumanServerData data = HumanServerData.get();
-        if (data != null) data.updateOrRegisterHumanMob(human);
+        if (data != null) {
+            if (human.getData() != null) data.updateOrRegisterHumanMob(human);
+            else data.humanGunner$removeHuman(human.getUUID());
+        }
     }
 
     public static boolean isForcedHostileTo(Human human, Player player) {

@@ -1,5 +1,27 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.4.0 — 2026-09-28（含 3.3.14 的累计更新）
+
+### 简体中文
+
+- 延续 3.3.14 的独立创造模式选项卡：统一展示模组物品，并按类别排列。
+- 和平模式仅清除野生人类；已雇佣士兵保留，但停止战斗。处理和平模式切换及重新加载时的名册状态。
+- 对讲机改为像素风格名册界面，支持逐名查看状态、单独召回、调整指令、手动刷新、排序和滚动浏览；未加载士兵的状态可查看，但操作按钮锁定。批量召回移入界面，避免下蹲右键误触。
+- 优化对讲机列表的悬停预览、空白区域点击及排序操作，减少指针经过士兵按钮间隙时的信息闪烁；士兵指令界面采用相近风格，并支持 Esc 返回上一级。
+- 加入低频名册核查及实体移除后的及时清理，减少失效的雇佣记录占用名额；区块未加载不直接视为实体消失。
+- 霰弹枪优势保持距离从 3–8 格调整为 1–6 格；人类枪械瞄准点下移至目标碰撞箱高度的 70% 或更低的原有眼睛高度，普通射击与撤退反击均适用。
+- 源码检查不能代替游戏内验证。对讲机交互、和平模式跨区块行为及枪械命中仍需实测。
+
+### English
+
+- Carries forward the 3.3.14 dedicated Creative Mode tab, grouping the mod's items by category.
+- Peaceful difficulty removes wild Humans but retains hired soldiers in a non-combat state, including roster handling across difficulty changes and reloads.
+- Reworks the radio as a pixel-style roster with individual status, recall and orders, manual refresh, sorting, and scrolling. Unloaded soldiers remain visible while their order controls are disabled. Recall-all moves into the UI to prevent accidental sneak-right-click recalls.
+- Improves roster hover previews, blank-area clicks, and ordering so crossing gaps between soldier rows does not flicker the overview. The soldier command screen shares the visual style and Esc returns to the previous menu.
+- Adds a low-frequency roster audit and immediate cleanup after actual entity removal, without treating an unloaded chunk alone as deletion.
+- Changes the shotgun's preferred engagement band from 3–8 to 1–6 blocks. Gun aim now uses 70% of the target hitbox height or the original eye height, whichever is lower, for both normal fire and retreating counterfire.
+- Source checks do not replace in-game verification of radio interactions, Peaceful behavior across chunks, or gun hits.
+
 ## 3.3.14 — 2026-09-28
 
 ### 简体中文

@@ -1,5 +1,7 @@
 package club.someoneice.humangunner;
 
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -33,6 +35,55 @@ public final class RecruitmentCombatTest {
                 check(Arrays.stream(slots).allMatch(n -> n >= 0), "no stack underflow");
             }
         }
+        UUID owner = new UUID(0, 10), otherOwner = new UUID(0, 11);
+        UUID a = new UUID(0, 1), b = new UUID(0, 2), c = new UUID(0, 3);
+        UUID other = new UUID(0, 4), higherTier = new UUID(0, 5);
+        RecruitmentLedger roster = new RecruitmentLedger();
+        roster.hire(a, owner, 1);
+        roster.hire(b, owner, 1);
+        roster.hire(c, owner, 1);
+        roster.hire(other, otherOwner, 1);
+        roster.hire(higherTier, owner, 2);
+        check(roster.move(c, owner, -1, -1), "soldier moves earlier in the full roster");
+        check(roster.soldiers(owner).get(1).id().equals(c), "moved soldier changes displayed order");
+        check(roster.move(c, owner, 1, -1), "soldier moves later in the full roster");
+        check(roster.soldiers(owner).get(2).id().equals(c), "later move restores displayed order");
+        check(roster.move(higherTier, owner, -1, -1)
+                        && roster.soldiers(owner).get(2).id().equals(higherTier),
+                "full roster can move a soldier across tiers");
+        check(!roster.move(a, owner, -1, -1)
+                        && !roster.move(higherTier, owner, -1, 1),
+                "roster boundary and wrong tier filter are rejected");
+        check(!roster.move(other, owner, 1, -1), "another owner's soldier cannot be reordered");
+        check(roster.move(c, owner, -1, 1)
+                        && roster.soldiers(owner).get(1).id().equals(c),
+                "tier-filtered view reorders only its visible soldiers");
+        check(roster.enterPeaceful() && roster.count(owner, 1) == 3,
+                "Peaceful retains hired soldiers and their slots");
+        check(roster.move(c, owner, 1, -1), "hired soldiers can still be reordered in Peaceful");
+        CompoundTag rosterNbt = roster.save(new CompoundTag());
+        RecruitmentLedger restored = RecruitmentLedger.load(rosterNbt);
+        check(restored.count(owner, 1) == 3
+                        && restored.soldiers(owner).get(2).id().equals(c)
+                        && restored.soldiers(owner).get(1).id().equals(higherTier),
+                "roster order and occupancy survive saving");
+        for (Tag value : rosterNbt.getList("entries", Tag.TAG_COMPOUND)) {
+            ((CompoundTag) value).remove("sort_order");
+        }
+        RecruitmentLedger legacy = RecruitmentLedger.load(rosterNbt);
+        check(legacy.soldiers(owner).get(0).id().equals(a)
+                        && legacy.soldiers(owner).get(2).id().equals(c),
+                "older rosters retain their UUID-based display order");
+        RecruitmentLedger mixedTiers = new RecruitmentLedger();
+        UUID roamer = new UUID(0, 20), tierOne = new UUID(0, 21), tierTwo = new UUID(0, 22);
+        mixedTiers.hire(roamer, owner, 0);
+        mixedTiers.hire(tierOne, owner, 1);
+        mixedTiers.hire(tierTwo, owner, 2);
+        check(mixedTiers.move(tierTwo, owner, -1, -1)
+                        && mixedTiers.soldiers(owner).get(1).id().equals(tierTwo),
+                "one soldier per tier can still be reordered on the All tab");
+        check(!mixedTiers.move(tierTwo, owner, -1, 2),
+                "single-soldier tier filter has no invisible reorder target");
         UUID first = UUID.randomUUID(), second = UUID.randomUUID();
         SoldierCombatMemory memory = new SoldierCombatMemory();
         check(!memory.timedOut(first, 0), "start target clock");
@@ -57,7 +108,7 @@ public final class RecruitmentCombatTest {
         pressureMemory.threatened(first, 500);
         check(!pressureMemory.timedOut(first, 1099), "incoming hostile action refreshes pursuit");
         check(pressureMemory.timedOut(first, 1100), "refreshed pursuit still has a finite limit");
-        System.out.println("PASS: " + checks + " recruitment payment and combat-memory checks");
+        System.out.println("PASS: " + checks + " recruitment, roster and combat-memory checks");
     }
     private static void check(boolean value, String message) {
         checks++;

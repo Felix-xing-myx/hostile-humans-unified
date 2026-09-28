@@ -1047,10 +1047,11 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     protected boolean shouldDespawnInPeaceful() {
-        return true;
+        return !this.hasOwner();
     }
 
     public boolean doHurtTarget(Entity entityIn) {
+        if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return false;
         this.resetFallDistance();
         AttributeInstance attack = getAttribute(Attributes.ATTACK_DAMAGE);
         if (attack == null) return super.doHurtTarget(entityIn);
@@ -1191,6 +1192,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public boolean canAttack(LivingEntity entity) {
+        if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return false;
         if (entity == null) return false;
         if (!club.someoneice.humangunner.SoldierOrder.allowsTarget(this, entity)) return false;
         if (!club.someoneice.humangunner.HumanGunner.canControlledHumanAttack(this, entity)) return false;
@@ -1242,6 +1244,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     @Override
     public void setTarget(@Nullable LivingEntity livingEntity) {
+        if (livingEntity != null && this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL)
+            livingEntity = null;
         if (livingEntity != null && !club.someoneice.humangunner.SoldierOrder.allowsTarget(this, livingEntity))
             livingEntity = null;
         super.setTarget(livingEntity);
@@ -1281,6 +1285,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     @Override
     public void tick() {
+        if (club.someoneice.humangunner.PeacefulHumanPolicy.beforeHumanTick(this)) return;
         bootstrapMissingHumanData();
         if (!this.level().isClientSide) {
             this.updateWaterKnockbackResistance();
@@ -1530,6 +1535,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public void shootCrossbowProjectile(LivingEntity target, ItemStack crossbow, Projectile projectile, float angle) {
+        if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return;
         this.shootCrossbowProjectile((LivingEntity)this, target, projectile, angle, 1.6f);
         // CrossbowItem creates and launches the projectile before adding it to
         // the level. Apply the authoritative velocity here so the spawn packet
@@ -1549,6 +1555,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public void performRangedAttack(LivingEntity target, float distanceFactor) {
+        if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return;
         if (SpartanRangedCompat.fire(this, target)) return;
 
         if (this.getMainHandItem().getItem() instanceof TridentItem) {
@@ -1580,6 +1587,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public void performRangedAttackTrident(LivingEntity target, float distanceFactor) {
+        if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return;
 
         Human human = this;
         ItemStack held = human.getMainHandItem();
@@ -1628,6 +1636,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     @Override
     public void performPotionRangedAttack(LivingEntity target, float var2) {
+        if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return;
         if (!club.someoneice.humangunner.PotionThrowing.inRange(this, target)) {
             return;
         }

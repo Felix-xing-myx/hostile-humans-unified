@@ -111,6 +111,13 @@ public final class HumanServerData extends SavedData implements HumanServerDataC
         if (owner != null) syncHumanData(owner);
         return true;
     }
+    /** Peaceful removes wild Humans without losing hired soldiers' saved locations. */
+    public void clearWildHumans() {
+        for (UUID id : new ArrayList<>(humans.keySet())) {
+            HumanData human = humans.get(id);
+            if (human != null && !human.hasOwner()) humanGunner$removeHuman(id);
+        }
+    }
     @Override public CompoundTag save(CompoundTag tag) {
         ListTag list = new ListTag();
         for (HumanData human : humans.values()) {

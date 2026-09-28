@@ -4,7 +4,7 @@ import com.craftix.hostile_humans.entity.entities.Human;
 
 /** Persistent owner choice controlling deliberate item-search movement. */
 public final class SoldierPickupPolicy {
-    private static final String ENABLED = HumanGunner.MOD_ID + ":soldier_pickup_enabled";
+    static final String ENABLED = HumanGunner.MOD_ID + ":soldier_pickup_enabled";
 
     private SoldierPickupPolicy() {
     }

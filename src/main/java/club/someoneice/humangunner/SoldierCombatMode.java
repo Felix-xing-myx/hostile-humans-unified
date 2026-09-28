@@ -17,7 +17,7 @@ public enum SoldierCombatMode {
         OWNER_ASSAULT
     }
 
-    private static final String MODE = "humangunner:soldier_combat_mode";
+    static final String MODE = "humangunner:soldier_combat_mode";
     private static final String AUTHORIZED_TARGET = "humangunner:authorized_combat_target";
     private static final String AUTHORIZED_CAUSE = "humangunner:authorized_combat_cause";
     private static final String AUTHORIZED_UNTIL = "humangunner:authorized_combat_until";

@@ -9,6 +9,8 @@ import com.craftix.hostile_humans.HumanUtil;
 import com.mojang.logging.LogUtils;
 import com.craftix.hostile_humans.patch.HostileHumansEquipmentPatch;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.network.chat.Component;
@@ -94,6 +96,7 @@ public final class HumanGunner {
         HumanGunnerRegistries.ITEMS.register(modBus);
         HumanGunnerRegistries.MENUS.register(modBus);
         HumanCommandNetwork.register();
+        SoldierRosterNetwork.register();
         modBus.addListener(HumanGunner::onRegisterSpawnPlacements);
         if (ModList.get().isLoaded("touhou_little_maid")) {
             TouhouMaidCompat.register();
@@ -119,6 +122,11 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onServerTick);
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onPlayerLogout);
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onServerStopped);
+        MinecraftForge.EVENT_BUS.addListener(PeacefulHumanPolicy::onServerTick);
+        MinecraftForge.EVENT_BUS.addListener(SoldierRosterAudit::onServerTick);
+        MinecraftForge.EVENT_BUS.addListener(SoldierRosterAudit::onServerStopped);
+        MinecraftForge.EVENT_BUS.addListener(SoldierRosterNetwork::onPlayerLogout);
+        MinecraftForge.EVENT_BUS.addListener(SoldierRosterNetwork::onServerStopped);
         MinecraftForge.EVENT_BUS.addListener(OwnerOfflinePolicy::onPlayerLogout);
         MinecraftForge.EVENT_BUS.addListener(OwnerOfflinePolicy::onPlayerLogin);
         LOGGER.info("Hostile Humans Unified initialized; optional TaCZ firearms {}", GunSupport.get().enabled() ? "enabled" : "disabled");
@@ -271,7 +279,9 @@ public final class HumanGunner {
         if (!(event.getEntity() instanceof Human human)) {
             return;
         }
-        initializeHumanIfReady(human);
+        if (PeacefulHumanPolicy.onJoin(event, human)
+                && event.getLevel() instanceof ServerLevel level
+                && level.getServer().isSameThread()) initializeHumanIfReady(human);
     }
 
     private static void onEntityLeave(EntityLeaveLevelEvent event) {
@@ -283,11 +293,20 @@ public final class HumanGunner {
             // Chunk unload and dimension transfer must retain external inventory.
             return;
         }
-        com.craftix.hostile_humans.entity.data.HumanServerData serverData =
-                com.craftix.hostile_humans.entity.data.HumanServerData.get();
-        if (serverData != null) {
-            serverData.humanGunner$removeHuman(human.getUUID());
-        }
+        MinecraftServer server = event.getLevel() instanceof ServerLevel level ? level.getServer() : null;
+        if (server == null) return;
+        UUID id = human.getUUID();
+        Runnable cleanup = () -> {
+            RecruitmentLedger ledger = RecruitmentLedger.get(server);
+            ledger.dismiss(id);
+            ledger.finishDismissal(id);
+            HiredHumanRecall.cancelPending(server, id);
+            com.craftix.hostile_humans.entity.data.HumanServerData serverData =
+                    com.craftix.hostile_humans.entity.data.HumanServerData.get();
+            if (serverData != null) serverData.humanGunner$removeHuman(id);
+        };
+        if (server.isSameThread()) cleanup.run();
+        else server.execute(cleanup);
     }
 
     static boolean initializeHumanIfReady(Human human) {
@@ -392,6 +411,13 @@ public final class HumanGunner {
      * areSameFaction, so their existing infighting remains fully enabled.
      */
     private static void onHumanFriendlyFire(LivingHurtEvent event) {
+        // A projectile launched just before the difficulty change may still
+        // land after Peaceful begins. Retained soldiers must not deal damage.
+        if (event.getSource().getEntity() instanceof Human attacker
+                && attacker.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) {
+            event.setCanceled(true);
+            return;
+        }
         if (event.getSource().getEntity() instanceof Human attacker
                 && event.getEntity() instanceof Human defender
                 && shouldBlockHumanDamage(attacker, defender)) {
@@ -488,10 +514,9 @@ public final class HumanGunner {
         if (!(event.getEntity() instanceof Human human) || human.level().isClientSide) {
             return;
         }
-        if (human.getPersistentData().getBoolean(HumanRelations.NO_DROPS)) {
-            return;
-        }
-        if (!event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
+        boolean noDrops = human.getPersistentData().getBoolean(HumanRelations.NO_DROPS);
+        if (!noDrops
+                && !event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
                 && InventoryTotemProtection.tryUseInventoryTotem(human, event.getSource())) {
             // LivingDeathEvent is posted before LivingEntity performs its death
             // transition. Restoring health and cancelling here provides the same
@@ -499,7 +524,11 @@ public final class HumanGunner {
             event.setCanceled(true);
             return;
         }
-        RecruitmentLedger.get(human.getServer()).dismiss(human.getUUID());
+        MinecraftServer server = human.getServer();
+        if (server != null) RecruitmentLedger.get(server).dismiss(human.getUUID());
+        if (noDrops) {
+            return;
+        }
         // Hostile Humans clears equipment inside dropCustomDeathLoot before
         // LivingDropsEvent. Capture every owned stack while the slots and
         // external backpack are still authoritative.

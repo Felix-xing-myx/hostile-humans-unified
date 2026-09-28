@@ -12,7 +12,7 @@ final class GunRangePolicy {
         String type = rawType == null ? "" : rawType.toLowerCase(Locale.ROOT);
         return switch (type) {
             case "sniper", "snipers_rifle", "sniper_rifle" -> new Band(32.0D, 40.0D, 36.0D, 128.0D);
-            case "shotgun" -> new Band(3.0D, 8.0D, 6.0D, 64.0D);
+            case "shotgun" -> new Band(1.0D, 6.0D, 4.0D, 64.0D);
             case "pistol" -> new Band(6.0D, 12.0D, 9.0D, 64.0D);
             case "smg" -> new Band(8.0D, 16.0D, 12.0D, 64.0D);
             case "mg", "machine_gun" -> new Band(16.0D, 24.0D, 20.0D, 64.0D);

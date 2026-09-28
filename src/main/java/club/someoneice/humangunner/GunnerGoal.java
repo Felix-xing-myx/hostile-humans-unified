@@ -76,6 +76,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     @Override
     public boolean canUse() {
+        if (mob.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return false;
         boolean shoreSeeking = isShoreSeeking();
         LivingEntity target = mob.getTarget();
         if (mob instanceof Human human
@@ -568,7 +569,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     private AimRotation calculateAim(LivingEntity target, ItemStack weapon) {
         Vec3 origin = mob.getEyePosition();
-        Vec3 aimPoint = target.getEyePosition();
+        Vec3 aimPoint = GunAimPoint.forTarget(target);
 
         IGun gun = IGun.getIGunOrNull(weapon);
         CommonGunIndex index = gun == null

@@ -125,7 +125,8 @@ public final class AdaptiveCombatGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (!config.enabled() || human.level().isClientSide || !human.isAlive()) {
+        if (!config.enabled() || human.level().isClientSide || !human.isAlive()
+                || human.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) {
             return false;
         }
         IncomingArrow incomingArrow = findIncomingArrow();
@@ -873,8 +874,9 @@ public final class AdaptiveCombatGoal extends Goal {
         }
         gunOperator.aim(true);
         Vec3 origin = human.getEyePosition();
-        double leadTicks = Mth.clamp(origin.distanceTo(threat.getEyePosition()) / 5.0D, 0.0D, 5.0D);
-        Vec3 aimPoint = threat.getEyePosition().add(threat.getDeltaMovement().scale(leadTicks));
+        Vec3 targetPoint = GunAimPoint.forTarget(threat);
+        double leadTicks = Mth.clamp(origin.distanceTo(targetPoint) / 5.0D, 0.0D, 5.0D);
+        Vec3 aimPoint = targetPoint.add(threat.getDeltaMovement().scale(leadTicks));
         Vec3 delta = aimPoint.subtract(origin);
         double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
         float exactYaw = (float) (Mth.atan2(delta.z, delta.x) * Mth.RAD_TO_DEG) - 90.0F;
