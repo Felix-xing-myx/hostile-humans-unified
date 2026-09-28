@@ -7,6 +7,7 @@ import com.craftix.hostile_humans.entity.loadout.HumanLoadoutManager;
 import com.craftix.hostile_humans.entity.spawner.SpawnHandler;
 import com.craftix.hostile_humans.event.EventHandler;
 import com.craftix.hostile_humans.item.ModItems;
+import com.craftix.hostile_humans.item.UnifiedCreativeTab;
 import com.craftix.hostile_humans.network.NetworkHandler;
 import com.craftix.hostile_humans.sounds.ModSoundEvents;
 import com.mojang.logging.LogUtils;
@@ -24,12 +25,10 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -51,25 +50,16 @@ public class HostileHumans {
         IEventBus forgeEventBus = MinecraftForge.EVENT_BUS;
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, (IConfigSpec)Config.SPEC, "hostile_humans.toml");
         modEventBus.addListener(NetworkHandler::registerNetworkHandler);
-        modEventBus.addListener(HostileHumans::buildCreativeTabContents);
         forgeEventBus.addListener(HostileHumans::remapUnifiedTierThreeIds);
         ModEntityType.ENTITIES.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
+        UnifiedCreativeTab.TABS.register(modEventBus);
         ModSoundEvents.SOUNDS.register(modEventBus);
         modEventBus.addListener(SpawnHandler::registerSpawnPlacements);
         forgeEventBus.addListener(ServerSetup::handleServerStartingEvent);
         forgeEventBus.addListener(HumanLoadoutManager::addReloadListener);
         MinecraftForge.EVENT_BUS.register(new EventHandler());
         loadLocalNames();
-    }
-
-    private static void buildCreativeTabContents(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
-            event.accept(ModItems.HUMAN1_SPAWN_EGG);
-            event.accept(ModItems.HUMAN2_SPAWN_EGG);
-            event.accept(ModItems.HUMAN3_SPAWN_EGG);
-            event.accept(ModItems.ROAMER_SPAWN_EGG);
-        }
     }
 
     /** Preserve 3.1.3/3.1.4 worlds while moving tier three into the common namespace. */

@@ -1,5 +1,19 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.3.14 — 2026-09-28
+
+### 简体中文
+
+- 新增“敌对人类：统一版”创造模式独立选项卡，以一阶身份牌为图标，集中展示两个保留的 modId 下注册的全部物品。
+- 移除刷怪蛋和材料选项卡中的旧入口，避免物品在多个分类重复出现。新增物品会自动进入独立选项卡。
+- 自动构建与检查不能代替游戏内确认选项卡图标、名称和物品显示。
+
+### English
+
+- Adds a dedicated Hostile Humans Unified Creative Mode tab with a Tier I identity badge icon. It collects all items registered under both retained mod IDs.
+- Removes the old Spawn Eggs and Ingredients tab entries to avoid duplicate listings. Newly registered items join the dedicated tab automatically.
+- Automated build and checks do not replace in-game verification of the tab icon, title, and contents.
+
 ## 3.3.13 — 2026-09-27
 
 ### 简体中文

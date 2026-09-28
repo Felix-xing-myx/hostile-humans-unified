@@ -37,7 +37,6 @@ import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.event.entity.SpawnPlacementRegisterEvent;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
@@ -50,7 +49,6 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.ModList;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -97,7 +95,6 @@ public final class HumanGunner {
         HumanGunnerRegistries.MENUS.register(modBus);
         HumanCommandNetwork.register();
         modBus.addListener(HumanGunner::onRegisterSpawnPlacements);
-        modBus.addListener(HumanGunner::onBuildCreativeTab);
         if (ModList.get().isLoaded("touhou_little_maid")) {
             TouhouMaidCompat.register();
         }
@@ -149,29 +146,6 @@ public final class HumanGunner {
                 NaturalHumanSpawnRules::checkSquadSpawn,
                 SpawnPlacementRegisterEvent.Operation.REPLACE
         );
-    }
-
-    private static void onBuildCreativeTab(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
-            event.accept(HumanGunnerRegistries.ROAMER_IDENTITY_BADGE);
-            event.accept(HumanGunnerRegistries.TIER_ONE_IDENTITY_BADGE);
-            event.accept(HumanGunnerRegistries.TIER_TWO_IDENTITY_BADGE);
-            event.accept(HumanGunnerRegistries.TIER_THREE_IDENTITY_BADGE);
-            event.accept(HumanGunnerRegistries.ULTIMATE_IDENTITY_BADGE);
-            event.accept(HumanGunnerRegistries.SOLDIER_ROSTER);
-            event.accept(HumanGunnerRegistries.ROAMER_CONTRACT);
-            event.accept(HumanGunnerRegistries.TIER_ONE_CONTRACT);
-            event.accept(HumanGunnerRegistries.TIER_TWO_CONTRACT);
-            event.accept(HumanGunnerRegistries.TIER_THREE_CONTRACT);
-            event.accept(HumanGunnerRegistries.ROAMER_SIGNAL_FLARE);
-            event.accept(HumanGunnerRegistries.TIER_ONE_SIGNAL_FLARE);
-            event.accept(HumanGunnerRegistries.TIER_TWO_SIGNAL_FLARE);
-            event.accept(HumanGunnerRegistries.TIER_THREE_SIGNAL_FLARE);
-            event.accept(HumanGunnerRegistries.ROAMER_HOSTILE_BEACON);
-            event.accept(HumanGunnerRegistries.TIER_ONE_HOSTILE_BEACON);
-            event.accept(HumanGunnerRegistries.TIER_TWO_HOSTILE_BEACON);
-            event.accept(HumanGunnerRegistries.TIER_THREE_HOSTILE_BEACON);
-        }
     }
 
     private static void onLivingTick(LivingEvent.LivingTickEvent event) {

@@ -12,6 +12,8 @@ Designed for **Minecraft 1.20.1, Forge 47.4.16, and Java 17**. Install one unifi
 
 The mod adds human units in four ranks: Roamers, Tier I, Tier II, and Tier III. Their relationship with players depends on rank, identity badges, and recruitment status. Wild humans may be hostile, neutral, or protective, while eligible humans can be hired as companions. Idle humans in water try to find reachable shore; combat and retreat retain their own movement priorities, including crossing water to pursue a target. Ranged units with no clear shot in water try to reposition and can seek a way ashore when needed.
 
+In Creative Mode, all items from the unified JAR appear in a dedicated Hostile Humans Unified tab with an identity badge icon.
+
 Identity badges work from any inventory slot. With Curios installed, they can also be placed in the dedicated badge slot. Higher-level badges affect more ranks, and the Ultimate Identity Badge makes all human ranks protect its holder.
 
 Hired humans can be ordered to follow, guard an area, hold their position, or patrol. Their combat behavior can be set to Aggressive, Passive Protection, or Fully Neutral (self-defense only). You can open a hired human's inventory to manage equipment, choose whether they actively pick up items, or dismiss them.
