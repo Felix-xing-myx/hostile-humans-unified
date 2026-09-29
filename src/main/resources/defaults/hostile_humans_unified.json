@@ -316,6 +316,11 @@
     },
     "allow_hired_pvp_damage": false
   },
+  "better_combat": {
+    "_说明_中文": "士兵的 Better Combat 可选兼容，默认开启。安装 Better Combat 时，士兵近战使用其武器攻击形状/范围、攻击速度冷却和扇形多目标判定；不影响玩家攻击，也不会叠加另一套攻击 Goal。未安装 Better Combat 时自动回退到本模组原有 AI、分阶随机攻击间隔、伤害与单体近战判定。可手动关闭此项；修改后需重启游戏。",
+    "_description_en": "Optional Better Combat integration for soldiers; enabled by default. When Better Combat is installed, soldier melee uses its weapon hitbox shape/range, attack-speed cooldown, and multi-target arc checks. Player attacks are unaffected and no second attack Goal is added. If Better Combat is absent, soldiers automatically fall back to this mod's existing AI, tier-based random attack intervals, damage, and single-target melee checks. This option can be disabled manually; restart the game after changing it.",
+    "soldier_melee_enabled": true
+  },
   "tacz": {
     "_说明_中文": "TaCZ 枪械兼容与枪手设置。枪械出现概率/掉落概率及伤害倍率均为倍率或概率值；枪械分类权重决定抽取构成；白名单控制可生成/可装备枪械，黑名单优先排除。",
     "_description_en": "TaCZ firearm integration and gunner settings. Spawn/drop chances and damage values are probabilities or multipliers; type weights control weapon distribution; whitelists control eligible guns and the blacklist excludes guns first.",

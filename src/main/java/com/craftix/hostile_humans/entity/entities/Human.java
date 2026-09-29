@@ -2,6 +2,7 @@ package com.craftix.hostile_humans.entity.entities;
 
 import club.someoneice.humangunner.ConditionalGoal;
 import club.someoneice.humangunner.HumanGunner;
+import club.someoneice.humangunner.BetterCombatMeleeCombat;
 import net.minecraft.world.entity.ai.goal.Goal;
 import club.someoneice.humangunner.RangedHybridMeleeGoal;
 import club.someoneice.humangunner.RangedWeaponCustody;
@@ -108,7 +109,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ProjectileWeaponItem;
-import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.SplashPotionItem;
 import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.item.UseAnim;
@@ -154,11 +154,25 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private boolean humanGunner$movementShieldAllowance;
     private int rangedFacingTick = Integer.MIN_VALUE;
     private LivingEntity rangedFacingTarget;
+    private float rangedFacingYaw = Float.NaN;
+    private int nextHiredArmorWearTick;
+    private int nextHiredArmorSlotIndex;
+    private LivingEntity pendingBetterCombatTarget;
+    private ItemStack pendingBetterCombatWeapon = ItemStack.EMPTY;
+    private int pendingBetterCombatUpswingTicks;
 
     /** The firing goal requests a final facing update after navigation has moved. */
     public void markRangedFacing(LivingEntity target) {
         this.rangedFacingTick = this.tickCount;
         this.rangedFacingTarget = target;
+        this.rangedFacingYaw = Float.NaN;
+    }
+
+    /** Keep the body aligned with the actual ballistic firing direction. */
+    public void markRangedFacing(LivingEntity target, float yaw) {
+        this.rangedFacingTick = this.tickCount;
+        this.rangedFacingTarget = target;
+        this.rangedFacingYaw = yaw;
     }
 
     private BowAttack<Human> humanGunner$enhancedBowGoal;
@@ -901,7 +915,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public static AttributeSupplier.Builder createAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.105D).add(Attributes.MAX_HEALTH, 60.0).add(Attributes.ATTACK_DAMAGE, 1.0).add((Attribute)ForgeMod.ENTITY_REACH.get(), 3.0).add(Attributes.FOLLOW_RANGE, 40.0);
+        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.105D).add(Attributes.MAX_HEALTH, 60.0).add(Attributes.ATTACK_DAMAGE, 1.0).add(Attributes.ATTACK_SPEED, 4.0D).add((Attribute)ForgeMod.ENTITY_REACH.get(), 3.0).add(Attributes.FOLLOW_RANGE, 40.0);
     }
 
     @Override
@@ -959,7 +973,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 if (!(d < d2) || (item = this.getItemBySlot(equipmentslot)).isEmpty()) continue;
                 // Route through the shared break-sound gate: the equipment
                 // change listener can observe the same removal synchronously.
-                club.someoneice.humangunner.EquipmentBreakSounds.playNow(this, equipmentslot);
+                club.someoneice.humangunner.EquipmentBreakSounds.playNow(this, equipmentslot, item.copy());
                 this.setItemSlot(equipmentslot, Items.AIR.getDefaultInstance());
             }
         }
@@ -981,16 +995,25 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (amount <= 0.0F) {
             return;
         }
-        // A hired Human's armor can lose at most one point per damaging hit,
-        // regardless of the hit's raw damage. Avoid a second wear path here.
-        for (EquipmentSlot slot : EquipmentSlot.values()) {
-            if (slot.getType() != EquipmentSlot.Type.ARMOR) {
-                continue;
-            }
+        // A hired soldier loses at most one armor point across the whole set
+        // per 60 ticks. Rotate the selected piece rather than wearing one slot
+        // exclusively; hurtAndBreak still applies vanilla Unbreaking.
+        if (this.tickCount < nextHiredArmorWearTick) return;
+        EquipmentSlot[] armorSlots = {EquipmentSlot.FEET, EquipmentSlot.LEGS,
+                EquipmentSlot.CHEST, EquipmentSlot.HEAD};
+        for (int offset = 0; offset < armorSlots.length; offset++) {
+            int index = (nextHiredArmorSlotIndex + offset) % armorSlots.length;
+            EquipmentSlot slot = armorSlots[index];
             ItemStack armor = this.getItemBySlot(slot);
-            if (armor.getItem() instanceof ArmorItem
+            if (armor.isDamageableItem()
                     && !(source.is(DamageTypeTags.IS_FIRE) && armor.getItem().isFireResistant())) {
-                armor.hurtAndBreak(1, this, broken -> this.broadcastBreakEvent(slot));
+                int oldDamage = armor.getDamageValue();
+                wearEquippedItem(armor, slot);
+                nextHiredArmorSlotIndex = (index + 1) % armorSlots.length;
+                if (armor.isEmpty() || armor.getDamageValue() > oldDamage) {
+                    nextHiredArmorWearTick = this.tickCount + 60;
+                }
+                break;
             }
         }
     }
@@ -1052,18 +1075,85 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     public boolean doHurtTarget(Entity entityIn) {
         if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return false;
+        if (BetterCombatMeleeCombat.isEnabled(this) && entityIn instanceof LivingEntity requestedTarget) {
+            if (pendingBetterCombatTarget != null) return false;
+            BetterCombatMeleeCombat.AttackPlan plan =
+                    BetterCombatMeleeCombat.createAttackPlan(this, requestedTarget);
+            if (plan != null) {
+                if (plan.targets().isEmpty()) return false;
+                // Players (and Better Mob Combat's working mob bridge) animate
+                // the upswing before applying damage. Starting at the hit tick
+                // discards the entire first half of the visible player motion.
+                setNpcBetterCombatAttackAnimation(plan.profile().animationName(),
+                        plan.profile().cooldownTicks(), plan.profile().animationUpswing());
+                swing(InteractionHand.MAIN_HAND);
+                pendingBetterCombatTarget = requestedTarget;
+                pendingBetterCombatWeapon = getMainHandItem().copy();
+                pendingBetterCombatUpswingTicks = Math.max(1, Math.round(
+                        plan.profile().cooldownTicks() * plan.profile().animationUpswing()));
+                return true;
+            }
+        }
+        return doHurtTargetSingle(entityIn, true);
+    }
+
+    private void finishBetterCombatUpswing() {
+        if (pendingBetterCombatTarget == null) return;
+        if (--pendingBetterCombatUpswingTicks > 0) return;
+        LivingEntity target = pendingBetterCombatTarget;
+        pendingBetterCombatTarget = null;
+        ItemStack attackWeapon = pendingBetterCombatWeapon;
+        pendingBetterCombatWeapon = ItemStack.EMPTY;
+        if (!isAlive() || isNoAi() || !target.isAlive() || !canAttack(target)
+                || !ItemStack.isSameItemSameTags(attackWeapon, getMainHandItem())
+                || !BetterCombatMeleeCombat.isEnabled(this)) return;
+        BetterCombatMeleeCombat.AttackPlan plan =
+                BetterCombatMeleeCombat.createAttackPlan(this, target);
+        if (plan == null || plan.targets().isEmpty()) return;
+        boolean hitAny = false;
+        for (LivingEntity victim : plan.targets()) {
+            hitAny |= BetterCombatMeleeCombat.applyDamageMultiplier(this, plan.profile(),
+                    plan.targets().size(), () -> doHurtTargetSingle(victim, false, false));
+        }
+        // A sweep is one weapon action, even when its hitbox reaches several
+        // entities. Apply Unbreaking once after all victims were processed.
+        if (hitAny) wearEquippedItem(getMainHandItem(), EquipmentSlot.MAINHAND);
+        BetterCombatMeleeCombat.completeAttack(this);
+    }
+
+    private boolean doHurtTargetSingle(Entity entityIn, boolean animate) {
+        return doHurtTargetSingle(entityIn, animate, true);
+    }
+
+    private boolean doHurtTargetSingle(Entity entityIn, boolean animate, boolean wearWeapon) {
         this.resetFallDistance();
         AttributeInstance attack = getAttribute(Attributes.ATTACK_DAMAGE);
-        if (attack == null) return super.doHurtTarget(entityIn);
+        if (attack == null) {
+            boolean hit = super.doHurtTarget(entityIn);
+            if (hit && wearWeapon) wearEquippedItem(getMainHandItem(), EquipmentSlot.MAINHAND);
+            return hit;
+        }
         attack.removeModifier(FLURRY_ID);
         if (meleeFlurryDamageTicks > 0) attack.addTransientModifier(FLURRY_DAMAGE);
         try {
             boolean hit = super.doHurtTarget(entityIn);
-            swing(InteractionHand.MAIN_HAND);
+            if (animate) swing(InteractionHand.MAIN_HAND);
+            if (hit && wearWeapon) wearEquippedItem(getMainHandItem(), EquipmentSlot.MAINHAND);
             return hit;
         } finally {
             attack.removeModifier(FLURRY_ID);
         }
+    }
+
+    private void wearEquippedItem(ItemStack stack, EquipmentSlot slot) {
+        if (level().isClientSide || !stack.isDamageableItem()) return;
+        ItemStack beforeDamage = stack.copy();
+        // ItemStack.hurtAndBreak delegates to the vanilla Unbreaking roll for
+        // weapons and armor. Direct setDamageValue would bypass that roll.
+        stack.hurtAndBreak(1, this, broken -> {
+            club.someoneice.humangunner.EquipmentBreakSounds.playNow(this, slot, beforeDamage);
+            broadcastBreakEvent(slot);
+        });
     }
 
     protected void blockUsingShield(LivingEntity entityIn) {
@@ -1288,6 +1378,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (club.someoneice.humangunner.PeacefulHumanPolicy.beforeHumanTick(this)) return;
         bootstrapMissingHumanData();
         if (!this.level().isClientSide) {
+            setNpcBetterCombatMeleeEnabled(BetterCombatMeleeCombat.isEnabled(this));
             this.updateWaterKnockbackResistance();
         }
         if (!level().isClientSide && !attributesMigrated) {
@@ -1298,6 +1389,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
 
         super.tick();
+        if (!level().isClientSide) finishBetterCombatUpswing();
         if (!level().isClientSide && rangedFacingTick == tickCount
                 && rangedFacingTarget != null
                 && rangedFacingTarget == getTarget() && rangedFacingTarget.isAlive()) {
@@ -1306,14 +1398,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // shot, without replacing the movement path or strafe input.
             double dx = rangedFacingTarget.getX() - getX();
             double dz = rangedFacingTarget.getZ() - getZ();
-            if (dx * dx + dz * dz > 1.0E-6D) {
-                float yaw = (float) (Mth.atan2(dz, dx) * (180.0D / Math.PI)) - 90.0F;
-                setYRot(yaw);
-                setYHeadRot(yaw);
-                yBodyRot = yaw;
+            if (Float.isFinite(rangedFacingYaw)) {
+                setRangedFacingYaw(rangedFacingYaw);
+            } else if (dx * dx + dz * dz > 1.0E-6D) {
+                setRangedFacingYaw((float) (Mth.atan2(dz, dx) * (180.0D / Math.PI)) - 90.0F);
             }
         }
         rangedFacingTarget = null;
+        rangedFacingYaw = Float.NaN;
         if (!level().isClientSide && !isNoAi()) {
             recoverStalledNavigation();
         }
@@ -1415,6 +1507,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (this.tickCount % 300 == 0) {
             this.setCombatTask();
         }
+    }
+
+    private void setRangedFacingYaw(float yaw) {
+        setYRot(yaw);
+        setYHeadRot(yaw);
+        setYBodyRot(yaw);
     }
 
     private void updateWaterKnockbackResistance() {
@@ -1563,7 +1661,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             return;
         }
         this.shieldCoolDown = 8;
-        ItemStack weaponStack = this.getItemInHand(ProjectileUtil.getWeaponHoldingHand((LivingEntity)this, this::canFireProjectileWeapon));
+        InteractionHand weaponHand = ProjectileUtil.getWeaponHoldingHand((LivingEntity)this,
+                this::canFireProjectileWeapon);
+        ItemStack weaponStack = this.getItemInHand(weaponHand);
         if (weaponStack.getItem() instanceof CrossbowItem) {
             this.performCrossbowAttack((LivingEntity)this, 1.6f);
         } else {
@@ -1583,6 +1683,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             HumanGunner.applyFirstTickArrowBallistics(this, mobArrow, target);
             this.playSound(SoundEvents.SKELETON_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
             this.level().addFreshEntity((Entity)mobArrow);
+            if (weaponStack.getItem() instanceof BowItem) {
+                wearEquippedItem(weaponStack, weaponHand == InteractionHand.MAIN_HAND
+                        ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
+            }
         }
     }
 
@@ -1624,6 +1728,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             projectile.setOwner(human);
             HumanGunner.applyTridentBallistics(human, projectile, target);
             human.level().addFreshEntity(projectile);
+            wearEquippedItem(held, EquipmentSlot.MAINHAND);
             human.level().playSound(
                     null, human.getX(), human.getY(), human.getZ(),
                     SoundEvents.DROWNED_SHOOT, SoundSource.HOSTILE, 1.0F,

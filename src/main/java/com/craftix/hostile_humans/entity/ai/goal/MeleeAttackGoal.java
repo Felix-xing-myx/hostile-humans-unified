@@ -5,6 +5,8 @@ import com.craftix.hostile_humans.entity.HumanMobEntityData;
 import com.craftix.hostile_humans.entity.ai.goal.HumanGoal;
 import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.MeleeAttackTiming;
+import club.someoneice.humangunner.MeleeCombatRange;
+import club.someoneice.humangunner.MeleeSpacing;
 import club.someoneice.humangunner.SoldierOrder;
 import java.util.EnumSet;
 import java.util.Objects;
@@ -93,9 +95,16 @@ extends HumanGoal {
     }
 
     public void start() {
-        boolean isSit = this.mob.isOrderedToSit();
-        if (!isSit && (!(this.mob instanceof Human human)
-                || !SoldierOrder.isHoldingPosition(human))) {
+        boolean canPursue = !this.mob.isOrderedToSit();
+        if (this.mob instanceof Human human) {
+            canPursue &= !SoldierOrder.isHoldingPosition(human);
+            LivingEntity target = this.mob.getTarget();
+            if (target != null) {
+                canPursue &= this.mob.distanceTo(target)
+                        > MeleeCombatRange.reach(human, target) * 0.82D;
+            }
+        }
+        if (canPursue) {
             this.mob.getNavigation().moveTo(this.path, this.speedModifier);
         }
         this.mob.setAggressive(true);
@@ -132,7 +141,12 @@ extends HumanGoal {
             this.ticksUntilNextPathRecalculation = Math.max(this.ticksUntilNextPathRecalculation - 1, 0);
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
-            if (!holdingPosition
+            boolean spacing = !holdingPosition && this.mob instanceof Human human
+                    && MeleeSpacing.control(human, livingEntity);
+            if (spacing && this.ticksUntilNextPathRecalculation <= 0) {
+                this.ticksUntilNextPathRecalculation = 8;
+            }
+            if (!holdingPosition && !spacing
                     && (this.followingTargetEvenIfNotSeen || this.mob.getSensing().hasLineOfSight((Entity)livingEntity))
                     && this.ticksUntilNextPathRecalculation <= 0
                     && (this.mob.getNavigation().isDone()
@@ -214,6 +228,7 @@ extends HumanGoal {
     }
 
     protected double getAttackReachSqr(LivingEntity livingEntity) {
+        if (this.mob instanceof Human human) return MeleeCombatRange.reachSqr(human, livingEntity);
         return this.mob.getBbWidth() * 3.0f * this.mob.getBbWidth() * 3.0f + livingEntity.getBbWidth();
     }
 }

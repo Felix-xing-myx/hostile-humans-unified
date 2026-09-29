@@ -99,7 +99,6 @@ public final class RangedHybridMeleeGoal extends Goal {
     }
 
     private double meleeReachSqr(LivingEntity target) {
-        double width = human.getBbWidth() * 2.0D;
-        return width * width + target.getBbWidth();
+        return MeleeCombatRange.reachSqr(human, target);
     }
 }

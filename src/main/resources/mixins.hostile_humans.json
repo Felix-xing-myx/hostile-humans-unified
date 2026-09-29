@@ -12,7 +12,9 @@
     "DoorMixin",
     "ChestBlockEnityMixin"
   ],
-  "client": [],
+  "client": [
+    "TaczNpcAnimatorMixin"
+  ],
   "injectors": {
     "maxShiftBy": 10,
     "defaultRequire": 1

@@ -9,6 +9,9 @@ public final class MeleeAttackTiming {
     private MeleeAttackTiming() {}
 
     public static int nextCooldown(Human human) {
+        if (BetterCombatMeleeCombat.isEnabled(human)) {
+            return BetterCombatMeleeCombat.cooldownTicks(human);
+        }
         UnifiedConfig.Tier tier = TierAttributes.of(human);
         return human.getRandom().nextInt(tier.meleeCooldownMin(), tier.meleeCooldownMax() + 1);
     }

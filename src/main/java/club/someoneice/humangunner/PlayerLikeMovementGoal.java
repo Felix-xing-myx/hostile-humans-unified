@@ -190,8 +190,7 @@ public final class PlayerLikeMovementGoal extends Goal {
     }
 
     private double meleeReachSqr(LivingEntity target) {
-        double reach = human.getBbWidth() * 3.0D;
-        return reach * reach + target.getBbWidth();
+        return MeleeCombatRange.reachSqr(human, target);
     }
 
     private boolean movingToward(LivingEntity target) {

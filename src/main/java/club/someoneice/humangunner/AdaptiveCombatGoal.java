@@ -804,7 +804,10 @@ public final class AdaptiveCombatGoal extends Goal {
             restoreRetreatGun();
         }
 
-        if (distanceSqr <= 4.0D) {
+        double retreatMeleeRange = BetterCombatMeleeCombat.isEnabled(human)
+                ? BetterCombatMeleeCombat.attackRange(human) + threat.getBbWidth() * 0.5D
+                : 2.0D;
+        if (distanceSqr <= retreatMeleeRange * retreatMeleeRange) {
             setRetreatBackpedaling(false);
             gunOperator.aim(false);
             retreatAimTicks = 0;
@@ -889,6 +892,7 @@ public final class AdaptiveCombatGoal extends Goal {
         human.setYRot(exactYaw);
         human.setYBodyRot(exactYaw);
         human.setYHeadRot(exactYaw);
+        human.markRangedFacing(threat, exactYaw);
         if (++retreatAimTicks < 2) {
             return true;
         }

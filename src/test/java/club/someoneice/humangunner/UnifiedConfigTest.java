@@ -10,6 +10,13 @@ public final class UnifiedConfigTest {
         JsonObject defaults = UnifiedConfig.defaults();
         check(new ArrayList<>(defaults.keySet()).get(defaults.size()-1).equals("tacz"), "TaCZ section last");
         UnifiedConfig config = new UnifiedConfig(new JsonObject());
+        check(config.betterCombatSoldierMeleeEnabled(), "soldier Better Combat defaults on");
+        JsonObject betterCombatOverride = new JsonObject();
+        betterCombatOverride.add("better_combat", JsonParser.parseString(
+                "{\"soldier_melee_enabled\":true}"
+        ));
+        check(new UnifiedConfig(betterCombatOverride).betterCombatSoldierMeleeEnabled(),
+                "soldier Better Combat option can be enabled");
         check(config.taczEnabled(), "auto enable when installed");
         check(config.tier("roamer").healthMin() == 50, "legacy health min");
         check(config.tier("tier3").healthMax() == 100, "legacy health max");
@@ -201,6 +208,14 @@ public final class UnifiedConfigTest {
             String bytes = java.nio.file.Files.readString(newFile);
             UnifiedConfig.load(directory);
             check(java.nio.file.Files.readString(newFile).equals(bytes), "existing settings never rewritten");
+            JsonObject olderSettings = JsonParser.parseString(bytes).getAsJsonObject();
+            olderSettings.remove("better_combat");
+            java.nio.file.Files.writeString(newFile, olderSettings.toString());
+            check(UnifiedConfig.load(directory).betterCombatSoldierMeleeEnabled(),
+                    "older config missing the option gets its enabled default");
+            JsonObject upgraded = JsonParser.parseString(java.nio.file.Files.readString(newFile)).getAsJsonObject();
+            check(upgraded.getAsJsonObject("better_combat").get("soldier_melee_enabled").getAsBoolean(),
+                    "older config is safely given the new enabled option");
         } finally {
             java.nio.file.Files.deleteIfExists(newFile);
             java.nio.file.Files.deleteIfExists(legacyFile);

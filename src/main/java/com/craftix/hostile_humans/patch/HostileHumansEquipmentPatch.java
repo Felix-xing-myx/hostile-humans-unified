@@ -96,8 +96,13 @@ public final class HostileHumansEquipmentPatch {
             if (blockedDamage >= 3.0F) {
                 EquipmentSlot slot = hand == InteractionHand.MAIN_HAND
                         ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
+                ItemStack shieldBeforeDamage = shield.copy();
                 shield.hurtAndBreak(1 + (int) blockedDamage, human,
-                        broken -> human.broadcastBreakEvent(slot));
+                        broken -> {
+                            club.someoneice.humangunner.EquipmentBreakSounds.playNow(
+                                    human, slot, shieldBeforeDamage);
+                            human.broadcastBreakEvent(slot);
+                        });
                 if (shield.isEmpty()) {
                     human.stopUsingItem();
                 }

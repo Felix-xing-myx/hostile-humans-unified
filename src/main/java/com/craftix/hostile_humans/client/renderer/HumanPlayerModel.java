@@ -1,9 +1,9 @@
 package com.craftix.hostile_humans.client.renderer;
 
+import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.GunSupport;
 import club.someoneice.humangunner.RangedWeaponCustody;
 import com.craftix.hostile_humans.HumanUtil;
-import com.craftix.hostile_humans.entity.entities.Human;
 import java.util.Map;
 import java.util.WeakHashMap;
 import net.minecraft.client.model.PlayerModel;
@@ -44,6 +44,17 @@ final class HumanPlayerModel extends PlayerModel<Human> {
             return 0.0F;
         }
 
+        if (GunSupport.get().isGun(human.getMainHandItem())
+                && TaczNpcAnimator.isAimingOrFiring(human)) {
+            // The server-side gunner goal already turns the entity toward its
+            // ballistic target while aiming. Do not add the visual sidestep
+            // turn on top of that yaw: it makes the gun point off-target.
+            // When TaCZ aim is released, normal movement-based body turning
+            // resumes smoothly from zero.
+            stances.remove(human);
+            return 0.0F;
+        }
+
         double age = human.tickCount + partialTick;
         StanceState state = stances.computeIfAbsent(human, ignored -> new StanceState(age));
         double elapsed = age - state.lastAge;
@@ -79,7 +90,26 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         // The renderer turns the complete model, including shoulders and
         // armor. Counter that turn only in the head/weapon aim animation.
         float aimYaw = Mth.clamp(netHeadYaw - renderStanceYawDegrees, -85.0F, 85.0F);
-        super.setupAnim(human, limbSwing, limbSwingAmount, ageInTicks, aimYaw, headPitch);
+        // Model instances are reused across entities; do not let the previous
+        // Human's Player Animator processor leak into this render pass.
+        PlayerAnimatorModelBridge.bind(this, null);
+        boolean customMeleeAnimation = BetterCombatNpcAnimator.prepare(human)
+                || BetterCombatNpcAnimator.shouldSuppressVanillaSwing(human);
+        float vanillaAttackTime = this.attackTime;
+        if (customMeleeAnimation) this.attackTime = 0.0F;
+        try {
+            super.setupAnim(human, limbSwing, limbSwingAmount, ageInTicks, aimYaw, headPitch);
+        } finally {
+            this.attackTime = vanillaAttackTime;
+        }
+        // TaCZ's bundled Player Animator assets are not applied by TaCZ to
+        // custom LivingEntity renderers (its built-in bridge is player-only).
+        // Apply the active gun's third-person hold/aim/reload/fire animation
+        // after vanilla has posed the model so it visibly drives the NPC parts.
+        TaczNpcAnimator.apply(human, this, ageInTicks);
+        BetterCombatNpcAnimator.apply(human, this, ageInTicks);
+        // Keep the separate skin overlay on the same animated head pose.
+        this.hat.copyFrom(this.head);
     }
 
     private static boolean isRangedStance(Human human) {
@@ -87,7 +117,7 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         if (HumanUtil.isMeleeWeapon(mainHand)) return false;
         if (RangedWeaponCustody.isBowOrCrossbow(mainHand)
                 || mainHand.getItem() instanceof TridentItem
-                || GunSupport.get().isGun(mainHand)) return true;
+                || club.someoneice.humangunner.GunSupport.get().isGun(mainHand)) return true;
         ItemStack offhand = human.getOffhandItem();
         return mainHand.isEmpty() && (RangedWeaponCustody.isBowOrCrossbow(offhand)
                 || offhand.getItem() instanceof TridentItem);

@@ -157,7 +157,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         manualStrafeUntilTick = 0;
         strafeAnchorSet = false;
         movementTarget = null;
-        operator.aim(false);
+        setAiming(false);
         if (mob instanceof Human human) {
             MovementSpeedController.combat(human, false);
             GunAttackMovementState.clear(human);
@@ -236,7 +236,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 updateRetreatPressure(distance, range);
             }
             if (!closeDefense
-                    && distance <= CLOSE_MELEE_ENTER_RANGE
+                    && distance <= closeMeleeRange(human, target)
                     && retreatFailureTicks >= 12
                     && GunCustody.beginCloseMeleeCounter(human)) {
                 tickCloseMeleeDefense(human, target, distance);
@@ -264,7 +264,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // Keep moving toward the marked player after a side fight, but do
             // not turn the beacon's pursuit range into extra weapon reach.
             aimTicks = 0;
-            operator.aim(false);
+            setAiming(false);
             if (!ShoreSeekingPolicy.shouldMoveTowardCombatTarget(isShoreSeeking())) {
                 // The environmental MOVE lease must remain pointed at dry
                 // ground; this special beacon pursuit used to replace it with
@@ -279,7 +279,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         }
         if (!mob.getSensing().hasLineOfSight(target)) {
             aimTicks = 0;
-            operator.aim(false);
+            setAiming(false);
             if (isShoreSeeking()) {
                 clearLateralInputPreservingNavigation();
                 return;
@@ -310,10 +310,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             moveForFiringPosition(target, distance, range, false);
         }
 
-        operator.aim(true);
+        setAiming(true);
         if (mob instanceof Human human) {
             GunAttackMovementState.markAttackActive(human);
-            human.markRangedFacing(target);
         }
         if (distance <= RETREAT_RANGE) {
             // Close pressure must not turn the gun into a silent prop. TaCZ
@@ -326,6 +325,10 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         mob.setXRot(aim.pitch());
         mob.setYRot(aim.yaw());
         mob.setYHeadRot(aim.yaw());
+        mob.setYBodyRot(aim.yaw());
+        if (mob instanceof Human human) {
+            human.markRangedFacing(target, aim.yaw());
+        }
         // The synchronized aiming-progress value is presentation state, not a
         // server-side ballistic requirement. It can remain at zero while the
         // Human is swimming, which used to suppress every underwater shot.
@@ -344,7 +347,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     private void tickCloseMeleeDefense(Human human, LivingEntity target, double distance) {
-        operator.aim(false);
+        setAiming(false);
         aimTicks = 0;
         boolean shoreSeeking = isShoreSeeking();
         if (shoreSeeking) {
@@ -370,7 +373,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             retreatFrom(target);
             nextCloseRetreatPathTick = human.tickCount + 8;
         }
-        if (distance > CLOSE_MELEE_ENTER_RANGE
+        if (distance > closeMeleeRange(human, target)
                 || human.isUsingItem()
                 || human.tickCount < nextCloseMeleeAttackTick
                 || !(HumanUtil.isMeleeWeapon(human.getMainHandItem())
@@ -380,6 +383,10 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         human.swing(InteractionHand.MAIN_HAND);
         human.doHurtTarget(target);
         nextCloseMeleeAttackTick = human.tickCount + MeleeAttackTiming.nextCooldown(human);
+    }
+
+    private static double closeMeleeRange(Human human, LivingEntity target) {
+        return MeleeCombatRange.reach(human, target);
     }
 
     static void handleShootResult(
@@ -565,6 +572,10 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         mob.getPersistentData().remove(NEXT_RELOAD_ATTEMPT);
         mob.getPersistentData().remove(STALL_DEADLINE);
         mob.getPersistentData().remove(BOLT_HARD_DEADLINE);
+    }
+
+    private void setAiming(boolean aiming) {
+        operator.aim(aiming);
     }
 
     private AimRotation calculateAim(LivingEntity target, ItemStack weapon) {

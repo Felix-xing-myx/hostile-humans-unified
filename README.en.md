@@ -28,7 +28,7 @@ Hired humans can be ordered to follow, guard an area, hold their position, or pa
 
 ![Hired human inventory and equipment screen](docs/images/en/soldier-inventory.png)
 
-Humans can fight with melee weapons, shields, bows, crossbows, tridents, and—when TaCZ is installed and enabled—compatible firearms. Ranged units adjust their combat behavior to their weapon. Hired companions may retreat to recover at low health and warn their owner when critically injured.
+Humans can fight with melee weapons, shields, bows, crossbows, tridents, and—when TaCZ is installed and enabled—compatible firearms. Ranged units adjust their combat behavior to their weapon. When TaCZ is installed, gunners also display firearm-ready, aiming, firing, reloading, and gun-melee actions. The Better Combat soldier compatibility option is enabled by default: soldiers use its area-based melee hit detection and attack cadence when Better Combat is installed, and automatically fall back to this mod's existing combat behavior when it is absent. The option can also be disabled manually in the configuration. Hired companions may retreat to recover at low health and warn their owner when critically injured.
 
 ## Signal Items
 
@@ -38,7 +38,7 @@ Humans can fight with melee weapons, shields, bows, crossbows, tridents, and—w
 
 ## Configuration
 
-The main configuration file is `config/hostile_humans_unified.json`. It covers rank attributes and ranged spread, damage multipliers, natural spawning, combat AI, hiring limits, PvP damage for hired humans, and TaCZ firearm settings. Restart the game after changing it. In multiplayer, the server configuration controls gameplay.
+The main configuration file is `config/hostile_humans_unified.json`. It covers rank attributes and ranged spread, damage multipliers, natural spawning, combat AI, hiring limits, PvP damage for hired humans, the optional Better Combat soldier setting, and TaCZ firearm settings. Restart the game after changing it. In multiplayer, the server configuration controls gameplay.
 
 The detailed field-by-field configuration guide is currently available in [Chinese](CONFIGURATION.md).
 

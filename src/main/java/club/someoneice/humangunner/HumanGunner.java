@@ -436,7 +436,6 @@ public final class HumanGunner {
         }
         if (event.getEntity() instanceof Human damagedHuman) {
             event.setAmount(event.getAmount() * (float) TierAttributes.of(damagedHuman).incomingDamage());
-            EquipmentBreakSounds.captureBeforeDamage(damagedHuman);
         }
         if (event.getEntity() instanceof Human defender && attacker instanceof Player player
                 && !HumanRelations.isControlledBy(defender, player)) {
@@ -492,7 +491,6 @@ public final class HumanGunner {
         if (event.getEntity() instanceof Human human
                 && !human.level().isClientSide
                 && event.getAmount() > 0.0F) {
-            EquipmentBreakSounds.detectAfterDamage(human);
             // LivingDamageEvent carries the final post-armour, post-enchantment
             // amount. Counting it avoids treating blocked or mitigated attack
             // input as health actually lost.

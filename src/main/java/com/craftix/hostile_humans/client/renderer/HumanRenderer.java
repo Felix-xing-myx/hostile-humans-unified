@@ -18,6 +18,7 @@ import net.minecraft.client.renderer.entity.layers.BeeStingerLayer;
 import net.minecraft.client.renderer.entity.layers.CustomHeadLayer;
 import net.minecraft.client.renderer.entity.layers.ElytraLayer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -42,7 +43,15 @@ public class HumanRenderer
 extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     public HumanRenderer(EntityRendererProvider.Context context) {
         super(context, new HumanPlayerModel(context.bakeLayer(ModelLayers.PLAYER)), 0.5f);
-        this.addLayer((RenderLayer)new HumanoidArmorLayer((RenderLayerParent)this, new HumanoidModel(context.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)), new HumanoidModel(context.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)), context.getModelManager()));
+        // HumanoidMobRenderer installs the vanilla held-item layer. Replace
+        // only this Human renderer's instance so item keyframes follow the
+        // same Better Combat attack as the body, without a global Mixin.
+        this.layers.removeIf(layer -> layer instanceof ItemInHandLayer);
+        this.addLayer(new HumanAnimatedItemInHandLayer(this, context.getItemInHandRenderer()));
+        this.addLayer(new HumanoidArmorLayer<>(this,
+                new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
+                new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),
+                context.getModelManager()));
         this.addLayer((RenderLayer)new ArrowLayer(context, (LivingEntityRenderer)this));
         this.addLayer((RenderLayer)new CustomHeadLayer((RenderLayerParent)this, context.getModelSet(), context.getItemInHandRenderer()));
         this.addLayer((RenderLayer)new ElytraLayer((RenderLayerParent)this, context.getModelSet()));
@@ -104,6 +113,7 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         // Turn the model as one player-like unit: shoulders, torso, legs,
         // armor and held items share the same smoothly interpolated yaw.
         p_117803_.mulPose(Axis.YP.rotationDegrees(-stanceYaw));
+        BetterCombatNpcAnimator.applyBodyTransform(p_117802_, p_117803_, p_117806_);
     }
 
     @NotNull
@@ -148,8 +158,11 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         }
         if (hand == InteractionHand.MAIN_HAND
                 && club.someoneice.humangunner.GunSupport.get().isGun(stack)) {
-            // Vanilla has no firearm arm pose; retain the mod's two-handed aim.
-            return HumanoidModel.ArmPose.BOW_AND_ARROW;
+            // TaCZ's legacy two-handed biped pose is disabled for Humans. The
+            // NPC Player Animator adapter owns its motion when assets exist;
+            // use the neutral item pose rather than reintroducing the old pose
+            // as a fallback when a gun has no third-person animation asset.
+            return HumanoidModel.ArmPose.ITEM;
         }
         if (stack.getItem() instanceof CrossbowItem && CrossbowItem.isCharged(stack)
                 && !human.swinging) {
@@ -157,5 +170,6 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         }
         return HumanoidModel.ArmPose.ITEM;
     }
+
 }
 

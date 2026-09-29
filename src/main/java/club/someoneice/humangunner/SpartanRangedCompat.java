@@ -76,7 +76,9 @@ public final class SpartanRangedCompat {
 
         EquipmentSlot slot = hand == InteractionHand.MAIN_HAND
                 ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
-        crossbow.hurtAndBreak(1, human, broken -> EquipmentBreakSounds.playNow(human, slot));
+        ItemStack crossbowBeforeDamage = crossbow.copy();
+        crossbow.hurtAndBreak(1, human,
+                broken -> EquipmentBreakSounds.playNow(human, slot, crossbowBeforeDamage));
         human.level().playSound(
                 null, human.getX(), human.getY(), human.getZ(),
                 SoundEvents.CROSSBOW_SHOOT, SoundSource.HOSTILE, 1.0F,

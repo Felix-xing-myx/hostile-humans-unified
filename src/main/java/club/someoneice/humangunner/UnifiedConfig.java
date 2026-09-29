@@ -16,6 +16,7 @@ public final class UnifiedConfig {
     private final Set<String> blacklist;
     private final Spawn spawn;
     private final Recruitment recruitment;
+    private final boolean betterCombatSoldierMeleeEnabled;
 
     public record Tier(int healthMin, int healthMax, double baseMovementSpeed,
             double attackDamage, double armor, double armorToughness,
@@ -123,6 +124,7 @@ public final class UnifiedConfig {
                 (int) number(limits, "tier2", 6, 0, 10000),
                 (int) number(limits, "tier3", 3, 0, 10000),
                 bool(r, "allow_hired_pvp_damage", false));
+        betterCombatSoldierMeleeEnabled = bool(object(root, "better_combat"), "soldier_melee_enabled", true);
         Set<String> banned = new HashSet<>();
         JsonElement list = object(root, "tacz").get("gun_blacklist");
         if (list != null && list.isJsonArray()) {
@@ -144,6 +146,7 @@ public final class UnifiedConfig {
     public Spawn spawn() { return spawn; }
     public int recruitmentLimit(int tier) { return recruitment.limit(tier); }
     public boolean allowHiredPvpDamage() { return recruitment.allowHiredPvpDamage(); }
+    public boolean betterCombatSoldierMeleeEnabled() { return betterCombatSoldierMeleeEnabled; }
     public boolean taczEnabled() { return bool(object(root, "tacz"), "enabled", true); }
     public boolean blacklisted(String id) { return blacklist.contains(id); }
     public double damage(String key, double fallback) { return number(object(root, "damage"), key, fallback, 0, 10); }
@@ -163,6 +166,7 @@ public final class UnifiedConfig {
                 JsonObject data = read(path);
                 if (data.has("schema_version") && data.get("schema_version").getAsInt() != 1)
                     throw new IOException("Unsupported config schema; file left unchanged");
+                ensureBetterCombatOption(path, data);
                 return new UnifiedConfig(data);
             }
             JsonObject migrated = migrate(readIfPresent(directory.resolve("humangunner.json")),
@@ -185,6 +189,47 @@ public final class UnifiedConfig {
         } catch (Exception error) {
             com.mojang.logging.LogUtils.getLogger().error("Could not load unified config {}; using safe defaults without overwriting input", path, error);
             return new UnifiedConfig(new JsonObject());
+        }
+    }
+
+    /** Adds the optional setting to existing installations without discarding their other values. */
+    private static void ensureBetterCombatOption(Path path, JsonObject data) {
+        JsonObject defaults = defaults();
+        JsonObject defaultSection = object(defaults, "better_combat");
+        JsonObject section = object(data, "better_combat");
+        boolean changed = false;
+        if (!data.has("better_combat") || !data.get("better_combat").isJsonObject()) {
+            section = new JsonObject();
+            data.add("better_combat", section);
+            changed = true;
+        }
+        for (var entry : defaultSection.entrySet()) {
+            if (!section.has(entry.getKey())) {
+                section.add(entry.getKey(), entry.getValue().deepCopy());
+                changed = true;
+            }
+        }
+        if (!changed) return;
+
+        Path temporary = null;
+        try {
+            temporary = Files.createTempFile(path.getParent(), "hostile-humans-config-", ".tmp");
+            try (Writer writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
+                GSON.toJson(data, writer);
+            }
+            try {
+                Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException unsupported) {
+                Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException error) {
+            com.mojang.logging.LogUtils.getLogger().warn(
+                    "Could not add the Better Combat soldier option to {}; the runtime default remains enabled",
+                    path, error);
+        } finally {
+            if (temporary != null) try { Files.deleteIfExists(temporary); }
+            catch (IOException ignored) { }
         }
     }
 

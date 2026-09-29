@@ -37,6 +37,11 @@ implements HumansDataSync {
     private static final EntityDataAccessor<String> DATA_NAME = SynchedEntityData.defineId(HumanMobEntityData.class, (EntityDataSerializer)EntityDataSerializers.STRING);
     private static final EntityDataAccessor<String> DATA_VARIANT = SynchedEntityData.defineId(HumanMobEntityData.class, (EntityDataSerializer)EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> DATA_TIER = SynchedEntityData.defineId(HumanMobEntityData.class, (EntityDataSerializer)EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> DATA_BETTER_COMBAT_MELEE_ENABLED = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<String> DATA_BETTER_COMBAT_ATTACK_ANIMATION = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<Integer> DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_BETTER_COMBAT_ATTACK_ANIMATION_DURATION = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Float> DATA_BETTER_COMBAT_ATTACK_ANIMATION_UPSWING = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.FLOAT);
     private static final int DATA_SYNC_TICK = 10;
     public String team = "";
     protected UUID persistentAngerTarget;
@@ -78,6 +83,48 @@ implements HumansDataSync {
 
     public void setCharging(boolean charging) {
         this.entityData.set(DATA_IS_CHARGING, charging);
+    }
+
+    public boolean isNpcBetterCombatMeleeEnabled() {
+        return this.entityData.get(DATA_BETTER_COMBAT_MELEE_ENABLED);
+    }
+
+    public void setNpcBetterCombatMeleeEnabled(boolean enabled) {
+        if (this.entityData.get(DATA_BETTER_COMBAT_MELEE_ENABLED) != enabled) {
+            this.entityData.set(DATA_BETTER_COMBAT_MELEE_ENABLED, enabled);
+        }
+    }
+
+    public String getNpcBetterCombatAttackAnimation() {
+        return this.entityData.get(DATA_BETTER_COMBAT_ATTACK_ANIMATION);
+    }
+
+    public int getNpcBetterCombatAttackAnimationSequence() {
+        return this.entityData.get(DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE);
+    }
+
+    public int getNpcBetterCombatAttackAnimationDuration() {
+        return this.entityData.get(DATA_BETTER_COMBAT_ATTACK_ANIMATION_DURATION);
+    }
+
+    public float getNpcBetterCombatAttackAnimationUpswing() {
+        return this.entityData.get(DATA_BETTER_COMBAT_ATTACK_ANIMATION_UPSWING);
+    }
+
+    public void setNpcBetterCombatAttackAnimation(String animation) {
+        this.setNpcBetterCombatAttackAnimation(animation, 1, 0.5F);
+    }
+
+    public void setNpcBetterCombatAttackAnimation(String animation, int durationTicks, float upswing) {
+        if (this.level().isClientSide) return;
+        this.entityData.set(DATA_BETTER_COMBAT_ATTACK_ANIMATION,
+                animation == null ? "" : animation);
+        this.entityData.set(DATA_BETTER_COMBAT_ATTACK_ANIMATION_DURATION, Math.max(1, durationTicks));
+        float safeUpswing = Float.isFinite(upswing) ? upswing : 0.5F;
+        this.entityData.set(DATA_BETTER_COMBAT_ATTACK_ANIMATION_UPSWING,
+                Math.max(0.05F, Math.min(0.95F, safeUpswing)));
+        this.entityData.set(DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE,
+                this.entityData.get(DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE) + 1);
     }
 
     public boolean isSleepingThisNight() {
@@ -223,6 +270,11 @@ implements HumansDataSync {
         this.entityData.define(DATA_HAS_DECIDED_ON_SLEEP, false);
         this.entityData.define(DATA_VARIANT, "skin1");
         this.entityData.define(DATA_TIER, 1);
+        this.entityData.define(DATA_BETTER_COMBAT_MELEE_ENABLED, false);
+        this.entityData.define(DATA_BETTER_COMBAT_ATTACK_ANIMATION, "");
+        this.entityData.define(DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE, 0);
+        this.entityData.define(DATA_BETTER_COMBAT_ATTACK_ANIMATION_DURATION, 1);
+        this.entityData.define(DATA_BETTER_COMBAT_ATTACK_ANIMATION_UPSWING, 0.5F);
         this.entityData.define(DATA_SIT_POS, new BlockPos(0, 0, 0));
         this.entityData.define(DATA_HOME_POS, new BlockPos(0, 0, 0));
     }

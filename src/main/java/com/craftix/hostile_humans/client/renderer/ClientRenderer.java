@@ -26,6 +26,7 @@ public class ClientRenderer {
 
     @SubscribeEvent
     public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        EmfAnimationCompat.registerPauseCondition();
         event.registerEntityRenderer((EntityType)ModEntityType.HUMAN1.get(), HumanRenderer::new);
         event.registerEntityRenderer((EntityType)ModEntityType.HUMAN2.get(), HumanRenderer::new);
         event.registerEntityRenderer((EntityType)ModEntityType.HUMAN3.get(), HumanRenderer::new);

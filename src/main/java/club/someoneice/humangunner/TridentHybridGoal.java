@@ -137,9 +137,12 @@ public final class TridentHybridGoal extends Goal {
             if (!SoldierOrder.isReturningToHoldPosition(human)) {
                 human.getNavigation().stop();
             }
-        } else if (pathCooldown <= 0) {
-            human.getNavigation().moveTo(target, 1.0D);
-            pathCooldown = 4 + human.getRandom().nextInt(3);
+        } else {
+            boolean spacing = MeleeSpacing.control(human, target);
+            if (pathCooldown <= 0) {
+                if (!spacing) human.getNavigation().moveTo(target, 1.0D);
+                pathCooldown = 4 + human.getRandom().nextInt(3);
+            }
         }
         if (!SoldierOrder.isHoldingPosition(human)) {
             human.approachCombatTargetInWater(target,
@@ -216,8 +219,7 @@ public final class TridentHybridGoal extends Goal {
     }
 
     private double meleeReachSqr(LivingEntity victim) {
-        double width = human.getBbWidth() * 2.0D;
-        return width * width + victim.getBbWidth();
+        return MeleeCombatRange.reachSqr(human, victim);
     }
 
     private boolean isHoldingTrident() {

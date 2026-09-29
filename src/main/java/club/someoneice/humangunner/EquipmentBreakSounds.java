@@ -12,13 +12,12 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 /**
- * Emits the vanilla tool-breaking cue and catches direct slot clears which do
- * not invoke LivingEntity#broadcastBreakEvent.
+ * Emits break cues only from explicit durability-break paths. Equipment slot
+ * changes are cached for identifying the broken stack, but are never treated
+ * as evidence that an item broke (recovery temporarily moves gear between slots).
  */
 public final class EquipmentBreakSounds {
     private static final Map<Human, EnumMap<EquipmentSlot, ItemStack>> LAST_EQUIPMENT =
-            new WeakHashMap<>();
-    private static final Map<Human, EnumMap<EquipmentSlot, ItemStack>> BEFORE_DAMAGE =
             new WeakHashMap<>();
     private static final Map<Human, EnumMap<EquipmentSlot, Integer>> LAST_SOUND_TICK =
             new WeakHashMap<>();
@@ -26,35 +25,24 @@ public final class EquipmentBreakSounds {
     private EquipmentBreakSounds() {
     }
 
-    static void captureBeforeDamage(Human human) {
-        BEFORE_DAMAGE.put(human, snapshot(human));
-    }
-
-    static void detectAfterDamage(Human human) {
-        EnumMap<EquipmentSlot, ItemStack> before = BEFORE_DAMAGE.remove(human);
-        if (before != null) {
-            compare(human, before, snapshot(human));
-        }
-        LAST_EQUIPMENT.put(human, snapshot(human));
-    }
-
-    /** Run before recovery and weapon custody can refill an emptied hand. */
+    /** Cache current damageable stacks without inferring breaks from slot changes. */
     static void tick(Human human) {
-        EnumMap<EquipmentSlot, ItemStack> current = snapshot(human);
-        EnumMap<EquipmentSlot, ItemStack> previous = LAST_EQUIPMENT.put(human, current);
-        if (previous != null) {
-            compare(human, previous, current);
+        EnumMap<EquipmentSlot, ItemStack> previous = LAST_EQUIPMENT.computeIfAbsent(
+                human, ignored -> new EnumMap<>(EquipmentSlot.class));
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            rememberIfDamageable(previous, slot, human.getItemBySlot(slot));
         }
     }
 
     static void observeEquipmentChange(
             Human human, EquipmentSlot slot, ItemStack previous, ItemStack current
     ) {
-        if (isBrokenTransition(previous, current)) {
-            play(human, slot, previous);
+        EnumMap<EquipmentSlot, ItemStack> known = LAST_EQUIPMENT.computeIfAbsent(
+                human, ignored -> new EnumMap<>(EquipmentSlot.class));
+        rememberIfDamageable(known, slot, current);
+        if (!known.containsKey(slot) && previous != null) {
+            rememberIfDamageable(known, slot, previous);
         }
-        LAST_EQUIPMENT.computeIfAbsent(human, ignored -> snapshot(human))
-                .put(slot, current.isDamageableItem() ? current.copy() : ItemStack.EMPTY);
     }
 
     public static void playNow(Human human, EquipmentSlot slot) {
@@ -68,24 +56,16 @@ public final class EquipmentBreakSounds {
         play(human, slot, broken);
     }
 
-    private static void compare(
-            Human human,
-            EnumMap<EquipmentSlot, ItemStack> before,
-            EnumMap<EquipmentSlot, ItemStack> after
-    ) {
-        for (EquipmentSlot slot : EquipmentSlot.values()) {
-            ItemStack previous = before.get(slot);
-            if (isBrokenTransition(previous, after.get(slot))) {
-                play(human, slot, previous);
-            }
-        }
+    public static void playNow(Human human, EquipmentSlot slot, ItemStack brokenStack) {
+        play(human, slot, brokenStack);
     }
 
-    private static boolean isBrokenTransition(ItemStack before, ItemStack after) {
-        return before != null
-                && !before.isEmpty()
-                && before.isDamageableItem()
-                && (after == null || after.isEmpty());
+    private static void rememberIfDamageable(
+            EnumMap<EquipmentSlot, ItemStack> known, EquipmentSlot slot, ItemStack stack
+    ) {
+        if (stack != null && !stack.isEmpty() && stack.isDamageableItem()) {
+            known.put(slot, stack.copy());
+        }
     }
 
     private static void play(Human human, EquipmentSlot slot, ItemStack broken) {
@@ -100,6 +80,9 @@ public final class EquipmentBreakSounds {
         }
         ticks.put(slot, human.tickCount);
 
+        if (broken == null || broken.isEmpty()) {
+            return;
+        }
         SoundEvent sound = SoundEvents.ITEM_BREAK;
         float volume = SpartanEquipmentCompat.isShield(broken) || isArmorSlot(slot)
                 ? 1.0F
@@ -120,14 +103,4 @@ public final class EquipmentBreakSounds {
                 || slot == EquipmentSlot.FEET;
     }
 
-    private static EnumMap<EquipmentSlot, ItemStack> snapshot(Human human) {
-        EnumMap<EquipmentSlot, ItemStack> result = new EnumMap<>(EquipmentSlot.class);
-        for (EquipmentSlot slot : EquipmentSlot.values()) {
-            ItemStack stack = human.getItemBySlot(slot);
-            // Only damageable stacks can satisfy isBrokenTransition. Avoid
-            // copying food, ammo and NBT-heavy non-damageable guns every tick.
-            result.put(slot, stack.isDamageableItem() ? stack.copy() : ItemStack.EMPTY);
-        }
-        return result;
-    }
 }
