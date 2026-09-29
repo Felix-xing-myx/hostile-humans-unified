@@ -39,4 +39,4 @@
 
 ## 许可证与来源
 
-本模组的完整来源与第三方组件说明见 [`provenance.json`](provenance.json) 和 [`THIRD_PARTY_NOTICES.md`](src/main/resources/THIRD_PARTY_NOTICES.md)。MIT 许可证仅适用于原创核心模块 `OwnerIndex.java` 与 `BudgetedUpdates.java`，不代表整个仓库或整合版 JAR 均以 MIT 授权；详见 [`LICENSES/MIT-Original-Core.txt`](LICENSES/MIT-Original-Core.txt)。
+本模组统一发行版使用 GNU GPL v2.0，完整文本见仓库根目录 [`LICENSE`](LICENSE)。整合自 Human Gunner 的源码保留原有 MPL-2.0 声明，并在 MPL-2.0 允许的范围内作为较大 GPL 作品的一部分同时按 GPL 条款发布。组件来源及许可说明见 [`THIRD_PARTY_NOTICES.md`](src/main/resources/THIRD_PARTY_NOTICES.md)。

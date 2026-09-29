@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0-only
 // Copyright (c) 2026 Felix-xing-myx
 package dev.felix.hostilehumans.core;
 

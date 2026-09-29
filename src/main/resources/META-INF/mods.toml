@@ -1,6 +1,6 @@
 modLoader="javafml"
 loaderVersion="[47,)"
-license="Mixed; see THIRD_PARTY_NOTICES.md"
+license="GPL-2.0-only"
 logoFile="logo.png"
 
 [[mods]]

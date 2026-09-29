@@ -39,4 +39,4 @@ The main configuration is `config/hostile_humans_unified.json`. It covers tier a
 
 ## License and Credits
 
-Source provenance and third-party component notices are documented in [`provenance.json`](provenance.json) and [`THIRD_PARTY_NOTICES.md`](src/main/resources/THIRD_PARTY_NOTICES.md). The MIT License applies only to the original core modules `OwnerIndex.java` and `BudgetedUpdates.java`; it does not relicense the whole repository or unified mod JAR. See [`LICENSES/MIT-Original-Core.txt`](LICENSES/MIT-Original-Core.txt).
+The unified release is licensed under the GNU GPL v2.0; see the full text in the repository root [`LICENSE`](LICENSE). Source incorporated from Human Gunner retains its original MPL-2.0 notices and, where permitted by MPL-2.0, is additionally distributed under GPL terms as part of this larger work. See [`THIRD_PARTY_NOTICES.md`](src/main/resources/THIRD_PARTY_NOTICES.md) for component provenance and license details.
