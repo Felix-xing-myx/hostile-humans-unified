@@ -30,6 +30,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private static final double RETREAT_RANGE = 4.0D;
     private static final double CLOSE_MELEE_ENTER_RANGE = 2.0D;
     private static final double CLOSE_MELEE_EXIT_RANGE = 4.0D;
+    private static final double OBSCURED_ADVANCE_DISTANCE = 10.0D;
+    private static final int OBSCURED_ADVANCE_AFTER_TICKS = 30;
     private static final int MIN_AIM_TICKS = 2;
     private static final long RELOAD_RETRY_TICKS = 4L;
     private static final double MAX_LEAD_TICKS = 8.0D;
@@ -43,6 +45,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private final T mob;
     private final IGunOperator operator;
     private int aimTicks;
+    private int unseenTargetTicks;
     private int nextCloseMeleeAttackTick;
     private int nextCloseRetreatPathTick;
     private int nextRangeRetreatPathTick;
@@ -117,6 +120,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     @Override
     public void start() {
         aimTicks = 0;
+        unseenTargetTicks = 0;
         retreatFailureTicks = 0;
         lastThreatDistance = Double.POSITIVE_INFINITY;
         retreatingForSpace = false;
@@ -150,6 +154,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             stopLateralMovement();
         }
         aimTicks = 0;
+        unseenTargetTicks = 0;
         retreatingForSpace = false;
         approachingTarget = false;
         seekingFiringPosition = false;
@@ -209,6 +214,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             retreatingForSpace = false;
             strafeAnchorSet = false;
             aimTicks = 0;
+            unseenTargetTicks = 0;
+            nextFiringPositionTick = mob.tickCount;
+            nextApproachPathTick = mob.tickCount;
         }
 
         double distance = mob.distanceTo(target);
@@ -264,6 +272,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // Keep moving toward the marked player after a side fight, but do
             // not turn the beacon's pursuit range into extra weapon reach.
             aimTicks = 0;
+            unseenTargetTicks = 0;
             setAiming(false);
             if (!ShoreSeekingPolicy.shouldMoveTowardCombatTarget(isShoreSeeking())) {
                 // The environmental MOVE lease must remain pointed at dry
@@ -278,6 +287,13 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             return;
         }
         if (!mob.getSensing().hasLineOfSight(target)) {
+            unseenTargetTicks = Math.min(OBSCURED_ADVANCE_AFTER_TICKS + 1,
+                    unseenTargetTicks + 1);
+            if (unseenTargetTicks == OBSCURED_ADVANCE_AFTER_TICKS) {
+                // A failed preferred-band search must not postpone the first
+                // closer-angle attempt for the rest of its retry interval.
+                nextFiringPositionTick = mob.tickCount;
+            }
             aimTicks = 0;
             setAiming(false);
             if (isShoreSeeking()) {
@@ -296,6 +312,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             }
             return;
         }
+        unseenTargetTicks = 0;
 
         if (isShoreSeeking()) {
             // LeaveWaterWhenIdleGoal owns navigation until the Human is dry.
@@ -349,6 +366,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private void tickCloseMeleeDefense(Human human, LivingEntity target, double distance) {
         setAiming(false);
         aimTicks = 0;
+        unseenTargetTicks = 0;
         boolean shoreSeeking = isShoreSeeking();
         if (shoreSeeking) {
             clearLateralInputPreservingNavigation();
@@ -649,6 +667,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                                        GunRangePolicy.Band range, boolean obscured) {
         if (obscured) {
             stopLateralMovement();
+            boolean seekCloserAngle = unseenTargetTicks >= OBSCURED_ADVANCE_AFTER_TICKS
+                    && distance > OBSCURED_ADVANCE_DISTANCE;
             if (distance > range.maximum() + 12.0D
                     || (mob instanceof Human human && human.shouldUseWaterMovement()
                     && distance > range.maximum())) {
@@ -660,16 +680,24 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                     approachingTarget = false;
                 }
                 seekingFiringPosition = false;
-                approachTarget(target, range);
+                approachTarget(target, seekCloserAngle
+                        ? OBSCURED_ADVANCE_DISTANCE : range.maximum());
                 return;
             }
             if (!seekingFiringPosition) {
                 // Cancel a stale straight-to-target path once cover blocks the
-                // shot. The replacement path must end at a verified firing lane.
-                if (approachingTarget || !mob.getNavigation().isDone()) {
+                // shot. After sustained occlusion, keep the deliberate closer
+                // approach instead of cancelling it on every following tick.
+                if ((!seekCloserAngle && approachingTarget)
+                        || (!approachingTarget && !mob.getNavigation().isDone())) {
                     mob.getNavigation().stop();
                     approachingTarget = false;
                 }
+            }
+            if (seekCloserAngle && !seekingFiringPosition && approachingTarget
+                    && !mob.getNavigation().isDone() && !mob.getNavigation().isStuck()) {
+                approachTarget(target, OBSCURED_ADVANCE_DISTANCE);
+                return;
             }
             if ((mob.getNavigation().isDone() || mob.getNavigation().isStuck())
                     && mob.tickCount >= nextFiringPositionTick
@@ -677,15 +705,27 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 Path firingPath = RangedFiringPosition.findVisiblePath(
                         human,
                         target,
-                        range.minimum(),
-                        range.maximum(),
+                        seekCloserAngle
+                                ? Math.min(OBSCURED_ADVANCE_DISTANCE, range.minimum())
+                                : range.minimum(),
+                        seekCloserAngle
+                                ? Math.max(range.maximum(), distance)
+                                : range.maximum(),
                         12,
                         16
                 );
+                // After sustained occlusion, accept a nearer firing lane.
+                // Keeping one bounded search avoids doubling path probes.
                 if (firingPath != null) {
                     mob.getNavigation().moveTo(firingPath, 1.0D);
                     approachingTarget = true;
                     seekingFiringPosition = true;
+                } else if (seekCloserAngle) {
+                    seekingFiringPosition = false;
+                    approachTarget(target, OBSCURED_ADVANCE_DISTANCE);
+                    if (!approachingTarget && human.isInWater()) {
+                        human.beginCombatFiringShore(target, 1.0D);
+                    }
                 } else {
                     if (human.isInWater()) {
                         human.beginCombatFiringShore(target, 1.0D);
@@ -695,7 +735,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                     approachingTarget = false;
                     seekingFiringPosition = false;
                 }
-                nextFiringPositionTick = mob.tickCount + (firingPath == null ? 40 : 10);
+                nextFiringPositionTick = mob.tickCount + (firingPath == null
+                        ? (seekCloserAngle ? 20 : 40) : 10);
             }
             return;
         }
@@ -731,6 +772,10 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     private void approachTarget(LivingEntity target, GunRangePolicy.Band range) {
+        approachTarget(target, range.maximum());
+    }
+
+    private void approachTarget(LivingEntity target, double desiredDistance) {
         // A water navigator cannot always path to a target standing on the far
         // bank. Do not retry A-star every tick or abandon the weapon's range.
         if (mob.tickCount >= nextApproachPathTick) {
@@ -738,7 +783,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             nextApproachPathTick = mob.tickCount + 12;
         }
         if (mob instanceof Human human) {
-            human.approachCombatTargetInWater(target, range.maximum(), 1.0D);
+            human.approachCombatTargetInWater(target, desiredDistance, 1.0D);
         }
     }
 

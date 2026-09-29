@@ -1,5 +1,29 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.5.0 — 2026-09-29（累计 3.4.0 之后的更新）
+
+### 简体中文
+
+- 增加士兵的 Better Combat 兼容选项，默认启用。检测到 Better Combat 时，士兵读取武器攻击范围、攻击形状与冷却，并可攻击范围内的多个目标；未安装时自动回退到模组原有战斗逻辑。
+- 改进 Better Combat 攻击动画，使士兵的身体、护甲和手持武器随攻击动作连续变化；支持双手武器的攻击动作与待机姿势。
+- 改进 TaCZ 枪手的瞄准、射击和换弹动画及换弹音效，并调整开火时的朝向，使枪械保持对准目标。
+- 枪手持续失去目标视野、且目标仍在 10 格外时，会暂时放宽优势距离，靠近或侧移寻找射界；短暂遮挡不触发，重新看见目标后恢复正常控距。
+- 修正盾牌切换与真实破损的音效判定；护甲和工具仅在实际损坏时播放对应的原版破损音效。
+- 近战控距会读取当前武器的攻击距离：安装 Better Combat 时使用其武器范围，未安装时使用 Forge 实体攻击距离属性。人类能够面朝目标后退调整距离。
+- 修复已雇佣人类使用近战武器时耐久不正确的问题；武器与护甲均应用耐久附魔判定。已雇佣人类的整套护甲增加共享磨损冷却，降低高频受击造成的耐久消耗。
+- 调整玩家动画资源包兼容：Better Combat 与 TaCZ 的战斗动画在相应动作期间优先显示，其他状态可继续使用资源包动画。
+
+### English
+
+- Adds a Better Combat option for soldiers, enabled by default. When Better Combat is installed, soldiers read weapon range, attack shape, and cooldown, and can hit multiple targets within an attack. Without it, they fall back to this mod's combat logic.
+- Improves Better Combat attack animations so the soldier's body, armor, and held weapon move continuously with the attack. Two-handed weapons support both attack animations and an idle pose.
+- Improves TaCZ gunner aiming, firing, and reloading animations and reload sounds. Firing alignment is adjusted to keep guns pointed at the target.
+- After prolonged loss of sight with the target more than 10 blocks away, gunners temporarily relax their preferred range to approach or flank for a firing lane. Brief occlusion does not trigger this behavior, and normal spacing resumes once the target is visible.
+- Distinguishes shield switching from actual breakage; vanilla armor and tool break sounds play only when the corresponding item really breaks.
+- Melee spacing reads the current weapon's attack reach: Better Combat weapon range when installed, or Forge's entity-reach attribute otherwise. Humans can step backward while facing their target to adjust distance.
+- Fixes durability loss for hired humans' melee weapons. Durability enchantments apply to weapons and armor. Hired soldiers now share an armor-wear cooldown across the full armor set to reduce durability loss under rapid attacks.
+- Improves compatibility with player-animation resource packs: Better Combat and TaCZ combat animations take priority during their corresponding actions, while resource-pack animations remain available in other states.
+
 ## 3.4.0 — 2026-09-28（含 3.3.14 的累计更新）
 
 ### 简体中文
