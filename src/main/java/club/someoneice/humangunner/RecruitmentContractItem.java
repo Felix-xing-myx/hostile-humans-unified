@@ -24,8 +24,10 @@ public final class RecruitmentContractItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.humangunner.contract.tooltip",
-                RecruitmentPolicy.cost(tier), RecruitmentPolicy.limit(tier))
+        var payment = UnifiedConfig.get().recruitmentCost(tier);
+        tooltip.add((payment == null ? Component.translatable("message.humangunner.hire.invalid_payment")
+                : Component.translatable("item.humangunner.contract.payment_tooltip",
+                payment.count(), paymentName(payment), RecruitmentPolicy.limit(tier)))
                 .withStyle(ChatFormatting.GRAY));
     }
 
@@ -47,10 +49,20 @@ public final class RecruitmentContractItem extends Item {
             return fail(player, "limit");
         if (player.isSpectator()) return InteractionResult.PASS;
         var inventory = player.getInventory();
-        if (!RecruitmentPayment.pay(player.isCreative(), RecruitmentPolicy.cost(tier), inventory.items.size(),
-                slot -> inventory.items.get(slot).is(net.minecraft.world.item.Items.EMERALD)
-                        ? inventory.items.get(slot).getCount() : 0,
-                (slot, count) -> inventory.items.get(slot).shrink(count))) return fail(player, "emeralds");
+        if (!player.isCreative()) {
+            var payment = UnifiedConfig.get().recruitmentCost(tier);
+            Item currency = paymentItem(payment);
+            if (currency == null) return fail(player, "invalid_payment");
+            if (!RecruitmentPayment.pay(false, payment.count(), inventory.items.size(),
+                    slot -> inventory.items.get(slot).is(currency)
+                            ? Math.max(0, inventory.items.get(slot).getCount()
+                            - (inventory.items.get(slot) == stack ? 1 : 0)) : 0,
+                    (slot, count) -> inventory.items.get(slot).shrink(count))) {
+                player.displayClientMessage(Component.translatable("message.humangunner.hire.payment",
+                        payment.count(), paymentName(payment)).withStyle(ChatFormatting.RED), true);
+                return InteractionResult.FAIL;
+            }
+        }
 
         if (!player.isCreative()) {
             stack.shrink(1);
@@ -77,5 +89,19 @@ public final class RecruitmentContractItem extends Item {
         player.displayClientMessage(Component.translatable("message.humangunner.hire." + reason)
                 .withStyle(ChatFormatting.RED), true);
         return InteractionResult.CONSUME;
+    }
+
+    private static Item paymentItem(UnifiedConfig.RecruitmentCost payment) {
+        if (payment == null) return null;
+        var id = net.minecraft.resources.ResourceLocation.tryParse(payment.itemId());
+        var registry = net.minecraft.core.registries.BuiltInRegistries.ITEM;
+        if (id == null || !registry.containsKey(id)) return null;
+        Item item = registry.get(id);
+        return item == net.minecraft.world.item.Items.AIR ? null : item;
+    }
+
+    private static Component paymentName(UnifiedConfig.RecruitmentCost payment) {
+        Item item = paymentItem(payment);
+        return item == null ? Component.literal(payment.itemId()) : item.getDescription();
     }
 }

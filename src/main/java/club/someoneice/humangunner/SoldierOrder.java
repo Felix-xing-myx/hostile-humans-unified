@@ -34,6 +34,7 @@ public enum SoldierOrder {
     }
 
     public static void set(Human human, SoldierOrder order) {
+        human.guardCombatState.reset();
         human.getPersistentData().putString(ORDER, order.name());
         human.getPersistentData().putLong(ANCHOR, human.blockPosition().asLong());
         human.getPersistentData().remove(NEXT_PATROL);
@@ -49,6 +50,7 @@ public enum SoldierOrder {
     }
 
     static void clear(Human human) {
+        human.guardCombatState.reset();
         human.getPersistentData().remove(ORDER);
         human.getPersistentData().remove(ANCHOR);
         human.getPersistentData().remove(NEXT_PATROL);
@@ -114,6 +116,15 @@ public enum SoldierOrder {
             }
         }
         LivingEntity target = human.getTarget();
+        if (order == GUARD) {
+            if (distanceFromAnchorSqr(human, anchor) <= 4.0D) human.guardCombatState.returnedToPost();
+            human.guardCombatState.tick(level.getGameTime(), !insideGuardArea(human, human.getX(), human.getZ()),
+                    target != null);
+            if (human.guardCombatState.returning() && target != null) {
+                human.forgetSoldierTarget();
+                target = null;
+            }
+        }
         if (target != null && (!target.isAlive() || HumanRelations.allied(human, target)
                 || !allowsTarget(human, target)
                 || human.soldierCombatMemory.timedOut(target.getUUID(), level.getGameTime()))) {
@@ -153,7 +164,7 @@ public enum SoldierOrder {
             return;
         }
         double leash = order == GUARD ? 48.0D * 48.0D : PATROL_RANGE_SQR;
-        if (target != null && !isRecentSelfAttacker(human, target)
+        if (order != GUARD && target != null && !isRecentSelfAttacker(human, target)
                 && horizontalDistanceSqr(target.getX(), target.getZ(), anchor) > leash) {
             human.forgetSoldierTarget();
             target = null;
@@ -161,6 +172,10 @@ public enum SoldierOrder {
         if (target != null) return;
 
         if (order == GUARD) {
+            // The pickup goal owns its route; lifecycle callbacks must not
+            // overwrite it with a return path or stop it near the anchor.
+            if (human.isActivelyCollectingLoot()
+                    && insideGuardArea(human, human.getX(), human.getZ())) return;
             if (distanceFromAnchor > 4.0D && human.tickCount % 10 == 0) {
                 human.getNavigation().moveTo(anchor.getX() + 0.5D, anchor.getY(), anchor.getZ() + 0.5D, 1.1D);
             } else if (distanceFromAnchor <= 4.0D) {
@@ -195,13 +210,21 @@ public enum SoldierOrder {
         // never an exceptional soldier-order state.
         if (target == null) return false;
         if (!human.hasOwner() || human.level().isClientSide) return true;
+        SoldierOrder order = get(human);
+        boolean guardRetaliation = order == GUARD && human.guardCombatState
+                .retaliating(target.getUUID(), human.level().getGameTime());
+        boolean guardChase = order == GUARD && (target == human.getTarget()
+                || human.guardCombatState.retainsTarget(target.getUUID()))
+                && !human.guardCombatState.returning();
         if (!target.isAlive() || target.level() != human.level()
-                || human.distanceToSqr(target) > FOLLOW_COMBAT_RANGE_SQR
+                || (!guardRetaliation && !guardChase
+                && human.distanceToSqr(target) > FOLLOW_COMBAT_RANGE_SQR)
                 || !human.soldierCombatMemory.allowed(target.getUUID(), human.level().getGameTime())
                 || !SoldierCombatMode.allowsTarget(human, target)) return false;
         if (human.getPersistentData().getBoolean(RETURNING_FROM_RETREAT)) return false;
+        if (order == GUARD && human.guardCombatState.returning()) return false;
+        if (guardRetaliation || guardChase) return true;
         if (human.isFleeing || isRecentSelfAttacker(human, target)) return true;
-        SoldierOrder order = get(human);
         if (order == FOLLOW) {
             Player owner = human.level().getPlayerByUUID(human.getOwnerUUID());
             return owner != null && owner.isAlive()
@@ -215,6 +238,25 @@ public enum SoldierOrder {
 
     public static boolean isHoldingPosition(Human human) {
         return human.hasOwner() && get(human) == HOLD_POSITION;
+    }
+
+    public static void onSelfAttacked(Human human, LivingEntity attacker) {
+        if (!human.hasOwner() || get(human) != GUARD || HumanRelations.allied(human, attacker)) return;
+        long now = human.level().getGameTime();
+        human.guardCombatState.attacked(attacker.getUUID(), now,
+                !insideGuardArea(human, human.getX(), human.getZ()));
+        human.soldierCombatMemory.threatened(attacker.getUUID(), now);
+        human.getPersistentData().remove(RETURNING_FROM_RETREAT);
+    }
+
+    private static boolean insideGuardArea(Human human, double x, double z) {
+        return horizontalDistanceSqr(x, z, anchor(human)) <= FOLLOW_COMBAT_RANGE_SQR;
+    }
+
+    public static boolean allowsLootPosition(Human human, double x, double z) {
+        return !human.hasOwner() || get(human) != GUARD
+                || (!human.guardCombatState.returning() && insideGuardArea(human, human.getX(), human.getZ())
+                && insideGuardArea(human, x, z));
     }
 
     public static boolean isReturningToHoldPosition(Human human) {

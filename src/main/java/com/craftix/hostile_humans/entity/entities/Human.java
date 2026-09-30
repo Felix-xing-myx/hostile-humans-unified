@@ -155,9 +155,13 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private int rangedFacingTick = Integer.MIN_VALUE;
     private LivingEntity rangedFacingTarget;
     private float rangedFacingYaw = Float.NaN;
-    private int nextHiredArmorWearTick;
-    private int nextHiredArmorSlotIndex;
+    private final dev.felix.hostilehumans.core.EquipmentWearCooldown hiredArmorWear =
+            new dev.felix.hostilehumans.core.EquipmentWearCooldown(4, 60);
+    private static final EquipmentSlot[] HIRED_ARMOR_SLOTS = {
+            EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD};
     private LivingEntity pendingBetterCombatTarget;
+    public final club.someoneice.humangunner.GuardCombatState guardCombatState =
+            new club.someoneice.humangunner.GuardCombatState();
     private ItemStack pendingBetterCombatWeapon = ItemStack.EMPTY;
     private int pendingBetterCombatUpswingTicks;
 
@@ -366,6 +370,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private UUID combatFiringShoreTarget;
     private int combatFiringShoreUntilTick;
     private boolean waterKnockbackModifierApplied;
+    private static final Direction[] SHORE_DIRECTIONS = {
+            Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST
+    };
     private int surfaceCheckTick = Integer.MIN_VALUE;
     private double surfaceCheckX;
     private double surfaceCheckY;
@@ -694,14 +701,15 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private boolean isDryStandingPosition(BlockPos feetPos) {
+        if (!this.level().hasChunkAt(feetPos)) return false;
         BlockPos headPos = feetPos.above();
         BlockPos floorPos = feetPos.below();
-        if (this.level().getFluidState(feetPos).is(FluidTags.WATER)
-                || this.level().getFluidState(feetPos).is(FluidTags.LAVA)
-                || this.level().getFluidState(headPos).is(FluidTags.WATER)
-                || this.level().getFluidState(headPos).is(FluidTags.LAVA)
-                || this.level().getFluidState(floorPos).is(FluidTags.WATER)
-                || this.level().getFluidState(floorPos).is(FluidTags.LAVA)
+        var feetFluid = this.level().getFluidState(feetPos);
+        if (feetFluid.is(FluidTags.WATER) || feetFluid.is(FluidTags.LAVA)) return false;
+        var headFluid = this.level().getFluidState(headPos);
+        if (headFluid.is(FluidTags.WATER) || headFluid.is(FluidTags.LAVA)) return false;
+        var floorFluid = this.level().getFluidState(floorPos);
+        if (floorFluid.is(FluidTags.WATER) || floorFluid.is(FluidTags.LAVA)
                 || !this.level().getBlockState(feetPos).getCollisionShape(this.level(), feetPos).isEmpty()
                 || !this.level().getBlockState(headPos).getCollisionShape(this.level(), headPos).isEmpty()) {
             return false;
@@ -979,9 +987,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
         boolean damaged = super.hurt(damageSource, amount);
         if (damaged && this.isAlive() && attacker != null
-                && club.someoneice.humangunner.SoldierCombatMode.authorizeSelfDefense(this, attacker)
-                && this.canAttack(attacker)) {
-            this.setTarget(attacker);
+                && club.someoneice.humangunner.SoldierCombatMode.authorizeSelfDefense(this, attacker)) {
+            club.someoneice.humangunner.SoldierOrder.onSelfAttacked(this, attacker);
+            if (this.canAttack(attacker)) this.setTarget(attacker);
         }
         return damaged;
     }
@@ -995,25 +1003,19 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (amount <= 0.0F) {
             return;
         }
-        // A hired soldier loses at most one armor point across the whole set
-        // per 60 ticks. Rotate the selected piece rather than wearing one slot
-        // exclusively; hurtAndBreak still applies vanilla Unbreaking.
-        if (this.tickCount < nextHiredArmorWearTick) return;
-        EquipmentSlot[] armorSlots = {EquipmentSlot.FEET, EquipmentSlot.LEGS,
-                EquipmentSlot.CHEST, EquipmentSlot.HEAD};
-        for (int offset = 0; offset < armorSlots.length; offset++) {
-            int index = (nextHiredArmorSlotIndex + offset) % armorSlots.length;
-            EquipmentSlot slot = armorSlots[index];
+        // Each piece has its own 60-tick loss cooldown. Vanilla Unbreaking
+        // still rolls per piece; a prevented loss does not consume its gate.
+        for (int index = 0; index < HIRED_ARMOR_SLOTS.length; index++) {
+            if (!hiredArmorWear.ready(index, this.tickCount)) continue;
+            EquipmentSlot slot = HIRED_ARMOR_SLOTS[index];
             ItemStack armor = this.getItemBySlot(slot);
             if (armor.isDamageableItem()
                     && !(source.is(DamageTypeTags.IS_FIRE) && armor.getItem().isFireResistant())) {
                 int oldDamage = armor.getDamageValue();
                 wearEquippedItem(armor, slot);
-                nextHiredArmorSlotIndex = (index + 1) % armorSlots.length;
                 if (armor.isEmpty() || armor.getDamageValue() > oldDamage) {
-                    nextHiredArmorWearTick = this.tickCount + 60;
+                    hiredArmorWear.lostDurability(index, this.tickCount);
                 }
-                break;
             }
         }
     }
@@ -1844,13 +1846,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     private double computeDistanceToActualWaterSurface() {
         BlockPos origin = this.blockPosition();
+        net.minecraft.world.level.material.FluidState previouslyReadAbove = null;
         for (int yOffset = -1; yOffset <= 3; yOffset++) {
             BlockPos fluidPos = origin.offset(0, yOffset, 0);
-            var fluid = this.level().getFluidState(fluidPos);
-            if (!fluid.is(FluidTags.WATER)
-                    || this.level().getFluidState(fluidPos.above()).is(FluidTags.WATER)) {
-                continue;
-            }
+            var fluid = previouslyReadAbove == null ? this.level().getFluidState(fluidPos) : previouslyReadAbove;
+            previouslyReadAbove = null;
+            if (!fluid.is(FluidTags.WATER)) continue;
+            previouslyReadAbove = this.level().getFluidState(fluidPos.above());
+            if (previouslyReadAbove.is(FluidTags.WATER)) continue;
 
             double surfaceY = fluidPos.getY() + fluid.getHeight(this.level(), fluidPos);
             double distanceToSurface = surfaceY - this.getY();
@@ -1915,21 +1918,17 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         double oneBlockLandingLimit = Double.isFinite(surfaceDistance)
                 ? ShoreSeekingPolicy.oneBlockShoreLandingLimit(this.getY() + surfaceDistance)
                 : Double.POSITIVE_INFINITY;
-        for (int forwardIndex = 0; forwardIndex < 3; forwardIndex++) {
-            double forward = 0.4D + forwardIndex * 0.35D;
-            for (int sideIndex = -1; sideIndex <= 1; sideIndex++) {
-                double side = sideIndex * 0.3D;
-                int x = Mth.floor(this.getX() + directionX * forward - directionZ * side);
-                int z = Mth.floor(this.getZ() + directionZ * forward + directionX * side);
-                for (int y = minY; y <= maxY; y++) {
-                    if (y > this.getY() + 0.35D
-                            && y <= this.getY() + 2.55D
-                            && y <= oneBlockLandingLimit
-                            && this.isDryStandingPosition(new BlockPos(x, y, z))) {
-                        this.cachedDryLandingAhead = true;
-                        this.cachedDryLandingFeetY = y;
-                        return true;
-                    }
+        for (BlockPos column : ShoreSeekingPolicy.forwardLandingColumns(
+                this.getX(), this.getZ(), directionX, directionZ)) {
+            if (column == null) break;
+            for (int y = minY; y <= maxY; y++) {
+                if (y > this.getY() + 0.35D
+                        && y <= this.getY() + 2.55D
+                        && y <= oneBlockLandingLimit
+                        && this.isDryStandingPosition(new BlockPos(column.getX(), y, column.getZ()))) {
+                    this.cachedDryLandingAhead = true;
+                    this.cachedDryLandingFeetY = y;
+                    return true;
                 }
             }
         }
@@ -1943,8 +1942,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 this.getY() + surfaceDistance);
         int minY = Mth.floor(this.getY() + 0.1D);
         int maxY = Mth.floor(this.getY() + 2.65D);
-        for (Direction direction : new Direction[]{
-                Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST}) {
+        for (Direction direction : SHORE_DIRECTIONS) {
             int x = Mth.floor(this.getX() + direction.getStepX() * 0.85D);
             int z = Mth.floor(this.getZ() + direction.getStepZ() * 0.85D);
             for (int y = minY; y <= maxY; y++) {

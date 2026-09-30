@@ -41,6 +41,11 @@ public class HumanData {
     private NonNullList<ItemStack> armorItems = NonNullList.withSize((int)4, ItemStack.EMPTY);
     private NonNullList<ItemStack> handItems = NonNullList.withSize((int)2, ItemStack.EMPTY);
     private NonNullList<ItemStack> inventoryItems = NonNullList.withSize((int)30, ItemStack.EMPTY);
+    private int inventoryRevision;
+    private final dev.felix.hostilehumans.core.TickRevisionMemo<Boolean> storedGunPresence =
+            new dev.felix.hostilehumans.core.TickRevisionMemo<>();
+    private final dev.felix.hostilehumans.core.TickRevisionMemo<Boolean> storedRangedPresence =
+            new dev.felix.hostilehumans.core.TickRevisionMemo<>();
     private java.lang.ref.WeakReference<HumanEntity> humanRef = new java.lang.ref.WeakReference<>(null);
     private ResourceKey<Level> level;
 
@@ -134,11 +139,43 @@ public class HumanData {
 
     public void setInventoryItem(int index, ItemStack itemStack) {
         this.inventoryItems.set(index, itemStack);
+        inventoryRevision++;
         this.setDirty();
     }
 
     public void markInventoryDirty() {
+        inventoryRevision++;
         this.setDirty();
+    }
+
+    public int getInventoryRevision() { return inventoryRevision; }
+
+    /** Per-instance cache: UUID-equal replacement records never share results. */
+    public boolean hasStoredGun(int tick) {
+        var guns = club.someoneice.humangunner.GunSupport.get();
+        if (!guns.enabled()) return false;
+        if (!storedGunPresence.isCurrent(tick, inventoryRevision)) {
+            boolean found = false;
+            for (ItemStack stack : inventoryItems) {
+                if (guns.isGun(stack)) { found = true; break; }
+            }
+            storedGunPresence.remember(tick, inventoryRevision, found);
+        }
+        return storedGunPresence.value();
+    }
+
+    public boolean hasStoredBowOrCrossbow(int tick) {
+        if (!storedRangedPresence.isCurrent(tick, inventoryRevision)) {
+            boolean found = false;
+            for (ItemStack stack : inventoryItems) {
+                if (club.someoneice.humangunner.RangedWeaponCustody.isBowOrCrossbow(stack)) {
+                    found = true;
+                    break;
+                }
+            }
+            storedRangedPresence.remember(tick, inventoryRevision, found);
+        }
+        return storedRangedPresence.value();
     }
 
     @Nonnull
@@ -156,6 +193,12 @@ public class HumanData {
     }
 
     public void load(HumanEntity humanMob) {
+        refreshLiveMetadata(humanMob);
+        this.entityData = humanMob.serializeNBT();
+    }
+
+    /** Live UI/index updates do not need a full entity/capability snapshot. */
+    public void refreshLiveMetadata(HumanEntity humanMob) {
         this.humanRef = new java.lang.ref.WeakReference<>(humanMob);
         this.humanMobUUID = humanMob.getUUID();
         // Name tags update vanilla CustomName, not the older DATA_NAME field.
@@ -177,7 +220,6 @@ public class HumanData {
         this.entityAggressionLevel = humanMob.getAggressionLevel();
         this.entityType = humanMob.getType();
         this.entitySitting = humanMob.isOrderedToSit();
-        this.entityData = humanMob.serializeNBT();
         this.setArmorItems((NonNullList<ItemStack>)((NonNullList)humanMob.getArmorSlots()));
         this.setHandItems((NonNullList<ItemStack>)((NonNullList)humanMob.getHandSlots()));
     }
@@ -215,6 +257,7 @@ public class HumanData {
         HumanHelper.loadArmorItems(compoundTag, this.armorItems);
         HumanHelper.loadHandItems(compoundTag, this.handItems);
         HumanHelper.loadInventoryItems(compoundTag, this.inventoryItems);
+        inventoryRevision++;
         if (compoundTag.contains(ENTITY_AGGRESSION_LEVEL)) {
             this.entityAggressionLevel = AggressionMode.get(compoundTag.getString(ENTITY_AGGRESSION_LEVEL));
         }

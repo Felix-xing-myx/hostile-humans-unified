@@ -23,11 +23,16 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.HashMap;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.ToDoubleFunction;
+import dev.felix.hostilehumans.core.IncrementalBestSearch;
 
 /**
  * High-priority, interruptible survival layer above Hostile Humans' native
@@ -70,6 +75,21 @@ public final class AdaptiveCombatGoal extends Goal {
     private Phase phase;
     private LivingEntity threat;
     private Path activePath;
+    private IncrementalBestSearch<BlockPos, PlannedPath> retreatSearch;
+    private Vec3 retreatSearchOrigin;
+    private Vec3 retreatSearchThreatPosition;
+    private UUID retreatSearchThreat;
+    private int retreatSearchRadius;
+    private int retreatFallbackRemaining;
+    private int lastRetreatPlanningTick = Integer.MIN_VALUE;
+    private IncrementalBestSearch<Vec3, PlannedPath> tacticalSearch;
+    private UUID tacticalSearchThreat;
+    private Vec3 tacticalSearchOrigin;
+    private Vec3 tacticalSearchThreatPosition;
+    private int tacticalSearchRadius;
+    private int tacticalSearchAttempts;
+    private int lastTacticalPlanningTick = Integer.MIN_VALUE;
+    private boolean tacticalFallbackPending;
     private Vec3 lastObservedPosition;
     private UUID combatTarget;
     private int phaseTicks;
@@ -282,6 +302,10 @@ public final class AdaptiveCombatGoal extends Goal {
         pendingPhase = null;
         repathTicks = 0;
         activePath = null;
+        retreatSearch = null;
+        tacticalSearch = null;
+        tacticalFallbackPending = false;
+        retreatFallbackRemaining = 0;
         switch (phase) {
             case DEFEND -> {
                 defenseMovementTarget = null;
@@ -299,6 +323,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 startShieldBlockIfAvailable(shouldAdvanceToMeleeThreat());
             }
             case RETREAT -> {
+                human.getNavigation().stop();
                 phaseTicks = 200;
                 retreatAimTicks = 0;
                 retreatStartedTick = human.tickCount;
@@ -310,6 +335,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 planRetreat();
             }
             case RECOVER -> {
+                human.getNavigation().stop();
                 phaseTicks = 200;
                 setFleeing(true);
             }
@@ -363,7 +389,12 @@ public final class AdaptiveCombatGoal extends Goal {
         gunOperator.aim(false);
         retreatAimTicks = 0;
         activePath = null;
+        retreatSearch = null;
+        tacticalSearch = null;
+        tacticalFallbackPending = false;
+        retreatFallbackRemaining = 0;
         defenseMovementTarget = null;
+        OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.RETREAT);
         if (human.getTarget() == null) {
             MovementSpeedController.normal(human);
         } else {
@@ -573,9 +604,7 @@ public final class AdaptiveCombatGoal extends Goal {
         AABB search = bounds.inflate(20.0D, 8.0D, 20.0D);
         Boolean deferRangedGuard = null;
         for (AbstractArrow arrow : human.level().getEntitiesOfClass(AbstractArrow.class, search)) {
-            if (!arrow.isAlive() || arrow.getOwner() == human
-                    || (arrow.getOwner() instanceof LivingEntity shooter
-                    && HumanRelations.allied(human, shooter))) {
+            if (!arrow.isAlive() || arrow.getOwner() == human) {
                 continue;
             }
             Vec3 velocity = arrow.getDeltaMovement();
@@ -588,6 +617,14 @@ public final class AdaptiveCombatGoal extends Goal {
                     || ticksToImpact >= earliestImpact) {
                 continue;
             }
+            // Embedded/moving-away arrows never need inventory/faction work.
+            if (arrow.getOwner() instanceof LivingEntity shooter
+                    && HumanRelations.allied(human, shooter)) continue;
+            UUID projectileId = arrow.getUUID();
+            Boolean shouldBlock = arrowDefenseDecisions.get(projectileId);
+            // A recorded miss cannot turn into a block on a later tick. Avoid
+            // tracing its trajectory repeatedly while it remains nearby.
+            if (Boolean.FALSE.equals(shouldBlock)) continue;
             if (dedicatedRanged && !ProjectileShieldPolicy.shouldGuardRangedUser(ticksToImpact)) {
                 continue;
             }
@@ -610,8 +647,6 @@ public final class AdaptiveCombatGoal extends Goal {
                     != HitResult.Type.MISS) {
                 continue;
             }
-            UUID projectileId = arrow.getUUID();
-            Boolean shouldBlock = arrowDefenseDecisions.get(projectileId);
             if (shouldBlock == null) {
                 shouldBlock = human.getRandom().nextFloat() < projectileDefenseChance();
                 arrowDefenseDecisions.put(projectileId, shouldBlock);
@@ -751,7 +786,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 || human.getNavigation().isDone()
                 || human.getNavigation().isStuck()
                 || retreatStagnantTicks >= 10;
-        if (pathFailed && repathTicks <= 0
+        if ((pathFailed || retreatSearch != null || retreatFallbackRemaining > 0) && repathTicks <= 0
                 && (!counterfiring || retreatStagnantTicks >= 10)) {
             planRetreat();
         }
@@ -804,7 +839,7 @@ public final class AdaptiveCombatGoal extends Goal {
             restoreRetreatGun();
         }
 
-        double retreatMeleeRange = BetterCombatMeleeCombat.isEnabled(human)
+        double retreatMeleeRange = BetterCombatMeleeCombat.hasWeaponProfile(human)
                 ? BetterCombatMeleeCombat.attackRange(human) + threat.getBbWidth() * 0.5D
                 : 2.0D;
         if (distanceSqr <= retreatMeleeRange * retreatMeleeRange) {
@@ -1005,7 +1040,8 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void tickFlank() {
-        if (repathTicks <= 0 && (activePath == null || human.getNavigation().isDone())) {
+        if (repathTicks <= 0 && (tacticalSearch != null || tacticalFallbackPending
+                || activePath == null || human.getNavigation().isDone())) {
             planTacticalMove();
         }
         jumpIfBlocked();
@@ -1016,7 +1052,8 @@ public final class AdaptiveCombatGoal extends Goal {
             phaseTicks = 0;
             return;
         }
-        if (repathTicks <= 0 || activePath == null || human.getNavigation().isDone()) {
+        // A null/failed path is not a reason to bypass the retry interval.
+        if (repathTicks <= 0) {
             planPressureMove();
         }
         jumpIfBlocked();
@@ -1026,7 +1063,7 @@ public final class AdaptiveCombatGoal extends Goal {
         if (human.onGround() && (human.horizontalCollision || human.getNavigation().isStuck())) {
             human.getJumpControl().jump();
         }
-        if (repathTicks <= 0 || human.getNavigation().isDone()) {
+        if (repathTicks <= 0) {
             planUnstuckMove();
         }
     }
@@ -1447,49 +1484,90 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void planRetreat() {
-        human.getNavigation().stop();
+        if (lastRetreatPlanningTick == human.tickCount) return;
+        lastRetreatPlanningTick = human.tickCount;
+        boolean continuingFallback = retreatSearch == null && retreatFallbackRemaining > 0;
+        boolean pathChanged = false;
         PlannedPath plan = chooseRetreatPath();
         if (plan != null) {
-            startPath(plan, 1.0D);
-        } else {
+            if (plan.path() != activePath) {
+                startPath(plan, 1.0D);
+                pathChanged = true;
+            }
+        } else if (retreatSearch == null && continuingFallback) {
             int searchRadius = retreatSearchRadius();
             double currentDistanceSqr = human.distanceToSqr(threat);
-            for (int attempt = 0; attempt < 8; attempt++) {
+            int attempts = OptionalPathBudget.claim(human, OptionalPathBudget.Kind.RETREAT,
+                    Math.min(4, retreatFallbackRemaining));
+            for (int attempt = 0; attempt < attempts; attempt++) {
+                retreatFallbackRemaining--;
                 Vec3 fallback = DefaultRandomPos.getPosAway(human, searchRadius, 7, threat.position());
                 if (fallback != null && RetreatRecoveryPolicy.isUsefulRetreatDestination(
                         currentDistanceSqr, threat.distanceToSqr(fallback))
                         && moveToCandidate(fallback, 1.0D)) {
+                    retreatFallbackRemaining = 0;
+                    pathChanged = true;
                     break;
                 }
             }
         }
-        retreatStagnantTicks = 0;
-        lastRetreatPosition = human.position();
-        repathTicks = 14;
+        if (plan == null && activePath != null && !NavigationSupport.pathStartsGenerallyToward(
+                activePath, human.position(), NavigationSupport.horizontalDirection(threat.position(), human.position()))) {
+            human.getNavigation().stop();
+            activePath = null;
+        }
+        if (pathChanged) {
+            retreatStagnantTicks = 0;
+            lastRetreatPosition = human.position();
+        }
+        repathTicks = retreatSearch != null || retreatFallbackRemaining > 0 ? 1 : 14;
+        if (retreatSearch == null && retreatFallbackRemaining == 0) {
+            OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.RETREAT);
+        }
     }
 
     private PlannedPath chooseRetreatPath() {
-        PlannedPath best = null;
+        if (retreatSearch == null && retreatFallbackRemaining > 0) return null;
         double currentDistance = human.distanceToSqr(threat);
         Vec3 desiredAway = NavigationSupport.horizontalDirection(threat.position(), human.position());
         int searchRadius = retreatSearchRadius();
-        for (int i = 0; i < config.coverSearchAttempts(); i++) {
-            Vec3 candidate = DefaultRandomPos.getPosAway(
-                    human,
-                    searchRadius,
-                    7,
-                    threat.position()
-            );
-            if (candidate == null || !RetreatRecoveryPolicy.isUsefulRetreatDestination(
-                    currentDistance, threat.distanceToSqr(candidate))) {
-                continue;
+        if (retreatSearch == null || !threat.getUUID().equals(retreatSearchThreat)
+                || human.position().distanceToSqr(retreatSearchOrigin) > 16.0D
+                || threat.position().distanceToSqr(retreatSearchThreatPosition) > 16.0D
+                || searchRadius != retreatSearchRadius) {
+            List<BlockPos> candidates = new ArrayList<>();
+            HashSet<BlockPos> unique = new HashSet<>();
+            for (int i = 0; i < config.coverSearchAttempts(); i++) {
+                Vec3 candidate = DefaultRandomPos.getPosAway(human, searchRadius, 7, threat.position());
+                if (candidate != null && RetreatRecoveryPolicy.isUsefulRetreatDestination(
+                        currentDistance, threat.distanceToSqr(candidate))) {
+                    BlockPos block = BlockPos.containing(candidate);
+                    if (unique.add(block)) candidates.add(block);
+                }
             }
-            Path path = human.getNavigation().createPath(BlockPos.containing(candidate), 0);
+            retreatSearch = new IncrementalBestSearch<>(candidates.iterator());
+            retreatSearchOrigin = human.position();
+            retreatSearchThreatPosition = threat.position();
+            retreatSearchThreat = threat.getUUID();
+            retreatSearchRadius = searchRadius;
+            retreatFallbackRemaining = 0;
+        }
+        int budget = OptionalPathBudget.claim(human, OptionalPathBudget.Kind.RETREAT, 4);
+        if (budget == 0) return null;
+        PlannedPath best = retreatSearch.advance(budget, candidate -> {
+            Path path = human.getNavigation().createPath(candidate, 0);
             if (path == null || !path.canReach()
                     || !NavigationSupport.pathStartsGenerallyToward(path, human.position(), desiredAway)) {
-                continue;
+                return null;
             }
             Vec3 reachableEnd = Vec3.atCenterOf(path.getTarget());
+            return new PlannedPath(path, reachableEnd, 0.0D);
+        }, plan -> {
+            Path path = plan.path();
+            Vec3 reachableEnd = plan.position();
+            if (!NavigationSupport.pathStartsGenerallyToward(path, human.position(), desiredAway)
+                    || !RetreatRecoveryPolicy.isUsefulRetreatDestination(
+                    currentDistance, threat.distanceToSqr(reachableEnd))) return Double.NEGATIVE_INFINITY;
             double distance = threat.position().distanceTo(reachableEnd);
             Vec3 candidateDirection = NavigationSupport.horizontalDirection(human.position(), reachableEnd);
             double directionalCommitment = Math.max(-1.0D, candidateDirection.dot(desiredAway));
@@ -1506,9 +1584,11 @@ public final class AdaptiveCombatGoal extends Goal {
                     && !human.level().getFluidState(path.getTarget()).is(FluidTags.WATER)) {
                 score += 24.0D;
             }
-            if (best == null || score > best.score()) {
-                best = new PlannedPath(path, reachableEnd, score);
-            }
+            return score;
+        });
+        if (!retreatSearch.hasRemaining()) {
+            retreatSearch = null;
+            if (best == null) retreatFallbackRemaining = 8;
         }
         return best;
     }
@@ -1519,10 +1599,33 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void planTacticalMove() {
+        if (lastTacticalPlanningTick == human.tickCount) return;
+        lastTacticalPlanningTick = human.tickCount;
+        if (tacticalFallbackPending) {
+            tacticalFallbackPending = false;
+            planTacticalFallback();
+            repathTicks = 7;
+            return;
+        }
         PlannedPath plan = chooseTacticalPath();
         if (plan != null) {
-            startPath(plan, 1.0D);
-        } else if (human.distanceTo(threat) < preferredMinimumRange()) {
+            if (plan.path() != activePath) startPath(plan, 1.0D);
+        } else if (tacticalSearch != null) {
+            // Pending is not failure: don't replace the search with pursuit.
+            repathTicks = 1;
+            return;
+        } else {
+            // A failed final batch already spent this tick's grant. The one
+            // fallback path is a separate next-tick request, not a fifth A*.
+            tacticalFallbackPending = true;
+            repathTicks = 1;
+            return;
+        }
+        repathTicks = tacticalSearch != null ? 1 : 7;
+    }
+
+    private void planTacticalFallback() {
+        if (human.distanceTo(threat) < preferredMinimumRange()) {
             Vec3 fallback = DefaultRandomPos.getPosAway(human, 12, 5, threat.position());
             if (fallback != null) {
                 moveToCandidate(fallback, 1.0D);
@@ -1530,7 +1633,6 @@ public final class AdaptiveCombatGoal extends Goal {
         } else {
             human.getNavigation().moveTo(threat, 1.0D);
         }
-        repathTicks = 7;
     }
 
     private void planUnstuckMove() {
@@ -1568,43 +1670,77 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private PlannedPath chooseTacticalPath() {
-        PlannedPath best = null;
         PathNavigation navigation = human.getNavigation();
-        for (int i = 0; i < config.coverSearchAttempts(); i++) {
-            Vec3 candidate = DefaultRandomPos.getPos(human, Math.min(14, config.coverSearchRadius()), 6);
-            if (candidate == null) {
-                continue;
+        double spacingRadius = config.allySpacingRadius();
+        int searchRadius = Math.min(14, config.coverSearchRadius());
+        int attempts = config.coverSearchAttempts();
+        if (tacticalSearch == null || !threat.getUUID().equals(tacticalSearchThreat)
+                || human.position().distanceToSqr(tacticalSearchOrigin) > 16.0D
+                || threat.position().distanceToSqr(tacticalSearchThreatPosition) > 16.0D
+                || tacticalSearchRadius != searchRadius || tacticalSearchAttempts != attempts) {
+            List<Vec3> candidates = new ArrayList<>();
+            HashSet<BlockPos> unique = new HashSet<>();
+            for (int i = 0; i < attempts; i++) {
+                Vec3 candidate = DefaultRandomPos.getPos(human, searchRadius, 6);
+                if (candidate != null && unique.add(BlockPos.containing(candidate))) candidates.add(candidate);
             }
+            tacticalSearch = new IncrementalBestSearch<>(candidates.iterator());
+            tacticalSearchThreat = threat.getUUID();
+            tacticalSearchOrigin = human.position();
+            tacticalSearchThreatPosition = threat.position();
+            tacticalSearchRadius = searchRadius;
+            tacticalSearchAttempts = attempts;
+        }
+        double candidateExtent = searchRadius + searchRadius / 2 + 1.0D;
+        int budget = 4;
+        // One broad-phase query for this decision. Each candidate retains the
+        // original bounding-box intersection test, without repeating faction
+        // checks and allocating an entity list for every sampled destination.
+        List<Human> allies = spacingRadius <= 0.0D ? List.of()
+                : human.level().getEntitiesOfClass(Human.class,
+                new AABB(tacticalSearchOrigin, tacticalSearchOrigin)
+                        .inflate(candidateExtent + spacingRadius, 7 + spacingRadius, candidateExtent + spacingRadius),
+                other -> other != human && HumanRelations.allied(human, other));
+        Map<Vec3, Double> candidateScores = new HashMap<>();
+        double[] bestScore = {Double.NEGATIVE_INFINITY};
+        double maximumDryBonus = human.isInWater() ? 24.0D : 0.0D;
+        ToDoubleFunction<Vec3> prePathScore = candidate -> candidateScores.computeIfAbsent(candidate, position -> {
             double candidateThreatDistance = threat.distanceToSqr(candidate);
             double baseScore = candidateThreatDistance * 0.015D
                     - Math.abs(candidate.y - human.getY()) * 2.0D;
-            // A clear lane adds at most 45 points, plus at most 24 for a dry
-            // landing while wet. Ally spacing can only reduce the score.
-            if (best != null && baseScore + 45.0D
-                    + (human.isInWater() ? 24.0D : 0.0D) <= best.score()) {
-                continue;
-            }
             boolean firingLane = hasClearRay(candidate.add(0.0D, human.getEyeHeight(), 0.0D), threat.getEyePosition());
             double score = baseScore + (firingLane ? 45.0D : 0.0D);
-            score -= countAlliesNear(candidate, config.allySpacingRadius()) * 18.0D;
+            AABB spacingBox = new AABB(candidate, candidate).inflate(spacingRadius);
+            int nearbyAllies = 0;
+            for (Human ally : allies) {
+                if (ally.getBoundingBox().intersects(spacingBox)) nearbyAllies++;
+            }
+            score -= nearbyAllies * 18.0D;
+            return score;
+        });
+        PlannedPath best = tacticalSearch.advance(budget, candidate -> {
             BlockPos destination = BlockPos.containing(candidate);
-            if (best != null && score + (human.isInWater() ? 24.0D : 0.0D)
-                    <= best.score()) {
-                continue;
-            }
+            if (!human.level().hasChunkAt(destination)) return null;
+            double cheapUpperBound = threat.distanceToSqr(candidate) * 0.015D
+                    - Math.abs(candidate.y - human.getY()) * 2.0D + 45.0D + maximumDryBonus;
+            if (cheapUpperBound <= bestScore[0]
+                    || prePathScore.applyAsDouble(candidate) + maximumDryBonus <= bestScore[0]) return null;
             Path path = navigation.createPath(destination, 0);
-            if (path != null) {
-                // A dry bank is a preference during combat, never a
-                // compulsory shore goal that overrides pursuit or retreat.
-                if (human.isInWater()
-                        && !human.level().getFluidState(path.getTarget()).is(FluidTags.WATER)) {
-                    score += 24.0D;
-                }
-                if (best == null || score > best.score()) {
-                    best = new PlannedPath(path, candidate, score);
-                }
+            return path == null ? null : new PlannedPath(path, candidate, 0.0D);
+        }, plan -> {
+            if (!human.level().hasChunkAt(plan.path().getTarget())) return Double.NEGATIVE_INFINITY;
+            double score = prePathScore.applyAsDouble(plan.position());
+            Path path = plan.path();
+            // A dry bank is a preference during combat, never a
+            // compulsory shore goal that overrides pursuit or retreat.
+            if (human.isInWater()
+                    && !human.level().getFluidState(path.getTarget()).is(FluidTags.WATER)) {
+                score += 24.0D;
             }
-        }
+            bestScore[0] = Math.max(bestScore[0], score);
+            return score;
+        });
+        if (!tacticalSearch.hasRemaining()) tacticalSearch = null;
         return best;
     }
 

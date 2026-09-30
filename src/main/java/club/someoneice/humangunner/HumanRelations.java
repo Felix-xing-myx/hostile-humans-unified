@@ -11,7 +11,15 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.UUID;
 
 public final class HumanRelations {
@@ -32,6 +40,11 @@ public final class HumanRelations {
             AttributeModifier.Operation.ADDITION);
     private static final UUID GUN_FOLLOW_RANGE_ID =
             UUID.fromString("cc24aaaf-a833-4750-9b85-150000000064");
+    // Only the spatial broad phase is memoized. Ownership, badges and combat
+    // authorization must be read live for every individual attacker event.
+    private static final Map<Player, NearbyHumans> NEARBY_HUMANS = new WeakHashMap<>();
+    private record NearbyHumans(long tick, ResourceKey<Level> dimension, AABB bounds,
+                                List<WeakReference<Human>> humans) {}
 
     private HumanRelations() {}
 
@@ -152,8 +165,10 @@ public final class HumanRelations {
 
     static void defend(Player player, LivingEntity attacker) {
         if (!(player.level() instanceof ServerLevel level) || attacker == player) return;
-        for (Human human : level.getEntitiesOfClass(Human.class,
-                player.getBoundingBox().inflate(48.0D), h -> h.isAlive() && protects(h, player))) {
+        AABB bounds = player.getBoundingBox().inflate(48.0D);
+        for (WeakReference<Human> reference : nearbyHumans(player, level)) {
+            Human human = reference.get();
+            if (!isNearbyLiveHuman(human, bounds, level) || !protects(human, player)) continue;
             if (effectiveOwner(human) != null) {
                 if (!SoldierCombatMode.authorizeOwnerDefense(human, attacker) || allied(human, attacker)) continue;
             } else if (allied(human, attacker)) {
@@ -165,13 +180,34 @@ public final class HumanRelations {
 
     static void followOwnerAssault(Player player, LivingEntity target) {
         if (!(player.level() instanceof ServerLevel level) || target == player) return;
-        for (Human human : level.getEntitiesOfClass(Human.class,
-                player.getBoundingBox().inflate(48.0D), h -> h.isAlive() && isControlledBy(h, player))) {
-            if (suppressesBadgeBearerAssault(player, target)
-                    || !SoldierCombatMode.authorizeOwnerAssault(human, target)
+        if (suppressesBadgeBearerAssault(player, target)) return;
+        AABB bounds = player.getBoundingBox().inflate(48.0D);
+        for (WeakReference<Human> reference : nearbyHumans(player, level)) {
+            Human human = reference.get();
+            if (!isNearbyLiveHuman(human, bounds, level) || !isControlledBy(human, player)) continue;
+            if (!SoldierCombatMode.authorizeOwnerAssault(human, target)
                     || allied(human, target)) continue;
             assignGuardTarget(human, target, level.getGameTime());
         }
+    }
+
+    private static List<WeakReference<Human>> nearbyHumans(Player player, ServerLevel level) {
+        AABB bounds = player.getBoundingBox().inflate(48.0D);
+        NearbyHumans cached = NEARBY_HUMANS.get(player);
+        long tick = level.getGameTime();
+        if (cached != null && cached.tick() == tick && cached.dimension().equals(level.dimension())
+                && cached.bounds().equals(bounds)) return cached.humans();
+        List<WeakReference<Human>> humans = new ArrayList<>();
+        for (Human human : level.getEntitiesOfClass(Human.class, bounds)) {
+            humans.add(new WeakReference<>(human));
+        }
+        NEARBY_HUMANS.put(player, new NearbyHumans(tick, level.dimension(), bounds, humans));
+        return humans;
+    }
+
+    private static boolean isNearbyLiveHuman(Human human, AABB bounds, ServerLevel level) {
+        return human != null && !human.isRemoved() && human.isAlive() && human.level() == level
+                && human.getBoundingBox().intersects(bounds);
     }
 
     private static boolean suppressesBadgeBearerAssault(Player player, LivingEntity target) {

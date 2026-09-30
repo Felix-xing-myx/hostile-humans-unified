@@ -18,29 +18,50 @@ public final class MeleeSpacing {
 
         double reach = MeleeCombatRange.reach(human, target);
         double distance = human.distanceTo(target);
-        double preferred = Math.max(1.35D, reach * 0.82D);
-        double tooClose = Math.min(preferred - 0.35D, Math.max(1.0D, reach * 0.55D));
+        double preferred = preferredDistance(reach);
+        double tooClose = dev.felix.hostilehumans.core.MeleeSpacingPolicy.tooClose(reach);
         if (distance > preferred) return false;
         if (distance >= tooClose) {
             human.getNavigation().stop();
             return true;
         }
         Vec3 away = human.position().subtract(target.position()).multiply(1.0D, 0.0D, 1.0D);
-        human.getNavigation().stop();
         if (away.lengthSqr() < 1.0E-4D) {
-            return true;
+            // Overlapping centers need a deterministic escape direction,
+            // not an indefinite navigation stop waiting for an external push.
+            away = new Vec3(Math.cos(Math.toRadians(human.getYRot())), 0.0D,
+                    Math.sin(Math.toRadians(human.getYRot())));
         }
         // Check the next step, not a path behind the mob: a retreat path would
         // rotate the whole body away from its opponent. STRAFE keeps the torso
         // and the ordinary walking legs facing the fight while stepping back.
         Vec3 step = away.normalize().scale(0.8D);
-        BlockPos floor = BlockPos.containing(human.position().add(step)).below();
-        if (human.level().getBlockState(floor).isFaceSturdy(human.level(), floor, Direction.UP)
-                && human.level().getFluidState(floor.above()).isEmpty()
-                && human.level().noCollision(human, human.getBoundingBox().move(step))) {
-            human.getMoveControl().strafe(-0.6F, 0.0F);
-            human.markRangedFacing(target);
-        }
+        if (tryStep(human, target, step)) return true;
+        // A wall or another soldier behind us must not permanently block
+        // melee movement. Try both flanks, then release ordinary pursuit.
+        Vec3 side = new Vec3(-step.z, 0.0D, step.x);
+        if ((human.getId() & 1) != 0) side = side.scale(-1.0D);
+        return tryStep(human, target, side) || tryStep(human, target, side.scale(-1.0D));
+    }
+
+    public static double preferredDistance(double reach) {
+        return dev.felix.hostilehumans.core.MeleeSpacingPolicy.preferred(reach);
+    }
+
+    private static boolean tryStep(Human human, LivingEntity target, Vec3 step) {
+        BlockPos feet = BlockPos.containing(human.position().add(step));
+        BlockPos floor = feet.below();
+        if (!human.level().hasChunkAt(feet)
+                || !human.level().getBlockState(floor).isFaceSturdy(human.level(), floor, Direction.UP)
+                || !human.level().getFluidState(feet).isEmpty()
+                || !human.level().noCollision(human, human.getBoundingBox().move(step))) return false;
+        double yaw = Math.toRadians(human.getYRot());
+        Vec3 direction = step.normalize();
+        float forward = (float) (direction.x * -Math.sin(yaw) + direction.z * Math.cos(yaw));
+        float right = (float) (direction.x * Math.cos(yaw) + direction.z * Math.sin(yaw));
+        human.getNavigation().stop();
+        human.getMoveControl().strafe(forward * 0.6F, right * 0.6F);
+        human.markRangedFacing(target);
         return true;
     }
 }

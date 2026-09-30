@@ -34,6 +34,7 @@ final class SoldierRosterNetwork {
     private static final Map<ServerPlayer, Session> SESSIONS = new WeakHashMap<>();
     private static final Map<ServerPlayer, Long> LAST_REORDER_TICK = new WeakHashMap<>();
     private static final Map<ServerPlayer, Long> LAST_SCROLL_TICK = new WeakHashMap<>();
+    private static final Map<ServerPlayer, Long> LAST_STATUS_REFRESH_TICK = new WeakHashMap<>();
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation(HumanGunner.MOD_ID, "soldier_roster"),
             () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
@@ -69,6 +70,7 @@ final class SoldierRosterNetwork {
             SESSIONS.remove(player);
             LAST_REORDER_TICK.remove(player);
             LAST_SCROLL_TICK.remove(player);
+            LAST_STATUS_REFRESH_TICK.remove(player);
         }
     }
 
@@ -76,6 +78,7 @@ final class SoldierRosterNetwork {
         SESSIONS.clear();
         LAST_REORDER_TICK.clear();
         LAST_SCROLL_TICK.clear();
+        LAST_STATUS_REFRESH_TICK.clear();
     }
 
     static void request(UUID token, int action, UUID human) {
@@ -97,15 +100,18 @@ final class SoldierRosterNetwork {
         MinecraftServer server = player.server;
         RecruitmentLedger ledger = RecruitmentLedger.get(server);
         ledger.refreshLoadedIndex(server, player.getUUID());
-        List<RecruitmentLedger.Soldier> all = ledger.soldiers(player.getUUID()).stream()
-                .filter(soldier -> session.filter < 0 || soldier.tier() == session.filter).toList();
+        RecruitmentLedger.RosterView view = ledger.roster(player.getUUID());
+        List<RecruitmentLedger.Soldier> all = view.filtered(session.filter);
         int page = Math.min(session.page, Math.max(0, (all.size() - 1) / PAGE_SIZE));
         List<RecruitmentLedger.Soldier> displayed = all.subList(page * PAGE_SIZE,
                 Math.min(all.size(), (page + 1) * PAGE_SIZE));
         SoldierRosterAudit.refresh(player, displayed.stream().map(RecruitmentLedger.Soldier::id).toList());
         // Auditing can remove stale entries; rebuild the page once against the authoritative ledger.
-        all = ledger.soldiers(player.getUUID()).stream()
-                .filter(soldier -> session.filter < 0 || soldier.tier() == session.filter).toList();
+        RecruitmentLedger.RosterView audited = ledger.roster(player.getUUID());
+        if (audited != view) {
+            view = audited;
+            all = view.filtered(session.filter);
+        }
         page = Math.min(page, Math.max(0, (all.size() - 1) / PAGE_SIZE));
         displayed = all.subList(page * PAGE_SIZE, Math.min(all.size(), (page + 1) * PAGE_SIZE));
         HumanServerData saved = HumanServerData.get();
@@ -139,7 +145,7 @@ final class SoldierRosterNetwork {
                     : stored != null && stored.getLevelKey() != null
                     ? stored.getLevelKey().location().toString() : "?";
             if (name.length() > 256) name = name.substring(0, 256);
-            CompoundTag lastData = stored == null ? new CompoundTag()
+            CompoundTag lastData = live != null || stored == null ? new CompoundTag()
                     : stored.getPersistedCommandData();
             String order = live != null ? SoldierOrder.get(live).name()
                     : validOrder(lastData.getString(SoldierOrder.ORDER));
@@ -155,7 +161,7 @@ final class SoldierRosterNetwork {
         }
         int[] counts = new int[4], limits = new int[4];
         for (int tier = 0; tier < 4; tier++) {
-            counts[tier] = ledger.count(player.getUUID(), tier);
+            counts[tier] = view.count(tier);
             limits[tier] = RecruitmentPolicy.limit(tier);
         }
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
@@ -264,6 +270,7 @@ final class SoldierRosterNetwork {
                 SESSIONS.remove(player);
                 LAST_REORDER_TICK.remove(player);
                 LAST_SCROLL_TICK.remove(player);
+                LAST_STATUS_REFRESH_TICK.remove(player);
                 return;
             }
             if (packet.action == 7 && packet.value == -1 && session.filter != -1) {
@@ -276,6 +283,10 @@ final class SoldierRosterNetwork {
             }
             if (packet.action == 10) {
                 // A periodic read must never consume the player's command cooldown.
+                long tick = player.serverLevel().getGameTime();
+                Long previous = LAST_STATUS_REFRESH_TICK.get(player);
+                if (previous != null && tick >= previous && tick - previous < 20) return;
+                LAST_STATUS_REFRESH_TICK.put(player, tick);
                 sendSnapshot(player, session, false);
                 return;
             }

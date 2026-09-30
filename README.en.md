@@ -35,7 +35,7 @@ These are optional integrations, not required dependencies.
 
 Requires Minecraft 1.20.1 and Forge. Place the unified mod JAR in the instance's `mods` folder. Do not install separate Hostile Humans or Human Gunner JARs alongside it.
 
-The main configuration is `config/hostile_humans_unified.json`. It covers tier attributes and weapon spread, natural spawning, combat behavior, hiring limits, damage multipliers, and TaCZ firearm settings. See the [configuration guide](CONFIGURATION.md) for details. In multiplayer, the server configuration controls gameplay.
+Configuration lives in `config/hostile_humans_unified/`, split into six JSON files for tiers, spawning, combat, recruitment, TaCZ, and integrations, with Chinese and English descriptions. Legacy single-file settings migrate automatically with a backup, preserving custom values. Options include tier unlock dates, attributes, weapon spread, combat behavior, hiring limits, and firearm lists. See the [configuration guide](CONFIGURATION.md) for details. In multiplayer, the server configuration controls gameplay.
 
 ## License and Credits
 

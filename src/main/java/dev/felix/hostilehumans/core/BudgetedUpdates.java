@@ -10,6 +10,7 @@ public final class BudgetedUpdates<K> {
     public void offer(K key) { pending.add(Objects.requireNonNull(key)); }
     public List<K> drain(int budget) {
         if (budget < 0) throw new IllegalArgumentException("negative budget");
+        if (budget == 0 || pending.isEmpty()) return List.of();
         List<K> batch = new ArrayList<>(Math.min(budget, pending.size()));
         Iterator<K> iterator = pending.iterator();
         while (iterator.hasNext() && batch.size() < budget) {

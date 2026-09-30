@@ -1,5 +1,59 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
+## 3.5.5 — 2026-10-01（累计 3.5.0 之后的更新，不含 3.5.0）
+
+### 简体中文
+
+- 修复近战控距后退受阻或双方位置重叠时持续停止导航的问题：尝试安全后退及两侧脱困，均不可行时允许普通追击重寻路，不再等待外力推动。
+- 近战保持距离统一设在实际攻击范围以内，留出至少 0.5 格余量；修正短攻击范围被固定最小控距抬高的问题，追击启动与控距使用同一门槛。
+- 已雇佣人类的护甲磨损由整套共享冷却改为四个部位各自独立的 3 秒冷却，每件每次最多损耗 1 点耐久；仍应用耐久附魔与火抗物品保护。
+- 模组衍生源码的许可证统一为 GPL-2.0-only，更新对应许可证与说明。
+- 增加各阶雇佣支付物品与数量配置，支持其他模组注册的物品 ID，默认绿宝石及数量不变；合同提示与费用不足提示显示对应物品，无效配置阻止扣款，创造雇佣仍免费。
+- Better Combat 缺少当前武器配置时回退到原版近战、攻击距离和冷却；近战武器破损后可使用背包工具，没有工具则空手反击。
+- 区域驻守可反击远距离伤害来源，保留战斗中的近距离威胁切换；越界作战最多持续 20 秒，随后返回驻点，返回中受击可重新锁敌并重置计时。闲暇主动拾取不再被驻守返回导航抢占，物品与拾取路径限制在驻守区域内。
+- 名册排序、阶级分组与人数统计共用不可变视图；雇佣、解雇、转移与重排立即失效，避免面板刷新重复筛选全队。
+- 掉落物候选在同一筛选批次共用背包容量与替换摘要，不再对每个候选重复遍历全部槽位；空位、同类合并、受保护物品及价值替换门槛保持不变，摘要不用于实际物品交换或跨 tick 缓存。
+- 水中上岸助跳按方块列去重，减少重复流体和碰撞探测，并阻止探测未加载区块；水面扫描复用同一次扫描已读取的流体。药水掉落评分由多遍效果扫描改为单遍，保留原优先级；恢复食物评分减少重复属性读取。
+- 射界搜索与紧急撤退/岩浆脱困增加服务器级独立候选预算及轮转等待，减少多单位同 tick 集中寻路；等待保留搜索进度，不触发失败兜底，射界搜索不会因持续等待被旧超时重置。战术失败兜底不再叠加到最后一批寻路。
+- 调查与警觉事件共享同 tick 范围查询，减少破坏方块、开门、放置与受伤时的重复广播扫描；装备耐久、附魔或装备更换后及时清除旧掉落物价值判断，保留失败寻路冷却。恢复药水选择不再重复解析同一份效果。
+- 战术选位也改为完整分批比较，每人每 tick 最多检查 4 个候选；保留射界与盟友间距评分及寻路前上界过滤，可用临时路径先执行，后续改善路径时才更新导航。
+- 优化同 tick 的身份牌与枪械背包查询、射界候选点预筛选、失败寻路重试、分批找水与岩浆脱困、战术选位盟友查询和掉落物评分；减少重复反射及不必要的审计字符串构造。
+- 合并同 tick 的主人保护范围查询，保留逐目标实时关系判断；背包装备一次分类、名册排序复用、读取请求独立限流与分页处理减少重复计算。已加载单位的一键召回也分批执行，单个召回保持即时响应。
+- 撤退选位分帧比较，每个人类每 tick 最多尝试 4 条候选路径，先执行可用路径并继续搜索；避免启动与 tick 重复规划、无效候选重复寻路及补充搜索反复停止现有导航。
+- 大量掉落物的评分分批执行，每 tick 最多处理 64 个新候选；保留当前物品堆优先策略，背包变化后使旧筛选结果失效。减少碰撞开门候选的集合分配及提前跳跃的重复方块形状探测。
+- 射界搜索分批完整推进，区分未完成与失败，避免中途被上岸兜底覆盖；减少没有弓弩时的重复背包扫描与恢复物品布尔查询的全量评分，保留原武器和补给优先级。
+- 召回未加载士兵不再同步等待区块加载：每 tick 最多提交 4 个加载请求，全服最多维持 16 个活动召回票据；排队时间不消耗加载超时。日常雇佣记录更新不再重复生成完整实体 NBT，保存与离开时仍保留完整快照。
+- 增加可配置的新手安全期与自然生成分阶解锁：默认安全期 1 天，流浪者、一阶、二阶、三阶最早于第 3、5、10、20 天出现。自动大型战斗同样遵循解锁规则，两类信号装置召唤不受影响。
+- 增加 `/hostilehumans day get/set/add/sync` 指令。所有维度使用主世界日历加存档偏移，睡觉会推进模组日期；修改天数后仍继续随主世界流逝，可随时重新对齐。
+- 旧配置自动补入缺失的新选项，不重置已有设置；世界时间偏移随存档保存。
+- 配置拆分到 `config/hostile_humans_unified/` 下的六个模块文件，保留双语说明和枪械名单示例。旧单文件自动迁移、备份并保留；新模块优先，损坏模块独立回退，不覆盖输入或重置其他模块。
+
+### English
+
+- Fixes melee spacing repeatedly stopping navigation when backward movement is blocked or fighters overlap. Humans try safe backward and lateral steps, then yield to normal pursuit if none is available instead of waiting for an external push.
+- Melee spacing stays inside effective attack reach with at least half a block of margin. Short-reach weapons no longer inherit an excessive fixed minimum; pursuit and spacing use the same threshold.
+- Hired humans' armor now uses independent three-second wear cooldowns for all four slots instead of one shared set-wide gate. Each piece loses at most one durability point per event, retaining Unbreaking and fire-resistant-item handling.
+- Standardizes the derivative mod source license as GPL-2.0-only and updates the corresponding license notices.
+- Adds per-tier recruitment item IDs and quantities, supporting registered items from other mods while retaining emerald defaults. Contract and insufficient-payment tooltips reflect the selected item; invalid settings block payment, and creative hiring remains free.
+- Missing Better Combat weapon profiles fall back to vanilla melee, reach and cooldown. After a weapon breaks, humans can use stored tools or fight empty-handed when no tool remains.
+- Area guards can retaliate against distant attackers while retaining nearby-threat switching. Out-of-area combat lasts up to 20 seconds before returning to the post; incoming hits can restart combat and the timer. Idle pickup retains movement ownership and stays within the guarded area, including its path.
+- Roster ordering, tier groups and counts share an immutable view, invalidated immediately by hiring, dismissal, transfers and reordering to avoid repeatedly filtering the whole roster.
+- Loot candidates share a batch-local inventory capacity/eviction summary instead of repeatedly traversing every slot. Empty slots, compatible stack merging, protected items and replacement thresholds retain their behavior; the summary is never used for actual transfers or cached across ticks.
+- Shore-step probes deduplicate block columns, avoid repeated fluid/collision reads and reject unloaded chunks. Surface scans reuse fluid states already read during the same scan. Potion loot scoring uses a single effect pass with the original priority order; recovery-food scoring avoids repeated property reads.
+- Firing-lane and emergency retreat/lava searches use separate server-wide candidate budgets with rotating waits to reduce simultaneous pathfinding bursts. Waiting retains search progress instead of triggering failure fallbacks or stale-search resets. Tactical fallbacks no longer add an extra path to the final candidate batch.
+- Investigation and alert events share same-tick neighborhood queries across block, door and damage notifications. Equipment, durability and enchantment changes invalidate stale loot-value decisions without clearing failed-path cooldowns. Recovery-potion selection avoids parsing the same effects twice.
+- Tactical repositioning now compares all candidates incrementally, evaluating at most four per human per tick. Firing-lane and ally-spacing scores and pre-path upper-bound filtering are retained; provisional routes run immediately and navigation changes only when the selected route improves.
+- Optimizes same-tick badge and stored-firearm queries, firing-position prefilters, failed path retries, incremental water/lava searches, tactical ally queries and loot scoring; reduces repeated reflection and unnecessary audit string construction.
+- Reuses same-tick owner-protection spatial queries while checking each target's relationships live. Single-pass equipment classification, cached roster ordering, independent read throttling and leaner pagination reduce repeated work. Bulk recalls of loaded soldiers are also processed incrementally; individual recalls remain immediate.
+- Retreat route selection is incremental, with at most four candidate path attempts per human per tick. Usable provisional routes run while selection continues; duplicate planning, repeated candidate paths and unnecessary navigation restarts are avoided.
+- Loot scoring is incremental, examining at most 64 new candidates per tick while retaining committed-pile priority. Inventory changes invalidate stale screening decisions. Passage checks allocate fewer collections, and predictive jumps avoid repeated shape probes of the same block.
+- Firing-lane searches retain and process all candidates incrementally, distinguishing pending work from failure so shore fallbacks do not interrupt them. Repeated bow/crossbow absence scans and full scoring for supply-presence queries are reduced without changing weapon or supply priorities.
+- Unloaded-soldier recall no longer blocks while loading chunks: at most four loading requests start per tick, with sixteen active recall tickets server-wide. Queue time does not consume the loading timeout. Routine roster refreshes avoid full entity NBT snapshots; saves and entity removal retain complete snapshots.
+- Adds configurable beginner protection and natural-spawn unlock dates. By default, protection lasts one day; Roamers and Tiers I–III unlock on days 3, 5, 10, and 20. Automatic battle encounters respect these dates; support flares and hostile beacons remain unaffected.
+- Adds `/hostilehumans day get/set/add/sync`. All dimensions share the Overworld calendar plus a saved offset. Sleeping advances the mod date, edited dates continue following the Overworld, and the offset can be reset to resynchronize.
+- Missing options are added to existing configurations without resetting custom settings. Calendar offsets persist per world.
+- Splits configuration into six module files under `config/hostile_humans_unified/`, preserving bilingual descriptions and firearm-list examples. Legacy settings migrate with a retained backup. New modules take precedence; malformed modules fall back independently without overwriting input or resetting other modules.
+
 ## 3.5.0 — 2026-09-29（累计 3.4.0 之后的更新）
 
 ### 简体中文

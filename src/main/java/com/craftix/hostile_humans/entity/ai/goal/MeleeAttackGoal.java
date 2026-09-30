@@ -42,6 +42,10 @@ extends HumanGoal {
 
     @Override
     public boolean canUse() {
+        if (this.mob instanceof Human human && human.getMainHandItem().isEmpty()
+                && human.getTarget() != null) {
+            club.someoneice.humangunner.HumanLootManager.equipMeleeFallback(human);
+        }
         long gameTime;
         HumanEntity humanEntity = this.mob;
         if (humanEntity instanceof Human) {
@@ -60,6 +64,11 @@ extends HumanGoal {
             return false;
         }
         if (this.mob instanceof Human human && SoldierOrder.isHoldingPosition(human)) {
+            return true;
+        }
+        if (this.getAttackReachSqr(livingEntity) >= this.mob.distanceToSqr(livingEntity)) {
+            // Starting an in-reach attack does not need a pursuit path.
+            this.path = null;
             return true;
         }
         this.path = this.mob.getNavigation().createPath((Entity)livingEntity, 0);
@@ -101,11 +110,12 @@ extends HumanGoal {
             LivingEntity target = this.mob.getTarget();
             if (target != null) {
                 canPursue &= this.mob.distanceTo(target)
-                        > MeleeCombatRange.reach(human, target) * 0.82D;
+                        > MeleeSpacing.preferredDistance(MeleeCombatRange.reach(human, target));
             }
         }
         if (canPursue) {
-            this.mob.getNavigation().moveTo(this.path, this.speedModifier);
+            if (this.path != null) this.mob.getNavigation().moveTo(this.path, this.speedModifier);
+            else this.mob.getNavigation().stop();
         }
         this.mob.setAggressive(true);
         this.ticksUntilNextPathRecalculation = 0;

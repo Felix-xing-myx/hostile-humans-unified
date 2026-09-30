@@ -1,7 +1,9 @@
 package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
+import com.craftix.hostile_humans.entity.data.HumanData;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -20,6 +22,12 @@ final class ValuableItemPickupGoal extends Goal {
     private static final int STALLED_TARGET_TICKS = 60;
     private final Human human;
     private final Map<UUID, ScreenedItem> screenedItems = new LinkedHashMap<>();
+    private static final EquipmentSlot[] EQUIPMENT_SLOTS = EquipmentSlot.values();
+    private final ItemStack[] screenedEquipment = new ItemStack[EQUIPMENT_SLOTS.length];
+    private HumanData screenedInventory;
+    private HumanLootManager.NearbySearch pendingSearch;
+    private int lastSelectionTick = Integer.MIN_VALUE;
+    private boolean selectionDeferred;
     private ItemEntity targetItem;
     private Vec3 pileCenter;
     private Vec3 lastPathItemPosition;
@@ -41,8 +49,14 @@ final class ValuableItemPickupGoal extends Goal {
                 || human.isFleeing
                 || human.isUsingItem()
                 || !SoldierPickupPolicy.isEnabled(human)
-                || SoldierOrder.isHoldingPosition(human)
-                || human.tickCount < nextSearchTick) {
+                || !SoldierOrder.allowsLootPosition(human, human.getX(), human.getZ())
+                || SoldierOrder.isHoldingPosition(human)) {
+            pendingSearch = null;
+            selectionDeferred = false;
+            pileCenter = null;
+            return false;
+        }
+        if (human.tickCount < nextSearchTick) {
             return false;
         }
         nextSearchTick = human.tickCount + 20 + human.getRandom().nextInt(20);
@@ -60,6 +74,7 @@ final class ValuableItemPickupGoal extends Goal {
                 && !human.isUsingItem()
                 && SoldierPickupPolicy.isEnabled(human)
                 && !SoldierOrder.isHoldingPosition(human)
+                && SoldierOrder.allowsLootPosition(human, targetItem.getX(), targetItem.getZ())
                 && human.distanceToSqr(targetItem) <= 256.0D;
     }
 
@@ -123,16 +138,35 @@ final class ValuableItemPickupGoal extends Goal {
     @Override
     public void stop() {
         targetItem = null;
-        pileCenter = null;
+        // A normal target completion can leave an unfinished decision. It
+        // owns no navigation or water movement; combat interrupts discard it.
+        if (pendingSearch == null && !selectionDeferred) pileCenter = null;
         human.setActivelyCollectingLoot(false);
         human.setPursuingWaterLoot(false);
         human.getNavigation().stop();
     }
 
     private ItemEntity chooseTarget() {
+        if (lastSelectionTick == human.tickCount) {
+            selectionDeferred = true;
+            nextSearchTick = human.tickCount + 1;
+            return null;
+        }
+        lastSelectionTick = human.tickCount;
+        selectionDeferred = false;
+        refreshScreeningEquipment();
         screenedItems.entrySet().removeIf(entry -> entry.getValue().expiresAt <= human.tickCount);
-        ItemEntity chosen = HumanLootManager.findBestNearby(human, 12.0D, pileCenter,
-                this::isScreened, item -> rememberScreened(item, SCREENED_COOLDOWN_TICKS));
+        if (pendingSearch == null || !pendingSearch.isCurrent(human)) {
+            pendingSearch = new HumanLootManager.NearbySearch(human, 12.0D, pileCenter);
+        }
+        ItemEntity chosen = pendingSearch.advance(64,
+                item -> isScreened(item) || !SoldierOrder.allowsLootPosition(human, item.getX(), item.getZ()),
+                item -> rememberScreened(item, SCREENED_COOLDOWN_TICKS));
+        if (!pendingSearch.isDone()) {
+            nextSearchTick = human.tickCount + 1;
+            return null;
+        }
+        pendingSearch = null;
         if (chosen == null) {
             pileCenter = null;
         } else if (pileCenter == null || chosen.position().distanceToSqr(pileCenter) > 16.0D) {
@@ -165,7 +199,19 @@ final class ValuableItemPickupGoal extends Goal {
 
     private void moveToItem() {
         if (targetItem != null) {
-            human.getNavigation().moveTo(targetItem, 0.9D);
+            net.minecraft.world.level.pathfinder.Path path = human.getNavigation().createPath(targetItem, 0);
+            if (path != null) {
+                for (int i = 0; i < path.getNodeCount(); i++) {
+                    var node = path.getNode(i);
+                    if (!SoldierOrder.allowsLootPosition(human, node.x + 0.5D, node.z + 0.5D)) {
+                        rememberScreened(targetItem, FAILED_TARGET_COOLDOWN_TICKS);
+                        targetItem = null;
+                        human.getNavigation().stop();
+                        return;
+                    }
+                }
+            }
+            human.getNavigation().moveTo(path, 0.9D);
             lastPathItemPosition = targetItem.position();
             nextRepathTick = human.tickCount + 20;
         }
@@ -175,6 +221,7 @@ final class ValuableItemPickupGoal extends Goal {
         ScreenedItem cached = screenedItems.get(item.getUUID());
         if (cached == null) return false;
         if (cached.expiresAt <= human.tickCount
+                || (cached.inventorySensitive && cached.inventoryRevision != inventoryRevision())
                 || cached.position.distanceToSqr(item.position()) > 4.0D
                 || cached.stack.getCount() != item.getItem().getCount()
                 || !ItemStack.isSameItemSameTags(cached.stack, item.getItem())) {
@@ -195,8 +242,38 @@ final class ValuableItemPickupGoal extends Goal {
             }
         }
         screenedItems.put(item.getUUID(), new ScreenedItem(item.getItem().copy(),
-                item.position(), human.tickCount + cooldownTicks));
+                item.position(), human.tickCount + cooldownTicks, inventoryRevision(),
+                cooldownTicks == SCREENED_COOLDOWN_TICKS));
     }
 
-    private record ScreenedItem(ItemStack stack, Vec3 position, int expiresAt) {}
+    private int inventoryRevision() {
+        return human.getData() == null ? 0 : human.getData().getInventoryRevision();
+    }
+
+    private void refreshScreeningEquipment() {
+        // Once per selection batch, not once per ground item. Copies are made
+        // only on change; direct durability/enchantment edits are detected too.
+        HumanData currentInventory = human.getData();
+        boolean changed = screenedInventory != currentInventory;
+        screenedInventory = currentInventory;
+        for (int i = 0; i < EQUIPMENT_SLOTS.length; i++) {
+            ItemStack current = human.getItemBySlot(EQUIPMENT_SLOTS[i]);
+            if (!sameScreeningEquipment(screenedEquipment[i], current)) {
+                screenedEquipment[i] = current.copy();
+                changed = true;
+            }
+        }
+        if (changed) {
+            screenedItems.entrySet().removeIf(entry -> entry.getValue().inventorySensitive);
+            pendingSearch = null;
+        }
+    }
+
+    static boolean sameScreeningEquipment(ItemStack previous, ItemStack current) {
+        return previous != null && previous.getCount() == current.getCount()
+                && ItemStack.isSameItemSameTags(previous, current);
+    }
+
+    private record ScreenedItem(ItemStack stack, Vec3 position, int expiresAt,
+                                int inventoryRevision, boolean inventorySensitive) {}
 }

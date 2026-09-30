@@ -50,6 +50,9 @@ extends Mob {
         club.someoneice.humangunner.NaturalHumanSpawnRules.battleMemberAdded((ServerLevel)member.level());
     }
     private boolean spawnBattle(ServerLevel level) {
+        boolean tier1Allowed = club.someoneice.humangunner.NaturalHumanSpawnRules.isTierUnlocked(level, 1);
+        boolean tier2Allowed = club.someoneice.humangunner.NaturalHumanSpawnRules.isTierUnlocked(level, 2);
+        if (!tier1Allowed && !tier2Allowed) return false;
         BlockPos blockpos = this.blockPosition();
         if (this.hasEnoughSpace((BlockGetter)level, blockpos) && Config.eventType.get() != SpawnType.Disabled) {
             if (level.getBiome(blockpos).is(Biomes.THE_VOID)) {
@@ -70,7 +73,9 @@ extends Mob {
                     }
                     addMember(spawnedEntities, (LivingEntity)this.getRandomPillager().spawn(level, (CompoundTag)null, null, pos, MobSpawnType.EVENT, false, false));
                 } else {
-                    Human newHuman = (Human)((double)this.random.nextFloat() < 0.05 ? (EntityType)ModEntityType.HUMAN2.get() : (EntityType)ModEntityType.HUMAN1.get()).spawn(level, (CompoundTag)null, null, pos, MobSpawnType.EVENT, false, false);
+                    EntityType<Human> humanType = tier2Allowed && (!tier1Allowed || this.random.nextFloat() < 0.05F)
+                            ? ModEntityType.HUMAN2.get() : ModEntityType.HUMAN1.get();
+                    Human newHuman = humanType.spawn(level, (CompoundTag)null, null, pos, MobSpawnType.EVENT, false, false);
                     addMember(spawnedEntities, newHuman);
                     if (newHuman != null) {
                         if (totalAmount > 5) {

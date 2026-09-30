@@ -17,6 +17,7 @@ import java.util.UUID;
 final class RecruitmentLedger extends SavedData {
     private static final String ID = "humangunner_recruits";
     private final Map<UUID, Entry> entries = new LinkedHashMap<>();
+    private final Map<UUID, RosterView> orderedByOwner = new HashMap<>();
     private final Map<UUID, UUID> pendingDismissals = new HashMap<>();
     private long nextSortOrder;
     private long peacefulGeneration;
@@ -65,27 +66,61 @@ final class RecruitmentLedger extends SavedData {
                 ? previous.sortOrder : nextSortOrder++;
         Entry replacement = new Entry(owner, tier, sortOrder);
         entries.put(human, replacement);
+        if (!replacement.equals(previous)) {
+            if (previous != null) orderedByOwner.remove(previous.owner);
+            orderedByOwner.remove(owner);
+        }
         boolean removedDismissal = pendingDismissals.remove(human) != null;
         if (!replacement.equals(previous) || removedDismissal) setDirty();
     }
 
     void dismiss(UUID human) {
-        if (entries.remove(human) != null) setDirty();
+        Entry removed = entries.remove(human);
+        if (removed != null) { orderedByOwner.remove(removed.owner); setDirty(); }
     }
 
     int count(UUID owner, int tier) {
-        return (int) entries.values().stream().filter(e -> e.owner.equals(owner) && e.tier == tier).count();
+        return roster(owner).count(tier);
     }
 
     record Soldier(UUID id, int tier) {}
 
+    /** Frozen grouping and order from one ledger revision; safe for one UI snapshot. */
+    static final class RosterView {
+        private final List<Soldier> all;
+        private final Map<Integer, List<Soldier>> tiers;
+
+        RosterView(List<Soldier> all) {
+            this.all = all;
+            Map<Integer, List<Soldier>> groups = new HashMap<>();
+            for (Soldier soldier : all) {
+                groups.computeIfAbsent(soldier.tier(), ignored -> new ArrayList<>()).add(soldier);
+            }
+            groups.replaceAll((tier, soldiers) -> List.copyOf(soldiers));
+            tiers = Map.copyOf(groups);
+        }
+
+        List<Soldier> all() { return all; }
+        List<Soldier> filtered(int filter) { return filter < 0 ? all : tiers.getOrDefault(filter, List.of()); }
+        int count(int tier) { return tiers.getOrDefault(tier, List.of()).size(); }
+    }
+
     List<Soldier> soldiers(UUID owner) {
-        return entries.entrySet().stream()
+        return roster(owner).all();
+    }
+
+    RosterView roster(UUID owner) {
+        RosterView cached = orderedByOwner.get(owner);
+        if (cached != null) return cached;
+        List<Soldier> sorted = entries.entrySet().stream()
                 .filter(entry -> entry.getValue().owner.equals(owner))
                 .map(entry -> new Soldier(entry.getKey(), entry.getValue().tier))
                 .sorted(Comparator.comparingLong((Soldier soldier) -> entries.get(soldier.id()).sortOrder)
                         .thenComparing(Soldier::id))
                 .toList();
+        RosterView view = new RosterView(sorted);
+        orderedByOwner.put(owner, view);
+        return view;
     }
 
     /** Move one visible step; a tier filter only reorders soldiers in that tier. */
@@ -94,8 +129,7 @@ final class RecruitmentLedger extends SavedData {
         Entry current = entries.get(human);
         if (current == null || !current.owner.equals(owner)) return false;
         if (filter >= 0 && current.tier != filter) return false;
-        List<Soldier> visibleSoldiers = soldiers(owner).stream()
-                .filter(soldier -> filter < 0 || soldier.tier() == filter).toList();
+        List<Soldier> visibleSoldiers = roster(owner).filtered(filter);
         int index = -1;
         for (int i = 0; i < visibleSoldiers.size(); i++) {
             if (visibleSoldiers.get(i).id().equals(human)) {
@@ -109,6 +143,7 @@ final class RecruitmentLedger extends SavedData {
         Entry other = entries.get(otherId);
         entries.put(human, new Entry(current.owner, current.tier, other.sortOrder));
         entries.put(otherId, new Entry(other.owner, other.tier, current.sortOrder));
+        orderedByOwner.remove(owner);
         setDirty();
         return true;
     }
@@ -130,6 +165,7 @@ final class RecruitmentLedger extends SavedData {
     boolean requestDismissal(UUID human, UUID owner) {
         if (!isOwnedRecord(human, owner)) return false;
         entries.remove(human);
+        orderedByOwner.remove(owner);
         // Persist the dismissal before releasing capacity. An unloaded entity
         // with stale owner NBT is neutralized when it next joins the world.
         pendingDismissals.put(human, owner);
@@ -170,12 +206,11 @@ final class RecruitmentLedger extends SavedData {
         com.craftix.hostile_humans.entity.data.HumanServerData data =
                 com.craftix.hostile_humans.entity.data.HumanServerData.get();
         if (data == null) return;
-        for (Map.Entry<UUID, Entry> entry : entries.entrySet()) {
-            if (!entry.getValue().owner.equals(owner)) continue;
+        for (Soldier soldier : soldiers(owner)) {
             for (net.minecraft.server.level.ServerLevel level : server.getAllLevels()) {
-                if (!(level.getEntity(entry.getKey())
+                if (!(level.getEntity(soldier.id())
                         instanceof com.craftix.hostile_humans.entity.entities.Human human)) continue;
-                com.craftix.hostile_humans.entity.data.HumanData stored = data.getHumanMob(entry.getKey());
+                com.craftix.hostile_humans.entity.data.HumanData stored = data.getHumanMob(soldier.id());
                 if (stored == null || !owner.equals(stored.getOwnerUUID())) {
                     data.updateOrRegisterHumanMob(human);
                 }

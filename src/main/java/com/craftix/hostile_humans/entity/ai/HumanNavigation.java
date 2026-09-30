@@ -37,7 +37,7 @@ public final class HumanNavigation extends GroundPathNavigation {
             BlockPos pos = new BlockPos(x, y, z);
             if (isAvoided(pos)) return BlockPathTypes.BLOCKED;
             var state = getter.getBlockState(pos);
-            if (state.getBlockPathType(getter, pos, mob) == null && state.getBlock() instanceof FenceGateBlock)
+            if (state.getBlock() instanceof FenceGateBlock && state.getBlockPathType(getter, pos, mob) == null)
                 return BlockPathTypes.DOOR_IRON_CLOSED;
             return super.getBlockPathType(getter, x, y, z);
         }

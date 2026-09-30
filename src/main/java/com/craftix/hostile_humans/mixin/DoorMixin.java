@@ -1,6 +1,6 @@
 package com.craftix.hostile_humans.mixin;
 
-import com.craftix.hostile_humans.entity.entities.Human;
+import club.someoneice.humangunner.HumanAwareness;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -21,9 +21,7 @@ public abstract class DoorMixin {
     @Inject(method={"use"}, at={@At(value="RETURN")})
     public void useInject(BlockState p_57540_, Level pLevel, BlockPos p_57542_, Player pPlayer, InteractionHand p_57544_, BlockHitResult p_57545_, CallbackInfoReturnable<InteractionResult> cir) {
         if (cir.getReturnValue() == InteractionResult.CONSUME && !pLevel.isClientSide && !pPlayer.isCreative()) {
-            for (Human human : pPlayer.level().getEntitiesOfClass(Human.class, pPlayer.getBoundingBox().inflate(16.0))) {
-                human.setInvestigateSound(p_57545_.getBlockPos());
-            }
+            HumanAwareness.investigate(pPlayer, p_57545_.getBlockPos());
         }
     }
 }

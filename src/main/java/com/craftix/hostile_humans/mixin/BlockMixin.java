@@ -1,6 +1,6 @@
 package com.craftix.hostile_humans.mixin;
 
-import com.craftix.hostile_humans.entity.entities.Human;
+import club.someoneice.humangunner.HumanAwareness;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,9 +20,7 @@ public abstract class BlockMixin {
     @Inject(method={"playerWillDestroy"}, at={@At(value="TAIL")})
     public void useInject(Level pLevel, BlockPos pPos, BlockState pState, Player pPlayer, CallbackInfo ci) {
         if (!pLevel.isClientSide && !pPlayer.isCreative()) {
-            for (Human human : pPlayer.level().getEntitiesOfClass(Human.class, pPlayer.getBoundingBox().inflate(16.0))) {
-                human.setInvestigateSound(pPos);
-            }
+            HumanAwareness.investigate(pPlayer, pPos);
         }
     }
 
@@ -30,9 +28,7 @@ public abstract class BlockMixin {
     public void useInject(Level pLevel, BlockPos pPos, BlockState p_49849_, @Nullable LivingEntity entity, ItemStack p_49851_, CallbackInfo ci) {
         ServerPlayer pPlayer;
         if (entity instanceof ServerPlayer && !(pPlayer = (ServerPlayer)entity).isCreative()) {
-            for (Human human : pPlayer.level().getEntitiesOfClass(Human.class, pPlayer.getBoundingBox().inflate(16.0))) {
-                human.setInvestigateSound(pPos);
-            }
+            HumanAwareness.investigate(pPlayer, pPos);
         }
     }
 }

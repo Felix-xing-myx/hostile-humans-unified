@@ -153,7 +153,7 @@ public final class RecoverySupplies {
     }
 
     public static boolean hasUsableSupply(Human human) {
-        return findBestSlot(human, false, true) >= 0;
+        return hasSupply(human, true);
     }
 
     public static boolean hasActiveUse(Human human) {
@@ -162,11 +162,33 @@ public final class RecoverySupplies {
 
     /** Combat retreat recovery excludes ordinary food, which has its own bounded goal. */
     public static boolean hasCombatRecoverySupply(Human human) {
-        return findBestSlot(human, false, false) >= 0;
+        return hasSupply(human, false);
     }
 
     public static boolean hasOrdinaryFood(Human human) {
-        return findBestOrdinaryFoodSlot(human) >= 0;
+        HumanData data = human.getData();
+        if (data == null) return false;
+        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            if (isOrdinaryFood(human, data.getInventoryItem(i))) return true;
+        }
+        return false;
+    }
+
+    private static boolean hasSupply(Human human, boolean allowFood) {
+        HumanData data = human.getData();
+        if (data == null) return false;
+        boolean allowEnchantedApple = healthRatio(human) <= 0.35D;
+        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            ItemStack stack = data.getInventoryItem(i);
+            if (stack.isEmpty()) continue;
+            if (stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
+                if (allowEnchantedApple) return true;
+                continue;
+            }
+            if (stack.is(Items.GOLDEN_APPLE) || isHealingPotion(stack)
+                    || (allowFood && isRecoveryFood(human, stack))) return true;
+        }
+        return false;
     }
 
     public static boolean isRecoverySupply(Human human, ItemStack stack) {
@@ -508,7 +530,7 @@ public final class RecoverySupplies {
     public static void auditOwnedShields(Human human) {
         ShieldSnapshot current = shieldSnapshot(human);
         ShieldSnapshot previous = SHIELD_AUDIT.put(human, current);
-        if (previous == null || previous.state().equals(current.state())) {
+        if (previous == null || (previous.count() == current.count() && previous.state().equals(current.state()))) {
             return;
         }
         HumanGunner.LOGGER.debug(
@@ -815,14 +837,14 @@ public final class RecoverySupplies {
 
     private static ShieldSnapshot shieldSnapshot(Human human) {
         int count = 0;
-        StringBuilder state = new StringBuilder();
+        StringBuilder state = HumanGunner.LOGGER.isDebugEnabled() ? new StringBuilder() : null;
         if (SpartanEquipmentCompat.isShield(human.getMainHandItem())) {
             count += human.getMainHandItem().getCount();
-            appendShieldState(state, "main", human.getMainHandItem());
+            if (state != null) appendShieldState(state, "main", human.getMainHandItem());
         }
         if (SpartanEquipmentCompat.isShield(human.getOffhandItem())) {
             count += human.getOffhandItem().getCount();
-            appendShieldState(state, "off", human.getOffhandItem());
+            if (state != null) appendShieldState(state, "off", human.getOffhandItem());
         }
         HumanData data = human.getData();
         if (data != null) {
@@ -832,10 +854,10 @@ public final class RecoverySupplies {
                     continue;
                 }
                 count += stored.getCount();
-                appendShieldState(state, "inv" + i, stored);
+                if (state != null) appendShieldState(state, "inv" + i, stored);
             }
         }
-        return new ShieldSnapshot(count, state.toString());
+        return new ShieldSnapshot(count, state == null ? "" : state.toString());
     }
 
     private static void appendShieldState(StringBuilder state, String location, ItemStack stack) {
@@ -1306,18 +1328,19 @@ public final class RecoverySupplies {
         int bestFoodScore = Integer.MIN_VALUE;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
             ItemStack stack = data.getInventoryItem(i);
-            if (isHealingPotion(stack)) {
-                int score = healingPotionScore(stack);
-                if (score > bestPotionScore) {
+            int potionScore = healingPotionScore(stack);
+            if (potionScore != Integer.MIN_VALUE) {
+                if (potionScore > bestPotionScore) {
                     bestPotion = i;
-                    bestPotionScore = score;
+                    bestPotionScore = potionScore;
                 }
             } else if (stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
                 enchantedGoldenApple = i;
             } else if (stack.is(Items.GOLDEN_APPLE)) {
                 goldenApple = i;
-            } else if (isRecoveryFood(human, stack)) {
+            } else if (allowFood && !stack.isEmpty() && stack.isEdible()) {
                 FoodProperties food = stack.getFoodProperties(human);
+                if (food == null) continue;
                 int score = Math.round(food.getNutrition() * (1.0F + food.getSaturationModifier()));
                 if (score > bestFoodScore) {
                     bestFood = i;
@@ -1355,10 +1378,12 @@ public final class RecoverySupplies {
         int bestScore = Integer.MIN_VALUE;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
             ItemStack stack = data.getInventoryItem(i);
-            if (!isOrdinaryFood(human, stack)) {
+            if (stack.isEmpty() || !stack.isEdible() || stack.is(Items.GOLDEN_APPLE)
+                    || stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
                 continue;
             }
             FoodProperties food = stack.getFoodProperties(human);
+            if (food == null) continue;
             int score = Math.round(food.getNutrition() * (1.0F + food.getSaturationModifier()));
             if (score > bestScore) {
                 bestSlot = i;
@@ -1383,8 +1408,10 @@ public final class RecoverySupplies {
             return false;
         }
         List<MobEffectInstance> effects = PotionUtils.getMobEffects(stack);
-        return effects.stream().anyMatch(effect -> effect.getEffect() == MobEffects.HEAL
-                || effect.getEffect() == MobEffects.REGENERATION);
+        for (MobEffectInstance effect : effects) {
+            if (effect.getEffect() == MobEffects.HEAL || effect.getEffect() == MobEffects.REGENERATION) return true;
+        }
+        return false;
     }
 
     /** Exact built-in drinkable Instant Health II used by the recovery kits. */
@@ -1407,15 +1434,19 @@ public final class RecoverySupplies {
     }
 
     private static int healingPotionScore(ItemStack stack) {
+        if (!stack.is(Items.POTION)) return Integer.MIN_VALUE;
         int score = 0;
+        boolean healing = false;
         for (MobEffectInstance effect : PotionUtils.getMobEffects(stack)) {
             if (effect.getEffect() == MobEffects.HEAL) {
+                healing = true;
                 score += 100 + effect.getAmplifier() * 40;
             } else if (effect.getEffect() == MobEffects.REGENERATION) {
+                healing = true;
                 score += 40 + effect.getAmplifier() * 20 + effect.getDuration() / 20;
             }
         }
-        return score;
+        return healing ? score : Integer.MIN_VALUE;
     }
 
     private static boolean insertInventory(HumanData data, ItemStack source) {

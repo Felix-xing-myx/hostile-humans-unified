@@ -9,6 +9,9 @@ import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
+import java.util.ArrayList;
+import java.util.Comparator;
+import dev.felix.hostilehumans.core.BudgetedSearch;
 
 /** Emergency movement that gets humans out of lava before combat or orders resume. */
 public final class LavaEscapeGoal extends Goal {
@@ -21,6 +24,8 @@ public final class LavaEscapeGoal extends Goal {
 
     private final Human human;
     private int nextSearchTick;
+    private BudgetedSearch<BlockPos> pendingShoreCandidates;
+    private Path selectedShorePath;
 
     public LavaEscapeGoal(Human human) {
         this.human = human;
@@ -45,6 +50,7 @@ public final class LavaEscapeGoal extends Goal {
     @Override
     public void start() {
         nextSearchTick = 0;
+        pendingShoreCandidates = null;
         MovementSpeedController.retreat(human, true);
         human.stopUsingItem();
         human.setSprinting(true);
@@ -70,6 +76,9 @@ public final class LavaEscapeGoal extends Goal {
 
     @Override
     public void stop() {
+        OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.LAVA);
+        pendingShoreCandidates = null;
+        selectedShorePath = null;
         nextSearchTick = human.tickCount + SEARCH_INTERVAL_TICKS;
         if (!human.isInLava()) {
             human.setSprinting(false);
@@ -83,10 +92,42 @@ public final class LavaEscapeGoal extends Goal {
     }
 
     private void findAndFollowShorePath() {
-        nextSearchTick = human.tickCount + SEARCH_INTERVAL_TICKS;
+        if (pendingShoreCandidates == null) {
+            pendingShoreCandidates = new BudgetedSearch<>(collectShoreCandidates().iterator());
+        }
+        selectedShorePath = null;
+        // Keep the full candidate set, but spread failed A* requests over
+        // subsequent ticks rather than running up to 64 in one entity tick.
+        int budget = OptionalPathBudget.claim(human, OptionalPathBudget.Kind.LAVA, 4);
+        if (budget == 0) {
+            nextSearchTick = human.tickCount + 1;
+            return;
+        }
+        BlockPos found = pendingShoreCandidates.firstMatching(budget, candidate -> {
+            if (!human.level().hasChunkAt(candidate) || !isSafeShore(candidate)) return false;
+            Path path = human.getNavigation().createPath(candidate, 0);
+            if (path == null || !path.canReach()) return false;
+            selectedShorePath = path;
+            return true;
+        });
+        if (found != null) {
+            human.getNavigation().moveTo(selectedShorePath, NAVIGATION_SPEED);
+            selectedShorePath = null;
+            pendingShoreCandidates = null;
+            OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.LAVA);
+            nextSearchTick = human.tickCount + SEARCH_INTERVAL_TICKS;
+        } else if (pendingShoreCandidates.hasRemaining()) {
+            nextSearchTick = human.tickCount + 1;
+        } else {
+            pendingShoreCandidates = null;
+            OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.LAVA);
+            nextSearchTick = human.tickCount + SEARCH_INTERVAL_TICKS + Math.floorMod(human.getId(), 10);
+        }
+    }
+
+    private ArrayList<BlockPos> collectShoreCandidates() {
         BlockPos origin = human.blockPosition();
-        Path bestPath = null;
-        double bestDistance = Double.MAX_VALUE;
+        ArrayList<BlockPos> candidates = new ArrayList<>();
         double angleOffset = human.getRandom().nextDouble() * Math.PI * 2.0D;
 
         for (int radius = SEARCH_STEP; radius <= SEARCH_RADIUS; radius += SEARCH_STEP) {
@@ -104,21 +145,14 @@ public final class LavaEscapeGoal extends Goal {
                     continue;
                 }
 
-                Path path = human.getNavigation().createPath(candidate, 0);
-                if (path == null || !path.canReach()) {
-                    continue;
-                }
-                double distance = candidate.distSqr(origin);
-                if (distance < bestDistance) {
-                    bestPath = path;
-                    bestDistance = distance;
-                }
+                candidates.add(candidate);
             }
         }
 
-        if (bestPath != null) {
-            human.getNavigation().moveTo(bestPath, NAVIGATION_SPEED);
-        }
+        // First reachable in this order is the same nearest-destination
+        // criterion as the old exhaustive bestDistance comparison.
+        candidates.sort(Comparator.comparingDouble(candidate -> candidate.distSqr(origin)));
+        return candidates;
     }
 
     private boolean isSafeShore(BlockPos pos) {

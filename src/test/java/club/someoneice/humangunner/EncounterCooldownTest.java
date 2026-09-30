@@ -15,6 +15,42 @@ public final class EncounterCooldownTest {
         System.out.println("PASS: identity badge hostile/neutral/friendly matrix");
         int[] costs = {8, 24, 72, 216}, limits = {12, 10, 6, 3}, waves = {5, 4, 3, 2};
         UnifiedConfig defaultConfig = new UnifiedConfig(new JsonObject());
+        NaturalSpawnProgression progression = defaultConfig.spawn().progression();
+        int[] firstDays = {3, 5, 10, 20};
+        for (int tier = 0; tier < 4; tier++) {
+            long firstTick = (firstDays[tier] - 1L) * 24000L;
+            check(!progression.allowsTier(firstTick - 1L, tier), "tier locked before its opening day");
+            check(progression.allowsTier(firstTick, tier), "tier unlocked at opening day");
+        }
+        check(!progression.allowsBattle(4L * 24000L - 1L), "automatic battle waits for soldiers");
+        check(progression.allowsBattle(4L * 24000L), "automatic battle unlocks with tier one");
+        check(!new NaturalSpawnProgression(true, 10, 1, 1, 1, 1).allowsTier(9L * 24000L, 3),
+                "safe days override earlier rank dates");
+        check(new NaturalSpawnProgression(true, 0, 1, 1, 1, 1).allowsTier(0L, 0),
+                "zero safe days allows configured day one");
+        check(new NaturalSpawnProgression(false, 100, 500, 500, 500, 500).allowsTier(0L, 3),
+                "disabled progression preserves previous eligibility");
+        check(new NaturalSpawnProgression(true, 0, 20, 20, 1, 20).allowsBattle(0L),
+                "custom tier two date can unlock battles independently");
+        check(!progression.allowsTier(Long.MAX_VALUE, -1), "invalid tier rejected");
+        check(NaturalSpawnProgression.dayAt(-100L) == 1L, "negative calendar clamped to day one");
+
+        ProgressionClock calendar = new ProgressionClock(0L);
+        check(calendar.ticksAt(24000L) == 24000L, "default follows Overworld calendar including sleep");
+        calendar.setDay(3, 90000L);
+        check(calendar.ticksAt(90000L) == 48000L, "set changes only offset to requested day start");
+        check(calendar.ticksAt(114000L) == 72000L, "sleep advances adjusted calendar too");
+        calendar.addDays(2, 114100L);
+        check(calendar.ticksAt(114100L) == 120100L, "add preserves within-day time");
+        check(new ProgressionClock(calendar.savedOffset()).ticksAt(114100L) == 120100L,
+                "saved offset survives reload");
+        calendar.addDays(-100, 114100L);
+        check(calendar.ticksAt(114100L) == 0L, "negative add clamps to day one");
+        calendar.syncFromOverworld();
+        check(calendar.ticksAt(114100L) == 114100L, "sync clears offset");
+        check(new ProgressionClock(100L).ticksAt(Long.MAX_VALUE) == Long.MAX_VALUE,
+                "calendar addition cannot overflow");
+        System.out.println("PASS: tier opening dates, safety override, saved calendar offset and sleeping");
         for (int tier = 0; tier < 4; tier++) {
             check(RecruitmentPolicy.cost(tier) == costs[tier], "recruitment cost");
             check(RecruitmentPolicy.limit(tier, defaultConfig) == limits[tier], "follower cap");
@@ -57,6 +93,38 @@ public final class EncounterCooldownTest {
         }
         check(SpawnSafety.unlitBuffer((x,y,z) -> x == 16 && y == 1 && z == 0), "outside spherical boundary");
         check(SpawnSafety.unlitBuffer((x,y,z) -> x == 17 && y == 0 && z == 0), "17 block dark gap");
+        java.util.Set<String> sphericalCells = new java.util.HashSet<>();
+        SpawnSafety.unlitColumns((x, z, minY, maxY) -> {
+            for (int y = minY; y <= maxY; y++) {
+                check(sphericalCells.add(x + "," + y + "," + z), "columns contain no duplicate cells");
+            }
+            return false;
+        });
+        int referenceCells = 0;
+        for (int x = -16; x <= 16; x++) {
+            for (int y = -16; y <= 16; y++) {
+                for (int z = -16; z <= 16; z++) {
+                    boolean inside = x*x + y*y + z*z <= 256;
+                    check(sphericalCells.contains(x + "," + y + "," + z) == inside,
+                            "precomputed columns preserve exact spherical geometry");
+                    if (inside) referenceCells++;
+                }
+            }
+        }
+        check(sphericalCells.size() == referenceCells, "no extra cells outside sphere");
+        for (int originX = -33; originX <= 33; originX++) {
+            for (int originZ = -33; originZ <= 33; originZ++) {
+                int firstX = (originX - 16) >> 4, firstZ = (originZ - 16) >> 4;
+                for (int dx : new int[]{-16, 0, 16}) {
+                    for (int dz : new int[]{-16, 0, 16}) {
+                        int xIndex = ((originX + dx) >> 4) - firstX;
+                        int zIndex = ((originZ + dz) >> 4) - firstZ;
+                        check(xIndex >= 0 && xIndex < 3 && zIndex >= 0 && zIndex < 3,
+                                "chunk memo indexing covers negative coordinates and boundaries");
+                    }
+                }
+            }
+        }
         System.out.println("PASS: strict 96-block horizontal distance and 16-block spherical light buffer");
         EncounterCooldown clock = new EncounterCooldown();
         Object first = new Object(), second = new Object();
@@ -67,6 +135,23 @@ public final class EncounterCooldownTest {
         check(!clock.join(101, first, 5), "token reuse on later tick must be denied");
         check(!clock.join(2499, second, 5), "cooldown must last full 2400 ticks");
         check(clock.join(2500, second, 5), "new squad at exact cooldown expiry");
+        EncounterCooldown concurrentClock = new EncounterCooldown();
+        Object concurrentBatch = new Object();
+        var workers = java.util.concurrent.Executors.newFixedThreadPool(8);
+        var accepted = new java.util.concurrent.atomic.AtomicInteger();
+        try {
+            var jobs = new java.util.ArrayList<java.util.concurrent.Future<?>>();
+            for (int i = 0; i < 64; i++) {
+                jobs.add(workers.submit(() -> {
+                    if (concurrentClock.join(100, concurrentBatch, 5)) accepted.incrementAndGet();
+                }));
+            }
+            for (var job : jobs) job.get();
+            check(accepted.get() == 5, "concurrent admission cannot exceed the shared pack limit");
+            check(concurrentClock.cooling(101), "concurrent successful admission publishes cooldown");
+        } catch (Exception failure) {
+            throw new AssertionError("concurrent admission regression", failure);
+        } finally { workers.shutdownNow(); }
         EncounterCooldown battle = new EncounterCooldown();
         for (int i = 0; i < 36; i++) check(battle.join(200, first, Integer.MAX_VALUE), "battle member");
         check(!battle.join(200, second, 5), "battle must suppress normal squad");

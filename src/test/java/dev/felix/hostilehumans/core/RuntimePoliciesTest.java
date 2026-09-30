@@ -10,6 +10,30 @@ public final class RuntimePoliciesTest {
         if (!condition) throw new AssertionError("check " + checks);
     }
     public static void main(String[] args) {
+        for (int i = 100; i <= 1800; i++) {
+            double reach = i / 100.0D;
+            check(MeleeSpacingPolicy.preferred(reach) < reach);
+            check(reach - MeleeSpacingPolicy.preferred(reach) >= 0.5D - 1.0E-9D);
+            check(MeleeSpacingPolicy.tooClose(reach) < MeleeSpacingPolicy.preferred(reach));
+        }
+        EquipmentWearCooldown wear = new EquipmentWearCooldown(4, 60);
+        for (int slot = 0; slot < 4; slot++) check(wear.ready(slot, 0));
+        wear.lostDurability(0, 0);
+        check(!wear.ready(0, 59));
+        for (int slot = 1; slot < 4; slot++) check(wear.ready(slot, 0));
+        wear.lostDurability(1, 10);
+        check(wear.ready(0, 60));
+        check(!wear.ready(1, 69));
+        check(wear.ready(1, 70));
+        for (int tick = 0; tick < 600; tick++) {
+            for (int slot = 0; slot < 4; slot++) {
+                if (wear.ready(slot, tick)) {
+                    wear.lostDurability(slot, tick);
+                    check(!wear.ready(slot, tick + 59));
+                    check(wear.ready(slot, tick + 60));
+                }
+            }
+        }
         UUID human = UUID.randomUUID(), first = UUID.randomUUID(), second = UUID.randomUUID();
         OwnerIndex index = new OwnerIndex();
         check(index.assign(human, first) == null);
@@ -21,6 +45,10 @@ public final class RuntimePoliciesTest {
         check(snapshot.equals(Set.of(human)));
         check(index.assign(human, second).equals(second));
         check(index.members(second).size() == 1);
+        for (int i = 0; i < 1000; i++) {
+            check(index.assign(human, second).equals(second));
+            check(index.owner(human).equals(second));
+        }
         check(index.assign(human, null).equals(second));
         check(index.members(second).isEmpty());
         check(index.owner(human) == null);

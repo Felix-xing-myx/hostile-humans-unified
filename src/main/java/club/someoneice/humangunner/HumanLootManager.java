@@ -23,13 +23,25 @@ import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.AABB;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
+import java.util.UUID;
+import dev.felix.hostilehumans.core.PileFirstSelection;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.IntFunction;
+import java.util.function.ToDoubleFunction;
 
 public final class HumanLootManager {
     private static final double MIN_PICKUP_VALUE = 24.0D;
+    private static final EquipmentSlot[] ARMOUR_SLOTS = {
+            EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
+    };
 
     private HumanLootManager() {
     }
@@ -43,12 +55,16 @@ public final class HumanLootManager {
         if (data == null) {
             return;
         }
-        for (EquipmentSlot slot : new EquipmentSlot[]{
-                EquipmentSlot.HEAD, EquipmentSlot.CHEST,
-                EquipmentSlot.LEGS, EquipmentSlot.FEET
-        }) {
+        // Classification can invoke compatibility hooks. Each backpack entry
+        // needs classifying only once for this non-yielding optimization pass.
+        EquipmentSlot[] storedSlots = new EquipmentSlot[data.getInventoryItemsSize()];
+        for (int i = 0; i < storedSlots.length; i++) {
+            ItemStack stack = data.getInventoryItem(i);
+            if (!stack.isEmpty()) storedSlots[i] = preferredEquipmentSlot(stack);
+        }
+        for (EquipmentSlot slot : ARMOUR_SLOTS) {
             if (!HumanManagedLoadout.isArmourLocked(human, slot)) {
-                equipBestStored(human, data, slot, false);
+                equipBestStored(human, data, slot, false, storedSlots);
             }
         }
         // Armour can be replaced while blocking, drawing a bow or consuming.
@@ -59,19 +75,19 @@ public final class HumanLootManager {
                 && !GunCustody.isActive(human)
                 && !RangedWeaponCustody.controlsMainHand(human)
                 && !club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())) {
-            equipBestStored(human, data, EquipmentSlot.MAINHAND, true);
+            equipBestStored(human, data, EquipmentSlot.MAINHAND, true, storedSlots);
         }
     }
 
     private static void equipBestStored(
-            Human human, HumanData data, EquipmentSlot slot, boolean weaponOnly
+            Human human, HumanData data, EquipmentSlot slot, boolean weaponOnly, EquipmentSlot[] storedSlots
     ) {
         ItemStack current = human.getItemBySlot(slot);
         double bestScore = equipmentScore(current, slot);
         int bestSlot = -1;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
             ItemStack candidate = data.getInventoryItem(i);
-            if (candidate.isEmpty() || preferredEquipmentSlot(candidate) != slot) {
+            if (candidate.isEmpty() || storedSlots[i] != slot) {
                 continue;
             }
             if (weaponOnly && !isNonGunWeapon(candidate)) {
@@ -88,6 +104,7 @@ public final class HumanLootManager {
         }
         ItemStack replacement = data.getInventoryItem(bestSlot).copy();
         data.setInventoryItem(bestSlot, current.copy());
+        storedSlots[bestSlot] = current.isEmpty() ? null : preferredEquipmentSlot(current);
         human.setItemSlot(slot, replacement);
         human.setDropChance(slot, 1.0F);
     }
@@ -132,51 +149,82 @@ public final class HumanLootManager {
         return equipmentScore(stack, EquipmentSlot.MAINHAND);
     }
 
-    static ItemEntity findBestNearby(Human human, double radius, Vec3 preferredPile,
-                                     Predicate<ItemEntity> skip, Consumer<ItemEntity> reject) {
-        List<ItemEntity> nearby = human.level().getEntitiesOfClass(
-                ItemEntity.class,
-                human.getBoundingBox().inflate(radius, 4.0D, radius),
-                item -> item.isAlive() && !item.getItem().isEmpty());
-        if (preferredPile != null) {
-            ItemEntity bestInPile = bestCandidate(human, nearby, preferredPile, true, skip, reject);
-            if (bestInPile != null) {
-                return bestInPile;
-            }
-        }
-        return bestCandidate(human, nearby, preferredPile, false, skip, reject);
+    /** Existing tools are usable backups; never manufacture replacements. */
+    public static boolean equipMeleeFallback(Human human) {
+        return HumanManagedLoadout.equipStoredMeleeIfMainHandEmpty(human);
     }
 
-    private static ItemEntity bestCandidate(Human human, List<ItemEntity> nearby, Vec3 preferredPile,
-                                            boolean pileOnly, Predicate<ItemEntity> skip,
-                                            Consumer<ItemEntity> reject) {
-        ItemEntity best = null;
-        double bestScore = Double.NEGATIVE_INFINITY;
-        for (ItemEntity item : nearby) {
-            if (pileOnly && item.position().distanceToSqr(preferredPile) > 16.0D) continue;
-            if (skip.test(item)) continue;
-            if (!isReachableWithoutDiving(item)) {
-                reject.accept(item);
-                continue;
-            }
-            double value = benefit(human, item.getItem());
-            if (value <= 0.0D) {
-                reject.accept(item);
-                continue;
-            }
-            // Value determines whether an item is useful; distance should
-            // dominate the choice between two otherwise viable piles.
-            double score = value * 0.25D - human.distanceTo(item) * 2.0D;
-            if (score > bestScore) {
-                bestScore = score;
-                best = item;
-            }
+    /** One complete nearby selection, with a bounded scoring batch and pile-first semantics. */
+    static final class NearbySearch {
+        private final Human human;
+        private final double radius;
+        private final Vec3 origin;
+        private final Vec3 preferredPile;
+        private final AABB searchArea;
+        private final HumanData inventory;
+        private final int inventoryRevision;
+        private final PileFirstSelection<ItemEntity, UUID> selection;
+
+        NearbySearch(Human human, double radius, Vec3 preferredPile) {
+            this.human = human;
+            this.radius = radius;
+            this.origin = human.position();
+            this.preferredPile = preferredPile;
+            this.searchArea = human.getBoundingBox().inflate(radius, 4.0D, radius);
+            this.inventory = human.getData();
+            this.inventoryRevision = inventory == null ? 0 : inventory.getInventoryRevision();
+            AABB pileArea = preferredPile == null ? null : new AABB(preferredPile, preferredPile).inflate(4.0D);
+            boolean pileOnly = pileArea != null && searchArea.intersects(pileArea);
+            selection = new PileFirstSelection<>(query(pileOnly ? searchArea.intersect(pileArea) : searchArea),
+                    pileOnly, () -> query(searchArea), ItemEntity::getUUID,
+                    item -> item.position().distanceToSqr(preferredPile) <= 16.0D);
         }
-        return best;
+
+        boolean isCurrent(Human human) {
+            HumanData current = human.getData();
+            return this.human == human && origin.distanceToSqr(human.position()) <= 4.0D
+                    && current == inventory && (current == null || current.getInventoryRevision() == inventoryRevision);
+        }
+
+        boolean isDone() { return selection.isDone(); }
+
+        ItemEntity advance(int budget, Predicate<ItemEntity> skip, Consumer<ItemEntity> reject) {
+            // The backpack can change between batches; values never cross a tick.
+            HumanData current = human.getData();
+            StorageSummary capacity = current == null ? null : new StorageSummary(
+                    current.getInventoryItemsSize(), current::getInventoryItem,
+                    HumanLootManager::protectedFromEviction, stack -> inventoryValue(human, stack));
+            return selection.advance(budget, item -> {
+                if (!item.isAlive() || item.getItem().isEmpty() || item.level() != human.level()
+                        || !item.getBoundingBox().intersects(searchArea) || skip.test(item)) return Double.NEGATIVE_INFINITY;
+                double candidateScore = score(item, capacity);
+                if (candidateScore == Double.NEGATIVE_INFINITY) {
+                    if (item.isAlive() && !item.getItem().isEmpty()) reject.accept(item);
+                }
+                return candidateScore;
+            });
+        }
+
+        private Iterator<ItemEntity> query(AABB area) {
+            return human.level().getEntitiesOfClass(ItemEntity.class, area,
+                    item -> item.isAlive() && !item.getItem().isEmpty()).iterator();
+        }
+
+        private double score(ItemEntity item, StorageSummary capacity) {
+            if (item == null || !item.isAlive() || item.getItem().isEmpty()
+                    || item.level() != human.level() || !item.getBoundingBox().intersects(searchArea)
+                    || human.distanceToSqr(item) > (radius + 4.0D) * (radius + 4.0D)
+                    || (selection.isPileOnly() && item.position().distanceToSqr(preferredPile) > 16.0D)
+                    || !isReachableWithoutDiving(item)) return Double.NEGATIVE_INFINITY;
+            double value = benefit(human, item.getItem(), capacity);
+            return value <= 0.0D ? Double.NEGATIVE_INFINITY
+                    : value * 0.25D - human.distanceTo(item) * 2.0D;
+        }
     }
 
     static boolean isWorthCollecting(Human human, ItemEntity item) {
         return item.isAlive() && !item.getItem().isEmpty()
+                && SoldierOrder.allowsLootPosition(human, item.getX(), item.getZ())
                 && isReachableWithoutDiving(item)
                 && benefit(human, item.getItem()) > 0.0D;
     }
@@ -207,6 +255,7 @@ public final class HumanLootManager {
     }
 
     static boolean collect(Human human, ItemEntity entity) {
+        if (!SoldierOrder.allowsLootPosition(human, entity.getX(), entity.getZ())) return false;
         ItemStack ground = entity.getItem();
         if (ground.isEmpty() || !HumanGunAcceptance.accepts(ground)) {
             return false;
@@ -253,6 +302,10 @@ public final class HumanLootManager {
     }
 
     private static double benefit(Human human, ItemStack stack) {
+        return benefit(human, stack, null);
+    }
+
+    private static double benefit(Human human, ItemStack stack, StorageSummary capacity) {
         if (stack.isEmpty() || stack.getItem() instanceof IdentityBadgeItem
                 || !HumanGunAcceptance.accepts(stack)) {
             return 0.0D;
@@ -263,7 +316,8 @@ public final class HumanLootManager {
                     - equipmentScore(human.getItemBySlot(slot), slot)) * 5.0D;
         }
         double value = inventoryValue(human, stack);
-        return value >= MIN_PICKUP_VALUE && canStoreOrImprove(human, stack, value) ? value : 0.0D;
+        return value >= MIN_PICKUP_VALUE && (capacity == null ? canStoreOrImprove(human, stack, value)
+                : capacity.canStore(stack, value)) ? value : 0.0D;
     }
 
     private static boolean shouldEquip(Human human, ItemStack incoming, EquipmentSlot slot) {
@@ -320,11 +374,12 @@ public final class HumanLootManager {
             return 0.0D;
         }
         double score = 0.0D;
-        score += attribute(stack, slot, Attributes.ARMOR) * 8.0D;
-        score += attribute(stack, slot, Attributes.ARMOR_TOUGHNESS) * 5.0D;
-        score += attribute(stack, slot, Attributes.KNOCKBACK_RESISTANCE) * 10.0D;
-        score += attribute(stack, slot, Attributes.ATTACK_DAMAGE) * 5.0D;
-        score += Math.max(0.0D, attribute(stack, slot, Attributes.ATTACK_SPEED)) * 1.5D;
+        var modifiers = stack.getAttributeModifiers(slot);
+        score += attribute(modifiers.get(Attributes.ARMOR)) * 8.0D;
+        score += attribute(modifiers.get(Attributes.ARMOR_TOUGHNESS)) * 5.0D;
+        score += attribute(modifiers.get(Attributes.KNOCKBACK_RESISTANCE)) * 10.0D;
+        score += attribute(modifiers.get(Attributes.ATTACK_DAMAGE)) * 5.0D;
+        score += Math.max(0.0D, attribute(modifiers.get(Attributes.ATTACK_SPEED))) * 1.5D;
         if (club.someoneice.humangunner.GunSupport.get().isGun(stack)) {
             score += 90.0D;
         } else if (stack.getItem() instanceof TridentItem) {
@@ -336,17 +391,18 @@ public final class HumanLootManager {
         } else if (SpartanEquipmentCompat.isShield(stack)) {
             score += SpartanEquipmentCompat.shieldValue(stack);
         }
-        score += EnchantmentHelper.getEnchantments(stack).values().stream()
-                .mapToInt(Integer::intValue).sum() * 2.5D;
+        int enchantmentLevels = 0;
+        for (int level : EnchantmentHelper.getEnchantments(stack).values()) enchantmentLevels += level;
+        score += enchantmentLevels * 2.5D;
         if (stack.isDamageableItem()) {
             score *= 0.55D + 0.45D * (1.0D - (double) stack.getDamageValue() / stack.getMaxDamage());
         }
         return score;
     }
 
-    private static double attribute(ItemStack stack, EquipmentSlot slot, net.minecraft.world.entity.ai.attributes.Attribute attribute) {
+    private static double attribute(java.util.Collection<AttributeModifier> modifiers) {
         double total = 0.0D;
-        for (AttributeModifier modifier : stack.getAttributeModifiers(slot).get(attribute)) {
+        for (AttributeModifier modifier : modifiers) {
             total += modifier.getAmount();
         }
         return total;
@@ -363,31 +419,7 @@ public final class HumanLootManager {
             return 140.0D;
         }
         if (stack.is(Items.POTION) || stack.is(Items.SPLASH_POTION) || stack.is(Items.LINGERING_POTION)) {
-            var effects = PotionUtils.getMobEffects(stack);
-            if (effects.stream().anyMatch(effect -> effect.getEffect() == MobEffects.HEAL)) {
-                return 115.0D;
-            }
-            if (effects.stream().anyMatch(effect -> effect.getEffect() == MobEffects.REGENERATION)) {
-                return 108.0D;
-            }
-            if (effects.stream().anyMatch(effect -> effect.getEffect() == MobEffects.DAMAGE_BOOST)) {
-                return 96.0D;
-            }
-            if (effects.stream().anyMatch(effect -> effect.getEffect() == MobEffects.MOVEMENT_SPEED)) {
-                return 88.0D;
-            }
-            if (stack.is(Items.SPLASH_POTION)
-                    && effects.stream().anyMatch(effect -> effect.getEffect() == MobEffects.MOVEMENT_SLOWDOWN)) {
-                return 92.0D;
-            }
-            if (stack.is(Items.SPLASH_POTION)
-                    && effects.stream().anyMatch(effect -> effect.getEffect() == MobEffects.WEAKNESS)) {
-                return 86.0D;
-            }
-            if (effects.stream().anyMatch(effect -> effect.getEffect().isBeneficial())) {
-                return 70.0D;
-            }
-            return 20.0D;
+            return potionValue(PotionUtils.getMobEffects(stack), stack.is(Items.SPLASH_POTION));
         }
         if (RecoverySupplies.isRecoverySupply(human, stack)) {
             FoodProperties food = stack.getFoodProperties(human);
@@ -399,6 +431,27 @@ public final class HumanLootManager {
             return 35.0D + equipmentScore(stack, preferredEquipmentSlot(stack));
         }
         return 0.0D;
+    }
+
+    static double potionValue(List<net.minecraft.world.effect.MobEffectInstance> effects, boolean splash) {
+        int present = 0;
+        for (var instance : effects) {
+            var effect = instance.getEffect();
+            if (effect == MobEffects.HEAL) return 115.0D;
+            if (effect == MobEffects.REGENERATION) present |= 1;
+            else if (effect == MobEffects.DAMAGE_BOOST) present |= 2;
+            else if (effect == MobEffects.MOVEMENT_SPEED) present |= 4;
+            else if (splash && effect == MobEffects.MOVEMENT_SLOWDOWN) present |= 8;
+            else if (splash && effect == MobEffects.WEAKNESS) present |= 16;
+            else if (effect.isBeneficial()) present |= 32;
+        }
+        // Priority is not numerical maximum: speed precedes splash slowness.
+        if ((present & 1) != 0) return 108.0D;
+        if ((present & 2) != 0) return 96.0D;
+        if ((present & 4) != 0) return 88.0D;
+        if ((present & 8) != 0) return 92.0D;
+        if ((present & 16) != 0) return 86.0D;
+        return (present & 32) != 0 ? 70.0D : 20.0D;
     }
 
     private static boolean canStoreOrImprove(Human human, ItemStack incoming, double incomingValue) {
@@ -413,12 +466,71 @@ public final class HumanLootManager {
                     && stored.getCount() < stored.getMaxStackSize())) {
                 return true;
             }
-            if (!protectedFromEviction(stored)
-                    && inventoryValue(human, stored) + 1.0D < incomingValue) {
-                return true;
+            if (!protectedFromEviction(stored)) {
+                double storedValue = inventoryValue(human, stored);
+                if (storedValue + 1.0D < incomingValue) return true;
             }
         }
         return false;
+    }
+
+    /** Lazy capacity/eviction summary; valid only during one non-mutating batch. */
+    static final class StorageSummary {
+        private final int size;
+        private final IntFunction<ItemStack> items;
+        private final Predicate<ItemStack> protectedItems;
+        private final ToDoubleFunction<ItemStack> value;
+        private boolean prepared;
+        private boolean valuesPrepared;
+        private boolean emptySlot;
+        private List<ItemStack> stacks;
+        private double lowestEvictable = Double.POSITIVE_INFINITY;
+        private final Map<net.minecraft.world.item.Item, List<ItemStack>> mergeable = new IdentityHashMap<>();
+
+        StorageSummary(int size, IntFunction<ItemStack> items, Predicate<ItemStack> protectedItems,
+                       ToDoubleFunction<ItemStack> value) {
+            this.size = size;
+            this.items = items;
+            this.protectedItems = protectedItems;
+            this.value = value;
+        }
+
+        boolean canStore(ItemStack incoming, double incomingValue) {
+            if (!prepared) prepare();
+            if (emptySlot) return true;
+            List<ItemStack> matches = mergeable.get(incoming.getItem());
+            if (matches != null) for (ItemStack stored : matches) {
+                if (ItemStack.isSameItemSameTags(stored, incoming)) return true;
+            }
+            if (!valuesPrepared) {
+                valuesPrepared = true;
+                for (ItemStack stored : stacks) {
+                    if (!protectedItems.test(stored)) {
+                        double storedValue = value.applyAsDouble(stored);
+                        if (storedValue < lowestEvictable) lowestEvictable = storedValue;
+                    }
+                }
+            }
+            return lowestEvictable + 1.0D < incomingValue;
+        }
+
+        private void prepare() {
+            prepared = true;
+            stacks = new ArrayList<>(size);
+            for (int i = 0; i < size; i++) {
+                ItemStack stack = items.apply(i);
+                if (stack.isEmpty()) {
+                    emptySlot = true;
+                    return;
+                }
+                stacks.add(stack);
+            }
+            for (ItemStack stored : stacks) {
+                if (stored.getCount() < stored.getMaxStackSize()) {
+                    mergeable.computeIfAbsent(stored.getItem(), ignored -> new ArrayList<>()).add(stored);
+                }
+            }
+        }
     }
 
     /** Mutates {@code incoming}; success means at least one item was stored. */

@@ -52,7 +52,8 @@ final class SoldierRosterAudit {
             audit(server, ids.get((state.cursor + i) % size), state);
         }
         state.cursor = (state.cursor + Math.min(PASSIVE_BATCH, size)) % size;
-        state.suspectedMissing.retainAll(new HashSet<>(RecruitmentLedger.get(server).soldierIds()));
+        RecruitmentLedger ledger = RecruitmentLedger.get(server);
+        state.suspectedMissing.removeIf(id -> ledger.tier(id) < 0);
     }
 
     /** Immediately validates the displayed page without forcing any chunk to load. */

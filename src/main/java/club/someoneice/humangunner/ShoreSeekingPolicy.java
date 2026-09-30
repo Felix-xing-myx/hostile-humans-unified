@@ -2,6 +2,8 @@ package club.someoneice.humangunner;
 
 import java.util.Map;
 import java.util.WeakHashMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
 
 /** Pure decisions shared by water-exit assistance and combat movement. */
 public final class ShoreSeekingPolicy {
@@ -25,6 +27,29 @@ public final class ShoreSeekingPolicy {
     public static final double SURFACE_STANCE_DEPTH = 0.55D;
 
     private ShoreSeekingPolicy() {
+    }
+
+    /** Unit horizontal direction; stable unique columns, followed by null slots. */
+    public static BlockPos[] forwardLandingColumns(double x, double z, double directionX, double directionZ) {
+        BlockPos[] columns = new BlockPos[9];
+        int size = 0;
+        for (int forwardIndex = 0; forwardIndex < 3; forwardIndex++) {
+            double forward = 0.4D + forwardIndex * 0.35D;
+            for (int sideIndex = -1; sideIndex <= 1; sideIndex++) {
+                double side = sideIndex * 0.3D;
+                int columnX = Mth.floor(x + directionX * forward - directionZ * side);
+                int columnZ = Mth.floor(z + directionZ * forward + directionX * side);
+                boolean duplicate = false;
+                for (int i = 0; i < size; i++) {
+                    if (columns[i].getX() == columnX && columns[i].getZ() == columnZ) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (!duplicate) columns[size++] = new BlockPos(columnX, 0, columnZ);
+            }
+        }
+        return columns;
     }
 
     public static boolean shouldAttemptShore(boolean serverSide, boolean effectiveAi,

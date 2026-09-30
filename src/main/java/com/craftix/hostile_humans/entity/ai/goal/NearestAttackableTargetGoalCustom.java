@@ -20,15 +20,12 @@ extends TargetGoal {
     @Nullable
     protected LivingEntity target;
     protected TargetingConditions targetConditions;
-    @Nullable
-    private final Predicate<LivingEntity> targetPredicate;
 
     public NearestAttackableTargetGoalCustom(Mob p_26053_, Class<T> p_26054_, int p_26055_, boolean p_26056_, boolean p_26057_, @Nullable Predicate<LivingEntity> livingEntityPredicate) {
         super(p_26053_, p_26056_, p_26057_);
         this.targetType = p_26054_;
         this.randomInterval = NearestAttackableTargetGoalCustom.reducedTickDelay((int)p_26055_);
         this.setFlags(EnumSet.of(Goal.Flag.TARGET));
-        this.targetPredicate = livingEntityPredicate;
         this.targetConditions = TargetingConditions.forCombat().range(this.getFollowDistance()).selector(livingEntityPredicate);
     }
 
@@ -49,9 +46,8 @@ extends TargetGoal {
 
     protected void findTarget() {
         // Follow range changes when a human switches between guns and melee.
-        // Rebuild the range gate instead of keeping the constructor-time value.
-        this.targetConditions = TargetingConditions.forCombat()
-                .range(this.getFollowDistance()).selector(this.targetPredicate);
+        // Update the range while reusing the immutable selector and flags.
+        this.targetConditions.range(this.getFollowDistance());
         this.target = this.targetType != Player.class && this.targetType != ServerPlayer.class ? this.mob.level().getNearestEntity(this.mob.level().getEntitiesOfClass(this.targetType, this.getTargetSearchArea(this.getFollowDistance()), entity -> true), this.targetConditions, (LivingEntity)this.mob, this.mob.getX(), this.mob.getEyeY(), this.mob.getZ()) : this.mob.level().getNearestPlayer(this.targetConditions, (LivingEntity)this.mob, this.mob.getX(), this.mob.getEyeY(), this.mob.getZ());
     }
 

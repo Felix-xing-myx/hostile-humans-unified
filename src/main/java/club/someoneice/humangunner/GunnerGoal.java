@@ -145,6 +145,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     @Override
     public void stop() {
+        if (mob instanceof Human human) RangedFiringPosition.cancelVisibleSearch(human);
         if (mob instanceof Human human && human.isCombatFiringShore()) {
             human.stopSeekingShore();
         }
@@ -385,9 +386,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             if (!SoldierOrder.isReturningToHoldPosition(human)) {
                 human.getNavigation().stop();
             }
-        } else if (human.tickCount >= nextCloseRetreatPathTick
-                || human.getNavigation().isDone()
-                || human.getNavigation().isStuck()) {
+        } else if (human.tickCount >= nextCloseRetreatPathTick) {
             retreatFrom(target);
             nextCloseRetreatPathTick = human.tickCount + 8;
         }
@@ -720,6 +719,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                     mob.getNavigation().moveTo(firingPath, 1.0D);
                     approachingTarget = true;
                     seekingFiringPosition = true;
+                } else if (RangedFiringPosition.hasPendingVisibleSearch(human)) {
+                    // Pending is not failure: do not abandon the lane search
+                    // for a different movement/shore policy after its first batch.
                 } else if (seekCloserAngle) {
                     seekingFiringPosition = false;
                     approachTarget(target, OBSCURED_ADVANCE_DISTANCE);
@@ -735,8 +737,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                     approachingTarget = false;
                     seekingFiringPosition = false;
                 }
-                nextFiringPositionTick = mob.tickCount + (firingPath == null
-                        ? (seekCloserAngle ? 20 : 40) : 10);
+                nextFiringPositionTick = mob.tickCount + RangedFiringPosition.retryDelay(
+                        human, firingPath, seekCloserAngle ? 20 : 40);
             }
             return;
         }
@@ -750,9 +752,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         if (retreatingForSpace) {
             stopLateralMovement();
             approachingTarget = false;
-            if (mob.tickCount >= nextRangeRetreatPathTick
-                    || mob.getNavigation().isDone()
-                    || mob.getNavigation().isStuck()) {
+            if (mob.tickCount >= nextRangeRetreatPathTick) {
                 retreatFrom(target);
                 nextRangeRetreatPathTick = mob.tickCount + 8;
             }

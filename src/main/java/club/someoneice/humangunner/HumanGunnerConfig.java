@@ -29,7 +29,7 @@ public record HumanGunnerConfig(
         Map<ResourceLocation, Integer> gunWhitelist,
         Map<ResourceLocation, Integer> hiredGunAdditionalWhitelist
 ) {
-    private static final String PATH = "hostile_humans_unified.json: tacz";
+    private static final String PATH = "hostile_humans_unified/tacz.json: tacz";
     private static volatile HumanGunnerConfig instance;
 
     public static HumanGunnerConfig get() {

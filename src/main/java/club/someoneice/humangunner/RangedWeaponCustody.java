@@ -61,18 +61,17 @@ public final class RangedWeaponCustody {
 
     private static boolean hasStoredRangedWeapon(Human human) {
         HumanData data = human.getData();
-        if (data == null) return false;
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            if (isBowOrCrossbow(data.getInventoryItem(i))) return true;
-        }
-        return false;
+        return data != null && data.hasStoredBowOrCrossbow(human.tickCount);
     }
 
     static void registerPreferred(Human human, ItemStack ranged) {
         if (!isBowOrCrossbow(ranged)) {
             return;
         }
-        ranged.getOrCreateTag().putString(PRIMARY_OWNER, human.getUUID().toString());
+        String owner = human.getStringUUID();
+        if (!ranged.hasTag() || !owner.equals(ranged.getTag().getString(PRIMARY_OWNER))) {
+            ranged.getOrCreateTag().putString(PRIMARY_OWNER, owner);
+        }
     }
 
     static void tick(Human human) {
@@ -80,6 +79,8 @@ public final class RangedWeaponCustody {
             clearLease(human);
             return;
         }
+        if (!isActive(human) && !isBowOrCrossbow(human.getMainHandItem())
+                && !hasStoredRangedWeapon(human)) return;
         if (isBowOrCrossbow(human.getMainHandItem())) {
             registerPreferred(human, human.getMainHandItem());
             if (isActive(human)) {
@@ -216,10 +217,8 @@ public final class RangedWeaponCustody {
         if (data == null) {
             return false;
         }
-        int rangedSlot = findBestStoredRangedSlot(human, true);
-        if (rangedSlot < 0) {
-            rangedSlot = findBestStoredRangedSlot(human, false);
-        }
+        if (!isActive(human) && !data.hasStoredBowOrCrossbow(human.tickCount)) return false;
+        int rangedSlot = findBestStoredRangedSlot(human);
         if (rangedSlot >= 0) {
             int ownedBefore = countOwnedRanged(human);
             ItemStack ranged = data.getInventoryItem(rangedSlot).copy();
@@ -272,10 +271,7 @@ public final class RangedWeaponCustody {
         if (data == null) {
             return;
         }
-        int rangedSlot = findBestStoredRangedSlot(human, true);
-        if (rangedSlot < 0) {
-            rangedSlot = findBestStoredRangedSlot(human, false);
-        }
+        int rangedSlot = findBestStoredRangedSlot(human);
         if (rangedSlot < 0) {
             return;
         }
@@ -328,36 +324,49 @@ public final class RangedWeaponCustody {
         return bestSlot;
     }
 
-    private static int findBestStoredRangedSlot(Human human, boolean requireOwner) {
+    private static int findBestStoredRangedSlot(Human human) {
         HumanData data = human.getData();
         if (data == null) {
             return -1;
         }
-        String owner = human.getUUID().toString();
-        int bestSlot = -1;
-        double bestScore = Double.NEGATIVE_INFINITY;
+        String owner = human.getStringUUID();
+        int ownedSlot = -1;
+        double ownedScore = Double.NEGATIVE_INFINITY;
+        int[] alternatives = new int[data.getInventoryItemsSize()];
+        int alternativeCount = 0;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
             ItemStack stack = data.getInventoryItem(i);
             if (!isBowOrCrossbow(stack)) {
                 continue;
             }
             boolean owned = stack.hasTag() && owner.equals(stack.getTag().getString(PRIMARY_OWNER));
-            if (requireOwner != owned) {
+            if (!owned) {
+                alternatives[alternativeCount++] = i;
                 continue;
             }
             double score = rangedScore(stack);
-            if (score > bestScore) {
-                bestScore = score;
-                bestSlot = i;
+            if (score > ownedScore) {
+                ownedScore = score;
+                ownedSlot = i;
             }
         }
-        return bestSlot;
+        if (ownedSlot >= 0) return ownedSlot;
+        int otherSlot = -1;
+        double otherScore = Double.NEGATIVE_INFINITY;
+        for (int i = 0; i < alternativeCount; i++) {
+            int slot = alternatives[i];
+            double score = rangedScore(data.getInventoryItem(slot));
+            if (score > otherScore) {
+                otherScore = score;
+                otherSlot = slot;
+            }
+        }
+        return otherSlot;
     }
 
     private static double rangedScore(ItemStack stack) {
         double score = stack.getItem() instanceof CrossbowItem ? 12.0D : 10.0D;
-        score += EnchantmentHelper.getEnchantments(stack).values().stream()
-                .mapToInt(Integer::intValue).sum() * 2.0D;
+        for (int level : EnchantmentHelper.getEnchantments(stack).values()) score += level * 2.0D;
         if (stack.isDamageableItem()) {
             score += 5.0D * (1.0D - (double) stack.getDamageValue() / stack.getMaxDamage());
         }

@@ -13,11 +13,13 @@ import java.util.WeakHashMap;
 
 /**
  * Emits break cues only from explicit durability-break paths. Equipment slot
- * changes are cached for identifying the broken stack, but are never treated
+ * changes cache only the break cue category, but are never treated
  * as evidence that an item broke (recovery temporarily moves gear between slots).
  */
 public final class EquipmentBreakSounds {
-    private static final Map<Human, EnumMap<EquipmentSlot, ItemStack>> LAST_EQUIPMENT =
+    private enum BreakCue { QUIET, NORMAL }
+    private static final EquipmentSlot[] SLOTS = EquipmentSlot.values();
+    private static final Map<Human, EnumMap<EquipmentSlot, BreakCue>> LAST_EQUIPMENT =
             new WeakHashMap<>();
     private static final Map<Human, EnumMap<EquipmentSlot, Integer>> LAST_SOUND_TICK =
             new WeakHashMap<>();
@@ -25,11 +27,11 @@ public final class EquipmentBreakSounds {
     private EquipmentBreakSounds() {
     }
 
-    /** Cache current damageable stacks without inferring breaks from slot changes. */
+    /** Cache damageable items' cue categories without inferring breaks from slot changes. */
     static void tick(Human human) {
-        EnumMap<EquipmentSlot, ItemStack> previous = LAST_EQUIPMENT.computeIfAbsent(
+        EnumMap<EquipmentSlot, BreakCue> previous = LAST_EQUIPMENT.computeIfAbsent(
                 human, ignored -> new EnumMap<>(EquipmentSlot.class));
-        for (EquipmentSlot slot : EquipmentSlot.values()) {
+        for (EquipmentSlot slot : SLOTS) {
             rememberIfDamageable(previous, slot, human.getItemBySlot(slot));
         }
     }
@@ -37,7 +39,7 @@ public final class EquipmentBreakSounds {
     static void observeEquipmentChange(
             Human human, EquipmentSlot slot, ItemStack previous, ItemStack current
     ) {
-        EnumMap<EquipmentSlot, ItemStack> known = LAST_EQUIPMENT.computeIfAbsent(
+        EnumMap<EquipmentSlot, BreakCue> known = LAST_EQUIPMENT.computeIfAbsent(
                 human, ignored -> new EnumMap<>(EquipmentSlot.class));
         rememberIfDamageable(known, slot, current);
         if (!known.containsKey(slot) && previous != null) {
@@ -47,29 +49,36 @@ public final class EquipmentBreakSounds {
 
     public static void playNow(Human human, EquipmentSlot slot) {
         ItemStack broken = human.getItemBySlot(slot);
+        BreakCue cue = broken.isEmpty() ? null : cue(slot, broken);
         if (broken.isEmpty()) {
-            EnumMap<EquipmentSlot, ItemStack> previous = LAST_EQUIPMENT.get(human);
+            EnumMap<EquipmentSlot, BreakCue> previous = LAST_EQUIPMENT.get(human);
             if (previous != null) {
-                broken = previous.getOrDefault(slot, ItemStack.EMPTY);
+                cue = previous.get(slot);
             }
         }
-        play(human, slot, broken);
+        play(human, slot, cue);
     }
 
     public static void playNow(Human human, EquipmentSlot slot, ItemStack brokenStack) {
-        play(human, slot, brokenStack);
+        play(human, slot, brokenStack == null || brokenStack.isEmpty() ? null : cue(slot, brokenStack));
     }
 
     private static void rememberIfDamageable(
-            EnumMap<EquipmentSlot, ItemStack> known, EquipmentSlot slot, ItemStack stack
+            EnumMap<EquipmentSlot, BreakCue> known, EquipmentSlot slot, ItemStack stack
     ) {
         if (stack != null && !stack.isEmpty() && stack.isDamageableItem()) {
-            known.put(slot, stack.copy());
+            // A break cue needs only its volume category, not a copied gun,
+            // attachment, enchantment or capability NBT every entity tick.
+            known.put(slot, cue(slot, stack));
         }
     }
 
-    private static void play(Human human, EquipmentSlot slot, ItemStack broken) {
-        if (human.level().isClientSide) {
+    private static BreakCue cue(EquipmentSlot slot, ItemStack stack) {
+        return isArmorSlot(slot) || SpartanEquipmentCompat.isShield(stack) ? BreakCue.QUIET : BreakCue.NORMAL;
+    }
+
+    private static void play(Human human, EquipmentSlot slot, BreakCue cue) {
+        if (human.level().isClientSide || cue == null) {
             return;
         }
         EnumMap<EquipmentSlot, Integer> ticks = LAST_SOUND_TICK.computeIfAbsent(
@@ -80,13 +89,8 @@ public final class EquipmentBreakSounds {
         }
         ticks.put(slot, human.tickCount);
 
-        if (broken == null || broken.isEmpty()) {
-            return;
-        }
         SoundEvent sound = SoundEvents.ITEM_BREAK;
-        float volume = SpartanEquipmentCompat.isShield(broken) || isArmorSlot(slot)
-                ? 1.0F
-                : 4.0F;
+        float volume = cue == BreakCue.QUIET ? 1.0F : 4.0F;
         // The authoritative callback and the direct-clear fallback share this
         // per-slot/tick gate, so one break can never create two sound packets.
         human.level().playSound(

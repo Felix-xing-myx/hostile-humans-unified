@@ -20,6 +20,7 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 public final class HumanServerData extends SavedData implements HumanServerDataCleanup {
     public static final String HUMAN_MOBS_TAG = "HumanMobs";
     private final Map<UUID, HumanData> humans = new LinkedHashMap<>();
+    private final Set<UUID> wildHumans = new LinkedHashSet<>();
     private final ListTag unreadableRecords = new ListTag();
     private final dev.felix.hostilehumans.core.OwnerIndex ownership = new dev.felix.hostilehumans.core.OwnerIndex();
 
@@ -55,6 +56,8 @@ public final class HumanServerData extends SavedData implements HumanServerDataC
         UUID id = Objects.requireNonNull(human.getUUID());
         humans.put(id, human);
         ownership.assign(id, human.getOwnerUUID());
+        if (human.hasOwner()) wildHumans.remove(id);
+        else wildHumans.add(id);
     }
     public HumanData getHumanMob(UUID id) { return id == null ? null : humans.get(id); }
     public Entity getHumanMobEntity(UUID id, ServerLevel level) {
@@ -81,7 +84,10 @@ public final class HumanServerData extends SavedData implements HumanServerDataC
         HumanData human = humans.get(entity.getUUID());
         if (human == null) return registerHumanMob(entity);
         UUID previous = ownership.owner(entity.getUUID());
-        human.load(entity);
+        // Complete snapshots remain mandatory at removal/death and world save.
+        // Frequent heal/damage/index refreshes only update live metadata.
+        if (entity.isRemoved() || !entity.isAlive()) human.load(entity);
+        else human.refreshLiveMetadata(entity);
         put(human);
         setDirty();
         if (previous != null && !Objects.equals(previous, human.getOwnerUUID())) syncHumanData(previous);
@@ -106,6 +112,7 @@ public final class HumanServerData extends SavedData implements HumanServerDataC
     public void syncHumanData(HumanData human) { HumansServerDataClientSync.syncHumanData(human); }
     @Override public boolean humanGunner$removeHuman(UUID id) {
         if (id == null || humans.remove(id) == null) return false;
+        wildHumans.remove(id);
         UUID owner = ownership.assign(id, null);
         setDirty();
         if (owner != null) syncHumanData(owner);
@@ -113,9 +120,10 @@ public final class HumanServerData extends SavedData implements HumanServerDataC
     }
     /** Peaceful removes wild Humans without losing hired soldiers' saved locations. */
     public void clearWildHumans() {
-        for (UUID id : new ArrayList<>(humans.keySet())) {
+        for (UUID id : new ArrayList<>(wildHumans)) {
             HumanData human = humans.get(id);
             if (human != null && !human.hasOwner()) humanGunner$removeHuman(id);
+            else wildHumans.remove(id);
         }
     }
     @Override public CompoundTag save(CompoundTag tag) {

@@ -45,12 +45,13 @@ final class GunCustody {
     }
 
     static boolean hasOwnedGun(Human human) {
+        if (!GunSupport.get().enabled()) return false;
         if (club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())
                 || club.someoneice.humangunner.GunSupport.get().isGun(human.getOffhandItem())) {
             return true;
         }
         HumanData data = human.getData();
-        return data != null && findAnyGunSlot(data) >= 0;
+        return data != null && data.hasStoredGun(human.tickCount);
     }
 
     static void registerPrimaryGun(Human human, ItemStack gun) {
@@ -180,6 +181,7 @@ final class GunCustody {
     }
 
     static void tick(Human human) {
+        if (!GunSupport.get().enabled() && !isActive(human)) return;
         ItemStack held = human.getMainHandItem();
         if (club.someoneice.humangunner.GunSupport.get().isGun(held)) {
             registerPrimaryGun(human, held);
@@ -210,7 +212,7 @@ final class GunCustody {
         // gun should prefer it whenever it is not performing the explicit
         // two-block retreat melee counterattack.
         HumanData data = human.getData();
-        if (data != null && (human.getTarget() == null
+        if (data != null && data.hasStoredGun(human.tickCount) && (human.getTarget() == null
                 || !human.isFleeing
                 || human.distanceToSqr(human.getTarget()) > 4.0D)
                 && (findPrimaryGunSlot(human, data) >= 0 || findAnyGunSlot(data) >= 0)) {
@@ -271,7 +273,7 @@ final class GunCustody {
     static void auditOwnedGuns(Human human) {
         GunSnapshot current = snapshot(human);
         GunSnapshot previous = AUDIT.put(human, current);
-        if (previous == null || previous.state().equals(current.state())) {
+        if (previous == null || (previous.count() == current.count() && previous.state().equals(current.state()))) {
             return;
         }
         HumanGunner.LOGGER.debug(
@@ -289,6 +291,7 @@ final class GunCustody {
     }
 
     private static int findPrimaryGunSlot(Human human, HumanData data) {
+        if (!GunSupport.get().enabled()) return -1;
         String owner = human.getUUID().toString();
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
             ItemStack stack = data.getInventoryItem(i);
@@ -302,6 +305,7 @@ final class GunCustody {
     }
 
     private static int findAnyGunSlot(HumanData data) {
+        if (!GunSupport.get().enabled()) return -1;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
             if (club.someoneice.humangunner.GunSupport.get().isGun(data.getInventoryItem(i))) {
                 return i;
@@ -351,17 +355,18 @@ final class GunCustody {
     }
 
     private static GunSnapshot snapshot(Human human) {
+        if (!GunSupport.get().enabled()) return new GunSnapshot(0, "");
         int count = 0;
-        StringBuilder state = new StringBuilder();
+        StringBuilder state = HumanGunner.LOGGER.isDebugEnabled() ? new StringBuilder() : null;
         ItemStack main = human.getMainHandItem();
         if (club.someoneice.humangunner.GunSupport.get().isGun(main)) {
             count++;
-            state.append("main=").append(itemId(main));
+            if (state != null) state.append("main=").append(itemId(main));
         }
         ItemStack off = human.getOffhandItem();
         if (club.someoneice.humangunner.GunSupport.get().isGun(off)) {
             count++;
-            append(state, "off=" + itemId(off));
+            if (state != null) append(state, "off=" + itemId(off));
         }
         HumanData data = human.getData();
         if (data != null) {
@@ -369,11 +374,11 @@ final class GunCustody {
                 ItemStack stored = data.getInventoryItem(i);
                 if (club.someoneice.humangunner.GunSupport.get().isGun(stored)) {
                     count++;
-                    append(state, "inv" + i + "=" + itemId(stored));
+                    if (state != null) append(state, "inv" + i + "=" + itemId(stored));
                 }
             }
         }
-        return new GunSnapshot(count, state.toString());
+        return new GunSnapshot(count, state == null ? "" : state.toString());
     }
 
     private static void append(StringBuilder state, String value) {

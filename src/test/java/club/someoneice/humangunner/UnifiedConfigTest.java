@@ -10,6 +10,24 @@ public final class UnifiedConfigTest {
         JsonObject defaults = UnifiedConfig.defaults();
         check(new ArrayList<>(defaults.keySet()).get(defaults.size()-1).equals("tacz"), "TaCZ section last");
         UnifiedConfig config = new UnifiedConfig(new JsonObject());
+        int[] defaultPayments = {8, 24, 72, 216};
+        for (int tier = 0; tier < 4; tier++) {
+            check(config.recruitmentCost(tier).itemId().equals("minecraft:emerald")
+                    && config.recruitmentCost(tier).count() == defaultPayments[tier], "unchanged default hiring payment");
+        }
+        JsonObject paymentOverride = JsonParser.parseString("{\"recruitment\":{\"payment_by_tier\":{\"tier1\":{\"item\":\"create:brass_ingot\",\"count\":37}}}}").getAsJsonObject();
+        check(new UnifiedConfig(paymentOverride).recruitmentCost(1).equals(
+                new UnifiedConfig.RecruitmentCost("create:brass_ingot", 37)), "custom mod item and quantity");
+        check(new UnifiedConfig(paymentOverride).recruitmentCost(2).count() == 72, "other tiers preserve defaults");
+        JsonObject customPayment = paymentOverride.getAsJsonObject("recruitment").getAsJsonObject("payment_by_tier").getAsJsonObject("tier1");
+        for (String invalid : List.of("-1", "1.5", "1000001", "\"12\"", "null")) {
+            customPayment.add("count", JsonParser.parseString(invalid));
+            check(new UnifiedConfig(paymentOverride).recruitmentCost(1) == null, "invalid payment quantity fails closed");
+        }
+        customPayment.addProperty("count", 0);
+        check(new UnifiedConfig(paymentOverride).recruitmentCost(1).count() == 0, "explicit zero payment");
+        customPayment.addProperty("item", "not an id");
+        check(new UnifiedConfig(paymentOverride).recruitmentCost(1) == null, "malformed payment ID fails closed");
         check(config.betterCombatSoldierMeleeEnabled(), "soldier Better Combat defaults on");
         JsonObject betterCombatOverride = new JsonObject();
         betterCombatOverride.add("better_combat", JsonParser.parseString(
@@ -71,6 +89,18 @@ public final class UnifiedConfigTest {
         check(config.tier("tier3").projectileSpreadDegrees("trident") == 1.5D,
                 "trident has its own spread setting with the existing default");
         check(config.spawn().admissionChance() == .08, "legacy spawn chance");
+        NaturalSpawnProgression defaultProgression = config.spawn().progression();
+        check(defaultProgression.enabled() && defaultProgression.safeDays() == 1
+                        && defaultProgression.roamerFirstDay() == 3 && defaultProgression.tier1FirstDay() == 5
+                        && defaultProgression.tier2FirstDay() == 10 && defaultProgression.tier3FirstDay() == 20,
+                "new world protection and rank dates default correctly");
+        NaturalSpawnProgression boundedProgression = new UnifiedConfig(JsonParser.parseString("""
+                {"spawning":{"progression":{"safe_days":-5,"first_spawn_day_by_tier":{
+                "roamer":0,"tier1":1000001,"tier2":"invalid"}}}}
+                """).getAsJsonObject()).spawn().progression();
+        check(boundedProgression.safeDays() == 0 && boundedProgression.roamerFirstDay() == 1
+                        && boundedProgression.tier1FirstDay() == 1000000 && boundedProgression.tier2FirstDay() == 10,
+                "progression values clamp safely and invalid dates use defaults");
         check(config.tier("tier3").spawnMultiplier() == .04, "legacy rare tier");
         check(config.recruitmentLimit(0) == 12 && config.recruitmentLimit(1) == 10
                 && config.recruitmentLimit(2) == 6 && config.recruitmentLimit(3) == 3,
@@ -192,37 +222,129 @@ public final class UnifiedConfigTest {
         }
         java.nio.file.Path directory = java.nio.file.Files.createTempDirectory("hostile-humans-config-test-");
         java.nio.file.Path legacyFile = directory.resolve("humangunner.json");
-        java.nio.file.Path newFile = directory.resolve("hostile_humans_unified.json");
+        java.nio.file.Path oldUnified = directory.resolve("hostile_humans_unified.json");
+        java.nio.file.Path modules = directory.resolve(SplitConfigFiles.DIRECTORY);
+        java.nio.file.Path gunFile = modules.resolve("tacz.json");
+        java.nio.file.Path spawnFile = modules.resolve("spawning.json");
         try {
             String original = guns.toString();
             java.nio.file.Files.writeString(legacyFile, original);
             UnifiedConfig first = UnifiedConfig.load(directory);
             check(first.blacklisted("test:black"), "disk migration blacklist");
             check(java.nio.file.Files.readString(legacyFile).equals(original), "legacy file never modified");
-            JsonObject saved = JsonParser.parseString(java.nio.file.Files.readString(newFile)).getAsJsonObject();
-            check(new ArrayList<>(saved.keySet()).get(saved.size()-1).equals("tacz"), "generated config TaCZ last");
+            for (String file : List.of("tiers.json", "spawning.json", "combat.json", "recruitment.json", "tacz.json", "compatibility.json")) {
+                JsonObject module = readModule(modules.resolve(file));
+                check(module.has("_说明_中文") && module.has("_description_en"), "module bilingual guidance: " + file);
+                for (var section : module.entrySet()) {
+                    if (defaults.has(section.getKey()) && section.getValue().isJsonObject()
+                            && defaults.get(section.getKey()).isJsonObject()) {
+                        checkDescriptions(section.getValue().getAsJsonObject(),
+                                defaults.getAsJsonObject(section.getKey()), file + ":" + section.getKey());
+                    }
+                }
+            }
+            JsonObject saved = readModule(gunFile);
+            check(saved.getAsJsonObject("tacz").has("_说明_中文"), "nested descriptions retained");
+            check(saved.getAsJsonObject("tacz").get("_说明_枪械名单_中文")
+                            .equals(defaults.getAsJsonObject("tacz").get("_说明_枪械名单_中文"))
+                            && saved.getAsJsonObject("tacz").get("_description_gun_lists_en")
+                            .equals(defaults.getAsJsonObject("tacz").get("_description_gun_lists_en")),
+                    "bilingual firearm-list examples retain exact string contents");
+            JsonObject tierModule = readModule(modules.resolve("tiers.json"));
+            check(tierModule.getAsJsonObject("tiers").equals(defaults.getAsJsonObject("tiers")),
+                    "full tier settings and nested descriptions migrate without changes");
             saved.getAsJsonObject("tacz").addProperty("enabled", false);
-            java.nio.file.Files.writeString(newFile, saved.toString());
+            java.nio.file.Files.writeString(gunFile, saved.toString());
             java.nio.file.Files.writeString(legacyFile, "{}");
-            check(!UnifiedConfig.load(directory).taczEnabled(), "existing unified config wins over legacy");
-            String bytes = java.nio.file.Files.readString(newFile);
+            check(!UnifiedConfig.load(directory).taczEnabled(), "split config wins over oldest legacy");
+            String bytes = java.nio.file.Files.readString(gunFile);
             UnifiedConfig.load(directory);
-            check(java.nio.file.Files.readString(newFile).equals(bytes), "existing settings never rewritten");
-            JsonObject olderSettings = JsonParser.parseString(bytes).getAsJsonObject();
-            olderSettings.remove("better_combat");
-            java.nio.file.Files.writeString(newFile, olderSettings.toString());
-            check(UnifiedConfig.load(directory).betterCombatSoldierMeleeEnabled(),
-                    "older config missing the option gets its enabled default");
-            JsonObject upgraded = JsonParser.parseString(java.nio.file.Files.readString(newFile)).getAsJsonObject();
-            check(upgraded.getAsJsonObject("better_combat").get("soldier_melee_enabled").getAsBoolean(),
-                    "older config is safely given the new enabled option");
+            check(java.nio.file.Files.readString(gunFile).equals(bytes), "complete module never rewritten");
+            JsonObject olderSettings = readModule(spawnFile);
+            olderSettings.getAsJsonObject("spawning").remove("progression");
+            olderSettings.getAsJsonObject("spawning").addProperty("admission_chance", 0.123);
+            java.nio.file.Files.writeString(spawnFile, olderSettings.toString());
+            UnifiedConfig.load(directory);
+            JsonObject upgraded = readModule(spawnFile);
+            check(upgraded.getAsJsonObject("spawning").getAsJsonObject("progression")
+                            .getAsJsonObject("first_spawn_day_by_tier").get("tier3").getAsInt() == 20,
+                    "older config receives progression defaults");
+            check(UnifiedConfig.load(directory).spawn().admissionChance() == 0.123,
+                    "new options preserve existing spawning settings");
+            JsonObject partial = upgraded.getAsJsonObject("spawning").getAsJsonObject("progression");
+            partial.addProperty("enabled", false);
+            partial.addProperty("safe_days", 4);
+            partial.getAsJsonObject("first_spawn_day_by_tier").addProperty("roamer", 7);
+            partial.getAsJsonObject("first_spawn_day_by_tier").remove("tier2");
+            java.nio.file.Files.writeString(spawnFile, upgraded.toString());
+            NaturalSpawnProgression parsed = UnifiedConfig.load(directory).spawn().progression();
+            check(!parsed.enabled() && parsed.safeDays() == 4 && parsed.roamerFirstDay() == 7
+                            && parsed.tier2FirstDay() == 10,
+                    "partial progression defaults added without overwriting custom settings");
+            String stable = java.nio.file.Files.readString(spawnFile);
+            UnifiedConfig.load(directory);
+            check(java.nio.file.Files.readString(spawnFile).equals(stable), "option upgrade is idempotent");
+
+            JsonObject legacyUnified = JsonParser.parseString("""
+                    {"schema_version":1,"tiers":{"tier1":{"gun_spread_degrees":1.25,
+                     "_说明_自定义":"保留这段说明","extension_setting":42}},
+                     "tacz":{"enabled":true,"gun_whitelist":{"custom:gun":37}},
+                     "recruitment":{"max_hired_by_tier":{"tier3":8}},
+                     "spawning":{"admission_chance":0.321,"_说明_中文":"自定义说明"}}
+                    """).getAsJsonObject();
+            String oldBytes = legacyUnified.toString();
+            java.nio.file.Files.writeString(oldUnified, oldBytes);
+            java.nio.file.Files.delete(modules.resolve("tiers.json"));
+            java.nio.file.Files.delete(modules.resolve("recruitment.json"));
+            check(UnifiedConfig.load(directory).recruitmentLimit(3) == 8, "missing module migrates old custom values");
+            check(UnifiedConfig.load(directory).tier("tier1").gunSpreadDegrees("rifle") == 1.25D,
+                    "migration preserves supported legacy accuracy alias precedence");
+            JsonObject migratedTier = readModule(modules.resolve("tiers.json"))
+                    .getAsJsonObject("tiers").getAsJsonObject("tier1");
+            check(migratedTier.get("_说明_自定义").getAsString().equals("保留这段说明")
+                            && migratedTier.get("extension_setting").getAsInt() == 42,
+                    "custom descriptions and unknown extension fields survive migration");
+            check(!UnifiedConfig.load(directory).taczEnabled(), "existing module takes precedence over old unified config");
+            check(java.nio.file.Files.readString(oldUnified).equals(oldBytes), "old unified source remains byte intact");
+            check(java.nio.file.Files.readString(directory.resolve("hostile_humans_unified.json.pre-split.bak")).equals(oldBytes),
+                    "migration backup preserves original bytes");
+            java.nio.file.Files.writeString(spawnFile, "broken JSON");
+            check(UnifiedConfig.load(directory).spawn().admissionChance() == 0.321,
+                    "broken module falls back only to its old section");
+            check(!UnifiedConfig.load(directory).taczEnabled(), "broken spawning does not reset valid gun module");
+            check(java.nio.file.Files.readString(spawnFile).equals("broken JSON"), "broken module is never overwritten");
+            java.nio.file.Files.delete(oldUnified);
+            check(UnifiedConfig.load(directory).spawn().admissionChance() == 0.08, "broken module without legacy uses defaults");
+            java.nio.file.Files.writeString(gunFile, "{\"schema_version\":99,\"tacz\":{\"enabled\":false}}");
+            check(UnifiedConfig.load(directory).taczEnabled(), "unsupported module schema falls back safely");
+            java.nio.file.Files.delete(spawnFile);
+            java.nio.file.Files.writeString(oldUnified, "malformed legacy JSON");
+            check(UnifiedConfig.load(directory).spawn().admissionChance() == 0.08,
+                    "invalid migration source uses defaults in memory");
+            check(!java.nio.file.Files.exists(spawnFile), "invalid source cannot generate a replacement module");
         } finally {
-            java.nio.file.Files.deleteIfExists(newFile);
-            java.nio.file.Files.deleteIfExists(legacyFile);
-            java.nio.file.Files.deleteIfExists(directory);
+            try (var paths = java.nio.file.Files.walk(directory)) {
+                for (var path : paths.sorted(java.util.Comparator.reverseOrder()).toList())
+                    java.nio.file.Files.deleteIfExists(path);
+            }
         }
         System.out.println("UnifiedConfigTest: " + assertions + " checks passed");
     }
     private static ResourceLocation id(String id) { return ResourceLocation.tryParse(id); }
+    private static void checkDescriptions(JsonObject actual, JsonObject expected, String path) {
+        for (var entry : expected.entrySet()) {
+            String key = entry.getKey();
+            if (key.startsWith("_")) {
+                check(actual.has(key) && actual.get(key).equals(entry.getValue()),
+                        "description preserved exactly: " + path + "." + key);
+            } else if (entry.getValue().isJsonObject() && actual.has(key)
+                    && actual.get(key).isJsonObject()) {
+                checkDescriptions(actual.getAsJsonObject(key), entry.getValue().getAsJsonObject(), path + "." + key);
+            }
+        }
+    }
+    private static JsonObject readModule(java.nio.file.Path path) throws java.io.IOException {
+        return JsonParser.parseString(java.nio.file.Files.readString(path)).getAsJsonObject();
+    }
     private static void check(boolean value, String name) { assertions++; if (!value) throw new AssertionError(name); }
 }

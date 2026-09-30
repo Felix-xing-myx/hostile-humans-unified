@@ -9,7 +9,7 @@ public final class MeleeAttackTiming {
     private MeleeAttackTiming() {}
 
     public static int nextCooldown(Human human) {
-        if (BetterCombatMeleeCombat.isEnabled(human)) {
+        if (BetterCombatMeleeCombat.hasWeaponProfile(human)) {
             return BetterCombatMeleeCombat.cooldownTicks(human);
         }
         UnifiedConfig.Tier tier = TierAttributes.of(human);

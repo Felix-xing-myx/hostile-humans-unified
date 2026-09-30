@@ -18,6 +18,9 @@
   "item.humangunner.tier_two_contract": "二阶雇佣合同",
   "item.humangunner.tier_three_contract": "三阶雇佣合同",
   "item.humangunner.contract.tooltip": "雇佣费用：%s 颗原版绿宝石；该阶上限：%s 人",
+  "item.humangunner.contract.payment_tooltip": "雇佣费用：%s 个 %s；该阶上限：%s 人",
+  "message.humangunner.hire.payment": "雇佣所需物品不足：需要 %s 个 %s（合同另外消耗）",
+  "message.humangunner.hire.invalid_payment": "雇佣费用配置无效或对应物品未注册，请检查服务端 recruitment.json",
   "item.humangunner.roamer_signal_flare": "流浪者援军信号弹",
   "item.humangunner.tier_one_signal_flare": "一阶援军信号弹",
   "item.humangunner.tier_two_signal_flare": "二阶援军信号弹",
@@ -103,5 +106,9 @@
   "screen.humangunner.inventory.title": "%s 的背包与装备",
   "screen.humangunner.inventory.backpack": "背包（30格）",
   "screen.humangunner.inventory.equipment": "装备",
-  "screen.humangunner.inventory.gun_rule": "枪械受雇佣输入白名单限制"
+  "screen.humangunner.inventory.gun_rule": "枪械受雇佣输入白名单限制",
+  "commands.humangunner.day.status": "人类生成进度：模组第 %s 天；主世界第 %s 天",
+  "commands.humangunner.day.changed": "已调整人类生成进度至模组第 %s 天，随后继续正常计时",
+  "commands.humangunner.day.synced": "已将人类生成进度对齐主世界当前日期：第 %s 天",
+  "commands.humangunner.day.disabled": "配置中的分阶天数限制已关闭；计时器仍会保存和继续流逝"
 }

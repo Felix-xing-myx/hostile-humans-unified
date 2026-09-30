@@ -10,7 +10,9 @@ public final class OwnerIndex {
     private final Map<UUID, Set<UUID>> members = new HashMap<>();
     public UUID assign(UUID entity, UUID owner) {
         Objects.requireNonNull(entity, "entity");
-        UUID previous = owners.remove(entity);
+        UUID previous = owners.get(entity);
+        if (Objects.equals(previous, owner)) return previous;
+        owners.remove(entity);
         if (previous != null) {
             Set<UUID> group = members.get(previous);
             group.remove(entity);

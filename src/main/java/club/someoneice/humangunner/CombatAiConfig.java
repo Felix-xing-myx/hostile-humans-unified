@@ -29,7 +29,7 @@ public record CombatAiConfig(
         double foodUseSpeedMultiplier,
         double shieldUseSpeedMultiplier
 ) {
-    private static final String PATH = "hostile_humans_unified.json: ai";
+    private static final String PATH = "hostile_humans_unified/combat.json: ai";
     private static volatile CombatAiConfig instance;
 
     public static CombatAiConfig get() {

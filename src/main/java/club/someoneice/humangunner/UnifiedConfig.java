@@ -10,7 +10,6 @@ import java.util.*;
 /** Immutable, restart-scoped settings. No optional-mod API or world access. */
 public final class UnifiedConfig {
     private static volatile UnifiedConfig instance;
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private final JsonObject root;
     private final Map<String, Tier> tiers;
     private final Set<String> blacklist;
@@ -34,7 +33,8 @@ public final class UnifiedConfig {
         }
     }
     public record Spawn(boolean enabled, double admissionChance, double battleChance, int legacyRoll,
-            int cooldownTicks, int horizontalRadius, int verticalRadius, double densityDivisor) {}
+            int cooldownTicks, int horizontalRadius, int verticalRadius, double densityDivisor,
+            NaturalSpawnProgression progression) {}
     public record Recruitment(int roamerLimit, int tier1Limit, int tier2Limit, int tier3Limit,
             boolean allowHiredPvpDamage) {
         int limit(int tier) {
@@ -109,13 +109,21 @@ public final class UnifiedConfig {
         }
         tiers = Map.copyOf(values);
         JsonObject s = object(root, "spawning");
+        JsonObject progression = object(s, "progression");
+        JsonObject firstDays = object(progression, "first_spawn_day_by_tier");
         spawn = new Spawn(bool(s, "enabled", true), number(s, "admission_chance", .08, 0, 1),
                 number(s, "battle_admission_chance", .08, 0, 1),
                 (int) number(s, "roamer_legacy_roll", 200, 1, 1000000),
                 (int) number(s, "encounter_cooldown_ticks", 2400, 0, 72000),
                 (int) number(s, "nearby_horizontal_radius", 48, 1, 96),
                 (int) number(s, "nearby_vertical_radius", 16, 1, 64),
-                number(s, "density_divisor", 4, .1, 1000));
+                number(s, "density_divisor", 4, .1, 1000),
+                new NaturalSpawnProgression(bool(progression, "enabled", true),
+                        (int) number(progression, "safe_days", 1, 0, 1000000),
+                        (int) number(firstDays, "roamer", 3, 1, 1000000),
+                        (int) number(firstDays, "tier1", 5, 1, 1000000),
+                        (int) number(firstDays, "tier2", 10, 1, 1000000),
+                        (int) number(firstDays, "tier3", 20, 1, 1000000)));
         JsonObject r = object(root, "recruitment");
         JsonObject limits = object(r, "max_hired_by_tier");
         recruitment = new Recruitment(
@@ -145,6 +153,25 @@ public final class UnifiedConfig {
     public Tier tier(String key) { return tiers.getOrDefault(key, tiers.get("roamer")); }
     public Spawn spawn() { return spawn; }
     public int recruitmentLimit(int tier) { return recruitment.limit(tier); }
+    public record RecruitmentCost(String itemId, int count) {}
+    public RecruitmentCost recruitmentCost(int tier) {
+        if (tier < 0 || tier > 3) throw new IllegalArgumentException("Unknown recruitment tier: " + tier);
+        String key = List.of("roamer", "tier1", "tier2", "tier3").get(tier);
+        JsonObject cost = object(object(object(root, "recruitment"), "payment_by_tier"), key);
+        String id;
+        int count;
+        try {
+            JsonElement item = cost.get("item");
+            if (item == null || !item.isJsonPrimitive() || !item.getAsJsonPrimitive().isString()) return null;
+            id = item.getAsString();
+            if (net.minecraft.resources.ResourceLocation.tryParse(id) == null || !id.contains(":")) return null;
+            JsonElement amount = cost.get("count");
+            if (amount == null || !amount.isJsonPrimitive() || !amount.getAsJsonPrimitive().isNumber()) return null;
+            count = amount.getAsBigDecimal().intValueExact();
+            if (count < 0 || count > 1_000_000) return null;
+        } catch (RuntimeException invalid) { return null; }
+        return new RecruitmentCost(id, count);
+    }
     public boolean allowHiredPvpDamage() { return recruitment.allowHiredPvpDamage(); }
     public boolean betterCombatSoldierMeleeEnabled() { return betterCombatSoldierMeleeEnabled; }
     public boolean taczEnabled() { return bool(object(root, "tacz"), "enabled", true); }
@@ -160,77 +187,33 @@ public final class UnifiedConfig {
     }
 
     static UnifiedConfig load(Path directory) {
-        Path path = directory.resolve("hostile_humans_unified.json");
         try {
-            if (Files.exists(path)) {
-                JsonObject data = read(path);
-                if (data.has("schema_version") && data.get("schema_version").getAsInt() != 1)
-                    throw new IOException("Unsupported config schema; file left unchanged");
-                ensureBetterCombatOption(path, data);
-                return new UnifiedConfig(data);
-            }
-            JsonObject migrated = migrate(readIfPresent(directory.resolve("humangunner.json")),
-                    readIfPresent(directory.resolve("humangunner_ai.json")));
-            UnifiedConfig result = new UnifiedConfig(migrated);
-            Files.createDirectories(directory);
-            // Write a complete sibling file, then rename without REPLACE_EXISTING.
-            // A crash must not leave a half-written authoritative configuration.
-            Path temporary = Files.createTempFile(directory, "hostile-humans-config-", ".tmp");
-            try {
-                try (Writer writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
-                    GSON.toJson(migrated, writer);
-                }
-                try { Files.move(temporary, path); }
-                catch (FileAlreadyExistsException concurrentWriter) { return new UnifiedConfig(read(path)); }
-            } finally {
-                Files.deleteIfExists(temporary);
-            }
-            return result;
+            return new UnifiedConfig(SplitConfigFiles.load(directory));
         } catch (Exception error) {
-            com.mojang.logging.LogUtils.getLogger().error("Could not load unified config {}; using safe defaults without overwriting input", path, error);
+            com.mojang.logging.LogUtils.getLogger().error("Could not load human configuration in {}; using defaults without overwriting input", directory, error);
             return new UnifiedConfig(new JsonObject());
         }
     }
 
-    /** Adds the optional setting to existing installations without discarding their other values. */
-    private static void ensureBetterCombatOption(Path path, JsonObject data) {
-        JsonObject defaults = defaults();
-        JsonObject defaultSection = object(defaults, "better_combat");
-        JsonObject section = object(data, "better_combat");
-        boolean changed = false;
-        if (!data.has("better_combat") || !data.get("better_combat").isJsonObject()) {
-            section = new JsonObject();
-            data.add("better_combat", section);
-            changed = true;
+    static boolean addMissingSettings(JsonObject data, String key, JsonObject defaults) {
+        if (!data.has(key)) {
+            data.add(key, defaults.deepCopy());
+            return true;
         }
-        for (var entry : defaultSection.entrySet()) {
+        // Preserve malformed explicit values too: parsing can fall back, but
+        // loading must not silently discard an administrator's input.
+        if (!data.get(key).isJsonObject()) return false;
+        JsonObject section = data.getAsJsonObject(key);
+        boolean changed = false;
+        for (var entry : defaults.entrySet()) {
             if (!section.has(entry.getKey())) {
                 section.add(entry.getKey(), entry.getValue().deepCopy());
                 changed = true;
+            } else if (entry.getValue().isJsonObject()) {
+                changed |= addMissingSettings(section, entry.getKey(), entry.getValue().getAsJsonObject());
             }
         }
-        if (!changed) return;
-
-        Path temporary = null;
-        try {
-            temporary = Files.createTempFile(path.getParent(), "hostile-humans-config-", ".tmp");
-            try (Writer writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
-                GSON.toJson(data, writer);
-            }
-            try {
-                Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING,
-                        StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException unsupported) {
-                Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING);
-            }
-        } catch (IOException error) {
-            com.mojang.logging.LogUtils.getLogger().warn(
-                    "Could not add the Better Combat soldier option to {}; the runtime default remains enabled",
-                    path, error);
-        } finally {
-            if (temporary != null) try { Files.deleteIfExists(temporary); }
-            catch (IOException ignored) { }
-        }
+        return changed;
     }
 
     static JsonObject migrate(JsonObject guns, JsonObject ai) {
@@ -271,14 +254,6 @@ public final class UnifiedConfig {
                 UnifiedConfig.class.getResourceAsStream("/defaults/hostile_humans_unified.json")), StandardCharsets.UTF_8)) {
             return JsonParser.parseReader(reader).getAsJsonObject();
         } catch (IOException e) { throw new IllegalStateException("Missing packaged config defaults", e); }
-    }
-    private static JsonObject readIfPresent(Path path) throws IOException {
-        return Files.exists(path) ? read(path) : new JsonObject();
-    }
-    private static JsonObject read(Path path) throws IOException {
-        try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-            return JsonParser.parseReader(reader).getAsJsonObject();
-        }
     }
     private static JsonObject merge(JsonObject defaults, JsonObject data) {
         JsonObject result = defaults.deepCopy();

@@ -18,11 +18,12 @@ import net.minecraft.server.level.ServerLevel;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.Collections;
 
 /** Natural-spawn admission shared by all Hostile Humans encounter entries. */
 public final class NaturalHumanSpawnRules {
-    private static final Map<ServerLevel, EncounterCooldown> CLOCKS = new WeakHashMap<>();
-    private static final Map<Mob, Boolean> NATURAL_MEMBERS = new WeakHashMap<>();
+    private static final Map<ServerLevel, EncounterCooldown> CLOCKS = Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<Mob, Boolean> NATURAL_MEMBERS = Collections.synchronizedMap(new WeakHashMap<>());
     private static final Map<ServerLevel, Object> ACTIVE_BATTLES = new WeakHashMap<>();
     private static final int PACK_DECISION_RADIUS = 16;
     private static final Map<ServerLevelAccessor, Map<EntityType<?>, PackDecision>> PACK_DECISIONS =
@@ -47,6 +48,7 @@ public final class NaturalHumanSpawnRules {
         if (!isNaturalAttempt(spawnType)) {
             return Mob.checkMobSpawnRules(type, level, spawnType, pos, random);
         }
+        if (!UnifiedConfig.get().spawn().enabled() || !isTierUnlocked(level, tier(type))) return false;
         if (!isUnlitLand(level, pos) || !Mob.checkMobSpawnRules(type, level, spawnType, pos, random)) {
             return false;
         }
@@ -69,6 +71,7 @@ public final class NaturalHumanSpawnRules {
         if (!isNaturalAttempt(spawnType)) {
             return Mob.checkMobSpawnRules(type, level, spawnType, pos, random);
         }
+        if (!UnifiedConfig.get().spawn().enabled() || !isTierUnlocked(level, tier(type))) return false;
         if (!isUnlitLand(level, pos) || !Mob.checkMobSpawnRules(type, level, spawnType, pos, random)) {
             return false;
         }
@@ -83,30 +86,34 @@ public final class NaturalHumanSpawnRules {
             boolean includeLegacyRoll
     ) {
         var config = UnifiedConfig.get().spawn();
-        if (!config.enabled()) return false;
         long gameTime = level.getLevel().getGameTime();
+        PackDecision previous;
         synchronized (PACK_DECISIONS) {
-            Map<EntityType<?>, PackDecision> byType = PACK_DECISIONS.computeIfAbsent(level.getLevel(), ignored -> new HashMap<>());
-            PackDecision previous = byType.get(type);
-            if (previous != null
-                    && previous.gameTime == gameTime
-                    && previous.origin.distManhattan(pos) <= PACK_DECISION_RADIUS) {
-                return previous.allowed && isSafePosition(level, pos);
-            }
-
-            if (clock(level).cooling(gameTime)) {
-                return false;
-            }
-
-            // Roll the base chance before querying entities: failed attempts are cheap.
-            // Cache the complete decision so a squad does not suppress its own members.
-            boolean allowed = (!includeLegacyRoll || random.nextInt(config.legacyRoll()) == 0)
-                    && random.nextDouble() < config.admissionChance() * tierMultiplier(type)
-                    && passesDensityCheck(level, pos, random)
-                    && isSafePosition(level, pos);
-            byType.put(type, new PackDecision(gameTime, pos.immutable(), allowed));
-            return allowed;
+            var byType = PACK_DECISIONS.get(level.getLevel());
+            previous = byType == null ? null : byType.get(type);
         }
+        if (samePack(previous, gameTime, pos)) return previous.allowed && isSafePosition(level, pos);
+        if (clock(level).cooling(gameTime)) return false;
+        // No world/entity/light query may hold the cross-dimension cache lock.
+        // Failed rolls remain cheap; racing pack attempts use the first published
+        // complete decision and still validate their own final position.
+        boolean allowed = (!includeLegacyRoll || random.nextInt(config.legacyRoll()) == 0)
+                && random.nextDouble() < config.admissionChance() * tierMultiplier(type)
+                && passesDensityCheck(level, pos, random) && isSafePosition(level, pos);
+        synchronized (PACK_DECISIONS) {
+            var byType = PACK_DECISIONS.computeIfAbsent(level.getLevel(), ignored -> new HashMap<>());
+            previous = byType.get(type);
+            if (!samePack(previous, gameTime, pos)) {
+                byType.put(type, new PackDecision(gameTime, pos.immutable(), allowed));
+                return allowed;
+            }
+        }
+        return previous.allowed && isSafePosition(level, pos);
+    }
+
+    private static boolean samePack(PackDecision decision, long time, BlockPos pos) {
+        return decision != null && decision.gameTime == time
+                && decision.origin.distManhattan(pos) <= PACK_DECISION_RADIUS;
     }
 
     /** Called only after the original large-battle predicate has succeeded. */
@@ -114,7 +121,7 @@ public final class NaturalHumanSpawnRules {
                                                 BlockPos pos, RandomSource random) {
         if (!isNaturalAttempt(spawnType)) return true;
         var config = UnifiedConfig.get().spawn();
-        if (!config.enabled()) return false;
+        if (!config.enabled() || !isBattleUnlocked(level)) return false;
         long now = level.getLevel().getGameTime();
         if (clock(level).cooling(now)) return false;
         boolean allowed = random.nextDouble() < config.battleChance()
@@ -133,9 +140,13 @@ public final class NaturalHumanSpawnRules {
         if (!(event.getEntity() instanceof Mob mob) || NATURAL_MEMBERS.remove(mob) == null
                 || !(event.getLevel() instanceof ServerLevel level)) return;
         long now = level.getGameTime();
-        Map<EntityType<?>, PackDecision> decisions = PACK_DECISIONS.get(level);
-        PackDecision decision = decisions == null ? null : decisions.get(mob.getType());
-        if (decision == null || !decision.allowed || decision.gameTime != now
+        PackDecision decision;
+        synchronized (PACK_DECISIONS) {
+            Map<EntityType<?>, PackDecision> decisions = PACK_DECISIONS.get(level);
+            decision = decisions == null ? null : decisions.get(mob.getType());
+        }
+        if (!isTierUnlocked(level, tier(mob.getType()))
+                || decision == null || !decision.allowed || decision.gameTime != now
                 || decision.origin.distManhattan(mob.blockPosition()) > PACK_DECISION_RADIUS
                 || !isSafePosition(level, mob.blockPosition())
                 || !clock(level).join(now, decision, mob.getType() == ModEntityType.ROAMER.get() ? 1 : 5)) {
@@ -145,7 +156,8 @@ public final class NaturalHumanSpawnRules {
     }
 
     public static boolean beginBattle(ServerLevel level, BlockPos pos) {
-        if (clock(level).cooling(level.getGameTime())
+        if (!UnifiedConfig.get().spawn().enabled() || !isBattleUnlocked(level)
+                || clock(level).cooling(level.getGameTime())
                 || ACTIVE_BATTLES.containsKey(level) || !isSafePosition(level, pos)) return false;
         ACTIVE_BATTLES.put(level, new Object());
         return true;
@@ -166,10 +178,31 @@ public final class NaturalHumanSpawnRules {
     }
 
     private static double tierMultiplier(EntityType<?> type) {
-        String key = type == HumanGunnerRegistries.TIER_THREE_HUMAN.get() ? "tier3"
-                : type == ModEntityType.HUMAN2.get() ? "tier2"
-                : type == ModEntityType.HUMAN1.get() ? "tier1" : "roamer";
+        String key = switch (tier(type)) {
+            case 3 -> "tier3";
+            case 2 -> "tier2";
+            case 1 -> "tier1";
+            default -> "roamer";
+        };
         return UnifiedConfig.get().tier(key).spawnMultiplier();
+    }
+
+    private static int tier(EntityType<?> type) {
+        return type == HumanGunnerRegistries.TIER_THREE_HUMAN.get() ? 3
+                : type == ModEntityType.HUMAN2.get() ? 2
+                : type == ModEntityType.HUMAN1.get() ? 1 : 0;
+    }
+
+    public static boolean isTierUnlocked(ServerLevelAccessor level, int tier) {
+        var progression = UnifiedConfig.get().spawn().progression();
+        return !progression.enabled() || progression.allowsTier(
+                WorldProgressionData.time(level.getLevel().getServer()), tier);
+    }
+
+    private static boolean isBattleUnlocked(ServerLevelAccessor level) {
+        var progression = UnifiedConfig.get().spawn().progression();
+        return !progression.enabled() || progression.allowsBattle(
+                WorldProgressionData.time(level.getLevel().getServer()));
     }
 
     /** Check every member's final position; sky light does not count as block light. */
@@ -184,12 +217,26 @@ public final class NaturalHumanSpawnRules {
         }
         if (!hasPlayer) return false;
         BlockPos.MutableBlockPos probe = new BlockPos.MutableBlockPos();
-        return SpawnSafety.unlitBuffer((dx, dy, dz) -> {
-            probe.set(pos.getX() + dx, pos.getY() + dy, pos.getZ() + dz);
-            if (level.isOutsideBuildHeight(probe)) return false;
-            // Unknown chunks must not be loaded just to admit a spawn.
-            return !level.hasChunk(probe.getX() >> 4, probe.getZ() >> 4)
-                    || level.getBrightness(LightLayer.BLOCK, probe) > 0;
+        // A 33-block span touches at most three chunks per axis. Resolve their
+        // loaded status once per check, not once per block in the sphere.
+        byte[] loaded = new byte[9];
+        int firstChunkX = (pos.getX() - 16) >> 4;
+        int firstChunkZ = (pos.getZ() - 16) >> 4;
+        return SpawnSafety.unlitColumns((dx, dz, minDy, maxDy) -> {
+            int minY = Math.max(pos.getY() + minDy, level.getMinBuildHeight());
+            int maxY = Math.min(pos.getY() + maxDy, level.getMaxBuildHeight() - 1);
+            if (minY > maxY) return false;
+            int x = pos.getX() + dx, z = pos.getZ() + dz;
+            int chunkX = x >> 4, chunkZ = z >> 4;
+            int index = (chunkX - firstChunkX) * 3 + chunkZ - firstChunkZ;
+            if (loaded[index] == 0) loaded[index] = (byte) (level.hasChunk(chunkX, chunkZ) ? 1 : 2);
+            // Unknown chunks remain forbidden; never load them for admission.
+            if (loaded[index] == 2) return true;
+            for (int y = minY; y <= maxY; y++) {
+                probe.set(x, y, z);
+                if (level.getBrightness(LightLayer.BLOCK, probe) > 0) return true;
+            }
+            return false;
         });
     }
 

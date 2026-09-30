@@ -35,7 +35,7 @@
 
 适用于 Minecraft 1.20.1 Forge。将统一版 JAR 放入实例的 `mods` 文件夹即可；不要同时安装独立的 Hostile Humans 或 Human Gunner JAR。
 
-主配置文件为 `config/hostile_humans_unified.json`。可在其中调整各阶属性与武器散布、自然生成、战斗行为、雇佣上限、伤害倍率及 TaCZ 枪械设置。完整说明见[配置文件指南](CONFIGURATION.md)。多人游戏以服务器配置为准。
+配置位于 `config/hostile_humans_unified/`，按属性、自然生成、战斗、雇佣、TaCZ 和兼容开关拆为六个 JSON 文件，保留中英文说明。旧单文件配置会自动迁移并保留备份，不重置自定义设置。可调整分阶解锁日期、属性与散布、战斗行为、雇佣上限及枪械名单等。完整说明见[配置文件指南](CONFIGURATION.md)。多人游戏以服务器配置为准。
 
 ## 许可证与来源
 

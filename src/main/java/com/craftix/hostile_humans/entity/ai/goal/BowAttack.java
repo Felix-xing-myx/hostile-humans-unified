@@ -79,6 +79,7 @@ extends Goal {
 
     public void stop() {
         super.stop();
+        if (this.mob instanceof Human human) RangedFiringPosition.cancelVisibleSearch(human);
         if (this.mob instanceof Human human && human.isCombatFiringShore()) {
             human.stopSeekingShore();
         }
@@ -196,7 +197,7 @@ extends Goal {
                         if (firingPath != null) {
                             this.mob.getNavigation().moveTo(firingPath, this.speedModifier);
                             this.updatePathDelay = 0;
-                        } else {
+                        } else if (!(this.mob instanceof Human human && RangedFiringPosition.hasPendingVisibleSearch(human))) {
                             if (this.mob instanceof Human human && human.isInWater()) {
                                 human.beginCombatFiringShore(livingentity, this.speedModifier);
                             } else {
@@ -205,7 +206,8 @@ extends Goal {
                             this.updatePathDelay = 0;
                         }
                         this.nextFiringPositionTick = this.mob.tickCount
-                                + (firingPath == null ? 40 : 10);
+                                + (this.mob instanceof Human human ? RangedFiringPosition.retryDelay(human, firingPath, 40)
+                                : firingPath == null ? 40 : 10);
                     }
                 }
                 this.strafingTime = -1;

@@ -116,6 +116,9 @@ public final class HumanGunner {
         // Canceling FinalizeSpawn skips initialization, not entity insertion.
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, true, NaturalHumanSpawnRules::trackNaturalMember);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, NaturalHumanSpawnRules::onNaturalMemberJoin);
+        MinecraftForge.EVENT_BUS.addListener(WorldProgressionData::onServerStarted);
+        MinecraftForge.EVENT_BUS.addListener(WorldProgressionData::onServerStopped);
+        MinecraftForge.EVENT_BUS.addListener(ProgressionCommands::register);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onEntityLeave);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingDrops);
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onPlayerTick);
@@ -946,6 +949,7 @@ public final class HumanGunner {
     private static void configureSoldierOrders(Human human) {
         if (!SOLDIER_ORDERS_CONFIGURED.add(human)) return;
         human.addCombatGoal(-6, new SoldierOrderGoal(human));
+        human.addTargetGoal(-10, new GuardCombatTargetGoal(human));
     }
 
     private static boolean areTierRivals(Human first, Human second) {

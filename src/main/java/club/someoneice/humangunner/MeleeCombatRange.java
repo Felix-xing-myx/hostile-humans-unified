@@ -9,7 +9,7 @@ public final class MeleeCombatRange {
     private MeleeCombatRange() {}
 
     public static double reach(Human human, LivingEntity target) {
-        double base = BetterCombatMeleeCombat.isEnabled(human)
+        double base = BetterCombatMeleeCombat.hasWeaponProfile(human)
                 ? BetterCombatMeleeCombat.attackRange(human)
                 : human.getAttributeValue(ForgeMod.ENTITY_REACH.get());
         if (!Double.isFinite(base)) base = 3.0D;

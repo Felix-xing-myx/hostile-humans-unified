@@ -26,6 +26,7 @@ public final class SoldierCombatMemory {
     }
 
     public void threatened(UUID attacker, long now) {
+        ignored.remove(attacker);
         if (attacker.equals(target)) lastDamage = now;
     }
 

@@ -18,6 +18,9 @@
   "item.humangunner.tier_two_contract": "Tier II Recruitment Contract",
   "item.humangunner.tier_three_contract": "Tier III Recruitment Contract",
   "item.humangunner.contract.tooltip": "Cost: %s vanilla emeralds; tier cap: %s followers",
+  "item.humangunner.contract.payment_tooltip": "Cost: %s x %s; tier cap: %s followers",
+  "message.humangunner.hire.payment": "Not enough recruitment items: requires %s x %s (contract consumed separately)",
+  "message.humangunner.hire.invalid_payment": "Invalid recruitment payment or unregistered item; check server recruitment.json",
   "item.humangunner.roamer_signal_flare": "Roamer Reinforcement Flare",
   "item.humangunner.tier_one_signal_flare": "Tier I Reinforcement Flare",
   "item.humangunner.tier_two_signal_flare": "Tier II Reinforcement Flare",
@@ -103,5 +106,9 @@
   "screen.humangunner.inventory.title": "%s's Inventory and Equipment",
   "screen.humangunner.inventory.backpack": "Backpack (30 slots)",
   "screen.humangunner.inventory.equipment": "Equipment",
-  "screen.humangunner.inventory.gun_rule": "Firearms follow the hired-input whitelist"
+  "screen.humangunner.inventory.gun_rule": "Firearms follow the hired-input whitelist",
+  "commands.humangunner.day.status": "Human spawn progression: mod day %s; Overworld day %s",
+  "commands.humangunner.day.changed": "Human spawn progression set to mod day %s; the clock continues normally",
+  "commands.humangunner.day.synced": "Human spawn progression aligned to the Overworld date: day %s",
+  "commands.humangunner.day.disabled": "Tier day gates are disabled in configuration; the clock still saves and advances"
 }

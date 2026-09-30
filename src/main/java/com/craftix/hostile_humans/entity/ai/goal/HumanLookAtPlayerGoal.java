@@ -45,8 +45,11 @@ extends Goal {
         if (this.mob.getRandom().nextFloat() >= this.probability) {
             return false;
         }
-        if (this.mob.getTarget() != null) {
+        if (this.mob.getTarget() != null && this.lookAtType.isInstance(this.mob.getTarget())
+                && this.mob.getTarget().isAlive() && this.mob.distanceToSqr(this.mob.getTarget())
+                <= (double)(this.lookDistance * this.lookDistance)) {
             this.lookAt = this.mob.getTarget();
+            return true;
         }
         this.lookAt = this.lookAtType == Player.class ? this.mob.level().getNearestPlayer(this.lookAtContext, (LivingEntity)this.mob, this.mob.getX(), this.mob.getEyeY(), this.mob.getZ()) : this.mob.level().getNearestEntity(this.mob.level().getEntitiesOfClass(this.lookAtType, this.mob.getBoundingBox().inflate((double)this.lookDistance, 9.0, (double)this.lookDistance), p_148124_ -> true), this.lookAtContext, (LivingEntity)this.mob, this.mob.getX(), this.mob.getEyeY(), this.mob.getZ());
         return this.lookAt != null;

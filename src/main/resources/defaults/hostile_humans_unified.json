@@ -267,6 +267,22 @@
     "_description_en": "Controls natural encounters: master toggle, admission chances, legacy roamer roll, encounter cooldown, search radii and local human-density scaling. Chances range from 0 to 1.",
     "enabled": true,
     "admission_chance": 0.08,
+    "progression": {
+      "_说明_中文": "按主世界日历加存档中保存的偏移量逐阶开放自然生成，所有维度共用。新世界初始为第 1 天，每天 24000 tick；睡觉跳夜与原版时间命令也会改变模组时间，doDaylightCycle 关闭时天数随主世界暂停。/hostilehumans day get 查看，set <天数> 设置，add <增减天数> 调整，sync 清除偏移并对齐主世界当前日期；这些指令不修改主世界时间。仅限制普通自然生成、区块初始自然生成及自然大型战斗；不影响援军信号弹、敌对信标、刷怪蛋、命令、结构固定单位或已有实体。关闭 enabled 可恢复不按天数限制的自然生成。",
+      "_description_en": "Unlocks natural spawns using the Overworld calendar plus a saved offset, shared across dimensions. A new world starts on day 1; each day is 24000 ticks. Sleeping and vanilla time commands also affect mod time; disabling doDaylightCycle pauses its normal flow. /hostilehumans day get shows the day; set <day> changes it; add <days> adjusts it; sync clears the offset to match the Overworld date. These commands do not change world time. Applies to ordinary/chunk-generation natural spawns and automatic large battles, not reinforcement flares, hostile beacons, spawn eggs, commands, fixed structure units or existing entities. Disable enabled to remove the day gates.",
+      "enabled": true,
+      "_说明_安全日_中文": "safe_days 为开局完全禁止自然刷新人类的完整天数（0–1000000）。安全日和各阶解锁日同时生效，按较晚者开放；默认第 1 天安全，第 2 天仍无阶级解锁，第 3 天才开始流浪者自然生成。",
+      "_description_safe_days_en": "safe_days is the number of complete opening days without natural human spawns (0–1000000). Both the safety period and tier unlock day must have elapsed. Defaults protect day 1; no tier is unlocked on day 2, and roamers begin on day 3.",
+      "safe_days": 1,
+      "first_spawn_day_by_tier": {
+        "_说明_中文": "各阶最早开始自然生成的模组日（1–1000000）。roamer=流浪者，tier1/tier2/tier3=一/二/三阶；独立配置，不要求按顺序递增。解锁只允许参与原有生成判定，不保证当天必定生成；自然大型战斗只能使用已解锁的一阶或二阶单位。",
+        "_description_en": "First eligible mod day per tier (1–1000000). roamer, tier1, tier2 and tier3 are independently configurable; ascending order is not required. Unlocking permits existing spawn rules but does not guarantee a spawn. Automatic large battles use only unlocked tier I or tier II units.",
+        "roamer": 3,
+        "tier1": 5,
+        "tier2": 10,
+        "tier3": 20
+      }
+    },
     "battle_admission_chance": 0.08,
     "roamer_legacy_roll": 200,
     "encounter_cooldown_ticks": 2400,
@@ -313,6 +329,14 @@
       "tier1": 10,
       "tier2": 6,
       "tier3": 3
+    },
+    "payment_by_tier": {
+      "_说明_中文": "各阶每次正式雇佣额外支付的物品与数量，合同仍另外消耗 1 张。item 填完整物品注册 ID（模组命名空间:物品名），不是翻译名、文件路径或 TaCZ 枪械的 GunId。例如 item 填 minecraft:diamond、count 填 16，表示支付 16 个钻石；其他模组也可用，例如 create:brass_ingot。按物品 ID 匹配，不限制 NBT；可跨背包多个格子合计。count 必须为 0 至 1000000 的整数，0 表示仅消耗合同。无效 ID、未安装物品所属模组、空气或非法数量会阻止生存雇佣，不扣款。创造模式不支付。修改后重启游戏；服务器以服务端配置为准。",
+      "_description_en": "Additional item payment per permanent hire; one contract is consumed separately. item is the full registered item ID (namespace:item), not a translated name, file path or TaCZ GunId. Example: item minecraft:diamond with count 16 costs 16 diamonds; modded items such as create:brass_ingot are supported. Matching uses item ID without NBT restrictions and totals multiple inventory slots. count must be an integer from 0 to 1000000; 0 consumes only the contract. Invalid/unregistered IDs, missing mods, air or invalid counts block survival hiring without payment. Creative hiring is free. Restart after edits; server settings are authoritative.",
+      "roamer": {"item": "minecraft:emerald", "count": 8},
+      "tier1": {"item": "minecraft:emerald", "count": 24},
+      "tier2": {"item": "minecraft:emerald", "count": 72},
+      "tier3": {"item": "minecraft:emerald", "count": 216}
     },
     "allow_hired_pvp_damage": false
   },

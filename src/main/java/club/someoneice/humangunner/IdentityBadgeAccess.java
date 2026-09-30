@@ -5,11 +5,17 @@ import com.craftix.hostile_humans.entity.entities.HumanTier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.ModList;
+import java.util.Map;
+import java.util.WeakHashMap;
+import java.util.Collections;
+import dev.felix.hostilehumans.core.TickRevisionMemo;
 
 final class IdentityBadgeAccess {
     private static final String RETALIATION_PLAYER = HumanGunner.MOD_ID + ":badge_retaliation_player";
     private static final String RETALIATION_UNTIL = HumanGunner.MOD_ID + ":badge_retaliation_until";
     private static final int RETALIATION_MEMORY_TICKS = 600;
+    // Values contain no player/world references; disconnects can be collected.
+    private static final Map<Player, TickRevisionMemo<Integer>> CLEARANCE_CACHE = Collections.synchronizedMap(new WeakHashMap<>());
 
     private IdentityBadgeAccess() {
     }
@@ -45,6 +51,11 @@ final class IdentityBadgeAccess {
     }
 
     static int highestClearance(Player player) {
+        int revision = player.getInventory().getTimesChanged();
+        TickRevisionMemo<Integer> cached = CLEARANCE_CACHE.computeIfAbsent(player, ignored -> new TickRevisionMemo<>());
+        if (cached.isCurrent(player.tickCount, revision)) {
+            return cached.value();
+        }
         int clearance = -1;
         for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
             ItemStack stack = player.getInventory().getItem(i);
@@ -55,6 +66,7 @@ final class IdentityBadgeAccess {
         if (ModList.get().isLoaded("curios")) {
             clearance = Math.max(clearance, CuriosBadgeAccess.highestClearance(player));
         }
+        cached.remember(player.tickCount, revision, clearance);
         return clearance;
     }
 

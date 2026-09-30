@@ -14,38 +14,40 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 /** Small, deterministic helpers shared by normal pursuit and retreat movement. */
 final class NavigationSupport {
     private NavigationSupport() {
     }
 
     static boolean openBlockingPassage(Human human) {
-        Set<BlockPos> candidates = new LinkedHashSet<>();
+        // At most seven positions: a small array avoids a hash table and one
+        // node allocation per position on every collision tick.
+        BlockPos[] candidates = new BlockPos[7];
+        int count = 0;
         BlockPos feet = human.blockPosition();
-        candidates.add(feet);
-        candidates.add(feet.above());
+        count = addUnique(candidates, count, feet);
+        count = addUnique(candidates, count, feet.above());
 
         Path path = human.getNavigation().getPath();
         if (path != null && !path.isDone()) {
             BlockPos next = path.getNextNodePos();
-            candidates.add(next);
-            candidates.add(next.above());
-            candidates.add(next.below());
+            count = addUnique(candidates, count, next);
+            count = addUnique(candidates, count, next.above());
+            count = addUnique(candidates, count, next.below());
         }
 
         Vec3 motion = human.getDeltaMovement().multiply(1.0D, 0.0D, 1.0D);
         if (motion.lengthSqr() > 0.0025D) {
             Vec3 ahead = human.position().add(motion.normalize().scale(0.9D));
             BlockPos forward = BlockPos.containing(ahead);
-            candidates.add(forward);
-            candidates.add(forward.above());
+            count = addUnique(candidates, count, forward);
+            count = addUnique(candidates, count, forward.above());
         }
 
         boolean opened = false;
-        for (BlockPos pos : candidates) {
+        for (int i = 0; i < count; i++) {
+            BlockPos pos = candidates[i];
+            if (!human.level().hasChunkAt(pos)) continue;
             BlockState state = human.level().getBlockState(pos);
             if (!state.hasProperty(BlockStateProperties.OPEN)
                     || state.getValue(BlockStateProperties.OPEN)) {
@@ -63,6 +65,12 @@ final class NavigationSupport {
         return opened;
     }
 
+    private static int addUnique(BlockPos[] positions, int count, BlockPos position) {
+        for (int i = 0; i < count; i++) if (positions[i].equals(position)) return count;
+        positions[count] = position;
+        return count + 1;
+    }
+
     static boolean hasOneBlockObstacleAhead(Human human, Vec3 pathDirection) {
         Vec3 forward = pathDirection.multiply(1.0D, 0.0D, 1.0D);
         if (forward.lengthSqr() < 0.01D) {
@@ -71,6 +79,7 @@ final class NavigationSupport {
         forward = forward.normalize();
         int feetY = BlockPos.containing(human.getX(), human.getY() + 0.05D, human.getZ()).getY();
         AABB mobBounds = human.getBoundingBox();
+        BlockPos previousObstacle = null;
 
         // Probe ahead of the body, not at its leading collision edge. This gives
         // the jump controller time to clear an ordinary one-block step before
@@ -79,6 +88,9 @@ final class NavigationSupport {
             double distance = 0.75D + probeIndex * 0.25D;
             Vec3 probe = human.position().add(forward.scale(distance));
             BlockPos obstacle = BlockPos.containing(probe.x, feetY, probe.z);
+            if (obstacle.equals(previousObstacle)) continue;
+            previousObstacle = obstacle;
+            if (!human.level().hasChunkAt(obstacle)) continue;
             if (obstacle.getX() == human.blockPosition().getX()
                     && obstacle.getZ() == human.blockPosition().getZ()) {
                 continue;

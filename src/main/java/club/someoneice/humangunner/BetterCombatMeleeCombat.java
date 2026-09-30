@@ -23,6 +23,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.fml.ModList;
 import org.slf4j.Logger;
+import dev.felix.hostilehumans.core.CachedReflection;
 
 /** Optional server-side adapter for Better Combat's weapon profiles and melee hitboxes. */
 public final class BetterCombatMeleeCombat {
@@ -77,18 +78,24 @@ public final class BetterCombatMeleeCombat {
     public static double attackRange(Human human) {
         if (!isEnabled(human)) return 0.0D;
         Object attributes = weaponAttributes(human);
+        if (attributes == null || human.getMainHandItem().isEmpty()) return 0.0D;
         double range = number(call(attributes, "attackRange"), 3.0D);
         return Double.isFinite(range) ? Math.min(16.0D, Math.max(0.1D, range)) : 3.0D;
     }
 
     public static int cooldownTicks(Human human) {
-        if (!isEnabled(human)) return 0;
+        if (!hasWeaponProfile(human)) return 0;
         return profile(human).cooldownTicks();
+    }
+
+    public static boolean hasWeaponProfile(Human human) {
+        return isEnabled(human) && !human.getMainHandItem().isEmpty()
+                && weaponAttributes(human) != null;
     }
 
     /** Resolve the active combo step and collect the hostile entities in its oriented hitbox. */
     public static AttackPlan createAttackPlan(Human human, LivingEntity requestedTarget) {
-        if (!isEnabled(human) || requestedTarget == null) return null;
+        if (!hasWeaponProfile(human) || requestedTarget == null) return null;
         Profile profile = profile(human);
         List<LivingEntity> targets = collectTargets(human, profile);
         if (!targets.contains(requestedTarget) && canBeHit(human, requestedTarget, profile)) {
@@ -221,7 +228,7 @@ public final class BetterCombatMeleeCombat {
     }
 
     private static boolean conditionsMatch(Human human, Object mainAttributes, Object conditions) {
-        if (conditions == null || !conditions.getClass().isArray()) return true;
+        if (conditions == null || !conditions.getClass().isArray() || Array.getLength(conditions) == 0) return true;
         ItemStack offhand = human.getOffhandItem();
         Object offAttributes = getWeaponAttributes(offhand);
         boolean dualWield = mainAttributes != null && offAttributes != null
@@ -403,21 +410,11 @@ public final class BetterCombatMeleeCombat {
     }
 
     private static Object call(Object instance, String methodName) {
-        if (instance == null) return null;
-        try {
-            return instance.getClass().getMethod(methodName).invoke(instance);
-        } catch (ReflectiveOperationException | LinkageError ignored) {
-            return null;
-        }
+        return CachedReflection.call(instance, methodName);
     }
 
     private static Object field(Object instance, String fieldName) {
-        if (instance == null) return null;
-        try {
-            return instance.getClass().getField(fieldName).get(instance);
-        } catch (ReflectiveOperationException | LinkageError ignored) {
-            return null;
-        }
+        return CachedReflection.field(instance, fieldName);
     }
 
     private static double number(Object value, double fallback) {

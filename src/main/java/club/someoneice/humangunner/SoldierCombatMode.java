@@ -117,7 +117,9 @@ public enum SoldierCombatMode {
         int selected = selectAuthorizationSlot(target.getUUID(), targets, expiries, now);
         human.getPersistentData().putUUID(slotKey(AUTHORIZED_TARGET, selected), target.getUUID());
         human.getPersistentData().putString(slotKey(AUTHORIZED_CAUSE, selected), cause.name());
-        human.getPersistentData().putLong(slotKey(AUTHORIZED_UNTIL, selected), now + AUTHORIZATION_TICKS);
+        long duration = cause == Cause.SELF && human.hasOwner() && SoldierOrder.get(human) == SoldierOrder.GUARD
+                ? GuardCombatState.EXCURSION_TICKS : AUTHORIZATION_TICKS;
+        human.getPersistentData().putLong(slotKey(AUTHORIZED_UNTIL, selected), now + duration);
         human.soldierCombatMemory.threatened(target.getUUID(), now);
         return true;
     }

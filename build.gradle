@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.5.0'
+version = '3.5.5'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -70,8 +70,20 @@ tasks.register('runtimePoliciesTest', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'dev.felix.hostilehumans.core.RuntimePoliciesTest'
 }
+
+tasks.register('performancePoliciesTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.felix.hostilehumans.core.PerformancePoliciesTest'
+}
+
+tasks.register('lootScreeningTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.LootScreeningTest'
+}
 tasks.named('check').configure {
-    dependsOn tasks.named('encounterPolicyTest'), tasks.named('runtimePoliciesTest')
+    dependsOn tasks.named('encounterPolicyTest'), tasks.named('runtimePoliciesTest'), tasks.named('performancePoliciesTest')
 }
 
 tasks.register('optionalRuntimeTest', JavaExec) {

@@ -44,7 +44,13 @@ public final class RecruitmentCombatTest {
         roster.hire(c, owner, 1);
         roster.hire(other, otherOwner, 1);
         roster.hire(higherTier, owner, 2);
+        var initialOrder = roster.soldiers(owner);
+        check(initialOrder == roster.soldiers(owner), "unchanged owner roster reuses immutable ordering");
+        roster.hire(a, owner, 1);
+        check(initialOrder == roster.soldiers(owner), "same owner and tier reconciliation retains ordering cache");
         check(roster.move(c, owner, -1, -1), "soldier moves earlier in the full roster");
+        check(initialOrder != roster.soldiers(owner) && initialOrder.get(1).id().equals(b),
+                "reorder invalidates cache without mutating a previously exported snapshot");
         check(roster.soldiers(owner).get(1).id().equals(c), "moved soldier changes displayed order");
         check(roster.move(c, owner, 1, -1), "soldier moves later in the full roster");
         check(roster.soldiers(owner).get(2).id().equals(c), "later move restores displayed order");
@@ -79,11 +85,53 @@ public final class RecruitmentCombatTest {
         mixedTiers.hire(roamer, owner, 0);
         mixedTiers.hire(tierOne, owner, 1);
         mixedTiers.hire(tierTwo, owner, 2);
+        var stableView = mixedTiers.roster(owner);
+        for (int repeat = 0; repeat < 1000; repeat++) {
+            check(stableView == mixedTiers.roster(owner), "unchanged ledger reuses roster grouping");
+            check(stableView.filtered(1) == mixedTiers.roster(owner).filtered(1), "tier filtering reuses immutable list");
+        }
+        check(stableView.count(1) == 1 && stableView.filtered(-1) == stableView.all(),
+                "counts and All filter share one ledger snapshot");
+        try { stableView.filtered(1).clear(); throw new AssertionError("tier list is mutable"); }
+        catch (UnsupportedOperationException expected) { checks++; }
         check(mixedTiers.move(tierTwo, owner, -1, -1)
                         && mixedTiers.soldiers(owner).get(1).id().equals(tierTwo),
                 "one soldier per tier can still be reordered on the All tab");
         check(!mixedTiers.move(tierTwo, owner, -1, 2),
                 "single-soldier tier filter has no invisible reorder target");
+        var oldOwnerOrder = mixedTiers.soldiers(owner);
+        mixedTiers.hire(tierOne, otherOwner, 3);
+        check(stableView.count(1) == 1 && mixedTiers.roster(owner).count(1) == 0,
+                "owner transfer replaces grouping without mutating old snapshot");
+        check(mixedTiers.soldiers(owner).size() == 2 && mixedTiers.count(owner, 1) == 0
+                        && mixedTiers.count(otherOwner, 3) == 1 && oldOwnerOrder.size() == 3,
+                "owner transfer invalidates both views and counts, preserving old snapshots");
+        mixedTiers.dismiss(tierOne);
+        check(mixedTiers.soldiers(otherOwner).isEmpty(), "dismissal invalidates last soldier view");
+        check(mixedTiers.requestDismissal(roamer, owner) && mixedTiers.soldiers(owner).size() == 1,
+                "unloaded dismissal immediately invalidates ordered cache");
+        var emptyView = mixedTiers.roster(otherOwner);
+        check(emptyView == mixedTiers.roster(otherOwner), "empty roster view also reused");
+        mixedTiers.hire(tierOne, otherOwner, 1);
+        check(emptyView != mixedTiers.roster(otherOwner) && emptyView.count(1) == 0
+                        && mixedTiers.count(otherOwner, 1) == 1, "hiring invalidates empty owner view");
+        java.util.Random groupingRandom = new java.util.Random(9076);
+        RecruitmentLedger groupingLedger = new RecruitmentLedger();
+        for (int step = 0; step < 200; step++) {
+            UUID soldierId = new UUID(7, groupingRandom.nextInt(30));
+            UUID soldierOwner = groupingRandom.nextBoolean() ? owner : otherOwner;
+            if (groupingRandom.nextInt(4) == 0) groupingLedger.dismiss(soldierId);
+            else groupingLedger.hire(soldierId, soldierOwner, groupingRandom.nextInt(4));
+            for (UUID ownerId : java.util.List.of(owner, otherOwner)) {
+                var grouped = groupingLedger.roster(ownerId);
+                for (int tier = 0; tier < 4; tier++) {
+                    final int tierFilter = tier;
+                    var expectedGroup = grouped.all().stream().filter(s -> s.tier() == tierFilter).toList();
+                    check(grouped.filtered(tier).equals(expectedGroup), "group preserves sorted order after roster mutations");
+                    check(grouped.count(tier) == expectedGroup.size(), "cached count follows roster mutations");
+                }
+            }
+        }
         UUID first = UUID.randomUUID(), second = UUID.randomUUID();
         SoldierCombatMemory memory = new SoldierCombatMemory();
         check(!memory.timedOut(first, 0), "start target clock");
@@ -104,6 +152,40 @@ public final class RecruitmentCombatTest {
         check(!memory.timedOut(second, 1861), "switch target starts fresh");
 
         SoldierCombatMemory pressureMemory = new SoldierCombatMemory();
+        GuardCombatState guard = new GuardCombatState();
+        guard.attacked(first, 0, false);
+        check(guard.retaliating(first, 399), "distant self attacker remains eligible for guard response");
+        check(!guard.retaliating(second, 10), "retaliation does not authorize unrelated distant enemies");
+        guard.tick(100, true, true);
+        guard.retainTarget(first);
+        check(guard.retainsTarget(first), "accepted chase survives vanilla target-goal handoff");
+        for (int tick = 101; tick < 500; tick++) {
+            guard.tick(tick, true, true);
+            check(!guard.returning(), "guard may fight outside for full twenty seconds");
+        }
+        guard.tick(500, true, true);
+        check(guard.returning(), "guard returns at exact 400-tick boundary");
+        check(!guard.retainsTarget(first), "excursion expiry releases retained chase");
+        guard.tick(501, false, false);
+        check(guard.returning(), "entering area edge does not cancel return to post");
+        guard.attacked(first, 502, true);
+        check(!guard.returning(), "fresh hit interrupts return");
+        guard.tick(901, true, true);
+        check(!guard.returning(), "fresh hit resets full excursion duration");
+        guard.tick(902, true, true);
+        check(guard.returning(), "renewed combat still has a finite excursion limit");
+        guard.returnedToPost();
+        check(!guard.returning(), "reaching post ends return state");
+        guard.tick(1000, true, true);
+        guard.tick(1399, true, true);
+        check(!guard.returning(), "later excursion gets its own clock");
+        guard.tick(1400, true, true);
+        check(guard.returning(), "later excursion expires independently");
+        guard.reset();
+        check(guard.attacker(0) == null && !guard.returning(), "changing orders clears transient guard state");
+        pressureMemory.forget(first, 0);
+        pressureMemory.threatened(first, 1);
+        check(pressureMemory.allowed(first, 1), "new self attack overrides old target retry delay");
         check(!pressureMemory.timedOut(first, 0), "pressure target starts fresh");
         pressureMemory.threatened(first, 500);
         check(!pressureMemory.timedOut(first, 1099), "incoming hostile action refreshes pursuit");

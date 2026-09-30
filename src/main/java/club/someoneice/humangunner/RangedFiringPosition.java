@@ -9,9 +9,42 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import dev.felix.hostilehumans.core.IncrementalBestSearch;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.WeakHashMap;
+import net.minecraft.world.item.Item;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 
 /** Finds a reachable nearby position with a clear shot, without taking over retreat behavior. */
 public final class RangedFiringPosition {
+    // Values contain only geometry, identifiers and paths, never their Human
+    // key or the world. Interrupted searches cannot keep unloaded entities alive.
+    private static final Map<Human, VisibleSearch> VISIBLE_SEARCHES = new WeakHashMap<>();
+    private static final class SearchVisit {
+        int tick;
+        SearchVisit(int tick) { this.tick = tick; }
+    }
+    private record VisibleSearch(UUID target, ResourceKey<Level> dimension, Item weapon, Vec3 origin, Vec3 targetPosition,
+                                 double minimum, double maximum, int radius, int attempts,
+                                 SearchVisit visit, IncrementalBestSearch<BlockPos, Path> search) {}
+
+    public static boolean hasPendingVisibleSearch(Human human) { return VISIBLE_SEARCHES.containsKey(human); }
+    public static void cancelVisibleSearch(Human human) {
+        VISIBLE_SEARCHES.remove(human);
+        OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.FIRING_LANE);
+    }
+    public static int retryDelay(Human human, Path result, int failureDelay) {
+        return retryDelay(hasPendingVisibleSearch(human), result != null, failureDelay);
+    }
+    static int retryDelay(boolean pending, boolean found, int failureDelay) {
+        return pending ? 1 : found ? 10 : failureDelay;
+    }
     private RangedFiringPosition() {
     }
 
@@ -24,7 +57,9 @@ public final class RangedFiringPosition {
             int attempts
     ) {
         if (human.isFleeing || SoldierOrder.isHoldingPosition(human)
-                || human.level().isClientSide || target == null || !target.isAlive()) {
+                || human.level().isClientSide || target == null || !target.isAlive()
+                || target.level() != human.level()) {
+            cancelVisibleSearch(human);
             return null;
         }
 
@@ -32,38 +67,67 @@ public final class RangedFiringPosition {
         double preferredRange = Math.max(minimumRange, Math.min(maximumRange, currentRange));
         double minimumRangeSqr = minimumRange * minimumRange;
         double maximumRangeSqr = maximumRange * maximumRange;
-        Path bestPath = null;
-        double bestScore = Double.POSITIVE_INFINITY;
-
-        for (int attempt = 0; attempt < attempts; attempt++) {
-            Vec3 candidate = DefaultRandomPos.getPos(human, searchRadius, 4);
-            if (candidate == null) {
-                continue;
+        VisibleSearch session = VISIBLE_SEARCHES.get(human);
+        if (session == null || !session.target().equals(target.getUUID())
+                || !session.dimension().equals(human.level().dimension())
+                || session.weapon() != human.getMainHandItem().getItem()
+                || session.origin().distanceToSqr(human.position()) > 4.0D
+                || session.targetPosition().distanceToSqr(target.position()) > 4.0D
+                || Math.abs(session.minimum() - minimumRange) > 0.5D
+                || Math.abs(session.maximum() - maximumRange) > 0.5D
+                || session.radius() != searchRadius || session.attempts() != attempts
+                || human.tickCount < session.visit().tick || human.tickCount - session.visit().tick > 20) {
+            List<BlockPos> candidates = new ArrayList<>();
+            HashSet<BlockPos> unique = new HashSet<>();
+            for (int attempt = 0; attempt < attempts; attempt++) {
+                Vec3 candidate = DefaultRandomPos.getPos(human, searchRadius, 4);
+                if (candidate == null) continue;
+                double sampledRange = Math.sqrt(target.distanceToSqr(candidate));
+                if (sampledRange < Math.max(0.0D, minimumRange - 2.0D)
+                        || sampledRange > maximumRange + 2.0D
+                        || candidate.distanceToSqr(human.position()) < 1.0D) continue;
+                BlockPos candidateBlock = BlockPos.containing(candidate);
+                if (unique.add(candidateBlock)) candidates.add(candidateBlock);
             }
-            // Reject obviously out-of-band positions before synchronous A*.
-            // A reachable path can end slightly off the sampled block, hence
-            // the two-block tolerance around the requested firing band.
-            double sampledRange = Math.sqrt(target.distanceToSqr(candidate));
-            if (sampledRange < Math.max(0.0D, minimumRange - 2.0D)
-                    || sampledRange > maximumRange + 2.0D
-                    || candidate.distanceToSqr(human.position()) < 1.0D) {
-                continue;
+            session = new VisibleSearch(target.getUUID(), human.level().dimension(), human.getMainHandItem().getItem(),
+                    human.position(), target.position(),
+                    minimumRange, maximumRange, searchRadius, attempts, new SearchVisit(human.tickCount),
+                    new IncrementalBestSearch<>(candidates.iterator()));
+            VISIBLE_SEARCHES.put(human, session);
+        }
+        // Budget waiting is live work, not an abandoned search. Refresh only
+        // its visit time; movement/target/weapon validation still runs above.
+        session.visit().tick = human.tickCount;
+        int budget = OptionalPathBudget.claim(human, OptionalPathBudget.Kind.FIRING_LANE, 4);
+        if (budget == 0) return null;
+        Map<BlockPos, Boolean> clearShots = new HashMap<>();
+        Path bestPath = session.search().advance(budget, candidateBlock -> {
+            Vec3 candidateFeet = Vec3.atBottomCenterOf(candidateBlock);
+            double candidateRangeSqr = target.distanceToSqr(candidateFeet);
+            if (candidateRangeSqr < minimumRangeSqr || candidateRangeSqr > maximumRangeSqr
+                    || candidateFeet.distanceToSqr(human.position()) < 4.0D
+                    || !human.level().hasChunkAt(candidateBlock)
+                    || !clearShots.computeIfAbsent(candidateBlock, pos -> hasClearShot(human,
+                    Vec3.atBottomCenterOf(pos).add(0.0D, human.getEyeHeight(), 0.0D), target.getEyePosition()))) {
+                return null;
             }
-            Path path = human.getNavigation().createPath(BlockPos.containing(candidate), 0);
+            Path path = human.getNavigation().createPath(candidateBlock, 0);
             if (path == null || !path.canReach() || path.getNodeCount() < 2) {
-                continue;
+                return null;
             }
-
+            return path;
+        }, path -> {
             Vec3 destination = Vec3.atBottomCenterOf(path.getTarget());
             double targetDistanceSqr = target.distanceToSqr(destination);
             if (targetDistanceSqr < minimumRangeSqr || targetDistanceSqr > maximumRangeSqr
                     || destination.distanceToSqr(human.position()) < 4.0D) {
-                continue;
+                return Double.NEGATIVE_INFINITY;
             }
 
             Vec3 destinationEye = destination.add(0.0D, human.getEyeHeight(), 0.0D);
-            if (!hasClearShot(human, destinationEye, target.getEyePosition())) {
-                continue;
+            if (!clearShots.computeIfAbsent(path.getTarget(), pos ->
+                    hasClearShot(human, destinationEye, target.getEyePosition()))) {
+                return Double.NEGATIVE_INFINITY;
             }
 
             double targetDistance = Math.sqrt(targetDistanceSqr);
@@ -79,11 +143,10 @@ public final class RangedFiringPosition {
                 // an archer can still shoot while crossing a river.
                 score -= 12.0D;
             }
-            if (score < bestScore) {
-                bestScore = score;
-                bestPath = path;
-            }
-        }
+            return -score;
+        });
+        if (session.search().hasRemaining()) return null;
+        cancelVisibleSearch(human);
         return bestPath;
     }
 
@@ -153,6 +216,15 @@ public final class RangedFiringPosition {
             if (candidateBlock.distSqr(human.blockPosition()) < 16.0D) {
                 continue;
             }
+            Vec3 candidateFeet = Vec3.atBottomCenterOf(candidateBlock);
+            double candidateRangeSqr = target.distanceToSqr(candidateFeet);
+            if (candidateRangeSqr < minimumRangeSqr || candidateRangeSqr > maximumRangeSqr
+                    || candidateFeet.distanceToSqr(human.position()) < 30.25D
+                    || !human.level().hasChunkAt(candidateBlock)
+                    || !hasClearShot(human, candidateFeet
+                    .add(0.0D, human.getEyeHeight(), 0.0D), target.getEyePosition())) {
+                continue;
+            }
             Path path = human.getNavigation().createPath(candidateBlock, 0);
             if (path == null || !path.canReach() || path.getNodeCount() < 2) {
                 continue;
@@ -172,7 +244,8 @@ public final class RangedFiringPosition {
                 continue;
             }
             Vec3 destinationEye = destination.add(0.0D, human.getEyeHeight(), 0.0D);
-            if (!hasClearShot(human, destinationEye, target.getEyePosition())) {
+            if (!path.getTarget().equals(candidateBlock)
+                    && !hasClearShot(human, destinationEye, target.getEyePosition())) {
                 continue;
             }
 

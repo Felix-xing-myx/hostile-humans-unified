@@ -1,9 +1,9 @@
 package com.craftix.hostile_humans.entity.ai.goal;
 
 import java.util.EnumSet;
+import dev.felix.hostilehumans.core.BudgetedSearch;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Vec3i;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -19,6 +19,10 @@ extends Goal {
     private double wantedX;
     private double wantedY;
     private double wantedZ;
+    private BudgetedSearch<BlockPos> search;
+    private BlockPos searchOrigin;
+    private int nextSearchTick;
+    private static final int BLOCK_PROBES_PER_CHECK = 128;
 
     public FindWaterOnFireGoal(PathfinderMob p_25221_, double p_25222_) {
         this.mob = p_25221_;
@@ -37,6 +41,8 @@ extends Goal {
             return false;
         }
         if (!this.mob.isOnFire()) {
+            search = null;
+            searchOrigin = null;
             return false;
         }
         return this.setWantedPos();
@@ -66,10 +72,23 @@ extends Goal {
     @Nullable
     protected Vec3 getHidePos() {
         BlockPos blockpos = this.mob.blockPosition();
-        int radius = 10;
-        for (BlockPos blockpos1 : BlockPos.betweenClosed((int)(blockpos.getX() - radius), (int)(blockpos.getY() - radius / 3), (int)(blockpos.getZ() - radius), (int)(blockpos.getX() + radius), (int)(blockpos.getY() + radius / 3), (int)(blockpos.getZ() + radius))) {
-            if (this.level.getBlockState(blockpos1).getBlock() != Blocks.WATER) continue;
-            return Vec3.atBottomCenterOf((Vec3i)blockpos1);
+        if (this.mob.tickCount < nextSearchTick) return null;
+        if (search == null || searchOrigin.distSqr(blockpos) > 16.0D) {
+            searchOrigin = blockpos.immutable();
+            // Same complete 21x7x21 volume, but nearest blocks first and no
+            // repeated full-volume scans every failed GoalSelector check.
+            search = new BudgetedSearch<>(BlockPos.withinManhattan(searchOrigin, 10, 3, 10).iterator());
+        }
+        BlockPos water = search.firstMatching(BLOCK_PROBES_PER_CHECK,
+                pos -> this.level.hasChunkAt(pos) && this.level.getBlockState(pos).is(Blocks.WATER));
+        if (water != null) {
+            search = null;
+            nextSearchTick = this.mob.tickCount + 20;
+            return Vec3.atBottomCenterOf(water);
+        }
+        if (!search.hasRemaining()) {
+            search = null;
+            nextSearchTick = this.mob.tickCount + 40 + Math.floorMod(this.mob.getId(), 20);
         }
         return null;
     }

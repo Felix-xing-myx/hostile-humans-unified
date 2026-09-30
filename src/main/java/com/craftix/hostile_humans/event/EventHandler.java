@@ -5,7 +5,7 @@ import com.craftix.hostile_humans.compat.CollectiveVillagerNames;
 import com.craftix.hostile_humans.compat.FarmersDelight;
 import com.craftix.hostile_humans.entity.entities.Human;
 import com.craftix.hostile_humans.entity.entities.HumanInventoryGenerator;
-import java.util.List;
+import club.someoneice.humangunner.HumanAwareness;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Position;
 import net.minecraft.world.phys.AABB;
@@ -44,9 +44,8 @@ public class EventHandler {
     @SubscribeEvent
     public void damage(LivingDamageEvent event) {
         if (!event.getEntity().level().isClientSide) {
-            for (Human human : event.getEntity().level().getEntitiesOfClass(Human.class, event.getEntity().getBoundingBox().inflate(16.0))) {
-                human.setInvestigateSound(event.getEntity().blockPosition());
-            }
+            LivingEntity source = event.getEntity();
+            HumanAwareness.investigate(source, source.blockPosition());
         }
     }
 
@@ -63,19 +62,7 @@ public class EventHandler {
     public void onPlace(BlockEvent.EntityPlaceEvent event) {
         Entity placer = event.getEntity();
         if (placer != null && !placer.level().isClientSide) {
-            List<Entity> humans = placer.level().getEntities(placer, placer.getBoundingBox().inflate(10.0), entity -> {
-                boolean bl;
-                if (entity instanceof Human) {
-                    Human otherHuman = (Human)entity;
-                    bl = true;
-                } else {
-                    bl = false;
-                }
-                return bl;
-            });
-            for (Entity otherHuman : humans) {
-                ((Human)otherHuman).isAlert = true;
-            }
+            HumanAwareness.alert(placer, true);
         }
     }
 
@@ -83,19 +70,7 @@ public class EventHandler {
     public void onPlayerDamage(LivingDamageEvent event) {
         LivingEntity damaged = event.getEntity();
         if (damaged instanceof Player && !damaged.level().isClientSide) {
-            List<Entity> humans = damaged.level().getEntities((Entity)damaged, damaged.getBoundingBox().inflate(10.0), entity -> {
-                boolean bl;
-                if (entity instanceof Human) {
-                    Human otherHuman = (Human)entity;
-                    bl = true;
-                } else {
-                    bl = false;
-                }
-                return bl;
-            });
-            for (Entity otherHuman : humans) {
-                ((Human)otherHuman).isAlert = true;
-            }
+            HumanAwareness.alert(damaged, false);
         }
     }
 

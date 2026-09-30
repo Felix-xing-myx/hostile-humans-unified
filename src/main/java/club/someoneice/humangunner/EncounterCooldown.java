@@ -11,11 +11,11 @@ final class EncounterCooldown {
     private Object batch;
     private int members;
 
-    boolean cooling(long tick) {
+    synchronized boolean cooling(long tick) {
         return tick < next;
     }
 
-    boolean join(long tick, Object token, int limit) {
+    synchronized boolean join(long tick, Object token, int limit) {
         if (token == null || limit < 1) return false;
         boolean sameBatch = batch == token && batchTick == tick;
         if (sameBatch ? members >= limit : cooling(tick)) return false;

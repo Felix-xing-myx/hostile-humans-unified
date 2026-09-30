@@ -69,6 +69,7 @@ public final class TridentHybridGoal extends Goal {
 
     @Override
     public void stop() {
+        RangedFiringPosition.cancelVisibleSearch(human);
         if (human.isCombatFiringShore()) {
             human.stopSeekingShore();
         }
@@ -183,10 +184,10 @@ public final class TridentHybridGoal extends Goal {
                         human, target, 4.0D, 36.0D, 10, 12);
                 if (firingPath != null) {
                     human.getNavigation().moveTo(firingPath, 1.0D);
-                } else {
+                } else if (!RangedFiringPosition.hasPendingVisibleSearch(human)) {
                     human.beginCombatFiringShore(target, 1.0D);
                 }
-                nextFiringPositionTick = human.tickCount + (firingPath == null ? 40 : 10);
+                nextFiringPositionTick = human.tickCount + RangedFiringPosition.retryDelay(human, firingPath, 40);
             }
             return;
         }
