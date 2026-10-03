@@ -37,7 +37,7 @@ public class SpawnHandler {
     }
 
     public static boolean checkHumanSpawnRules(EntityType<? extends Human> p_33018_, ServerLevelAccessor p_33019_, MobSpawnType p_33020_, BlockPos p_33021_, RandomSource random) {
-        return club.someoneice.humangunner.NaturalHumanSpawnRules.checkLegacySpawn(
+        return club.someoneice.humangunner.NaturalHumanSpawnRules.checkSquadSpawn(
                 p_33018_, p_33019_, p_33020_, p_33021_, random);
     }
 

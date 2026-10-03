@@ -2,10 +2,9 @@ package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.data.HumanData;
 import com.craftix.hostile_humans.entity.entities.Human;
-import com.craftix.hostile_humans.entity.entities.HumanTier;
 import net.minecraft.world.item.ItemStack;
 
-/** Grants a finite, persistent one-to-three-shield loadout at spawn. */
+/** Grants the configured finite, persistent zero-to-three-shield loadout at spawn. */
 final class GuaranteedShieldLoadout {
     private static final String GENERATED = "humangunner:guaranteed_shields_generated";
     private static final String TARGET_COUNT = "humangunner:spawn_shield_count";
@@ -21,16 +20,17 @@ final class GuaranteedShieldLoadout {
         if (data == null) {
             return;
         }
+        var loadout = ConfiguredHumanEquipment.of(human);
         int target = human.getPersistentData().getInt(TARGET_COUNT);
-        if (target < 1 || target > 3) {
-            target = human.getTier() == HumanTier.ROAMER
-                    ? 1 : human.getRandom().nextInt(1, 4);
+        if (!human.getPersistentData().contains(TARGET_COUNT)
+                || target < loadout.shieldMin || target > loadout.shieldMax) {
+            target = human.getRandom().nextInt(loadout.shieldMin, loadout.shieldMax + 1);
             human.getPersistentData().putInt(TARGET_COUNT, target);
         }
 
         int owned = countShields(human, data);
         while (owned < target) {
-            ItemStack shield = SpartanEquipmentCompat.createShieldFor(human);
+            ItemStack shield = ConfiguredHumanEquipment.shield(human);
             if (shield.isEmpty()) {
                 break;
             }

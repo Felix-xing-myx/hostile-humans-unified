@@ -3,12 +3,6 @@
   "biomes": "#minecraft:is_overworld",
   "spawners": [
     {
-      "type": "hostile_humans:human_roamer",
-      "weight": 1,
-      "minCount": 1,
-      "maxCount": 1
-    },
-    {
       "type": "hostile_humans:human_group",
       "weight": 1,
       "minCount": 1,

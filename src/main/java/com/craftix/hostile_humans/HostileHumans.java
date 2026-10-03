@@ -3,7 +3,6 @@ package com.craftix.hostile_humans;
 import com.craftix.hostile_humans.Config;
 import com.craftix.hostile_humans.ServerSetup;
 import com.craftix.hostile_humans.entity.entities.ModEntityType;
-import com.craftix.hostile_humans.entity.loadout.HumanLoadoutManager;
 import com.craftix.hostile_humans.entity.spawner.SpawnHandler;
 import com.craftix.hostile_humans.event.EventHandler;
 import com.craftix.hostile_humans.item.ModItems;
@@ -57,7 +56,6 @@ public class HostileHumans {
         ModSoundEvents.SOUNDS.register(modEventBus);
         modEventBus.addListener(SpawnHandler::registerSpawnPlacements);
         forgeEventBus.addListener(ServerSetup::handleServerStartingEvent);
-        forgeEventBus.addListener(HumanLoadoutManager::addReloadListener);
         MinecraftForge.EVENT_BUS.register(new EventHandler());
         loadLocalNames();
     }

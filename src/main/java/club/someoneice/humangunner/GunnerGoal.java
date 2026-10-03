@@ -716,7 +716,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 // After sustained occlusion, accept a nearer firing lane.
                 // Keeping one bounded search avoids doubling path probes.
                 if (firingPath != null) {
-                    mob.getNavigation().moveTo(firingPath, 1.0D);
+                    if (mob.getNavigation().moveTo(firingPath, 1.0D))
+                        SoldierDialogue.event(human, "reposition");
                     approachingTarget = true;
                     seekingFiringPosition = true;
                 } else if (RangedFiringPosition.hasPendingVisibleSearch(human)) {

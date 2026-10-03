@@ -4,7 +4,6 @@ import com.craftix.hostile_humans.HumanUtil;
 import com.craftix.hostile_humans.entity.AggressionMode;
 import com.craftix.hostile_humans.entity.HumanCommand;
 import com.craftix.hostile_humans.entity.HumanMobEntityData;
-import com.craftix.hostile_humans.entity.ai.control.HumanEntityWalkControl;
 import com.craftix.hostile_humans.entity.data.HumanData;
 import com.craftix.hostile_humans.entity.data.HumanServerData;
 import com.craftix.hostile_humans.entity.entities.Human;
@@ -32,7 +31,6 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -56,13 +54,13 @@ extends HumanMobEntityData {
     }
     public static final MobCategory CATEGORY = MobCategory.MONSTER;
     protected PickUpLoot pick;
+    private boolean rejectedVehicleMount;
 
     public HumanEntity(EntityType<? extends HumanEntity> entityType, Level level) {
         super(entityType, level);
         this.setSyncReference(this);
         this.navigation.setCanFloat(true);
         this.setDataSyncNeeded();
-        this.moveControl = new HumanEntityWalkControl((Mob)this);
         this.setAggressionLevel(AggressionMode.AGGRESSIVE_MONSTER);
         this.pick = new PickUpLoot(this, level);
     }
@@ -126,12 +124,19 @@ extends HumanMobEntityData {
 
     @Override
     public void tick() {
-        super.tick();
-        // Also release entities already saved as boat passengers before this
-        // restriction was added; otherwise the new startRiding guard is too late.
-        if (this.getVehicle() instanceof Boat) {
+        // Humans are autonomous foot units. Seats/cushions from other mods
+        // often use invisible vehicles and force=true, just like boats do.
+        // Also release passengers restored from an existing world save.
+        if (!this.level().isClientSide && (this.isPassenger() || this.rejectedVehicleMount)) {
             this.stopRiding();
+            this.rejectedVehicleMount = false;
+            // Some seats set the tamable sitting flag even after a failed
+            // mount. Clear that side effect, including during save loading;
+            // the separate owner-issued SoldierOrder is not changed.
+            this.setOrderedToSit(false);
+            this.setInSittingPose(false);
         }
+        super.tick();
         this.pick.tick();
     }
 
@@ -164,9 +169,6 @@ extends HumanMobEntityData {
     }
 
     public void finalizeSpawn() {
-        if (!this.hasCustomName()) {
-            // empty if block
-        }
         this.registerData();
     }
 
@@ -201,10 +203,8 @@ extends HumanMobEntityData {
 
     @Override
     public boolean startRiding(Entity vehicle, boolean force) {
-        if (vehicle instanceof Boat) {
-            return false;
-        }
-        return super.startRiding(vehicle, force);
+        if (!this.level().isClientSide) this.rejectedVehicleMount = true;
+        return false;
     }
 
     public void tame(Player player) {

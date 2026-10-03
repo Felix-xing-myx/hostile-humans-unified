@@ -2,7 +2,6 @@ package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
 import com.craftix.hostile_humans.entity.entities.HumanTier;
-import com.craftix.hostile_humans.patch.HostileHumansEquipmentPatch;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.entity.IGunOperator;
 import com.tacz.guns.api.event.common.EntityHurtByGunEvent;
@@ -149,7 +148,7 @@ final class TaczIntegration implements GunSupport {
                 // TaCZ does not pass through vanilla projectile shield handling,
                 // so apply both the shield durability cost and the requested
                 // 70% reduction at its own damage event.
-                HostileHumansEquipmentPatch.damageShield(defender, event.getBaseAmount());
+                ShieldDurability.damageShield(defender, event.getBaseAmount());
                 event.setBaseAmount(event.getBaseAmount() * (float) UnifiedConfig.get().gunSetting("shield_damage_multiplier", .3));
             }
         }

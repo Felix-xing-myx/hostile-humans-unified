@@ -91,11 +91,11 @@ public final class CombatPressurePolicyTest {
                         && !ShoreSeekingPolicy.shouldPreferSaferShorePath(12, 19, true)
                         && !ShoreSeekingPolicy.shouldPreferSaferShorePath(12, 13, false),
                 "retreats choose a safer bank only when the shore detour remains bounded");
-        check(!ShoreSeekingPolicy.shouldClearFleeingAfterCombatStop(true, true)
-                        && ShoreSeekingPolicy.shouldClearFleeingAfterCombatStop(true, false)
+        check(ShoreSeekingPolicy.shouldClearFleeingAfterCombatStop(true)
+                        && !ShoreSeekingPolicy.shouldClearFleeingAfterCombatStop(false)
                         && !ShoreSeekingPolicy.shouldReturnToOwnerAfterCombatStop(true, true)
                         && ShoreSeekingPolicy.shouldReturnToOwnerAfterCombatStop(true, false),
-                "a shore handoff does not cancel retreat state or prematurely start owner-return behavior");
+                "a shore handoff releases the stopped combat owner's flee flag without starting owner return");
         check(ProjectileShieldPolicy.shouldGuardRangedUser(0.5D)
                         && ProjectileShieldPolicy.shouldGuardRangedUser(2.5D)
                         && !ProjectileShieldPolicy.shouldGuardRangedUser(2.51D)
@@ -103,7 +103,8 @@ public final class CombatPressurePolicyTest {
                 "ranged projectile defense waits until an arrow is within the immediate impact window");
         check(ProjectileShieldPolicy.guardWindowTicks(true, 2.5D) == 3
                         && ProjectileShieldPolicy.guardWindowTicks(true, 0.5D) == 2
-                        && ProjectileShieldPolicy.guardWindowTicks(false, 20.0D) == 32,
+                        && ProjectileShieldPolicy.guardWindowTicks(false, 12.0D) == 14
+                        && ProjectileShieldPolicy.guardWindowTicks(false, 20.0D) == 0,
                 "ranged shield interruption lasts only through the imminent shot while other defenders retain their window");
         check(!CombatPressurePolicy.shouldOpenCounterWindow(5, 0, true),
                 "shield remains up through the effective block wind-up");
@@ -147,6 +148,12 @@ public final class CombatPressurePolicyTest {
                         && !RetreatRecoveryPolicy.safeToReturn(24.0D * 24.0D, 80, 39)
                         && RetreatRecoveryPolicy.safeToReturn(24.0D * 24.0D, 40, 40),
                 "retreat does not yield to attack or anchor return until distance, quiet and commitment gates pass");
+        check(RetreatRecoveryPolicy.canResumeAfterHealing(1.0D, 0.75D, 40, false)
+                        && RetreatRecoveryPolicy.canResumeAfterHealing(0.75D, 0.75D, 40, false)
+                        && !RetreatRecoveryPolicy.canResumeAfterHealing(0.74D, 0.75D, 100, false)
+                        && !RetreatRecoveryPolicy.canResumeAfterHealing(1.0D, 0.75D, 39, false)
+                        && !RetreatRecoveryPolicy.canResumeAfterHealing(1.0D, 0.75D, 100, true),
+                "real healing ends prolonged retreat without a distance gate, retaining commitment and active pressure protection");
         check(RetreatRecoveryPolicy.canStart(9.0D * 9.0D, true, 11)
                         && RetreatRecoveryPolicy.canStart(12.0D * 12.0D, false, 11),
                 "retreat recovery starts at nine blocks behind cover or twelve in the open");

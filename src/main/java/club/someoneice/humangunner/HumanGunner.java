@@ -7,7 +7,6 @@ import com.craftix.hostile_humans.entity.entities.ModEntityType;
 import com.craftix.hostile_humans.entity.data.HumanData;
 import com.craftix.hostile_humans.HumanUtil;
 import com.mojang.logging.LogUtils;
-import com.craftix.hostile_humans.patch.HostileHumansEquipmentPatch;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -65,12 +64,13 @@ import java.util.WeakHashMap;
 @Mod(HumanGunner.MOD_ID)
 public final class HumanGunner {
     public static final String MOD_ID = "humangunner";
+    // Keep weapon-family classification valid even if NPC firearm support is
+    // disabled. This registry tag needs no optional-mod API; absent TaCZ it is empty.
+    private static final net.minecraft.tags.TagKey<net.minecraft.world.damagesource.DamageType> TACZ_BULLET_DAMAGE =
+            net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,
+                    new ResourceLocation("tacz", "bullets"));
     public static final Logger LOGGER = LogUtils.getLogger();
-    private static final String GUN_ROLL_DONE = MOD_ID + ":gun_roll_done";
     private static final String INCOMING_GUNFIRE_UNTIL = MOD_ID + ":incoming_gunfire_until";
-    private static final AtomicBoolean WARNED_EMPTY_GUN_POOL = new AtomicBoolean();
-    private static final AtomicBoolean LOGGED_READY_GUN_POOL = new AtomicBoolean();
-    private static final AtomicBoolean LOGGED_FIRST_EQUIP = new AtomicBoolean();
     private static final AtomicBoolean LOGGED_FIRST_ADAPTIVE_ARROW = new AtomicBoolean();
     private static final Set<Human> RIVALRY_CONFIGURED = Collections.newSetFromMap(new WeakHashMap<>());
     private static final Set<Human> COMBAT_AI_CONFIGURED = Collections.newSetFromMap(new WeakHashMap<>());
@@ -91,13 +91,24 @@ public final class HumanGunner {
             "pistol", "shotgun", "assault_rifle", "snipers_rifle", "bazooka"
     );
 
+    private static void onEquipmentConfigReady(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
+        // Optional integrations can first read settings before items register.
+        // Repeat startup discovery after registries are ready, never per tick.
+        event.enqueueWork(() -> { UnifiedConfig.reloadForServer(); });
+    }
+
     public HumanGunner() {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         HumanGunnerRegistries.ITEMS.register(modBus);
         HumanGunnerRegistries.MENUS.register(modBus);
         HumanCommandNetwork.register();
         SoldierRosterNetwork.register();
+        RecruitmentConfigNetwork.register();
+        MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onServerStarting);
+        MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onServerStopped);
+        MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onPlayerLogin);
         modBus.addListener(HumanGunner::onRegisterSpawnPlacements);
+        modBus.addListener(HumanGunner::onEquipmentConfigReady);
         if (ModList.get().isLoaded("touhou_little_maid")) {
             TouhouMaidCompat.register();
         }
@@ -116,8 +127,17 @@ public final class HumanGunner {
         // Canceling FinalizeSpawn skips initialization, not entity insertion.
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, true, NaturalHumanSpawnRules::trackNaturalMember);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, NaturalHumanSpawnRules::onNaturalMemberJoin);
-        MinecraftForge.EVENT_BUS.addListener(WorldProgressionData::onServerStarted);
-        MinecraftForge.EVENT_BUS.addListener(WorldProgressionData::onServerStopped);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onStarted);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onTick);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onLogin);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onDimensionChanged);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onRespawn);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onLogout);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onStopping);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onStopped);
+        MinecraftForge.EVENT_BUS.addListener(SoldierMessageDispatcher::onTick);
+        MinecraftForge.EVENT_BUS.addListener(SoldierMessageDispatcher::onLogout);
+        MinecraftForge.EVENT_BUS.addListener(SoldierMessageDispatcher::onStopped);
         MinecraftForge.EVENT_BUS.addListener(ProgressionCommands::register);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onEntityLeave);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingDrops);
@@ -130,8 +150,6 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(SoldierRosterAudit::onServerStopped);
         MinecraftForge.EVENT_BUS.addListener(SoldierRosterNetwork::onPlayerLogout);
         MinecraftForge.EVENT_BUS.addListener(SoldierRosterNetwork::onServerStopped);
-        MinecraftForge.EVENT_BUS.addListener(OwnerOfflinePolicy::onPlayerLogout);
-        MinecraftForge.EVENT_BUS.addListener(OwnerOfflinePolicy::onPlayerLogin);
         LOGGER.info("Hostile Humans Unified initialized; optional TaCZ firearms {}", GunSupport.get().enabled() ? "enabled" : "disabled");
     }
 
@@ -164,9 +182,7 @@ public final class HumanGunner {
             if (!initializeHumanIfReady(human)) {
                 return;
             }
-            if (OwnerOfflinePolicy.tick(human)) {
-                return;
-            }
+            OwnerOfflinePolicy.tick(human);
             HumanRelations.tick(human);
             RandomizedHumanHealth.ensureApplied(human);
             HiredHumanHealthWarning.tick(human);
@@ -220,14 +236,12 @@ public final class HumanGunner {
             // custody tracks the exact recovery hand instead of treating any
             // active use as a reason to postpone the check indefinitely.
             RecoverySupplies.tickHandCustody(human);
+            SoldierDialogue.tick(human);
             GunCustody.tick(human);
             RangedWeaponCustody.tick(human);
             if ((human.tickCount + (human.getId() & 7)) % 8 == 0) {
                 RecoverySupplies.auditOwnedShields(human);
                 GunCustody.auditOwnedGuns(human);
-            }
-            if ((human.tickCount + (human.getId() & 63)) % 100 == 0) {
-                ensureMeleeFallback(human);
             }
             if ((human.tickCount + Math.floorMod(human.getId(), 20)) % 20 == 0) {
                 HumanManagedLoadout.equipStoredMeleeIfMainHandEmpty(human);
@@ -319,52 +333,19 @@ public final class HumanGunner {
         // Direct EntityType#create/add paths and a few compatibility spawners
         // can publish the join event before Hostile Humans has registered its
         // server-side HumanData. Defer all inventory/loadout work until that
-        // data is available; otherwise Spartan replacement calls putItemAway
-        // against null data and recovery provisioning can be skipped.
+        // data is available; otherwise spawn reserves cannot be stored and
+        // recovery provisioning can be skipped.
         if (human.getData() == null) {
             return false;
         }
         RandomizedHumanHealth.applyOnce(human);
-        boolean newTierThreeLoadout = TierThreeLoadout.configureOnce(human);
+        if (!HumanSpawnEquipment.completeIfReady(human)) return false;
         TierAttributes.apply(human);
         MovementSpeedController.normal(human);
-        InventoryTotemProtection.stowOffhandTotem(human);
-        SpartanEquipmentCompat.applyOnce(human);
-        if (newTierThreeLoadout) {
-            TierThreeLoadout.ensureRangedWeapon(human);
-        }
-        GuaranteedShieldLoadout.applyOnce(human);
-        ShieldEnchantmentRoll.applyOnce(human);
         configureTierRivalry(human);
         configureCombatAi(human);
         configureSoldierOrders(human);
         SoldierCombatMode.initialize(human);
-        if (GunSupport.get().enabled() && !human.getPersistentData().getBoolean(GUN_ROLL_DONE)) {
-            HumanGunnerConfig config = HumanGunnerConfig.get();
-            long availableGuns = config.availableGunCount();
-            if (availableGuns == 0) {
-                if (WARNED_EMPTY_GUN_POOL.compareAndSet(false, true)) {
-                    LOGGER.warn("Human Gunner found no configured firearms in the loaded TaCZ common gun index");
-                }
-            } else {
-                if (LOGGED_READY_GUN_POOL.compareAndSet(false, true)) {
-                    LOGGER.info(
-                            "Human Gunner is ready with {} configured TaCZ firearms (tier-1 chance {}, tier-2 chance {}, tier-3 chance {}, roamer chance {})",
-                            availableGuns,
-                            config.tier1GunChance(),
-                            config.tier2GunChance(),
-                            config.tier3GunChance(),
-                            config.roamerGunChance()
-                    );
-                }
-
-                // Persist the result, including a chance miss, so saving and reloading an
-                // entity cannot repeatedly reroll its equipment.
-                human.getPersistentData().putBoolean(GUN_ROLL_DONE, true);
-                tryEquipGun(human, false);
-            }
-        }
-        ensureMeleeFallback(human);
         ((StaticCombatGoalHost) human).humanGunner$installStaticCombatGoals();
         INITIALIZED_HUMANS.add(human);
         return true;
@@ -398,8 +379,7 @@ public final class HumanGunner {
 
     private static void onLivingChangeTarget(LivingChangeTargetEvent event) {
         if (event.getEntity() instanceof Human attacker) {
-            if (event.getNewTarget() != null && (OwnerOfflinePolicy.isOwnerOffline(attacker)
-                    || HumanRelations.allied(attacker, event.getNewTarget())
+            if (event.getNewTarget() != null && (HumanRelations.allied(attacker, event.getNewTarget())
                     || !SoldierOrder.allowsTarget(attacker, event.getNewTarget()))) {
                 event.setNewTarget(null);
             }
@@ -450,6 +430,12 @@ public final class HumanGunner {
                 event.setCanceled(true);
                 return;
             }
+            // TaCZ's pretend_melee_damage_on tag can make a bullet's direct
+            // entity equal its shooter. Classify the damage before testing
+            // entity identity, otherwise gun global/tier factors incorrectly
+            // stack with the unrelated melee global/tier factors.
+            if (event.getSource().is(TACZ_BULLET_DAMAGE)
+                    || GunSupport.get().isBullet(event.getSource())) return;
             if (directEntity == attacker) {
                 float multiplier = (float) (UnifiedConfig.get().damage("human_melee_damage_multiplier", 1.7)
                         * TierAttributes.of(humanAttacker).meleeDamage());
@@ -515,7 +501,8 @@ public final class HumanGunner {
         if (!(event.getEntity() instanceof Human human) || human.level().isClientSide) {
             return;
         }
-        boolean noDrops = human.getPersistentData().getBoolean(HumanRelations.NO_DROPS);
+        boolean noDrops = !human.hasOwner()
+                && human.getPersistentData().getBoolean(HumanRelations.NO_DROPS);
         if (!noDrops
                 && !event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
                 && InventoryTotemProtection.tryUseInventoryTotem(human, event.getSource())) {
@@ -543,7 +530,7 @@ public final class HumanGunner {
 
         double chance = HumanGunnerConfig.get().gunDropChance();
         if (event.getEntity() instanceof Human human) {
-            if (human.getPersistentData().getBoolean(HumanRelations.NO_DROPS)) {
+            if (!human.hasOwner() && human.getPersistentData().getBoolean(HumanRelations.NO_DROPS)) {
                 event.getDrops().clear();
                 return;
             }
@@ -565,67 +552,6 @@ public final class HumanGunner {
         });
     }
 
-    public static void tryEquipGun(Human human, boolean forceRanged) {
-        if (human.level().isClientSide || !GunSupport.get().enabled()) {
-            return;
-        }
-
-        HumanGunnerConfig config = HumanGunnerConfig.get();
-        double chance;
-        String tierGunTypeKey;
-        if (TierThreeHuman.isTierThree(human)) {
-            chance = config.tier3GunChance();
-            tierGunTypeKey = "tier3";
-        } else if (human.getTier() == HumanTier.LEVEL1) {
-            chance = config.tier1GunChance();
-            tierGunTypeKey = "tier1";
-        } else if (human.getTier() == HumanTier.LEVEL2) {
-            chance = forceRanged ? config.forcedRangedChance() : config.tier2GunChance();
-            tierGunTypeKey = "tier2";
-        } else if (human.getTier() == HumanTier.ROAMER) {
-            chance = config.roamerGunChance();
-            tierGunTypeKey = "roamer";
-        } else {
-            return;
-        }
-        if (human.getRandom().nextDouble() >= chance) {
-            return;
-        }
-
-        config.rollAvailableGun(human.getRandom(), tierGunTypeKey).ifPresent(gunId -> {
-            ItemStack gun = GunSupport.get().createLoadedGun(gunId);
-            if (gun.isEmpty()) {
-                LOGGER.warn("TaCZ rejected configured Human Gunner firearm {}", gunId);
-                return;
-            }
-
-            GunCustody.registerPrimaryGun(human, gun);
-
-            ItemStack previousWeapon = human.getMainHandItem().copy();
-            human.setItemSlot(EquipmentSlot.MAINHAND, gun);
-            // Make the gun enter Forge's drop collection reliably; the global
-            // drop filter below is the sole 1% gate. Bound tier-3 gear remains
-            // unconditionally removed.
-            human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
-            // Keep one melee fallback for the custody-owned two-block retreat
-            // counterattack. Do not retain an old bow/crossbow: the gun remains
-            // the authoritative ranged weapon for this NPC.
-            if (!previousWeapon.isEmpty() && !HumanUtil.isRangedWeapon(previousWeapon)) {
-                human.putItemAway(previousWeapon);
-            }
-            // This runs before the static combat goal set is installed at the
-            // end of EntityJoinLevelEvent.
-            human.setCombatTask();
-            ensureMeleeFallback(human);
-            if (LOGGED_FIRST_EQUIP.compareAndSet(false, true)) {
-                LOGGER.info("Human Gunner first successful equipment roll: {} received {}", human.getTier(), gunId);
-            }
-            LOGGER.debug(
-                    "Equipped npc={} tier={} with TaCZ firearm {}",
-                    human.getUUID(), human.getTier(), gunId
-            );
-        });
-    }
 
     public static void applyFirstTickArrowBallistics(Human shooter, AbstractArrow projectile) {
         // Fallback for projectiles created by launchers that cannot pass their
@@ -813,60 +739,6 @@ public final class HumanGunner {
         );
     }
 
-    private static void ensureMeleeFallback(Human human) {
-        HumanData data = human.getData();
-        if (data == null) {
-            return;
-        }
-        boolean hasGun = GunSupport.get().isGun(human.getMainHandItem())
-                || GunSupport.get().isGun(human.getOffhandItem());
-        // Count the hand copy only while custody has temporarily withdrawn the
-        // backpack fallback. At every stable gunner state the required melee
-        // weapon must occupy an actual HumanData inventory slot.
-        boolean hasMelee = GunCustody.isActive(human)
-                && HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem());
-        int replacementSlot = -1;
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            ItemStack stored = data.getInventoryItem(i);
-            hasGun |= GunSupport.get().isGun(stored);
-            hasMelee |= HumanLootManager.isDedicatedMeleeWeapon(stored);
-            if (replacementSlot < 0 && stored.isEmpty()) {
-                replacementSlot = i;
-            }
-        }
-        if (!hasGun || hasMelee) {
-            return;
-        }
-
-        // A firearm owner must always retain one dedicated melee fallback in
-        // the backpack. If supplies filled every slot, evict the lowest-value
-        // candidate through the centralized valuation policy instead of
-        // silently leaving the gunner unable to defend at contact distance.
-        if (replacementSlot < 0) {
-            replacementSlot = HumanLootManager.lowestMandatoryMeleeEvictionSlot(human);
-            if (replacementSlot < 0) {
-                return;
-            }
-            ItemStack evicted = data.getInventoryItem(replacementSlot).copy();
-            if (!evicted.isEmpty()) {
-                human.spawnAtLocation(evicted);
-            }
-        }
-
-        ItemStack fallback;
-        if (TierThreeHuman.isTierThree(human)) {
-            fallback = new ItemStack(Items.DIAMOND_SWORD);
-            fallback.getOrCreateTag().putBoolean(TierThreeLoadout.BOUND_GEAR, true);
-        } else if (human.getTier() == HumanTier.LEVEL2) {
-            fallback = new ItemStack(Items.IRON_SWORD);
-        } else if (human.getTier() == HumanTier.LEVEL1) {
-            fallback = new ItemStack(Items.STONE_SWORD);
-        } else {
-            fallback = new ItemStack(Items.IRON_AXE);
-        }
-        data.setInventoryItem(replacementSlot, fallback);
-        human.getPersistentData().putBoolean(MOD_ID + ":melee_fallback_added", true);
-    }
 
     static boolean isRangedWeapon(ItemStack stack) {
         return !stack.isEmpty()

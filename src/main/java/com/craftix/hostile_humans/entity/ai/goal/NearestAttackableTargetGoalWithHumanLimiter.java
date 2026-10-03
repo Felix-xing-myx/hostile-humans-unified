@@ -4,7 +4,6 @@ import com.craftix.hostile_humans.Config;
 import com.craftix.hostile_humans.HumanUtil;
 import com.craftix.hostile_humans.entity.entities.Human;
 import java.util.List;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -77,18 +76,8 @@ extends NearestAttackableTargetGoal<T> {
                 return false;
             }
         }
-        if (usable && !this.mob.getTags().contains("greeted") && Math.random() < (Double)Config.greetChance.get()) {
-            this.mob.addTag("greeted");
-            String name = "";
-            if (this.mob.hasCustomName()) {
-                name = this.mob.getCustomName().getString();
-            }
-            if (name.isEmpty()) {
-                name = "Human";
-            }
-            if (this.target != null) {
-                this.target.sendSystemMessage((Component)Component.literal((String)("<" + name + "> " + HumanUtil.greetings[(int)(Math.random() * (double)HumanUtil.greetings.length)])));
-            }
+        if (usable && this.target instanceof net.minecraft.server.level.ServerPlayer player) {
+            club.someoneice.humangunner.SoldierDialogue.hostile(this.human, player);
         }
         return usable;
     }

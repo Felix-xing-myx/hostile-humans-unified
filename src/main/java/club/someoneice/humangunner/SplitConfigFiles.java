@@ -13,9 +13,10 @@ import java.util.List;
 /** Startup-only storage boundary. Gameplay retains one immutable, merged settings snapshot. */
 final class SplitConfigFiles {
     static final String DIRECTORY = "hostile_humans_unified";
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().serializeNulls().create();
     private record Module(String file, String chinese, String english, List<String> sections) { }
     private static final List<Module> MODULES = List.of(
+            new Module("equipment.json", "四阶生成装备自定义、装备成长与附魔", "Four-rank spawn equipment, growth and enchantments", List.of("equipment_loadouts", "equipment_growth")),
             new Module("tiers.json", "各阶属性、移动、伤害与武器散布", "Tier attributes, movement, damage and weapon accuracy", List.of("tiers")),
             new Module("spawning.json", "自然生成、密度、新手保护与分阶日期", "Natural spawning, density, beginner protection and tier dates", List.of("spawning")),
             new Module("combat.json", "战斗 AI、恢复行为与通用伤害", "Combat AI, recovery and common damage", List.of("damage", "ai")),
@@ -63,18 +64,23 @@ final class SplitConfigFiles {
                     boolean changed = enrich(data, module, defaults);
                     if (changed) writeSafely(path, data, true);
                 } catch (Exception error) {
-                    LogUtils.getLogger().error("Cannot load human config module {}; using legacy/default values for this module without overwriting it", path, error);
+                    LogUtils.getLogger().error("Cannot load human config module {}; leaving it untouched. Recruitment payments are disabled for an invalid recruitment module; other modules use legacy/default values", path, error);
                     data = project(seed, module, defaults);
+                    if (module.sections.contains("recruitment")) rejectPayments(data);
                 }
             } else {
                 data = project(seed, module, defaults);
+                if (!canGenerate && module.sections.contains("recruitment")) rejectPayments(data);
                 if (canGenerate) {
                     try {
                         Files.createDirectories(directory);
                         write(path, data, false);
                     } catch (FileAlreadyExistsException concurrentWriter) {
                         try { data = read(path); }
-                        catch (Exception error) { LogUtils.getLogger().error("Cannot read concurrently created human config {}", path, error); }
+                        catch (Exception error) {
+                            if (module.sections.contains("recruitment")) rejectPayments(data);
+                            LogUtils.getLogger().error("Cannot read concurrently created human config {}", path, error);
+                        }
                     } catch (IOException error) {
                         LogUtils.getLogger().error("Cannot create human config module {}; using in-memory settings", path, error);
                     }
@@ -98,7 +104,7 @@ final class SplitConfigFiles {
     }
 
     private static boolean enrich(JsonObject data, Module module, JsonObject defaults) {
-        boolean changed = false;
+        boolean changed = ConfigSchemaUpgrade.aliases(data, defaults);
         if (!data.has("schema_version")) { data.addProperty("schema_version", 1); changed = true; }
         if (!data.has("_说明_中文")) { data.addProperty("_说明_中文", module.chinese + "。修改后重启生效；本文件优先于旧单文件配置。"); changed = true; }
         if (!data.has("_description_en")) { data.addProperty("_description_en", module.english + ". Restart to apply. This file takes precedence over the legacy single-file config."); changed = true; }
@@ -107,33 +113,19 @@ final class SplitConfigFiles {
                 data.add(section, defaults.get(section).deepCopy());
                 changed = true;
             } else if (data.get(section).isJsonObject()) {
-                changed |= addDescriptions(data.getAsJsonObject(section), defaults.getAsJsonObject(section));
+                changed |= ConfigSchemaUpgrade.fill(data.getAsJsonObject(section), defaults.getAsJsonObject(section), section);
             }
         }
-        // Add genuine new options without filling all legacy tier fields:
-        // inserting modern numeric defaults would override deprecated-but-supported aliases.
-        if (module.sections.contains("spawning") && data.get("spawning").isJsonObject()) {
-            changed |= UnifiedConfig.addMissingSettings(data.getAsJsonObject("spawning"), "progression",
-                    defaults.getAsJsonObject("spawning").getAsJsonObject("progression"));
-        }
-        if (module.sections.contains("better_combat")) {
-            changed |= UnifiedConfig.addMissingSettings(data, "better_combat", defaults.getAsJsonObject("better_combat"));
-        }
+        if (module.sections.contains("equipment_loadouts")) changed |= EquipmentIntegrationDefaults.seed(data);
         return changed;
     }
 
-    private static boolean addDescriptions(JsonObject data, JsonObject defaults) {
-        boolean changed = false;
-        for (var entry : defaults.entrySet()) {
-            String key = entry.getKey();
-            if (key.startsWith("_") && !data.has(key)) {
-                data.add(key, entry.getValue().deepCopy());
-                changed = true;
-            } else if (entry.getValue().isJsonObject() && data.has(key) && data.get(key).isJsonObject()) {
-                changed |= addDescriptions(data.getAsJsonObject(key), entry.getValue().getAsJsonObject());
-            }
-        }
-        return changed;
+    private static void rejectPayments(JsonObject data) {
+        // A broken recruitment document must not quietly charge the default
+        // emerald price. Keep its bytes untouched and disable survival hiring.
+        JsonObject recruitment = UnifiedConfig.object(data, "recruitment");
+        recruitment.add("payment_by_tier", JsonNull.INSTANCE);
+        data.add("recruitment", recruitment);
     }
 
     private static JsonObject readIfPresent(Path path) throws IOException {
@@ -150,7 +142,13 @@ final class SplitConfigFiles {
     }
 
     private static void writeSafely(Path path, JsonObject data, boolean replace) {
-        try { write(path, data, replace); }
+        try {
+            if (replace) {
+                Path backup = path.resolveSibling(path.getFileName() + ".pre-upgrade.bak");
+                if (!Files.exists(backup)) Files.copy(path, backup);
+            }
+            write(path, data, replace);
+        }
         catch (IOException error) { LogUtils.getLogger().warn("Cannot add missing descriptions/options to {}; in-memory settings remain active", path, error); }
     }
 

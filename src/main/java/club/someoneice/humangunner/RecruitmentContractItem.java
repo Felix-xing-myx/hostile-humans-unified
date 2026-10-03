@@ -24,10 +24,13 @@ public final class RecruitmentContractItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        var payment = UnifiedConfig.get().recruitmentCost(tier);
-        tooltip.add((payment == null ? Component.translatable("message.humangunner.hire.invalid_payment")
+        var price = net.minecraftforge.fml.loading.FMLEnvironment.dist == net.minecraftforge.api.distmarker.Dist.CLIENT
+                ? RecruitmentConfigClient.price(tier) : RecruitmentConfigNetwork.serverTooltipPrice(tier);
+        var payment = price == null ? null : price.payment();
+        tooltip.add((price == null ? Component.translatable("item.humangunner.contract.awaiting_server")
+                : payment == null ? Component.translatable("message.humangunner.hire.invalid_payment")
                 : Component.translatable("item.humangunner.contract.payment_tooltip",
-                payment.count(), paymentName(payment), RecruitmentPolicy.limit(tier)))
+                payment.count(), price.name(), price.limit()))
                 .withStyle(ChatFormatting.GRAY));
     }
 
@@ -45,21 +48,18 @@ public final class RecruitmentContractItem extends Item {
         if (human.hasOwner()) return fail(player, "owned");
         if (human.getPersistentData().hasUUID(HumanRelations.TEMP_OWNER)
                 && !HumanRelations.isTemporaryFor(human, player)) return fail(player, "owned");
-        if (RecruitmentLedger.get(serverPlayer.server).count(player.getUUID(), tier) >= RecruitmentPolicy.limit(tier))
+        var terms = RecruitmentConfigNetwork.serverPrice(tier);
+        if (RecruitmentLedger.get(serverPlayer.server).count(player.getUUID(), tier) >= terms.limit())
             return fail(player, "limit");
         if (player.isSpectator()) return InteractionResult.PASS;
         var inventory = player.getInventory();
         if (!player.isCreative()) {
-            var payment = UnifiedConfig.get().recruitmentCost(tier);
-            Item currency = paymentItem(payment);
+            var payment = terms.payment();
+            Item currency = RecruitmentConfigNetwork.currency(payment);
             if (currency == null) return fail(player, "invalid_payment");
-            if (!RecruitmentPayment.pay(false, payment.count(), inventory.items.size(),
-                    slot -> inventory.items.get(slot).is(currency)
-                            ? Math.max(0, inventory.items.get(slot).getCount()
-                            - (inventory.items.get(slot) == stack ? 1 : 0)) : 0,
-                    (slot, count) -> inventory.items.get(slot).shrink(count))) {
+            if (!RecruitmentConfigNetwork.pay(terms, inventory.items, stack)) {
                 player.displayClientMessage(Component.translatable("message.humangunner.hire.payment",
-                        payment.count(), paymentName(payment)).withStyle(ChatFormatting.RED), true);
+                        payment.count(), terms.name()).withStyle(ChatFormatting.RED), true);
                 return InteractionResult.FAIL;
             }
         }
@@ -80,7 +80,7 @@ public final class RecruitmentContractItem extends Item {
         SoldierCombatMode.set(human, SoldierCombatMode.ACTIVE);
         RecruitmentLedger.get(serverPlayer.server).hire(human.getUUID(), player.getUUID(), tier);
         com.craftix.hostile_humans.entity.data.HumanServerData.get().updateOrRegisterHumanMob(human);
-        player.displayClientMessage(Component.translatable("message.humangunner.hired"), false);
+        SoldierDialogue.hired(serverPlayer, human);
         HumanCommandNetwork.openFor(serverPlayer, human);
         return InteractionResult.CONSUME;
     }
@@ -91,17 +91,4 @@ public final class RecruitmentContractItem extends Item {
         return InteractionResult.CONSUME;
     }
 
-    private static Item paymentItem(UnifiedConfig.RecruitmentCost payment) {
-        if (payment == null) return null;
-        var id = net.minecraft.resources.ResourceLocation.tryParse(payment.itemId());
-        var registry = net.minecraft.core.registries.BuiltInRegistries.ITEM;
-        if (id == null || !registry.containsKey(id)) return null;
-        Item item = registry.get(id);
-        return item == net.minecraft.world.item.Items.AIR ? null : item;
-    }
-
-    private static Component paymentName(UnifiedConfig.RecruitmentCost payment) {
-        Item item = paymentItem(payment);
-        return item == null ? Component.literal(payment.itemId()) : item.getDescription();
-    }
 }

@@ -32,6 +32,7 @@ public final class ShieldEnchantmentRoll {
 
     /** Applies exactly one tier-scaled durability roll to this physical stack. */
     public static void applyToShield(Human human, ItemStack shield) {
+        if (!ConfiguredHumanEquipment.of(human).shieldEnchantments) return;
         if (!SpartanEquipmentCompat.isShield(shield)
                 || (shield.hasTag() && shield.getTag().getBoolean(STACK_ROLLED))) {
             return;

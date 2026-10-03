@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.5.5'
+version = '3.6.0'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -146,6 +146,37 @@ tasks.register('soldierCombatModeTest', JavaExec) {
     mainClass = 'club.someoneice.humangunner.SoldierCombatModeTest'
 }
 tasks.named('check').configure { dependsOn tasks.named('soldierCombatModeTest') }
+
+tasks.register('recruitmentTermsTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.RecruitmentTermsTest'
+}
+tasks.named('check').configure { dependsOn tasks.named('recruitmentTermsTest') }
+
+tasks.register('pickupPolicyWiringTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.PickupPolicyWiringTest'
+}
+tasks.named('check').configure { dependsOn tasks.named('pickupPolicyWiringTest') }
+
+tasks.register('defensiveBehaviorTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.DefensiveBehaviorTest'
+}
+tasks.named('check').configure { dependsOn tasks.named('defensiveBehaviorTest') }
+
+// Regression checks for inventory custody, save codecs, and removed artifact entries.
+tasks.register('maintenanceRefactorTest', JavaExec) {
+    dependsOn tasks.named('testClasses'), tasks.named('reobfJar')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.MaintenanceRefactorTest'
+    args tasks.named('jar', Jar).get().archiveFile.get().asFile.absolutePath
+}
+
+tasks.named('check').configure { dependsOn tasks.named('maintenanceRefactorTest') }
 
 // Explicit maintenance action; never runs during build/check.
 tasks.register('sanitizeStructureWaystones', JavaExec) {

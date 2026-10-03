@@ -15,13 +15,14 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 /**
- * Exact per-owned-item death rolls, independent of the base mod's drop path:
+ * Hired humans return all owned stacks. Wild humans retain their per-item rolls:
  * guns 1% (configurable), equipment 5%, and all other carried supplies 20%.
  */
 final class HumanEquipmentDrops {
     private static final double EQUIPMENT_DROP_CHANCE = 0.05D;
     private static final double SUPPLY_DROP_CHANCE = 0.20D;
-    private static final Map<Human, List<ItemStack>> PRE_DEATH_SNAPSHOTS =
+    private record DeathInventory(List<ItemStack> stacks, boolean hired) {}
+    private static final Map<Human, DeathInventory> PRE_DEATH_SNAPSHOTS =
             Collections.synchronizedMap(new WeakHashMap<>());
 
     private HumanEquipmentDrops() {
@@ -29,7 +30,7 @@ final class HumanEquipmentDrops {
 
     /** Capture ownership before the base mod mutates and clears equipment. */
     static void captureBeforeDeath(Human human) {
-        PRE_DEATH_SNAPSHOTS.put(human, collectOwned(human));
+        PRE_DEATH_SNAPSHOTS.put(human, new DeathInventory(collectOwned(human), human.hasOwner()));
         // The entity is committed to death at this point (totem cancellation
         // has already returned). Suppress the base equipment-roll producer as
         // a first line of defence; LivingDrops cleanup below is still required
@@ -43,11 +44,12 @@ final class HumanEquipmentDrops {
     static void rebuildOwnedDrops(
             Human human, Collection<ItemEntity> drops, double gunDropChance
     ) {
-        List<ItemStack> owned = PRE_DEATH_SNAPSHOTS.remove(human);
-        if (owned == null) {
+        DeathInventory snapshot = PRE_DEATH_SNAPSHOTS.remove(human);
+        if (snapshot == null) {
             // Defensive fallback for non-standard death paths.
-            owned = collectOwned(human);
+            snapshot = new DeathInventory(collectOwned(human), human.hasOwner());
         }
+        List<ItemStack> owned = snapshot.stacks();
 
         // Hostile Humans changes durability, spawns each equipped stack and
         // clears the slot before LivingDropsEvent. Exact NBT comparison alone
@@ -58,10 +60,12 @@ final class HumanEquipmentDrops {
 
         for (ItemStack stack : owned) {
             double chance = dropChance(stack, gunDropChance);
-            int kept = 0;
-            for (int unit = 0; unit < stack.getCount(); unit++) {
-                if (human.getRandom().nextDouble() < chance) {
-                    kept++;
+            int kept = snapshot.hired() ? stack.getCount() : 0;
+            if (!snapshot.hired()) {
+                for (int unit = 0; unit < stack.getCount(); unit++) {
+                    if (human.getRandom().nextDouble() < chance) {
+                        kept++;
+                    }
                 }
             }
             if (kept <= 0) {

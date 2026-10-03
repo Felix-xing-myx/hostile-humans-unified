@@ -11,7 +11,6 @@ import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
-import java.util.Locale;
 import java.util.function.Supplier;
 
 /** Small validated channel for the hired-soldier command screen. */
@@ -129,10 +128,7 @@ public final class HumanCommandNetwork {
                 // The short-lived screen session is not: expiry or another
                 // menu opening must not silently discard an owner command.
                 SoldierOrder.set(human, packet.order);
-                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                        "message.humangunner.order.changed",
-                        net.minecraft.network.chat.Component.translatable(
-                                "screen.humangunner.soldier." + packet.order.name().toLowerCase(Locale.ROOT))), false);
+                SoldierCommandFeedback.order(player, human, packet.order);
             });
             context.setPacketHandled(true);
         }
@@ -156,11 +152,7 @@ public final class HumanCommandNetwork {
                 Human human = ownedHumanForCommand(player, packet.entityId);
                 if (human == null) return;
                 SoldierCombatMode.set(human, packet.mode);
-                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                        "message.humangunner.combat_mode.changed",
-                        net.minecraft.network.chat.Component.translatable(
-                                "screen.humangunner.soldier.combat."
-                                        + packet.mode.name().toLowerCase(Locale.ROOT))), false);
+                SoldierCommandFeedback.combat(player, human, packet.mode);
             });
             context.setPacketHandled(true);
         }
@@ -184,11 +176,7 @@ public final class HumanCommandNetwork {
                 Human human = ownedHumanForCommand(player, packet.entityId);
                 if (human == null) return;
                 SoldierPickupPolicy.set(human, packet.enabled);
-                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                        "message.humangunner.pickup.changed",
-                        net.minecraft.network.chat.Component.translatable(packet.enabled
-                                ? "screen.humangunner.soldier.pickup.enabled"
-                                : "screen.humangunner.soldier.pickup.disabled")), false);
+                SoldierCommandFeedback.pickup(player, human, packet.enabled);
             });
             context.setPacketHandled(true);
         }

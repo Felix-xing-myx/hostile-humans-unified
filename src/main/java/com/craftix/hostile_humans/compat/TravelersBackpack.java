@@ -12,6 +12,9 @@ import top.theillusivec4.curios.api.type.inventory.ICurioStacksHandler;
 
 public class TravelersBackpack {
     private static final String BACK_SLOT = "back";
+    // Item registration is fixed for the loaded mod set. Share this registry-only
+    // catalog across spawns; never scan the complete item registry for every human.
+    private static volatile List<Item> backpackItems;
 
     public static void apply(LivingEntity living) {
         if (living.getRandom().nextInt(0, 3) != 0) {
@@ -33,15 +36,20 @@ public class TravelersBackpack {
     }
 
     private static ItemStack pickBackpack(LivingEntity living) {
-        List<Item> entries = net.minecraftforge.registries.ForgeRegistries.ITEMS.getEntries().stream()
-                .filter(e -> e.getKey().location().getNamespace().equals("travelersbackpack"))
-                .filter(e -> e.getKey().location().getPath().endsWith("_travelers_backpack"))
-                .map(java.util.Map.Entry::getValue).toList();
+        List<Item> entries = backpackItems;
+        if (entries == null) {
+            entries = net.minecraftforge.registries.ForgeRegistries.ITEMS.getEntries().stream()
+                    .filter(e -> e.getKey().location().getNamespace().equals("travelersbackpack"))
+                    .filter(e -> e.getKey().location().getPath().endsWith("_travelers_backpack"))
+                    .map(java.util.Map.Entry::getValue).toList();
+            backpackItems = entries;
+        }
         if (entries.isEmpty()) {
             return ItemStack.EMPTY;
         }
-        ItemStack standardBackpack = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(
-                new net.minecraft.resources.ResourceLocation("travelersbackpack", "standard")).getDefaultInstance();
+        Item standard = net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(
+                new net.minecraft.resources.ResourceLocation("travelersbackpack", "standard"));
+        ItemStack standardBackpack = standard == null ? ItemStack.EMPTY : standard.getDefaultInstance();
         for (int attempt = 0; attempt < 8; ++attempt) {
             ItemStack backpack = ((Item)entries.get(living.getRandom().nextInt(entries.size()))).getDefaultInstance();
             String itemPath = TravelersBackpack.getItemPath(backpack);

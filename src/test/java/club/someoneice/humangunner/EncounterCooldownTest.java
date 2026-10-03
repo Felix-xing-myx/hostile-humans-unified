@@ -15,6 +15,7 @@ public final class EncounterCooldownTest {
         System.out.println("PASS: identity badge hostile/neutral/friendly matrix");
         int[] costs = {8, 24, 72, 216}, limits = {12, 10, 6, 3}, waves = {5, 4, 3, 2};
         UnifiedConfig defaultConfig = new UnifiedConfig(new JsonObject());
+        checkRoamerAdmission(defaultConfig);
         NaturalSpawnProgression progression = defaultConfig.spawn().progression();
         int[] firstDays = {3, 5, 10, 20};
         for (int tier = 0; tier < 4; tier++) {
@@ -35,24 +36,62 @@ public final class EncounterCooldownTest {
         check(!progression.allowsTier(Long.MAX_VALUE, -1), "invalid tier rejected");
         check(NaturalSpawnProgression.dayAt(-100L) == 1L, "negative calendar clamped to day one");
 
-        ProgressionClock calendar = new ProgressionClock(0L);
-        check(calendar.ticksAt(24000L) == 24000L, "default follows Overworld calendar including sleep");
-        calendar.setDay(3, 90000L);
-        check(calendar.ticksAt(90000L) == 48000L, "set changes only offset to requested day start");
-        check(calendar.ticksAt(114000L) == 72000L, "sleep advances adjusted calendar too");
-        calendar.addDays(2, 114100L);
-        check(calendar.ticksAt(114100L) == 120100L, "add preserves within-day time");
-        check(new ProgressionClock(calendar.savedOffset()).ticksAt(114100L) == 120100L,
-                "saved offset survives reload");
-        calendar.addDays(-100, 114100L);
-        check(calendar.ticksAt(114100L) == 0L, "negative add clamps to day one");
-        calendar.syncFromOverworld();
-        check(calendar.ticksAt(114100L) == 114100L, "sync clears offset");
-        check(new ProgressionClock(100L).ticksAt(Long.MAX_VALUE) == Long.MAX_VALUE,
-                "calendar addition cannot overflow");
-        System.out.println("PASS: tier opening dates, safety override, saved calendar offset and sleeping");
+        check(ProgressionClock.addClamped(23900L, 200L) == 24100L, "online batch advances across day boundary");
+        check(ProgressionClock.addClamped(24100L, -24000L) == 100L, "day adjustment preserves fraction");
+        check(ProgressionClock.addClamped(100L, -24000L) == 0L, "negative adjustment clamps to day one");
+        check(ProgressionClock.addClamped(Long.MAX_VALUE - 100L, 200L) == Long.MAX_VALUE,
+                "online clock cannot overflow");
+        net.minecraft.nbt.CompoundTag saved = new net.minecraft.nbt.CompoundTag();
+        net.minecraft.nbt.CompoundTag players = new net.minecraft.nbt.CompoundTag();
+        String first = java.util.UUID.randomUUID().toString(), second = java.util.UUID.randomUUID().toString();
+        players.putLong(first, 48000L);
+        players.putLong(second, 0L);
+        players.putLong("invalid-id", 90000L);
+        saved.put("players", players);
+        var restored = PlayerProgressionData.load(saved).save(new net.minecraft.nbt.CompoundTag()).getCompound("players");
+        check(restored.getLong(first) == 48000L && restored.getLong(second) == 0L,
+                "personal online dates persist independently");
+        check(!restored.contains("invalid-id"), "invalid saved player IDs ignored");
+        PlayerProgressionData online = PlayerProgressionData.load(saved);
+        java.util.UUID firstId = java.util.UUID.fromString(first), secondId = java.util.UUID.fromString(second);
+        online.settle(firstId, 1000L);
+        online.settle(firstId, 1200L);
+        online.settle(secondId, 1100L);
+        online.settle(secondId, 1200L);
+        var counted = online.save(new net.minecraft.nbt.CompoundTag());
+        check(counted.getCompound("players").getLong(first) == 48200L
+                        && counted.getCompound("players").getLong(second) == 100L,
+                "different login times accumulate independently");
+        online = PlayerProgressionData.load(counted);
+        online.settle(firstId, 50000L);
+        check(online.save(new net.minecraft.nbt.CompoundTag()).getCompound("players").getLong(first) == 48200L,
+                "offline interval and server restart are not counted");
+        online.settle(firstId, 50200L);
+        check(online.save(new net.minecraft.nbt.CompoundTag()).getCompound("players").getLong(first) == 48400L,
+                "reconnected session continues saved progress");
+        System.out.println("PASS: rank dates, safety override and persistent personal online clocks");
+        SoldierChatBudget chatterBudget = new SoldierChatBudget();
+        int simultaneous = 0;
+        for (int i = 0; i < 100; i++) {
+            if (chatterBudget.allow(0L, 1200, 6000, 3)) simultaneous++;
+        }
+        check(simultaneous == 1, "one owner cannot receive simultaneous squad chatter");
+        check(!chatterBudget.allow(1199L, 1200, 6000, 3), "shared chatter minimum interval");
+        check(chatterBudget.allow(1200L, 1200, 6000, 3)
+                && chatterBudget.allow(2400L, 1200, 6000, 3), "configured chatter quota admitted");
+        check(!chatterBudget.allow(3600L, 1200, 6000, 3), "rolling chatter maximum enforced");
+        check(chatterBudget.allow(6000L, 1200, 6000, 3), "old chatter expires from rolling window");
+        check(new SoldierChatBudget().allow(0L, 1200, 6000, 3), "different owners have independent budgets");
+        check(!new SoldierChatBudget().allow(0L, 1200, 6000, 0), "zero quota disables ordinary chatter");
+        SoldierChatBudget reportsBudget = new SoldierChatBudget();
+        for (int i = 0; i < 6; i++) {
+            check(reportsBudget.allow(i * 100L, 100, 1200, 6), "report quota");
+        }
+        check(!reportsBudget.allow(600L, 100, 1200, 6), "important reports also have a rolling maximum");
+        check(reportsBudget.allow(1200L, 100, 1200, 6), "report quota recovers");
+        System.out.println("PASS: shared owner chatter/report rolling limits and independent quotas");
         for (int tier = 0; tier < 4; tier++) {
-            check(RecruitmentPolicy.cost(tier) == costs[tier], "recruitment cost");
+            check(defaultConfig.recruitmentCost(tier).count() == costs[tier], "recruitment cost");
             check(RecruitmentPolicy.limit(tier, defaultConfig) == limits[tier], "follower cap");
             check(RecruitmentPolicy.waveSize(tier) == waves[tier], "wave size");
         }
@@ -127,14 +166,14 @@ public final class EncounterCooldownTest {
         }
         System.out.println("PASS: strict 96-block horizontal distance and 16-block spherical light buffer");
         EncounterCooldown clock = new EncounterCooldown();
-        Object first = new Object(), second = new Object();
+        Object firstSquad = new Object(), secondSquad = new Object();
         check(!clock.cooling(100), "failed/no attempts must not start cooldown");
-        for (int i = 0; i < 5; i++) check(clock.join(100, first, 5), "same squad member " + i);
-        check(!clock.join(100, first, 5), "sixth member must be denied");
-        check(!clock.join(100, second, 5), "second squad in same tick must be denied");
-        check(!clock.join(101, first, 5), "token reuse on later tick must be denied");
-        check(!clock.join(2499, second, 5), "cooldown must last full 2400 ticks");
-        check(clock.join(2500, second, 5), "new squad at exact cooldown expiry");
+        for (int i = 0; i < 5; i++) check(clock.join(100, firstSquad, 5), "same squad member " + i);
+        check(!clock.join(100, firstSquad, 5), "sixth member must be denied");
+        check(!clock.join(100, secondSquad, 5), "second squad in same tick must be denied");
+        check(!clock.join(101, firstSquad, 5), "token reuse on later tick must be denied");
+        check(!clock.join(2499, secondSquad, 5), "cooldown must last full 2400 ticks");
+        check(clock.join(2500, secondSquad, 5), "new squad at exact cooldown expiry");
         EncounterCooldown concurrentClock = new EncounterCooldown();
         Object concurrentBatch = new Object();
         var workers = java.util.concurrent.Executors.newFixedThreadPool(8);
@@ -166,5 +205,48 @@ public final class EncounterCooldownTest {
 
     private static void check(boolean value, String message) {
         if (!value) throw new AssertionError(message);
+    }
+
+    private static void checkRoamerAdmission(UnifiedConfig config) {
+        double roamer = NaturalHumanSpawnRules.admissionChance(config.spawn().admissionChance(),
+                config.tier("roamer").spawnMultiplier());
+        double tier1 = NaturalHumanSpawnRules.admissionChance(config.spawn().admissionChance(),
+                config.tier("tier1").spawnMultiplier());
+        check(roamer == .08 && roamer == tier1, "no hidden roamer 1/200 gate");
+        check(NaturalHumanSpawnRules.admissionChance(.08, .005) == .0004,
+                "fractional per-tier multipliers remain supported");
+        check(NaturalHumanSpawnRules.admissionChance(.08, 0) == 0
+                        && NaturalHumanSpawnRules.admissionChance(.08, 100) == 1,
+                "disabled and saturated admission limits");
+        JsonObject oldConfig = new JsonObject();
+        JsonObject oldSpawning = new JsonObject();
+        oldSpawning.addProperty("roamer_legacy_roll", 200);
+        oldConfig.add("spawning", oldSpawning);
+        UnifiedConfig retained = new UnifiedConfig(oldConfig);
+        check(NaturalHumanSpawnRules.admissionChance(retained.spawn().admissionChance(),
+                        retained.tier("roamer").spawnMultiplier()) == roamer,
+                "retained obsolete config cannot reintroduce the roamer gate");
+        int roamerWeight = 0, tier1Weight = 0, roamerEntries = 0;
+        for (String resource : new String[]{
+                "/data/hostile_humans/forge/biome_modifier/human_spawns.json",
+                "/data/humangunner/forge/biome_modifier/human_squad_spawns.json"}) {
+            try (var reader = new java.io.InputStreamReader(
+                    java.util.Objects.requireNonNull(EncounterCooldownTest.class.getResourceAsStream(resource)),
+                    java.nio.charset.StandardCharsets.UTF_8)) {
+                var spawners = com.google.gson.JsonParser.parseReader(reader).getAsJsonObject().getAsJsonArray("spawners");
+                for (var element : spawners) {
+                    var row = element.getAsJsonObject();
+                    String type = row.get("type").getAsString();
+                    if (type.equals("hostile_humans:human_roamer")) {
+                        roamerEntries++;
+                        roamerWeight += row.get("weight").getAsInt();
+                        check(row.get("minCount").getAsInt() == 1 && row.get("maxCount").getAsInt() == 1,
+                                "roamers stay solitary");
+                    } else if (type.equals("hostile_humans:human_tier1")) tier1Weight += row.get("weight").getAsInt();
+                }
+            } catch (java.io.IOException error) { throw new AssertionError("Cannot inspect spawn resources", error); }
+        }
+        check(roamerEntries == 1 && roamerWeight == 10 && tier1Weight == 3,
+                "single roamer entry retains higher selection weight than tier one");
     }
 }

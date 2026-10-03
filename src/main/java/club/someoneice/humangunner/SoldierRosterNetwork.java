@@ -352,13 +352,16 @@ final class SoldierRosterNetwork {
                     SoldierOrder[] values = SoldierOrder.values();
                     if (packet.value < 0 || packet.value >= values.length) return;
                     SoldierOrder.set(live, values[packet.value]);
+                    SoldierCommandFeedback.order(player, live, values[packet.value]);
                 } else if (packet.action == 5) {
                     SoldierCombatMode[] values = SoldierCombatMode.values();
                     if (packet.value < 0 || packet.value >= values.length) return;
                     SoldierCombatMode.set(live, values[packet.value]);
+                    SoldierCommandFeedback.combat(player, live, values[packet.value]);
                 } else {
                     if (packet.value != 0 && packet.value != 1) return;
                     SoldierPickupPolicy.set(live, packet.value == 1);
+                    SoldierCommandFeedback.pickup(player, live, packet.value == 1);
                 }
                 HumanServerData data = HumanServerData.get();
                 if (data != null) data.updateOrRegisterHumanMob(live);

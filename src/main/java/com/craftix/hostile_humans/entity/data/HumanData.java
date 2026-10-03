@@ -4,7 +4,7 @@ import com.craftix.hostile_humans.entity.AggressionMode;
 import com.craftix.hostile_humans.entity.HumanEntity;
 import com.craftix.hostile_humans.entity.data.HumanHelper;
 import com.craftix.hostile_humans.entity.data.HumanServerData;
-import com.craftix.hostile_humans.patch.HostileHumansEquipmentPatch;
+import club.someoneice.humangunner.HumanInventoryCustody;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import net.minecraft.core.BlockPos;
@@ -189,7 +189,7 @@ public class HumanData {
 
     public boolean storeInventoryItem(ItemStack itemStack) {
         if (!club.someoneice.humangunner.HumanGunAcceptance.accepts(itemStack)) return false;
-        return HostileHumansEquipmentPatch.storePickupTransactionally(this, itemStack);
+        return HumanInventoryCustody.storePickupTransactionally(this, itemStack);
     }
 
     public void load(HumanEntity humanMob) {

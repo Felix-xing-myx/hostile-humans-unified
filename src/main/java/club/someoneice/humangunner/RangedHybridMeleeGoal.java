@@ -22,6 +22,7 @@ public final class RangedHybridMeleeGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (human.isFleeing) return false;
         if (RangedWeaponCustody.isActive(human) && human.getMainHandItem().isEmpty()
                 && isValidTarget(human.getTarget())) HumanLootManager.equipMeleeFallback(human);
         return RangedWeaponCustody.isActive(human)
@@ -37,6 +38,8 @@ public final class RangedHybridMeleeGoal extends Goal {
 
     @Override
     public void start() {
+        if (human.getTarget() != null && human.distanceToSqr(human.getTarget()) <= 16)
+            SoldierDialogue.event(human, "melee_switch");
         attackCooldown = 0;
         pathCooldown = 0;
         // A bow/crossbow orbit can have issued movement later in the same
@@ -49,7 +52,7 @@ public final class RangedHybridMeleeGoal extends Goal {
 
     @Override
     public void stop() {
-        human.getNavigation().stop();
+        if (!human.isFleeing) human.getNavigation().stop();
         human.setAggressive(false);
         // Never clear Human#getTarget here: reaching the six-block return
         // threshold must hand the same target directly back to bow/crossbow AI.

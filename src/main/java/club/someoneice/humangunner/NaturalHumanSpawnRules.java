@@ -33,7 +33,7 @@ public final class NaturalHumanSpawnRules {
     }
 
     /**
-     * Tier squads are selected by biome weight, then admitted at eight percent,
+     * All ranks are selected by biome weight, then admitted at eight percent,
      * further reduced by nearby human density. One cached decision is shared by the nearby members of
      * the same vanilla pack so a successful 2-5 member squad is not thinned to
      * eight percent member-by-member.
@@ -48,42 +48,18 @@ public final class NaturalHumanSpawnRules {
         if (!isNaturalAttempt(spawnType)) {
             return Mob.checkMobSpawnRules(type, level, spawnType, pos, random);
         }
-        if (!UnifiedConfig.get().spawn().enabled() || !isTierUnlocked(level, tier(type))) return false;
+        if (!UnifiedConfig.get().spawn().enabled() || !isTierUnlocked(level, pos, tier(type))) return false;
         if (!isUnlitLand(level, pos) || !Mob.checkMobSpawnRules(type, level, spawnType, pos, random)) {
             return false;
         }
-        return packDecision(type, level, pos, random, false);
-    }
-
-    /**
-     * The original roamer entry already carried a 1/200 roll. Preserve it,
-     * remove the old daylight-only requirement, and admit eight percent of
-     * those otherwise valid attempts, with additional local density suppression.
-     * Large battles keep their original predicate and use a separate post-filter.
-     */
-    public static <T extends Mob> boolean checkLegacySpawn(
-            EntityType<T> type,
-            ServerLevelAccessor level,
-            MobSpawnType spawnType,
-            BlockPos pos,
-            RandomSource random
-    ) {
-        if (!isNaturalAttempt(spawnType)) {
-            return Mob.checkMobSpawnRules(type, level, spawnType, pos, random);
-        }
-        if (!UnifiedConfig.get().spawn().enabled() || !isTierUnlocked(level, tier(type))) return false;
-        if (!isUnlitLand(level, pos) || !Mob.checkMobSpawnRules(type, level, spawnType, pos, random)) {
-            return false;
-        }
-        return packDecision(type, level, pos, random, true);
+        return packDecision(type, level, pos, random);
     }
 
     private static boolean packDecision(
             EntityType<?> type,
             ServerLevelAccessor level,
             BlockPos pos,
-            RandomSource random,
-            boolean includeLegacyRoll
+            RandomSource random
     ) {
         var config = UnifiedConfig.get().spawn();
         long gameTime = level.getLevel().getGameTime();
@@ -97,8 +73,7 @@ public final class NaturalHumanSpawnRules {
         // No world/entity/light query may hold the cross-dimension cache lock.
         // Failed rolls remain cheap; racing pack attempts use the first published
         // complete decision and still validate their own final position.
-        boolean allowed = (!includeLegacyRoll || random.nextInt(config.legacyRoll()) == 0)
-                && random.nextDouble() < config.admissionChance() * tierMultiplier(type)
+        boolean allowed = random.nextDouble() < admissionChance(config.admissionChance(), tierMultiplier(type))
                 && passesDensityCheck(level, pos, random) && isSafePosition(level, pos);
         synchronized (PACK_DECISIONS) {
             var byType = PACK_DECISIONS.computeIfAbsent(level.getLevel(), ignored -> new HashMap<>());
@@ -111,6 +86,11 @@ public final class NaturalHumanSpawnRules {
         return previous.allowed && isSafePosition(level, pos);
     }
 
+    /** Shared rank-independent roll; no hidden extra roamer probability gate. */
+    static double admissionChance(double globalChance, double tierMultiplier) {
+        return Math.max(0, Math.min(1, globalChance * tierMultiplier));
+    }
+
     private static boolean samePack(PackDecision decision, long time, BlockPos pos) {
         return decision != null && decision.gameTime == time
                 && decision.origin.distManhattan(pos) <= PACK_DECISION_RADIUS;
@@ -121,7 +101,7 @@ public final class NaturalHumanSpawnRules {
                                                 BlockPos pos, RandomSource random) {
         if (!isNaturalAttempt(spawnType)) return true;
         var config = UnifiedConfig.get().spawn();
-        if (!config.enabled() || !isBattleUnlocked(level)) return false;
+        if (!config.enabled() || !isBattleUnlocked(level, pos)) return false;
         long now = level.getLevel().getGameTime();
         if (clock(level).cooling(now)) return false;
         boolean allowed = random.nextDouble() < config.battleChance()
@@ -145,7 +125,7 @@ public final class NaturalHumanSpawnRules {
             Map<EntityType<?>, PackDecision> decisions = PACK_DECISIONS.get(level);
             decision = decisions == null ? null : decisions.get(mob.getType());
         }
-        if (!isTierUnlocked(level, tier(mob.getType()))
+        if (!isTierUnlocked(level, mob.blockPosition(), tier(mob.getType()))
                 || decision == null || !decision.allowed || decision.gameTime != now
                 || decision.origin.distManhattan(mob.blockPosition()) > PACK_DECISION_RADIUS
                 || !isSafePosition(level, mob.blockPosition())
@@ -156,7 +136,7 @@ public final class NaturalHumanSpawnRules {
     }
 
     public static boolean beginBattle(ServerLevel level, BlockPos pos) {
-        if (!UnifiedConfig.get().spawn().enabled() || !isBattleUnlocked(level)
+        if (!UnifiedConfig.get().spawn().enabled() || !isBattleUnlocked(level, pos)
                 || clock(level).cooling(level.getGameTime())
                 || ACTIVE_BATTLES.containsKey(level) || !isSafePosition(level, pos)) return false;
         ACTIVE_BATTLES.put(level, new Object());
@@ -171,6 +151,10 @@ public final class NaturalHumanSpawnRules {
 
     public static void endBattle(ServerLevel level) {
         ACTIVE_BATTLES.remove(level);
+    }
+
+    public static boolean isAutomaticBattleMember(ServerLevel level) {
+        return ACTIVE_BATTLES.containsKey(level);
     }
 
     private static EncounterCooldown clock(ServerLevelAccessor level) {
@@ -193,16 +177,18 @@ public final class NaturalHumanSpawnRules {
                 : type == ModEntityType.HUMAN1.get() ? 1 : 0;
     }
 
-    public static boolean isTierUnlocked(ServerLevelAccessor level, int tier) {
+    public static boolean isTierUnlocked(ServerLevelAccessor level, BlockPos pos, int tier) {
         var progression = UnifiedConfig.get().spawn().progression();
-        return !progression.enabled() || progression.allowsTier(
-                WorldProgressionData.time(level.getLevel().getServer()), tier);
+        if (!progression.enabled()) return true;
+        long time = PlayerProgressionData.timeNear(level, pos);
+        return time >= 0 && progression.allowsTier(time, tier);
     }
 
-    private static boolean isBattleUnlocked(ServerLevelAccessor level) {
+    private static boolean isBattleUnlocked(ServerLevelAccessor level, BlockPos pos) {
         var progression = UnifiedConfig.get().spawn().progression();
-        return !progression.enabled() || progression.allowsBattle(
-                WorldProgressionData.time(level.getLevel().getServer()));
+        if (!progression.enabled()) return true;
+        long time = PlayerProgressionData.timeNear(level, pos);
+        return time >= 0 && progression.allowsBattle(time);
     }
 
     /** Check every member's final position; sky light does not count as block light. */

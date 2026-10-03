@@ -10,6 +10,29 @@ public final class RuntimePoliciesTest {
         if (!condition) throw new AssertionError("check " + checks);
     }
     public static void main(String[] args) {
+        for (int i = 1; i < 100; i++) {
+            double reach = i / 100.0D;
+            check(MeleeSpacingPolicy.preferred(reach) > 0 && MeleeSpacingPolicy.preferred(reach) < reach);
+            check(MeleeSpacingPolicy.tooClose(reach) > 0
+                    && MeleeSpacingPolicy.tooClose(reach) < MeleeSpacingPolicy.preferred(reach));
+        }
+        MeleePursuitProgress pursuit = new MeleePursuitProgress();
+        for (int tick = 0; tick < 30; tick++) check(!pursuit.stalled(tick, 1, 0, 0, 0, true));
+        check(pursuit.stalled(30, 1, 0, 0, 0, true));
+        for (int tick = 31; tick < 60; tick++) check(!pursuit.stalled(tick, 1, 0, 0, 0, true));
+        check(pursuit.stalled(60, 1, 0, 0, 0, true));
+        // Repeated path replacement cannot reset observation of stationary feet.
+        check(!pursuit.stalled(61, 2, 0, 0, 0, true));
+        check(!pursuit.stalled(90, 2, 0, 0, 0, true));
+        check(pursuit.stalled(91, 2, 0, 0, 0, true));
+        check(!pursuit.stalled(92, 2, 0, 0, 0, false)); // legal in-reach pause or hold order
+        check(!pursuit.stalled(120, 2, 0, 0, 0, true));
+        check(!pursuit.stalled(121, 2, 0.31, 0, 0, true)); // real movement resets the timer
+        check(!pursuit.stalled(150, 2, 0.31, 0, 0, true));
+        check(pursuit.stalled(151, 2, 0.31, 0, 0, true));
+        check(!pursuit.stalled(1, 2, 0.31, 0, 0, true)); // tick reset
+        for (int tick = 2; tick < 300; tick++)
+            check(!pursuit.stalled(tick, 2, tick * 0.105D, 0, 0, true)); // ordinary walking
         for (int i = 100; i <= 1800; i++) {
             double reach = i / 100.0D;
             check(MeleeSpacingPolicy.preferred(reach) < reach);

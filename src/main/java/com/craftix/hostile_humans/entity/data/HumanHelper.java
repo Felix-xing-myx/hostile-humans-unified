@@ -6,91 +6,53 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 
-public class HumanHelper {
-    public static CompoundTag saveArmorItems(CompoundTag compoundTag, NonNullList<ItemStack> armor) {
-        ListTag listTag = new ListTag();
-        for (int i = 0; i < armor.size(); ++i) {
-            ItemStack itemStack = (ItemStack)armor.get(i);
-            if (itemStack.isEmpty()) continue;
-            CompoundTag compoundTagSlot = new CompoundTag();
-            compoundTagSlot.putByte("Slot", (byte)i);
-            itemStack.save(compoundTagSlot);
-            listTag.add(compoundTagSlot);
-        }
-        if (!listTag.isEmpty()) {
-            compoundTag.put("Armor", (Tag)listTag);
-        }
-        return compoundTag;
+/** Shared inventory codec. Existing save keys and unsigned byte slot IDs are preserved. */
+public final class HumanHelper {
+    private HumanHelper() { }
+
+    public static CompoundTag saveArmorItems(CompoundTag tag, NonNullList<ItemStack> items) {
+        return saveItems(tag, "Armor", items);
+    }
+    public static CompoundTag saveInventoryItems(CompoundTag tag, NonNullList<ItemStack> items) {
+        return saveItems(tag, "Inventory", items);
+    }
+    public static CompoundTag saveHandItems(CompoundTag tag, NonNullList<ItemStack> items) {
+        return saveItems(tag, "Hand", items);
+    }
+    public static void loadArmorItems(CompoundTag tag, NonNullList<ItemStack> items) {
+        loadItems(tag, "Armor", items);
+    }
+    public static void loadInventoryItems(CompoundTag tag, NonNullList<ItemStack> items) {
+        loadItems(tag, "Inventory", items);
+    }
+    public static void loadHandItems(CompoundTag tag, NonNullList<ItemStack> items) {
+        loadItems(tag, "Hand", items);
     }
 
-    public static void loadArmorItems(CompoundTag compoundTag, NonNullList<ItemStack> armor) {
-        HumanHelper.resetNonNullList(armor);
-        ListTag listTag = compoundTag.getList("Armor", 10);
-        for (int i = 0; i < listTag.size(); ++i) {
-            CompoundTag compoundTagSlot = listTag.getCompound(i);
-            int index = compoundTagSlot.getByte("Slot") & 0xFF;
-            if (index < 0 || index >= armor.size()) continue;
-            armor.set(index, ItemStack.of((CompoundTag)compoundTagSlot));
+    private static CompoundTag saveItems(CompoundTag tag, String key, NonNullList<ItemStack> items) {
+        ListTag list = new ListTag();
+        for (int slot = 0; slot < items.size(); slot++) {
+            ItemStack stack = items.get(slot);
+            if (stack.isEmpty()) continue;
+            CompoundTag entry = new CompoundTag();
+            entry.putByte("Slot", (byte) slot);
+            stack.save(entry);
+            list.add(entry);
         }
+        // A reused tag must not retain yesterday's equipment after all slots
+        // were emptied, or the next load would resurrect removed/broken items.
+        if (list.isEmpty()) tag.remove(key);
+        else tag.put(key, list);
+        return tag;
     }
 
-    public static CompoundTag saveInventoryItems(CompoundTag compoundTag, NonNullList<ItemStack> inventory) {
-        ListTag listTag = new ListTag();
-        for (int i = 0; i < inventory.size(); ++i) {
-            ItemStack itemStack = (ItemStack)inventory.get(i);
-            if (itemStack.isEmpty()) continue;
-            CompoundTag compoundTagSlot = new CompoundTag();
-            compoundTagSlot.putByte("Slot", (byte)i);
-            itemStack.save(compoundTagSlot);
-            listTag.add(compoundTagSlot);
-        }
-        if (!listTag.isEmpty()) {
-            compoundTag.put("Inventory", (Tag)listTag);
-        }
-        return compoundTag;
-    }
-
-    public static void loadInventoryItems(CompoundTag compoundTag, NonNullList<ItemStack> inventory) {
-        HumanHelper.resetNonNullList(inventory);
-        ListTag listTag = compoundTag.getList("Inventory", 10);
-        for (int i = 0; i < listTag.size(); ++i) {
-            CompoundTag compoundTagSlot = listTag.getCompound(i);
-            int index = compoundTagSlot.getByte("Slot") & 0xFF;
-            if (index < 0 || index >= inventory.size()) continue;
-            inventory.set(index, ItemStack.of((CompoundTag)compoundTagSlot));
-        }
-    }
-
-    public static CompoundTag saveHandItems(CompoundTag compoundTag, NonNullList<ItemStack> hand) {
-        ListTag listTag = new ListTag();
-        for (int i = 0; i < hand.size(); ++i) {
-            ItemStack itemStack = (ItemStack)hand.get(i);
-            if (itemStack.isEmpty()) continue;
-            CompoundTag compoundTagSlot = new CompoundTag();
-            compoundTagSlot.putByte("Slot", (byte)i);
-            itemStack.save(compoundTagSlot);
-            listTag.add(compoundTagSlot);
-        }
-        if (!listTag.isEmpty()) {
-            compoundTag.put("Hand", (Tag)listTag);
-        }
-        return compoundTag;
-    }
-
-    public static void loadHandItems(CompoundTag compoundTag, NonNullList<ItemStack> hand) {
-        HumanHelper.resetNonNullList(hand);
-        ListTag listTag = compoundTag.getList("Hand", 10);
-        for (int i = 0; i < listTag.size(); ++i) {
-            CompoundTag compoundTagSlot = listTag.getCompound(i);
-            int index = compoundTagSlot.getByte("Slot") & 0xFF;
-            if (index < 0 || index >= hand.size()) continue;
-            hand.set(index, ItemStack.of((CompoundTag)compoundTagSlot));
-        }
-    }
-
-    private static void resetNonNullList(NonNullList<ItemStack> list) {
-        for (int index = 0; index < list.size(); ++index) {
-            list.set(index, ItemStack.EMPTY);
+    private static void loadItems(CompoundTag tag, String key, NonNullList<ItemStack> items) {
+        for (int slot = 0; slot < items.size(); slot++) items.set(slot, ItemStack.EMPTY);
+        ListTag list = tag.getList(key, Tag.TAG_COMPOUND);
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag entry = list.getCompound(i);
+            int slot = entry.getByte("Slot") & 0xFF;
+            if (slot < items.size()) items.set(slot, ItemStack.of(entry));
         }
     }
 }

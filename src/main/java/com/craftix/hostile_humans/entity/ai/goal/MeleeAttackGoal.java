@@ -2,14 +2,12 @@ package com.craftix.hostile_humans.entity.ai.goal;
 
 import com.craftix.hostile_humans.entity.HumanEntity;
 import com.craftix.hostile_humans.entity.HumanMobEntityData;
-import com.craftix.hostile_humans.entity.ai.goal.HumanGoal;
 import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.MeleeAttackTiming;
 import club.someoneice.humangunner.MeleeCombatRange;
 import club.someoneice.humangunner.MeleeSpacing;
 import club.someoneice.humangunner.SoldierOrder;
 import java.util.EnumSet;
-import java.util.Objects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -17,13 +15,15 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.entity.ai.util.DefaultRandomPos;
+import net.minecraft.world.phys.Vec3;
 
 public class MeleeAttackGoal
-extends HumanGoal {
+extends Goal {
+    protected final HumanEntity mob;
     private static final long COOLDOWN_BETWEEN_CAN_USE_CHECKS = 5L;
     private final double speedModifier;
     private final boolean followingTargetEvenIfNotSeen;
-    private final boolean canPenalize = false;
     private Path path;
     private double pathedTargetX;
     private double pathedTargetY;
@@ -31,10 +31,13 @@ extends HumanGoal {
     private int ticksUntilNextPathRecalculation;
     private int ticksUntilNextAttack;
     private long lastCanUseCheck;
-    private int failedPathFindingPenalty = 0;
+    private int recoveryRouteUntilTick;
+    private int recoveryTargetId;
+    private final dev.felix.hostilehumans.core.MeleePursuitProgress pursuitProgress =
+            new dev.felix.hostilehumans.core.MeleePursuitProgress();
 
     public MeleeAttackGoal(HumanEntity humanEntity, double speedModifier, boolean followingTargetEvenIfNotSeen) {
-        super(humanEntity);
+        this.mob = humanEntity;
         this.speedModifier = speedModifier;
         this.followingTargetEvenIfNotSeen = followingTargetEvenIfNotSeen;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
@@ -54,7 +57,7 @@ extends HumanGoal {
                 return false;
             }
         }
-        if ((gameTime = this.mob.level().getGameTime()) - this.lastCanUseCheck < 5L) {
+        if ((gameTime = this.mob.level().getGameTime()) - this.lastCanUseCheck < COOLDOWN_BETWEEN_CAN_USE_CHECKS) {
             return false;
         }
         this.lastCanUseCheck = gameTime;
@@ -66,7 +69,7 @@ extends HumanGoal {
         if (this.mob instanceof Human human && SoldierOrder.isHoldingPosition(human)) {
             return true;
         }
-        if (this.getAttackReachSqr(livingEntity) >= this.mob.distanceToSqr(livingEntity)) {
+        if (canStrike(livingEntity)) {
             // Starting an in-reach attack does not need a pursuit path.
             this.path = null;
             return true;
@@ -81,7 +84,9 @@ extends HumanGoal {
             // water fallback can continue the crossing.
             return true;
         }
-        return this.getAttackReachSqr(livingEntity) >= this.mob.distanceToSqr(livingEntity.getX(), livingEntity.getY(), livingEntity.getZ());
+        // Keep the goal alive to retry/recover an unreachable or partial path.
+        // Otherwise a mutually blocked pair never runs its movement watchdog.
+        return this.mob instanceof Human;
     }
 
     public boolean canContinueToUse() {
@@ -104,13 +109,15 @@ extends HumanGoal {
     }
 
     public void start() {
+        this.recoveryRouteUntilTick = 0;
         boolean canPursue = !this.mob.isOrderedToSit();
         if (this.mob instanceof Human human) {
             canPursue &= !SoldierOrder.isHoldingPosition(human);
             LivingEntity target = this.mob.getTarget();
             if (target != null) {
-                canPursue &= this.mob.distanceTo(target)
-                        > MeleeSpacing.preferredDistance(MeleeCombatRange.reach(human, target));
+                canPursue = canPursue && (!MeleeCombatRange.canStrike(human, target)
+                        || this.mob.distanceTo(target)
+                        > MeleeSpacing.preferredDistance(MeleeCombatRange.reach(human, target)));
             }
         }
         if (canPursue) {
@@ -123,12 +130,19 @@ extends HumanGoal {
     }
 
     public void stop() {
-        this.mob.setTarget(null);
+        // Target ownership belongs to targeting/order logic, not the movement
+        // goal. Defense, a weapon handoff or a failed route may interrupt us.
+        LivingEntity target = this.mob.getTarget();
+        if (target != null && (!target.isAlive() || !this.mob.canAttack(target))) this.mob.setTarget(null);
         this.mob.setAggressive(false);
+        // A defensive interruption is not a failed target/path acquisition.
+        // Let melee resume at the next selector pass instead of idling through
+        // the expensive-acquisition throttle after every received hit.
+        this.lastCanUseCheck = this.mob.level().getGameTime() - COOLDOWN_BETWEEN_CAN_USE_CHECKS;
         boolean isSit = this.mob.isOrderedToSit();
         if (isSit) {
             this.mob.setOrderedToPosition((BlockPos)this.mob.getEntityData().get(HumanMobEntityData.DATA_SIT_POS));
-        } else {
+        } else if (target == null || !target.isAlive()) {
             this.mob.getMoveControl().setWantedPosition(this.mob.position().x(), this.mob.position().y(), this.mob.position().z(), 1.0);
         }
     }
@@ -143,22 +157,35 @@ extends HumanGoal {
             Player player;
             ItemStack itemStack;
             if (livingEntity instanceof Player && ((itemStack = (player = (Player)livingEntity).getItemInHand(player.getUsedItemHand())).is(this.mob.getTameItem()) || this.mob.isOwnedBy((LivingEntity)player))) {
+                this.mob.setTarget(null);
                 this.stop();
                 return;
             }
             this.mob.getLookControl().setLookAt((Entity)livingEntity, 30.0f, 30.0f);
             double distance = this.mob.distanceToSqr(livingEntity.getX(), livingEntity.getY(), livingEntity.getZ());
+            if (this.mob instanceof Human human && distance <= this.getAttackReachSqr(livingEntity) + 4.0D)
+                MeleeCombatRange.faceTarget(human, livingEntity);
             this.ticksUntilNextPathRecalculation = Math.max(this.ticksUntilNextPathRecalculation - 1, 0);
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
             boolean spacing = !holdingPosition && this.mob instanceof Human human
                     && MeleeSpacing.control(human, livingEntity);
+            boolean stalled = pursuitProgress.stalled(this.mob.tickCount, livingEntity.getId(),
+                    this.mob.getX(), this.mob.getY(), this.mob.getZ(),
+                    !holdingPosition && !spacing && !canStrike(livingEntity)
+                            && !this.mob.isUsingItem());
+            if (stalled) {
+                recoverPursuit(livingEntity);
+                this.ticksUntilNextPathRecalculation = 8;
+            }
             if (spacing && this.ticksUntilNextPathRecalculation <= 0) {
                 this.ticksUntilNextPathRecalculation = 8;
             }
             if (!holdingPosition && !spacing
                     && (this.followingTargetEvenIfNotSeen || this.mob.getSensing().hasLineOfSight((Entity)livingEntity))
                     && this.ticksUntilNextPathRecalculation <= 0
+                    && (this.mob.tickCount >= recoveryRouteUntilTick
+                    || livingEntity.getId() != recoveryTargetId || this.mob.getNavigation().isDone())
                     && (this.mob.getNavigation().isDone()
                     || this.pathedTargetX == 0.0 && this.pathedTargetY == 0.0 && this.pathedTargetZ == 0.0
                     || livingEntity.distanceToSqr(this.pathedTargetX, this.pathedTargetY, this.pathedTargetZ) >= 1.0
@@ -167,7 +194,6 @@ extends HumanGoal {
                 this.pathedTargetY = livingEntity.getY();
                 this.pathedTargetZ = livingEntity.getZ();
                 this.ticksUntilNextPathRecalculation = 4 + this.mob.getRandom().nextInt(7);
-                Objects.requireNonNull(this);
                 if (distance > 1024.0) {
                     this.ticksUntilNextPathRecalculation += 10;
                 } else if (distance > 256.0) {
@@ -183,13 +209,12 @@ extends HumanGoal {
                         Math.sqrt(this.getAttackReachSqr(livingEntity)), this.speedModifier);
             }
             this.ticksUntilNextAttack = Math.max(this.ticksUntilNextAttack - 1, 0);
-            this.checkAndPerformAttack(livingEntity, distance);
+            this.checkAndPerformAttack(livingEntity);
         }
     }
 
-    protected void checkAndPerformAttack(LivingEntity livingEntity, double attackDistance) {
-        double distance = this.getAttackReachSqr(livingEntity);
-        if (attackDistance <= distance && this.ticksUntilNextAttack <= 0) {
+    protected void checkAndPerformAttack(LivingEntity livingEntity) {
+        if (canStrike(livingEntity) && this.ticksUntilNextAttack <= 0) {
             HumanEntity humanEntity;
             this.resetAttackCooldown();
             if (this.mob.isBlocking()) {
@@ -205,10 +230,11 @@ extends HumanGoal {
 
     /** Opens one guaranteed attack window after an adaptive shield block. */
     public boolean humanGunner$tryImmediateCounterattack(LivingEntity target) {
-        if (target == null || !target.isAlive() || !this.mob.canAttack(target)
-                || this.mob.distanceToSqr(target) > this.getAttackReachSqr(target)) {
+        if (target == null || !target.isAlive() || !this.mob.canAttack(target)) {
             return false;
         }
+        if (this.mob instanceof Human human) MeleeCombatRange.faceTarget(human, target);
+        if (!canStrike(target)) return false;
         if (this.mob.isBlocking()) {
             this.mob.stopUsingItem();
         }
@@ -221,15 +247,6 @@ extends HumanGoal {
     }
 
     protected void resetAttackCooldown() {
-        HumanEntity humanEntity = this.mob;
-        if (humanEntity instanceof Human) {
-            Human human = (Human)humanEntity;
-            // The former flurry path inserted one-tick melee intervals. Clear
-            // old transient state so every real close-range hit now observes
-            // the configured 16-28 tick cadence.
-            human.meleeFlurryHitsRemaining = 0;
-            human.meleeFlurryDamageTicks = 0;
-        }
         this.ticksUntilNextAttack = this.adjustedTickDelay(
                 this.mob instanceof Human human
                         ? MeleeAttackTiming.nextCooldown(human)
@@ -240,6 +257,32 @@ extends HumanGoal {
     protected double getAttackReachSqr(LivingEntity livingEntity) {
         if (this.mob instanceof Human human) return MeleeCombatRange.reachSqr(human, livingEntity);
         return this.mob.getBbWidth() * 3.0f * this.mob.getBbWidth() * 3.0f + livingEntity.getBbWidth();
+    }
+
+    private boolean canStrike(LivingEntity target) {
+        return this.mob instanceof Human human ? MeleeCombatRange.canStrike(human, target)
+                : this.mob.distanceToSqr(target) <= getAttackReachSqr(target)
+                && this.mob.getSensing().hasLineOfSight(target);
+    }
+
+    private void recoverPursuit(LivingEntity target) {
+        // One bounded flank path attempt per stall, not a scan or forced push.
+        Path oldPath = this.mob.getNavigation().getPath();
+        if (oldPath != null && !oldPath.isDone()
+                && !oldPath.getNextNodePos().equals(this.mob.blockPosition())
+                && this.mob.getNavigation() instanceof com.craftix.hostile_humans.entity.ai.HumanNavigation ground)
+            ground.avoidWaypoint(oldPath.getNextNodePos(), this.mob.level().getGameTime() + 60L);
+        Vec3 candidate = DefaultRandomPos.getPosTowards(this.mob, 6, 3, target.position(), Math.PI / 2.0D);
+        if (candidate != null && this.mob.getNavigation().moveTo(candidate.x, candidate.y, candidate.z, this.speedModifier)) {
+            recoveryRouteUntilTick = this.mob.tickCount + 30;
+            recoveryTargetId = target.getId();
+            return;
+        }
+        this.mob.getNavigation().stop();
+        if (this.mob.onGround() && this.mob.horizontalCollision && oldPath != null && !oldPath.isDone()
+                && oldPath.getNextNodePos().getY() > this.mob.getY()
+                && oldPath.getNextNodePos().getY() <= this.mob.getY() + 1.0D)
+            this.mob.getJumpControl().jump();
     }
 }
 

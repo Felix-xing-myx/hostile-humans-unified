@@ -211,7 +211,8 @@ public final class HumanLootManager {
         }
 
         private double score(ItemEntity item, StorageSummary capacity) {
-            if (item == null || !item.isAlive() || item.getItem().isEmpty()
+            if (item == null || item.hasPickUpDelay() || !SoldierPickupPolicy.canCollectNow(human)
+                    || !item.isAlive() || item.getItem().isEmpty()
                     || item.level() != human.level() || !item.getBoundingBox().intersects(searchArea)
                     || human.distanceToSqr(item) > (radius + 4.0D) * (radius + 4.0D)
                     || (selection.isPileOnly() && item.position().distanceToSqr(preferredPile) > 16.0D)
@@ -223,7 +224,8 @@ public final class HumanLootManager {
     }
 
     static boolean isWorthCollecting(Human human, ItemEntity item) {
-        return item.isAlive() && !item.getItem().isEmpty()
+        return SoldierPickupPolicy.canCollectNow(human) && item.isAlive() && !item.getItem().isEmpty()
+                && !item.hasPickUpDelay()
                 && SoldierOrder.allowsLootPosition(human, item.getX(), item.getZ())
                 && isReachableWithoutDiving(item)
                 && benefit(human, item.getItem()) > 0.0D;
@@ -231,7 +233,7 @@ public final class HumanLootManager {
 
     /** Keep the legacy nearby pickup ability on the same value policy as active searching. */
     public static boolean tryCollectNearby(Human human, ItemEntity item) {
-        return human.isAlive() && !human.isDeadOrDying()
+        return SoldierPickupPolicy.canCollectNow(human)
                 && human.distanceToSqr(item) <= 6.25D
                 && isWorthCollecting(human, item)
                 && collect(human, item);
@@ -255,7 +257,8 @@ public final class HumanLootManager {
     }
 
     static boolean collect(Human human, ItemEntity entity) {
-        if (!SoldierOrder.allowsLootPosition(human, entity.getX(), entity.getZ())) return false;
+        if (!SoldierPickupPolicy.canCollectNow(human) || !entity.isAlive() || entity.hasPickUpDelay()
+                || !SoldierOrder.allowsLootPosition(human, entity.getX(), entity.getZ())) return false;
         ItemStack ground = entity.getItem();
         if (ground.isEmpty() || !HumanGunAcceptance.accepts(ground)) {
             return false;
@@ -272,7 +275,7 @@ public final class HumanLootManager {
                 return false;
             }
             human.setItemSlot(slot, replacement);
-            human.setDropChance(slot, TierThreeLoadout.isBoundGear(replacement) ? 0.0F : 0.2F);
+            human.setDropChance(slot, HumanSpawnEquipment.isBoundGear(replacement) ? 0.0F : 0.2F);
             if (slot == EquipmentSlot.MAINHAND
                     && RangedWeaponCustody.isBowOrCrossbow(replacement)) {
                 RangedWeaponCustody.registerPreferred(human, human.getMainHandItem());
@@ -334,7 +337,7 @@ public final class HumanLootManager {
             return !RangedWeaponCustody.isBowOrCrossbow(current)
                     || equipmentScore(incoming, slot) > equipmentScore(current, slot) + 1.5D;
         }
-        if (TierThreeLoadout.isBoundGear(current)) {
+        if (HumanSpawnEquipment.isBoundGear(current)) {
             return false;
         }
         if (slot == EquipmentSlot.OFFHAND && current.is(Items.TOTEM_OF_UNDYING)) {
@@ -632,7 +635,7 @@ public final class HumanLootManager {
         for (int pass = 0; pass < 2 && bestSlot < 0; pass++) {
             for (int i = 0; i < data.getInventoryItemsSize(); i++) {
                 ItemStack stack = data.getInventoryItem(i);
-                if (stack.isEmpty() || TierThreeLoadout.isBoundGear(stack)) {
+                if (stack.isEmpty() || HumanSpawnEquipment.isBoundGear(stack)) {
                     continue;
                 }
                 if (pass == 0 && club.someoneice.humangunner.GunSupport.get().isGun(stack)) {
@@ -650,7 +653,7 @@ public final class HumanLootManager {
     }
 
     private static boolean protectedFromEviction(ItemStack stack) {
-        return TierThreeLoadout.isBoundGear(stack)
+        return HumanSpawnEquipment.isBoundGear(stack)
                 || club.someoneice.humangunner.GunSupport.get().isGun(stack)
                 || RangedWeaponCustody.isBowOrCrossbow(stack)
                 || SpartanEquipmentCompat.isShield(stack)

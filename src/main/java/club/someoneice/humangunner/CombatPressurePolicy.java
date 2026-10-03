@@ -52,6 +52,12 @@ final class CombatPressurePolicy {
                 || (distanceSqr > 6.25D && approachSpeed <= -0.025D));
     }
 
+    static boolean shouldReleaseUnpressuredBlock(int heldTicks, int quietTicks,
+                                                boolean incomingProjectile, boolean incomingMelee) {
+        return heldTicks >= MINIMUM_EFFECTIVE_BLOCK_TICKS && quietTicks >= 4
+                && !incomingProjectile && !incomingMelee;
+    }
+
     static boolean shouldPrioritizeGunnerRetreat(boolean ownsGun, int closeThreatCount) {
         return ownsGun && closeThreatCount >= CROWD_THREAT_COUNT;
     }

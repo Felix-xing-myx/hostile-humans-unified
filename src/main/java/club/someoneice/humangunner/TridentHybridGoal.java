@@ -183,7 +183,8 @@ public final class TridentHybridGoal extends Goal {
                 Path firingPath = RangedFiringPosition.findVisiblePath(
                         human, target, 4.0D, 36.0D, 10, 12);
                 if (firingPath != null) {
-                    human.getNavigation().moveTo(firingPath, 1.0D);
+                    if (human.getNavigation().moveTo(firingPath, 1.0D))
+                        SoldierDialogue.event(human, "reposition");
                 } else if (!RangedFiringPosition.hasPendingVisibleSearch(human)) {
                     human.beginCombatFiringShore(target, 1.0D);
                 }

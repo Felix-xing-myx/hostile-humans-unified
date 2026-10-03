@@ -50,8 +50,8 @@ extends Mob {
         club.someoneice.humangunner.NaturalHumanSpawnRules.battleMemberAdded((ServerLevel)member.level());
     }
     private boolean spawnBattle(ServerLevel level) {
-        boolean tier1Allowed = club.someoneice.humangunner.NaturalHumanSpawnRules.isTierUnlocked(level, 1);
-        boolean tier2Allowed = club.someoneice.humangunner.NaturalHumanSpawnRules.isTierUnlocked(level, 2);
+        boolean tier1Allowed = club.someoneice.humangunner.NaturalHumanSpawnRules.isTierUnlocked(level, blockPosition(), 1);
+        boolean tier2Allowed = club.someoneice.humangunner.NaturalHumanSpawnRules.isTierUnlocked(level, blockPosition(), 2);
         if (!tier1Allowed && !tier2Allowed) return false;
         BlockPos blockpos = this.blockPosition();
         if (this.hasEnoughSpace((BlockGetter)level, blockpos) && Config.eventType.get() != SpawnType.Disabled) {

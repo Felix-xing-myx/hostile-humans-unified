@@ -206,8 +206,10 @@ extends Goal {
                                     Math.sqrt(this.attackRadiusSqr), 10, 12)
                             : null;
                     if (firingPath != null) {
-                        this.mob.getNavigation().moveTo(firingPath,
-                                this.canRun() ? this.speedModifier : this.speedModifier * 0.65D);
+                        if (this.mob.getNavigation().moveTo(firingPath,
+                                this.canRun() ? this.speedModifier : this.speedModifier * 0.65D)
+                                && this.mob instanceof Human human)
+                            club.someoneice.humangunner.SoldierDialogue.event(human, "reposition");
                     } else if (!(this.mob instanceof Human human && RangedFiringPosition.hasPendingVisibleSearch(human))) {
                         if (this.mob instanceof Human human && human.isInWater()) {
                             human.beginCombatFiringShore(livingentity, this.speedModifier);

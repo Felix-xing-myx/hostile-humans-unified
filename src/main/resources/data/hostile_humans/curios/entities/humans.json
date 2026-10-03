@@ -2,6 +2,7 @@
   "entities": [
     "hostile_humans:human_tier1",
     "hostile_humans:human_tier2",
+    "hostile_humans:human_tier3",
     "hostile_humans:human_roamer"
   ],
   "slots": [

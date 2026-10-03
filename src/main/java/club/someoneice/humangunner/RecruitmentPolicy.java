@@ -4,10 +4,6 @@ final class RecruitmentPolicy {
     private static final int[] WAVE_SIZES = {5, 4, 3, 2};
     private RecruitmentPolicy() {}
 
-    static int cost(int tier) {
-        var payment = UnifiedConfig.get().recruitmentCost(tier);
-        return payment == null ? -1 : payment.count();
-    }
     static int limit(int tier) { return UnifiedConfig.get().recruitmentLimit(tier); }
     static int limit(int tier, UnifiedConfig config) { return config.recruitmentLimit(tier); }
     static int waveSize(int tier) { return WAVE_SIZES[tier]; }

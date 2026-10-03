@@ -141,9 +141,10 @@ public final class ShoreSeekingPolicy {
                 && saferPathNodes <= shortestPathNodes + MAX_SAFE_SHORE_DETOUR_NODES;
     }
 
-    public static boolean shouldClearFleeingAfterCombatStop(boolean ownsFleeFlag,
-            boolean shoreTransitionPending) {
-        return ownsFleeFlag && !shoreTransitionPending;
+    public static boolean shouldClearFleeingAfterCombatStop(boolean ownsFleeFlag) {
+        // Shore movement has its own state. It does not own the combat escape
+        // flag; leaving it set after its owner stops disables normal combat.
+        return ownsFleeFlag;
     }
 
     public static boolean shouldReturnToOwnerAfterCombatStop(boolean retreatEnded,

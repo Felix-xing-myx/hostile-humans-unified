@@ -29,7 +29,6 @@ import com.craftix.hostile_humans.entity.ai.goal.HumanLookAtPlayerGoal;
 import com.craftix.hostile_humans.entity.ai.goal.InvestigateSoundGoal;
 import com.craftix.hostile_humans.entity.ai.goal.LadderClimbGoal;
 import com.craftix.hostile_humans.entity.ai.goal.LeaveWaterWhenIdleGoal;
-import com.craftix.hostile_humans.entity.ai.goal.LookForChestGoal;
 import com.craftix.hostile_humans.entity.ai.goal.MeleeAttackGoal;
 import com.craftix.hostile_humans.entity.ai.goal.NearestAttackableTargetGoalCustom;
 import com.craftix.hostile_humans.entity.ai.goal.NearestAttackableTargetGoalWithHumanLimiter;
@@ -40,12 +39,12 @@ import com.craftix.hostile_humans.entity.ai.goal.PotionRangedAttackGoal;
 import com.craftix.hostile_humans.entity.ai.goal.RandomStrollGoalFar;
 import com.craftix.hostile_humans.entity.ai.goal.RandomStrollGoalWithHome;
 import com.craftix.hostile_humans.entity.ai.goal.RunFromTarget;
-import com.craftix.hostile_humans.entity.ai.goal.TridentAttackGoal;
 import com.craftix.hostile_humans.entity.entities.HumanFood;
-import com.craftix.hostile_humans.entity.entities.HumanInventoryGenerator;
 import com.craftix.hostile_humans.entity.entities.HumanTier;
 import com.craftix.hostile_humans.entity.entities.ModEntityType;
-import com.craftix.hostile_humans.patch.HostileHumansEquipmentPatch;
+import club.someoneice.humangunner.HumanInventoryCustody;
+import club.someoneice.humangunner.HumanSpawnEquipment;
+import club.someoneice.humangunner.ShieldDurability;
 import com.google.common.collect.Maps;
 import java.util.ArrayList;
 import java.util.List;
@@ -95,7 +94,6 @@ import net.minecraft.world.entity.animal.AbstractSchoolingFish;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.Bee;
 import net.minecraft.world.entity.monster.CrossbowAttackMob;
-import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.entity.monster.RangedAttackMob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
@@ -155,6 +153,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private int rangedFacingTick = Integer.MIN_VALUE;
     private LivingEntity rangedFacingTarget;
     private float rangedFacingYaw = Float.NaN;
+    private float meleeFacingPitch = Float.NaN;
+    private int shieldFacingTick = Integer.MIN_VALUE;
+    private Entity shieldFacingTarget;
     private final dev.felix.hostilehumans.core.EquipmentWearCooldown hiredArmorWear =
             new dev.felix.hostilehumans.core.EquipmentWearCooldown(4, 60);
     private static final EquipmentSlot[] HIRED_ARMOR_SLOTS = {
@@ -167,6 +168,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     /** The firing goal requests a final facing update after navigation has moved. */
     public void markRangedFacing(LivingEntity target) {
+        this.meleeFacingPitch = Float.NaN;
         this.rangedFacingTick = this.tickCount;
         this.rangedFacingTarget = target;
         this.rangedFacingYaw = Float.NaN;
@@ -174,9 +176,36 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     /** Keep the body aligned with the actual ballistic firing direction. */
     public void markRangedFacing(LivingEntity target, float yaw) {
+        this.meleeFacingPitch = Float.NaN;
         this.rangedFacingTick = this.tickCount;
         this.rangedFacingTarget = target;
         this.rangedFacingYaw = yaw;
+    }
+
+    public void markMeleeFacing(LivingEntity target, float yaw, float pitch) {
+        markRangedFacing(target, yaw);
+        this.meleeFacingPitch = pitch;
+    }
+
+    /** Defensive orientation has a one-tick lease and never changes aggro. */
+    public void markShieldFacing(Entity attacker) {
+        shieldFacingTick = tickCount;
+        shieldFacingTarget = attacker;
+    }
+
+    private boolean hasShieldFacing() {
+        return shieldFacingTick == tickCount && shieldFacingTarget != null
+                && shieldFacingTarget.isAlive() && shieldFacingTarget.level() == level()
+                && !isFleeing && isUsingItem()
+                && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(getUseItem());
+    }
+
+    private void applyShieldFacing() {
+        double dx = shieldFacingTarget.getX() - getX();
+        double dz = shieldFacingTarget.getZ() - getZ();
+        if (dx * dx + dz * dz < 1.0E-6D) return;
+        float yaw = (float) (Mth.atan2(dz, dx) * (180.0D / Math.PI)) - 90.0F;
+        setRangedFacingYaw(Mth.approachDegrees(getYRot(), yaw, 75.0F));
     }
 
     private BowAttack<Human> humanGunner$enhancedBowGoal;
@@ -279,7 +308,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
         boolean pending = human.getPersistentData().getBoolean("hostile_humans:pending_loadout");
         if (!hasExplicitEquipment || pending) {
-            HumanInventoryGenerator.generateInventory(human,
+            HumanSpawnEquipment.generate(human,
                     human.getPersistentData().getBoolean("hostile_humans:pending_ranged"));
             human.getPersistentData().remove("hostile_humans:pending_loadout");
             human.getPersistentData().remove("hostile_humans:pending_ranged");
@@ -287,8 +316,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     
     }
     private static final UUID FLURRY_ID = UUID.fromString("82624020-1000-4000-8000-000000000204");
-    private static final AttributeModifier FLURRY_DAMAGE = new AttributeModifier(
-            FLURRY_ID, "Human flurry damage", -0.6, AttributeModifier.Operation.MULTIPLY_TOTAL);
     private boolean attributesMigrated;
     private static void humanGunner$removeLoyalty(ItemStack stack) {
         if (stack.isEmpty()) {
@@ -320,8 +347,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public boolean consumesAmmoOrNot() { return true; }
 
     public static final ItemStack[] EXTRA_EDIBLE_ITEMS = new ItemStack[]{Items.GOLDEN_APPLE.getDefaultInstance(), PotionUtils.setPotion((ItemStack)Items.POTION.getDefaultInstance(), (Potion)Potions.REGENERATION), PotionUtils.setPotion((ItemStack)Items.POTION.getDefaultInstance(), (Potion)Potions.HEALING), PotionUtils.setPotion((ItemStack)Items.POTION.getDefaultInstance(), (Potion)Potions.STRENGTH)};
-    public static final ItemStack[] PRE_ATTACK_BUFF_ITEMS = new ItemStack[]{Items.GOLDEN_APPLE.getDefaultInstance(), PotionUtils.setPotion((ItemStack)Items.POTION.getDefaultInstance(), (Potion)Potions.STRENGTH), PotionUtils.setPotion((ItemStack)Items.POTION.getDefaultInstance(), (Potion)Potions.REGENERATION), PotionUtils.setPotion((ItemStack)Items.POTION.getDefaultInstance(), (Potion)Potions.SWIFTNESS)};
-    public static final ItemStack[] MID_FIGHT_BUFF_ITEMS = new ItemStack[]{Items.GOLDEN_APPLE.getDefaultInstance(), PotionUtils.setPotion((ItemStack)Items.POTION.getDefaultInstance(), (Potion)Potions.STRONG_REGENERATION)};
     private static final UUID MODIFIER_UUID = UUID.fromString("7a0811af-4025-4691-ba75-2d638d4ab3f4");
     private static final UUID WATER_KNOCKBACK_ID = UUID.fromString("327564c3-f609-4dd9-a9e1-49de9157bd30");
     // Eating/shield movement multipliers are configurable through the unified AI settings.
@@ -335,9 +360,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public int shieldCoolDown;
     public int shieldUpTicks;
     public int switchingWeaponCoolDown;
-    public int meleeFlurryHitsRemaining;
-    public int meleeFlurryDamageTicks;
-    public int onPlayerJumpCoolDown;
     private boolean resolvedFleeThisCombat;
     private boolean shouldFleeThisCombat;
     public boolean isFleeing;
@@ -345,7 +367,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Nullable
     public LivingEntity toAvoid;
     public BlockPos investigateSound = BlockPos.ZERO;
-    public int lookForChestCooldown;
     public HumanFood food = new HumanFood();
     public int healCooldown;
     public int ticksOutOfCombat;
@@ -390,14 +411,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     protected final WaterBoundPathNavigation waterNavigation;
     protected final GroundPathNavigation groundNavigation;
     @Nullable
-    private PathNavigation watchedNavigation;
-    @Nullable
-    private BlockPos watchedPathGoal;
-    @Nullable
-    private BlockPos watchedWaypoint;
-    private double bestWaypointDistance = Double.MAX_VALUE;
-    private int lastWaypointProgressTick;
-    @Nullable
     private BlockPos abandonedNavigationGoal;
     private int abandonedNavigationGoalUntil;
 
@@ -406,55 +419,13 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 && tickCount < abandonedNavigationGoalUntil;
     }
 
-    private void recoverStalledNavigation() {
-        Path path = navigation.getPath();
-        if (path == null || path.isDone()) {
-            // Keep the observation across a short vanilla stuck-stop/retry.
-            // Otherwise a goal that recreates the same path every few ticks
-            // could reset this watchdog forever.
-            if (tickCount - lastWaypointProgressTick > 200) {
-                watchedNavigation = null;
-                watchedPathGoal = null;
-                watchedWaypoint = null;
-            }
-            return;
-        }
-        BlockPos goal = path.getTarget();
-        BlockPos waypoint = path.getNextNodePos();
-        double distance = position().distanceTo(net.minecraft.world.phys.Vec3.atCenterOf(waypoint));
-        if (navigation != watchedNavigation || !goal.equals(watchedPathGoal)
-                || !waypoint.equals(watchedWaypoint)) {
-            watchedNavigation = navigation;
-            watchedPathGoal = goal;
-            watchedWaypoint = waypoint;
-            bestWaypointDistance = distance;
-            lastWaypointProgressTick = tickCount;
-            return;
-        }
-        if (isUsingItem()) {
-            // Drawing a bow/crossbow, eating and blocking can deliberately
-            // pause movement. Do not blacklist a valid waypoint because the
-            // combat or recovery goal temporarily chose to stand still.
-            lastWaypointProgressTick = tickCount;
-            return;
-        }
-        if (distance < bestWaypointDistance - 0.5D) {
-            bestWaypointDistance = distance;
-            lastWaypointProgressTick = tickCount;
-            return;
-        }
-        // A path that makes no progress for four seconds is worse than
-        // abandoning one waypoint and letting the owning goal choose again.
-        if (tickCount - lastWaypointProgressTick < 80) return;
+    public void markNavigationGoalAbandoned(BlockPos goal) {
         abandonedNavigationGoal = goal.immutable();
         abandonedNavigationGoalUntil = tickCount + 100;
-        if (navigation instanceof com.craftix.hostile_humans.entity.ai.HumanNavigation ground) {
-            ground.avoidWaypoint(waypoint, level().getGameTime() + 100L);
-        }
-        navigation.stop();
-        watchedNavigation = null;
-        watchedPathGoal = null;
-        watchedWaypoint = null;
+    }
+
+    private void recoverStalledNavigation() {
+        club.someoneice.humangunner.MovementContinuity.tick(this);
     }
 
     public BlockPos investigateSound() {
@@ -922,6 +893,18 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         return super.mobInteract(player, hand);
     }
 
+    @Override
+    public boolean canPickUpLoot() {
+        return super.canPickUpLoot() && club.someoneice.humangunner.SoldierPickupPolicy.canCollectNow(this);
+    }
+
+    @Override
+    protected void pickUpItem(net.minecraft.world.entity.item.ItemEntity item) {
+        // Vanilla Mob collection must obey the same owner policy and backpack
+        // transaction as the old nearby ability and the active pickup goal.
+        club.someoneice.humangunner.HumanLootManager.tryCollectNearby(this, item);
+    }
+
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.105D).add(Attributes.MAX_HEALTH, 60.0).add(Attributes.ATTACK_DAMAGE, 1.0).add(Attributes.ATTACK_SPEED, 4.0D).add((Attribute)ForgeMod.ENTITY_REACH.get(), 3.0).add(Attributes.FOLLOW_RANGE, 40.0);
     }
@@ -944,6 +927,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             control.clearCombatStrafe();
         }
         this.setXxa(0.0F);
+    }
+
+    /** A current melee spacing request is not leftover bow/gun strafing. */
+    public void strafeMelee(float forward, float right) {
+        if (this.moveControl instanceof HumanMoveControl control) {
+            control.strafe(forward, right);
+            control.meleeSpacingStrafe = true;
+        }
     }
 
     public void applySpawnedWeaponEnchantments(RandomSource random, float enchantChance) {
@@ -989,9 +980,25 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (damaged && this.isAlive() && attacker != null
                 && club.someoneice.humangunner.SoldierCombatMode.authorizeSelfDefense(this, attacker)) {
             club.someoneice.humangunner.SoldierOrder.onSelfAttacked(this, attacker);
-            if (this.canAttack(attacker)) this.setTarget(attacker);
+            // Remember retaliation without handing movement back to offense
+            // while an escape/recovery controller still owns the route.
+            if (!this.isFleeing && this.canAttack(attacker)) this.setTarget(attacker);
         }
         return damaged;
+    }
+
+    @Override
+    public void knockback(double strength, double x, double z) {
+        Vec3 before = getDeltaMovement();
+        boolean grounded = onGround();
+        // Retain vanilla resistance, knockback events and damage immunity.
+        // Shorten the physical hit reaction rather than resetting hurt timers
+        // (which would unintentionally increase rapid-fire damage).
+        super.knockback(strength * 0.5D, x, z);
+        if (grounded && !isInWater() && !isInLava()) {
+            Vec3 after = getDeltaMovement();
+            setDeltaMovement(after.x, Math.min(after.y, Math.max(before.y, 0.12D)), after.z);
+        }
     }
 
     @Override
@@ -1043,7 +1050,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.goalSelector.addGoal(0, (Goal)new AvoidTNTGoal((PathfinderMob)this, 6.0f, 1.0, 1.2));
         this.goalSelector.addGoal(0, (Goal)new InvestigateSoundGoal((Mob)this, 1.0));
         this.goalSelector.addGoal(1, (Goal)new PotionRangedAttackGoal(this, 1.0, 10, 12.0f));
-        this.goalSelector.addGoal(-30, (Goal)new LookForChestGoal(this, 1.0));
         if (this.getType() == ModEntityType.ROAMER.get()) {
             this.goalSelector.addGoal(8, (Goal)new RandomStrollGoalFar((PathfinderMob)this, 0.65, 15, false));
         } else {
@@ -1054,17 +1060,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.targetSelector.addGoal(0, (Goal)new HurtByTargetGoal((PathfinderMob)this, new Class[0]).setAlertOthers(new Class[0]));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoalCustom<LivingEntity>((Mob)this, LivingEntity.class, 13, true, false, this::isAngryAt));
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoalWithHumanLimiter<Player>(this, Player.class, true));
-        this.targetSelector.addGoal(4, (Goal)new NearestAttackableTargetGoalCustom<Mob>((Mob)this, Mob.class, 5, false, false, target -> {
-            if (target instanceof EnderMan) {
-                return false;
-            }
-            return club.someoneice.humangunner.HumanTargeting.isAutonomousPlayerEnemy(this, target);
-        }));
-    }
-
-    public void setCombatTask() {
-        // Goals are installed once after entity construction by the unified lifecycle.
-        // Their predicates select weapons without mutating a running GoalSelector.
+        this.targetSelector.addGoal(4, new NearestAttackableTargetGoalCustom<Mob>(this, Mob.class, 5,
+                false, false, target -> club.someoneice.humangunner.HumanTargeting
+                .isAutonomousPlayerEnemy(this, target)));
     }
 
     public boolean humanGunner$tryImmediateMeleeCounterattack(LivingEntity target) {
@@ -1079,6 +1077,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return false;
         if (BetterCombatMeleeCombat.isEnabled(this) && entityIn instanceof LivingEntity requestedTarget) {
             if (pendingBetterCombatTarget != null) return false;
+            if (BetterCombatMeleeCombat.hasWeaponProfile(this)) {
+                club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, requestedTarget);
+            }
             BetterCombatMeleeCombat.AttackPlan plan =
                     BetterCombatMeleeCombat.createAttackPlan(this, requestedTarget);
             if (plan != null) {
@@ -1093,10 +1094,27 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 pendingBetterCombatWeapon = getMainHandItem().copy();
                 pendingBetterCombatUpswingTicks = Math.max(1, Math.round(
                         plan.profile().cooldownTicks() * plan.profile().animationUpswing()));
+                facePendingBetterCombatAttack();
                 return true;
             }
         }
         return doHurtTargetSingle(entityIn, true);
+    }
+
+    private boolean hasPendingBetterCombatFacing() {
+        return !level().isClientSide && pendingBetterCombatTarget != null
+                && pendingBetterCombatTarget.isAlive() && pendingBetterCombatTarget.level() == level()
+                && isAlive() && !isNoAi() && !isFleeing
+                && canAttack(pendingBetterCombatTarget)
+                && ItemStack.isSameItemSameTags(pendingBetterCombatWeapon, getMainHandItem())
+                && BetterCombatMeleeCombat.isEnabled(this);
+    }
+
+    /** The delayed strike, not the next path node, owns yaw until its impact tick. */
+    private void facePendingBetterCombatAttack() {
+        if (hasPendingBetterCombatFacing()) {
+            club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, pendingBetterCombatTarget);
+        }
     }
 
     private void finishBetterCombatUpswing() {
@@ -1106,9 +1124,13 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         pendingBetterCombatTarget = null;
         ItemStack attackWeapon = pendingBetterCombatWeapon;
         pendingBetterCombatWeapon = ItemStack.EMPTY;
-        if (!isAlive() || isNoAi() || !target.isAlive() || !canAttack(target)
+        if (!isAlive() || isNoAi() || isFleeing || !target.isAlive() || !canAttack(target)
                 || !ItemStack.isSameItemSameTags(attackWeapon, getMainHandItem())
                 || !BetterCombatMeleeCombat.isEnabled(this)) return;
+        // Navigation has already ticked and may have faced a nearby waypoint.
+        // The actual melee impact must use the same opponent-facing geometry
+        // as the upswing, rather than the path node's yaw.
+        club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, target);
         BetterCombatMeleeCombat.AttackPlan plan =
                 BetterCombatMeleeCombat.createAttackPlan(this, target);
         if (plan == null || plan.targets().isEmpty()) return;
@@ -1129,22 +1151,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     private boolean doHurtTargetSingle(Entity entityIn, boolean animate, boolean wearWeapon) {
         this.resetFallDistance();
-        AttributeInstance attack = getAttribute(Attributes.ATTACK_DAMAGE);
-        if (attack == null) {
-            boolean hit = super.doHurtTarget(entityIn);
-            if (hit && wearWeapon) wearEquippedItem(getMainHandItem(), EquipmentSlot.MAINHAND);
-            return hit;
-        }
-        attack.removeModifier(FLURRY_ID);
-        if (meleeFlurryDamageTicks > 0) attack.addTransientModifier(FLURRY_DAMAGE);
-        try {
-            boolean hit = super.doHurtTarget(entityIn);
-            if (animate) swing(InteractionHand.MAIN_HAND);
-            if (hit && wearWeapon) wearEquippedItem(getMainHandItem(), EquipmentSlot.MAINHAND);
-            return hit;
-        } finally {
-            attack.removeModifier(FLURRY_ID);
-        }
+        boolean hit = super.doHurtTarget(entityIn);
+        if (animate) swing(InteractionHand.MAIN_HAND);
+        if (hit && wearWeapon) wearEquippedItem(getMainHandItem(), EquipmentSlot.MAINHAND);
+        return hit;
     }
 
     private void wearEquippedItem(ItemStack stack, EquipmentSlot slot) {
@@ -1180,6 +1190,11 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     @Nullable
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficulty, MobSpawnType mobSpawnType, @Nullable SpawnGroupData spawnGroupData, @Nullable CompoundTag compoundTag) {
+        if (mobSpawnType == MobSpawnType.NATURAL || mobSpawnType == MobSpawnType.CHUNK_GENERATION
+                || (mobSpawnType == MobSpawnType.EVENT
+                    && club.someoneice.humangunner.NaturalHumanSpawnRules.isAutomaticBattleMember(serverLevelAccessor.getLevel()))) {
+            club.someoneice.humangunner.NaturalEquipmentGrowth.markSpawn(this, serverLevelAccessor);
+        }
         spawnGroupData = super.finalizeSpawn(serverLevelAccessor, difficulty, mobSpawnType, spawnGroupData, compoundTag);
         ArrayList<String> variants = new ArrayList<String>(TEXTURE_BY_VARIANT.keySet());
         this.setRandomVariant(variants);
@@ -1191,14 +1206,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.setVariant(variants.get(this.random.nextInt(variants.size())));
     }
 
-    @Override
-    public void setItemSlot(EquipmentSlot slotIn, ItemStack stack) {
-        super.setItemSlot(slotIn, stack);
-        if (!this.level().isClientSide && !stack.isEmpty()) {
-            this.setCombatTask();
-        }
-    }
-
     protected SoundEvent getHurtSound(DamageSource damageSourceIn) {
         if (this.isBlocking()) {
             return SoundEvents.SHIELD_BLOCK;
@@ -1207,7 +1214,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     protected void hurtCurrentlyUsedShield(float f) {
-        HostileHumansEquipmentPatch.damageShield(this, f);
+        ShieldDurability.damageShield(this, f);
     }
 
     public void startUsingItem(@NotNull InteractionHand hand) {
@@ -1247,7 +1254,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
     }
 
-    /** Start a mobile defensive block without the ordinary shield speed penalty. */
+    /** Start a mobile block retaining at least 40% speed, with the configured penalty otherwise. */
     public void humanGunner$startMovementShield(InteractionHand hand) {
         if (!club.someoneice.humangunner.SpartanEquipmentCompat.isShield(getItemInHand(hand))) {
             return;
@@ -1280,7 +1287,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     public void readAdditionalSaveData(CompoundTag compound) {
         super.readAdditionalSaveData(compound);
-        this.setCombatTask();
+        // tickCount is not persisted. A saved gunfire-until tick must not look
+        // like a fresh hit when this entity is loaded with tickCount zero.
+        getPersistentData().remove("humangunner:incoming_gunfire_until");
     }
 
     public boolean canAttack(LivingEntity entity) {
@@ -1346,15 +1355,15 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     public void finalizeSpawn() {
         super.finalizeSpawn();
-        HumanInventoryGenerator.generateInventory(this, false);
+        HumanSpawnEquipment.generate(this, false);
     }
 
     public void setBanner(ItemStack banner) {
         this.setItemSlot(EquipmentSlot.HEAD, banner);
     }
 
-    public void putItemAway(ItemStack itemStack) {
-        HostileHumansEquipmentPatch.stowOrDrop(this, itemStack);
+    public boolean putItemAway(ItemStack itemStack) {
+        return HumanInventoryCustody.stowOrDrop(this, itemStack);
     }
 
     public boolean equipWeapon(Predicate<ItemStack> predicate) {
@@ -1362,7 +1371,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public boolean equipWeapon(Predicate<ItemStack> predicate, EquipmentSlot equipmentSlot) {
-        return HostileHumansEquipmentPatch.swapRequestedSlot(this, predicate, equipmentSlot);
+        return HumanInventoryCustody.swapRequestedSlot(this, predicate, equipmentSlot);
     }
 
     protected void completeUsingItem() {
@@ -1391,10 +1400,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
 
         super.tick();
-        if (!level().isClientSide) finishBetterCombatUpswing();
         if (!level().isClientSide && rangedFacingTick == tickCount
                 && rangedFacingTarget != null
                 && rangedFacingTarget == getTarget() && rangedFacingTarget.isAlive()) {
+            if (Float.isFinite(meleeFacingPitch)) setXRot(meleeFacingPitch);
             // MoveControl can turn the body toward its next path node after the
             // firing goal aims. Restore target-facing yaw only for an active
             // shot, without replacing the movement path or strafe input.
@@ -1408,11 +1417,17 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
         rangedFacingTarget = null;
         rangedFacingYaw = Float.NaN;
+        meleeFacingPitch = Float.NaN;
+        if (!level().isClientSide && hasShieldFacing()) applyShieldFacing();
+        shieldFacingTarget = null;
+        if (!level().isClientSide) {
+            // Goals, navigation and defensive look control may all write yaw.
+            // Restore the attack's facing after those writers, before damage.
+            facePendingBetterCombatAttack();
+            finishBetterCombatUpswing();
+        }
         if (!level().isClientSide && !isNoAi()) {
             recoverStalledNavigation();
-        }
-        if (this.lookForChestCooldown > 0) {
-            --this.lookForChestCooldown;
         }
         if (this.getTarget() != null) {
             this.ticksOutOfCombat = 0;
@@ -1506,9 +1521,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (this.shieldUpTicks > 0) {
             --this.shieldUpTicks;
         }
-        if (this.tickCount % 300 == 0) {
-            this.setCombatTask();
-        }
     }
 
     private void setRangedFacingYaw(float yaw) {
@@ -1568,12 +1580,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (this.switchingWeaponCoolDown > 0) {
             --this.switchingWeaponCoolDown;
         }
-        if (this.onPlayerJumpCoolDown > 0) {
-            --this.onPlayerJumpCoolDown;
-        }
-        if (this.meleeFlurryDamageTicks > 0) {
-            --this.meleeFlurryDamageTicks;
-        }
         this.updateSwingTime();
     }
 
@@ -1583,6 +1589,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     protected void dropCustomDeathLoot(DamageSource p_21385_, int p_21386_, boolean p_21387_) {
         super.dropCustomDeathLoot(p_21385_, p_21386_, p_21387_);
+        // Owned death inventory is rebuilt from its pre-death snapshot. Do not
+        // apply the wild-human random durability destruction to hired gear.
+        if (hasOwner()) return;
         for (EquipmentSlot equipmentslot : EquipmentSlot.values()) {
             boolean flag;
             ItemStack itemstack = this.getItemBySlot(equipmentslot);
@@ -2061,6 +2070,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         private int combatStrafeTick = Integer.MIN_VALUE;
         private float combatStrafeForward;
         private float combatStrafeRight;
+        private boolean meleeSpacingStrafe;
 
         public HumanMoveControl(Human p_32433_) {
             super((Mob)p_32433_);
@@ -2070,12 +2080,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         @Override
         public void strafe(float forward, float right) {
             super.strafe(forward, right);
+            this.meleeSpacingStrafe = false;
             this.combatStrafeTick = this.human.tickCount;
             this.combatStrafeForward = forward;
             this.combatStrafeRight = right;
         }
 
         private void clearCombatStrafe() {
+            this.meleeSpacingStrafe = false;
             this.combatStrafeTick = Integer.MIN_VALUE;
             this.combatStrafeForward = 0.0F;
             this.combatStrafeRight = 0.0F;
@@ -2087,6 +2099,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
 
         public void tick() {
+            club.someoneice.humangunner.MovementContinuity.applyStep(this.human);
+            this.human.facePendingBetterCombatAttack();
             if (this.shorePopCooldownTicks > 0) {
                 this.shorePopCooldownTicks--;
             }
@@ -2105,11 +2119,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // normal walking pace; sprint and potion modifiers are applied
             // separately by vanilla MOVEMENT_SPEED, just as for a player.
             this.speedModifier = Math.min(this.speedModifier, 1.0D);
+            if (this.human.hasShieldFacing()) clearCombatStrafe();
             // Navigation runs after goals and can replace their STRAFE operation
             // with MOVE_TO. Keep the combat strafe requested this tick independent
             // of that operation, but never override a retreat or shore route.
             if (HumanUtil.isMeleeWeapon(this.human.getMainHandItem())
-                    && this.combatStrafeRight != 0.0F) {
+                    && this.combatStrafeRight != 0.0F && !this.meleeSpacingStrafe) {
                 clearCombatStrafe();
             }
             if (this.combatStrafeTick == this.human.tickCount
@@ -2194,7 +2209,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                     return;
                 }
                 double horizontalDistance = Math.sqrt(d0 * d0 + d2 * d2);
-                if (horizontalDistance > 1.0E-4D) {
+                if (horizontalDistance > 1.0E-4D && !this.human.hasPendingBetterCombatFacing()) {
                     float yaw = (float)(Mth.atan2(d2, d0) * 57.2957763671875) - 90.0F;
                     this.human.setYRot(this.rotlerp(this.human.getYRot(), yaw, 90.0F));
                     this.human.yBodyRot = this.human.getYRot();
@@ -2214,7 +2229,39 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 // MOVE_TO and WAIT do not clear the side input that the last
                 // ranged STRAFE wrote. Clear it before normal path movement.
                 this.human.setXxa(0.0F);
-                super.tick();
+                if ((this.human.hasPendingBetterCombatFacing() || this.human.hasShieldFacing())
+                        && this.operation == MoveControl.Operation.MOVE_TO) {
+                    this.moveWhileShieldFacing();
+                } else {
+                    super.tick();
+                }
+            }
+        }
+
+        private void moveWhileShieldFacing() {
+            double dx = wantedX - human.getX();
+            double dz = wantedZ - human.getZ();
+            double distance = Math.sqrt(dx * dx + dz * dz);
+            if (human.hasPendingBetterCombatFacing()) human.facePendingBetterCombatAttack();
+            else human.applyShieldFacing();
+            operation = MoveControl.Operation.WAIT;
+            if (distance < 0.05D) {
+                human.setZza(0.0F);
+                human.setXxa(0.0F);
+                return;
+            }
+            float yaw = human.getYRot() * ((float) Math.PI / 180.0F);
+            // Move toward the path in world space while facing the attacker:
+            // the body is not repeatedly pulled toward each navigation node.
+            human.setSpeed((float) (speedModifier * human.getAttributeValue(Attributes.MOVEMENT_SPEED)));
+            human.setZza((float) ((dz * Mth.cos(yaw) - dx * Mth.sin(yaw)) / distance));
+            human.setXxa((float) ((dx * Mth.cos(yaw) + dz * Mth.sin(yaw)) / distance));
+            Path path = human.getNavigation().getPath();
+            if (human.onGround() && path != null && !path.isDone()
+                    && wantedY > human.getY() + human.getStepHeight()
+                    && wantedY <= human.getY() + 1.1D && distance <= 1.5D) {
+                // Only a real one-block rise may jump during defense.
+                human.getJumpControl().jump();
             }
         }
 

@@ -24,6 +24,12 @@ public final class RetreatRecoveryPolicy {
                 && retreatTicks >= 40;
     }
 
+    /** Actual healing may end a retreat even when a pursuer prevents a 24-block gap. */
+    static boolean canResumeAfterHealing(double healthRatio, double resumeRatio,
+            int retreatTicks, boolean activePressureRetreat) {
+        return healthRatio >= resumeRatio && retreatTicks >= 40 && !activePressureRetreat;
+    }
+
     static boolean canStart(Human human, LivingEntity threat) {
         if (threat == null || !threat.isAlive()) {
             return false;

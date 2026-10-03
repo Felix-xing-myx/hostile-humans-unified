@@ -31,6 +31,7 @@ final class ValuableItemPickupGoal extends Goal {
     private ItemEntity targetItem;
     private Vec3 pileCenter;
     private Vec3 lastPathItemPosition;
+    private net.minecraft.world.level.pathfinder.Path ownedPath;
     private int nextSearchTick;
     private int nextRepathTick;
     private int nextValidationTick;
@@ -44,7 +45,8 @@ final class ValuableItemPickupGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (!human.isAlive()
+        if (!SoldierPickupPolicy.canCollectNow(human)
+                || !human.isAlive()
                 || human.getTarget() != null
                 || human.isFleeing
                 || human.isUsingItem()
@@ -67,7 +69,9 @@ final class ValuableItemPickupGoal extends Goal {
     @Override
     public boolean canContinueToUse() {
         return targetItem != null
+                && SoldierPickupPolicy.canCollectNow(human)
                 && targetItem.isAlive()
+                && !targetItem.hasPickUpDelay()
                 && !targetItem.getItem().isEmpty()
                 && human.getTarget() == null
                 && !human.isFleeing
@@ -86,7 +90,8 @@ final class ValuableItemPickupGoal extends Goal {
 
     @Override
     public void tick() {
-        if (targetItem == null) {
+        if (!canContinueToUse()) {
+            stop();
             return;
         }
         human.setPursuingWaterLoot(human.isInWater() || targetItem.isInWater());
@@ -143,7 +148,9 @@ final class ValuableItemPickupGoal extends Goal {
         if (pendingSearch == null && !selectionDeferred) pileCenter = null;
         human.setActivelyCollectingLoot(false);
         human.setPursuingWaterLoot(false);
-        human.getNavigation().stop();
+        if (ownsPath(human.getNavigation().getPath(), ownedPath)
+                || MovementContinuity.ownsRoute(human, ownedPath)) human.getNavigation().stop();
+        ownedPath = null;
     }
 
     private ItemEntity chooseTarget() {
@@ -174,6 +181,10 @@ final class ValuableItemPickupGoal extends Goal {
             pileCenter = chosen.position();
         }
         return chosen;
+    }
+
+    static boolean ownsPath(Object current, Object assigned) {
+        return assigned != null && current == assigned;
     }
 
     private void beginTarget() {
@@ -211,7 +222,7 @@ final class ValuableItemPickupGoal extends Goal {
                     }
                 }
             }
-            human.getNavigation().moveTo(path, 0.9D);
+            if (human.getNavigation().moveTo(path, 0.9D)) ownedPath = human.getNavigation().getPath();
             lastPathItemPosition = targetItem.position();
             nextRepathTick = human.tickCount + 20;
         }

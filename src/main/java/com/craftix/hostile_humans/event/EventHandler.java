@@ -1,10 +1,8 @@
 package com.craftix.hostile_humans.event;
 
 import com.craftix.hostile_humans.HostileHumans;
-import com.craftix.hostile_humans.compat.CollectiveVillagerNames;
 import com.craftix.hostile_humans.compat.FarmersDelight;
 import com.craftix.hostile_humans.entity.entities.Human;
-import com.craftix.hostile_humans.entity.entities.HumanInventoryGenerator;
 import club.someoneice.humangunner.HumanAwareness;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Position;
@@ -51,7 +49,6 @@ public class EventHandler {
 
     @SubscribeEvent
     public void serverStart(ServerStartedEvent event) {
-        HostileHumans.patreonNames.forEach(name -> CollectiveVillagerNames.addCustomName(name));
         if (!addedFarmerItems && ModList.get().isLoaded("farmersdelight")) {
             FarmersDelight.addFoodItems();
             addedFarmerItems = true;
@@ -83,10 +80,7 @@ public class EventHandler {
             if (entity instanceof Human) {
                 Human human = (Human)entity;
                 human.setHomePos(human.blockPosition());
-                for (EquipmentSlot equipmentslot : EquipmentSlot.values()) {
-                    human.setItemSlot(equipmentslot, ItemStack.EMPTY);
-                }
-                HumanInventoryGenerator.generateInventory(human, tag.contains("ranged"));
+                club.someoneice.humangunner.HumanSpawnEquipment.generateRequested(human, tag.contains("ranged"));
                 entity.setCustomName(null);
             }
             if (entity instanceof ArmorStand) {
@@ -107,8 +101,11 @@ public class EventHandler {
         }
         if (entity instanceof Human) {
             Human human = (Human)entity;
-            if (ModList.get().isLoaded("villagernames")) {
-                CollectiveVillagerNames.nameEntity((Entity)human);
+            if (ModList.get().isLoaded("villagernames") && !human.hasCustomName()
+                    && !HostileHumans.patreonNames.isEmpty()) {
+                var names = HostileHumans.patreonNames;
+                human.setCustomName(net.minecraft.network.chat.Component.literal(
+                        names.get(human.getRandom().nextInt(names.size()))));
             }
         }
     }

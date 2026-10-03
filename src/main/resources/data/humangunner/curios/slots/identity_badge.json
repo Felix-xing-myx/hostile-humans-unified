@@ -1,0 +1,7 @@
+{
+  "size": 1,
+  "order": 30,
+  "use_native_gui": true,
+  "add_cosmetic": false,
+  "validators": ["curios:tag"]
+}

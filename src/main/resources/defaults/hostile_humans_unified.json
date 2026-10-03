@@ -5,12 +5,14 @@
   "tiers": {
     "_说明_中文": "各阶人类的属性、新式移动速度、伤害倍率、武器散布、近战冷却和自然生成倍率。roamer/tier1/tier2/tier3 分别对应流浪者/一阶/二阶/三阶。",
     "_description_en": "Per-tier attributes, new movement-speed settings, damage multipliers, weapon spread, melee cooldown and natural-spawn multiplier. roamer/tier1/tier2/tier3 correspond to Roamer/Tier 1/Tier 2/Tier 3.",
+    "_说明_伤害层级_中文": "这里配置的是整个阶级，不是某个独立 NPC。各阶伤害倍率与 combat.json 的对应全局倍率相乘，不互相覆盖；1 表示不额外调整，0 表示该类攻击不造成伤害。例如全局近战 1.7、本阶近战 0.5，合并倍率为 0.85。枪械伤害单独在 tacz.json 设置，不使用这里的近战/弓/三叉戟输出倍率。",
+    "_description_damage_layers_en": "These settings apply to an entire tier, not an individual NPC. Tier damage multipliers multiply the corresponding global values in combat.json; neither overrides the other. 1 makes no additional change and 0 disables that attack's damage. For example, global melee 1.7 times tier melee 0.5 gives 0.85. Firearm damage is configured separately in tacz.json and does not use these melee/bow/trident outgoing multipliers.",
     "roamer": {
       "_说明_中文": "流浪者参数。",
       "_description_en": "Roamer settings.",
       "attributes": {
-        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；护甲、韧性、击退抗性、跟随范围和基础攻击属性。",
-        "_description_en": "Health bounds use health points (2 points = 1 heart); also sets armor, toughness, knockback resistance, follow range and base attack damage.",
+        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
+        "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
         "health_min": 50,
         "health_max": 70,
         "attack_damage": 1,
@@ -25,8 +27,8 @@
         "base_speed": 0.105
       },
       "damage_multipliers": {
-        "_说明_中文": "本阶人类近战、弓箭、三叉戟伤害倍率及受到伤害倍率。",
-        "_description_en": "This tier's melee, bow and trident damage multipliers, plus its incoming-damage multiplier.",
+        "_说明_中文": "输出倍率与 combat.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 tacz.json。",
+        "_description_en": "Outgoing multipliers multiply the matching global values in combat.json; the default 1 makes no additional change. melee_damage_multiplier covers melee, including trident stabs; bow_damage_multiplier covers arrows from bows and crossbows; trident_damage_multiplier covers thrown tridents only. incoming_damage_multiplier belongs to the defender and scales damage received by this tier, including firearms and environmental damage; it is not an outgoing multiplier. Firearm output is configured in tacz.json.",
         "melee_damage_multiplier": 1,
         "bow_damage_multiplier": 1,
         "trident_damage_multiplier": 1,
@@ -61,8 +63,8 @@
         "melee_cooldown_max": 32
       },
       "spawning": {
-        "_说明_中文": "该阶相对于默认值的自然生成倍率；0 表示不自然生成。",
-        "_description_en": "Natural-spawn multiplier for this tier; 0 disables its natural spawning.",
+        "_说明_中文": "spawn_multiplier 是本阶普通自然生成/区块初始自然生成的准入倍率，不是直接概率；允许 0–100 的整数或小数。相对于本项设为 1 时，0.5 保留 50%、0.1 保留 10%、0.01 保留 1% 的基础准入机会；可直接填写 0.005 等更小的数值，不加引号或百分号。0 禁止本阶普通自然生成。它与 spawning.json 的 admission_chance 相乘，仍受天数、地形、密度等条件限制；四阶使用相同准入规则，没有流浪者额外随机判定。自然大型战斗由 battle_admission_chance 单独控制，不乘此倍率；援军信号弹和敌对信标不受此项影响。",
+        "_description_en": "spawn_multiplier scales admission for this tier's ordinary and chunk-generation natural spawns; it is not a direct probability. Integers and decimals from 0 to 100 are accepted. Compared with setting this value to 1, 0.5 retains 50%, 0.1 retains 10%, and 0.01 retains 1% of base admission chances. Smaller values such as 0.005 can be entered directly without quotes or a percent sign. 0 disables this tier's ordinary natural spawns. It multiplies admission_chance in spawning.json and remains subject to day gates, terrain, density and other checks; all four ranks share this admission rule without an extra roamer roll. Automatic large battles use battle_admission_chance separately, not this multiplier. Reinforcement flares and hostile beacons are unaffected.",
         "spawn_multiplier": 1
       }
     },
@@ -70,8 +72,8 @@
       "_说明_中文": "一阶人类参数。",
       "_description_en": "Tier 1 settings.",
       "attributes": {
-        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；护甲、韧性、击退抗性、跟随范围和基础攻击属性。",
-        "_description_en": "Health bounds use health points (2 points = 1 heart); also sets armor, toughness, knockback resistance, follow range and base attack damage.",
+        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
+        "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
         "health_min": 60,
         "health_max": 80,
         "attack_damage": 1,
@@ -86,8 +88,8 @@
         "base_speed": 0.105
       },
       "damage_multipliers": {
-        "_说明_中文": "本阶人类近战、弓箭、三叉戟伤害倍率及受到伤害倍率。",
-        "_description_en": "This tier's melee, bow and trident damage multipliers, plus its incoming-damage multiplier.",
+        "_说明_中文": "输出倍率与 combat.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 tacz.json。",
+        "_description_en": "Outgoing multipliers multiply the matching global values in combat.json; the default 1 makes no additional change. melee_damage_multiplier covers melee, including trident stabs; bow_damage_multiplier covers arrows from bows and crossbows; trident_damage_multiplier covers thrown tridents only. incoming_damage_multiplier belongs to the defender and scales damage received by this tier, including firearms and environmental damage; it is not an outgoing multiplier. Firearm output is configured in tacz.json.",
         "melee_damage_multiplier": 1,
         "bow_damage_multiplier": 1,
         "trident_damage_multiplier": 1,
@@ -122,8 +124,8 @@
         "melee_cooldown_max": 28
       },
       "spawning": {
-        "_说明_中文": "该阶相对于默认值的自然生成倍率；0 表示不自然生成。",
-        "_description_en": "Natural-spawn multiplier for this tier; 0 disables its natural spawning.",
+        "_说明_中文": "spawn_multiplier 是本阶普通自然生成/区块初始自然生成的准入倍率，不是直接概率；允许 0–100 的整数或小数。相对于本项设为 1 时，0.5 保留 50%、0.1 保留 10%、0.01 保留 1% 的基础准入机会；可直接填写 0.005 等更小的数值，不加引号或百分号。0 禁止本阶普通自然生成。它与 spawning.json 的 admission_chance 相乘，仍受天数、地形、密度等条件限制；四阶使用相同准入规则，没有流浪者额外随机判定。自然大型战斗由 battle_admission_chance 单独控制，不乘此倍率；援军信号弹和敌对信标不受此项影响。",
+        "_description_en": "spawn_multiplier scales admission for this tier's ordinary and chunk-generation natural spawns; it is not a direct probability. Integers and decimals from 0 to 100 are accepted. Compared with setting this value to 1, 0.5 retains 50%, 0.1 retains 10%, and 0.01 retains 1% of base admission chances. Smaller values such as 0.005 can be entered directly without quotes or a percent sign. 0 disables this tier's ordinary natural spawns. It multiplies admission_chance in spawning.json and remains subject to day gates, terrain, density and other checks; all four ranks share this admission rule without an extra roamer roll. Automatic large battles use battle_admission_chance separately, not this multiplier. Reinforcement flares and hostile beacons are unaffected.",
         "spawn_multiplier": 1
       }
     },
@@ -131,8 +133,8 @@
       "_说明_中文": "二阶人类参数。",
       "_description_en": "Tier 2 settings.",
       "attributes": {
-        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；护甲、韧性、击退抗性、跟随范围和基础攻击属性。",
-        "_description_en": "Health bounds use health points (2 points = 1 heart); also sets armor, toughness, knockback resistance, follow range and base attack damage.",
+        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
+        "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
         "health_min": 70,
         "health_max": 90,
         "attack_damage": 1,
@@ -147,8 +149,8 @@
         "base_speed": 0.105
       },
       "damage_multipliers": {
-        "_说明_中文": "本阶人类近战、弓箭、三叉戟伤害倍率及受到伤害倍率。",
-        "_description_en": "This tier's melee, bow and trident damage multipliers, plus its incoming-damage multiplier.",
+        "_说明_中文": "输出倍率与 combat.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 tacz.json。",
+        "_description_en": "Outgoing multipliers multiply the matching global values in combat.json; the default 1 makes no additional change. melee_damage_multiplier covers melee, including trident stabs; bow_damage_multiplier covers arrows from bows and crossbows; trident_damage_multiplier covers thrown tridents only. incoming_damage_multiplier belongs to the defender and scales damage received by this tier, including firearms and environmental damage; it is not an outgoing multiplier. Firearm output is configured in tacz.json.",
         "melee_damage_multiplier": 1,
         "bow_damage_multiplier": 1,
         "trident_damage_multiplier": 1,
@@ -183,8 +185,8 @@
         "melee_cooldown_max": 24
       },
       "spawning": {
-        "_说明_中文": "该阶相对于默认值的自然生成倍率；0 表示不自然生成。",
-        "_description_en": "Natural-spawn multiplier for this tier; 0 disables its natural spawning.",
+        "_说明_中文": "spawn_multiplier 是本阶普通自然生成/区块初始自然生成的准入倍率，不是直接概率；允许 0–100 的整数或小数。相对于本项设为 1 时，0.5 保留 50%、0.1 保留 10%、0.01 保留 1% 的基础准入机会；可直接填写 0.005 等更小的数值，不加引号或百分号。0 禁止本阶普通自然生成。它与 spawning.json 的 admission_chance 相乘，仍受天数、地形、密度等条件限制；四阶使用相同准入规则，没有流浪者额外随机判定。自然大型战斗由 battle_admission_chance 单独控制，不乘此倍率；援军信号弹和敌对信标不受此项影响。",
+        "_description_en": "spawn_multiplier scales admission for this tier's ordinary and chunk-generation natural spawns; it is not a direct probability. Integers and decimals from 0 to 100 are accepted. Compared with setting this value to 1, 0.5 retains 50%, 0.1 retains 10%, and 0.01 retains 1% of base admission chances. Smaller values such as 0.005 can be entered directly without quotes or a percent sign. 0 disables this tier's ordinary natural spawns. It multiplies admission_chance in spawning.json and remains subject to day gates, terrain, density and other checks; all four ranks share this admission rule without an extra roamer roll. Automatic large battles use battle_admission_chance separately, not this multiplier. Reinforcement flares and hostile beacons are unaffected.",
         "spawn_multiplier": 0.2
       }
     },
@@ -192,8 +194,8 @@
       "_说明_中文": "三阶人类参数。",
       "_description_en": "Tier 3 settings.",
       "attributes": {
-        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；护甲、韧性、击退抗性、跟随范围和基础攻击属性。",
-        "_description_en": "Health bounds use health points (2 points = 1 heart); also sets armor, toughness, knockback resistance, follow range and base attack damage.",
+        "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
+        "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
         "health_min": 80,
         "health_max": 100,
         "attack_damage": 1,
@@ -208,8 +210,8 @@
         "base_speed": 0.105
       },
       "damage_multipliers": {
-        "_说明_中文": "本阶人类近战、弓箭、三叉戟伤害倍率及受到伤害倍率。",
-        "_description_en": "This tier's melee, bow and trident damage multipliers, plus its incoming-damage multiplier.",
+        "_说明_中文": "输出倍率与 combat.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 tacz.json。",
+        "_description_en": "Outgoing multipliers multiply the matching global values in combat.json; the default 1 makes no additional change. melee_damage_multiplier covers melee, including trident stabs; bow_damage_multiplier covers arrows from bows and crossbows; trident_damage_multiplier covers thrown tridents only. incoming_damage_multiplier belongs to the defender and scales damage received by this tier, including firearms and environmental damage; it is not an outgoing multiplier. Firearm output is configured in tacz.json.",
         "melee_damage_multiplier": 1,
         "bow_damage_multiplier": 1,
         "trident_damage_multiplier": 1,
@@ -244,32 +246,583 @@
         "melee_cooldown_max": 20
       },
       "spawning": {
-        "_说明_中文": "该阶相对于默认值的自然生成倍率；0 表示不自然生成。",
-        "_description_en": "Natural-spawn multiplier for this tier; 0 disables its natural spawning.",
+        "_说明_中文": "spawn_multiplier 是本阶普通自然生成/区块初始自然生成的准入倍率，不是直接概率；允许 0–100 的整数或小数。相对于本项设为 1 时，0.5 保留 50%、0.1 保留 10%、0.01 保留 1% 的基础准入机会；可直接填写 0.005 等更小的数值，不加引号或百分号。0 禁止本阶普通自然生成。它与 spawning.json 的 admission_chance 相乘，仍受天数、地形、密度等条件限制；四阶使用相同准入规则，没有流浪者额外随机判定。自然大型战斗由 battle_admission_chance 单独控制，不乘此倍率；援军信号弹和敌对信标不受此项影响。",
+        "_description_en": "spawn_multiplier scales admission for this tier's ordinary and chunk-generation natural spawns; it is not a direct probability. Integers and decimals from 0 to 100 are accepted. Compared with setting this value to 1, 0.5 retains 50%, 0.1 retains 10%, and 0.01 retains 1% of base admission chances. Smaller values such as 0.005 can be entered directly without quotes or a percent sign. 0 disables this tier's ordinary natural spawns. It multiplies admission_chance in spawning.json and remains subject to day gates, terrain, density and other checks; all four ranks share this admission rule without an extra roamer roll. Automatic large battles use battle_admission_chance separately, not this multiplier. Reinforcement flares and hostile beacons are unaffected.",
         "spawn_multiplier": 0.04
       }
     }
   },
   "damage": {
-    "_说明_中文": "全局伤害倍率，用于调整各类人类攻击、弹道速度伤害、跳跃攻击，以及人类近战对已驯服女仆造成的伤害。tamed_maid_melee_damage_multiplier 只削减人类对女仆的近战伤害，不控制女仆对人类的伤害。",
-    "_description_en": "Global damage multipliers for human attacks, projectile-speed scaling, jump attacks, and human melee damage dealt to tamed maids. tamed_maid_melee_damage_multiplier reduces human melee damage to maids; it does not control maid damage to humans.",
+    "_说明_中文": "非枪械的全局输出倍率，与 tiers.json 中攻击者所属阶级的对应倍率相乘；不是覆盖值。每次命中只使用匹配的攻击类型，不把近战、箭矢、投掷三叉戟倍率全部乘在一起。各项只调整伤害，不调整攻击距离、射速或弹速。枪械输出另在 tacz.json。",
+    "_description_en": "Global outgoing multipliers for non-firearm attacks multiply the corresponding attacker-tier values in tiers.json; they are not overrides. Each hit uses its matching attack category, not all melee/arrow/thrown-trident multipliers together. These settings change damage, not reach, attack cadence or projectile speed. Firearm output is configured in tacz.json.",
+    "_说明_近战计算_中文": "普通近战输入伤害 × human_melee_damage_multiplier × 本阶 melee_damage_multiplier。输入伤害已经包含武器、攻击属性和附魔等原生计算；Better Combat 的连招/扫击按其攻击属性规则参与，不会替代这里的倍率。特殊近刺、跳斩和目标承伤倍率只在条件成立时继续相乘。",
+    "_description_melee_formula_en": "Ordinary melee input damage × human_melee_damage_multiplier × tier melee_damage_multiplier. Input damage already includes native weapon, attack-attribute and enchantment calculations. Better Combat combo/sweep rules affect the attack attributes and do not replace these multipliers. Stab, jump-attack and defender multipliers apply additionally only when their conditions are met.",
     "human_melee_damage_multiplier": 1.7,
+    "_说明_弹射物计算_中文": "弓/弩箭输入伤害 × human_bow_damage_multiplier × 本阶 bow_damage_multiplier × bow_velocity_damage_multiplier；投掷三叉戟输入伤害 × human_trident_damage_multiplier × 本阶 trident_damage_multiplier × trident_velocity_damage_multiplier。两个 velocity 项沿用历史名称，实际是额外常数伤害倍率，不读取或改变弹速。箭矢自身的原生伤害计算仍可包含速度。",
+    "_description_projectile_formula_en": "Bow/crossbow arrow input damage × human_bow_damage_multiplier × tier bow_damage_multiplier × bow_velocity_damage_multiplier; thrown-trident input damage × human_trident_damage_multiplier × tier trident_damage_multiplier × trident_velocity_damage_multiplier. The two velocity keys retain historical names but are additional constant damage multipliers; they neither read nor change projectile speed. Native arrow damage may still depend on speed.",
     "human_bow_damage_multiplier": 1.2096,
     "human_trident_damage_multiplier": 0.84,
     "bow_velocity_damage_multiplier": 1.5,
     "trident_velocity_damage_multiplier": 1.5,
+    "_说明_特殊修正_中文": "trident_stab_damage_multiplier 仅额外修正手持三叉戟的近刺，仍使用近战全局/阶级倍率，不使用投掷三叉戟倍率。jump_attack_damage_multiplier 仅用于条件成立的下落跳斩。tamed_maid_melee_damage_multiplier 仅额外修正人类对已驯服女仆的近战伤害，不控制女仆对人类的伤害。这些值以及目标减伤、护甲和其他模组的修改会共同影响最终扣血，因此上述公式不是保证的最终生命损失。",
+    "_description_special_factors_en": "trident_stab_damage_multiplier applies additionally to a held trident's melee stab, which still uses melee global/tier values, not thrown-trident values. jump_attack_damage_multiplier applies only to qualifying falling jump attacks. tamed_maid_melee_damage_multiplier applies additionally to human melee attacks against tamed maids, not maid attacks against humans. These factors, defender reductions, armor and other mods affect actual health loss; the formulas above do not guarantee final health loss.",
     "trident_stab_damage_multiplier": 0.42,
     "jump_attack_damage_multiplier": 1.5,
     "tamed_maid_melee_damage_multiplier": 0.25
   },
+  "equipment_loadouts": {
+    "_说明_中文": "四阶生成装备的唯一配置入口：roamer=流浪者，tier1=一阶，tier2=二阶，tier3=三阶。位于 config/hostile_humans_unified/equipment.json。只影响之后生成的人类，已有实体和主人手动放入的物品不重置。修改后重启游戏/服务器；/reload 不重读本配置。旧数据包 human_loadouts 已停止读取，不会自动迁移第三方数据包的自定义条目，需手动填入这里。",
+    "_description_en": "The sole spawn-loadout config for roamer and tier1-3, in config/hostile_humans_unified/equipment.json. Applies only to future spawns, never resets existing entities or owner-supplied items. Restart the game/server to apply; /reload does not reload these settings. The old human_loadouts datapack loader is removed; third-party datapack customizations must be copied here manually.",
+    "_说明_格式_中文": "数组里的每一项用花括号，物品用完整 item ID 字符串，例如 {\"item\":\"minecraft:iron_sword\",\"weight\":3} 与 {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}；两项之间用逗号。所有 ID/键使用双引号，数量、权重和概率不加引号。weight 为 0 至 1000000 的整数，0 禁用，正数按可用条目的相对权重分配，不必合计 100。count 可选，默认 1，范围 1-64 并限制到物品最大堆叠数。requires_mod 可选。未安装的模组物品会跳过；非法 ID 条目启动时告警并跳过。说明文本中的 \\\" 是 JSON 字符串转义，实际 item 字段只写 \"minecraft:iron_sword\"，不要把反斜杠复制到 ID 里。",
+    "_description_format_en": "Each array row is an object, e.g. {\"item\":\"minecraft:iron_sword\",\"weight\":3} and {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}, separated by commas. Quote keys/IDs, not numbers. weight is an integer 0-1000000; 0 disables a row. Positive weights are relative among available rows and need not sum to 100. Optional count defaults to 1, accepts 1-64 and is capped at the item's maximum stack size. Optional requires_mod gates a row. Missing mod items are skipped; malformed ID rows are warned and skipped at startup. Backslash-escaped quotes inside these description strings are JSON syntax: the actual item field is \"minecraft:iron_sword\", without backslashes in the ID.",
+    "_说明_池_中文": "mainhand=普通主手池；ranged_mainhand=支持的非枪械远程池；inventory=备用近战池，供远程备用与额外武器名额抽取；offhand.chance/entries=副手概率和池；bonus_mainhand.chance/entries=额外武器名额选择奖励池的概率和池，不替换主手。武器每条生成 1 把，数量统一受本阶上限控制。armor_sets 按权重选整套，head/chest/legs/feet 为四部位 ID，省略或 null 表示不穿，空数组表示不生成护甲。任一填写部位不存在或不匹配则跳过整套。主手/远程池全部失效仍使用安全武器，但空备用池不制造额外武器。",
+    "_description_pools_en": "mainhand is the ordinary weapon pool; ranged_mainhand accepts supported non-firearm ranged weapons; inventory supplies melee backups and extra weapon slots. offhand.chance/entries control offhand rolls. bonus_mainhand.chance/entries select a bonus pool for an extra slot, never replace the main hand. Each weapon entry generates one weapon within the rank cap. armor_sets chooses a whole weighted set; head/chest/legs/feet are item IDs, omitted/null means unequipped and [] means no armor. Missing or wrong-slot items reject the whole set. Unavailable primary/ranged pools use a safe weapon, but an empty reserve pool does not manufacture extras.",
+    "_说明_远程与盾牌_中文": "ranged_chance 为 0-1 的非枪械远程概率，默认 0.2/0.4/0.7/1；枪械判定成功时保留枪械和近战，不再额外补弓弩。ranged_in_backpack=true 将远程放背包，数量计入本阶上限。guaranteed_shields_min/max 为 0-3 的总盾牌数量目标，含手与背包；缺少时只从 shield_pool 抽取，空池或无有效条目就不补充，不回退到原版盾牌。禁止所有盾牌时同时清空 shield_pool 与 offhand.entries 中的盾牌条目。",
+    "_description_ranged_shields_en": "ranged_chance is a 0-1 non-firearm ranged chance, defaulting to 0.2/0.4/0.7/1. A successful gun roll retains a gun and melee weapon instead of adding another bow/crossbow. ranged_in_backpack stores the ranged item; it counts toward the rank cap. guaranteed_shields_min/max target 0-3 total equipped/stored shields. Shortages only draw from shield_pool; empty/unavailable pools do not create a vanilla fallback. To disable all shields, clear shield_pool and remove shield rows from offhand.entries.",
+    "_说明_优先级与联动_中文": "斯巴达武器/盾牌不再在生成后替换装备。automatic_spartan_weapons/shields 仅控制启动时首次导入：识别已安装模组的可用条目后写入对应配置池，以 weight 抽取；_imported_spartanweaponry/_imported_spartanshields 为导入记录，保留记录即可让删除的条目不再补回。关闭导入开关不删除已经写入的条目，要禁止生成某装备请从池中删除或把 weight 设为 0。护甲只读取 armor_sets；requires_mod 可省略，物品不存在仍会跳过。删除数组内条目或保留空数组可以完全自定义，不要删除整个配置键。TaCZ 是额外携带机会，保留普通近战装备，枪械型号与概率读取 tacz.json；不要把 tacz:modern_kinetic_gun 当作型号写入物品池。自然装备成长最后处理，固定品质请关闭 equipment_growth.enabled。",
+    "_description_priority_en": "Spartan gear never replaces generated equipment. automatic_spartan_weapons/shields only enable first-time startup import of registered compatible items into weighted pools. Keep _imported_spartanweaponry/_imported_spartanshields receipts so deleted rows stay deleted. Disabling import does not remove existing rows: delete a row or set its weight to 0 to stop its generation. Armor reads armor_sets only. requires_mod is optional; missing items are still skipped. Replace array contents or keep empty arrays for customization; do not delete entire keys. TaCZ is an extra carried firearm chance while keeping melee gear; gun IDs/chances remain in tacz.json, not the generic tacz:modern_kinetic_gun item. Natural growth runs last; disable equipment_growth.enabled for fixed quality.",
+    "_说明_武器数量_中文": "生成携带上限包含主手、副手和背包中的近战、弓弩、三叉戟、枪械：流浪者 2 把，其他三阶 3 把。weapon_count.second_weapon_chance 默认 0.45，第三把在第二把判定成功后以 third_weapon_chance 默认 0.20 再判定；近战默认数量概率为 1 把 55%、2 把 36%、3 把 9%，流浪者为 1 把 55%、2 把 45%。概率可配置 0-0.49，确保多把更少见。远程单位的近战备用占一个名额，枪手至少保留枪械与近战两把。bonus_mainhand 仅参与额外名额的抽取，不再替换主手。数量只在生成时限制，不限制以后拾取或主人配装。",
+    "_description_weapon_count_en": "Spawn-only caps count weapons in both hands and the backpack: Roamers 2, other ranks 3, including melee, bows/crossbows, tridents and guns. second_weapon_chance defaults to 0.45; after success, third_weapon_chance defaults to 0.20. Ordinary melee counts are 55%/36%/9% for 1/2/3 weapons, or 55%/45% for Roamers. Chances accept 0-0.49 to keep larger counts rarer. Ranged melee backups count toward the cap; gunners retain at least a gun and melee weapon. bonus_mainhand participates in extra slots, never replaces the main hand. Later looting/owner equipment is not capped.",
+    "_说明_附魔_中文": "rules.enchant_chance 为基础随机附魔概率；damage_percent_min/max 为生成时已损耗耐久比例（0=全新，0.85=最多损耗85%）；elite_enchantments 启用原三阶强化附魔预设，默认仅三阶 true。物品池条目可额外填写 enchantments 对象，例如 {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}，等级为 1-255 的整数；只接受存在且适用于该物品的附魔，明确填写的等级在随机主手附魔后应用。automatic_shield_enchantments 控制额外按阶随机盾牌附魔，默认 true。若要仅使用自己指定的附魔，设 enchant_chance=0、elite_enchantments=false、automatic_shield_enchantments=false，并关闭自动斯巴达装备（其生成仍带自身附魔）。成长启用时最后仍会削弱附魔。",
+    "_description_enchantments_en": "rules.enchant_chance controls base random enchanting; damage_percent_min/max are the fraction of durability already consumed at spawn (0=fresh, 0.85=up to 85% worn). elite_enchantments enables the original elite enchantment preset, default true only for tier3. Item rows may include enchantments such as {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}; integer levels 1-255, registered/applicable enchantments only. Explicit levels are applied after random main-hand enchanting. automatic_shield_enchantments controls the additional rank-specific shield enchantment pass, default true. For explicit-only enchantments use enchant_chance=0, elite_enchantments=false, automatic_shield_enchantments=false and disable automatic Spartan gear (it brings its own enchantments). Growth, if enabled, can still reduce enchantments afterward.",
+    "roamer": {
+      "rules": {
+        "enchant_chance": 1,
+        "damage_percent_min": 0,
+        "damage_percent_max": 0.85,
+        "elite_enchantments": false
+      },
+      "mainhand": [
+        {
+          "item": "minecraft:iron_sword",
+          "weight": 3
+        },
+        {
+          "item": "minecraft:stone_sword",
+          "weight": 3
+        },
+        {
+          "item": "minecraft:diamond_sword",
+          "weight": 1
+        },
+        {
+          "item": "minecraft:diamond_axe",
+          "weight": 1
+        }
+      ],
+      "ranged_mainhand": [
+        {
+          "item": "minecraft:crossbow",
+          "weight": 1
+        },
+        {
+          "item": "minecraft:bow",
+          "weight": 1
+        }
+      ],
+      "offhand": {
+        "chance": 0.4,
+        "entries": [
+          {
+            "item": "minecraft:shield",
+            "weight": 9
+          },
+          {
+            "item": "minecraft:totem_of_undying",
+            "weight": 1
+          }
+        ]
+      },
+      "inventory": [
+        {
+          "item": "minecraft:iron_sword",
+          "weight": 2
+        },
+        {
+          "item": "minecraft:stone_sword",
+          "weight": 2
+        }
+      ],
+      "bonus_mainhand": {
+        "chance": 0.05,
+        "entries": [
+          {
+            "item": "minecraft:trident",
+            "weight": 1
+          }
+        ]
+      },
+      "_说明_护甲_中文": "流浪者默认护甲权重：皮革 6、锁链 3、铁 1，即 60%/30%/10%，不默认生成钻石或高档联动护甲。新版本仅自动迁移完全未修改的旧默认护甲池，保留自定义内容；只影响之后生成的单位，不剥除现有装备或限制战利品拾取。",
+      "_description_armor_en": "Default Roamer armor weights: leather 6, chainmail 3, iron 1 (60%/30%/10%); no default diamond or high-end integration armor. Only the exact unmodified former default pool is migrated; custom pools remain intact. Applies to future spawns, without stripping existing gear or restricting loot pickup.",
+      "armor_sets": [
+        {
+          "weight": 1,
+          "head": "minecraft:iron_helmet",
+          "chest": "minecraft:iron_chestplate",
+          "legs": "minecraft:iron_leggings",
+          "feet": "minecraft:iron_boots"
+        },
+        {
+          "weight": 6,
+          "head": "minecraft:leather_helmet",
+          "chest": "minecraft:leather_chestplate",
+          "legs": "minecraft:leather_leggings",
+          "feet": "minecraft:leather_boots"
+        },
+        {
+          "weight": 3,
+          "head": "minecraft:chainmail_helmet",
+          "chest": "minecraft:chainmail_chestplate",
+          "legs": "minecraft:chainmail_leggings",
+          "feet": "minecraft:chainmail_boots"
+        }
+      ],
+      "ranged_chance": 0.2,
+      "ranged_in_backpack": false,
+      "automatic_spartan_weapons": true,
+      "automatic_spartan_shields": true,
+      "allow_tacz_firearms": true,
+      "weapon_count": { "second_weapon_chance": 0.45, "third_weapon_chance": 0.2 },
+      "automatic_shield_enchantments": true,
+      "guaranteed_shields_min": 1,
+      "guaranteed_shields_max": 1,
+      "shield_pool": [
+        {
+          "item": "minecraft:shield",
+          "weight": 1
+        }
+      ]
+    },
+    "tier1": {
+      "rules": {
+        "enchant_chance": 0.3,
+        "damage_percent_min": 0,
+        "damage_percent_max": 0.85,
+        "elite_enchantments": false
+      },
+      "mainhand": [
+        {
+          "item": "minecraft:iron_sword",
+          "weight": 2
+        },
+        {
+          "item": "minecraft:stone_sword",
+          "weight": 2
+        }
+      ],
+      "ranged_mainhand": [
+        {
+          "item": "minecraft:crossbow",
+          "weight": 1
+        },
+        {
+          "item": "minecraft:bow",
+          "weight": 1
+        }
+      ],
+      "offhand": {
+        "chance": 0.2,
+        "entries": [
+          {
+            "item": "minecraft:shield",
+            "weight": 1
+          }
+        ]
+      },
+      "inventory": [
+        {
+          "item": "minecraft:iron_sword",
+          "weight": 1
+        },
+        {
+          "item": "minecraft:stone_sword",
+          "weight": 1
+        }
+      ],
+      "bonus_mainhand": {
+        "chance": 0,
+        "entries": []
+      },
+      "armor_sets": [
+        {
+          "weight": 1,
+          "head": "minecraft:leather_helmet",
+          "chest": "minecraft:leather_chestplate",
+          "legs": "minecraft:leather_leggings",
+          "feet": "minecraft:leather_boots"
+        },
+        {
+          "weight": 1,
+          "head": "minecraft:chainmail_helmet",
+          "chest": "minecraft:chainmail_chestplate",
+          "legs": "minecraft:chainmail_leggings",
+          "feet": "minecraft:chainmail_boots"
+        },
+        {
+          "weight": 1,
+          "head": "minecraft:iron_helmet",
+          "chest": "minecraft:iron_chestplate",
+          "legs": "minecraft:iron_leggings",
+          "feet": "minecraft:iron_boots"
+        },
+        {
+          "weight": 1,
+          "head": "minecraft:golden_helmet",
+          "chest": "minecraft:golden_chestplate",
+          "legs": "minecraft:golden_leggings",
+          "feet": "minecraft:golden_boots"
+        },
+        {
+          "weight": 1,
+          "requires_mod": "immersive_armors",
+          "head": "immersive_armors:wooden_helmet",
+          "chest": "immersive_armors:wooden_chestplate",
+          "legs": "immersive_armors:wooden_leggings",
+          "feet": "immersive_armors:wooden_boots"
+        },
+        {
+          "weight": 1,
+          "requires_mod": "immersive_armors",
+          "head": "immersive_armors:bone_helmet",
+          "chest": "immersive_armors:bone_chestplate",
+          "legs": "immersive_armors:bone_leggings",
+          "feet": "immersive_armors:bone_boots"
+        },
+        {
+          "weight": 1,
+          "requires_mod": "immersive_armors",
+          "head": "immersive_armors:robe_helmet",
+          "chest": "immersive_armors:robe_chestplate",
+          "legs": "immersive_armors:robe_leggings",
+          "feet": "immersive_armors:robe_boots"
+        }
+      ],
+      "ranged_chance": 0.4,
+      "ranged_in_backpack": false,
+      "automatic_spartan_weapons": true,
+      "automatic_spartan_shields": true,
+      "allow_tacz_firearms": true,
+      "weapon_count": { "second_weapon_chance": 0.45, "third_weapon_chance": 0.2 },
+      "automatic_shield_enchantments": true,
+      "guaranteed_shields_min": 1,
+      "guaranteed_shields_max": 3,
+      "shield_pool": [
+        {
+          "item": "minecraft:shield",
+          "weight": 1
+        }
+      ]
+    },
+    "tier2": {
+      "rules": {
+        "enchant_chance": 1,
+        "damage_percent_min": 0,
+        "damage_percent_max": 0.85,
+        "elite_enchantments": false
+      },
+      "mainhand": [
+        {
+          "item": "minecraft:diamond_sword",
+          "weight": 3
+        },
+        {
+          "item": "minecraft:diamond_axe",
+          "weight": 2
+        }
+      ],
+      "ranged_mainhand": [
+        {
+          "item": "minecraft:crossbow",
+          "weight": 1
+        },
+        {
+          "item": "minecraft:bow",
+          "weight": 1
+        }
+      ],
+      "offhand": {
+        "chance": 0.5,
+        "entries": [
+          {
+            "item": "minecraft:shield",
+            "weight": 85
+          },
+          {
+            "item": "minecraft:totem_of_undying",
+            "weight": 15
+          }
+        ]
+      },
+      "inventory": [
+        {
+          "item": "minecraft:iron_sword",
+          "weight": 1
+        },
+        {
+          "item": "minecraft:stone_sword",
+          "weight": 1
+        }
+      ],
+      "bonus_mainhand": {
+        "chance": 0.05,
+        "entries": [
+          {
+            "item": "minecraft:trident",
+            "weight": 1
+          }
+        ]
+      },
+      "armor_sets": [
+        {
+          "weight": 1,
+          "head": "minecraft:iron_helmet",
+          "chest": "minecraft:iron_chestplate",
+          "legs": "minecraft:iron_leggings",
+          "feet": "minecraft:iron_boots"
+        },
+        {
+          "weight": 1,
+          "head": "minecraft:diamond_helmet",
+          "chest": "minecraft:diamond_chestplate",
+          "legs": "minecraft:diamond_leggings",
+          "feet": "minecraft:diamond_boots"
+        },
+        {
+          "weight": 1,
+          "requires_mod": "immersive_armors",
+          "head": "immersive_armors:warrior_helmet",
+          "chest": "immersive_armors:warrior_chestplate",
+          "legs": "immersive_armors:warrior_leggings",
+          "feet": "immersive_armors:warrior_boots"
+        },
+        {
+          "weight": 1,
+          "requires_mod": "immersive_armors",
+          "head": "immersive_armors:heavy_helmet",
+          "chest": "immersive_armors:heavy_chestplate",
+          "legs": "immersive_armors:heavy_leggings",
+          "feet": "immersive_armors:heavy_boots"
+        },
+        {
+          "weight": 1,
+          "requires_mod": "immersive_armors",
+          "head": "immersive_armors:divine_helmet",
+          "chest": "immersive_armors:divine_chestplate",
+          "legs": "immersive_armors:divine_leggings",
+          "feet": "immersive_armors:divine_boots"
+        },
+        {
+          "weight": 1,
+          "requires_mod": "immersive_armors",
+          "head": "immersive_armors:wither_helmet",
+          "chest": "immersive_armors:wither_chestplate",
+          "legs": "immersive_armors:wither_leggings",
+          "feet": "immersive_armors:wither_boots"
+        }
+      ],
+      "ranged_chance": 0.7,
+      "ranged_in_backpack": false,
+      "automatic_spartan_weapons": true,
+      "automatic_spartan_shields": true,
+      "allow_tacz_firearms": true,
+      "weapon_count": { "second_weapon_chance": 0.45, "third_weapon_chance": 0.2 },
+      "automatic_shield_enchantments": true,
+      "guaranteed_shields_min": 1,
+      "guaranteed_shields_max": 3,
+      "shield_pool": [
+        {
+          "item": "minecraft:shield",
+          "weight": 1
+        }
+      ]
+    },
+    "tier3": {
+      "rules": {
+        "enchant_chance": 1,
+        "damage_percent_min": 0,
+        "damage_percent_max": 0,
+        "elite_enchantments": true
+      },
+      "mainhand": [
+        {
+          "item": "minecraft:netherite_sword",
+          "weight": 72
+        },
+        {
+          "item": "minecraft:netherite_axe",
+          "weight": 28
+        }
+      ],
+      "ranged_mainhand": [
+        {
+          "item": "minecraft:bow",
+          "weight": 1
+        },
+        {
+          "item": "minecraft:crossbow",
+          "weight": 1
+        }
+      ],
+      "offhand": {
+        "chance": 1,
+        "entries": [
+          {
+            "item": "minecraft:shield",
+            "weight": 1
+          }
+        ]
+      },
+      "inventory": [
+        {
+          "item": "minecraft:netherite_sword",
+          "weight": 72
+        },
+        {
+          "item": "minecraft:netherite_axe",
+          "weight": 28
+        }
+      ],
+      "bonus_mainhand": {
+        "chance": 0,
+        "entries": []
+      },
+      "armor_sets": [
+        {
+          "weight": 186,
+          "head": "minecraft:netherite_helmet",
+          "chest": "minecraft:netherite_chestplate",
+          "legs": "minecraft:netherite_leggings",
+          "feet": "minecraft:netherite_boots"
+        },
+        {
+          "weight": 38,
+          "requires_mod": "immersive_armors",
+          "head": "immersive_armors:prismarine_helmet",
+          "chest": "immersive_armors:prismarine_chestplate",
+          "legs": "immersive_armors:prismarine_leggings",
+          "feet": "immersive_armors:prismarine_boots"
+        },
+        {
+          "weight": 38,
+          "requires_mod": "immersive_armors",
+          "head": "immersive_armors:heavy_helmet",
+          "chest": "immersive_armors:heavy_chestplate",
+          "legs": "immersive_armors:heavy_leggings",
+          "feet": "immersive_armors:heavy_boots"
+        },
+        {
+          "weight": 38,
+          "requires_mod": "immersive_armors",
+          "head": "immersive_armors:divine_helmet",
+          "chest": "immersive_armors:divine_chestplate",
+          "legs": "immersive_armors:divine_leggings",
+          "feet": "immersive_armors:divine_boots"
+        }
+      ],
+      "ranged_chance": 1,
+      "ranged_in_backpack": true,
+      "automatic_spartan_weapons": true,
+      "automatic_spartan_shields": true,
+      "allow_tacz_firearms": true,
+      "weapon_count": { "second_weapon_chance": 0.45, "third_weapon_chance": 0.2 },
+      "automatic_shield_enchantments": true,
+      "guaranteed_shields_min": 1,
+      "guaranteed_shields_max": 3,
+      "shield_pool": [
+        {
+          "item": "minecraft:shield",
+          "weight": 1
+        }
+      ]
+    }
+  },
+  "equipment_growth": {
+    "_说明_中文": "自然生成装备成长总开关，默认开启。仅作用于新自然生成、区块初始自然生成和自然大型战斗的人类；已有实体、玩家装备、援军信号弹、敌对信标、刷怪蛋和命令生成不变。关闭 enabled 后新生成的人类完全使用原有装备规则，不自动恢复已经生成的早期装备。只影响初始装备，不修改血量、基础伤害倍率、阶级和原有弓弩携带概率；装备和附魔变化仍会影响实际战斗表现。修改后重启生效，不重置已有配置。",
+    "_description_en": "Enabled by default. Applies only to newly naturally spawned humans, initial chunk-population spawns and automatic battles. Existing entities, owner-supplied gear, friendly flares, hostile beacons, spawn eggs and commands are unchanged. Disabling enabled gives new humans the original loadout rules; it does not restore early gear already generated. Only initial gear is affected, not base health, configured damage multipliers, rank or existing bow/crossbow probabilities; changed gear and enchantments still affect combat strength. Restart to apply; existing configuration is preserved.",
+    "enabled": true,
+    "_说明_成长公式_中文": "每阶进度 p=限制到 0–1 的 (个人在线日-start_day)/(full_quality_day-start_day)。采用生成点同维度最近的存活非旁观玩家的累计在线时间，与自然生成解锁共用个人计时；24000 个在线游戏 tick 为一天，离线、暂停、睡觉跳夜和 /time 不增加进度。start_day 只控制装备成长；解锁日在 spawning.json 独立配置。结束日不晚于起点时，从结束日起使用完整装备。进度只在生成时保存，不会每天给已有实体换装。",
+    "_description_progress_formula_en": "Per-tier p=clamp((personal online day-start_day)/(full_quality_day-start_day),0,1). Uses the nearest living non-spectator player's accumulated online time in the spawn dimension, shared with rank unlocks. A day is 24000 online game ticks; offline time, pauses, skipped nights and /time do not advance it. start_day controls equipment only; spawning.json controls unlock dates. If the end is at/before the start, full gear applies from the end. Captured at spawn; existing humans are not re-equipped daily.",
+    "_说明_品质与枪械_中文": "所有 early_* 概率/倍率允许 0–1 小数，实际值=早期值+(1-早期值)×p。early_baseline_gear_chance 是保留本阶原有装备材质的概率，同一实体共用材质判定；否则使用 early_melee、early_armor 和 early_spartan_material。早期材质不会提升本就更弱的默认装备。early_gun_chance_multiplier 乘 tacz.json 本阶原有枪械携带概率：例如原概率 0.8、早期倍率 0.25，则起点概率 0.2；枪械 ID、类型权重和伤害不变。默认本阶原有装备品质达到日依次为 40、50、70、80。",
+    "_description_quality_and_guns_en": "All early_* chances/multipliers accept decimals 0–1; the actual value is early+(1-early)×p. early_baseline_gear_chance preserves original material quality, with one shared material roll per human; otherwise early_melee, early_armor and early_spartan_material are used. Early substitutions do not upgrade weaker baseline gear. early_gun_chance_multiplier multiplies the tier's existing firearm chance in tacz.json: 0.8×0.25=0.2 at the start. Gun IDs, type weights and damage are unchanged. Default baseline-quality days are 40, 50, 70 and 80.",
+    "_说明_附魔与特殊物品_中文": "early_enchantment_keep_chance 是每个非诅咒附魔的保留概率；early_enchantment_level_multiplier 乘原等级并向下取整，结果 0 时去除该附魔；例如等级 IV×0.25=I。诅咒保留，替换物品只接受其可用附魔。盾牌与背包备用装备也处理。early_totem_keep_chance 控制已抽中的不死图腾保留概率；early_trident_keep_chance 控制已抽中的三叉戟保留概率，不保留时替换为弓以保留远程能力。到结束日不再过滤任何装备和附魔。食物、药水等补给不受影响。",
+    "_description_enchantments_and_specials_en": "early_enchantment_keep_chance retains each non-curse enchantment; early_enchantment_level_multiplier multiplies its original level and rounds down, removing levels that become 0. Level IV×0.25=I. Curses remain; replacement items accept only applicable enchantments. Shields and backpack backups are included. early_totem_keep_chance retains already-rolled totems. early_trident_keep_chance retains already-rolled tridents; otherwise a bow preserves ranged capability. On the end day, gear/enchantments are no longer filtered. Food and potion supplies are unchanged.",
+    "_说明_物品ID_中文": "early_melee.sword/axe 和 early_armor.head/chest/legs/feet 接受原版或模组的完整物品 ID 字符串，例如 \"minecraft:iron_sword\"、\"immersive_armors:wooden_chestplate\"；ID 使用双引号，JSON 各项用逗号分隔。未安装、无效 ID、air 或不符合部位/武器类型的 ID 使用安全回退装备，控制台对每个无效 ID 仅警告一次。early_spartan_material 指斯巴达注册名的材质前缀，例如 wooden、stone、copper、iron、diamond；尽量保留武器类型，无对应物品则回退早期原版近战武器、弓/弩或盾牌。不能靠材质前缀评定任意枪械的强弱，因此枪械只调整生成概率。如本说明中的引号以反斜杠转义显示，真实物品 ID 配置需移除转义反斜杠，只保留包裹字符串的双引号。",
+    "_description_item_ids_en": "early_melee.sword/axe and early_armor.head/chest/legs/feet accept full vanilla/mod item IDs such as \"minecraft:iron_sword\" or \"immersive_armors:wooden_chestplate\". Use double-quoted strings and commas between JSON entries. Missing, invalid, air or wrong slot/weapon-type IDs use safe fallback gear and log once per invalid ID. early_spartan_material is the Spartan registry material prefix, e.g. wooden, stone, copper, iron or diamond. Weapon archetypes are retained where possible; missing variants fall back to early vanilla melee, bows/crossbows or shields. Arbitrary gun strength cannot be inferred from material names, so only gun spawn chance changes. If quotes in this description appear backslash-escaped, remove those escape backslashes from actual ID settings and retain the enclosing double quotes.",
+    "tiers": {
+      "roamer": {
+        "_说明_中文": "流浪者：第 3 天开始装备成长，第 40 天恢复原有品质。日期范围 1–1000000；下列概率/倍率范围 0–1。",
+        "_description_en": "Roamer: growth starts on day 3 and reaches original quality on day 40. Dates: 1–1000000; chances/multipliers: 0–1.",
+        "start_day": 3,
+        "full_quality_day": 40,
+        "early_baseline_gear_chance": 0.0,
+        "early_gun_chance_multiplier": 0.25,
+        "early_enchantment_keep_chance": 0.15,
+        "early_enchantment_level_multiplier": 0.25,
+        "early_totem_keep_chance": 0.0,
+        "early_trident_keep_chance": 0.0,
+        "early_spartan_material": "wooden",
+        "early_melee": { "sword": "minecraft:stone_sword", "axe": "minecraft:stone_axe" },
+        "early_armor": { "head": "minecraft:leather_helmet", "chest": "minecraft:leather_chestplate", "legs": "minecraft:leather_leggings", "feet": "minecraft:leather_boots" }
+      },
+      "tier1": {
+        "_说明_中文": "一阶：第 5 天开始装备成长，第 50 天恢复原有品质。日期范围 1–1000000；下列概率/倍率范围 0–1。",
+        "_description_en": "Tier I: growth starts on day 5 and reaches original quality on day 50. Dates: 1–1000000; chances/multipliers: 0–1.",
+        "start_day": 5,
+        "full_quality_day": 50,
+        "early_baseline_gear_chance": 0.0,
+        "early_gun_chance_multiplier": 0.25,
+        "early_enchantment_keep_chance": 0.15,
+        "early_enchantment_level_multiplier": 0.25,
+        "early_totem_keep_chance": 0.0,
+        "early_trident_keep_chance": 0.0,
+        "early_spartan_material": "stone",
+        "early_melee": { "sword": "minecraft:stone_sword", "axe": "minecraft:stone_axe" },
+        "early_armor": { "head": "minecraft:leather_helmet", "chest": "minecraft:leather_chestplate", "legs": "minecraft:leather_leggings", "feet": "minecraft:leather_boots" }
+      },
+      "tier2": {
+        "_说明_中文": "二阶：第 10 天开始装备成长，第 70 天恢复原有品质。日期范围 1–1000000；下列概率/倍率范围 0–1。",
+        "_description_en": "Tier II: growth starts on day 10 and reaches original quality on day 70. Dates: 1–1000000; chances/multipliers: 0–1.",
+        "start_day": 10,
+        "full_quality_day": 70,
+        "early_baseline_gear_chance": 0.0,
+        "early_gun_chance_multiplier": 0.25,
+        "early_enchantment_keep_chance": 0.15,
+        "early_enchantment_level_multiplier": 0.25,
+        "early_totem_keep_chance": 0.0,
+        "early_trident_keep_chance": 0.0,
+        "early_spartan_material": "iron",
+        "early_melee": { "sword": "minecraft:iron_sword", "axe": "minecraft:iron_axe" },
+        "early_armor": { "head": "minecraft:iron_helmet", "chest": "minecraft:iron_chestplate", "legs": "minecraft:iron_leggings", "feet": "minecraft:iron_boots" }
+      },
+      "tier3": {
+        "_说明_中文": "三阶：第 20 天开始装备成长，第 80 天恢复原有品质。日期范围 1–1000000；下列概率/倍率范围 0–1。",
+        "_description_en": "Tier III: growth starts on day 20 and reaches original quality on day 80. Dates: 1–1000000; chances/multipliers: 0–1.",
+        "start_day": 20,
+        "full_quality_day": 80,
+        "early_baseline_gear_chance": 0.0,
+        "early_gun_chance_multiplier": 0.25,
+        "early_enchantment_keep_chance": 0.15,
+        "early_enchantment_level_multiplier": 0.25,
+        "early_totem_keep_chance": 0.0,
+        "early_trident_keep_chance": 0.0,
+        "early_spartan_material": "diamond",
+        "early_melee": { "sword": "minecraft:diamond_sword", "axe": "minecraft:diamond_axe" },
+        "early_armor": { "head": "minecraft:diamond_helmet", "chest": "minecraft:diamond_chestplate", "legs": "minecraft:diamond_leggings", "feet": "minecraft:diamond_boots" }
+      }
+    }
+  },
   "spawning": {
-    "_说明_中文": "自然遭遇生成总开关、遭遇出现概率、流浪者旧式随机判定、遭遇冷却、搜索半径和附近人类密度限制。概率范围为 0 到 1。",
-    "_description_en": "Controls natural encounters: master toggle, admission chances, legacy roamer roll, encounter cooldown, search radii and local human-density scaling. Chances range from 0 to 1.",
+    "_说明_流浪者修复_中文": "流浪者与一至三阶共用准入公式，已取消旧的 1/200 额外判定。默认主世界群系选择权重为流浪者 10、一阶 3、二阶 2、三阶 1；流浪者每次 1 只，一至三阶每队 2-5 只，因此选择权重不是最终实体数量比例。旧配置中保留的 roamer_legacy_roll 已不再读取；需要调少流浪者时使用 tiers.json 中 roamer.spawning.spawn_multiplier。天数、安全距离、灯光、密度和遭遇冷却仍生效，信号弹/信标召唤不受影响。",
+    "_description_roamer_fix_en": "Roamers share the tier I-III admission formula; the old extra 1/200 roll is removed. Default Overworld biome-selection weights are roamer 10, tier I 3, tier II 2, tier III 1. Roamers spawn singly and tiers I-III in squads of 2-5, so weights are not final entity-count ratios. Any roamer_legacy_roll retained in an old config is ignored; use roamer.spawning.spawn_multiplier in tiers.json to reduce roamers. Day gates, safe distance, light, density and encounter cooldown remain; flare/beacon summons are unchanged.",
+    "_说明_中文": "自然遭遇生成总开关、准入概率、遭遇冷却、搜索半径和附近人类密度限制。admission_chance 与 battle_admission_chance 均支持 0–1 的小数：1=100%、0.1=10%、0.01=1%、0.001=0.1%、0=禁止对应遭遇。直接填写 JSON 数字，不加引号或百分号；这不是每 tick 的实际刷新概率。",
+    "_description_en": "Controls natural encounters: master toggle, admission probabilities, encounter cooldown, search radii and local human-density scaling. admission_chance and battle_admission_chance accept decimals from 0 to 1: 1=100%, 0.1=10%, 0.01=1%, 0.001=0.1%, and 0 disables the corresponding encounter. Enter JSON numbers without quotes or a percent sign; these are not actual per-tick spawn probabilities.",
+    "_说明_概率与倍率_中文": "普通自然遭遇的概率环节为 min(1, admission_chance × tiers.json 中本阶的 spawn_multiplier)。例如 0.08 × 0.1 = 0.008，即 0.8% 的基础准入机会，之后仍要通过密度、安全位置、冷却和解锁天数等条件；四阶均无额外隐藏概率。自然大型战斗另用 battle_admission_chance，不乘本阶 spawn_multiplier，且仍要通过其原有生成条件。只减某一阶的普通自然生成，改 tiers.json；降低所有普通自然遭遇，改 admission_chance；减少自然大型战斗，改 battle_admission_chance。信号弹/敌对信标召唤不受这些准入概率影响。",
+    "_description_probability_and_multiplier_en": "Ordinary natural encounters use min(1, admission_chance × that tier's spawn_multiplier in tiers.json) for their admission roll. For example, 0.08 × 0.1 = 0.008, or 0.8% base admission, followed by density, safe-position, cooldown, unlocked-day and other checks; none of the four ranks has an additional hidden probability gate. Automatic large battles instead use battle_admission_chance without the tier spawn_multiplier and must still pass their original conditions. Edit tiers.json to reduce one tier's ordinary natural spawns, admission_chance to reduce all ordinary natural encounters, or battle_admission_chance to reduce automatic large battles. Flare/beacon summons are unaffected by these admission probabilities.",
     "enabled": true,
     "admission_chance": 0.08,
     "progression": {
-      "_说明_中文": "按主世界日历加存档中保存的偏移量逐阶开放自然生成，所有维度共用。新世界初始为第 1 天，每天 24000 tick；睡觉跳夜与原版时间命令也会改变模组时间，doDaylightCycle 关闭时天数随主世界暂停。/hostilehumans day get 查看，set <天数> 设置，add <增减天数> 调整，sync 清除偏移并对齐主世界当前日期；这些指令不修改主世界时间。仅限制普通自然生成、区块初始自然生成及自然大型战斗；不影响援军信号弹、敌对信标、刷怪蛋、命令、结构固定单位或已有实体。关闭 enabled 可恢复不按天数限制的自然生成。",
-      "_description_en": "Unlocks natural spawns using the Overworld calendar plus a saved offset, shared across dimensions. A new world starts on day 1; each day is 24000 ticks. Sleeping and vanilla time commands also affect mod time; disabling doDaylightCycle pauses its normal flow. /hostilehumans day get shows the day; set <day> changes it; add <days> adjusts it; sync clears the offset to match the Overworld date. These commands do not change world time. Applies to ordinary/chunk-generation natural spawns and automatic large battles, not reinforcement flares, hostile beacons, spawn eggs, commands, fixed structure units or existing entities. Disable enabled to remove the day gates.",
+      "_说明_中文": "按玩家 UUID 独立保存累计在线时间，从第 1 天开始，24000 个在线游戏 tick 为一天（20 TPS 时约 20 分钟）。离线或单人暂停不累计，睡觉、/time、doDaylightCycle 不影响进度。生成点以同维度最近的存活非旁观玩家为依据，装备成长使用同一个计时来源；多人共用世界，已生成敌人仍可遇到其他玩家。每 200 tick 批量结算，正常退出结算余量，随世界正常保存，不在生成查询中读写文件。旧世界日历和偏移不迁移。/hostilehumans day get [玩家] 查看，set <天数> [玩家]、add <增减天数> [玩家] 由管理员调整；不带玩家时操作自己，控制台需指定玩家；已移除 sync。仅限制自然生成和自然大型战斗，不影响两类信号召唤、刷怪蛋、命令、结构固定单位或已有实体。关闭 enabled 取消解锁日期限制，不关闭独立的装备成长。",
+      "_description_en": "Accumulates online game ticks independently by player UUID, starting on day 1. One day is 24000 ticks (about 20 minutes at 20 TPS). Offline time and single-player pauses do not count; sleep, /time and doDaylightCycle do not affect progress. Uses the nearest living non-spectator player in the spawn dimension for both unlocks and equipment growth. Spawned enemies are shared and may encounter other players. Settles every 200 ticks and at normal logout, saved with the world; spawn queries perform no file I/O. Old world-calendar offsets are not migrated. /hostilehumans day get [player] queries; administrator set <day> [player] and add <days> [player] adjust personal progress. Omit player to target yourself; console must specify one. sync is removed. Applies only to natural spawns and automatic battles, not flares, beacons, eggs, commands, fixed structure units or existing entities. Disabling enabled removes unlock gates, not independent equipment growth.",
       "enabled": true,
       "_说明_安全日_中文": "safe_days 为开局完全禁止自然刷新人类的完整天数（0–1000000）。安全日和各阶解锁日同时生效，按较晚者开放；默认第 1 天安全，第 2 天仍无阶级解锁，第 3 天才开始流浪者自然生成。",
       "_description_safe_days_en": "safe_days is the number of complete opening days without natural human spawns (0–1000000). Both the safety period and tier unlock day must have elapsed. Defaults protect day 1; no tier is unlocked on day 2, and roamers begin on day 3.",
@@ -284,7 +837,6 @@
       }
     },
     "battle_admission_chance": 0.08,
-    "roamer_legacy_roll": 200,
     "encounter_cooldown_ticks": 2400,
     "nearby_horizontal_radius": 48,
     "nearby_vertical_radius": 16,
@@ -293,8 +845,8 @@
   "ai": {
     "_说明_中文": "战斗 AI、逃跑与恢复、举盾、战术走位、队友间距、跳跃、物品恢复和动作速度修正。时长和间隔单位为 tick（20 tick=1 秒）；概率为 0 到 1，动作倍率为 0.1 到 1。",
     "_description_en": "Combat AI, retreat and recovery, shield timing, tactical movement, ally spacing, jumping, item recovery and action speed modifiers. Durations and intervals are in ticks (20 ticks = 1 second); chances range from 0 to 1 and action multipliers from 0.1 to 1.",
-    "_说明_动作速度倍率_中文": "food_use_speed_multiplier 和 shield_use_speed_multiplier 分别设置进食、普通举盾时的移速修正（允许 0.1–1）。默认值 0.7 表示进食时附加 -30% 的速度属性修正；普通举盾默认 0.2，即附加 -80%。预判格挡来袭弹射物时，举盾移速至少保留 0.7 倍，以便继续移动。喝药不额外施加移速惩罚。",
-    "_description_action_speed_multipliers_en": "food_use_speed_multiplier and shield_use_speed_multiplier set movement modifiers while eating and using a regular shield (range 0.1–1). The default 0.7 adds a -30% movement modifier while eating; the default 0.2 adds -80% while using a regular shield. During a predicted projectile block, shield movement retains at least 0.7x speed so the human can keep moving. Drinking adds no extra movement penalty.",
+    "_说明_动作速度倍率_中文": "food_use_speed_multiplier 和 shield_use_speed_multiplier 分别设置进食、普通举盾时的移速修正（允许 0.1–1）。默认进食 0.7，即附加 -30%；普通举盾配置默认 0.2，即附加 -80%。战斗 AI 的移动格挡（包括弹射物预判）至少保留 0.4 倍速度属性，避免举盾推进过慢；配置高于 0.4 时采用配置值。喝药不额外施加移速惩罚。",
+    "_description_action_speed_multipliers_en": "food_use_speed_multiplier and shield_use_speed_multiplier set movement modifiers while eating or using a regular shield (range 0.1–1). Food defaults to 0.7 (-30%); regular shield use defaults to 0.2 (-80%). Combat AI mobile blocks, including projectile guards, retain at least 0.4x movement speed; higher configured values are respected. Drinking adds no extra movement penalty.",
     "enabled": true,
     "retreat_health_ratio": 0.3,
     "critical_health_ratio": 0.12,
@@ -338,7 +890,16 @@
       "tier2": {"item": "minecraft:emerald", "count": 72},
       "tier3": {"item": "minecraft:emerald", "count": 216}
     },
-    "allow_hired_pvp_damage": false
+    "allow_hired_pvp_damage": false,
+    "soldier_messages": {
+      "_说明_中文": "所有士兵共享其主人的消息预算，不按每个士兵分别计算。日常闲聊、战斗开始/结束、撤退等普通自动台词：默认至少相隔 1200 tick（60 秒），滚动 5 分钟最多 3 条；chatter_max_per_five_minutes 设为 0 可关闭普通自动台词。低血量、食物耗尽及装备破损使用独立状态报告预算：默认至少相隔 100 tick（5 秒），滚动 1 分钟最多 6 条。并发报告合并为一条消息，最多列出 3 条详情，余下显示合并数量；低血量优先。重复的同一士兵/同类待发报告合并，待发详情最多 32 条，不无限积压。报告可能延后或仅显示汇总；主动雇佣和玩家操作命令的反馈不受这些自动消息限额影响。tick 按 20 TPS 换算；修改后重启。",
+      "_description_en": "All soldiers share their owner's message budget. Automatic chatter, combat transitions and retreat lines default to a 1200-tick (60-second) gap and at most 3 messages per rolling 5 minutes; chatter_max_per_five_minutes=0 disables ordinary automatic dialogue. Critical health, food exhaustion and equipment breaks use a separate report budget: a 100-tick (5-second) gap and at most 6 batches per rolling minute. Concurrent reports are merged, showing up to 3 details plus an additional-count summary, with critical health first. Repeated pending reports from the same soldier/category coalesce; detail storage is capped at 32. Reports may be delayed or summarized. Hiring and player-requested command acknowledgements are not limited by these automatic budgets. Tick conversions assume 20 TPS; restart after changes.",
+      "chatter_interval_ticks": 1200,
+      "chatter_max_per_five_minutes": 3,
+      "report_interval_ticks": 100,
+      "report_max_per_minute": 6,
+      "report_details_per_message": 3
+    }
   },
   "better_combat": {
     "_说明_中文": "士兵的 Better Combat 可选兼容，默认开启。安装 Better Combat 时，士兵近战使用其武器攻击形状/范围、攻击速度冷却和扇形多目标判定；不影响玩家攻击，也不会叠加另一套攻击 Goal。未安装 Better Combat 时自动回退到本模组原有 AI、分阶随机攻击间隔、伤害与单体近战判定。可手动关闭此项；修改后需重启游戏。",
@@ -346,6 +907,9 @@
     "soldier_melee_enabled": true
   },
   "tacz": {
+    "_说明_野外枪械_中文": "natural_spawn_firearms_enabled 控制自然生成和自然大型战斗中的人类是否额外携带枪械，默认 true。关闭不改变近战、弓弩、盾牌或护甲池，也不禁用 TaCZ 兼容、已有枪械、雇佣后的输入或信号召唤。开启时继续使用原有按阶枪械概率与自然装备成长倍率，枪械占武器数量名额且保留近战备用；本阶 allow_tacz_firearms 仍可进一步禁止该阶生成枪械。",
+    "_description_natural_firearms_en": "natural_spawn_firearms_enabled defaults true and controls extra firearms for natural spawns and automatic natural battles. Disabling it leaves other equipment pools unchanged, and does not disable TaCZ integration, existing guns, hired input or signal summons. Existing tier chances and growth multipliers apply when enabled. Guns count toward spawn weapon caps and retain a melee backup. Per-rank allow_tacz_firearms can additionally disable firearm generation for that rank.",
+    "natural_spawn_firearms_enabled": true,
     "_说明_中文": "TaCZ 枪械兼容与枪手设置。枪械出现概率/掉落概率及伤害倍率均为倍率或概率值；枪械分类权重决定抽取构成；白名单控制可生成/可装备枪械，黑名单优先排除。",
     "_description_en": "TaCZ firearm integration and gunner settings. Spawn/drop chances and damage values are probabilities or multipliers; type weights control weapon distribution; whitelists control eligible guns and the blacklist excludes guns first.",
     "_说明_枪械生成_中文": "各阶枪械出现概率、强制远程人类枪械概率、枪械掉落概率、自动收录新枪及自动收录权重/排除规则。",
@@ -358,8 +922,8 @@
     "forced_ranged_gun_chance": 0.33,
     "gun_drop_chance": 0.01,
     "excluded_gun_namespaces": [],
-    "_说明_枪械伤害_中文": "TaCZ 人类枪械基础伤害、掠夺者枪械伤害，以及按阶伤害倍率。",
-    "_description_gun_damage_en": "Base firearm damage for humans and pillagers, plus per-tier firearm damage multipliers.",
+    "_说明_枪械伤害_中文": "人类枪械倍率 = human_gun_damage_multiplier × tier_damage_multipliers 中攻击者所属阶级的值。全局与阶级相乘，不互相覆盖；例如 0.5 × 1.5 = 0.75，即原生枪械伤害的 75%（目标减伤前）。tiers.json 的 attack_damage、近战/弓/三叉戟输出倍率以及 combat.json 的非枪械输出倍率不参与。枪械自身伤害、爆头和距离衰减仍由 TaCZ/枪包计算。pillager_gun_damage_multiplier 仅用于掠夺者，不与人类倍率相乘。此处没有逐枪械类型伤害倍率；类型权重、名单权重和散布不是伤害值。",
+    "_description_gun_damage_en": "Human firearm scaling = human_gun_damage_multiplier × the attacker's entry in tier_damage_multipliers. Global and tier values multiply rather than override: 0.5 × 1.5 = 0.75, or 75% of native firearm damage before defender reductions. attack_damage and melee/bow/trident outgoing multipliers in tiers.json, plus non-firearm output in combat.json, do not participate. Native firearm damage, headshots and distance falloff remain TaCZ/gun-pack calculations. pillager_gun_damage_multiplier applies to pillagers only and is not multiplied by Human values. No per-firearm-category damage multiplier is defined here; type weights, list weights and spread are not damage values.",
     "human_gun_damage_multiplier": 0.5,
     "pillager_gun_damage_multiplier": 0.4,
     "tier_damage_multipliers": {
@@ -409,8 +973,8 @@
     ],
     "hired_gun_additional_whitelist": {},
     "gun_blacklist": [],
-    "_说明_枪械承伤与盾牌_中文": "shield_damage_multiplier 控制人类举盾格挡 TaCZ 子弹后剩余的生命伤害比例（0.3 表示承受原伤害的 30%，即减伤 70%）；tamed_maid_damage_multiplier 控制已驯服女仆受到的 TaCZ 子弹伤害比例（默认 0.15）。女仆伤害倍率不区分攻击者，所以人类枪械攻击女仆时也会应用；此时还会先应用人类枪械基础倍率和阶级倍率。人类对女仆的近战伤害另由 damage.tamed_maid_melee_damage_multiplier 控制。",
-    "_description_gun_damage_taken_en": "shield_damage_multiplier controls the health damage a Human takes after blocking a TaCZ bullet (0.3 means 30% damage remains, i.e. 70% reduction). tamed_maid_damage_multiplier controls TaCZ bullet damage received by tamed maids (default 0.15). It does not filter by attacker, so it also applies when a Human shoots a maid; Human gun base and tier multipliers are applied beforehand. Human melee damage to maids is controlled separately by damage.tamed_maid_melee_damage_multiplier.",
+    "_说明_枪械承伤与盾牌_中文": "这里是目标承伤修正，不是攻击者输出的覆盖项。shield_damage_multiplier 在人类正在使用盾牌且受到 TaCZ 子弹伤害时额外相乘（0.3 保留 30% 的输入伤害），当前判定不验证子弹方向或真实格挡命中；该人类所属阶级的 incoming_damage_multiplier 仍会参与。tamed_maid_damage_multiplier 额外修正已驯服女仆承受的 TaCZ 枪伤，不区分攻击者；人类射击女仆时还会同时应用人类枪械全局和阶级倍率。目标护甲等减伤仍按原流程计算，不保证最终扣血比例。人类对女仆的近战倍率另见 combat.json 的 damage.tamed_maid_melee_damage_multiplier。",
+    "_description_gun_damage_taken_en": "These are defender-side factors, not overrides for outgoing damage. shield_damage_multiplier additionally applies when a Human is actively using a shield and receives TaCZ bullet damage (0.3 retains 30% of input damage); the current check does not validate bullet direction or an actual blocked hit. That Human tier's incoming_damage_multiplier still applies. tamed_maid_damage_multiplier additionally scales TaCZ damage received by a tamed maid regardless of attacker; a Human shooting a maid also uses the Human firearm global and tier values. Native armor and other mitigation still apply, so these are not guaranteed final health-loss ratios. Human melee damage to maids uses damage.tamed_maid_melee_damage_multiplier in combat.json.",
     "shield_damage_multiplier": 0.3,
     "tamed_maid_damage_multiplier": 0.15,
     "_说明_兼容字段_中文": "仅供非 Hostile Humans 实体使用的枪手散布回退值；Hostile Humans 人类枪手使用 tiers 中逐阶、逐枪械类型的 weapon_spread_degrees。",

@@ -26,7 +26,9 @@ extends Goal {
     @Nullable
     protected Path path;
     Vec3 targetPos = null;
-    boolean jump;
+    private int nextRouteRetryTick;
+    private Vec3 lastRoutePosition = Vec3.ZERO;
+    private int stalledTicks;
 
     public RunFromTarget(Human p_25027_, float p_25029_, double p_25030_, double p_25031_) {
         this(p_25027_, p_25052_ -> true, p_25029_, p_25030_, p_25031_, EntitySelector.NO_CREATIVE_OR_SPECTATOR::test);
@@ -61,12 +63,18 @@ extends Goal {
         if (this.human.toAvoid == null) {
             return false;
         }
-        return this.generatePathAwayFromAttacker();
+        if (this.human.tickCount < this.nextRouteRetryTick) return false;
+        // Enter escape even when the planner is queued; safe local movement bridges it.
+        this.generatePathAwayFromAttacker();
+        return true;
     }
 
     private boolean generatePathAwayFromAttacker() {
         double currentDistanceSqr = this.human.toAvoid.distanceToSqr(this.human);
-        for (int i = 0; i < 10; ++i) {
+        int budget = club.someoneice.humangunner.RetreatRouteContinuity.claimSearch(this.human, 4);
+        // Queued work retries cheaply each tick; an actual failed search backs off.
+        this.nextRouteRetryTick = this.human.tickCount + (budget == 0 ? 1 : 5);
+        for (int i = 0; i < budget; ++i) {
             Vec3 candidate = DefaultRandomPos.getPosAway(
                     this.human, 64, 7, this.human.toAvoid.position());
             if (candidate == null || !club.someoneice.humangunner.RetreatRecoveryPolicy
@@ -79,9 +87,11 @@ extends Goal {
             if (candidatePath != null && candidatePath.canReach()) {
                 this.path = candidatePath;
                 this.targetPos = candidate;
+                club.someoneice.humangunner.RetreatRouteContinuity.cancelSearch(this.human);
                 return true;
             }
         }
+        if (budget > 0) club.someoneice.humangunner.RetreatRouteContinuity.cancelSearch(this.human);
         return false;
     }
 
@@ -103,27 +113,30 @@ extends Goal {
         if (this.human.distanceToSqr((Entity)this.human.toAvoid) > 576.0) {
             return false;
         }
-        if (!this.human.onGround()) {
-            this.jump = true;
-        } else if (this.jump) {
-            this.jump = false;
-            this.human.getNavigation().stop();
-            if (this.generatePathAwayFromAttacker()) {
-                this.human.getNavigation().moveTo(this.path, this.walkSpeedModifier);
-            }
-        }
-        return !this.human.getNavigation().isDone();
+        // Airborne/landing transitions do not mean the escape has ended.
+        // A temporarily absent path is repaired by tick(), not by stop().
+        return this.human.toAvoid.isAlive();
     }
 
     public void start() {
         this.human.isFleeing = true;
         this.human.setTarget(null);
         this.human.getNavigation().moveTo(this.path, this.walkSpeedModifier);
+        this.nextRouteRetryTick = this.human.tickCount + (this.path == null ? 1 : 5);
+        this.lastRoutePosition = this.human.position();
+        this.stalledTicks = 0;
     }
 
     public void stop() {
+        club.someoneice.humangunner.RetreatRouteContinuity.cancelSearch(this.human);
+        // Do not leave a long escape route running after health has recovered.
+        if (club.someoneice.humangunner.MovementContinuity.ownsRoute(this.human, this.path)) {
+            this.human.getNavigation().stop();
+        }
+        this.path = null;
+        this.targetPos = null;
+        this.stalledTicks = 0;
         this.human.isFleeing = false;
-        this.human.onPlayerJumpCoolDown = 20;
         this.human.toAvoid = null;
     }
 
@@ -132,11 +145,29 @@ extends Goal {
             return;
         }
         this.human.isFleeing = true;
+        club.someoneice.humangunner.MovementContinuity.escapeWhilePlanning(this.human, this.human.toAvoid);
+        double moved = this.human.position().distanceToSqr(this.lastRoutePosition);
+        this.stalledTicks = this.human.onGround() && moved < 0.0025D ? this.stalledTicks + 1 : 0;
+        this.lastRoutePosition = this.human.position();
+        boolean extension = club.someoneice.humangunner.RetreatRouteContinuity
+                .needsExtension(this.human, this.human.toAvoid);
+        if (this.human.tickCount >= this.nextRouteRetryTick
+                && (extension || this.stalledTicks >= 5)) {
+            // Keep the old escape until a replacement is actually available.
+            if (this.generatePathAwayFromAttacker()) {
+                this.human.getNavigation().moveTo(this.path, this.walkSpeedModifier);
+                this.stalledTicks = 0;
+                this.nextRouteRetryTick = this.human.tickCount + 10;
+            }
+        }
         if (this.human.distanceToSqr((Entity)this.human.toAvoid) < 144.0) {
             this.human.getNavigation().setSpeedModifier(this.sprintSpeedModifier);
         } else {
             this.human.getNavigation().setSpeedModifier(this.walkSpeedModifier);
         }
     }
+
+    @Override
+    public boolean requiresUpdateEveryTick() { return true; }
 }
 

@@ -195,7 +195,9 @@ extends Goal {
                                         Math.sqrt(this.attackRadiusSqr), 10, 12)
                                 : null;
                         if (firingPath != null) {
-                            this.mob.getNavigation().moveTo(firingPath, this.speedModifier);
+                            if (this.mob.getNavigation().moveTo(firingPath, this.speedModifier)
+                                    && this.mob instanceof Human human)
+                                club.someoneice.humangunner.SoldierDialogue.event(human, "reposition");
                             this.updatePathDelay = 0;
                         } else if (!(this.mob instanceof Human human && RangedFiringPosition.hasPendingVisibleSearch(human))) {
                             if (this.mob instanceof Human human && human.isInWater()) {

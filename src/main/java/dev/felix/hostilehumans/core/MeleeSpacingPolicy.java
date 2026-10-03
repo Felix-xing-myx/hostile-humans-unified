@@ -4,9 +4,10 @@ package dev.felix.hostilehumans.core;
 public final class MeleeSpacingPolicy {
     private MeleeSpacingPolicy() {}
     public static double preferred(double reach) {
-        return Math.max(0.35D, Math.min(reach * 0.78D, reach - 0.5D));
+        return Math.max(Math.min(0.35D, reach * 0.5D), Math.min(reach * 0.78D, reach - 0.5D));
     }
     public static double tooClose(double reach) {
-        return Math.max(0.15D, Math.min(preferred(reach) - 0.25D, reach * 0.5D));
+        return Math.max(Math.min(0.15D, preferred(reach) * 0.5D),
+                Math.min(preferred(reach) - 0.25D, reach * 0.5D));
     }
 }

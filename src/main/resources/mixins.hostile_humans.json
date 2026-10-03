@@ -9,8 +9,7 @@
     "DamageSourceMix",
     "MonsterMobsMixin",
     "BlockMixin",
-    "DoorMixin",
-    "ChestBlockEnityMixin"
+    "DoorMixin"
   ],
   "client": [
     "TaczNpcAnimatorMixin"

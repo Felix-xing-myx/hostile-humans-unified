@@ -160,6 +160,11 @@ public final class RecoverySupplies {
         return ACTIVE_USES.containsKey(human);
     }
 
+    /** Includes the deferred swap-back after the use animation finishes. */
+    static boolean hasHandCustody(Human human) {
+        return ACTIVE_USES.containsKey(human) || PENDING_FINISHES.containsKey(human);
+    }
+
     /** Combat retreat recovery excludes ordinary food, which has its own bounded goal. */
     public static boolean hasCombatRecoverySupply(Human human) {
         return hasSupply(human, false);

@@ -19,6 +19,20 @@ public final class PerformancePoliciesTest {
     }
 
     public static void main(String[] args) {
+        MovementContinuityProgress continuity = new MovementContinuityProgress();
+        check(!continuity.stalled(0, 0, 0, 0.1D, true), "continuity window starts without replanning");
+        for (int tick = 1; tick < 5; tick++)
+            check(!continuity.stalled(tick, 0, 0, 0.1D, true), "no expensive reaction before five ticks");
+        check(continuity.stalled(5, 0, 0, 0.1D, true), "stationary movement responds at five ticks");
+        MovementContinuityProgress slow = new MovementContinuityProgress();
+        for (int tick = 0; tick < 200; tick++)
+            check(!slow.stalled(tick, tick * 0.006D, 0, 0.02D, true),
+                    "shield/recovery slow movement is not mistaken for a stuck route");
+        MovementContinuityProgress idle = new MovementContinuityProgress();
+        for (int tick = 0; tick < 200; tick++)
+            check(!idle.stalled(tick, 0, 0, 0.1D, false), "intentional idle never requests recovery");
+        check(!idle.stalled(201, 0, 0, 0.1D, true), "new movement gets a fresh window");
+        check(!idle.stalled(0, 0, 0, 0.1D, true), "tick rollback resets progress safely");
         Random columnRandom = new Random(7631);
         for (int trial = 0; trial < 1000; trial++) {
             double x = columnRandom.nextDouble() * 200 - 100;
@@ -218,6 +232,6 @@ public final class PerformancePoliciesTest {
             check(Objects.equals(expected, actual), "ranked incremental route agrees with exhaustive nearest result");
         }
         System.out.println("PerformancePoliciesTest: " + checks + " checks passed");
-        System.out.println("Terrain probe burst: 3087 -> at most 128 per check; lava path burst: 64 -> at most 4 per tick.");
+        System.out.println("Policy checks: search batches capped at 128 probes and 4 candidates; not a live-game benchmark.");
     }
 }

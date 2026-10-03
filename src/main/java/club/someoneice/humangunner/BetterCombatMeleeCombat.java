@@ -93,6 +93,17 @@ public final class BetterCombatMeleeCombat {
                 && weaponAttributes(human) != null;
     }
 
+    /** Single-target geometry check; never performs the sweep's entity query. */
+    public static boolean canStrike(Human human, LivingEntity target) {
+        if (target == null || !hasWeaponProfile(human)) return false;
+        Vec3 origin = MeleeCombatRange.attackOrigin(human);
+        Vec3 aimed = MeleeCombatRange.aimPoint(origin, target.getBoundingBox()).subtract(origin);
+        // Reach/spacing asks whether we can face and hit, not whether a previous
+        // navigation/look tick already happened to face this elevation.
+        return canBeHit(human, target, profile(human),
+                aimed.lengthSqr() > 1.0E-8D ? aimed.normalize() : human.getViewVector(1.0F));
+    }
+
     /** Resolve the active combo step and collect the hostile entities in its oriented hitbox. */
     public static AttackPlan createAttackPlan(Human human, LivingEntity requestedTarget) {
         if (!hasWeaponProfile(human) || requestedTarget == null) return null;
@@ -280,13 +291,17 @@ public final class BetterCombatMeleeCombat {
     }
 
     private static boolean canBeHit(Human human, LivingEntity target, Profile profile) {
+        return canBeHit(human, target, profile, human.getViewVector(1.0F));
+    }
+
+    private static boolean canBeHit(Human human, LivingEntity target, Profile profile, Vec3 view) {
         if (!target.isAlive() || !human.canAttack(target)
                 || (!booleanValue(field(getConfig(), "allow_attacking_thru_walls"), false)
                 && !human.hasLineOfSight(target))) return false;
         if (target instanceof Human other && HumanRelations.allied(human, other)) return false;
 
-        Vec3 origin = human.position().add(0.0D, human.getBbHeight() * 0.85D, 0.0D);
-        Vec3 forward = human.getViewVector(1.0F).normalize();
+        Vec3 origin = MeleeCombatRange.attackOrigin(human);
+        Vec3 forward = view.normalize();
         Vec3 right = forward.cross(new Vec3(0.0D, 1.0D, 0.0D)).normalize();
         if (right.lengthSqr() < 1.0E-6D) right = new Vec3(1.0D, 0.0D, 0.0D);
         Vec3 up = right.cross(forward).normalize();
@@ -336,6 +351,7 @@ public final class BetterCombatMeleeCombat {
     }
 
     private static boolean insideAttackAngle(Vec3 delta, Vec3 forward, double angleDegrees) {
+        if (delta.lengthSqr() < 1.0E-12D) return true;
         double distance = Math.max(1.0E-6D, delta.length());
         double dot = Math.max(-1.0D, Math.min(1.0D, delta.dot(forward) / distance));
         return Math.toDegrees(Math.acos(dot)) <= angleDegrees * 0.5D;

@@ -16,6 +16,17 @@ public final class HumanNavigation extends GroundPathNavigation {
 
     public HumanNavigation(Mob mob, Level level) { super(mob, level); }
 
+    /** Bypass same-target path reuse without abandoning the current route on failure. */
+    public Path createFreshPath(BlockPos goal) {
+        Path previous = this.path;
+        try {
+            this.path = null;
+            return createPath(goal, 0);
+        } finally {
+            this.path = previous;
+        }
+    }
+
     /** Exclude a waypoint that repeatedly traps this human from the next path search. */
     public void avoidWaypoint(BlockPos node, long untilTick) {
         temporarilyBlockedNode = node.immutable();

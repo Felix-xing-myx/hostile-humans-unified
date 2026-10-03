@@ -34,6 +34,11 @@ extends HumanAbility {
     @Override
     public void tick() {
         super.tick();
+        if (this.humanEntity instanceof Human human
+                && !club.someoneice.humangunner.SoldierPickupPolicy.canCollectNow(human)) {
+            this.ticker = 0;
+            return;
+        }
         if (!this.level.isClientSide && radius > 0) {
             short s = this.ticker;
             this.ticker = (short)(s + 1);

@@ -32,9 +32,9 @@ final class HiredHumanHealthWarning {
             return;
         }
         int percent = Math.max(0, (int) Math.floor(healthRatio * 100.0D));
-        owner.displayClientMessage(Component.translatable(
-                "message.humangunner.soldier_critical_health", human.getDisplayName(), percent
-        ).withStyle(ChatFormatting.RED), false);
+        SoldierMessageDispatcher.report(owner, human, "critical_health", Component.translatable(
+                "dialogue.humangunner.critical_health", percent
+        ).withStyle(ChatFormatting.RED), true);
         human.getPersistentData().putBoolean(WARNED, true);
     }
 }

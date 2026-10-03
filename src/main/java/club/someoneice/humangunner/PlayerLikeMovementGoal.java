@@ -20,13 +20,10 @@ public final class PlayerLikeMovementGoal extends Goal {
     private final CombatAiConfig config;
     private int nextTerrainJumpTick;
     private int nextCombatJumpTick;
-    private int stagnantTicks;
-    private Vec3 lastPosition;
 
     public PlayerLikeMovementGoal(Human human) {
         this.human = human;
         this.config = CombatAiConfig.get();
-        this.lastPosition = human.position();
     }
 
     @Override
@@ -48,14 +45,14 @@ public final class PlayerLikeMovementGoal extends Goal {
 
     @Override
     public void start() {
-        lastPosition = human.position();
-        stagnantTicks = 0;
         scheduleCombatJump();
     }
 
     @Override
     public void stop() {
-        if (human.getTarget() == null) {
+        if (human.isFleeing) {
+            MovementSpeedController.retreat(human, true);
+        } else if (human.getTarget() == null) {
             MovementSpeedController.normal(human);
         } else {
             MovementSpeedController.combat(human, false);
@@ -72,11 +69,17 @@ public final class PlayerLikeMovementGoal extends Goal {
         // must not restart navigation or a weapon switch while the shield is
         // raised. A melee soldier may still sprint along its existing attack
         // path so a block does not turn into a stationary hit-reaction loop.
-        if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
+        if (!human.isFleeing && human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
             MovementSpeedController.combat(human, shouldSprintToMeleeTarget(target));
+            // Only a real rising waypoint permits a hop while guarding; never
+            // use the random combat-jump loop to escape a stationary block.
+            if (human.onGround() && !human.isInWater() && !human.isInLava()
+                    && human.tickCount >= nextTerrainJumpTick && pathSuggestsStepUp()) {
+                human.getJumpControl().jump();
+                nextTerrainJumpTick = human.tickCount + 7;
+            }
             return;
         }
-        assistExistingNavigation();
         boolean travelling = human.distanceToSqr(target) > 9.0D
                 || human.isFleeing
                 || human.horizontalCollision;
@@ -127,23 +130,6 @@ public final class PlayerLikeMovementGoal extends Goal {
         }
     }
 
-    private void assistExistingNavigation() {
-        boolean navigating = !human.getNavigation().isDone();
-        double movedSqr = human.position().distanceToSqr(lastPosition);
-        if (navigating && movedSqr < 0.0064D) {
-            stagnantTicks++;
-        } else if (movedSqr >= 0.0064D || !navigating) {
-            stagnantTicks = 0;
-        }
-        lastPosition = human.position();
-
-        if (human.horizontalCollision || stagnantTicks >= 5) {
-            if (NavigationSupport.openBlockingPassage(human)) {
-                stagnantTicks = Math.max(0, stagnantTicks - 3);
-            }
-        }
-    }
-
     private boolean pathSuggestsStepUp() {
         Path path = human.getNavigation().getPath();
         if (path == null || path.isDone()) {
@@ -183,14 +169,10 @@ public final class PlayerLikeMovementGoal extends Goal {
                 || GunSupport.get().isGun(human.getMainHandItem())
                 || HumanUtil.isRangedWeapon(human.getMainHandItem())
                 || HumanUtil.isTrident(human.getMainHandItem())
-                || human.distanceToSqr(target) <= meleeReachSqr(target)) {
+                || MeleeCombatRange.canStrike(human, target)) {
             return false;
         }
         return pathHeadsToward(target);
-    }
-
-    private double meleeReachSqr(LivingEntity target) {
-        return MeleeCombatRange.reachSqr(human, target);
     }
 
     private boolean movingToward(LivingEntity target) {

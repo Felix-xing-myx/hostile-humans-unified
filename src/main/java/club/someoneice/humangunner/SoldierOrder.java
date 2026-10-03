@@ -132,8 +132,17 @@ public enum SoldierOrder {
             target = null;
         }
 
+        // All idle orders yield to an authorized pickup route. Holding a
+        // fixed position never starts a pickup route, only nearby collection.
+        if (target == null && human.isActivelyCollectingLoot()
+                && SoldierPickupPolicy.canCollectNow(human)) return;
+
         if (order == FOLLOW) {
-            if (owner == null) { human.getNavigation().stop(); return; }
+            // Preserve combat navigation when following has no available owner.
+            if (owner == null) {
+                if (target == null) human.getNavigation().stop();
+                return;
+            }
             if (human.distanceToSqr(owner) > FOLLOW_COMBAT_RANGE_SQR) {
                 human.forgetSoldierTarget();
                 target = null;
@@ -172,10 +181,6 @@ public enum SoldierOrder {
         if (target != null) return;
 
         if (order == GUARD) {
-            // The pickup goal owns its route; lifecycle callbacks must not
-            // overwrite it with a return path or stop it near the anchor.
-            if (human.isActivelyCollectingLoot()
-                    && insideGuardArea(human, human.getX(), human.getZ())) return;
             if (distanceFromAnchor > 4.0D && human.tickCount % 10 == 0) {
                 human.getNavigation().moveTo(anchor.getX() + 0.5D, anchor.getY(), anchor.getZ() + 0.5D, 1.1D);
             } else if (distanceFromAnchor <= 4.0D) {
@@ -227,6 +232,7 @@ public enum SoldierOrder {
         if (human.isFleeing || isRecentSelfAttacker(human, target)) return true;
         if (order == FOLLOW) {
             Player owner = human.level().getPlayerByUUID(human.getOwnerUUID());
+            if (owner == null || !owner.isAlive()) return true;
             return owner != null && owner.isAlive()
                     && human.distanceToSqr(owner) <= FOLLOW_COMBAT_RANGE_SQR
                     && target.distanceToSqr(owner) <= FOLLOW_COMBAT_RANGE_SQR;

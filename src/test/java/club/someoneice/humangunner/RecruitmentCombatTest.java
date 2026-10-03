@@ -19,7 +19,7 @@ public final class RecruitmentCombatTest {
         check(!RecruitmentPolicy.hasContractClearance(false, true, true),
                 "survival contract cannot recruit a retaliating human");
         for (int tier = 0; tier < 4; tier++) {
-            int cost = RecruitmentPolicy.cost(tier);
+            int cost = new UnifiedConfig(UnifiedConfig.defaults()).recruitmentCost(tier).count();
             for (int total = 0; total <= cost + 80; total++) {
                 int[] slots = new int[36];
                 int left = total;

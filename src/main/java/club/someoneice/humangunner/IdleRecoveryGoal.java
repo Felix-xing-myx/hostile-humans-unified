@@ -22,6 +22,7 @@ public final class IdleRecoveryGoal extends Goal {
         return config.enabled()
                 && config.itemRecoveryEnabled()
                 && human.isAlive()
+                && !human.isFleeing
                 && human.getTarget() == null
                 && outOfCombatLongEnough()
                 && needsMoreRecovery()
@@ -31,6 +32,7 @@ public final class IdleRecoveryGoal extends Goal {
     @Override
     public boolean canContinueToUse() {
         return human.isAlive()
+                && !human.isFleeing
                 && (session != null || (human.getTarget() == null
                 && outOfCombatLongEnough()
                 && needsMoreRecovery()
@@ -59,7 +61,9 @@ public final class IdleRecoveryGoal extends Goal {
         }
         mealsInBatch = 0;
         human.getPersistentData().putString("humangunner:ai_phase", "idle");
-        if (human.getTarget() == null) {
+        if (human.isFleeing) {
+            MovementSpeedController.retreat(human, true);
+        } else if (human.getTarget() == null) {
             MovementSpeedController.normal(human);
         } else {
             MovementSpeedController.combat(human, false);
