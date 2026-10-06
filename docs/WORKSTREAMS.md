@@ -44,10 +44,21 @@
 
 | ID | 任务 / 状态 | 负责人 | 工作树 / 分支 | 修改范围与接口约定 |
 | --- | --- | --- | --- | --- |
-| TACZ-01 | 持枪动画重追踪/传送冻结修复；无 Player Animator 动画方案 / 开发中 | tacz_animation 子 Agent，GPT-6.1 Sol / medium | `E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\tacz-animation` / `fix/tacz-animation-lifecycle` | 客户端 renderer 动画模块、`TaczNpcAnimatorMixin`、必要独立测试；不改 Human、HumanGunner、配置、版本或日志。保留 Better Combat 接口和服务端出伤权限 |
-| LOOT-01 | 敌对信标食物保留原掉落期望的 20%，不掉附魔金苹果 / 开发中 | beacon_drops 子 Agent，GPT-6 Luna / medium | `E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\beacon-drops` / `fix/beacon-food-drops` | HumanGunner 掉落事件、信标来源标记及独立掉落策略；不改 renderer、Human、配置、版本或日志。最终掉落处逐件保留 20%，非食物不变；检查正式雇佣库存语义 |
+| TACZ-01 | 持枪动画重追踪/传送冻结修复；无 Player Animator 动画方案 / 已整合，待构建与游戏验收 | tacz_animation 子 Agent，GPT-6.1 Sol / medium | `E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\tacz-animation` / `fix/tacz-animation-lifecycle` | 客户端 renderer 动画模块、`TaczNpcAnimatorMixin`、独立策略测试；不改 Human、HumanGunner、配置、版本或日志。保留 Better Combat 接口和服务端出伤权限 |
+| LOOT-01 | 敌对信标食物保留原掉落期望的 20%，不掉附魔金苹果 / 已整合，待构建与游戏验收 | beacon_drops 子 Agent，GPT-6 Luna / medium | `E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\beacon-drops` / `fix/beacon-food-drops` | 信标来源、HumanEquipmentDrops 最终掉落集合和独立策略；非食物不变；用户明确正式雇佣后完整返还库存 |
 
-主控负责公共构建/测试任务接入、更新日志、版本决策、交付审核与本地整合。子 Agent 不再分派其他 Agent。交付提交及验证结果在审核后补记。
+主控负责公共构建/测试任务接入、更新日志、版本决策、交付审核与本地整合。子 Agent 未再分派其他 Agent；仅使用上述两个模型及独立目录。
+
+### 交付与审核结果
+
+- TACZ-01：开发提交 `92d13f7d24dbd85e9f320c1cbda05227abbb7ae5`，整合提交 `ed127f5`。文件为 ClientRenderer、HumanPlayerModel、TaczNpcAnimator、TaczNativeAnimation、TaczAnimationPolicy、TaczNpcAnimatorMixin 及 TaczAnimationPolicyTest。保留 `apply`、`isAimingOrFiring`、`hasActiveCustomAnimation`，新增包内 `resetPlayback()`。
+- 动画审核：实际只读 TaCZ 1.1.8-hotfix JAR 的 javap 确认原生 ThirdPersonManager/IThirdPersonAnimation 仅提供持枪/瞄准（部件顺序 rightArm、leftArm、body、head）；基础换弹/射击等用同步状态驱动模型，完整枪包关键帧仍依赖 Player Animator。时钟回退、渲染间隔、位置跳变、模型变化和资源重载重建状态；EMF 优先级读取实时动作。每帧模型复位及失败关键帧回滚防止姿势残留，未改变攻击/弹药逻辑。
+- LOOT-01：开发提交 `d29731adb95147a155134a8c2888a992f64020b7`、`59411447dd0d6aba46cee8ddbd665bfc07444727`，对应整合提交 `a3fef26`、`2949971`。文件为 HumanEquipmentDrops、HumanRelations、HumanSignalItem。第一版仅覆盖库存，主控发现实体 loot table 也产食物后要求修订为最终集合过滤，避免漏掉或重复削减。
+- 来源持久化：新单位写入 `humangunner:hostile_beacon_origin`，仍保留旧 `forced_hostile_target` 的单位会固化来源。已经在旧版本丢失旧标记的历史实体无法凭空恢复来源。按死亡快照正式雇佣状态排除；未雇佣时对现有食物结果逐件再保留 20%，附魔金苹果归零，非食物不变。原补给 20% 的库存路径最终期望为原携带量 4%；战利品表按其自身原结果再乘 20%。
+- 主控补充 HostileBeaconFoodPolicy 与概率边界/组合削减测试，并将 `hostileBeaconFoodPolicyTest`、`taczAnimationPolicyTest` 接入 `check`。README 中英说明基础动作与资源关键帧区别；版本保留 3.6.0，日志新增未发布栏。既有 CHANGELOG 中英文重排保留为用户未提交修改，未混入任务提交。
+- 实际验证：当前源码调用关系审查、TaCZ API javap 核对、Git 差异/暂存范围检查。未运行 Gradle、编译、自动化测试、游戏、同步或 push。新增测试仅已接入，不能写成已通过。
+- 待游戏验收：持枪跟随同维度/跨维度传送、离开追踪范围后返回、重新登录与资源重载；有/无 Player Animator，EMF 资源包，移动/瞄准/开火/换弹切换，护甲/持物和左右手；Better Combat 切换及无 TaCZ 启动；四阶信标的最终食物统计/附魔苹果、自然生成对照，以及雇佣后自存食物/附魔苹果完整返还。
+- 两项无文本合并冲突；独立开发工作树保留且干净，便于后续反馈定位。冻结现象尚未游戏复现，修复覆盖源码可确认的生命周期缺口，不将其宣称为已确认的唯一根因。
 
 ## 分派与交付模板
 

@@ -14,7 +14,7 @@ Humans use melee weapons, shields, bows, crossbows, tridents, or firearms accord
 
 ## Mod Compatibility
 
-- **TaCZ**: Optional firearm integration. With TaCZ installed, gunners can use firearms and display aiming, firing, and reloading animations.
+- **TaCZ**: Optional firearm integration. Gunners can hold and aim firearms and display basic reload/fire motions without Player Animator. With Player Animator installed and matching gun-pack assets available, they use the gun pack's third-person keyframe animations.
 - **Better Combat**: Optional melee integration. Soldiers can use its attack cooldowns, ranges, and area attacks. Without it, they fall back to this mod's combat logic. The integration can be adjusted in the configuration.
 - **Curios**: Optional accessory integration. Identity badges can be placed in a dedicated badge slot.
 - **Spartan Weaponry, Spartan Shields, and Immersive Armors**: Compatible weapons, shields, and armor are detected automatically, with no extra configuration.

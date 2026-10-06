@@ -178,6 +178,22 @@ tasks.register('maintenanceRefactorTest', JavaExec) {
 
 tasks.named('check').configure { dependsOn tasks.named('maintenanceRefactorTest') }
 
+tasks.register('hostileBeaconFoodPolicyTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.HostileBeaconFoodPolicyTest'
+}
+
+tasks.named('check').configure { dependsOn tasks.named('hostileBeaconFoodPolicyTest') }
+
+tasks.register('taczAnimationPolicyTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.craftix.hostile_humans.client.renderer.TaczAnimationPolicyTest'
+}
+
+tasks.named('check').configure { dependsOn tasks.named('taczAnimationPolicyTest') }
+
 // Explicit maintenance action; never runs during build/check.
 tasks.register('sanitizeStructureWaystones', JavaExec) {
     dependsOn tasks.named('testClasses')

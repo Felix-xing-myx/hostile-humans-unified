@@ -87,7 +87,7 @@ final class HumanEquipmentDrops {
 
         // Apply the beacon rule once to the complete final event collection,
         // including loot-table and third-party drops. Inventory rolls above
-        // retain their existing chances and therefore are not compounded.
+        // retain their existing chances; food is thinned only once afterwards.
         if (snapshot.hostileBeacon() && !snapshot.hired()) {
             filterHostileBeaconDrops(human, drops);
         }
@@ -144,15 +144,9 @@ final class HumanEquipmentDrops {
         List<ItemEntity> remove = new ArrayList<>();
         for (ItemEntity entity : drops) {
             ItemStack stack = entity.getItem();
-            if (stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
-                remove.add(entity);
-                continue;
-            }
-            if (!isFood(stack, human)) continue;
-            int kept = 0;
-            for (int unit = 0; unit < stack.getCount(); unit++) {
-                if (human.getRandom().nextDouble() < 0.20D) kept++;
-            }
+            int kept = HostileBeaconFoodPolicy.retainedCount(stack.getCount(),
+                    isFood(stack, human), stack.is(Items.ENCHANTED_GOLDEN_APPLE),
+                    human.getRandom()::nextDouble);
             if (kept == 0) {
                 remove.add(entity);
             } else {
