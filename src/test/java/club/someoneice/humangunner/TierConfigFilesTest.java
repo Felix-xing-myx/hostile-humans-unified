@@ -8,6 +8,7 @@ import java.util.*;
 public final class TierConfigFilesTest {
     private static int assertions;
     public static void main(String[] args) throws Exception {
+        checkMasterIntegrationSwitch();
         checkDefaultIntegrationRetry();
         checkProjection();
         checkReadableDefaults();
@@ -301,14 +302,77 @@ public final class TierConfigFilesTest {
         } finally { cleanup(directory); }
     }
 
+    private static void checkMasterIntegrationSwitch() throws Exception {
+        JsonObject defaults = UnifiedConfig.defaults();
+        Path directory = Files.createTempDirectory("human-spartan-master-");
+        java.util.function.BiPredicate<String, JsonObject> ready = (rank, file) ->
+                EquipmentIntegrationDefaults.seedRank(rank, file, TierConfigProjection.tier(defaults, rank),
+                        mod -> true, item -> true);
+        try {
+            Path ranks = directory.resolve(SplitConfigFiles.DIRECTORY);
+            Files.createDirectories(ranks);
+            JsonObject global = TierConfigProjection.global(defaults);
+            TierConfigProjection.put(global, "equipment_integration.auto_import_enabled", new JsonPrimitive(false));
+            Files.writeString(ranks.resolve("global.json"), global.toString());
+            // No rank files or legacy sources: the global switch must still block the fresh path.
+            SplitConfigFiles.load(directory, defaults, ready);
+            Map<String, byte[]> before = new HashMap<>();
+            for (String name : SplitConfigFiles.FILES) before.put(name, Files.readAllBytes(ranks.resolve(name)));
+            for (String rank : TierConfigProjection.RANKS) {
+                JsonObject gear = read(ranks.resolve(rank + ".json")).getAsJsonObject("equipment_loadout");
+                check(!gear.has("_imported_spartanweaponry") && !gear.has("_imported_spartanshields"),
+                        "global false blocks even new rank imports " + rank);
+            }
+            SplitConfigFiles.load(directory, defaults, ready);
+            for (String name : SplitConfigFiles.FILES)
+                check(Arrays.equals(before.get(name), Files.readAllBytes(ranks.resolve(name))), "disabled reload leaves bytes intact " + name);
+            try (var paths = Files.list(ranks)) { check(paths.count() == 5, "disabled imports create no backups or temporary files"); }
+            for (String invalid : List.of("not json", "{\"schema_version\":999}")) {
+                Files.writeString(ranks.resolve("global.json"), invalid);
+                SplitConfigFiles.load(directory, defaults, ready);
+                for (String rank : TierConfigProjection.RANKS)
+                    check(Arrays.equals(before.get(rank + ".json"), Files.readAllBytes(ranks.resolve(rank + ".json"))),
+                            "unreadable global cannot authorize rank modifications " + rank);
+                check(Files.readString(ranks.resolve("global.json")).equals(invalid), "unreadable global remains untouched");
+            }
+            TierConfigProjection.put(global, "equipment_integration.auto_import_enabled", new JsonPrimitive(true));
+            Files.writeString(ranks.resolve("global.json"), global.toString());
+            JsonObject tier1 = read(ranks.resolve("tier1.json"));
+            JsonArray custom = tier1.getAsJsonObject("equipment_loadout").getAsJsonArray("mainhand");
+            JsonObject row = json("{\"item\":\"example:custom_blade\",\"weight\":42,\"count\":1}");
+            custom.add(row);
+            // Preconfigured import candidate with weight zero must remain disabled, never rewritten to one.
+            JsonObject disabled = json("{\"item\":\"spartanweaponry:iron_longsword\",\"weight\":0}");
+            custom.add(disabled);
+            Files.writeString(ranks.resolve("tier1.json"), tier1.toString());
+            SplitConfigFiles.load(directory, defaults, ready);
+            JsonArray imported = read(ranks.resolve("tier1.json")).getAsJsonObject("equipment_loadout").getAsJsonArray("mainhand");
+            check(imported.contains(row) && imported.contains(disabled) && imported.size() > custom.size(),
+                    "enabled additive import preserves user entries and disabled weights");
+            TierConfigProjection.put(global, "equipment_integration.auto_import_enabled", new JsonPrimitive(false));
+            Files.writeString(ranks.resolve("global.json"), global.toString());
+            byte[] completed = Files.readAllBytes(ranks.resolve("tier1.json"));
+            SplitConfigFiles.load(directory, defaults, ready);
+            check(Arrays.equals(completed, Files.readAllBytes(ranks.resolve("tier1.json"))), "turning off does not delete prior imports");
+            check(EquipmentIntegrationDefaults.automaticImportsEnabled(new JsonObject()), "missing master keeps default enabled");
+            for (JsonElement invalid : List.of(JsonNull.INSTANCE, new JsonPrimitive("yes"), new JsonObject())) {
+                TierConfigProjection.put(global, "equipment_integration.auto_import_enabled", invalid);
+                check(!EquipmentIntegrationDefaults.automaticImportsEnabled(global), "invalid master cannot authorize imports");
+            }
+            JsonObject root = defaults.deepCopy();
+            TierConfigProjection.put(root, "equipment_integration.auto_import_enabled", new JsonPrimitive(false));
+            check(!EquipmentIntegrationDefaults.seed(root, mod -> true, item -> true), "root import entry also honors master switch");
+        } finally { cleanup(directory); }
+    }
+
     private static void checkDefaultIntegrationRetry() throws Exception {
         JsonObject defaults = UnifiedConfig.defaults();
         Path directory = Files.createTempDirectory("human-spartan-retry-");
         java.util.function.BiPredicate<String, JsonObject> unavailable = (rank, file) ->
-                EquipmentIntegrationDefaults.seedDefaultRank(rank, file, TierConfigProjection.tier(defaults, rank),
+                EquipmentIntegrationDefaults.seedRank(rank, file, TierConfigProjection.tier(defaults, rank),
                         mod -> true, item -> false);
         java.util.function.BiPredicate<String, JsonObject> ready = (rank, file) ->
-                EquipmentIntegrationDefaults.seedDefaultRank(rank, file, TierConfigProjection.tier(defaults, rank),
+                EquipmentIntegrationDefaults.seedRank(rank, file, TierConfigProjection.tier(defaults, rank),
                         mod -> true, item -> true);
         try {
             SplitConfigFiles.load(directory, defaults, unavailable);
@@ -368,10 +432,11 @@ public final class TierConfigFilesTest {
                 gear = file.getAsJsonObject("equipment_loadout");
                 gear.getAsJsonArray("mainhand").get(0).getAsJsonObject().addProperty("weight", 987);
                 JsonArray custom = gear.getAsJsonArray("mainhand").deepCopy();
-                check(ready.test(rank, file) && custom.equals(gear.getAsJsonArray("mainhand")),
-                        "other default pools import without changing customized pool " + rank);
+                check(ready.test(rank, file) && gear.getAsJsonArray("mainhand").size() > custom.size()
+                        && gear.getAsJsonArray("mainhand").get(0).equals(custom.get(0)),
+                        "additive import retains customized row and weight " + rank);
                 file = TierConfigProjection.tier(defaults, rank);
-                check(!EquipmentIntegrationDefaults.seedDefaultRank(rank, file, TierConfigProjection.tier(defaults, rank),
+                check(!EquipmentIntegrationDefaults.seedRank(rank, file, TierConfigProjection.tier(defaults, rank),
                         mod -> false, item -> true), "absent mods do not import " + rank);
             }
             Path changed = ranks.resolve("tier1.json");

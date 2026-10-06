@@ -93,9 +93,8 @@ final class LegacySplitConfigFiles {
         if (blocked.contains("recruitment")) {
             TierConfigProjection.put(root, "recruitment.payment_by_tier", JsonNull.INSTANCE);
         }
-        // Preserve deliberate empty/deleted custom pools. Discover integrations only for
-        // an entirely new installation; migrated receipts and user pools are not seeded again.
-        if (sources.isEmpty()) EquipmentIntegrationDefaults.seed(root);
+        // Integration discovery runs in SplitConfigFiles only after the authoritative
+        // global file (including its master switch) has been loaded. No legacy bypass.
         return new Loaded(root, Set.copyOf(blocked), Set.copyOf(sources));
     }
 

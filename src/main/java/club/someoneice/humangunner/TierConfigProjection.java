@@ -95,7 +95,7 @@ final class TierConfigProjection {
                 "attributes", "movement", "damage_multipliers", "combat", "weapon_spread_degrees",
                 "ai", "spawning", "equipment_loadout", "equipment_growth", "ammunition", "potions",
                 "tacz", "recruitment") : List.of("schema_version", "_说明_中文", "_description_en",
-                "vanilla_mode", "ai", "ammunition", "better_combat", "damage", "spawning", "equipment_growth",
+                "vanilla_mode", "ai", "ammunition", "equipment_integration", "better_combat", "damage", "spawning", "equipment_growth",
                 "recruitment", "tacz", "native_gameplay"));
     }
 

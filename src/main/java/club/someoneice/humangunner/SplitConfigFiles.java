@@ -19,7 +19,7 @@ final class SplitConfigFiles {
     }
 
     static JsonObject load(Path configDirectory, JsonObject defaults) {
-        return load(configDirectory, defaults, (rank, data) -> EquipmentIntegrationDefaults.seedDefaultRank(
+        return load(configDirectory, defaults, (rank, data) -> EquipmentIntegrationDefaults.seedRank(
                 rank, data, TierConfigProjection.tier(defaults, rank)));
     }
 
@@ -37,10 +37,13 @@ final class SplitConfigFiles {
         // Discard recognized per-tier values accidentally left in a global file. This
         // avoids a second settings source and makes each rank independently authoritative.
         result = TierConfigProjection.global(result);
+        boolean automaticImports = EquipmentIntegrationDefaults.automaticImportsEnabled(result);
+        java.util.function.BiPredicate<String, JsonObject> permittedIntegrations =
+                (rank, data) -> automaticImports && integrations.test(rank, data);
         for (String rank : TierConfigProjection.RANKS) {
             JsonObject fallback = TierConfigProjection.tier(legacy.root(), rank);
             JsonObject data = loadFile(directory.resolve(rank + ".json"), fallback,
-                    TierConfigProjection.tier(defaults, rank), backedUp && legacy.canGenerate(rank + ".json"), true, integrations);
+                    TierConfigProjection.tier(defaults, rank), backedUp && legacy.canGenerate(rank + ".json"), true, permittedIntegrations);
             TierConfigProjection.applyTier(result, rank, data);
         }
         result.addProperty("schema_version", 2);
@@ -75,7 +78,7 @@ final class SplitConfigFiles {
             byte[] original = Files.readAllBytes(path);
             JsonObject data = read(path, 2);
             if (rank && integrations.test(rankName(path), data)) {
-                // Only a successful first import into untouched stock pools may persist.
+                // Only a successful first additive equipment import may persist.
                 // Custom values/notes are retained, and the exact source bytes are backed up.
                 if (!writeImported(path, original, data)) data = read(path, 2);
             }
@@ -86,6 +89,7 @@ final class SplitConfigFiles {
             LogUtils.getLogger().error("Cannot load human configuration {}; leaving input untouched and using defaults in memory", path, invalid);
             JsonObject data = defaults.deepCopy();
             if (rank) TierConfigProjection.put(data, "recruitment.payment", JsonNull.INSTANCE);
+            else TierConfigProjection.put(data, "equipment_integration.auto_import_enabled", new JsonPrimitive(false));
             return data;
         }
     }

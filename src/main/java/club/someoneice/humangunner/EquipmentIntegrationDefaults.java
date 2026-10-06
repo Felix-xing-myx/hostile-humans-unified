@@ -25,27 +25,26 @@ final class EquipmentIntegrationDefaults {
     }
 
     static boolean seed(JsonObject equipment, Predicate<String> loaded, Predicate<String> registered) {
-        return seed(equipment, loaded, registered, (rank, pool) -> true);
+        return automaticImportsEnabled(equipment) && seed(equipment, loaded, registered, (rank, pool) -> true);
     }
 
-    /** Retry only untouched shipped pools; empty/customized pools remain authoritative. */
-    static boolean seedDefaultRank(String rank, JsonObject file, JsonObject defaults) {
-        return seedDefaultRank(rank, file, defaults,
+    /** One-time additive import; configured entries/weights and explicit empty pools remain authoritative. */
+    static boolean seedRank(String rank, JsonObject file, JsonObject defaults) {
+        return seedRank(rank, file, defaults,
                 mod -> ModList.get() != null && ModList.get().isLoaded(mod),
                 id -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(id)) != null
                         && ForgeRegistries.ITEMS.getValue(new ResourceLocation(id)) != Items.AIR);
     }
 
-    static boolean seedDefaultRank(String rank, JsonObject file, JsonObject defaults,
+    static boolean seedRank(String rank, JsonObject file, JsonObject defaults,
                                    Predicate<String> loaded, Predicate<String> registered) {
         if (!file.has("equipment_loadout") || !file.get("equipment_loadout").isJsonObject()
                 || !defaults.has("equipment_loadout") || !defaults.get("equipment_loadout").isJsonObject()) return false;
         JsonObject settings = file.getAsJsonObject("equipment_loadout");
-        JsonObject baseline = defaults.getAsJsonObject("equipment_loadout");
         Set<String> eligible = new HashSet<>();
         for (String pool : List.of("mainhand", "inventory", "ranged_mainhand", "shield_pool")) {
             if (settings.has(pool) && settings.get(pool).isJsonArray()
-                    && !settings.getAsJsonArray(pool).isEmpty() && settings.get(pool).equals(baseline.get(pool)))
+                    && !settings.getAsJsonArray(pool).isEmpty())
                 eligible.add(pool);
         }
         if (eligible.isEmpty()) return false;
@@ -98,6 +97,12 @@ final class EquipmentIntegrationDefaults {
             }
         }
         return changed;
+    }
+
+    static boolean automaticImportsEnabled(JsonObject root) {
+        if (!root.has("equipment_integration")) return true;
+        var group = root.get("equipment_integration");
+        return group.isJsonObject() && booleanOption(group.getAsJsonObject(), "auto_import_enabled", true, false);
     }
 
     private static boolean booleanOption(JsonObject settings, String key, boolean absent, boolean invalid) {
