@@ -995,7 +995,7 @@ public final class RecoverySupplies {
             human.getPersistentData().putFloat(PENDING_HEAL, pending);
             human.getPersistentData().putInt(
                     NEXT_HEAL_TICK,
-                    human.tickCount + CombatAiConfig.get().gradualHealIntervalTicks()
+                    human.tickCount + CombatAiConfig.forHuman(human).gradualHealIntervalTicks()
             );
         }
     }
@@ -1005,7 +1005,7 @@ public final class RecoverySupplies {
         if (amount <= 0.0F) {
             return;
         }
-        CombatAiConfig config = CombatAiConfig.get();
+        CombatAiConfig config = CombatAiConfig.forHuman(human);
         float pending = human.getPersistentData().getFloat(PENDING_HEAL);
         human.getPersistentData().putFloat(PENDING_HEAL, pending + amount);
         human.getPersistentData().putInt(
@@ -1020,7 +1020,7 @@ public final class RecoverySupplies {
         if (properties == null) {
             return 0.0F;
         }
-        CombatAiConfig config = CombatAiConfig.get();
+        CombatAiConfig config = CombatAiConfig.forHuman(human);
         float saturationPoints = properties.getNutrition() * properties.getSaturationModifier() * 2.0F;
         float calculated = properties.getNutrition() * 0.55F + saturationPoints * 0.35F;
         return Mth.clamp(

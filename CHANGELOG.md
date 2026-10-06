@@ -4,6 +4,7 @@
 
 ### 简体中文
 
+- 配置重组为全局及四阶独立JSON；属性、装备、战斗AI、枪械概率、雇佣条件和出生弹药按阶设置。迁移旧JSON与TOML前保留备份；全局弹药消耗默认开启，关闭后弓弩和枪械换弹不要求或扣除库存。
 - 人类箭矢与通用弹匣使用专属32×32透明像素贴图；新增工作台无序配方：4支原版箭、1根木棍、1根羽毛合成32支人类箭矢，3份火药和2个铁锭合成2个通用弹匣。弹匣配方仅在安装TaCZ时加载。
 - 闲置换弹仅在弹匣余量严格低于容量25%时触发，战斗中必须打空（包括膛内剩余子弹）才开始换弹。统一入口再次检查阈值，避免旁路调用提前收费。
 - 远程人类改为有限弹药：弓弩统一消耗64堆叠的人类箭矢，每次成功射击／齐射扣1；TaCZ 使用24堆叠的通用弹匣，每次有效启动换弹按手枪／冲锋枪1、步枪／霰弹枪2、狙击枪3、机枪4、重型武器5扣除。原生逐发装填按完整换弹周期收费，库存供弹枪也使用有限弹仓；取消、切枪和卡顿恢复不能无偿补满。
@@ -15,6 +16,7 @@
 
 ### English
 
+- Consolidate configuration into global and four rank files, with independent AI and spawn ammunition. Back up and migrate legacy JSON/TOML; the default-on ammunition switch can waive reserves and deductions without bypassing reload timing.
 - Added dedicated 32×32 transparent pixel-art textures and shapeless crafting-table recipes: 4 vanilla arrows, 1 stick and 1 feather produce 32 Human Arrows; 3 gunpowder and 2 iron ingots produce 2 Universal Magazines. The magazine recipe loads only with TaCZ installed.
 - Idle reloads require strictly less than 25% magazine capacity; combat reloads require all loaded rounds, including the chamber, to be spent. The shared accepted reload boundary checks these thresholds before charging supplies.
 - Humans now use finite ammunition: Human Arrows stack to 64 and cost 1 per successful bow shot/crossbow volley; Universal Magazines stack to 24 and cost 1/2/3/4/5 per accepted reload for pistol/SMG, rifle/shotgun, sniper, machine gun and heavy weapons. Manual feeds pay once per cycle; inventory-feed guns use finite internal rounds. Cancellation, weapon changes and stall recovery do not refill ammunition for free.

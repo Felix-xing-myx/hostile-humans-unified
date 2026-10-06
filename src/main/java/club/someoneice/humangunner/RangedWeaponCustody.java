@@ -97,7 +97,7 @@ public final class RangedWeaponCustody {
             boolean defenseActive = "defend".equals(human.getPersistentData()
                     .getString("humangunner:ai_phase"));
             if (shouldReleaseReturnShield(returningToRanged, defenseActive,
-                    human.getTicksUsingItem(), CombatAiConfig.get().shieldBlockDurationMaxTicks())) {
+                    human.getTicksUsingItem(), CombatAiConfig.forHuman(human).shieldBlockDurationMaxTicks())) {
                 // A lingering off-hand block must not hold the melee lease
                 // forever after its target dies or leaves close range.
                 human.stopUsingItem();

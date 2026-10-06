@@ -104,6 +104,18 @@
 - 原版工作台无序配方：4个 `minecraft:arrow`＋1个 `minecraft:stick`＋1个 `minecraft:feather`→32个 `humangunner:human_arrow`；3个 `minecraft:gunpowder`＋2个 `minecraft:iron_ingot`→2个 `humangunner:human_magazine`。用户未指定额外材料/铁数量，主控选木棍/羽毛作为扩充箭杆/箭羽，每弹匣1铁锭。后者 `forge:mod_loaded` 条件为TaCZ，符合可选联动范围。
 - 实际验证：JSON解析、重复材料计数/产量、工作台格数、可选条件、模型路径及PNG尺寸/alpha检查通过；箭图735透明/289可见像素，弹匣643透明/381可见像素，放大预览检查通过；Git diff --check通过。日志在维护目录 `验证日志/static-ammo-assets-20261006.log`，预览 `验证日志/ammo-textures-preview-20261006.png`。没有运行Gradle/编译/游戏；合成界面与资源加载仍需构建及游戏验收。版本仍为3.6.0，更新日志仅新增未发布条目。
 
+## 阶级配置重组与弹药配置：2026-10-06（已本地整合）
+
+- 基线 `0b5c67f10a994c52e47e368556f8b3caa950c2a8`；原CHANGELOG用户改动保留。此轮仅开发，无构建/投放/push。
+- CONFIG-LAYOUT：GPT-6.1 Sol medium子Agent，维护目录 `worktrees/tier-config-layout`，分支 `feature/tier-config-layout`，独占SplitConfigFiles及新投影/旧布局读取模块、独立迁移测试；五文件布局/迁移/备份，禁止修改UnifiedConfig、默认JSON和公共文档。全局/阶级模式接口由主控约定。
+- AMMO-CONFIG：GPT-6.1 Sol medium子Agent，维护目录 `worktrees/ammo-config-switch`，分支 `feature/ammo-config-switch`，独占HumanAmmo、HumanAmmoSpawn及必要TaCZ事务/选择修订与独立测试；以主控提供UnifiedConfig接口读取配置，关闭消耗时无弹药也可射击/换弹，开启仍执行库存扣费。
+- 主控独占UnifiedConfig、默认JSON、CombatAiConfig与按需AI调用接入、TierRuntimeConfigTest、公共Gradle/文档/版本，负责审核整合。总开关留全局，既有分阶参数全部归并，用户确认AI行为参数也按阶独立。现有UnifiedConfigTest由CONFIG-LAYOUT负责人调整。
+
+- 已审核并整合 AMMO-CONFIG 原提交 `5f6de430aa89dac3f26855bd9e1cc47036121dee` → `ef5cf58`；CONFIG-LAYOUT 原提交 `05b12e4ea9a47ad83398b64aa5fc475f08ff10d4` → `21f1eae`，补充 `a73f4eb2f93657123d056dce462e810fbbafefaa` → `a7f345f`。均为本地提交。
+- 主控将所有AI读取绑定实体阶级，加入出生弹药范围缓存/零库存免费弹药总开关，迁移并停止注册旧Forge TOML；原生结构设置进global.native_gameplay，旧逃跑/台词概率进每阶ai。独立逻辑共用原有射击与换弹入口，不另建战斗/动画流程。
+- 静态核查：五文件权威来源、旧文件只读/先备份、损坏招聘价格失败关闭、空池/权重保护、所有AI调用分阶、可选TaCZ边界、默认数值兼容与Git diff --check。新增TierRuntimeConfigTest、HumanAmmoConfigSwitchTest、TierConfigFilesTest，已接Gradle但按用户规则未执行编译或测试运行。
+- 待游戏验收：旧配置升级后五文件生成与备份；四阶AI差异和出生弹药范围；开关关闭时零库存弓弩射击/枪械换弹、开启时扣费与武器回退。未构建、未实例同步、未推送；版本保留3.6.0，变更登记Unreleased。
+
 ## 分派与交付模板
 
 每项功能任务新增独立记录，至少包含：

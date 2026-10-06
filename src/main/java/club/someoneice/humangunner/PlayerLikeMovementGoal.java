@@ -23,7 +23,7 @@ public final class PlayerLikeMovementGoal extends Goal {
 
     public PlayerLikeMovementGoal(Human human) {
         this.human = human;
-        this.config = CombatAiConfig.get();
+        this.config = CombatAiConfig.forHuman(human);
     }
 
     @Override

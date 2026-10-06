@@ -1242,12 +1242,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 double multiplier;
                 if (shield) {
                     double configuredShieldMultiplier =
-                            club.someoneice.humangunner.CombatAiConfig.get().shieldUseSpeedMultiplier();
+                            club.someoneice.humangunner.CombatAiConfig.forHuman(this).shieldUseSpeedMultiplier();
                     multiplier = humanGunner$movementShieldAllowance
                             ? Math.max(0.4D, configuredShieldMultiplier)
                             : configuredShieldMultiplier;
                 } else {
-                    multiplier = club.someoneice.humangunner.CombatAiConfig.get().foodUseSpeedMultiplier();
+                    multiplier = club.someoneice.humangunner.CombatAiConfig.forHuman(this).foodUseSpeedMultiplier();
                 }
                 if (multiplier < 1.0D) {
                     modifiableattributeinstance.addTransientModifier(new AttributeModifier(MODIFIER_UUID,
@@ -1561,10 +1561,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
         if (!this.resolvedFleeThisCombat) {
             this.resolvedFleeThisCombat = true;
-            if (this.getTier() == HumanTier.LEVEL2 && (double)this.random.nextFloat() < (Double)Config.midBattleBuffInsteadOfRunChance.get()) {
+            if (this.getTier() == HumanTier.LEVEL2 && (double)this.random.nextFloat() < club.someoneice.humangunner.CombatAiConfig.forHuman(this).midBattleBuffInsteadOfRunChance()) {
                 this.shouldFleeThisCombat = false;
             } else {
-                this.shouldFleeThisCombat = (double)this.random.nextFloat() < (Double)Config.runAwayMiddleFightChance.get();
+                this.shouldFleeThisCombat = (double)this.random.nextFloat() < club.someoneice.humangunner.CombatAiConfig.forHuman(this).runAwayMiddleFightChance();
             }
         }
         return this.shouldFleeThisCombat;

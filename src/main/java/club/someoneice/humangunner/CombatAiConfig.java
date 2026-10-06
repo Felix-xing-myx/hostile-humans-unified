@@ -3,7 +3,7 @@ package club.someoneice.humangunner;
 import com.google.gson.JsonObject;
 
 
-/** General AI settings from the unified file; movement bases belong to each tier. */
+/** Immutable per-tier AI settings; the enabled master switch belongs to global.json. */
 public record CombatAiConfig(
         boolean enabled,
         double retreatHealthRatio,
@@ -27,31 +27,14 @@ public record CombatAiConfig(
         double combatJumpChance,
         boolean itemRecoveryEnabled,
         double foodUseSpeedMultiplier,
-        double shieldUseSpeedMultiplier
+        double shieldUseSpeedMultiplier,
+        double legacyFleeHealthRatio,
+        double runAwayMiddleFightChance,
+        double midBattleBuffInsteadOfRunChance,
+        double greetChance
 ) {
-    private static final String PATH = "hostile_humans_unified/combat.json: ai";
-    private static volatile CombatAiConfig instance;
-
-    public static CombatAiConfig get() {
-        CombatAiConfig value = instance;
-        if (value == null) {
-            synchronized (CombatAiConfig.class) {
-                value = instance;
-                if (value == null) {
-                    instance = value = load();
-                }
-            }
-        }
-        return value;
-    }
-
-    private static CombatAiConfig load() {
-        try {
-            return parse(UnifiedConfig.get().ai());
-        } catch (Exception exception) {
-            HumanGunner.LOGGER.error("Could not read {}; using defaults", PATH, exception);
-            return defaults();
-        }
+    public static CombatAiConfig forHuman(com.craftix.hostile_humans.entity.entities.Human human) {
+        return UnifiedConfig.get().combatAi(TierAttributes.key(human));
     }
 
     static CombatAiConfig parse(JsonObject root) {
@@ -79,7 +62,11 @@ public record CombatAiConfig(
                     bounded(root, "combat_jump_chance", defaults.combatJumpChance, 0.0D, 1.0D),
                     bool(root, "item_recovery_enabled", defaults.itemRecoveryEnabled),
                     bounded(root, "food_use_speed_multiplier", defaults.foodUseSpeedMultiplier, 0.1D, 1.0D),
-                    bounded(root, "shield_use_speed_multiplier", defaults.shieldUseSpeedMultiplier, 0.1D, 1.0D)
+                    bounded(root, "shield_use_speed_multiplier", defaults.shieldUseSpeedMultiplier, 0.1D, 1.0D),
+                    bounded(root, "flee_hp", defaults.legacyFleeHealthRatio, 0, 1),
+                    bounded(root, "run_away_middle_fight_chance", defaults.runAwayMiddleFightChance, 0, 1),
+                    bounded(root, "mid_battle_buff_instead_of_run_chance", defaults.midBattleBuffInsteadOfRunChance, 0, 1),
+                    bounded(root, "greet_chance", defaults.greetChance, 0, 1)
         ).normalized();
     }
 
@@ -111,7 +98,7 @@ public record CombatAiConfig(
                 combatJumpChance,
                 itemRecoveryEnabled,
                 foodUseSpeedMultiplier,
-                shieldUseSpeedMultiplier
+                shieldUseSpeedMultiplier, legacyFleeHealthRatio, runAwayMiddleFightChance, midBattleBuffInsteadOfRunChance, greetChance
         );
     }
 
@@ -139,7 +126,7 @@ public record CombatAiConfig(
                 0.60D,
                 true,
                 0.7D,
-                0.2D
+                0.2D, 0.35D, 0.5D, 0.1D, 0.05D
         );
     }
 
@@ -163,7 +150,7 @@ public record CombatAiConfig(
         // 10-health threshold based on the former uniform 60-health entities.
         if (root.has("recovery_damage_tolerance")) {
             return Math.max(0.0D, Math.min(1.0D,
-                    root.get("recovery_damage_tolerance").getAsDouble() / 60.0D));
+                    UnifiedConfig.number(root, "recovery_damage_tolerance", fallback * 60, 0, 60) / 60.0D));
         }
         return fallback;
     }

@@ -64,7 +64,7 @@ extends NearestAttackableTargetGoal<T> {
             } else if (!this.human.isAlert) {
                 return false;
             }
-            int limit = Config.maxTargeting.get();
+            int limit = Config.maxTargeting();
             List<Human> targetters = new java.util.ArrayList<>(Math.min(Math.max(0, limit), 16));
             if (limit > 0) {
                 player.level().getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(Human.class),

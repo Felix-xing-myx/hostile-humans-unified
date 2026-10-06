@@ -21,7 +21,7 @@ final class CombatFoodRecoveryGoal extends Goal {
 
     CombatFoodRecoveryGoal(Human human) {
         this.human = human;
-        this.config = CombatAiConfig.get();
+        this.config = CombatAiConfig.forHuman(human);
         human.getPersistentData().remove(ACTIVE_KEY);
     }
 

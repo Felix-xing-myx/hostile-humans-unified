@@ -1,6 +1,5 @@
 package club.someoneice.humangunner;
 
-import com.craftix.hostile_humans.Config;
 import com.craftix.hostile_humans.entity.data.HumanData;
 import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.network.chat.Component;
@@ -38,7 +37,7 @@ public final class SoldierDialogue {
     public static void hostile(Human human, ServerPlayer player) {
         if (human.level().isClientSide || human.hasOwner() || HumanRelations.protects(human, player)
                 || !human.canAttack(player) || human.getTags().contains("greeted")
-                || human.getRandom().nextDouble() >= Config.greetChance.get()) return;
+                || human.getRandom().nextDouble() >= CombatAiConfig.forHuman(human).greetChance()) return;
         human.addTag("greeted");
         SoldierCommandFeedback.say(player, human, Component.translatable(
                 "dialogue.humangunner.hostile." + human.getRandom().nextInt(6)));

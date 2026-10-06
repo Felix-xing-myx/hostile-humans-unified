@@ -21,7 +21,7 @@ public class EventHandlerMod {
         if (event.getPackType() != PackType.SERVER_DATA) {
             return;
         }
-        selectPack(ModList.get()::isLoaded, Config.noWaystones.get())
+        selectPack(ModList.get()::isLoaded, Config.noWaystones())
                 .ifPresent(name -> registerAddon(event, name));
     }
 

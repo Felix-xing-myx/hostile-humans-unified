@@ -14,7 +14,7 @@ public final class IdleRecoveryGoal extends Goal {
 
     public IdleRecoveryGoal(Human human) {
         this.human = human;
-        this.config = CombatAiConfig.get();
+        this.config = CombatAiConfig.forHuman(human);
     }
 
     @Override

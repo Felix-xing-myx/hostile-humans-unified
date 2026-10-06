@@ -43,7 +43,7 @@ final class ConfigSchemaUpgrade {
     private ConfigSchemaUpgrade() {}
 
     static boolean userMap(String path) {
-        return path.equals("tacz.gun_whitelist") || path.equals("tacz.hired_gun_additional_whitelist")
+        return path.matches("recruitment\\.payment_by_tier\\.(roamer|tier1|tier2|tier3)") || path.equals("tacz.gun_whitelist") || path.equals("tacz.hired_gun_additional_whitelist")
                 || path.matches("tacz\\.tier_gun_type_weights\\.(roamer|tier1|tier2|tier3)");
     }
 

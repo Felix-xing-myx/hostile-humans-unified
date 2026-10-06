@@ -54,12 +54,12 @@ extends Mob {
         boolean tier2Allowed = club.someoneice.humangunner.NaturalHumanSpawnRules.isTierUnlocked(level, blockPosition(), 2);
         if (!tier1Allowed && !tier2Allowed) return false;
         BlockPos blockpos = this.blockPosition();
-        if (this.hasEnoughSpace((BlockGetter)level, blockpos) && Config.eventType.get() != SpawnType.Disabled) {
+        if (this.hasEnoughSpace((BlockGetter)level, blockpos) && Config.eventType() != SpawnType.Disabled) {
             if (level.getBiome(blockpos).is(Biomes.THE_VOID)) {
                 return false;
             }
             boolean currentTeam = false;
-            boolean isPillagers = Config.eventType.get() == SpawnType.HumanVsPillager || this.random.nextFloat() < 0.6f && Config.eventType.get() != SpawnType.HumanVsHuman;
+            boolean isPillagers = Config.eventType() == SpawnType.HumanVsPillager || this.random.nextFloat() < 0.6f && Config.eventType() != SpawnType.HumanVsHuman;
             int totalAmount = this.random.nextInt(3, 18);
             boolean bannerLeft = false;
             boolean bannerRight = false;

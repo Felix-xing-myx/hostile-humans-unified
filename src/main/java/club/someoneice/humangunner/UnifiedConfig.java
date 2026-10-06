@@ -19,6 +19,10 @@ public final class UnifiedConfig {
     private final Recruitment recruitment;
     private final boolean betterCombatSoldierMeleeEnabled;
     private final SoldierMessages soldierMessages;
+    private final Map<String, AmmoReserve> ammunition;
+    private final Map<String, CombatAiConfig> combatByTier;
+    private final boolean ammoConsumptionEnabled;
+    public record AmmoReserve(int arrowMin, int arrowMax, int magazineMin, int magazineMax) { }
     public record SoldierMessages(int chatterIntervalTicks, int chatterMaxPerFiveMinutes,
             int reportIntervalTicks, int reportMaxPerMinute, int reportDetailsPerMessage) { }
 
@@ -118,6 +122,30 @@ public final class UnifiedConfig {
                     Math.max(meleeCooldownLow, meleeCooldownHigh)));
         }
         tiers = Map.copyOf(values);
+        Map<String, AmmoReserve> ammoValues = new LinkedHashMap<>();
+        Map<String, CombatAiConfig> aiValues = new LinkedHashMap<>();
+        JsonObject commonAi = object(root, "ai");
+        int rankIndex = 0;
+        for (String rank : List.of("roamer", "tier1", "tier2", "tier3")) {
+            JsonObject ammo = object(object(object(root, "tiers"), rank), "ammunition");
+            int arrowLow = ammoCount(object(ammo, "arrows"), "min", HumanAmmoPolicy.arrowMinimum(rankIndex), 1920);
+            int arrowHigh = ammoCount(object(ammo, "arrows"), "max", HumanAmmoPolicy.arrowMaximum(rankIndex), 1920);
+            int magazineLow = ammoCount(object(ammo, "magazines"), "min", HumanAmmoPolicy.magazineMinimum(rankIndex), 720);
+            int magazineHigh = ammoCount(object(ammo, "magazines"), "max", HumanAmmoPolicy.magazineMaximum(rankIndex), 720);
+            ammoValues.put(rank, new AmmoReserve(Math.min(arrowLow, arrowHigh), Math.max(arrowLow, arrowHigh),
+                    Math.min(magazineLow, magazineHigh), Math.max(magazineLow, magazineHigh)));
+            JsonObject tierAi = commonAi.deepCopy();
+            for (var entry : object(object(root, "tier_ai"), rank).entrySet()) {
+                if (!entry.getKey().equals("enabled")) tierAi.add(entry.getKey(), entry.getValue().deepCopy());
+            }
+            // The master switch always belongs to global.json, never a rank override.
+            tierAi.addProperty("enabled", bool(commonAi, "enabled", true));
+            aiValues.put(rank, CombatAiConfig.parse(tierAi));
+            rankIndex++;
+        }
+        ammunition = Map.copyOf(ammoValues);
+        combatByTier = Map.copyOf(aiValues);
+        ammoConsumptionEnabled = bool(object(root, "ammunition"), "consume_ammunition", true);
         JsonObject s = object(root, "spawning");
         JsonObject progression = object(s, "progression");
         JsonObject firstDays = object(progression, "first_spawn_day_by_tier");
@@ -189,6 +217,9 @@ public final class UnifiedConfig {
         return instance = load(FMLPaths.CONFIGDIR.get());
     }
     public Tier tier(String key) { return tiers.getOrDefault(key, tiers.get("roamer")); }
+    public AmmoReserve ammoReserve(String rank) { return ammunition.getOrDefault(rank, ammunition.get("roamer")); }
+    public boolean ammoConsumptionEnabled() { return ammoConsumptionEnabled; }
+    public CombatAiConfig combatAi(String rank) { return combatByTier.getOrDefault(rank, combatByTier.get("roamer")); }
     public Spawn spawn() { return spawn; }
     EquipmentGrowthPolicy equipmentGrowth() { return equipmentGrowth; }
     public ConfiguredEquipmentLoadout equipmentLoadout(String rank) {
@@ -224,6 +255,14 @@ public final class UnifiedConfig {
     public double tierGunDamage(String key) {
         return number(object(object(root, "tacz"), "tier_damage_multipliers"), key, 1, 0, 10);
     }
+    public String disabledStructures() { return string(object(root, "native_gameplay"), "disabled_structures", ""); }
+    public int maxTargeting() { return (int) number(object(root, "native_gameplay"), "max_targeting", 3, 0, 10000); }
+    public boolean noWaystones() { return bool(object(root, "native_gameplay"), "no_waystones", false); }
+    public String battleEvent() {
+        String value = string(object(root, "native_gameplay"), "battle_event", "Random");
+        return java.util.Set.of("HumanVsHuman", "HumanVsPillager", "Random", "Disabled").contains(value) ? value : "Random";
+    }
+
     JsonObject ai() { return object(root, "ai").deepCopy(); }
     JsonObject gunConfig() {
         return object(root, "tacz").deepCopy();
@@ -303,6 +342,14 @@ public final class UnifiedConfig {
         JsonElement value = data.get(key);
         return value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
                 ? value.getAsString() : fallback;
+    }
+
+    private static int ammoCount(JsonObject data, String key, int fallback, int maximum) {
+        try {
+            JsonElement value = data.get(key);
+            if (value == null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()) return fallback;
+            return Math.max(0, Math.min(maximum, value.getAsBigDecimal().intValueExact()));
+        } catch (RuntimeException invalid) { return fallback; }
     }
 
     static JsonObject object(JsonObject data, String key) {

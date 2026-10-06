@@ -783,7 +783,7 @@ public final class HumanGunner {
     }
 
     private static void configureCombatAi(Human human) {
-        CombatAiConfig config = CombatAiConfig.get();
+        CombatAiConfig config = CombatAiConfig.forHuman(human);
         if (!config.enabled() || !COMBAT_AI_CONFIGURED.add(human)) {
             return;
         }

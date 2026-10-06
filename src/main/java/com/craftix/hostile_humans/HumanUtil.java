@@ -29,7 +29,7 @@ public class HumanUtil {
     public static ItemStack[] EDIBLE_ITEMS_2 = new ItemStack[]{Items.APPLE.getDefaultInstance(), Items.BREAD.getDefaultInstance(), Items.COOKED_PORKCHOP.getDefaultInstance(), Items.COOKED_COD.getDefaultInstance(), Items.COOKED_SALMON.getDefaultInstance(), Items.COOKIE.getDefaultInstance(), Items.MELON_SLICE.getDefaultInstance(), Items.COOKED_BEEF.getDefaultInstance(), Items.COOKED_CHICKEN.getDefaultInstance(), Items.CARROT.getDefaultInstance(), Items.POTATO.getDefaultInstance(), Items.BAKED_POTATO.getDefaultInstance(), Items.GOLDEN_CARROT.getDefaultInstance(), Items.PUMPKIN_PIE.getDefaultInstance(), Items.COOKED_RABBIT.getDefaultInstance(), Items.RABBIT_STEW.getDefaultInstance(), Items.COOKED_MUTTON.getDefaultInstance(), Items.BEETROOT.getDefaultInstance(), Items.DRIED_KELP.getDefaultInstance(), Items.SWEET_BERRIES.getDefaultInstance(), Items.GLOW_BERRIES.getDefaultInstance()};
 
     public static boolean isStructureDisabled(String value) {
-        return Arrays.asList(((String)Config.disabledStructures.get()).replace(" ", "").split(",")).contains(value);
+        return Arrays.asList(Config.disabledStructures().replace(" ", "").split(",")).contains(value);
     }
 
     public static boolean isRangedWeapon(ItemStack value) {
@@ -124,7 +124,7 @@ public class HumanUtil {
         if (human.getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING) {
             return false;
         }
-        return (double)human.getHealth() < (double)human.getMaxHealth() * (Double)Config.fleeHpPercent.get();
+        return (double)human.getHealth() < (double)human.getMaxHealth() * (human instanceof com.craftix.hostile_humans.entity.entities.Human npc ? club.someoneice.humangunner.CombatAiConfig.forHuman(npc).legacyFleeHealthRatio() : 0.35D);
     }
 
 }

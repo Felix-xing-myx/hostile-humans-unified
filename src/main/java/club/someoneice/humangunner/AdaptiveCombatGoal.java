@@ -132,7 +132,7 @@ public final class AdaptiveCombatGoal extends Goal {
 
     public AdaptiveCombatGoal(Human human) {
         this.human = human;
-        this.config = CombatAiConfig.get();
+        this.config = CombatAiConfig.forHuman(human);
         this.gunOperator = GunSupport.get().control(human);
         this.lastObservedPosition = human.position();
         this.lastRetreatPosition = human.position();
