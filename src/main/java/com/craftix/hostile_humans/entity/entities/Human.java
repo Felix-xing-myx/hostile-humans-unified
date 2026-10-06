@@ -116,7 +116,6 @@ import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
-import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
@@ -135,6 +134,7 @@ implements RangedAttackMob,
 CrossbowAttackMob,
 PotionRangedAttackMob, StaticCombatGoalHost {
     private boolean humanGunner$staticCombatGoalsInstalled;
+    private List<Projectile> humanGunner$crossbowVolley;
     public final club.someoneice.humangunner.SoldierCombatMemory soldierCombatMemory =
             new club.someoneice.humangunner.SoldierCombatMemory();
 
@@ -1646,29 +1646,62 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public void shootCrossbowProjectile(LivingEntity target, ItemStack crossbow, Projectile projectile, float angle) {
         if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return;
         this.shootCrossbowProjectile((LivingEntity)this, target, projectile, angle, 1.6f);
+        if (humanGunner$crossbowVolley != null) humanGunner$crossbowVolley.add(projectile);
         // CrossbowItem creates and launches the projectile before adding it to
         // the level. Apply the authoritative velocity here so the spawn packet
         // carries the same trajectory that the server will simulate.
         if (projectile instanceof AbstractArrow arrow) {
+            arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
             arrow.getPersistentData().putBoolean(HumanGunner.NPC_CROSSBOW_PROJECTILE, true);
             HumanGunner.applyFirstTickArrowBallistics(this, arrow, target);
         }
     }
 
     public ItemStack getProjectile(ItemStack p_21272_) {
-        return new ItemStack((ItemLike)Items.ARROW);
+        return club.someoneice.humangunner.HumanArrowCombat.projectileFor(this);
     }
 
     public void onCrossbowAttackPerformed() {
         this.noActionTime = 0;
     }
 
+    @Override
+    public void performCrossbowAttack(LivingEntity shooter, float velocity) {
+        LivingEntity target = getTarget();
+        if (shooter != this || humanGunner$crossbowVolley != null
+                || !club.someoneice.humangunner.HumanArrowCombat.canShoot(this, target)) return;
+        InteractionHand hand = ProjectileUtil.getWeaponHoldingHand(this, item -> item instanceof CrossbowItem);
+        ItemStack crossbow = getItemInHand(hand);
+        if (SpartanRangedCompat.isHeavyCrossbow(crossbow)) {
+            SpartanRangedCompat.fire(this, target);
+            return;
+        }
+        if (!club.someoneice.humangunner.HumanArrowCombat.prepareCrossbowVolley(crossbow)) return;
+        List<Projectile> volley = new ArrayList<>(3);
+        humanGunner$crossbowVolley = volley;
+        try {
+            CrossbowAttackMob.super.performCrossbowAttack(this, velocity);
+        } finally {
+            humanGunner$crossbowVolley = null;
+            // A cancelled insertion pays nothing; successful Multishot pays once.
+            if (volley.stream().anyMatch(Projectile::isAddedToWorld)) {
+                club.someoneice.humangunner.HumanAmmo.consumeArrow(this);
+            }
+        }
+    }
+
     public void performRangedAttack(LivingEntity target, float distanceFactor) {
         if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return;
-        if (SpartanRangedCompat.fire(this, target)) return;
 
         if (this.getMainHandItem().getItem() instanceof TridentItem) {
             this.performRangedAttackTrident(target, distanceFactor);
+            return;
+        }
+        if (!club.someoneice.humangunner.HumanArrowCombat.canShoot(this, target)) return;
+        // A recognized heavy crossbow owns this path, including a failed shot.
+        if (SpartanRangedCompat.isHeavyCrossbow(getMainHandItem())
+                || SpartanRangedCompat.isHeavyCrossbow(getOffhandItem())) {
+            SpartanRangedCompat.fire(this, target);
             return;
         }
         this.shieldCoolDown = 8;
@@ -1676,13 +1709,15 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 this::canFireProjectileWeapon);
         ItemStack weaponStack = this.getItemInHand(weaponHand);
         if (weaponStack.getItem() instanceof CrossbowItem) {
+            if (target != getTarget()) return;
+            // Native CrossbowItem fires all Multishot projectiles as one paid volley.
             this.performCrossbowAttack((LivingEntity)this, 1.6f);
-        } else {
+        } else if (weaponStack.getItem() instanceof BowItem bow) {
             ItemStack itemstack = this.getProjectile(weaponStack);
+            if (itemstack.isEmpty()) return;
             AbstractArrow mobArrow = ProjectileUtil.getMobArrow((LivingEntity)this, (ItemStack)itemstack, (float)distanceFactor);
-            if (this.getMainHandItem().getItem() instanceof BowItem) {
-                mobArrow = ((BowItem)this.getMainHandItem().getItem()).customArrow(mobArrow);
-            }
+            mobArrow = bow.customArrow(mobArrow);
+            mobArrow.pickup = AbstractArrow.Pickup.DISALLOWED;
             double d0 = target.getX() - this.getX();
             double d1 = target.getY(0.3333333333333333) - mobArrow.getY();
             double d2 = target.getZ() - this.getZ();
@@ -1692,8 +1727,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // server tick is too late for the client spawn packet and creates
             // a visibly low phantom trajectory despite a correct server hit.
             HumanGunner.applyFirstTickArrowBallistics(this, mobArrow, target);
+            if (!this.level().addFreshEntity((Entity)mobArrow)) return;
+            club.someoneice.humangunner.HumanAmmo.consumeArrow(this);
             this.playSound(SoundEvents.SKELETON_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
-            this.level().addFreshEntity((Entity)mobArrow);
             if (weaponStack.getItem() instanceof BowItem) {
                 wearEquippedItem(weaponStack, weaponHand == InteractionHand.MAIN_HAND
                         ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);

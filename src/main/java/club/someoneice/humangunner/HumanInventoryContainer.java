@@ -22,6 +22,9 @@ final class HumanInventoryContainer implements Container {
 
     HumanInventoryContainer(Human human) {
         this.human = human;
+        // The edit session pauses combat. Clear empty NPC charging markers
+        // before quick-move copies stacks directly out of slots.
+        for (int slot = 0; slot < TOTAL_SIZE; slot++) HumanArrowCombat.clearNpcLoad(getItem(slot));
     }
 
     @Override
@@ -51,6 +54,7 @@ final class HumanInventoryContainer implements Container {
         if (current.isEmpty() || amount <= 0) return ItemStack.EMPTY;
         ItemStack remainder = current.copy();
         ItemStack removed = remainder.split(amount);
+        HumanArrowCombat.clearNpcLoad(removed);
         setItem(slot, remainder);
         return removed;
     }
@@ -60,6 +64,7 @@ final class HumanInventoryContainer implements Container {
         ItemStack current = getItem(slot);
         if (current.isEmpty()) return ItemStack.EMPTY;
         ItemStack removed = current.copy();
+        HumanArrowCombat.clearNpcLoad(removed);
         setItem(slot, ItemStack.EMPTY);
         return removed;
     }

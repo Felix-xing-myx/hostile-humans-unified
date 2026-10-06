@@ -5,6 +5,7 @@ import com.craftix.hostile_humans.entity.HumanEntity;
 import com.craftix.hostile_humans.entity.HumanMobEntityData;
 import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.BowRangePolicy;
+import club.someoneice.humangunner.HumanAmmo;
 import club.someoneice.humangunner.RangedFiringPosition;
 import club.someoneice.humangunner.RangedWeaponCustody;
 import club.someoneice.humangunner.RangedStrafeSpeed;
@@ -55,7 +56,7 @@ extends Goal {
 
     protected boolean isHoldingBow() {
         if (this.mob instanceof Human human
-                && (RangedWeaponCustody.isActive(human)
+                && (!HumanAmmo.hasArrows(human) || RangedWeaponCustody.isActive(human)
                 || HumanUtil.isMeleeWeapon(human.getMainHandItem()))) {
             return false;
         }
@@ -108,6 +109,10 @@ extends Goal {
     }
 
     public void tick() {
+        if (!this.canContinueToUse()) {
+            this.stop();
+            return;
+        }
         if (mob instanceof Human) {
             if (attackTime > 0) attackTime = Math.max(1, attackTime - 1);
             if (mob.isUsingItem() && mob.getUseItem().getItem() instanceof net.minecraft.world.item.BowItem)
@@ -279,6 +284,11 @@ extends Goal {
     }
 
     private void tickShot(LivingEntity target, boolean visible) {
+        if (this.mob instanceof Human human && !HumanAmmo.hasArrows(human)) {
+            if (this.mob.isUsingItem() && this.mob.getUseItem().getItem() instanceof BowItem)
+                this.mob.stopUsingItem();
+            return;
+        }
         if (visible && this.mob instanceof Human human) {
             human.markRangedFacing(target);
         }
