@@ -112,7 +112,7 @@
 - 主控独占UnifiedConfig、默认JSON、CombatAiConfig与按需AI调用接入、TierRuntimeConfigTest、公共Gradle/文档/版本，负责审核整合。总开关留全局，既有分阶参数全部归并，用户确认AI行为参数也按阶独立。现有UnifiedConfigTest由CONFIG-LAYOUT负责人调整。
 
 - 已审核并整合 AMMO-CONFIG 原提交 `5f6de430aa89dac3f26855bd9e1cc47036121dee` → `ef5cf58`；CONFIG-LAYOUT 原提交 `05b12e4ea9a47ad83398b64aa5fc475f08ff10d4` → `21f1eae`，补充 `a73f4eb2f93657123d056dce462e810fbbafefaa` → `a7f345f`。均为本地提交。
-- 主控将所有AI读取绑定实体阶级，加入出生弹药范围缓存/零库存免费弹药总开关，迁移并停止注册旧Forge TOML；原生结构设置进global.native_gameplay，旧逃跑/台词概率进每阶ai。独立逻辑共用原有射击与换弹入口，不另建战斗/动画流程。
+- 主控接入提交 `2e6690c`：将所有AI读取绑定实体阶级，加入出生弹药范围缓存/零库存免费弹药总开关，迁移并停止注册旧Forge TOML；原生结构设置进global.native_gameplay，旧逃跑/台词概率进每阶ai。独立逻辑共用原有射击与换弹入口，不另建战斗/动画流程。
 - 静态核查：五文件权威来源、旧文件只读/先备份、损坏招聘价格失败关闭、空池/权重保护、所有AI调用分阶、可选TaCZ边界、默认数值兼容与Git diff --check。新增TierRuntimeConfigTest、HumanAmmoConfigSwitchTest、TierConfigFilesTest，已接Gradle但按用户规则未执行编译或测试运行。
 - 待游戏验收：旧配置升级后五文件生成与备份；四阶AI差异和出生弹药范围；开关关闭时零库存弓弩射击/枪械换弹、开启时扣费与武器回退。未构建、未实例同步、未推送；版本保留3.6.0，变更登记Unreleased。
 
