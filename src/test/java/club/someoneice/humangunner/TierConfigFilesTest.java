@@ -335,6 +335,11 @@ public final class TierConfigFilesTest {
     }
 
     private static void checkCurrentLayoutOnly() throws Exception {
+        Path fresh = Files.createTempDirectory("human-current-fresh-");
+        try {
+            SplitConfigFiles.load(fresh, UnifiedConfig.defaults(), (rank, data) -> false);
+            checkFiveFiles(fresh, 5);
+        } finally { cleanup(fresh); }
         Path directory = Files.createTempDirectory("human-current-layout-");
         try {
             Path ranks = directory.resolve(SplitConfigFiles.DIRECTORY);
@@ -347,7 +352,7 @@ public final class TierConfigFilesTest {
             for (Path old : oldSources) Files.writeString(old, "broken obsolete config");
             JsonObject defaults = UnifiedConfig.defaults();
             JsonObject loaded = SplitConfigFiles.load(directory, defaults, (rank, data) -> false);
-            checkFiveFiles(directory);
+            checkFiveFiles(directory, 12);
             for (Path old : oldSources) check(Files.readString(old).equals("broken obsolete config"), "old source never touched " + old);
             check(new UnifiedConfig(loaded).tier("tier1").equals(new UnifiedConfig(defaults).tier("tier1")), "obsolete sources do not change gameplay defaults");
             try (var paths = Files.list(ranks)) { check(paths.count() == 12, "only five current files added beside seven existing old files"); }
@@ -389,10 +394,10 @@ public final class TierConfigFilesTest {
         } finally { cleanup(directory); }
     }
 
-    private static void checkFiveFiles(Path directory) throws Exception {
+    private static void checkFiveFiles(Path directory, int expectedJsonFiles) throws Exception {
         for (String file : SplitConfigFiles.FILES) check(Files.isRegularFile(directory.resolve(SplitConfigFiles.DIRECTORY).resolve(file)), "current file exists " + file);
         try (var paths = Files.list(directory.resolve(SplitConfigFiles.DIRECTORY))) {
-            check(paths.filter(path -> path.toString().endsWith(".json")).count() == 5, "new installation creates exactly five JSON files");
+            check(paths.filter(path -> path.toString().endsWith(".json")).count() == expectedJsonFiles, "only current five JSON files added, preserving existing obsolete files");
         }
     }
     private static JsonObject json(String text) { return JsonParser.parseString(text).getAsJsonObject(); }
