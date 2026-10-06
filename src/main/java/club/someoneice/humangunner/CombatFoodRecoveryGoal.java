@@ -4,8 +4,8 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.world.entity.ai.goal.Goal;
 
 /**
- * Handles bounded combat-food batches without claiming movement or look flags.
- * Once a batch starts, incoming pressure does not interrupt its food custody.
+ * Handles bounded combat-food batches and urgent instant healing without claiming
+ * movement or look flags. Only urgent healing preempts a meal's item custody.
  */
 final class CombatFoodRecoveryGoal extends Goal {
     private static final double START_HEALTH_RATIO = 2.0D / 3.0D;
@@ -27,22 +27,22 @@ final class CombatFoodRecoveryGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        boolean urgent = RecoverySupplies.hasUrgentInstantHealing(human);
         return config.enabled()
                 && config.itemRecoveryEnabled()
                 && human.isAlive()
-                && human.getTarget() != null
-                && mayStartFood()
+                && (urgent || (human.getTarget() != null && mayStartFood()))
                 && !human.isUsingItem()
                 && !RecoverySupplies.hasActiveUse(human)
-                && human.tickCount >= nextUseTick
-                && needsCombatFood()
-                && RecoverySupplies.hasOrdinaryFood(human);
+                && (urgent || (human.tickCount >= nextUseTick && needsCombatFood()
+                && RecoverySupplies.hasOrdinaryFood(human)));
     }
 
     @Override
     public boolean canContinueToUse() {
         return human.isAlive()
                 && (session != null
+                || RecoverySupplies.hasUrgentInstantHealing(human)
                 || (human.getTarget() != null
                 && mayStartFood()
                 && needsCombatFood()
@@ -69,12 +69,22 @@ final class CombatFoodRecoveryGoal extends Goal {
 
     @Override
     public void tick() {
+        boolean urgent = RecoverySupplies.hasUrgentInstantHealing(human);
+        if (session != null && session.food() && urgent) {
+            boolean completed = RecoverySupplies.completed(human, session);
+            RecoverySupplies.finishUse(human, session, completed);
+            session = null;
+            mealsInBatch = 0;
+            nextUseTick = human.tickCount;
+            return;
+        }
         if (session == null) {
-            if (human.tickCount < nextUseTick || !mayStartFood() || !needsCombatFood()
+            if ((!urgent && (human.tickCount < nextUseTick || !mayStartFood() || !needsCombatFood()))
                     || RecoverySupplies.hasActiveUse(human)) {
                 return;
             }
-            session = RecoverySupplies.beginCombatFoodUse(human);
+            session = urgent ? RecoverySupplies.beginUrgentInstantHealing(human)
+                    : RecoverySupplies.beginCombatFoodUse(human);
             if (session == null) {
                 nextUseTick = human.tickCount + 20;
             }
@@ -84,7 +94,7 @@ final class CombatFoodRecoveryGoal extends Goal {
             return;
         }
         boolean completed = RecoverySupplies.completed(human, session);
-        if (completed && mealsInBatch + 1 < RecoverySupplies.MEALS_PER_BATCH) {
+        if (completed && session.food() && mealsInBatch + 1 < RecoverySupplies.MEALS_PER_BATCH) {
             mealsInBatch++;
             RecoverySupplies.UseSession continued = RecoverySupplies.continueFoodUse(
                     human, session, FULL_HEALTH_RATIO
@@ -94,7 +104,7 @@ final class CombatFoodRecoveryGoal extends Goal {
                 nextUseTick = human.tickCount;
                 return;
             }
-        } else if (completed) {
+        } else if (completed && session.food()) {
             mealsInBatch++;
         }
         RecoverySupplies.finishUse(human, session, completed);

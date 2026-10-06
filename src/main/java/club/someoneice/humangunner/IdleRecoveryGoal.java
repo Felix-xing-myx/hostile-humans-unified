@@ -24,6 +24,7 @@ public final class IdleRecoveryGoal extends Goal {
                 && human.isAlive()
                 && !human.isFleeing
                 && human.getTarget() == null
+                && !RecoverySupplies.hasUrgentInstantHealing(human)
                 && outOfCombatLongEnough()
                 && needsMoreRecovery()
                 && RecoverySupplies.hasUsableSupply(human);
@@ -34,6 +35,7 @@ public final class IdleRecoveryGoal extends Goal {
         return human.isAlive()
                 && !human.isFleeing
                 && (session != null || (human.getTarget() == null
+                && !RecoverySupplies.hasUrgentInstantHealing(human)
                 && outOfCombatLongEnough()
                 && needsMoreRecovery()
                 && RecoverySupplies.hasUsableSupply(human)));
@@ -72,8 +74,16 @@ public final class IdleRecoveryGoal extends Goal {
 
     @Override
     public void tick() {
+        if (session != null && session.food() && RecoverySupplies.hasUrgentInstantHealing(human)) {
+            RecoverySupplies.finishUse(human, session, RecoverySupplies.completed(human, session));
+            session = null;
+            mealsInBatch = 0;
+            nextUseTick = human.tickCount;
+            return;
+        }
         if (session == null) {
-            if (human.tickCount < nextUseTick || !needsMoreRecovery()) {
+            if (RecoverySupplies.hasUrgentInstantHealing(human)
+                    || human.tickCount < nextUseTick || !needsMoreRecovery()) {
                 return;
             }
             session = RecoverySupplies.beginIdleUse(human);

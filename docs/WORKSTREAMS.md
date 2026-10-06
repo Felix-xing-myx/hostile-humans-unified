@@ -295,3 +295,12 @@
 - JAR全部ZIP条目读取、修复类存在及MANIFEST版本核查通过。备份前与替换前两次确认无Java进程，旧JAR及10份相关配置备份逐一核对哈希，仅替换本模组JAR，实例中仅一份；既有配置哈希全部不变，用户原CHANGELOG未混入提交。未启动游戏或推送GitHub。
 - 源/目标SHA-256 `3B6C80E4CD51949DAE4BCCD0B9065878F3AC98E7838CD4B1EAE811C42411B03E`；旧JAR `5CF40CE7D1DC3509BD047255EA384F9DED71A5B42345F311A555F0DD8EC1EF5B`。备份清单 `部署备份/20261006-213437-bodyguard-combat-repair-Forge_47.4.21/deployment.json`；构建日志 `验证日志/build-bodyguard-repair-20261006-213318.log`（均在维护上级目录）。
 - 待游戏验收：主人旁近敌优先于士兵远处自卫目标、连续挨打下不来回卡刀；有/无盾Better Combat慢武器连续命中；普通/带电/点燃苦力怕停止引爆后立即恢复，保护全模式救主及危险结束后权限恢复。自动检查成功不代表真实游戏行为已验证。
+
+## 低生命瞬间治疗优先及一秒饮用：2026-10-06（本地修复）
+
+- 基线 `7abba3feea05bbdfd0fe646dd2bc26c4064a2b19`；主控 `/root` 单独编辑主仓库main，RecoverySupplies与Adaptive接入由主控唯一负责。只读审核 `/root/combat_stall_audit` 沿用GPT6.1 Sol / medium，未编辑或构建。范围：RecoverySupplies/PotionRecoveryPolicy、CombatFoodRecoveryGoal/IdleRecoveryGoal/AdaptiveCombatGoal、PotionRecoveryTest与文档；无新增物品、配置、版本或第二套库存使用控制器，既有用户CHANGELOG保留。
+- 原因：闲置findBestSlot明确先选食物，战斗独立食物Goal占据ACTIVE_USES并参考projectedHealth，已排队食物回血能掩盖实际危险生命；退避药水还需安全距离才开始。现在实际HP严格低于最大生命30%且库存有可用饮用瞬间治疗时，共用原战斗食物Goal启动急救，覆盖战斗/无目标/退避，不等待食物批次冷却或食物预计回血，闲置Goal让出。普通恢复总开关保留；无可用药水仍沿原食物等回退，不生成免费药品。
+- findBestSlot在食品偏好、普通/附魔金苹果和再生选择前优先瞬间治疗；长效再生不会误当急救。战斗/闲置/退避中的未完成食物可中断，完成食物照常登记；先用finishUse和原延迟托管结算归还副手/库存，ACTIVE_USES未释放前不会开第二次交换。食物连续批次也让出，药水不计入食物批次数。瞬间治疗II原效果、非玩家一次扣瓶/玻璃瓶归还及再生阻重复逻辑保留。
+- 本地Forge映射JAR javap确认PotionItem.getUseDuration返回32 tick（1.6秒）。仅含HEAL的饮用药水将原时长限制为最多20 tick，短于20不延长；食品沿原加速、再生/增益饮用时长不变。createSession期望完成时间与实际advanceUseTime共用同一recoveryUseDuration，避免缩时间后不扣瓶或认定饮用未完成。
+- 验证：源码急救入场、库存锁、中断/结算、退避及耗瓶调用链静态核查；只读审核未发现新增具体问题。新增30%严格边界、32/20/8/0时长、实际血量不读projectedHealth、闲置/退避选择、食物链让出及计时一致接入回归，接入既有PotionRecoveryTest/check，尚未编译执行。未构建、未同步、未启动游戏、未推送。
+- 待游戏验收：战斗/闲置/退避从30%以上跌至以下，有食品与瞬间治疗I/II时先喝药，已排队食物回血不阻止；正吃食物时中断无扣食物/丢盾，无药水仍进食；实际喝药20 tick完成且仅扣一瓶，不无限喝；瞬间治疗完成后生命不再低于阈值即回原恢复规则，普通再生饮用保持原时长。

@@ -19,6 +19,13 @@ public final class PotionRecoveryTest {
         check(!PotionRecoveryPolicy.regenerationActive(0), "expired buff permits another potion");
         check(PotionRecoveryPolicy.regenerationStep(0) == 1.0F, "level one matches food pulse");
         check(PotionRecoveryPolicy.regenerationStep(1) == 2.0F, "level two doubles food pulse");
+        check(PotionRecoveryPolicy.urgentInstantHealing(0.299999), "strictly below thirty percent needs instant healing");
+        check(!PotionRecoveryPolicy.urgentInstantHealing(0.30), "exactly thirty percent does not override food");
+        check(!PotionRecoveryPolicy.urgentInstantHealing(0.31), "ordinary recovery above threshold is preserved");
+        check(PotionRecoveryPolicy.instantHealingUseDuration(32) == 20, "vanilla instant potion drinks in one second");
+        check(PotionRecoveryPolicy.instantHealingUseDuration(20) == 20, "one-second custom potion is unchanged");
+        check(PotionRecoveryPolicy.instantHealingUseDuration(8) == 8, "already faster custom potion is not slowed");
+        check(PotionRecoveryPolicy.instantHealingUseDuration(0) == 1, "malformed zero duration remains safe");
         var clock = new PotionRecoveryPolicy.Clock(100, 10);
         check(!clock.pulse(109, 10) && clock.pulse(110, 10), "first regeneration waits a food interval");
         check(!clock.pulse(110, 10), "duplicate tick cannot heal twice");
@@ -27,6 +34,22 @@ public final class PotionRecoveryTest {
         var restarted = new PotionRecoveryPolicy.Clock(1001, 10);
         check(!restarted.pulse(1010, 10) && restarted.pulse(1011, 10), "new buff gets a fresh clock");
         String recovery = "club/someoneice/humangunner/RecoverySupplies";
+        check(callIndex(recovery, "hasUrgentInstantHealing", recovery, "healthRatio") >= 0
+                && callIndex(recovery, "hasUrgentInstantHealing", recovery, "projectedHealth") < 0,
+                "queued food healing cannot mask actual critical health");
+        check(callIndex(recovery, "findBestSlot", recovery, "findBestInstantHealingSlot") >= 0,
+                "idle and retreat selectors prioritize instant healing");
+        check(callIndex(recovery, "continueFoodUse", recovery, "hasUrgentInstantHealing") >= 0,
+                "critical health stops food chaining");
+        check(callIndex(recovery, "createSession", recovery, "recoveryUseDuration") >= 0
+                && callIndex(recovery, "accelerateFoodUse", recovery, "recoveryUseDuration") >= 0,
+                "session completion and native countdown use identical duration");
+        check(callIndex(recovery, "recoveryUseDuration", "club/someoneice/humangunner/PotionRecoveryPolicy", "instantHealingUseDuration") >= 0,
+                "only instant healing has one-second duration cap");
+        check(callIndex("club/someoneice/humangunner/CombatFoodRecoveryGoal", "tick", recovery, "beginUrgentInstantHealing") >= 0,
+                "urgent use shares existing food goal and custody controller");
+        check(callIndex("club/someoneice/humangunner/IdleRecoveryGoal", "tick", recovery, "hasUrgentInstantHealing") >= 0,
+                "idle food yields to emergency potion");
         for (String method : new String[] {"hasSupply", "beginInventoryUse", "findUsefulDrinkableBuffSlot", "healingPotionScore"}) {
             check(callIndex(recovery, method, recovery, "canUsePotionNow") >= 0, "regeneration gate: " + method);
         }

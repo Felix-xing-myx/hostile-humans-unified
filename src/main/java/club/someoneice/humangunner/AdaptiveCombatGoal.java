@@ -1088,6 +1088,11 @@ public final class AdaptiveCombatGoal extends Goal {
             return;
         }
         if (recoverySession != null) {
+            if (recoverySession.food() && RecoverySupplies.hasUrgentInstantHealing(human)) {
+                cancelRecoveryUse();
+                nextRecoveryUseTick = human.tickCount;
+                return;
+            }
             if (human.isUsingItem()) {
                 boolean unsafeProximity = RetreatRecoveryPolicy.shouldBreakOffUse(
                         human.distanceToSqr(threat), human.getSensing().hasLineOfSight(threat),

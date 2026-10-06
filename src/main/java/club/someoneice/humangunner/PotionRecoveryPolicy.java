@@ -9,6 +9,8 @@ final class PotionRecoveryPolicy {
     }
 
     static boolean regenerationActive(int duration) { return duration > 0 || duration == -1; }
+    static boolean urgentInstantHealing(double actualHealthRatio) { return actualHealthRatio < 0.30D; }
+    static int instantHealingUseDuration(int originalTicks) { return Math.min(20, Math.max(1, originalTicks)); }
     static float regenerationStep(int amplifier) { return amplifier >= 1 ? 2.0F : 1.0F; }
 
     static final class Clock {

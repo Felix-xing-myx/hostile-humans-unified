@@ -222,6 +222,29 @@ public final class RecoverySupplies {
         return beginUse(human, true);
     }
 
+    static boolean hasUrgentInstantHealing(Human human) {
+        return PotionRecoveryPolicy.urgentInstantHealing(healthRatio(human))
+                && findBestInstantHealingSlot(human) >= 0;
+    }
+
+    static UseSession beginUrgentInstantHealing(Human human) {
+        if (!hasUrgentInstantHealing(human)) return null;
+        return beginInventoryUse(human, human.getData(), findBestInstantHealingSlot(human));
+    }
+
+    private static int findBestInstantHealingSlot(Human human) {
+        HumanData data = human.getData();
+        if (data == null) return -1;
+        int best = -1, score = Integer.MIN_VALUE;
+        for (int slot = 0; slot < data.getInventoryItemsSize(); slot++) {
+            ItemStack stack = data.getInventoryItem(slot);
+            if (!isInstantHealingPotion(stack)) continue;
+            int candidate = healingPotionScore(human, stack);
+            if (candidate > score) { best = slot; score = candidate; }
+        }
+        return best;
+    }
+
     /** Starts food-only recovery without selecting potions or either golden apple. */
     public static UseSession beginCombatFoodUse(Human human) {
         if (human.isUsingItem()) {
@@ -356,6 +379,7 @@ public final class RecoverySupplies {
             UseSession completedSession,
             double targetHealthRatio
     ) {
+        if (hasUrgentInstantHealing(human)) return null;
         if (completedSession == null
                 || ACTIVE_USES.get(human) != completedSession
                 || !completed(human, completedSession)
@@ -1237,10 +1261,7 @@ public final class RecoverySupplies {
             ItemStack displacedHandItem,
             int shieldCountAtStart
     ) {
-        int remaining = acceleratedUseDuration(
-                Math.max(1, stack.getUseDuration()),
-                stack.getUseAnimation() == net.minecraft.world.item.UseAnim.EAT
-        );
+        int remaining = recoveryUseDuration(stack);
         return new UseSession(
                 hand, stack.copy(),
                 human.tickCount + remaining, healthRatio(human),
@@ -1250,12 +1271,19 @@ public final class RecoverySupplies {
     }
 
     private static void accelerateFoodUse(Human human, ItemStack stack) {
-        if (stack.getUseAnimation() != net.minecraft.world.item.UseAnim.EAT) {
+        if (stack.getUseAnimation() != net.minecraft.world.item.UseAnim.EAT && !isInstantHealingPotion(stack)) {
             return;
         }
         int original = Math.max(1, stack.getUseDuration());
-        int accelerated = acceleratedUseDuration(original, true);
+        int accelerated = recoveryUseDuration(stack);
         human.advanceUseTime(original - accelerated);
+    }
+
+    private static int recoveryUseDuration(ItemStack stack) {
+        return isInstantHealingPotion(stack)
+                ? PotionRecoveryPolicy.instantHealingUseDuration(stack.getUseDuration())
+                : acceleratedUseDuration(stack.getUseDuration(),
+                        stack.getUseAnimation() == net.minecraft.world.item.UseAnim.EAT);
     }
 
     static int acceleratedUseDuration(int originalTicks, boolean food) {
@@ -1277,6 +1305,10 @@ public final class RecoverySupplies {
         HumanData data = human.getData();
         if (data == null) {
             return -1;
+        }
+        if (PotionRecoveryPolicy.urgentInstantHealing(healthRatio(human))) {
+            int instant = findBestInstantHealingSlot(human);
+            if (instant >= 0) return instant;
         }
         int bestPotion = -1;
         int bestPotionScore = Integer.MIN_VALUE;
@@ -1370,6 +1402,11 @@ public final class RecoverySupplies {
             if (effect.getEffect() == MobEffects.HEAL || effect.getEffect() == MobEffects.REGENERATION) return true;
         }
         return false;
+    }
+
+    static boolean isInstantHealingPotion(ItemStack stack) {
+        return stack.is(Items.POTION) && PotionUtils.getMobEffects(stack).stream()
+                .anyMatch(effect -> effect.getEffect() == MobEffects.HEAL);
     }
 
     /** Exact built-in drinkable Instant Health II used by the recovery kits. */
