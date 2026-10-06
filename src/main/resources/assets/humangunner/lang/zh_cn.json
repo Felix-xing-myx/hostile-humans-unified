@@ -159,5 +159,8 @@
   "dialogue.humangunner.order.patrol": "收到，开始巡逻。",
   "dialogue.humangunner.combat.active": "收到，主动应对敌对目标。",
   "dialogue.humangunner.combat.passive_protection": "收到，保护你和我自己，不响应你的主动攻击。",
-  "dialogue.humangunner.combat.self_defense": "收到，不介入你的战斗，只进行自卫。"
+  "dialogue.humangunner.combat.self_defense": "收到，不介入你的战斗，只进行自卫。",
+  "message.humangunner.offline_death": "离线期间士兵“%s”死亡：%s（%s，坐标 %s, %s, %s）",
+  "message.humangunner.offline_death.unknown": "死亡原因不明",
+  "message.humangunner.offline_death.overflow": "另有 %s 名士兵在你离线期间死亡（详细记录已达保存上限）。"
 }

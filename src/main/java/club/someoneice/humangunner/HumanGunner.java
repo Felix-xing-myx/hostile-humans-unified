@@ -119,6 +119,9 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onSoldierDamage);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingDamage);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanGunner::onLivingDeath);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, OfflineSoldierDeathReports::onDeath);
+        MinecraftForge.EVENT_BUS.addListener(OfflineSoldierDeathReports::onPlayerLogin);
+        MinecraftForge.EVENT_BUS.addListener(OfflineSoldierDeathReports::onServerStopped);
         // Run after ordinary LivingTick listeners so late compatibility code
         // cannot leave the persistent tier health roll replaced by an old base.
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingTick);
@@ -144,6 +147,7 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onPlayerTick);
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onServerTick);
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onPlayerLogout);
+        MinecraftForge.EVENT_BUS.addListener(OwnerOfflinePolicy::onPlayerLogout);
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onServerStopped);
         MinecraftForge.EVENT_BUS.addListener(PeacefulHumanPolicy::onServerTick);
         MinecraftForge.EVENT_BUS.addListener(SoldierRosterAudit::onServerTick);
@@ -179,6 +183,7 @@ public final class HumanGunner {
 
     private static void onLivingTick(LivingEvent.LivingTickEvent event) {
         if (event.getEntity() instanceof Human human && !human.level().isClientSide) {
+            OfflineSoldierDeathReports.tick(human);
             if (!initializeHumanIfReady(human)) {
                 return;
             }
@@ -306,12 +311,17 @@ public final class HumanGunner {
             return;
         }
         Entity.RemovalReason reason = human.getRemovalReason();
+        SoldierFollowNavigation.clear(human);
+        OfflineSoldierDeathReports.onEntityLeave(human);
         if (reason != Entity.RemovalReason.KILLED && reason != Entity.RemovalReason.DISCARDED) {
             // Chunk unload and dimension transfer must retain external inventory.
             return;
         }
         MinecraftServer server = event.getLevel() instanceof ServerLevel level ? level.getServer() : null;
         if (server == null) return;
+        if (human.hasOwner()) LOGGER.info("Hired soldier removed: id={}, owner={}, reason={}, dimension={}, position={}",
+                human.getUUID(), human.getOwnerUUID(), reason,
+                human.level().dimension().location(), human.blockPosition());
         UUID id = human.getUUID();
         Runnable cleanup = () -> {
             RecruitmentLedger ledger = RecruitmentLedger.get(server);

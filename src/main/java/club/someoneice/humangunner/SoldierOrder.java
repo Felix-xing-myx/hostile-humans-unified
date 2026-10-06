@@ -34,12 +34,17 @@ public enum SoldierOrder {
     }
 
     public static void set(Human human, SoldierOrder order) {
+        set(human, order, false);
+    }
+
+    static void set(Human human, SoldierOrder order, boolean preserveNavigation) {
+        SoldierFollowNavigation.clear(human);
         human.guardCombatState.reset();
         human.getPersistentData().putString(ORDER, order.name());
         human.getPersistentData().putLong(ANCHOR, human.blockPosition().asLong());
         human.getPersistentData().remove(NEXT_PATROL);
         human.getPersistentData().remove(RETURNING_FROM_RETREAT);
-        human.getNavigation().stop();
+        if (!preserveNavigation) human.getNavigation().stop();
         if (order != FOLLOW) human.setTarget(null);
     }
 
@@ -50,6 +55,7 @@ public enum SoldierOrder {
     }
 
     static void clear(Human human) {
+        SoldierFollowNavigation.clear(human);
         human.guardCombatState.reset();
         human.getPersistentData().remove(ORDER);
         human.getPersistentData().remove(ANCHOR);
@@ -70,6 +76,12 @@ public enum SoldierOrder {
 
     static void tick(Human human) {
         if (!human.hasOwner() || !(human.level() instanceof ServerLevel level)) return;
+        // LavaEscapeGoal owns its route without setting the retreat flag.
+        // Neither follow nor a guard anchor may replace that emergency route.
+        if (human.isInLava()) {
+            SoldierFollowNavigation.clear(human);
+            return;
+        }
         // The shore goal already owns idle water movement. This lifecycle
         // callback runs outside GoalSelector arbitration, so it must not
         // replace the shore route with a follow/guard/patrol path.
@@ -95,9 +107,7 @@ public enum SoldierOrder {
                 if (human.getTarget() != null) human.forgetSoldierTarget();
                 if (order == FOLLOW) {
                     if (owner != null && human.distanceToSqr(owner) > 16.0D) {
-                        if (human.tickCount % 10 == 0 || human.getNavigation().isDone()) {
-                            human.getNavigation().moveTo(owner, 1.15D);
-                        }
+                        SoldierFollowNavigation.tick(human, owner);
                     } else if (owner != null) {
                         human.getPersistentData().remove(RETURNING_FROM_RETREAT);
                         human.getNavigation().stop();
@@ -152,10 +162,8 @@ public enum SoldierOrder {
                 human.forgetSoldierTarget();
                 target = null;
             }
-            if (target == null && human.tickCount % 10 == 0) {
-                if (human.distanceToSqr(owner) > 16.0D) human.getNavigation().moveTo(owner, 1.15D);
-                else human.getNavigation().stop();
-            }
+            if (target == null) SoldierFollowNavigation.tick(human, owner);
+            else SoldierFollowNavigation.clear(human);
             return;
         }
 
@@ -303,6 +311,7 @@ public enum SoldierOrder {
             BlockPos pos = SafePositions.nearFloor(owner.serverLevel(), owner.getBlockX() + dx,
                     owner.getBlockZ() + dz, owner.getBlockY());
             if (pos == null) continue;
+            SoldierFollowNavigation.clear(human);
             human.teleportTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
             human.getNavigation().stop();
             return;

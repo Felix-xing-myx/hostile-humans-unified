@@ -299,9 +299,15 @@ public class HumanData {
         if (humanEntity != null && humanEntity.isAlive()) {
             compoundTag.putBoolean(ENTITY_SITTING_TAG, humanEntity.isOrderedToSit());
             compoundTag.putString(ENTITY_AGGRESSION_LEVEL, humanEntity.getAggressionLevel().name());
-            if (humanEntity.getOwner() != null) {
-                compoundTag.putUUID(OWNER_TAG, humanEntity.getOwner().getUUID());
-                compoundTag.putString(OWNER_NAME_TAG, humanEntity.getOwner().getName().getString());
+            // The saved relationship belongs to the entity UUID, not an online
+            // owner reference (which is null offline or in another dimension).
+            UUID savedOwner = humanEntity.getOwnerUUID();
+            if (humanEntity.hasOwner() && savedOwner != null) {
+                compoundTag.putUUID(OWNER_TAG, savedOwner);
+                var onlineOwner = humanEntity.getOwner();
+                String savedName = onlineOwner != null ? onlineOwner.getName().getString()
+                        : savedOwner.equals(this.ownerUUID) ? this.ownerName : "";
+                compoundTag.putString(OWNER_NAME_TAG, savedName);
             }
             this.setArmorItems((NonNullList<ItemStack>)((NonNullList)humanEntity.getArmorSlots()));
             this.setHandItems((NonNullList<ItemStack>)((NonNullList)humanEntity.getHandSlots()));

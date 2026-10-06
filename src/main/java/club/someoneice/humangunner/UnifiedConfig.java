@@ -227,6 +227,11 @@ public final class UnifiedConfig {
     public boolean ammoConsumptionEnabled() { return ammoConsumptionEnabled; }
     public CombatAiConfig combatAi(String rank) { return combatByTier.getOrDefault(rank, combatByTier.get("roamer")); }
     SpawnPotionConfig spawnPotions(String rank) { return spawnPotions.getOrDefault(rank, spawnPotions.get("roamer")); }
+    public double followSpeed(String rank, boolean catchUp) {
+        JsonObject movement = object(object(object(root, "tiers"), rank), "movement");
+        double normal = number(movement, "follow_speed_multiplier", 1.35D, 0.1D, 3.0D);
+        return catchUp ? Math.max(normal, number(movement, "follow_catch_up_multiplier", 1.6D, 0.1D, 3.0D)) : normal;
+    }
     public Spawn spawn() { return spawn; }
     EquipmentGrowthPolicy equipmentGrowth() { return equipmentGrowth; }
     public ConfiguredEquipmentLoadout equipmentLoadout(String rank) {

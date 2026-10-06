@@ -159,5 +159,8 @@
   "dialogue.humangunner.order.patrol": "Understood. Starting patrol.",
   "dialogue.humangunner.combat.active": "Understood. Engaging hostile targets.",
   "dialogue.humangunner.combat.passive_protection": "Understood. I'll protect you and myself, without joining attacks you initiate.",
-  "dialogue.humangunner.combat.self_defense": "Understood. I'll stay out of your fights and defend myself only."
+  "dialogue.humangunner.combat.self_defense": "Understood. I'll stay out of your fights and defend myself only.",
+  "message.humangunner.offline_death": "While you were offline, soldier \"%s\" died: %s (%s at %s, %s, %s).",
+  "message.humangunner.offline_death.unknown": "Unknown cause of death",
+  "message.humangunner.offline_death.overflow": "Another %s soldiers died while you were offline (the detailed report limit was reached)."
 }

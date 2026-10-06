@@ -24,7 +24,11 @@
       "movement": {
         "_说明_中文": "新速度公式的基础移动速度（默认 0.105，即普通玩家基础移速的 1.05 倍；可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
         "_description_en": "Base movement attribute for the new speed formula (default 0.105, or 1.05x the normal player's base movement speed; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
-        "base_speed": 0.105
+        "base_speed": 0.105,
+        "follow_speed_multiplier": 1.35,
+        "follow_catch_up_multiplier": 1.6,
+        "_说明_跟随_中文": "雇佣士兵无目标跟随的导航倍率：普通1.35，超过12格追赶1.6；超过6格疾跑，2.5格内停止，4格外重新启动。倍率0.1至3，仅影响跟随，不改变战斗/撤退/驻守。",
+        "_description_follow_en": "Idle hired-follow navigation speed: 1.35 normally, 1.6 beyond 12 blocks; sprint beyond 6, stop within 2.5, restart beyond 4. Multipliers range 0.1-3; combat, retreat and guard are unchanged."
       },
       "damage_multipliers": {
         "_说明_中文": "输出倍率与 global.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 对应阶级文件或global.json。",
@@ -146,7 +150,11 @@
       "movement": {
         "_说明_中文": "新速度公式的基础移动速度（默认 0.105，即普通玩家基础移速的 1.05 倍；可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
         "_description_en": "Base movement attribute for the new speed formula (default 0.105, or 1.05x the normal player's base movement speed; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
-        "base_speed": 0.105
+        "base_speed": 0.105,
+        "follow_speed_multiplier": 1.35,
+        "follow_catch_up_multiplier": 1.6,
+        "_说明_跟随_中文": "雇佣士兵无目标跟随的导航倍率：普通1.35，超过12格追赶1.6；超过6格疾跑，2.5格内停止，4格外重新启动。倍率0.1至3，仅影响跟随，不改变战斗/撤退/驻守。",
+        "_description_follow_en": "Idle hired-follow navigation speed: 1.35 normally, 1.6 beyond 12 blocks; sprint beyond 6, stop within 2.5, restart beyond 4. Multipliers range 0.1-3; combat, retreat and guard are unchanged."
       },
       "damage_multipliers": {
         "_说明_中文": "输出倍率与 global.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 对应阶级文件或global.json。",
@@ -268,7 +276,11 @@
       "movement": {
         "_说明_中文": "新速度公式的基础移动速度（默认 0.105，即普通玩家基础移速的 1.05 倍；可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
         "_description_en": "Base movement attribute for the new speed formula (default 0.105, or 1.05x the normal player's base movement speed; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
-        "base_speed": 0.105
+        "base_speed": 0.105,
+        "follow_speed_multiplier": 1.35,
+        "follow_catch_up_multiplier": 1.6,
+        "_说明_跟随_中文": "雇佣士兵无目标跟随的导航倍率：普通1.35，超过12格追赶1.6；超过6格疾跑，2.5格内停止，4格外重新启动。倍率0.1至3，仅影响跟随，不改变战斗/撤退/驻守。",
+        "_description_follow_en": "Idle hired-follow navigation speed: 1.35 normally, 1.6 beyond 12 blocks; sprint beyond 6, stop within 2.5, restart beyond 4. Multipliers range 0.1-3; combat, retreat and guard are unchanged."
       },
       "damage_multipliers": {
         "_说明_中文": "输出倍率与 global.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 对应阶级文件或global.json。",
@@ -390,7 +402,11 @@
       "movement": {
         "_说明_中文": "新速度公式的基础移动速度（默认 0.105，即普通玩家基础移速的 1.05 倍；可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
         "_description_en": "Base movement attribute for the new speed formula (default 0.105, or 1.05x the normal player's base movement speed; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
-        "base_speed": 0.105
+        "base_speed": 0.105,
+        "follow_speed_multiplier": 1.35,
+        "follow_catch_up_multiplier": 1.6,
+        "_说明_跟随_中文": "雇佣士兵无目标跟随的导航倍率：普通1.35，超过12格追赶1.6；超过6格疾跑，2.5格内停止，4格外重新启动。倍率0.1至3，仅影响跟随，不改变战斗/撤退/驻守。",
+        "_description_follow_en": "Idle hired-follow navigation speed: 1.35 normally, 1.6 beyond 12 blocks; sprint beyond 6, stop within 2.5, restart beyond 4. Multipliers range 0.1-3; combat, retreat and guard are unchanged."
       },
       "damage_multipliers": {
         "_说明_中文": "输出倍率与 global.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 对应阶级文件或global.json。",

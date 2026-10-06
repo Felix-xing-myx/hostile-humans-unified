@@ -176,3 +176,15 @@
 - 源/目标SHA-256：`C79C24033B54B2F8C953F0A7C7B322105C37782DD74A09CB854C37E398A6889B`；旧JAR：`3E023411ABCA15E9CDC00EA4DFDE3887CD5AAE288798A09BB50694B91C3ECA50`。
 - 备份清单：维护目录 `部署备份/20261006-153120-potions-magazine-Forge_47.4.21/deployment.json`；构建日志 `验证日志/build-potion-config-20261006.log`。实例既有配置未改写，用户CHANGELOG未提交部分保留。
 - 待游戏验收：两条压槽的远近显示、通用箭矢名称、弹药与瞬间治疗拾取取舍、各阶出生药水的数量/候选池/空池和开关。已有五文件未填写potions时使用默认值，自定义按CONFIGURATION.md加入对应阶文件；自动验证不代替实际游戏验收。
+
+## 雇佣跟随、离线驻守及死亡报告：2026-10-06（本地开发完成）
+
+- 明确基线 `8ba0dbec684c3aa4ca8d5c2d2cab380922cc9784`，主控负责 main 的 SoldierFollowNavigation/SoldierOrder、OwnerOfflinePolicy、HumanData、UnifiedConfig、HumanGunner 事件接入、默认配置、语言、构建测试入口和文档。仅修改模组源码，不修改实例；保留用户原CHANGELOG改动。
+- 独立开发者 `/root/hired_persistence_audit`，GPT-6.1 Sol medium，工作树 `E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\offline-death-notices`，分支 `feature/offline-death-notices`；最初只读审计，随后仅授权 OfflineSoldierDeathReports.java 与对应测试。共享接口全部由主控接入，不允许自行合并/构建/部署。
+- 开发者交付 `b6b79ae65a2d1f2dee6fa0bade6e228a52fc7d2b`、`82cd1fa2b947c48fe5fa6af52797ebb238610369`，本地已逐项审核整合为 `16a4f7a`、`2a6b931`。接口：onDeath(LOWEST)、onEntityLeave(所有移除原因)、tick(清理复活候选)、onPlayerLogin、onServerStopped。SavedData 用主世界持久化，32详情上限、超出计数；候选保存实体NBT，只有KILLED入箱，卸载/换维度保留候选，DISCARDED不报告。
+- 确认问题：HumanData原活体保存依赖在线同维度getOwner，主人UUID可能漏存；改以实体getOwnerUUID为准，在线时更新名字、离线时保留已知名字。名册/召回受影响不等于实体实际死亡。实体卸载和跨维度原本不删除库存；离线实体正常承伤，不能仅凭缺席断言消失原因。为实际KILLED/DISCARDED增加日志以辅助后续定位。
+- 跟随：原每10tick重新提交路径、无起止迟滞且无追赶疾跑。新机制4格外开始、2.5格内停止、6格外疾跑、12格外追赶，默认导航1.35/1.6；延续有效路径，只在目标移动2格或路径结束时重算，最多每5tick一次。原48格安全传送、寻岸/撤退/拾取/战斗导航各自优先关系保持。
+- 下线：用户明确答复区域驻守，已加载跟随士兵在logout事件转换，后加载士兵分散20tick检查全服务器在线名单，避免把跨维度当离线。只FOLLOW->GUARD，不改其它指令或攻击模式；GUARD锚点为转换位置，不自动恢复跟随。
+- 验证：新增跟随边界/配置独立性/离线转换资格测试，以及26项死亡持久化/上限/玩家隔离/候选卸载与复活测试，已接入check。当前只做静态核查，未编译、未执行自动测试、未构建同步或推送。待游戏检查跟随连续性、不同地形与战斗切换、下线仅跟随转驻守、跨维度在线不误判、离线实际死亡/重启通知和其它模组救命取消。
+
+- 最终静态核查：默认与语言JSON全部可解析，四阶倍率一致、提示占位符匹配、事件入口唯一、离线检测使用全服身份、用户CHANGELOG旧段SHA-256保持不变；git diff --check通过。开发者独立只读复审发现岩浆逃生未置isFleeing的导航冲突，已补充SoldierOrder的岩浆让路；注销转换保留撤退/寻岸/岩浆导航，不取消逃生冲刺。没有执行编译或自动化回归，新增测试待用户构建授权后运行。
