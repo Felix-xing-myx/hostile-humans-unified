@@ -27,22 +27,28 @@ public final class TaczHumanReloadTransactions {
         var index = TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
         if (index == null || index.getGunData().getReloadData() == null) return false;
         int capacity = Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(weapon, index.getGunData()));
-        if (loaded >= capacity) return false;
         var reload = index.getGunData().getReloadData();
         boolean inventoryFeed = reload.getType() == FeedType.INVENTORY;
+        int occupied = GunReloadPolicy.capacityCheckedRounds(loaded, chambered, inventoryFeed,
+                index.getGunData().getBolt() == Bolt.OPEN_BOLT);
+        if (occupied >= capacity) return false;
         int missing = Math.max(1, capacity - loaded);
-        int delay = GunReloadPolicy.recoveryDelayTicks(reload.getType() == FeedType.MANUAL, missing,
+        int recoveryDelay = GunReloadPolicy.recoveryDelayTicks(reload.getType() == FeedType.MANUAL, missing,
                 reload.getFeed() == null ? 0 : reload.getFeed().getEmptyTime(),
                 reload.getCooldown() == null ? 0 : reload.getCooldown().getEmptyTime());
+        boolean empty = occupied == 0;
+        int feedDelay = GunReloadPolicy.inventoryFeedDurationTicks(
+                reload.getFeed() == null ? 0 : empty ? reload.getFeed().getEmptyTime() : reload.getFeed().getTacticalTime(),
+                reload.getCooldown() == null ? 0 : empty ? reload.getCooldown().getEmptyTime() : reload.getCooldown().getTacticalTime());
         boolean started = PAYMENTS.begin(data, weapon,
-                human.level().getGameTime() + GunReloadPolicy.hardLimitTicks(delay),
+                human.level().getGameTime() + GunReloadPolicy.hardLimitTicks(recoveryDelay),
                 () -> HumanAmmo.canReload(human, weapon),
                 () -> inventoryFeed || gun.startReload(data, weapon, shooter),
                 () -> HumanAmmo.consumeMagazines(human, weapon));
         if (started && inventoryFeed) {
             // Inventory-feed guns have no native reload script. NPCs instead
             // carry the pack's magazine capacity and use a paid timed refill.
-            INVENTORY_FEED_END.put(data, human.level().getGameTime() + delay);
+            INVENTORY_FEED_END.put(data, human.level().getGameTime() + feedDelay);
         }
         if (!started) {
             // A pack script may mutate rounds before rejecting start, or change the

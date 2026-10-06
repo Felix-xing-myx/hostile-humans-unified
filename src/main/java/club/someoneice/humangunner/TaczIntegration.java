@@ -86,7 +86,10 @@ final class TaczIntegration implements GunSupport {
         int capacity = Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(weapon, index.getGunData()));
         IGunOperator operator = IGunOperator.fromLivingEntity(human);
         boolean reloading = isReloading(human);
-        if (!GunReloadPolicy.shouldIdleTopOff(gun.getCurrentAmmoCount(weapon), capacity,
+        int occupied = GunReloadPolicy.capacityCheckedRounds(gun.getCurrentAmmoCount(weapon),
+                gun.hasBulletInBarrel(weapon), gun.useInventoryAmmo(weapon),
+                index.getGunData().getBolt() == com.tacz.guns.resource.pojo.data.gun.Bolt.OPEN_BOLT);
+        if (!GunReloadPolicy.shouldIdleTopOff(occupied, capacity,
                 human.getTarget() != null, human.isFleeing, human.isUsingItem(), reloading)) return;
 
         // The native operator needs a current-gun supplier even when its combat

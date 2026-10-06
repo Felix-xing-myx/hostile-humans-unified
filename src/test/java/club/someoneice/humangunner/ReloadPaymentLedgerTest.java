@@ -6,6 +6,17 @@ public final class ReloadPaymentLedgerTest {
     public static void main(String[] args) {
         var ledger = new ReloadPaymentLedger<Object, Object>();
         Object holder = new Object(), gun = new Object();
+        int fullInventoryGun = GunReloadPolicy.capacityCheckedRounds(29, true, true, false);
+        check(fullInventoryGun == 30 && !GunReloadPolicy.shouldIdleTopOff(fullInventoryGun, 30,
+                false, false, false, false), "chambered inventory-feed round prevents repeated full-gun top-offs");
+        check(GunReloadPolicy.capacityCheckedRounds(29, true, false, false) == 29,
+                "ordinary magazine keeps its native capacity semantics");
+        check(GunReloadPolicy.capacityCheckedRounds(30, true, true, true) == 30,
+                "open bolts do not invent chamber capacity");
+        check(GunReloadPolicy.inventoryFeedDurationTicks(0.5D, 0.5D) == 20,
+                "inventory feeding uses pack duration, not a stall recovery timeout");
+        check(GunReloadPolicy.inventoryFeedDurationTicks(Double.NaN, -2.0D) == 1,
+                "invalid inventory-feed timing remains bounded");
         int[] magazines = {2}, starts = {0};
         check(!ledger.begin(holder, gun, 100, () -> false,
                 () -> { starts[0]++; return true; }, () -> { magazines[0]--; return true; }),

@@ -4,6 +4,16 @@ package club.someoneice.humangunner;
 final class GunReloadPolicy {
     private GunReloadPolicy() {}
 
+    static int capacityCheckedRounds(int magazineRounds, boolean chambered, boolean inventoryFeed, boolean openBolt) {
+        return Math.max(0, magazineRounds) + (inventoryFeed && chambered && !openBolt ? 1 : 0);
+    }
+
+    static int inventoryFeedDurationTicks(double feedSeconds, double cooldownSeconds) {
+        double feed = Double.isFinite(feedSeconds) ? Math.max(0.0D, feedSeconds) : 0.0D;
+        double cooldown = Double.isFinite(cooldownSeconds) ? Math.max(0.0D, cooldownSeconds) : 0.0D;
+        return (int) Math.max(1L, Math.min(72000L, (long) Math.ceil((feed + cooldown) * 20.0D)));
+    }
+
     static boolean shouldIdleTopOff(int loaded, int capacity, boolean inCombat,
                                     boolean fleeing, boolean usingItem, boolean reloading) {
         return capacity > 0 && loaded >= 0 && loaded < capacity
