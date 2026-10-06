@@ -214,3 +214,13 @@
 - 游戏内验收：有/无 Better Combat 时持枪射击不同时挥砍；空枪不拳击，实际切剑后近战恢复；群体怪物/玩家切换及区域驻守死目标及时清除；击杀时正在换弹不被重新掏枪打断；真实换枪正常掏枪，射速、拉栓、供弹扣费、视线和攻击模式仍有效。响应时间仍受原生枪械动作、服务器 tick 和视线限制，静态核查不证明游戏效果。
 
 - 主控本地整合提交 `78a8b880eb00c223a817f632e18c14775ba1a455`；暂存差异及 draw 唯一入口静态检查通过。工作树仅保留用户原 CHANGELOG 修改，版本仍为3.6.0，游戏实例仍是之前部署产物。
+
+
+## 构建及测试实例同步：2026-10-06 17:01（北京时间）
+
+- 用户授权“构建并同步到测试实例”，仅目标 `E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21`。版本3.6.0，源码 `cc461be143ed37c7215dea9e0571ab96aadf0976`，包含跟随/下线驻守/离线死亡提示、配置说明排版、持枪近战拦截与目标响应等此前未部署修改。
+- Java17、仓库 gradlew.bat 与三个完整只读 API 参数执行 `build lootScreeningTest --offline`。首轮编译及新测试通过，但 UnifiedConfigTest 仍要求默认 JSON 最末键为 tacz；新说明元数据位于其后。仅调整测试为最后一个非说明配置区域须为 tacz，保留断言意图；提交 cc461be。重跑完整构建成功（38任务，34执行/4已有结果）。结构及坏配置 ERROR 是故障注入预期输出。
+- 自动化：GunCombatPolicyTest57、SoldierFollowPolicyTest31、OfflineSoldierDeathReportsTest26、TierConfigFilesTest241、UnifiedConfigTest1893、LootScreeningTest13391通过；可选依赖隔离358核心类与其余 check 均通过。JAR ZIP完整性、版本清单、最新类和默认 JSON 与源码一致性核验通过。
+- 替换前两次确认无 Minecraft/无法识别的 Java 进程；备份旧 JAR 和10份相关配置文件并逐一核对哈希。仅替换本模组 JAR，实例内仅一份；既有配置未改写，未启动游戏或推送 GitHub。
+- 新源/目标 SHA-256 `CBFBF4D82E5D86F347AAA3FC07D7936EED426447416F86296265C70062AAE657`；旧 JAR `C79C24033B54B2F8C953F0A7C7B322105C37782DD74A09CB854C37E398A6889B`。备份清单：维护目录 `部署备份/20261006-170124-gun-combat-follow-config-Forge_47.4.21/deployment.json`；构建日志 `验证日志/build-gun-combat-20261006-retry.log`。
+- 待用户游戏内验收：有/无 Better Combat 持枪不挥砍、空枪实际换武器后近战、群体连续选敌与换弹、跟随速度/停顿、下线仅跟随转区域驻守、离线真实死亡在上线后提示。新版说明与排版只用于新生成/缺失的配置文件，现有配置保留。自动化成功不代表真实游戏行为已验证。
