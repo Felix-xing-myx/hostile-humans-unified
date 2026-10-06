@@ -96,6 +96,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         }
         boolean closeDefense = mob instanceof Human human
                 && GunCustody.isCloseDefenseActive(human);
+        if (mob instanceof Human human
+                && !AmmoWeaponSelection.usableGun(human, human.getMainHandItem())
+                && (!closeDefense || !AmmoWeaponSelection.hasUsableGun(human))) return false;
         if (target == null || !target.isAlive()
                 || (!isGun(mob.getMainHandItem()) && !closeDefense)) {
             return false;

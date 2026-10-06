@@ -251,7 +251,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     
     }
     private static boolean humanGunner$isCrossbowMode(Human human) {
-        return !RangedWeaponCustody.hasGunPriority(human)
+        return club.someoneice.humangunner.HumanAmmo.hasArrows(human)
+                && !RangedWeaponCustody.hasGunPriority(human)
                 && !RangedWeaponCustody.isActive(human)
                 && !HumanUtil.isMeleeWeapon(human.getMainHandItem())
                 && !(human.getMainHandItem().getItem() instanceof TridentItem)
@@ -260,7 +261,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private static boolean humanGunner$isBowMode(Human human) {
-        return !RangedWeaponCustody.hasGunPriority(human)
+        return club.someoneice.humangunner.HumanAmmo.hasArrows(human)
+                && !RangedWeaponCustody.hasGunPriority(human)
                 && !RangedWeaponCustody.isActive(human)
                 && !HumanUtil.isMeleeWeapon(human.getMainHandItem())
                 && !(human.getMainHandItem().getItem() instanceof TridentItem)
@@ -272,18 +274,20 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private static boolean humanGunner$isMeleeMode(Human human) {
         ItemStack mainHand = human.getMainHandItem();
         ItemStack offHand = human.getOffhandItem();
+        boolean gunActive = club.someoneice.humangunner.GunSupport.get().isGun(mainHand)
+                && (club.someoneice.humangunner.HumanAmmo.canUseGun(human, mainHand)
+                || club.someoneice.humangunner.GunSupport.get().isReloading(human));
         if (!club.someoneice.humangunner.GunSupport.get().isGun(mainHand)
                 && !RangedWeaponCustody.isActive(human)
                 && HumanUtil.isMeleeWeapon(mainHand)) {
             return true;
         }
-        return !club.someoneice.humangunner.GunSupport.get().isGun(mainHand)
+        return !gunActive
                 && !RangedWeaponCustody.isActive(human)
                 && !(mainHand.getItem() instanceof TridentItem)
-                && !(mainHand.getItem() instanceof CrossbowItem)
-                && !(offHand.getItem() instanceof CrossbowItem)
-                && !(mainHand.getItem() instanceof BowItem)
-                && !(offHand.getItem() instanceof BowItem);
+                && (!club.someoneice.humangunner.HumanAmmo.hasArrows(human)
+                || (!RangedWeaponCustody.isBowOrCrossbow(mainHand)
+                && !RangedWeaponCustody.isBowOrCrossbow(offHand)));
     }
 
     private void bootstrapMissingHumanData() {

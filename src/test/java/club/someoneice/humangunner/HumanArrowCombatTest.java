@@ -23,6 +23,8 @@ public final class HumanArrowCombatTest {
         }
         check(calls(ARROWS, "projectileFor", AMMO, "hasArrows"), "no free projectile without reserve");
         check(calls(ARROWS, "canShoot", AMMO, "hasArrows"), "shot eligibility requires reserve");
+        for (String mode : List.of("humanGunner$isBowMode", "humanGunner$isCrossbowMode", "humanGunner$isMeleeMode"))
+            check(calls(HUMAN, mode, AMMO, "hasArrows"), "static combat mode respects reserves: " + mode);
         check(callsName(ARROWS, "canShoot", "isAlive") && callsName(ARROWS, "canShoot", "isRemoved")
                 && callsName(ARROWS, "canShoot", "getDifficulty"), "invalid/dead/peaceful attacks rejected");
         check(field(ARROWS, "canShoot", "isClientSide"), "client cannot execute a shot");
