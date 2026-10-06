@@ -152,6 +152,49 @@ public final class UnifiedConfigTest {
                         && actionSpeeds.shieldUseSpeedMultiplier() == .35D,
                 "food and shield action speed multipliers are configurable");
 
+        LowHealthCombatConfig lowHealthDefaults = CombatAiConfig.parse(new JsonObject()).lowHealthCombat();
+        check(lowHealthDefaults.equals(new LowHealthCombatConfig(.15D, 25.0D, .5D, 40, 80, 80, 100, 1.1D)),
+                "low-health combat defaults expose ratio and absolute forced-retreat thresholds");
+        CombatAiConfig boundedLowHealth = CombatAiConfig.parse(JsonParser.parseString("""
+                {"retreat_health_ratio":0.1,"low_health_combat":{
+                    "critical_health_ratio":0.9,"critical_absolute_health":2000,"finish_chance":-1,
+                    "trial_ticks":0,"observation_ticks":999,"decision_hold_ticks":0,
+                    "retry_delay_ticks":9999,"healing_safety_multiplier":0}}
+                """).getAsJsonObject());
+        check(boundedLowHealth.lowHealthCombat().equals(
+                        new LowHealthCombatConfig(.1D, 1024.0D, 0.0D, 20, 400, 20, 1200, 1.0D)),
+                "nested low-health thresholds respect retreat ratio and all bounds");
+        check(CombatAiConfig.parse(JsonParser.parseString("""
+                {"low_health_combat":{"critical_health_ratio":0,"critical_absolute_health":0,
+                    "finish_chance":2,"trial_ticks":999,"observation_ticks":0,
+                    "decision_hold_ticks":999,"retry_delay_ticks":0,"healing_safety_multiplier":9}}
+                """).getAsJsonObject()).lowHealthCombat().equals(
+                        new LowHealthCombatConfig(.01D, 1.0D, 1.0D, 200, 20, 400, 20, 3.0D)),
+                "low-health values clamp both lower and upper limits");
+        check(CombatAiConfig.parse(JsonParser.parseString("{\"low_health_combat\":null}")
+                        .getAsJsonObject()).lowHealthCombat().equals(lowHealthDefaults)
+                        && CombatAiConfig.parse(JsonParser.parseString("{\"low_health_combat\":false}")
+                        .getAsJsonObject()).lowHealthCombat().equals(lowHealthDefaults),
+                "malformed nested settings use current defaults");
+        for (String rank : TierConfigProjection.RANKS) {
+            JsonObject rankAi = TierConfigProjection.tier(defaults, rank).getAsJsonObject("ai");
+            check(rankAi.has("low_health_combat")
+                            && CombatAiConfig.parse(rankAi).lowHealthCombat().equals(lowHealthDefaults),
+                    "each rank receives independently configurable low-health defaults: " + rank);
+        }
+        JsonObject lowHealthOverride = defaults.deepCopy();
+        TierConfigProjection.put(lowHealthOverride, "tier_ai.tier2.low_health_combat.finish_chance", new JsonPrimitive(.8D));
+        UnifiedConfig rankLowHealth = new UnifiedConfig(lowHealthOverride);
+        check(rankLowHealth.combatAi("tier2").lowHealthCombat().finishChance() == .8D
+                        && rankLowHealth.combatAi("tier1").lowHealthCombat().finishChance() == .5D,
+                "rank low-health override does not alter other ranks");
+        check(CombatAiConfig.parse(JsonParser.parseString("{\"recovery_damage_tolerance\":60}")
+                        .getAsJsonObject()).recoveryDamageToleranceRatio() == 1.0D / 6.0D,
+                "removed absolute recovery-damage alias cannot override current ratio defaults");
+        check(CombatAiConfig.parse(JsonParser.parseString("{\"recovery_damage_tolerance_ratio\":0.3}")
+                        .getAsJsonObject()).recoveryDamageToleranceRatio() == .3D,
+                "current recovery-damage ratio remains configurable");
+
         JsonObject current = defaults.deepCopy();
         TierConfigProjection.put(current, "tacz.tier2_gun_chance", new JsonPrimitive(0.9));
         TierConfigProjection.put(current, "tacz.gun_whitelist", JsonParser.parseString("{\"test:keep\":7,\"test:zero\":0,\"banned:gun\":100,\"test:black\":2}"));

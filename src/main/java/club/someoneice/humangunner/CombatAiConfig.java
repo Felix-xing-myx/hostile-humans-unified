@@ -31,7 +31,8 @@ public record CombatAiConfig(
         double legacyFleeHealthRatio,
         double runAwayMiddleFightChance,
         double midBattleBuffInsteadOfRunChance,
-        double greetChance
+        double greetChance,
+        LowHealthCombatConfig lowHealthCombat
 ) {
     public static CombatAiConfig forHuman(com.craftix.hostile_humans.entity.entities.Human human) {
         return UnifiedConfig.get().combatAi(TierAttributes.key(human));
@@ -66,7 +67,9 @@ public record CombatAiConfig(
                     bounded(root, "flee_hp", defaults.legacyFleeHealthRatio, 0, 1),
                     bounded(root, "run_away_middle_fight_chance", defaults.runAwayMiddleFightChance, 0, 1),
                     bounded(root, "mid_battle_buff_instead_of_run_chance", defaults.midBattleBuffInsteadOfRunChance, 0, 1),
-                    bounded(root, "greet_chance", defaults.greetChance, 0, 1)
+                    bounded(root, "greet_chance", defaults.greetChance, 0, 1),
+                    LowHealthCombatConfig.parse(UnifiedConfig.object(root, "low_health_combat"),
+                            bounded(root, "retreat_health_ratio", defaults.retreatHealthRatio, 0.1D, 0.9D))
         ).normalized();
     }
 
@@ -98,7 +101,7 @@ public record CombatAiConfig(
                 combatJumpChance,
                 itemRecoveryEnabled,
                 foodUseSpeedMultiplier,
-                shieldUseSpeedMultiplier, legacyFleeHealthRatio, runAwayMiddleFightChance, midBattleBuffInsteadOfRunChance, greetChance
+                shieldUseSpeedMultiplier, legacyFleeHealthRatio, runAwayMiddleFightChance, midBattleBuffInsteadOfRunChance, greetChance, lowHealthCombat
         );
     }
 
@@ -126,7 +129,7 @@ public record CombatAiConfig(
                 0.60D,
                 true,
                 0.7D,
-                0.2D, 0.35D, 0.5D, 0.1D, 0.05D
+                0.2D, 0.35D, 0.5D, 0.1D, 0.05D, LowHealthCombatConfig.defaults()
         );
     }
 
@@ -143,15 +146,6 @@ public record CombatAiConfig(
     }
 
     private static double recoveryDamageToleranceRatio(JsonObject root, double fallback) {
-        if (root.has("recovery_damage_tolerance_ratio")) {
-            return UnifiedConfig.number(root, "recovery_damage_tolerance_ratio", fallback, 0, 1);
-        }
-        // One-time compatibility for older configs where this was an absolute
-        // 10-health threshold based on the former uniform 60-health entities.
-        if (root.has("recovery_damage_tolerance")) {
-            return Math.max(0.0D, Math.min(1.0D,
-                    UnifiedConfig.number(root, "recovery_damage_tolerance", fallback * 60, 0, 60) / 60.0D));
-        }
-        return fallback;
+        return UnifiedConfig.number(root, "recovery_damage_tolerance_ratio", fallback, 0, 1);
     }
 }
