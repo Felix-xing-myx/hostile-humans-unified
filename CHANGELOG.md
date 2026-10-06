@@ -4,6 +4,7 @@
 
 ### 简体中文
 
+- 人类箭矢与通用弹匣使用专属32×32透明像素贴图；新增工作台无序配方：4支原版箭、1根木棍、1根羽毛合成32支人类箭矢，3份火药和2个铁锭合成2个通用弹匣。弹匣配方仅在安装TaCZ时加载。
 - 闲置换弹仅在弹匣余量严格低于容量25%时触发，战斗中必须打空（包括膛内剩余子弹）才开始换弹。统一入口再次检查阈值，避免旁路调用提前收费。
 - 远程人类改为有限弹药：弓弩统一消耗64堆叠的人类箭矢，每次成功射击／齐射扣1；TaCZ 使用24堆叠的通用弹匣，每次有效启动换弹按手枪／冲锋枪1、步枪／霰弹枪2、狙击枪3、机枪4、重型武器5扣除。原生逐发装填按完整换弹周期收费，库存供弹枪也使用有限弹仓；取消、切枪和卡顿恢复不能无偿补满。
 - 新生成流浪者、一阶、二阶、三阶相应职业分别携带32–128／64–128／128–192／192支箭矢，6–12／12–24／32–48／48–72个弹匣；首仓枪内子弹保留。枪内和储备弹药耗尽后，优先有箭弓弩，再现有近战武器；补给后恢复可用武器，三叉戟无限投掷不变。旧存档不自动补满，NPC临时弩载荷及不可回收箭矢不能变成玩家免费弹药。
@@ -14,6 +15,7 @@
 
 ### English
 
+- Added dedicated 32×32 transparent pixel-art textures and shapeless crafting-table recipes: 4 vanilla arrows, 1 stick and 1 feather produce 32 Human Arrows; 3 gunpowder and 2 iron ingots produce 2 Universal Magazines. The magazine recipe loads only with TaCZ installed.
 - Idle reloads require strictly less than 25% magazine capacity; combat reloads require all loaded rounds, including the chamber, to be spent. The shared accepted reload boundary checks these thresholds before charging supplies.
 - Humans now use finite ammunition: Human Arrows stack to 64 and cost 1 per successful bow shot/crossbow volley; Universal Magazines stack to 24 and cost 1/2/3/4/5 per accepted reload for pistol/SMG, rifle/shotgun, sniper, machine gun and heavy weapons. Manual feeds pay once per cycle; inventory-feed guns use finite internal rounds. Cancellation, weapon changes and stall recovery do not refill ammunition for free.
 - Initial ranged reserves by tier are 32–128/64–128/128–192/192 arrows and 6–12/12–24/32–48/48–72 magazines, retaining the initially loaded firearm. Exhausted gunners prefer a supplied bow/crossbow, then existing melee equipment; resupply restores availability. Tridents stay unlimited. Existing saves are not replenished automatically, and NPC temporary crossbow payloads/unrecoverable arrows cannot supply free player ammunition.

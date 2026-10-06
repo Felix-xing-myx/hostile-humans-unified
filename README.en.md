@@ -16,6 +16,8 @@ Bows and crossbows consume Human Arrows (stack size 64): one per successful bow 
 
 Idle reloads require magazine ammunition strictly below 25% of capacity; exactly 25% does not trigger. A 30-round magazine reloads at 7 rounds, but not 8. During combat, reloads start only after all loaded rounds, including any chambered round, are spent. Thresholds and magazine payment share the same accepted reload entrypoint.
 
+Shapeless crafting-table recipes: 4 vanilla arrows + 1 stick + 1 feather yield 32 Human Arrows; 3 gunpowder + 2 iron ingots yield 2 Universal Magazines. The magazine recipe loads only with TaCZ installed.
+
 New ranged loadouts receive reserves by tier: Roamer 32–128 arrows / 6–12 magazines; Tier I 64–128 / 12–24; Tier II 128–192 / 32–48; Tier III 192 / 48–72. Units owning both weapon types receive both supplies. The initial loaded firearm does not incur another magazine charge. Existing saved units need resupply; loading saves or hiring does not replenish ammunition. These tokens are for humans only; ordinary player ammunition does not substitute for them.
 
 ## Mod Compatibility

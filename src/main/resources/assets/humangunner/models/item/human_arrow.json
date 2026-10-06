@@ -1,6 +1,6 @@
 {
   "textures": {
-    "layer0": "minecraft:item/arrow"
+    "layer0": "humangunner:item/human_arrow"
   },
   "parent": "minecraft:item/generated"
 }
