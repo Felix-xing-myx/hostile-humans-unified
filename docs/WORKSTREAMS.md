@@ -266,3 +266,12 @@
 - 挡护落点随威胁距离缩短（最低0.8格），避免敌人已贴身时仍固定走到2.5格而越过攻击者；平时2.5格保护距离不变。新增近威胁落点回归尚未运行。
 
 - 主控本地整合提交 `da579fce0348569933ffd2f372a3822b8a2393d0`；静态核查及精确暂存通过，用户原 CHANGELOG 片段哈希未变。新增与更新的自动回归均未编译/运行；测试实例未投放，客户端/服务器后续须统一新协议版本。
+
+## 构建及测试实例同步：2026-10-06 19:54（北京时间）
+
+- 用户授权“构建并同步”，唯一目标 `E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21`；版本3.6.0，源码提交 `32f10e33cf9fed9ca09c339b1a2de62f04177171`。包含生存物资预留/职业弹药偏好/近战防卫持握、药水消耗与再生叠加回血、原版模式/贴身保护/许可攻击等全部已整合修改。
+- Java17、仓库 gradlew.bat、三个完整只读API参数执行 `build lootScreeningTest --offline`，首轮成功：41任务，39执行、2已有结果。BodyguardAndVanillaModeTest51、SupplyAndCloseDefenseTest41、PotionRecoveryTest23、SoldierCombatModeTest53、SoldierFollowPolicyTest34、UnifiedConfigTest1897、LootScreeningTest13391及其余check通过；可选依赖隔离373核心类通过。坏配置/缺失结构包ERROR为故障注入预期输出。
+- JAR全部ZIP条目可读取，新保护/原版模式/物资/药水类存在，默认配置及双语资源与源码一致；MANIFEST Implementation-Version为3.6.0，mods.toml使用file.jarVersion引用该版本。
+- 备份前与替换前两次确认无Java进程；旧JAR及10份相关配置备份逐一核对哈希。只替换指定实例中的本模组JAR，确认仅一份；所有既有配置哈希保持不变。未启动游戏或推送GitHub，用户原CHANGELOG修改保留。
+- 源/目标SHA-256 `5CF40CE7D1DC3509BD047255EA384F9DED71A5B42345F311A555F0DD8EC1EF5B`；旧JAR `CBFBF4D82E5D86F347AAA3FC07D7936EED426447416F86296265C70062AAE657`。备份清单 `部署备份/20261006-195454-protection-ammo-potions-Forge_47.4.21/deployment.json`；构建日志 `验证日志/build-protection-ammo-potions-20261006-195242.log`（均在维护上级目录）。
+- 游戏内仍待用户验收：食物三槽/最后药品与备用装备保护、职业弹药偏好；近身连续反击与完整动画后恢复远程；药水扣瓶、不重复喝再生、再生II额外两倍食物回血；原版模式开关及外部生命加成；主动/许可/被动贴身保护、近威胁抢占、远程挡护、地形及主人下线重连。现有全局配置缺vanilla_mode时默认为false；启用需添加或修改该项。客户端与服务器必须同时使用本次更新JAR（新命令协议）。自动检查成功不等同游戏行为已验证。
