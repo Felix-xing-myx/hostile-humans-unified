@@ -64,15 +64,7 @@ final class HumanEquipmentDrops {
         drops.removeIf(drop -> matchesOwnedDrop(drop.getItem(), ownedSnapshot));
 
         for (ItemStack stack : owned) {
-            if (snapshot.hostileBeacon() && stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
-                continue;
-            }
             double chance = dropChance(stack, gunDropChance);
-            // Wild supply rolls already retain 20% per item. Beacon food gets
-            // an independent second 20% roll, for 4% expected of the original.
-            if (snapshot.hostileBeacon() && isFood(stack, human)) {
-                chance *= 0.20D;
-            }
             int kept = snapshot.hired() ? stack.getCount() : 0;
             if (!snapshot.hired()) {
                 for (int unit = 0; unit < stack.getCount(); unit++) {
@@ -91,6 +83,13 @@ final class HumanEquipmentDrops {
             );
             drop.setDefaultPickUpDelay();
             drops.add(drop);
+        }
+
+        // Apply the beacon rule once to the complete final event collection,
+        // including loot-table and third-party drops. Inventory rolls above
+        // retain their existing chances and therefore are not compounded.
+        if (snapshot.hostileBeacon() && !snapshot.hired()) {
+            filterHostileBeaconDrops(human, drops);
         }
     }
 
@@ -139,6 +138,28 @@ final class HumanEquipmentDrops {
 
     private static boolean isFood(ItemStack stack, Human human) {
         return !stack.isEmpty() && stack.isEdible() && stack.getFoodProperties(human) != null;
+    }
+
+    private static void filterHostileBeaconDrops(Human human, Collection<ItemEntity> drops) {
+        List<ItemEntity> remove = new ArrayList<>();
+        for (ItemEntity entity : drops) {
+            ItemStack stack = entity.getItem();
+            if (stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
+                remove.add(entity);
+                continue;
+            }
+            if (!isFood(stack, human)) continue;
+            int kept = 0;
+            for (int unit = 0; unit < stack.getCount(); unit++) {
+                if (human.getRandom().nextDouble() < 0.20D) kept++;
+            }
+            if (kept == 0) {
+                remove.add(entity);
+            } else {
+                stack.setCount(kept);
+            }
+        }
+        drops.removeAll(remove);
     }
 
     private static boolean isControlledEquipment(ItemStack stack) {

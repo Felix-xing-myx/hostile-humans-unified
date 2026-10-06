@@ -116,6 +116,7 @@ public final class HumanRelations {
     }
 
     static void dismiss(MinecraftServer server, Human human) {
+        persistHostileBeaconOrigin(human);
         RecruitmentLedger.get(server).dismiss(human.getUUID());
         human.setTarget(null);
         human.forgetSoldierTarget();
@@ -149,8 +150,14 @@ public final class HumanRelations {
 
     /** Persists independently of the temporary target so old beacon waves remain identifiable after hiring. */
     static boolean isHostileBeaconOrigin(Human human) {
-        return human.getPersistentData().getBoolean(HOSTILE_BEACON_ORIGIN)
-                || human.getPersistentData().hasUUID(FORCED_HOSTILE_TARGET);
+        persistHostileBeaconOrigin(human);
+        return human.getPersistentData().getBoolean(HOSTILE_BEACON_ORIGIN);
+    }
+
+    private static void persistHostileBeaconOrigin(Human human) {
+        if (human.getPersistentData().hasUUID(FORCED_HOSTILE_TARGET)) {
+            human.getPersistentData().putBoolean(HOSTILE_BEACON_ORIGIN, true);
+        }
     }
 
     private static boolean beaconThreatensOwner(Human wild, UUID owner) {
@@ -232,6 +239,7 @@ public final class HumanRelations {
     }
 
     static void tick(Human human) {
+        persistHostileBeaconOrigin(human);
         boolean beaconHostile = human.getPersistentData().hasUUID(FORCED_HOSTILE_TARGET);
         AttributeInstance followRange = human.getAttribute(Attributes.FOLLOW_RANGE);
         if (followRange != null) {
