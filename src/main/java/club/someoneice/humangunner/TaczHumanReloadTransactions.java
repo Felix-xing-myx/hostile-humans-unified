@@ -37,7 +37,7 @@ public final class TaczHumanReloadTransactions {
                 ? GunReloadPolicy.capacityCheckedRounds(loaded, chambered, true,
                 index.getGunData().getBolt() == Bolt.OPEN_BOLT) : occupied;
         if (!GunReloadPolicy.reloadThresholdSatisfied(thresholdRounds, capacity, inCombat)
-                || human.isUsingItem() || human.isFleeing) return false;
+                || human.isUsingItem() || (!inCombat && human.isFleeing)) return false;
         int missing = Math.max(1, capacity - loaded);
         int recoveryDelay = GunReloadPolicy.recoveryDelayTicks(reload.getType() == FeedType.MANUAL, missing,
                 reload.getFeed() == null ? 0 : reload.getFeed().getEmptyTime(),
