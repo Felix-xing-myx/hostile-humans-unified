@@ -16,8 +16,12 @@ final class GunReloadPolicy {
 
     static boolean shouldIdleTopOff(int loaded, int capacity, boolean inCombat,
                                     boolean fleeing, boolean usingItem, boolean reloading) {
-        return capacity > 0 && loaded >= 0 && loaded < capacity
+        return reloadThresholdSatisfied(loaded, capacity, false)
                 && !inCombat && !fleeing && !usingItem && !reloading;
+    }
+
+    static boolean reloadThresholdSatisfied(int loaded, int capacity, boolean inCombat) {
+        return capacity > 0 && loaded >= 0 && (inCombat ? loaded == 0 : (long) loaded * 4L < capacity);
     }
 
     static int recoveryDelayTicks(boolean manualFeed, int missingRounds,

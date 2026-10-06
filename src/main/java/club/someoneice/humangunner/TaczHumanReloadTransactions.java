@@ -32,6 +32,12 @@ public final class TaczHumanReloadTransactions {
         int occupied = GunReloadPolicy.capacityCheckedRounds(loaded, chambered, inventoryFeed,
                 index.getGunData().getBolt() == Bolt.OPEN_BOLT);
         if (occupied >= capacity) return false;
+        boolean inCombat = human.getTarget() != null;
+        int thresholdRounds = inCombat
+                ? GunReloadPolicy.capacityCheckedRounds(loaded, chambered, true,
+                index.getGunData().getBolt() == Bolt.OPEN_BOLT) : occupied;
+        if (!GunReloadPolicy.reloadThresholdSatisfied(thresholdRounds, capacity, inCombat)
+                || human.isUsingItem() || human.isFleeing) return false;
         int missing = Math.max(1, capacity - loaded);
         int recoveryDelay = GunReloadPolicy.recoveryDelayTicks(reload.getType() == FeedType.MANUAL, missing,
                 reload.getFeed() == null ? 0 : reload.getFeed().getEmptyTime(),

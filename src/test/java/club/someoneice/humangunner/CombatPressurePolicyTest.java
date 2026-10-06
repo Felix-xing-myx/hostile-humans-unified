@@ -200,7 +200,7 @@ public final class CombatPressurePolicyTest {
                 "a normally active reload is never interrupted by the short fallback timer");
         check(GunReloadPolicy.boltRecoveryDelayTicks(2.0D, 0.5D) >= 70,
                 "bolt-action guns retain their own cycling delay before emergency recovery");
-        check(GunReloadPolicy.shouldIdleTopOff(12, 30, false, false, false, false)
+        check(GunReloadPolicy.shouldIdleTopOff(7, 30, false, false, false, false)
                         && GunReloadPolicy.shouldIdleTopOff(0, 30, false, false, false, false),
                 "idle gunners top off both tactical and empty magazines");
         check(!GunReloadPolicy.shouldIdleTopOff(30, 30, false, false, false, false)

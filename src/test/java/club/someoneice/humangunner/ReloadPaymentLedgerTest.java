@@ -6,6 +6,18 @@ public final class ReloadPaymentLedgerTest {
     public static void main(String[] args) {
         var ledger = new ReloadPaymentLedger<Object, Object>();
         Object holder = new Object(), gun = new Object();
+        check(GunReloadPolicy.shouldIdleTopOff(7, 30, false, false, false, false)
+                && !GunReloadPolicy.shouldIdleTopOff(8, 30, false, false, false, false),
+                "30-round idle gun reloads below25 percent only");
+        check(GunReloadPolicy.reloadThresholdSatisfied(9, 40, false)
+                && !GunReloadPolicy.reloadThresholdSatisfied(10, 40, false),
+                "exactly25 percent is not below the threshold");
+        check(GunReloadPolicy.reloadThresholdSatisfied(0, 30, true)
+                && !GunReloadPolicy.reloadThresholdSatisfied(1, 30, true),
+                "combat waits for the last real round");
+        check(!GunReloadPolicy.reloadThresholdSatisfied(0, 0, false)
+                && !GunReloadPolicy.reloadThresholdSatisfied(-1, 30, true),
+                "invalid counts/capacity cannot authorize a reload");
         int fullInventoryGun = GunReloadPolicy.capacityCheckedRounds(29, true, true, false);
         check(fullInventoryGun == 30 && !GunReloadPolicy.shouldIdleTopOff(fullInventoryGun, 30,
                 false, false, false, false), "chambered inventory-feed round prevents repeated full-gun top-offs");
