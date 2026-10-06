@@ -46,6 +46,7 @@ final class SplitConfigFiles {
         JsonObject data = fallback.deepCopy();
         TierConfigProjection.fill(data, defaults, "");
         describe(data, rank);
+        data = TierConfigProjection.arrange(data, rank);
         if (generate) {
             try {
                 Files.createDirectories(path.getParent());

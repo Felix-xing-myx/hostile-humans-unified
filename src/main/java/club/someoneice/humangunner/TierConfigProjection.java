@@ -16,6 +16,8 @@ final class TierConfigProjection {
         removeRanks(object(result, "equipment_growth"), "tiers");
         JsonObject ai = object(result, "ai");
         JsonObject globalAi = new JsonObject();
+        globalAi.addProperty("_说明_中文", "增强战斗AI总开关；具体撤退、恢复、盾牌与战术参数在四阶文件的ai中独立设置。");
+        globalAi.addProperty("_description_en", "Enhanced combat AI master switch. Configure retreat, recovery, shields and tactics in each rank file's ai section.");
         if (ai.has("enabled")) globalAi.add("enabled", ai.get("enabled").deepCopy());
         result.add("ai", globalAi);
         JsonObject tacz = object(result, "tacz");
@@ -26,18 +28,48 @@ final class TierConfigProjection {
         removeRanks(recruitment, "max_hired_by_tier");
         removeRanks(recruitment, "payment_by_tier");
         removeRanks(object(object(result, "spawning"), "progression"), "first_spawn_day_by_tier");
-        return result;
+        // These groups have no global options after their four ranks move out.
+        // Remove only shipped guidance, retaining unknown user extensions/notes.
+        JsonObject defaults = UnifiedConfig.defaults();
+        JsonObject progression = object(object(result, "spawning"), "progression");
+        removeShippedGuidance(object(progression, "first_spawn_day_by_tier"),
+                object(object(object(defaults, "spawning"), "progression"), "first_spawn_day_by_tier"), List.of());
+        if (progression.has("first_spawn_day_by_tier") && progression.get("first_spawn_day_by_tier").isJsonObject()
+                && object(progression, "first_spawn_day_by_tier").size() == 0)
+            progression.remove("first_spawn_day_by_tier");
+        for (String group : List.of("tiers", "equipment_loadouts", "tier_ai", "_tier_file_metadata")) {
+            removeShippedGuidance(object(result, group), object(defaults, group), List.of());
+            if (result.has(group) && result.get(group).isJsonObject() && object(result, group).size() == 0) result.remove(group);
+        }
+        removeShippedGuidance(object(result, "equipment_growth"), object(defaults, "equipment_growth"),
+                List.of("_说明_中文", "_description_en", "_说明_enabled_中文", "_description_enabled_en"));
+        for (String key : List.of("_说明_枪械分布_中文", "_description_gun_type_weights_en")) tacz.remove(key);
+        return arrange(result, false);
     }
 
     static JsonObject tier(JsonObject root, String rank) {
         JsonObject result = object(object(root, "tiers"), rank).deepCopy();
+        copyGuidance(object(root, "tiers"), result);
+        for (String key : List.of("_说明_伤害层级_中文", "_description_damage_layers_en")) {
+            JsonElement damage = result.get("damage_multipliers");
+            if (damage != null && damage.isJsonObject()) {
+                JsonElement guidance = result.remove(key);
+                if (guidance != null && !damage.getAsJsonObject().has(key)) damage.getAsJsonObject().add(key, guidance);
+            }
+        }
         result.addProperty("schema_version", 2);
         copyAt(root, "equipment_loadouts." + rank, result, "equipment_loadout");
         copyAt(root, "equipment_growth.tiers." + rank, result, "equipment_growth");
+        if (result.has("equipment_loadout") && result.get("equipment_loadout").isJsonObject())
+            copyGuidance(object(root, "equipment_loadouts"), result.getAsJsonObject("equipment_loadout"));
+        if (result.has("equipment_growth") && result.get("equipment_growth").isJsonObject())
+            copyGuidance(object(root, "equipment_growth"), result.getAsJsonObject("equipment_growth"));
         JsonObject spawning = ensure(result, "spawning");
         copyAt(root, "spawning.progression.first_spawn_day_by_tier." + rank, spawning, "first_spawn_day");
         JsonObject metadata = object(object(root, "_tier_file_metadata"), rank);
         JsonObject tacz = object(metadata, "tacz").deepCopy();
+        for (String key : List.of("_说明_枪械分布_中文", "_description_gun_type_weights_en"))
+            copyAt(root, "tacz." + key, tacz, key);
         copyAt(root, "tacz." + rank + "_gun_chance", tacz, "gun_chance");
         copyAt(root, "tacz.tier_damage_multipliers." + rank, tacz, "damage_multiplier");
         copyAt(root, "tacz.tier_gun_type_weights." + rank, tacz, "gun_type_weights");
@@ -55,7 +87,16 @@ final class TierConfigProjection {
                 : object(root, "ai").deepCopy();
         ai.remove("enabled");
         result.add("ai", ai);
-        return result;
+        return arrange(result, true);
+    }
+
+    static JsonObject arrange(JsonObject result, boolean rank) {
+        return ordered(result, rank ? List.of("schema_version", "_说明_中文", "_description_en",
+                "attributes", "movement", "damage_multipliers", "combat", "weapon_spread_degrees",
+                "ai", "spawning", "equipment_loadout", "equipment_growth", "ammunition", "potions",
+                "tacz", "recruitment") : List.of("schema_version", "_说明_中文", "_description_en",
+                "ai", "ammunition", "better_combat", "damage", "spawning", "equipment_growth",
+                "recruitment", "tacz", "native_gameplay"));
     }
 
     static void applyTier(JsonObject root, String rank, JsonObject file) {
@@ -124,6 +165,47 @@ final class TierConfigProjection {
         if (value != null) target.add(key, value.deepCopy());
     }
     private static JsonObject object(JsonObject root, String key) { return UnifiedConfig.object(root, key); }
+    private static boolean guidance(String key) {
+        return key.startsWith("_说明_") || key.startsWith("_description_");
+    }
+    private static void copyGuidance(JsonObject source, JsonObject target) {
+        for (var entry : source.entrySet()) {
+            if (guidance(entry.getKey()) && !target.has(entry.getKey()))
+                target.add(entry.getKey(), entry.getValue().deepCopy());
+        }
+    }
+    private static void removeShippedGuidance(JsonObject target, JsonObject defaults, List<String> keep) {
+        for (String key : defaults.keySet()) {
+            if (guidance(key) && !keep.contains(key) && target.has(key)
+                    && target.get(key).equals(defaults.get(key))) target.remove(key);
+        }
+    }
+    private static JsonObject ordered(JsonObject source, List<String> keys) {
+        JsonObject result = new JsonObject();
+        for (String key : keys) if (source.has(key)) result.add(key, source.get(key));
+        for (var entry : source.entrySet()) if (!result.has(entry.getKey())) result.add(entry.getKey(), entry.getValue());
+        return adjacentGuidance(result);
+    }
+    /** Keep each field's bilingual help directly above the value, including projected fields. */
+    private static JsonObject adjacentGuidance(JsonObject source) {
+        JsonObject result = new JsonObject();
+        for (var entry : source.entrySet()) {
+            String key = entry.getKey();
+            if (guidance(key)) {
+                String field = key.startsWith("_说明_") && key.endsWith("_中文") && key.length() > 7
+                        ? key.substring(4, key.length() - 3)
+                        : key.startsWith("_description_") && key.endsWith("_en") && key.length() > 16
+                        ? key.substring(13, key.length() - 3) : "";
+                if (!field.isEmpty() && source.has(field)) continue;
+            } else {
+                for (String note : List.of("_说明_" + key + "_中文", "_description_" + key + "_en"))
+                    if (source.has(note)) result.add(note, source.get(note));
+            }
+            JsonElement value = entry.getValue();
+            result.add(key, value.isJsonObject() ? adjacentGuidance(value.getAsJsonObject()) : value);
+        }
+        return result;
+    }
     private static JsonObject ensure(JsonObject root, String key) {
         if (!root.has(key) || !root.get(key).isJsonObject()) root.add(key, new JsonObject());
         return root.getAsJsonObject(key);

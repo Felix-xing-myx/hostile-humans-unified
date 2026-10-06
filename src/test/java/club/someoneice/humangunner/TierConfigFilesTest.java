@@ -9,6 +9,7 @@ public final class TierConfigFilesTest {
     private static int assertions;
     public static void main(String[] args) throws Exception {
         checkProjection();
+        checkReadableDefaults();
         checkOldestMigration();
         checkSingleMigrationAndOwnership();
         checkLegacyModulesAndInvalidSources();
@@ -32,7 +33,8 @@ public final class TierConfigFilesTest {
         check(TierConfigProjection.at(global, "tiers.tier1") == null, "global has no per-rank attributes");
         check(TierConfigProjection.at(global, "equipment_loadouts.tier1") == null, "global has no rank equipment");
         check(TierConfigProjection.at(global, "tacz.tier1_gun_chance") == null, "global has no rank firearm chance");
-        check(global.getAsJsonObject("ai").size() == 1 && global.getAsJsonObject("ai").has("enabled"), "global AI has only enabled");
+        check(global.getAsJsonObject("ai").keySet().stream().filter(key -> !key.startsWith("_")).toList()
+                .equals(List.of("enabled")), "global AI has only enabled plus guidance");
         for (String rank : TierConfigProjection.RANKS) TierConfigProjection.applyTier(global, rank, TierConfigProjection.tier(root, rank));
         check(TierConfigProjection.at(global, "tiers.tier1.ammunition").equals(TierConfigProjection.at(root, "tiers.tier1.ammunition")), "ammunition ranges round trip");
         check(TierConfigProjection.at(global, "equipment_loadouts.tier1.mainhand").getAsJsonArray().size() == 0, "custom empty equipment pool preserved");
@@ -53,6 +55,55 @@ public final class TierConfigFilesTest {
         TierConfigProjection.applyTier(global, "tier1", sparseWeights);
         check(TierConfigProjection.tier(global, "tier1").getAsJsonObject("tacz").get("extension_option").getAsInt() == 23,
                 "unknown grouped rank option round trips through internal metadata");
+    }
+
+    private static void checkReadableDefaults() throws Exception {
+        JsonObject defaults = UnifiedConfig.defaults();
+        JsonObject global = TierConfigProjection.global(defaults);
+        check(!global.has("tiers") && !global.has("equipment_loadouts"), "no orphan rank/loadout guidance in global");
+        check(TierConfigProjection.at(global, "spawning.progression.first_spawn_day_by_tier") == null,
+                "no orphan rank unlock guidance in global");
+        check(!global.getAsJsonObject("equipment_growth").has("_description_item_ids_en"), "growth item guidance moves to ranks");
+        check(!global.getAsJsonObject("tacz").has("_description_gun_type_weights_en"), "type-weight guidance moves to ranks");
+        JsonObject custom = defaults.deepCopy();
+        custom.getAsJsonObject("tiers").addProperty("_description_custom_extension_en", "Keep my custom notes");
+        check(TierConfigProjection.global(custom).getAsJsonObject("tiers").has("_description_custom_extension_en"),
+                "unknown custom guidance is not discarded");
+        TierConfigProjection.put(custom, "equipment_loadouts.tier1", JsonNull.INSTANCE);
+        TierConfigProjection.put(custom, "equipment_growth.tiers.tier1", JsonNull.INSTANCE);
+        TierConfigProjection.put(custom, "tiers.tier1.damage_multipliers", JsonNull.INSTANCE);
+        JsonObject invalid = TierConfigProjection.tier(custom, "tier1");
+        check(invalid.get("equipment_loadout").isJsonNull() && invalid.get("equipment_growth").isJsonNull()
+                && invalid.get("damage_multipliers").isJsonNull(), "guidance does not replace explicit invalid values");
+        Path directory = Files.createTempDirectory("human-readable-config-");
+        try {
+            JsonObject assembled = SplitConfigFiles.load(directory, defaults);
+            UnifiedConfig baseline = new UnifiedConfig(defaults), projected = new UnifiedConfig(assembled);
+            for (String rank : TierConfigProjection.RANKS) {
+                JsonObject file = SplitConfigFiles.read(directory.resolve(SplitConfigFiles.DIRECTORY).resolve(rank + ".json"), 2);
+                List<String> sections = new ArrayList<>(file.keySet());
+                check(sections.get(0).equals("schema_version"), "schema first " + rank);
+                check(sections.indexOf("attributes") < sections.indexOf("ai")
+                        && sections.indexOf("ai") < sections.indexOf("equipment_loadout")
+                        && sections.indexOf("equipment_loadout") < sections.indexOf("ammunition"), "consistent section order " + rank);
+                for (String path : List.of("attributes.health_min", "movement.base_speed", "ai.retreat_health_ratio",
+                        "equipment_loadout.ranged_chance", "equipment_growth.start_day", "ammunition.arrows.min",
+                        "potions.recovery.count_min", "tacz.gun_chance", "recruitment.max_hired", "spawning.first_spawn_day")) {
+                    int dot = path.lastIndexOf('.');
+                    JsonObject section = TierConfigProjection.at(file, path.substring(0, dot)).getAsJsonObject();
+                    String field = path.substring(dot + 1);
+                    List<String> keys = new ArrayList<>(section.keySet());
+                    int index = keys.indexOf(field);
+                    check(index >= 2 && keys.get(index - 2).equals("_说明_" + field + "_中文")
+                            && keys.get(index - 1).equals("_description_" + field + "_en"), "adjacent bilingual help " + rank + "." + path);
+                }
+                check(baseline.tier(rank).equals(projected.tier(rank)), "rank behavior unchanged " + rank);
+                check(baseline.combatAi(rank).equals(projected.combatAi(rank)), "AI behavior unchanged " + rank);
+                check(baseline.ammoReserve(rank).equals(projected.ammoReserve(rank)), "ammunition unchanged " + rank);
+                check(baseline.recruitmentCost(TierConfigProjection.RANKS.indexOf(rank)).equals(
+                        projected.recruitmentCost(TierConfigProjection.RANKS.indexOf(rank))), "payment unchanged " + rank);
+            }
+        } finally { cleanup(directory); }
     }
 
     private static void checkOldestMigration() throws Exception {

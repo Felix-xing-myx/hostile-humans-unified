@@ -1,31 +1,51 @@
 {
   "schema_version": 1,
-  "_说明_中文": "Hostile Humans Unified 配置。修改后完整重启游戏生效。每阶属性集中在 tiers；武器散布按阶级和武器类型分别设置，角度单位为度。旧版 tiers 中的平铺字段仍可读取；旧的 gun_spread_degrees / projectile_spread_degrees 会按旧规则作为散布回退值。速度使用新的基础速度计算项，旧 normal/combat/retreat 速度字段不再生效。",
-  "_description_en": "Hostile Humans Unified configuration. Fully restart the game after editing. Tier settings are grouped under tiers; spread is independently configurable for each weapon type and tier, in degrees. Legacy flat tier fields remain readable; legacy gun_spread_degrees / projectile_spread_degrees values are used as fallbacks with their former offsets. Movement now uses the new base-speed formula; legacy normal/combat/retreat speed fields are ignored.",
+  "_说明_中文": "全局配置。修改后完整重启生效；只填写JSON配置值，以下_说明和_description字段仅供阅读。阶级独立属性、装备、AI、弹药与药水见roamer/tier1/tier2/tier3.json。",
+  "_description_en": "Global configuration. Fully restart after editing. _说明 and _description fields are documentation only. Independent rank settings are in roamer/tier1/tier2/tier3.json.",
   "tiers": {
     "_说明_中文": "各阶人类的属性、新式移动速度、伤害倍率、武器散布、近战冷却和自然生成倍率。roamer/tier1/tier2/tier3 分别对应流浪者/一阶/二阶/三阶。",
     "_description_en": "Per-tier attributes, new movement-speed settings, damage multipliers, weapon spread, melee cooldown and natural-spawn multiplier. roamer/tier1/tier2/tier3 correspond to Roamer/Tier 1/Tier 2/Tier 3.",
     "_说明_伤害层级_中文": "这里配置的是整个阶级，不是某个独立 NPC。各阶伤害倍率与 global.json 的对应全局倍率相乘，不互相覆盖；1 表示不额外调整，0 表示该类攻击不造成伤害。例如全局近战 1.7、本阶近战 0.5，合并倍率为 0.85。枪械伤害单独在 对应阶级文件或global.json 设置，不使用这里的近战/弓/三叉戟输出倍率。",
     "_description_damage_layers_en": "These settings apply to an entire tier, not an individual NPC. Tier damage multipliers multiply the corresponding global values in global.json; neither overrides the other. 1 makes no additional change and 0 disables that attack's damage. For example, global melee 1.7 times tier melee 0.5 gives 0.85. Firearm damage is configured separately in rank files or global.json and does not use these melee/bow/trident outgoing multipliers.",
     "roamer": {
-      "_说明_中文": "流浪者参数。",
-      "_description_en": "Roamer settings.",
+      "_说明_中文": "流浪者专用配置：按属性→移动→战斗→生成与装备→弹药与药水→枪械→雇佣阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
+      "_description_en": "roamer settings: attributes, movement, combat, spawning/equipment, ammunition/potions, firearms, hiring. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
       "attributes": {
         "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
         "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
+        "_说明_health_min_中文": "随机初始生命下限，范围1–1024点；2点=1颗心。",
+        "_description_health_min_en": "Minimum initial health, 1–1024 points; 2 points = 1 heart.",
         "health_min": 50,
+        "_说明_health_max_中文": "随机初始生命上限，范围1–1024点；上下限倒置时自动交换。",
+        "_description_health_max_en": "Maximum initial health, 1–1024 points; reversed bounds are swapped.",
         "health_max": 70,
+        "_说明_attack_damage_中文": "基础近战攻击属性，0–2048；装备、附魔和伤害倍率仍会继续计算。",
+        "_description_attack_damage_en": "Base melee attack attribute, 0–2048; equipment, enchantments and multipliers still apply.",
         "attack_damage": 1,
+        "_说明_armor_中文": "基础护甲值，0–30；装备护甲另外计算。",
+        "_description_armor_en": "Base armor, 0–30; equipped armor adds separately.",
         "armor": 0,
+        "_说明_armor_toughness_中文": "基础护甲韧性，0–20。",
+        "_description_armor_toughness_en": "Base armor toughness, 0–20.",
         "armor_toughness": 0,
+        "_说明_knockback_resistance_中文": "基础击退抗性，0–1；1表示完全抵抗常规击退。",
+        "_description_knockback_resistance_en": "Base knockback resistance, 0–1; 1 fully resists normal knockback.",
         "knockback_resistance": 0,
+        "_说明_follow_range_中文": "目标探测属性，8–128格；不是雇佣跟随的启停距离。",
+        "_description_follow_range_en": "Target detection attribute, 8–128 blocks; not the hired-follow start/stop distance.",
         "follow_range": 40
       },
       "movement": {
         "_说明_中文": "新速度公式的基础移动速度（默认 0.105，即普通玩家基础移速的 1.05 倍；可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
         "_description_en": "Base movement attribute for the new speed formula (default 0.105, or 1.05x the normal player's base movement speed; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
+        "_说明_base_speed_中文": "基础移速属性，0.01–0.2；默认0.105，保留原版疾跑及状态修正。",
+        "_description_base_speed_en": "Base movement attribute, 0.01–0.2; default 0.105, with vanilla sprint/effect modifiers.",
         "base_speed": 0.105,
+        "_说明_follow_speed_multiplier_中文": "闲置雇佣跟随导航倍率，0.1–3，默认1.35。",
+        "_description_follow_speed_multiplier_en": "Idle hired-follow navigation multiplier, 0.1–3; default 1.35.",
         "follow_speed_multiplier": 1.35,
+        "_说明_follow_catch_up_multiplier_中文": "距离主人超过12格的追赶倍率，0.1–3，默认1.6；不会低于普通跟随倍率。",
+        "_description_follow_catch_up_multiplier_en": "Catch-up multiplier beyond 12 blocks, 0.1–3; default 1.6, never below normal follow.",
         "follow_catch_up_multiplier": 1.6,
         "_说明_跟随_中文": "雇佣士兵无目标跟随的导航倍率：普通1.35，超过12格追赶1.6；超过6格疾跑，2.5格内停止，4格外重新启动。倍率0.1至3，仅影响跟随，不改变战斗/撤退/驻守。",
         "_description_follow_en": "Idle hired-follow navigation speed: 1.35 normally, 1.6 beyond 12 blocks; sprint beyond 6, stop within 2.5, restart beyond 4. Multipliers range 0.1-3; combat, retreat and guard are unchanged."
@@ -33,9 +53,17 @@
       "damage_multipliers": {
         "_说明_中文": "输出倍率与 global.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 对应阶级文件或global.json。",
         "_description_en": "Outgoing multipliers multiply the matching global values in global.json; the default 1 makes no additional change. melee_damage_multiplier covers melee, including trident stabs; bow_damage_multiplier covers arrows from bows and crossbows; trident_damage_multiplier covers thrown tridents only. incoming_damage_multiplier belongs to the defender and scales damage received by this tier, including firearms and environmental damage; it is not an outgoing multiplier. Firearm output is configured in rank files or global.json.",
+        "_说明_melee_damage_multiplier_中文": "本阶近战输出倍率，0–10；乘全局近战倍率。",
+        "_description_melee_damage_multiplier_en": "Rank melee output multiplier, 0–10; multiplies global melee scaling.",
         "melee_damage_multiplier": 1,
+        "_说明_bow_damage_multiplier_中文": "本阶弓/弩输出倍率，0–10；乘全局弓弩倍率。",
+        "_description_bow_damage_multiplier_en": "Rank bow/crossbow output multiplier, 0–10; multiplies global projectile scaling.",
         "bow_damage_multiplier": 1,
+        "_说明_trident_damage_multiplier_中文": "本阶投掷三叉戟输出倍率，0–10；不用于近刺。",
+        "_description_trident_damage_multiplier_en": "Rank thrown-trident output multiplier, 0–10; excludes melee stabs.",
         "trident_damage_multiplier": 1,
+        "_说明_incoming_damage_multiplier_中文": "本阶受到伤害的倍率，0–10；0可免除此层伤害，包括环境和枪伤。",
+        "_description_incoming_damage_multiplier_en": "Incoming damage multiplier for this rank, 0–10; 0 suppresses this layer, including environment/firearms.",
         "incoming_damage_multiplier": 1
       },
       "weapon_spread_degrees": {
@@ -63,33 +91,59 @@
       "combat": {
         "_说明_中文": "近战攻击冷却随机范围，单位为游戏 tick（20 tick=1 秒）。",
         "_description_en": "Random melee attack cooldown range in game ticks (20 ticks = 1 second).",
+        "_说明_melee_cooldown_min_中文": "近战随机冷却下限，1–200 tick；20 tick=1秒。",
+        "_description_melee_cooldown_min_en": "Minimum random melee cooldown, 1–200 ticks; 20 ticks = 1 second.",
         "melee_cooldown_min": 20,
+        "_说明_melee_cooldown_max_中文": "近战随机冷却上限，1–200 tick；上下限倒置时自动交换。",
+        "_description_melee_cooldown_max_en": "Maximum random melee cooldown, 1–200 ticks; reversed bounds are swapped.",
         "melee_cooldown_max": 32
       },
       "spawning": {
         "_说明_中文": "spawn_multiplier 是本阶普通自然生成/区块初始自然生成的准入倍率，不是直接概率；允许 0–100 的整数或小数。相对于本项设为 1 时，0.5 保留 50%、0.1 保留 10%、0.01 保留 1% 的基础准入机会；可直接填写 0.005 等更小的数值，不加引号或百分号。0 禁止本阶普通自然生成。它与 global.json 的 admission_chance 相乘，仍受天数、地形、密度等条件限制；四阶使用相同准入规则，没有流浪者额外随机判定。自然大型战斗由 battle_admission_chance 单独控制，不乘此倍率；援军信号弹和敌对信标不受此项影响。",
         "_description_en": "spawn_multiplier scales admission for this tier's ordinary and chunk-generation natural spawns; it is not a direct probability. Integers and decimals from 0 to 100 are accepted. Compared with setting this value to 1, 0.5 retains 50%, 0.1 retains 10%, and 0.01 retains 1% of base admission chances. Smaller values such as 0.005 can be entered directly without quotes or a percent sign. 0 disables this tier's ordinary natural spawns. It multiplies admission_chance in global.json and remains subject to day gates, terrain, density and other checks; all four ranks share this admission rule without an extra roamer roll. Automatic large battles use battle_admission_chance separately, not this multiplier. Reinforcement flares and hostile beacons are unaffected.",
-        "spawn_multiplier": 1
+        "spawn_multiplier": 1,
+        "_说明_first_spawn_day_中文": "本阶最早解锁的个人在线日，1–1000000；仍须超过全局safe_days。24000在线tick=1天；解锁不保证当日生成。",
+        "_description_first_spawn_day_en": "First eligible personal online day, 1–1000000; global safe_days also applies. 24000 online ticks = 1 day. Unlocking does not guarantee spawning."
       },
       "ammunition": {
         "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；加载旧存档、雇佣或补给不会重新配发。",
         "_description_en": "Initial reserves for actual owned bows/crossbows or firearms, chosen inclusively between min and max. Zero disables initial supplies; inverted bounds are normalized. Integers only, arrows capped at 1920 and magazines at 720; invalid values use defaults. Full inventories retain equipment protection and overflow drops. Loading saves, hiring or resupplying never grants another initial reserve.",
         "arrows": {
+          "_说明_min_中文": "出生数量下限，0–1920整数；0允许不配发。",
+          "_description_min_en": "Minimum initial count, integer 0–1920; zero allows no supply.",
           "min": 32,
-          "max": 128
+          "_说明_max_中文": "出生数量上限，0–1920整数；包含两端，倒置范围自动交换。",
+          "_description_max_en": "Maximum initial count, integer 0–1920; inclusive, with reversed bounds swapped.",
+          "max": 128,
+          "_说明_中文": "通用箭矢初始储备，只为对应远程职业生成；数量单位是个，不是组。",
+          "_description_en": "Initial arrows for matching ranged loadouts; counts are individual items, not stacks."
         },
         "magazines": {
+          "_说明_min_中文": "出生数量下限，0–720整数；0允许不配发。",
+          "_description_min_en": "Minimum initial count, integer 0–720; zero allows no supply.",
           "min": 6,
-          "max": 12
+          "_说明_max_中文": "出生数量上限，0–720整数；包含两端，倒置范围自动交换。",
+          "_description_max_en": "Maximum initial count, integer 0–720; inclusive, with reversed bounds swapped.",
+          "max": 12,
+          "_说明_中文": "通用弹匣初始储备，只为对应远程职业生成；数量单位是个，不是组。",
+          "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks."
         }
       },
       "potions": {
         "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",
         "_description_en": "One-time spawn provisioning, gated by ai.item_recovery_enabled. Counts are inclusive bottle totals (0-30), not stack size. Weighted pools are independent; empty pools never spawn fallback potions and unavailable IDs are skipped. Restart to apply; existing entities are not replenished.",
+        "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
+        "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
         "recovery": {
+          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
+          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
           "count_min": 2,
+          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
+          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
           "count_max": 4,
+          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
+          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:potion",
@@ -101,11 +155,19 @@
               "potion": "minecraft:long_regeneration",
               "weight": 1
             }
-          ]
+          ],
+          "_说明_中文": "恢复药水储备。",
+          "_description_en": "Recovery potion reserves."
         },
         "tactical": {
+          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
+          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
           "count_min": 1,
+          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
+          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
           "count_max": 2,
+          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
+          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -122,36 +184,64 @@
               "potion": "minecraft:long_strength",
               "weight": 2
             }
-          ]
+          ],
+          "_说明_中文": "战术药水储备；额外迅捷药水计入此类数量。",
+          "_description_en": "Tactical potion reserves; bonus Speed potions count toward this total."
         },
         "bonus": {
           "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
           "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
+          "_说明_item_中文": "额外药水的瓶形物品ID；例如minecraft:potion。",
+          "_description_item_en": "Bottle item ID for the bonus potion, e.g. minecraft:potion.",
           "item": "minecraft:potion",
+          "_说明_potion_中文": "额外药水注册ID；例如minecraft:swiftness。",
+          "_description_potion_en": "Registered bonus potion ID, e.g. minecraft:swiftness.",
           "potion": "minecraft:long_swiftness",
+          "_说明_chance_中文": "用额外药水替代一个战术瓶的概率，0–1；不会增加战术瓶总量。",
+          "_description_chance_en": "Chance to replace one tactical bottle, 0–1; does not increase the tactical total.",
           "chance": 0.1
         }
       }
     },
     "tier1": {
-      "_说明_中文": "一阶人类参数。",
-      "_description_en": "Tier 1 settings.",
+      "_说明_中文": "一阶人类专用配置：按属性→移动→战斗→生成与装备→弹药与药水→枪械→雇佣阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
+      "_description_en": "tier1 settings: attributes, movement, combat, spawning/equipment, ammunition/potions, firearms, hiring. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
       "attributes": {
         "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
         "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
+        "_说明_health_min_中文": "随机初始生命下限，范围1–1024点；2点=1颗心。",
+        "_description_health_min_en": "Minimum initial health, 1–1024 points; 2 points = 1 heart.",
         "health_min": 60,
+        "_说明_health_max_中文": "随机初始生命上限，范围1–1024点；上下限倒置时自动交换。",
+        "_description_health_max_en": "Maximum initial health, 1–1024 points; reversed bounds are swapped.",
         "health_max": 80,
+        "_说明_attack_damage_中文": "基础近战攻击属性，0–2048；装备、附魔和伤害倍率仍会继续计算。",
+        "_description_attack_damage_en": "Base melee attack attribute, 0–2048; equipment, enchantments and multipliers still apply.",
         "attack_damage": 1,
+        "_说明_armor_中文": "基础护甲值，0–30；装备护甲另外计算。",
+        "_description_armor_en": "Base armor, 0–30; equipped armor adds separately.",
         "armor": 0,
+        "_说明_armor_toughness_中文": "基础护甲韧性，0–20。",
+        "_description_armor_toughness_en": "Base armor toughness, 0–20.",
         "armor_toughness": 0,
+        "_说明_knockback_resistance_中文": "基础击退抗性，0–1；1表示完全抵抗常规击退。",
+        "_description_knockback_resistance_en": "Base knockback resistance, 0–1; 1 fully resists normal knockback.",
         "knockback_resistance": 0,
+        "_说明_follow_range_中文": "目标探测属性，8–128格；不是雇佣跟随的启停距离。",
+        "_description_follow_range_en": "Target detection attribute, 8–128 blocks; not the hired-follow start/stop distance.",
         "follow_range": 40
       },
       "movement": {
         "_说明_中文": "新速度公式的基础移动速度（默认 0.105，即普通玩家基础移速的 1.05 倍；可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
         "_description_en": "Base movement attribute for the new speed formula (default 0.105, or 1.05x the normal player's base movement speed; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
+        "_说明_base_speed_中文": "基础移速属性，0.01–0.2；默认0.105，保留原版疾跑及状态修正。",
+        "_description_base_speed_en": "Base movement attribute, 0.01–0.2; default 0.105, with vanilla sprint/effect modifiers.",
         "base_speed": 0.105,
+        "_说明_follow_speed_multiplier_中文": "闲置雇佣跟随导航倍率，0.1–3，默认1.35。",
+        "_description_follow_speed_multiplier_en": "Idle hired-follow navigation multiplier, 0.1–3; default 1.35.",
         "follow_speed_multiplier": 1.35,
+        "_说明_follow_catch_up_multiplier_中文": "距离主人超过12格的追赶倍率，0.1–3，默认1.6；不会低于普通跟随倍率。",
+        "_description_follow_catch_up_multiplier_en": "Catch-up multiplier beyond 12 blocks, 0.1–3; default 1.6, never below normal follow.",
         "follow_catch_up_multiplier": 1.6,
         "_说明_跟随_中文": "雇佣士兵无目标跟随的导航倍率：普通1.35，超过12格追赶1.6；超过6格疾跑，2.5格内停止，4格外重新启动。倍率0.1至3，仅影响跟随，不改变战斗/撤退/驻守。",
         "_description_follow_en": "Idle hired-follow navigation speed: 1.35 normally, 1.6 beyond 12 blocks; sprint beyond 6, stop within 2.5, restart beyond 4. Multipliers range 0.1-3; combat, retreat and guard are unchanged."
@@ -159,9 +249,17 @@
       "damage_multipliers": {
         "_说明_中文": "输出倍率与 global.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 对应阶级文件或global.json。",
         "_description_en": "Outgoing multipliers multiply the matching global values in global.json; the default 1 makes no additional change. melee_damage_multiplier covers melee, including trident stabs; bow_damage_multiplier covers arrows from bows and crossbows; trident_damage_multiplier covers thrown tridents only. incoming_damage_multiplier belongs to the defender and scales damage received by this tier, including firearms and environmental damage; it is not an outgoing multiplier. Firearm output is configured in rank files or global.json.",
+        "_说明_melee_damage_multiplier_中文": "本阶近战输出倍率，0–10；乘全局近战倍率。",
+        "_description_melee_damage_multiplier_en": "Rank melee output multiplier, 0–10; multiplies global melee scaling.",
         "melee_damage_multiplier": 1,
+        "_说明_bow_damage_multiplier_中文": "本阶弓/弩输出倍率，0–10；乘全局弓弩倍率。",
+        "_description_bow_damage_multiplier_en": "Rank bow/crossbow output multiplier, 0–10; multiplies global projectile scaling.",
         "bow_damage_multiplier": 1,
+        "_说明_trident_damage_multiplier_中文": "本阶投掷三叉戟输出倍率，0–10；不用于近刺。",
+        "_description_trident_damage_multiplier_en": "Rank thrown-trident output multiplier, 0–10; excludes melee stabs.",
         "trident_damage_multiplier": 1,
+        "_说明_incoming_damage_multiplier_中文": "本阶受到伤害的倍率，0–10；0可免除此层伤害，包括环境和枪伤。",
+        "_description_incoming_damage_multiplier_en": "Incoming damage multiplier for this rank, 0–10; 0 suppresses this layer, including environment/firearms.",
         "incoming_damage_multiplier": 1
       },
       "weapon_spread_degrees": {
@@ -189,33 +287,59 @@
       "combat": {
         "_说明_中文": "近战攻击冷却随机范围，单位为游戏 tick（20 tick=1 秒）。",
         "_description_en": "Random melee attack cooldown range in game ticks (20 ticks = 1 second).",
+        "_说明_melee_cooldown_min_中文": "近战随机冷却下限，1–200 tick；20 tick=1秒。",
+        "_description_melee_cooldown_min_en": "Minimum random melee cooldown, 1–200 ticks; 20 ticks = 1 second.",
         "melee_cooldown_min": 16,
+        "_说明_melee_cooldown_max_中文": "近战随机冷却上限，1–200 tick；上下限倒置时自动交换。",
+        "_description_melee_cooldown_max_en": "Maximum random melee cooldown, 1–200 ticks; reversed bounds are swapped.",
         "melee_cooldown_max": 28
       },
       "spawning": {
         "_说明_中文": "spawn_multiplier 是本阶普通自然生成/区块初始自然生成的准入倍率，不是直接概率；允许 0–100 的整数或小数。相对于本项设为 1 时，0.5 保留 50%、0.1 保留 10%、0.01 保留 1% 的基础准入机会；可直接填写 0.005 等更小的数值，不加引号或百分号。0 禁止本阶普通自然生成。它与 global.json 的 admission_chance 相乘，仍受天数、地形、密度等条件限制；四阶使用相同准入规则，没有流浪者额外随机判定。自然大型战斗由 battle_admission_chance 单独控制，不乘此倍率；援军信号弹和敌对信标不受此项影响。",
         "_description_en": "spawn_multiplier scales admission for this tier's ordinary and chunk-generation natural spawns; it is not a direct probability. Integers and decimals from 0 to 100 are accepted. Compared with setting this value to 1, 0.5 retains 50%, 0.1 retains 10%, and 0.01 retains 1% of base admission chances. Smaller values such as 0.005 can be entered directly without quotes or a percent sign. 0 disables this tier's ordinary natural spawns. It multiplies admission_chance in global.json and remains subject to day gates, terrain, density and other checks; all four ranks share this admission rule without an extra roamer roll. Automatic large battles use battle_admission_chance separately, not this multiplier. Reinforcement flares and hostile beacons are unaffected.",
-        "spawn_multiplier": 1
+        "spawn_multiplier": 1,
+        "_说明_first_spawn_day_中文": "本阶最早解锁的个人在线日，1–1000000；仍须超过全局safe_days。24000在线tick=1天；解锁不保证当日生成。",
+        "_description_first_spawn_day_en": "First eligible personal online day, 1–1000000; global safe_days also applies. 24000 online ticks = 1 day. Unlocking does not guarantee spawning."
       },
       "ammunition": {
         "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；加载旧存档、雇佣或补给不会重新配发。",
         "_description_en": "Initial reserves for actual owned bows/crossbows or firearms, chosen inclusively between min and max. Zero disables initial supplies; inverted bounds are normalized. Integers only, arrows capped at 1920 and magazines at 720; invalid values use defaults. Full inventories retain equipment protection and overflow drops. Loading saves, hiring or resupplying never grants another initial reserve.",
         "arrows": {
+          "_说明_min_中文": "出生数量下限，0–1920整数；0允许不配发。",
+          "_description_min_en": "Minimum initial count, integer 0–1920; zero allows no supply.",
           "min": 64,
-          "max": 128
+          "_说明_max_中文": "出生数量上限，0–1920整数；包含两端，倒置范围自动交换。",
+          "_description_max_en": "Maximum initial count, integer 0–1920; inclusive, with reversed bounds swapped.",
+          "max": 128,
+          "_说明_中文": "通用箭矢初始储备，只为对应远程职业生成；数量单位是个，不是组。",
+          "_description_en": "Initial arrows for matching ranged loadouts; counts are individual items, not stacks."
         },
         "magazines": {
+          "_说明_min_中文": "出生数量下限，0–720整数；0允许不配发。",
+          "_description_min_en": "Minimum initial count, integer 0–720; zero allows no supply.",
           "min": 12,
-          "max": 24
+          "_说明_max_中文": "出生数量上限，0–720整数；包含两端，倒置范围自动交换。",
+          "_description_max_en": "Maximum initial count, integer 0–720; inclusive, with reversed bounds swapped.",
+          "max": 24,
+          "_说明_中文": "通用弹匣初始储备，只为对应远程职业生成；数量单位是个，不是组。",
+          "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks."
         }
       },
       "potions": {
         "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",
         "_description_en": "One-time spawn provisioning, gated by ai.item_recovery_enabled. Counts are inclusive bottle totals (0-30), not stack size. Weighted pools are independent; empty pools never spawn fallback potions and unavailable IDs are skipped. Restart to apply; existing entities are not replenished.",
+        "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
+        "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
         "recovery": {
+          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
+          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
           "count_min": 2,
+          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
+          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
           "count_max": 5,
+          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
+          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:potion",
@@ -227,11 +351,19 @@
               "potion": "minecraft:long_regeneration",
               "weight": 1
             }
-          ]
+          ],
+          "_说明_中文": "恢复药水储备。",
+          "_description_en": "Recovery potion reserves."
         },
         "tactical": {
+          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
+          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
           "count_min": 2,
+          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
+          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
           "count_max": 3,
+          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
+          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -248,36 +380,64 @@
               "potion": "minecraft:long_strength",
               "weight": 2
             }
-          ]
+          ],
+          "_说明_中文": "战术药水储备；额外迅捷药水计入此类数量。",
+          "_description_en": "Tactical potion reserves; bonus Speed potions count toward this total."
         },
         "bonus": {
           "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
           "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
+          "_说明_item_中文": "额外药水的瓶形物品ID；例如minecraft:potion。",
+          "_description_item_en": "Bottle item ID for the bonus potion, e.g. minecraft:potion.",
           "item": "minecraft:potion",
+          "_说明_potion_中文": "额外药水注册ID；例如minecraft:swiftness。",
+          "_description_potion_en": "Registered bonus potion ID, e.g. minecraft:swiftness.",
           "potion": "minecraft:long_swiftness",
+          "_说明_chance_中文": "用额外药水替代一个战术瓶的概率，0–1；不会增加战术瓶总量。",
+          "_description_chance_en": "Chance to replace one tactical bottle, 0–1; does not increase the tactical total.",
           "chance": 0.2
         }
       }
     },
     "tier2": {
-      "_说明_中文": "二阶人类参数。",
-      "_description_en": "Tier 2 settings.",
+      "_说明_中文": "二阶人类专用配置：按属性→移动→战斗→生成与装备→弹药与药水→枪械→雇佣阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
+      "_description_en": "tier2 settings: attributes, movement, combat, spawning/equipment, ammunition/potions, firearms, hiring. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
       "attributes": {
         "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
         "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
+        "_说明_health_min_中文": "随机初始生命下限，范围1–1024点；2点=1颗心。",
+        "_description_health_min_en": "Minimum initial health, 1–1024 points; 2 points = 1 heart.",
         "health_min": 70,
+        "_说明_health_max_中文": "随机初始生命上限，范围1–1024点；上下限倒置时自动交换。",
+        "_description_health_max_en": "Maximum initial health, 1–1024 points; reversed bounds are swapped.",
         "health_max": 90,
+        "_说明_attack_damage_中文": "基础近战攻击属性，0–2048；装备、附魔和伤害倍率仍会继续计算。",
+        "_description_attack_damage_en": "Base melee attack attribute, 0–2048; equipment, enchantments and multipliers still apply.",
         "attack_damage": 1,
+        "_说明_armor_中文": "基础护甲值，0–30；装备护甲另外计算。",
+        "_description_armor_en": "Base armor, 0–30; equipped armor adds separately.",
         "armor": 0,
+        "_说明_armor_toughness_中文": "基础护甲韧性，0–20。",
+        "_description_armor_toughness_en": "Base armor toughness, 0–20.",
         "armor_toughness": 0,
+        "_说明_knockback_resistance_中文": "基础击退抗性，0–1；1表示完全抵抗常规击退。",
+        "_description_knockback_resistance_en": "Base knockback resistance, 0–1; 1 fully resists normal knockback.",
         "knockback_resistance": 0,
+        "_说明_follow_range_中文": "目标探测属性，8–128格；不是雇佣跟随的启停距离。",
+        "_description_follow_range_en": "Target detection attribute, 8–128 blocks; not the hired-follow start/stop distance.",
         "follow_range": 40
       },
       "movement": {
         "_说明_中文": "新速度公式的基础移动速度（默认 0.105，即普通玩家基础移速的 1.05 倍；可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
         "_description_en": "Base movement attribute for the new speed formula (default 0.105, or 1.05x the normal player's base movement speed; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
+        "_说明_base_speed_中文": "基础移速属性，0.01–0.2；默认0.105，保留原版疾跑及状态修正。",
+        "_description_base_speed_en": "Base movement attribute, 0.01–0.2; default 0.105, with vanilla sprint/effect modifiers.",
         "base_speed": 0.105,
+        "_说明_follow_speed_multiplier_中文": "闲置雇佣跟随导航倍率，0.1–3，默认1.35。",
+        "_description_follow_speed_multiplier_en": "Idle hired-follow navigation multiplier, 0.1–3; default 1.35.",
         "follow_speed_multiplier": 1.35,
+        "_说明_follow_catch_up_multiplier_中文": "距离主人超过12格的追赶倍率，0.1–3，默认1.6；不会低于普通跟随倍率。",
+        "_description_follow_catch_up_multiplier_en": "Catch-up multiplier beyond 12 blocks, 0.1–3; default 1.6, never below normal follow.",
         "follow_catch_up_multiplier": 1.6,
         "_说明_跟随_中文": "雇佣士兵无目标跟随的导航倍率：普通1.35，超过12格追赶1.6；超过6格疾跑，2.5格内停止，4格外重新启动。倍率0.1至3，仅影响跟随，不改变战斗/撤退/驻守。",
         "_description_follow_en": "Idle hired-follow navigation speed: 1.35 normally, 1.6 beyond 12 blocks; sprint beyond 6, stop within 2.5, restart beyond 4. Multipliers range 0.1-3; combat, retreat and guard are unchanged."
@@ -285,9 +445,17 @@
       "damage_multipliers": {
         "_说明_中文": "输出倍率与 global.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 对应阶级文件或global.json。",
         "_description_en": "Outgoing multipliers multiply the matching global values in global.json; the default 1 makes no additional change. melee_damage_multiplier covers melee, including trident stabs; bow_damage_multiplier covers arrows from bows and crossbows; trident_damage_multiplier covers thrown tridents only. incoming_damage_multiplier belongs to the defender and scales damage received by this tier, including firearms and environmental damage; it is not an outgoing multiplier. Firearm output is configured in rank files or global.json.",
+        "_说明_melee_damage_multiplier_中文": "本阶近战输出倍率，0–10；乘全局近战倍率。",
+        "_description_melee_damage_multiplier_en": "Rank melee output multiplier, 0–10; multiplies global melee scaling.",
         "melee_damage_multiplier": 1,
+        "_说明_bow_damage_multiplier_中文": "本阶弓/弩输出倍率，0–10；乘全局弓弩倍率。",
+        "_description_bow_damage_multiplier_en": "Rank bow/crossbow output multiplier, 0–10; multiplies global projectile scaling.",
         "bow_damage_multiplier": 1,
+        "_说明_trident_damage_multiplier_中文": "本阶投掷三叉戟输出倍率，0–10；不用于近刺。",
+        "_description_trident_damage_multiplier_en": "Rank thrown-trident output multiplier, 0–10; excludes melee stabs.",
         "trident_damage_multiplier": 1,
+        "_说明_incoming_damage_multiplier_中文": "本阶受到伤害的倍率，0–10；0可免除此层伤害，包括环境和枪伤。",
+        "_description_incoming_damage_multiplier_en": "Incoming damage multiplier for this rank, 0–10; 0 suppresses this layer, including environment/firearms.",
         "incoming_damage_multiplier": 1
       },
       "weapon_spread_degrees": {
@@ -315,33 +483,59 @@
       "combat": {
         "_说明_中文": "近战攻击冷却随机范围，单位为游戏 tick（20 tick=1 秒）。",
         "_description_en": "Random melee attack cooldown range in game ticks (20 ticks = 1 second).",
+        "_说明_melee_cooldown_min_中文": "近战随机冷却下限，1–200 tick；20 tick=1秒。",
+        "_description_melee_cooldown_min_en": "Minimum random melee cooldown, 1–200 ticks; 20 ticks = 1 second.",
         "melee_cooldown_min": 12,
+        "_说明_melee_cooldown_max_中文": "近战随机冷却上限，1–200 tick；上下限倒置时自动交换。",
+        "_description_melee_cooldown_max_en": "Maximum random melee cooldown, 1–200 ticks; reversed bounds are swapped.",
         "melee_cooldown_max": 24
       },
       "spawning": {
         "_说明_中文": "spawn_multiplier 是本阶普通自然生成/区块初始自然生成的准入倍率，不是直接概率；允许 0–100 的整数或小数。相对于本项设为 1 时，0.5 保留 50%、0.1 保留 10%、0.01 保留 1% 的基础准入机会；可直接填写 0.005 等更小的数值，不加引号或百分号。0 禁止本阶普通自然生成。它与 global.json 的 admission_chance 相乘，仍受天数、地形、密度等条件限制；四阶使用相同准入规则，没有流浪者额外随机判定。自然大型战斗由 battle_admission_chance 单独控制，不乘此倍率；援军信号弹和敌对信标不受此项影响。",
         "_description_en": "spawn_multiplier scales admission for this tier's ordinary and chunk-generation natural spawns; it is not a direct probability. Integers and decimals from 0 to 100 are accepted. Compared with setting this value to 1, 0.5 retains 50%, 0.1 retains 10%, and 0.01 retains 1% of base admission chances. Smaller values such as 0.005 can be entered directly without quotes or a percent sign. 0 disables this tier's ordinary natural spawns. It multiplies admission_chance in global.json and remains subject to day gates, terrain, density and other checks; all four ranks share this admission rule without an extra roamer roll. Automatic large battles use battle_admission_chance separately, not this multiplier. Reinforcement flares and hostile beacons are unaffected.",
-        "spawn_multiplier": 0.2
+        "spawn_multiplier": 0.2,
+        "_说明_first_spawn_day_中文": "本阶最早解锁的个人在线日，1–1000000；仍须超过全局safe_days。24000在线tick=1天；解锁不保证当日生成。",
+        "_description_first_spawn_day_en": "First eligible personal online day, 1–1000000; global safe_days also applies. 24000 online ticks = 1 day. Unlocking does not guarantee spawning."
       },
       "ammunition": {
         "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；加载旧存档、雇佣或补给不会重新配发。",
         "_description_en": "Initial reserves for actual owned bows/crossbows or firearms, chosen inclusively between min and max. Zero disables initial supplies; inverted bounds are normalized. Integers only, arrows capped at 1920 and magazines at 720; invalid values use defaults. Full inventories retain equipment protection and overflow drops. Loading saves, hiring or resupplying never grants another initial reserve.",
         "arrows": {
+          "_说明_min_中文": "出生数量下限，0–1920整数；0允许不配发。",
+          "_description_min_en": "Minimum initial count, integer 0–1920; zero allows no supply.",
           "min": 128,
-          "max": 192
+          "_说明_max_中文": "出生数量上限，0–1920整数；包含两端，倒置范围自动交换。",
+          "_description_max_en": "Maximum initial count, integer 0–1920; inclusive, with reversed bounds swapped.",
+          "max": 192,
+          "_说明_中文": "通用箭矢初始储备，只为对应远程职业生成；数量单位是个，不是组。",
+          "_description_en": "Initial arrows for matching ranged loadouts; counts are individual items, not stacks."
         },
         "magazines": {
+          "_说明_min_中文": "出生数量下限，0–720整数；0允许不配发。",
+          "_description_min_en": "Minimum initial count, integer 0–720; zero allows no supply.",
           "min": 32,
-          "max": 48
+          "_说明_max_中文": "出生数量上限，0–720整数；包含两端，倒置范围自动交换。",
+          "_description_max_en": "Maximum initial count, integer 0–720; inclusive, with reversed bounds swapped.",
+          "max": 48,
+          "_说明_中文": "通用弹匣初始储备，只为对应远程职业生成；数量单位是个，不是组。",
+          "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks."
         }
       },
       "potions": {
         "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",
         "_description_en": "One-time spawn provisioning, gated by ai.item_recovery_enabled. Counts are inclusive bottle totals (0-30), not stack size. Weighted pools are independent; empty pools never spawn fallback potions and unavailable IDs are skipped. Restart to apply; existing entities are not replenished.",
+        "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
+        "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
         "recovery": {
+          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
+          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
           "count_min": 4,
+          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
+          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
           "count_max": 7,
+          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
+          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:potion",
@@ -353,11 +547,19 @@
               "potion": "minecraft:long_regeneration",
               "weight": 1
             }
-          ]
+          ],
+          "_说明_中文": "恢复药水储备。",
+          "_description_en": "Recovery potion reserves."
         },
         "tactical": {
+          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
+          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
           "count_min": 3,
+          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
+          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
           "count_max": 5,
+          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
+          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -374,36 +576,64 @@
               "potion": "minecraft:long_strength",
               "weight": 2
             }
-          ]
+          ],
+          "_说明_中文": "战术药水储备；额外迅捷药水计入此类数量。",
+          "_description_en": "Tactical potion reserves; bonus Speed potions count toward this total."
         },
         "bonus": {
           "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
           "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
+          "_说明_item_中文": "额外药水的瓶形物品ID；例如minecraft:potion。",
+          "_description_item_en": "Bottle item ID for the bonus potion, e.g. minecraft:potion.",
           "item": "minecraft:potion",
+          "_说明_potion_中文": "额外药水注册ID；例如minecraft:swiftness。",
+          "_description_potion_en": "Registered bonus potion ID, e.g. minecraft:swiftness.",
           "potion": "minecraft:long_swiftness",
+          "_说明_chance_中文": "用额外药水替代一个战术瓶的概率，0–1；不会增加战术瓶总量。",
+          "_description_chance_en": "Chance to replace one tactical bottle, 0–1; does not increase the tactical total.",
           "chance": 0.3
         }
       }
     },
     "tier3": {
-      "_说明_中文": "三阶人类参数。",
-      "_description_en": "Tier 3 settings.",
+      "_说明_中文": "三阶人类专用配置：按属性→移动→战斗→生成与装备→弹药与药水→枪械→雇佣阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
+      "_description_en": "tier3 settings: attributes, movement, combat, spawning/equipment, ammunition/potions, firearms, hiring. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
       "attributes": {
         "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
         "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
+        "_说明_health_min_中文": "随机初始生命下限，范围1–1024点；2点=1颗心。",
+        "_description_health_min_en": "Minimum initial health, 1–1024 points; 2 points = 1 heart.",
         "health_min": 80,
+        "_说明_health_max_中文": "随机初始生命上限，范围1–1024点；上下限倒置时自动交换。",
+        "_description_health_max_en": "Maximum initial health, 1–1024 points; reversed bounds are swapped.",
         "health_max": 100,
+        "_说明_attack_damage_中文": "基础近战攻击属性，0–2048；装备、附魔和伤害倍率仍会继续计算。",
+        "_description_attack_damage_en": "Base melee attack attribute, 0–2048; equipment, enchantments and multipliers still apply.",
         "attack_damage": 1,
+        "_说明_armor_中文": "基础护甲值，0–30；装备护甲另外计算。",
+        "_description_armor_en": "Base armor, 0–30; equipped armor adds separately.",
         "armor": 0,
+        "_说明_armor_toughness_中文": "基础护甲韧性，0–20。",
+        "_description_armor_toughness_en": "Base armor toughness, 0–20.",
         "armor_toughness": 0,
+        "_说明_knockback_resistance_中文": "基础击退抗性，0–1；1表示完全抵抗常规击退。",
+        "_description_knockback_resistance_en": "Base knockback resistance, 0–1; 1 fully resists normal knockback.",
         "knockback_resistance": 0.15,
+        "_说明_follow_range_中文": "目标探测属性，8–128格；不是雇佣跟随的启停距离。",
+        "_description_follow_range_en": "Target detection attribute, 8–128 blocks; not the hired-follow start/stop distance.",
         "follow_range": 48
       },
       "movement": {
         "_说明_中文": "新速度公式的基础移动速度（默认 0.105，即普通玩家基础移速的 1.05 倍；可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
         "_description_en": "Base movement attribute for the new speed formula (default 0.105, or 1.05x the normal player's base movement speed; range 0.01–0.2). Sprint and effects such as Speed use vanilla attribute modifiers.",
+        "_说明_base_speed_中文": "基础移速属性，0.01–0.2；默认0.105，保留原版疾跑及状态修正。",
+        "_description_base_speed_en": "Base movement attribute, 0.01–0.2; default 0.105, with vanilla sprint/effect modifiers.",
         "base_speed": 0.105,
+        "_说明_follow_speed_multiplier_中文": "闲置雇佣跟随导航倍率，0.1–3，默认1.35。",
+        "_description_follow_speed_multiplier_en": "Idle hired-follow navigation multiplier, 0.1–3; default 1.35.",
         "follow_speed_multiplier": 1.35,
+        "_说明_follow_catch_up_multiplier_中文": "距离主人超过12格的追赶倍率，0.1–3，默认1.6；不会低于普通跟随倍率。",
+        "_description_follow_catch_up_multiplier_en": "Catch-up multiplier beyond 12 blocks, 0.1–3; default 1.6, never below normal follow.",
         "follow_catch_up_multiplier": 1.6,
         "_说明_跟随_中文": "雇佣士兵无目标跟随的导航倍率：普通1.35，超过12格追赶1.6；超过6格疾跑，2.5格内停止，4格外重新启动。倍率0.1至3，仅影响跟随，不改变战斗/撤退/驻守。",
         "_description_follow_en": "Idle hired-follow navigation speed: 1.35 normally, 1.6 beyond 12 blocks; sprint beyond 6, stop within 2.5, restart beyond 4. Multipliers range 0.1-3; combat, retreat and guard are unchanged."
@@ -411,9 +641,17 @@
       "damage_multipliers": {
         "_说明_中文": "输出倍率与 global.json 的对应全局倍率叠乘，默认 1 不额外调整。melee_damage_multiplier 用于近战（含三叉戟近刺）；bow_damage_multiplier 用于弓和弩的箭矢；trident_damage_multiplier 仅用于投掷三叉戟。incoming_damage_multiplier 属于受伤者：控制本阶人类受到的伤害（含枪伤和环境伤害），不是攻击输出倍率。枪械输出倍率另见 对应阶级文件或global.json。",
         "_description_en": "Outgoing multipliers multiply the matching global values in global.json; the default 1 makes no additional change. melee_damage_multiplier covers melee, including trident stabs; bow_damage_multiplier covers arrows from bows and crossbows; trident_damage_multiplier covers thrown tridents only. incoming_damage_multiplier belongs to the defender and scales damage received by this tier, including firearms and environmental damage; it is not an outgoing multiplier. Firearm output is configured in rank files or global.json.",
+        "_说明_melee_damage_multiplier_中文": "本阶近战输出倍率，0–10；乘全局近战倍率。",
+        "_description_melee_damage_multiplier_en": "Rank melee output multiplier, 0–10; multiplies global melee scaling.",
         "melee_damage_multiplier": 1,
+        "_说明_bow_damage_multiplier_中文": "本阶弓/弩输出倍率，0–10；乘全局弓弩倍率。",
+        "_description_bow_damage_multiplier_en": "Rank bow/crossbow output multiplier, 0–10; multiplies global projectile scaling.",
         "bow_damage_multiplier": 1,
+        "_说明_trident_damage_multiplier_中文": "本阶投掷三叉戟输出倍率，0–10；不用于近刺。",
+        "_description_trident_damage_multiplier_en": "Rank thrown-trident output multiplier, 0–10; excludes melee stabs.",
         "trident_damage_multiplier": 1,
+        "_说明_incoming_damage_multiplier_中文": "本阶受到伤害的倍率，0–10；0可免除此层伤害，包括环境和枪伤。",
+        "_description_incoming_damage_multiplier_en": "Incoming damage multiplier for this rank, 0–10; 0 suppresses this layer, including environment/firearms.",
         "incoming_damage_multiplier": 1
       },
       "weapon_spread_degrees": {
@@ -441,33 +679,59 @@
       "combat": {
         "_说明_中文": "近战攻击冷却随机范围，单位为游戏 tick（20 tick=1 秒）。",
         "_description_en": "Random melee attack cooldown range in game ticks (20 ticks = 1 second).",
+        "_说明_melee_cooldown_min_中文": "近战随机冷却下限，1–200 tick；20 tick=1秒。",
+        "_description_melee_cooldown_min_en": "Minimum random melee cooldown, 1–200 ticks; 20 ticks = 1 second.",
         "melee_cooldown_min": 10,
+        "_说明_melee_cooldown_max_中文": "近战随机冷却上限，1–200 tick；上下限倒置时自动交换。",
+        "_description_melee_cooldown_max_en": "Maximum random melee cooldown, 1–200 ticks; reversed bounds are swapped.",
         "melee_cooldown_max": 20
       },
       "spawning": {
         "_说明_中文": "spawn_multiplier 是本阶普通自然生成/区块初始自然生成的准入倍率，不是直接概率；允许 0–100 的整数或小数。相对于本项设为 1 时，0.5 保留 50%、0.1 保留 10%、0.01 保留 1% 的基础准入机会；可直接填写 0.005 等更小的数值，不加引号或百分号。0 禁止本阶普通自然生成。它与 global.json 的 admission_chance 相乘，仍受天数、地形、密度等条件限制；四阶使用相同准入规则，没有流浪者额外随机判定。自然大型战斗由 battle_admission_chance 单独控制，不乘此倍率；援军信号弹和敌对信标不受此项影响。",
         "_description_en": "spawn_multiplier scales admission for this tier's ordinary and chunk-generation natural spawns; it is not a direct probability. Integers and decimals from 0 to 100 are accepted. Compared with setting this value to 1, 0.5 retains 50%, 0.1 retains 10%, and 0.01 retains 1% of base admission chances. Smaller values such as 0.005 can be entered directly without quotes or a percent sign. 0 disables this tier's ordinary natural spawns. It multiplies admission_chance in global.json and remains subject to day gates, terrain, density and other checks; all four ranks share this admission rule without an extra roamer roll. Automatic large battles use battle_admission_chance separately, not this multiplier. Reinforcement flares and hostile beacons are unaffected.",
-        "spawn_multiplier": 0.04
+        "spawn_multiplier": 0.04,
+        "_说明_first_spawn_day_中文": "本阶最早解锁的个人在线日，1–1000000；仍须超过全局safe_days。24000在线tick=1天；解锁不保证当日生成。",
+        "_description_first_spawn_day_en": "First eligible personal online day, 1–1000000; global safe_days also applies. 24000 online ticks = 1 day. Unlocking does not guarantee spawning."
       },
       "ammunition": {
         "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；加载旧存档、雇佣或补给不会重新配发。",
         "_description_en": "Initial reserves for actual owned bows/crossbows or firearms, chosen inclusively between min and max. Zero disables initial supplies; inverted bounds are normalized. Integers only, arrows capped at 1920 and magazines at 720; invalid values use defaults. Full inventories retain equipment protection and overflow drops. Loading saves, hiring or resupplying never grants another initial reserve.",
         "arrows": {
+          "_说明_min_中文": "出生数量下限，0–1920整数；0允许不配发。",
+          "_description_min_en": "Minimum initial count, integer 0–1920; zero allows no supply.",
           "min": 192,
-          "max": 192
+          "_说明_max_中文": "出生数量上限，0–1920整数；包含两端，倒置范围自动交换。",
+          "_description_max_en": "Maximum initial count, integer 0–1920; inclusive, with reversed bounds swapped.",
+          "max": 192,
+          "_说明_中文": "通用箭矢初始储备，只为对应远程职业生成；数量单位是个，不是组。",
+          "_description_en": "Initial arrows for matching ranged loadouts; counts are individual items, not stacks."
         },
         "magazines": {
+          "_说明_min_中文": "出生数量下限，0–720整数；0允许不配发。",
+          "_description_min_en": "Minimum initial count, integer 0–720; zero allows no supply.",
           "min": 48,
-          "max": 72
+          "_说明_max_中文": "出生数量上限，0–720整数；包含两端，倒置范围自动交换。",
+          "_description_max_en": "Maximum initial count, integer 0–720; inclusive, with reversed bounds swapped.",
+          "max": 72,
+          "_说明_中文": "通用弹匣初始储备，只为对应远程职业生成；数量单位是个，不是组。",
+          "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks."
         }
       },
       "potions": {
         "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",
         "_description_en": "One-time spawn provisioning, gated by ai.item_recovery_enabled. Counts are inclusive bottle totals (0-30), not stack size. Weighted pools are independent; empty pools never spawn fallback potions and unavailable IDs are skipped. Restart to apply; existing entities are not replenished.",
+        "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
+        "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
         "recovery": {
+          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
+          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
           "count_min": 6,
+          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
+          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
           "count_max": 8,
+          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
+          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:potion",
@@ -479,11 +743,19 @@
               "potion": "minecraft:long_regeneration",
               "weight": 1
             }
-          ]
+          ],
+          "_说明_中文": "恢复药水储备。",
+          "_description_en": "Recovery potion reserves."
         },
         "tactical": {
+          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
+          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
           "count_min": 5,
+          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
+          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
           "count_max": 7,
+          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
+          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -500,13 +772,21 @@
               "potion": "minecraft:long_strength",
               "weight": 2
             }
-          ]
+          ],
+          "_说明_中文": "战术药水储备；额外迅捷药水计入此类数量。",
+          "_description_en": "Tactical potion reserves; bonus Speed potions count toward this total."
         },
         "bonus": {
           "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
           "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
+          "_说明_item_中文": "额外药水的瓶形物品ID；例如minecraft:potion。",
+          "_description_item_en": "Bottle item ID for the bonus potion, e.g. minecraft:potion.",
           "item": "minecraft:potion",
+          "_说明_potion_中文": "额外药水注册ID；例如minecraft:swiftness。",
+          "_description_potion_en": "Registered bonus potion ID, e.g. minecraft:swiftness.",
           "potion": "minecraft:long_swiftness",
+          "_说明_chance_中文": "用额外药水替代一个战术瓶的概率，0–1；不会增加战术瓶总量。",
+          "_description_chance_en": "Chance to replace one tactical bottle, 0–1; does not increase the tactical total.",
           "chance": 0.4
         }
       }
@@ -546,12 +826,38 @@
     "_说明_附魔_中文": "rules.enchant_chance 为基础随机附魔概率；damage_percent_min/max 为生成时已损耗耐久比例（0=全新，0.85=最多损耗85%）；elite_enchantments 启用原三阶强化附魔预设，默认仅三阶 true。物品池条目可额外填写 enchantments 对象，例如 {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}，等级为 1-255 的整数；只接受存在且适用于该物品的附魔，明确填写的等级在随机主手附魔后应用。automatic_shield_enchantments 控制额外按阶随机盾牌附魔，默认 true。若要仅使用自己指定的附魔，设 enchant_chance=0、elite_enchantments=false、automatic_shield_enchantments=false，并关闭自动斯巴达装备（其生成仍带自身附魔）。成长启用时最后仍会削弱附魔。",
     "_description_enchantments_en": "rules.enchant_chance controls base random enchanting; damage_percent_min/max are the fraction of durability already consumed at spawn (0=fresh, 0.85=up to 85% worn). elite_enchantments enables the original elite enchantment preset, default true only for tier3. Item rows may include enchantments such as {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}; integer levels 1-255, registered/applicable enchantments only. Explicit levels are applied after random main-hand enchanting. automatic_shield_enchantments controls the additional rank-specific shield enchantment pass, default true. For explicit-only enchantments use enchant_chance=0, elite_enchantments=false, automatic_shield_enchantments=false and disable automatic Spartan gear (it brings its own enchantments). Growth, if enabled, can still reduce enchantments afterward.",
     "roamer": {
+      "_说明_中文": "本阶出生装备池。正权重按相对值抽取；不可用主手池使用安全回退，空备用池不补额外武器，armor_sets=[]不配护甲。枪械生成见本阶tacz。",
+      "_description_en": "Rank spawn loadouts. Positive weights are relative. Unavailable primary pools use safe fallbacks; empty reserve pools grant no extras; armor_sets=[] grants no armor. Firearms are configured in rank tacz.",
+      "_说明_格式_中文": "数组里的每一项用花括号，物品用完整 item ID 字符串，例如 {\"item\":\"minecraft:iron_sword\",\"weight\":3} 与 {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}；两项之间用逗号。所有 ID/键使用双引号，数量、权重和概率不加引号。weight 为 0 至 1000000 的整数，0 禁用，正数按可用条目的相对权重分配，不必合计 100。count 可选，默认 1，范围 1-64 并限制到物品最大堆叠数。requires_mod 可选。未安装的模组物品会跳过；非法 ID 条目启动时告警并跳过。说明文本中的 \\\" 是 JSON 字符串转义，实际 item 字段只写 \"minecraft:iron_sword\"，不要把反斜杠复制到 ID 里。",
+      "_description_format_en": "Each array row is an object, e.g. {\"item\":\"minecraft:iron_sword\",\"weight\":3} and {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}, separated by commas. Quote keys/IDs, not numbers. weight is an integer 0-1000000; 0 disables a row. Positive weights are relative among available rows and need not sum to 100. Optional count defaults to 1, accepts 1-64 and is capped at the item's maximum stack size. Optional requires_mod gates a row. Missing mod items are skipped; malformed ID rows are warned and skipped at startup. Backslash-escaped quotes inside these description strings are JSON syntax: the actual item field is \"minecraft:iron_sword\", without backslashes in the ID.",
+      "_说明_池_中文": "mainhand=普通主手池；ranged_mainhand=支持的非枪械远程池；inventory=备用近战池，供远程备用与额外武器名额抽取；offhand.chance/entries=副手概率和池；bonus_mainhand.chance/entries=额外武器名额选择奖励池的概率和池，不替换主手。武器每条生成 1 把，数量统一受本阶上限控制。armor_sets 按权重选整套，head/chest/legs/feet 为四部位 ID，省略或 null 表示不穿，空数组表示不生成护甲。任一填写部位不存在或不匹配则跳过整套。主手/远程池全部失效仍使用安全武器，但空备用池不制造额外武器。",
+      "_description_pools_en": "mainhand is the ordinary weapon pool; ranged_mainhand accepts supported non-firearm ranged weapons; inventory supplies melee backups and extra weapon slots. offhand.chance/entries control offhand rolls. bonus_mainhand.chance/entries select a bonus pool for an extra slot, never replace the main hand. Each weapon entry generates one weapon within the rank cap. armor_sets chooses a whole weighted set; head/chest/legs/feet are item IDs, omitted/null means unequipped and [] means no armor. Missing or wrong-slot items reject the whole set. Unavailable primary/ranged pools use a safe weapon, but an empty reserve pool does not manufacture extras.",
+      "_说明_远程与盾牌_中文": "ranged_chance 为 0-1 的非枪械远程概率，默认 0.2/0.4/0.7/1；枪械判定成功时保留枪械和近战，不再额外补弓弩。ranged_in_backpack=true 将远程放背包，数量计入本阶上限。guaranteed_shields_min/max 为 0-3 的总盾牌数量目标，含手与背包；缺少时只从 shield_pool 抽取，空池或无有效条目就不补充，不回退到原版盾牌。禁止所有盾牌时同时清空 shield_pool 与 offhand.entries 中的盾牌条目。",
+      "_description_ranged_shields_en": "ranged_chance is a 0-1 non-firearm ranged chance, defaulting to 0.2/0.4/0.7/1. A successful gun roll retains a gun and melee weapon instead of adding another bow/crossbow. ranged_in_backpack stores the ranged item; it counts toward the rank cap. guaranteed_shields_min/max target 0-3 total equipped/stored shields. Shortages only draw from shield_pool; empty/unavailable pools do not create a vanilla fallback. To disable all shields, clear shield_pool and remove shield rows from offhand.entries.",
+      "_说明_优先级与联动_中文": "斯巴达武器/盾牌不再在生成后替换装备。automatic_spartan_weapons/shields 仅控制启动时首次导入：识别已安装模组的可用条目后写入对应配置池，以 weight 抽取；_imported_spartanweaponry/_imported_spartanshields 为导入记录，保留记录即可让删除的条目不再补回。关闭导入开关不删除已经写入的条目，要禁止生成某装备请从池中删除或把 weight 设为 0。护甲只读取 armor_sets；requires_mod 可省略，物品不存在仍会跳过。删除数组内条目或保留空数组可以完全自定义，不要删除整个配置键。TaCZ 是额外携带机会，保留普通近战装备，枪械型号与概率读取 对应阶级文件或global.json；不要把 tacz:modern_kinetic_gun 当作型号写入物品池。自然装备成长最后处理，固定品质请关闭 equipment_growth.enabled。",
+      "_description_priority_en": "Spartan gear never replaces generated equipment. automatic_spartan_weapons/shields only enable first-time startup import of registered compatible items into weighted pools. Keep _imported_spartanweaponry/_imported_spartanshields receipts so deleted rows stay deleted. Disabling import does not remove existing rows: delete a row or set its weight to 0 to stop its generation. Armor reads armor_sets only. requires_mod is optional; missing items are still skipped. Replace array contents or keep empty arrays for customization; do not delete entire keys. TaCZ is an extra carried firearm chance while keeping melee gear; gun IDs/chances remain in rank files or global.json, not the generic tacz:modern_kinetic_gun item. Natural growth runs last; disable equipment_growth.enabled for fixed quality.",
+      "_说明_武器数量_中文": "生成携带上限包含主手、副手和背包中的近战、弓弩、三叉戟、枪械：流浪者 2 把，其他三阶 3 把。weapon_count.second_weapon_chance 默认 0.45，第三把在第二把判定成功后以 third_weapon_chance 默认 0.20 再判定；近战默认数量概率为 1 把 55%、2 把 36%、3 把 9%，流浪者为 1 把 55%、2 把 45%。概率可配置 0-0.49，确保多把更少见。远程单位的近战备用占一个名额，枪手至少保留枪械与近战两把。bonus_mainhand 仅参与额外名额的抽取，不再替换主手。数量只在生成时限制，不限制以后拾取或主人配装。",
+      "_description_weapon_count_en": "Spawn-only caps count weapons in both hands and the backpack: Roamers 2, other ranks 3, including melee, bows/crossbows, tridents and guns. second_weapon_chance defaults to 0.45; after success, third_weapon_chance defaults to 0.20. Ordinary melee counts are 55%/36%/9% for 1/2/3 weapons, or 55%/45% for Roamers. Chances accept 0-0.49 to keep larger counts rarer. Ranged melee backups count toward the cap; gunners retain at least a gun and melee weapon. bonus_mainhand participates in extra slots, never replaces the main hand. Later looting/owner equipment is not capped.",
+      "_说明_附魔_中文": "rules.enchant_chance 为基础随机附魔概率；damage_percent_min/max 为生成时已损耗耐久比例（0=全新，0.85=最多损耗85%）；elite_enchantments 启用原三阶强化附魔预设，默认仅三阶 true。物品池条目可额外填写 enchantments 对象，例如 {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}，等级为 1-255 的整数；只接受存在且适用于该物品的附魔，明确填写的等级在随机主手附魔后应用。automatic_shield_enchantments 控制额外按阶随机盾牌附魔，默认 true。若要仅使用自己指定的附魔，设 enchant_chance=0、elite_enchantments=false、automatic_shield_enchantments=false，并关闭自动斯巴达装备（其生成仍带自身附魔）。成长启用时最后仍会削弱附魔。",
+      "_description_enchantments_en": "rules.enchant_chance controls base random enchanting; damage_percent_min/max are the fraction of durability already consumed at spawn (0=fresh, 0.85=up to 85% worn). elite_enchantments enables the original elite enchantment preset, default true only for tier3. Item rows may include enchantments such as {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}; integer levels 1-255, registered/applicable enchantments only. Explicit levels are applied after random main-hand enchanting. automatic_shield_enchantments controls the additional rank-specific shield enchantment pass, default true. For explicit-only enchantments use enchant_chance=0, elite_enchantments=false, automatic_shield_enchantments=false and disable automatic Spartan gear (it brings its own enchantments). Growth, if enabled, can still reduce enchantments afterward.",
+      "_说明_rules_中文": "装备附魔与耐久的共用生成规则。",
+      "_description_rules_en": "Shared enchantment/durability generation rules.",
       "rules": {
+        "_说明_enchant_chance_中文": "装备获得自动附魔的概率，0–1；具体条目附魔仍按装备池规则。",
+        "_description_enchant_chance_en": "Chance of automatic equipment enchantment, 0–1; entry enchantments follow pool rules.",
         "enchant_chance": 1,
+        "_说明_damage_percent_min_中文": "初始耐久损耗比例下限，0–1；0表示未损耗。",
+        "_description_damage_percent_min_en": "Minimum initial durability damage ratio, 0–1; 0 is undamaged.",
         "damage_percent_min": 0,
+        "_说明_damage_percent_max_中文": "初始耐久损耗比例上限，0–1。",
+        "_description_damage_percent_max_en": "Maximum initial durability damage ratio, 0–1.",
         "damage_percent_max": 0.85,
+        "_说明_elite_enchantments_中文": "是否允许本阶装备使用精英附魔规则。",
+        "_description_elite_enchantments_en": "Allow elite enchantment rules for this rank.",
         "elite_enchantments": false
       },
+      "_说明_mainhand_中文": "近战主手候选池，按正权重抽取一个。",
+      "_description_mainhand_en": "Melee main-hand pool; select one using positive relative weights.",
       "mainhand": [
         {
           "item": "minecraft:iron_sword",
@@ -570,6 +876,8 @@
           "weight": 1
         }
       ],
+      "_说明_ranged_mainhand_中文": "弓弩主手候选池；枪械生成不在此列表设置。",
+      "_description_ranged_mainhand_en": "Bow/crossbow main-hand pool; firearm generation is configured separately.",
       "ranged_mainhand": [
         {
           "item": "minecraft:crossbow",
@@ -580,6 +888,8 @@
           "weight": 1
         }
       ],
+      "_说明_offhand_中文": "副手生成概率chance及候选entries；远程职业盾牌遵循兼容规则。",
+      "_description_offhand_en": "Off-hand chance and entries; ranged shields follow compatibility rules.",
       "offhand": {
         "chance": 0.4,
         "entries": [
@@ -593,6 +903,8 @@
           }
         ]
       },
+      "_说明_inventory_中文": "背包备用武器候选池；现有数量规则保持。",
+      "_description_inventory_en": "Backpack backup-weapon pool; existing count rules apply.",
       "inventory": [
         {
           "item": "minecraft:iron_sword",
@@ -603,6 +915,8 @@
           "weight": 2
         }
       ],
+      "_说明_bonus_mainhand_中文": "额外武器槽候选：chance为0–1概率，entries为权重池；不替换已生成主手。",
+      "_description_bonus_mainhand_en": "Bonus weapon-slot selection: chance 0–1 and weighted entries; does not replace the generated main hand.",
       "bonus_mainhand": {
         "chance": 0.05,
         "entries": [
@@ -614,6 +928,8 @@
       },
       "_说明_护甲_中文": "流浪者默认护甲权重：皮革 6、锁链 3、铁 1，即 60%/30%/10%，不默认生成钻石或高档联动护甲。新版本仅自动迁移完全未修改的旧默认护甲池，保留自定义内容；只影响之后生成的单位，不剥除现有装备或限制战利品拾取。",
       "_description_armor_en": "Default Roamer armor weights: leather 6, chainmail 3, iron 1 (60%/30%/10%); no default diamond or high-end integration armor. Only the exact unmodified former default pool is migrated; custom pools remain intact. Applies to future spawns, without stripping existing gear or restricting loot pickup.",
+      "_说明_armor_sets_中文": "整套护甲池：weight为正权重，head/chest/legs/feet为各部位物品ID；requires_mod可限定前置。",
+      "_description_armor_sets_en": "Armor-set pool: positive weight, head/chest/legs/feet item IDs; optional requires_mod dependency.",
       "armor_sets": [
         {
           "weight": 1,
@@ -654,15 +970,59 @@
           "item": "minecraft:shield",
           "weight": 1
         }
-      ]
+      ],
+      "_说明_ranged_chance_中文": "非枪械远程武器生成概率，0–1；枪械已抽中时不额外补弓弩。",
+      "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
+      "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
+      "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
+      "_说明_automatic_spartan_weapons_中文": "首次配置生成/导入时，是否把可用斯巴达武器登记到池中；不是持续覆盖自定义池。",
+      "_description_automatic_spartan_weapons_en": "Import available Spartan weapons when initially generating/importing configuration; does not continually override custom pools.",
+      "_说明_automatic_spartan_shields_中文": "首次配置生成/导入时，是否把可用斯巴达盾牌登记到池中。",
+      "_description_automatic_spartan_shields_en": "Import available Spartan shields when initially generating/importing configuration.",
+      "_说明_allow_tacz_firearms_中文": "允许本阶自动配枪；关闭后仍可由玩家手动配枪，不关闭全局TaCZ兼容。",
+      "_description_allow_tacz_firearms_en": "Allow automatic firearm provisioning for this rank; players can still supply guns, and global TaCZ integration remains.",
+      "_说明_automatic_shield_enchantments_中文": "允许出生盾牌自动附魔；条目中指定的附魔仍按装备规则。",
+      "_description_automatic_shield_enchantments_en": "Allow automatic enchantments on spawn shields; explicit entry enchantments follow loadout rules.",
+      "_说明_guaranteed_shields_min_中文": "生成时盾牌总数目标下限，0–3，含手持与背包；仅从shield_pool补足。",
+      "_description_guaranteed_shields_min_en": "Minimum spawn shield-count target, 0–3, including hands/backpack; supplied only from shield_pool.",
+      "_说明_guaranteed_shields_max_中文": "盾牌总数目标上限，0–3；空或无效shield_pool不补原版回退盾牌。",
+      "_description_guaranteed_shields_max_en": "Maximum shield-count target, 0–3; empty/invalid shield_pool does not produce fallback vanilla shields.",
+      "_说明_shield_pool_中文": "盾牌候选权重池；须使用合法盾牌ID，空列表不保证盾牌。",
+      "_description_shield_pool_en": "Weighted shield pool; use valid shield IDs. An empty list guarantees no additional shields."
     },
     "tier1": {
+      "_说明_中文": "本阶出生装备池。正权重按相对值抽取；不可用主手池使用安全回退，空备用池不补额外武器，armor_sets=[]不配护甲。枪械生成见本阶tacz。",
+      "_description_en": "Rank spawn loadouts. Positive weights are relative. Unavailable primary pools use safe fallbacks; empty reserve pools grant no extras; armor_sets=[] grants no armor. Firearms are configured in rank tacz.",
+      "_说明_格式_中文": "数组里的每一项用花括号，物品用完整 item ID 字符串，例如 {\"item\":\"minecraft:iron_sword\",\"weight\":3} 与 {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}；两项之间用逗号。所有 ID/键使用双引号，数量、权重和概率不加引号。weight 为 0 至 1000000 的整数，0 禁用，正数按可用条目的相对权重分配，不必合计 100。count 可选，默认 1，范围 1-64 并限制到物品最大堆叠数。requires_mod 可选。未安装的模组物品会跳过；非法 ID 条目启动时告警并跳过。说明文本中的 \\\" 是 JSON 字符串转义，实际 item 字段只写 \"minecraft:iron_sword\"，不要把反斜杠复制到 ID 里。",
+      "_description_format_en": "Each array row is an object, e.g. {\"item\":\"minecraft:iron_sword\",\"weight\":3} and {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}, separated by commas. Quote keys/IDs, not numbers. weight is an integer 0-1000000; 0 disables a row. Positive weights are relative among available rows and need not sum to 100. Optional count defaults to 1, accepts 1-64 and is capped at the item's maximum stack size. Optional requires_mod gates a row. Missing mod items are skipped; malformed ID rows are warned and skipped at startup. Backslash-escaped quotes inside these description strings are JSON syntax: the actual item field is \"minecraft:iron_sword\", without backslashes in the ID.",
+      "_说明_池_中文": "mainhand=普通主手池；ranged_mainhand=支持的非枪械远程池；inventory=备用近战池，供远程备用与额外武器名额抽取；offhand.chance/entries=副手概率和池；bonus_mainhand.chance/entries=额外武器名额选择奖励池的概率和池，不替换主手。武器每条生成 1 把，数量统一受本阶上限控制。armor_sets 按权重选整套，head/chest/legs/feet 为四部位 ID，省略或 null 表示不穿，空数组表示不生成护甲。任一填写部位不存在或不匹配则跳过整套。主手/远程池全部失效仍使用安全武器，但空备用池不制造额外武器。",
+      "_description_pools_en": "mainhand is the ordinary weapon pool; ranged_mainhand accepts supported non-firearm ranged weapons; inventory supplies melee backups and extra weapon slots. offhand.chance/entries control offhand rolls. bonus_mainhand.chance/entries select a bonus pool for an extra slot, never replace the main hand. Each weapon entry generates one weapon within the rank cap. armor_sets chooses a whole weighted set; head/chest/legs/feet are item IDs, omitted/null means unequipped and [] means no armor. Missing or wrong-slot items reject the whole set. Unavailable primary/ranged pools use a safe weapon, but an empty reserve pool does not manufacture extras.",
+      "_说明_远程与盾牌_中文": "ranged_chance 为 0-1 的非枪械远程概率，默认 0.2/0.4/0.7/1；枪械判定成功时保留枪械和近战，不再额外补弓弩。ranged_in_backpack=true 将远程放背包，数量计入本阶上限。guaranteed_shields_min/max 为 0-3 的总盾牌数量目标，含手与背包；缺少时只从 shield_pool 抽取，空池或无有效条目就不补充，不回退到原版盾牌。禁止所有盾牌时同时清空 shield_pool 与 offhand.entries 中的盾牌条目。",
+      "_description_ranged_shields_en": "ranged_chance is a 0-1 non-firearm ranged chance, defaulting to 0.2/0.4/0.7/1. A successful gun roll retains a gun and melee weapon instead of adding another bow/crossbow. ranged_in_backpack stores the ranged item; it counts toward the rank cap. guaranteed_shields_min/max target 0-3 total equipped/stored shields. Shortages only draw from shield_pool; empty/unavailable pools do not create a vanilla fallback. To disable all shields, clear shield_pool and remove shield rows from offhand.entries.",
+      "_说明_优先级与联动_中文": "斯巴达武器/盾牌不再在生成后替换装备。automatic_spartan_weapons/shields 仅控制启动时首次导入：识别已安装模组的可用条目后写入对应配置池，以 weight 抽取；_imported_spartanweaponry/_imported_spartanshields 为导入记录，保留记录即可让删除的条目不再补回。关闭导入开关不删除已经写入的条目，要禁止生成某装备请从池中删除或把 weight 设为 0。护甲只读取 armor_sets；requires_mod 可省略，物品不存在仍会跳过。删除数组内条目或保留空数组可以完全自定义，不要删除整个配置键。TaCZ 是额外携带机会，保留普通近战装备，枪械型号与概率读取 对应阶级文件或global.json；不要把 tacz:modern_kinetic_gun 当作型号写入物品池。自然装备成长最后处理，固定品质请关闭 equipment_growth.enabled。",
+      "_description_priority_en": "Spartan gear never replaces generated equipment. automatic_spartan_weapons/shields only enable first-time startup import of registered compatible items into weighted pools. Keep _imported_spartanweaponry/_imported_spartanshields receipts so deleted rows stay deleted. Disabling import does not remove existing rows: delete a row or set its weight to 0 to stop its generation. Armor reads armor_sets only. requires_mod is optional; missing items are still skipped. Replace array contents or keep empty arrays for customization; do not delete entire keys. TaCZ is an extra carried firearm chance while keeping melee gear; gun IDs/chances remain in rank files or global.json, not the generic tacz:modern_kinetic_gun item. Natural growth runs last; disable equipment_growth.enabled for fixed quality.",
+      "_说明_武器数量_中文": "生成携带上限包含主手、副手和背包中的近战、弓弩、三叉戟、枪械：流浪者 2 把，其他三阶 3 把。weapon_count.second_weapon_chance 默认 0.45，第三把在第二把判定成功后以 third_weapon_chance 默认 0.20 再判定；近战默认数量概率为 1 把 55%、2 把 36%、3 把 9%，流浪者为 1 把 55%、2 把 45%。概率可配置 0-0.49，确保多把更少见。远程单位的近战备用占一个名额，枪手至少保留枪械与近战两把。bonus_mainhand 仅参与额外名额的抽取，不再替换主手。数量只在生成时限制，不限制以后拾取或主人配装。",
+      "_description_weapon_count_en": "Spawn-only caps count weapons in both hands and the backpack: Roamers 2, other ranks 3, including melee, bows/crossbows, tridents and guns. second_weapon_chance defaults to 0.45; after success, third_weapon_chance defaults to 0.20. Ordinary melee counts are 55%/36%/9% for 1/2/3 weapons, or 55%/45% for Roamers. Chances accept 0-0.49 to keep larger counts rarer. Ranged melee backups count toward the cap; gunners retain at least a gun and melee weapon. bonus_mainhand participates in extra slots, never replaces the main hand. Later looting/owner equipment is not capped.",
+      "_说明_附魔_中文": "rules.enchant_chance 为基础随机附魔概率；damage_percent_min/max 为生成时已损耗耐久比例（0=全新，0.85=最多损耗85%）；elite_enchantments 启用原三阶强化附魔预设，默认仅三阶 true。物品池条目可额外填写 enchantments 对象，例如 {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}，等级为 1-255 的整数；只接受存在且适用于该物品的附魔，明确填写的等级在随机主手附魔后应用。automatic_shield_enchantments 控制额外按阶随机盾牌附魔，默认 true。若要仅使用自己指定的附魔，设 enchant_chance=0、elite_enchantments=false、automatic_shield_enchantments=false，并关闭自动斯巴达装备（其生成仍带自身附魔）。成长启用时最后仍会削弱附魔。",
+      "_description_enchantments_en": "rules.enchant_chance controls base random enchanting; damage_percent_min/max are the fraction of durability already consumed at spawn (0=fresh, 0.85=up to 85% worn). elite_enchantments enables the original elite enchantment preset, default true only for tier3. Item rows may include enchantments such as {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}; integer levels 1-255, registered/applicable enchantments only. Explicit levels are applied after random main-hand enchanting. automatic_shield_enchantments controls the additional rank-specific shield enchantment pass, default true. For explicit-only enchantments use enchant_chance=0, elite_enchantments=false, automatic_shield_enchantments=false and disable automatic Spartan gear (it brings its own enchantments). Growth, if enabled, can still reduce enchantments afterward.",
+      "_说明_rules_中文": "装备附魔与耐久的共用生成规则。",
+      "_description_rules_en": "Shared enchantment/durability generation rules.",
       "rules": {
+        "_说明_enchant_chance_中文": "装备获得自动附魔的概率，0–1；具体条目附魔仍按装备池规则。",
+        "_description_enchant_chance_en": "Chance of automatic equipment enchantment, 0–1; entry enchantments follow pool rules.",
         "enchant_chance": 0.3,
+        "_说明_damage_percent_min_中文": "初始耐久损耗比例下限，0–1；0表示未损耗。",
+        "_description_damage_percent_min_en": "Minimum initial durability damage ratio, 0–1; 0 is undamaged.",
         "damage_percent_min": 0,
+        "_说明_damage_percent_max_中文": "初始耐久损耗比例上限，0–1。",
+        "_description_damage_percent_max_en": "Maximum initial durability damage ratio, 0–1.",
         "damage_percent_max": 0.85,
+        "_说明_elite_enchantments_中文": "是否允许本阶装备使用精英附魔规则。",
+        "_description_elite_enchantments_en": "Allow elite enchantment rules for this rank.",
         "elite_enchantments": false
       },
+      "_说明_mainhand_中文": "近战主手候选池，按正权重抽取一个。",
+      "_description_mainhand_en": "Melee main-hand pool; select one using positive relative weights.",
       "mainhand": [
         {
           "item": "minecraft:iron_sword",
@@ -673,6 +1033,8 @@
           "weight": 2
         }
       ],
+      "_说明_ranged_mainhand_中文": "弓弩主手候选池；枪械生成不在此列表设置。",
+      "_description_ranged_mainhand_en": "Bow/crossbow main-hand pool; firearm generation is configured separately.",
       "ranged_mainhand": [
         {
           "item": "minecraft:crossbow",
@@ -683,6 +1045,8 @@
           "weight": 1
         }
       ],
+      "_说明_offhand_中文": "副手生成概率chance及候选entries；远程职业盾牌遵循兼容规则。",
+      "_description_offhand_en": "Off-hand chance and entries; ranged shields follow compatibility rules.",
       "offhand": {
         "chance": 0.2,
         "entries": [
@@ -692,6 +1056,8 @@
           }
         ]
       },
+      "_说明_inventory_中文": "背包备用武器候选池；现有数量规则保持。",
+      "_description_inventory_en": "Backpack backup-weapon pool; existing count rules apply.",
       "inventory": [
         {
           "item": "minecraft:iron_sword",
@@ -702,10 +1068,14 @@
           "weight": 1
         }
       ],
+      "_说明_bonus_mainhand_中文": "额外武器槽候选：chance为0–1概率，entries为权重池；不替换已生成主手。",
+      "_description_bonus_mainhand_en": "Bonus weapon-slot selection: chance 0–1 and weighted entries; does not replace the generated main hand.",
       "bonus_mainhand": {
         "chance": 0,
         "entries": []
       },
+      "_说明_armor_sets_中文": "整套护甲池：weight为正权重，head/chest/legs/feet为各部位物品ID；requires_mod可限定前置。",
+      "_description_armor_sets_en": "Armor-set pool: positive weight, head/chest/legs/feet item IDs; optional requires_mod dependency.",
       "armor_sets": [
         {
           "weight": 1,
@@ -777,15 +1147,59 @@
           "item": "minecraft:shield",
           "weight": 1
         }
-      ]
+      ],
+      "_说明_ranged_chance_中文": "非枪械远程武器生成概率，0–1；枪械已抽中时不额外补弓弩。",
+      "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
+      "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
+      "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
+      "_说明_automatic_spartan_weapons_中文": "首次配置生成/导入时，是否把可用斯巴达武器登记到池中；不是持续覆盖自定义池。",
+      "_description_automatic_spartan_weapons_en": "Import available Spartan weapons when initially generating/importing configuration; does not continually override custom pools.",
+      "_说明_automatic_spartan_shields_中文": "首次配置生成/导入时，是否把可用斯巴达盾牌登记到池中。",
+      "_description_automatic_spartan_shields_en": "Import available Spartan shields when initially generating/importing configuration.",
+      "_说明_allow_tacz_firearms_中文": "允许本阶自动配枪；关闭后仍可由玩家手动配枪，不关闭全局TaCZ兼容。",
+      "_description_allow_tacz_firearms_en": "Allow automatic firearm provisioning for this rank; players can still supply guns, and global TaCZ integration remains.",
+      "_说明_automatic_shield_enchantments_中文": "允许出生盾牌自动附魔；条目中指定的附魔仍按装备规则。",
+      "_description_automatic_shield_enchantments_en": "Allow automatic enchantments on spawn shields; explicit entry enchantments follow loadout rules.",
+      "_说明_guaranteed_shields_min_中文": "生成时盾牌总数目标下限，0–3，含手持与背包；仅从shield_pool补足。",
+      "_description_guaranteed_shields_min_en": "Minimum spawn shield-count target, 0–3, including hands/backpack; supplied only from shield_pool.",
+      "_说明_guaranteed_shields_max_中文": "盾牌总数目标上限，0–3；空或无效shield_pool不补原版回退盾牌。",
+      "_description_guaranteed_shields_max_en": "Maximum shield-count target, 0–3; empty/invalid shield_pool does not produce fallback vanilla shields.",
+      "_说明_shield_pool_中文": "盾牌候选权重池；须使用合法盾牌ID，空列表不保证盾牌。",
+      "_description_shield_pool_en": "Weighted shield pool; use valid shield IDs. An empty list guarantees no additional shields."
     },
     "tier2": {
+      "_说明_中文": "本阶出生装备池。正权重按相对值抽取；不可用主手池使用安全回退，空备用池不补额外武器，armor_sets=[]不配护甲。枪械生成见本阶tacz。",
+      "_description_en": "Rank spawn loadouts. Positive weights are relative. Unavailable primary pools use safe fallbacks; empty reserve pools grant no extras; armor_sets=[] grants no armor. Firearms are configured in rank tacz.",
+      "_说明_格式_中文": "数组里的每一项用花括号，物品用完整 item ID 字符串，例如 {\"item\":\"minecraft:iron_sword\",\"weight\":3} 与 {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}；两项之间用逗号。所有 ID/键使用双引号，数量、权重和概率不加引号。weight 为 0 至 1000000 的整数，0 禁用，正数按可用条目的相对权重分配，不必合计 100。count 可选，默认 1，范围 1-64 并限制到物品最大堆叠数。requires_mod 可选。未安装的模组物品会跳过；非法 ID 条目启动时告警并跳过。说明文本中的 \\\" 是 JSON 字符串转义，实际 item 字段只写 \"minecraft:iron_sword\"，不要把反斜杠复制到 ID 里。",
+      "_description_format_en": "Each array row is an object, e.g. {\"item\":\"minecraft:iron_sword\",\"weight\":3} and {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}, separated by commas. Quote keys/IDs, not numbers. weight is an integer 0-1000000; 0 disables a row. Positive weights are relative among available rows and need not sum to 100. Optional count defaults to 1, accepts 1-64 and is capped at the item's maximum stack size. Optional requires_mod gates a row. Missing mod items are skipped; malformed ID rows are warned and skipped at startup. Backslash-escaped quotes inside these description strings are JSON syntax: the actual item field is \"minecraft:iron_sword\", without backslashes in the ID.",
+      "_说明_池_中文": "mainhand=普通主手池；ranged_mainhand=支持的非枪械远程池；inventory=备用近战池，供远程备用与额外武器名额抽取；offhand.chance/entries=副手概率和池；bonus_mainhand.chance/entries=额外武器名额选择奖励池的概率和池，不替换主手。武器每条生成 1 把，数量统一受本阶上限控制。armor_sets 按权重选整套，head/chest/legs/feet 为四部位 ID，省略或 null 表示不穿，空数组表示不生成护甲。任一填写部位不存在或不匹配则跳过整套。主手/远程池全部失效仍使用安全武器，但空备用池不制造额外武器。",
+      "_description_pools_en": "mainhand is the ordinary weapon pool; ranged_mainhand accepts supported non-firearm ranged weapons; inventory supplies melee backups and extra weapon slots. offhand.chance/entries control offhand rolls. bonus_mainhand.chance/entries select a bonus pool for an extra slot, never replace the main hand. Each weapon entry generates one weapon within the rank cap. armor_sets chooses a whole weighted set; head/chest/legs/feet are item IDs, omitted/null means unequipped and [] means no armor. Missing or wrong-slot items reject the whole set. Unavailable primary/ranged pools use a safe weapon, but an empty reserve pool does not manufacture extras.",
+      "_说明_远程与盾牌_中文": "ranged_chance 为 0-1 的非枪械远程概率，默认 0.2/0.4/0.7/1；枪械判定成功时保留枪械和近战，不再额外补弓弩。ranged_in_backpack=true 将远程放背包，数量计入本阶上限。guaranteed_shields_min/max 为 0-3 的总盾牌数量目标，含手与背包；缺少时只从 shield_pool 抽取，空池或无有效条目就不补充，不回退到原版盾牌。禁止所有盾牌时同时清空 shield_pool 与 offhand.entries 中的盾牌条目。",
+      "_description_ranged_shields_en": "ranged_chance is a 0-1 non-firearm ranged chance, defaulting to 0.2/0.4/0.7/1. A successful gun roll retains a gun and melee weapon instead of adding another bow/crossbow. ranged_in_backpack stores the ranged item; it counts toward the rank cap. guaranteed_shields_min/max target 0-3 total equipped/stored shields. Shortages only draw from shield_pool; empty/unavailable pools do not create a vanilla fallback. To disable all shields, clear shield_pool and remove shield rows from offhand.entries.",
+      "_说明_优先级与联动_中文": "斯巴达武器/盾牌不再在生成后替换装备。automatic_spartan_weapons/shields 仅控制启动时首次导入：识别已安装模组的可用条目后写入对应配置池，以 weight 抽取；_imported_spartanweaponry/_imported_spartanshields 为导入记录，保留记录即可让删除的条目不再补回。关闭导入开关不删除已经写入的条目，要禁止生成某装备请从池中删除或把 weight 设为 0。护甲只读取 armor_sets；requires_mod 可省略，物品不存在仍会跳过。删除数组内条目或保留空数组可以完全自定义，不要删除整个配置键。TaCZ 是额外携带机会，保留普通近战装备，枪械型号与概率读取 对应阶级文件或global.json；不要把 tacz:modern_kinetic_gun 当作型号写入物品池。自然装备成长最后处理，固定品质请关闭 equipment_growth.enabled。",
+      "_description_priority_en": "Spartan gear never replaces generated equipment. automatic_spartan_weapons/shields only enable first-time startup import of registered compatible items into weighted pools. Keep _imported_spartanweaponry/_imported_spartanshields receipts so deleted rows stay deleted. Disabling import does not remove existing rows: delete a row or set its weight to 0 to stop its generation. Armor reads armor_sets only. requires_mod is optional; missing items are still skipped. Replace array contents or keep empty arrays for customization; do not delete entire keys. TaCZ is an extra carried firearm chance while keeping melee gear; gun IDs/chances remain in rank files or global.json, not the generic tacz:modern_kinetic_gun item. Natural growth runs last; disable equipment_growth.enabled for fixed quality.",
+      "_说明_武器数量_中文": "生成携带上限包含主手、副手和背包中的近战、弓弩、三叉戟、枪械：流浪者 2 把，其他三阶 3 把。weapon_count.second_weapon_chance 默认 0.45，第三把在第二把判定成功后以 third_weapon_chance 默认 0.20 再判定；近战默认数量概率为 1 把 55%、2 把 36%、3 把 9%，流浪者为 1 把 55%、2 把 45%。概率可配置 0-0.49，确保多把更少见。远程单位的近战备用占一个名额，枪手至少保留枪械与近战两把。bonus_mainhand 仅参与额外名额的抽取，不再替换主手。数量只在生成时限制，不限制以后拾取或主人配装。",
+      "_description_weapon_count_en": "Spawn-only caps count weapons in both hands and the backpack: Roamers 2, other ranks 3, including melee, bows/crossbows, tridents and guns. second_weapon_chance defaults to 0.45; after success, third_weapon_chance defaults to 0.20. Ordinary melee counts are 55%/36%/9% for 1/2/3 weapons, or 55%/45% for Roamers. Chances accept 0-0.49 to keep larger counts rarer. Ranged melee backups count toward the cap; gunners retain at least a gun and melee weapon. bonus_mainhand participates in extra slots, never replaces the main hand. Later looting/owner equipment is not capped.",
+      "_说明_附魔_中文": "rules.enchant_chance 为基础随机附魔概率；damage_percent_min/max 为生成时已损耗耐久比例（0=全新，0.85=最多损耗85%）；elite_enchantments 启用原三阶强化附魔预设，默认仅三阶 true。物品池条目可额外填写 enchantments 对象，例如 {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}，等级为 1-255 的整数；只接受存在且适用于该物品的附魔，明确填写的等级在随机主手附魔后应用。automatic_shield_enchantments 控制额外按阶随机盾牌附魔，默认 true。若要仅使用自己指定的附魔，设 enchant_chance=0、elite_enchantments=false、automatic_shield_enchantments=false，并关闭自动斯巴达装备（其生成仍带自身附魔）。成长启用时最后仍会削弱附魔。",
+      "_description_enchantments_en": "rules.enchant_chance controls base random enchanting; damage_percent_min/max are the fraction of durability already consumed at spawn (0=fresh, 0.85=up to 85% worn). elite_enchantments enables the original elite enchantment preset, default true only for tier3. Item rows may include enchantments such as {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}; integer levels 1-255, registered/applicable enchantments only. Explicit levels are applied after random main-hand enchanting. automatic_shield_enchantments controls the additional rank-specific shield enchantment pass, default true. For explicit-only enchantments use enchant_chance=0, elite_enchantments=false, automatic_shield_enchantments=false and disable automatic Spartan gear (it brings its own enchantments). Growth, if enabled, can still reduce enchantments afterward.",
+      "_说明_rules_中文": "装备附魔与耐久的共用生成规则。",
+      "_description_rules_en": "Shared enchantment/durability generation rules.",
       "rules": {
+        "_说明_enchant_chance_中文": "装备获得自动附魔的概率，0–1；具体条目附魔仍按装备池规则。",
+        "_description_enchant_chance_en": "Chance of automatic equipment enchantment, 0–1; entry enchantments follow pool rules.",
         "enchant_chance": 1,
+        "_说明_damage_percent_min_中文": "初始耐久损耗比例下限，0–1；0表示未损耗。",
+        "_description_damage_percent_min_en": "Minimum initial durability damage ratio, 0–1; 0 is undamaged.",
         "damage_percent_min": 0,
+        "_说明_damage_percent_max_中文": "初始耐久损耗比例上限，0–1。",
+        "_description_damage_percent_max_en": "Maximum initial durability damage ratio, 0–1.",
         "damage_percent_max": 0.85,
+        "_说明_elite_enchantments_中文": "是否允许本阶装备使用精英附魔规则。",
+        "_description_elite_enchantments_en": "Allow elite enchantment rules for this rank.",
         "elite_enchantments": false
       },
+      "_说明_mainhand_中文": "近战主手候选池，按正权重抽取一个。",
+      "_description_mainhand_en": "Melee main-hand pool; select one using positive relative weights.",
       "mainhand": [
         {
           "item": "minecraft:diamond_sword",
@@ -796,6 +1210,8 @@
           "weight": 2
         }
       ],
+      "_说明_ranged_mainhand_中文": "弓弩主手候选池；枪械生成不在此列表设置。",
+      "_description_ranged_mainhand_en": "Bow/crossbow main-hand pool; firearm generation is configured separately.",
       "ranged_mainhand": [
         {
           "item": "minecraft:crossbow",
@@ -806,6 +1222,8 @@
           "weight": 1
         }
       ],
+      "_说明_offhand_中文": "副手生成概率chance及候选entries；远程职业盾牌遵循兼容规则。",
+      "_description_offhand_en": "Off-hand chance and entries; ranged shields follow compatibility rules.",
       "offhand": {
         "chance": 0.5,
         "entries": [
@@ -819,6 +1237,8 @@
           }
         ]
       },
+      "_说明_inventory_中文": "背包备用武器候选池；现有数量规则保持。",
+      "_description_inventory_en": "Backpack backup-weapon pool; existing count rules apply.",
       "inventory": [
         {
           "item": "minecraft:iron_sword",
@@ -829,6 +1249,8 @@
           "weight": 1
         }
       ],
+      "_说明_bonus_mainhand_中文": "额外武器槽候选：chance为0–1概率，entries为权重池；不替换已生成主手。",
+      "_description_bonus_mainhand_en": "Bonus weapon-slot selection: chance 0–1 and weighted entries; does not replace the generated main hand.",
       "bonus_mainhand": {
         "chance": 0.05,
         "entries": [
@@ -838,6 +1260,8 @@
           }
         ]
       },
+      "_说明_armor_sets_中文": "整套护甲池：weight为正权重，head/chest/legs/feet为各部位物品ID；requires_mod可限定前置。",
+      "_description_armor_sets_en": "Armor-set pool: positive weight, head/chest/legs/feet item IDs; optional requires_mod dependency.",
       "armor_sets": [
         {
           "weight": 1,
@@ -903,15 +1327,59 @@
           "item": "minecraft:shield",
           "weight": 1
         }
-      ]
+      ],
+      "_说明_ranged_chance_中文": "非枪械远程武器生成概率，0–1；枪械已抽中时不额外补弓弩。",
+      "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
+      "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
+      "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
+      "_说明_automatic_spartan_weapons_中文": "首次配置生成/导入时，是否把可用斯巴达武器登记到池中；不是持续覆盖自定义池。",
+      "_description_automatic_spartan_weapons_en": "Import available Spartan weapons when initially generating/importing configuration; does not continually override custom pools.",
+      "_说明_automatic_spartan_shields_中文": "首次配置生成/导入时，是否把可用斯巴达盾牌登记到池中。",
+      "_description_automatic_spartan_shields_en": "Import available Spartan shields when initially generating/importing configuration.",
+      "_说明_allow_tacz_firearms_中文": "允许本阶自动配枪；关闭后仍可由玩家手动配枪，不关闭全局TaCZ兼容。",
+      "_description_allow_tacz_firearms_en": "Allow automatic firearm provisioning for this rank; players can still supply guns, and global TaCZ integration remains.",
+      "_说明_automatic_shield_enchantments_中文": "允许出生盾牌自动附魔；条目中指定的附魔仍按装备规则。",
+      "_description_automatic_shield_enchantments_en": "Allow automatic enchantments on spawn shields; explicit entry enchantments follow loadout rules.",
+      "_说明_guaranteed_shields_min_中文": "生成时盾牌总数目标下限，0–3，含手持与背包；仅从shield_pool补足。",
+      "_description_guaranteed_shields_min_en": "Minimum spawn shield-count target, 0–3, including hands/backpack; supplied only from shield_pool.",
+      "_说明_guaranteed_shields_max_中文": "盾牌总数目标上限，0–3；空或无效shield_pool不补原版回退盾牌。",
+      "_description_guaranteed_shields_max_en": "Maximum shield-count target, 0–3; empty/invalid shield_pool does not produce fallback vanilla shields.",
+      "_说明_shield_pool_中文": "盾牌候选权重池；须使用合法盾牌ID，空列表不保证盾牌。",
+      "_description_shield_pool_en": "Weighted shield pool; use valid shield IDs. An empty list guarantees no additional shields."
     },
     "tier3": {
+      "_说明_中文": "本阶出生装备池。正权重按相对值抽取；不可用主手池使用安全回退，空备用池不补额外武器，armor_sets=[]不配护甲。枪械生成见本阶tacz。",
+      "_description_en": "Rank spawn loadouts. Positive weights are relative. Unavailable primary pools use safe fallbacks; empty reserve pools grant no extras; armor_sets=[] grants no armor. Firearms are configured in rank tacz.",
+      "_说明_格式_中文": "数组里的每一项用花括号，物品用完整 item ID 字符串，例如 {\"item\":\"minecraft:iron_sword\",\"weight\":3} 与 {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}；两项之间用逗号。所有 ID/键使用双引号，数量、权重和概率不加引号。weight 为 0 至 1000000 的整数，0 禁用，正数按可用条目的相对权重分配，不必合计 100。count 可选，默认 1，范围 1-64 并限制到物品最大堆叠数。requires_mod 可选。未安装的模组物品会跳过；非法 ID 条目启动时告警并跳过。说明文本中的 \\\" 是 JSON 字符串转义，实际 item 字段只写 \"minecraft:iron_sword\"，不要把反斜杠复制到 ID 里。",
+      "_description_format_en": "Each array row is an object, e.g. {\"item\":\"minecraft:iron_sword\",\"weight\":3} and {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}, separated by commas. Quote keys/IDs, not numbers. weight is an integer 0-1000000; 0 disables a row. Positive weights are relative among available rows and need not sum to 100. Optional count defaults to 1, accepts 1-64 and is capped at the item's maximum stack size. Optional requires_mod gates a row. Missing mod items are skipped; malformed ID rows are warned and skipped at startup. Backslash-escaped quotes inside these description strings are JSON syntax: the actual item field is \"minecraft:iron_sword\", without backslashes in the ID.",
+      "_说明_池_中文": "mainhand=普通主手池；ranged_mainhand=支持的非枪械远程池；inventory=备用近战池，供远程备用与额外武器名额抽取；offhand.chance/entries=副手概率和池；bonus_mainhand.chance/entries=额外武器名额选择奖励池的概率和池，不替换主手。武器每条生成 1 把，数量统一受本阶上限控制。armor_sets 按权重选整套，head/chest/legs/feet 为四部位 ID，省略或 null 表示不穿，空数组表示不生成护甲。任一填写部位不存在或不匹配则跳过整套。主手/远程池全部失效仍使用安全武器，但空备用池不制造额外武器。",
+      "_description_pools_en": "mainhand is the ordinary weapon pool; ranged_mainhand accepts supported non-firearm ranged weapons; inventory supplies melee backups and extra weapon slots. offhand.chance/entries control offhand rolls. bonus_mainhand.chance/entries select a bonus pool for an extra slot, never replace the main hand. Each weapon entry generates one weapon within the rank cap. armor_sets chooses a whole weighted set; head/chest/legs/feet are item IDs, omitted/null means unequipped and [] means no armor. Missing or wrong-slot items reject the whole set. Unavailable primary/ranged pools use a safe weapon, but an empty reserve pool does not manufacture extras.",
+      "_说明_远程与盾牌_中文": "ranged_chance 为 0-1 的非枪械远程概率，默认 0.2/0.4/0.7/1；枪械判定成功时保留枪械和近战，不再额外补弓弩。ranged_in_backpack=true 将远程放背包，数量计入本阶上限。guaranteed_shields_min/max 为 0-3 的总盾牌数量目标，含手与背包；缺少时只从 shield_pool 抽取，空池或无有效条目就不补充，不回退到原版盾牌。禁止所有盾牌时同时清空 shield_pool 与 offhand.entries 中的盾牌条目。",
+      "_description_ranged_shields_en": "ranged_chance is a 0-1 non-firearm ranged chance, defaulting to 0.2/0.4/0.7/1. A successful gun roll retains a gun and melee weapon instead of adding another bow/crossbow. ranged_in_backpack stores the ranged item; it counts toward the rank cap. guaranteed_shields_min/max target 0-3 total equipped/stored shields. Shortages only draw from shield_pool; empty/unavailable pools do not create a vanilla fallback. To disable all shields, clear shield_pool and remove shield rows from offhand.entries.",
+      "_说明_优先级与联动_中文": "斯巴达武器/盾牌不再在生成后替换装备。automatic_spartan_weapons/shields 仅控制启动时首次导入：识别已安装模组的可用条目后写入对应配置池，以 weight 抽取；_imported_spartanweaponry/_imported_spartanshields 为导入记录，保留记录即可让删除的条目不再补回。关闭导入开关不删除已经写入的条目，要禁止生成某装备请从池中删除或把 weight 设为 0。护甲只读取 armor_sets；requires_mod 可省略，物品不存在仍会跳过。删除数组内条目或保留空数组可以完全自定义，不要删除整个配置键。TaCZ 是额外携带机会，保留普通近战装备，枪械型号与概率读取 对应阶级文件或global.json；不要把 tacz:modern_kinetic_gun 当作型号写入物品池。自然装备成长最后处理，固定品质请关闭 equipment_growth.enabled。",
+      "_description_priority_en": "Spartan gear never replaces generated equipment. automatic_spartan_weapons/shields only enable first-time startup import of registered compatible items into weighted pools. Keep _imported_spartanweaponry/_imported_spartanshields receipts so deleted rows stay deleted. Disabling import does not remove existing rows: delete a row or set its weight to 0 to stop its generation. Armor reads armor_sets only. requires_mod is optional; missing items are still skipped. Replace array contents or keep empty arrays for customization; do not delete entire keys. TaCZ is an extra carried firearm chance while keeping melee gear; gun IDs/chances remain in rank files or global.json, not the generic tacz:modern_kinetic_gun item. Natural growth runs last; disable equipment_growth.enabled for fixed quality.",
+      "_说明_武器数量_中文": "生成携带上限包含主手、副手和背包中的近战、弓弩、三叉戟、枪械：流浪者 2 把，其他三阶 3 把。weapon_count.second_weapon_chance 默认 0.45，第三把在第二把判定成功后以 third_weapon_chance 默认 0.20 再判定；近战默认数量概率为 1 把 55%、2 把 36%、3 把 9%，流浪者为 1 把 55%、2 把 45%。概率可配置 0-0.49，确保多把更少见。远程单位的近战备用占一个名额，枪手至少保留枪械与近战两把。bonus_mainhand 仅参与额外名额的抽取，不再替换主手。数量只在生成时限制，不限制以后拾取或主人配装。",
+      "_description_weapon_count_en": "Spawn-only caps count weapons in both hands and the backpack: Roamers 2, other ranks 3, including melee, bows/crossbows, tridents and guns. second_weapon_chance defaults to 0.45; after success, third_weapon_chance defaults to 0.20. Ordinary melee counts are 55%/36%/9% for 1/2/3 weapons, or 55%/45% for Roamers. Chances accept 0-0.49 to keep larger counts rarer. Ranged melee backups count toward the cap; gunners retain at least a gun and melee weapon. bonus_mainhand participates in extra slots, never replaces the main hand. Later looting/owner equipment is not capped.",
+      "_说明_附魔_中文": "rules.enchant_chance 为基础随机附魔概率；damage_percent_min/max 为生成时已损耗耐久比例（0=全新，0.85=最多损耗85%）；elite_enchantments 启用原三阶强化附魔预设，默认仅三阶 true。物品池条目可额外填写 enchantments 对象，例如 {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}，等级为 1-255 的整数；只接受存在且适用于该物品的附魔，明确填写的等级在随机主手附魔后应用。automatic_shield_enchantments 控制额外按阶随机盾牌附魔，默认 true。若要仅使用自己指定的附魔，设 enchant_chance=0、elite_enchantments=false、automatic_shield_enchantments=false，并关闭自动斯巴达装备（其生成仍带自身附魔）。成长启用时最后仍会削弱附魔。",
+      "_description_enchantments_en": "rules.enchant_chance controls base random enchanting; damage_percent_min/max are the fraction of durability already consumed at spawn (0=fresh, 0.85=up to 85% worn). elite_enchantments enables the original elite enchantment preset, default true only for tier3. Item rows may include enchantments such as {\"minecraft:unbreaking\":3,\"minecraft:sharpness\":4}; integer levels 1-255, registered/applicable enchantments only. Explicit levels are applied after random main-hand enchanting. automatic_shield_enchantments controls the additional rank-specific shield enchantment pass, default true. For explicit-only enchantments use enchant_chance=0, elite_enchantments=false, automatic_shield_enchantments=false and disable automatic Spartan gear (it brings its own enchantments). Growth, if enabled, can still reduce enchantments afterward.",
+      "_说明_rules_中文": "装备附魔与耐久的共用生成规则。",
+      "_description_rules_en": "Shared enchantment/durability generation rules.",
       "rules": {
+        "_说明_enchant_chance_中文": "装备获得自动附魔的概率，0–1；具体条目附魔仍按装备池规则。",
+        "_description_enchant_chance_en": "Chance of automatic equipment enchantment, 0–1; entry enchantments follow pool rules.",
         "enchant_chance": 1,
+        "_说明_damage_percent_min_中文": "初始耐久损耗比例下限，0–1；0表示未损耗。",
+        "_description_damage_percent_min_en": "Minimum initial durability damage ratio, 0–1; 0 is undamaged.",
         "damage_percent_min": 0,
+        "_说明_damage_percent_max_中文": "初始耐久损耗比例上限，0–1。",
+        "_description_damage_percent_max_en": "Maximum initial durability damage ratio, 0–1.",
         "damage_percent_max": 0,
+        "_说明_elite_enchantments_中文": "是否允许本阶装备使用精英附魔规则。",
+        "_description_elite_enchantments_en": "Allow elite enchantment rules for this rank.",
         "elite_enchantments": true
       },
+      "_说明_mainhand_中文": "近战主手候选池，按正权重抽取一个。",
+      "_description_mainhand_en": "Melee main-hand pool; select one using positive relative weights.",
       "mainhand": [
         {
           "item": "minecraft:netherite_sword",
@@ -922,6 +1390,8 @@
           "weight": 28
         }
       ],
+      "_说明_ranged_mainhand_中文": "弓弩主手候选池；枪械生成不在此列表设置。",
+      "_description_ranged_mainhand_en": "Bow/crossbow main-hand pool; firearm generation is configured separately.",
       "ranged_mainhand": [
         {
           "item": "minecraft:bow",
@@ -932,6 +1402,8 @@
           "weight": 1
         }
       ],
+      "_说明_offhand_中文": "副手生成概率chance及候选entries；远程职业盾牌遵循兼容规则。",
+      "_description_offhand_en": "Off-hand chance and entries; ranged shields follow compatibility rules.",
       "offhand": {
         "chance": 1,
         "entries": [
@@ -941,6 +1413,8 @@
           }
         ]
       },
+      "_说明_inventory_中文": "背包备用武器候选池；现有数量规则保持。",
+      "_description_inventory_en": "Backpack backup-weapon pool; existing count rules apply.",
       "inventory": [
         {
           "item": "minecraft:netherite_sword",
@@ -951,10 +1425,14 @@
           "weight": 28
         }
       ],
+      "_说明_bonus_mainhand_中文": "额外武器槽候选：chance为0–1概率，entries为权重池；不替换已生成主手。",
+      "_description_bonus_mainhand_en": "Bonus weapon-slot selection: chance 0–1 and weighted entries; does not replace the generated main hand.",
       "bonus_mainhand": {
         "chance": 0,
         "entries": []
       },
+      "_说明_armor_sets_中文": "整套护甲池：weight为正权重，head/chest/legs/feet为各部位物品ID；requires_mod可限定前置。",
+      "_description_armor_sets_en": "Armor-set pool: positive weight, head/chest/legs/feet item IDs; optional requires_mod dependency.",
       "armor_sets": [
         {
           "weight": 186,
@@ -1005,38 +1483,86 @@
           "item": "minecraft:shield",
           "weight": 1
         }
-      ]
+      ],
+      "_说明_ranged_chance_中文": "非枪械远程武器生成概率，0–1；枪械已抽中时不额外补弓弩。",
+      "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
+      "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
+      "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
+      "_说明_automatic_spartan_weapons_中文": "首次配置生成/导入时，是否把可用斯巴达武器登记到池中；不是持续覆盖自定义池。",
+      "_description_automatic_spartan_weapons_en": "Import available Spartan weapons when initially generating/importing configuration; does not continually override custom pools.",
+      "_说明_automatic_spartan_shields_中文": "首次配置生成/导入时，是否把可用斯巴达盾牌登记到池中。",
+      "_description_automatic_spartan_shields_en": "Import available Spartan shields when initially generating/importing configuration.",
+      "_说明_allow_tacz_firearms_中文": "允许本阶自动配枪；关闭后仍可由玩家手动配枪，不关闭全局TaCZ兼容。",
+      "_description_allow_tacz_firearms_en": "Allow automatic firearm provisioning for this rank; players can still supply guns, and global TaCZ integration remains.",
+      "_说明_automatic_shield_enchantments_中文": "允许出生盾牌自动附魔；条目中指定的附魔仍按装备规则。",
+      "_description_automatic_shield_enchantments_en": "Allow automatic enchantments on spawn shields; explicit entry enchantments follow loadout rules.",
+      "_说明_guaranteed_shields_min_中文": "生成时盾牌总数目标下限，0–3，含手持与背包；仅从shield_pool补足。",
+      "_description_guaranteed_shields_min_en": "Minimum spawn shield-count target, 0–3, including hands/backpack; supplied only from shield_pool.",
+      "_说明_guaranteed_shields_max_中文": "盾牌总数目标上限，0–3；空或无效shield_pool不补原版回退盾牌。",
+      "_description_guaranteed_shields_max_en": "Maximum shield-count target, 0–3; empty/invalid shield_pool does not produce fallback vanilla shields.",
+      "_说明_shield_pool_中文": "盾牌候选权重池；须使用合法盾牌ID，空列表不保证盾牌。",
+      "_description_shield_pool_en": "Weighted shield pool; use valid shield IDs. An empty list guarantees no additional shields."
     }
   },
   "equipment_growth": {
     "_说明_中文": "自然生成装备成长总开关，默认开启。仅作用于新自然生成、区块初始自然生成和自然大型战斗的人类；已有实体、玩家装备、援军信号弹、敌对信标、刷怪蛋和命令生成不变。关闭 enabled 后新生成的人类完全使用原有装备规则，不自动恢复已经生成的早期装备。只影响初始装备，不修改血量、基础伤害倍率、阶级和原有弓弩携带概率；装备和附魔变化仍会影响实际战斗表现。修改后重启生效，不重置已有配置。",
     "_description_en": "Enabled by default. Applies only to newly naturally spawned humans, initial chunk-population spawns and automatic battles. Existing entities, owner-supplied gear, friendly flares, hostile beacons, spawn eggs and commands are unchanged. Disabling enabled gives new humans the original loadout rules; it does not restore early gear already generated. Only initial gear is affected, not base health, configured damage multipliers, rank or existing bow/crossbow probabilities; changed gear and enchantments still affect combat strength. Restart to apply; existing configuration is preserved.",
     "enabled": true,
-    "_说明_成长公式_中文": "每阶进度 p=限制到 0–1 的 (个人在线日-start_day)/(full_quality_day-start_day)。采用生成点同维度最近的存活非旁观玩家的累计在线时间，与自然生成解锁共用个人计时；24000 个在线游戏 tick 为一天，离线、暂停、睡觉跳夜和 /time 不增加进度。start_day 只控制装备成长；解锁日在 global.json 独立配置。结束日不晚于起点时，从结束日起使用完整装备。进度只在生成时保存，不会每天给已有实体换装。",
-    "_description_progress_formula_en": "Per-tier p=clamp((personal online day-start_day)/(full_quality_day-start_day),0,1). Uses the nearest living non-spectator player's accumulated online time in the spawn dimension, shared with rank unlocks. A day is 24000 online game ticks; offline time, pauses, skipped nights and /time do not advance it. start_day controls equipment only; global.json controls unlock dates. If the end is at/before the start, full gear applies from the end. Captured at spawn; existing humans are not re-equipped daily.",
-    "_说明_品质与枪械_中文": "所有 early_* 概率/倍率允许 0–1 小数，实际值=早期值+(1-早期值)×p。early_baseline_gear_chance 是保留本阶原有装备材质的概率，同一实体共用材质判定；否则使用 early_melee、early_armor 和 early_spartan_material。早期材质不会提升本就更弱的默认装备。early_gun_chance_multiplier 乘 对应阶级文件或global.json 本阶原有枪械携带概率：例如原概率 0.8、早期倍率 0.25，则起点概率 0.2；枪械 ID、类型权重和伤害不变。默认本阶原有装备品质达到日依次为 40、50、70、80。",
-    "_description_quality_and_guns_en": "All early_* chances/multipliers accept decimals 0–1; the actual value is early+(1-early)×p. early_baseline_gear_chance preserves original material quality, with one shared material roll per human; otherwise early_melee, early_armor and early_spartan_material are used. Early substitutions do not upgrade weaker baseline gear. early_gun_chance_multiplier multiplies the tier's existing firearm chance in rank files or global.json: 0.8×0.25=0.2 at the start. Gun IDs, type weights and damage are unchanged. Default baseline-quality days are 40, 50, 70 and 80.",
+    "_说明_成长公式_中文": "每阶进度 p=限制到 0–1 的 (个人在线日-start_day)/(full_quality_day-start_day)。采用生成点同维度最近的存活非旁观玩家的累计在线时间，与自然生成解锁共用个人计时；24000 个在线游戏 tick 为一天，离线、暂停、睡觉跳夜和 /time 不增加进度。start_day 只控制装备成长；解锁日在本阶 spawning.first_spawn_day 配置。结束日不晚于起点时，从结束日起使用完整装备。进度只在生成时保存，不会每天给已有实体换装。",
+    "_description_progress_formula_en": "Per-tier p=clamp((personal online day-start_day)/(full_quality_day-start_day),0,1). Uses the nearest living non-spectator player's accumulated online time in the spawn dimension, shared with rank unlocks. A day is 24000 online game ticks; offline time, pauses, skipped nights and /time do not advance it. start_day controls equipment only; rank spawning.first_spawn_day controls unlock dates. If the end is at/before the start, full gear applies from the end. Captured at spawn; existing humans are not re-equipped daily.",
+    "_说明_品质与枪械_中文": "所有 early_* 概率/倍率允许 0–1 小数，实际值=早期值+(1-早期值)×p。early_baseline_gear_chance 是保留本阶原有装备材质的概率，同一实体共用材质判定；否则使用 early_melee、early_armor 和 early_spartan_material。早期材质不会提升本就更弱的默认装备。early_gun_chance_multiplier 乘 本阶 tacz.gun_chance：例如原概率 0.8、早期倍率 0.25，则起点概率 0.2；枪械 ID、类型权重和伤害不变。默认本阶原有装备品质达到日依次为 40、50、70、80。",
+    "_description_quality_and_guns_en": "All early_* chances/multipliers accept decimals 0–1; the actual value is early+(1-early)×p. early_baseline_gear_chance preserves original material quality, with one shared material roll per human; otherwise early_melee, early_armor and early_spartan_material are used. Early substitutions do not upgrade weaker baseline gear. early_gun_chance_multiplier multiplies the rank tacz.gun_chance: 0.8×0.25=0.2 at the start. Gun IDs, type weights and damage are unchanged. Default baseline-quality days are 40, 50, 70 and 80.",
     "_说明_附魔与特殊物品_中文": "early_enchantment_keep_chance 是每个非诅咒附魔的保留概率；early_enchantment_level_multiplier 乘原等级并向下取整，结果 0 时去除该附魔；例如等级 IV×0.25=I。诅咒保留，替换物品只接受其可用附魔。盾牌与背包备用装备也处理。early_totem_keep_chance 控制已抽中的不死图腾保留概率；early_trident_keep_chance 控制已抽中的三叉戟保留概率，不保留时替换为弓以保留远程能力。到结束日不再过滤任何装备和附魔。食物、药水等补给不受影响。",
     "_description_enchantments_and_specials_en": "early_enchantment_keep_chance retains each non-curse enchantment; early_enchantment_level_multiplier multiplies its original level and rounds down, removing levels that become 0. Level IV×0.25=I. Curses remain; replacement items accept only applicable enchantments. Shields and backpack backups are included. early_totem_keep_chance retains already-rolled totems. early_trident_keep_chance retains already-rolled tridents; otherwise a bow preserves ranged capability. On the end day, gear/enchantments are no longer filtered. Food and potion supplies are unchanged.",
     "_说明_物品ID_中文": "early_melee.sword/axe 和 early_armor.head/chest/legs/feet 接受原版或模组的完整物品 ID 字符串，例如 \"minecraft:iron_sword\"、\"immersive_armors:wooden_chestplate\"；ID 使用双引号，JSON 各项用逗号分隔。未安装、无效 ID、air 或不符合部位/武器类型的 ID 使用安全回退装备，控制台对每个无效 ID 仅警告一次。early_spartan_material 指斯巴达注册名的材质前缀，例如 wooden、stone、copper、iron、diamond；尽量保留武器类型，无对应物品则回退早期原版近战武器、弓/弩或盾牌。不能靠材质前缀评定任意枪械的强弱，因此枪械只调整生成概率。如本说明中的引号以反斜杠转义显示，真实物品 ID 配置需移除转义反斜杠，只保留包裹字符串的双引号。",
     "_description_item_ids_en": "early_melee.sword/axe and early_armor.head/chest/legs/feet accept full vanilla/mod item IDs such as \"minecraft:iron_sword\" or \"immersive_armors:wooden_chestplate\". Use double-quoted strings and commas between JSON entries. Missing, invalid, air or wrong slot/weapon-type IDs use safe fallback gear and log once per invalid ID. early_spartan_material is the Spartan registry material prefix, e.g. wooden, stone, copper, iron or diamond. Weapon archetypes are retained where possible; missing variants fall back to early vanilla melee, bows/crossbows or shields. Arbitrary gun strength cannot be inferred from material names, so only gun spawn chance changes. If quotes in this description appear backslash-escaped, remove those escape backslashes from actual ID settings and retain the enclosing double quotes.",
     "tiers": {
       "roamer": {
+        "_说明_成长公式_中文": "每阶进度 p=限制到 0–1 的 (个人在线日-start_day)/(full_quality_day-start_day)。采用生成点同维度最近的存活非旁观玩家的累计在线时间，与自然生成解锁共用个人计时；24000 个在线游戏 tick 为一天，离线、暂停、睡觉跳夜和 /time 不增加进度。start_day 只控制装备成长；解锁日在本阶 spawning.first_spawn_day 配置。结束日不晚于起点时，从结束日起使用完整装备。进度只在生成时保存，不会每天给已有实体换装。",
+        "_description_progress_formula_en": "Per-tier p=clamp((personal online day-start_day)/(full_quality_day-start_day),0,1). Uses the nearest living non-spectator player's accumulated online time in the spawn dimension, shared with rank unlocks. A day is 24000 online game ticks; offline time, pauses, skipped nights and /time do not advance it. start_day controls equipment only; rank spawning.first_spawn_day controls unlock dates. If the end is at/before the start, full gear applies from the end. Captured at spawn; existing humans are not re-equipped daily.",
+        "_说明_品质与枪械_中文": "所有 early_* 概率/倍率允许 0–1 小数，实际值=早期值+(1-早期值)×p。early_baseline_gear_chance 是保留本阶原有装备材质的概率，同一实体共用材质判定；否则使用 early_melee、early_armor 和 early_spartan_material。早期材质不会提升本就更弱的默认装备。early_gun_chance_multiplier 乘 本阶 tacz.gun_chance：例如原概率 0.8、早期倍率 0.25，则起点概率 0.2；枪械 ID、类型权重和伤害不变。默认本阶原有装备品质达到日依次为 40、50、70、80。",
+        "_description_quality_and_guns_en": "All early_* chances/multipliers accept decimals 0–1; the actual value is early+(1-early)×p. early_baseline_gear_chance preserves original material quality, with one shared material roll per human; otherwise early_melee, early_armor and early_spartan_material are used. Early substitutions do not upgrade weaker baseline gear. early_gun_chance_multiplier multiplies the rank tacz.gun_chance: 0.8×0.25=0.2 at the start. Gun IDs, type weights and damage are unchanged. Default baseline-quality days are 40, 50, 70 and 80.",
+        "_说明_附魔与特殊物品_中文": "early_enchantment_keep_chance 是每个非诅咒附魔的保留概率；early_enchantment_level_multiplier 乘原等级并向下取整，结果 0 时去除该附魔；例如等级 IV×0.25=I。诅咒保留，替换物品只接受其可用附魔。盾牌与背包备用装备也处理。early_totem_keep_chance 控制已抽中的不死图腾保留概率；early_trident_keep_chance 控制已抽中的三叉戟保留概率，不保留时替换为弓以保留远程能力。到结束日不再过滤任何装备和附魔。食物、药水等补给不受影响。",
+        "_description_enchantments_and_specials_en": "early_enchantment_keep_chance retains each non-curse enchantment; early_enchantment_level_multiplier multiplies its original level and rounds down, removing levels that become 0. Level IV×0.25=I. Curses remain; replacement items accept only applicable enchantments. Shields and backpack backups are included. early_totem_keep_chance retains already-rolled totems. early_trident_keep_chance retains already-rolled tridents; otherwise a bow preserves ranged capability. On the end day, gear/enchantments are no longer filtered. Food and potion supplies are unchanged.",
+        "_说明_物品ID_中文": "early_melee.sword/axe 和 early_armor.head/chest/legs/feet 接受原版或模组的完整物品 ID 字符串，例如 \"minecraft:iron_sword\"、\"immersive_armors:wooden_chestplate\"；ID 使用双引号，JSON 各项用逗号分隔。未安装、无效 ID、air 或不符合部位/武器类型的 ID 使用安全回退装备，控制台对每个无效 ID 仅警告一次。early_spartan_material 指斯巴达注册名的材质前缀，例如 wooden、stone、copper、iron、diamond；尽量保留武器类型，无对应物品则回退早期原版近战武器、弓/弩或盾牌。不能靠材质前缀评定任意枪械的强弱，因此枪械只调整生成概率。如本说明中的引号以反斜杠转义显示，真实物品 ID 配置需移除转义反斜杠，只保留包裹字符串的双引号。",
+        "_description_item_ids_en": "early_melee.sword/axe and early_armor.head/chest/legs/feet accept full vanilla/mod item IDs such as \"minecraft:iron_sword\" or \"immersive_armors:wooden_chestplate\". Use double-quoted strings and commas between JSON entries. Missing, invalid, air or wrong slot/weapon-type IDs use safe fallback gear and log once per invalid ID. early_spartan_material is the Spartan registry material prefix, e.g. wooden, stone, copper, iron or diamond. Weapon archetypes are retained where possible; missing variants fall back to early vanilla melee, bows/crossbows or shields. Arbitrary gun strength cannot be inferred from material names, so only gun spawn chance changes. If quotes in this description appear backslash-escaped, remove those escape backslashes from actual ID settings and retain the enclosing double quotes.",
         "_说明_中文": "流浪者：第 3 天开始装备成长，第 40 天恢复原有品质。日期范围 1–1000000；下列概率/倍率范围 0–1。",
         "_description_en": "Roamer: growth starts on day 3 and reaches original quality on day 40. Dates: 1–1000000; chances/multipliers: 0–1.",
+        "_说明_start_day_中文": "开始装备成长的个人在线日，1–1000000；与本阶解锁日独立。",
+        "_description_start_day_en": "Personal online day when equipment growth starts, 1–1000000; independent of rank unlock.",
         "start_day": 3,
+        "_说明_full_quality_day_中文": "达到原装备品质的个人在线日，1–1000000；此后不再削减品质。",
+        "_description_full_quality_day_en": "Personal online day reaching baseline quality, 1–1000000; no quality reductions afterward.",
         "full_quality_day": 40,
+        "_说明_early_baseline_gear_chance_中文": "成长起点保留原装备材质的概率，0–1。",
+        "_description_early_baseline_gear_chance_en": "Chance to retain baseline material at growth start, 0–1.",
         "early_baseline_gear_chance": 0.0,
+        "_说明_early_gun_chance_multiplier_中文": "成长起点的枪械携带概率倍率，0–1；乘本阶tacz.gun_chance。",
+        "_description_early_gun_chance_multiplier_en": "Initial firearm chance multiplier, 0–1; multiplies rank tacz.gun_chance.",
         "early_gun_chance_multiplier": 0.25,
+        "_说明_early_enchantment_keep_chance_中文": "成长起点每个非诅咒附魔的保留概率，0–1。",
+        "_description_early_enchantment_keep_chance_en": "Initial retention chance for each non-curse enchantment, 0–1.",
         "early_enchantment_keep_chance": 0.15,
+        "_说明_early_enchantment_level_multiplier_中文": "成长起点附魔等级倍率，0–1，向下取整；0级移除。",
+        "_description_early_enchantment_level_multiplier_en": "Initial enchantment level multiplier, 0–1, rounded down; level 0 is removed.",
         "early_enchantment_level_multiplier": 0.25,
+        "_说明_early_totem_keep_chance_中文": "成长起点保留已抽中不死图腾的概率，0–1。",
+        "_description_early_totem_keep_chance_en": "Initial chance to retain an already-rolled totem, 0–1.",
         "early_totem_keep_chance": 0.0,
+        "_说明_early_trident_keep_chance_中文": "成长起点保留已抽中三叉戟的概率，0–1。",
+        "_description_early_trident_keep_chance_en": "Initial chance to retain an already-rolled trident, 0–1.",
         "early_trident_keep_chance": 0.0,
+        "_说明_early_spartan_material_中文": "斯巴达武器早期材质前缀，例如wooden/stone；无对应物品使用安全回退。",
+        "_description_early_spartan_material_en": "Early Spartan material prefix, e.g. wooden/stone; unavailable items use safe fallbacks.",
         "early_spartan_material": "wooden",
+        "_说明_early_melee_中文": "早期替换用剑/斧ID；必须符合武器类型。",
+        "_description_early_melee_en": "Early replacement sword/axe IDs; must match weapon types.",
         "early_melee": {
           "sword": "minecraft:stone_sword",
           "axe": "minecraft:stone_axe"
         },
+        "_说明_early_armor_中文": "早期替换护甲ID；必须符合对应装备部位。",
+        "_description_early_armor_en": "Early replacement armor IDs; must match equipment slots.",
         "early_armor": {
           "head": "minecraft:leather_helmet",
           "chest": "minecraft:leather_chestplate",
@@ -1045,21 +1571,51 @@
         }
       },
       "tier1": {
+        "_说明_成长公式_中文": "每阶进度 p=限制到 0–1 的 (个人在线日-start_day)/(full_quality_day-start_day)。采用生成点同维度最近的存活非旁观玩家的累计在线时间，与自然生成解锁共用个人计时；24000 个在线游戏 tick 为一天，离线、暂停、睡觉跳夜和 /time 不增加进度。start_day 只控制装备成长；解锁日在本阶 spawning.first_spawn_day 配置。结束日不晚于起点时，从结束日起使用完整装备。进度只在生成时保存，不会每天给已有实体换装。",
+        "_description_progress_formula_en": "Per-tier p=clamp((personal online day-start_day)/(full_quality_day-start_day),0,1). Uses the nearest living non-spectator player's accumulated online time in the spawn dimension, shared with rank unlocks. A day is 24000 online game ticks; offline time, pauses, skipped nights and /time do not advance it. start_day controls equipment only; rank spawning.first_spawn_day controls unlock dates. If the end is at/before the start, full gear applies from the end. Captured at spawn; existing humans are not re-equipped daily.",
+        "_说明_品质与枪械_中文": "所有 early_* 概率/倍率允许 0–1 小数，实际值=早期值+(1-早期值)×p。early_baseline_gear_chance 是保留本阶原有装备材质的概率，同一实体共用材质判定；否则使用 early_melee、early_armor 和 early_spartan_material。早期材质不会提升本就更弱的默认装备。early_gun_chance_multiplier 乘 本阶 tacz.gun_chance：例如原概率 0.8、早期倍率 0.25，则起点概率 0.2；枪械 ID、类型权重和伤害不变。默认本阶原有装备品质达到日依次为 40、50、70、80。",
+        "_description_quality_and_guns_en": "All early_* chances/multipliers accept decimals 0–1; the actual value is early+(1-early)×p. early_baseline_gear_chance preserves original material quality, with one shared material roll per human; otherwise early_melee, early_armor and early_spartan_material are used. Early substitutions do not upgrade weaker baseline gear. early_gun_chance_multiplier multiplies the rank tacz.gun_chance: 0.8×0.25=0.2 at the start. Gun IDs, type weights and damage are unchanged. Default baseline-quality days are 40, 50, 70 and 80.",
+        "_说明_附魔与特殊物品_中文": "early_enchantment_keep_chance 是每个非诅咒附魔的保留概率；early_enchantment_level_multiplier 乘原等级并向下取整，结果 0 时去除该附魔；例如等级 IV×0.25=I。诅咒保留，替换物品只接受其可用附魔。盾牌与背包备用装备也处理。early_totem_keep_chance 控制已抽中的不死图腾保留概率；early_trident_keep_chance 控制已抽中的三叉戟保留概率，不保留时替换为弓以保留远程能力。到结束日不再过滤任何装备和附魔。食物、药水等补给不受影响。",
+        "_description_enchantments_and_specials_en": "early_enchantment_keep_chance retains each non-curse enchantment; early_enchantment_level_multiplier multiplies its original level and rounds down, removing levels that become 0. Level IV×0.25=I. Curses remain; replacement items accept only applicable enchantments. Shields and backpack backups are included. early_totem_keep_chance retains already-rolled totems. early_trident_keep_chance retains already-rolled tridents; otherwise a bow preserves ranged capability. On the end day, gear/enchantments are no longer filtered. Food and potion supplies are unchanged.",
+        "_说明_物品ID_中文": "early_melee.sword/axe 和 early_armor.head/chest/legs/feet 接受原版或模组的完整物品 ID 字符串，例如 \"minecraft:iron_sword\"、\"immersive_armors:wooden_chestplate\"；ID 使用双引号，JSON 各项用逗号分隔。未安装、无效 ID、air 或不符合部位/武器类型的 ID 使用安全回退装备，控制台对每个无效 ID 仅警告一次。early_spartan_material 指斯巴达注册名的材质前缀，例如 wooden、stone、copper、iron、diamond；尽量保留武器类型，无对应物品则回退早期原版近战武器、弓/弩或盾牌。不能靠材质前缀评定任意枪械的强弱，因此枪械只调整生成概率。如本说明中的引号以反斜杠转义显示，真实物品 ID 配置需移除转义反斜杠，只保留包裹字符串的双引号。",
+        "_description_item_ids_en": "early_melee.sword/axe and early_armor.head/chest/legs/feet accept full vanilla/mod item IDs such as \"minecraft:iron_sword\" or \"immersive_armors:wooden_chestplate\". Use double-quoted strings and commas between JSON entries. Missing, invalid, air or wrong slot/weapon-type IDs use safe fallback gear and log once per invalid ID. early_spartan_material is the Spartan registry material prefix, e.g. wooden, stone, copper, iron or diamond. Weapon archetypes are retained where possible; missing variants fall back to early vanilla melee, bows/crossbows or shields. Arbitrary gun strength cannot be inferred from material names, so only gun spawn chance changes. If quotes in this description appear backslash-escaped, remove those escape backslashes from actual ID settings and retain the enclosing double quotes.",
         "_说明_中文": "一阶：第 5 天开始装备成长，第 50 天恢复原有品质。日期范围 1–1000000；下列概率/倍率范围 0–1。",
         "_description_en": "Tier I: growth starts on day 5 and reaches original quality on day 50. Dates: 1–1000000; chances/multipliers: 0–1.",
+        "_说明_start_day_中文": "开始装备成长的个人在线日，1–1000000；与本阶解锁日独立。",
+        "_description_start_day_en": "Personal online day when equipment growth starts, 1–1000000; independent of rank unlock.",
         "start_day": 5,
+        "_说明_full_quality_day_中文": "达到原装备品质的个人在线日，1–1000000；此后不再削减品质。",
+        "_description_full_quality_day_en": "Personal online day reaching baseline quality, 1–1000000; no quality reductions afterward.",
         "full_quality_day": 50,
+        "_说明_early_baseline_gear_chance_中文": "成长起点保留原装备材质的概率，0–1。",
+        "_description_early_baseline_gear_chance_en": "Chance to retain baseline material at growth start, 0–1.",
         "early_baseline_gear_chance": 0.0,
+        "_说明_early_gun_chance_multiplier_中文": "成长起点的枪械携带概率倍率，0–1；乘本阶tacz.gun_chance。",
+        "_description_early_gun_chance_multiplier_en": "Initial firearm chance multiplier, 0–1; multiplies rank tacz.gun_chance.",
         "early_gun_chance_multiplier": 0.25,
+        "_说明_early_enchantment_keep_chance_中文": "成长起点每个非诅咒附魔的保留概率，0–1。",
+        "_description_early_enchantment_keep_chance_en": "Initial retention chance for each non-curse enchantment, 0–1.",
         "early_enchantment_keep_chance": 0.15,
+        "_说明_early_enchantment_level_multiplier_中文": "成长起点附魔等级倍率，0–1，向下取整；0级移除。",
+        "_description_early_enchantment_level_multiplier_en": "Initial enchantment level multiplier, 0–1, rounded down; level 0 is removed.",
         "early_enchantment_level_multiplier": 0.25,
+        "_说明_early_totem_keep_chance_中文": "成长起点保留已抽中不死图腾的概率，0–1。",
+        "_description_early_totem_keep_chance_en": "Initial chance to retain an already-rolled totem, 0–1.",
         "early_totem_keep_chance": 0.0,
+        "_说明_early_trident_keep_chance_中文": "成长起点保留已抽中三叉戟的概率，0–1。",
+        "_description_early_trident_keep_chance_en": "Initial chance to retain an already-rolled trident, 0–1.",
         "early_trident_keep_chance": 0.0,
+        "_说明_early_spartan_material_中文": "斯巴达武器早期材质前缀，例如wooden/stone；无对应物品使用安全回退。",
+        "_description_early_spartan_material_en": "Early Spartan material prefix, e.g. wooden/stone; unavailable items use safe fallbacks.",
         "early_spartan_material": "stone",
+        "_说明_early_melee_中文": "早期替换用剑/斧ID；必须符合武器类型。",
+        "_description_early_melee_en": "Early replacement sword/axe IDs; must match weapon types.",
         "early_melee": {
           "sword": "minecraft:stone_sword",
           "axe": "minecraft:stone_axe"
         },
+        "_说明_early_armor_中文": "早期替换护甲ID；必须符合对应装备部位。",
+        "_description_early_armor_en": "Early replacement armor IDs; must match equipment slots.",
         "early_armor": {
           "head": "minecraft:leather_helmet",
           "chest": "minecraft:leather_chestplate",
@@ -1068,21 +1624,51 @@
         }
       },
       "tier2": {
+        "_说明_成长公式_中文": "每阶进度 p=限制到 0–1 的 (个人在线日-start_day)/(full_quality_day-start_day)。采用生成点同维度最近的存活非旁观玩家的累计在线时间，与自然生成解锁共用个人计时；24000 个在线游戏 tick 为一天，离线、暂停、睡觉跳夜和 /time 不增加进度。start_day 只控制装备成长；解锁日在本阶 spawning.first_spawn_day 配置。结束日不晚于起点时，从结束日起使用完整装备。进度只在生成时保存，不会每天给已有实体换装。",
+        "_description_progress_formula_en": "Per-tier p=clamp((personal online day-start_day)/(full_quality_day-start_day),0,1). Uses the nearest living non-spectator player's accumulated online time in the spawn dimension, shared with rank unlocks. A day is 24000 online game ticks; offline time, pauses, skipped nights and /time do not advance it. start_day controls equipment only; rank spawning.first_spawn_day controls unlock dates. If the end is at/before the start, full gear applies from the end. Captured at spawn; existing humans are not re-equipped daily.",
+        "_说明_品质与枪械_中文": "所有 early_* 概率/倍率允许 0–1 小数，实际值=早期值+(1-早期值)×p。early_baseline_gear_chance 是保留本阶原有装备材质的概率，同一实体共用材质判定；否则使用 early_melee、early_armor 和 early_spartan_material。早期材质不会提升本就更弱的默认装备。early_gun_chance_multiplier 乘 本阶 tacz.gun_chance：例如原概率 0.8、早期倍率 0.25，则起点概率 0.2；枪械 ID、类型权重和伤害不变。默认本阶原有装备品质达到日依次为 40、50、70、80。",
+        "_description_quality_and_guns_en": "All early_* chances/multipliers accept decimals 0–1; the actual value is early+(1-early)×p. early_baseline_gear_chance preserves original material quality, with one shared material roll per human; otherwise early_melee, early_armor and early_spartan_material are used. Early substitutions do not upgrade weaker baseline gear. early_gun_chance_multiplier multiplies the rank tacz.gun_chance: 0.8×0.25=0.2 at the start. Gun IDs, type weights and damage are unchanged. Default baseline-quality days are 40, 50, 70 and 80.",
+        "_说明_附魔与特殊物品_中文": "early_enchantment_keep_chance 是每个非诅咒附魔的保留概率；early_enchantment_level_multiplier 乘原等级并向下取整，结果 0 时去除该附魔；例如等级 IV×0.25=I。诅咒保留，替换物品只接受其可用附魔。盾牌与背包备用装备也处理。early_totem_keep_chance 控制已抽中的不死图腾保留概率；early_trident_keep_chance 控制已抽中的三叉戟保留概率，不保留时替换为弓以保留远程能力。到结束日不再过滤任何装备和附魔。食物、药水等补给不受影响。",
+        "_description_enchantments_and_specials_en": "early_enchantment_keep_chance retains each non-curse enchantment; early_enchantment_level_multiplier multiplies its original level and rounds down, removing levels that become 0. Level IV×0.25=I. Curses remain; replacement items accept only applicable enchantments. Shields and backpack backups are included. early_totem_keep_chance retains already-rolled totems. early_trident_keep_chance retains already-rolled tridents; otherwise a bow preserves ranged capability. On the end day, gear/enchantments are no longer filtered. Food and potion supplies are unchanged.",
+        "_说明_物品ID_中文": "early_melee.sword/axe 和 early_armor.head/chest/legs/feet 接受原版或模组的完整物品 ID 字符串，例如 \"minecraft:iron_sword\"、\"immersive_armors:wooden_chestplate\"；ID 使用双引号，JSON 各项用逗号分隔。未安装、无效 ID、air 或不符合部位/武器类型的 ID 使用安全回退装备，控制台对每个无效 ID 仅警告一次。early_spartan_material 指斯巴达注册名的材质前缀，例如 wooden、stone、copper、iron、diamond；尽量保留武器类型，无对应物品则回退早期原版近战武器、弓/弩或盾牌。不能靠材质前缀评定任意枪械的强弱，因此枪械只调整生成概率。如本说明中的引号以反斜杠转义显示，真实物品 ID 配置需移除转义反斜杠，只保留包裹字符串的双引号。",
+        "_description_item_ids_en": "early_melee.sword/axe and early_armor.head/chest/legs/feet accept full vanilla/mod item IDs such as \"minecraft:iron_sword\" or \"immersive_armors:wooden_chestplate\". Use double-quoted strings and commas between JSON entries. Missing, invalid, air or wrong slot/weapon-type IDs use safe fallback gear and log once per invalid ID. early_spartan_material is the Spartan registry material prefix, e.g. wooden, stone, copper, iron or diamond. Weapon archetypes are retained where possible; missing variants fall back to early vanilla melee, bows/crossbows or shields. Arbitrary gun strength cannot be inferred from material names, so only gun spawn chance changes. If quotes in this description appear backslash-escaped, remove those escape backslashes from actual ID settings and retain the enclosing double quotes.",
         "_说明_中文": "二阶：第 10 天开始装备成长，第 70 天恢复原有品质。日期范围 1–1000000；下列概率/倍率范围 0–1。",
         "_description_en": "Tier II: growth starts on day 10 and reaches original quality on day 70. Dates: 1–1000000; chances/multipliers: 0–1.",
+        "_说明_start_day_中文": "开始装备成长的个人在线日，1–1000000；与本阶解锁日独立。",
+        "_description_start_day_en": "Personal online day when equipment growth starts, 1–1000000; independent of rank unlock.",
         "start_day": 10,
+        "_说明_full_quality_day_中文": "达到原装备品质的个人在线日，1–1000000；此后不再削减品质。",
+        "_description_full_quality_day_en": "Personal online day reaching baseline quality, 1–1000000; no quality reductions afterward.",
         "full_quality_day": 70,
+        "_说明_early_baseline_gear_chance_中文": "成长起点保留原装备材质的概率，0–1。",
+        "_description_early_baseline_gear_chance_en": "Chance to retain baseline material at growth start, 0–1.",
         "early_baseline_gear_chance": 0.0,
+        "_说明_early_gun_chance_multiplier_中文": "成长起点的枪械携带概率倍率，0–1；乘本阶tacz.gun_chance。",
+        "_description_early_gun_chance_multiplier_en": "Initial firearm chance multiplier, 0–1; multiplies rank tacz.gun_chance.",
         "early_gun_chance_multiplier": 0.25,
+        "_说明_early_enchantment_keep_chance_中文": "成长起点每个非诅咒附魔的保留概率，0–1。",
+        "_description_early_enchantment_keep_chance_en": "Initial retention chance for each non-curse enchantment, 0–1.",
         "early_enchantment_keep_chance": 0.15,
+        "_说明_early_enchantment_level_multiplier_中文": "成长起点附魔等级倍率，0–1，向下取整；0级移除。",
+        "_description_early_enchantment_level_multiplier_en": "Initial enchantment level multiplier, 0–1, rounded down; level 0 is removed.",
         "early_enchantment_level_multiplier": 0.25,
+        "_说明_early_totem_keep_chance_中文": "成长起点保留已抽中不死图腾的概率，0–1。",
+        "_description_early_totem_keep_chance_en": "Initial chance to retain an already-rolled totem, 0–1.",
         "early_totem_keep_chance": 0.0,
+        "_说明_early_trident_keep_chance_中文": "成长起点保留已抽中三叉戟的概率，0–1。",
+        "_description_early_trident_keep_chance_en": "Initial chance to retain an already-rolled trident, 0–1.",
         "early_trident_keep_chance": 0.0,
+        "_说明_early_spartan_material_中文": "斯巴达武器早期材质前缀，例如wooden/stone；无对应物品使用安全回退。",
+        "_description_early_spartan_material_en": "Early Spartan material prefix, e.g. wooden/stone; unavailable items use safe fallbacks.",
         "early_spartan_material": "iron",
+        "_说明_early_melee_中文": "早期替换用剑/斧ID；必须符合武器类型。",
+        "_description_early_melee_en": "Early replacement sword/axe IDs; must match weapon types.",
         "early_melee": {
           "sword": "minecraft:iron_sword",
           "axe": "minecraft:iron_axe"
         },
+        "_说明_early_armor_中文": "早期替换护甲ID；必须符合对应装备部位。",
+        "_description_early_armor_en": "Early replacement armor IDs; must match equipment slots.",
         "early_armor": {
           "head": "minecraft:iron_helmet",
           "chest": "minecraft:iron_chestplate",
@@ -1091,21 +1677,51 @@
         }
       },
       "tier3": {
+        "_说明_成长公式_中文": "每阶进度 p=限制到 0–1 的 (个人在线日-start_day)/(full_quality_day-start_day)。采用生成点同维度最近的存活非旁观玩家的累计在线时间，与自然生成解锁共用个人计时；24000 个在线游戏 tick 为一天，离线、暂停、睡觉跳夜和 /time 不增加进度。start_day 只控制装备成长；解锁日在本阶 spawning.first_spawn_day 配置。结束日不晚于起点时，从结束日起使用完整装备。进度只在生成时保存，不会每天给已有实体换装。",
+        "_description_progress_formula_en": "Per-tier p=clamp((personal online day-start_day)/(full_quality_day-start_day),0,1). Uses the nearest living non-spectator player's accumulated online time in the spawn dimension, shared with rank unlocks. A day is 24000 online game ticks; offline time, pauses, skipped nights and /time do not advance it. start_day controls equipment only; rank spawning.first_spawn_day controls unlock dates. If the end is at/before the start, full gear applies from the end. Captured at spawn; existing humans are not re-equipped daily.",
+        "_说明_品质与枪械_中文": "所有 early_* 概率/倍率允许 0–1 小数，实际值=早期值+(1-早期值)×p。early_baseline_gear_chance 是保留本阶原有装备材质的概率，同一实体共用材质判定；否则使用 early_melee、early_armor 和 early_spartan_material。早期材质不会提升本就更弱的默认装备。early_gun_chance_multiplier 乘 本阶 tacz.gun_chance：例如原概率 0.8、早期倍率 0.25，则起点概率 0.2；枪械 ID、类型权重和伤害不变。默认本阶原有装备品质达到日依次为 40、50、70、80。",
+        "_description_quality_and_guns_en": "All early_* chances/multipliers accept decimals 0–1; the actual value is early+(1-early)×p. early_baseline_gear_chance preserves original material quality, with one shared material roll per human; otherwise early_melee, early_armor and early_spartan_material are used. Early substitutions do not upgrade weaker baseline gear. early_gun_chance_multiplier multiplies the rank tacz.gun_chance: 0.8×0.25=0.2 at the start. Gun IDs, type weights and damage are unchanged. Default baseline-quality days are 40, 50, 70 and 80.",
+        "_说明_附魔与特殊物品_中文": "early_enchantment_keep_chance 是每个非诅咒附魔的保留概率；early_enchantment_level_multiplier 乘原等级并向下取整，结果 0 时去除该附魔；例如等级 IV×0.25=I。诅咒保留，替换物品只接受其可用附魔。盾牌与背包备用装备也处理。early_totem_keep_chance 控制已抽中的不死图腾保留概率；early_trident_keep_chance 控制已抽中的三叉戟保留概率，不保留时替换为弓以保留远程能力。到结束日不再过滤任何装备和附魔。食物、药水等补给不受影响。",
+        "_description_enchantments_and_specials_en": "early_enchantment_keep_chance retains each non-curse enchantment; early_enchantment_level_multiplier multiplies its original level and rounds down, removing levels that become 0. Level IV×0.25=I. Curses remain; replacement items accept only applicable enchantments. Shields and backpack backups are included. early_totem_keep_chance retains already-rolled totems. early_trident_keep_chance retains already-rolled tridents; otherwise a bow preserves ranged capability. On the end day, gear/enchantments are no longer filtered. Food and potion supplies are unchanged.",
+        "_说明_物品ID_中文": "early_melee.sword/axe 和 early_armor.head/chest/legs/feet 接受原版或模组的完整物品 ID 字符串，例如 \"minecraft:iron_sword\"、\"immersive_armors:wooden_chestplate\"；ID 使用双引号，JSON 各项用逗号分隔。未安装、无效 ID、air 或不符合部位/武器类型的 ID 使用安全回退装备，控制台对每个无效 ID 仅警告一次。early_spartan_material 指斯巴达注册名的材质前缀，例如 wooden、stone、copper、iron、diamond；尽量保留武器类型，无对应物品则回退早期原版近战武器、弓/弩或盾牌。不能靠材质前缀评定任意枪械的强弱，因此枪械只调整生成概率。如本说明中的引号以反斜杠转义显示，真实物品 ID 配置需移除转义反斜杠，只保留包裹字符串的双引号。",
+        "_description_item_ids_en": "early_melee.sword/axe and early_armor.head/chest/legs/feet accept full vanilla/mod item IDs such as \"minecraft:iron_sword\" or \"immersive_armors:wooden_chestplate\". Use double-quoted strings and commas between JSON entries. Missing, invalid, air or wrong slot/weapon-type IDs use safe fallback gear and log once per invalid ID. early_spartan_material is the Spartan registry material prefix, e.g. wooden, stone, copper, iron or diamond. Weapon archetypes are retained where possible; missing variants fall back to early vanilla melee, bows/crossbows or shields. Arbitrary gun strength cannot be inferred from material names, so only gun spawn chance changes. If quotes in this description appear backslash-escaped, remove those escape backslashes from actual ID settings and retain the enclosing double quotes.",
         "_说明_中文": "三阶：第 20 天开始装备成长，第 80 天恢复原有品质。日期范围 1–1000000；下列概率/倍率范围 0–1。",
         "_description_en": "Tier III: growth starts on day 20 and reaches original quality on day 80. Dates: 1–1000000; chances/multipliers: 0–1.",
+        "_说明_start_day_中文": "开始装备成长的个人在线日，1–1000000；与本阶解锁日独立。",
+        "_description_start_day_en": "Personal online day when equipment growth starts, 1–1000000; independent of rank unlock.",
         "start_day": 20,
+        "_说明_full_quality_day_中文": "达到原装备品质的个人在线日，1–1000000；此后不再削减品质。",
+        "_description_full_quality_day_en": "Personal online day reaching baseline quality, 1–1000000; no quality reductions afterward.",
         "full_quality_day": 80,
+        "_说明_early_baseline_gear_chance_中文": "成长起点保留原装备材质的概率，0–1。",
+        "_description_early_baseline_gear_chance_en": "Chance to retain baseline material at growth start, 0–1.",
         "early_baseline_gear_chance": 0.0,
+        "_说明_early_gun_chance_multiplier_中文": "成长起点的枪械携带概率倍率，0–1；乘本阶tacz.gun_chance。",
+        "_description_early_gun_chance_multiplier_en": "Initial firearm chance multiplier, 0–1; multiplies rank tacz.gun_chance.",
         "early_gun_chance_multiplier": 0.25,
+        "_说明_early_enchantment_keep_chance_中文": "成长起点每个非诅咒附魔的保留概率，0–1。",
+        "_description_early_enchantment_keep_chance_en": "Initial retention chance for each non-curse enchantment, 0–1.",
         "early_enchantment_keep_chance": 0.15,
+        "_说明_early_enchantment_level_multiplier_中文": "成长起点附魔等级倍率，0–1，向下取整；0级移除。",
+        "_description_early_enchantment_level_multiplier_en": "Initial enchantment level multiplier, 0–1, rounded down; level 0 is removed.",
         "early_enchantment_level_multiplier": 0.25,
+        "_说明_early_totem_keep_chance_中文": "成长起点保留已抽中不死图腾的概率，0–1。",
+        "_description_early_totem_keep_chance_en": "Initial chance to retain an already-rolled totem, 0–1.",
         "early_totem_keep_chance": 0.0,
+        "_说明_early_trident_keep_chance_中文": "成长起点保留已抽中三叉戟的概率，0–1。",
+        "_description_early_trident_keep_chance_en": "Initial chance to retain an already-rolled trident, 0–1.",
         "early_trident_keep_chance": 0.0,
+        "_说明_early_spartan_material_中文": "斯巴达武器早期材质前缀，例如wooden/stone；无对应物品使用安全回退。",
+        "_description_early_spartan_material_en": "Early Spartan material prefix, e.g. wooden/stone; unavailable items use safe fallbacks.",
         "early_spartan_material": "diamond",
+        "_说明_early_melee_中文": "早期替换用剑/斧ID；必须符合武器类型。",
+        "_description_early_melee_en": "Early replacement sword/axe IDs; must match weapon types.",
         "early_melee": {
           "sword": "minecraft:diamond_sword",
           "axe": "minecraft:diamond_axe"
         },
+        "_说明_early_armor_中文": "早期替换护甲ID；必须符合对应装备部位。",
+        "_description_early_armor_en": "Early replacement armor IDs; must match equipment slots.",
         "early_armor": {
           "head": "minecraft:diamond_helmet",
           "chest": "minecraft:diamond_chestplate",
@@ -1152,38 +1768,90 @@
     "_说明_动作速度倍率_中文": "food_use_speed_multiplier 和 shield_use_speed_multiplier 分别设置进食、普通举盾时的移速修正（允许 0.1–1）。默认进食 0.7，即附加 -30%；普通举盾配置默认 0.2，即附加 -80%。战斗 AI 的移动格挡（包括弹射物预判）至少保留 0.4 倍速度属性，避免举盾推进过慢；配置高于 0.4 时采用配置值。喝药不额外施加移速惩罚。",
     "_description_action_speed_multipliers_en": "food_use_speed_multiplier and shield_use_speed_multiplier set movement modifiers while eating or using a regular shield (range 0.1–1). Food defaults to 0.7 (-30%); regular shield use defaults to 0.2 (-80%). Combat AI mobile blocks, including projectile guards, retain at least 0.4x movement speed; higher configured values are respected. Drinking adds no extra movement penalty.",
     "enabled": true,
+    "_说明_retreat_health_ratio_中文": "撤退生命比例，0.1–0.9；0.3表示剩余30%生命。",
+    "_description_retreat_health_ratio_en": "Retreat health ratio, 0.1–0.9; 0.3 means 30% health remains.",
     "retreat_health_ratio": 0.3,
+    "_说明_critical_health_ratio_中文": "危急生命比例，0.05–0.75；实际不高于撤退阈值。",
+    "_description_critical_health_ratio_en": "Critical health ratio, 0.05–0.75; capped at the retreat threshold.",
     "critical_health_ratio": 0.12,
+    "_说明_resume_health_ratio_中文": "恢复作战生命比例，0.2–1；至少比撤退阈值高0.05。",
+    "_description_resume_health_ratio_en": "Resume-combat health ratio, 0.2–1; at least 0.05 above retreat.",
     "resume_health_ratio": 0.65,
+    "_说明_cover_search_radius_中文": "掩体搜索半径，6–32格。",
+    "_description_cover_search_radius_en": "Cover search radius, 6–32 blocks.",
     "cover_search_radius": 18,
+    "_说明_cover_search_attempts_中文": "掩体候选尝试数，2–24；过大增加寻路开销。",
+    "_description_cover_search_attempts_en": "Cover candidate attempts, 2–24; larger values increase pathfinding work.",
     "cover_search_attempts": 10,
+    "_说明_recovery_damage_tolerance_ratio_中文": "恢复过程中可容忍的受伤比例，0–1；按最大生命计算。",
+    "_description_recovery_damage_tolerance_ratio_en": "Damage tolerance during recovery, 0–1 of maximum health.",
     "recovery_damage_tolerance_ratio": 0.1666666667,
+    "_说明_recovery_commit_ticks_中文": "恢复动作承诺时间，0–40 tick；20 tick=1秒。",
+    "_description_recovery_commit_ticks_en": "Recovery commitment time, 0–40 ticks; 20 ticks = 1 second.",
     "recovery_commit_ticks": 14,
+    "_说明_gradual_heal_interval_ticks_中文": "渐进恢复间隔，2–40 tick。",
+    "_description_gradual_heal_interval_ticks_en": "Gradual healing interval, 2–40 ticks.",
     "gradual_heal_interval_ticks": 10,
+    "_说明_food_recovery_min_health_中文": "食物恢复生命量下限，0–20点；不是生命比例。",
+    "_description_food_recovery_min_health_en": "Minimum food recovery health, 0–20 points; not a health ratio.",
     "food_recovery_min_health": 2,
+    "_说明_food_recovery_max_health_中文": "食物恢复生命量上限，1–30点；不是食物品质评分。",
+    "_description_food_recovery_max_health_en": "Maximum food recovery health, 1–30 points; not food pickup value.",
     "food_recovery_max_health": 12,
+    "_说明_food_use_speed_multiplier_中文": "进食时移动属性倍率，0.1–1；默认0.7即保留70%速度。",
+    "_description_food_use_speed_multiplier_en": "Movement multiplier while eating, 0.1–1; 0.7 retains 70% speed.",
     "food_use_speed_multiplier": 0.7,
+    "_说明_shield_block_duration_min_ticks_中文": "普通举盾时长下限，3–30 tick。",
+    "_description_shield_block_duration_min_ticks_en": "Minimum normal shield duration, 3–30 ticks.",
     "shield_block_duration_min_ticks": 6,
+    "_说明_shield_block_duration_max_ticks_中文": "普通举盾时长上限，4–160 tick；至少比下限高1。",
+    "_description_shield_block_duration_max_ticks_en": "Maximum normal shield duration, 4–160 ticks; at least one above the minimum.",
     "shield_block_duration_max_ticks": 160,
+    "_说明_shield_block_cooldown_ticks_中文": "普通举盾冷却，5–120 tick。",
+    "_description_shield_block_cooldown_ticks_en": "Normal shield cooldown, 5–120 ticks.",
     "shield_block_cooldown_ticks": 5,
+    "_说明_shield_block_chance_after_hit_中文": "受击后尝试普通举盾的概率，0–1。",
+    "_description_shield_block_chance_after_hit_en": "Chance to attempt normal shielding after a hit, 0–1.",
     "shield_block_chance_after_hit": 0.65,
+    "_说明_shield_use_speed_multiplier_中文": "普通举盾移动倍率，0.1–1；预判弹射物格挡时至少保留0.7。",
+    "_description_shield_use_speed_multiplier_en": "Normal shield movement multiplier, 0.1–1; predictive projectile blocks retain at least 0.7.",
     "shield_use_speed_multiplier": 0.2,
+    "_说明_tactical_reposition_interval_中文": "战术换位间隔，8–100 tick。",
+    "_description_tactical_reposition_interval_en": "Tactical reposition interval, 8–100 ticks.",
     "tactical_reposition_interval": 26,
+    "_说明_ally_spacing_radius_中文": "友军间距参考半径，0–10格。",
+    "_description_ally_spacing_radius_en": "Ally spacing reference radius, 0–10 blocks.",
     "ally_spacing_radius": 3.5,
+    "_说明_combat_jump_interval_min_中文": "战斗跳跃间隔下限，4–40 tick。",
+    "_description_combat_jump_interval_min_en": "Minimum combat jump interval, 4–40 ticks.",
     "combat_jump_interval_min": 12,
+    "_说明_combat_jump_interval_max_中文": "战斗跳跃间隔上限，5–60 tick；至少比下限高1。",
+    "_description_combat_jump_interval_max_en": "Maximum combat jump interval, 5–60 ticks; at least one above minimum.",
     "combat_jump_interval_max": 22,
+    "_说明_combat_jump_chance_中文": "符合跳跃条件时的跳跃概率，0–1。",
+    "_description_combat_jump_chance_en": "Jump chance when eligible, 0–1.",
     "combat_jump_chance": 0.6,
+    "_说明_item_recovery_enabled_中文": "本阶物品恢复与初始补给开关；出生药水还受potions.enabled控制。",
+    "_description_item_recovery_enabled_en": "Item recovery/initial supplies switch; spawn potions also require potions.enabled.",
     "item_recovery_enabled": true,
+    "_说明_flee_hp_中文": "原生低血撤退生命比例，0–1；不是增强AI的retreat_health_ratio。",
+    "_description_flee_hp_en": "Native low-health retreat ratio, 0–1; distinct from enhanced retreat_health_ratio.",
     "flee_hp": 0.35,
+    "_说明_run_away_middle_fight_chance_中文": "原生战斗中选择逃跑的概率，0–1。",
+    "_description_run_away_middle_fight_chance_en": "Native mid-fight retreat choice probability, 0–1.",
     "run_away_middle_fight_chance": 0.5,
+    "_说明_mid_battle_buff_instead_of_run_chance_中文": "原生战斗中选择强化而非逃跑的概率，0–1。",
+    "_description_mid_battle_buff_instead_of_run_chance_en": "Native mid-fight chance to buff instead of retreating, 0–1.",
     "mid_battle_buff_instead_of_run_chance": 0.1,
+    "_说明_greet_chance_中文": "原生问候行为概率，0–1。",
+    "_description_greet_chance_en": "Native greeting probability, 0–1.",
     "greet_chance": 0.05,
     "_说明_旧原生行为_中文": "以下选项也按阶独立：flee_hp旧低血量比例；run_away_middle_fight_chance逃跑选择概率；mid_battle_buff_instead_of_run_chance原二阶临战恢复概率；greet_chance敌对台词概率。均为0至1。",
     "_description_native_ai_en": "Per-rank legacy AI: flee_hp health ratio, run_away_middle_fight_chance retreat choice, mid_battle_buff_instead_of_run_chance existing tier-2 recovery choice, and greet_chance hostile dialogue. Each uses a 0-1 range."
   },
   "recruitment": {
-    "_说明_中文": "雇佣管理。max_hired_by_tier 分别限制每位玩家正式雇佣的各阶数量。allow_hired_pvp_damage 开启后，雇佣人类可伤害其他玩家及其雇佣人类；主人及同一主人的单位仍受保护。",
-    "_description_en": "Recruitment settings. max_hired_by_tier sets each player's permanent hire limit per tier. When allow_hired_pvp_damage is enabled, hired humans can damage other players and their recruits; their owner and same-owner units remain protected.",
+    "_说明_中文": "全局雇佣关系与消息设置；人数上限和费用在各阶recruitment中设置。",
+    "_description_en": "Global hiring relationships and message settings; limits and payments are in each rank recruitment section.",
     "max_hired_by_tier": {
       "_说明_中文": "每位玩家各阶正式雇佣人数上限。",
       "_description_en": "Maximum permanent hires per player for each tier.",
@@ -1245,10 +1913,10 @@
     "_说明_野外枪械_中文": "natural_spawn_firearms_enabled 控制自然生成和自然大型战斗中的人类是否额外携带枪械，默认 true。关闭不改变近战、弓弩、盾牌或护甲池，也不禁用 TaCZ 兼容、已有枪械、雇佣后的输入或信号召唤。开启时继续使用原有按阶枪械概率与自然装备成长倍率，枪械占武器数量名额且保留近战备用；本阶 allow_tacz_firearms 仍可进一步禁止该阶生成枪械。",
     "_description_natural_firearms_en": "natural_spawn_firearms_enabled defaults true and controls extra firearms for natural spawns and automatic natural battles. Disabling it leaves other equipment pools unchanged, and does not disable TaCZ integration, existing guns, hired input or signal summons. Existing tier chances and growth multipliers apply when enabled. Guns count toward spawn weapon caps and retain a melee backup. Per-rank allow_tacz_firearms can additionally disable firearm generation for that rank.",
     "natural_spawn_firearms_enabled": true,
-    "_说明_中文": "TaCZ 枪械兼容与枪手设置。枪械出现概率/掉落概率及伤害倍率均为倍率或概率值；枪械分类权重决定抽取构成；白名单控制可生成/可装备枪械，黑名单优先排除。",
-    "_description_en": "TaCZ firearm integration and gunner settings. Spawn/drop chances and damage values are probabilities or multipliers; type weights control weapon distribution; whitelists control eligible guns and the blacklist excludes guns first.",
-    "_说明_枪械生成_中文": "各阶枪械出现概率、强制远程人类枪械概率、枪械掉落概率、自动收录新枪及自动收录权重/排除规则。",
-    "_description_gun_generation_en": "Per-tier firearm chances, forced-ranged gun chance, gun drop chance, automatic inclusion of new guns, and its weights/exclusions.",
+    "_说明_中文": "全局TaCZ兼容、自然枪械开关、枪械ID名单、通用伤害及其他枪手兼容。各阶概率、类型权重和输出倍率见本阶tacz。",
+    "_description_en": "Global TaCZ integration, natural-firearm switch, gun ID lists, shared damage and other-gunner compatibility. Rank chances, type weights and damage factors are in each rank tacz section.",
+    "_说明_枪械生成_中文": "全局强制远程职业枪械概率、枪械掉落率和自动登记规则；本阶额外携枪概率在阶级文件tacz.gun_chance。",
+    "_description_gun_generation_en": "Global forced-ranged firearm chance, gun drop chance and automatic registration. Rank extra firearm chances are in rank tacz.gun_chance.",
     "enabled": true,
     "tier1_gun_chance": 0.1,
     "tier2_gun_chance": 0.4,
@@ -1257,8 +1925,8 @@
     "forced_ranged_gun_chance": 0.33,
     "gun_drop_chance": 0.01,
     "excluded_gun_namespaces": [],
-    "_说明_枪械伤害_中文": "人类枪械倍率 = human_gun_damage_multiplier × tier_damage_multipliers 中攻击者所属阶级的值。全局与阶级相乘，不互相覆盖；例如 0.5 × 1.5 = 0.75，即原生枪械伤害的 75%（目标减伤前）。对应阶级文件 的 attack_damage、近战/弓/三叉戟输出倍率以及 global.json 的非枪械输出倍率不参与。枪械自身伤害、爆头和距离衰减仍由 TaCZ/枪包计算。pillager_gun_damage_multiplier 仅用于掠夺者，不与人类倍率相乘。此处没有逐枪械类型伤害倍率；类型权重、名单权重和散布不是伤害值。",
-    "_description_gun_damage_en": "Human firearm scaling = human_gun_damage_multiplier × the attacker's entry in tier_damage_multipliers. Global and tier values multiply rather than override: 0.5 × 1.5 = 0.75, or 75% of native firearm damage before defender reductions. attack_damage and melee/bow/trident outgoing multipliers in the corresponding rank file, plus non-firearm output in global.json, do not participate. Native firearm damage, headshots and distance falloff remain TaCZ/gun-pack calculations. pillager_gun_damage_multiplier applies to pillagers only and is not multiplied by Human values. No per-firearm-category damage multiplier is defined here; type weights, list weights and spread are not damage values.",
+    "_说明_枪械伤害_中文": "全局人类枪伤倍率human_gun_damage_multiplier乘本阶tacz.damage_multiplier；卫道士枪伤使用pillager_gun_damage_multiplier。",
+    "_description_gun_damage_en": "Global human_gun_damage_multiplier multiplies rank tacz.damage_multiplier; pillager firearms use pillager_gun_damage_multiplier.",
     "human_gun_damage_multiplier": 0.5,
     "pillager_gun_damage_multiplier": 0.4,
     "tier_damage_multipliers": {
@@ -1315,5 +1983,87 @@
     "_说明_兼容字段_中文": "仅供非 Hostile Humans 实体使用的枪手散布回退值；Hostile Humans 人类枪手使用 tiers 中逐阶、逐枪械类型的 weapon_spread_degrees。",
     "_description_compat_fields_en": "Fallback gunner spread for non-Hostile-Humans entities only. Hostile Humans gunners use per-tier, per-firearm weapon_spread_degrees under tiers.",
     "gunner_spread_degrees": 0.6
+  },
+  "_tier_file_metadata": {
+    "roamer": {
+      "tacz": {
+        "_说明_中文": "本阶TaCZ出生概率、输出倍率和类型权重；兼容总开关及枪械ID名单见global.json。",
+        "_description_en": "Rank TaCZ spawn chance, damage scaling and type weights; integration switches and gun ID lists are in global.json.",
+        "_说明_gun_chance_中文": "本阶额外枪械携带概率，0–1；自然生成还受全局开关和装备成长倍率影响。",
+        "_description_gun_chance_en": "Rank extra firearm chance, 0–1; natural spawning also uses global switches and equipment growth.",
+        "_说明_damage_multiplier_中文": "本阶枪械输出倍率，0–10；与global.json中tacz.human_gun_damage_multiplier相乘。",
+        "_description_damage_multiplier_en": "Rank firearm damage multiplier, 0–10; multiplies global tacz.human_gun_damage_multiplier.",
+        "_说明_gun_type_weights_中文": "类型权重：pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击、mg机枪、rpg重型。正权重按相对值抽取；空对象或全部为0时使用内置默认类型权重，禁枪应使用gun_chance或equipment_loadout.allow_tacz_firearms。",
+        "_description_gun_type_weights_en": "Type weights: pistol, smg, rifle, shotgun, sniper, mg, rpg. Positive weights are relative; empty/all-zero rows use built-in defaults. Disable firearms using gun_chance or equipment_loadout.allow_tacz_firearms."
+      },
+      "recruitment": {
+        "_说明_中文": "本阶永久雇佣上限与费用；玩家伤害和士兵消息频率见global.json。",
+        "_description_en": "Rank permanent hiring limit and payment; PvP and soldier message frequency are in global.json.",
+        "_说明_max_hired_中文": "每位玩家可永久雇佣的本阶人数上限，0–10000；0禁止新增本阶雇佣。",
+        "_description_max_hired_en": "Per-player permanent hire limit, 0–10000; 0 disallows new hires in this rank.",
+        "_说明_payment_中文": "费用对象：item为注册物品ID，count为非负整数；合同另行消耗，0表示只需合同。",
+        "_description_payment_en": "Payment object: item is a registered item ID, count a nonnegative integer. Contract is separate; 0 requires only the contract."
+      }
+    },
+    "tier1": {
+      "tacz": {
+        "_说明_中文": "本阶TaCZ出生概率、输出倍率和类型权重；兼容总开关及枪械ID名单见global.json。",
+        "_description_en": "Rank TaCZ spawn chance, damage scaling and type weights; integration switches and gun ID lists are in global.json.",
+        "_说明_gun_chance_中文": "本阶额外枪械携带概率，0–1；自然生成还受全局开关和装备成长倍率影响。",
+        "_description_gun_chance_en": "Rank extra firearm chance, 0–1; natural spawning also uses global switches and equipment growth.",
+        "_说明_damage_multiplier_中文": "本阶枪械输出倍率，0–10；与global.json中tacz.human_gun_damage_multiplier相乘。",
+        "_description_damage_multiplier_en": "Rank firearm damage multiplier, 0–10; multiplies global tacz.human_gun_damage_multiplier.",
+        "_说明_gun_type_weights_中文": "类型权重：pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击、mg机枪、rpg重型。正权重按相对值抽取；空对象或全部为0时使用内置默认类型权重，禁枪应使用gun_chance或equipment_loadout.allow_tacz_firearms。",
+        "_description_gun_type_weights_en": "Type weights: pistol, smg, rifle, shotgun, sniper, mg, rpg. Positive weights are relative; empty/all-zero rows use built-in defaults. Disable firearms using gun_chance or equipment_loadout.allow_tacz_firearms."
+      },
+      "recruitment": {
+        "_说明_中文": "本阶永久雇佣上限与费用；玩家伤害和士兵消息频率见global.json。",
+        "_description_en": "Rank permanent hiring limit and payment; PvP and soldier message frequency are in global.json.",
+        "_说明_max_hired_中文": "每位玩家可永久雇佣的本阶人数上限，0–10000；0禁止新增本阶雇佣。",
+        "_description_max_hired_en": "Per-player permanent hire limit, 0–10000; 0 disallows new hires in this rank.",
+        "_说明_payment_中文": "费用对象：item为注册物品ID，count为非负整数；合同另行消耗，0表示只需合同。",
+        "_description_payment_en": "Payment object: item is a registered item ID, count a nonnegative integer. Contract is separate; 0 requires only the contract."
+      }
+    },
+    "tier2": {
+      "tacz": {
+        "_说明_中文": "本阶TaCZ出生概率、输出倍率和类型权重；兼容总开关及枪械ID名单见global.json。",
+        "_description_en": "Rank TaCZ spawn chance, damage scaling and type weights; integration switches and gun ID lists are in global.json.",
+        "_说明_gun_chance_中文": "本阶额外枪械携带概率，0–1；自然生成还受全局开关和装备成长倍率影响。",
+        "_description_gun_chance_en": "Rank extra firearm chance, 0–1; natural spawning also uses global switches and equipment growth.",
+        "_说明_damage_multiplier_中文": "本阶枪械输出倍率，0–10；与global.json中tacz.human_gun_damage_multiplier相乘。",
+        "_description_damage_multiplier_en": "Rank firearm damage multiplier, 0–10; multiplies global tacz.human_gun_damage_multiplier.",
+        "_说明_gun_type_weights_中文": "类型权重：pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击、mg机枪、rpg重型。正权重按相对值抽取；空对象或全部为0时使用内置默认类型权重，禁枪应使用gun_chance或equipment_loadout.allow_tacz_firearms。",
+        "_description_gun_type_weights_en": "Type weights: pistol, smg, rifle, shotgun, sniper, mg, rpg. Positive weights are relative; empty/all-zero rows use built-in defaults. Disable firearms using gun_chance or equipment_loadout.allow_tacz_firearms."
+      },
+      "recruitment": {
+        "_说明_中文": "本阶永久雇佣上限与费用；玩家伤害和士兵消息频率见global.json。",
+        "_description_en": "Rank permanent hiring limit and payment; PvP and soldier message frequency are in global.json.",
+        "_说明_max_hired_中文": "每位玩家可永久雇佣的本阶人数上限，0–10000；0禁止新增本阶雇佣。",
+        "_description_max_hired_en": "Per-player permanent hire limit, 0–10000; 0 disallows new hires in this rank.",
+        "_说明_payment_中文": "费用对象：item为注册物品ID，count为非负整数；合同另行消耗，0表示只需合同。",
+        "_description_payment_en": "Payment object: item is a registered item ID, count a nonnegative integer. Contract is separate; 0 requires only the contract."
+      }
+    },
+    "tier3": {
+      "tacz": {
+        "_说明_中文": "本阶TaCZ出生概率、输出倍率和类型权重；兼容总开关及枪械ID名单见global.json。",
+        "_description_en": "Rank TaCZ spawn chance, damage scaling and type weights; integration switches and gun ID lists are in global.json.",
+        "_说明_gun_chance_中文": "本阶额外枪械携带概率，0–1；自然生成还受全局开关和装备成长倍率影响。",
+        "_description_gun_chance_en": "Rank extra firearm chance, 0–1; natural spawning also uses global switches and equipment growth.",
+        "_说明_damage_multiplier_中文": "本阶枪械输出倍率，0–10；与global.json中tacz.human_gun_damage_multiplier相乘。",
+        "_description_damage_multiplier_en": "Rank firearm damage multiplier, 0–10; multiplies global tacz.human_gun_damage_multiplier.",
+        "_说明_gun_type_weights_中文": "类型权重：pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击、mg机枪、rpg重型。正权重按相对值抽取；空对象或全部为0时使用内置默认类型权重，禁枪应使用gun_chance或equipment_loadout.allow_tacz_firearms。",
+        "_description_gun_type_weights_en": "Type weights: pistol, smg, rifle, shotgun, sniper, mg, rpg. Positive weights are relative; empty/all-zero rows use built-in defaults. Disable firearms using gun_chance or equipment_loadout.allow_tacz_firearms."
+      },
+      "recruitment": {
+        "_说明_中文": "本阶永久雇佣上限与费用；玩家伤害和士兵消息频率见global.json。",
+        "_description_en": "Rank permanent hiring limit and payment; PvP and soldier message frequency are in global.json.",
+        "_说明_max_hired_中文": "每位玩家可永久雇佣的本阶人数上限，0–10000；0禁止新增本阶雇佣。",
+        "_description_max_hired_en": "Per-player permanent hire limit, 0–10000; 0 disallows new hires in this rank.",
+        "_说明_payment_中文": "费用对象：item为注册物品ID，count为非负整数；合同另行消耗，0表示只需合同。",
+        "_description_payment_en": "Payment object: item is a registered item ID, count a nonnegative integer. Contract is separate; 0 requires only the contract."
+      }
+    }
   }
 }

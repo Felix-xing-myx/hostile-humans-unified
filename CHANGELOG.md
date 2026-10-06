@@ -4,6 +4,7 @@
 
 ### 简体中文
 
+- 整理新生成的五份配置：全局不再遗留只有说明的阶级/装备/解锁区域，相关说明移至阶级文件。四阶采用统一分区顺序，配置值前增加双语用途、单位与范围说明，补齐弹药、药水、枪械和雇佣参数；配置数值、物品池及游戏逻辑不变，已有文件不自动改写。
 - 加快雇佣士兵闲置跟随并加入距离迟滞与有界路径更新；按阶配置普通/追赶倍率。主人下线仅将跟随改为当前位置区域驻守，保留其它指令和攻击模式。外部存档不再因主人离线或跨维度漏存主人UUID；离线真实死亡持久记录原因和地点，上线提示，卸载与丢弃不报死亡。
 - 弹匣简洁贴图增加两条压槽。四阶配置新增potions：独立设置出生恢复/战术药水池、瓶数范围及迅捷药水概率，支持已注册模组药水；空池不补默认药水，原药水发放硬编码移除。
 - 简化通用弹匣贴图轮廓与高光；人类箭矢改名通用箭矢（物品ID不变）。箭矢和弹匣拾取评分提升至160，瞬间治疗药水降至55，高于面包、低于牛排和金胡萝卜等高品质食物。
@@ -19,6 +20,7 @@
 
 ### English
 
+- Organize newly generated configuration files: move orphan rank/loadout/unlock guidance out of global settings, use consistent rank section ordering, and place bilingual purpose, unit and range help next to fields including ammunition, potions, firearms and hiring. Defaults, pools and gameplay behavior are unchanged; existing files are not rewritten.
 - Speed up idle hired follow with distance hysteresis and bounded route updates; configure normal/catch-up multipliers by rank. Logout converts only FOLLOW to GUARD at the current position, preserving other orders and combat modes. Save owner UUIDs even when owners are offline or in another dimension. Persist confirmed offline deaths and report causes/locations on login; unloads and discards do not produce death notices.
 - Add two stamped grooves to the magazine icon. Per-rank potions configure recovery/tactical pools, bottle counts and bonus chance, including registered mod potions; empty pools grant none and hardcoded provisioning is removed.
 - Simplify the universal magazine sprite and rename Human Arrow to Universal Arrow without changing its ID. Raise ammo pickup value to 160; lower instant healing to 55, above bread but below steak and golden carrots.
