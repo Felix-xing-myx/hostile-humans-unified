@@ -38,7 +38,16 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | TAKEOVER-20261006 | 首次接管及协作规范 / 已完成 | `5c7c4dcd06d5a3f4a502cb71e591766d5e619fe7` | 主控 / 当前接管聊天 | 主仓库 / `main` | 新建 `AGENTS.md`、`docs/WORKSTREAMS.md` | 无运行接口变化；不修改或提交既有 CHANGELOG 改动 | 交付为本记录所在的文档提交，可用 `git log -- AGENTS.md docs/WORKSTREAMS.md` 定位；静态核对及文档差异检查，无构建/同步/push/游戏测试 |
 
-尚无具体功能需求，不创建开发会话、子任务或额外工作树。后续功能任务须选择届时确认的基线提交，不能自动沿用上表初始 HEAD。
+## 2026-10-06 首批修复任务
+
+共同基线：`31aa9329b02f789e2bedfdd5b1d2f57503b46072`。主仓库未提交的 CHANGELOG 中英文重排不带入开发工作树，主控保留。未授权构建、同步、推送或启动游戏。
+
+| ID | 任务 / 状态 | 负责人 | 工作树 / 分支 | 修改范围与接口约定 |
+| --- | --- | --- | --- | --- |
+| TACZ-01 | 持枪动画重追踪/传送冻结修复；无 Player Animator 动画方案 / 开发中 | tacz_animation 子 Agent，GPT-6.1 Sol / medium | `E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\tacz-animation` / `fix/tacz-animation-lifecycle` | 客户端 renderer 动画模块、`TaczNpcAnimatorMixin`、必要独立测试；不改 Human、HumanGunner、配置、版本或日志。保留 Better Combat 接口和服务端出伤权限 |
+| LOOT-01 | 敌对信标食物保留原掉落期望的 20%，不掉附魔金苹果 / 开发中 | beacon_drops 子 Agent，GPT-6 Luna / medium | `E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\beacon-drops` / `fix/beacon-food-drops` | HumanGunner 掉落事件、信标来源标记及独立掉落策略；不改 renderer、Human、配置、版本或日志。最终掉落处逐件保留 20%，非食物不变；检查正式雇佣库存语义 |
+
+主控负责公共构建/测试任务接入、更新日志、版本决策、交付审核与本地整合。子 Agent 不再分派其他 Agent。交付提交及验证结果在审核后补记。
 
 ## 分派与交付模板
 
