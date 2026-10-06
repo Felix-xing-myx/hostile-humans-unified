@@ -6,7 +6,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 
-/** Ammunition lives in the actual backpack: no virtual replenishment or optional API types. */
+/** Physical reserves stay in the backpack; configuration can waive their use, never gun reload timing. */
 public final class HumanAmmo {
     public static final ResourceLocation ARROW_ID = new ResourceLocation("humangunner", "human_arrow");
     public static final ResourceLocation MAGAZINE_ID = new ResourceLocation("humangunner", "human_magazine");
@@ -23,16 +23,19 @@ public final class HumanAmmo {
 
     public static int arrowCount(Human human) { return count(human, ARROW_ID); }
     public static int magazineCount(Human human) { return count(human, MAGAZINE_ID); }
-    public static boolean hasArrows(Human human) { return arrowCount(human) > 0; }
-    public static boolean consumeArrow(Human human) { return consume(human, ARROW_ID, 1); }
+    public static boolean hasArrows(Human human) { return !consumptionEnabled() || arrowCount(human) > 0; }
+    public static boolean consumeArrow(Human human) { return !consumptionEnabled() || consume(human, ARROW_ID, 1); }
+    private static boolean consumptionEnabled() { return UnifiedConfig.get().ammoConsumptionEnabled(); }
     public static int magazineCost(ItemStack gun) {
         return HumanAmmoPolicy.magazineCost(GunSupport.get().gunType(gun));
     }
     public static boolean canReload(Human human, ItemStack gun) {
-        return GunSupport.get().isGun(gun) && magazineCount(human) >= magazineCost(gun);
+        return GunSupport.get().isGun(gun)
+                && (!consumptionEnabled() || magazineCount(human) >= magazineCost(gun));
     }
     public static boolean consumeMagazines(Human human, ItemStack gun) {
-        return GunSupport.get().isGun(gun) && consume(human, MAGAZINE_ID, magazineCost(gun));
+        return GunSupport.get().isGun(gun)
+                && (!consumptionEnabled() || consume(human, MAGAZINE_ID, magazineCost(gun)));
     }
     public static boolean canUseGun(Human human, ItemStack gun) {
         return GunSupport.get().isGun(gun)

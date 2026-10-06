@@ -23,18 +23,13 @@ final class HumanAmmoSpawn {
             bow |= RangedWeaponCustody.isBowOrCrossbow(stack);
             gun |= GunSupport.get().isGun(stack);
         }
-        int tier = switch (TierAttributes.key(human)) {
-            case "tier1" -> 1;
-            case "tier2" -> 2;
-            case "tier3" -> 3;
-            default -> 0;
-        };
+        var reserve = UnifiedConfig.get().ammoReserve(TierAttributes.key(human));
         // Set before storage: cancellation or later gear requests must not grant repeatedly.
         human.getPersistentData().putBoolean(GRANTED, true);
         if (bow) store(human, HumanGunnerRegistries.HUMAN_ARROW.get(), roll(human,
-                HumanAmmoPolicy.arrowMinimum(tier), HumanAmmoPolicy.arrowMaximum(tier)));
+                reserve.arrowMin(), reserve.arrowMax()));
         if (gun) store(human, HumanGunnerRegistries.HUMAN_MAGAZINE.get(), roll(human,
-                HumanAmmoPolicy.magazineMinimum(tier), HumanAmmoPolicy.magazineMaximum(tier)));
+                reserve.magazineMin(), reserve.magazineMax()));
     }
 
     private static int roll(Human human, int minimum, int maximum) {

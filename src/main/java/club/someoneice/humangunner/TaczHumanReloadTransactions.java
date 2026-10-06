@@ -53,7 +53,8 @@ public final class TaczHumanReloadTransactions {
                 () -> HumanAmmo.consumeMagazines(human, weapon));
         if (started && inventoryFeed) {
             // Inventory-feed guns have no native reload script. NPCs instead
-            // carry the pack's magazine capacity and use a paid timed refill.
+            // carry the pack's magazine capacity and use an authorized timed refill.
+            // Consumption-disabled cycles still bind this real weapon and deadline.
             INVENTORY_FEED_END.put(data, human.level().getGameTime() + feedDelay);
         }
         if (!started) {
