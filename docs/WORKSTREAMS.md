@@ -275,3 +275,14 @@
 - 备份前与替换前两次确认无Java进程；旧JAR及10份相关配置备份逐一核对哈希。只替换指定实例中的本模组JAR，确认仅一份；所有既有配置哈希保持不变。未启动游戏或推送GitHub，用户原CHANGELOG修改保留。
 - 源/目标SHA-256 `5CF40CE7D1DC3509BD047255EA384F9DED71A5B42345F311A555F0DD8EC1EF5B`；旧JAR `CBFBF4D82E5D86F347AAA3FC07D7936EED426447416F86296265C70062AAE657`。备份清单 `部署备份/20261006-195454-protection-ammo-potions-Forge_47.4.21/deployment.json`；构建日志 `验证日志/build-protection-ammo-potions-20261006-195242.log`（均在维护上级目录）。
 - 游戏内仍待用户验收：食物三槽/最后药品与备用装备保护、职业弹药偏好；近身连续反击与完整动画后恢复远程；药水扣瓶、不重复喝再生、再生II额外两倍食物回血；原版模式开关及外部生命加成；主动/许可/被动贴身保护、近威胁抢占、远程挡护、地形及主人下线重连。现有全局配置缺vanilla_mode时默认为false；启用需添加或修改该项。客户端与服务器必须同时使用本次更新JAR（新命令协议）。自动检查成功不等同游戏行为已验证。
+
+## 贴身选敌、Better Combat前摇与苦力怕救主：2026-10-06（本地修复）
+
+- 基线 `956543c9b3ff0fd8cbdf7bd6d7aa0e1e21c28096`；主控 `/root` 单独编辑主仓库main，共享Human/AdaptiveCombatGoal/配置接口由主控负责。只读审核 `/root/combat_stall_audit` 使用GPT6.1 Sol / medium，禁止编辑/构建。原工作树保留，用户原CHANGELOG片段未改。范围：BodyguardPolicy/Protection、SoldierOrder/CombatMode/HumanRelations、Human、AdaptiveCombatGoal、MeleeAttackGoal、BetterCombatNpcAnimator、AvoidCreeperGoal、新增CreeperSafetyPolicy、既有BodyguardAndVanillaModeTest及文档；无配置/版本/网络枚举变更。
+- 原因：Human受伤回调及Adaptive.resolveThreat可在TARGET Goal以外改成自己的攻击者；BODYGUARD setTarget随切换取消pending，造成主人近处优先级被覆盖与前摇来回取消。现在非空直接指定目标统一重定向到保护选择，Adaptive的保护模式不再维护自身反击锁，主人距离严格优先（等距离仅极小保持偏好）；许可/被动普通目标仍沿现有权限，未获许可近威胁可暂停远处攻击并挡护。既有守卫目标记录过期不再清除BODYGUARD正在用的目标。
+- Better Combat取消的空动画名原被客户端转换为duration1的默认挥刀，现清除攻击层并恢复idle。未完成前摇时普通战术防御/举盾及重复反击让出；两个近战入口在副作用前检查pending，避免再次假挥刀/扣冷却。严重低血/爆发伤害撤退仍可打断。实际出伤仍由原Human.finishBetterCombatUpswing处理，不新增攻击调度器。
+- AvoidCreeperGoal原继续条件仅为路径未走完，随机逃跑16格；现在只避让正在有效引爆者（自然膨胀且方向为正，或已点燃），逐tick复核，到普通6格/带电9格安全线或开始冷却即停止路径，回交原跟随/保护/战斗Goal。目标点限安全线至外侧2格，随机寻路范围缩小；死亡/移除也结束，平静苦力怕不启动无目的逃跑。
+- 用户确认所有攻击模式均有救主例外：BODYGUARD且在线主人在上述爆炸危险圈内时，正在引爆的苦力怕最高优先，沿同一canAttack权限入口允许提前击杀；不写永久授权，冷却/死亡/离开危险圈/切换命令后恢复普通规则。苦力怕避让与普通Adaptive退避/防御让出；原退避归队标记不阻挡救主。盾牌/武器切换/弹药与实际命中仍沿既有控制，不能保证引爆前击杀成功。
+- 验证：源码选敌/权限/前摇/导航移交逐入口静态核查；本地Forge映射JAR javap确认getSwellDir/isIgnited/isPowered公开API；用户原CHANGELOG片段哈希保持。新增主人近距离压过自卫、持续/冷却/点燃/死亡/安全边界/带电/救主例外边界及关键接入回归，挂既有check入口，尚未编译或执行。未构建、未同步、未启动游戏、未推送。
+- 待游戏验收：主动保护主人旁敌人与自身远处攻击者同时存在、连续挨打不来回换目标；许可/被动普通权限不扩大；Better Combat有/无盾及多目标慢武器的完整前摇/命中/后摇；自然/点燃/带电苦力怕引爆取消后立刻恢复、逃跑距离、多个苦力怕、所有模式主人旁引爆优先击杀及停止引爆后的权限恢复、原退避归队和水/岩浆生存控制。
+- 最终只读审核补齐一项权限遗漏：原忽略目标记忆会拒绝曾被遗忘、随后在主人身边起爆的苦力怕，而逃跑已让出。仅有效救主期间跳过该忽略检查，存活/维度/距离仍受原门控制，不删除其记忆，危险结束即恢复。递归链与已运行DEFEND释放核查通过；源码分隔符与入口顺序静态检查、git diff --check通过，不等同编译。

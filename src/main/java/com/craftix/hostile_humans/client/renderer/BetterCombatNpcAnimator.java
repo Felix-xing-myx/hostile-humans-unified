@@ -341,7 +341,8 @@ final class BetterCombatNpcAnimator {
         playback.applier = null;
         String animationName = human.getNpcBetterCombatAttackAnimation();
         if (animationName == null || animationName.isBlank()) {
-            animationName = "one_handed_slash_horizontal_right";
+            startIdle(playback, resolved, human);
+            return;
         }
         try {
             Object animation = findAnimation(resolved.animations, animationName);

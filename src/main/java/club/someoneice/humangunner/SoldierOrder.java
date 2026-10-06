@@ -102,6 +102,11 @@ public enum SoldierOrder {
             MovementSpeedController.normal(human);
         }
         BlockPos anchor = anchor(human);
+        if (order == BODYGUARD) {
+            BodyguardProtection.update(human);
+            if (BodyguardProtection.protectingFromExplosion(human, BodyguardProtection.threat(human)))
+                human.getPersistentData().remove(RETURNING_FROM_RETREAT);
+        }
         if (human.getPersistentData().getBoolean(RETURNING_FROM_RETREAT)) {
             int sinceHit = human.tickCount - human.getLastHurtByMobTimestamp();
             if (human.getLastHurtByMob() != null && sinceHit >= 0 && sinceHit <= 10) {
@@ -248,6 +253,7 @@ public enum SoldierOrder {
         if (target == null) return false;
         if (!human.hasOwner() || human.level().isClientSide) return true;
         SoldierOrder order = get(human);
+        boolean explosionRescue = BodyguardProtection.protectingFromExplosion(human, target);
         boolean guardRetaliation = order == GUARD && human.guardCombatState
                 .retaliating(target.getUUID(), human.level().getGameTime());
         boolean guardChase = order == GUARD && (target == human.getTarget()
@@ -256,9 +262,10 @@ public enum SoldierOrder {
         if (!target.isAlive() || target.level() != human.level()
                 || (!guardRetaliation && !guardChase
                 && human.distanceToSqr(target) > FOLLOW_COMBAT_RANGE_SQR)
-                || !human.soldierCombatMemory.allowed(target.getUUID(), human.level().getGameTime())
+                || (!explosionRescue && !human.soldierCombatMemory.allowed(target.getUUID(), human.level().getGameTime()))
                 || !SoldierCombatMode.allowsTarget(human, target)) return false;
-        if (human.getPersistentData().getBoolean(RETURNING_FROM_RETREAT)) return false;
+        if (human.getPersistentData().getBoolean(RETURNING_FROM_RETREAT)
+                && !explosionRescue) return false;
         if (order == GUARD && human.guardCombatState.returning()) return false;
         if (guardRetaliation || guardChase) return true;
         if (order == BODYGUARD) {

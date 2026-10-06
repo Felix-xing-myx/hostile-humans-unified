@@ -88,6 +88,7 @@ public enum SoldierCombatMode {
 
     public static boolean allowsTarget(Human human, LivingEntity target) {
         if (target == null) return false;
+        if (BodyguardProtection.protectingFromExplosion(human, target)) return true;
         if (!hasCombatController(human) || get(human) == ACTIVE) return true;
         return isExplicitlyAuthorizedAgainst(human, target);
     }

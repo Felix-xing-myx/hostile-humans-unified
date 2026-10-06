@@ -168,6 +168,7 @@ public final class AdaptiveCombatGoal extends Goal {
         }
         threat = currentThreat;
         updateCombatSession(currentThreat);
+        if (BodyguardProtection.protectingFromExplosion(human, currentThreat)) return false;
 
         updateBurstDamageRetreat();
         if (shouldUseBurstDamageRetreat() || shouldPrioritizeCrowdRetreat()) {
@@ -187,6 +188,8 @@ public final class AdaptiveCombatGoal extends Goal {
             return true;
         }
 
+        // Preserve the committed upswing; emergency recovery above may still preempt it.
+        if (human.humanGunner$hasPendingMeleeAttack()) return false;
         if ((canBlockWithShield() && human.tickCount >= nextDefenseTick)
                 || incomingArrow != null) {
             if (incomingArrow != null) {
@@ -280,6 +283,10 @@ public final class AdaptiveCombatGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (BodyguardProtection.isBodyguard(human)) {
+            BodyguardProtection.update(human);
+            if (BodyguardProtection.protectingFromExplosion(human, BodyguardProtection.threat(human))) return false;
+        }
         if (threat == null || !threat.isAlive() || !human.isAlive()) {
             return false;
         }
@@ -417,7 +424,8 @@ public final class AdaptiveCombatGoal extends Goal {
         if (ownsFleeFlag) {
             ownsFleeFlag = false;
         }
-        if (human.hasOwner() && ShoreSeekingPolicy.shouldReturnToOwnerAfterCombatStop(
+        if (human.hasOwner() && !BodyguardProtection.protectingFromExplosion(human, BodyguardProtection.threat(human))
+                && ShoreSeekingPolicy.shouldReturnToOwnerAfterCombatStop(
                 endedRetreat, shoreTransitionPending)) {
             SoldierOrder.beginReturnFromRetreat(human);
         }
@@ -435,6 +443,11 @@ public final class AdaptiveCombatGoal extends Goal {
     @Override
     public void tick() {
         LivingEntity reevaluated = resolveThreat();
+        if (reevaluated == null && BodyguardProtection.isBodyguard(human)
+                && BodyguardProtection.owner(human) != null) {
+            phaseTicks = 0;
+            return;
+        }
         if (reevaluated != null) {
             threat = reevaluated;
         }
@@ -470,6 +483,12 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void tickDefend() {
+        if (human.humanGunner$hasPendingMeleeAttack()
+                || BodyguardProtection.protectingFromExplosion(human, threat)) {
+            if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) human.stopUsingItem();
+            phaseTicks = 0;
+            return;
+        }
         MovementSpeedController.combat(human, false);
         if (!canBlockWithShield()
                 && !(defendingProjectile && canPreemptivelyBlockProjectile())) {
@@ -1137,6 +1156,11 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private LivingEntity resolveThreat() {
+        if (BodyguardProtection.isBodyguard(human) && BodyguardProtection.owner(human) != null) {
+            clearFocusLock();
+            BodyguardProtection.update(human);
+            return BodyguardProtection.attack(human);
+        }
         LivingEntity current = human.getTarget();
         LivingEntity attacker = human.getLastHurtByMob();
         int hurtTimestamp = human.getLastHurtByMobTimestamp();
@@ -1877,6 +1901,8 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void startShieldBlockIfAvailable() {
+        if (human.humanGunner$hasPendingMeleeAttack()) return;
+        if (BodyguardProtection.protectingFromExplosion(human, threat)) return;
         if (human.isUsingItem()) return;
         InteractionHand shieldHand = SpartanEquipmentCompat.isShield(human.getOffhandItem())
                 ? InteractionHand.OFF_HAND

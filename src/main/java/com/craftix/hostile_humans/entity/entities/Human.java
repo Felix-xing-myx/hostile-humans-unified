@@ -1115,6 +1115,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 && ItemStack.isSameItemSameTags(pendingBetterCombatWeapon, getMainHandItem())
                 && BetterCombatMeleeCombat.isEnabled(this);
     }
+    public boolean humanGunner$hasPendingMeleeAttack() {
+        return pendingBetterCombatTarget != null;
+    }
 
     /** The delayed strike, not the next path node, owns yaw until its impact tick. */
     private void facePendingBetterCombatAttack() {
@@ -1241,6 +1244,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public void startUsingItem(@NotNull InteractionHand hand) {
         Human human = this;
         ItemStack requested = human.getItemInHand(hand);
+        if (humanGunner$hasPendingMeleeAttack()
+                && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)) return;
         boolean holdingGun = club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())
                 || club.someoneice.humangunner.GunSupport.get().isGun(human.getOffhandItem());
         if (holdingGun && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)
@@ -1366,6 +1371,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     @Override
     public void setTarget(@Nullable LivingEntity livingEntity) {
+        if (livingEntity != null) livingEntity = club.someoneice.humangunner.BodyguardProtection
+                .preferredAttack(this, livingEntity);
+        if (livingEntity != null && this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL)
+            livingEntity = null;
+        if (livingEntity != null && !club.someoneice.humangunner.SoldierOrder.allowsTarget(this, livingEntity))
+            livingEntity = null;
         LivingEntity previous = getTarget();
         if (club.someoneice.humangunner.SoldierOrder.get(this)
                 == club.someoneice.humangunner.SoldierOrder.BODYGUARD
@@ -1380,10 +1391,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // Two ordinary selector passes, rather than an unbounded idle scan.
             humanGunner$fastGunRetargetUntilTick = tickCount + 6;
         }
-        if (livingEntity != null && this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL)
-            livingEntity = null;
-        if (livingEntity != null && !club.someoneice.humangunner.SoldierOrder.allowsTarget(this, livingEntity))
-            livingEntity = null;
         super.setTarget(livingEntity);
     }
 

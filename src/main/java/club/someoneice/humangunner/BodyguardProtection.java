@@ -15,7 +15,7 @@ import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.TridentItem;
 
 /** Threat selection only; actual damage and weapon control remain in existing goals. */
-final class BodyguardProtection {
+public final class BodyguardProtection {
     private static final Map<Human, State> STATES = new WeakHashMap<>();
     private static final Map<ServerPlayer, Nearby> NEARBY = new WeakHashMap<>();
     private record Nearby(long tick, net.minecraft.world.phys.Vec3 center, String dimension, List<UUID> ids) { }
@@ -33,6 +33,21 @@ final class BodyguardProtection {
     static void clear(Human human) { STATES.remove(human); }
     static boolean isBodyguard(Human human) {
         return human.hasOwner() && SoldierOrder.get(human) == SoldierOrder.BODYGUARD;
+    }
+    /** All target writers must respect the owner-centered selector. */
+    public static LivingEntity preferredAttack(Human human, LivingEntity requested) {
+        if (!isBodyguard(human) || owner(human) == null || human.isFleeing) return requested;
+        update(human);
+        return attack(human);
+    }
+    /** A live imminent explosion beside the owner is a narrowly scoped rescue exception. */
+    public static boolean protectingFromExplosion(Human human, LivingEntity candidate) {
+        if (!(candidate instanceof net.minecraft.world.entity.monster.Creeper creeper) || !isBodyguard(human)) return false;
+        ServerPlayer owner = owner(human);
+        return owner != null
+                && creeper.isAlive() && !creeper.isRemoved() && creeper.level() == human.level()
+                && CreeperSafetyPolicy.rescue(true, creeper.isIgnited(), creeper.swell,
+                        creeper.getSwellDir(), creeper.distanceToSqr(owner), creeper.isPowered());
     }
     static boolean ranged(Human human) {
         var item = human.getMainHandItem();
@@ -80,11 +95,13 @@ final class BodyguardProtection {
             boolean aimed = directed(human, owner, candidate);
             boolean authorized = SoldierCombatMode.isExplicitlyAuthorizedAgainst(human, candidate);
             boolean hostile = hostileToOwner(human, owner, candidate);
+            boolean rescuing = protectingFromExplosion(human, candidate);
             double distance = candidate.distanceToSqr(owner);
             if ((!aimed && !authorized && !hostile) || distance > BodyguardPolicy.RANGED_SQUARED
                     || (distance > BodyguardPolicy.CHASE_SQUARED && !aimed && !authorized)
-                    || (!aimed && !authorized && !human.getSensing().hasLineOfSight(candidate))) continue;
+                    || (!aimed && !authorized && !rescuing && !human.getSensing().hasLineOfSight(candidate))) continue;
             double score = BodyguardPolicy.priority(distance, aimed, candidate == human.getTarget());
+            if (rescuing) score -= 1000000.0D;
             if (score < threatScore) { bestThreat = candidate; threatScore = score; }
             if (score < attackScore && allowsTarget(human, candidate) && human.canAttack(candidate)) {
                 bestAttack = candidate;

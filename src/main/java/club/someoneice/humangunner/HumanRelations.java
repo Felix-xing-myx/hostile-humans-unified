@@ -300,7 +300,8 @@ public final class HumanRelations {
         if (!human.getPersistentData().hasUUID(GUARD_TARGET)
                 || human.level().getGameTime() <= human.getPersistentData().getLong(GUARD_UNTIL)) return;
         if (human.getTarget() != null && human.getTarget().getUUID().equals(
-                human.getPersistentData().getUUID(GUARD_TARGET))) human.setTarget(null);
+                human.getPersistentData().getUUID(GUARD_TARGET))
+                && !BodyguardProtection.isBodyguard(human)) human.setTarget(null);
         human.getPersistentData().remove(GUARD_TARGET);
         human.getPersistentData().remove(GUARD_UNTIL);
     }

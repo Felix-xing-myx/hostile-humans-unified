@@ -217,6 +217,7 @@ extends Goal {
     }
 
     protected void checkAndPerformAttack(LivingEntity livingEntity) {
+        if (this.mob instanceof Human human && human.humanGunner$hasPendingMeleeAttack()) return;
         if (canStrike(livingEntity) && this.ticksUntilNextAttack <= 0) {
             HumanEntity humanEntity;
             this.resetAttackCooldown();
@@ -233,6 +234,7 @@ extends Goal {
 
     /** Opens one guaranteed attack window after an adaptive shield block. */
     public boolean humanGunner$tryImmediateCounterattack(LivingEntity target) {
+        if (this.mob instanceof Human human && human.humanGunner$hasPendingMeleeAttack()) return false;
         if (club.someoneice.humangunner.GunSupport.isGunItem(this.mob.getMainHandItem())) return false;
         if (target == null || !target.isAlive() || !this.mob.canAttack(target)) {
             return false;
