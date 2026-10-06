@@ -25,9 +25,11 @@ final class TaczNativeAnimation {
     static void apply(Human human, HumanoidModel<Human> model, Sample sample,
                       float age, int firedTick, int reloadStart) {
         // Verified TaCZ 1.1.8 parameter order: right arm, left arm, body, head.
+        // Avoid a lambda whose synthetic method exposes GunDisplayInstance in
+        // this class's method descriptors when optional dependencies are absent.
+        var display = TimelessAPI.getGunDisplay(human.getMainHandItem()).orElse(null);
         IThirdPersonAnimation animation = ThirdPersonManager.getAnimation(
-                TimelessAPI.getGunDisplay(human.getMainHandItem())
-                        .map(display -> display.getThirdPersonAnimation()).orElse("default"));
+                display == null ? "default" : display.getThirdPersonAnimation());
         boolean leftHanded = human.getMainArm() == HumanoidArm.LEFT;
         var main = leftHanded ? model.leftArm : model.rightArm;
         var support = leftHanded ? model.rightArm : model.leftArm;
