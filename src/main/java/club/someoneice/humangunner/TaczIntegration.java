@@ -31,6 +31,10 @@ final class TaczIntegration implements GunSupport {
     private static final AtomicBoolean LOGGED_FIRST_ROAMER_GUN_HIT = new AtomicBoolean();
     public boolean enabled() { return true; }
     public boolean isGun(ItemStack stack) { return IGun.getIGunOrNull(stack) != null; }
+    public boolean hasLoadedAmmo(ItemStack stack) {
+        IGun gun = IGun.getIGunOrNull(stack);
+        return gun != null && (gun.getCurrentAmmoCount(stack) > 0 || gun.hasBulletInBarrel(stack));
+    }
     public String gunType(ItemStack stack) {
         ResourceLocation id = gunId(stack);
         return id == null ? "" : TimelessAPI.getCommonGunIndex(id)
@@ -64,8 +68,8 @@ final class TaczIntegration implements GunSupport {
     public Goal goal(Human human) { return new GunnerGoal<>(human); }
     public boolean isReloading(Human human) {
         IGunOperator operator = IGunOperator.fromLivingEntity(human);
-        return operator.getDataHolder().reloadStateType.isReloading()
-                || operator.getSynReloadState().getStateType().isReloading();
+        if (human.level().isClientSide) return operator.getSynReloadState().getStateType().isReloading();
+        return TaczHumanReloadTransactions.isPaidReloading(human, operator.getDataHolder());
     }
     public void tickIdleReload(Human human) {
         // A staggered one-second check avoids a reload attempt on every tick
@@ -74,15 +78,14 @@ final class TaczIntegration implements GunSupport {
         if ((human.tickCount + Math.floorMod(human.getId(), 20)) % 20 != 0) return;
         ItemStack weapon = human.getMainHandItem();
         IGun gun = IGun.getIGunOrNull(weapon);
-        if (gun == null || gun.useInventoryAmmo(weapon)) return;
+        if (gun == null || !HumanAmmo.canReload(human, weapon)) return;
         ResourceLocation gunId = gun.getGunId(weapon);
         if (gunId == null) return;
         var index = TimelessAPI.getCommonGunIndex(gunId).orElse(null);
         if (index == null || index.getGunData().getReloadData() == null) return;
-        int capacity = AttachmentDataUtils.getAmmoCountWithAttachment(weapon, index.getGunData());
+        int capacity = Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(weapon, index.getGunData()));
         IGunOperator operator = IGunOperator.fromLivingEntity(human);
-        boolean reloading = operator.getDataHolder().reloadStateType.isReloading()
-                || operator.getSynReloadState().getStateType().isReloading();
+        boolean reloading = isReloading(human);
         if (!GunReloadPolicy.shouldIdleTopOff(gun.getCurrentAmmoCount(weapon), capacity,
                 human.getTarget() != null, human.isFleeing, human.isUsingItem(), reloading)) return;
 

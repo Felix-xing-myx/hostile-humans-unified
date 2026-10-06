@@ -443,7 +443,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                         gameTime + GunReloadPolicy.hardLimitTicks(delay));
             }
             if (result == ShootResult.NO_AMMO
-                    && gameTime >= mob.getPersistentData().getLong(NEXT_RELOAD_ATTEMPT)) {
+                    && gameTime >= mob.getPersistentData().getLong(NEXT_RELOAD_ATTEMPT)
+                    && (!(mob instanceof Human human) || HumanAmmo.canReload(human, weapon))) {
                 operator.reload();
                 mob.getPersistentData().putLong(NEXT_RELOAD_ATTEMPT, gameTime + RELOAD_RETRY_TICKS);
             }
@@ -520,12 +521,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         }
         TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).ifPresent(index -> {
             operator.cancelReload();
-            if (!reason.contains("bolt")) {
-                int capacity = Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(
-                        weapon, index.getGunData()));
-                gun.setCurrentAmmoCount(weapon, capacity);
-            }
-            gun.setBulletInBarrel(weapon, true);
+            // Recovery only clears stalled operator state. Native bolting must
+            // move a real magazine round into the chamber; recovery never adds
+            // rounds, even after a paid reload was interrupted or timed out.
             operator.draw(mob::getMainHandItem);
             mob.setSprinting(false);
             mob.getPersistentData().putInt(
