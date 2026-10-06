@@ -131,19 +131,12 @@ public final class UnifiedConfigTest {
                         && adjustableAccuracy.tier("tier2").projectileSpreadDegrees("crossbow") == 7.25D
                         && adjustableAccuracy.tier("tier2").projectileSpreadDegrees("trident") == 8.0D,
                 "each firearm and projectile type is independently adjustable without changing other values");
-        JsonObject legacyAccuracy = JsonParser.parseString("""
+        JsonObject obsolete = JsonParser.parseString("""
                 {"tiers":{"tier1":{"health_min":55,"normal_movement_speed":0.42,
                   "gun_spread_degrees":1.25,"projectile_spread_degrees":3.0}}}
                 """).getAsJsonObject();
-        UnifiedConfig legacyConfig = new UnifiedConfig(legacyAccuracy);
-        check(legacyConfig.tier("tier1").healthMin() == 55
-                        && legacyConfig.tier("tier1").baseMovementSpeed() == .105D
-                        && legacyConfig.tier("tier1").gunSpreadDegrees("rifle") == 1.25D
-                        && legacyConfig.tier("tier1").gunSpreadDegrees("sniper") == 0.75D
-                        && legacyConfig.tier("tier1").gunSpreadDegrees("shotgun") == 2.75D
-                        && legacyConfig.tier("tier1").projectileSpreadDegrees("bow") == 3.0D
-                        && legacyConfig.tier("tier1").projectileSpreadDegrees("crossbow") == 2.5D,
-                "legacy speed setting is ignored while legacy spread settings keep their prior behavior");
+        check(new UnifiedConfig(obsolete).tier("tier1").equals(new UnifiedConfig(defaults).tier("tier1")),
+                "obsolete flat attributes are not translated into current settings");
 
         UnifiedConfig movementConfig = new UnifiedConfig(JsonParser.parseString("""
                 {"tiers":{"roamer":{"movement":{"base_speed":0.08}},
@@ -159,24 +152,14 @@ public final class UnifiedConfigTest {
                         && actionSpeeds.shieldUseSpeedMultiplier() == .35D,
                 "food and shield action speed multipliers are configurable");
 
-        JsonObject guns = JsonParser.parseString("""
-                {"globe":0.9,"guns":{"test:keep":7,"test:zero":0,"banned:gun":100,"test:black":2},
-                 "include_unlisted_guns":true,"excluded_gun_namespaces":["banned"],
-                 "gun_blacklist":["test:black"],"human_melee_damage_multiplier":2.75}
-                """).getAsJsonObject();
-        JsonObject ai = JsonParser.parseString("""
-                {"normal_movement_speed":0.42,"recovery_damage_tolerance":12}
-                """).getAsJsonObject();
-        JsonObject migrated = UnifiedConfig.migrate(guns.deepCopy(), ai);
-        config = new UnifiedConfig(migrated);
-        check(config.tier("tier2").baseMovementSpeed() == .105D
-                        && !config.ai().has("normal_movement_speed"),
-                "legacy speed migration is discarded in favor of new base-speed defaults");
-        check(config.ai().get("recovery_damage_tolerance_ratio").getAsDouble() == .2, "legacy absolute tolerance");
-        check(config.damage("human_melee_damage_multiplier", 1) == 2.75, "legacy damage");
-        check(config.blacklisted("test:black"), "blacklist migration");
+        JsonObject current = defaults.deepCopy();
+        TierConfigProjection.put(current, "tacz.tier2_gun_chance", new JsonPrimitive(0.9));
+        TierConfigProjection.put(current, "tacz.gun_whitelist", JsonParser.parseString("{\"test:keep\":7,\"test:zero\":0,\"banned:gun\":100,\"test:black\":2}"));
+        TierConfigProjection.put(current, "tacz.excluded_gun_namespaces", JsonParser.parseString("[\"banned\"]"));
+        TierConfigProjection.put(current, "tacz.gun_blacklist", JsonParser.parseString("[\"test:black\"]"));
+        config = new UnifiedConfig(current);
         HumanGunnerConfig weapon = HumanGunnerConfig.parse(config.gunConfig());
-        check(weapon.tier2GunChance() == .9, "legacy globe alias");
+        check(weapon.tier2GunChance() == .9, "current tier firearm chance");
         var pool = weapon.selectAvailable(Map.of(
                 id("test:keep"), "rifle", id("test:zero"), "rifle", id("test:black"), "rifle",
                 id("banned:gun"), "rifle", id("test:auto"), "rifle", id("test:rpg"), "rpg"), config::blacklisted);
@@ -224,9 +207,6 @@ public final class UnifiedConfigTest {
             if (duration > 0) check(clock.cooling(99L + duration), "custom clock before expiry");
         }
         TierConfigFilesTest.main(new String[0]);
-        checkGeneralSchemaUpgrade(defaults);
-        checkDamageGuidanceUpgrade(defaults);
-        checkRoamerArmorUpgrade(defaults);
         checkEquipmentImportAndCounts(defaults);
         System.out.println("UnifiedConfigTest: " + assertions + " checks passed");
     }
@@ -257,188 +237,9 @@ public final class UnifiedConfigTest {
         JsonObject gunsDisabled = defaults.deepCopy();
         gunsDisabled.getAsJsonObject("tacz").addProperty("natural_spawn_firearms_enabled", false);
         check(!new UnifiedConfig(gunsDisabled).naturalFirearmsEnabled(), "natural firearm switch is independent of integration");
-        JsonObject guidance = defaults.deepCopy();
-        JsonObject notes = guidance.getAsJsonObject("equipment_loadouts");
-        notes.addProperty("_description_priority_en", "Order: configured base gear -> permitted automatic mod equipment -> shield/ranged reserves -> natural equipment growth. automatic_spartan_weapons/shields default true and allow original Spartan replacement/addition. For strict custom pools, disable the relevant switches and specify mod item IDs directly. allow_tacz_firearms enables/disables this rank's automatic firearm generation; gun chances/real gun IDs still belong in tacz.json. Do not use tacz:modern_kinetic_gun in these pools: it does not select an actual gun model. Immersive Armors use requires_mod armor_sets rows, without a separate armor replacement pass. Enabled equipment_growth may weaken early gear after generation; disable growth for fixed quality.");
-        notes.addProperty("_说明_优先级与联动_中文", "整合包作者的自定义说明");
-        check(ConfigSchemaUpgrade.fill(guidance, defaults, "")
-                        && notes.get("_description_priority_en").equals(defaults.getAsJsonObject("equipment_loadouts").get("_description_priority_en"))
-                        && notes.get("_说明_优先级与联动_中文").getAsString().equals("整合包作者的自定义说明"),
-                "known stock replacement instructions refresh while custom equipment notes survive");
+
     }
 
-    private static void checkRoamerArmorUpgrade(JsonObject defaults) {
-        JsonObject loadouts = defaults.getAsJsonObject("equipment_loadouts");
-        JsonArray current = loadouts.getAsJsonObject("roamer").getAsJsonArray("armor_sets");
-        check(current.size() == 3, "roamer default armor has no high-end optional sets");
-        Map<String, Integer> weights = new HashMap<>();
-        for (JsonElement entry : current) {
-            JsonObject set = entry.getAsJsonObject();
-            weights.put(set.get("head").getAsString(), set.get("weight").getAsInt());
-            for (String slot : List.of("head", "chest", "legs", "feet")) {
-                String id = set.get(slot).getAsString();
-                check(id.startsWith("minecraft:leather_") || id.startsWith("minecraft:chainmail_")
-                        || id.startsWith("minecraft:iron_"), "roamer armor stays at iron tier or below");
-            }
-        }
-        check(weights.equals(Map.of("minecraft:leather_helmet", 6,
-                "minecraft:chainmail_helmet", 3, "minecraft:iron_helmet", 1)),
-                "roamer default weights favor weaker armor than tier one");
-        JsonArray old = new JsonArray();
-        for (String material : List.of("iron", "diamond", "chainmail", "slime", "prismarine", "steampunk")) {
-            boolean optional = old.size() >= 3;
-            String prefix = (optional ? "immersive_armors:" : "minecraft:") + material;
-            JsonObject set = new JsonObject();
-            set.addProperty("weight", material.equals("iron") ? 2 : 1);
-            if (optional) set.addProperty("requires_mod", "immersive_armors");
-            set.addProperty("head", prefix + "_helmet");
-            set.addProperty("chest", prefix + "_chestplate");
-            set.addProperty("legs", prefix + "_leggings");
-            set.addProperty("feet", prefix + "_boots");
-            old.add(set);
-        }
-        JsonObject stock = defaults.deepCopy();
-        JsonObject roamer = stock.getAsJsonObject("equipment_loadouts").getAsJsonObject("roamer");
-        roamer.add("armor_sets", old.deepCopy());
-        JsonElement tierOne = stock.getAsJsonObject("equipment_loadouts").get("tier1").deepCopy();
-        check(ConfigSchemaUpgrade.fill(stock, defaults, "") && roamer.get("armor_sets").equals(current),
-                "exact previous stock roamer armor migrates to the weaker pool");
-        check(stock.getAsJsonObject("equipment_loadouts").get("tier1").equals(tierOne),
-                "roamer upgrade never changes tier-one gear");
-        check(!ConfigSchemaUpgrade.fill(stock, defaults, ""), "roamer armor upgrade is idempotent");
-        for (int mode = 0; mode < 3; mode++) {
-            JsonArray custom = old.deepCopy();
-            if (mode == 0) custom.get(0).getAsJsonObject().addProperty("weight", 9);
-            if (mode == 1) custom.remove(1);
-            if (mode == 2) custom = new JsonArray();
-            roamer.add("armor_sets", custom.deepCopy());
-            ConfigSchemaUpgrade.fill(stock, defaults, "");
-            check(roamer.get("armor_sets").equals(custom), "custom weights, entries and empty armor pools are preserved");
-        }
-    }
-
-    private static void checkDamageGuidanceUpgrade(JsonObject defaults) {
-        JsonObject custom = defaults.deepCopy();
-        JsonObject damage = custom.getAsJsonObject("damage");
-        damage.addProperty("_说明_中文", "全局伤害倍率，用于调整各类人类攻击、弹道速度伤害、跳跃攻击，以及人类近战对已驯服女仆造成的伤害。tamed_maid_melee_damage_multiplier 只削减人类对女仆的近战伤害，不控制女仆对人类的伤害。");
-        damage.addProperty("_description_en", "My custom damage notes");
-        damage.addProperty("human_melee_damage_multiplier", 1.25);
-        JsonObject tier = custom.getAsJsonObject("tiers").getAsJsonObject("tier1")
-                .getAsJsonObject("damage_multipliers");
-        tier.addProperty("_说明_中文", "本阶人类近战、弓箭、三叉戟伤害倍率及受到伤害倍率。");
-        tier.addProperty("melee_damage_multiplier", 0.6);
-        JsonObject tacz = custom.getAsJsonObject("tacz");
-        tacz.addProperty("_description_gun_damage_en",
-                "Base firearm damage for humans and pillagers, plus per-tier firearm damage multipliers.");
-        tacz.addProperty("human_gun_damage_multiplier", 0.4);
-        tacz.getAsJsonObject("tier_damage_multipliers").addProperty("tier1", 1.5);
-        check(ConfigSchemaUpgrade.fill(custom, defaults, ""), "known obsolete damage guidance refreshed");
-        check(damage.get("_说明_中文").equals(defaults.getAsJsonObject("damage").get("_说明_中文"))
-                        && tier.get("_说明_中文").equals(defaults.getAsJsonObject("tiers")
-                        .getAsJsonObject("tier1").getAsJsonObject("damage_multipliers").get("_说明_中文"))
-                        && tacz.get("_description_gun_damage_en")
-                        .equals(defaults.getAsJsonObject("tacz").get("_description_gun_damage_en")),
-                "stock global/tier/firearm comments describe their multiplying relationship");
-        check(damage.get("_description_en").getAsString().equals("My custom damage notes"),
-                "user-written guidance is not replaced");
-        UnifiedConfig settings = new UnifiedConfig(custom);
-        check(Math.abs(settings.damage("human_melee_damage_multiplier", 1)
-                        * settings.tier("tier1").meleeDamage() - 0.75) < 1e-9,
-                "guidance upgrade does not alter global or tier melee values");
-        check(Math.abs(settings.gunSetting("human_gun_damage_multiplier", 1)
-                        * settings.tierGunDamage("tier1") - 0.6) < 1e-9,
-                "guidance upgrade does not alter global or tier firearm values");
-        check(!ConfigSchemaUpgrade.fill(custom, defaults, ""), "damage guidance upgrade is idempotent");
-    }
-
-    private static void checkGeneralSchemaUpgrade(JsonObject defaults) throws Exception {
-        var directory = java.nio.file.Files.createTempDirectory("human-schema-upgrade-test-");
-        var modules = directory.resolve(SplitConfigFiles.DIRECTORY);
-        java.nio.file.Files.createDirectories(modules);
-        Map<String, List<String>> files = new LinkedHashMap<>();
-        files.put("tiers.json", List.of("tiers"));
-        files.put("spawning.json", List.of("spawning"));
-        files.put("equipment.json", List.of("equipment_loadouts", "equipment_growth"));
-        files.put("combat.json", List.of("damage", "ai"));
-        files.put("recruitment.json", List.of("recruitment"));
-        files.put("tacz.json", List.of("tacz"));
-        files.put("compatibility.json", List.of("better_combat"));
-        JsonObject old = JsonParser.parseString("""
-                {"tiers":{"tier1":{"health_min":66,"health_max":73,"gun_spread_degrees":1.7,
-                 "projectile_spread_degrees":2.5,"melee_cooldown_min":30,"melee_cooldown_max":34}},
-                 "spawning":{"admission_chance":0.123},"ai":{"_custom_note":"keep"},"damage":{},
-                 "recruitment":{"payment_by_tier":{"roamer":{"item":"createdelightcore:gold_coin","count":19}}},
-                 "tacz":{"guns":{},"include_unlisted_guns":false,"unlisted_gun_weight":13,"globe":0.2},
-                 "better_combat":{},"equipment_growth":{},"equipment_loadouts":{}}
-                """).getAsJsonObject();
-        try {
-            for (var entry : files.entrySet()) {
-                JsonObject module = new JsonObject();
-                module.addProperty("schema_version", 1);
-                for (String section : entry.getValue()) module.add(section, old.get(section).deepCopy());
-                java.nio.file.Files.writeString(modules.resolve(entry.getKey()), module.toString());
-            }
-            UnifiedConfig upgraded = UnifiedConfig.load(directory);
-            check(upgraded.tier("tier1").healthMin() == 66 && upgraded.tier("tier1").healthMax() == 73
-                    && upgraded.tier("tier1").meleeCooldownMin() == 30
-                    && upgraded.tier("tier1").meleeCooldownMax() == 34, "flat legacy attributes and cooldown survive full upgrade");
-            check(Math.abs(upgraded.tier("tier1").gunSpreadDegrees("smg") - 2.7) < 1e-9
-                    && upgraded.tier("tier1").projectileSpreadDegrees("crossbow") == 2.0,
-                    "legacy spread migrated before inserting modern defaults");
-            check(upgraded.spawn().admissionChance() == 0.123
-                    && upgraded.recruitmentCost(0).itemId().equals("createdelightcore:gold_coin")
-                    && upgraded.recruitmentCost(0).count() == 19,
-                    "disk loading respects the user's actual mod currency and existing values");
-            HumanGunnerConfig guns = HumanGunnerConfig.parse(upgraded.gunConfig());
-            check(guns.gunWhitelist().isEmpty(), "explicit empty legacy whitelist stays empty through disk upgrade and runtime merge");
-            for (var entry : files.entrySet()) {
-                var file = modules.resolve(entry.getKey());
-                String stable = java.nio.file.Files.readString(file);
-                UnifiedConfig.load(directory);
-                check(java.nio.file.Files.readString(file).equals(stable), "legacy modules are never rewritten: " + entry.getKey());
-                check(java.nio.file.Files.readString(file.resolveSibling(file.getFileName() + ".pre-tier-layout.bak")).equals(stable),
-                        "each migrated module has an exact original backup: " + entry.getKey());
-            }
-            JsonObject global = readModule(modules.resolve("global.json"));
-            checkSchemaKeys(global, TierConfigProjection.global(defaults), "");
-            for (String rank : TierConfigProjection.RANKS)
-                checkSchemaKeys(readModule(modules.resolve(rank + ".json")), TierConfigProjection.tier(defaults, rank), "");
-            JsonObject futureDefaults = defaults.deepCopy();
-            futureDefaults.getAsJsonObject("ai").add("future_feature", JsonParser.parseString(
-                    "{\"_说明_中文\":\"新选项\",\"_description_en\":\"New option\",\"enabled\":true,\"amount\":17}"));
-            JsonObject earlier = old.deepCopy();
-            ConfigSchemaUpgrade.aliases(earlier, futureDefaults);
-            check(ConfigSchemaUpgrade.fill(earlier, futureDefaults, "")
-                    && earlier.getAsJsonObject("ai").getAsJsonObject("future_feature").get("amount").getAsInt() == 17,
-                    "a new nested feature and comments require no upgrade whitelist changes");
-            check(!ConfigSchemaUpgrade.fill(earlier, futureDefaults, ""), "future schema upgrade also idempotent");
-            UnifiedConfig unavailable = UnifiedConfig.load(null);
-            for (int tier = 0; tier < 4; tier++)
-                check(unavailable.recruitmentCost(tier) == null, "total config load failure cannot silently charge emeralds");
-            var recruitment = modules.resolve("recruitment.json");
-            java.nio.file.Files.writeString(recruitment, "broken recruitment JSON");
-            for (String file : SplitConfigFiles.FILES) java.nio.file.Files.delete(modules.resolve(file));
-            UnifiedConfig invalid = UnifiedConfig.load(directory);
-            for (int tier = 0; tier < 4; tier++)
-                check(invalid.recruitmentCost(tier) == null, "broken recruitment file cannot silently charge emeralds");
-            check(java.nio.file.Files.readString(recruitment).equals("broken recruitment JSON"),
-                    "broken input left intact for administrator repair");
-        } finally {
-            try (var paths = java.nio.file.Files.walk(directory)) {
-                for (var path : paths.sorted(Comparator.reverseOrder()).toList()) java.nio.file.Files.deleteIfExists(path);
-            }
-        }
-    }
-
-    private static void checkSchemaKeys(JsonObject actual, JsonObject expected, String path) {
-        if (ConfigSchemaUpgrade.userMap(path) || path.equals("tacz.gun_type_weights")) return;
-        for (var entry : expected.entrySet()) {
-            String child = path + "." + entry.getKey();
-            check(actual.has(entry.getKey()), "complete new schema key on disk: " + child);
-            if (entry.getValue().isJsonObject())
-                checkSchemaKeys(actual.getAsJsonObject(entry.getKey()), entry.getValue().getAsJsonObject(), child);
-        }
-    }
     private static ResourceLocation id(String id) { return ResourceLocation.tryParse(id); }
     private static void checkEquipmentLoadouts(UnifiedConfig defaults) {
         for (String rank : List.of("roamer", "tier1", "tier2", "tier3")) {
@@ -475,21 +276,6 @@ public final class UnifiedConfigTest {
                         && defaults.equipmentLoadout("tier1").rangedChance == .4
                         && defaults.equipmentLoadout("tier2").rangedChance == .7,
                 "existing nonelite ranged probabilities retained");
-    }
-    private static void checkDescriptions(JsonObject actual, JsonObject expected, String path) {
-        for (var entry : expected.entrySet()) {
-            String key = entry.getKey();
-            if (key.startsWith("_")) {
-                check(actual.has(key) && actual.get(key).equals(entry.getValue()),
-                        "description preserved exactly: " + path + "." + key);
-            } else if (entry.getValue().isJsonObject() && actual.has(key)
-                    && actual.get(key).isJsonObject()) {
-                checkDescriptions(actual.getAsJsonObject(key), entry.getValue().getAsJsonObject(), path + "." + key);
-            }
-        }
-    }
-    private static JsonObject readModule(java.nio.file.Path path) throws java.io.IOException {
-        return JsonParser.parseString(java.nio.file.Files.readString(path)).getAsJsonObject();
     }
     private static void check(boolean value, String name) { assertions++; if (!value) throw new AssertionError(name); }
 }

@@ -13,13 +13,8 @@ public final class TierConfigFilesTest {
         checkDefaultIntegrationRetry();
         checkProjection();
         checkReadableDefaults();
-        checkOldestMigration();
-        checkSingleMigrationAndOwnership();
-        checkLegacyModulesAndInvalidSources();
-        checkInvalidOldSingle();
         checkBrokenNewFilesAndPayments();
-        checkBackupFailure();
-        checkTomlMigration();
+        checkCurrentLayoutOnly();
         checkCreationCollision();
         System.out.println("TierConfigFilesTest: " + assertions + " checks passed");
     }
@@ -87,7 +82,7 @@ public final class TierConfigFilesTest {
                 List<String> sections = new ArrayList<>(file.keySet());
                 check(sections.get(0).equals("schema_version"), "schema first " + rank);
                 check(sections.indexOf("attributes") < sections.indexOf("ai")
-                        && sections.indexOf("ai") < sections.indexOf("equipment_loadout")
+                        && sections.indexOf("equipment_loadout") < sections.indexOf("ai")
                         && sections.indexOf("equipment_loadout") < sections.indexOf("ammunition"), "consistent section order " + rank);
                 for (String path : List.of("attributes.health_min", "movement.base_speed", "ai.retreat_health_ratio",
                         "equipment_loadout.ranged_chance", "equipment_growth.start_day", "ammunition.arrows.min",
@@ -106,104 +101,6 @@ public final class TierConfigFilesTest {
                 check(baseline.recruitmentCost(TierConfigProjection.RANKS.indexOf(rank)).equals(
                         projected.recruitmentCost(TierConfigProjection.RANKS.indexOf(rank))), "payment unchanged " + rank);
             }
-        } finally { cleanup(directory); }
-    }
-
-    private static void checkOldestMigration() throws Exception {
-        Path directory = Files.createTempDirectory("human-oldest-layout-");
-        try {
-            String oldGuns = "{\"guns\":{\"custom:rifle\":37},\"gun_blacklist\":[\"test:black\"],\"include_unlisted_guns\":false}";
-            String oldAi = "{\"enabled\":false,\"recovery_damage_tolerance\":18,\"_custom_note\":\"old AI\"}";
-            Files.writeString(directory.resolve("humangunner.json"), oldGuns);
-            Files.writeString(directory.resolve("humangunner_ai.json"), oldAi);
-            JsonObject loaded = SplitConfigFiles.load(directory);
-            check(TierConfigProjection.at(loaded, "tacz.gun_whitelist.custom:rifle").getAsInt() == 37, "old gun whitelist alias migrated");
-            check(new UnifiedConfig(loaded).blacklisted("test:black"), "disk migration retains blacklist");
-            check(!TierConfigProjection.at(loaded, "ai.enabled").getAsBoolean(), "old AI global toggle migrated");
-            for (String rank : TierConfigProjection.RANKS) {
-                check(TierConfigProjection.at(loaded, "tier_ai." + rank + ".recovery_damage_tolerance_ratio").getAsDouble() == 0.3, "old common AI distributed " + rank);
-                check(TierConfigProjection.at(loaded, "tier_ai." + rank + "._custom_note").getAsString().equals("old AI"), "AI notes distributed " + rank);
-            }
-            checkFiveFiles(directory);
-            check(Files.readString(directory.resolve("humangunner.json")).equals(oldGuns), "old gun input untouched");
-            check(Files.readString(directory.resolve("humangunner_ai.json.pre-tier-layout.bak")).equals(oldAi), "old AI exact backup");
-        } finally { cleanup(directory); }
-    }
-
-    private static void checkSingleMigrationAndOwnership() throws Exception {
-        Path directory = Files.createTempDirectory("human-single-layout-");
-        try {
-            JsonObject source = json("""
-                    {"schema_version":1,"tiers":{"tier1":{"gun_spread_degrees":1.25,
-                     "_说明_自定义":"保留这段说明","extension_setting":42}},
-                     "equipment_loadouts":{"tier1":{"mainhand":[],"armor_sets":[]}},
-                     "tacz":{"enabled":false,"gun_whitelist":{"custom:gun":37},"tier_gun_type_weights":{"tier1":{}}},
-                     "recruitment":{"max_hired_by_tier":{"tier3":8},"payment_by_tier":{"tier1":{"item":"create:brass_ingot","count":37},"tier2":null}},
-                     "spawning":{"admission_chance":0.321,"_说明_中文":"自定义说明"},"ai":{"recovery_health_ratio":0.71}}
-                    """);
-            String bytes = source.toString();
-            Path single = directory.resolve("hostile_humans_unified.json"), modules = directory.resolve(SplitConfigFiles.DIRECTORY);
-            Files.writeString(single, bytes);
-            UnifiedConfig migrated = new UnifiedConfig(SplitConfigFiles.load(directory));
-            check(migrated.tier("tier1").gunSpreadDegrees("rifle") == 1.25, "supported legacy accuracy alias wins before defaults");
-            check(migrated.recruitmentLimit(3) == 8 && migrated.recruitmentCost(1).count() == 37, "single custom limit and currency migrate");
-            check(migrated.recruitmentCost(2) == null && migrated.recruitmentCost(0).count() == 8, "invalid explicit payment isolated by tier");
-            JsonObject tier = read(modules.resolve("tier1.json"));
-            check(tier.get("extension_setting").getAsInt() == 42 && tier.get("_说明_自定义").getAsString().equals("保留这段说明"), "unknown fields and custom descriptions on disk");
-            check(tier.getAsJsonObject("equipment_loadout").getAsJsonArray("mainhand").size() == 0, "empty equipment pool on disk survives migration");
-            check(tier.getAsJsonObject("tacz").getAsJsonObject("gun_type_weights").size() == 0, "empty gun weights on disk survive migration");
-            check(Files.readString(single).equals(bytes) && Files.readString(single.resolveSibling(single.getFileName() + ".pre-tier-layout.bak")).equals(bytes), "single source and exact backup intact");
-            checkFiveFiles(directory);
-            JsonObject global = read(modules.resolve("global.json"));
-            check(global.getAsJsonObject("spawning").get("_说明_中文").getAsString().equals("自定义说明"), "user guidance remains intact");
-            JsonObject defaultTacz = UnifiedConfig.defaults().getAsJsonObject("tacz");
-            for (String key : List.of("_说明_枪械名单_中文", "_description_gun_lists_en"))
-                check(global.getAsJsonObject("tacz").get(key).equals(defaultTacz.get(key)), "bilingual firearm guidance exact string " + key);
-            global.getAsJsonObject("spawning").remove("progression");
-            global.getAsJsonObject("spawning").addProperty("admission_chance", 0.123);
-            global.getAsJsonObject("tacz").addProperty("enabled", true);
-            Files.writeString(modules.resolve("global.json"), global.toString());
-            tier.getAsJsonObject("spawning").addProperty("first_spawn_day", 7);
-            tier.getAsJsonObject("recruitment").addProperty("max_hired", 9);
-            Files.writeString(modules.resolve("tier1.json"), tier.toString());
-            Files.writeString(single, "broken obsolete source");
-            UnifiedConfig current = new UnifiedConfig(SplitConfigFiles.load(directory));
-            check(current.taczEnabled() && current.recruitmentLimit(1) == 9, "new global and rank files override old source");
-            check(current.spawn().admissionChance() == 0.123 && current.spawn().progression().tier1FirstDay() == 7, "global option defaults and tier day remain independently authoritative");
-            String stable = Files.readString(modules.resolve("global.json"));
-            SplitConfigFiles.load(directory);
-            check(Files.readString(modules.resolve("global.json")).equals(stable), "existing incomplete new file never rewritten");
-            check(Files.readString(single.resolveSibling(single.getFileName() + ".pre-tier-layout.bak")).equals(bytes), "backup written only once");
-        } finally { cleanup(directory); }
-    }
-
-    private static void checkLegacyModulesAndInvalidSources() throws Exception {
-        Path directory = Files.createTempDirectory("human-module-layout-");
-        try {
-            Path modules = directory.resolve(SplitConfigFiles.DIRECTORY);
-            Files.createDirectories(modules);
-            Files.writeString(directory.resolve("hostile_humans_unified.json"), "{\"schema_version\":1,\"spawning\":{\"admission_chance\":0.321},\"recruitment\":{\"max_hired_by_tier\":{\"tier1\":99}}}");
-            String recruitment = "{\"schema_version\":1,\"_custom_note\":\"keep module note\",\"recruitment\":{\"max_hired_by_tier\":{\"tier1\":9},\"payment_by_tier\":{\"tier1\":{\"count\":37}}}}";
-            Files.writeString(modules.resolve("recruitment.json"), recruitment);
-            Files.writeString(modules.resolve("spawning.json"), "broken spawning JSON");
-            JsonObject loaded = SplitConfigFiles.load(directory);
-            check(TierConfigProjection.at(loaded, "recruitment.max_hired_by_tier.tier1").getAsInt() == 9, "existing old module wins over old single file");
-            check(!TierConfigProjection.at(loaded, "recruitment.payment_by_tier.tier1").getAsJsonObject().has("item"), "partial legacy price remains invalid");
-            check(TierConfigProjection.at(loaded, "spawning.admission_chance").getAsDouble() == 0.321, "broken old module falls back to single values in memory");
-            for (String file : SplitConfigFiles.FILES) check(!Files.exists(modules.resolve(file)), "invalid old custom source prevents replacement generation " + file);
-            check(Files.readString(modules.resolve("spawning.json")).equals("broken spawning JSON"), "invalid old module bytes untouched");
-            Files.writeString(modules.resolve("spawning.json"), "{\"schema_version\":1,\"spawning\":{\"admission_chance\":0.123}}");
-            loaded = SplitConfigFiles.load(directory);
-            check(TierConfigProjection.at(loaded, "spawning.admission_chance").getAsDouble() == 0.123, "repaired old module precedence");
-            checkFiveFilesAlongsideLegacy(directory);
-            check(Files.readString(modules.resolve("recruitment.json")).equals(recruitment), "valid old modules read only");
-            check(TierConfigProjection.at(loaded, "_legacy_module_metadata.recruitment._custom_note").getAsString().equals("keep module note"), "module-level unknown notes retained in global metadata");
-            Files.delete(modules.resolve("tier2.json"));
-            Files.writeString(modules.resolve("recruitment.json"), "{\"schema_version\":99,\"recruitment\":{}}");
-            loaded = SplitConfigFiles.load(directory);
-            check(TierConfigProjection.at(loaded, "recruitment.payment_by_tier.tier2").isJsonNull(), "missing rank with invalid recruitment source fails closed");
-            check(!Files.exists(modules.resolve("tier2.json")), "unsupported legacy version cannot generate dependent rank");
-            check(TierConfigProjection.at(loaded, "recruitment.max_hired_by_tier.tier1").getAsInt() == 9, "existing rank unaffected by invalid legacy recruitment");
         } finally { cleanup(directory); }
     }
 
@@ -231,75 +128,6 @@ public final class TierConfigFilesTest {
             JsonObject loaded = SplitConfigFiles.load(directory);
             check(TierConfigProjection.at(loaded, "tiers.tier1.attributes.health_min").getAsInt() != 999, "global cannot override rank attributes");
             check(TierConfigProjection.at(loaded, "recruitment.max_hired_by_tier.tier1").getAsInt() != 999, "global cannot override rank recruitment");
-        } finally { cleanup(directory); }
-    }
-
-    private static void checkInvalidOldSingle() throws Exception {
-        Path directory = Files.createTempDirectory("human-invalid-single-");
-        try {
-            Path single = directory.resolve("hostile_humans_unified.json");
-            for (String invalid : List.of("malformed legacy JSON", "{\"schema_version\":99,\"tacz\":{\"enabled\":false}}", "[]")) {
-                Files.writeString(single, invalid);
-                JsonObject loaded = SplitConfigFiles.load(directory);
-                check(new UnifiedConfig(loaded).spawn().admissionChance() == 0.08, "invalid single falls back in memory");
-                for (int tier = 0; tier < 4; tier++)
-                    check(new UnifiedConfig(loaded).recruitmentCost(tier) == null, "invalid single recruitment fails closed");
-                for (String file : SplitConfigFiles.FILES)
-                    check(!Files.exists(directory.resolve(SplitConfigFiles.DIRECTORY).resolve(file)), "invalid single cannot generate replacement " + file);
-                check(Files.readString(single).equals(invalid), "invalid single bytes untouched");
-            }
-        } finally { cleanup(directory); }
-    }
-
-    private static void checkBackupFailure() throws Exception {
-        Path directory = Files.createTempDirectory("human-backup-failure-");
-        try {
-            Path single = directory.resolve("hostile_humans_unified.json");
-            String source = "{\"schema_version\":1,\"spawning\":{\"admission_chance\":0.23}}";
-            Files.writeString(single, source);
-            Files.createDirectory(single.resolveSibling(single.getFileName() + ".pre-tier-layout.bak"));
-            JsonObject loaded = SplitConfigFiles.load(directory);
-            check(TierConfigProjection.at(loaded, "spawning.admission_chance").getAsDouble() == 0.23, "backup failure retains in-memory custom settings");
-            for (String file : SplitConfigFiles.FILES) check(!Files.exists(directory.resolve(SplitConfigFiles.DIRECTORY).resolve(file)), "backup failure postpones generation " + file);
-            check(Files.readString(single).equals(source), "backup failure does not modify source");
-        } finally { cleanup(directory); }
-    }
-
-    private static void checkTomlMigration() throws Exception {
-        Path directory = Files.createTempDirectory("human-toml-layout-");
-        try {
-            String toml = """
-                    ["Hostile Humans Settings"]
-                    disabled_structures = "cottage,tower"
-                    max_targeting = 7
-                    no_waystones = true
-                    battle_event = "Random"
-                    greet_chance = 0.17
-                    flee_hp = 0.42
-                    run_away_middle_fight_chance = 0.67
-                    mid_battle_buff_instead_of_run_chance = 0.23
-                    """;
-            Files.writeString(directory.resolve("hostile_humans.toml"), toml);
-            JsonObject loaded = SplitConfigFiles.load(directory);
-            check(TierConfigProjection.at(loaded, "native_gameplay.max_targeting").getAsInt() == 7, "TOML global value survives implicit migrate defaults");
-            check(TierConfigProjection.at(loaded, "native_gameplay.no_waystones").getAsBoolean(), "TOML waystone toggle migrated");
-            for (String rank : TierConfigProjection.RANKS) {
-                check(TierConfigProjection.at(loaded, "tier_ai." + rank + ".flee_hp").getAsDouble() == 0.42, "TOML AI distributed " + rank);
-                check(TierConfigProjection.at(loaded, "tier_ai." + rank + ".greet_chance").getAsDouble() == 0.17, "TOML dialogue chance distributed " + rank);
-            }
-            check(Files.readString(directory.resolve("hostile_humans.toml.pre-tier.bak")).equals(toml), "TOML exact backup");
-            Path modules = directory.resolve(SplitConfigFiles.DIRECTORY);
-            for (String file : SplitConfigFiles.FILES) Files.delete(modules.resolve(file));
-            Files.writeString(directory.resolve("hostile_humans_unified.json"), "{\"schema_version\":1,\"native_gameplay\":{\"max_targeting\":11},\"ai\":{\"flee_hp\":0.19}}");
-            loaded = SplitConfigFiles.load(directory);
-            check(TierConfigProjection.at(loaded, "native_gameplay.max_targeting").getAsInt() == 11, "explicit JSON overrides TOML");
-            check(TierConfigProjection.at(loaded, "native_gameplay.no_waystones").getAsBoolean(), "missing JSON option migrates lower-priority TOML");
-            check(TierConfigProjection.at(loaded, "tier_ai.tier1.flee_hp").getAsDouble() == 0.19, "explicit JSON AI overrides TOML");
-            for (String file : SplitConfigFiles.FILES) Files.delete(modules.resolve(file));
-            Files.writeString(directory.resolve("hostile_humans.toml"), "[broken table");
-            SplitConfigFiles.load(directory);
-            for (String file : SplitConfigFiles.FILES) check(!Files.exists(modules.resolve(file)), "invalid TOML postpones dependent generation " + file);
-            check(Files.readString(directory.resolve("hostile_humans.toml")).equals("[broken table"), "invalid TOML never rewritten");
         } finally { cleanup(directory); }
     }
 
@@ -458,15 +286,12 @@ public final class TierConfigFilesTest {
                         && data.getAsJsonObject("attributes").get("health_min").getAsInt() == 21,
                         "unrelated edits retained " + rank);
                 try (var paths = Files.list(ranks)) {
-                    Path backup = paths.filter(p -> p.getFileName().toString().startsWith(rank + ".json.pre-equipment-import-"))
-                            .findFirst().orElseThrow();
-                    check(Arrays.equals(originals.get(rank), Files.readAllBytes(backup)), "exact source backup " + rank);
+                    check(paths.count() == 5, "import leaves exactly five files " + rank);
                 }
                 gear.add("mainhand", new JsonArray());
                 Files.writeString(path, data.toString());
-                byte[] deleted = Files.readAllBytes(path);
                 SplitConfigFiles.load(directory, defaults, ready);
-                check(Arrays.equals(deleted, Files.readAllBytes(path)), "receipt preserves deleted entries " + rank);
+                check(read(path).getAsJsonObject("equipment_loadout").getAsJsonArray("mainhand").isEmpty(), "receipt preserves deleted entries " + rank);
             }
             for (String rank : TierConfigProjection.RANKS) {
                 JsonObject file = TierConfigProjection.tier(defaults, rank);
@@ -500,12 +325,53 @@ public final class TierConfigFilesTest {
             byte[] stale = Files.readAllBytes(changed);
             Files.writeString(changed, "{\"schema_version\":2,\"_external_edit\":true}");
             byte[] current = Files.readAllBytes(changed);
-            check(!SplitConfigFiles.writeImported(changed, stale, TierConfigProjection.tier(defaults, "tier1"))
+            check(!SplitConfigFiles.writeCurrent(changed, stale, TierConfigProjection.tier(defaults, "tier1"))
                     && Arrays.equals(current, Files.readAllBytes(changed)), "stale snapshot cannot overwrite concurrent edit");
             Path broken = ranks.resolve("tier2.json");
             Files.writeString(broken, "not json");
             SplitConfigFiles.load(directory, defaults, ready);
             check(Files.readString(broken).equals("not json"), "malformed file cannot be rewritten by import");
+        } finally { cleanup(directory); }
+    }
+
+    private static void checkCurrentLayoutOnly() throws Exception {
+        Path directory = Files.createTempDirectory("human-current-layout-");
+        try {
+            Path ranks = directory.resolve(SplitConfigFiles.DIRECTORY);
+            Files.createDirectories(ranks);
+            List<Path> oldSources = new ArrayList<>();
+            for (String old : List.of("hostile_humans.toml", "hostile_humans_unified.json", "humangunner.json", "humangunner_ai.json"))
+                oldSources.add(directory.resolve(old));
+            for (String old : List.of("equipment.json", "tiers.json", "spawning.json", "combat.json", "recruitment.json", "tacz.json", "compatibility.json"))
+                oldSources.add(ranks.resolve(old));
+            for (Path old : oldSources) Files.writeString(old, "broken obsolete config");
+            JsonObject defaults = UnifiedConfig.defaults();
+            JsonObject loaded = SplitConfigFiles.load(directory, defaults, (rank, data) -> false);
+            checkFiveFiles(directory);
+            for (Path old : oldSources) check(Files.readString(old).equals("broken obsolete config"), "old source never touched " + old);
+            check(new UnifiedConfig(loaded).tier("tier1").equals(new UnifiedConfig(defaults).tier("tier1")), "obsolete sources do not change gameplay defaults");
+            try (var paths = Files.list(ranks)) { check(paths.count() == 12, "only five current files added beside seven existing old files"); }
+            Path tier = ranks.resolve("tier1.json");
+            JsonObject custom = json("{\"schema_version\":2,\"_custom_note\":\"keep\",\"recruitment\":{\"payment\":null},\"ammunition\":{\"arrows\":{\"min\":5}},\"equipment_loadout\":{\"mainhand\":[]},\"attributes\":{\"health_min\":31}}");
+            Files.writeString(tier, custom.toString());
+            SplitConfigFiles.load(directory, defaults, (rank, data) -> false);
+            check(read(tier).equals(custom), "layout-only save preserves every explicit value and absent key");
+            List<String> keys = new ArrayList<>(read(tier).keySet());
+            check(keys.indexOf("attributes") < keys.indexOf("equipment_loadout") && keys.indexOf("equipment_loadout") < keys.indexOf("recruitment"), "existing custom file is reordered");
+            byte[] stable = Files.readAllBytes(tier);
+            SplitConfigFiles.load(directory, defaults, (rank, data) -> false);
+            check(Arrays.equals(stable, Files.readAllBytes(tier)), "second reload does not rewrite layout");
+            check(!read(tier).getAsJsonObject("ammunition").getAsJsonObject("arrows").has("max"), "in-memory defaults are not persisted");
+            JsonObject emptyMaps = json("{\"recruitment\":{\"payment_by_tier\":{\"tier1\":{}}},\"tacz\":{\"gun_whitelist\":{},\"hired_gun_additional_whitelist\":{},\"tier_gun_type_weights\":{\"tier1\":{}}}}");
+            CurrentConfigDefaults.fill(emptyMaps, defaults, "");
+            for (String path : List.of("recruitment.payment_by_tier.tier1", "tacz.gun_whitelist", "tacz.hired_gun_additional_whitelist", "tacz.tier_gun_type_weights.tier1"))
+                check(TierConfigProjection.at(emptyMaps, path).getAsJsonObject().size() == 0, "custom empty map retained " + path);
+            for (JsonObject file : List.of(TierConfigProjection.global(defaults), TierConfigProjection.tier(defaults, "tier1"))) {
+                boolean rank = file.has("attributes");
+                JsonObject ordered = TierConfigProjection.arrange(file, rank);
+                check(file.equals(ordered), "layout contains identical fields and values");
+                check(ordered.toString().equals(TierConfigProjection.arrange(ordered, rank).toString()), "layout order is idempotent");
+            }
         } finally { cleanup(directory); }
     }
 
@@ -524,16 +390,9 @@ public final class TierConfigFilesTest {
     }
 
     private static void checkFiveFiles(Path directory) throws Exception {
-        checkFiveFilesAlongsideLegacy(directory);
+        for (String file : SplitConfigFiles.FILES) check(Files.isRegularFile(directory.resolve(SplitConfigFiles.DIRECTORY).resolve(file)), "current file exists " + file);
         try (var paths = Files.list(directory.resolve(SplitConfigFiles.DIRECTORY))) {
             check(paths.filter(path -> path.toString().endsWith(".json")).count() == 5, "new installation creates exactly five JSON files");
-        }
-    }
-    private static void checkFiveFilesAlongsideLegacy(Path directory) throws Exception {
-        for (String file : SplitConfigFiles.FILES) {
-            JsonObject data = read(directory.resolve(SplitConfigFiles.DIRECTORY).resolve(file));
-            check(data.get("schema_version").getAsInt() == 2, "v2 version " + file);
-            check(data.has("_说明_中文") && data.has("_description_en"), "bilingual file guidance " + file);
         }
     }
     private static JsonObject json(String text) { return JsonParser.parseString(text).getAsJsonObject(); }

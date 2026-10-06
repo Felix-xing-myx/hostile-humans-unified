@@ -26,14 +26,8 @@ final class SplitConfigFiles {
     static JsonObject load(Path configDirectory, JsonObject defaults,
                            java.util.function.BiPredicate<String, JsonObject> integrations) {
         Path directory = configDirectory.resolve(DIRECTORY);
-        // No old source is inspected if all five new files already exist. A broken old
-        // document cannot disable a fully migrated installation or restore deleted values.
-        boolean missing = FILES.stream().anyMatch(file -> !Files.exists(directory.resolve(file)));
-        LegacySplitConfigFiles.Loaded legacy = missing ? LegacySplitConfigFiles.load(configDirectory, defaults)
-                : new LegacySplitConfigFiles.Loaded(defaults.deepCopy(), Set.of(), Set.of());
-        boolean backedUp = !missing || LegacySplitConfigFiles.backup(legacy);
-        JsonObject result = loadFile(directory.resolve("global.json"), TierConfigProjection.global(legacy.root()),
-                TierConfigProjection.global(defaults), backedUp && legacy.canGenerate("global.json"), false, integrations);
+        JsonObject result = loadFile(directory.resolve("global.json"), TierConfigProjection.global(defaults),
+                false, integrations);
         // Discard recognized per-tier values accidentally left in a global file. This
         // avoids a second settings source and makes each rank independently authoritative.
         result = TierConfigProjection.global(result);
@@ -41,24 +35,24 @@ final class SplitConfigFiles {
         java.util.function.BiPredicate<String, JsonObject> permittedIntegrations =
                 (rank, data) -> automaticImports && integrations.test(rank, data);
         for (String rank : TierConfigProjection.RANKS) {
-            JsonObject fallback = TierConfigProjection.tier(legacy.root(), rank);
+            JsonObject fallback = TierConfigProjection.tier(defaults, rank);
             JsonObject data = loadFile(directory.resolve(rank + ".json"), fallback,
-                    TierConfigProjection.tier(defaults, rank), backedUp && legacy.canGenerate(rank + ".json"), true, permittedIntegrations);
+                    true, permittedIntegrations);
             TierConfigProjection.applyTier(result, rank, data);
         }
         result.addProperty("schema_version", 2);
         return result;
     }
 
-    private static JsonObject loadFile(Path path, JsonObject fallback, JsonObject defaults, boolean generate, boolean rank,
+    private static JsonObject loadFile(Path path, JsonObject defaults, boolean rank,
                                        java.util.function.BiPredicate<String, JsonObject> integrations) {
         if (Files.exists(path)) return existing(path, defaults, rank, integrations);
-        JsonObject data = fallback.deepCopy();
+        JsonObject data = defaults.deepCopy();
         TierConfigProjection.fill(data, defaults, "");
         describe(data, rank);
-        if (rank && generate) integrations.test(rankName(path), data);
+        if (rank) integrations.test(rankName(path), data);
         data = TierConfigProjection.arrange(data, rank);
-        if (generate) {
+        {
             try {
                 Files.createDirectories(path.getParent());
                 writeNew(path, data);
@@ -77,11 +71,14 @@ final class SplitConfigFiles {
         try {
             byte[] original = Files.readAllBytes(path);
             JsonObject data = read(path, 2);
-            if (rank && integrations.test(rankName(path), data)) {
-                // Only a successful first additive equipment import may persist.
-                // Custom values/notes are retained, and the exact source bytes are backed up.
-                if (!writeImported(path, original, data)) data = read(path, 2);
-            }
+            boolean imported = rank && integrations.test(rankName(path), data);
+            JsonObject arranged = TierConfigProjection.arrange(data, rank);
+            byte[] output = GSON.toJson(arranged).getBytes(StandardCharsets.UTF_8);
+            // Reorder only raw fields. Missing defaults remain in memory; user values,
+            // custom notes and empty pools are not replaced by a layout refresh.
+            if ((imported || !Arrays.equals(original, output)) && !writeCurrent(path, original, arranged))
+                data = read(path, 2);
+            else data = arranged;
             TierConfigProjection.fill(data, defaults, "");
             describe(data, rank);
             return data;
@@ -99,22 +96,19 @@ final class SplitConfigFiles {
         return name.substring(0, name.length() - ".json".length());
     }
 
-    static boolean writeImported(Path path, byte[] original, JsonObject data) {
+    static boolean writeCurrent(Path path, byte[] original, JsonObject data) {
         Path temporary = null;
         try {
             if (!Arrays.equals(original, Files.readAllBytes(path))) return false;
-            temporary = Files.createTempFile(path.getParent(), "human-equipment-import-", ".tmp");
+            temporary = Files.createTempFile(path.getParent(), "human-config-save-", ".tmp");
             try (Writer writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) { GSON.toJson(data, writer); }
-            Path backup = Files.createTempFile(path.getParent(), path.getFileName() + ".pre-equipment-import-", ".bak");
-            Files.write(backup, original);
-            if (!Arrays.equals(original, Files.readAllBytes(backup))) throw new IOException("Import backup mismatch");
             if (!Arrays.equals(original, Files.readAllBytes(path))) return false;
             try { Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING); }
             catch (AtomicMoveNotSupportedException unavailable) { Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING); }
-            LogUtils.getLogger().info("Imported available default equipment into {}; previous configuration backed up at {}", path, backup);
+            LogUtils.getLogger().info("Saved current human configuration layout/equipment in {}", path);
             return true;
         } catch (IOException error) {
-            LogUtils.getLogger().error("Cannot persist equipment import into {}; existing file remains authoritative", path, error);
+            LogUtils.getLogger().error("Cannot save current configuration into {}; existing file remains authoritative", path, error);
             return false;
         } finally {
             if (temporary != null) {
@@ -126,10 +120,10 @@ final class SplitConfigFiles {
 
     private static void describe(JsonObject data, boolean rank) {
         if (!data.has("_说明_中文")) data.addProperty("_说明_中文", rank
-                ? "本阶属性、装备、弹药、战斗 AI、生成、枪械与招聘设置。修改后重启生效；本文件优先于旧布局。"
+                ? "本阶属性、装备、弹药、战斗 AI、生成、枪械与招聘设置。修改后重启生效；本阶常用设置在前，细节参数在后。"
                 : "全局开关、伤害、自然生成、装备成长、招聘与兼容设置。修改后重启生效；分阶设置在各阶文件中。" );
         if (!data.has("_description_en")) data.addProperty("_description_en", rank
-                ? "This rank's attributes, equipment, ammunition, AI, spawning, firearms and hiring. Restart to apply; this file takes precedence over old layouts."
+                ? "This rank's attributes, equipment, ammunition, AI, spawning, firearms and hiring. Restart to apply; common settings precede detailed tuning."
                 : "Global switches, damage, spawning, equipment growth, hiring and integrations. Restart to apply; rank options live in the rank files.");
     }
 
@@ -139,8 +133,6 @@ final class SplitConfigFiles {
             if (!parsed.isJsonObject()) throw new IOException("Configuration root must be an object: " + path);
             JsonObject data = parsed.getAsJsonObject();
             JsonElement schema = data.get("schema_version");
-            // Legacy schema omission is supported; new files must explicitly declare v2.
-            if (schema == null && version == 1) return data;
             if (schema == null || !schema.isJsonPrimitive() || !schema.getAsJsonPrimitive().isNumber()
                     || !schema.getAsBigDecimal().equals(java.math.BigDecimal.valueOf(version)))
                 throw new IOException("Unsupported config schema; input left unchanged: " + path);

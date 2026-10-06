@@ -90,13 +90,45 @@ final class TierConfigProjection {
         return arrange(result, true);
     }
 
-    static JsonObject arrange(JsonObject result, boolean rank) {
-        return ordered(result, rank ? List.of("schema_version", "_说明_中文", "_description_en",
-                "attributes", "movement", "damage_multipliers", "combat", "weapon_spread_degrees",
-                "ai", "spawning", "equipment_loadout", "equipment_growth", "ammunition", "potions",
-                "tacz", "recruitment") : List.of("schema_version", "_说明_中文", "_description_en",
-                "vanilla_mode", "ai", "ammunition", "equipment_integration", "better_combat", "damage", "spawning", "equipment_growth",
-                "recruitment", "tacz", "native_gameplay"));
+    /** Common controls first, detailed tuning last; field names and values never change. */
+    static JsonObject arrange(JsonObject source, boolean rank) {
+        JsonObject result = source.deepCopy();
+        List<String> sections = rank
+                ? List.of("schema_version", "_说明_中文", "_description_en", "attributes", "spawning",
+                    "equipment_loadout", "ammunition", "potions", "recruitment", "damage_multipliers",
+                    "combat", "ai", "movement", "weapon_spread_degrees", "tacz", "equipment_growth")
+                : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "ammunition",
+                    "equipment_integration", "ai", "spawning", "recruitment", "damage", "tacz",
+                    "better_combat", "equipment_growth", "native_gameplay");
+        orderGroup(result, "equipment_loadout", List.of("ranged_chance", "ranged_in_backpack", "allow_tacz_firearms",
+                "automatic_spartan_weapons", "automatic_spartan_shields", "automatic_immersive_armors",
+                "weapon_count", "guaranteed_shields_min", "guaranteed_shields_max", "automatic_shield_enchantments",
+                "mainhand", "ranged_mainhand", "armor_sets", "shield_pool", "inventory", "offhand", "bonus_mainhand", "rules"));
+        orderGroup(result, "attributes", List.of("health_min", "health_max", "attack_damage", "armor",
+                "armor_toughness", "knockback_resistance", "follow_range"));
+        orderGroup(result, "spawning", rank ? List.of("spawn_multiplier", "first_spawn_day")
+                : List.of("enabled", "admission_chance", "battle_admission_chance", "progression",
+                    "encounter_cooldown_ticks", "nearby_horizontal_radius", "nearby_vertical_radius", "density_divisor"));
+        orderGroup(result, "recruitment", rank ? List.of("max_hired", "payment")
+                : List.of("allow_hired_pvp_damage", "soldier_messages"));
+        orderGroup(result, "ai", List.of("enabled", "item_recovery_enabled", "retreat_health_ratio", "critical_health_ratio",
+                "resume_health_ratio", "gradual_heal_interval_ticks", "food_recovery_min_health", "food_recovery_max_health",
+                "recovery_damage_tolerance_ratio", "recovery_commit_ticks", "shield_block_chance_after_hit",
+                "shield_block_duration_min_ticks", "shield_block_duration_max_ticks", "shield_block_cooldown_ticks"));
+        orderGroup(result, "tacz", rank ? List.of("gun_chance", "damage_multiplier", "gun_type_weights")
+                : List.of("enabled", "natural_spawn_firearms_enabled", "auto_add_new_guns", "auto_added_gun_weight",
+                    "excluded_auto_gun_types", "excluded_gun_namespaces", "gun_blacklist", "human_gun_damage_multiplier",
+                    "pillager_gun_damage_multiplier", "shield_damage_multiplier", "tamed_maid_damage_multiplier",
+                    "gunner_spread_degrees", "forced_ranged_gun_chance", "gun_drop_chance", "gun_whitelist",
+                    "hired_gun_additional_whitelist"));
+        return ordered(result, sections);
+    }
+
+    private static void orderGroup(JsonObject parent, String key, List<String> fields) {
+        if (!parent.has(key) || !parent.get(key).isJsonObject()) return;
+        java.util.ArrayList<String> keys = new java.util.ArrayList<>(List.of("_说明_中文", "_description_en"));
+        keys.addAll(fields);
+        parent.add(key, ordered(parent.getAsJsonObject(key), keys));
     }
 
     static void applyTier(JsonObject root, String rank, JsonObject file) {

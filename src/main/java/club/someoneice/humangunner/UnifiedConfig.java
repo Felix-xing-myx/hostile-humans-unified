@@ -300,39 +300,6 @@ public final class UnifiedConfig {
         }
     }
 
-    static JsonObject migrate(JsonObject guns, JsonObject ai) {
-        JsonObject data = defaults();
-        JsonObject tacz = data.getAsJsonObject("tacz");
-        // Normalize the aliases before merging with current defaults.
-        alias(guns, "globe", "tier2_gun_chance");
-        alias(guns, "guns", "gun_whitelist");
-        alias(guns, "include_unlisted_guns", "auto_add_new_guns");
-        alias(guns, "unlisted_gun_weight", "auto_added_gun_weight");
-        alias(guns, "excluded_unlisted_gun_types", "excluded_auto_gun_types");
-        for (var entry : guns.entrySet()) {
-            if (entry.getKey().equals("human_melee_damage_multiplier")
-                    || entry.getKey().equals("human_bow_damage_multiplier")
-                    || entry.getKey().equals("human_trident_damage_multiplier"))
-                data.getAsJsonObject("damage").add(entry.getKey(), entry.getValue().deepCopy());
-            else tacz.add(entry.getKey(), entry.getValue().deepCopy());
-        }
-        for (var entry : ai.entrySet()) {
-            // Deprecated speed fields belonged to the old path/combat/retreat
-            // controller and do not map to the current base-speed formula.
-            if (!Set.of("normal_movement_speed", "combat_movement_speed", "retreat_movement_speed")
-                    .contains(entry.getKey())) {
-                data.getAsJsonObject("ai").add(entry.getKey(), entry.getValue().deepCopy());
-            }
-        }
-        if (ai.has("recovery_damage_tolerance") && !ai.has("recovery_damage_tolerance_ratio"))
-            data.getAsJsonObject("ai").addProperty("recovery_damage_tolerance_ratio",
-                    number(ai, "recovery_damage_tolerance", 10, 0, 60) / 60.0);
-        return data;
-    }
-    private static void alias(JsonObject data, String old, String current) {
-        if (!data.has(current) && data.has(old)) data.add(current, data.get(old).deepCopy());
-        data.remove(old);
-    }
     static JsonObject defaults() {
         try (Reader reader = new InputStreamReader(Objects.requireNonNull(
                 UnifiedConfig.class.getResourceAsStream("/defaults/hostile_humans_unified.json")), StandardCharsets.UTF_8)) {
@@ -341,8 +308,7 @@ public final class UnifiedConfig {
     }
     private static JsonObject merge(JsonObject defaults, JsonObject data) {
         JsonObject result = data.deepCopy();
-        ConfigSchemaUpgrade.aliases(result, defaults);
-        ConfigSchemaUpgrade.fill(result, defaults, "");
+        CurrentConfigDefaults.fill(result, defaults, "");
         return result;
     }
     private static Map<String, String> growthItems(JsonObject configured, JsonObject defaults) {

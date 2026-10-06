@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "_说明_中文": "全局配置。修改后完整重启生效；只填写JSON配置值，以下_说明和_description字段仅供阅读。阶级独立属性、装备、AI、弹药与药水见roamer/tier1/tier2/tier3.json。",
   "_description_en": "Global configuration. Fully restart after editing. _说明 and _description fields are documentation only. Independent rank settings are in roamer/tier1/tier2/tier3.json.",
   "_说明_vanilla_mode_中文": "原版模式，默认关闭；所有人类（含雇佣士兵）基础生命20、基础近战1并取消本模组近战/跳跃/三叉戟刺击倍率。武器、附魔、状态效果及外部生命修饰保留；不改变远程伤害、护甲、AI或装备。完整重启生效，已有实体按生命比例切换；关闭恢复保存的阶级生命。",
@@ -11,8 +11,8 @@
     "_说明_伤害层级_中文": "这里配置的是整个阶级，不是某个独立 NPC。各阶伤害倍率与 global.json 的对应全局倍率相乘，不互相覆盖；1 表示不额外调整，0 表示该类攻击不造成伤害。例如全局近战 1.7、本阶近战 0.5，合并倍率为 0.85。枪械伤害单独在 对应阶级文件或global.json 设置，不使用这里的近战/弓/三叉戟输出倍率。",
     "_description_damage_layers_en": "These settings apply to an entire tier, not an individual NPC. Tier damage multipliers multiply the corresponding global values in global.json; neither overrides the other. 1 makes no additional change and 0 disables that attack's damage. For example, global melee 1.7 times tier melee 0.5 gives 0.85. Firearm damage is configured separately in rank files or global.json and does not use these melee/bow/trident outgoing multipliers.",
     "roamer": {
-      "_说明_中文": "流浪者专用配置：按属性→移动→战斗→生成与装备→弹药与药水→枪械→雇佣阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
-      "_description_en": "roamer settings: attributes, movement, combat, spawning/equipment, ammunition/potions, firearms, hiring. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
+      "_说明_中文": "流浪者专用配置：按属性→生成→装备→弹药与药水→雇佣→伤害与战斗→移动与枪械→成长阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
+      "_description_en": "roamer settings: attributes, spawning, equipment, ammunition/potions, hiring, damage/combat, movement/firearms, growth. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
       "attributes": {
         "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
         "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
@@ -207,8 +207,8 @@
       }
     },
     "tier1": {
-      "_说明_中文": "一阶人类专用配置：按属性→移动→战斗→生成与装备→弹药与药水→枪械→雇佣阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
-      "_description_en": "tier1 settings: attributes, movement, combat, spawning/equipment, ammunition/potions, firearms, hiring. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
+      "_说明_中文": "一阶人类专用配置：按属性→生成→装备→弹药与药水→雇佣→伤害与战斗→移动与枪械→成长阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
+      "_description_en": "tier1 settings: attributes, spawning, equipment, ammunition/potions, hiring, damage/combat, movement/firearms, growth. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
       "attributes": {
         "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
         "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
@@ -403,8 +403,8 @@
       }
     },
     "tier2": {
-      "_说明_中文": "二阶人类专用配置：按属性→移动→战斗→生成与装备→弹药与药水→枪械→雇佣阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
-      "_description_en": "tier2 settings: attributes, movement, combat, spawning/equipment, ammunition/potions, firearms, hiring. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
+      "_说明_中文": "二阶人类专用配置：按属性→生成→装备→弹药与药水→雇佣→伤害与战斗→移动与枪械→成长阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
+      "_description_en": "tier2 settings: attributes, spawning, equipment, ammunition/potions, hiring, damage/combat, movement/firearms, growth. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
       "attributes": {
         "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
         "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
@@ -599,8 +599,8 @@
       }
     },
     "tier3": {
-      "_说明_中文": "三阶人类专用配置：按属性→移动→战斗→生成与装备→弹药与药水→枪械→雇佣阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
-      "_description_en": "tier3 settings: attributes, movement, combat, spawning/equipment, ammunition/potions, firearms, hiring. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
+      "_说明_中文": "三阶人类专用配置：按属性→生成→装备→弹药与药水→雇佣→伤害与战斗→移动与枪械→成长阅读。本文件只影响本阶；总开关在global.json。修改后完整重启，出生装备/补给不补发给已有实体。",
+      "_description_en": "tier3 settings: attributes, spawning, equipment, ammunition/potions, hiring, damage/combat, movement/firearms, growth. Applies only to this rank; master switches are in global.json. Restart to apply; spawn equipment/supplies are not reissued to existing entities.",
       "attributes": {
         "_说明_中文": "生命值范围以生命值点数计（2 点=1 颗心）；其余为实体基础属性。attack_damage 是基础近战攻击属性，不是伤害倍率或固定最终伤害，武器和状态效果仍可修改它；不参与弓、弩、投掷三叉戟和枪械伤害计算。实际近战伤害另乘全局和本阶近战倍率。",
         "_description_en": "Health bounds use health points (2 points = 1 heart); the other values are base entity attributes. attack_damage is the base melee attack attribute, not a multiplier or fixed final damage; weapons and effects may still modify it. It is not used for bow, crossbow, thrown-trident or firearm damage. Actual melee damage also uses the global and tier melee multipliers.",
@@ -936,8 +936,8 @@
           }
         ]
       },
-      "_说明_护甲_中文": "流浪者默认护甲权重：皮革 6、锁链 3、铁 1，即 60%/30%/10%，不默认生成钻石或高档联动护甲。新版本仅自动迁移完全未修改的旧默认护甲池，保留自定义内容；只影响之后生成的单位，不剥除现有装备或限制战利品拾取。",
-      "_description_armor_en": "Default Roamer armor weights: leather 6, chainmail 3, iron 1 (60%/30%/10%); no default diamond or high-end integration armor. Only the exact unmodified former default pool is migrated; custom pools remain intact. Applies to future spawns, without stripping existing gear or restricting loot pickup.",
+      "_说明_护甲_中文": "流浪者默认护甲权重：皮革 6、锁链 3、铁 1，即 60%/30%/10%，不默认生成钻石或高档联动护甲。配置中的自定义护甲池保持原样；只影响之后生成的单位，不剥除现有装备或限制战利品拾取。",
+      "_description_armor_en": "Default Roamer armor weights: leather 6, chainmail 3, iron 1 (60%/30%/10%); no default diamond or high-end integration armor. Custom armor pools remain intact. Applies to future spawns, without stripping existing gear or restricting loot pickup.",
       "_说明_armor_sets_中文": "整套护甲池：weight为正权重，head/chest/legs/feet为各部位物品ID；requires_mod可限定前置。",
       "_description_armor_sets_en": "Armor-set pool: positive weight, head/chest/legs/feet item IDs; optional requires_mod dependency.",
       "armor_sets": [

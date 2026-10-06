@@ -152,7 +152,7 @@ public record HumanGunnerConfig(
                     ? root.get("tier1_gun_chance").getAsDouble() : 0.1D;
             double chance = root.has("tier2_gun_chance")
                     ? root.get("tier2_gun_chance").getAsDouble()
-                    : root.has("globe") ? root.get("globe").getAsDouble() : 0.4D;
+                    : 0.4D;
             double tier3Chance = root.has("tier3_gun_chance")
                     ? root.get("tier3_gun_chance").getAsDouble() : 0.7D;
             double forcedChance = root.has("forced_ranged_gun_chance")
@@ -169,18 +169,15 @@ public record HumanGunnerConfig(
                     ? root.get("gunner_spread_degrees").getAsDouble() : 0.6D;
             boolean autoAddNew = root.has("auto_add_new_guns")
                     ? root.get("auto_add_new_guns").getAsBoolean()
-                    : !root.has("include_unlisted_guns") || root.get("include_unlisted_guns").getAsBoolean();
+                    : true;
             int autoAddedWeight = root.has("auto_added_gun_weight")
                     ? Math.max(0, root.get("auto_added_gun_weight").getAsInt())
-                    : root.has("unlisted_gun_weight")
-                    ? Math.max(0, root.get("unlisted_gun_weight").getAsInt()) : 5;
+                    : 5;
             LinkedHashSet<String> excludedTypes = new LinkedHashSet<>();
             if (root.has("excluded_auto_gun_types")) {
                 root.getAsJsonArray("excluded_auto_gun_types")
                         .forEach(element -> excludedTypes.add(element.getAsString()));
-            } else if (root.has("excluded_unlisted_gun_types")) {
-                root.getAsJsonArray("excluded_unlisted_gun_types")
-                        .forEach(element -> excludedTypes.add(element.getAsString()));
+
             } else {
                 excludedTypes.add("rpg");
             }
@@ -193,7 +190,7 @@ public record HumanGunnerConfig(
             LinkedHashMap<ResourceLocation, Integer> weights = new LinkedHashMap<>();
             JsonObject gunObject = root.has("gun_whitelist")
                     ? root.getAsJsonObject("gun_whitelist")
-                    : root.getAsJsonObject("guns");
+                    : null;
             readGunWeights(gunObject, "gun_whitelist", weights);
             if (gunObject == null) {
                 weights.putAll(defaults().gunWhitelist());

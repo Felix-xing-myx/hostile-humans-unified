@@ -45,14 +45,14 @@
 
 适用于 Minecraft 1.20.1 Forge。将统一版 JAR 放入实例的 `mods` 文件夹即可；不要同时安装独立的 Hostile Humans 或 Human Gunner JAR。
 
-配置位于 `config/hostile_humans_unified/`，由 global.json 和 roamer/tier1/tier2/tier3.json 五个文件组成，各阶独立设置属性、AI、装备和出生弹药；全局管理总开关与共享规则，保留中英文说明。旧 JSON 与原 TOML 会自动迁移并保留备份，不重置自定义设置。可调整分阶解锁日期、随日期成长的装备品质、四阶装备池、属性与散布、战斗行为、雇佣费用及枪械名单等。装备自定义直接使用配置文件，不再使用旧装备数据包。完整说明见[配置文件指南](CONFIGURATION.md)。多人游戏以服务器配置为准。
+配置位于 `config/hostile_humans_unified/`，由 global.json 和 roamer/tier1/tier2/tier3.json 五个文件组成，各阶独立设置属性、AI、装备和出生弹药；全局管理总开关与共享规则，保留中英文说明。仅使用这五份当前配置，不再读取或转换旧 JSON/TOML，也不生成迁移、升级或导入备份文件。缺失文件直接生成当前默认值；已有文件按常用设置优先重排，保留自定义值。可调整分阶解锁日期、随日期成长的装备品质、四阶装备池、属性与散布、战斗行为、雇佣费用及枪械名单等。装备自定义直接使用配置文件，不再使用旧装备数据包。完整说明见[配置文件指南](CONFIGURATION.md)。多人游戏以服务器配置为准。
 
 ## 许可证与来源
 
 本模组统一发行版使用 GNU GPL v2.0，完整文本见仓库根目录 [`LICENSE`](LICENSE)。整合自 Human Gunner 的源码保留原有 MPL-2.0 声明，并在 MPL-2.0 允许的范围内作为较大 GPL 作品的一部分同时按 GPL 条款发布。组件来源及许可说明见 [`THIRD_PARTY_NOTICES.md`](src/main/resources/THIRD_PARTY_NOTICES.md)。
 
 
-全局 `global.json` 中的 `equipment_integration.auto_import_enabled` 是武器装备自动导入总开关，默认 `true`（旧文件缺少该项也按开启读取，可手动添加此配置组）。设为 `false` 后，启动不再导入或改写装备池，已有条目仍可使用。斯巴达武器、盾牌与沉浸式盔甲还分别受各阶 `automatic_spartan_weapons`、`automatic_spartan_shields`、`automatic_immersive_armors` 控制。安装对应模组后，启动时会将已注册装备追加到各阶尚未导入的非空装备池，保留玩家自定义条目及权重；即使配置先于物品注册表生成，也会在注册表就绪后重试。已有阶级文件导入前会生成 `.pre-equipment-import-*.bak` 备份，并保留自定义属性和说明。空池、关闭自动导入的池，以及保留 `_imported_spartanweaponry` / `_imported_spartanshields` / `_imported_immersive_armors` 导入记录后删除的装备不会自动补回；导入只影响随后生成的人类。
+全局 `global.json` 中的 `equipment_integration.auto_import_enabled` 是武器装备自动导入总开关，默认 `true`（旧文件缺少该项也按开启读取，可手动添加此配置组）。设为 `false` 后，启动不再导入或改写装备池，已有条目仍可使用。斯巴达武器、盾牌与沉浸式盔甲还分别受各阶 `automatic_spartan_weapons`、`automatic_spartan_shields`、`automatic_immersive_armors` 控制。安装对应模组后，启动时会将已注册装备追加到各阶尚未导入的非空装备池，保留玩家自定义条目及权重；即使配置先于物品注册表生成，也会在注册表就绪后重试。导入采用临时文件与原子替换保存，保留自定义属性和说明，不在配置目录留下备份文件。空池、关闭自动导入的池，以及保留 `_imported_spartanweaponry` / `_imported_spartanshields` / `_imported_immersive_armors` 导入记录后删除的装备不会自动补回；导入只影响随后生成的人类。
 
 装备池默认含原版装备。可以删除原版条目并填写已注册的自定义装备；保留数组键，用 `[]` 表示空池。主手池无可用条目时仍有安全近战回退，远程池无可用条目时仍有弓回退；护甲、盾牌和备用武器的空池不补默认装备。希望出生装备严格使用自定义池时，关闭自动导入及全局 `equipment_growth.enabled`，并按需关闭各阶 `equipment_loadout.allow_tacz_firearms`，以免额外配枪或成长替换影响最终装备。
 
