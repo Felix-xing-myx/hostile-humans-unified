@@ -220,6 +220,7 @@ public final class TierConfigFilesTest {
                     max_targeting = 7
                     no_waystones = true
                     battle_event = "Random"
+                    greet_chance = 0.17
                     flee_hp = 0.42
                     run_away_middle_fight_chance = 0.67
                     mid_battle_buff_instead_of_run_chance = 0.23
@@ -228,8 +229,10 @@ public final class TierConfigFilesTest {
             JsonObject loaded = SplitConfigFiles.load(directory);
             check(TierConfigProjection.at(loaded, "native_gameplay.max_targeting").getAsInt() == 7, "TOML global value survives implicit migrate defaults");
             check(TierConfigProjection.at(loaded, "native_gameplay.no_waystones").getAsBoolean(), "TOML waystone toggle migrated");
-            for (String rank : TierConfigProjection.RANKS)
+            for (String rank : TierConfigProjection.RANKS) {
                 check(TierConfigProjection.at(loaded, "tier_ai." + rank + ".flee_hp").getAsDouble() == 0.42, "TOML AI distributed " + rank);
+                check(TierConfigProjection.at(loaded, "tier_ai." + rank + ".greet_chance").getAsDouble() == 0.17, "TOML dialogue chance distributed " + rank);
+            }
             check(Files.readString(directory.resolve("hostile_humans.toml.pre-tier.bak")).equals(toml), "TOML exact backup");
             Path modules = directory.resolve(SplitConfigFiles.DIRECTORY);
             for (String file : SplitConfigFiles.FILES) Files.delete(modules.resolve(file));
