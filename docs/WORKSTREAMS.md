@@ -167,3 +167,12 @@
 - 默认上下限与种类取原代码，新增独立均匀数量/权重抽取替代与食物预设耦合的药水次数及固定药水轮换；原食物/金苹果预设保持。将药水硬编码发放从RecoverySupplies移除，不新增恢复/攻击/动画系统。
 - 内置imagegen编辑弹匣，加入两条压槽，最近邻整理32×32透明PNG；完整提示词见docs/AMMO_ASSETS.md。静态JSON、默认值变化隔离、食物预设、一次性调用、PNG尺寸与差异检查通过。
 - 新增分阶投影/默认值/空池/关闭/上下限/注册ID配置回归测试，已接check但没有运行编译或自动化测试。本轮未构建、未同步、未推送；待游戏验收各阶出生瓶数、模组药水ID、背包满与空池、关闭开关及贴图效果。
+
+## 构建及测试实例同步：2026-10-06 15:31（北京时间）
+
+- 用户授权“构建同步”，目标沿用 `E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21`；只同步这一实例，未启动游戏、未推送。
+- 源码 `37451d6397c56410f3609e38c33cf242bd3a04fa`，版本3.6.0。Java17、仓库gradlew.bat、显式三个API参数，`build lootScreeningTest --offline` 一次成功，35任务；新SpawnPotionConfigTest通过，UnifiedConfig1016检查及拾取/食物药水价值13391检查通过。其他check全通过，故障注入ERROR为预期坏配置测试。
+- 包内弹匣PNG与源码一致，中文箭矢名称为通用箭矢，四阶默认potions与SpawnPotionConfig类在包内。运行状态检查无目标Minecraft，旧JAR和模组配置备份完成；目标仅一份本模组JAR。
+- 源/目标SHA-256：`C79C24033B54B2F8C953F0A7C7B322105C37782DD74A09CB854C37E398A6889B`；旧JAR：`3E023411ABCA15E9CDC00EA4DFDE3887CD5AAE288798A09BB50694B91C3ECA50`。
+- 备份清单：维护目录 `部署备份/20261006-153120-potions-magazine-Forge_47.4.21/deployment.json`；构建日志 `验证日志/build-potion-config-20261006.log`。实例既有配置未改写，用户CHANGELOG未提交部分保留。
+- 待游戏验收：两条压槽的远近显示、通用箭矢名称、弹药与瞬间治疗拾取取舍、各阶出生药水的数量/候选池/空池和开关。已有五文件未填写potions时使用默认值，自定义按CONFIGURATION.md加入对应阶文件；自动验证不代替实际游戏验收。
