@@ -8,7 +8,8 @@ public final class UnifiedConfigTest {
     private static int assertions;
     public static void main(String[] args) throws Exception {
         JsonObject defaults = UnifiedConfig.defaults();
-        check(new ArrayList<>(defaults.keySet()).get(defaults.size()-1).equals("tacz"), "TaCZ section last");
+        List<String> gameplaySections = defaults.keySet().stream().filter(key -> !key.startsWith("_")).toList();
+        check(gameplaySections.get(gameplaySections.size()-1).equals("tacz"), "TaCZ last gameplay section, ignoring guidance metadata");
         UnifiedConfig config = new UnifiedConfig(new JsonObject());
         checkEquipmentLoadouts(config);
         int[] defaultPayments = {8, 24, 72, 216};
