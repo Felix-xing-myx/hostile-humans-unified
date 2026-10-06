@@ -8,6 +8,7 @@ import java.util.*;
 public final class TierConfigFilesTest {
     private static int assertions;
     public static void main(String[] args) throws Exception {
+        checkDefaultIntegrationRetry();
         checkProjection();
         checkReadableDefaults();
         checkOldestMigration();
@@ -297,6 +298,92 @@ public final class TierConfigFilesTest {
             SplitConfigFiles.load(directory);
             for (String file : SplitConfigFiles.FILES) check(!Files.exists(modules.resolve(file)), "invalid TOML postpones dependent generation " + file);
             check(Files.readString(directory.resolve("hostile_humans.toml")).equals("[broken table"), "invalid TOML never rewritten");
+        } finally { cleanup(directory); }
+    }
+
+    private static void checkDefaultIntegrationRetry() throws Exception {
+        JsonObject defaults = UnifiedConfig.defaults();
+        Path directory = Files.createTempDirectory("human-spartan-retry-");
+        java.util.function.BiPredicate<String, JsonObject> unavailable = (rank, file) ->
+                EquipmentIntegrationDefaults.seedDefaultRank(rank, file, TierConfigProjection.tier(defaults, rank),
+                        mod -> true, item -> false);
+        java.util.function.BiPredicate<String, JsonObject> ready = (rank, file) ->
+                EquipmentIntegrationDefaults.seedDefaultRank(rank, file, TierConfigProjection.tier(defaults, rank),
+                        mod -> true, item -> true);
+        try {
+            SplitConfigFiles.load(directory, defaults, unavailable);
+            Path ranks = directory.resolve(SplitConfigFiles.DIRECTORY);
+            byte[] global = Files.readAllBytes(ranks.resolve("global.json"));
+            Map<String, byte[]> originals = new HashMap<>();
+            for (String rank : TierConfigProjection.RANKS) {
+                Path path = ranks.resolve(rank + ".json");
+                JsonObject data = read(path);
+                data.addProperty("_custom_note", "Preserve this note");
+                data.getAsJsonObject("attributes").addProperty("health_min", 21);
+                Files.writeString(path, data.toString());
+                originals.put(rank, Files.readAllBytes(path));
+                check(!data.getAsJsonObject("equipment_loadout").has("_imported_spartanweaponry"),
+                        "unready registry does not finalize " + rank);
+            }
+            SplitConfigFiles.load(directory, defaults, ready);
+            check(Arrays.equals(global, Files.readAllBytes(ranks.resolve("global.json"))), "global is byte-identical");
+            for (String rank : TierConfigProjection.RANKS) {
+                Path path = ranks.resolve(rank + ".json");
+                JsonObject data = read(path), gear = data.getAsJsonObject("equipment_loadout");
+                check(gear.get("_imported_spartanweaponry").getAsBoolean()
+                        && gear.get("_imported_spartanshields").getAsBoolean(), "both imports persisted " + rank);
+                for (String pool : List.of("mainhand", "inventory", "ranged_mainhand", "shield_pool"))
+                    check(gear.getAsJsonArray(pool).size() > TierConfigProjection.tier(defaults, rank)
+                            .getAsJsonObject("equipment_loadout").getAsJsonArray(pool).size(), "full stock pool seeded " + rank + pool);
+                check(data.get("_custom_note").getAsString().equals("Preserve this note")
+                        && data.getAsJsonObject("attributes").get("health_min").getAsInt() == 21,
+                        "unrelated edits retained " + rank);
+                try (var paths = Files.list(ranks)) {
+                    Path backup = paths.filter(p -> p.getFileName().toString().startsWith(rank + ".json.pre-equipment-import-"))
+                            .findFirst().orElseThrow();
+                    check(Arrays.equals(originals.get(rank), Files.readAllBytes(backup)), "exact source backup " + rank);
+                }
+                gear.add("mainhand", new JsonArray());
+                Files.writeString(path, data.toString());
+                byte[] deleted = Files.readAllBytes(path);
+                SplitConfigFiles.load(directory, defaults, ready);
+                check(Arrays.equals(deleted, Files.readAllBytes(path)), "receipt preserves deleted entries " + rank);
+            }
+            for (String rank : TierConfigProjection.RANKS) {
+                JsonObject file = TierConfigProjection.tier(defaults, rank);
+                JsonObject gear = file.getAsJsonObject("equipment_loadout");
+                for (String pool : List.of("mainhand", "inventory", "ranged_mainhand", "shield_pool")) gear.add(pool, new JsonArray());
+                check(!ready.test(rank, file), "explicit empty unimported pools not filled " + rank);
+                file = TierConfigProjection.tier(defaults, rank);
+                gear = file.getAsJsonObject("equipment_loadout");
+                gear.addProperty("automatic_spartan_weapons", false);
+                gear.addProperty("automatic_spartan_shields", false);
+                check(!ready.test(rank, file), "disabled flags prevent import " + rank);
+                file = TierConfigProjection.tier(defaults, rank);
+                gear = file.getAsJsonObject("equipment_loadout");
+                gear.add("automatic_spartan_weapons", JsonNull.INSTANCE);
+                gear.add("automatic_spartan_shields", JsonNull.INSTANCE);
+                check(!ready.test(rank, file), "malformed import flags preserved " + rank);
+                file = TierConfigProjection.tier(defaults, rank);
+                gear = file.getAsJsonObject("equipment_loadout");
+                gear.getAsJsonArray("mainhand").get(0).getAsJsonObject().addProperty("weight", 987);
+                JsonArray custom = gear.getAsJsonArray("mainhand").deepCopy();
+                check(ready.test(rank, file) && custom.equals(gear.getAsJsonArray("mainhand")),
+                        "other default pools import without changing customized pool " + rank);
+                file = TierConfigProjection.tier(defaults, rank);
+                check(!EquipmentIntegrationDefaults.seedDefaultRank(rank, file, TierConfigProjection.tier(defaults, rank),
+                        mod -> false, item -> true), "absent mods do not import " + rank);
+            }
+            Path changed = ranks.resolve("tier1.json");
+            byte[] stale = Files.readAllBytes(changed);
+            Files.writeString(changed, "{\"schema_version\":2,\"_external_edit\":true}");
+            byte[] current = Files.readAllBytes(changed);
+            check(!SplitConfigFiles.writeImported(changed, stale, TierConfigProjection.tier(defaults, "tier1"))
+                    && Arrays.equals(current, Files.readAllBytes(changed)), "stale snapshot cannot overwrite concurrent edit");
+            Path broken = ranks.resolve("tier2.json");
+            Files.writeString(broken, "not json");
+            SplitConfigFiles.load(directory, defaults, ready);
+            check(Files.readString(broken).equals("not json"), "malformed file cannot be rewritten by import");
         } finally { cleanup(directory); }
     }
 

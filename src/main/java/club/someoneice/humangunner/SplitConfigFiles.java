@@ -19,6 +19,12 @@ final class SplitConfigFiles {
     }
 
     static JsonObject load(Path configDirectory, JsonObject defaults) {
+        return load(configDirectory, defaults, (rank, data) -> EquipmentIntegrationDefaults.seedDefaultRank(
+                rank, data, TierConfigProjection.tier(defaults, rank)));
+    }
+
+    static JsonObject load(Path configDirectory, JsonObject defaults,
+                           java.util.function.BiPredicate<String, JsonObject> integrations) {
         Path directory = configDirectory.resolve(DIRECTORY);
         // No old source is inspected if all five new files already exist. A broken old
         // document cannot disable a fully migrated installation or restore deleted values.
@@ -27,25 +33,27 @@ final class SplitConfigFiles {
                 : new LegacySplitConfigFiles.Loaded(defaults.deepCopy(), Set.of(), Set.of());
         boolean backedUp = !missing || LegacySplitConfigFiles.backup(legacy);
         JsonObject result = loadFile(directory.resolve("global.json"), TierConfigProjection.global(legacy.root()),
-                TierConfigProjection.global(defaults), backedUp && legacy.canGenerate("global.json"), false);
+                TierConfigProjection.global(defaults), backedUp && legacy.canGenerate("global.json"), false, integrations);
         // Discard recognized per-tier values accidentally left in a global file. This
         // avoids a second settings source and makes each rank independently authoritative.
         result = TierConfigProjection.global(result);
         for (String rank : TierConfigProjection.RANKS) {
             JsonObject fallback = TierConfigProjection.tier(legacy.root(), rank);
             JsonObject data = loadFile(directory.resolve(rank + ".json"), fallback,
-                    TierConfigProjection.tier(defaults, rank), backedUp && legacy.canGenerate(rank + ".json"), true);
+                    TierConfigProjection.tier(defaults, rank), backedUp && legacy.canGenerate(rank + ".json"), true, integrations);
             TierConfigProjection.applyTier(result, rank, data);
         }
         result.addProperty("schema_version", 2);
         return result;
     }
 
-    private static JsonObject loadFile(Path path, JsonObject fallback, JsonObject defaults, boolean generate, boolean rank) {
-        if (Files.exists(path)) return existing(path, defaults, rank);
+    private static JsonObject loadFile(Path path, JsonObject fallback, JsonObject defaults, boolean generate, boolean rank,
+                                       java.util.function.BiPredicate<String, JsonObject> integrations) {
+        if (Files.exists(path)) return existing(path, defaults, rank, integrations);
         JsonObject data = fallback.deepCopy();
         TierConfigProjection.fill(data, defaults, "");
         describe(data, rank);
+        if (rank && generate) integrations.test(rankName(path), data);
         data = TierConfigProjection.arrange(data, rank);
         if (generate) {
             try {
@@ -53,7 +61,7 @@ final class SplitConfigFiles {
                 writeNew(path, data);
             } catch (FileAlreadyExistsException concurrentWriter) {
                 // Re-read the winner, including its version and payment failure handling.
-                return existing(path, defaults, rank);
+                return existing(path, defaults, rank, integrations);
             } catch (IOException error) {
                 LogUtils.getLogger().error("Cannot create human configuration {}; using in-memory settings", path, error);
             }
@@ -61,19 +69,54 @@ final class SplitConfigFiles {
         return data;
     }
 
-    private static JsonObject existing(Path path, JsonObject defaults, boolean rank) {
+    private static JsonObject existing(Path path, JsonObject defaults, boolean rank,
+                                       java.util.function.BiPredicate<String, JsonObject> integrations) {
         try {
+            byte[] original = Files.readAllBytes(path);
             JsonObject data = read(path, 2);
+            if (rank && integrations.test(rankName(path), data)) {
+                // Only a successful first import into untouched stock pools may persist.
+                // Custom values/notes are retained, and the exact source bytes are backed up.
+                if (!writeImported(path, original, data)) data = read(path, 2);
+            }
             TierConfigProjection.fill(data, defaults, "");
             describe(data, rank);
-            // Existing new files are never rewritten automatically. This protects unknown
-            // fields, custom guidance, invalid values and concurrent edits byte for byte.
             return data;
         } catch (Exception invalid) {
             LogUtils.getLogger().error("Cannot load human configuration {}; leaving input untouched and using defaults in memory", path, invalid);
             JsonObject data = defaults.deepCopy();
             if (rank) TierConfigProjection.put(data, "recruitment.payment", JsonNull.INSTANCE);
             return data;
+        }
+    }
+
+    private static String rankName(Path path) {
+        String name = path.getFileName().toString();
+        return name.substring(0, name.length() - ".json".length());
+    }
+
+    static boolean writeImported(Path path, byte[] original, JsonObject data) {
+        Path temporary = null;
+        try {
+            if (!Arrays.equals(original, Files.readAllBytes(path))) return false;
+            temporary = Files.createTempFile(path.getParent(), "human-equipment-import-", ".tmp");
+            try (Writer writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) { GSON.toJson(data, writer); }
+            Path backup = Files.createTempFile(path.getParent(), path.getFileName() + ".pre-equipment-import-", ".bak");
+            Files.write(backup, original);
+            if (!Arrays.equals(original, Files.readAllBytes(backup))) throw new IOException("Import backup mismatch");
+            if (!Arrays.equals(original, Files.readAllBytes(path))) return false;
+            try { Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING); }
+            catch (AtomicMoveNotSupportedException unavailable) { Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING); }
+            LogUtils.getLogger().info("Imported available default equipment into {}; previous configuration backed up at {}", path, backup);
+            return true;
+        } catch (IOException error) {
+            LogUtils.getLogger().error("Cannot persist equipment import into {}; existing file remains authoritative", path, error);
+            return false;
+        } finally {
+            if (temporary != null) {
+                try { Files.deleteIfExists(temporary); }
+                catch (IOException cleanup) { LogUtils.getLogger().warn("Cannot remove equipment import temporary file {}", temporary, cleanup); }
+            }
         }
     }
 

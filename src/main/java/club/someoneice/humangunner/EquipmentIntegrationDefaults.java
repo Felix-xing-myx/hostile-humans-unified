@@ -7,6 +7,9 @@ import net.minecraft.world.item.Items;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.registries.ForgeRegistries;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 /** Startup-only discovery. Persistent receipts prevent deleted entries reappearing. */
@@ -22,6 +25,39 @@ final class EquipmentIntegrationDefaults {
     }
 
     static boolean seed(JsonObject equipment, Predicate<String> loaded, Predicate<String> registered) {
+        return seed(equipment, loaded, registered, (rank, pool) -> true);
+    }
+
+    /** Retry only untouched shipped pools; empty/customized pools remain authoritative. */
+    static boolean seedDefaultRank(String rank, JsonObject file, JsonObject defaults) {
+        return seedDefaultRank(rank, file, defaults,
+                mod -> ModList.get() != null && ModList.get().isLoaded(mod),
+                id -> ForgeRegistries.ITEMS.getValue(new ResourceLocation(id)) != null
+                        && ForgeRegistries.ITEMS.getValue(new ResourceLocation(id)) != Items.AIR);
+    }
+
+    static boolean seedDefaultRank(String rank, JsonObject file, JsonObject defaults,
+                                   Predicate<String> loaded, Predicate<String> registered) {
+        if (!file.has("equipment_loadout") || !file.get("equipment_loadout").isJsonObject()
+                || !defaults.has("equipment_loadout") || !defaults.get("equipment_loadout").isJsonObject()) return false;
+        JsonObject settings = file.getAsJsonObject("equipment_loadout");
+        JsonObject baseline = defaults.getAsJsonObject("equipment_loadout");
+        Set<String> eligible = new HashSet<>();
+        for (String pool : List.of("mainhand", "inventory", "ranged_mainhand", "shield_pool")) {
+            if (settings.has(pool) && settings.get(pool).isJsonArray()
+                    && !settings.getAsJsonArray(pool).isEmpty() && settings.get(pool).equals(baseline.get(pool)))
+                eligible.add(pool);
+        }
+        if (eligible.isEmpty()) return false;
+        JsonObject ranks = new JsonObject();
+        ranks.add(rank, settings);
+        JsonObject root = new JsonObject();
+        root.add("equipment_loadouts", ranks);
+        return seed(root, loaded, registered, (candidate, pool) -> eligible.contains(pool));
+    }
+
+    private static boolean seed(JsonObject equipment, Predicate<String> loaded, Predicate<String> registered,
+                                BiPredicate<String, String> eligible) {
         boolean changed = false;
         JsonObject ranks = equipment.getAsJsonObject("equipment_loadouts");
         if (ranks == null) return false;
@@ -31,8 +67,8 @@ final class EquipmentIntegrationDefaults {
             for (String mod : List.of("spartanweaponry", "spartanshields")) {
                 String flag = mod.equals("spartanweaponry") ? "automatic_spartan_weapons" : "automatic_spartan_shields";
                 String receipt = "_imported_" + mod;
-                if (!UnifiedConfig.bool(settings, flag, true) || !loaded.test(mod)
-                        || UnifiedConfig.bool(settings, receipt, false)) continue;
+                if (!booleanOption(settings, flag, true, false) || !loaded.test(mod)
+                        || booleanOption(settings, receipt, false, true)) continue;
                 List<String> materials = switch (rank) {
                     case "roamer" -> List.of("wooden", "stone", "copper");
                     case "tier1" -> List.of("stone", "copper", "iron");
@@ -44,14 +80,14 @@ final class EquipmentIntegrationDefaults {
                     if (mod.equals("spartanweaponry")) {
                         for (String type : TYPES) {
                             String id = mod + ":" + material + "_" + type;
-                            any |= append(settings, "mainhand", id, mod, registered);
-                            any |= append(settings, "inventory", id, mod, registered);
+                            if (eligible.test(rank, "mainhand")) any |= append(settings, "mainhand", id, mod, registered);
+                            if (eligible.test(rank, "inventory")) any |= append(settings, "inventory", id, mod, registered);
                         }
                         for (String type : List.of("longbow", "heavy_crossbow"))
-                            any |= append(settings, "ranged_mainhand", mod + ":" + material + "_" + type, mod, registered);
+                            if (eligible.test(rank, "ranged_mainhand")) any |= append(settings, "ranged_mainhand", mod + ":" + material + "_" + type, mod, registered);
                     } else {
                         for (String type : List.of("basic_shield", "tower_shield"))
-                            any |= append(settings, "shield_pool", mod + ":" + material + "_" + type, mod, registered);
+                            if (eligible.test(rank, "shield_pool")) any |= append(settings, "shield_pool", mod + ":" + material + "_" + type, mod, registered);
                     }
                 }
                 // Do not finalize an import before item registries are ready.
@@ -62,6 +98,12 @@ final class EquipmentIntegrationDefaults {
             }
         }
         return changed;
+    }
+
+    private static boolean booleanOption(JsonObject settings, String key, boolean absent, boolean invalid) {
+        if (!settings.has(key)) return absent;
+        var value = settings.get(key);
+        return value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean() ? value.getAsBoolean() : invalid;
     }
 
     private static boolean append(JsonObject root, String pool, String id, String mod, Predicate<String> registered) {

@@ -50,3 +50,6 @@
 ## 许可证与来源
 
 本模组统一发行版使用 GNU GPL v2.0，完整文本见仓库根目录 [`LICENSE`](LICENSE)。整合自 Human Gunner 的源码保留原有 MPL-2.0 声明，并在 MPL-2.0 允许的范围内作为较大 GPL 作品的一部分同时按 GPL 条款发布。组件来源及许可说明见 [`THIRD_PARTY_NOTICES.md`](src/main/resources/THIRD_PARTY_NOTICES.md)。
+
+
+斯巴达武器和盾牌的自动导入默认开启。安装对应模组后，启动时会将已注册装备加入各阶尚未导入的默认装备池；即使配置先于物品注册表生成，也会在注册表就绪后重试。已有阶级文件导入前会生成 `.pre-equipment-import-*.bak` 备份，并保留自定义属性和说明。自定义池、空池、关闭自动导入的池，以及保留 `_imported_spartanweaponry` / `_imported_spartanshields` 导入记录后删除的装备不会自动补回；导入只影响随后生成的人类。
