@@ -47,6 +47,7 @@ final class AmmoWeaponSelection {
         if (human.level().isClientSide || HumanInventorySession.isEditing(human)) return;
         HumanData data = human.getData();
         if (data == null) return;
+        if (CloseDefenseHold.shouldHold(human) && !isExhausted(human, human.getMainHandItem())) return;
         // A stale draw must not keep an exhausted off-hand bow blocking melee.
         if (human.isUsingItem() && isExhausted(human, human.getUseItem())) human.stopUsingItem();
         if (human.isUsingItem() || GunSupport.get().isReloading(human)) return;

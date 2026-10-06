@@ -105,6 +105,7 @@ final class GunCustody {
         // therefore never observe a gun that has left both owned locations.
         data.setInventoryItem(meleeSlot, gun);
         human.setItemSlot(EquipmentSlot.MAINHAND, melee);
+        CloseDefenseHold.begin(human);
         human.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
         HumanGunner.LOGGER.debug(
                 "Gun custody begin npc={} slot={} gun={} melee={}",
@@ -114,6 +115,7 @@ final class GunCustody {
     }
 
     static boolean restorePrimaryGun(Human human, String reason) {
+        if (isActive(human) && CloseDefenseHold.shouldHold(human)) return false;
         ItemStack held = human.getMainHandItem();
         if (AmmoWeaponSelection.usableGun(human, held)) {
             registerPrimaryGun(human, held);
@@ -204,12 +206,14 @@ final class GunCustody {
     }
 
     static void prepareForManualInventory(Human human) {
+        CloseDefenseHold.clear(human);
         if (!isActive(human)) return;
         if (human.isUsingItem()) human.stopUsingItem();
         if (!restorePrimaryGun(human, "owner_inventory_open")) clearLease(human);
     }
 
     static void adoptManualLoadout(Human human) {
+        CloseDefenseHold.clear(human);
         clearLease(human);
         HumanData data = human.getData();
         ItemStack preferred = preferredManualGun(human, data);
@@ -305,6 +309,7 @@ final class GunCustody {
     }
 
     private static void clearLease(Human human) {
+        if (isActive(human) && !CloseDefenseHold.shouldHold(human)) CloseDefenseHold.clear(human);
         CompoundTag data = human.getPersistentData();
         data.remove(ACTIVE);
         data.remove(RESERVED_SLOT);

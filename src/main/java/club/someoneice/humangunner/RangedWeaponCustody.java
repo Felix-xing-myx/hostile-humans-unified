@@ -140,12 +140,14 @@ public final class RangedWeaponCustody {
     }
 
     static void prepareForManualInventory(Human human) {
+        CloseDefenseHold.clear(human);
         if (!isActive(human)) return;
         if (human.isUsingItem()) human.stopUsingItem();
         if (!restorePreferred(human, "owner_inventory_open")) clearLease(human);
     }
 
     static void adoptManualLoadout(Human human) {
+        CloseDefenseHold.clear(human);
         clearLease(human);
         clearPrimaryMarker(human.getMainHandItem());
         clearPrimaryMarker(human.getOffhandItem());
@@ -194,6 +196,7 @@ public final class RangedWeaponCustody {
         // following hand write completes an exact swap and cannot depend on capacity.
         data.setInventoryItem(meleeSlot, ranged);
         human.setItemSlot(EquipmentSlot.MAINHAND, melee);
+        CloseDefenseHold.begin(human);
         human.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
         HumanGunner.LOGGER.debug(
                 "Ranged custody begin npc={} slot={} ranged={} melee={}",
@@ -204,6 +207,7 @@ public final class RangedWeaponCustody {
     }
 
     static boolean restorePreferred(Human human, String reason) {
+        if (isActive(human) && CloseDefenseHold.shouldHold(human)) return false;
         if (hasGunPriority(human) || !HumanAmmo.hasArrows(human) || human.isUsingItem()) {
             return false;
         }
@@ -259,6 +263,7 @@ public final class RangedWeaponCustody {
         ownerData.putBoolean(ACTIVE, true);
         ownerData.putInt(RESERVED_SLOT, rangedSlot);
         ownerData.put(SNAPSHOT, ranged.copy().save(new CompoundTag()));
+        CloseDefenseHold.begin(human);
         human.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
         HumanGunner.LOGGER.debug(
                 "Ranged custody adopted close melee npc={} slot={} ranged={} melee={}",
@@ -354,6 +359,7 @@ public final class RangedWeaponCustody {
     }
 
     private static void clearLease(Human human) {
+        if (isActive(human) && !CloseDefenseHold.shouldHold(human)) CloseDefenseHold.clear(human);
         CompoundTag data = human.getPersistentData();
         data.remove(ACTIVE);
         data.remove(RESERVED_SLOT);

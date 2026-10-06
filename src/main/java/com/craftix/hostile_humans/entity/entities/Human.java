@@ -1092,6 +1092,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 // discards the entire first half of the visible player motion.
                 setNpcBetterCombatAttackAnimation(plan.profile().animationName(),
                         plan.profile().cooldownTicks(), plan.profile().animationUpswing());
+                // NPC recovery can extend past the hit/cooldown boundary. Allow two cycles plus a sync margin.
+                club.someoneice.humangunner.CloseDefenseHold.attack(this, plan.profile().cooldownTicks() * 2 + 2);
                 swing(InteractionHand.MAIN_HAND);
                 pendingBetterCombatTarget = requestedTarget;
                 pendingBetterCombatWeapon = getMainHandItem().copy();
@@ -1164,7 +1166,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (!humanGunner$canMeleeAttack()) return false;
         this.resetFallDistance();
         boolean hit = super.doHurtTarget(entityIn);
-        if (animate) swing(InteractionHand.MAIN_HAND);
+        if (animate) {
+            club.someoneice.humangunner.CloseDefenseHold.attack(this, 8);
+            swing(InteractionHand.MAIN_HAND);
+        }
         if (hit && wearWeapon) wearEquippedItem(getMainHandItem(), EquipmentSlot.MAINHAND);
         return hit;
     }
