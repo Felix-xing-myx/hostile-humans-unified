@@ -80,7 +80,7 @@ public final class RecoverySupplies {
         }
     }
 
-    private record SupplyPreset(int weight, IntRange potions, IntRange food, IntRange goldenApples) {
+    private record SupplyPreset(int weight, IntRange food, IntRange goldenApples) {
     }
 
     private record ShieldSnapshot(int count, String state) {
@@ -123,20 +123,10 @@ public final class RecoverySupplies {
         SupplyPreset preset = rollPreset(human);
         RandomSource random = human.getRandom();
 
-        int potionCount = preset.potions().roll(random);
-        int insertedPotions = 0;
-        for (int i = 0; i < potionCount; i++) {
-            ItemStack potion = PotionUtils.setPotion(
-                    new ItemStack(Items.POTION),
-                    i % 3 == 2 ? Potions.LONG_REGENERATION : Potions.STRONG_HEALING
-            );
-            if (!insertInventory(data, potion)) {
-                break;
-            }
-            insertedPotions++;
-        }
-
-        int tacticalPotions = provisionTacticalPotions(human, data);
+        SpawnPotionConfig.Granted potions = UnifiedConfig.get().spawnPotions(TierAttributes.key(human))
+                .grant(data, random);
+        int insertedPotions = potions.recovery();
+        int tacticalPotions = potions.tactical();
 
         int appleCount = preset.goldenApples().roll(random);
         ItemStack apples = new ItemStack(Items.GOLDEN_APPLE, appleCount);
@@ -1087,27 +1077,27 @@ public final class RecoverySupplies {
         List<SupplyPreset> pool;
         if (human.getPersistentData().getBoolean(TIER_THREE_MARKER)) {
             pool = List.of(
-                    preset(25, 6, 7, 96, 112, 3, 4),
-                    preset(50, 7, 8, 108, 124, 4, 5),
-                    preset(25, 8, 8, 120, 128, 5, 5)
+                    preset(25, 96, 112, 3, 4),
+                    preset(50, 108, 124, 4, 5),
+                    preset(25, 120, 128, 5, 5)
             );
         } else if (human.getTier() == HumanTier.LEVEL2) {
             pool = List.of(
-                    preset(30, 4, 5, 64, 80, 2, 3),
-                    preset(50, 5, 6, 76, 96, 3, 4),
-                    preset(20, 6, 7, 92, 112, 4, 5)
+                    preset(30, 64, 80, 2, 3),
+                    preset(50, 76, 96, 3, 4),
+                    preset(20, 92, 112, 4, 5)
             );
         } else if (human.getTier() == HumanTier.LEVEL1) {
             pool = List.of(
-                    preset(35, 2, 3, 32, 48, 1, 2),
-                    preset(45, 3, 4, 44, 64, 2, 3),
-                    preset(20, 4, 5, 56, 72, 2, 3)
+                    preset(35, 32, 48, 1, 2),
+                    preset(45, 44, 64, 2, 3),
+                    preset(20, 56, 72, 2, 3)
             );
         } else {
             pool = List.of(
-                    preset(45, 2, 2, 20, 32, 1, 1),
-                    preset(40, 2, 3, 28, 42, 1, 2),
-                    preset(15, 3, 4, 36, 48, 2, 2)
+                    preset(45, 20, 32, 1, 1),
+                    preset(40, 28, 42, 1, 2),
+                    preset(15, 36, 48, 2, 2)
             );
         }
         int totalWeight = pool.stream().mapToInt(SupplyPreset::weight).sum();
@@ -1132,80 +1122,6 @@ public final class RecoverySupplies {
         }
         human.getPersistentData().remove(SHIELD_REBLOCK_UNTIL);
         return true;
-    }
-
-    private static int provisionTacticalPotions(Human human, HumanData data) {
-        int minimum;
-        int maximum;
-        if (human.getPersistentData().getBoolean(TIER_THREE_MARKER)) {
-            minimum = 5;
-            maximum = 7;
-        } else if (human.getTier() == HumanTier.LEVEL2) {
-            minimum = 3;
-            maximum = 5;
-        } else if (human.getTier() == HumanTier.LEVEL1) {
-            minimum = 2;
-            maximum = 3;
-        } else {
-            minimum = 1;
-            maximum = 2;
-        }
-        int requested = human.getRandom().nextInt(minimum, maximum + 1);
-        int inserted = 0;
-        // Roll Swiftness once per spawned human, independently of the tactical
-        // potion count. In particular, a roamer with only one slot still has
-        // the advertised 10% chance instead of half that chance.
-        float swiftnessChance = human.getPersistentData().getBoolean(TIER_THREE_MARKER)
-                ? 0.40F : human.getTier() == HumanTier.LEVEL2
-                ? 0.30F : human.getTier() == HumanTier.LEVEL1 ? 0.20F : 0.10F;
-        if (!hasSwiftnessPotion(human, data) && human.getRandom().nextFloat() < swiftnessChance) {
-            ItemStack swiftness = PotionUtils.setPotion(new ItemStack(Items.POTION), Potions.LONG_SWIFTNESS);
-            if (insertInventory(data, swiftness)) {
-                inserted++;
-            }
-        }
-        int remaining = requested - inserted;
-        for (int i = 0; i < remaining; i++) {
-            boolean splash = i % 2 == 0;
-            ItemStack potion;
-            if (splash) {
-                potion = PotionUtils.setPotion(
-                        new ItemStack(Items.SPLASH_POTION),
-                        human.getRandom().nextBoolean() ? Potions.LONG_SLOWNESS : Potions.LONG_WEAKNESS
-                );
-            } else {
-                potion = PotionUtils.setPotion(
-                        new ItemStack(Items.POTION),
-                        Potions.LONG_STRENGTH
-                );
-            }
-            if (!insertInventory(data, potion)) {
-                break;
-            }
-            inserted++;
-        }
-        return inserted;
-    }
-
-    private static boolean hasSwiftnessPotion(Human human, HumanData data) {
-        if (isSwiftnessPotion(human.getMainHandItem()) || isSwiftnessPotion(human.getOffhandItem())) {
-            return true;
-        }
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            if (isSwiftnessPotion(data.getInventoryItem(i))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean isSwiftnessPotion(ItemStack stack) {
-        if (!stack.is(Items.POTION) && !stack.is(Items.SPLASH_POTION) && !stack.is(Items.LINGERING_POTION)) {
-            return false;
-        }
-        var potion = PotionUtils.getPotion(stack);
-        return potion == Potions.SWIFTNESS || potion == Potions.LONG_SWIFTNESS
-                || potion == Potions.STRONG_SWIFTNESS;
     }
 
     private static int provisionEnchantedGoldenApple(Human human) {
@@ -1266,11 +1182,10 @@ public final class RecoverySupplies {
     }
 
     private static SupplyPreset preset(
-            int weight, int potionMin, int potionMax, int foodMin, int foodMax, int appleMin, int appleMax
+            int weight, int foodMin, int foodMax, int appleMin, int appleMax
     ) {
         return new SupplyPreset(
                 weight,
-                new IntRange(potionMin, potionMax),
                 new IntRange(foodMin, foodMax),
                 new IntRange(appleMin, appleMax)
         );
@@ -1454,7 +1369,7 @@ public final class RecoverySupplies {
         return healing ? score : Integer.MIN_VALUE;
     }
 
-    private static boolean insertInventory(HumanData data, ItemStack source) {
+    static boolean insertInventory(HumanData data, ItemStack source) {
         if (source.isEmpty()) {
             return true;
         }

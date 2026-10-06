@@ -22,6 +22,7 @@ public final class UnifiedConfig {
     private final Map<String, AmmoReserve> ammunition;
     private final Map<String, CombatAiConfig> combatByTier;
     private final boolean ammoConsumptionEnabled;
+    private final Map<String, SpawnPotionConfig> spawnPotions;
     public record AmmoReserve(int arrowMin, int arrowMax, int magazineMin, int magazineMax) { }
     public record SoldierMessages(int chatterIntervalTicks, int chatterMaxPerFiveMinutes,
             int reportIntervalTicks, int reportMaxPerMinute, int reportDetailsPerMessage) { }
@@ -143,6 +144,11 @@ public final class UnifiedConfig {
             aiValues.put(rank, CombatAiConfig.parse(tierAi));
             rankIndex++;
         }
+        Map<String, SpawnPotionConfig> potionValues = new LinkedHashMap<>();
+        for (String rank : List.of("roamer", "tier1", "tier2", "tier3")) {
+            potionValues.put(rank, new SpawnPotionConfig(object(object(object(root, "tiers"), rank), "potions")));
+        }
+        spawnPotions = Map.copyOf(potionValues);
         ammunition = Map.copyOf(ammoValues);
         combatByTier = Map.copyOf(aiValues);
         ammoConsumptionEnabled = bool(object(root, "ammunition"), "consume_ammunition", true);
@@ -220,6 +226,7 @@ public final class UnifiedConfig {
     public AmmoReserve ammoReserve(String rank) { return ammunition.getOrDefault(rank, ammunition.get("roamer")); }
     public boolean ammoConsumptionEnabled() { return ammoConsumptionEnabled; }
     public CombatAiConfig combatAi(String rank) { return combatByTier.getOrDefault(rank, combatByTier.get("roamer")); }
+    SpawnPotionConfig spawnPotions(String rank) { return spawnPotions.getOrDefault(rank, spawnPotions.get("roamer")); }
     public Spawn spawn() { return spawn; }
     EquipmentGrowthPolicy equipmentGrowth() { return equipmentGrowth; }
     public ConfiguredEquipmentLoadout equipmentLoadout(String rank) {

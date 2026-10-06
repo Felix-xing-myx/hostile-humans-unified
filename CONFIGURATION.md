@@ -159,3 +159,52 @@
 `global.json` 的 `native_gameplay` 包含 `disabled_structures`（逗号分隔结构禁用名单）、`max_targeting`（同时攻击玩家的人类上限，默认 3）、`no_waystones`（默认 false）、`battle_event`（HumanVsHuman、HumanVsPillager、Random、Disabled，默认 Random）。
 
 各阶 `ai` 中还包含 `flee_hp`（旧低血量判断，默认 0.35）、`run_away_middle_fight_chance`（默认 0.5）、`mid_battle_buff_instead_of_run_chance`（原二阶临战恢复判定，默认 0.1）及 `greet_chance`（敌对台词概率，默认 0.05）。这些概率范围为 0–1；增强 AI 的 `retreat_health_ratio` 等仍控制对应增强行为。
+
+
+## 阶级 `potions`：出生药水
+
+`roamer.json`、`tier1.json`、`tier2.json`、`tier3.json` 分别配置本阶出生药水，新生成文件会包含这一节。已有五文件配置不会自动重写；可以把下面的 `potions` 区域加入对应阶级文件，未填写时先使用默认值。完整重启后生效，只影响后来生成且尚未发放初始补给的单位，既有人类不补发。
+
+```json
+"potions": {
+  "enabled": true,
+  "recovery": {
+    "count_min": 2,
+    "count_max": 4,
+    "pool": [
+      { "item": "minecraft:potion", "potion": "minecraft:strong_healing", "weight": 2 },
+      { "item": "minecraft:potion", "potion": "minecraft:long_regeneration", "weight": 1 }
+    ]
+  },
+  "tactical": {
+    "count_min": 1,
+    "count_max": 2,
+    "pool": [
+      { "item": "minecraft:splash_potion", "potion": "minecraft:long_slowness", "weight": 1 },
+      { "item": "minecraft:splash_potion", "potion": "minecraft:long_weakness", "weight": 1 },
+      { "item": "minecraft:potion", "potion": "minecraft:long_strength", "weight": 2 }
+    ]
+  },
+  "bonus": {
+    "item": "minecraft:potion",
+    "potion": "minecraft:long_swiftness",
+    "chance": 0.1
+  }
+}
+```
+
+- `enabled: false` 禁止本阶出生时发放药水；本阶 `ai.item_recovery_enabled: false` 仍会关闭整个初始恢复补给包。
+- `count_min/max` 是药水瓶数，包含两端，各限于 0–30；反向范围会交换。0–0可关闭该组。药水仍按物品原有堆叠上限存放，背包满时停止，不挤走其他装备。
+- `item` 是瓶子的物品ID，一般用 `minecraft:potion`（饮用）、`minecraft:splash_potion`（喷溅）或 `minecraft:lingering_potion`（滞留）。`potion` 是药水注册ID，支持原版与已安装模组的药水；标准药水物品及Potion NBT为前提。不支持在此直接填写任意自定义效果NBT。
+- `pool` 中每瓶按 `weight` 相对权重独立抽选，无需合计100。正整数权重上限1000000；0、错误条目、缺失物品/药水ID会跳过，每池最多读取前128项。显式空数组 `[]` 不会补回默认药水。
+- `bonus.chance` 是预留一瓶战术药水给该药水的概率，范围0–1，默认是迅捷。它占一个战术药水名额，不增加总瓶数；设为0关闭，战术数量为0或战术池为空也不发放。
+- 药水配置控制携带；现有AI仍按其支持的效果决定饮用或投掷。配置模组药水并不额外新增该模组的特殊使用逻辑；滞留药水可以携带，但当前主动投掷入口只处理喷溅药水。
+
+| 阶级 | 恢复药水瓶数 | 战术药水瓶数 | 默认迅捷概率 |
+|---|---:|---:|---:|
+| 流浪者 | 2–4 | 1–2 | 10% |
+| 一阶 | 2–5 | 2–3 | 20% |
+| 二阶 | 4–7 | 3–5 | 30% |
+| 三阶 | 6–8 | 5–7 | 40% |
+
+默认药水种类沿用强效治疗、长效再生、长效力量、喷溅长效缓慢/虚弱与长效迅捷。原先恢复数量与食物补给预设共用一次抽选、药水种类按固定顺序；现在药水数量在独立配置范围内均匀抽取、种类按池权重抽取。食物与金苹果原有补给预设不变。

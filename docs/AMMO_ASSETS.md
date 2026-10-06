@@ -23,3 +23,10 @@ Use case: stylized-concept. Asset type: Minecraft 1.20.1 inventory item PNG text
 用户反馈远处贴图杂乱，使用内置 imagegen 编辑旧图，保留深色金属/橄榄绿风格，以大面积灰色主体、单条侧缘高光和底部色带替代细碎沟槽。最终仍为同路径32×32透明PNG，由System.Drawing最近邻缩放；物品ID和模型路径保持原样。箭矢显示名改为通用箭矢 / Universal Arrow。
 
 本次提示词：Edit target: the supplied Minecraft magazine inventory sprite. Use case: precise-object-edit. Replace its cluttered tiny grooves and scattered highlights with a MUCH SIMPLER bold silhouette readable at 16x16 and 32x32. One single slightly curved rectangular rifle magazine, dark gunmetal broad flat face, thick almost-black outside outline, one broad steel-gray highlight along a single edge, a single desaturated olive green band near the base, at most one brass cartridge tip on the top. Angle clockwise about 20 degrees as before. Keep the utilitarian Hostile Humans Unified military supply style. STRICT coarse pixel art designed on a 32x32 logical grid enlarged nearest-neighbor, 5 to 7 flat colors, no thin interior lines, no grooves, no mottled pixels, no realistic reflections or detail, no dithering, no text or logos, no shadow, transparent background with preserved alpha. Fill 85% of square canvas. Exactly one magazine and nothing else. Prioritize large continuous color regions and clear contrast at inventory scale.
+
+
+## 弹匣少量压槽线：2026-10-06
+
+内置imagegen再次编辑简化版，保留轮廓与底部绿带，在金属主体加两条有轻微边缘高光的平行压槽。最近邻缩放为同路径32×32RGBA，检查小尺寸清晰度；不改变箭矢、物品ID或模型。
+
+提示词：Use case: precise-object-edit. Edit target: supplied simplified Minecraft magazine sprite. Preserve its silhouette, clockwise tilt, large dark gunmetal face, single steel gray edge highlight, olive band and brass tip exactly in spirit. Add ONLY TWO straight broad stamped groove lines running parallel down the main metal face. Each groove is dark with a tiny restrained gray edge, coarse one-pixel lines on a logical 32x32 grid, spaced clearly apart. Stop grooves above olive band. Keep overall clean readability at 16x16. No other details, no mottling, no texture noise, no text, no gun, no shadow. Strict coarse Minecraft pixel art, square pixels, transparent background and alpha. One isolated magazine fills square canvas.

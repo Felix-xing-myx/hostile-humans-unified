@@ -78,6 +78,55 @@
           "min": 6,
           "max": 12
         }
+      },
+      "potions": {
+        "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",
+        "_description_en": "One-time spawn provisioning, gated by ai.item_recovery_enabled. Counts are inclusive bottle totals (0-30), not stack size. Weighted pools are independent; empty pools never spawn fallback potions and unavailable IDs are skipped. Restart to apply; existing entities are not replenished.",
+        "enabled": true,
+        "recovery": {
+          "count_min": 2,
+          "count_max": 4,
+          "pool": [
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_healing",
+              "weight": 2
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_regeneration",
+              "weight": 1
+            }
+          ]
+        },
+        "tactical": {
+          "count_min": 1,
+          "count_max": 2,
+          "pool": [
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:long_slowness",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:long_weakness",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_strength",
+              "weight": 2
+            }
+          ]
+        },
+        "bonus": {
+          "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
+          "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
+          "item": "minecraft:potion",
+          "potion": "minecraft:long_swiftness",
+          "chance": 0.1
+        }
       }
     },
     "tier1": {
@@ -150,6 +199,55 @@
         "magazines": {
           "min": 12,
           "max": 24
+        }
+      },
+      "potions": {
+        "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",
+        "_description_en": "One-time spawn provisioning, gated by ai.item_recovery_enabled. Counts are inclusive bottle totals (0-30), not stack size. Weighted pools are independent; empty pools never spawn fallback potions and unavailable IDs are skipped. Restart to apply; existing entities are not replenished.",
+        "enabled": true,
+        "recovery": {
+          "count_min": 2,
+          "count_max": 5,
+          "pool": [
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_healing",
+              "weight": 2
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_regeneration",
+              "weight": 1
+            }
+          ]
+        },
+        "tactical": {
+          "count_min": 2,
+          "count_max": 3,
+          "pool": [
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:long_slowness",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:long_weakness",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_strength",
+              "weight": 2
+            }
+          ]
+        },
+        "bonus": {
+          "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
+          "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
+          "item": "minecraft:potion",
+          "potion": "minecraft:long_swiftness",
+          "chance": 0.2
         }
       }
     },
@@ -224,6 +322,55 @@
           "min": 32,
           "max": 48
         }
+      },
+      "potions": {
+        "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",
+        "_description_en": "One-time spawn provisioning, gated by ai.item_recovery_enabled. Counts are inclusive bottle totals (0-30), not stack size. Weighted pools are independent; empty pools never spawn fallback potions and unavailable IDs are skipped. Restart to apply; existing entities are not replenished.",
+        "enabled": true,
+        "recovery": {
+          "count_min": 4,
+          "count_max": 7,
+          "pool": [
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_healing",
+              "weight": 2
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_regeneration",
+              "weight": 1
+            }
+          ]
+        },
+        "tactical": {
+          "count_min": 3,
+          "count_max": 5,
+          "pool": [
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:long_slowness",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:long_weakness",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_strength",
+              "weight": 2
+            }
+          ]
+        },
+        "bonus": {
+          "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
+          "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
+          "item": "minecraft:potion",
+          "potion": "minecraft:long_swiftness",
+          "chance": 0.3
+        }
       }
     },
     "tier3": {
@@ -296,6 +443,55 @@
         "magazines": {
           "min": 48,
           "max": 72
+        }
+      },
+      "potions": {
+        "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",
+        "_description_en": "One-time spawn provisioning, gated by ai.item_recovery_enabled. Counts are inclusive bottle totals (0-30), not stack size. Weighted pools are independent; empty pools never spawn fallback potions and unavailable IDs are skipped. Restart to apply; existing entities are not replenished.",
+        "enabled": true,
+        "recovery": {
+          "count_min": 6,
+          "count_max": 8,
+          "pool": [
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_healing",
+              "weight": 2
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_regeneration",
+              "weight": 1
+            }
+          ]
+        },
+        "tactical": {
+          "count_min": 5,
+          "count_max": 7,
+          "pool": [
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:long_slowness",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:long_weakness",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_strength",
+              "weight": 2
+            }
+          ]
+        },
+        "bonus": {
+          "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
+          "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
+          "item": "minecraft:potion",
+          "potion": "minecraft:long_swiftness",
+          "chance": 0.4
         }
       }
     }

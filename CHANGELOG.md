@@ -4,6 +4,7 @@
 
 ### 简体中文
 
+- 弹匣简洁贴图增加两条压槽。四阶配置新增potions：独立设置出生恢复/战术药水池、瓶数范围及迅捷药水概率，支持已注册模组药水；空池不补默认药水，原药水发放硬编码移除。
 - 简化通用弹匣贴图轮廓与高光；人类箭矢改名通用箭矢（物品ID不变）。箭矢和弹匣拾取评分提升至160，瞬间治疗药水降至55，高于面包、低于牛排和金胡萝卜等高品质食物。
 - 配置重组为全局及四阶独立JSON；属性、装备、战斗AI、枪械概率、雇佣条件和出生弹药按阶设置。迁移旧JSON与TOML前保留备份；全局弹药消耗默认开启，关闭后弓弩和枪械换弹不要求或扣除库存。
 - 人类箭矢与通用弹匣使用专属32×32透明像素贴图；新增工作台无序配方：4支原版箭、1根木棍、1根羽毛合成32支人类箭矢，3份火药和2个铁锭合成2个通用弹匣。弹匣配方仅在安装TaCZ时加载。
@@ -17,6 +18,7 @@
 
 ### English
 
+- Add two stamped grooves to the magazine icon. Per-rank potions configure recovery/tactical pools, bottle counts and bonus chance, including registered mod potions; empty pools grant none and hardcoded provisioning is removed.
 - Simplify the universal magazine sprite and rename Human Arrow to Universal Arrow without changing its ID. Raise ammo pickup value to 160; lower instant healing to 55, above bread but below steak and golden carrots.
 - Consolidate configuration into global and four rank files, with independent AI and spawn ammunition. Back up and migrate legacy JSON/TOML; the default-on ammunition switch can waive reserves and deductions without bypassing reload timing.
 - Added dedicated 32×32 transparent pixel-art textures and shapeless crafting-table recipes: 4 vanilla arrows, 1 stick and 1 feather produce 32 Human Arrows; 3 gunpowder and 2 iron ingots produce 2 Universal Magazines. The magazine recipe loads only with TaCZ installed.

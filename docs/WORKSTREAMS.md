@@ -158,3 +158,12 @@
 - 内置imagegen编辑旧弹匣，简化大面积明暗、底部绿带和轮廓，System.Drawing最近邻整理32×32RGBA。最终提示词见docs/AMMO_ASSETS.md，模型路径不变。
 - 箭矢中文“通用箭矢”、英文“Universal Arrow”，注册ID humangunner:human_arrow保留；两个弹药物品同走HumanAmmo.isAmmo，评分100→160。瞬间治疗药水115→55（包括同类喷溅/滞留形式）；其它药水、食物公式、堆叠和受保护装备不改。
 - 提取foodValue供生产与回归共用；新增面包<治疗<牛排/金胡萝卜、满背包双向替换回归断言。静态JSON/PNG/评分/差异检查通过，未编译或执行自动测试；未构建、同步或推送。待游戏验收物品远距/背包贴图、显示名及满背包拾取取舍。
+
+
+## 弹匣压槽及出生药水配置：2026-10-06（本地开发完成）
+
+- 基线 `07dfdf19ba562924d0041f542d0a691806b1ddd0`；主控独立实施，未开新Agent。范围：SpawnPotionConfig、UnifiedConfig、RecoverySupplies、默认JSON、独立SpawnPotionConfigTest/Gradle入口、弹匣PNG与文档；原CHANGELOG用户修改保留。
+- 按阶级缓存potions snapshot，读取恢复/战术数量范围、带瓶形和药水注册ID的权重池及bonus概率；仅原KIT_GRANTED的一次性补给入口调用。库存满停止、原堆叠上限不变、未注册药水跳过、空池不制造fallback；关闭本阶potions不关闭食物，既有item_recovery_enabled仍管整个补给包。可选药水注册在实际生成时解析，不在启动静态初始化强绑模组API。
+- 默认上下限与种类取原代码，新增独立均匀数量/权重抽取替代与食物预设耦合的药水次数及固定药水轮换；原食物/金苹果预设保持。将药水硬编码发放从RecoverySupplies移除，不新增恢复/攻击/动画系统。
+- 内置imagegen编辑弹匣，加入两条压槽，最近邻整理32×32透明PNG；完整提示词见docs/AMMO_ASSETS.md。静态JSON、默认值变化隔离、食物预设、一次性调用、PNG尺寸与差异检查通过。
+- 新增分阶投影/默认值/空池/关闭/上下限/注册ID配置回归测试，已接check但没有运行编译或自动化测试。本轮未构建、未同步、未推送；待游戏验收各阶出生瓶数、模组药水ID、背包满与空池、关闭开关及贴图效果。
