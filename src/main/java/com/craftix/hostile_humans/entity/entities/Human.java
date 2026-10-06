@@ -1002,7 +1002,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 this.setItemSlot(equipmentslot, Items.AIR.getDefaultInstance());
             }
         }
+        float previousHealth = this.getHealth();
         boolean damaged = super.hurt(damageSource, amount);
+        club.someoneice.humangunner.LowHealthCombatController.recordDamage(this,
+                Math.max(0.0F, previousHealth - this.getHealth()), attacker);
         if (damaged && this.isAlive() && attacker != null
                 && club.someoneice.humangunner.SoldierCombatMode.authorizeSelfDefense(this, attacker)) {
             club.someoneice.humangunner.SoldierOrder.onSelfAttacked(this, attacker);
@@ -1628,12 +1631,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public boolean shouldStartFleeingThisCombat() {
-        if (club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(
-                this.getHealth() / Math.max(1.0F, this.getMaxHealth()))) {
-            this.resolvedFleeThisCombat = true;
-            this.shouldFleeThisCombat = true;
-            return true;
-        }
+        // A hard emergency does not permanently overwrite the encounter's flee roll.
+        if (club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(this)) return true;
+        if (club.someoneice.humangunner.LowHealthCombatController.shouldHoldGround(this, this.getTarget())) return false;
         if (!this.resolvedFleeThisCombat) {
             this.resolvedFleeThisCombat = true;
             if (this.getTier() == HumanTier.LEVEL2 && (double)this.random.nextFloat() < club.someoneice.humangunner.CombatAiConfig.forHuman(this).midBattleBuffInsteadOfRunChance()) {
@@ -1643,6 +1643,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             }
         }
         return this.shouldFleeThisCombat;
+    }
+
+    @Override
+    public void heal(float amount) {
+        float before = this.getHealth();
+        super.heal(amount);
+        club.someoneice.humangunner.LowHealthCombatController.recordHealing(this,
+                Math.max(0.0F, this.getHealth() - before));
     }
 
     public void aiStep() {

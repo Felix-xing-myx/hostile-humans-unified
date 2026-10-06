@@ -398,3 +398,17 @@
 - 待游戏验收：闲置静水/流水与一格岸阶、窄河转弯、不可达岸边和多人同时入水，确认不受击也自动恢复上岸；高血短时受伤/多人围攻不触发战斗逃跑，低血撤退和恢复反击仍工作。未构建、未同步、未动实例配置或启动游戏、未推送。
 - 最终只读审核通过：避免卡点贯穿完整寻路与备用小扫描，源中已无高伤害触发方法/标记引用；Java分隔符、diff检查及用户CHANGELOG原片段哈希核查通过。自动回归未编译运行。
 - 本地整合提交 `3af5d57681a3dc79a4f9e6e1fa381469cbc55d2e`；原用户CHANGELOG改动继续保留为未提交，尚未构建或部署。
+
+
+## 2026-10-07 低血量搏斗、真实恢复试探与双硬撤退底线
+
+- 基线 `74c45c8676ca60102eeaf9dbecdc9eaaaff81a42`，主控 /root 在main编辑运行逻辑及CombatPressurePolicyTest；/root/combat_stall_audit（GPT-6.1 Sol medium）在独立工作树 `worktrees/low-health-combat-config` / `feature/low-health-combat-config` 编辑配置类、默认配置、UnifiedConfigTest和指南，提交 `d30858fcc539ece3d37171f08eb6bc036d2ffca6` 已审核并cherry-pick为 `21fef6f`。后续主控统一公共接口与指南，并由该agent只读审核主工作区。
+- 用户决策：唯一有效目标同时生命<30%最大值且<30点时默认50%继续搏斗；本人硬撤退同时要求生命<15%且<25点。缺瞬间治疗时可有限试探，实际回血能抵御真实伤害则反击，否则退；沿用正常食物恢复和武器动作。
+- 接口：CombatAiConfig.lowHealthCombat公开八字段record，每阶ai.low_health_combat；默认比例.15/绝对25/概率.5/试探40tick/观测80tick/续战保持80tick/失败重试100tick/回血安全倍率1.1。全局仍仅AI总开关；配置排版将本组放在低血阈值附近。
+- 单一LowHealthCombatController供Human原生概率、RunFromTarget、Adaptive恢复/撤退和低血目标选择接入。纯状态决定FINISH/TRIAL/SUSTAIN/RETREAT；概率缓存按对手及恢复阶段保持，硬底线不再永久置true，返回搏斗恢复合法toAvoid且不误回主人驻点。
+- 实际观测在Human.hurt/heal完成后取生命差，尊重防御/取消/生命上限和外部heal修正；记录不自动触发高血量撤退。试探无补给亦可，但无实际回血无法维持续战；无受伤样本不把逃跑时回血判为耐伤。净损失显著或最近一击可致死时提前收回搏斗许可，失败限频。
+- 唯一对手扫描10tick限频，换目标立即刷新；其它可攻击玩家、Human、怪物及最近80tick其它存活合法攻击者都计入。样本保留至少80tick，即使自定义观测更短也不丢攻击者记忆。弱Map状态只保留UUID/数值，无强引用实体循环。
+- 保留RecoverySupplies库存/消耗与CombatFoodRecoveryGoal。瞬间治疗guard覆盖背包、ACTIVE_USES和在用物品，直到结算；避免最后一瓶移副手后被误取消。站定搏斗可继续既有战斗食物恢复，原物品使用互斥与BC/TaCZ动作保持。
+- 回归：配置解析/异常/四阶投射/独立覆盖；硬底线双条件及严格等号、残血双条件、一次概率、多次调用稳定、药水优先、无物品限时试探、真实回血覆盖、失败冷却、明显掉血早退、无受伤样本不批准持续搏斗。均未编译运行；用户本轮未要求构建同步。
+- 待游戏验收：20/60及高外部生命NPC的双硬底线；单个残血敌人与第二名攻击者出现；食物/再生持续时反击及强火力撤退；最后一瓶瞬间治疗喝完扣瓶；Better Combat及弓弩/TaCZ副手进食时动作与恢复切换。未构建/同步/启动游戏/推送，保留原CHANGELOG修改。
+- 最终只读复核与静态检查通过：Java分隔符、默认JSON、旧force/短伤引用、任务diff及用户CHANGELOG原片段哈希核查；自动回归未编译或执行。原critical_health_ratio仅恢复动作使用，独立旧危急比例撤退入口删除。

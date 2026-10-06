@@ -31,7 +31,9 @@ extends TargetGoal {
     }
 
     public boolean canUse() {
-        if (HumanUtil.isLowHp((LivingEntity)this.mob)) {
+        if (this.mob instanceof com.craftix.hostile_humans.entity.entities.Human lowHuman
+                ? club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(lowHuman) || lowHuman.isFleeing
+                : HumanUtil.isLowHp((LivingEntity)this.mob)) {
             return false;
         }
         boolean fastRetarget = this.mob instanceof com.craftix.hostile_humans.entity.entities.Human human

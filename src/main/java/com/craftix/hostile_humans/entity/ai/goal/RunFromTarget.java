@@ -45,9 +45,9 @@ extends Goal {
     }
 
     public boolean canUse() {
+        if (club.someoneice.humangunner.LowHealthCombatController.shouldHoldGround(this.human, this.human.getTarget())) return false;
         if (club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this.human)) return false;
-        boolean desperate = club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(
-                this.human.getHealth() / Math.max(1.0F, this.human.getMaxHealth()));
+        boolean desperate = club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(this.human);
         if (!desperate && this.human.getOffhandItem().is(Items.TOTEM_OF_UNDYING)) {
             return false;
         }
@@ -96,10 +96,10 @@ extends Goal {
     }
 
     public boolean canContinueToUse() {
+        if (club.someoneice.humangunner.LowHealthCombatController.shouldHoldGround(this.human, this.human.toAvoid)) return false;
         if (club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this.human)) return false;
         Player player;
-        if (!club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(
-                this.human.getHealth() / Math.max(1.0F, this.human.getMaxHealth()))
+        if (!club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(this.human)
                 && !HumanUtil.isLowHp((LivingEntity)this.human)) {
             return false;
         }
@@ -137,6 +137,10 @@ extends Goal {
         this.targetPos = null;
         this.stalledTicks = 0;
         this.human.isFleeing = false;
+        LivingEntity previousThreat = this.human.toAvoid;
+        if (previousThreat != null && previousThreat.isAlive() && this.human.canAttack(previousThreat)
+                && club.someoneice.humangunner.LowHealthCombatController.shouldHoldGround(this.human, previousThreat))
+            this.human.setTarget(previousThreat);
         this.human.toAvoid = null;
     }
 

@@ -51,7 +51,9 @@ extends NearestAttackableTargetGoal<T> {
 
     public boolean canUse() {
         LivingEntity livingEntity;
-        if (HumanUtil.isLowHp((LivingEntity)this.mob)) {
+        if (this.mob instanceof com.craftix.hostile_humans.entity.entities.Human lowHuman
+                ? club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(lowHuman) || lowHuman.isFleeing
+                : HumanUtil.isLowHp((LivingEntity)this.mob)) {
             return false;
         }
         this.targetConditions.range(this.getFollowDistance());

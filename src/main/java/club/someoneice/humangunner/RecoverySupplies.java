@@ -227,6 +227,13 @@ public final class RecoverySupplies {
                 && findBestInstantHealingSlot(human) >= 0;
     }
 
+    static boolean hasInstantHealingInProgress(Human human) {
+        UseSession active = ACTIVE_USES.get(human);
+        ItemStack item = active != null ? active.itemAtStart() : human.getUseItem();
+        return item.is(Items.POTION) && PotionUtils.getMobEffects(item).stream()
+                .anyMatch(effect -> effect.getEffect() == MobEffects.HEAL);
+    }
+
     static UseSession beginUrgentInstantHealing(Human human) {
         if (!hasUrgentInstantHealing(human)) return null;
         return beginInventoryUse(human, human.getData(), findBestInstantHealingSlot(human));

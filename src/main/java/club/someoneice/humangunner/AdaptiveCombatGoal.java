@@ -152,7 +152,7 @@ public final class AdaptiveCombatGoal extends Goal {
         // Hold position forbids ordinary tactical movement, but not a
         // life-saving retreat or blocking a projectile headed into its post.
         if (SoldierOrder.isHoldingPosition(human)
-                && !RetreatRecoveryPolicy.shouldForceRetreat(healthRatio())
+                && !RetreatRecoveryPolicy.shouldForceRetreat(human)
                 && incomingArrow == null) {
             return false;
         }
@@ -170,13 +170,13 @@ public final class AdaptiveCombatGoal extends Goal {
         if (BodyguardProtection.protectingFromExplosion(human, currentThreat)) return false;
 
         double health = healthRatio();
-        if (RetreatRecoveryPolicy.shouldForceRetreat(health)
+        if (!LowHealthCombatController.shouldHoldGround(human, currentThreat)
+                && (RetreatRecoveryPolicy.shouldForceRetreat(human)
                 || (HumanUtil.isLowHp(human) && human.shouldStartFleeingThisCombat())
-                || health <= config.criticalHealthRatio()
                 || (health < config.retreatHealthRatio()
                 && projectedHealthRatio() < config.resumeHealthRatio()
                 && config.itemRecoveryEnabled()
-                && RecoverySupplies.hasCombatRecoverySupply(human))) {
+                && RecoverySupplies.hasCombatRecoverySupply(human)))) {
             pendingPhase = Phase.RETREAT;
             return true;
         }
@@ -417,7 +417,8 @@ public final class AdaptiveCombatGoal extends Goal {
         if (ownsFleeFlag) {
             ownsFleeFlag = false;
         }
-        if (human.hasOwner() && !BodyguardProtection.protectingFromExplosion(human, BodyguardProtection.threat(human))
+        if (human.hasOwner() && !LowHealthCombatController.shouldHoldGround(human, threat)
+                && !BodyguardProtection.protectingFromExplosion(human, BodyguardProtection.threat(human))
                 && ShoreSeekingPolicy.shouldReturnToOwnerAfterCombatStop(
                 endedRetreat, shoreTransitionPending)) {
             SoldierOrder.beginReturnFromRetreat(human);
@@ -864,9 +865,10 @@ public final class AdaptiveCombatGoal extends Goal {
     private boolean recoveredFromRetreat() {
         // Real health, not predicted food/regeneration, must meet the resume
         // threshold. Also avoid handing off straight into native low-HP escape.
-        return !HumanUtil.isLowHp(human)
+        return LowHealthCombatController.shouldHoldGround(human, threat)
+                || (!HumanUtil.isLowHp(human)
                 && RetreatRecoveryPolicy.canResumeAfterHealing(healthRatio(),
-                        config.resumeHealthRatio(), human.tickCount - retreatStartedTick);
+                        config.resumeHealthRatio(), human.tickCount - retreatStartedTick));
     }
 
     private boolean tickRetreatCounterattack() {
@@ -1646,7 +1648,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private int retreatSearchRadius() {
-        return RetreatRecoveryPolicy.shouldForceRetreat(healthRatio())
+        return RetreatRecoveryPolicy.shouldForceRetreat(human)
                 ? Math.max(24, config.coverSearchRadius()) : config.coverSearchRadius();
     }
 

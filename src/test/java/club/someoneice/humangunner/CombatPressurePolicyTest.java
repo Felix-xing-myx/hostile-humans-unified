@@ -148,9 +148,18 @@ public final class CombatPressurePolicyTest {
         check(!RetreatRecoveryPolicy.canStart(8.0D * 8.0D, true, 20)
                         && !RetreatRecoveryPolicy.canStart(11.0D * 11.0D, false, 20),
                 "cover alone and a short open-field gap cannot start recovery");
-        check(RetreatRecoveryPolicy.shouldForceRetreat(0.25D)
-                        && !RetreatRecoveryPolicy.shouldForceRetreat(0.2501D),
-                "one-quarter health always triggers escape without a chance reroll");
+        LowHealthCombatConfig lowConfig = LowHealthCombatConfig.defaults();
+        check(LowHealthCombatPolicy.critical(14, 100, lowConfig)
+                        && !LowHealthCombatPolicy.critical(15, 100, lowConfig)
+                        && !LowHealthCombatPolicy.critical(25, 1000, lowConfig)
+                        && !LowHealthCombatPolicy.critical(100, 1000, lowConfig)
+                        && !LowHealthCombatPolicy.critical(24, 100, lowConfig),
+                "hard escape needs both strictly low ratio and low absolute health");
+        check(LowHealthCombatPolicy.weakTarget(20, 100)
+                        && !LowHealthCombatPolicy.weakTarget(30, 1000)
+                        && !LowHealthCombatPolicy.weakTarget(20, 50),
+                "finishing target needs both under thirty percent and thirty health");
+        checkLowHealthDecisions();
         check(CombatPressurePolicy.shouldUseRetreatCounterfire(5.0D * 5.0D, 12, 2.0D, 64.0D, 12)
                         && CombatPressurePolicy.shouldUseRetreatCounterfire(5.0D * 5.0D, 12, 2.0D, 36.0D, 12)
                         && !CombatPressurePolicy.shouldUseRetreatCounterfire(1.5D * 1.5D, 12, 2.0D, 64.0D, 12)
@@ -298,6 +307,51 @@ public final class CombatPressurePolicyTest {
                 "an archer can approach from beyond bow range");
 
         System.out.println("CombatPressurePolicyTest: " + checks + " behavior checks passed");
+    }
+
+    private static LowHealthCombatPolicy.Input lowInput(int tick, float health, boolean weak,
+            boolean recovery, boolean instant, float healed, float damaged, float strike) {
+        return new LowHealthCombatPolicy.Input(tick, health, 100,
+                new java.util.UUID(0, 1), weak, recovery, instant, healed, damaged, strike);
+    }
+
+    private static void checkLowHealthDecisions() {
+        LowHealthCombatConfig config = LowHealthCombatConfig.defaults();
+        LowHealthCombatPolicy.State state = new LowHealthCombatPolicy.State();
+        java.util.concurrent.atomic.AtomicInteger rolls = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.function.DoubleSupplier chooseFinish = () -> { rolls.incrementAndGet(); return 0.4D; };
+        check(state.allow(lowInput(0, 20, true, false, false, 0, 0, 0), config, chooseFinish),
+                "approved lone weak opponent permits finishing even without recovery items");
+        for (int tick = 1; tick < 80; tick++)
+            check(state.allow(lowInput(tick, 20, true, false, false, 0, 0, 0), config, chooseFinish),
+                    "finishing permission stays stable throughout an encounter");
+        check(rolls.get() == 1, "probability is not rerolled by repeated AI callers");
+        check(!state.allow(lowInput(80, 14, true, true, false, 10, 1, 0), config, chooseFinish),
+                "hard dual health floor overrides finishing and good healing");
+        state.reset();
+        check(!state.allow(lowInput(0, 20, true, true, true, 0, 0, 0), config, chooseFinish),
+                "an available or in-progress instant potion keeps healing priority");
+        state.reset();
+        check(state.allow(lowInput(0, 28, false, false, false, 0, 0, 0), config, () -> 0.9D),
+                "no supplies still allows a bounded damage trial");
+        check(!state.allow(lowInput(40, 26, false, false, false, 0, 2, 2), config, () -> 0.9D),
+                "zero regeneration cannot sustain incoming damage");
+        check(!state.allow(lowInput(41, 27, false, true, false, 4, 2, 2), config, () -> 0.9D),
+                "failed trials have a cooldown rather than bouncing back next tick");
+        state.reset();
+        check(state.allow(lowInput(0, 28, false, true, false, 0, 0, 0), config, () -> 0.9D)
+                        && state.allow(lowInput(40, 30, false, true, false, 4, 2, 2), config, () -> 0.9D)
+                        && state.mode() == LowHealthCombatPolicy.Mode.SUSTAIN,
+                "actual healing exceeding tested damage grants sustained retaliation");
+        check(!state.allow(lowInput(50, 21, false, true, false, 4, 8, 4), config, () -> 0.9D),
+                "losing exchange revokes permission before hard emergency health");
+        state.reset();
+        check(state.allow(lowInput(0, 28, false, true, false, 0, 0, 0), config, () -> 0.9D)
+                        && !state.allow(lowInput(40, 32, false, true, false, 4, 0, 0), config, () -> 0.9D),
+                "quiet healing without an enemy hit cannot prove damage is sustainable");
+        check(!LowHealthCombatPolicy.healingCovers(2, 2, 1.1D)
+                        && LowHealthCombatPolicy.healingCovers(3, 2, 1.1D),
+                "sustained fighting needs the configured healing safety margin");
     }
 
     private static void check(boolean condition, String message) {

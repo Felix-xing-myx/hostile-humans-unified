@@ -111,7 +111,7 @@ final class TierConfigProjection {
                     "encounter_cooldown_ticks", "nearby_horizontal_radius", "nearby_vertical_radius", "density_divisor"));
         orderGroup(result, "recruitment", rank ? List.of("max_hired", "payment")
                 : List.of("allow_hired_pvp_damage", "soldier_messages"));
-        orderGroup(result, "ai", List.of("enabled", "item_recovery_enabled", "retreat_health_ratio", "critical_health_ratio",
+        orderGroup(result, "ai", List.of("enabled", "item_recovery_enabled", "retreat_health_ratio", "low_health_combat", "critical_health_ratio",
                 "resume_health_ratio", "gradual_heal_interval_ticks", "food_recovery_min_health", "food_recovery_max_health",
                 "recovery_damage_tolerance_ratio", "recovery_commit_ticks", "shield_block_chance_after_hit",
                 "shield_block_duration_min_ticks", "shield_block_duration_max_ticks", "shield_block_cooldown_ticks"));

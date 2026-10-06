@@ -5,7 +5,6 @@ import net.minecraft.world.entity.LivingEntity;
 
 /** Distance and pressure gates shared by retreat potions and retreat food. */
 public final class RetreatRecoveryPolicy {
-    public static final double FORCED_RETREAT_HEALTH_RATIO = 0.25D;
     private static final int QUIET_TICKS_BEFORE_RECOVERY = 10;
     private static final double OPEN_RECOVERY_DISTANCE_SQR = 12.0D * 12.0D;
     private static final double COVER_RECOVERY_DISTANCE_SQR = 9.0D * 9.0D;
@@ -14,8 +13,9 @@ public final class RetreatRecoveryPolicy {
     private RetreatRecoveryPolicy() {
     }
 
-    public static boolean shouldForceRetreat(double healthRatio) {
-        return healthRatio <= FORCED_RETREAT_HEALTH_RATIO;
+    public static boolean shouldForceRetreat(Human human) {
+        return LowHealthCombatPolicy.critical(human.getHealth(), human.getMaxHealth(),
+                CombatAiConfig.forHuman(human).lowHealthCombat());
     }
 
     static boolean safeToReturn(double distanceSqr, int quietTicks, int retreatTicks) {
