@@ -72,6 +72,31 @@
 - 构建来源：`build/libs/hostile-humans-unified-1.20.1-3.6.0.jar`；替换目标：指定实例 `mods/hostile-humans-unified-1.20.1-3.6.0.jar`。源/目标 SHA-256 均为 `48349D249CA65CA7223B5F14C132BF7A943D1FDE9E73EB4628370EC7CEDFAA16`，目标大小 3,639,281 字节，仅一份统一版 JAR。
 - 备份目录的 `deployment.json` 保存完整清单。未改其他实例、未启动游戏、未 push；传送/重追踪与资源包组合、掉落统计及雇佣完整返还仍待用户游戏验收。
 
+## 有限弹药开发：2026-10-06
+
+共同开发基线 `9ca9c54c83292190fe62587d586f5dbb66ccb3a1`（已包含共享 HumanAmmo/HumanAmmoPolicy 与 GunSupport.hasLoadedAmmo 接口）；主仓库原 CHANGELOG 重排保留。此轮只授权开发，不构建/同步/push/启动游戏。
+
+| ID | 负责人 / 模型 | 工作树 / 分支 | 独占文件范围与接口 |
+| --- | --- | --- | --- |
+| AMMO-GUN | finite_gun 子 Agent / GPT-6.1 Sol medium | 维护目录 `worktrees/finite-gun-ammo` / `feature/finite-gun-ammo` | TaczIntegration、GunnerGoal、独立换弹事务模块/测试；所有换弹入口共用扣费，修复无偿补满。实现 GunSupport.hasLoadedAmmo，不修改共享 HumanAmmo/GunSupport 定义 |
+| AMMO-BOW | finite_bow 子 Agent / GPT-6.1 Sol medium | 维护目录 `worktrees/finite-bow-ammo` / `feature/finite-bow-ammo` | Human.java、BowAttack、CrossbowGoal、SpartanRangedCompat 及独立射击策略/测试；每次弓射击/弩齐射消耗一个 HumanAmmo 箭矢，三叉戟不变 |
+| AMMO-FALLBACK | ammo_fallback 子 Agent / GPT-6.1 Sol medium | 维护目录 `worktrees/ammo-weapon-fallback` / `feature/ammo-weapon-fallback` | GunCustody、RangedWeaponCustody、HumanLootManager、必要独立武器选择模块/测试；有弹枪优先，其次有箭弓弩，再近战；补给恢复可用武器，库存守恒 |
+
+主控负责物品注册与资源、HumanAmmo 公共实现、生成弹药、文档/版本与公共测试任务接入。公共文件不交叉编辑，子 Agent 不再分派。用户已确认霰弹枪每次换弹消耗2个，与步枪相同。
+
+### 交付与整合（已整合）
+
+- AMMO-BOW：开发提交 `686a83d7003ec475c66084d147f9815a91e2ab34`，整合 `f7808b2`。Human、BowAttack、CrossbowGoal、SpartanRangedCompat、HumanArrowCombat、HumanInventoryContainer、HumanArrowCombatTest。菜单文件的新增归属在工作中明确交给该 Agent；普通弓、原生弩和 Spartan 重弩同一储备，每次成功射击/齐射扣1，多重射击不逐箭扣。装填后只保存空 charged 动作，发射即时合成载荷并禁止回收；玩家投入的实际 charged 载荷不在菜单转出时清除，NPC发射仍以统一箭矢计费。主控补充 finally 清理，异常钩子也不留下临时载荷。
+- AMMO-FALLBACK：开发提交 `94758b35159371d2f4132ce6e423abe1572125be`，整合 `25f06a2`。AmmoWeaponSelection、GunCustody、RangedWeaponCustody、HumanLootManager、AdaptiveCombatGoal、PlayerLikeMovementGoal、AmmoWeaponSelectionTest；后两公共战术文件在工作中明确追加为独占范围。物理拥有枪接口保留，战术改为实际可用枪；已付费换弹保留手持至完成，可用枪→有箭弓弩→现有近战/工具→空手。原位交换优先，满包掉落插入失败不清手持；租约快照不重建武器。补给价值100并沿用拾取设置，不能作为武器装备。
+- AMMO-GUN：开发提交 `ac3ccbff74f9069aed1cb6dd7e729175ed09d5be`、`936aed6abfc2821f600d51809be02327ccfe83ea`，整合 `7fb02be`、`bc5de4b`。TaczIntegration、GunnerGoal、ReloadPaymentLedger、TaczHumanReloadTransactions、TaczHumanReloadMixin/TaczHumanShootMixin/TaczHumanGunScriptMixin、OptionalRuntimeTest、ReloadPaymentLedgerTest。收费位于原生取消事件/重复/冷却过滤之后、startReload成功时；逐发装填在完整周期只付一次。授权仅内存并绑定实际 ItemStack，取消/切枪/超时不能继承免费装填。INVENTORY供弹枪转为NPC有限弹仓，玩家保留原路径；补给耗尽时不能续装。
+- 主控 `baba2eb` 注册箭矢64/弹匣24、物品模型与中英提示，弹匣只在安装TaCZ时显示创造栏但注册ID始终稳定；生成管线在最终成长替换后按实际持有武器配给，四阶数量遵照需求并拆成合法堆叠。初始枪内子弹保留；仅初次生成授予，旧存档/雇佣/重加载不自动补满。自定义满包通过现有价值/保护规则存入，若全部槽位受保护则溢出物理掉落；取消掉落不会覆盖现有装备。未新增合成配方或弹药数量配置。
+- 主控 `e965d6d` 补充静态AI模式和枪手Goal弹药门控，避免未能收起的无弹副手堵住近战。`557511b`、`7b039f5` 修复INVENTORY枪膛内计数导致满弹重复闲置收费，以及开膛枪旧barrel标记虚构剩余一发；定时装填使用枪包空仓/战术 feed+cooldown 时间，恢复超时预算独立。
+- 用户追加换弹阈值后，`7a9d2dc`、`ecf8026` 整合：闲置严格低于25%（30发剩7触发、8不触发；40发剩10不触发），战斗必须实际弹仓/膛内皆空；统一收费入口也复核阈值。既有闲置逃跑/使用物品保护保留，战斗逃跑不被新增闲置限制误拦截。已开始的有效周期继续，不因随后进入战斗而自动退费。
+- 公共测试入口已接入 `check`：humanAmmoPolicyTest、humanArrowCombatTest、ammoWeaponSelectionTest、reloadPaymentLedgerTest；更新旧 CombatPressurePolicyTest 的闲置预期。新增用例覆盖阶级预算、类型成本、25%边界、最后一份库存、拒绝/重复/取消/超时、武器对象变化、齐射/装填/不可回收接线及满包交换守恒。版本仍为3.6.0，有限弹药与阈值记录在未发布栏。
+- 实际验证：三个 Agent 与主控执行 Git diff/暂存检查；主控核对实际TaCZ 1.1.8-hotfix javap调用顺序、描述符与字段，验证资源JSON、3个@Pseudo注册、生成顺序、收费前阈值等25项静态检查，日志在维护目录 `验证日志/static-finite-ammo-20261006.log`。子Agent另有12项源码静态断言。未执行Gradle、编译、新增测试或游戏，本轮未部署/push；上轮已部署JAR不包含这些新改动。
+- 游戏验收待项：各阶自然/信标生成数量；低于/等于25%及战斗最后一发；各类枪费用、最后一次付费周期、逐颗装填/INVENTORY枪包；补货回切、近身租约、满包与拒绝掉落；多重弩/Spartan弩、NPC临时载荷取出/死亡、三叉戟无限；换枪/菜单/存档/传送、缺TaCZ启动与玩家枪械回归。Mixin注入、编译及游戏效果不能由静态检查宣称通过。
+- 三个开发工作树均保持干净并保留；主控整合无文本冲突，逐项核对逻辑交互，补充上述跨模块修正。源码最终提交为 `ecf8026`（文档提交另计），原用户CHANGELOG重排独立保留。
+
 ## 分派与交付模板
 
 每项功能任务新增独立记录，至少包含：

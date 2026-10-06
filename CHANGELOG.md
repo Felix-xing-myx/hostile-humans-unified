@@ -4,6 +4,9 @@
 
 ### 简体中文
 
+- 闲置换弹仅在弹匣余量严格低于容量25%时触发，战斗中必须打空（包括膛内剩余子弹）才开始换弹。统一入口再次检查阈值，避免旁路调用提前收费。
+- 远程人类改为有限弹药：弓弩统一消耗64堆叠的人类箭矢，每次成功射击／齐射扣1；TaCZ 使用24堆叠的通用弹匣，每次有效启动换弹按手枪／冲锋枪1、步枪／霰弹枪2、狙击枪3、机枪4、重型武器5扣除。原生逐发装填按完整换弹周期收费，库存供弹枪也使用有限弹仓；取消、切枪和卡顿恢复不能无偿补满。
+- 新生成流浪者、一阶、二阶、三阶相应职业分别携带32–128／64–128／128–192／192支箭矢，6–12／12–24／32–48／48–72个弹匣；首仓枪内子弹保留。枪内和储备弹药耗尽后，优先有箭弓弩，再现有近战武器；补给后恢复可用武器，三叉戟无限投掷不变。旧存档不自动补满，NPC临时弩载荷及不可回收箭矢不能变成玩家免费弹药。
 - 修复 TaCZ NPC 动画播放状态在传送、重新追踪、模型或资源重载后遗留的问题；动作优先级读取实时同步状态，旧瞄准、换弹或单次动画不再持续占用资源包动画。每次模型设置先清理上一帧姿势，保留 Better Combat 接入。
 - TaCZ 持枪和瞄准可使用其原生第三人称接口，不再要求 Player Animator；无此前置或缺少枪包动画资源时，换弹与射击使用基础模型动作。枪包精确关键帧仍在 Player Animator 可用时播放，不改变服务端攻击、弹药或换弹逻辑。
 - 未雇佣的敌对信标人类在原有掉落规则完成后，食物逐件再以 20% 概率保留，附魔金苹果全部排除；非食物掉落不变。新来源标记持久保存并兼容仍有旧信标目标标记的单位，正式雇佣后仍完整返还库存。
@@ -11,6 +14,9 @@
 
 ### English
 
+- Idle reloads require strictly less than 25% magazine capacity; combat reloads require all loaded rounds, including the chamber, to be spent. The shared accepted reload boundary checks these thresholds before charging supplies.
+- Humans now use finite ammunition: Human Arrows stack to 64 and cost 1 per successful bow shot/crossbow volley; Universal Magazines stack to 24 and cost 1/2/3/4/5 per accepted reload for pistol/SMG, rifle/shotgun, sniper, machine gun and heavy weapons. Manual feeds pay once per cycle; inventory-feed guns use finite internal rounds. Cancellation, weapon changes and stall recovery do not refill ammunition for free.
+- Initial ranged reserves by tier are 32–128/64–128/128–192/192 arrows and 6–12/12–24/32–48/48–72 magazines, retaining the initially loaded firearm. Exhausted gunners prefer a supplied bow/crossbow, then existing melee equipment; resupply restores availability. Tridents stay unlimited. Existing saves are not replenished automatically, and NPC temporary crossbow payloads/unrecoverable arrows cannot supply free player ammunition.
 - Reset TaCZ NPC playback across teleports, tracking gaps, model changes and resource reloads. Animation priority reads live synchronized actions, releases stale actions, and clears the previous model pose while preserving Better Combat integration.
 - Native TaCZ hold/aim poses and basic reload/fire gestures work without Player Animator or matching keyframe assets. Gun-pack keyframes remain available with Player Animator; server-side attacks, ammunition and reload rules are unchanged.
 - After existing loot rules, unhired hostile-beacon Humans retain each food item with an additional 20% chance and never drop enchanted golden apples. Non-food loot is unchanged. Persistent origin tracking supports legacy beacon markers; formally hired Humans still return their full inventory.

@@ -12,6 +12,12 @@ Players can hire humans with contracts and manage their roster through a radio. 
 
 Humans use melee weapons, shields, bows, crossbows, tridents, or firearms according to their equipment. At low health they retreat and try to recover. Ranged units look for firing positions while melee units pursue their targets. Signal flares summon temporary allies or hostile humans; the radio shows soldier status and can recall them.
 
+Bows and crossbows consume Human Arrows (stack size 64): one per successful bow shot or crossbow volley, including Multishot. TaCZ reloads consume Universal Magazines (stack size 24): pistol/SMG 1, rifle/shotgun 2, sniper 3, machine gun 4, heavy weapon 5. Insufficient reserves prevent reloads, while remaining loaded rounds can still fire. Exhausted gunners prefer a supplied bow/crossbow, then an existing melee weapon. Put supplies in the soldier's backpack to restore ranged availability. Tridents remain unlimited.
+
+Idle reloads require magazine ammunition strictly below 25% of capacity; exactly 25% does not trigger. A 30-round magazine reloads at 7 rounds, but not 8. During combat, reloads start only after all loaded rounds, including any chambered round, are spent. Thresholds and magazine payment share the same accepted reload entrypoint.
+
+New ranged loadouts receive reserves by tier: Roamer 32–128 arrows / 6–12 magazines; Tier I 64–128 / 12–24; Tier II 128–192 / 32–48; Tier III 192 / 48–72. Units owning both weapon types receive both supplies. The initial loaded firearm does not incur another magazine charge. Existing saved units need resupply; loading saves or hiring does not replenish ammunition. These tokens are for humans only; ordinary player ammunition does not substitute for them.
+
 ## Mod Compatibility
 
 - **TaCZ**: Optional firearm integration. Gunners can hold and aim firearms and display basic reload/fire motions without Player Animator. With Player Animator installed and matching gun-pack assets available, they use the gun pack's third-person keyframe animations.
