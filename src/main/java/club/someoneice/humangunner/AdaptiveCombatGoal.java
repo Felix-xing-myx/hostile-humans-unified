@@ -111,7 +111,6 @@ public final class AdaptiveCombatGoal extends Goal {
     private int nextTacticalTick;
     private int nextCrowdScanTick;
     private int crowdPressureUntil;
-    private int burstDamageRetreatUntil;
     private int nextTerrainJumpTick;
     private int retreatAimTicks;
     private int retreatStartedTick;
@@ -169,12 +168,6 @@ public final class AdaptiveCombatGoal extends Goal {
         threat = currentThreat;
         updateCombatSession(currentThreat);
         if (BodyguardProtection.protectingFromExplosion(human, currentThreat)) return false;
-
-        updateBurstDamageRetreat();
-        if (shouldUseBurstDamageRetreat() || shouldPrioritizeCrowdRetreat()) {
-            pendingPhase = Phase.RETREAT;
-            return true;
-        }
 
         double health = healthRatio();
         if (RetreatRecoveryPolicy.shouldForceRetreat(health)
@@ -453,19 +446,6 @@ public final class AdaptiveCombatGoal extends Goal {
             threat = reevaluated;
         }
         if (threat == null) {
-            return;
-        }
-        updateBurstDamageRetreat();
-        if ((shouldUseBurstDamageRetreat() || shouldPrioritizeCrowdRetreat())
-                && phase != Phase.RETREAT && phase != Phase.RECOVER) {
-            if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
-                human.stopUsingItem();
-            }
-            phaseTicks = 0;
-            human.getPersistentData().putString(
-                    "humangunner:ai_phase",
-                    crowdPressureActive() ? "crowd_retreat_pending" : "burst_damage_retreat_pending"
-            );
             return;
         }
         lastThreatTick = human.tickCount;
@@ -844,7 +824,6 @@ public final class AdaptiveCombatGoal extends Goal {
         tickMovingRecovery(mayUseSupply, recentlyHit);
         if (retreatSafe() && recoverySession == null
                 && !CombatFoodRecoveryGoal.isActive(human)) {
-            burstDamageRetreatUntil = 0;
             phaseTicks = 0;
             human.getPersistentData().putString("humangunner:ai_phase", "retreat_safe_to_return");
             return;
@@ -887,8 +866,7 @@ public final class AdaptiveCombatGoal extends Goal {
         // threshold. Also avoid handing off straight into native low-HP escape.
         return !HumanUtil.isLowHp(human)
                 && RetreatRecoveryPolicy.canResumeAfterHealing(healthRatio(),
-                        config.resumeHealthRatio(), human.tickCount - retreatStartedTick,
-                        shouldUseBurstDamageRetreat() || shouldPrioritizeCrowdRetreat());
+                        config.resumeHealthRatio(), human.tickCount - retreatStartedTick);
     }
 
     private boolean tickRetreatCounterattack() {
@@ -1262,8 +1240,7 @@ public final class AdaptiveCombatGoal extends Goal {
             }
         }
         if (immediateThreats >= CombatPressurePolicy.CROWD_THREAT_COUNT
-                && CombatPressurePolicy.shouldPrioritizeGunnerRetreat(
-                AmmoWeaponSelection.hasUsableGun(human), immediateThreats)) {
+                && AmmoWeaponSelection.hasUsableGun(human)) {
             crowdPressureUntil = Math.max(
                     crowdPressureUntil,
                     human.tickCount + CombatPressurePolicy.CROWD_PRESSURE_MEMORY_TICKS
@@ -1424,34 +1401,16 @@ public final class AdaptiveCombatGoal extends Goal {
         human.getPersistentData().remove("humangunner:focus_target");
     }
 
-    private void updateBurstDamageRetreat() {
-        if (RecentDamageTracker.consumeRetreatTrigger(human)) {
-            burstDamageRetreatUntil = Math.max(burstDamageRetreatUntil, human.tickCount + 100);
-        }
-    }
-
-    private boolean burstDamageRetreatActive() {
-        return human.tickCount < burstDamageRetreatUntil;
-    }
-
-    private boolean shouldUseBurstDamageRetreat() {
-        // Bow/crossbow goals can now retreat while continuing their own draw
-        // or charge state. Pre-empting them for the generic damage retreat
-        // repeatedly cancelled crossbow charging under automatic gunfire.
-        // Critical-health recovery still uses this goal via the health checks.
-        return burstDamageRetreatActive() && !RangedWeaponCustody.controlsMainHand(human);
-    }
-
     private boolean crowdPressureActive() {
         return human.tickCount < crowdPressureUntil;
     }
 
-    private boolean shouldPrioritizeCrowdRetreat() {
+    private boolean crowdCounterfireReady() {
         return crowdPressureActive() && AmmoWeaponSelection.hasUsableGun(human);
     }
 
     private void prepareCrowdRetreatGun() {
-        if (!shouldPrioritizeCrowdRetreat()) {
+        if (!crowdCounterfireReady()) {
             return;
         }
         if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {

@@ -58,10 +58,6 @@ final class CombatPressurePolicy {
                 && !incomingProjectile && !incomingMelee;
     }
 
-    static boolean shouldPrioritizeGunnerRetreat(boolean ownsGun, int closeThreatCount) {
-        return ownsGun && closeThreatCount >= CROWD_THREAT_COUNT;
-    }
-
     static boolean shouldPrioritizeCloserThreat(double currentDistanceSqr,
                                                  double candidateDistanceSqr,
                                                  float recentCurrentDamage,

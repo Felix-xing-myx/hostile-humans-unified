@@ -10,6 +10,19 @@ public final class CombatPressurePolicyTest {
                         && !MaxHealthCompatibilityPolicy.shouldApplyRoll(500.0D, 0, 60.0D)
                         && MaxHealthCompatibilityPolicy.shouldApplyRoll(50.0D, 90, 50.0D),
                 "tier health repairs only its own roll or an original base, not another mod's maximum health");
+        ShoreProgressTracker shoreProgress = new ShoreProgressTracker();
+        shoreProgress.reset(0);
+        for (int tick = 0; tick <= 60; tick++) shoreProgress.observe(tick, 0, 8.0D + Math.sin(tick) * 0.05D);
+        check(shoreProgress.isStalled(60), "bobbing/circling without approaching the waypoint expires shore route");
+        shoreProgress.reset(100);
+        shoreProgress.observe(100, 0, 10.0D);
+        shoreProgress.observe(140, 0, 9.5D);
+        check(!shoreProgress.isStalled(199) && shoreProgress.isStalled(200), "meaningful approach resets the stall deadline");
+        shoreProgress.observe(200, 1, 12.0D);
+        check(!shoreProgress.isStalled(259), "advancing to another waypoint counts on detour routes");
+        shoreProgress.reset(300);
+        check(shoreProgress.isStalled(360), "missing fallback destination still permits bounded retry");
+
         check(ShoreSeekingPolicy.shouldAttemptShore(true, true, true, false, false, false, false)
                         && !ShoreSeekingPolicy.shouldAttemptShore(false, true, true, false, false, false, false)
                         && !ShoreSeekingPolicy.shouldAttemptShore(true, false, true, false, false, false, false)
@@ -148,12 +161,11 @@ public final class CombatPressurePolicyTest {
                         && !RetreatRecoveryPolicy.safeToReturn(24.0D * 24.0D, 80, 39)
                         && RetreatRecoveryPolicy.safeToReturn(24.0D * 24.0D, 40, 40),
                 "retreat does not yield to attack or anchor return until distance, quiet and commitment gates pass");
-        check(RetreatRecoveryPolicy.canResumeAfterHealing(1.0D, 0.75D, 40, false)
-                        && RetreatRecoveryPolicy.canResumeAfterHealing(0.75D, 0.75D, 40, false)
-                        && !RetreatRecoveryPolicy.canResumeAfterHealing(0.74D, 0.75D, 100, false)
-                        && !RetreatRecoveryPolicy.canResumeAfterHealing(1.0D, 0.75D, 39, false)
-                        && !RetreatRecoveryPolicy.canResumeAfterHealing(1.0D, 0.75D, 100, true),
-                "real healing ends prolonged retreat without a distance gate, retaining commitment and active pressure protection");
+        check(RetreatRecoveryPolicy.canResumeAfterHealing(1.0D, 0.75D, 40)
+                        && RetreatRecoveryPolicy.canResumeAfterHealing(0.75D, 0.75D, 40)
+                        && !RetreatRecoveryPolicy.canResumeAfterHealing(0.74D, 0.75D, 100)
+                        && !RetreatRecoveryPolicy.canResumeAfterHealing(1.0D, 0.75D, 39),
+                "real healing ends prolonged retreat without a distance gate, retaining minimum retreat commitment");
         check(RetreatRecoveryPolicy.canStart(9.0D * 9.0D, true, 11)
                         && RetreatRecoveryPolicy.canStart(12.0D * 12.0D, false, 11),
                 "retreat recovery starts at nine blocks behind cover or twelve in the open");
@@ -228,12 +240,6 @@ public final class CombatPressurePolicyTest {
         check(counters >= 4,
                 "continuous pressure alternates block and counter instead of extending one block forever");
 
-        check(!CombatPressurePolicy.shouldPrioritizeGunnerRetreat(true, 2),
-                "two nearby threats do not force the crowd override");
-        check(CombatPressurePolicy.shouldPrioritizeGunnerRetreat(true, 3),
-                "three nearby threats force an armed gunner to retreat");
-        check(!CombatPressurePolicy.shouldPrioritizeGunnerRetreat(false, 6),
-                "ordinary melee humans keep their normal pressure behavior");
         check(CombatPressurePolicy.shouldPrioritizeCloserThreat(20.0D * 20.0D,
                         3.0D * 3.0D, 2.0F, 60.0F)
                         && CombatPressurePolicy.shouldPrioritizeCloserThreat(5.0D * 5.0D,

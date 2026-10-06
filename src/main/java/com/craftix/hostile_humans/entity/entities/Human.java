@@ -508,6 +508,11 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     @Nullable
     private BlockPos findNearestDryShoreTarget(int maxColumns) {
+        return this.findNearestDryShoreTarget(maxColumns, null);
+    }
+
+    @Nullable
+    private BlockPos findNearestDryShoreTarget(int maxColumns, @Nullable BlockPos avoidDestination) {
         BlockPos origin = this.blockPosition();
         double startAngle = this.getRandom().nextDouble() * Math.PI * 2.0D;
         int[] searchRadii = {4, 8, 12, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128};
@@ -533,6 +538,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 if (!this.isDryStandingPosition(candidate)) {
                     continue;
                 }
+                if (avoidDestination != null && candidate.equals(avoidDestination)) continue;
                 double distanceSqr = origin.distSqr(candidate);
                 if (distanceSqr < nearestDistanceSqr) {
                     nearest = candidate.immutable();
@@ -598,13 +604,13 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 if (!this.isDryStandingPosition(candidate)) {
                     continue;
                 }
+                if (avoidDestination != null && candidate.equals(avoidDestination)) {
+                    continue;
+                }
                 double fallbackCandidateDistanceSqr = origin.distSqr(candidate);
                 if (fallbackCandidateDistanceSqr < fallbackDistanceSqr) {
                     this.shoreFallbackTarget = candidate.immutable();
                     fallbackDistanceSqr = fallbackCandidateDistanceSqr;
-                }
-                if (avoidDestination != null && candidate.equals(avoidDestination)) {
-                    continue;
                 }
                 if (fallbackCandidateDistanceSqr
                         > ShoreSeekingPolicy.MAX_SHORE_PATH_DISTANCE
@@ -700,7 +706,20 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.navigation.moveTo(path, speed);
     }
 
+    /** Keep a valid bank across failed searches instead of turning toward a new bank every retry. */
+    public void startSeekingShoreWithoutPath(@Nullable BlockPos retainedDestination,
+            @Nullable BlockPos avoidDestination) {
+        if (retainedDestination != null && !retainedDestination.equals(avoidDestination)
+                && this.isDryStandingPosition(retainedDestination))
+            this.shoreFallbackTarget = retainedDestination.immutable();
+        this.beginSeekingShoreWithoutPath(avoidDestination);
+    }
+
     public void startSeekingShoreWithoutPath() {
+        this.beginSeekingShoreWithoutPath(null);
+    }
+
+    private void beginSeekingShoreWithoutPath(@Nullable BlockPos avoidDestination) {
         this.shoreTransitionPendingTick = Integer.MIN_VALUE;
         this.seekingShore = true;
         this.shorePathUsesWaterNavigation = true;
@@ -708,7 +727,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // The full 128-block search is reserved for the globally budgeted
             // path slot. A wave of Humans entering water should not all scan
             // distant heightmaps synchronously just to acquire movement.
-            this.findNearestDryShoreTarget(16);
+            this.findNearestDryShoreTarget(16, avoidDestination);
         }
         this.navigation.stop();
         this.selectShoreNavigation();
@@ -769,6 +788,11 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     public boolean isShoreTransitionPending() {
         return this.shoreTransitionPendingTick == this.tickCount;
+    }
+
+    @Nullable
+    public BlockPos getShoreDestination() {
+        return this.shoreFallbackTarget;
     }
 
     public boolean isSeekingShore() {

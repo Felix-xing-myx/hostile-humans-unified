@@ -8,18 +8,16 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
 
-/** Tracks final post-mitigation health damage for burst-damage retreats. */
+/** Tracks final health damage by attacker for threat selection only. */
 final class RecentDamageTracker {
     private record DamageSample(int tick, float amount, UUID attacker) {
     }
 
     private static final class DamageWindow {
         private final ArrayDeque<DamageSample> samples = new ArrayDeque<>();
-        private int nextEligibleTick;
     }
 
     private static final int WINDOW_TICKS = 80;
-    private static final float RETREAT_RATIO = 0.40F;
     private static final Map<Human, DamageWindow> WINDOWS = new WeakHashMap<>();
 
     private RecentDamageTracker() {
@@ -52,29 +50,6 @@ final class RecentDamageTracker {
             }
         }
         return total;
-    }
-
-    static boolean consumeRetreatTrigger(Human human) {
-        DamageWindow window = WINDOWS.get(human);
-        if (window == null) {
-            return false;
-        }
-        prune(human, window);
-        if (human.tickCount < window.nextEligibleTick) {
-            return false;
-        }
-        float total = 0.0F;
-        for (DamageSample sample : window.samples) {
-            total += sample.amount();
-        }
-        if (total <= human.getMaxHealth() * RETREAT_RATIO) {
-            return false;
-        }
-        window.samples.clear();
-        window.nextEligibleTick = human.tickCount + WINDOW_TICKS;
-        human.getPersistentData().putFloat("humangunner:burst_damage_retreat_amount", total);
-        human.getPersistentData().putInt("humangunner:burst_damage_retreat_tick", human.tickCount);
-        return true;
     }
 
     private static void prune(Human human, DamageWindow window) {
