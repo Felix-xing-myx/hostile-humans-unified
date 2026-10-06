@@ -60,6 +60,18 @@
 - 待游戏验收：持枪跟随同维度/跨维度传送、离开追踪范围后返回、重新登录与资源重载；有/无 Player Animator，EMF 资源包，移动/瞄准/开火/换弹切换，护甲/持物和左右手；Better Combat 切换及无 TaCZ 启动；四阶信标的最终食物统计/附魔苹果、自然生成对照，以及雇佣后自存食物/附魔苹果完整返还。
 - 两项无文本合并冲突；独立开发工作树保留且干净，便于后续反馈定位。冻结现象尚未游戏复现，修复覆盖源码可确认的生命周期缺口，不将其宣称为已确认的唯一根因。
 
+## 指定实例构建与投放：2026-10-06
+
+- 用户明确目标：`E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21`，仅此实例。
+- 版本沿用 3.6.0；构建源码提交 `dcfef5fb8073e4414ab03860ccaef9b043c3bd96`，用户 CHANGELOG 旧段落重排保留在工作区。
+- Java 17，仓库 gradlew.bat，`build lootScreeningTest --offline`，三个指定 compileOnly API 路径均以完整参数传入。成功日志：维护目录 `验证日志/build-20261006-animation-beacon-retry.log`。
+- 首次构建在 optionalRuntimeTest 发现 TaczNativeAnimation 的 lambda 合成方法暴露 GunDisplayInstance；主控移除该 lambda，保持未安装 TaCZ 时加载检查，未通过跳过测试规避问题。修复提交为上述源码提交。
+- 重试 BUILD SUCCESSFUL：27 actionable tasks，23 executed / 4 up-to-date；TaCZ 动画策略、信标食物概率、无可选依赖链接（332 核心类）、战斗、库存、配置、结构及 lootScreening 等全部通过。结构/配置坏输入检查的错误日志是预期兜底场景。此前“未执行”的记录为开发阶段状态，现更新为自动化通过、游戏验收待定。
+- 替换前再次检查进程，未检测到运行游戏；目标 mods 中仅一份统一版 JAR，TaCZ 为 1.1.8-hotfix，目标 Forge 47.4.21 在模组声明范围内。
+- 旧文件备份：维护目录 `部署备份/20261006-122206-animation-beacon-Forge_47.4.21/hostile-humans-unified-1.20.1-3.6.0.jar`，旧文件与备份 SHA-256 均为 `4EFDB98536D1142D374CFA6554040EBE648B55A49513BBB9EC93CFB90B1C41E0`。
+- 构建来源：`build/libs/hostile-humans-unified-1.20.1-3.6.0.jar`；替换目标：指定实例 `mods/hostile-humans-unified-1.20.1-3.6.0.jar`。源/目标 SHA-256 均为 `48349D249CA65CA7223B5F14C132BF7A943D1FDE9E73EB4628370EC7CEDFAA16`，目标大小 3,639,281 字节，仅一份统一版 JAR。
+- 备份目录的 `deployment.json` 保存完整清单。未改其他实例、未启动游戏、未 push；传送/重追踪与资源包组合、掉落统计及雇佣完整返还仍待用户游戏验收。
+
 ## 分派与交付模板
 
 每项功能任务新增独立记录，至少包含：
