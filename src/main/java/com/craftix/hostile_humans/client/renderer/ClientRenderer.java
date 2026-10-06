@@ -13,6 +13,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -22,6 +24,11 @@ public class ClientRenderer {
     public static final ModelLayerLocation HUMAN_MODEL_LAYER = new ModelLayerLocation(new ResourceLocation("hostile_humans", "human"), "main");
 
     protected ClientRenderer() {
+    }
+
+    @SubscribeEvent
+    public static void registerAnimationReloadListener(RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((ResourceManagerReloadListener) manager -> TaczNpcAnimator.resetPlayback());
     }
 
     @SubscribeEvent

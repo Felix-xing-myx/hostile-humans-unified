@@ -4,17 +4,19 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import com.mojang.logging.LogUtils;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.Optional;
 import java.util.WeakHashMap;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.ModList;
 import org.slf4j.Logger;
 
-/** Applies TaCZ's Player Animator layers to non-player Human models. */
+/** Optional resource keyframes with native TaCZ model animation as a fallback. */
 public final class TaczNpcAnimator {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<Human, State> STATES = new WeakHashMap<>();
@@ -29,112 +31,150 @@ public final class TaczNpcAnimator {
 
     private TaczNpcAnimator() {}
 
-    /**
-     * TaCZ's aim state is read while the model is being animated, after the
-     * renderer has already selected its whole-body sidestep yaw. Remember the
-     * last client-side aim sample so an actively aiming gunner can keep the
-     * body locked to the behavior-layer target yaw instead of turning the gun
-     * away from the target to face its lateral movement.
-     */
-    static boolean isAimingOrFiring(Human human) {
-        State state = STATES.get(human);
-        return state != null && (state.aiming || human.tickCount <= state.firingUntilTick);
+    /** Invalidate playback after a resource reload, including missing-asset caches. */
+    static void resetPlayback() {
+        STATES.clear();
     }
 
-    /** True only while a TaCZ-specific action should take precedence over CEM animations. */
-    static boolean hasActiveCustomAnimation(Human human) {
-        if (human == null || !hasDependencies()
-                || !club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())) {
-            return false;
-        }
-        State state = STATES.get(human);
-        if (state == null) return false;
-        if (state.aiming || state.reloading || human.tickCount <= state.firingUntilTick) return true;
-        Api resolved = api;
-        if (resolved == null || state.oneShotLayer == null) return false;
+    static boolean isAimingOrFiring(Human human) {
+        if (!canAnimate(human)) return false;
         try {
-            return (Boolean) resolved.layerIsActive.invoke(state.oneShotLayer);
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
-            warnOnce("Could not read TaCZ's active one-shot animation state", exception);
+            return TaczNativeAnimation.sample(human).aim() > 0.0F || recentlyFired(human);
+        } catch (RuntimeException | LinkageError exception) {
+            warnOnce("Could not read TaCZ synchronized action state", exception);
             return false;
         }
+    }
+
+    /** EMF asks before setupAnim: read live synchronized state, never cached aim/reload flags. */
+    static boolean hasActiveCustomAnimation(Human human) {
+        if (!canAnimate(human)) return false;
+        try {
+            return TaczNativeAnimation.sample(human).actionActive() || recentlyFired(human);
+        } catch (RuntimeException | LinkageError exception) {
+            warnOnce("Could not read TaCZ synchronized action state", exception);
+            return false;
+        }
+    }
+
+    private static boolean recentlyFired(Human human) {
+        State state = STATES.get(human);
+        return state != null && !discontinuous(state, human)
+                && human.tickCount >= state.firedTick && human.tickCount < state.firedTick + 6;
+    }
+
+    private static boolean canAnimate(Human human) {
+        return human != null && ModList.get().isLoaded("tacz") && human.isAlive()
+                && !human.isSleeping() && !human.isVisuallySwimming() && !human.isFallFlying()
+                && club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem());
+    }
+
+    private static boolean discontinuous(State state, Human human) {
+        double dx = human.getX() - state.x;
+        double dy = human.getY() - state.y;
+        double dz = human.getZ() - state.z;
+        return TaczAnimationPolicy.needsReset(state.lastTick, human.tickCount,
+                state.lastGameTime, human.level().getGameTime(), dx * dx + dy * dy + dz * dz);
     }
 
     static void apply(Human human, HumanoidModel<Human> model, float ageInTicks) {
-        ItemStack gun = human.getMainHandItem();
-        if (!hasDependencies() || !club.someoneice.humangunner.GunSupport.get().isGun(gun)
-                || human.isVisuallySwimming() || human.isFallFlying()) {
+        PlayerAnimatorModelBridge.bind(model, null);
+        if (!canAnimate(human)) {
             STATES.remove(human);
             return;
         }
-
-        Api resolved = resolveApi();
-        if (resolved == null) return;
+        State state = STATES.get(human);
+        if (state == null || discontinuous(state, human)
+                || state.model == null || state.model.get() != model) {
+            state = new State();
+            state.lastTick = human.tickCount;
+            state.model = new WeakReference<>(model);
+            STATES.put(human, state);
+        }
+        state.lastGameTime = human.level().getGameTime();
+        state.x = human.getX();
+        state.y = human.getY();
+        state.z = human.getZ();
         try {
-            Object display = ((Optional<?>) resolved.getGunDisplay.invoke(null, gun)).orElse(null);
-            if (!hasAnimationAsset(resolved, display)) {
-                STATES.remove(human);
-                return;
+            TaczNativeAnimation.Sample sample = TaczNativeAnimation.sample(human);
+            boolean fired = TaczAnimationPolicy.cooldownStarted(state.lastShootCooldown, sample.shootCooldown());
+            state.lastShootCooldown = sample.shootCooldown();
+            if (fired) state.firedTick = human.tickCount;
+            boolean reloadStarted = sample.reloading() && !state.wasReloading;
+            if (reloadStarted) state.reloadStart = human.tickCount;
+            state.wasReloading = sample.reloading();
+            if (!applyKeyframes(state, human, model, ageInTicks, sample, fired, reloadStarted)) {
+                TaczNativeAnimation.apply(human, model, sample, ageInTicks, state.firedTick, state.reloadStart);
+                copyOverlays(model);
             }
-            Object assetId = resolved.getPlayerAnimator3rd.invoke(display);
-            Object assetManager = resolved.getAssetManager.invoke(null);
-
-            State state = STATES.computeIfAbsent(human, ignored -> new State());
-            if (!assetId.equals(state.assetId) || state.stack == null) {
-                initialize(state, resolved, assetId, human.tickCount);
-            }
-
-            Object operator = resolved.fromLivingEntity.invoke(null, human);
-            float aimProgress = ((Number) resolved.getAimingProgress.invoke(operator)).floatValue();
-            boolean aiming = aimProgress > 0.0F;
-            state.aiming = aiming;
-            Object reloadState = resolved.getReloadState.invoke(operator);
-            Object reloadType = reloadState == null ? null : resolved.getReloadType.invoke(reloadState);
-            boolean reloading = reloadType != null
-                    && (Boolean) resolved.isReloading.invoke(reloadType);
-            state.reloading = reloading;
-            long shootCooldown = ((Number) resolved.getShootCooldown.invoke(operator)).longValue();
-            boolean fired = state.lastShootCooldown != Long.MIN_VALUE
-                    && shootCooldown > state.lastShootCooldown + 2L;
-            state.lastShootCooldown = shootCooldown;
-            if (fired) state.firingUntilTick = human.tickCount + 6;
-
-            updateLoop(state, resolved, assetManager, assetId, state.lowerLayer,
-                    Channel.LOWER, selectLowerAnimation(human));
-            updateLoop(state, resolved, assetManager, assetId, state.upperLayer,
-                    Channel.UPPER, selectUpperAnimation(human, aiming));
-            // TaCZ's native path always installs this empty-channel animation;
-            // it carries its Player Animator aim/head adjustment metadata.
-            updateLoop(state, resolved, assetManager, assetId, state.rotationLayer,
-                    Channel.ROTATION, "empty");
-
-            boolean reloadStarted = reloading && !state.wasReloading;
-            state.wasReloading = reloading;
-            if (reloadStarted) {
-                startOneShot(state, resolved, assetManager, assetId, "reload_upper");
-            } else if (fired && !reloading) {
-                startOneShot(state, resolved, assetManager, assetId,
-                        aiming ? "aim_fire_upper" : "normal_fire_upper");
-            }
-
-            tickStack(state, resolved, human.tickCount);
-            if (!hasActiveCustomAnimation(human)) {
-                // Leave the base model available to EMF/CEM packs while the
-                // gunner is merely idle. EMF's pause callback takes over only
-                // during actual aim, reload, or firing actions.
-                PlayerAnimatorModelBridge.bind(model, null);
-                return;
-            }
-            applyParts(state, resolved, model, ageInTicks);
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
-            warnOnce("TaCZ Player Animator layers could not be applied to a Human", exception);
+        } catch (RuntimeException | LinkageError exception) {
+            warnOnce("TaCZ native animation could not be applied to a Human", exception);
             STATES.remove(human);
             PlayerAnimatorModelBridge.bind(model, null);
+        } finally {
+            state.lastTick = human.tickCount;
         }
     }
 
-    private static boolean hasDependencies() {
-        return ModList.get().isLoaded("tacz") && ModList.get().isLoaded("playeranimator");
+    private static boolean applyKeyframes(State state, Human human, HumanoidModel<Human> model,
+                                         float age, TaczNativeAnimation.Sample sample,
+                                         boolean fired, boolean reloadStarted) {
+        if (!ModList.get().isLoaded("playeranimator")) return false;
+        Api resolved = resolveApi();
+        if (resolved == null) return false;
+        try {
+            ItemStack gun = human.getMainHandItem();
+            Object display = ((Optional<?>) resolved.getGunDisplay.invoke(null, gun)).orElse(null);
+            if (!hasAnimationAsset(resolved, display)) {
+                state.stack = null;
+                return false;
+            }
+            Object assetId = resolved.getPlayerAnimator3rd.invoke(display);
+            Object assetManager = resolved.getAssetManager.invoke(null);
+            // A reload may replace the manager or the asset under the same ID.
+            Object sentinel = resolved.getAnimations.invoke(assetManager, assetId, "hold_upper");
+            Object asset = sentinel instanceof Optional<?> optional ? optional.orElse(null) : null;
+            if (!assetId.equals(state.assetId) || state.stack == null || asset != state.assetIdentity) {
+                initialize(state, resolved, assetId, human.tickCount);
+                state.assetIdentity = asset;
+                reloadStarted = sample.reloading();
+            }
+            updateLoop(state, resolved, assetManager, assetId, state.lowerLayer,
+                    Channel.LOWER, selectLowerAnimation(human));
+            updateLoop(state, resolved, assetManager, assetId, state.upperLayer,
+                    Channel.UPPER, selectUpperAnimation(human, sample.aim() > 0.0F));
+            updateLoop(state, resolved, assetManager, assetId, state.rotationLayer,
+                    Channel.ROTATION, "empty");
+            if (reloadStarted) {
+                // Reload preempts an unfinished fire animation.
+                resolved.layerSetAnimation.invoke(state.oneShotLayer, new Object[]{null});
+                startOneShot(state, resolved, assetManager, assetId, "reload_upper");
+            } else if (fired && !sample.reloading()) {
+                startOneShot(state, resolved, assetManager, assetId,
+                        sample.aim() > 0.0F ? "aim_fire_upper" : "normal_fire_upper");
+            }
+            if (!sample.reloading() && state.keyframeReloading) {
+                resolved.layerSetAnimation.invoke(state.oneShotLayer, new Object[]{null});
+            }
+            state.keyframeReloading = sample.reloading();
+            tickStack(state, resolved, human.tickCount);
+            // Programmatic fallback covers unavailable channels/actions. No stale
+            // one-shot may keep EMF paused once the synchronized action has ended.
+            boolean action = sample.actionActive() || recentlyFired(human);
+            boolean missingAction = sample.reloading() && "reload_upper".equals(state.missingOneShotAnimation)
+                    || recentlyFired(human) && (sample.aim() > 0.0F ? "aim_fire_upper" : "normal_fire_upper")
+                            .equals(state.missingOneShotAnimation);
+            if (!action || missingAction || sample.bolting()
+                    || sample.drawCooldown() > 0L || sample.meleeCooldown() > 0L
+                    || state.upperAnimation.isEmpty()) return false;
+            applyParts(state, resolved, model, age);
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            warnOnce("TaCZ Player Animator playback failed; using native model animation", exception);
+            state.stack = null;
+            PlayerAnimatorModelBridge.bind(model, null);
+            return false;
+        }
     }
 
     private static boolean hasAnimationAsset(Api resolved, Object display)
@@ -155,8 +195,7 @@ public final class TaczNpcAnimator {
         state.missingUpperAnimation = "";
         state.missingRotationAnimation = "";
         state.missingOneShotAnimation = "";
-        state.wasReloading = false;
-        state.lastShootCooldown = Long.MIN_VALUE;
+        state.keyframeReloading = false;
         state.lastTick = tickCount;
 
         state.stack = resolved.stackConstructor.newInstance();
@@ -225,19 +264,39 @@ public final class TaczNpcAnimator {
             for (int i = 0; i < Math.min(elapsedTicks, 20); i++) {
                 resolved.stackTick.invoke(state.stack);
             }
-            state.lastTick = tickCount;
         }
+        state.lastTick = tickCount;
     }
 
     private static void applyParts(State state, Api resolved, HumanoidModel<Human> model,
                                    float ageInTicks) throws ReflectiveOperationException {
-        resolved.setTickDelta.invoke(state.applier, ageInTicks - (float) Math.floor(ageInTicks));
-        applyPart(state, resolved, "torso", model.body);
-        applyPart(state, resolved, "head", model.head);
-        applyPart(state, resolved, "rightArm", model.rightArm);
-        applyPart(state, resolved, "leftArm", model.leftArm);
-        applyPart(state, resolved, "rightLeg", model.rightLeg);
-        applyPart(state, resolved, "leftLeg", model.leftLeg);
+        ModelPart[] parts = {model.body, model.head, model.rightArm, model.leftArm, model.rightLeg, model.leftLeg};
+        String[] names = {"torso", "head", "rightArm", "leftArm", "rightLeg", "leftLeg"};
+        PartPose[] poses = new PartPose[parts.length];
+        float[][] scales = new float[parts.length][3];
+        for (int i = 0; i < parts.length; i++) {
+            poses[i] = parts[i].storePose();
+            scales[i] = new float[]{parts[i].xScale, parts[i].yScale, parts[i].zScale};
+        }
+        try {
+            resolved.setTickDelta.invoke(state.applier, ageInTicks - (float) Math.floor(ageInTicks));
+            for (int i = 0; i < parts.length; i++) applyPart(state, resolved, names[i], parts[i]);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            // A failed optional layer must not leave half a keyframe on the
+            // vanilla pose used by the native fallback (especially the legs).
+            for (int i = 0; i < parts.length; i++) {
+                parts[i].loadPose(poses[i]);
+                parts[i].xScale = scales[i][0];
+                parts[i].yScale = scales[i][1];
+                parts[i].zScale = scales[i][2];
+            }
+            throw exception;
+        }
+        copyOverlays(model);
+        PlayerAnimatorModelBridge.bind(model, state.applier);
+    }
+
+    private static void copyOverlays(HumanoidModel<Human> model) {
         model.hat.copyFrom(model.head);
         if (model instanceof PlayerModel<?> playerModel) {
             playerModel.jacket.copyFrom(model.body);
@@ -246,7 +305,6 @@ public final class TaczNpcAnimator {
             playerModel.rightPants.copyFrom(model.rightLeg);
             playerModel.leftPants.copyFrom(model.leftLeg);
         }
-        PlayerAnimatorModelBridge.bind(model, state.applier);
     }
 
     private static void applyPart(State state, Api resolved, String name, ModelPart part)
@@ -326,19 +384,6 @@ public final class TaczNpcAnimator {
                             String.class);
                     getAnimations.setAccessible(true);
 
-                    Class<?> gunOperator = Class.forName("com.tacz.guns.api.entity.IGunOperator", false, loader);
-                    Method fromLivingEntity = gunOperator.getMethod("fromLivingEntity",
-                            Class.forName("net.minecraft.world.entity.LivingEntity", false, loader));
-                    Method getAimingProgress = gunOperator.getMethod("getSynAimingProgress");
-                    Method getReloadState = gunOperator.getMethod("getSynReloadState");
-                    Method getShootCooldown = gunOperator.getMethod("getSynShootCoolDown");
-                    Class<?> reloadStateType = Class.forName(
-                            "com.tacz.guns.api.entity.ReloadState", false, loader);
-                    Method getReloadType = reloadStateType.getMethod("getStateType");
-                    Class<?> reloadEnum = Class.forName(
-                            "com.tacz.guns.api.entity.ReloadState$StateType", false, loader);
-                    Method isReloading = reloadEnum.getMethod("isReloading");
-
                     Class<?> animationType = Class.forName(
                             "dev.kosmx.playerAnim.core.data.KeyframeAnimation", false, loader);
                     Class<?> animationInterface = Class.forName(
@@ -370,8 +415,7 @@ public final class TaczNpcAnimator {
                     Method setTickDelta = applierType.getMethod("setTickDelta", float.class);
                     Method updatePart = applierType.getMethod("updatePart", String.class, ModelPart.class);
                     api = new Api(getGunDisplay, getPlayerAnimator3rd, getAssetManager, containsKey,
-                            getAnimations, fromLivingEntity, getAimingProgress, getReloadState,
-                            getShootCooldown, getReloadType, isReloading, stackConstructor,
+                            getAnimations, stackConstructor,
                             stackAddLayer, stackTick, layerConstructor, layerIsActive,
                             layerSetAnimation, replaceAnimationWithFade, standardFadeIn,
                             inOutSine, playerConstructor, applierConstructor, setTickDelta, updatePart);
@@ -400,15 +444,14 @@ public final class TaczNpcAnimator {
     }
 
     private record Api(Method getGunDisplay, Method getPlayerAnimator3rd, Method getAssetManager,
-                       Method containsKey, Method getAnimations, Method fromLivingEntity,
-                       Method getAimingProgress, Method getReloadState, Method getShootCooldown,
-                       Method getReloadType, Method isReloading, Constructor<?> stackConstructor,
+                       Method containsKey, Method getAnimations, Constructor<?> stackConstructor,
                        Method stackAddLayer, Method stackTick, Constructor<?> layerConstructor,
                        Method layerIsActive, Method layerSetAnimation, Method replaceAnimationWithFade,
                        Method standardFadeIn, Object inOutSine, Constructor<?> playerConstructor,
                        Constructor<?> applierConstructor, Method setTickDelta, Method updatePart) {}
 
     private static final class State {
+        private WeakReference<HumanoidModel<Human>> model;
         private Object assetId;
         private Object stack;
         private Object lowerLayer;
@@ -424,9 +467,12 @@ public final class TaczNpcAnimator {
         private String missingRotationAnimation = "";
         private String missingOneShotAnimation = "";
         private boolean wasReloading;
-        private boolean aiming;
-        private boolean reloading;
-        private int firingUntilTick = Integer.MIN_VALUE;
+        private boolean keyframeReloading;
+        private int firedTick = Integer.MIN_VALUE / 2;
+        private int reloadStart;
+        private long lastGameTime;
+        private double x, y, z;
+        private Object assetIdentity;
         private long lastShootCooldown = Long.MIN_VALUE;
         private int lastTick;
     }

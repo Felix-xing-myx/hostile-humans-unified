@@ -19,6 +19,7 @@ final class HumanPlayerModel extends PlayerModel<Human> {
     private static final double MIN_STEP_DISTANCE_SQR = 0.0004D;
     private static final double MAX_STEP_DISTANCE_SQR = 0.49D;
     private final Map<Human, StanceState> stances = new WeakHashMap<>();
+    private final ModelPart root;
     private float renderStanceYawDegrees;
 
     private static final class StanceState {
@@ -32,6 +33,7 @@ final class HumanPlayerModel extends PlayerModel<Human> {
 
     HumanPlayerModel(ModelPart root) {
         super(root, false);
+        this.root = root;
     }
 
     float updateStance(Human human, float partialTick) {
@@ -93,6 +95,9 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         // Model instances are reused across entities; do not let the previous
         // Human's Player Animator processor leak into this render pass.
         PlayerAnimatorModelBridge.bind(this, null);
+        // Keyframes modify pivots as well as rotations. Vanilla setupAnim does
+        // not restore every pivot/axis, so a reused model needs its rest pose.
+        this.root.getAllParts().forEach(ModelPart::resetPose);
         boolean customMeleeAnimation = BetterCombatNpcAnimator.prepare(human)
                 || BetterCombatNpcAnimator.shouldSuppressVanillaSwing(human);
         float vanillaAttackTime = this.attackTime;
@@ -102,10 +107,8 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         } finally {
             this.attackTime = vanillaAttackTime;
         }
-        // TaCZ's bundled Player Animator assets are not applied by TaCZ to
-        // custom LivingEntity renderers (its built-in bridge is player-only).
-        // Apply the active gun's third-person hold/aim/reload/fire animation
-        // after vanilla has posed the model so it visibly drives the NPC parts.
+        // Prefer optional resource keyframes; native hold/aim and synchronized
+        // procedural actions remain available without Player Animator.
         TaczNpcAnimator.apply(human, this, ageInTicks);
         BetterCombatNpcAnimator.apply(human, this, ageInTicks);
         // Keep the separate skin overlay on the same animated head pose.

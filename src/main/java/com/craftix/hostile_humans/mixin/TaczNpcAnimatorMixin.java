@@ -18,10 +18,10 @@ public abstract class TaczNpcAnimatorMixin {
             require = 0, remap = false)
     private static void hostileHumans$avoidLegacyPoseOnAnimatedNpc(
             LivingEntity entity,
-            ModelPart head,
             ModelPart rightArm,
             ModelPart leftArm,
             ModelPart body,
+            ModelPart head,
             float tickDelta,
             CallbackInfo callback
     ) {
