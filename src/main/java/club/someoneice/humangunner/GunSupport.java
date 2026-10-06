@@ -25,6 +25,7 @@ public interface GunSupport {
     default boolean isBullet(DamageSource source) { return false; }
     default Map<ResourceLocation, String> catalog() { return Map.of(); }
     default ItemStack createLoadedGun(ResourceLocation id) { return ItemStack.EMPTY; }
+    default boolean hasLoadedAmmo(ItemStack gun) { return false; }
     default Goal goal(Human human) { return new Goal() { public boolean canUse() { return false; } }; }
     default Control control(Human human) { return Control.NONE; }
     default void tickIdleReload(Human human) {}
