@@ -412,3 +412,15 @@
 - 回归：配置解析/异常/四阶投射/独立覆盖；硬底线双条件及严格等号、残血双条件、一次概率、多次调用稳定、药水优先、无物品限时试探、真实回血覆盖、失败冷却、明显掉血早退、无受伤样本不批准持续搏斗。均未编译运行；用户本轮未要求构建同步。
 - 待游戏验收：20/60及高外部生命NPC的双硬底线；单个残血敌人与第二名攻击者出现；食物/再生持续时反击及强火力撤退；最后一瓶瞬间治疗喝完扣瓶；Better Combat及弓弩/TaCZ副手进食时动作与恢复切换。未构建/同步/启动游戏/推送，保留原CHANGELOG修改。
 - 最终只读复核与静态检查通过：Java分隔符、默认JSON、旧force/短伤引用、任务diff及用户CHANGELOG原片段哈希核查；自动回归未编译或执行。原critical_health_ratio仅恢复动作使用，独立旧危急比例撤退入口删除。
+
+
+## 2026-10-07 3.6.5 构建与测试实例同步
+
+- 用户授权“构建并同步为3.6.5版本”，主控 /root 在main执行，基线51488d6d52911a4ad58031f7e563d5a533c2467d；版本/更新日志提交5a3f8fc，最终构建源码41a4f582529ca7995d50ace61569fc6d27226f4d。原用户CHANGELOG中3.6.0及后续段落保留未提交，未推送。
+- 纳入已整合的当前五配置布局与旧兼容移除、闲置上岸停滞恢复、短时高伤及独立围攻撤退删除、低血量搏斗与实际恢复试探。默认硬撤退同时要求本人低于15%和25点，弱单目标默认50%搏斗，各阶可配置。
+- 首次完整构建在TierConfigFilesTest失败：预置七旧JSON的用例错误要求目录只有五JSON。262d95e将全新目录五文件和旧目录十二文件分开验证，继续确认旧源字节保留；第二次在UnifiedConfigTest失败：边界测试仍用已移除的旧平铺属性键。41a4f58将该输入改为当前attributes/damage_multipliers结构。均仅测试修正，未恢复旧配置兼容或放宽生产逻辑。
+- Java17及三个显式API路径执行build lootScreeningTest --offline，最终BUILD SUCCESSFUL in 41s，41任务37执行4最新。CombatPressurePolicyTest162、TierConfigFilesTest286、UnifiedConfigTest123、LootScreeningTest13391检查通过，OptionalRuntimeTest无TaCZ/Curios/Maid链接380核心类，其余check任务通过。损坏JSON/元数据等ERROR为预期坏输入回归诊断。
+- 成功日志：维护目录/验证日志/build-3.6.5-20261007-004921.log。JAR manifest确认Implementation-Version为3.6.5，两个mod ID经file.jarVersion使用此版本。
+- 唯一部署目标E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21；备份前及替换前无非Gradle Java进程。备份旧JAR及14配置共15文件并核对每份SHA，备份维护目录/部署备份/20261007-005037-3.6.5-Forge_47.4.21/deployment.json。
+- 目标mods只留hostile-humans-unified-1.20.1-3.6.5.jar；源/目标SHA256均380AF284878549CA93A419DBE2D77B5D49FCF11B6B1A7920A92E6B094DC26B47，原3.6.0 JAR已备份后移除，所有配置部署前后哈希不变。已有旧备份文件保留；启动后新逻辑不会继续创建迁移/导入备份。
+- 未启动游戏、未推送、未同步其它实例。待游戏验收：水中无需受击自动上岸、低血量试探回血与反击/撤退切换、高最大生命的双硬底线、瞬间治疗最后一瓶扣除及BC/TaCZ动作关系；重启后当前五配置重排保留自定义值。
