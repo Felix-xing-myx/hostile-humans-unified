@@ -104,7 +104,7 @@ public final class TaczHumanReloadTransactions {
     public static boolean isPaidReloading(Human human, ShooterDataHolder data) {
         boolean active = data.reloadTimestamp != -1L && data.reloadStateType.isReloading()
                 && PAYMENTS.authorized(data, human.getMainHandItem(), human.level().getGameTime());
-        if (!active) end(data);
+        // Queries must not cancel native state; cleanup belongs to tick/cancel.
         return active;
     }
 

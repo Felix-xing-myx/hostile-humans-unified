@@ -201,6 +201,11 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         ItemStack weapon = mob.getMainHandItem();
         boolean closeDefense = mob instanceof Human human
                 && GunCustody.isCloseDefenseActive(human);
+        if (target != null && mob instanceof Human human && !human.canAttack(target)) {
+            human.setTarget(null);
+            setAiming(false);
+            return;
+        }
         if (target == null || !target.isAlive()
                 || (!isGun(weapon) && !closeDefense)) {
             return;
@@ -436,6 +441,13 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
         if (result == ShootResult.NO_AMMO || result == ShootResult.IS_RELOADING) {
             operator.aim(false);
+            if (result == ShootResult.NO_AMMO && mob instanceof Human human
+                    && (human.isUsingItem() || !HumanAmmo.canReload(human, weapon))) {
+                // Eating/blocking and exhausted reserves are ordinary waiting states.
+                // Repeated draw recovery would reset the gun without fixing either.
+                clearRecoveryTimers(mob);
+                return;
+            }
             IGun gun = IGun.getIGunOrNull(weapon);
             if (gun == null) return;
             String gunId = gun.getGunId(weapon).toString();
@@ -539,6 +551,13 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             return;
         }
         TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).ifPresent(index -> {
+            LivingEntity target = mob.getTarget();
+            HumanGunner.LOGGER.debug(
+                    "TaCZ recovery context npc={} reason={} target={} rounds={} chamber={} usingItem={} reload={} reserves={}",
+                    mob.getUUID(), reason, target == null ? "none" : target.getUUID(),
+                    gun.getCurrentAmmoCount(weapon), gun.hasBulletInBarrel(weapon), mob.isUsingItem(),
+                    operator.getDataHolder().reloadStateType,
+                    mob instanceof Human human ? HumanAmmo.magazineCount(human) : -1);
             operator.cancelReload();
             // Recovery only clears stalled operator state. Native bolting must
             // move a real magazine round into the chamber; recovery never adds

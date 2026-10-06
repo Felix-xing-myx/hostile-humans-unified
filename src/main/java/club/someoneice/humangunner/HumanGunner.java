@@ -220,6 +220,11 @@ public final class HumanGunner {
             if (HumanInventorySession.isEditing(human)) {
                 return;
             }
+            // Ownership can change while an already-running goal retains its target.
+            LivingEntity currentTarget = human.getTarget();
+            if (currentTarget != null && !canControlledHumanAttack(human, currentTarget)) {
+                human.setTarget(null);
+            }
             EquipmentBreakSounds.tick(human);
             SoldierOrder.tick(human);
             // The external Hostile Humans index can lag an entity's owner

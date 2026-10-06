@@ -61,6 +61,32 @@ public final class GunCombatPolicyTest {
             check(aliveChecks >= 2, "guard rejects dead remembered attacker " + entry);
         }
         check(calls(MOD + "GuardCombatTargetGoal", "stop", "setTarget"), "dead guard target cleared for reacquisition");
+        check(calls(HUMAN, "setTarget", "canControlledHumanAttack"), "target assignment rejects controlled allies");
+        check(calls(MOD + "HumanGunner", "onLivingTick", "canControlledHumanAttack"),
+                "ownership changes invalidate already assigned friendly targets");
+        for (String entry : new String[]{"canContinueToUse", "tick"})
+            check(calls(MOD + "AdaptiveCombatGoal", entry, "isValidThreat"), "cached tactical threat revalidated: " + entry);
+        check(calls(MOD + "GunnerGoal", "tick", "canAttack"), "live gun tick rechecks attack permission");
+        check(index(method(MOD + "GunnerGoal", "handleShootResult"), "isUsingItem")
+                < index(method(MOD + "GunnerGoal", "handleShootResult"), "reload"),
+                "ordinary item-use wait is checked before reload attempts");
+        check(!calls(MOD + "TaczHumanReloadTransactions", "isPaidReloading", "end"),
+                "reload-state queries never cancel native reload state");
+        String mixin = MOD + "mixin/TaczHumanReloadMixin";
+        MethodNode publish = method(mixin, "humanGunner$paidStart");
+        check(index(publish, "start") < index(publish, "sendToTrackingEntity"),
+                "native NPC reload notification follows successful authorization");
+        boolean successGuard = false;
+        for (var instruction : publish.instructions) {
+            if (instruction instanceof MethodInsnNode call && call.name.equals("sendToTrackingEntity")) break;
+            if (instruction.getOpcode() == org.objectweb.asm.Opcodes.IFEQ) successGuard = true;
+        }
+        check(successGuard, "failed NPC start cannot publish a reload notification");
+        check(calls(mixin, "humanGunner$discardFinishedPayment", "isUsingItem")
+                && calls(mixin, "humanGunner$discardFinishedPayment", "canReload"),
+                "preflight rejects item use and insufficient reserves before native notifications");
+        check(calls(mixin, "humanGunner$deferReloadNotification", "sendToTrackingEntity"),
+                "non-Human native notification forwarding remains present");
         System.out.println("GunCombatPolicyTest: " + checks + " checks passed");
     }
 

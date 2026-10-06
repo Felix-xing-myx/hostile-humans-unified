@@ -1,6 +1,10 @@
 package club.someoneice.humangunner.mixin;
 
 import club.someoneice.humangunner.TaczHumanReloadTransactions;
+import club.someoneice.humangunner.HumanAmmo;
+import com.tacz.guns.network.NetworkHandler;
+import com.tacz.guns.network.message.event.ServerMessageGunReload;
+import net.minecraft.world.entity.Entity;
 import com.craftix.hostile_humans.entity.entities.Human;
 import com.tacz.guns.api.entity.ReloadState;
 import com.tacz.guns.api.entity.IGunOperator;
@@ -33,6 +37,11 @@ public abstract class TaczHumanReloadMixin {
                 server.execute(() -> {
                     if (human.isAlive()) IGunOperator.fromLivingEntity(human).reload();
                 });
+                ci.cancel();
+                return;
+            }
+            if (human.isUsingItem() || (!data.reloadStateType.isReloading()
+                    && !HumanAmmo.canReload(human, human.getMainHandItem()))) {
                 ci.cancel();
                 return;
             }
@@ -70,7 +79,19 @@ public abstract class TaczHumanReloadMixin {
             "Lcom/tacz/guns/api/item/gun/AbstractGunItem;startReload(Lcom/tacz/guns/entity/shooter/ShooterDataHolder;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z"), require = 1)
     private boolean humanGunner$paidStart(AbstractGunItem gun, ShooterDataHolder holder,
                                          ItemStack weapon, LivingEntity entity) {
-        return TaczHumanReloadTransactions.start(gun, holder, weapon, entity);
+        boolean started = TaczHumanReloadTransactions.start(gun, holder, weapon, entity);
+        if (started && entity instanceof Human) {
+            // Native TaCZ sends this before startReload. NPC authorization may
+            // refuse the cycle, so publish animation/sound only after success.
+            NetworkHandler.sendToTrackingEntity(new ServerMessageGunReload(entity.getId(), weapon), entity);
+        }
+        return started;
+    }
+
+    @Redirect(method = "lambda$reload$0", at = @At(value = "INVOKE", target =
+            "Lcom/tacz/guns/network/NetworkHandler;sendToTrackingEntity(Ljava/lang/Object;Lnet/minecraft/world/entity/Entity;)V"), require = 1)
+    private void humanGunner$deferReloadNotification(Object message, Entity entity) {
+        if (!(shooter instanceof Human)) NetworkHandler.sendToTrackingEntity(message, entity);
     }
 
     @Redirect(method = "tickReloadState", at = @At(value = "INVOKE", target =

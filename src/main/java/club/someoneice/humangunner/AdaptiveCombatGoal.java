@@ -287,7 +287,7 @@ public final class AdaptiveCombatGoal extends Goal {
             BodyguardProtection.update(human);
             if (BodyguardProtection.protectingFromExplosion(human, BodyguardProtection.threat(human))) return false;
         }
-        if (threat == null || !threat.isAlive() || !human.isAlive()) {
+        if (!isValidThreat(threat) || !human.isAlive()) {
             return false;
         }
         if ((human.distanceToSqr(threat) > 4096.0D
@@ -443,8 +443,9 @@ public final class AdaptiveCombatGoal extends Goal {
     @Override
     public void tick() {
         LivingEntity reevaluated = resolveThreat();
-        if (reevaluated == null && BodyguardProtection.isBodyguard(human)
-                && BodyguardProtection.owner(human) != null) {
+        if (reevaluated == null && (!isValidThreat(threat)
+                || (BodyguardProtection.isBodyguard(human)
+                && BodyguardProtection.owner(human) != null))) {
             phaseTicks = 0;
             return;
         }

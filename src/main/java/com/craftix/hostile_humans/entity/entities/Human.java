@@ -1375,7 +1375,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 .preferredAttack(this, livingEntity);
         if (livingEntity != null && this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL)
             livingEntity = null;
-        if (livingEntity != null && !club.someoneice.humangunner.SoldierOrder.allowsTarget(this, livingEntity))
+        if (livingEntity != null && (!club.someoneice.humangunner.SoldierOrder.allowsTarget(this, livingEntity)
+                || !HumanGunner.canControlledHumanAttack(this, livingEntity)))
             livingEntity = null;
         LivingEntity previous = getTarget();
         if (club.someoneice.humangunner.SoldierOrder.get(this)
