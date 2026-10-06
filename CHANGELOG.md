@@ -2,6 +2,8 @@
 
 ## 未发布 / Unreleased
 
+## 3.6.5 — 2026-10-07
+
 - 新增分阶低血量搏斗策略：唯一对手同时低于30%生命和30点时默认50%收尾搏斗；其余无即时治疗时限时试探，根据实际回血/受伤决定续战，失败冷却并防止30%附近重抽。自身同时低于15%和25点才硬撤退；瞬间治疗会话优先，拆除强制撤退永久写死逃跑概率，并恢复低血返战目标。
 
 - 修复闲置水中浮沉/绕圈被误认为上岸进展、寻路失败旧路径阻塞直接岸边移动及短暂丢失上岸状态；卡住后限频重选岸边，保留有效备用方向。删除短时高伤与独立围攻撤退触发，只保留低血量战斗撤退及环境避险。
@@ -13,19 +15,19 @@
 ### 简体中文
 
 - 将沉浸式盔甲默认套装改为与斯巴达装备共用全局自动导入开关，安装且四部位注册后首次追加，支持分阶automatic_immersive_armors和导入回执；保留既有套装、自定义权重及空池。新基础池不再预置联动套装，原分阶范围/套装权重不变。
-- 增加默认开启的全局equipment_integration.auto_import_enabled，关闭时启动不导入或改写装备池；开启时首次追加可用斯巴达武器/盾牌，保留玩家自定义条目、权重、空池和导入记录。全局开关在新建、已有分阶和迁移路径统一生效，已导入条目不因关闭被删除。
-- 修复斯巴达武器/盾牌默认联动仅首次无旧配置时导入，分阶配置生成过早或迁移后不再重试的问题；注册表就绪后一次补入未导入的默认装备池并备份原文件，保留自定义/空池、关闭开关和已完成导入记录。
+- 增加默认开启的全局equipment_integration.auto_import_enabled，关闭时启动不导入或改写装备池；开启时首次追加可用斯巴达武器/盾牌，保留玩家自定义条目、权重、空池和导入记录。全局开关在新建和已有分阶配置中统一生效，已导入条目不因关闭被删除。
+- 修复斯巴达武器/盾牌默认联动仅首次无旧配置时导入，分阶配置生成过早后不再重试的问题；注册表就绪后一次补入未导入的默认装备池，保留自定义/空池、关闭开关和已完成导入记录。
 - 修复雇佣后旧友军目标残留于选敌与退避缓存；持枪攻击实时重查权限。换弹等待进食/举盾或缺弹匣时不反复重置拔枪；仅原生换弹成功且弹匣付费通过后通知客户端播放动作和音效，失败尝试不循环播开头，状态查询不取消原生换弹。
 - 实际生命严格低于30%且有可用瞬间治疗药水时，优先喝药而非食物；战斗/闲置与退避共用库存托管，食物待回血不遮蔽急救阈值，未完成进食可安全中断归还。瞬间治疗饮用超过20 tick时缩为20 tick，已更快的药水不延长，原扣瓶与效果逻辑保留。
 - 新增默认关闭的全局原版模式：所有人类含雇佣士兵基础生命20、基础近战1，取消本模组近战额外倍率，保留武器/附魔/效果及外部生命修饰；切换保存受伤比例和原有阶级生命。新增贴身保护移动命令，约2–4格护卫、最多12格追击、主人近处新威胁优先返回，远程可在身边反击，沿用现有盾牌/攻击/弹药/生存导航。新增许可攻击模式，只对自卫、主人受攻击或主人主动攻击的已授权目标出伤；被动贴身保护可提前挡护，主人实际受伤后反击且保留自卫。旧命令序号保留，双界面与网络协议同步更新。
 - 修复人类喝完药水未扣除的问题，保留玻璃瓶与副手归还；已有再生效果时不重复饮用含再生药水。再生I/II按本阶食物回血间隔额外恢复1/2点生命，可与食物及原版再生叠加，效果结束即停止。
 - 自动拾取保留三个食物槽位及最后一份恢复药品、必要备用近战与各部位护甲，食物不足时留空位，按数量与品质保留较充足的食物，同类更好物品可升级。枪手优先弹匣、弓弩手优先通用箭矢、近战两者同等；临时换武器不改变原武器需求。远程近身防卫至少手持近战40 tick，等待挥击/Better Combat收招后才自动回远程，近身威胁持续时可多次反击；手动管理装备仍立即生效。
 - 禁止主手持 TaCZ 枪械时执行原生或 Better Combat 近战、反击及延迟出伤，空枪同样适用；切换主手近战武器后恢复。修复玩家目标和驻守记忆保留死亡目标，枪手击杀后短时跳过随机重搜等待。同一把枪跨目标及 Goal 重启不重复掏枪，保留原生射速、换弹与有限弹药规则。
-- 整理新生成的五份配置：全局不再遗留只有说明的阶级/装备/解锁区域，相关说明移至阶级文件。四阶采用统一分区顺序，配置值前增加双语用途、单位与范围说明，补齐弹药、药水、枪械和雇佣参数；配置数值、物品池及游戏逻辑不变，已有文件不自动改写。
+- 整理新生成的五份配置：全局不再遗留只有说明的阶级/装备/解锁区域，相关说明移至阶级文件。四阶采用统一分区顺序，配置值前增加双语用途、单位与范围说明，补齐弹药、药水、枪械和雇佣参数；配置数值、物品池及游戏逻辑不变，现有有效文件仅重排字段，保留自定义值。
 - 加快雇佣士兵闲置跟随并加入距离迟滞与有界路径更新；按阶配置普通/追赶倍率。主人下线仅将跟随改为当前位置区域驻守，保留其它指令和攻击模式。外部存档不再因主人离线或跨维度漏存主人UUID；离线真实死亡持久记录原因和地点，上线提示，卸载与丢弃不报死亡。
 - 弹匣简洁贴图增加两条压槽。四阶配置新增potions：独立设置出生恢复/战术药水池、瓶数范围及迅捷药水概率，支持已注册模组药水；空池不补默认药水，原药水发放硬编码移除。
 - 简化通用弹匣贴图轮廓与高光；人类箭矢改名通用箭矢（物品ID不变）。箭矢和弹匣拾取评分提升至160，瞬间治疗药水降至55，高于面包、低于牛排和金胡萝卜等高品质食物。
-- 配置重组为全局及四阶独立JSON；属性、装备、战斗AI、枪械概率、雇佣条件和出生弹药按阶设置。迁移旧JSON与TOML前保留备份；全局弹药消耗默认开启，关闭后弓弩和枪械换弹不要求或扣除库存。
+- 配置重组为全局及四阶独立JSON；属性、装备、战斗AI、枪械概率、雇佣条件和出生弹药按阶设置。仅读取当前五份JSON，不再迁移旧JSON或TOML；全局弹药消耗默认开启，关闭后弓弩和枪械换弹不要求或扣除库存。
 - 人类箭矢与通用弹匣使用专属32×32透明像素贴图；新增工作台无序配方：4支原版箭、1根木棍、1根羽毛合成32支人类箭矢，3份火药和2个铁锭合成2个通用弹匣。弹匣配方仅在安装TaCZ时加载。
 - 闲置换弹仅在弹匣余量严格低于容量25%时触发，战斗中必须打空（包括膛内剩余子弹）才开始换弹。统一入口再次检查阈值，避免旁路调用提前收费。
 - 远程人类改为有限弹药：弓弩统一消耗64堆叠的人类箭矢，每次成功射击／齐射扣1；TaCZ 使用24堆叠的通用弹匣，每次有效启动换弹按手枪／冲锋枪1、步枪／霰弹枪2、狙击枪3、机枪4、重型武器5扣除。原生逐发装填按完整换弹周期收费，库存供弹枪也使用有限弹仓；取消、切枪和卡顿恢复不能无偿补满。
@@ -41,11 +43,11 @@
 - Charge one potion after successful NPC drinking and preserve bottle/offhand custody; do not redrink regeneration potions while regeneration remains active. Regeneration I/II independently add 1/2 HP per rank food-healing interval, stacking with food and native regeneration only while the effect lasts.
 - Reserve three backpack food slots, one recovery medicine and necessary melee/armor backups during automatic pickups; keep empty space when food is missing and retain substantial stacks by combined quantity/value. Gunners favor magazines, bow/crossbow users favor Universal Arrows, and melee users value both equally, including temporary weapon swaps. Hold close-defense weapons for at least 40 ticks and finish vanilla/Better Combat swings before automatic ranged restoration; continuing threats permit repeated counters, while manual equipment management remains immediate.
 - Block native and Better Combat melee, counters and pending hits while a TaCZ gun occupies the main hand, including empty guns; melee resumes after switching weapons. Reject dead player/remembered guard targets and briefly bypass randomized gunner reacquisition after a kill. Reuse the same gun binding across targets and goal restarts without repeated draws, retaining native fire/reload timing and finite ammunition.
-- Organize newly generated configuration files: move orphan rank/loadout/unlock guidance out of global settings, use consistent rank section ordering, and place bilingual purpose, unit and range help next to fields including ammunition, potions, firearms and hiring. Defaults, pools and gameplay behavior are unchanged; existing files are not rewritten.
+- Organize newly generated configuration files: move orphan rank/loadout/unlock guidance out of global settings, use consistent rank section ordering, and place bilingual purpose, unit and range help next to fields including ammunition, potions, firearms and hiring. Defaults, pools and gameplay behavior are unchanged; existing valid files reorder fields while preserving custom values.
 - Speed up idle hired follow with distance hysteresis and bounded route updates; configure normal/catch-up multipliers by rank. Logout converts only FOLLOW to GUARD at the current position, preserving other orders and combat modes. Save owner UUIDs even when owners are offline or in another dimension. Persist confirmed offline deaths and report causes/locations on login; unloads and discards do not produce death notices.
 - Add two stamped grooves to the magazine icon. Per-rank potions configure recovery/tactical pools, bottle counts and bonus chance, including registered mod potions; empty pools grant none and hardcoded provisioning is removed.
 - Simplify the universal magazine sprite and rename Human Arrow to Universal Arrow without changing its ID. Raise ammo pickup value to 160; lower instant healing to 55, above bread but below steak and golden carrots.
-- Consolidate configuration into global and four rank files, with independent AI and spawn ammunition. Back up and migrate legacy JSON/TOML; the default-on ammunition switch can waive reserves and deductions without bypassing reload timing.
+- Consolidate configuration into global and four rank files, with independent AI and spawn ammunition. Read only the current five JSON files without legacy JSON/TOML migration; the default-on ammunition switch can waive reserves and deductions without bypassing reload timing.
 - Added dedicated 32×32 transparent pixel-art textures and shapeless crafting-table recipes: 4 vanilla arrows, 1 stick and 1 feather produce 32 Human Arrows; 3 gunpowder and 2 iron ingots produce 2 Universal Magazines. The magazine recipe loads only with TaCZ installed.
 - Idle reloads require strictly less than 25% magazine capacity; combat reloads require all loaded rounds, including the chamber, to be spent. The shared accepted reload boundary checks these thresholds before charging supplies.
 - Humans now use finite ammunition: Human Arrows stack to 64 and cost 1 per successful bow shot/crossbow volley; Universal Magazines stack to 24 and cost 1/2/3/4/5 per accepted reload for pistol/SMG, rifle/shotgun, sniper, machine gun and heavy weapons. Manual feeds pay once per cycle; inventory-feed guns use finite internal rounds. Cancellation, weapon changes and stall recovery do not refill ammunition for free.
