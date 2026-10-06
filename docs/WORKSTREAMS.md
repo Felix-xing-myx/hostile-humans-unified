@@ -151,3 +151,10 @@
 - 源/目标SHA-256一致：`3E023411ABCA15E9CDC00EA4DFDE3887CD5AAE288798A09BB50694B91C3ECA50`。旧JAR：`48349D249CA65CA7223B5F14C132BF7A943D1FDE9E73EB4628370EC7CEDFAA16`。
 - 备份及部署清单：`E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261006-150935-tier-config-ammo-Forge_47.4.21\deployment.json`；最终构建日志：维护目录 `验证日志/build-tier-config-20261006-retry3.log`。
 - 实例配置未提前改写；五文件布局于用户下一次启动迁移。待游戏内验收动画重追踪、信标掉落、有限弹药/武器回退、换弹阈值、配方贴图以及分阶配置效果；自动验证不代表游戏行为已验收。
+
+## 弹药贴图、命名与拾取价值：2026-10-06（已开发）
+
+- 基线 `5c38171311d90425b294d1c1191821bb6954eae8`；主控单独实施，不另开Agent或工作树。范围：HumanLootManager、LootScreeningTest、两种语言、弹匣PNG和维护文档；原CHANGELOG未提交部分保留。
+- 内置imagegen编辑旧弹匣，简化大面积明暗、底部绿带和轮廓，System.Drawing最近邻整理32×32RGBA。最终提示词见docs/AMMO_ASSETS.md，模型路径不变。
+- 箭矢中文“通用箭矢”、英文“Universal Arrow”，注册ID humangunner:human_arrow保留；两个弹药物品同走HumanAmmo.isAmmo，评分100→160。瞬间治疗药水115→55（包括同类喷溅/滞留形式）；其它药水、食物公式、堆叠和受保护装备不改。
+- 提取foodValue供生产与回归共用；新增面包<治疗<牛排/金胡萝卜、满背包双向替换回归断言。静态JSON/PNG/评分/差异检查通过，未编译或执行自动测试；未构建、同步或推送。待游戏验收物品远距/背包贴图、显示名及满背包拾取取舍。

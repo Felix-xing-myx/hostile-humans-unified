@@ -44,14 +44,25 @@ public final class LootScreeningTest {
             List<MobEffectInstance> effects = new ArrayList<>();
             for (int i = 0; i < types.size(); i++) if ((mask & (1 << i)) != 0) effects.add(new MobEffectInstance(types.get(i), 200));
             for (boolean splash : new boolean[]{false, true}) {
-                double expected = (mask & 1) != 0 ? 115 : (mask & 2) != 0 ? 108 : (mask & 4) != 0 ? 96
+                double expected = (mask & 1) != 0 ? 55 : (mask & 2) != 0 ? 108 : (mask & 4) != 0 ? 96
                         : (mask & 8) != 0 ? 88 : splash && (mask & 16) != 0 ? 92
                         : splash && (mask & 32) != 0 ? 86 : (mask & 64) != 0 ? 70 : 20;
-                check(HumanLootManager.potionValue(effects, splash) == expected, "single-pass value preserves original effect priority");
+                check(HumanLootManager.potionValue(effects, splash) == expected, "single-pass value preserves adjusted healing priority");
                 Collections.reverse(effects);
                 check(HumanLootManager.potionValue(effects, splash) == expected, "mixed-effect list order cannot change priority");
             }
         }
+        double healing = HumanLootManager.potionValue(List.of(new MobEffectInstance(MobEffects.HEAL, 1)), false);
+        check(healing > HumanLootManager.foodValue(Items.BREAD.getFoodProperties()), "healing beats ordinary bread");
+        check(healing < HumanLootManager.foodValue(Items.COOKED_BEEF.getFoodProperties()), "steak beats single healing potion");
+        check(healing < HumanLootManager.foodValue(Items.GOLDEN_CARROT.getFoodProperties()), "golden carrot beats healing potion");
+        var healingSlot = new HumanLootManager.StorageSummary(1, i -> new ItemStack(Items.POTION),
+                stack -> false, stack -> healing);
+        check(healingSlot.canStore(new ItemStack(Items.COOKED_BEEF, 64), HumanLootManager.foodValue(Items.COOKED_BEEF.getFoodProperties())),
+                "full backpack may replace healing bottle with high quality food");
+        var steakSlot = new HumanLootManager.StorageSummary(1, i -> new ItemStack(Items.COOKED_BEEF, 64),
+                stack -> false, stack -> HumanLootManager.foodValue(Items.COOKED_BEEF.getFoodProperties()));
+        check(!steakSlot.canStore(new ItemStack(Items.POTION), healing), "healing cannot evict high quality food");
         Random random = new Random(84321);
         for (int trial = 0; trial < 200; trial++) {
             List<ItemStack> inventory = new ArrayList<>();
@@ -95,7 +106,7 @@ public final class LootScreeningTest {
                 stack -> true, stack -> { throw new AssertionError("merge should not score protected item"); });
         check(mergeOnly.canStore(new ItemStack(Items.DIRT), 0), "merge into protected stack is still allowed");
         check(!mergeOnly.canStore(new ItemStack(Items.STONE), 1000), "protected item cannot be evicted");
-        System.out.println("LootScreeningTest: 13386 checks passed");
+        System.out.println("LootScreeningTest: 13391 checks passed");
     }
 
     private static void check(boolean condition, String message) {

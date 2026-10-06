@@ -4,6 +4,7 @@
 
 ### 简体中文
 
+- 简化通用弹匣贴图轮廓与高光；人类箭矢改名通用箭矢（物品ID不变）。箭矢和弹匣拾取评分提升至160，瞬间治疗药水降至55，高于面包、低于牛排和金胡萝卜等高品质食物。
 - 配置重组为全局及四阶独立JSON；属性、装备、战斗AI、枪械概率、雇佣条件和出生弹药按阶设置。迁移旧JSON与TOML前保留备份；全局弹药消耗默认开启，关闭后弓弩和枪械换弹不要求或扣除库存。
 - 人类箭矢与通用弹匣使用专属32×32透明像素贴图；新增工作台无序配方：4支原版箭、1根木棍、1根羽毛合成32支人类箭矢，3份火药和2个铁锭合成2个通用弹匣。弹匣配方仅在安装TaCZ时加载。
 - 闲置换弹仅在弹匣余量严格低于容量25%时触发，战斗中必须打空（包括膛内剩余子弹）才开始换弹。统一入口再次检查阈值，避免旁路调用提前收费。
@@ -16,6 +17,7 @@
 
 ### English
 
+- Simplify the universal magazine sprite and rename Human Arrow to Universal Arrow without changing its ID. Raise ammo pickup value to 160; lower instant healing to 55, above bread but below steak and golden carrots.
 - Consolidate configuration into global and four rank files, with independent AI and spawn ammunition. Back up and migrate legacy JSON/TOML; the default-on ammunition switch can waive reserves and deductions without bypassing reload timing.
 - Added dedicated 32×32 transparent pixel-art textures and shapeless crafting-table recipes: 4 vanilla arrows, 1 stick and 1 feather produce 32 Human Arrows; 3 gunpowder and 2 iron ingots produce 2 Universal Magazines. The magazine recipe loads only with TaCZ installed.
 - Idle reloads require strictly less than 25% magazine capacity; combat reloads require all loaded rounds, including the chamber, to be spent. The shared accepted reload boundary checks these thresholds before charging supplies.

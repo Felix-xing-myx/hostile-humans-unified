@@ -1,10 +1,9 @@
 {
-  "item.humangunner.human_arrow": "人类箭矢",
+  "item.humangunner.human_arrow": "通用箭矢",
   "item.humangunner.human_magazine": "通用弹匣",
   "item.humangunner.human_ammo.tooltip": "放入人类库存补给；仅供人类使用",
   "item.humangunner.human_arrow.tooltip": "每次弓射击或弩齐射消耗 1 支",
   "item.humangunner.human_magazine.tooltip": "换弹消耗：手枪/冲锋枪 1，步枪/霰弹枪 2，狙击枪 3，机枪 4，重型武器 5",
-
   "dialogue.humangunner.critical_health": "警告：我的生命值降到了 %s%%！",
   "message.humangunner.soldier.reports_merged": "；另有 %s 条士兵状态报告已合并。",
   "item.humangunner.roamer_identity_badge": "初级身份牌",

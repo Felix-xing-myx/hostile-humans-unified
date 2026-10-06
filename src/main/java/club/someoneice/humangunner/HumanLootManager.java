@@ -417,7 +417,7 @@ public final class HumanLootManager {
 
     private static double inventoryValue(Human human, ItemStack stack) {
         if (HumanAmmo.isAmmo(stack)) {
-            return 100.0D;
+            return 160.0D;
         }
         if (stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
             return 150.0D;
@@ -435,7 +435,7 @@ public final class HumanLootManager {
             FoodProperties food = stack.getFoodProperties(human);
             return food == null
                     ? 90.0D
-                    : 28.0D + food.getNutrition() * 4.0D + food.getSaturationModifier() * 10.0D;
+                    : foodValue(food);
         }
         if (isEquipment(stack)) {
             return 35.0D + equipmentScore(stack, preferredEquipmentSlot(stack));
@@ -443,11 +443,15 @@ public final class HumanLootManager {
         return 0.0D;
     }
 
+    static double foodValue(FoodProperties food) {
+        return 28.0D + food.getNutrition() * 4.0D + food.getSaturationModifier() * 10.0D;
+    }
+
     static double potionValue(List<net.minecraft.world.effect.MobEffectInstance> effects, boolean splash) {
         int present = 0;
         for (var instance : effects) {
             var effect = instance.getEffect();
-            if (effect == MobEffects.HEAL) return 115.0D;
+            if (effect == MobEffects.HEAL) return 55.0D;
             if (effect == MobEffects.REGENERATION) present |= 1;
             else if (effect == MobEffects.DAMAGE_BOOST) present |= 2;
             else if (effect == MobEffects.MOVEMENT_SPEED) present |= 4;
