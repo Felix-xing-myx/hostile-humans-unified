@@ -87,6 +87,7 @@ public final class HumanSignalItem extends Item {
                 human.getPersistentData().putBoolean(HumanRelations.NO_DROPS, true);
                 human.setTarget(null);
             } else {
+                human.getPersistentData().putBoolean(HumanRelations.HOSTILE_BEACON_ORIGIN, true);
                 human.getPersistentData().putUUID(HumanRelations.FORCED_HOSTILE_TARGET, player.getUUID());
                 human.setTarget(player);
             }

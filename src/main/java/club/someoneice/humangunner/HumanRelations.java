@@ -28,6 +28,7 @@ public final class HumanRelations {
     static final String TEMP_UNTIL = "humangunner:temporary_until";
     static final String NO_DROPS = "humangunner:no_equipment_drops";
     static final String FORCED_HOSTILE_TARGET = "humangunner:forced_hostile_target";
+    static final String HOSTILE_BEACON_ORIGIN = "humangunner:hostile_beacon_origin";
     private static final String GUARD_TARGET = "humangunner:guard_target";
     private static final String GUARD_UNTIL = "humangunner:guard_until";
     private static final double BADGE_GUARD_RADIUS_SQR = 48.0D * 48.0D;
@@ -144,6 +145,12 @@ public final class HumanRelations {
     public static boolean isForcedHostileTo(Human human, Player player) {
         return human.getPersistentData().hasUUID(FORCED_HOSTILE_TARGET)
                 && human.getPersistentData().getUUID(FORCED_HOSTILE_TARGET).equals(player.getUUID());
+    }
+
+    /** Persists independently of the temporary target so old beacon waves remain identifiable after hiring. */
+    static boolean isHostileBeaconOrigin(Human human) {
+        return human.getPersistentData().getBoolean(HOSTILE_BEACON_ORIGIN)
+                || human.getPersistentData().hasUUID(FORCED_HOSTILE_TARGET);
     }
 
     private static boolean beaconThreatensOwner(Human wild, UUID owner) {

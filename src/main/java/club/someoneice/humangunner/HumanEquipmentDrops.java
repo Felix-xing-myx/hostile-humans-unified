@@ -6,6 +6,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,7 +22,7 @@ import java.util.WeakHashMap;
 final class HumanEquipmentDrops {
     private static final double EQUIPMENT_DROP_CHANCE = 0.05D;
     private static final double SUPPLY_DROP_CHANCE = 0.20D;
-    private record DeathInventory(List<ItemStack> stacks, boolean hired) {}
+    private record DeathInventory(List<ItemStack> stacks, boolean hired, boolean hostileBeacon) {}
     private static final Map<Human, DeathInventory> PRE_DEATH_SNAPSHOTS =
             Collections.synchronizedMap(new WeakHashMap<>());
 
@@ -30,7 +31,9 @@ final class HumanEquipmentDrops {
 
     /** Capture ownership before the base mod mutates and clears equipment. */
     static void captureBeforeDeath(Human human) {
-        PRE_DEATH_SNAPSHOTS.put(human, new DeathInventory(collectOwned(human), human.hasOwner()));
+        boolean hired = human.hasOwner();
+        PRE_DEATH_SNAPSHOTS.put(human, new DeathInventory(collectOwned(human), hired,
+                !hired && HumanRelations.isHostileBeaconOrigin(human)));
         // The entity is committed to death at this point (totem cancellation
         // has already returned). Suppress the base equipment-roll producer as
         // a first line of defence; LivingDrops cleanup below is still required
@@ -47,7 +50,9 @@ final class HumanEquipmentDrops {
         DeathInventory snapshot = PRE_DEATH_SNAPSHOTS.remove(human);
         if (snapshot == null) {
             // Defensive fallback for non-standard death paths.
-            snapshot = new DeathInventory(collectOwned(human), human.hasOwner());
+            boolean hired = human.hasOwner();
+            snapshot = new DeathInventory(collectOwned(human), hired,
+                    !hired && HumanRelations.isHostileBeaconOrigin(human));
         }
         List<ItemStack> owned = snapshot.stacks();
 
@@ -59,7 +64,15 @@ final class HumanEquipmentDrops {
         drops.removeIf(drop -> matchesOwnedDrop(drop.getItem(), ownedSnapshot));
 
         for (ItemStack stack : owned) {
+            if (snapshot.hostileBeacon() && stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
+                continue;
+            }
             double chance = dropChance(stack, gunDropChance);
+            // Wild supply rolls already retain 20% per item. Beacon food gets
+            // an independent second 20% roll, for 4% expected of the original.
+            if (snapshot.hostileBeacon() && isFood(stack, human)) {
+                chance *= 0.20D;
+            }
             int kept = snapshot.hired() ? stack.getCount() : 0;
             if (!snapshot.hired()) {
                 for (int unit = 0; unit < stack.getCount(); unit++) {
@@ -122,6 +135,10 @@ final class HumanEquipmentDrops {
             return gunDropChance;
         }
         return isControlledEquipment(stack) ? EQUIPMENT_DROP_CHANCE : SUPPLY_DROP_CHANCE;
+    }
+
+    private static boolean isFood(ItemStack stack, Human human) {
+        return !stack.isEmpty() && stack.isEdible() && stack.getFoodProperties(human) != null;
     }
 
     private static boolean isControlledEquipment(ItemStack stack) {
