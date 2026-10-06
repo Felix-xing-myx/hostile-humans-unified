@@ -1408,10 +1408,16 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     protected void completeUsingItem() {
-        boolean strongHealing = club.someoneice.humangunner.RecoverySupplies.isStrongInstantHealingPotion(getUseItem());
+        InteractionHand hand = getUsedItemHand();
+        ItemStack before = getUseItem().copy();
+        boolean completing = isUsingItem() && !before.isEmpty() && getUseItem() == getItemInHand(hand);
+        boolean strongHealing = club.someoneice.humangunner.RecoverySupplies.isStrongInstantHealingPotion(before);
         try {
             super.completeUsingItem();
-            if (strongHealing && !level().isClientSide) heal(12.0F);
+            if (completing && !isUsingItem() && !level().isClientSide) {
+                club.someoneice.humangunner.RecoverySupplies.consumeCompletedPotion(this, hand, before);
+                if (strongHealing) heal(12.0F);
+            }
         } finally {
             clearUseSpeedPenalty();
         }

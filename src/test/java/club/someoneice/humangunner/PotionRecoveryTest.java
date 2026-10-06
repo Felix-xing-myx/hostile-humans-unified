@@ -1,0 +1,66 @@
+package club.someoneice.humangunner;
+
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+
+/** Regression cases for non-player consumption, expiry and independent regeneration cadence. */
+public final class PotionRecoveryTest {
+    private static int checks;
+    public static void main(String[] args) throws Exception {
+        check(PotionRecoveryPolicy.needsPotionCharge(true, 1, 1), "vanilla NPC potion needs one charge");
+        check(PotionRecoveryPolicy.needsPotionCharge(true, 4, 4), "modded stacked potion needs one charge");
+        check(!PotionRecoveryPolicy.needsPotionCharge(true, 4, 3), "already consumed stack is not charged twice");
+        check(!PotionRecoveryPolicy.needsPotionCharge(false, 1, 1), "custom finish result is preserved");
+        check(!PotionRecoveryPolicy.needsPotionCharge(false, 1, 0), "returned empty bottle is preserved");
+        check(!PotionRecoveryPolicy.needsPotionCharge(true, 0, 0), "empty use is not charged");
+        check(PotionRecoveryPolicy.regenerationActive(1), "last live buff tick still blocks redrinking");
+        check(PotionRecoveryPolicy.regenerationActive(-1), "infinite buff still blocks redrinking");
+        check(!PotionRecoveryPolicy.regenerationActive(0), "expired buff permits another potion");
+        check(PotionRecoveryPolicy.regenerationStep(0) == 1.0F, "level one matches food pulse");
+        check(PotionRecoveryPolicy.regenerationStep(1) == 2.0F, "level two doubles food pulse");
+        var clock = new PotionRecoveryPolicy.Clock(100, 10);
+        check(!clock.pulse(109, 10) && clock.pulse(110, 10), "first regeneration waits a food interval");
+        check(!clock.pulse(110, 10), "duplicate tick cannot heal twice");
+        check(!clock.pulse(119, 10) && clock.pulse(120, 10), "independent regular cadence");
+        check(clock.pulse(1000, 10) && !clock.pulse(1000, 10), "unloaded time never catches up with a burst");
+        var restarted = new PotionRecoveryPolicy.Clock(1001, 10);
+        check(!restarted.pulse(1010, 10) && restarted.pulse(1011, 10), "new buff gets a fresh clock");
+        String recovery = "club/someoneice/humangunner/RecoverySupplies";
+        for (String method : new String[] {"hasSupply", "beginInventoryUse", "findUsefulDrinkableBuffSlot", "healingPotionScore"}) {
+            check(callIndex(recovery, method, recovery, "canUsePotionNow") >= 0, "regeneration gate: " + method);
+        }
+        String human = "com/craftix/hostile_humans/entity/entities/Human";
+        int nativeFinish = callIndex(human, "completeUsingItem", "com/craftix/hostile_humans/entity/HumanEntity", "completeUsingItem");
+        check(nativeFinish >= 0 && callIndex(human, "completeUsingItem", recovery, "consumeCompletedPotion") > nativeFinish,
+                "charge follows native completion and effect application");
+        check(callIndex(recovery, "tickRegenerationHealing", recovery, "queueFoodHealing") < 0
+                && callIndex(recovery, "tickRegenerationHealing", null, "getPersistentData") < 0,
+                "regeneration neither queues nor spends food healing");
+        String hook = "club/someoneice/humangunner/HumanGunner";
+        int bonus = callIndex(hook, "onLivingTick", recovery, "tickRegenerationHealing");
+        check(bonus >= 0 && bonus < callIndex(hook, "onLivingTick", null, "isEditing"),
+                "buff continues while owner edits inventory");
+        System.out.println("PotionRecoveryTest: " + checks + " checks passed");
+    }
+
+    private static int callIndex(String owner, String method, String target, String name) throws Exception {
+        ClassNode node = new ClassNode();
+        try (var stream = PotionRecoveryTest.class.getClassLoader().getResourceAsStream(owner + ".class")) {
+            if (stream == null) throw new AssertionError("Missing compiled " + owner);
+            new ClassReader(stream).accept(node, 0);
+        }
+        for (var entry : node.methods) if (entry.name.equals(method)) {
+            int index = 0;
+            for (var instruction : entry.instructions) {
+                if (instruction instanceof MethodInsnNode call && (target == null || call.owner.equals(target)) && call.name.equals(name)) return index;
+                index++;
+            }
+        }
+        return -1;
+    }
+    private static void check(boolean condition, String message) {
+        checks++;
+        if (!condition) throw new AssertionError(message);
+    }
+}

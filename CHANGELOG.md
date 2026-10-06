@@ -4,6 +4,7 @@
 
 ### 简体中文
 
+- 修复人类喝完药水未扣除的问题，保留玻璃瓶与副手归还；已有再生效果时不重复饮用含再生药水。再生I/II按本阶食物回血间隔额外恢复1/2点生命，可与食物及原版再生叠加，效果结束即停止。
 - 自动拾取保留三个食物槽位及最后一份恢复药品、必要备用近战与各部位护甲，食物不足时留空位，按数量与品质保留较充足的食物，同类更好物品可升级。枪手优先弹匣、弓弩手优先通用箭矢、近战两者同等；临时换武器不改变原武器需求。远程近身防卫至少手持近战40 tick，等待挥击/Better Combat收招后才自动回远程，近身威胁持续时可多次反击；手动管理装备仍立即生效。
 - 禁止主手持 TaCZ 枪械时执行原生或 Better Combat 近战、反击及延迟出伤，空枪同样适用；切换主手近战武器后恢复。修复玩家目标和驻守记忆保留死亡目标，枪手击杀后短时跳过随机重搜等待。同一把枪跨目标及 Goal 重启不重复掏枪，保留原生射速、换弹与有限弹药规则。
 - 整理新生成的五份配置：全局不再遗留只有说明的阶级/装备/解锁区域，相关说明移至阶级文件。四阶采用统一分区顺序，配置值前增加双语用途、单位与范围说明，补齐弹药、药水、枪械和雇佣参数；配置数值、物品池及游戏逻辑不变，已有文件不自动改写。
@@ -22,6 +23,7 @@
 
 ### English
 
+- Charge one potion after successful NPC drinking and preserve bottle/offhand custody; do not redrink regeneration potions while regeneration remains active. Regeneration I/II independently add 1/2 HP per rank food-healing interval, stacking with food and native regeneration only while the effect lasts.
 - Reserve three backpack food slots, one recovery medicine and necessary melee/armor backups during automatic pickups; keep empty space when food is missing and retain substantial stacks by combined quantity/value. Gunners favor magazines, bow/crossbow users favor Universal Arrows, and melee users value both equally, including temporary weapon swaps. Hold close-defense weapons for at least 40 ticks and finish vanilla/Better Combat swings before automatic ranged restoration; continuing threats permit repeated counters, while manual equipment management remains immediate.
 - Block native and Better Combat melee, counters and pending hits while a TaCZ gun occupies the main hand, including empty guns; melee resumes after switching weapons. Reject dead player/remembered guard targets and briefly bypass randomized gunner reacquisition after a kill. Reuse the same gun binding across targets and goal restarts without repeated draws, retaining native fire/reload timing and finite ammunition.
 - Organize newly generated configuration files: move orphan rank/loadout/unlock guidance out of global settings, use consistent rank section ordering, and place bilingual purpose, unit and range help next to fields including ammunition, potions, firearms and hiring. Defaults, pools and gameplay behavior are unchanged; existing files are not rewritten.

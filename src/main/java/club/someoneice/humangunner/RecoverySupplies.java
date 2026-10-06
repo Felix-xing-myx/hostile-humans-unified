@@ -48,6 +48,7 @@ public final class RecoverySupplies {
      * from settling the same off-hand stack twice.
      */
     private static final Map<Human, UseSession> ACTIVE_USES = new WeakHashMap<>();
+    private static final Map<Human, PotionRecoveryPolicy.Clock> REGENERATION_CLOCKS = new WeakHashMap<>();
     /**
      * Item completion can publish its final hand remainder after an AI goal has
      * already observed {@code isUsingItem() == false}. Restoring the displaced
@@ -180,7 +181,7 @@ public final class RecoverySupplies {
                 if (allowEnchantedApple) return true;
                 continue;
             }
-            if (stack.is(Items.GOLDEN_APPLE) || isHealingPotion(stack)
+            if (stack.is(Items.GOLDEN_APPLE) || (isHealingPotion(stack) && canUsePotionNow(human, stack))
                     || (allowFood && isRecoveryFood(human, stack))) return true;
         }
         return false;
@@ -314,7 +315,7 @@ public final class RecoverySupplies {
             return null;
         }
         ItemStack supply = data.getInventoryItem(slot).copy();
-        if (supply.isEmpty()) {
+        if (supply.isEmpty() || !canUsePotionNow(human, supply)) {
             return null;
         }
 
@@ -961,6 +962,43 @@ public final class RecoverySupplies {
         }
     }
 
+    /** Extra regeneration never spends or resets the separately queued food healing. */
+    public static void tickRegenerationHealing(Human human) {
+        MobEffectInstance regeneration = human.getEffect(MobEffects.REGENERATION);
+        if (human.level().isClientSide || !human.isAlive() || regeneration == null
+                || !PotionRecoveryPolicy.regenerationActive(regeneration.getDuration())) {
+            REGENERATION_CLOCKS.remove(human);
+            return;
+        }
+        int interval = CombatAiConfig.forHuman(human).gradualHealIntervalTicks();
+        PotionRecoveryPolicy.Clock clock = REGENERATION_CLOCKS.computeIfAbsent(human,
+                ignored -> new PotionRecoveryPolicy.Clock(human.tickCount, interval));
+        if (clock.pulse(human.tickCount, interval) && human.getHealth() < human.getMaxHealth()) {
+            human.heal(PotionRecoveryPolicy.regenerationStep(regeneration.getAmplifier()));
+        }
+    }
+
+    private static boolean canUsePotionNow(Human human, ItemStack stack) {
+        if (!stack.is(Items.POTION)) return true;
+        MobEffectInstance active = human.getEffect(MobEffects.REGENERATION);
+        return active == null || !PotionRecoveryPolicy.regenerationActive(active.getDuration())
+                || PotionUtils.getMobEffects(stack).stream().noneMatch(effect -> effect.getEffect() == MobEffects.REGENERATION);
+    }
+
+    /** Called only after native completion; preserve modded finish results that already consumed the bottle. */
+    public static void consumeCompletedPotion(Human human, InteractionHand hand, ItemStack before) {
+        if (human.level().isClientSide || !before.is(Items.POTION)) return;
+        ItemStack after = human.getItemInHand(hand);
+        if (!PotionRecoveryPolicy.needsPotionCharge(ItemStack.isSameItemSameTags(before, after),
+                before.getCount(), after.getCount())) return;
+        ItemStack remainder = after.copy();
+        remainder.shrink(1);
+        human.setItemInHand(hand, remainder.isEmpty() ? new ItemStack(Items.GLASS_BOTTLE) : remainder);
+        // Standard potions stack to one. If another mod permits more, keep both
+        // the remaining potions and this bottle without evicting recovery gear.
+        if (!remainder.isEmpty()) HumanInventoryCustody.stowOrDrop(human, new ItemStack(Items.GLASS_BOTTLE));
+    }
+
     public static void tickGradualHealing(Human human) {
         float pending = human.getPersistentData().getFloat(PENDING_HEAL);
         if (pending <= 0.0F || !human.isAlive()) {
@@ -1152,7 +1190,7 @@ public final class RecoverySupplies {
         }
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
             ItemStack stack = data.getInventoryItem(i);
-            if (!stack.is(Items.POTION)) {
+            if (!stack.is(Items.POTION) || !canUsePotionNow(human, stack)) {
                 continue;
             }
             for (MobEffectInstance effect : PotionUtils.getMobEffects(stack)) {
@@ -1248,7 +1286,7 @@ public final class RecoverySupplies {
         int bestFoodScore = Integer.MIN_VALUE;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
             ItemStack stack = data.getInventoryItem(i);
-            int potionScore = healingPotionScore(stack);
+            int potionScore = healingPotionScore(human, stack);
             if (potionScore != Integer.MIN_VALUE) {
                 if (potionScore > bestPotionScore) {
                     bestPotion = i;
@@ -1353,8 +1391,8 @@ public final class RecoverySupplies {
                         || effect.getEffect() == MobEffects.WEAKNESS);
     }
 
-    private static int healingPotionScore(ItemStack stack) {
-        if (!stack.is(Items.POTION)) return Integer.MIN_VALUE;
+    private static int healingPotionScore(Human human, ItemStack stack) {
+        if (!stack.is(Items.POTION) || !canUsePotionNow(human, stack)) return Integer.MIN_VALUE;
         int score = 0;
         boolean healing = false;
         for (MobEffectInstance effect : PotionUtils.getMobEffects(stack)) {

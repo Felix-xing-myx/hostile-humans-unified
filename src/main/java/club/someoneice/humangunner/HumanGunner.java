@@ -214,6 +214,7 @@ public final class HumanGunner {
                     }
                 }
             }
+            RecoverySupplies.tickRegenerationHealing(human);
             // The menu is backed directly by HumanData/equipment. While it is
             // open, no AI inventory writer may race the player's slot actions.
             if (HumanInventorySession.isEditing(human)) {
