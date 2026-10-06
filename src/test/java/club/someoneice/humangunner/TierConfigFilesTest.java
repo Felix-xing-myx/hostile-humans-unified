@@ -35,8 +35,8 @@ public final class TierConfigFilesTest {
         check(global.getAsJsonObject("ai").size() == 1 && global.getAsJsonObject("ai").has("enabled"), "global AI has only enabled");
         for (String rank : TierConfigProjection.RANKS) TierConfigProjection.applyTier(global, rank, TierConfigProjection.tier(root, rank));
         check(TierConfigProjection.at(global, "tiers.tier1.ammunition").equals(TierConfigProjection.at(root, "tiers.tier1.ammunition")), "ammunition ranges round trip");
-        check(TierConfigProjection.at(global, "equipment_loadouts.tier1.mainhand").getAsJsonArray().isEmpty(), "custom empty equipment pool preserved");
-        check(TierConfigProjection.at(global, "tacz.tier_gun_type_weights.tier1").getAsJsonObject().isEmpty(), "custom empty firearm weights preserved");
+        check(TierConfigProjection.at(global, "equipment_loadouts.tier1.mainhand").getAsJsonArray().size() == 0, "custom empty equipment pool preserved");
+        check(TierConfigProjection.at(global, "tacz.tier_gun_type_weights.tier1").getAsJsonObject().size() == 0, "custom empty firearm weights preserved");
         check(TierConfigProjection.at(global, "tiers.tier1.extension.amount").getAsInt() == 42, "unknown rank fields preserved");
         check(TierConfigProjection.at(global, "tiers.tier1._custom_note").getAsString().equals("keep"), "custom tier guidance preserved");
         check(!TierConfigProjection.at(global, "tier_ai.tier1").getAsJsonObject().has("enabled"), "rank cannot override global AI toggle");
@@ -96,8 +96,8 @@ public final class TierConfigFilesTest {
             check(migrated.recruitmentCost(2) == null && migrated.recruitmentCost(0).count() == 8, "invalid explicit payment isolated by tier");
             JsonObject tier = read(modules.resolve("tier1.json"));
             check(tier.get("extension_setting").getAsInt() == 42 && tier.get("_说明_自定义").getAsString().equals("保留这段说明"), "unknown fields and custom descriptions on disk");
-            check(tier.getAsJsonObject("equipment_loadout").getAsJsonArray("mainhand").isEmpty(), "empty equipment pool on disk survives migration");
-            check(tier.getAsJsonObject("tacz").getAsJsonObject("gun_type_weights").isEmpty(), "empty gun weights on disk survive migration");
+            check(tier.getAsJsonObject("equipment_loadout").getAsJsonArray("mainhand").size() == 0, "empty equipment pool on disk survives migration");
+            check(tier.getAsJsonObject("tacz").getAsJsonObject("gun_type_weights").size() == 0, "empty gun weights on disk survive migration");
             check(Files.readString(single).equals(bytes) && Files.readString(single.resolveSibling(single.getFileName() + ".pre-tier-layout.bak")).equals(bytes), "single source and exact backup intact");
             checkFiveFiles(directory);
             JsonObject global = read(modules.resolve("global.json"));

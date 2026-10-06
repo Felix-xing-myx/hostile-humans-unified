@@ -46,6 +46,7 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs += ['-Xmaxerrs', '300', '-Xlint:-deprecation', '-Xlint:-removal']
 }
 tasks.withType(JavaExec).configureEach {
+    systemProperty "hhu.projectDir", projectDir.absolutePath
     def isolatedWorkingDir = file("$buildDir/javaexec/${name}")
     workingDir isolatedWorkingDir
     doFirst { isolatedWorkingDir.mkdirs() }

@@ -75,7 +75,7 @@ final class LegacySplitConfigFiles {
                 JsonObject metadata = data.deepCopy();
                 for (String section : module.getValue()) metadata.remove(section);
                 metadata.remove("schema_version");
-                if (!metadata.isEmpty()) TierConfigProjection.put(root, "_legacy_module_metadata." + module.getKey().replace(".json", ""), metadata);
+                if (metadata.size() != 0) TierConfigProjection.put(root, "_legacy_module_metadata." + module.getKey().replace(".json", ""), metadata);
             } catch (Exception invalid) {
                 blocked.addAll(module.getValue());
                 log(file, invalid);

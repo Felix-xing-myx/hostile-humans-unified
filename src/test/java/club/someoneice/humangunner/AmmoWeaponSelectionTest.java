@@ -17,7 +17,7 @@ public final class AmmoWeaponSelectionTest {
         check(exhaustedGun == empty && exhaustedBow == empty,
                 "exhausted ranged weapons cannot win selection even when also classified as melee");
 
-        Path source = Path.of("src/main/java/club/someoneice/humangunner");
+        Path source = Path.of(System.getProperty("hhu.projectDir", ".")).resolve("src/main/java/club/someoneice/humangunner");
         String selection = Files.readString(source.resolve("AmmoWeaponSelection.java"));
         check(selection.contains("GunSupport.get().isReloading(human)"),
                 "paid in-progress reload survives a now-empty magazine inventory");

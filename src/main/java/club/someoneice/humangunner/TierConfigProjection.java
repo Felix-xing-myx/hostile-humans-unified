@@ -84,7 +84,7 @@ final class TierConfigProjection {
             JsonObject extras = object(file, group).deepCopy();
             for (String key : group.equals("tacz") ? List.of("gun_chance", "damage_multiplier", "gun_type_weights")
                     : List.of("max_hired", "payment")) extras.remove(key);
-            if (!extras.isEmpty()) put(root, "_tier_file_metadata." + rank + "." + group, extras);
+            if (extras.size() != 0) put(root, "_tier_file_metadata." + rank + "." + group, extras);
         }
     }
 
@@ -132,6 +132,6 @@ final class TierConfigProjection {
         if (!root.has(key) || !root.get(key).isJsonObject()) return;
         JsonObject group = root.getAsJsonObject(key);
         for (String rank : RANKS) group.remove(rank);
-        if (group.isEmpty()) root.remove(key);
+        if (group.size() == 0) root.remove(key);
     }
 }
