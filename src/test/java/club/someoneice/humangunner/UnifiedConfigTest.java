@@ -227,8 +227,8 @@ public final class UnifiedConfigTest {
         check(HumanGunnerConfig.parse(disabled).humanGunDamageMultiplier() == 2.5, "gun multipliers above one allowed");
 
         JsonObject bad = JsonParser.parseString("""
-                {"tiers":{"roamer":{"health_min":900,"health_max":5,"movement":{"base_speed":"NaN"},
-                 "attack_damage":-30,"incoming_damage_multiplier":10000}},"spawning":{
+                {"tiers":{"roamer":{"attributes":{"health_min":900,"health_max":5,"attack_damage":-30},
+                 "movement":{"base_speed":"NaN"},"damage_multipliers":{"incoming_damage_multiplier":10000}}},"spawning":{
                  "enabled":false,"admission_chance":2,"encounter_cooldown_ticks":-3,"density_divisor":0},
                  "recruitment":{"max_hired_by_tier":{"roamer":-3,"tier3":20000},
                  "allow_hired_pvp_damage":true}}
