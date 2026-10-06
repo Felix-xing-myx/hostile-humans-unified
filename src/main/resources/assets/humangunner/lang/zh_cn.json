@@ -162,5 +162,9 @@
   "dialogue.humangunner.combat.self_defense": "收到，不介入你的战斗，只进行自卫。",
   "message.humangunner.offline_death": "离线期间士兵“%s”死亡：%s（%s，坐标 %s, %s, %s）",
   "message.humangunner.offline_death.unknown": "死亡原因不明",
-  "message.humangunner.offline_death.overflow": "另有 %s 名士兵在你离线期间死亡（详细记录已达保存上限）。"
+  "message.humangunner.offline_death.overflow": "另有 %s 名士兵在你离线期间死亡（详细记录已达保存上限）。",
+  "screen.humangunner.soldier.bodyguard": "贴身保护",
+  "screen.humangunner.soldier.combat.authorized": "许可攻击",
+  "dialogue.humangunner.order.bodyguard": "我会贴身保护你，优先拦截你身边的威胁。",
+  "dialogue.humangunner.combat.authorized": "我不会主动挑起战斗；你攻击或受攻击时，我会协助，自身遇袭也会还击。"
 }

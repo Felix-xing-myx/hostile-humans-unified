@@ -9,7 +9,7 @@ import org.lwjgl.glfw.GLFW;
 
 /** Command panel opened directly on a hired soldier. */
 public final class SoldierCommandScreen extends Screen {
-    private static final int PANEL_WIDTH = 350, PANEL_HEIGHT = 205;
+    private static final int PANEL_WIDTH = 350, PANEL_HEIGHT = 227;
     private static final int PANEL = 0xF0101820, SURFACE = 0xFF202B36;
     private static final int HOVER = 0xFF2A3947, EDGE = 0xFF394653;
     private static final int TEXT = 0xFFE5EAF0, MUTED = 0xFF9DADBB;
@@ -84,7 +84,8 @@ public final class SoldierCommandScreen extends Screen {
                             + order.name().toLowerCase(Locale.ROOT)), movementX, y, 160, 19,
                     hit(mouseX, mouseY, movementX, y, 160, 19), selectedOrder == order, false);
         }
-        SoldierCombatMode[] modes = SoldierCombatMode.values();
+        SoldierCombatMode[] modes = {SoldierCombatMode.ACTIVE, SoldierCombatMode.AUTHORIZED,
+                SoldierCombatMode.PASSIVE_PROTECTION, SoldierCombatMode.SELF_DEFENSE};
         for (int i = 0; i < modes.length; i++) {
             SoldierCombatMode mode = modes[i];
             int y = top + 65 + i * 22;
@@ -94,20 +95,20 @@ public final class SoldierCommandScreen extends Screen {
         }
         drawButton(graphics, Component.translatable(pickupEnabled
                         ? "screen.humangunner.soldier.pickup.enabled"
-                        : "screen.humangunner.soldier.pickup.disabled"), combatX, top + 131, 160, 19,
-                hit(mouseX, mouseY, combatX, top + 131, 160, 19), pickupEnabled, false);
+                        : "screen.humangunner.soldier.pickup.disabled"), combatX, top + 153, 160, 19,
+                hit(mouseX, mouseY, combatX, top + 153, 160, 19), pickupEnabled, false);
         graphics.drawString(font, font.plainSubstrByWidth(
                         Component.translatable("screen.humangunner.soldier.help").getString(),
-                        PANEL_WIDTH - 20), left + 10, top + 159, MUTED, false);
+                        PANEL_WIDTH - 20), left + 10, top + 181, MUTED, false);
         drawButton(graphics, Component.translatable("screen.humangunner.soldier.close"),
-                left + 10, top + 180, 90, 18,
-                hit(mouseX, mouseY, left + 10, top + 180, 90, 18), false, false);
+                left + 10, top + 202, 90, 18,
+                hit(mouseX, mouseY, left + 10, top + 202, 90, 18), false, false);
         boolean confirming = System.currentTimeMillis() < dismissConfirmUntil;
         drawButton(graphics, Component.translatable(confirming
                         ? "screen.humangunner.soldier.dismiss.confirm"
                         : "screen.humangunner.soldier.dismiss"),
-                left + 208, top + 180, 132, 18,
-                hit(mouseX, mouseY, left + 208, top + 180, 132, 18), false, true);
+                left + 208, top + 202, 132, 18,
+                hit(mouseX, mouseY, left + 208, top + 202, 132, 18), false, true);
     }
 
     @Override
@@ -125,7 +126,8 @@ public final class SoldierCommandScreen extends Screen {
                 return true;
             }
         }
-        SoldierCombatMode[] modes = SoldierCombatMode.values();
+        SoldierCombatMode[] modes = {SoldierCombatMode.ACTIVE, SoldierCombatMode.AUTHORIZED,
+                SoldierCombatMode.PASSIVE_PROTECTION, SoldierCombatMode.SELF_DEFENSE};
         for (int i = 0; i < modes.length; i++) {
             if (hit(mouseX, mouseY, combatX, top + 65 + i * 22, 160, 19)) {
                 selectedCombatMode = modes[i];
@@ -133,16 +135,16 @@ public final class SoldierCommandScreen extends Screen {
                 return true;
             }
         }
-        if (hit(mouseX, mouseY, combatX, top + 131, 160, 19)) {
+        if (hit(mouseX, mouseY, combatX, top + 153, 160, 19)) {
             pickupEnabled = !pickupEnabled;
             HumanCommandNetwork.sendPickupPolicy(entityId, pickupEnabled);
             return true;
         }
-        if (hit(mouseX, mouseY, left + 10, top + 180, 90, 18)) {
+        if (hit(mouseX, mouseY, left + 10, top + 202, 90, 18)) {
             onClose();
             return true;
         }
-        if (hit(mouseX, mouseY, left + 208, top + 180, 132, 18)) {
+        if (hit(mouseX, mouseY, left + 208, top + 202, 132, 18)) {
             long now = System.currentTimeMillis();
             if (now < dismissConfirmUntil) {
                 HumanCommandNetwork.sendDismiss(entityId);

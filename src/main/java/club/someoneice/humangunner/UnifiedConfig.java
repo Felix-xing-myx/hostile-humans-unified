@@ -22,6 +22,7 @@ public final class UnifiedConfig {
     private final Map<String, AmmoReserve> ammunition;
     private final Map<String, CombatAiConfig> combatByTier;
     private final boolean ammoConsumptionEnabled;
+    private final boolean vanillaMode;
     private final Map<String, SpawnPotionConfig> spawnPotions;
     public record AmmoReserve(int arrowMin, int arrowMax, int magazineMin, int magazineMax) { }
     public record SoldierMessages(int chatterIntervalTicks, int chatterMaxPerFiveMinutes,
@@ -61,6 +62,7 @@ public final class UnifiedConfig {
     UnifiedConfig(JsonObject configured) {
         JsonObject defaults = defaults();
         root = merge(defaults, configured);
+        vanillaMode = bool(root, "vanilla_mode", false);
         Map<String, ConfiguredEquipmentLoadout> loadouts = new LinkedHashMap<>();
         for (String rank : List.of("roamer", "tier1", "tier2", "tier3")) {
             loadouts.put(rank, ConfiguredEquipmentLoadout.parse(
@@ -225,6 +227,7 @@ public final class UnifiedConfig {
     public Tier tier(String key) { return tiers.getOrDefault(key, tiers.get("roamer")); }
     public AmmoReserve ammoReserve(String rank) { return ammunition.getOrDefault(rank, ammunition.get("roamer")); }
     public boolean ammoConsumptionEnabled() { return ammoConsumptionEnabled; }
+    public boolean vanillaMode() { return vanillaMode; }
     public CombatAiConfig combatAi(String rank) { return combatByTier.getOrDefault(rank, combatByTier.get("roamer")); }
     SpawnPotionConfig spawnPotions(String rank) { return spawnPotions.getOrDefault(rank, spawnPotions.get("roamer")); }
     public double followSpeed(String rank, boolean catchUp) {

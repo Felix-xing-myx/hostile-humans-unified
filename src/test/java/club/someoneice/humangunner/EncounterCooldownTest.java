@@ -117,7 +117,8 @@ public final class EncounterCooldownTest {
                 "support spawns beside owner");
         check(SignalPolicy.minimumDistance(true) == 48 && SignalPolicy.maximumDistance(true) == 60,
                 "hostile signal distance");
-        check(SoldierOrder.values().length == 4, "exactly four soldier orders");
+        check(SoldierOrder.values().length == 5 && SoldierOrder.BODYGUARD.ordinal() == 4,
+                "five soldier orders, old ordinals preserved");
         System.out.println("PASS: per-tier signal cooldowns, support lifetime/distances and soldier orders");
         check(!SpawnSafety.farEnough(96, 0), "96 block boundary excluded");
         check(!SpawnSafety.farEnough(-96, 0), "negative boundary excluded");

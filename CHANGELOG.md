@@ -4,6 +4,7 @@
 
 ### 简体中文
 
+- 新增默认关闭的全局原版模式：所有人类含雇佣士兵基础生命20、基础近战1，取消本模组近战额外倍率，保留武器/附魔/效果及外部生命修饰；切换保存受伤比例和原有阶级生命。新增贴身保护移动命令，约2–4格护卫、最多12格追击、主人近处新威胁优先返回，远程可在身边反击，沿用现有盾牌/攻击/弹药/生存导航。新增许可攻击模式，只对自卫、主人受攻击或主人主动攻击的已授权目标出伤；被动贴身保护可提前挡护，主人实际受伤后反击且保留自卫。旧命令序号保留，双界面与网络协议同步更新。
 - 修复人类喝完药水未扣除的问题，保留玻璃瓶与副手归还；已有再生效果时不重复饮用含再生药水。再生I/II按本阶食物回血间隔额外恢复1/2点生命，可与食物及原版再生叠加，效果结束即停止。
 - 自动拾取保留三个食物槽位及最后一份恢复药品、必要备用近战与各部位护甲，食物不足时留空位，按数量与品质保留较充足的食物，同类更好物品可升级。枪手优先弹匣、弓弩手优先通用箭矢、近战两者同等；临时换武器不改变原武器需求。远程近身防卫至少手持近战40 tick，等待挥击/Better Combat收招后才自动回远程，近身威胁持续时可多次反击；手动管理装备仍立即生效。
 - 禁止主手持 TaCZ 枪械时执行原生或 Better Combat 近战、反击及延迟出伤，空枪同样适用；切换主手近战武器后恢复。修复玩家目标和驻守记忆保留死亡目标，枪手击杀后短时跳过随机重搜等待。同一把枪跨目标及 Goal 重启不重复掏枪，保留原生射速、换弹与有限弹药规则。
@@ -23,6 +24,7 @@
 
 ### English
 
+- Add default-off global vanilla mode: all Humans, including recruits, use 20 base health and 1 base melee damage without mod-specific melee factors, retaining weapon/effect modifiers, injury percentage and saved tier health. Add Close Protection movement with nearby positioning, a 12-block chase leash and owner-centered threat reprioritization; existing shields, ranged attacks, ammo and survival navigation remain authoritative. Add Authorized Attack for self-defense, owner defense and owner-initiated fights only. Passive protection may intercept before damage but attacks after actual owner injury or in self-defense. Preserve old enum ordinals and update both screens and channel protocols.
 - Charge one potion after successful NPC drinking and preserve bottle/offhand custody; do not redrink regeneration potions while regeneration remains active. Regeneration I/II independently add 1/2 HP per rank food-healing interval, stacking with food and native regeneration only while the effect lasts.
 - Reserve three backpack food slots, one recovery medicine and necessary melee/armor backups during automatic pickups; keep empty space when food is missing and retain substantial stacks by combined quantity/value. Gunners favor magazines, bow/crossbow users favor Universal Arrows, and melee users value both equally, including temporary weapon swaps. Hold close-defense weapons for at least 40 ticks and finish vanilla/Better Combat swings before automatic ranged restoration; continuing threats permit repeated counters, while manual equipment management remains immediate.
 - Block native and Better Combat melee, counters and pending hits while a TaCZ gun occupies the main hand, including empty guns; melee resumes after switching weapons. Reject dead player/remembered guard targets and briefly bypass randomized gunner reacquisition after a kill. Reuse the same gun binding across targets and goal restarts without repeated draws, retaining native fire/reload timing and finite ammunition.

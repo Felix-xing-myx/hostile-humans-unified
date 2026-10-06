@@ -1367,6 +1367,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     public void setTarget(@Nullable LivingEntity livingEntity) {
         LivingEntity previous = getTarget();
+        if (club.someoneice.humangunner.SoldierOrder.get(this)
+                == club.someoneice.humangunner.SoldierOrder.BODYGUARD
+                && pendingBetterCombatTarget != null && pendingBetterCombatTarget != livingEntity) {
+            pendingBetterCombatTarget = null;
+            pendingBetterCombatWeapon = ItemStack.EMPTY;
+            pendingBetterCombatUpswingTicks = 0;
+            setNpcBetterCombatAttackAnimation("");
+        }
         if (previous != null && (!previous.isAlive() || previous.isRemoved())
                 && club.someoneice.humangunner.GunSupport.isGunItem(getMainHandItem())) {
             // Two ordinary selector passes, rather than an unbounded idle scan.

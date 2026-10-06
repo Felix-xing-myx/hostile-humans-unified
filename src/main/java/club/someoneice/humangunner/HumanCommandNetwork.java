@@ -15,7 +15,7 @@ import java.util.function.Supplier;
 
 /** Small validated channel for the hired-soldier command screen. */
 public final class HumanCommandNetwork {
-    private static final String PROTOCOL = "5";
+    private static final String PROTOCOL = "6";
     private record Session(java.util.UUID human, int entityId, long expiresAt) {}
     private static final java.util.Map<ServerPlayer, Session> SESSIONS = new java.util.WeakHashMap<>();
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(

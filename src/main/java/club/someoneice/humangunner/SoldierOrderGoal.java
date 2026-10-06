@@ -16,7 +16,9 @@ final class SoldierOrderGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return human.hasOwner() && !human.isFleeing && human.getTarget() == null;
+        return human.hasOwner() && (SoldierOrder.get(human) != SoldierOrder.BODYGUARD
+                || BodyguardProtection.owner(human) == null || SoldierOrder.isReturningFromRetreat(human))
+                && !human.isFleeing && human.getTarget() == null;
     }
 
     @Override

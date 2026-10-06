@@ -18,7 +18,9 @@ public final class TierAttributes {
     public static void apply(Human human) {
         var tier = of(human);
         set(human, Attributes.MOVEMENT_SPEED, tier.baseMovementSpeed());
-        set(human, Attributes.ATTACK_DAMAGE, tier.attackDamage());
+        // Player-like base damage: weapon modifiers, enchantments and effects
+        // are still calculated by the native attack, without a tier bonus.
+        set(human, Attributes.ATTACK_DAMAGE, VanillaModePolicy.attackBase(UnifiedConfig.get().vanillaMode(), tier.attackDamage()));
         set(human, Attributes.ARMOR, tier.armor());
         set(human, Attributes.ARMOR_TOUGHNESS, tier.armorToughness());
         set(human, Attributes.KNOCKBACK_RESISTANCE, tier.knockbackResistance());

@@ -9,6 +9,9 @@ public final class SoldierCombatModeTest {
     private static int checks;
 
     public static void main(String[] args) {
+        check(!SoldierCombatMode.autonomous(SoldierCombatMode.AUTHORIZED), "authorized mode never starts an autonomous fight");
+        for (String cause : new String[] {"SELF", "OWNER_DEFENSE", "OWNER_ASSAULT"})
+            check(SoldierCombatMode.permits(SoldierCombatMode.AUTHORIZED, cause), "authorized mode allows " + cause);
         check(SoldierCombatMode.permits(SoldierCombatMode.ACTIVE, "SELF"),
                 "active mode retaliates for itself");
         check(SoldierCombatMode.permits(SoldierCombatMode.ACTIVE, "OWNER_DEFENSE"),

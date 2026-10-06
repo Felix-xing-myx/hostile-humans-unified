@@ -12,7 +12,7 @@ import org.lwjgl.glfw.GLFW;
 /** Owner roster with a compact, pixel-style interface. Server validates every action. */
 public final class SoldierRosterScreen extends Screen {
     private static final UUID NONE = new UUID(0, 0);
-    private static final int WIDTH = 408, HEIGHT = 226;
+    private static final int WIDTH = 408, HEIGHT = 248;
     private static final int PANEL = 0xF0101820, SURFACE = 0xFF202B36;
     private static final int HOVER = 0xFF2A3947, EDGE = 0xFF394653;
     private static final int TEXT = 0xFFE5EAF0, MUTED = 0xFF9DADBB;
@@ -341,7 +341,8 @@ public final class SoldierRosterScreen extends Screen {
                     lx, by, 190, 19, hit(mx, my, lx, by, 190, 19), loaded,
                     entry.order().equals(order.name()), false);
         }
-        SoldierCombatMode[] modes = SoldierCombatMode.values();
+        SoldierCombatMode[] modes = {SoldierCombatMode.ACTIVE, SoldierCombatMode.AUTHORIZED,
+                SoldierCombatMode.PASSIVE_PROTECTION, SoldierCombatMode.SELF_DEFENSE};
         for (int i = 0; i < modes.length; i++) {
             SoldierCombatMode mode = modes[i];
             int by = y + 86 + i * 22;
@@ -352,16 +353,16 @@ public final class SoldierRosterScreen extends Screen {
         }
         button(graphics, tr(entry.pickup() ? "screen.humangunner.soldier.pickup.enabled"
                         : "screen.humangunner.soldier.pickup.disabled"),
-                rx, y + 152, 190, 19, hit(mx, my, rx, y + 152, 190, 19), loaded, false, false);
-        button(graphics, tr("screen.humangunner.roster.recall_one"), lx, y + 179, 190, 18,
-                hit(mx, my, lx, y + 179, 190, 18), true, false, false);
-        button(graphics, tr("screen.humangunner.roster.refresh"), rx, y + 179, 190, 18,
-                hit(mx, my, rx, y + 179, 190, 18), true, false, false);
-        button(graphics, tr("screen.humangunner.roster.back"), lx, y + 201, 190, 18,
+                rx, y + 174, 190, 19, hit(mx, my, rx, y + 174, 190, 19), loaded, false, false);
+        button(graphics, tr("screen.humangunner.roster.recall_one"), lx, y + 201, 190, 18,
                 hit(mx, my, lx, y + 201, 190, 18), true, false, false);
+        button(graphics, tr("screen.humangunner.roster.refresh"), rx, y + 201, 190, 18,
+                hit(mx, my, rx, y + 201, 190, 18), true, false, false);
+        button(graphics, tr("screen.humangunner.roster.back"), lx, y + 223, 190, 18,
+                hit(mx, my, lx, y + 223, 190, 18), true, false, false);
         button(graphics, tr(System.currentTimeMillis() < dismissConfirmUntil
                         ? "screen.humangunner.roster.confirm" : "screen.humangunner.soldier.dismiss"),
-                rx, y + 201, 190, 18, hit(mx, my, rx, y + 201, 190, 18), true, false, true);
+                rx, y + 223, 190, 18, hit(mx, my, rx, y + 223, 190, 18), true, false, true);
     }
 
     @Override
@@ -470,32 +471,33 @@ public final class SoldierRosterScreen extends Screen {
                     return true;
                 }
             }
-            SoldierCombatMode[] modes = SoldierCombatMode.values();
+            SoldierCombatMode[] modes = {SoldierCombatMode.ACTIVE, SoldierCombatMode.AUTHORIZED,
+                SoldierCombatMode.PASSIVE_PROTECTION, SoldierCombatMode.SELF_DEFENSE};
             for (int i = 0; i < modes.length; i++) {
                 if (hit(mx, my, rx, y + 86 + i * 22, 190, 19)) {
                     SoldierRosterNetwork.request(token, 5, entry.id(), modes[i].ordinal());
                     return true;
                 }
             }
-            if (hit(mx, my, rx, y + 152, 190, 19)) {
+            if (hit(mx, my, rx, y + 174, 190, 19)) {
                 SoldierRosterNetwork.request(token, 6, entry.id(), entry.pickup() ? 0 : 1);
                 return true;
             }
         }
-        if (hit(mx, my, lx, y + 179, 190, 18)) {
+        if (hit(mx, my, lx, y + 201, 190, 18)) {
             SoldierRosterNetwork.request(token, 3, entry.id());
             return true;
         }
-        if (hit(mx, my, rx, y + 179, 190, 18)) {
+        if (hit(mx, my, rx, y + 201, 190, 18)) {
             SoldierRosterNetwork.request(token, 0, NONE);
             return true;
         }
-        if (hit(mx, my, lx, y + 201, 190, 18)) {
+        if (hit(mx, my, lx, y + 223, 190, 18)) {
             detail = false;
             dismissConfirmUntil = 0;
             return true;
         }
-        if (hit(mx, my, rx, y + 201, 190, 18)) {
+        if (hit(mx, my, rx, y + 223, 190, 18)) {
             if (System.currentTimeMillis() < dismissConfirmUntil) {
                 SoldierRosterNetwork.request(token, 1, entry.id());
                 dismissConfirmUntil = 0;

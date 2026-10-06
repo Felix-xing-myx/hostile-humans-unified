@@ -2,6 +2,9 @@
   "schema_version": 1,
   "_说明_中文": "全局配置。修改后完整重启生效；只填写JSON配置值，以下_说明和_description字段仅供阅读。阶级独立属性、装备、AI、弹药与药水见roamer/tier1/tier2/tier3.json。",
   "_description_en": "Global configuration. Fully restart after editing. _说明 and _description fields are documentation only. Independent rank settings are in roamer/tier1/tier2/tier3.json.",
+  "_说明_vanilla_mode_中文": "原版模式，默认关闭；所有人类（含雇佣士兵）基础生命20、基础近战1并取消本模组近战/跳跃/三叉戟刺击倍率。武器、附魔、状态效果及外部生命修饰保留；不改变远程伤害、护甲、AI或装备。完整重启生效，已有实体按生命比例切换；关闭恢复保存的阶级生命。",
+  "_description_vanilla_mode_en": "Default-off vanilla mode: all Humans, including hired soldiers, use 20 base health and 1 base melee damage without this mod's melee/jump/trident-stab multipliers. Keep weapons, enchantments, effects and external health modifiers. Ranged damage, armor, AI and equipment are unchanged. Restart; preserve health percentage and restore stored tier health when disabled.",
+  "vanilla_mode": false,
   "tiers": {
     "_说明_中文": "各阶人类的属性、新式移动速度、伤害倍率、武器散布、近战冷却和自然生成倍率。roamer/tier1/tier2/tier3 分别对应流浪者/一阶/二阶/三阶。",
     "_description_en": "Per-tier attributes, new movement-speed settings, damage multipliers, weapon spread, melee cooldown and natural-spawn multiplier. roamer/tier1/tier2/tier3 correspond to Roamer/Tier 1/Tier 2/Tier 3.",

@@ -178,11 +178,21 @@ public final class HumanRelations {
     }
 
     static void defend(Player player, LivingEntity attacker) {
+        defend(player, attacker, false);
+    }
+
+    static void defendAfterDamage(Player player, LivingEntity attacker) {
+        defend(player, attacker, true);
+    }
+
+    private static void defend(Player player, LivingEntity attacker, boolean damagedOwner) {
         if (!(player.level() instanceof ServerLevel level) || attacker == player) return;
         AABB bounds = player.getBoundingBox().inflate(48.0D);
         for (WeakReference<Human> reference : nearbyHumans(player, level)) {
             Human human = reference.get();
             if (!isNearbyLiveHuman(human, bounds, level) || !protects(human, player)) continue;
+            if (!damagedOwner && BodyguardProtection.isBodyguard(human)
+                    && SoldierCombatMode.get(human) == SoldierCombatMode.PASSIVE_PROTECTION) continue;
             if (effectiveOwner(human) != null) {
                 if (!SoldierCombatMode.authorizeOwnerDefense(human, attacker) || allied(human, attacker)) continue;
             } else if (allied(human, attacker)) {

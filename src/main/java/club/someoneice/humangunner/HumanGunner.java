@@ -448,6 +448,7 @@ public final class HumanGunner {
             if (event.getSource().is(TACZ_BULLET_DAMAGE)
                     || GunSupport.get().isBullet(event.getSource())) return;
             if (directEntity == attacker) {
+                if (UnifiedConfig.get().vanillaMode()) return;
                 float multiplier = (float) (UnifiedConfig.get().damage("human_melee_damage_multiplier", 1.7)
                         * TierAttributes.of(humanAttacker).meleeDamage());
                 Human human = humanAttacker;
@@ -488,6 +489,13 @@ public final class HumanGunner {
     }
 
     private static void onLivingDamage(LivingDamageEvent event) {
+        if (event.getAmount() > 0.0F && event.getSource().getEntity() instanceof Human attacker) {
+            SoldierCombatMode.refreshAuthorizedFight(attacker, event.getEntity());
+        }
+        if (event.getAmount() > 0.0F && event.getEntity() instanceof Player owner
+                && event.getSource().getEntity() instanceof LivingEntity attacker) {
+            HumanRelations.defendAfterDamage(owner, attacker);
+        }
         if (event.getEntity() instanceof Human human
                 && !human.level().isClientSide
                 && event.getAmount() > 0.0F) {
@@ -833,6 +841,8 @@ public final class HumanGunner {
         if (!SOLDIER_ORDERS_CONFIGURED.add(human)) return;
         human.addCombatGoal(-6, new SoldierOrderGoal(human));
         human.addTargetGoal(-10, new GuardCombatTargetGoal(human));
+        human.addTargetGoal(-11, new BodyguardTargetGoal(human));
+        human.addCombatGoal(-5, new BodyguardMovementGoal(human));
     }
 
     private static boolean areTierRivals(Human first, Human second) {

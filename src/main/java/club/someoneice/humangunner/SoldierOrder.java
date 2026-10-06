@@ -12,7 +12,8 @@ public enum SoldierOrder {
     HOLD_POSITION,
     GUARD,
     FOLLOW,
-    PATROL;
+    PATROL,
+    BODYGUARD;
 
     static final String ORDER = "humangunner:soldier_order";
     private static final String ANCHOR = "humangunner:order_anchor";
@@ -38,6 +39,7 @@ public enum SoldierOrder {
     }
 
     static void set(Human human, SoldierOrder order, boolean preserveNavigation) {
+        BodyguardProtection.clear(human);
         SoldierFollowNavigation.clear(human);
         human.guardCombatState.reset();
         human.getPersistentData().putString(ORDER, order.name());
@@ -55,6 +57,7 @@ public enum SoldierOrder {
     }
 
     static void clear(Human human) {
+        BodyguardProtection.clear(human);
         SoldierFollowNavigation.clear(human);
         human.guardCombatState.reset();
         human.getPersistentData().remove(ORDER);
@@ -105,7 +108,7 @@ public enum SoldierOrder {
                 human.getPersistentData().remove(RETURNING_FROM_RETREAT);
             } else {
                 if (human.getTarget() != null) human.forgetSoldierTarget();
-                if (order == FOLLOW) {
+                if (order == FOLLOW || order == BODYGUARD) {
                     if (owner != null && human.distanceToSqr(owner) > 16.0D) {
                         SoldierFollowNavigation.tick(human, owner);
                     } else if (owner != null) {
@@ -126,6 +129,27 @@ public enum SoldierOrder {
             }
         }
         LivingEntity target = human.getTarget();
+        if (order == BODYGUARD) {
+            if (owner == null) {
+                if (target != null && !allowsTarget(human, target)) human.forgetSoldierTarget();
+                BodyguardProtection.clear(human);
+                if (human.getTarget() == null) {
+                    human.getNavigation().stop();
+                    MovementSpeedController.normal(human);
+                }
+                return;
+            }
+            // Temporary offline/dimension standby uses the last protection
+            // position, without replacing the stored BODYGUARD order.
+            human.getPersistentData().putLong(ANCHOR, human.blockPosition().asLong());
+            if (human.distanceToSqr(owner) > FOLLOW_COMBAT_RANGE_SQR) {
+                human.forgetSoldierTarget();
+                teleportBesideOwner(human, owner);
+            }
+            if (target != null && !BodyguardProtection.allowsTarget(human, target)) human.forgetSoldierTarget();
+            BodyguardProtection.update(human);
+            return; // The MOVE goal owns protection routes, not this lifecycle callback.
+        }
         if (order == GUARD) {
             if (distanceFromAnchorSqr(human, anchor) <= 4.0D) human.guardCombatState.returnedToPost();
             human.guardCombatState.tick(level.getGameTime(), !insideGuardArea(human, human.getX(), human.getZ()),
@@ -237,6 +261,12 @@ public enum SoldierOrder {
         if (human.getPersistentData().getBoolean(RETURNING_FROM_RETREAT)) return false;
         if (order == GUARD && human.guardCombatState.returning()) return false;
         if (guardRetaliation || guardChase) return true;
+        if (order == BODYGUARD) {
+            if (BodyguardProtection.owner(human) == null)
+                return distanceFromAnchorSqr(human, anchor(human)) <= BodyguardPolicy.CHASE_SQUARED
+                        && horizontalDistanceSqr(target.getX(), target.getZ(), anchor(human)) <= BodyguardPolicy.CHASE_SQUARED;
+            return BodyguardProtection.allowsTarget(human, target);
+        }
         if (human.isFleeing || isRecentSelfAttacker(human, target)) return true;
         if (order == FOLLOW) {
             Player owner = human.level().getPlayerByUUID(human.getOwnerUUID());
@@ -251,7 +281,14 @@ public enum SoldierOrder {
     }
 
     public static boolean isHoldingPosition(Human human) {
-        return human.hasOwner() && get(human) == HOLD_POSITION;
+        if (!human.hasOwner()) return false;
+        if (get(human) == HOLD_POSITION) return true;
+        var owner = BodyguardProtection.owner(human);
+        var target = human.getTarget();
+        // Existing ranged goals already understand stationary firing. Reuse
+        // that gate so a distant attacker cannot lure a protector into pursuit.
+        return get(human) == BODYGUARD && owner != null && target != null
+                && target.distanceToSqr(owner) > BodyguardPolicy.CHASE_SQUARED;
     }
 
     public static void onSelfAttacked(Human human, LivingEntity attacker) {
@@ -268,12 +305,19 @@ public enum SoldierOrder {
     }
 
     public static boolean allowsLootPosition(Human human, double x, double z) {
+        if (BodyguardProtection.isBodyguard(human)) {
+            Player owner = BodyguardProtection.owner(human);
+            return owner != null && BodyguardProtection.threat(human) == null
+                    && human.distanceToSqr(owner) <= 16.0D
+                    && owner.distanceToSqr(x, owner.getY(), z) <= 16.0D;
+        }
         return !human.hasOwner() || get(human) != GUARD
                 || (!human.guardCombatState.returning() && insideGuardArea(human, human.getX(), human.getZ())
                 && insideGuardArea(human, x, z));
     }
 
     public static boolean isReturningToHoldPosition(Human human) {
+        if (BodyguardProtection.isBodyguard(human)) return false;
         return isHoldingPosition(human)
                 && distanceFromAnchorSqr(human, anchor(human)) > HOLD_RETURN_DISTANCE_SQR;
     }

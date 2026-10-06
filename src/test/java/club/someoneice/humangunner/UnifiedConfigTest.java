@@ -11,6 +11,7 @@ public final class UnifiedConfigTest {
         List<String> gameplaySections = defaults.keySet().stream().filter(key -> !key.startsWith("_")).toList();
         check(gameplaySections.get(gameplaySections.size()-1).equals("tacz"), "TaCZ last gameplay section, ignoring guidance metadata");
         UnifiedConfig config = new UnifiedConfig(new JsonObject());
+        check(!config.vanillaMode(), "vanilla mode defaults off for existing configs");
         checkEquipmentLoadouts(config);
         int[] defaultPayments = {8, 24, 72, 216};
         for (int tier = 0; tier < 4; tier++) {

@@ -8,11 +8,15 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 public final class RandomizedHumanHealth {
     private static final String ROLLED_HEALTH = HumanGunner.MOD_ID + ":rolled_max_health";
     private static final String TIER_RANGE_SCHEMA = HumanGunner.MOD_ID + ":tier_health_ranges_v2";
+    private static final String VANILLA_ACTIVE = HumanGunner.MOD_ID + ":vanilla_health_active";
+    private static final String PREVIOUS_BASE = HumanGunner.MOD_ID + ":pre_vanilla_health_base";
+    private static final String PREVIOUS_TIER_BASE = HumanGunner.MOD_ID + ":pre_vanilla_tier_health";
 
     private RandomizedHumanHealth() {
     }
 
     public static void applyOnce(Human human) {
+        if (applyVanillaMode(human)) return;
         applyAndRepair(human);
     }
 
@@ -22,6 +26,7 @@ public final class RandomizedHumanHealth {
      * read getMaxHealth(), so an external base change must remain effective.
      */
     public static void ensureApplied(Human human) {
+        if (applyVanillaMode(human)) return;
         AttributeInstance maximumHealth = human.getAttribute(Attributes.MAX_HEALTH);
         if (maximumHealth == null) {
             return;
@@ -35,6 +40,44 @@ public final class RandomizedHumanHealth {
                         maximumHealth.getBaseValue(), rolled, originalBase(human)))) {
             applyAndRepair(human);
         }
+    }
+
+    /** Preserve external modifiers and the saved tier roll when toggling modes. */
+    private static boolean applyVanillaMode(Human human) {
+        AttributeInstance maximum = human.getAttribute(Attributes.MAX_HEALTH);
+        if (maximum == null) return UnifiedConfig.get().vanillaMode();
+        var data = human.getPersistentData();
+        if (UnifiedConfig.get().vanillaMode()) {
+            if (!data.getBoolean(VANILLA_ACTIVE)) {
+                data.putDouble(PREVIOUS_BASE, maximum.getBaseValue());
+                data.putBoolean(PREVIOUS_TIER_BASE, MaxHealthCompatibilityPolicy.shouldApplyRoll(
+                        maximum.getBaseValue(), data.getInt(ROLLED_HEALTH), originalBase(human)));
+                data.putBoolean(VANILLA_ACTIVE, true);
+            }
+            changeBase(human, maximum, 20.0D);
+            return true;
+        }
+        if (data.getBoolean(VANILLA_ACTIVE)) {
+            // Restore only our own base; do not overwrite a later external base.
+            if (Math.abs(maximum.getBaseValue() - 20.0D) < 1.0E-6D) {
+                double saved = data.contains(PREVIOUS_BASE) ? data.getDouble(PREVIOUS_BASE) : originalBase(human);
+                changeBase(human, maximum, VanillaModePolicy.restoredBase(data.getBoolean(PREVIOUS_TIER_BASE),
+                        saved, data.getInt(ROLLED_HEALTH), originalBase(human)));
+            }
+            data.remove(VANILLA_ACTIVE);
+            data.remove(PREVIOUS_BASE);
+            data.remove(PREVIOUS_TIER_BASE);
+        }
+        return false;
+    }
+
+    private static void changeBase(Human human, AttributeInstance maximum, double value) {
+        if (Math.abs(maximum.getBaseValue() - value) < 1.0E-6D) return;
+        float health = human.getHealth();
+        double previousMax = human.getMaxHealth();
+        maximum.setBaseValue(value);
+        // Never revive a dead entity during a configuration transition.
+        human.setHealth(VanillaModePolicy.transitionedHealth(health, previousMax, human.getMaxHealth()));
     }
 
     private static void applyAndRepair(Human human) {
@@ -64,7 +107,7 @@ public final class RandomizedHumanHealth {
         // Preserve the percentage against the resulting value, not just the
         // rolled base, so optional max-health modifiers cannot turn a damaged
         // saved entity into a different health percentage on first migration.
-        human.setHealth((float) Math.max(1.0D, human.getMaxHealth() * currentRatio));
+        human.setHealth(currentRatio <= 0.0D ? 0.0F : (float) Math.max(1.0D, human.getMaxHealth() * currentRatio));
     }
 
     private static HealthRange rangeFor(Human human) {

@@ -9,7 +9,8 @@ import java.util.UUID;
 public enum SoldierCombatMode {
     ACTIVE,
     PASSIVE_PROTECTION,
-    SELF_DEFENSE;
+    SELF_DEFENSE,
+    AUTHORIZED;
 
     private enum Cause {
         SELF,
@@ -41,6 +42,7 @@ public enum SoldierCombatMode {
 
     public static void set(Human human, SoldierCombatMode mode) {
         if (!human.hasOwner()) return;
+        BodyguardProtection.clear(human);
         human.getPersistentData().putString(MODE, mode.name());
         clearAuthorization(human);
         human.setTarget(null);
@@ -54,7 +56,22 @@ public enum SoldierCombatMode {
     }
 
     public static boolean allowsAutonomousTargeting(Human human) {
-        return !hasCombatController(human) || get(human) == ACTIVE;
+        return !hasCombatController(human) || autonomous(get(human));
+    }
+
+    static boolean autonomous(SoldierCombatMode mode) { return mode == ACTIVE; }
+
+    /** Keep an already permitted fight alive; never grant a new target by NPC damage. */
+    static void refreshAuthorizedFight(Human human, LivingEntity target) {
+        if (get(human) != AUTHORIZED || !isExplicitlyAuthorizedAgainst(human, target)) return;
+        long now = human.level().getGameTime();
+        for (int slot = 0; slot < MAX_AUTHORIZED_TARGETS; slot++) {
+            String key = slotKey(AUTHORIZED_TARGET, slot);
+            if (human.getPersistentData().hasUUID(key) && target.getUUID().equals(human.getPersistentData().getUUID(key))) {
+                human.getPersistentData().putLong(slotKey(AUTHORIZED_UNTIL, slot), now + AUTHORIZATION_TICKS);
+                return;
+            }
+        }
     }
 
     public static boolean authorizeSelfDefense(Human human, LivingEntity attacker) {
@@ -139,8 +156,9 @@ public enum SoldierCombatMode {
     }
 
     private static boolean permits(SoldierCombatMode mode, Cause cause) {
+        if (cause == null) return false;
         return switch (mode) {
-            case ACTIVE -> true;
+            case ACTIVE, AUTHORIZED -> true;
             case PASSIVE_PROTECTION -> cause == Cause.SELF || cause == Cause.OWNER_DEFENSE;
             case SELF_DEFENSE -> cause == Cause.SELF;
         };
@@ -150,7 +168,7 @@ public enum SoldierCombatMode {
         try {
             return Cause.valueOf(human.getPersistentData().getString(slotKey(AUTHORIZED_CAUSE, slot)));
         } catch (IllegalArgumentException ignored) {
-            return Cause.OWNER_ASSAULT;
+            return null; // Malformed saved authorization must not grant a new-mode target.
         }
     }
 

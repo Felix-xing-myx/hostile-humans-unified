@@ -29,7 +29,7 @@ import net.minecraftforge.event.server.ServerStoppedEvent;
 
 /** Owner-only roster snapshots and dismissal commands. Never trusts client roster contents. */
 final class SoldierRosterNetwork {
-    private static final String PROTOCOL = "4";
+    private static final String PROTOCOL = "5";
     static final int PAGE_SIZE = 5;
     private static final Map<ServerPlayer, Session> SESSIONS = new WeakHashMap<>();
     private static final Map<ServerPlayer, Long> LAST_REORDER_TICK = new WeakHashMap<>();
