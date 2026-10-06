@@ -51,6 +51,7 @@ public final class HumanLootManager {
      * performs exact two-location upgrades. This remains active in combat.
      */
     static void optimizeOwnedEquipment(Human human) {
+        AmmoWeaponSelection.tick(human);
         HumanData data = human.getData();
         if (data == null) {
             return;
@@ -90,7 +91,7 @@ public final class HumanLootManager {
             if (candidate.isEmpty() || storedSlots[i] != slot) {
                 continue;
             }
-            if (weaponOnly && !isNonGunWeapon(candidate)) {
+            if (weaponOnly && (!isNonGunWeapon(candidate) || AmmoWeaponSelection.isExhausted(human, candidate))) {
                 continue;
             }
             double score = equipmentScore(candidate, slot);
@@ -327,10 +328,13 @@ public final class HumanLootManager {
         if (HumanManagedLoadout.isArmourLocked(human, slot)) {
             return false;
         }
+        if (slot == EquipmentSlot.MAINHAND && AmmoWeaponSelection.isExhausted(human, incoming)) {
+            return false;
+        }
         ItemStack current = human.getItemBySlot(slot);
         if (slot == EquipmentSlot.MAINHAND
                 && RangedWeaponCustody.isBowOrCrossbow(incoming)
-                && !GunCustody.hasOwnedGun(human)) {
+                && !RangedWeaponCustody.hasGunPriority(human)) {
             // A non-gunner adopts a newly found bow/crossbow even when holding
             // a melee weapon or trident. The caller first stores that old hand
             // item and aborts without changing the ground stack if storage fails.
@@ -412,6 +416,9 @@ public final class HumanLootManager {
     }
 
     private static double inventoryValue(Human human, ItemStack stack) {
+        if (HumanAmmo.isAmmo(stack)) {
+            return 100.0D;
+        }
         if (stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
             return 150.0D;
         }
@@ -579,7 +586,9 @@ public final class HumanLootManager {
                         human.level(), human.getX(), human.getY() + 0.4D, human.getZ(), evicted
                 );
                 dropped.setPickUpDelay(60);
-                human.level().addFreshEntity(dropped);
+                if (!human.level().addFreshEntity(dropped)) {
+                    return incoming.getCount() < originalCount;
+                }
                 int moved = Math.min(incoming.getCount(), incoming.getMaxStackSize());
                 data.setInventoryItem(lowestSlot, incoming.copyWithCount(moved));
                 incoming.shrink(moved);

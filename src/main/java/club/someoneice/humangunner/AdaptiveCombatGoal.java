@@ -736,7 +736,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private boolean isDedicatedRangedCombatant() {
-        return GunCustody.hasOwnedGun(human)
+        return AmmoWeaponSelection.hasUsableGun(human)
                 || RangedWeaponCustody.controlsMainHand(human)
                 || isRangedCombat()
                 || human.getMainHandItem().getItem() instanceof TridentItem
@@ -761,7 +761,7 @@ public final class AdaptiveCombatGoal extends Goal {
             return false;
         }
         if (human.isFleeing
-                || (GunCustody.hasOwnedGun(human) && GunSupport.get().isReloading(human))
+                || (AmmoWeaponSelection.hasUsableGun(human) && GunSupport.get().isReloading(human))
                 || (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem()))) {
             return true;
         }
@@ -892,7 +892,7 @@ public final class AdaptiveCombatGoal extends Goal {
             }
         }
         boolean crowdCounterfire = CombatPressurePolicy.shouldUseCrowdCounterfire(
-                GunCustody.hasOwnedGun(human), crowdPressureActive(),
+                AmmoWeaponSelection.hasUsableGun(human), crowdPressureActive(),
                 human.getSensing().hasLineOfSight(threat), distanceSqr
         );
         if (crowdCounterfire) {
@@ -1232,7 +1232,7 @@ public final class AdaptiveCombatGoal extends Goal {
         }
         if (immediateThreats >= CombatPressurePolicy.CROWD_THREAT_COUNT
                 && CombatPressurePolicy.shouldPrioritizeGunnerRetreat(
-                GunCustody.hasOwnedGun(human), immediateThreats)) {
+                AmmoWeaponSelection.hasUsableGun(human), immediateThreats)) {
             crowdPressureUntil = Math.max(
                     crowdPressureUntil,
                     human.tickCount + CombatPressurePolicy.CROWD_PRESSURE_MEMORY_TICKS
@@ -1416,7 +1416,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private boolean shouldPrioritizeCrowdRetreat() {
-        return crowdPressureActive() && GunCustody.hasOwnedGun(human);
+        return crowdPressureActive() && AmmoWeaponSelection.hasUsableGun(human);
     }
 
     private void prepareCrowdRetreatGun() {
@@ -1926,7 +1926,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private boolean isRangedCombat() {
-        if (club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())) {
+        if (AmmoWeaponSelection.usableGun(human, human.getMainHandItem())) {
             return true;
         }
         // Tridents and bow/crossbow users now own their distance transitions.
@@ -1940,12 +1940,12 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private boolean isUsingTaczGun() {
-        return club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem());
+        return AmmoWeaponSelection.usableGun(human, human.getMainHandItem());
     }
 
     private boolean isHoldingTaczGun() {
-        return club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())
-                || club.someoneice.humangunner.GunSupport.get().isGun(human.getOffhandItem());
+        return AmmoWeaponSelection.usableGun(human, human.getMainHandItem())
+                || AmmoWeaponSelection.usableGun(human, human.getOffhandItem());
     }
 
     private boolean isGunThreat(LivingEntity target) {

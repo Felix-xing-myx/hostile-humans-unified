@@ -36,9 +36,9 @@ public final class RangedWeaponCustody {
                 || SpartanEquipmentCompat.isSpartanRangedWeapon(stack));
     }
 
-    /** Gun ownership always outranks the bow/crossbow loadout, even while the gun is stored. */
+    /** Loaded ammunition, a payable reload or a paid reload in progress outranks bows. */
     public static boolean hasGunPriority(Human human) {
-        return GunCustody.hasOwnedGun(human);
+        return AmmoWeaponSelection.hasUsableGun(human);
     }
 
     public static boolean isCrossbowWeapon(ItemStack stack) {
@@ -51,7 +51,7 @@ public final class RangedWeaponCustody {
     }
 
     static boolean controlsMainHand(Human human) {
-        if (GunCustody.hasOwnedGun(human)) {
+        if (hasGunPriority(human) || !HumanAmmo.hasArrows(human)) {
             return false;
         }
         return isActive(human)
@@ -61,7 +61,7 @@ public final class RangedWeaponCustody {
 
     private static boolean hasStoredRangedWeapon(Human human) {
         HumanData data = human.getData();
-        return data != null && data.hasStoredBowOrCrossbow(human.tickCount);
+        return HumanAmmo.hasArrows(human) && data != null && data.hasStoredBowOrCrossbow(human.tickCount);
     }
 
     static void registerPreferred(Human human, ItemStack ranged) {
@@ -75,7 +75,7 @@ public final class RangedWeaponCustody {
     }
 
     static void tick(Human human) {
-        if (GunCustody.hasOwnedGun(human)) {
+        if (hasGunPriority(human) || !HumanAmmo.hasArrows(human)) {
             clearLease(human);
             return;
         }
@@ -159,7 +159,7 @@ public final class RangedWeaponCustody {
     }
 
     static boolean beginCloseMelee(Human human) {
-        if (isActive(human) || GunCustody.hasOwnedGun(human)) {
+        if (isActive(human) || hasGunPriority(human) || !HumanAmmo.hasArrows(human)) {
             return isActive(human);
         }
         ItemStack held = human.getMainHandItem();
@@ -204,7 +204,7 @@ public final class RangedWeaponCustody {
     }
 
     static boolean restorePreferred(Human human, String reason) {
-        if (GunCustody.hasOwnedGun(human) || human.isUsingItem()) {
+        if (hasGunPriority(human) || !HumanAmmo.hasArrows(human) || human.isUsingItem()) {
             return false;
         }
         if (isBowOrCrossbow(human.getMainHandItem())) {
@@ -238,32 +238,9 @@ public final class RangedWeaponCustody {
             return true;
         }
 
-        CompoundTag ownerData = human.getPersistentData();
-        if (!ownerData.getBoolean(ACTIVE) || !ownerData.contains(SNAPSHOT)) {
-            return false;
-        }
-        ItemStack recovered = ItemStack.of(ownerData.getCompound(SNAPSHOT));
-        if (!isBowOrCrossbow(recovered)) {
-            clearLease(human);
-            return false;
-        }
-        ItemStack displaced = human.getMainHandItem().copy();
-        if (!displaced.isEmpty()) {
-            ItemStack moving = displaced.copy();
-            HumanLootManager.storeWithEviction(human, moving);
-            if (!moving.isEmpty()) {
-                human.spawnAtLocation(moving);
-            }
-        }
-        registerPreferred(human, recovered);
-        human.setItemSlot(EquipmentSlot.MAINHAND, recovered);
-        human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
-        HumanGunner.LOGGER.error(
-                "Reconstructed missing preferred ranged weapon npc={} reason={} ranged={}",
-                human.getUUID(), reason, itemId(recovered)
-        );
+        // A stale lease snapshot must never manufacture a missing weapon.
         clearLease(human);
-        return true;
+        return false;
     }
 
     private static void adoptExistingCloseMelee(Human human) {

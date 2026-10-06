@@ -5,7 +5,6 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Map;
@@ -17,8 +16,8 @@ import java.util.WeakHashMap;
  * <p>The old implementation had two unrelated goals swapping a gun into an
  * inventory slot. One of them had no restore path, while the other remembered
  * only an in-memory slot number. This custody survives goal replacement and
- * entity saving, locates a moved gun by its owner marker, and retains a full
- * snapshot as a last-resort loss repair.</p>
+ * entity saving and locates a moved gun by its owner marker. Snapshots are
+ * diagnostic metadata and cannot reconstruct missing owned weapons.</p>
  */
 final class GunCustody {
     private static final String PRIMARY_OWNER = "humangunner:primary_gun_owner";
@@ -116,7 +115,7 @@ final class GunCustody {
 
     static boolean restorePrimaryGun(Human human, String reason) {
         ItemStack held = human.getMainHandItem();
-        if (club.someoneice.humangunner.GunSupport.get().isGun(held)) {
+        if (AmmoWeaponSelection.usableGun(human, held)) {
             registerPrimaryGun(human, held);
             clearLease(human);
             human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
@@ -131,8 +130,8 @@ final class GunCustody {
         }
 
         int gunSlot = findPrimaryGunSlot(human, data);
-        if (gunSlot < 0) {
-            gunSlot = findAnyGunSlot(data);
+        if (gunSlot < 0 || !HumanAmmo.canUseGun(human, data.getInventoryItem(gunSlot))) {
+            gunSlot = findUsableGunSlot(human, data);
         }
         ItemStack gun;
         if (gunSlot >= 0) {
@@ -153,34 +152,14 @@ final class GunCustody {
             return true;
         }
 
-        CompoundTag ownerData = human.getPersistentData();
-        if (!ownerData.getBoolean(ACTIVE) || !ownerData.contains(SNAPSHOT)) {
-            return false;
-        }
-        gun = ItemStack.of(ownerData.getCompound(SNAPSHOT));
-        if (!club.someoneice.humangunner.GunSupport.get().isGun(gun)) {
-            HumanGunner.LOGGER.error(
-                    "Gun custody snapshot invalid npc={} reason={}", human.getUUID(), reason
-            );
-            clearLease(human);
-            return false;
-        }
-        registerPrimaryGun(human, gun);
-        ItemStack displaced = human.getMainHandItem().copy();
-        if (!displaced.isEmpty()) {
-            stowWithoutDeleting(human, data, displaced);
-        }
-        human.setItemSlot(EquipmentSlot.MAINHAND, gun);
-        human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
-        HumanGunner.LOGGER.error(
-                "Recovered missing primary gun from custody snapshot npc={} reason={} gun={}",
-                human.getUUID(), reason, itemId(gun)
-        );
+        // The snapshot is diagnostic metadata, never evidence of an owned item.
+        // A removed or exhausted gun cannot be recreated or forced back into the hand.
         clearLease(human);
-        return true;
+        return false;
     }
 
     static void tick(Human human) {
+        AmmoWeaponSelection.tick(human);
         if (!GunSupport.get().enabled() && !isActive(human)) return;
         ItemStack held = human.getMainHandItem();
         if (club.someoneice.humangunner.GunSupport.get().isGun(held)) {
@@ -191,6 +170,10 @@ final class GunCustody {
             return;
         }
         if (human.isUsingItem()) {
+            return;
+        }
+        if (!AmmoWeaponSelection.hasUsableGun(human)) {
+            clearLease(human);
             return;
         }
         boolean active = human.getPersistentData().getBoolean(ACTIVE);
@@ -208,8 +191,8 @@ final class GunCustody {
             return;
         }
 
-        // Repair guns stranded by older builds. A Human that owns a backpack
-        // gun should prefer it whenever it is not performing the explicit
+        // Reconcile available guns stranded in the backpack. A Human should
+        // prefer a usable gun whenever it is not performing the explicit
         // two-block retreat melee counterattack.
         HumanData data = human.getData();
         if (data != null && data.hasStoredGun(human.tickCount) && (human.getTarget() == null
@@ -314,32 +297,11 @@ final class GunCustody {
         return -1;
     }
 
-    private static void stowWithoutDeleting(Human human, HumanData data, ItemStack stack) {
+    private static int findUsableGunSlot(Human human, HumanData data) {
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            if (data.getInventoryItem(i).isEmpty()) {
-                data.setInventoryItem(i, stack);
-                return;
-            }
+            if (HumanAmmo.canUseGun(human, data.getInventoryItem(i))) return i;
         }
-        int evictionSlot = HumanLootManager.lowestEvictableSlot(human);
-        if (evictionSlot >= 0) {
-            ItemStack evicted = data.getInventoryItem(evictionSlot).copy();
-            data.setInventoryItem(evictionSlot, stack);
-            drop(human, evicted);
-            return;
-        }
-        drop(human, stack);
-    }
-
-    private static void drop(Human human, ItemStack stack) {
-        if (stack.isEmpty()) {
-            return;
-        }
-        ItemEntity drop = new ItemEntity(
-                human.level(), human.getX(), human.getY() + 0.4D, human.getZ(), stack
-        );
-        drop.setPickUpDelay(60);
-        human.level().addFreshEntity(drop);
+        return -1;
     }
 
     private static void clearLease(Human human) {
