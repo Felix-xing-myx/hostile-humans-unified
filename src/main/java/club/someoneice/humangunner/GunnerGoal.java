@@ -445,8 +445,18 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             if (result == ShootResult.NO_AMMO
                     && gameTime >= mob.getPersistentData().getLong(NEXT_RELOAD_ATTEMPT)
                     && (!(mob instanceof Human human) || HumanAmmo.canReload(human, weapon))) {
+                boolean wasReloading = operator.getDataHolder().reloadStateType.isReloading();
                 operator.reload();
                 mob.getPersistentData().putLong(NEXT_RELOAD_ATTEMPT, gameTime + RELOAD_RETRY_TICKS);
+                if (!wasReloading && operator.getDataHolder().reloadStateType.isReloading()) {
+                    // Waiting without reserves or under draw cooldown must not
+                    // spend most of the newly paid cycle's recovery budget.
+                    int delay = nativeReloadRecoveryDelay(weapon, gun);
+                    deadline = gameTime + delay;
+                    mob.getPersistentData().putLong(RELOAD_DEADLINE, deadline);
+                    mob.getPersistentData().putLong(RELOAD_HARD_DEADLINE,
+                            gameTime + GunReloadPolicy.hardLimitTicks(delay));
+                }
             }
             if (gameTime >= deadline) {
                 boolean stillReloading = operator.getSynReloadState().getStateType().isReloading();
