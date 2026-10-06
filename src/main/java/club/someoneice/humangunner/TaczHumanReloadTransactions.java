@@ -78,10 +78,12 @@ public final class TaczHumanReloadTransactions {
             var index = TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
             if (index != null) {
                 int capacity = Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(weapon, index.getGunData()));
-                gun.setCurrentAmmoCount(weapon, capacity);
-                if (!gun.hasBulletInBarrel(weapon) && capacity > 0 && index.getGunData().getBolt() != Bolt.OPEN_BOLT) {
+                if (index.getGunData().getBolt() != Bolt.OPEN_BOLT) {
                     gun.setCurrentAmmoCount(weapon, capacity - 1);
                     gun.setBulletInBarrel(weapon, true);
+                } else {
+                    gun.setCurrentAmmoCount(weapon, capacity);
+                    gun.setBulletInBarrel(weapon, false);
                 }
             }
             end(data);

@@ -33,7 +33,11 @@ final class TaczIntegration implements GunSupport {
     public boolean isGun(ItemStack stack) { return IGun.getIGunOrNull(stack) != null; }
     public boolean hasLoadedAmmo(ItemStack stack) {
         IGun gun = IGun.getIGunOrNull(stack);
-        return gun != null && (gun.getCurrentAmmoCount(stack) > 0 || gun.hasBulletInBarrel(stack));
+        if (gun == null) return false;
+        if (gun.getCurrentAmmoCount(stack) > 0) return true;
+        return gun.hasBulletInBarrel(stack) && TimelessAPI.getCommonGunIndex(gun.getGunId(stack))
+                .map(index -> index.getGunData().getBolt() != com.tacz.guns.resource.pojo.data.gun.Bolt.OPEN_BOLT)
+                .orElse(false);
     }
     public String gunType(ItemStack stack) {
         ResourceLocation id = gunId(stack);
@@ -62,7 +66,7 @@ final class TaczIntegration implements GunSupport {
         if (gun == null) return ItemStack.EMPTY;
         gun.setCurrentAmmoCount(stack, Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(stack, index.getGunData())));
         gun.setFireMode(stack, index.getGunData().getFireModeSet().get(0));
-        gun.setBulletInBarrel(stack, true);
+        gun.setBulletInBarrel(stack, index.getGunData().getBolt() != com.tacz.guns.resource.pojo.data.gun.Bolt.OPEN_BOLT);
         return stack;
     }
     public Goal goal(Human human) { return new GunnerGoal<>(human); }
