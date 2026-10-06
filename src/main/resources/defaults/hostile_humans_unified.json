@@ -816,8 +816,8 @@
   "equipment_integration": {
     "_说明_中文": "武器装备自动导入总开关。只控制启动时是否向装备池追加已安装模组的默认联动装备，不控制动画兼容和物品使用。修改后重启生效。",
     "_description_en": "Master switch for startup equipment imports. Controls additive discovery of default equipment from installed mods, not animations or item use. Restart to apply.",
-    "_说明_auto_import_enabled_中文": "默认true。开启时按阶追加首次导入的斯巴达武器/盾牌，保留自定义条目及其权重、空池和已有导入记录；关闭后不追加或改写装备池，也不删除已有条目。分阶automatic_spartan_weapons/shields仍分别控制导入。",
-    "_description_auto_import_enabled_en": "Default true. Add first-time Spartan weapon/shield imports by rank while preserving custom rows/weights, empty pools and receipts. False prevents pool imports/writes without removing existing rows. Per-rank Spartan switches still apply.",
+    "_说明_auto_import_enabled_中文": "默认true。开启时按阶追加首次导入的斯巴达武器/盾牌及沉浸式盔甲套装，保留自定义条目及其权重、空池和已有导入记录；关闭后不追加或改写装备池，也不删除已有条目。分阶automatic_spartan_weapons/shields及automatic_immersive_armors仍分别控制导入。",
+    "_description_auto_import_enabled_en": "Default true. Add first-time Spartan weapon/shield and Immersive Armors imports by rank while preserving custom rows/weights, empty pools and receipts. False prevents pool imports/writes without removing existing rows. Per-rank Spartan and Immersive Armors switches still apply.",
     "auto_import_enabled": true
   },
   "equipment_loadouts": {
@@ -967,6 +967,7 @@
       "ranged_in_backpack": false,
       "automatic_spartan_weapons": true,
       "automatic_spartan_shields": true,
+      "automatic_immersive_armors": true,
       "allow_tacz_firearms": true,
       "weapon_count": {
         "second_weapon_chance": 0.45,
@@ -985,6 +986,8 @@
       "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
       "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
       "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
+      "_说明_automatic_immersive_armors_中文": "是否首次自动导入本阶默认沉浸式盔甲套装；受全局equipment_integration.auto_import_enabled控制，保留自定义套装、权重、空池和导入记录。",
+      "_description_automatic_immersive_armors_en": "Import this rank's default Immersive Armors sets once under the global equipment integration switch, preserving custom sets/weights, empty pools and receipts.",
       "_说明_automatic_spartan_weapons_中文": "是否自动导入可用斯巴达武器；受全局equipment_integration.auto_import_enabled控制；启动注册表就绪后追加并备份，保留自定义条目/权重，空池及已有导入记录不补回。",
       "_description_automatic_spartan_weapons_en": "Import available Spartan weapons additively once registries are ready, under the global equipment_integration.auto_import_enabled switch. Back up existing files and preserve custom entries/weights, empty pools and completed imports.",
       "_说明_automatic_spartan_shields_中文": "是否自动导入可用斯巴达盾牌；受全局equipment_integration.auto_import_enabled控制；启动注册表就绪后追加并备份，保留自定义条目/权重，空池及已有导入记录不补回。",
@@ -1114,36 +1117,13 @@
           "chest": "minecraft:golden_chestplate",
           "legs": "minecraft:golden_leggings",
           "feet": "minecraft:golden_boots"
-        },
-        {
-          "weight": 1,
-          "requires_mod": "immersive_armors",
-          "head": "immersive_armors:wooden_helmet",
-          "chest": "immersive_armors:wooden_chestplate",
-          "legs": "immersive_armors:wooden_leggings",
-          "feet": "immersive_armors:wooden_boots"
-        },
-        {
-          "weight": 1,
-          "requires_mod": "immersive_armors",
-          "head": "immersive_armors:bone_helmet",
-          "chest": "immersive_armors:bone_chestplate",
-          "legs": "immersive_armors:bone_leggings",
-          "feet": "immersive_armors:bone_boots"
-        },
-        {
-          "weight": 1,
-          "requires_mod": "immersive_armors",
-          "head": "immersive_armors:robe_helmet",
-          "chest": "immersive_armors:robe_chestplate",
-          "legs": "immersive_armors:robe_leggings",
-          "feet": "immersive_armors:robe_boots"
         }
       ],
       "ranged_chance": 0.4,
       "ranged_in_backpack": false,
       "automatic_spartan_weapons": true,
       "automatic_spartan_shields": true,
+      "automatic_immersive_armors": true,
       "allow_tacz_firearms": true,
       "weapon_count": {
         "second_weapon_chance": 0.45,
@@ -1162,6 +1142,8 @@
       "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
       "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
       "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
+      "_说明_automatic_immersive_armors_中文": "是否首次自动导入本阶默认沉浸式盔甲套装；受全局equipment_integration.auto_import_enabled控制，保留自定义套装、权重、空池和导入记录。",
+      "_description_automatic_immersive_armors_en": "Import this rank's default Immersive Armors sets once under the global equipment integration switch, preserving custom sets/weights, empty pools and receipts.",
       "_说明_automatic_spartan_weapons_中文": "是否自动导入可用斯巴达武器；受全局equipment_integration.auto_import_enabled控制；启动注册表就绪后追加并备份，保留自定义条目/权重，空池及已有导入记录不补回。",
       "_description_automatic_spartan_weapons_en": "Import available Spartan weapons additively once registries are ready, under the global equipment_integration.auto_import_enabled switch. Back up existing files and preserve custom entries/weights, empty pools and completed imports.",
       "_说明_automatic_spartan_shields_中文": "是否自动导入可用斯巴达盾牌；受全局equipment_integration.auto_import_enabled控制；启动注册表就绪后追加并备份，保留自定义条目/权重，空池及已有导入记录不补回。",
@@ -1286,44 +1268,13 @@
           "chest": "minecraft:diamond_chestplate",
           "legs": "minecraft:diamond_leggings",
           "feet": "minecraft:diamond_boots"
-        },
-        {
-          "weight": 1,
-          "requires_mod": "immersive_armors",
-          "head": "immersive_armors:warrior_helmet",
-          "chest": "immersive_armors:warrior_chestplate",
-          "legs": "immersive_armors:warrior_leggings",
-          "feet": "immersive_armors:warrior_boots"
-        },
-        {
-          "weight": 1,
-          "requires_mod": "immersive_armors",
-          "head": "immersive_armors:heavy_helmet",
-          "chest": "immersive_armors:heavy_chestplate",
-          "legs": "immersive_armors:heavy_leggings",
-          "feet": "immersive_armors:heavy_boots"
-        },
-        {
-          "weight": 1,
-          "requires_mod": "immersive_armors",
-          "head": "immersive_armors:divine_helmet",
-          "chest": "immersive_armors:divine_chestplate",
-          "legs": "immersive_armors:divine_leggings",
-          "feet": "immersive_armors:divine_boots"
-        },
-        {
-          "weight": 1,
-          "requires_mod": "immersive_armors",
-          "head": "immersive_armors:wither_helmet",
-          "chest": "immersive_armors:wither_chestplate",
-          "legs": "immersive_armors:wither_leggings",
-          "feet": "immersive_armors:wither_boots"
         }
       ],
       "ranged_chance": 0.7,
       "ranged_in_backpack": false,
       "automatic_spartan_weapons": true,
       "automatic_spartan_shields": true,
+      "automatic_immersive_armors": true,
       "allow_tacz_firearms": true,
       "weapon_count": {
         "second_weapon_chance": 0.45,
@@ -1342,6 +1293,8 @@
       "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
       "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
       "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
+      "_说明_automatic_immersive_armors_中文": "是否首次自动导入本阶默认沉浸式盔甲套装；受全局equipment_integration.auto_import_enabled控制，保留自定义套装、权重、空池和导入记录。",
+      "_description_automatic_immersive_armors_en": "Import this rank's default Immersive Armors sets once under the global equipment integration switch, preserving custom sets/weights, empty pools and receipts.",
       "_说明_automatic_spartan_weapons_中文": "是否自动导入可用斯巴达武器；受全局equipment_integration.auto_import_enabled控制；启动注册表就绪后追加并备份，保留自定义条目/权重，空池及已有导入记录不补回。",
       "_description_automatic_spartan_weapons_en": "Import available Spartan weapons additively once registries are ready, under the global equipment_integration.auto_import_enabled switch. Back up existing files and preserve custom entries/weights, empty pools and completed imports.",
       "_说明_automatic_spartan_shields_中文": "是否自动导入可用斯巴达盾牌；受全局equipment_integration.auto_import_enabled控制；启动注册表就绪后追加并备份，保留自定义条目/权重，空池及已有导入记录不补回。",
@@ -1450,36 +1403,13 @@
           "chest": "minecraft:netherite_chestplate",
           "legs": "minecraft:netherite_leggings",
           "feet": "minecraft:netherite_boots"
-        },
-        {
-          "weight": 38,
-          "requires_mod": "immersive_armors",
-          "head": "immersive_armors:prismarine_helmet",
-          "chest": "immersive_armors:prismarine_chestplate",
-          "legs": "immersive_armors:prismarine_leggings",
-          "feet": "immersive_armors:prismarine_boots"
-        },
-        {
-          "weight": 38,
-          "requires_mod": "immersive_armors",
-          "head": "immersive_armors:heavy_helmet",
-          "chest": "immersive_armors:heavy_chestplate",
-          "legs": "immersive_armors:heavy_leggings",
-          "feet": "immersive_armors:heavy_boots"
-        },
-        {
-          "weight": 38,
-          "requires_mod": "immersive_armors",
-          "head": "immersive_armors:divine_helmet",
-          "chest": "immersive_armors:divine_chestplate",
-          "legs": "immersive_armors:divine_leggings",
-          "feet": "immersive_armors:divine_boots"
         }
       ],
       "ranged_chance": 1,
       "ranged_in_backpack": true,
       "automatic_spartan_weapons": true,
       "automatic_spartan_shields": true,
+      "automatic_immersive_armors": true,
       "allow_tacz_firearms": true,
       "weapon_count": {
         "second_weapon_chance": 0.45,
@@ -1498,6 +1428,8 @@
       "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
       "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
       "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
+      "_说明_automatic_immersive_armors_中文": "是否首次自动导入本阶默认沉浸式盔甲套装；受全局equipment_integration.auto_import_enabled控制，保留自定义套装、权重、空池和导入记录。",
+      "_description_automatic_immersive_armors_en": "Import this rank's default Immersive Armors sets once under the global equipment integration switch, preserving custom sets/weights, empty pools and receipts.",
       "_说明_automatic_spartan_weapons_中文": "是否自动导入可用斯巴达武器；受全局equipment_integration.auto_import_enabled控制；启动注册表就绪后追加并备份，保留自定义条目/权重，空池及已有导入记录不补回。",
       "_description_automatic_spartan_weapons_en": "Import available Spartan weapons additively once registries are ready, under the global equipment_integration.auto_import_enabled switch. Back up existing files and preserve custom entries/weights, empty pools and completed imports.",
       "_说明_automatic_spartan_shields_中文": "是否自动导入可用斯巴达盾牌；受全局equipment_integration.auto_import_enabled控制；启动注册表就绪后追加并备份，保留自定义条目/权重，空池及已有导入记录不补回。",

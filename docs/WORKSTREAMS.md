@@ -352,3 +352,15 @@
 - 静态验证：默认JSON有效，除总开关新增外游戏默认参数不变，源码分隔符与diff核查、用户CHANGELOG原片段哈希保留。实例配置/存档与JAR未改，未启动游戏、未推送。待构建及游戏验收开关两状态与自定义装备出生。
 - 只读审核发现global损坏时默认开启回退可能误授权；已将无效/不支持schema的global仅在内存关闭自动导入，并新增坏global与schema999不改四阶文件回归。其它游戏默认回退不变，原文件保留。
 - 主控本地整合提交 `483d9f31a82390b3b7a31f5f9b475ab1c42accff`，只读最终审核通过，任务精确暂存与用户CHANGELOG保护检查通过。新增自动回归未编译运行，源码总开关及上一项斯巴达重试修复均未构建部署。
+
+
+## 2026-10-06 沉浸式盔甲统一自动导入
+
+- 用户纠正范围：equipment_integration.auto_import_enabled 同时管理斯巴达武器/盾牌与沉浸式盔甲，沉浸盔甲采用相同的首次追加、自定义保留与关闭不导入规则。本次未要求构建/同步。
+- 基线 `583442c3c37e66f39bf8c4cfc8511b9482eec50d`，main主工作树；主控 `/root` 编辑；`/root/combat_stall_audit`（GPT-6.1 Sol / medium）只读核查本地API与审核。范围：EquipmentIntegrationDefaults、默认配置、新候选资源、TierConfigFilesTest及文档；总开关与配置备份边界继续复用，无第二套护甲替换机制。
+- 将原基础armor_sets的沉浸套装移至只读候选资源defaults/equipment_integrations.json；基础新配置只含原版套装。沿用原范围：流浪者无候选，一阶wooden/bone/robe，二阶warrior/heavy/divine/wither，三阶prismarine/heavy/divine；套装权重分别1/1/38，三阶原版下界合金186不变。
+- 安装immersive_armors且候选完整四部位已注册时，受总开关与各阶automatic_immersive_armors（默认true）控制，一次追加到非空armor_sets并写_imported_immersive_armors。相同head/chest/legs/feet套装去重，保留已有weight0、自定义附加字段和说明；空池、无效开关/回执、成功导入后的删除仍保留。关闭不删除旧配置显式套装，与斯巴达已导入装备一致。
+- 本地只读依据：新二创内容/mods/[沉浸式盔甲] immersive_armors-1.7.2+1.20.1-forge.jar，mod ID正确；8材质×4部位32个唯一ID的模型/配方及套装注册字节码确认。未安装进测试实例，也未修改该JAR。
+- 回归新增：基础池不预列联动、未注册不登记、整套追加/权重保留、去重保留weight0/注释、删除回执不补回、空池/分阶关闭、缺部位不导入；原空池/关闭/非法分阶开关用例扩充沉浸盔甲分支，根入口也保护空池。尚未编译运行。
+- 静态验证：两个JSON有效，迁出候选与原套装ID/权重/分阶逐项相同，其余游戏默认参数与原版护甲池不变；源码分隔符与diff检查、用户CHANGELOG原片段哈希保留。未构建、未同步、未动实例配置/存档、未启动游戏、未推送。
+- 待验收：安装沉浸盔甲后总开关开启可在一至三阶池看到候选及回执；关闭的新池不出现候选；旧套装不删，自定义套装/权重及删除记录保留。候选只参与随机出生，不保证每名士兵穿联动盔甲。

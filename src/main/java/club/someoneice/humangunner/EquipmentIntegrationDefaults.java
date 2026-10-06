@@ -16,6 +16,7 @@ import java.util.function.Predicate;
 final class EquipmentIntegrationDefaults {
     private static final List<String> TYPES = List.of("dagger", "longsword", "katana", "saber", "rapier",
             "spear", "battleaxe", "flanged_mace", "warhammer", "glaive", "scythe");
+    private static final JsonObject ARMOR_DEFAULTS = armorDefaults();
     private EquipmentIntegrationDefaults() { }
 
     static boolean seed(JsonObject equipment) {
@@ -25,7 +26,11 @@ final class EquipmentIntegrationDefaults {
     }
 
     static boolean seed(JsonObject equipment, Predicate<String> loaded, Predicate<String> registered) {
-        return automaticImportsEnabled(equipment) && seed(equipment, loaded, registered, (rank, pool) -> true);
+        return automaticImportsEnabled(equipment) && seed(equipment, loaded, registered, (rank, pool) -> {
+            JsonObject settings = UnifiedConfig.object(UnifiedConfig.object(equipment, "equipment_loadouts"), rank);
+            var entries = settings.get(pool);
+            return entries != null && entries.isJsonArray() && !entries.getAsJsonArray().isEmpty();
+        });
     }
 
     /** One-time additive import; configured entries/weights and explicit empty pools remain authoritative. */
@@ -42,7 +47,7 @@ final class EquipmentIntegrationDefaults {
                 || !defaults.has("equipment_loadout") || !defaults.get("equipment_loadout").isJsonObject()) return false;
         JsonObject settings = file.getAsJsonObject("equipment_loadout");
         Set<String> eligible = new HashSet<>();
-        for (String pool : List.of("mainhand", "inventory", "ranged_mainhand", "shield_pool")) {
+        for (String pool : List.of("mainhand", "inventory", "ranged_mainhand", "shield_pool", "armor_sets")) {
             if (settings.has(pool) && settings.get(pool).isJsonArray()
                     && !settings.getAsJsonArray(pool).isEmpty())
                 eligible.add(pool);
@@ -63,6 +68,17 @@ final class EquipmentIntegrationDefaults {
         for (String rank : List.of("roamer", "tier1", "tier2", "tier3")) {
             if (!ranks.has(rank) || !ranks.get(rank).isJsonObject()) continue;
             JsonObject settings = ranks.getAsJsonObject(rank);
+            if (eligible.test(rank, "armor_sets") && loaded.test("immersive_armors")
+                    && booleanOption(settings, "automatic_immersive_armors", true, false)
+                    && !booleanOption(settings, "_imported_immersive_armors", false, true)) {
+                boolean anyArmor = false;
+                for (var row : ARMOR_DEFAULTS.getAsJsonArray(rank))
+                    anyArmor |= appendArmor(settings, row.getAsJsonObject(), registered);
+                if (anyArmor) {
+                    settings.addProperty("_imported_immersive_armors", true);
+                    changed = true;
+                }
+            }
             for (String mod : List.of("spartanweaponry", "spartanshields")) {
                 String flag = mod.equals("spartanweaponry") ? "automatic_spartan_weapons" : "automatic_spartan_shields";
                 String receipt = "_imported_" + mod;
@@ -97,6 +113,33 @@ final class EquipmentIntegrationDefaults {
             }
         }
         return changed;
+    }
+
+    private static JsonObject armorDefaults() {
+        try (var stream = EquipmentIntegrationDefaults.class.getResourceAsStream("/defaults/equipment_integrations.json")) {
+            if (stream == null) throw new IllegalStateException("Missing packaged equipment integration defaults");
+            try (var reader = new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8)) {
+                return com.google.gson.JsonParser.parseReader(reader).getAsJsonObject().getAsJsonObject("immersive_armors");
+            }
+        } catch (java.io.IOException error) {
+            throw new IllegalStateException("Cannot read equipment integration defaults", error);
+        }
+    }
+
+    private static boolean appendArmor(JsonObject settings, JsonObject candidate, Predicate<String> registered) {
+        if (!settings.has("armor_sets") || !settings.get("armor_sets").isJsonArray()) return false;
+        List<String> slots = List.of("head", "chest", "legs", "feet");
+        for (String slot : slots) if (!registered.test(candidate.get(slot).getAsString())) return false;
+        JsonArray entries = settings.getAsJsonArray("armor_sets");
+        for (var row : entries) {
+            if (!row.isJsonObject()) continue;
+            boolean same = true;
+            for (String slot : slots) same &= candidate.get(slot).equals(row.getAsJsonObject().get(slot));
+            // Preserve the user's weight (including zero), notes and extra fields.
+            if (same) return true;
+        }
+        entries.add(candidate.deepCopy());
+        return true;
     }
 
     static boolean automaticImportsEnabled(JsonObject root) {

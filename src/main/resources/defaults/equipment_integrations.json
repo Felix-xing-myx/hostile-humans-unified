@@ -1,0 +1,91 @@
+{
+  "immersive_armors": {
+    "roamer": [],
+    "tier1": [
+      {
+        "weight": 1,
+        "requires_mod": "immersive_armors",
+        "head": "immersive_armors:wooden_helmet",
+        "chest": "immersive_armors:wooden_chestplate",
+        "legs": "immersive_armors:wooden_leggings",
+        "feet": "immersive_armors:wooden_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "immersive_armors",
+        "head": "immersive_armors:bone_helmet",
+        "chest": "immersive_armors:bone_chestplate",
+        "legs": "immersive_armors:bone_leggings",
+        "feet": "immersive_armors:bone_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "immersive_armors",
+        "head": "immersive_armors:robe_helmet",
+        "chest": "immersive_armors:robe_chestplate",
+        "legs": "immersive_armors:robe_leggings",
+        "feet": "immersive_armors:robe_boots"
+      }
+    ],
+    "tier2": [
+      {
+        "weight": 1,
+        "requires_mod": "immersive_armors",
+        "head": "immersive_armors:warrior_helmet",
+        "chest": "immersive_armors:warrior_chestplate",
+        "legs": "immersive_armors:warrior_leggings",
+        "feet": "immersive_armors:warrior_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "immersive_armors",
+        "head": "immersive_armors:heavy_helmet",
+        "chest": "immersive_armors:heavy_chestplate",
+        "legs": "immersive_armors:heavy_leggings",
+        "feet": "immersive_armors:heavy_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "immersive_armors",
+        "head": "immersive_armors:divine_helmet",
+        "chest": "immersive_armors:divine_chestplate",
+        "legs": "immersive_armors:divine_leggings",
+        "feet": "immersive_armors:divine_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "immersive_armors",
+        "head": "immersive_armors:wither_helmet",
+        "chest": "immersive_armors:wither_chestplate",
+        "legs": "immersive_armors:wither_leggings",
+        "feet": "immersive_armors:wither_boots"
+      }
+    ],
+    "tier3": [
+      {
+        "weight": 38,
+        "requires_mod": "immersive_armors",
+        "head": "immersive_armors:prismarine_helmet",
+        "chest": "immersive_armors:prismarine_chestplate",
+        "legs": "immersive_armors:prismarine_leggings",
+        "feet": "immersive_armors:prismarine_boots"
+      },
+      {
+        "weight": 38,
+        "requires_mod": "immersive_armors",
+        "head": "immersive_armors:heavy_helmet",
+        "chest": "immersive_armors:heavy_chestplate",
+        "legs": "immersive_armors:heavy_leggings",
+        "feet": "immersive_armors:heavy_boots"
+      },
+      {
+        "weight": 38,
+        "requires_mod": "immersive_armors",
+        "head": "immersive_armors:divine_helmet",
+        "chest": "immersive_armors:divine_chestplate",
+        "legs": "immersive_armors:divine_leggings",
+        "feet": "immersive_armors:divine_boots"
+      }
+    ]
+  }
+}

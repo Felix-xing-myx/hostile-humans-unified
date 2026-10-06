@@ -8,6 +8,7 @@ import java.util.*;
 public final class TierConfigFilesTest {
     private static int assertions;
     public static void main(String[] args) throws Exception {
+        checkImmersiveArmorImport();
         checkMasterIntegrationSwitch();
         checkDefaultIntegrationRetry();
         checkProjection();
@@ -302,6 +303,60 @@ public final class TierConfigFilesTest {
         } finally { cleanup(directory); }
     }
 
+    private static void checkImmersiveArmorImport() throws Exception {
+        JsonObject defaults = UnifiedConfig.defaults();
+        java.util.function.Predicate<String> onlyArmor = mod -> mod.equals("immersive_armors");
+        for (String rank : TierConfigProjection.RANKS) {
+            JsonObject file = TierConfigProjection.tier(defaults, rank);
+            JsonObject baseline = TierConfigProjection.tier(defaults, rank);
+            JsonArray armor = file.getAsJsonObject("equipment_loadout").getAsJsonArray("armor_sets");
+            for (var row : armor) check(!row.getAsJsonObject().has("requires_mod"), "fresh base armor excludes automatic mod rows " + rank);
+            int baseSize = armor.size();
+            check(!EquipmentIntegrationDefaults.seedRank(rank, file, baseline, onlyArmor, item -> false),
+                    "unregistered armor does not finalize import " + rank);
+            boolean imported = EquipmentIntegrationDefaults.seedRank(rank, file, baseline, onlyArmor, item -> true);
+            if (rank.equals("roamer")) {
+                check(!imported && armor.size() == baseSize, "roamer keeps original vanilla-only armor distribution");
+                continue;
+            }
+            check(imported && armor.size() > baseSize
+                    && file.getAsJsonObject("equipment_loadout").get("_imported_immersive_armors").getAsBoolean(),
+                    "complete sets imported with receipt " + rank);
+            for (int i = baseSize; i < armor.size(); i++) {
+                var row = armor.get(i).getAsJsonObject();
+                check(row.get("requires_mod").getAsString().equals("immersive_armors"), "import retains mod requirement");
+                check(row.get("weight").getAsInt() == (rank.equals("tier3") ? 38 : 1), "original tier armor weight retained");
+            }
+            armor.remove(armor.size() - 1);
+            JsonArray deleted = armor.deepCopy();
+            check(!EquipmentIntegrationDefaults.seedRank(rank, file, baseline, onlyArmor, item -> true)
+                    && armor.equals(deleted), "deleted imported armor does not reappear " + rank);
+            JsonObject customFile = baseline.deepCopy();
+            JsonObject customGear = customFile.getAsJsonObject("equipment_loadout");
+            JsonArray customArmor = customGear.getAsJsonArray("armor_sets");
+            JsonObject existing = armor.get(baseSize).getAsJsonObject().deepCopy();
+            existing.addProperty("weight", 0);
+            existing.addProperty("_custom_note", "keep my disabled set");
+            customArmor.add(existing);
+            int count = customArmor.size();
+            check(EquipmentIntegrationDefaults.seedRank(rank, customFile, baseline, onlyArmor, item -> true)
+                    && customArmor.contains(existing), "existing set weight zero and notes retained " + rank);
+            int duplicates = 0;
+            for (var row : customArmor)
+                if (existing.get("head").equals(row.getAsJsonObject().get("head"))) duplicates++;
+            check(duplicates == 1 && customArmor.size() >= count, "same armor tuple never duplicated " + rank);
+            customFile = baseline.deepCopy();
+            customFile.getAsJsonObject("equipment_loadout").add("armor_sets", new JsonArray());
+            check(!EquipmentIntegrationDefaults.seedRank(rank, customFile, baseline, onlyArmor, item -> true), "empty armor remains empty " + rank);
+            customFile = baseline.deepCopy();
+            customFile.getAsJsonObject("equipment_loadout").addProperty("automatic_immersive_armors", false);
+            check(!EquipmentIntegrationDefaults.seedRank(rank, customFile, baseline, onlyArmor, item -> true), "rank armor import can be disabled " + rank);
+            customFile = baseline.deepCopy();
+            check(!EquipmentIntegrationDefaults.seedRank(rank, customFile, baseline, onlyArmor, item -> !item.endsWith("_boots")),
+                    "missing set piece cannot import partial armor " + rank);
+        }
+    }
+
     private static void checkMasterIntegrationSwitch() throws Exception {
         JsonObject defaults = UnifiedConfig.defaults();
         Path directory = Files.createTempDirectory("human-spartan-master-");
@@ -416,17 +471,19 @@ public final class TierConfigFilesTest {
             for (String rank : TierConfigProjection.RANKS) {
                 JsonObject file = TierConfigProjection.tier(defaults, rank);
                 JsonObject gear = file.getAsJsonObject("equipment_loadout");
-                for (String pool : List.of("mainhand", "inventory", "ranged_mainhand", "shield_pool")) gear.add(pool, new JsonArray());
+                for (String pool : List.of("mainhand", "inventory", "ranged_mainhand", "shield_pool", "armor_sets")) gear.add(pool, new JsonArray());
                 check(!ready.test(rank, file), "explicit empty unimported pools not filled " + rank);
                 file = TierConfigProjection.tier(defaults, rank);
                 gear = file.getAsJsonObject("equipment_loadout");
                 gear.addProperty("automatic_spartan_weapons", false);
                 gear.addProperty("automatic_spartan_shields", false);
+                gear.addProperty("automatic_immersive_armors", false);
                 check(!ready.test(rank, file), "disabled flags prevent import " + rank);
                 file = TierConfigProjection.tier(defaults, rank);
                 gear = file.getAsJsonObject("equipment_loadout");
                 gear.add("automatic_spartan_weapons", JsonNull.INSTANCE);
                 gear.add("automatic_spartan_shields", JsonNull.INSTANCE);
+                gear.add("automatic_immersive_armors", JsonNull.INSTANCE);
                 check(!ready.test(rank, file), "malformed import flags preserved " + rank);
                 file = TierConfigProjection.tier(defaults, rank);
                 gear = file.getAsJsonObject("equipment_loadout");
