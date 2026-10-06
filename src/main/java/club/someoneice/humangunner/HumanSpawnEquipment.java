@@ -83,6 +83,7 @@ public final class HumanSpawnEquipment {
         ensureMeleeFallback(human);
         ConfiguredHumanEquipment.generateReserves(human);
         NaturalEquipmentGrowth.applyOnce(human);
+        HumanAmmoSpawn.applyOnce(human);
         tag.putBoolean(GENERATED, true);
         tag.remove(PENDING);
         tag.remove(FORCE_RANGED);

@@ -1,0 +1,6 @@
+{
+  "textures": {
+    "layer0": "minecraft:item/arrow"
+  },
+  "parent": "minecraft:item/generated"
+}

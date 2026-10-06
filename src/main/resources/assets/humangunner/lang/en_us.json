@@ -1,4 +1,10 @@
 {
+  "item.humangunner.human_arrow": "Human Arrow",
+  "item.humangunner.human_magazine": "Universal Magazine",
+  "item.humangunner.human_ammo.tooltip": "Place in a human's inventory to resupply; for humans only",
+  "item.humangunner.human_arrow.tooltip": "Consumes 1 per bow shot or crossbow volley",
+  "item.humangunner.human_magazine.tooltip": "Reload cost: pistol/SMG 1, rifle/shotgun 2, sniper 3, machine gun 4, heavy weapon 5",
+
   "dialogue.humangunner.critical_health": "Warning: my health dropped to %s%%!",
   "message.humangunner.soldier.reports_merged": "; %s additional soldier status reports were merged.",
   "item.humangunner.roamer_identity_badge": "Beginner Identity Badge",

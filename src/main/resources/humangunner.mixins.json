@@ -9,6 +9,9 @@
     "PolymorphConcurrencyMixin",
     "SpartanWeaponryItemRandomizerMixin",
     "TouhouMaidGunHurtMixin",
+    "TaczHumanReloadMixin",
+    "TaczHumanShootMixin",
+    "TaczHumanGunScriptMixin",
     "ThrownTridentLifecycleMixin"
   ],
   "client": [],

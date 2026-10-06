@@ -14,6 +14,12 @@ public final class HumanGunnerRegistries {
     public static final DeferredRegister<MenuType<?>> MENUS =
             DeferredRegister.create(ForgeRegistries.MENU_TYPES, HumanGunner.MOD_ID);
 
+    public static final RegistryObject<Item> HUMAN_ARROW = ITEMS.register("human_arrow",
+            () -> new HumanAmmoItem(false, new Item.Properties().stacksTo(64)));
+    // Keep the registry ID stable even when TaCZ is absent, so saved inventories remain readable.
+    public static final RegistryObject<Item> HUMAN_MAGAZINE = ITEMS.register("human_magazine",
+            () -> new HumanAmmoItem(true, new Item.Properties().stacksTo(24)));
+
     public static final RegistryObject<MenuType<HumanInventoryMenu>> HUMAN_INVENTORY_MENU = MENUS.register(
             "human_inventory",
             () -> IForgeMenuType.create(HumanInventoryMenu::fromNetwork)

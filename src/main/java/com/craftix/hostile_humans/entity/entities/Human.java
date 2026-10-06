@@ -1683,6 +1683,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             CrossbowAttackMob.super.performCrossbowAttack(this, velocity);
         } finally {
             humanGunner$crossbowVolley = null;
+            // Even a throwing/cancelled mod hook must not leave an unpaid
+            // synthetic payload available for equipment transfer.
+            club.someoneice.humangunner.HumanArrowCombat.markNpcLoad(crossbow);
             // A cancelled insertion pays nothing; successful Multishot pays once.
             if (volley.stream().anyMatch(Projectile::isAddedToWorld)) {
                 club.someoneice.humangunner.HumanAmmo.consumeArrow(this);
