@@ -201,3 +201,14 @@
 - 未构建、未执行编译或自动化测试、未同步和推送。用户下次授权构建后运行TierConfigFilesTest；游戏内仍需检查首次生成五份文件、既有自定义文件不改写以及配置读取效果。
 
 - 本地整合提交 `9d3ea2cb71089f6d1b7cc5ef5821efab27679431`；默认JSON和差异静态核查通过，原用户CHANGELOG旧段哈希不变，游戏实例未改动。
+
+
+## 持枪近战拦截及群体目标响应：2026-10-06（本地开发完成）
+
+- 基线 `adbcfae5fd4096f991debd34e08dcb43c15f63f5`；主控 `/root` 单独在主仓库 main 实施，未增加 Agent 或并行编辑工作树。Human、AdaptiveCombatGoal、build.gradle 和所有接入文件由主控唯一负责；保留用户原 CHANGELOG 修改。
+- 文件范围：GunSupport/TaczGunItemIdentity、GunDrawContinuity、GunnerGoal/TaczIntegration、Human、MeleeAttackGoal/MeleeCombatRange、BetterCombatMeleeCombat、AdaptiveCombatGoal、RangedHybridMeleeGoal/TridentHybridGoal、两个 NearestAttackableTargetGoal 与 GuardCombatTargetGoal；新增 GunCombatPolicyTest，更新 OptionalRuntimeTest、构建测试入口及文档。
+- 接口：GunSupport.isGunItem 识别实际枪械且不受 NPC 兼容开关影响，可选 API 仅存在 TaCZ 已安装时构造的适配器。Human.humanGunner$canMeleeAttack 统一保护持枪伤害与动画入口，空枪不能被归入近战模式；取消切成枪后的 Better Combat 待出伤。近距离枪手仍通过现有 GunCustody 实际换主手武器后才能反击。
+- 确認的响应原因：玩家目标限流 Goal 未检查死亡/移除/换维度，驻守记忆能重新指定死亡攻击者；随机目标重搜进一步增加等待。补齐有效性检查，驻守结束仅清除死亡目标。枪手失去死亡目标后使用 6 tick 短窗口跳过已有选择器随机门槛，并保留玩家警戒、人数上限、攻击模式、范围及原有目标谓词，不创建第二套选敌系统。
+- 本机只读核对 TaCZ 1.1.8-hotfix API JAR 字节码：draw 调用 initialData 重置射击、换弹、拉栓与瞄准状态，GunDrawEvent 未取消时才发布 currentGunItem supplier。原 GunnerGoal 每次 start 无条件 draw；改为记录实体当前实际 ItemStack 引用及 gun ID，同枪跨目标/Goal 重启保持状态，真正换枪或绑定丢失才 draw。取消事件不标记成功，原卡顿/NOT_DRAW 恢复保留强制 draw；弱键映射不持有实体引用。默认 supplier 动态读取主手，不能仅以 supplier.get()==主手判断是否换过枪。
+- 验证：git diff --check 与源码调用链静态核查；新增同枪多次目标切换、真换枪、原地改 gun ID、丢失绑定、外部已绑定和掏枪事件取消的状态回归及近战/目标入口字节码接入检查，接入 check，尚未编译或运行。本轮没有构建、实例同步、游戏启动或 GitHub 推送。
+- 游戏内验收：有/无 Better Combat 时持枪射击不同时挥砍；空枪不拳击，实际切剑后近战恢复；群体怪物/玩家切换及区域驻守死目标及时清除；击杀时正在换弹不被重新掏枪打断；真实换枪正常掏枪，射速、拉栓、供弹扣费、视线和攻击模式仍有效。响应时间仍受原生枪械动作、服务器 tick 和视线限制，静态核查不证明游戏效果。

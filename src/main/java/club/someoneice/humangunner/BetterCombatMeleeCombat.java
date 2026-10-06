@@ -60,6 +60,7 @@ public final class BetterCombatMeleeCombat {
 
     public static boolean isEnabled(Human human) {
         return human != null && !human.level().isClientSide
+                && human.humanGunner$canMeleeAttack()
                 && isConfiguredEnabled();
     }
 

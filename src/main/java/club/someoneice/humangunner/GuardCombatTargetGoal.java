@@ -26,7 +26,8 @@ final class GuardCombatTargetGoal extends Goal {
         }
         var id = human.guardCombatState.attacker(human.level().getGameTime());
         return id != null && human.level() instanceof ServerLevel level
-                && level.getEntity(id) instanceof LivingEntity attacker && human.canAttack(attacker);
+                && level.getEntity(id) instanceof LivingEntity attacker && attacker.isAlive()
+                && !attacker.isRemoved() && human.canAttack(attacker);
     }
     @Override public boolean canContinueToUse() { return canUse(); }
     @Override public void tick() {
@@ -34,7 +35,8 @@ final class GuardCombatTargetGoal extends Goal {
         if (current != null && current.isAlive() && human.canAttack(current)) return;
         var id = human.guardCombatState.attacker(human.level().getGameTime());
         if (id != null && human.level() instanceof ServerLevel level
-                && level.getEntity(id) instanceof LivingEntity attacker && human.canAttack(attacker)) {
+                && level.getEntity(id) instanceof LivingEntity attacker && attacker.isAlive()
+                && !attacker.isRemoved() && human.canAttack(attacker)) {
             human.setTarget(attacker);
         }
     }
@@ -49,6 +51,8 @@ final class GuardCombatTargetGoal extends Goal {
     @Override public void stop() {
         startingTarget = null;
         human.guardCombatState.retainTarget(null);
+        LivingEntity current = human.getTarget();
+        if (current != null && (!current.isAlive() || current.isRemoved())) human.setTarget(null);
     }
-    // Do not clear a target on stop: nearby tactical switching owns that target.
+    // Live targets belong to nearby tactical switching; only clear dead targets.
 }

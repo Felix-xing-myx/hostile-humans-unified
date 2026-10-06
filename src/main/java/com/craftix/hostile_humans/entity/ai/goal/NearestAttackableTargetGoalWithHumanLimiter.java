@@ -14,6 +14,7 @@ import net.minecraft.world.scores.Team;
 public class NearestAttackableTargetGoalWithHumanLimiter<T extends LivingEntity>
 extends NearestAttackableTargetGoal<T> {
     Human human;
+    private boolean reacquireAfterDeath;
 
     public NearestAttackableTargetGoalWithHumanLimiter(Human p_26060_, Class<T> p_26061_, boolean p_26062_) {
         super((Mob)p_26060_, p_26061_, p_26062_);
@@ -26,6 +27,10 @@ extends NearestAttackableTargetGoal<T> {
             target1 = this.targetMob;
         }
         if (target1 == null) {
+            return false;
+        }
+        if (!target1.isAlive() || target1.isRemoved() || target1.level() != this.mob.level()) {
+            reacquireAfterDeath = club.someoneice.humangunner.GunSupport.isGunItem(this.mob.getMainHandItem());
             return false;
         }
         if (!this.mob.canAttack(target1)) {
@@ -50,7 +55,12 @@ extends NearestAttackableTargetGoal<T> {
             return false;
         }
         this.targetConditions.range(this.getFollowDistance());
-        boolean usable = super.canUse();
+        boolean usable;
+        if (reacquireAfterDeath || human.humanGunner$shouldFastGunRetarget()) {
+            reacquireAfterDeath = false;
+            this.findTarget();
+            usable = this.target != null;
+        } else usable = super.canUse();
         if (usable && (livingEntity = this.target) instanceof Player) {
             Player player = (Player)livingEntity;
             if (HumanUtil.isLookingAtTarget((LivingEntity)this.human, (Entity)this.target)) {

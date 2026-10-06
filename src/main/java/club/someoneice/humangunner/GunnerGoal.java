@@ -25,8 +25,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public final class GunnerGoal<T extends PathfinderMob> extends Goal {
+    private static final Map<PathfinderMob, GunDrawContinuity> DRAW_BINDINGS = new WeakHashMap<>();
     private static final double RETREAT_RANGE = 4.0D;
     private static final double CLOSE_MELEE_ENTER_RANGE = 2.0D;
     private static final double CLOSE_MELEE_EXIT_RANGE = 4.0D;
@@ -142,7 +145,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         nextApproachPathTick = mob.tickCount;
         movementTarget = mob.getTarget();
         if (isGun(mob.getMainHandItem())) {
-            operator.draw(mob::getMainHandItem);
+            ensureGunDrawn(mob, operator);
         }
     }
 
@@ -239,7 +242,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 if (!isGun(weapon)) {
                     return;
                 }
-                operator.draw(mob::getMainHandItem);
+                ensureGunDrawn(mob, operator);
                 human.getPersistentData().putString(
                         "humangunner:ai_phase", "gun_close_defense_return"
                 );
@@ -265,6 +268,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 MovementSpeedController.combat(human, false);
             }
         }
+
+        if (ensureGunDrawn(mob, operator)) aimTicks = 0;
 
         mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
         double fireRangeSqr = firingRangeSqr(range);
@@ -394,6 +399,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             nextCloseRetreatPathTick = human.tickCount + 8;
         }
         if (distance > closeMeleeRange(human, target)
+                || !human.humanGunner$canMeleeAttack()
                 || human.isUsingItem()
                 || human.tickCount < nextCloseMeleeAttackTick
                 || !(HumanUtil.isMeleeWeapon(human.getMainHandItem())
@@ -499,7 +505,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         }
 
         if (result == ShootResult.NOT_DRAW) {
-            operator.draw(mob::getMainHandItem);
+            drawCurrentGun(mob, operator);
             return;
         }
         if (result == ShootResult.IS_MELEE) {
@@ -537,7 +543,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // Recovery only clears stalled operator state. Native bolting must
             // move a real magazine round into the chamber; recovery never adds
             // rounds, even after a paid reload was interrupted or timed out.
-            operator.draw(mob::getMainHandItem);
+            drawCurrentGun(mob, operator);
             mob.setSprinting(false);
             mob.getPersistentData().putInt(
                     "humangunner:gun_recovery_count",
@@ -560,6 +566,29 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         mob.setSprinting(false);
         operator.getDataHolder().sprintTimeS = 0.0F;
         operator.getDataHolder().sprintTimestamp = -1L;
+    }
+
+    static boolean ensureGunDrawn(PathfinderMob mob, IGunOperator operator) {
+        ItemStack weapon = mob.getMainHandItem();
+        IGun gun = IGun.getIGunOrNull(weapon);
+        if (gun == null) return false;
+        var current = operator.getDataHolder().currentGunItem;
+        boolean bound = current != null && current.get() == weapon;
+        return DRAW_BINDINGS.computeIfAbsent(mob, ignored -> new GunDrawContinuity())
+                .ensure(weapon, gun.getGunId(weapon).toString(), bound, () -> drawCurrentGun(mob, operator));
+    }
+
+    private static boolean drawCurrentGun(PathfinderMob mob, IGunOperator operator) {
+        ItemStack weapon = mob.getMainHandItem();
+        IGun gun = IGun.getIGunOrNull(weapon);
+        if (gun == null) return false;
+        java.util.function.Supplier<ItemStack> requested = mob::getMainHandItem;
+        operator.draw(requested);
+        // TaCZ publishes the supplier only after an uncancelled GunDrawEvent.
+        if (operator.getDataHolder().currentGunItem != requested) return false;
+        DRAW_BINDINGS.computeIfAbsent(mob, ignored -> new GunDrawContinuity())
+                .drawn(weapon, gun.getGunId(weapon).toString());
+        return true;
     }
 
     static void prepareUrgentCloseShot(PathfinderMob mob, IGunOperator operator) {

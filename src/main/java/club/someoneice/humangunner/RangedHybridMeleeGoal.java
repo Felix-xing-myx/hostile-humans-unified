@@ -65,6 +65,7 @@ public final class RangedHybridMeleeGoal extends Goal {
 
     @Override
     public void tick() {
+        if (!human.humanGunner$canMeleeAttack()) return;
         LivingEntity target = human.getTarget();
         if (!isValidTarget(target)) {
             return;

@@ -165,6 +165,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             new club.someoneice.humangunner.GuardCombatState();
     private ItemStack pendingBetterCombatWeapon = ItemStack.EMPTY;
     private int pendingBetterCombatUpswingTicks;
+    private int humanGunner$fastGunRetargetUntilTick = -1;
 
     /** The firing goal requests a final facing update after navigation has moved. */
     public void markRangedFacing(LivingEntity target) {
@@ -272,18 +273,15 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private static boolean humanGunner$isMeleeMode(Human human) {
+        if (!human.humanGunner$canMeleeAttack()) return false;
         ItemStack mainHand = human.getMainHandItem();
         ItemStack offHand = human.getOffhandItem();
-        boolean gunActive = club.someoneice.humangunner.GunSupport.get().isGun(mainHand)
-                && (club.someoneice.humangunner.HumanAmmo.canUseGun(human, mainHand)
-                || club.someoneice.humangunner.GunSupport.get().isReloading(human));
         if (!club.someoneice.humangunner.GunSupport.get().isGun(mainHand)
                 && !RangedWeaponCustody.isActive(human)
                 && HumanUtil.isMeleeWeapon(mainHand)) {
             return true;
         }
-        return !gunActive
-                && !RangedWeaponCustody.isActive(human)
+        return !RangedWeaponCustody.isActive(human)
                 && !(mainHand.getItem() instanceof TridentItem)
                 && (!club.someoneice.humangunner.HumanAmmo.hasArrows(human)
                 || (!RangedWeaponCustody.isBowOrCrossbow(mainHand)
@@ -1078,6 +1076,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public boolean doHurtTarget(Entity entityIn) {
+        if (!humanGunner$canMeleeAttack()) return false;
         if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return false;
         if (BetterCombatMeleeCombat.isEnabled(this) && entityIn instanceof LivingEntity requestedTarget) {
             if (pendingBetterCombatTarget != null) return false;
@@ -1107,6 +1106,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     private boolean hasPendingBetterCombatFacing() {
         return !level().isClientSide && pendingBetterCombatTarget != null
+                && humanGunner$canMeleeAttack()
                 && pendingBetterCombatTarget.isAlive() && pendingBetterCombatTarget.level() == level()
                 && isAlive() && !isNoAi() && !isFleeing
                 && canAttack(pendingBetterCombatTarget)
@@ -1123,6 +1123,13 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     private void finishBetterCombatUpswing() {
         if (pendingBetterCombatTarget == null) return;
+        if (!humanGunner$canMeleeAttack()) {
+            pendingBetterCombatTarget = null;
+            pendingBetterCombatWeapon = ItemStack.EMPTY;
+            pendingBetterCombatUpswingTicks = 0;
+            setNpcBetterCombatAttackAnimation("");
+            return;
+        }
         if (--pendingBetterCombatUpswingTicks > 0) return;
         LivingEntity target = pendingBetterCombatTarget;
         pendingBetterCombatTarget = null;
@@ -1154,11 +1161,16 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private boolean doHurtTargetSingle(Entity entityIn, boolean animate, boolean wearWeapon) {
+        if (!humanGunner$canMeleeAttack()) return false;
         this.resetFallDistance();
         boolean hit = super.doHurtTarget(entityIn);
         if (animate) swing(InteractionHand.MAIN_HAND);
         if (hit && wearWeapon) wearEquippedItem(getMainHandItem(), EquipmentSlot.MAINHAND);
         return hit;
+    }
+
+    public boolean humanGunner$canMeleeAttack() {
+        return !club.someoneice.humangunner.GunSupport.isGunItem(getMainHandItem());
     }
 
     private void wearEquippedItem(ItemStack stack, EquipmentSlot slot) {
@@ -1349,11 +1361,23 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     @Override
     public void setTarget(@Nullable LivingEntity livingEntity) {
+        LivingEntity previous = getTarget();
+        if (previous != null && (!previous.isAlive() || previous.isRemoved())
+                && club.someoneice.humangunner.GunSupport.isGunItem(getMainHandItem())) {
+            // Two ordinary selector passes, rather than an unbounded idle scan.
+            humanGunner$fastGunRetargetUntilTick = tickCount + 6;
+        }
         if (livingEntity != null && this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL)
             livingEntity = null;
         if (livingEntity != null && !club.someoneice.humangunner.SoldierOrder.allowsTarget(this, livingEntity))
             livingEntity = null;
         super.setTarget(livingEntity);
+    }
+
+    public boolean humanGunner$shouldFastGunRetarget() {
+        return tickCount <= humanGunner$fastGunRetargetUntilTick
+                && club.someoneice.humangunner.GunSupport.isGunItem(getMainHandItem())
+                && (getTarget() == null || !getTarget().isAlive());
     }
 
     @Override

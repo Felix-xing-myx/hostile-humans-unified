@@ -1021,6 +1021,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void performRetreatMeleeCounter() {
+        if (!human.humanGunner$canMeleeAttack()) return;
         if (!(HumanUtil.isMeleeWeapon(human.getMainHandItem())
                 || human.getMainHandItem().getItem() instanceof TridentItem)
                 || human.tickCount < nextRetreatMeleeTick) {
@@ -1453,6 +1454,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private boolean performShieldCounterattack() {
+        if (!human.humanGunner$canMeleeAttack()) return false;
         if (threat == null || !threat.isAlive()) {
             return false;
         }

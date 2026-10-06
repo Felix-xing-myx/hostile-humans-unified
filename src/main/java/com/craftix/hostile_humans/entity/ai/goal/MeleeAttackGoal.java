@@ -45,6 +45,7 @@ extends Goal {
 
     @Override
     public boolean canUse() {
+        if (club.someoneice.humangunner.GunSupport.isGunItem(this.mob.getMainHandItem())) return false;
         if (this.mob instanceof Human human && human.getMainHandItem().isEmpty()
                 && human.getTarget() != null) {
             club.someoneice.humangunner.HumanLootManager.equipMeleeFallback(human);
@@ -90,6 +91,7 @@ extends Goal {
     }
 
     public boolean canContinueToUse() {
+        if (club.someoneice.humangunner.GunSupport.isGunItem(this.mob.getMainHandItem())) return false;
         HumanEntity humanEntity = this.mob;
         if (humanEntity instanceof Human) {
             Human human = (Human)humanEntity;
@@ -152,6 +154,7 @@ extends Goal {
     }
 
     public void tick() {
+        if (club.someoneice.humangunner.GunSupport.isGunItem(this.mob.getMainHandItem())) return;
         LivingEntity livingEntity = this.mob.getTarget();
         if (livingEntity != null) {
             Player player;
@@ -230,6 +233,7 @@ extends Goal {
 
     /** Opens one guaranteed attack window after an adaptive shield block. */
     public boolean humanGunner$tryImmediateCounterattack(LivingEntity target) {
+        if (club.someoneice.humangunner.GunSupport.isGunItem(this.mob.getMainHandItem())) return false;
         if (target == null || !target.isAlive() || !this.mob.canAttack(target)) {
             return false;
         }

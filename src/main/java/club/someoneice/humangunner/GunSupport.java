@@ -12,6 +12,16 @@ import java.util.Map;
 public interface GunSupport {
     static GunSupport get() { return Holder.INSTANCE; }
 
+    /** Physical gun identity must not depend on the NPC integration toggle. */
+    static boolean isGunItem(ItemStack stack) {
+        return stack != null && !stack.isEmpty() && GunIdentityHolder.IDENTITY.test(stack);
+    }
+    final class GunIdentityHolder {
+        private static final java.util.function.Predicate<ItemStack> IDENTITY = ModList.get().isLoaded("tacz")
+                ? new TaczGunItemIdentity() : stack -> false;
+        private GunIdentityHolder() { }
+    }
+
     final class Holder {
         private static final GunSupport INSTANCE = ModList.get().isLoaded("tacz")
                 && UnifiedConfig.get().taczEnabled() ? new TaczIntegration() : new GunSupport() {};

@@ -27,7 +27,7 @@ public final class MeleeCombatRange {
 
     /** Movement may stop only where this weapon can actually hit, not just within nominal reach. */
     public static boolean canStrike(Human human, LivingEntity target) {
-        if (target == null || !target.isAlive() || !human.canAttack(target)) return false;
+        if (!human.humanGunner$canMeleeAttack() || target == null || !target.isAlive() || !human.canAttack(target)) return false;
         if (BetterCombatMeleeCombat.hasWeaponProfile(human))
             return BetterCombatMeleeCombat.canStrike(human, target);
         return human.distanceToSqr(target) <= reachSqr(human, target)

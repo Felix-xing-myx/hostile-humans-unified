@@ -20,6 +20,7 @@ extends TargetGoal {
     @Nullable
     protected LivingEntity target;
     protected TargetingConditions targetConditions;
+    private boolean reacquireAfterDeath;
 
     public NearestAttackableTargetGoalCustom(Mob p_26053_, Class<T> p_26054_, int p_26055_, boolean p_26056_, boolean p_26057_, @Nullable Predicate<LivingEntity> livingEntityPredicate) {
         super(p_26053_, p_26056_, p_26057_);
@@ -33,11 +34,24 @@ extends TargetGoal {
         if (HumanUtil.isLowHp((LivingEntity)this.mob)) {
             return false;
         }
-        if (this.randomInterval > 0 && this.mob.getRandom().nextInt(this.randomInterval) != 0) {
+        boolean fastRetarget = this.mob instanceof com.craftix.hostile_humans.entity.entities.Human human
+                && human.humanGunner$shouldFastGunRetarget();
+        if (!reacquireAfterDeath && !fastRetarget && this.randomInterval > 0
+                && this.mob.getRandom().nextInt(this.randomInterval) != 0) {
             return false;
         }
+        reacquireAfterDeath = false;
         this.findTarget();
         return this.target != null;
+    }
+
+    @Override public boolean canContinueToUse() {
+        LivingEntity current = this.mob.getTarget() != null ? this.mob.getTarget() : this.target;
+        if (current != null && (!current.isAlive() || current.isRemoved() || current.level() != this.mob.level())) {
+            reacquireAfterDeath = club.someoneice.humangunner.GunSupport.isGunItem(this.mob.getMainHandItem());
+            return false;
+        }
+        return super.canContinueToUse();
     }
 
     protected AABB getTargetSearchArea(double p_26069_) {

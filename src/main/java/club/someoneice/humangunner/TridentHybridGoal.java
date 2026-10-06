@@ -95,6 +95,7 @@ public final class TridentHybridGoal extends Goal {
 
     @Override
     public void tick() {
+        if (!human.humanGunner$canMeleeAttack()) return;
         target = human.getTarget();
         if (!isValidTarget(target)) {
             return;

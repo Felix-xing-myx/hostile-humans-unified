@@ -99,21 +99,18 @@ final class TaczIntegration implements GunSupport {
         // The native operator needs a current-gun supplier even when its combat
         // goal has never run. Drawing once may impose TaCZ's ordinary draw
         // cooldown; the next check will start a normal timed reload.
-        var currentGun = operator.getDataHolder().currentGunItem;
-        if (currentGun == null || currentGun.get() != weapon) {
-            operator.draw(human::getMainHandItem);
-            return;
-        }
+        if (GunnerGoal.ensureGunDrawn(human, operator)) return;
         operator.reload();
     }
     public Control control(Human human) {
         IGunOperator operator = IGunOperator.fromLivingEntity(human);
         return new Control() {
             public void aim(boolean aiming) { operator.aim(aiming); }
-            public void draw() { operator.draw(human::getMainHandItem); }
+            public void draw() { GunnerGoal.ensureGunDrawn(human, operator); }
             public void clearSprintLock() { GunnerGoal.clearNpcSprintLock(human, operator); }
             public void prepareUrgentShot() { GunnerGoal.prepareUrgentCloseShot(human, operator); }
             public void shoot(ItemStack weapon, float pitch, float yaw) {
+                if (GunnerGoal.ensureGunDrawn(human, operator)) return;
                 GunnerGoal.handleShootResult(human, operator, weapon, operator.shoot(() -> pitch, () -> yaw));
             }
         };
