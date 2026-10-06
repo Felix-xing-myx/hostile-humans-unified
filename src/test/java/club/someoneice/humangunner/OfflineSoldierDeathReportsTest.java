@@ -3,6 +3,7 @@ package club.someoneice.humangunner;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
 
 /** Persistence and recipient isolation without starting a server. */
 public final class OfflineSoldierDeathReportsTest {
@@ -41,6 +42,32 @@ public final class OfflineSoldierDeathReportsTest {
         CompoundTag invalid = new CompoundTag();
         invalid.putString("Owners", "not a list");
         check(OfflineSoldierDeathReports.Store.load(invalid).peek(owner).deaths().isEmpty(), "invalid list is safely ignored");
+
+        CompoundTag persistent = new CompoundTag();
+        OfflineSoldierDeathReports.saveCandidate(persistent, drowned);
+        check(OfflineSoldierDeathReports.onCandidateLeave(persistent, drowned.human(),
+                Entity.RemovalReason.UNLOADED_TO_CHUNK) == null, "unload never confirms a death");
+        check(persistent.contains(OfflineSoldierDeathReports.CANDIDATE), "unload retains candidate in entity NBT");
+        check(OfflineSoldierDeathReports.onCandidateLeave(persistent, drowned.human(),
+                Entity.RemovalReason.CHANGED_DIMENSION) == null, "dimension transfer never confirms a death");
+        CompoundTag reloadedEntity = persistent.copy();
+        check(OfflineSoldierDeathReports.onCandidateLeave(reloadedEntity, drowned.human(),
+                Entity.RemovalReason.KILLED).equals(drowned), "entity NBT alone recovers a confirmed death after reload");
+        check(!reloadedEntity.contains(OfflineSoldierDeathReports.CANDIDATE), "KILLED consumes candidate");
+        check(OfflineSoldierDeathReports.onCandidateLeave(reloadedEntity, drowned.human(),
+                Entity.RemovalReason.KILLED) == null, "repeated KILLED cannot redeliver candidate");
+        check(!OfflineSoldierDeathReports.clearRevivedCandidate(persistent, 0, false), "death animation retains candidate");
+        check(!OfflineSoldierDeathReports.clearRevivedCandidate(persistent, 5, false), "positive health alone is insufficient");
+        check(OfflineSoldierDeathReports.clearRevivedCandidate(persistent, 5, true), "revival clears stale candidate");
+        check(OfflineSoldierDeathReports.onCandidateLeave(persistent, drowned.human(),
+                Entity.RemovalReason.KILLED) == null, "revived candidate cannot create later false notice");
+        OfflineSoldierDeathReports.saveCandidate(persistent, drowned);
+        check(OfflineSoldierDeathReports.onCandidateLeave(persistent, drowned.human(),
+                Entity.RemovalReason.DISCARDED) == null && !persistent.contains(OfflineSoldierDeathReports.CANDIDATE),
+                "discard consumes evidence without claiming death");
+        OfflineSoldierDeathReports.saveCandidate(persistent, drowned);
+        check(OfflineSoldierDeathReports.onCandidateLeave(persistent, UUID.randomUUID(),
+                Entity.RemovalReason.KILLED) == null, "foreign UUID cannot reuse candidate");
         System.out.println("OfflineSoldierDeathReportsTest passed " + assertions + " assertions");
     }
 

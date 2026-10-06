@@ -21,6 +21,7 @@ import net.minecraftforge.event.server.ServerStoppedEvent;
 /** Capture a proposed death, then persist only an actual KILLED removal. */
 final class OfflineSoldierDeathReports {
     private static final String ID = "humangunner_offline_deaths";
+    static final String CANDIDATE = "humangunner:offline_death_candidate";
     static final int MAX_REPORTS = 32;
     // Weak keys prevent cancelled deaths from retaining living entities or worlds.
     private static final Map<Human, Death> PENDING = new WeakHashMap<>();
@@ -30,20 +31,30 @@ final class OfflineSoldierDeathReports {
     static void onDeath(LivingDeathEvent event) {
         if (!(event.getEntity() instanceof Human human) || human.level().isClientSide) return;
         PENDING.remove(human);
+        human.getPersistentData().remove(CANDIDATE);
         MinecraftServer server = human.getServer();
         UUID owner = human.getOwnerUUID();
-        if (event.isCanceled() || server == null || owner == null
+        if (event.isCanceled() || server == null || !human.hasOwner() || owner == null
                 || server.getPlayerList().getPlayer(owner) != null) return;
         Component cause = event.getSource().getLocalizedDeathMessage(human);
-        PENDING.put(human, new Death(human.getUUID(), owner, human.getDisplayName().getString(),
+        Death proposed = new Death(human.getUUID(), owner, human.getDisplayName().getString(),
                 Component.Serializer.toJson(cause), human.level().dimension().location().toString(),
-                human.getBlockX(), human.getBlockY(), human.getBlockZ()));
+                human.getBlockX(), human.getBlockY(), human.getBlockZ());
+        PENDING.put(human, proposed);
+        saveCandidate(human.getPersistentData(), proposed);
+    }
+
+    static void tick(Human human) {
+        if (!human.level().isClientSide && clearRevivedCandidate(
+                human.getPersistentData(), human.getHealth(), human.isAlive())) PENDING.remove(human);
     }
 
     static void onEntityLeave(Human human) {
+        if (human.level().isClientSide) return;
         Death proposed = PENDING.remove(human);
-        if (human.level().isClientSide || proposed == null
-                || human.getRemovalReason() != Entity.RemovalReason.KILLED) return;
+        Death persisted = onCandidateLeave(human.getPersistentData(), human.getUUID(), human.getRemovalReason());
+        if (proposed == null) proposed = persisted;
+        if (proposed == null || human.getRemovalReason() != Entity.RemovalReason.KILLED) return;
         MinecraftServer server = human.getServer();
         if (server == null) return;
         Store store = get(server);
@@ -52,6 +63,34 @@ final class OfflineSoldierDeathReports {
         // Deliver immediately once KILLED is confirmed instead of waiting for another login.
         ServerPlayer owner = server.getPlayerList().getPlayer(proposed.owner());
         if (owner != null) deliver(owner, store);
+    }
+
+    static void saveCandidate(CompoundTag persistent, Death death) {
+        CompoundTag tag = new CompoundTag();
+        tag.putUUID("Human", death.human());
+        tag.putUUID("Owner", death.owner());
+        tag.putString("Name", death.name());
+        tag.putString("Cause", death.causeJson());
+        tag.putString("Dimension", death.dimension());
+        tag.putInt("X", death.x()); tag.putInt("Y", death.y()); tag.putInt("Z", death.z());
+        persistent.put(CANDIDATE, tag);
+    }
+
+    static boolean clearRevivedCandidate(CompoundTag persistent, float health, boolean alive) {
+        if (health <= 0 || !alive || !persistent.contains(CANDIDATE)) return false;
+        persistent.remove(CANDIDATE);
+        return true;
+    }
+
+    /** Unloads/transfers keep the entity's tentative evidence; destructive removals consume it. */
+    static Death onCandidateLeave(CompoundTag persistent, UUID human, Entity.RemovalReason reason) {
+        CompoundTag tag = persistent.getCompound(CANDIDATE);
+        if (reason == Entity.RemovalReason.KILLED || reason == Entity.RemovalReason.DISCARDED)
+            persistent.remove(CANDIDATE);
+        if (reason != Entity.RemovalReason.KILLED || !tag.hasUUID("Human") || !tag.hasUUID("Owner")
+                || !human.equals(tag.getUUID("Human"))) return null;
+        return new Death(human, tag.getUUID("Owner"), tag.getString("Name"), tag.getString("Cause"),
+                tag.getString("Dimension"), tag.getInt("X"), tag.getInt("Y"), tag.getInt("Z"));
     }
 
     static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
