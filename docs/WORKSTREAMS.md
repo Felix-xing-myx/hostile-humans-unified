@@ -287,3 +287,11 @@
 - 待游戏验收：主动保护主人旁敌人与自身远处攻击者同时存在、连续挨打不来回换目标；许可/被动普通权限不扩大；Better Combat有/无盾及多目标慢武器的完整前摇/命中/后摇；自然/点燃/带电苦力怕引爆取消后立刻恢复、逃跑距离、多个苦力怕、所有模式主人旁引爆优先击杀及停止引爆后的权限恢复、原退避归队和水/岩浆生存控制。
 - 最终只读审核补齐一项权限遗漏：原忽略目标记忆会拒绝曾被遗忘、随后在主人身边起爆的苦力怕，而逃跑已让出。仅有效救主期间跳过该忽略检查，存活/维度/距离仍受原门控制，不删除其记忆，危险结束即恢复。递归链与已运行DEFEND释放核查通过；源码分隔符与入口顺序静态检查、git diff --check通过，不等同编译。
 - 主控本地整合提交 `9ff9c4474101535fe248037e50b945105cf4fdf2`；精确暂存仅本任务内容，用户原CHANGELOG片段哈希未变，当前仅该原修改留在工作区。新增回归未编译执行，测试实例仍为19:54部署产物。
+
+## 构建及测试实例同步：2026-10-06 21:34（北京时间）
+
+- 用户授权“构建并同步”；唯一目标 `E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21`，版本3.6.0，源码 `132baa32f7c0e5d6c5f58bdd28d712f8120d473a`。包含贴身保护统一选敌、Better Combat前摇/取消动画修复、苦力怕停止引爆及时停止避让及全模式救主例外。
+- Java17、仓库gradlew.bat及三个完整只读API参数执行 `build lootScreeningTest --offline`，首轮成功，41任务（38执行/3已有结果）。BodyguardAndVanillaModeTest75、DefensiveBehaviorTest1119、GunCombatPolicyTest57、SoldierCombatModeTest53、UnifiedConfigTest1897、LootScreeningTest13391与其余check通过；可选依赖隔离374核心类通过。坏配置/缺失结构包ERROR为故障注入预期输出，非构建失败。
+- JAR全部ZIP条目读取、修复类存在及MANIFEST版本核查通过。备份前与替换前两次确认无Java进程，旧JAR及10份相关配置备份逐一核对哈希，仅替换本模组JAR，实例中仅一份；既有配置哈希全部不变，用户原CHANGELOG未混入提交。未启动游戏或推送GitHub。
+- 源/目标SHA-256 `3B6C80E4CD51949DAE4BCCD0B9065878F3AC98E7838CD4B1EAE811C42411B03E`；旧JAR `5CF40CE7D1DC3509BD047255EA384F9DED71A5B42345F311A555F0DD8EC1EF5B`。备份清单 `部署备份/20261006-213437-bodyguard-combat-repair-Forge_47.4.21/deployment.json`；构建日志 `验证日志/build-bodyguard-repair-20261006-213318.log`（均在维护上级目录）。
+- 待游戏验收：主人旁近敌优先于士兵远处自卫目标、连续挨打下不来回卡刀；有/无盾Better Combat慢武器连续命中；普通/带电/点燃苦力怕停止引爆后立即恢复，保护全模式救主及危险结束后权限恢复。自动检查成功不代表真实游戏行为已验证。
