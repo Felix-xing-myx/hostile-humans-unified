@@ -3,7 +3,7 @@ package com.craftix.hostile_humans.entity.ai.goal;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import com.craftix.hostile_humans.entity.ai.InteractionSafetyPolicy;
-import net.minecraft.tags.BlockTags;
+import com.craftix.hostile_humans.entity.ai.PassageLease;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -106,7 +106,7 @@ extends Goal {
     }
 
     public static boolean isWoodenTrapdoor(BlockState p_52818_) {
-        return p_52818_.getBlock() instanceof TrapDoorBlock && p_52818_.is(BlockTags.WOODEN_TRAPDOORS);
+        return PassageLease.handOpenableTrapdoor(p_52818_);
     }
 
     public void setOpenTrapdoor(@Nullable Entity p_153166_, Level p_153167_, BlockState p_153168_, BlockPos p_153169_, boolean p_153170_) {

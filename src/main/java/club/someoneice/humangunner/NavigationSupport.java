@@ -7,8 +7,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.DoorBlock;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.pathfinder.Path;
@@ -61,8 +59,7 @@ final class NavigationSupport {
                 door.setOpen(human, human.level(), state, pos, true);
                 PassageLease.opened(human, pos);
                 opened = true;
-            } else if (state.getBlock() instanceof TrapDoorBlock
-                    && !state.is(Blocks.IRON_TRAPDOOR)) {
+            } else if (PassageLease.handOpenableTrapdoor(state)) {
                 human.level().setBlock(pos, state.setValue(BlockStateProperties.OPEN, true), 10);
                 PassageLease.opened(human, pos);
                 opened = true;

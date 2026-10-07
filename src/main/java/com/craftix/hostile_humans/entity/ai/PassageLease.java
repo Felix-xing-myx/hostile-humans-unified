@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.Level;
@@ -28,6 +29,10 @@ public final class PassageLease {
 
     public static boolean handOpenable(BlockState state) {
         return state.getBlock() instanceof DoorBlock door && door.type().canOpenByHand();
+    }
+
+    public static boolean handOpenableTrapdoor(BlockState state) {
+        return state.getBlock() instanceof TrapDoorBlock && state.is(BlockTags.WOODEN_TRAPDOORS);
     }
 
     public static BlockPos normalize(Level level, BlockPos pos) {
@@ -90,7 +95,7 @@ public final class PassageLease {
         for (int i = next; i < InteractionSafetyPolicy.nearbyNodeLimit(next, path.getNodeCount()); i++) {
             BlockPos node = path.getNodePos(i);
             if (node.getX() == pos.getX() && node.getZ() == pos.getZ()
-                    && Math.abs(node.getY() - pos.getY()) <= 2) return true;
+                    && Math.abs(node.getY() - pos.getY()) <= 3) return true;
         }
         return false;
     }

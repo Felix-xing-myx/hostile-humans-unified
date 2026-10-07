@@ -29,6 +29,9 @@ public class AvoidTNTGoal extends Goal {
     private Vec3 lastPosition = Vec3.ZERO;
     private int stalledTicks;
     private boolean started;
+    private boolean fleeingBeforeStart;
+    private boolean sprintingBeforeStart;
+    private boolean changedSprint;
 
     public AvoidTNTGoal(PathfinderMob mob, float distance, double walk, double sprint) {
         this(mob, entity -> true, distance, walk, sprint, EntitySelector.NO_CREATIVE_OR_SPECTATOR::test);
@@ -106,7 +109,10 @@ public class AvoidTNTGoal extends Goal {
 
     @Override public void start() {
         started = true;
+        sprintingBeforeStart = mob.isSprinting();
+        changedSprint = false;
         if (mob instanceof Human human) {
+            fleeingBeforeStart = human.isFleeing;
             human.explosionThreat = toAvoid;
             human.isFleeing = true;
         }
@@ -119,18 +125,20 @@ public class AvoidTNTGoal extends Goal {
     }
 
     @Override public void stop() {
+        boolean ownsThreat = !(mob instanceof Human human) || human.explosionThreat == toAvoid;
         if (ownsCurrentRoute()) mob.getNavigation().stop();
         if (assignedNavigation != null && assignedNavigation != mob.getNavigation()
                 && assignedNavigation.getPath() == path) assignedNavigation.stop();
         if (started && mob instanceof Human human && human.explosionThreat == toAvoid) {
             human.explosionThreat = null;
-            human.isFleeing = false;
+            human.isFleeing = fleeingBeforeStart;
         }
-        if (started) mob.setSprinting(false);
+        if (started && ownsThreat && changedSprint) mob.setSprinting(sprintingBeforeStart);
         started = false;
         toAvoid = null;
         path = null;
         assignedNavigation = null;
+        changedSprint = false;
     }
 
     @Override public boolean requiresUpdateEveryTick() { return true; }
@@ -144,7 +152,10 @@ public class AvoidTNTGoal extends Goal {
                 && InteractionSafetyPolicy.retryTnt(mob.tickCount, nextSearchTick, retries)) searchRoute();
         if (ownsCurrentRoute()) {
             mob.getNavigation().setSpeedModifier(sprintSpeedModifier);
-            mob.setSprinting(true);
+            if (!mob.isSprinting()) {
+                mob.setSprinting(true);
+                changedSprint = true;
+            }
         }
     }
 }
