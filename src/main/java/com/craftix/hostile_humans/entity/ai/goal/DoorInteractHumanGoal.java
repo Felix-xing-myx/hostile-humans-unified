@@ -1,7 +1,8 @@
 package com.craftix.hostile_humans.entity.ai.goal;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.tags.BlockTags;
+import com.craftix.hostile_humans.entity.ai.InteractionSafetyPolicy;
+import com.craftix.hostile_humans.entity.ai.PassageLease;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -81,7 +82,7 @@ extends Goal {
             DoorBlock normalizedDoorBlock = (DoorBlock)block2;
             doorBlock = normalizedDoorBlock;
         }
-        if (DoorBlock.isWoodenDoor((Level)this.mob.level(), (BlockPos)this.doorPos)) {
+        if (PassageLease.handOpenable(blockState)) {
             doorBlock.setOpen((Entity)this.mob, this.mob.level(), blockState, this.doorPos, open);
             return;
         }
@@ -98,7 +99,7 @@ extends Goal {
         GroundPathNavigation groundPathNavigation = (GroundPathNavigation)pathNavigation;
         Path path = groundPathNavigation.getPath();
         if (path != null && !path.isDone() && groundPathNavigation.canOpenDoors()) {
-            for (int i = 0; i < Math.min(path.getNextNodeIndex() + 2, path.getNodeCount()); ++i) {
+            for (int i = InteractionSafetyPolicy.firstNearbyNode(path.getNextNodeIndex()); i < InteractionSafetyPolicy.nearbyNodeLimit(path.getNextNodeIndex(), path.getNodeCount()); ++i) {
                 Node node = path.getNode(i);
                 this.doorPos = DoorInteractHumanGoal.normalizeDoorPos(this.mob.level(), new BlockPos(node.x, node.y + 1, node.z));
                 if (this.mob.distanceToSqr((double)this.doorPos.getX(), this.mob.getY(), (double)this.doorPos.getZ()) > 2.25) continue;
@@ -138,7 +139,7 @@ extends Goal {
 
     protected static boolean isDoor(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        return state.getBlock() instanceof DoorBlock && state.is(BlockTags.DOORS);
+        return state.getBlock() instanceof DoorBlock;
     }
 
     protected static BlockPos normalizeDoorPos(Level level, BlockPos pos) {
@@ -170,4 +171,3 @@ extends Goal {
         return level.clip(new ClipContext(from, new Vec3((double)to.getX() + 0.5, (double)to.getY() + 0.5, (double)to.getZ() + 0.5), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, null)).getType() == HitResult.Type.MISS;
     }
 }
-

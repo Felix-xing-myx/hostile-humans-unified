@@ -1,10 +1,11 @@
 package com.craftix.hostile_humans.entity.ai.goal;
 
+import com.craftix.hostile_humans.entity.ai.InteractionSafetyPolicy;
+import com.craftix.hostile_humans.entity.entities.Human;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
@@ -15,86 +16,135 @@ import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 
-public class AvoidTNTGoal
-extends Goal {
+/** Explosion escape uses the current land/water navigator and owns only its own route. */
+public class AvoidTNTGoal extends Goal {
     protected final PathfinderMob mob;
     protected final float maxDist;
-    protected final PathNavigation pathNav;
-    protected final Predicate<LivingEntity> avoidPredicate;
-    protected final Predicate<LivingEntity> predicateOnAvoidEntity;
-    private final double walkSpeedModifier;
     private final double sprintSpeedModifier;
-    @Nullable
-    protected PrimedTnt toAvoid;
-    @Nullable
-    protected Path path;
+    @Nullable protected PrimedTnt toAvoid;
+    @Nullable protected Path path;
+    private PathNavigation assignedNavigation;
+    private int nextSearchTick;
+    private int retries;
+    private Vec3 lastPosition = Vec3.ZERO;
+    private int stalledTicks;
+    private boolean started;
 
-    public AvoidTNTGoal(PathfinderMob p_25027_, float p_25029_, double p_25030_, double p_25031_) {
-        this(p_25027_, p_25052_ -> true, p_25029_, p_25030_, p_25031_, EntitySelector.NO_CREATIVE_OR_SPECTATOR::test);
+    public AvoidTNTGoal(PathfinderMob mob, float distance, double walk, double sprint) {
+        this(mob, entity -> true, distance, walk, sprint, EntitySelector.NO_CREATIVE_OR_SPECTATOR::test);
     }
 
-    public AvoidTNTGoal(PathfinderMob p_25040_, Predicate<LivingEntity> p_25042_, float p_25043_, double p_25044_, double p_25045_, Predicate<LivingEntity> p_25046_) {
-        this.mob = p_25040_;
-        this.avoidPredicate = p_25042_;
-        this.maxDist = p_25043_;
-        this.walkSpeedModifier = p_25044_;
-        this.sprintSpeedModifier = p_25045_;
-        this.predicateOnAvoidEntity = p_25046_;
-        this.pathNav = p_25040_.getNavigation();
-        this.setFlags(EnumSet.of(Goal.Flag.MOVE));
+    // Keep the old constructor signature; LivingEntity predicates cannot apply to PrimedTnt.
+    public AvoidTNTGoal(PathfinderMob mob, Predicate<LivingEntity> ignored, float distance,
+            double walk, double sprint, Predicate<LivingEntity> alsoIgnored) {
+        this.mob = mob;
+        this.maxDist = distance;
+        this.sprintSpeedModifier = sprint;
+        setFlags(EnumSet.of(Flag.MOVE));
     }
 
-    @Nullable
-    PrimedTnt getNearestEntity(List<PrimedTnt> p_45983_, double p_45986_, double p_45987_, double p_45988_) {
-        double d0 = -1.0;
-        PrimedTnt t = null;
-        for (PrimedTnt t1 : p_45983_) {
-            double d1 = t1.distanceToSqr(p_45986_, p_45987_, p_45988_);
-            if (d0 != -1.0 && !(d1 < d0)) continue;
-            d0 = d1;
-            t = t1;
+    @Nullable PrimedTnt getNearestEntity(List<PrimedTnt> candidates, double x, double y, double z) {
+        PrimedTnt nearest = null;
+        double best = Double.MAX_VALUE;
+        for (PrimedTnt candidate : candidates) {
+            double distance = candidate.distanceToSqr(x, y, z);
+            if (candidate.isAlive() && !candidate.isRemoved() && distance < best
+                    && InteractionSafetyPolicy.escapeTnt(true, distance)) {
+                nearest = candidate;
+                best = distance;
+            }
         }
-        return t;
+        return nearest;
     }
 
-    public boolean canUse() {
-        if (this.mob instanceof com.craftix.hostile_humans.entity.entities.Human human
-                && club.someoneice.humangunner.SoldierOrder.isHoldingPosition(human)) return false;
-        this.toAvoid = this.getNearestEntity(this.mob.level().getEntitiesOfClass(PrimedTnt.class, this.mob.getBoundingBox().inflate((double)this.maxDist, 3.0, (double)this.maxDist)), this.mob.getX(), this.mob.getY(), this.mob.getZ());
-        if (this.toAvoid == null) {
-            return false;
+    @Override public boolean canUse() {
+        if (mob.tickCount < nextSearchTick) return false;
+        double radius = Math.max(maxDist, Math.sqrt(InteractionSafetyPolicy.TNT_SAFE_DISTANCE_SQUARED));
+        toAvoid = getNearestEntity(mob.level().getEntitiesOfClass(PrimedTnt.class,
+                mob.getBoundingBox().inflate(radius)), mob.getX(), mob.getY(), mob.getZ());
+        if (!unsafe()) return false;
+        retries = 0;
+        return searchRoute();
+    }
+
+    private boolean unsafe() {
+        return toAvoid != null && InteractionSafetyPolicy.escapeTnt(
+                toAvoid.isAlive() && !toAvoid.isRemoved(), toAvoid.distanceToSqr(mob));
+    }
+
+    private boolean searchRoute() {
+        nextSearchTick = mob.tickCount + InteractionSafetyPolicy.TNT_RETRY_DELAY;
+        retries++;
+        PathNavigation navigation = mob.getNavigation();
+        for (int attempt = 0; attempt < 4; attempt++) {
+            Vec3 candidate = DefaultRandomPos.getPosAway(mob, 12, 5, toAvoid.position());
+            if (candidate == null || toAvoid.distanceToSqr(candidate)
+                    < InteractionSafetyPolicy.TNT_SAFE_DISTANCE_SQUARED) continue;
+            Path replacement = navigation.createPath(candidate.x, candidate.y, candidate.z, 0);
+            if (replacement == null || !replacement.canReach()) continue;
+            if (assignedNavigation != null && assignedNavigation != navigation
+                    && assignedNavigation.getPath() == path) assignedNavigation.stop();
+            path = replacement;
+            assignedNavigation = navigation;
+            if (started) navigation.moveTo(path, sprintSpeedModifier);
+            stalledTicks = 0;
+            return true;
         }
-        Vec3 vec3 = DefaultRandomPos.getPosAway((PathfinderMob)this.mob, (int)16, (int)7, (Vec3)this.toAvoid.position());
-        if (vec3 == null) {
-            return false;
+        return false;
+    }
+
+    @Override public boolean canContinueToUse() {
+        return unsafe() && (retries < InteractionSafetyPolicy.TNT_MAX_RETRIES
+                || ownsCurrentRoute() && !mob.getNavigation().isDone() && stalledTicks < 20);
+    }
+
+    private boolean ownsCurrentRoute() {
+        return mob instanceof Human human
+                ? club.someoneice.humangunner.MovementContinuity.ownsRoute(human, path)
+                : path != null && mob.getNavigation().getPath() == path;
+    }
+
+    @Override public void start() {
+        started = true;
+        if (mob instanceof Human human) {
+            human.explosionThreat = toAvoid;
+            human.isFleeing = true;
         }
-        if (this.toAvoid.distanceToSqr(vec3.x, vec3.y, vec3.z) < this.toAvoid.distanceToSqr((Entity)this.mob)) {
-            return false;
+        // Navigator may have changed between selection and start.
+        if (assignedNavigation != mob.getNavigation()
+                && retries < InteractionSafetyPolicy.TNT_MAX_RETRIES) searchRoute();
+        if (assignedNavigation == mob.getNavigation()) mob.getNavigation().moveTo(path, sprintSpeedModifier);
+        lastPosition = mob.position();
+        stalledTicks = 0;
+    }
+
+    @Override public void stop() {
+        if (ownsCurrentRoute()) mob.getNavigation().stop();
+        if (assignedNavigation != null && assignedNavigation != mob.getNavigation()
+                && assignedNavigation.getPath() == path) assignedNavigation.stop();
+        if (started && mob instanceof Human human && human.explosionThreat == toAvoid) {
+            human.explosionThreat = null;
+            human.isFleeing = false;
         }
-        this.path = this.pathNav.createPath(vec3.x, vec3.y, vec3.z, 0);
-        return this.path != null;
+        if (started) mob.setSprinting(false);
+        started = false;
+        toAvoid = null;
+        path = null;
+        assignedNavigation = null;
     }
 
-    public boolean canContinueToUse() {
-        return (!(this.mob instanceof com.craftix.hostile_humans.entity.entities.Human human)
-                || !club.someoneice.humangunner.SoldierOrder.isHoldingPosition(human))
-                && !this.pathNav.isDone();
-    }
+    @Override public boolean requiresUpdateEveryTick() { return true; }
 
-    public void start() {
-        this.pathNav.moveTo(this.path, this.walkSpeedModifier);
-    }
-
-    public void stop() {
-        this.toAvoid = null;
-    }
-
-    public void tick() {
-        if (this.mob.distanceToSqr((Entity)this.toAvoid) < 49.0) {
-            this.mob.getNavigation().setSpeedModifier(this.sprintSpeedModifier);
-        } else {
-            this.mob.getNavigation().setSpeedModifier(this.walkSpeedModifier);
+    @Override public void tick() {
+        if (!unsafe()) return;
+        stalledTicks = mob.position().distanceToSqr(lastPosition) < 0.0025D ? stalledTicks + 1 : 0;
+        lastPosition = mob.position();
+        if ((assignedNavigation != mob.getNavigation() || mob.getNavigation().isDone()
+                || !ownsCurrentRoute() || stalledTicks >= 20)
+                && InteractionSafetyPolicy.retryTnt(mob.tickCount, nextSearchTick, retries)) searchRoute();
+        if (ownsCurrentRoute()) {
+            mob.getNavigation().setSpeedModifier(sprintSpeedModifier);
+            mob.setSprinting(true);
         }
     }
 }
-

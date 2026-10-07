@@ -2,6 +2,7 @@ package com.craftix.hostile_humans.entity.ai.goal;
 
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
+import com.craftix.hostile_humans.entity.ai.InteractionSafetyPolicy;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
@@ -61,8 +62,9 @@ extends Goal {
         GroundPathNavigation groundpathnavigation = (GroundPathNavigation)this.mob.getNavigation();
         Path path = groundpathnavigation.getPath();
         if (path != null && !path.isDone() && groundpathnavigation.canOpenDoors()) {
-            for (int i = 0; i < Math.min(path.getNextNodeIndex() + 2, path.getNodeCount()); ++i) {
+            for (int i = InteractionSafetyPolicy.firstNearbyNode(path.getNextNodeIndex()); i < InteractionSafetyPolicy.nearbyNodeLimit(path.getNextNodeIndex(), path.getNodeCount()); ++i) {
                 Node node = path.getNode(i);
+                if (!InteractionSafetyPolicy.nearPassage(this.mob.distanceToSqr(node.x + 0.5D, this.mob.getY(), node.z + 0.5D))) continue;
                 this.doorPos = new BlockPos(node.x, node.y, node.z);
                 for (int j = 0; j < 3; ++j) {
                     this.doorPos = this.doorPos.above();
@@ -114,4 +116,3 @@ extends Goal {
         }
     }
 }
-

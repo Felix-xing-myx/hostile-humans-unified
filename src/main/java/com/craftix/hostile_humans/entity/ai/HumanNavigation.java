@@ -7,6 +7,7 @@ import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.pathfinder.*;
 
 /** Human-only navigation. Other mobs' fence/door classification is untouched. */
@@ -49,13 +50,10 @@ public final class HumanNavigation extends GroundPathNavigation {
             if (isAvoided(pos)) return BlockPathTypes.BLOCKED;
             var state = getter.getBlockState(pos);
             if (state.getBlock() instanceof FenceGateBlock && state.getBlockPathType(getter, pos, mob) == null)
-                return BlockPathTypes.DOOR_IRON_CLOSED;
+                return state.getValue(FenceGateBlock.OPEN) ? BlockPathTypes.WALKABLE : BlockPathTypes.DOOR_WOOD_CLOSED;
+            if (state.getBlock() instanceof DoorBlock && PassageLease.handOpenable(state))
+                return state.getValue(DoorBlock.OPEN) ? BlockPathTypes.DOOR_OPEN : BlockPathTypes.DOOR_WOOD_CLOSED;
             return super.getBlockPathType(getter, x, y, z);
-        }
-        @Override protected BlockPathTypes evaluateBlockPathType(BlockGetter getter, BlockPos pos, BlockPathTypes type) {
-            if (type == BlockPathTypes.DOOR_IRON_CLOSED && canOpenDoors() && canPassDoors())
-                return BlockPathTypes.WALKABLE_DOOR;
-            return super.evaluateBlockPathType(getter, pos, type);
         }
         @Override public int getNeighbors(Node[] neighbors, Node node) {
             int count = super.getNeighbors(neighbors, node);

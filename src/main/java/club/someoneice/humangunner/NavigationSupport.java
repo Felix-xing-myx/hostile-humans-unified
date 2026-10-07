@@ -1,6 +1,8 @@
 package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
+import com.craftix.hostile_humans.entity.ai.PassageLease;
+import com.craftix.hostile_humans.entity.ai.InteractionSafetyPolicy;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
@@ -47,18 +49,22 @@ final class NavigationSupport {
         boolean opened = false;
         for (int i = 0; i < count; i++) {
             BlockPos pos = candidates[i];
+            if (!InteractionSafetyPolicy.nearPassage(human.distanceToSqr(pos.getX() + 0.5D,
+                    human.getY(), pos.getZ() + 0.5D))) continue;
             if (!human.level().hasChunkAt(pos)) continue;
             BlockState state = human.level().getBlockState(pos);
             if (!state.hasProperty(BlockStateProperties.OPEN)
                     || state.getValue(BlockStateProperties.OPEN)) {
                 continue;
             }
-            if (state.getBlock() instanceof DoorBlock door && door.type().canOpenByHand()) {
+            if (state.getBlock() instanceof DoorBlock door && PassageLease.handOpenable(state)) {
                 door.setOpen(human, human.level(), state, pos, true);
+                PassageLease.opened(human, pos);
                 opened = true;
             } else if (state.getBlock() instanceof TrapDoorBlock
                     && !state.is(Blocks.IRON_TRAPDOOR)) {
                 human.level().setBlock(pos, state.setValue(BlockStateProperties.OPEN, true), 10);
+                PassageLease.opened(human, pos);
                 opened = true;
             }
         }

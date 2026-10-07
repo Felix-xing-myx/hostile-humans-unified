@@ -1,44 +1,35 @@
 package com.craftix.hostile_humans.entity.ai.goal;
 
-import com.craftix.hostile_humans.HumanUtil;
-import java.util.EnumSet;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
 
-public class LadderClimbGoal
-extends Goal {
+/** Vertical assistance only: the combat/order goal keeps ownership of MOVE and its route. */
+public class LadderClimbGoal extends Goal {
     private final Mob entity;
-    private Path path;
 
-    public LadderClimbGoal(Mob entity) {
-        this.entity = entity;
-        this.setFlags(EnumSet.of(Goal.Flag.MOVE));
+    public LadderClimbGoal(Mob entity) { this.entity = entity; }
+
+    @Override public boolean canUse() {
+        Path path = entity.getNavigation().getPath();
+        return entity.onClimbable() && path != null && !path.isDone();
     }
 
-    public boolean canUse() {
-        if (this.entity.getTarget() == null) {
-            return false;
-        }
-        if (!this.entity.getNavigation().isDone()) {
-            this.path = this.entity.getNavigation().getPath();
-            return this.path != null && this.entity.onClimbable();
-        }
-        return false;
-    }
+    @Override public boolean canContinueToUse() { return canUse(); }
+    @Override public boolean requiresUpdateEveryTick() { return true; }
 
-    public void tick() {
-        int i = this.path.getNextNodeIndex();
-        if (i + 1 < this.path.getNodeCount()) {
-            int y = this.path.getNode((int)i).y;
-            Node pointNext = this.path.getNode(i + 1);
-            BlockState down = this.entity.level().getBlockState(this.entity.blockPosition().below());
-            double yMotion = pointNext.y < y || pointNext.y == y && !HumanUtil.isLadder(down, (LivingEntity)this.entity, this.entity.blockPosition().below()) ? -0.15 : 0.15;
-            this.entity.setDeltaMovement(this.entity.getDeltaMovement().add(0.0, yMotion, 0.0));
-        }
+    @Override public void tick() {
+        Path path = entity.getNavigation().getPath();
+        if (!entity.onClimbable() || path == null || path.isDone()) return;
+        int next = path.getNextNodeIndex();
+        if (next >= path.getNodeCount()) return;
+        int targetY = path.getNode(next).y;
+        if (Math.abs(targetY - entity.getY()) < 0.25D && next + 1 < path.getNodeCount())
+            targetY = path.getNode(next + 1).y;
+        double delta = targetY - entity.getY();
+        if (Math.abs(delta) < 0.25D) return;
+        double vertical = delta > 0 ? 0.15D : -0.15D;
+        var motion = entity.getDeltaMovement();
+        entity.setDeltaMovement(motion.x, vertical, motion.z);
     }
 }
-

@@ -2,6 +2,7 @@ package com.craftix.hostile_humans.entity.ai.goal;
 
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
+import com.craftix.hostile_humans.entity.ai.InteractionSafetyPolicy;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -84,9 +85,10 @@ extends Goal {
         GroundPathNavigation groundpathnavigation = (GroundPathNavigation)this.mob.getNavigation();
         Path path = groundpathnavigation.getPath();
         if (path != null && !path.isDone() && groundpathnavigation.canOpenDoors()) {
-            for (int i = 0; i < Math.min(path.getNextNodeIndex() + 2, path.getNodeCount()); ++i) {
+            for (int i = InteractionSafetyPolicy.firstNearbyNode(path.getNextNodeIndex()); i < InteractionSafetyPolicy.nearbyNodeLimit(path.getNextNodeIndex(), path.getNodeCount()); ++i) {
                 Node node = path.getNode(i);
-                this.fencePosPos = new BlockPos(node.x, node.y + 1, node.z);
+                this.fencePosPos = new BlockPos(node.x, node.y, node.z);
+                if (!isFence(this.mob.level(), this.fencePosPos)) this.fencePosPos = this.fencePosPos.above();
                 if (this.mob.distanceToSqr((double)this.fencePosPos.getX(), this.mob.getY(), (double)this.fencePosPos.getZ()) > 2.25) continue;
                 this.hasFence = FenceInteractGoal.isFence(this.mob.level(), this.fencePosPos);
                 if (!this.hasFence) continue;
@@ -122,4 +124,3 @@ extends Goal {
         }
     }
 }
-
