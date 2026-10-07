@@ -69,7 +69,8 @@ public final class LavaEscapeGoal extends Goal {
         }
 
         if (human.tickCount >= nextSearchTick
-                && (human.getNavigation().isDone() || human.getNavigation().getPath() == null)) {
+                && (human.getNavigation().isDone() || human.getNavigation().getPath() == null
+                || human.getNavigation().isStuck())) {
             findAndFollowShorePath();
         }
     }
@@ -106,13 +107,11 @@ public final class LavaEscapeGoal extends Goal {
         BlockPos found = pendingShoreCandidates.firstMatching(budget, candidate -> {
             if (!human.level().hasChunkAt(candidate) || !isSafeShore(candidate)) return false;
             Path path = human.getNavigation().createPath(candidate, 0);
-            if (path == null || !path.canReach()) return false;
+            if (!RetreatPathSafety.tryMove(human, path, NAVIGATION_SPEED)) return false;
             selectedShorePath = path;
             return true;
         });
         if (found != null) {
-            human.getNavigation().moveTo(selectedShorePath, NAVIGATION_SPEED);
-            selectedShorePath = null;
             pendingShoreCandidates = null;
             OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.LAVA);
             nextSearchTick = human.tickCount + SEARCH_INTERVAL_TICKS;
@@ -130,6 +129,30 @@ public final class LavaEscapeGoal extends Goal {
         ArrayList<BlockPos> candidates = new ArrayList<>();
         double angleOffset = human.getRandom().nextDouble() * Math.PI * 2.0D;
 
+        // Underground lava pools have a roof heightmap. Inspect at most 48
+        // nearby loaded columns and six local heights (288 block probes).
+        int[] localRadii = {1, 2, 4, 6, 8, 12};
+        int[] heightOffsets = {0, 1, 2, -1, -2, 3};
+        java.util.HashSet<BlockPos> unique = new java.util.HashSet<>();
+        for (int radius : localRadii) {
+            for (int step = 0; step < ANGULAR_STEPS; step++) {
+                double angle = angleOffset + Math.PI * 2.0D * step / ANGULAR_STEPS;
+                int x = origin.getX() + (int) Math.round(Math.cos(angle) * radius);
+                int z = origin.getZ() + (int) Math.round(Math.sin(angle) * radius);
+                BlockPos column = new BlockPos(x, origin.getY(), z);
+                if (!human.level().hasChunkAt(column)) continue;
+                for (int offset : heightOffsets) {
+                    BlockPos local = new BlockPos(x, origin.getY() + offset, z);
+                    if (isSafeShore(local)) {
+                        if (unique.add(local)) candidates.add(local);
+                        break;
+                    }
+                }
+            }
+        }
+        candidates.sort(Comparator.comparingDouble(candidate -> candidate.distSqr(origin)));
+        ArrayList<BlockPos> surfaceCandidates = new ArrayList<>();
+
         for (int radius = SEARCH_STEP; radius <= SEARCH_RADIUS; radius += SEARCH_STEP) {
             for (int step = 0; step < ANGULAR_STEPS; step++) {
                 double angle = angleOffset + Math.PI * 2.0D * step / ANGULAR_STEPS;
@@ -145,19 +168,25 @@ public final class LavaEscapeGoal extends Goal {
                     continue;
                 }
 
-                candidates.add(candidate);
+                if (unique.add(candidate)) surfaceCandidates.add(candidate);
             }
         }
 
-        // First reachable in this order is the same nearest-destination
-        // criterion as the old exhaustive bestDistance comparison.
-        candidates.sort(Comparator.comparingDouble(candidate -> candidate.distSqr(origin)));
+        // Prefer the nearest local-height shore, then the nearest surface bank.
+        surfaceCandidates.sort(Comparator.comparingDouble(candidate -> candidate.distSqr(origin)));
+        candidates.addAll(surfaceCandidates);
         return candidates;
     }
 
     private boolean isSafeShore(BlockPos pos) {
         BlockPos floor = pos.below();
-        return human.level().getFluidState(pos).isEmpty()
+        Vec3 target = Vec3.atBottomCenterOf(pos);
+        return human.level().hasChunkAt(pos)
+                && !RetreatPathSafety.isHazard(human, pos)
+                && !RetreatPathSafety.isHazard(human, pos.above())
+                && !RetreatPathSafety.isHazard(human, floor)
+                && human.level().noCollision(human, human.getBoundingBox().move(target.subtract(human.position())))
+                && human.level().getFluidState(pos).isEmpty()
                 && human.level().getFluidState(pos.above()).isEmpty()
                 && human.level().getFluidState(floor).isEmpty()
                 && human.level().getBlockState(pos).getCollisionShape(human.level(), pos).isEmpty()

@@ -4,6 +4,37 @@ public final class CombatPressurePolicyTest {
     private static int checks;
 
     public static void main(String[] args) {
+        check(RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
+                        new double[][] {{9, 0}, {9, 3}, {12, 3}, {16, 0}}, true),
+                "safe whole retreat permits a short first step toward a wall-side threat");
+        check(RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
+                        new double[][] {{9, 0}, {9, 4}, {11, 4}, {11, -4}, {16, -4}}, true),
+                "bounded U-shaped retreat is not rejected by first-node dot product");
+        check(!RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
+                        new double[][] {{6, 0}, {18, 0}}, true)
+                        && !RetreatPathSafetyPolicy.isSafe(2, 0, 0, 0,
+                        new double[][] {{1.9, 0}, {6, 0}}, true),
+                "detours cannot dip beyond the approach allowance or closer inside melee clearance");
+        check(!RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
+                        new double[][] {{-15, 0}}, true),
+                "segments cannot cross near the enemy even when endpoints are distant");
+        check(!RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
+                        new double[][] {{9, 0}, {9, 6}, {8, 4}, {16, 4}}, true),
+                "initial approach must finish within eight travelled blocks");
+        check(!RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
+                        new double[][] {{10, 30}, {18, 0}}, true),
+                "extra route distance is bounded relative to the direct escape");
+        check(RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
+                        new double[][] {{9, 0}, {10, 2}}, false)
+                        && !RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
+                        new double[][] {{9, 0}, {10, 2}}, true),
+                "continuing a safe remaining route does not require a fresh three-block gain");
+        check(!RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0, new double[0][2], true)
+                        && !RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
+                        new double[RetreatPathSafetyPolicy.MAX_NODES + 1][2], true)
+                        && !RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
+                        new double[][] {{Double.NaN, 0}}, true),
+                "whole-route inspection is finite and rejects missing or oversized paths");
         check(MaxHealthCompatibilityPolicy.shouldApplyRoll(60.0D, 75, 60.0D)
                         && MaxHealthCompatibilityPolicy.shouldApplyRoll(75.0D, 75, 60.0D)
                         && !MaxHealthCompatibilityPolicy.shouldApplyRoll(500.0D, 75, 60.0D)

@@ -75,6 +75,7 @@ public final class AdaptiveCombatGoal extends Goal {
     private Phase phase;
     private LivingEntity threat;
     private Path activePath;
+    private final RetreatShoreEscape retreatShoreEscape = new RetreatShoreEscape();
     private IncrementalBestSearch<BlockPos, PlannedPath> retreatSearch;
     private Vec3 retreatSearchOrigin;
     private Vec3 retreatSearchThreatPosition;
@@ -393,8 +394,10 @@ public final class AdaptiveCombatGoal extends Goal {
         }
         cancelRecoveryUse();
         if (endedRetreat && !shoreTransitionPending) {
-            human.getNavigation().stop();
+            if (MovementContinuity.ownsRoute(human, activePath)) human.getNavigation().stop();
+            if (human.isSeekingShore()) human.stopSeekingShore();
         }
+        retreatShoreEscape.reset();
         restoreRetreatGun();
         setRetreatBackpedaling(false);
         gunOperator.aim(false);
@@ -406,6 +409,7 @@ public final class AdaptiveCombatGoal extends Goal {
         retreatFallbackRemaining = 0;
         defenseMovementTarget = null;
         OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.RETREAT);
+        BasicNavigationBudget.cancel(human);
         if (human.getTarget() == null) {
             MovementSpeedController.normal(human);
         } else {
@@ -574,8 +578,12 @@ public final class AdaptiveCombatGoal extends Goal {
             // fighter just outside its reach. Keep closing while guarded and
             // let the normal counter window interrupt the block once in range.
             if (defenseMovementTarget != threat || repathTicks <= 0) {
+                if (!BasicNavigationBudget.tryAcquire(human, 1)) {
+                    repathTicks = 1;
+                    return;
+                }
                 repathTicks = 8;
-                if (!human.getNavigation().moveTo(threat, 1.0D)) {
+                if (!moveToThreat(1.0D)) {
                     // Hand failed routes back to the melee pursuit watchdog;
                     // a shield must not own MOVE while making no progress.
                     phaseTicks = 0;
@@ -614,12 +622,17 @@ public final class AdaptiveCombatGoal extends Goal {
             maximum = HumanUtil.isTrident(human.getMainHandItem()) ? 16.0D : 20.0D;
         }
         double distance = human.distanceTo(threat);
+        if ((distance < minimum || distance > maximum || !human.getSensing().hasLineOfSight(threat))
+                && !BasicNavigationBudget.tryAcquire(human, 1)) {
+            repathTicks = 1;
+            return;
+        }
         boolean moved = true;
         if (distance < minimum) {
             Vec3 away = DefaultRandomPos.getPosAway(human, 8, 3, threat.position());
-            moved = away != null && human.getNavigation().moveTo(away.x, away.y, away.z, 1.0D);
+            moved = away != null && moveToCandidate(away, 1.0D);
         } else if (distance > maximum || !human.getSensing().hasLineOfSight(threat)) {
-            moved = human.getNavigation().moveTo(threat, 1.0D);
+            moved = moveToThreat(1.0D);
         } else {
             // Already in a valid firing band: release promptly so the weapon
             // goal resumes instead of waiting through a long damage reaction.
@@ -1008,8 +1021,9 @@ public final class AdaptiveCombatGoal extends Goal {
             return false;
         }
         Vec3 destination = human.position().add(away.normalize().scale(2.0D));
+        if (!BasicNavigationBudget.tryAcquire(human, 1)) return false;
         Path path = human.getNavigation().createPath(BlockPos.containing(destination), 0);
-        return path != null && path.canReach();
+        return RetreatPathSafety.isSafe(human, threat, path, false);
     }
 
     private void setRetreatBackpedaling(boolean backpedaling) {
@@ -1540,13 +1554,23 @@ public final class AdaptiveCombatGoal extends Goal {
     private void planRetreat() {
         if (lastRetreatPlanningTick == human.tickCount) return;
         lastRetreatPlanningTick = human.tickCount;
+        if (human.isInWater()) {
+            Path shore = retreatShoreEscape.tick(human, threat, 1.0D);
+            if (shore != null) {
+                activePath = shore;
+                retreatStagnantTicks = 0;
+                lastRetreatPosition = human.position();
+            }
+            repathTicks = 1;
+            return;
+        }
         boolean continuingFallback = retreatSearch == null && retreatFallbackRemaining > 0;
         boolean pathChanged = false;
         PlannedPath plan = chooseRetreatPath();
         if (plan != null) {
             if (plan.path() != activePath) {
-                startPath(plan, 1.0D);
-                pathChanged = true;
+                pathChanged = startPath(plan, 1.0D);
+                if (!pathChanged && retreatSearch == null) retreatFallbackRemaining = 8;
             }
         } else if (retreatSearch == null && continuingFallback) {
             int searchRadius = retreatSearchRadius();
@@ -1565,8 +1589,10 @@ public final class AdaptiveCombatGoal extends Goal {
                 }
             }
         }
-        if (plan == null && activePath != null && !NavigationSupport.pathStartsGenerallyToward(
-                activePath, human.position(), NavigationSupport.horizontalDirection(threat.position(), human.position()))) {
+        // A failed replacement must not erase the previous route. Revalidate
+        // whole routes when selecting replacements instead of vetoing their first turn.
+        if (!pathChanged && MovementContinuity.ownsRoute(human, activePath)
+                && !RetreatPathSafety.isSafe(human, threat, human.getNavigation().getPath(), false)) {
             human.getNavigation().stop();
             activePath = null;
         }
@@ -1611,7 +1637,7 @@ public final class AdaptiveCombatGoal extends Goal {
         PlannedPath best = retreatSearch.advance(budget, candidate -> {
             Path path = human.getNavigation().createPath(candidate, 0);
             if (path == null || !path.canReach()
-                    || !NavigationSupport.pathStartsGenerallyToward(path, human.position(), desiredAway)) {
+                    || !RetreatPathSafety.isSafe(human, threat, path, true)) {
                 return null;
             }
             Vec3 reachableEnd = Vec3.atCenterOf(path.getTarget());
@@ -1619,7 +1645,7 @@ public final class AdaptiveCombatGoal extends Goal {
         }, plan -> {
             Path path = plan.path();
             Vec3 reachableEnd = plan.position();
-            if (!NavigationSupport.pathStartsGenerallyToward(path, human.position(), desiredAway)
+            if (!RetreatPathSafety.isSafe(human, threat, path, true)
                     || !RetreatRecoveryPolicy.isUsefulRetreatDestination(
                     currentDistance, threat.distanceToSqr(reachableEnd))) return Double.NEGATIVE_INFINITY;
             double distance = threat.position().distanceTo(reachableEnd);
@@ -1656,14 +1682,19 @@ public final class AdaptiveCombatGoal extends Goal {
         if (lastTacticalPlanningTick == human.tickCount) return;
         lastTacticalPlanningTick = human.tickCount;
         if (tacticalFallbackPending) {
-            tacticalFallbackPending = false;
-            planTacticalFallback();
-            repathTicks = 7;
+            if (planTacticalFallback()) {
+                tacticalFallbackPending = false;
+                repathTicks = 7;
+            } else repathTicks = 1;
             return;
         }
         PlannedPath plan = chooseTacticalPath();
         if (plan != null) {
-            if (plan.path() != activePath) startPath(plan, 1.0D);
+            if (plan.path() != activePath && !startPath(plan, 1.0D)) {
+                tacticalFallbackPending = tacticalSearch == null;
+                repathTicks = 1;
+                return;
+            }
         } else if (tacticalSearch != null) {
             // Pending is not failure: don't replace the search with pursuit.
             repathTicks = 1;
@@ -1678,30 +1709,27 @@ public final class AdaptiveCombatGoal extends Goal {
         repathTicks = tacticalSearch != null ? 1 : 7;
     }
 
-    private void planTacticalFallback() {
+    private boolean planTacticalFallback() {
+        if (!BasicNavigationBudget.tryAcquire(human, 1)) return false;
         if (human.distanceTo(threat) < preferredMinimumRange()) {
             Vec3 fallback = DefaultRandomPos.getPosAway(human, 12, 5, threat.position());
             if (fallback != null) {
                 moveToCandidate(fallback, 1.0D);
             }
         } else {
-            human.getNavigation().moveTo(threat, 1.0D);
+            moveToThreat(1.0D);
         }
+        return true;
     }
 
     private void planUnstuckMove() {
-        human.getNavigation().stop();
+        if (!BasicNavigationBudget.tryAcquire(human, 1)) {
+            repathTicks = 1;
+            return;
+        }
         Vec3 candidate = DefaultRandomPos.getPos(human, 10, 5);
-        if (candidate != null) {
-            moveToCandidate(candidate, 1.0D);
-        } else {
-            Vec3 away = human.position().subtract(threat.position()).multiply(1.0D, 0.0D, 1.0D).normalize();
-            human.getMoveControl().setWantedPosition(
-                    human.getX() + away.x * 5.0D,
-                    human.getY() + 1.0D,
-                    human.getZ() + away.z * 5.0D,
-                    1.0D
-            );
+        if (candidate == null || !moveToCandidate(candidate, 1.0D)) {
+            RetreatPathSafety.tryLocalStep(human, threat, 1.0D);
         }
         if (human.onGround()) {
             human.getJumpControl().jump();
@@ -1710,15 +1738,17 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void planPressureMove() {
+        // At most the direct path and one local approach alternative.
+        if (!BasicNavigationBudget.tryAcquire(human, 2)) {
+            repathTicks = 1;
+            return;
+        }
         Path direct = human.getNavigation().createPath(threat, 1);
-        if (direct != null && direct.canReach()) {
+        if (RetreatPathSafety.tryMove(human, direct, 1.0D)) {
             activePath = direct;
-            human.getNavigation().moveTo(direct, 1.0D);
         } else {
             Vec3 candidate = DefaultRandomPos.getPosTowards(human, 8, 4, threat.position(), 0.55D);
-            if (candidate == null || !moveToCandidate(candidate, 1.0D)) {
-                human.getNavigation().moveTo(threat, 1.0D);
-            }
+            if (candidate != null) moveToCandidate(candidate, 1.0D);
         }
         repathTicks = 12;
     }
@@ -1747,6 +1777,7 @@ public final class AdaptiveCombatGoal extends Goal {
         }
         double candidateExtent = searchRadius + searchRadius / 2 + 1.0D;
         int budget = 4;
+        if (!BasicNavigationBudget.tryAcquire(human, budget)) return null;
         // One broad-phase query for this decision. Each candidate retains the
         // original bounding-box intersection test, without repeating faction
         // checks and allocating an entity list for every sampled destination.
@@ -1780,7 +1811,8 @@ public final class AdaptiveCombatGoal extends Goal {
             if (cheapUpperBound <= bestScore[0]
                     || prePathScore.applyAsDouble(candidate) + maximumDryBonus <= bestScore[0]) return null;
             Path path = navigation.createPath(destination, 0);
-            return path == null ? null : new PlannedPath(path, candidate, 0.0D);
+            return path == null || !path.canReach() || path.isDone()
+                    ? null : new PlannedPath(path, candidate, 0.0D);
         }, plan -> {
             if (!human.level().hasChunkAt(plan.path().getTarget())) return Double.NEGATIVE_INFINITY;
             double score = prePathScore.applyAsDouble(plan.position());
@@ -1798,18 +1830,31 @@ public final class AdaptiveCombatGoal extends Goal {
         return best;
     }
 
-    private void startPath(PlannedPath plan, double speed) {
-        activePath = plan.path();
-        human.getNavigation().moveTo(activePath, speed);
+    private boolean startPath(PlannedPath plan, double speed) {
+        Path path = plan.path();
+        if (!RetreatPathSafety.tryMove(human, path, speed)) return false;
+        activePath = path;
+        return true;
     }
 
     private boolean moveToCandidate(Vec3 candidate, double speed) {
         Path path = human.getNavigation().createPath(BlockPos.containing(candidate), 0);
-        if (path == null) {
+        if (path == null || !path.canReach()
+                || (phase == Phase.RETREAT || phase == Phase.RECOVER)
+                && !RetreatPathSafety.isSafe(human, threat, path, true)) {
             return false;
         }
+        if (!RetreatPathSafety.tryMove(human, path, speed)) return false;
         activePath = path;
-        return human.getNavigation().moveTo(path, speed);
+        return true;
+    }
+
+    /** Caller reserves the single ordinary path request before entering. */
+    private boolean moveToThreat(double speed) {
+        Path path = human.getNavigation().createPath(threat, 1);
+        if (!RetreatPathSafety.tryMove(human, path, speed)) return false;
+        activePath = path;
+        return true;
     }
 
     private boolean hasClearRay(Vec3 from, Vec3 to) {

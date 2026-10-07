@@ -25,6 +25,9 @@ extends Goal {
     private final double sprintSpeedModifier;
     @Nullable
     protected Path path;
+    private Path pendingPath;
+    private final club.someoneice.humangunner.RetreatShoreEscape shoreEscape =
+            new club.someoneice.humangunner.RetreatShoreEscape();
     Vec3 targetPos = null;
     private int nextRouteRetryTick;
     private Vec3 lastRoutePosition = Vec3.ZERO;
@@ -65,11 +68,11 @@ extends Goal {
         }
         if (this.human.tickCount < this.nextRouteRetryTick) return false;
         // Enter escape even when the planner is queued; safe local movement bridges it.
-        this.generatePathAwayFromAttacker();
+        this.pendingPath = this.human.isInWater() ? null : this.generatePathAwayFromAttacker();
         return true;
     }
 
-    private boolean generatePathAwayFromAttacker() {
+    private Path generatePathAwayFromAttacker() {
         double currentDistanceSqr = this.human.toAvoid.distanceToSqr(this.human);
         int budget = club.someoneice.humangunner.RetreatRouteContinuity.claimSearch(this.human, 4);
         // Queued work retries cheaply each tick; an actual failed search backs off.
@@ -84,15 +87,14 @@ extends Goal {
             }
             Path candidatePath = this.human.getNavigation().createPath(
                     candidate.x, candidate.y, candidate.z, 0);
-            if (candidatePath != null && candidatePath.canReach()) {
-                this.path = candidatePath;
-                this.targetPos = candidate;
+            if (club.someoneice.humangunner.RetreatPathSafety.isSafe(
+                    this.human, this.human.toAvoid, candidatePath, true)) {
                 club.someoneice.humangunner.RetreatRouteContinuity.cancelSearch(this.human);
-                return true;
+                return candidatePath;
             }
         }
         if (budget > 0) club.someoneice.humangunner.RetreatRouteContinuity.cancelSearch(this.human);
-        return false;
+        return null;
     }
 
     public boolean canContinueToUse() {
@@ -121,7 +123,13 @@ extends Goal {
     public void start() {
         this.human.isFleeing = true;
         this.human.setTarget(null);
-        this.human.getNavigation().moveTo(this.path, this.walkSpeedModifier);
+        updateSprint();
+        if (club.someoneice.humangunner.RetreatPathSafety.tryMove(this.human, this.pendingPath, movementSpeed())) {
+            this.path = this.pendingPath;
+            this.targetPos = Vec3.atBottomCenterOf(this.path.getTarget());
+        }
+        this.pendingPath = null;
+        if (this.human.isInWater()) this.path = this.shoreEscape.tick(this.human, this.human.toAvoid, movementSpeed());
         this.nextRouteRetryTick = this.human.tickCount + (this.path == null ? 1 : 5);
         this.lastRoutePosition = this.human.position();
         this.stalledTicks = 0;
@@ -132,11 +140,16 @@ extends Goal {
         // Do not leave a long escape route running after health has recovered.
         if (club.someoneice.humangunner.MovementContinuity.ownsRoute(this.human, this.path)) {
             this.human.getNavigation().stop();
+            if (this.human.isSeekingShore()) this.human.stopSeekingShore();
         }
+        this.shoreEscape.reset();
+        this.pendingPath = null;
         this.path = null;
         this.targetPos = null;
         this.stalledTicks = 0;
         this.human.isFleeing = false;
+        if (this.human.getTarget() == null) club.someoneice.humangunner.MovementSpeedController.normal(this.human);
+        else club.someoneice.humangunner.MovementSpeedController.combat(this.human, false);
         LivingEntity previousThreat = this.human.toAvoid;
         if (previousThreat != null && previousThreat.isAlive() && this.human.canAttack(previousThreat)
                 && club.someoneice.humangunner.LowHealthCombatController.shouldHoldGround(this.human, previousThreat))
@@ -149,6 +162,13 @@ extends Goal {
             return;
         }
         this.human.isFleeing = true;
+        updateSprint();
+        if (this.human.isInWater()) {
+            Path shore = this.shoreEscape.tick(this.human, this.human.toAvoid, movementSpeed());
+            if (shore != null) this.path = shore;
+            this.human.getNavigation().setSpeedModifier(movementSpeed());
+            return;
+        }
         club.someoneice.humangunner.MovementContinuity.escapeWhilePlanning(this.human, this.human.toAvoid);
         double moved = this.human.position().distanceToSqr(this.lastRoutePosition);
         this.stalledTicks = this.human.onGround() && moved < 0.0025D ? this.stalledTicks + 1 : 0;
@@ -158,17 +178,34 @@ extends Goal {
         if (this.human.tickCount >= this.nextRouteRetryTick
                 && (extension || this.stalledTicks >= 5)) {
             // Keep the old escape until a replacement is actually available.
-            if (this.generatePathAwayFromAttacker()) {
-                this.human.getNavigation().moveTo(this.path, this.walkSpeedModifier);
+            Path replacement = this.generatePathAwayFromAttacker();
+            if (club.someoneice.humangunner.RetreatPathSafety.tryMove(this.human, replacement, movementSpeed())) {
+                this.path = replacement;
+                this.targetPos = Vec3.atBottomCenterOf(replacement.getTarget());
                 this.stalledTicks = 0;
                 this.nextRouteRetryTick = this.human.tickCount + 10;
             }
         }
-        if (this.human.distanceToSqr((Entity)this.human.toAvoid) < 144.0) {
-            this.human.getNavigation().setSpeedModifier(this.sprintSpeedModifier);
-        } else {
-            this.human.getNavigation().setSpeedModifier(this.walkSpeedModifier);
+        if (club.someoneice.humangunner.MovementContinuity.ownsRoute(this.human, this.path)
+                && !club.someoneice.humangunner.RetreatPathSafety.isSafe(
+                this.human, this.human.toAvoid, this.human.getNavigation().getPath(), false)) {
+            // Keep valid detours during budget waits; cancel only a route that
+            // has actually become unsafe as the pursuer changes position.
+            this.human.getNavigation().stop();
+            this.path = null;
+            club.someoneice.humangunner.RetreatPathSafety.tryLocalStep(this.human, this.human.toAvoid, movementSpeed());
         }
+        this.human.getNavigation().setSpeedModifier(movementSpeed());
+    }
+
+    private double movementSpeed() {
+        return this.human.toAvoid != null && this.human.distanceToSqr(this.human.toAvoid) < 144.0D
+                ? this.sprintSpeedModifier : this.walkSpeedModifier;
+    }
+
+    private void updateSprint() {
+        club.someoneice.humangunner.MovementSpeedController.retreat(this.human,
+                this.human.toAvoid != null && this.human.distanceToSqr(this.human.toAvoid) < 144.0D);
     }
 
     @Override

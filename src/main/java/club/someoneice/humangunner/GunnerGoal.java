@@ -66,6 +66,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private boolean strafeAnchorSet;
     private float strafeDirection = 1.0F;
     private int retreatFailureTicks;
+    private boolean retreatSearchQueued;
     private double lastThreatDistance = Double.POSITIVE_INFINITY;
     private boolean retreatingForSpace;
     private boolean approachingTarget;
@@ -128,6 +129,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         aimTicks = 0;
         unseenTargetTicks = 0;
         retreatFailureTicks = 0;
+        retreatSearchQueued = false;
         lastThreatDistance = Double.POSITIVE_INFINITY;
         retreatingForSpace = false;
         approachingTarget = false;
@@ -151,6 +153,11 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     @Override
     public void stop() {
+        if (mob instanceof Human human) {
+            BasicNavigationBudget.cancel(human);
+            RetreatRouteContinuity.cancelSearch(human);
+        }
+        retreatSearchQueued = false;
         if (mob instanceof Human human) RangedFiringPosition.cancelVisibleSearch(human);
         if (mob instanceof Human human && human.isCombatFiringShore()) {
             human.stopSeekingShore();
@@ -704,20 +711,26 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     private void retreatFrom(LivingEntity target) {
-        Vec3 away = DefaultRandomPos.getPosAway(mob, 16, 7, target.position());
-        if (away != null) {
-            if (mob instanceof Human human) {
-                MovementSpeedController.retreat(human, false);
+        if (mob instanceof Human human) {
+            MovementSpeedController.retreat(human, false);
+            boolean moved = false;
+            retreatSearchQueued = RetreatRouteContinuity.claimSearch(human, 1) == 0;
+            if (!retreatSearchQueued) {
+                Vec3 away = DefaultRandomPos.getPosAway(mob, 16, 7, target.position());
+                Path path = away == null ? null : mob.getNavigation().createPath(
+                        net.minecraft.core.BlockPos.containing(away), 0);
+                moved = RetreatPathSafety.isSafe(human, target, path, true)
+                        && RetreatPathSafety.tryMove(human, path, 1.0D);
+                RetreatRouteContinuity.cancelSearch(human);
             }
-            mob.getNavigation().moveTo(
-                    away.x,
-                    away.y,
-                    away.z,
-                    1.0D
-            );
+            // A non-null sample is not movement success. Preserve a live route,
+            // and use collision/terrain checked backsteps only when no route runs.
+            if (!moved) RetreatPathSafety.tryLocalStep(human, target, 1.0D);
         } else {
-            mob.getNavigation().stop();
-            mob.getMoveControl().strafe(-0.80F, mob.getRandom().nextBoolean() ? 0.25F : -0.25F);
+            Vec3 away = DefaultRandomPos.getPosAway(mob, 16, 7, target.position());
+            Path path = away == null ? null : mob.getNavigation().createPath(
+                    net.minecraft.core.BlockPos.containing(away), 0);
+            if (path != null && path.canReach()) mob.getNavigation().moveTo(path, 1.0D);
         }
     }
 
@@ -775,10 +788,11 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 // After sustained occlusion, accept a nearer firing lane.
                 // Keeping one bounded search avoids doubling path probes.
                 if (firingPath != null) {
-                    if (mob.getNavigation().moveTo(firingPath, 1.0D))
+                    if (RetreatPathSafety.tryMove(human, firingPath, 1.0D)) {
                         SoldierDialogue.event(human, "reposition");
-                    approachingTarget = true;
-                    seekingFiringPosition = true;
+                        approachingTarget = true;
+                        seekingFiringPosition = true;
+                    }
                 } else if (RangedFiringPosition.hasPendingVisibleSearch(human)) {
                     // Pending is not failure: do not abandon the lane search
                     // for a different movement/shore policy after its first batch.
@@ -814,7 +828,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             approachingTarget = false;
             if (mob.tickCount >= nextRangeRetreatPathTick) {
                 retreatFrom(target);
-                nextRangeRetreatPathTick = mob.tickCount + 8;
+                nextRangeRetreatPathTick = mob.tickCount + (retreatSearchQueued ? 1 : 8);
             }
             return;
         }
@@ -839,8 +853,16 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         // A water navigator cannot always path to a target standing on the far
         // bank. Do not retry A-star every tick or abandon the weapon's range.
         if (mob.tickCount >= nextApproachPathTick) {
-            approachingTarget = mob.getNavigation().moveTo(target, 1.0D);
-            nextApproachPathTick = mob.tickCount + 12;
+            if (mob instanceof Human human) {
+                if (BasicNavigationBudget.tryAcquire(human, 1)) {
+                    Path path = mob.getNavigation().createPath(target, 1);
+                    if (RetreatPathSafety.tryMove(human, path, 1.0D)) approachingTarget = true;
+                    nextApproachPathTick = mob.tickCount + 12;
+                } else nextApproachPathTick = mob.tickCount + 1;
+            } else {
+                approachingTarget = mob.getNavigation().moveTo(target, 1.0D);
+                nextApproachPathTick = mob.tickCount + 12;
+            }
         }
         if (mob instanceof Human human) {
             human.approachCombatTargetInWater(target, desiredDistance, 1.0D);
@@ -873,6 +895,11 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private void updateRetreatPressure(double distance, GunRangePolicy.Band range) {
         if (distance >= range.minimum()) {
             retreatFailureTicks = 0;
+            retreatSearchQueued = false;
+            lastThreatDistance = distance;
+            return;
+        }
+        if (retreatSearchQueued) {
             lastThreatDistance = distance;
             return;
         }
@@ -956,6 +983,12 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             return;
         }
 
+        if (mob instanceof Human human && !human.shouldUseWaterMovement()
+                && !BasicNavigationBudget.tryAcquire(human, 3)) {
+            nextStrafeRepositionTick = mob.tickCount + 1;
+            return;
+        }
+
         strafeLegStartTick = mob.tickCount;
         strafeLegStartX = mob.getX();
         strafeLegStartZ = mob.getZ();
@@ -966,8 +999,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                         human, target, range.minimum(), range.maximum(), (int) strafeDirection,
                         strafeAnchorX, strafeAnchorZ, anchorRadius)
                 : null;
-        if (lateralPath != null
-                && mob.getNavigation().moveTo(lateralPath, 1.15D)) {
+        if (lateralPath != null && (mob instanceof Human human
+                ? RetreatPathSafety.tryMove(human, lateralPath, 1.15D)
+                : mob.getNavigation().moveTo(lateralPath, 1.15D))) {
             strafePathActive = true;
             strafing = true;
             return;
