@@ -38,6 +38,7 @@ public class AvoidTNTGoal extends Goal {
     private boolean sprintingBeforeStart;
     private boolean changedSprint;
     private int fallbackUntilTick;
+    private PrimedTnt sessionThreat;
 
     public AvoidTNTGoal(PathfinderMob mob, float distance, double walk, double sprint) {
         this(mob, entity -> true, distance, walk, sprint, EntitySelector.NO_CREATIVE_OR_SPECTATOR::test);
@@ -71,7 +72,15 @@ public class AvoidTNTGoal extends Goal {
         toAvoid = getNearestEntity(mob.level().getEntitiesOfClass(PrimedTnt.class,
                 mob.getBoundingBox().inflate(radius)), mob.getX(), mob.getY(), mob.getZ());
         if (!unsafe()) return false;
-        retries = 0;
+        // A scheduler interruption cannot replenish one TNT's fallback/search allowance.
+        if (sessionThreat != toAvoid) {
+            sessionThreat = toAvoid;
+            fallbackUntilTick = mob.tickCount + 100;
+            nextSearchTick = mob.tickCount;
+            retries = 0;
+        } else if (mob.tickCount >= fallbackUntilTick) {
+            return false;
+        }
         return true;
     }
 
@@ -97,7 +106,7 @@ public class AvoidTNTGoal extends Goal {
                         < InteractionSafetyPolicy.TNT_SAFE_DISTANCE_SQUARED) continue;
                 Path replacement = navigation.createPath(candidate.x, candidate.y, candidate.z, 0);
                 if (replacement == null || !replacement.canReach()) continue;
-                Path previous = navigation.getPath();
+                Path previous = ownsCurrentRoute() ? navigation.getPath() : null;
                 if (!navigation.moveTo(replacement, sprintSpeedModifier)) {
                     // Vanilla may discard its current path when rejecting a replacement.
                     if (previous != null && !previous.isDone()) navigation.moveTo(previous, sprintSpeedModifier);
@@ -140,9 +149,9 @@ public class AvoidTNTGoal extends Goal {
             human.explosionThreat = toAvoid;
             human.isFleeing = true;
         }
-        fallbackUntilTick = mob.tickCount + 100;
-        nextSearchTick = mob.tickCount;
-        searchRoute();
+        // MOVE takeover abandons pursuit/following once; only TNT escape routes are retained later.
+        if (!ownsCurrentRoute()) mob.getNavigation().stop();
+        if (InteractionSafetyPolicy.retryTnt(mob.tickCount, nextSearchTick, retries)) searchRoute();
         lastPosition = mob.position();
         stalledTicks = 0;
     }
@@ -202,7 +211,11 @@ public class AvoidTNTGoal extends Goal {
             if (!mob.level().noCollision(mob, mob.getBoundingBox().expandTowards(offset))) continue;
             // Check both the midpoint and destination: no gaps, fire, hazardous supports or fluids.
             if (!safeFooting(mob.position().add(offset.scale(0.5D))) || !safeFooting(destination)) continue;
-            mob.getMoveControl().setWantedPosition(destination.x, destination.y, destination.z, sprintSpeedModifier);
+            if (mob instanceof Human human) {
+                club.someoneice.humangunner.MovementContinuity.requestEscapeStep(human, destination);
+            } else {
+                mob.getMoveControl().setWantedPosition(destination.x, destination.y, destination.z, sprintSpeedModifier);
+            }
             return;
         }
     }
