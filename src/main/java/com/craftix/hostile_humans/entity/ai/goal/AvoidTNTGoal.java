@@ -72,6 +72,16 @@ public class AvoidTNTGoal extends Goal {
         toAvoid = getNearestEntity(mob.level().getEntitiesOfClass(PrimedTnt.class,
                 mob.getBoundingBox().inflate(radius)), mob.getX(), mob.getY(), mob.getZ());
         if (!unsafe()) return false;
+        if (!resumeThreatSession()) return false;
+        return true;
+    }
+
+    private boolean unsafe() {
+        return toAvoid != null && InteractionSafetyPolicy.escapeTnt(
+                toAvoid.isAlive() && !toAvoid.isRemoved(), toAvoid.distanceToSqr(mob));
+    }
+
+    private boolean resumeThreatSession() {
         // A scheduler interruption cannot replenish one TNT's fallback/search allowance.
         if (sessionThreat != toAvoid) {
             sessionThreat = toAvoid;
@@ -82,11 +92,6 @@ public class AvoidTNTGoal extends Goal {
             return false;
         }
         return true;
-    }
-
-    private boolean unsafe() {
-        return toAvoid != null && InteractionSafetyPolicy.escapeTnt(
-                toAvoid.isAlive() && !toAvoid.isRemoved(), toAvoid.distanceToSqr(mob));
     }
 
     private boolean searchRoute() {
@@ -106,6 +111,8 @@ public class AvoidTNTGoal extends Goal {
                         < InteractionSafetyPolicy.TNT_SAFE_DISTANCE_SQUARED) continue;
                 Path replacement = navigation.createPath(candidate.x, candidate.y, candidate.z, 0);
                 if (replacement == null || !replacement.canReach()) continue;
+                if (mob instanceof Human human && !club.someoneice.humangunner.RetreatPathSafety
+                        .isSafe(human, toAvoid, replacement, false)) continue;
                 Path previous = ownsCurrentRoute() ? navigation.getPath() : null;
                 if (!navigation.moveTo(replacement, sprintSpeedModifier)) {
                     // Vanilla may discard its current path when rejecting a replacement.
