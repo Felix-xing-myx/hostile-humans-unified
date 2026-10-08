@@ -467,3 +467,11 @@
 - 修复：FOLLOW/BODYGUARD和临时援军跟随继续使用已有canFloat=true的HumanNavigation，浅/深水表面和岸上使用同一导航，不因入水停止原路线；闲置上岸继续让路，原有水中移动/上浮和禁止下潜保持。其它撤退/寻岸路径选择本次不扩展。
 - 新增11项导航选择策略边界及一项编译入口ASM回归，覆盖岸上/水面/残留上岸状态、非跟随与AI关闭；尚未编译执行。本轮只做源码语法、diff和原用户CHANGELOG片段保护核查，不代表游戏行为已验收。
 - 待构建及游戏验收：跟随入水后主人持续移动、停下再出水上岸、贴身保护穿水、深水仅水面移动、战斗/低血避险中断后恢复跟随。测试实例JAR、配置和存档未改，未启动游戏或推送。
+
+
+## 2026-10-08 水面跟随修复构建与测试实例同步
+
+- 用户授权“构建并同步”；main源码61bfdb2，Java17与三个显式API参数运行build lootScreeningTest --offline，BUILD SUCCESSFUL in 42s，43任务40执行3最新。SoldierFollowPolicyTest99项（含新增导航类型及实际入口检查）、其它check任务及LootScreeningTest13391项通过。日志维护目录/验证日志/build-surface-follow-20261008.log。
+- 版本保持3.6.5。唯一目标E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21；两次部署前核查无非Gradle Java进程，旧JAR及14份配置共15文件备份并校验。备份维护目录/部署备份/20261008-113647-surface-follow-Forge_47.4.21/deployment.json。
+- 源/目标SHA256均9895E1B012F5A5C9C72AB04064723233EF725EAA23DD5B1070DEB173984F63CB；目标仅一份本模组JAR，配置哈希不变，原用户CHANGELOG修改保留。未启动游戏、未推送或同步其它实例。
+- 待游戏验收：FOLLOW/BODYGUARD入水持续跟随、停下后再行进、跨岸往返及深水保持水面；此次自动检查不替代转圈现象的游戏验证。
