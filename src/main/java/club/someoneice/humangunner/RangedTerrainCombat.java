@@ -63,6 +63,12 @@ public final class RangedTerrainCombat {
         return true;
     }
 
+    /** Select native obstacle pursuit rather than the short close-defense backpedal goal. */
+    public static boolean isTerrainMelee(Human human) {
+        State state = STATES.get(human);
+        return state != null && state.terrainMelee && RangedWeaponCustody.isActive(human);
+    }
+
     static boolean holdsMelee(Human human) {
         State state = STATES.get(human);
         LivingEntity target = human.getTarget();

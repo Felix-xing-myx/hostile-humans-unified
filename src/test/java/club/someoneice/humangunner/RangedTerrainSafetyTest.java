@@ -46,6 +46,8 @@ public final class RangedTerrainSafetyTest {
             check(calls(type, "tickShot", root + "RangedWeaponCustody", "isActive"), goal + " never shoots after melee hand switch");
         }
         check(calls(root + "RangedWeaponCustody", "shouldReturnToRanged", root + "RangedTerrainCombat", "holdsMelee"), "terrain melee is a real sustained custody lease");
+        check(calls(human, "humanGunner$isMeleeMode", root + "RangedTerrainCombat", "isTerrainMelee"), "terrain melee enables native obstacle pursuit");
+        check(calls(root + "RangedHybridMeleeGoal", "canUse", root + "RangedTerrainCombat", "isTerrainMelee"), "terrain pursuit excludes short backpedal defense goal");
         System.out.println("RangedTerrainSafetyTest: " + checks + " checks passed; voxel terrain gameplay remains to be tested");
     }
     private static boolean calls(String owner, String method, String target, String name) throws Exception {

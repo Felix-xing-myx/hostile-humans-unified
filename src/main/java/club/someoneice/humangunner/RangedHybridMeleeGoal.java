@@ -22,7 +22,7 @@ public final class RangedHybridMeleeGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (human.isFleeing) return false;
+        if (human.isFleeing || RangedTerrainCombat.isTerrainMelee(human)) return false;
         if (RangedWeaponCustody.isActive(human) && human.getMainHandItem().isEmpty()
                 && isValidTarget(human.getTarget())) HumanLootManager.equipMeleeFallback(human);
         return RangedWeaponCustody.isActive(human)
