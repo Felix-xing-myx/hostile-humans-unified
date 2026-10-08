@@ -445,3 +445,5 @@
 - 实际验证：全部300份Java由tree-sitter语法解析无错误；24项源码接入断言通过；映射JAR的MoveControl/PathNavigation方法只读核对；git diff --check通过；用户CHANGELOG原片段SHA256仍340C905E8C54142D3C0FC15961D82539DA50BD9FAC7C416055A43C4E7D039EC2。解析器安装于维护目录maintenance-tools/navigation-parser，不进入源码Git。
 - 新增/扩展跟随救援、失败退避、寻岸公平排队、整段退路几何和通道/TNT回归；新任务已注册check。未执行Gradle、javac或Java测试；语法/源码检查不代表编译、运行或游戏行为通过。
 - 待用户要求构建后执行自动回归；游戏验收：浅/深水跟随与贴身保护、不可达楼层长期救援、U形墙低血绕路与恢复、地下水/岩浆岸阶、TNT中断驻守后返回、多人排队过门/梯子、群体NPC寻路性能、Better Combat/TaCZ换武器及恢复动作不被移动破坏。未修改任何实例配置/JAR、未启动游戏、未推送；原用户CHANGELOG改动保留未提交。
+
+- 主控最终本地整合提交 c18497ed95fce5dc7aa69b8d4469848d090aa411；最后复核全部300份Java解析无错误、完整批次预算三个接入口通过，暂存CHANGELOG仅含本任务未发布条目。主工作树仅剩原用户CHANGELOG未提交修改；无构建、同步或推送。
