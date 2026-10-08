@@ -209,6 +209,9 @@ tasks.named('check').configure { dependsOn tasks.named('humanAmmoPolicyTest') }
         dependsOn tasks.named('testClasses')
         classpath = sourceSets.test.runtimeClasspath
         mainClass = 'club.someoneice.humangunner.' + testClass
+        if (testClass == 'TntEscapeSourceTest') {
+            args file('src/main/java/com/craftix/hostile_humans/entity/ai/goal/AvoidTNTGoal.java').absolutePath
+        }
     }
     tasks.named('check').configure { dependsOn tasks.named(taskName) }
 }

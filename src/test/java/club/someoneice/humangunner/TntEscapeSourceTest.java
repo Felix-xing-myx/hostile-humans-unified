@@ -6,7 +6,9 @@ import java.nio.file.Path;
 /** Source-only acceptance and emergency fallback checks; never loads Minecraft classes. */
 public final class TntEscapeSourceTest {
     public static void main(String[] args) throws Exception {
-        String source = Files.readString(Path.of("src/main/java/com/craftix/hostile_humans/entity/ai/goal/AvoidTNTGoal.java"));
+        Path sourcePath = Path.of(args.length == 0
+                ? "src/main/java/com/craftix/hostile_humans/entity/ai/goal/AvoidTNTGoal.java" : args[0]);
+        String source = Files.readString(sourcePath, java.nio.charset.StandardCharsets.UTF_8);
         String selection = source.substring(source.indexOf("boolean canUse()"), source.indexOf("private boolean unsafe()"));
         check(selection.contains("return true;") && !selection.contains("searchRoute()")
                 && !selection.contains("nextSearchTick"), "threat enters escape without needing a route or budget");
