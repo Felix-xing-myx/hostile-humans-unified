@@ -232,7 +232,9 @@ extends Goal {
                 this.updatePathDelay = 0;
                 ++this.strafingTime;
             } else {
-                if (this.mob.tickCount >= this.nextWaterApproachPathTick
+                if (this.mob instanceof Human pursuingHuman) {
+                    club.someoneice.humangunner.PursuitNavigation.update(pursuingHuman, livingentity, this.speedModifier);
+                } else if (this.mob.tickCount >= this.nextWaterApproachPathTick
                         && (!(this.mob instanceof Human human)
                         || club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1))) {
                     this.mob.getNavigation().moveTo((Entity)livingentity, this.speedModifier);

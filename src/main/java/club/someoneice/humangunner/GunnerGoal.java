@@ -852,17 +852,11 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private void approachTarget(LivingEntity target, double desiredDistance) {
         // A water navigator cannot always path to a target standing on the far
         // bank. Do not retry A-star every tick or abandon the weapon's range.
-        if (mob.tickCount >= nextApproachPathTick) {
-            if (mob instanceof Human human) {
-                if (BasicNavigationBudget.tryAcquire(human, 1)) {
-                    Path path = mob.getNavigation().createPath(target, 1);
-                    if (RetreatPathSafety.tryMove(human, path, 1.0D)) approachingTarget = true;
-                    nextApproachPathTick = mob.tickCount + 12;
-                } else nextApproachPathTick = mob.tickCount + 1;
-            } else {
-                approachingTarget = mob.getNavigation().moveTo(target, 1.0D);
-                nextApproachPathTick = mob.tickCount + 12;
-            }
+        if (mob instanceof Human pursuingHuman) {
+            approachingTarget = PursuitNavigation.update(pursuingHuman, target, 1.0D);
+        } else if (mob.tickCount >= nextApproachPathTick) {
+            approachingTarget = mob.getNavigation().moveTo(target, 1.0D);
+            nextApproachPathTick = mob.tickCount + 12;
         }
         if (mob instanceof Human human) {
             human.approachCombatTargetInWater(target, desiredDistance, 1.0D);

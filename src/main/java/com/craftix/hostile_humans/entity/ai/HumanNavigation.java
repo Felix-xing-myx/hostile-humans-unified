@@ -30,6 +30,17 @@ public final class HumanNavigation extends GroundPathNavigation {
         }
     }
 
+    /** Moving entities may keep their block while the cached route still points behind them. */
+    public Path createFreshPath(net.minecraft.world.entity.Entity target, int accuracy) {
+        Path previous = this.path;
+        try {
+            this.path = null;
+            return createPath(target, accuracy);
+        } finally {
+            this.path = previous;
+        }
+    }
+
     /** Exclude a waypoint that repeatedly traps this human from the next path search. */
     public void avoidWaypoint(BlockPos node, long untilTick) {
         temporarilyBlockedNode = node.immutable();

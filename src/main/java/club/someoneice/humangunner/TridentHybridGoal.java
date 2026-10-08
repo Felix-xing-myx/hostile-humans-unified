@@ -27,7 +27,6 @@ public final class TridentHybridGoal extends Goal {
     private boolean meleeMode;
     private int attackCooldown;
     private int nextThrowTick;
-    private int pathCooldown;
     private int unseenTicks;
     private int nextFiringPositionTick;
 
@@ -60,7 +59,6 @@ public final class TridentHybridGoal extends Goal {
         target = human.getTarget();
         meleeMode = target != null && human.distanceToSqr(target) <= ENTER_MELEE_DISTANCE_SQR;
         attackCooldown = 0;
-        pathCooldown = 0;
         unseenTicks = 0;
         nextFiringPositionTick = human.tickCount;
         clearStuckUseState();
@@ -106,9 +104,6 @@ public final class TridentHybridGoal extends Goal {
         if (attackCooldown > 0) {
             attackCooldown--;
         }
-        if (pathCooldown > 0) {
-            pathCooldown--;
-        }
 
         double distanceSqr = human.distanceToSqr(target);
         boolean visible = human.getSensing().hasLineOfSight(target);
@@ -141,13 +136,7 @@ public final class TridentHybridGoal extends Goal {
             }
         } else {
             boolean spacing = MeleeSpacing.control(human, target);
-            if (pathCooldown <= 0) {
-                if (!spacing && !BasicNavigationBudget.tryAcquire(human, 1)) pathCooldown = 1;
-                else {
-                    if (!spacing) human.getNavigation().moveTo(target, 1.0D);
-                    pathCooldown = 4 + human.getRandom().nextInt(3);
-                }
-            }
+            if (!spacing) PursuitNavigation.update(human, target, 1.0D);
         }
         if (!SoldierOrder.isHoldingPosition(human)) {
             human.approachCombatTargetInWater(target,
@@ -197,12 +186,7 @@ public final class TridentHybridGoal extends Goal {
             return;
         }
         if (!visible || distanceSqr > MAX_THROW_DISTANCE_SQR || waterApproach) {
-            if (pathCooldown <= 0) {
-                if (BasicNavigationBudget.tryAcquire(human, 1)) {
-                    human.getNavigation().moveTo(target, 1.0D);
-                    pathCooldown = 5 + human.getRandom().nextInt(4);
-                } else pathCooldown = 1;
-            }
+            PursuitNavigation.update(human, target, 1.0D);
             human.approachCombatTargetInWater(target, waterApproach ? 22.0D : 4.0D, 1.0D);
             throwTridentIfReady(distanceSqr, visible);
             return;

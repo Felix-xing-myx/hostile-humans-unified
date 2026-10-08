@@ -271,7 +271,10 @@ extends Goal {
                     || (this.mob instanceof Human human && human.shouldUseWaterMovement()
                     && d0 > HOLD_DISTANCE_SQR)) {
                 --this.updatePathDelay;
-                if (this.updatePathDelay <= 0 && (!(this.mob instanceof Human human)
+                if (this.mob instanceof Human pursuingHuman) {
+                    this.pursuingTarget = club.someoneice.humangunner.PursuitNavigation.update(pursuingHuman, livingentity,
+                            this.canRun() ? this.speedModifier : this.speedModifier * 0.5D);
+                } else if (this.updatePathDelay <= 0 && (!(this.mob instanceof Human human)
                         || club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1))) {
                     // On land, close only beyond firing reach. In water,
                     // continue toward the 24-block tactical band even while

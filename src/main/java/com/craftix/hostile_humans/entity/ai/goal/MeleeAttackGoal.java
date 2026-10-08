@@ -189,7 +189,13 @@ extends Goal {
             if (spacing && this.ticksUntilNextPathRecalculation <= 0) {
                 this.ticksUntilNextPathRecalculation = 8;
             }
-            if (!holdingPosition && !spacing
+            if (this.mob instanceof Human human) {
+                if (!holdingPosition && !spacing
+                        && (this.followingTargetEvenIfNotSeen || this.mob.getSensing().hasLineOfSight(livingEntity))
+                        && (this.mob.tickCount >= recoveryRouteUntilTick
+                        || livingEntity.getId() != recoveryTargetId || this.mob.getNavigation().isDone()))
+                    club.someoneice.humangunner.PursuitNavigation.update(human, livingEntity, this.speedModifier);
+            } else if (!holdingPosition && !spacing
                     && (this.followingTargetEvenIfNotSeen || this.mob.getSensing().hasLineOfSight((Entity)livingEntity))
                     && this.ticksUntilNextPathRecalculation <= 0
                     && (this.mob.tickCount >= recoveryRouteUntilTick
