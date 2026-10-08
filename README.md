@@ -60,3 +60,10 @@
 
 
 雇佣士兵的跟随与贴身保护允许直接在浅水或深水的水面跟随主人，不因闲置上岸辅助自行离队。跟随长期没有有效接近或路径进展时，可尝试安全传送到主人附近；没有已加载、无碰撞且无危险的落点时继续等待，不盲目传送。退路允许有限绕墙，同时限制靠近敌人的距离和总路线长度。原地待命遇到TNT可临时避险，命令与驻点保留。关闭铁门只有在实际可开启时才能通行；开门后的自动关闭会避开仍在通过的单位。
+
+
+新生成单位的食物候选与数量在各阶文件的 `food` 中配置：`pool` 填注册食物物品 ID 和相对 `weight`，`presets` 填食物总数 `count_min/count_max` 与普通金苹果数量 `golden_apple_min/golden_apple_max`；附魔金苹果用 `enchanted_golden_apple_chance`。空 `pool` 不生成普通食物；`food.enabled=false` 禁止自动发放食物和两种金苹果。`equipment_loadout.inventory` 是备用近战武器池，不能用它替代食物池。已有配置缺少 `food` 时采用原默认配额，手动添加此组即可自定义；新生成配置会显示完整设置，启动不再生成兼容/迁移文件。
+
+药水在各阶 `potions.recovery/tactical.pool` 填瓶形 `item`（通常 `minecraft:potion` 或 `minecraft:splash_potion`）、药水注册 ID `potion` 和 `weight`；药水 ID 不等于效果 ID或物品 ID。`count_min/count_max` 是瓶数，普通药水每瓶通常占一格，背包满会限制实际发放。可以携带自定义注册药水，但 AI 主动使用仍按已支持的治疗、再生、力量、速度及减益策略判断，不会任意饮用所有模组效果。食物/药水自动补给还依赖全局 `ai.enabled` 与本阶 `ai.item_recovery_enabled`；关闭 `potions.enabled` 只禁用出生药水，不会移除玩家后续交给士兵的药水。
+
+护甲在 `equipment_loadout.armor_sets` 按整套权重抽取，`head/chest/legs/feet` 填对应部位的物品 ID；空数组不配护甲。任一填写部位未注册或部位错误则整套跳过，日志会给出原因。自动装备导入仍可追加候选，且自然生成/自动战斗的装备成长可在抽取后替换护甲：需要严格使用自定义套装时，关闭全局 `equipment_integration.auto_import_enabled` 和 `equipment_growth.enabled`，并删除池内不需要的已有候选。修改后重启服务器，对新生成单位生效，已有单位不重新发放。

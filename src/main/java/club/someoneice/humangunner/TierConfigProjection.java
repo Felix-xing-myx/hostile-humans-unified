@@ -95,7 +95,7 @@ final class TierConfigProjection {
         JsonObject result = source.deepCopy();
         List<String> sections = rank
                 ? List.of("schema_version", "_说明_中文", "_description_en", "attributes", "spawning",
-                    "equipment_loadout", "ammunition", "potions", "recruitment", "damage_multipliers",
+                    "equipment_loadout", "ammunition", "food", "potions", "recruitment", "damage_multipliers",
                     "combat", "ai", "movement", "weapon_spread_degrees", "tacz", "equipment_growth")
                 : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "ammunition",
                     "equipment_integration", "ai", "spawning", "recruitment", "damage", "tacz",

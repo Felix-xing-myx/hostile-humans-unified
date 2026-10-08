@@ -132,6 +132,127 @@
           "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks."
         }
       },
+      "food": {
+        "_说明_中文": "仅新生成单位发放一次的食物和金苹果补给；受本阶ai.item_recovery_enabled控制。pool按权重选择食物种类，空列表不补默认食物。presets按权重抽取数量方案；count_min/max为食物总个数，golden_apple_min/max为普通金苹果总个数。附魔金苹果独立按概率发放一枚。背包满时实际数量受容量限制；修改后重启，已有单位不补发。",
+        "_description_en": "One-time spawn food/apple supplies, gated by rank ai.item_recovery_enabled. pool chooses food varieties by weight; an empty pool grants no fallback food. presets choose total food and golden-apple count ranges by weight. Enchanted apples use an independent one-item chance. Actual grants are bounded by inventory capacity. Restart to apply; existing units are not replenished.",
+        "enabled": true,
+        "variety_min": 4,
+        "variety_max": 7,
+        "enchanted_golden_apple_chance": 0.2,
+        "presets": [
+          {
+            "weight": 45,
+            "count_min": 20,
+            "count_max": 32,
+            "golden_apple_min": 1,
+            "golden_apple_max": 1
+          },
+          {
+            "weight": 40,
+            "count_min": 28,
+            "count_max": 42,
+            "golden_apple_min": 1,
+            "golden_apple_max": 2
+          },
+          {
+            "weight": 15,
+            "count_min": 36,
+            "count_max": 48,
+            "golden_apple_min": 2,
+            "golden_apple_max": 2
+          }
+        ],
+        "pool": [
+          {
+            "item": "minecraft:cooked_beef",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_porkchop",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_chicken",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_salmon",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:bread",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:baked_potato",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:hamburger",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:bacon_and_eggs",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:chicken_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:bacon_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:egg_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:dumplings",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:stuffed_potato",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:barbecue_stick",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:roast_chicken",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:honey_glazed_ham",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:steak_and_potatoes",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:pasta_with_meatballs",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:grilled_salmon",
+            "weight": 1
+          }
+        ],
+        "_说明_enabled_中文": "本阶出生食物、普通金苹果和附魔金苹果总开关。",
+        "_description_enabled_en": "Spawn food and both apple types switch for this rank.",
+        "_说明_variety_min_中文": "食物种类下限，1至30；受有效食物种类数限制。",
+        "_description_variety_min_en": "Minimum food varieties, 1-30, limited by available food types.",
+        "_说明_variety_max_中文": "食物种类上限，1至30；上下限反填自动交换。",
+        "_description_variety_max_en": "Maximum food varieties, 1-30; reversed bounds are swapped.",
+        "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
+        "_description_enchanted_golden_apple_chance_en": "One enchanted-apple spawn chance, 0-1; zero grants none. Beacon drop restrictions remain independent.",
+        "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
+        "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
+        "_说明_pool_中文": "食物候选：item为注册食物物品ID，weight为正权重；按权重不重复选种类。不识别的物品和非食物跳过，空列表不回退。金苹果用上述专用数量项。",
+        "_description_pool_en": "Food candidates: registered edible item IDs and positive weights; varieties are sampled without replacement. Unavailable/nonfood items are skipped; empty lists grant no fallback. Use dedicated counts for apples."
+      },
       "potions": {
         "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",
         "_description_en": "One-time spawn provisioning, gated by ai.item_recovery_enabled. Counts are inclusive bottle totals (0-30), not stack size. Weighted pools are independent; empty pools never spawn fallback potions and unavailable IDs are skipped. Restart to apply; existing entities are not replenished.",
@@ -327,6 +448,127 @@
           "_说明_中文": "通用弹匣初始储备，只为对应远程职业生成；数量单位是个，不是组。",
           "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks."
         }
+      },
+      "food": {
+        "_说明_中文": "仅新生成单位发放一次的食物和金苹果补给；受本阶ai.item_recovery_enabled控制。pool按权重选择食物种类，空列表不补默认食物。presets按权重抽取数量方案；count_min/max为食物总个数，golden_apple_min/max为普通金苹果总个数。附魔金苹果独立按概率发放一枚。背包满时实际数量受容量限制；修改后重启，已有单位不补发。",
+        "_description_en": "One-time spawn food/apple supplies, gated by rank ai.item_recovery_enabled. pool chooses food varieties by weight; an empty pool grants no fallback food. presets choose total food and golden-apple count ranges by weight. Enchanted apples use an independent one-item chance. Actual grants are bounded by inventory capacity. Restart to apply; existing units are not replenished.",
+        "enabled": true,
+        "variety_min": 4,
+        "variety_max": 7,
+        "enchanted_golden_apple_chance": 0.3,
+        "presets": [
+          {
+            "weight": 35,
+            "count_min": 32,
+            "count_max": 48,
+            "golden_apple_min": 1,
+            "golden_apple_max": 2
+          },
+          {
+            "weight": 45,
+            "count_min": 44,
+            "count_max": 64,
+            "golden_apple_min": 2,
+            "golden_apple_max": 3
+          },
+          {
+            "weight": 20,
+            "count_min": 56,
+            "count_max": 72,
+            "golden_apple_min": 2,
+            "golden_apple_max": 3
+          }
+        ],
+        "pool": [
+          {
+            "item": "minecraft:cooked_beef",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_porkchop",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_chicken",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_salmon",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:bread",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:baked_potato",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:hamburger",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:bacon_and_eggs",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:chicken_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:bacon_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:egg_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:dumplings",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:stuffed_potato",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:barbecue_stick",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:roast_chicken",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:honey_glazed_ham",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:steak_and_potatoes",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:pasta_with_meatballs",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:grilled_salmon",
+            "weight": 1
+          }
+        ],
+        "_说明_enabled_中文": "本阶出生食物、普通金苹果和附魔金苹果总开关。",
+        "_description_enabled_en": "Spawn food and both apple types switch for this rank.",
+        "_说明_variety_min_中文": "食物种类下限，1至30；受有效食物种类数限制。",
+        "_description_variety_min_en": "Minimum food varieties, 1-30, limited by available food types.",
+        "_说明_variety_max_中文": "食物种类上限，1至30；上下限反填自动交换。",
+        "_description_variety_max_en": "Maximum food varieties, 1-30; reversed bounds are swapped.",
+        "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
+        "_description_enchanted_golden_apple_chance_en": "One enchanted-apple spawn chance, 0-1; zero grants none. Beacon drop restrictions remain independent.",
+        "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
+        "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
+        "_说明_pool_中文": "食物候选：item为注册食物物品ID，weight为正权重；按权重不重复选种类。不识别的物品和非食物跳过，空列表不回退。金苹果用上述专用数量项。",
+        "_description_pool_en": "Food candidates: registered edible item IDs and positive weights; varieties are sampled without replacement. Unavailable/nonfood items are skipped; empty lists grant no fallback. Use dedicated counts for apples."
       },
       "potions": {
         "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",
@@ -524,6 +766,127 @@
           "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks."
         }
       },
+      "food": {
+        "_说明_中文": "仅新生成单位发放一次的食物和金苹果补给；受本阶ai.item_recovery_enabled控制。pool按权重选择食物种类，空列表不补默认食物。presets按权重抽取数量方案；count_min/max为食物总个数，golden_apple_min/max为普通金苹果总个数。附魔金苹果独立按概率发放一枚。背包满时实际数量受容量限制；修改后重启，已有单位不补发。",
+        "_description_en": "One-time spawn food/apple supplies, gated by rank ai.item_recovery_enabled. pool chooses food varieties by weight; an empty pool grants no fallback food. presets choose total food and golden-apple count ranges by weight. Enchanted apples use an independent one-item chance. Actual grants are bounded by inventory capacity. Restart to apply; existing units are not replenished.",
+        "enabled": true,
+        "variety_min": 4,
+        "variety_max": 7,
+        "enchanted_golden_apple_chance": 0.4,
+        "presets": [
+          {
+            "weight": 30,
+            "count_min": 64,
+            "count_max": 80,
+            "golden_apple_min": 2,
+            "golden_apple_max": 3
+          },
+          {
+            "weight": 50,
+            "count_min": 76,
+            "count_max": 96,
+            "golden_apple_min": 3,
+            "golden_apple_max": 4
+          },
+          {
+            "weight": 20,
+            "count_min": 92,
+            "count_max": 112,
+            "golden_apple_min": 4,
+            "golden_apple_max": 5
+          }
+        ],
+        "pool": [
+          {
+            "item": "minecraft:cooked_beef",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_porkchop",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_chicken",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_salmon",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:bread",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:baked_potato",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:hamburger",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:bacon_and_eggs",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:chicken_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:bacon_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:egg_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:dumplings",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:stuffed_potato",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:barbecue_stick",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:roast_chicken",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:honey_glazed_ham",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:steak_and_potatoes",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:pasta_with_meatballs",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:grilled_salmon",
+            "weight": 1
+          }
+        ],
+        "_说明_enabled_中文": "本阶出生食物、普通金苹果和附魔金苹果总开关。",
+        "_description_enabled_en": "Spawn food and both apple types switch for this rank.",
+        "_说明_variety_min_中文": "食物种类下限，1至30；受有效食物种类数限制。",
+        "_description_variety_min_en": "Minimum food varieties, 1-30, limited by available food types.",
+        "_说明_variety_max_中文": "食物种类上限，1至30；上下限反填自动交换。",
+        "_description_variety_max_en": "Maximum food varieties, 1-30; reversed bounds are swapped.",
+        "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
+        "_description_enchanted_golden_apple_chance_en": "One enchanted-apple spawn chance, 0-1; zero grants none. Beacon drop restrictions remain independent.",
+        "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
+        "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
+        "_说明_pool_中文": "食物候选：item为注册食物物品ID，weight为正权重；按权重不重复选种类。不识别的物品和非食物跳过，空列表不回退。金苹果用上述专用数量项。",
+        "_description_pool_en": "Food candidates: registered edible item IDs and positive weights; varieties are sampled without replacement. Unavailable/nonfood items are skipped; empty lists grant no fallback. Use dedicated counts for apples."
+      },
       "potions": {
         "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",
         "_description_en": "One-time spawn provisioning, gated by ai.item_recovery_enabled. Counts are inclusive bottle totals (0-30), not stack size. Weighted pools are independent; empty pools never spawn fallback potions and unavailable IDs are skipped. Restart to apply; existing entities are not replenished.",
@@ -719,6 +1082,127 @@
           "_说明_中文": "通用弹匣初始储备，只为对应远程职业生成；数量单位是个，不是组。",
           "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks."
         }
+      },
+      "food": {
+        "_说明_中文": "仅新生成单位发放一次的食物和金苹果补给；受本阶ai.item_recovery_enabled控制。pool按权重选择食物种类，空列表不补默认食物。presets按权重抽取数量方案；count_min/max为食物总个数，golden_apple_min/max为普通金苹果总个数。附魔金苹果独立按概率发放一枚。背包满时实际数量受容量限制；修改后重启，已有单位不补发。",
+        "_description_en": "One-time spawn food/apple supplies, gated by rank ai.item_recovery_enabled. pool chooses food varieties by weight; an empty pool grants no fallback food. presets choose total food and golden-apple count ranges by weight. Enchanted apples use an independent one-item chance. Actual grants are bounded by inventory capacity. Restart to apply; existing units are not replenished.",
+        "enabled": true,
+        "variety_min": 4,
+        "variety_max": 7,
+        "enchanted_golden_apple_chance": 0.8,
+        "presets": [
+          {
+            "weight": 25,
+            "count_min": 96,
+            "count_max": 112,
+            "golden_apple_min": 3,
+            "golden_apple_max": 4
+          },
+          {
+            "weight": 50,
+            "count_min": 108,
+            "count_max": 124,
+            "golden_apple_min": 4,
+            "golden_apple_max": 5
+          },
+          {
+            "weight": 25,
+            "count_min": 120,
+            "count_max": 128,
+            "golden_apple_min": 5,
+            "golden_apple_max": 5
+          }
+        ],
+        "pool": [
+          {
+            "item": "minecraft:cooked_beef",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_porkchop",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_chicken",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:cooked_salmon",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:bread",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:baked_potato",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:hamburger",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:bacon_and_eggs",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:chicken_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:bacon_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:egg_sandwich",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:dumplings",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:stuffed_potato",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:barbecue_stick",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:roast_chicken",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:honey_glazed_ham",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:steak_and_potatoes",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:pasta_with_meatballs",
+            "weight": 1
+          },
+          {
+            "item": "farmersdelight:grilled_salmon",
+            "weight": 1
+          }
+        ],
+        "_说明_enabled_中文": "本阶出生食物、普通金苹果和附魔金苹果总开关。",
+        "_description_enabled_en": "Spawn food and both apple types switch for this rank.",
+        "_说明_variety_min_中文": "食物种类下限，1至30；受有效食物种类数限制。",
+        "_description_variety_min_en": "Minimum food varieties, 1-30, limited by available food types.",
+        "_说明_variety_max_中文": "食物种类上限，1至30；上下限反填自动交换。",
+        "_description_variety_max_en": "Maximum food varieties, 1-30; reversed bounds are swapped.",
+        "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
+        "_description_enchanted_golden_apple_chance_en": "One enchanted-apple spawn chance, 0-1; zero grants none. Beacon drop restrictions remain independent.",
+        "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
+        "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
+        "_说明_pool_中文": "食物候选：item为注册食物物品ID，weight为正权重；按权重不重复选种类。不识别的物品和非食物跳过，空列表不回退。金苹果用上述专用数量项。",
+        "_description_pool_en": "Food candidates: registered edible item IDs and positive weights; varieties are sampled without replacement. Unavailable/nonfood items are skipped; empty lists grant no fallback. Use dedicated counts for apples."
       },
       "potions": {
         "_说明_中文": "仅生成时发放一次，受ai.item_recovery_enabled控制。count_min/max是含两端的瓶数(0至30)，不是堆叠量；恢复/战术池按weight独立抽取。空池不会补默认药水，缺失注册ID跳过；修改后重启，已有实体不补发。",

@@ -2,9 +2,7 @@ package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.data.HumanData;
 import com.craftix.hostile_humans.entity.entities.Human;
-import com.craftix.hostile_humans.entity.entities.HumanTier;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
@@ -19,8 +17,6 @@ import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -63,27 +59,6 @@ public final class RecoverySupplies {
     private static final int INTERRUPTED_FINISH_QUIET_TICKS = 1;
     private static final double FOOD_USE_TIME_MULTIPLIER = 0.70D;
 
-    private static final List<String> FOOD_POOL = List.of(
-            "minecraft:cooked_beef", "minecraft:cooked_porkchop", "minecraft:cooked_chicken",
-            "minecraft:cooked_salmon", "minecraft:bread", "minecraft:baked_potato",
-            "farmersdelight:hamburger", "farmersdelight:bacon_and_eggs",
-            "farmersdelight:chicken_sandwich", "farmersdelight:bacon_sandwich",
-            "farmersdelight:egg_sandwich", "farmersdelight:dumplings",
-            "farmersdelight:stuffed_potato", "farmersdelight:barbecue_stick",
-            "farmersdelight:roast_chicken", "farmersdelight:honey_glazed_ham",
-            "farmersdelight:steak_and_potatoes", "farmersdelight:pasta_with_meatballs",
-            "farmersdelight:grilled_salmon"
-    );
-
-    private record IntRange(int minimum, int maximum) {
-        int roll(RandomSource random) {
-            return random.nextInt(minimum, maximum + 1);
-        }
-    }
-
-    private record SupplyPreset(int weight, IntRange food, IntRange goldenApples) {
-    }
-
     private record ShieldSnapshot(int count, String state) {
     }
 
@@ -121,8 +96,9 @@ public final class RecoverySupplies {
             return;
         }
         human.getPersistentData().putBoolean(KIT_GRANTED, true);
-        SupplyPreset preset = rollPreset(human);
         RandomSource random = human.getRandom();
+        SpawnFoodConfig foodConfig = UnifiedConfig.get().spawnFood(TierAttributes.key(human));
+        SpawnFoodConfig.Preset preset = foodConfig.roll(random);
 
         SpawnPotionConfig.Granted potions = UnifiedConfig.get().spawnPotions(TierAttributes.key(human))
                 .grant(data, random);
@@ -133,9 +109,9 @@ public final class RecoverySupplies {
         ItemStack apples = new ItemStack(Items.GOLDEN_APPLE, appleCount);
         insertInventory(data, apples);
         int insertedApples = appleCount - apples.getCount();
-        int enchantedApples = provisionEnchantedGoldenApple(human);
+        int enchantedApples = provisionEnchantedGoldenApple(human, foodConfig);
         int foodCount = preset.food().roll(random);
-        int insertedFood = provisionFoodVariety(human, data, foodCount);
+        int insertedFood = provisionFoodVariety(human, data, foodCount, foodConfig);
         human.getPersistentData().putInt("humangunner:recovery_kit_potions", insertedPotions);
         human.getPersistentData().putInt("humangunner:tactical_kit_potions", tacticalPotions);
         human.getPersistentData().putInt("humangunner:recovery_kit_food", insertedFood);
@@ -1096,25 +1072,10 @@ public final class RecoverySupplies {
         );
     }
 
-    private static int provisionFoodVariety(Human human, HumanData data, int totalCount) {
-        List<Item> available = new ArrayList<>();
-        for (String idString : FOOD_POOL) {
-            ResourceLocation id = ResourceLocation.tryParse(idString);
-            if (id == null) {
-                continue;
-            }
-            BuiltInRegistries.ITEM.getOptional(id).ifPresent(item -> {
-                ItemStack sample = item.getDefaultInstance();
-                if (sample.isEdible() && sample.getMaxStackSize() > 1) {
-                    available.add(item);
-                }
-            });
-        }
-        if (available.isEmpty()) {
-            available.add(Items.COOKED_BEEF);
-        }
-        Collections.shuffle(available, new java.util.Random(human.getRandom().nextLong()));
-        int variety = Math.min(available.size(), human.getRandom().nextInt(4, 8));
+    private static int provisionFoodVariety(Human human, HumanData data, int totalCount, SpawnFoodConfig config) {
+        List<Item> available = config.availableFoods(human);
+        if (!config.enabled || available.isEmpty() || totalCount <= 0) return 0;
+        int variety = Math.min(available.size(), human.getRandom().nextInt(config.varietyMin, config.varietyMax + 1));
         int remaining = totalCount;
         for (int i = 0; i < variety && remaining > 0; i++) {
             Item item = available.get(i);
@@ -1129,7 +1090,7 @@ public final class RecoverySupplies {
             remaining -= before - stack.getCount();
         }
         int cursor = 0;
-        while (remaining > 0 && cursor < available.size() * 4) {
+        while (remaining > 0 && cursor < totalCount) {
             Item item = available.get(cursor % variety);
             ItemStack stack = new ItemStack(item, Math.min(remaining, item.getMaxStackSize()));
             int before = stack.getCount();
@@ -1140,44 +1101,6 @@ public final class RecoverySupplies {
             cursor++;
         }
         return totalCount - remaining;
-    }
-
-    private static SupplyPreset rollPreset(Human human) {
-        List<SupplyPreset> pool;
-        if (human.getPersistentData().getBoolean(TIER_THREE_MARKER)) {
-            pool = List.of(
-                    preset(25, 96, 112, 3, 4),
-                    preset(50, 108, 124, 4, 5),
-                    preset(25, 120, 128, 5, 5)
-            );
-        } else if (human.getTier() == HumanTier.LEVEL2) {
-            pool = List.of(
-                    preset(30, 64, 80, 2, 3),
-                    preset(50, 76, 96, 3, 4),
-                    preset(20, 92, 112, 4, 5)
-            );
-        } else if (human.getTier() == HumanTier.LEVEL1) {
-            pool = List.of(
-                    preset(35, 32, 48, 1, 2),
-                    preset(45, 44, 64, 2, 3),
-                    preset(20, 56, 72, 2, 3)
-            );
-        } else {
-            pool = List.of(
-                    preset(45, 20, 32, 1, 1),
-                    preset(40, 28, 42, 1, 2),
-                    preset(15, 36, 48, 2, 2)
-            );
-        }
-        int totalWeight = pool.stream().mapToInt(SupplyPreset::weight).sum();
-        int roll = human.getRandom().nextInt(totalWeight);
-        for (SupplyPreset preset : pool) {
-            roll -= preset.weight();
-            if (roll < 0) {
-                return preset;
-            }
-        }
-        return pool.get(pool.size() - 1);
     }
 
     public static boolean consumeShieldReblockRequest(Human human) {
@@ -1193,17 +1116,9 @@ public final class RecoverySupplies {
         return true;
     }
 
-    private static int provisionEnchantedGoldenApple(Human human) {
-        float chance;
-        if (TierThreeHuman.isTierThree(human)) {
-            chance = 0.80F;
-        } else if (human.getTier() == HumanTier.LEVEL2) {
-            chance = 0.40F;
-        } else if (human.getTier() == HumanTier.LEVEL1) {
-            chance = 0.30F;
-        } else {
-            chance = 0.20F;
-        }
+    private static int provisionEnchantedGoldenApple(Human human, SpawnFoodConfig config) {
+        if (!config.enabled) return 0;
+        double chance = config.enchantedAppleChance;
         if (human.getRandom().nextFloat() >= chance) {
             return 0;
         }
@@ -1248,16 +1163,6 @@ public final class RecoverySupplies {
             }
         }
         return -1;
-    }
-
-    private static SupplyPreset preset(
-            int weight, int foodMin, int foodMax, int appleMin, int appleMax
-    ) {
-        return new SupplyPreset(
-                weight,
-                new IntRange(foodMin, foodMax),
-                new IntRange(appleMin, appleMax)
-        );
     }
 
     private static UseSession createSession(

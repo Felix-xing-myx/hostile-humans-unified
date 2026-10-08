@@ -157,9 +157,14 @@ public final class ConfiguredEquipmentLoadout {
         private static boolean armor(ResourceLocation id, EquipmentSlot slot) {
             if (id == null) return true;
             Item item = ForgeRegistries.ITEMS.getValue(id);
-            return item instanceof ArmorItem armor && armor.getEquipmentSlot() == slot;
+            boolean valid = item instanceof ArmorItem armor && armor.getEquipmentSlot() == slot;
+            if (!valid && UNAVAILABLE_ARMOR.add(id + "/" + slot.getName())) HumanGunner.LOGGER.warn(
+                    "Cannot grant configured armor {} in slot {}: unregistered ID or wrong armor slot; skipping whole set",
+                    id, slot.getName());
+            return valid;
         }
     }
+    private static final java.util.Set<String> UNAVAILABLE_ARMOR = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static boolean loaded(String mod) { return mod == null || mod.isBlank() || ModList.get().isLoaded(mod); }
 
     static final class Pool<T extends WeightedEntry> {

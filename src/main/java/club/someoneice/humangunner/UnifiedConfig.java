@@ -24,6 +24,7 @@ public final class UnifiedConfig {
     private final boolean ammoConsumptionEnabled;
     private final boolean vanillaMode;
     private final Map<String, SpawnPotionConfig> spawnPotions;
+    private final Map<String, SpawnFoodConfig> spawnFoods;
     public record AmmoReserve(int arrowMin, int arrowMax, int magazineMin, int magazineMax) { }
     public record SoldierMessages(int chatterIntervalTicks, int chatterMaxPerFiveMinutes,
             int reportIntervalTicks, int reportMaxPerMinute, int reportDetailsPerMessage) { }
@@ -151,6 +152,11 @@ public final class UnifiedConfig {
             potionValues.put(rank, new SpawnPotionConfig(object(object(object(root, "tiers"), rank), "potions")));
         }
         spawnPotions = Map.copyOf(potionValues);
+        Map<String, SpawnFoodConfig> foodValues = new LinkedHashMap<>();
+        for (String rank : List.of("roamer", "tier1", "tier2", "tier3")) {
+            foodValues.put(rank, new SpawnFoodConfig(object(object(object(root, "tiers"), rank), "food")));
+        }
+        spawnFoods = Map.copyOf(foodValues);
         ammunition = Map.copyOf(ammoValues);
         combatByTier = Map.copyOf(aiValues);
         ammoConsumptionEnabled = bool(object(root, "ammunition"), "consume_ammunition", true);
@@ -230,6 +236,7 @@ public final class UnifiedConfig {
     public boolean vanillaMode() { return vanillaMode; }
     public CombatAiConfig combatAi(String rank) { return combatByTier.getOrDefault(rank, combatByTier.get("roamer")); }
     SpawnPotionConfig spawnPotions(String rank) { return spawnPotions.getOrDefault(rank, spawnPotions.get("roamer")); }
+    SpawnFoodConfig spawnFood(String rank) { return spawnFoods.getOrDefault(rank, spawnFoods.get("roamer")); }
     public double followSpeed(String rank, boolean catchUp) {
         JsonObject movement = object(object(object(root, "tiers"), rank), "movement");
         double normal = number(movement, "follow_speed_multiplier", 1.35D, 0.1D, 3.0D);

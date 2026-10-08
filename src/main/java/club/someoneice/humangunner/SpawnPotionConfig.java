@@ -13,12 +13,18 @@ import java.util.List;
 
 /** Per-rank startup snapshot; optional potion registrations resolve only at spawn time. */
 final class SpawnPotionConfig {
+    private static final java.util.Set<String> UNAVAILABLE = java.util.concurrent.ConcurrentHashMap.newKeySet();
     record Entry(ResourceLocation item, ResourceLocation potion, int weight) {
         ItemStack resolve() {
             var registeredItem = BuiltInRegistries.ITEM.getOptional(item);
             var registeredPotion = BuiltInRegistries.POTION.getOptional(potion);
             if (registeredItem.isEmpty() || !(registeredItem.get() instanceof PotionItem)
-                    || registeredPotion.isEmpty()) return ItemStack.EMPTY;
+                    || registeredPotion.isEmpty()) {
+                if (UNAVAILABLE.add(item + "/" + potion)) HumanGunner.LOGGER.warn(
+                        "Cannot grant configured spawn potion item={} potion={}: unregistered ID or item is not a PotionItem",
+                        item, potion);
+                return ItemStack.EMPTY;
+            }
             return PotionUtils.setPotion(new ItemStack(registeredItem.get()), registeredPotion.get());
         }
     }
