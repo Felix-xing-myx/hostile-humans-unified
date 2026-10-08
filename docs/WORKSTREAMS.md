@@ -484,3 +484,12 @@
 - 实际缺口：普通食物和两种金苹果发放此前硬编码，装备inventory为近战备用池。新增分阶food与SpawnFoodConfig接入真实RecoverySupplies，保持原19候选及分阶加权数量/金苹果默认；删除硬编码和空候选牛排回退，支持单份食物；药水和护甲无效ID/部位新增一次诊断。
 - 新增SupplyConfigurationTest的真实临时五文件加载链回归，并注册check；未编译执行。静态302份Java解析无错误、默认JSON除food新增外逐项相同、diff检查和原用户CHANGELOG片段SHA256保护通过。
 - 未改实例配置/JAR、未启动游戏或推送。后续验收按审查文档，尤其新生成/重启、自定义单池、药水数量/ID、关闭成长后护甲精确池和无效ID日志。
+
+
+## 2026-10-08 食物药水配置复核、构建与测试实例同步
+
+- 用户授权再次核查食物与药水配置，确认后构建同步。主控 /root 在 main 单独完成；源码基线及实际构建提交7d49570abd66ed3f9b1e2c6569432ada52b21fb3，版本保持3.6.5，无新agent。加载、默认合并、分阶快照及出生发放接入复核未发现新的覆盖问题。
+- Java17和三个显式只读API参数执行build lootScreeningTest --offline，BUILD SUCCESSFUL in 1m 36s，44任务42执行2最新。SupplyConfigurationTest23、PotionRecoveryTest37、TierConfigFilesTest286、UnifiedConfigTest123、LootScreeningTest13391项及其余check任务通过。自定义注册ID测试验证加载快照，不替代第三方药水游戏使用验收；坏配置ERROR为预期诊断。日志维护目录/验证日志/build-supply-config-20261008.log。
+- 唯一目标E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21；备份前及替换前无非Gradle Java进程。旧JAR及14份配置共15文件已备份并逐份核对SHA256，备份维护目录/部署备份/20261008-181658-supply-config-Forge_47.4.21/deployment.json。
+- 源/目标JAR SHA256均BC6832DC0A34F66B0D83A1DFF5FE48F1F623E272329BEEBA42FC36124AFE6AA8；目标仅一份本模组JAR，14配置哈希全部不变。已有阶文件缺food时继续使用默认配额，自定义食物需按docs/SUPPLY_CONFIG_AUDIT.md添加food组；重启后仅新生成单位领取出生配置物品。
+- 未启动游戏、未推送、未同步其它实例。待游戏验收：新生成各阶单一自定义食物池/数量、注册药水ID及零配额、护甲单套（关闭成长/自动导入），背包容量与旧士兵不补发。原用户CHANGELOG片段保护哈希仍340C905E8C54142D3C0FC15961D82539DA50BD9FAC7C416055A43C4E7D039EC2。
