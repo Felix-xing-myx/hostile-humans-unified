@@ -108,8 +108,13 @@ public final class HumanTerrainSafety {
                 ? new Vec3(input.x * Math.cos(yaw) - input.z * Math.sin(yaw), 0,
                         input.z * Math.cos(yaw) + input.x * Math.sin(yaw))
                 : motionBefore.multiply(1, 0, 1);
-        double ahead = Math.min(2.0D, Math.max(0.9D, human.getDeltaMovement().horizontalDistance() * 3.0D + 0.5D));
-        if (safeStep(human, direction.normalize().scale(ahead))) return input;
+        double ahead = Math.min(4.0D, Math.max(0.9D, motionBefore.horizontalDistance() * 3.0D + 0.5D));
+        boolean safeInput = safeStep(human, direction.normalize().scale(ahead));
+        // A new sideways/backward command does not instantly redirect velocity.
+        // Check the old trajectory too, unless it came from an external hit.
+        boolean safeMomentum = human.hurtTime > 0 || motionBefore.horizontalDistanceSqr() < 0.0025D
+                || safeStep(human, motionBefore.multiply(1, 0, 1).normalize().scale(ahead));
+        if (safeInput && safeMomentum) return input;
         human.setZza(0); human.setXxa(0);
         if (human.hurtTime == 0) { // Do not turn the guard into knockback immunity.
             var motion = human.getDeltaMovement();
