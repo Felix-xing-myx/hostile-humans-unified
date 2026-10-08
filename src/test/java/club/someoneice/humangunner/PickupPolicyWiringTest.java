@@ -65,8 +65,14 @@ public final class PickupPolicyWiringTest {
                 "owner logout does not disable configured pickup");
         check(calls(POLICY, "canCollectNow", "club/someoneice/humangunner/SoldierOrder", "allowsLootPosition"),
                 "area boundary is enforced in all pickup entrypoints");
-        check(calls("club/someoneice/humangunner/SoldierOrder", "tick", POLICY, "canCollectNow"),
-                "follow/patrol/guard lifecycle yields to an authorized active pickup");
+        check(calls("club/someoneice/humangunner/SoldierOrder", "tickMovement", POLICY, "canCollectNow"),
+                "follow/patrol/guard movement yields to an authorized active pickup");
+        check(calls("club/someoneice/humangunner/SoldierOrderGoal", "tick",
+                "club/someoneice/humangunner/SoldierOrder", "tickMovement"),
+                "MOVE goal reaches the pickup-aware movement entrypoint");
+        check(!callsOwner("club/someoneice/humangunner/SoldierOrder", "tick",
+                "net/minecraft/world/entity/ai/navigation/PathNavigation"),
+                "lifecycle does not directly overwrite pickup navigation");
         check(calls("club/someoneice/humangunner/RecruitmentContractItem", "interactLivingEntity",
                 "club/someoneice/humangunner/RecruitmentConfigNetwork", "serverPrice")
                 && calls("club/someoneice/humangunner/RecruitmentContractItem", "interactLivingEntity",
