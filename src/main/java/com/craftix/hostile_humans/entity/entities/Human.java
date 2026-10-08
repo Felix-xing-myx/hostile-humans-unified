@@ -1503,6 +1503,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public boolean canAttack(LivingEntity entity) {
         if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return false;
         if (entity == null) return false;
+        if (!club.someoneice.humangunner.HumanTargeting.allowsWildHumanTarget(this, entity)) return false;
         if (!club.someoneice.humangunner.SoldierOrder.allowsTarget(this, entity)) return false;
         if (!club.someoneice.humangunner.HumanGunner.canControlledHumanAttack(this, entity)) return false;
         Human otherHuman;
@@ -1558,6 +1559,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (livingEntity != null && this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL)
             livingEntity = null;
         if (livingEntity != null && (!club.someoneice.humangunner.SoldierOrder.allowsTarget(this, livingEntity)
+                || !club.someoneice.humangunner.HumanTargeting.allowsWildHumanTarget(this, livingEntity)
                 || !HumanGunner.canControlledHumanAttack(this, livingEntity)))
             livingEntity = null;
         LivingEntity previous = getTarget();

@@ -9,6 +9,10 @@ public final class MaidHumanRelationTest {
     private static int checks;
 
     public static void main(String[] args) throws Exception {
+        check(!MaidHumanRelationPolicy.allowsWildTarget(true, true, false), "wild humans never initiate against maids");
+        check(MaidHumanRelationPolicy.allowsWildTarget(true, true, true), "wild humans retain actual self-defense");
+        check(MaidHumanRelationPolicy.allowsWildTarget(false, true, false), "hired/temporary combat rules remain separate");
+        check(MaidHumanRelationPolicy.allowsWildTarget(true, false, false), "other target classifications are unchanged");
         for (int rank = 0; rank <= 3; rank++) {
             for (int clearance = -1; clearance <= 4; clearance++) {
                 check(MaidHumanRelationPolicy.allowsAttack(true, false, clearance, rank, false, false)
@@ -34,6 +38,17 @@ public final class MaidHumanRelationTest {
                 "switching badges removes hostility for neutral as well as friendly humans");
         String compat = "club/someoneice/humangunner/TouhouMaidCompat";
         String mixin = "club/someoneice/humangunner/mixin/TouhouMaidHumanTargetMixin";
+        String targeting = "club/someoneice/humangunner/HumanTargeting";
+        String human = "com/craftix/hostile_humans/entity/entities/Human";
+        check(calls(human, "canAttack", targeting, "allowsWildHumanTarget"), "all weapon damage/attack gates honor maid neutrality");
+        check(calls(human, "setTarget", targeting, "allowsWildHumanTarget"), "direct target assignment honors neutrality");
+        check(calls(targeting, "isAutonomousPlayerEnemy", targeting, "allowsWildHumanTarget"), "autonomous search excludes neutral maids");
+        check(calls("club/someoneice/humangunner/HumanGunner", "onLivingTick", targeting, "allowsWildHumanTarget"),
+                "already selected neutral maid targets are cleared");
+        check(calls("club/someoneice/humangunner/HumanGunner", "onLivingChangeTarget", targeting, "allowsWildHumanTarget"),
+                "external target events honor neutrality");
+        check(calls(targeting, "allowsWildHumanTarget", "club/someoneice/humangunner/HumanRelations", "isRecentHumanAttacker"),
+                "self-defense requires a real recent attacker rather than anger alone");
         check(calls(mixin, "humanGunner$recognizeHumans", compat, "humanAttackDecision"), "maid canAttack hook");
         check(calls(compat, "relationAllowsAttack", "club/someoneice/humangunner/IdentityBadgeAccess", "highestClearance"),
                 "owner inventory and Curios badge access");

@@ -6,14 +6,24 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.fml.ModList;
 
 /** Shared classification for autonomous attacks against vanilla and modded enemies. */
 public final class HumanTargeting {
     private HumanTargeting() {}
 
+    /** Neutrality is independent of the maid owner's badge and includes untamed maids. */
+    public static boolean allowsWildHumanTarget(Human human, LivingEntity candidate) {
+        if (candidate == null || HumanRelations.effectiveOwner(human) != null
+                || !ModList.get().isLoaded("touhou_little_maid")) return true;
+        return MaidHumanRelationPolicy.allowsWildTarget(true, TouhouMaidCompat.isMaid(candidate),
+                HumanRelations.isRecentHumanAttacker(human, candidate));
+    }
+
     public static boolean isAutonomousPlayerEnemy(Human observer, LivingEntity candidate) {
         if (!(candidate instanceof Mob mob) || candidate == observer
-                || !SoldierCombatMode.allowsAutonomousTargeting(observer)) return false;
+                || !SoldierCombatMode.allowsAutonomousTargeting(observer)
+                || !allowsWildHumanTarget(observer, candidate)) return false;
         if (candidate instanceof Human wild) {
             return isAutonomousWildEnemy(observer, wild);
         }

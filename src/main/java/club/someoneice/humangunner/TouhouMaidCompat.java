@@ -30,6 +30,8 @@ public final class TouhouMaidCompat {
     private TouhouMaidCompat() {
     }
 
+    public static boolean isMaid(LivingEntity entity) { return entity instanceof EntityMaid; }
+
     public static void register() {
         if (GunSupport.get().enabled()) TaczMaidIntegration.register();
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, TouhouMaidCompat::onMaidTick);

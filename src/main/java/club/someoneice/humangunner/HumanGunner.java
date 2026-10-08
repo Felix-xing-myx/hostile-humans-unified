@@ -183,6 +183,11 @@ public final class HumanGunner {
 
     private static void onLivingTick(LivingEvent.LivingTickEvent event) {
         if (event.getEntity() instanceof Human human && !human.level().isClientSide) {
+            if (human.getTarget() != null && !HumanTargeting.allowsWildHumanTarget(human, human.getTarget())) {
+                // Also retire stale targets assigned before this rule or by outside AI.
+                human.setTarget(null);
+                human.getNavigation().stop();
+            }
             OfflineSoldierDeathReports.tick(human);
             if (!initializeHumanIfReady(human)) {
                 return;
@@ -390,6 +395,7 @@ public final class HumanGunner {
     private static void onLivingChangeTarget(LivingChangeTargetEvent event) {
         if (event.getEntity() instanceof Human attacker) {
             if (event.getNewTarget() != null && (HumanRelations.allied(attacker, event.getNewTarget())
+                    || !HumanTargeting.allowsWildHumanTarget(attacker, event.getNewTarget())
                     || !SoldierOrder.allowsTarget(attacker, event.getNewTarget()))) {
                 event.setNewTarget(null);
             }

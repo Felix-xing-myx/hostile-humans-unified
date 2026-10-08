@@ -522,3 +522,12 @@
 - 唯一目标E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21；备份前/替换前无非Gradle Java进程。旧JAR和14份配置共15文件已备份并逐一核对SHA256，备份维护目录/部署备份/20261008-225403-bodyguard-projectiles-Forge_47.4.21/deployment.json。
 - 源/目标JAR SHA256均B53F20FC40504A1374AE2CFD99F171DF72D9906A0B4B4D027A3D3116C870B058，目标仅一份本模组JAR；manifest版本及三个新增可选/原生碰撞Mixin类和清单确认已打包。14配置哈希不变，原用户CHANGELOG片段保护哈希仍340C905E8C54142D3C0FC15961D82539DA50BD9FAC7C416055A43C4E7D039EC2。
 - 未启动游戏、未推送、未同步其它实例。自动检查证明编译、关系/射程边界、真实TaCZ入口及依赖隔离，不替代启动时Mixin应用或游戏验收。待重启实例验证女仆按身份牌识別/切牌停追、主动护卫远射且近威胁优先、枪线/火矢/药箭/三叉戟穿过友军无命中副作用，以及野生与雇佣三阶仍可互相命中。
+
+
+## 2026-10-08 野生人类对女仆统一中立（源码整合，未构建）
+
+- 用户反馈高阶身份牌虽让女仆不攻击低阶野生人类，反向野生人类仍可能攻击女仆，要求所有野生人类默认不对女仆主动起仇恨。基线main 8cd89a6b5269b963dff7467273e0b124ded1ff14；主控/root顺序接入Human.java、HumanGunner与HumanTargeting，无新agent。没有本轮构建/同步授权。
+- 边界：HumanTargeting.allowsWildHumanTarget先检查有效控制者，再通过ModList门控可选TouhouMaidCompat.isMaid，不在核心接口签名/字段引入女仆类型。所有阶级、信标来源且未被控制的人类，对已/未驯服女仆均中立，不依赖身份牌。保留真实近期受击的自卫，复用HumanRelations.isRecentHumanAttacker；队友告警与持久仇恨本身不能绕过。
+- 接入：Human.canAttack阻止全部武器的攻击许可，setTarget拦截直接赋值，HumanTargeting主动分类入口排除中立女仆，LivingChangeTargetEvent覆盖外部赋目标；服务端tick清理既存无故女仆目标并停止旧导航。已雇佣/临时控制人类及女仆反向身份牌选敌逻辑保持。
+- 验证：309份Java树解析无错误，核心可选依赖门控、真实受击入口、git diff --check及原用户CHANGELOG片段哈希保护通过。扩展MaidHumanRelationTest至281项预期检查，含中立/自卫/控制权分类和五个实际入口；已注册check，尚未编译执行。静态核查不代表编译或游戏行为验收。
+- 版本仍3.6.5，未运行Gradle/javac、未改测试实例JAR/配置、未启动游戏或推送。待游戏验收：高阶/同阶/无牌主人的女仆附近野生各阶及信标人类不主动选敌，已有锁定在新版清理，女仆实际开火后野生人类正常自卫；雇佣/临时控制与其它生物目标保持，缺少女仆前置时启动正常。
