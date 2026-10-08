@@ -447,3 +447,14 @@
 - 待用户要求构建后执行自动回归；游戏验收：浅/深水跟随与贴身保护、不可达楼层长期救援、U形墙低血绕路与恢复、地下水/岩浆岸阶、TNT中断驻守后返回、多人排队过门/梯子、群体NPC寻路性能、Better Combat/TaCZ换武器及恢复动作不被移动破坏。未修改任何实例配置/JAR、未启动游戏、未推送；原用户CHANGELOG改动保留未提交。
 
 - 主控最终本地整合提交 c18497ed95fce5dc7aa69b8d4469848d090aa411；最后复核全部300份Java解析无错误、完整批次预算三个接入口通过，暂存CHANGELOG仅含本任务未发布条目。主工作树仅剩原用户CHANGELOG未提交修改；无构建、同步或推送。
+
+
+## 2026-10-08 导航修复构建与测试实例同步
+
+- 用户授权“构建并同步到测试实例”；主控 /root 在 main 执行，导航基线44d8610，最终构建源码d279be3，版本保持3.6.5，未推送。
+- 首次构建编译通过，但PickupPolicyWiringTest仍检查旧SoldierOrder.tick入口。0c8f574将断言改为tickMovement并增加MOVE Goal接入与生命周期不直接写导航的检查。第二次构建TntEscapeSourceTest的相对路径在JavaExec中找不到源码；d279be3由Gradle传入绝对路径并按UTF-8读取。均仅修正验证接入，未削弱生产行为或检查要求。
+- Java17、三个显式只读API路径执行build lootScreeningTest --offline，最终BUILD SUCCESSFUL in 37s，43任务39执行4最新。SoldierFollowPolicyTest87、CombatPressurePolicyTest170、InteractionSafetyPolicyTest18、TntEscapeSourceTest8、PickupPolicyWiringTest76、PerformancePoliciesTest53077、LootScreeningTest13391检查通过；OptionalRuntimeTest无TaCZ/Curios/Maid链接388核心类。损坏配置用例的ERROR为预期诊断。
+- 成功日志：维护目录/验证日志/build-navigation-20261008-final.log；JAR manifest版本3.6.5，新增导航预算与临时援军MOVE类已包含。
+- 唯一目标E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21；部署前及部署后未检测到非Gradle Java进程。旧JAR及14份配置共15文件已备份并逐一核对哈希。备份维护目录/部署备份/20261008-103241-navigation-Forge_47.4.21/deployment.json。
+- 源/目标JAR SHA256均E62FDDDD7F845FFD415EF2A04F0E09534E8066A23E9BAAF9023D1239A14438B6，目标mods仅一份本模组JAR，所有配置哈希不变。原用户CHANGELOG未提交修改保留。
+- 未启动游戏、未同步其它实例、未推送。待游戏验收：水面跟随/贴身保护、长期卡住安全救援、绕墙撤退与地下水上岸、TNT临时避险及驻点恢复、多人门梯通行，以及Better Combat/TaCZ战斗移动衔接。自动回归通过不代表游戏内行为已验收。
