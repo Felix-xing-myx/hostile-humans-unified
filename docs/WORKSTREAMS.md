@@ -542,3 +542,5 @@
 - HumanProjectileRelations共用玩家边界：有效雇主始终跳过，其他玩家在allow_hired_pvp_damage关闭时跳过，开启可误伤；野生发射者不套用此规则。原生/TaCZ碰撞Mixin复用新条件，在点燃/药箭/击退/反馈前过滤。TaCZ ProjectileExplosion实际先发Forge Detonate再遍历命中列表，新增该事件过滤弹丸来源爆炸实体，防止单独范围伤害和爆炸击退；LivingAttackEvent在伤害反馈/报复记录前兜底，方块爆炸和环境火保持原规则。
 - 验证：315份Java树解析无错误，git diff --check及原用户CHANGELOG片段SHA256保护通过；只读复审未发现台阶/梯子、水面跟随和托管的明确新增阻塞。新增RangedTerrainSafetyTest预期432项、扩展HumanProjectileRelationsTest预期23项，注册check，尚未编译或执行。静态解析及API核对不代表编译、Mixin加载或游戏行为验收。
 - 版本保持3.6.5，无本轮构建授权，未运行Gradle/javac、未改实例配置/JAR、未启动游戏或推送。待构建及游戏验收：弓弩崖边绕行、流动浅岩浆、窄廊绕障/近战切回、半砖与梯子、低血量下降/高血量上限、被击退仍正常、水面跟随与脱困；雇主及其他玩家分别在PVP两种状态下测试枪线、火矢/药箭、三叉戟及爆炸弹，且原人类互为友军与野生/雇佣敌对边界保持。
+
+- 源码交付提交：8bb8bab；主控已在main整合，原用户CHANGELOG修改仍独立留在工作区。
