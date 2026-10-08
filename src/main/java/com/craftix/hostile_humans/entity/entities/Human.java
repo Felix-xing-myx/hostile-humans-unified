@@ -2318,26 +2318,19 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public void updateSwimming() {
         if (!this.level().isClientSide) {
             this.computeShouldUseWaterMovement();
-            if (this.isEffectiveAi() && this.shouldUseWaterMovement()) {
-                if (this.seekingShore && !this.shorePathUsesWaterNavigation) {
-                    if (this.navigation != this.groundNavigation) {
-                        this.navigation.stop();
-                    }
-                    this.navigation = this.groundNavigation;
-                } else {
-                    if (this.navigation != this.waterNavigation) {
-                        this.navigation.stop();
-                    }
-                    this.navigation = this.waterNavigation;
-                }
-                this.setSwimming(false);
-            } else {
-                if (this.navigation != this.groundNavigation) {
-                    this.navigation.stop();
-                }
-                this.navigation = this.groundNavigation;
-                this.setSwimming(false);
+            // WaterBoundPathNavigation evaluates a submerged body and routes
+            // through underwater nodes. Surface-only followers cannot execute
+            // those routes; keep their canFloat walking route into/out of water.
+            boolean useWater = ShoreSeekingPolicy.shouldUseWaterNavigator(
+                    this.isEffectiveAi(), this.shouldUseWaterMovement(),
+                    club.someoneice.humangunner.SoldierOrder.shouldFollowThroughWater(this),
+                    this.seekingShore, this.shorePathUsesWaterNavigation);
+            var desired = useWater ? this.waterNavigation : this.groundNavigation;
+            if (this.navigation != desired) {
+                this.navigation.stop();
+                this.navigation = desired;
             }
+            this.setSwimming(false);
         }
     }
 

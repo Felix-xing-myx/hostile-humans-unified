@@ -458,3 +458,12 @@
 - 唯一目标E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21；部署前及部署后未检测到非Gradle Java进程。旧JAR及14份配置共15文件已备份并逐一核对哈希。备份维护目录/部署备份/20261008-103241-navigation-Forge_47.4.21/deployment.json。
 - 源/目标JAR SHA256均E62FDDDD7F845FFD415EF2A04F0E09534E8066A23E9BAAF9023D1239A14438B6，目标mods仅一份本模组JAR，所有配置哈希不变。原用户CHANGELOG未提交修改保留。
 - 未启动游戏、未同步其它实例、未推送。待游戏验收：水面跟随/贴身保护、长期卡住安全救援、绕墙撤退与地下水上岸、TNT临时避险及驻点恢复、多人门梯通行，以及Better Combat/TaCZ战斗移动衔接。自动回归通过不代表游戏内行为已验收。
+
+
+## 2026-10-08 水面跟随导航类型修复（未构建）
+
+- 用户反馈导航版测试JAR入水后士兵转圈、不跟随，并明确继续禁用水下游泳。基线main a179a63，主控 /root 在主工作树编辑；无新增开发agent，未要求构建同步。
+- 依据：Human.updateSwimming此前对非上岸的入水实体一律选择WaterBoundPathNavigation；其SwimNodeEvaluator按实体全身水体判断节点（空气边缘返回BREACH，普通WaterBound不允许breach），并可选择水下节点。但Human.setSwimming(false)及水中移动速度的非负Y限制只允许水面移动，形成路径类型与可执行移动冲突。只读javap核对当前Forge映射API与节点实现。
+- 修复：FOLLOW/BODYGUARD和临时援军跟随继续使用已有canFloat=true的HumanNavigation，浅/深水表面和岸上使用同一导航，不因入水停止原路线；闲置上岸继续让路，原有水中移动/上浮和禁止下潜保持。其它撤退/寻岸路径选择本次不扩展。
+- 新增11项导航选择策略边界及一项编译入口ASM回归，覆盖岸上/水面/残留上岸状态、非跟随与AI关闭；尚未编译执行。本轮只做源码语法、diff和原用户CHANGELOG片段保护核查，不代表游戏行为已验收。
+- 待构建及游戏验收：跟随入水后主人持续移动、停下再出水上岸、贴身保护穿水、深水仅水面移动、战斗/低血避险中断后恢复跟随。测试实例JAR、配置和存档未改，未启动游戏或推送。

@@ -93,6 +93,12 @@ public final class ShoreSeekingPolicy {
         return seekingShore && hasDryDestination && navigationDone;
     }
 
+    /** Surface followers keep the floating walking route across both banks. */
+    public static boolean shouldUseWaterNavigator(boolean effectiveAi, boolean inWater,
+            boolean surfaceFollowing, boolean seekingShore, boolean shorePathUsesWater) {
+        return effectiveAi && inWater && !surfaceFollowing && (!seekingShore || shorePathUsesWater);
+    }
+
     public static boolean shouldRiseTowardSurface(boolean eyesInWater,
             double feetToRealSurface) {
         return eyesInWater || feetToRealSurface > SURFACE_STANCE_DEPTH;

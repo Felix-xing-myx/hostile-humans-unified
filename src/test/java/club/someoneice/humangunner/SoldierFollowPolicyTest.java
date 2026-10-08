@@ -6,7 +6,7 @@ import com.google.gson.JsonParser;
 /** Follow hysteresis, independent speed overrides and offline order eligibility. */
 public final class SoldierFollowPolicyTest {
     private static int checks;
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         check(!SoldierFollowNavigation.shouldChase(false, 16), "start boundary");
         check(SoldierFollowNavigation.shouldChase(false, 16.01), "start beyond four blocks");
         check(SoldierFollowNavigation.shouldChase(true, 9), "keep chasing inside start radius");
@@ -35,6 +35,21 @@ public final class SoldierFollowPolicyTest {
             }
         }
         for (boolean value : served) check(value, "all callers receive full capacity despite a two-slot remainder");
+        for (boolean water : new boolean[]{false, true}) {
+            for (boolean shore : new boolean[]{false, true}) {
+                for (boolean waterShore : new boolean[]{false, true}) {
+                    check(!ShoreSeekingPolicy.shouldUseWaterNavigator(true, water, true, shore, waterShore),
+                            "surface following keeps walking navigation across land, water and stale shore state");
+                }
+            }
+        }
+        check(ShoreSeekingPolicy.shouldUseWaterNavigator(true, true, false, false, false),
+                "ordinary water navigation remains available outside owner-follow routing");
+        check(!ShoreSeekingPolicy.shouldUseWaterNavigator(true, true, false, true, false),
+                "ground shore route retains its navigator");
+        check(!ShoreSeekingPolicy.shouldUseWaterNavigator(false, true, false, false, false),
+                "disabled AI stays on ground navigation");
+        check(updateSwimmingUsesSurfacePolicy(), "compiled navigator selection uses the surface-follow policy");
         UnifiedConfig defaults = new UnifiedConfig(new JsonObject());
         for (String rank : new String[]{"roamer", "tier1", "tier2", "tier3"}) {
             check(defaults.followSpeed(rank, false) == 1.35, "normal default " + rank);
@@ -57,6 +72,22 @@ public final class SoldierFollowPolicyTest {
             check(!OwnerOfflinePolicy.shouldGuard(true, false, order), "dead orders untouched " + order);
         }
         System.out.println("SoldierFollowPolicyTest: " + checks + " checks passed");
+    }
+    private static boolean updateSwimmingUsesSurfacePolicy() throws Exception {
+        var node = new org.objectweb.asm.tree.ClassNode();
+        try (var stream = SoldierFollowPolicyTest.class.getClassLoader().getResourceAsStream(
+                "com/craftix/hostile_humans/entity/entities/Human.class")) {
+            if (stream == null) throw new AssertionError("Human class missing");
+            new org.objectweb.asm.ClassReader(stream).accept(node, 0);
+        }
+        var method = node.methods.stream().filter(m -> m.name.equals("updateSwimming"))
+                .findFirst().orElseThrow();
+        for (var instruction : method.instructions) {
+            if (instruction instanceof org.objectweb.asm.tree.MethodInsnNode call
+                    && call.owner.equals("club/someoneice/humangunner/ShoreSeekingPolicy")
+                    && call.name.equals("shouldUseWaterNavigator")) return true;
+        }
+        return false;
     }
     private static void check(boolean value, String message) {
         checks++;
