@@ -10,6 +10,13 @@ import org.objectweb.asm.tree.MethodInsnNode;
 public final class HumanProjectileRelationsTest {
     private static int checks;
     public static void main(String[] args) throws Exception {
+        var owner = java.util.UUID.fromString("00000000-0000-0000-0000-000000000001");
+        var other = java.util.UUID.fromString("00000000-0000-0000-0000-000000000002");
+        for (boolean pvp : new boolean[]{false, true})
+            check(HumanRelationshipPolicy.ownedHumanAlliedToPlayer(owner, owner, pvp), "owner is protected in both PvP modes");
+        check(HumanRelationshipPolicy.ownedHumanAlliedToPlayer(owner, other, false), "PvP off: other players are skipped");
+        check(!HumanRelationshipPolicy.ownedHumanAlliedToPlayer(owner, other, true), "PvP on: other players can be hit accidentally");
+        check(!HumanRelationshipPolicy.ownedHumanAlliedToPlayer(null, other, false), "wild humans do not inherit hired player immunity");
         check(HumanRelationshipPolicy.blockHumanDamage(false, false, true), "same-faction wild humans are protected");
         check(!HumanRelationshipPolicy.blockHumanDamage(false, false, false), "wild enemies remain hittable");
         check(!HumanRelationshipPolicy.blockHumanDamage(false, true, true), "wild can hit same-tier hired human before retaliation");
@@ -18,6 +25,14 @@ public final class HumanProjectileRelationsTest {
         check(!HumanRelationshipPolicy.blockHumanDamage(true, true, false), "authorized hired PvP remains hittable");
         String root = "club/someoneice/humangunner/";
         ClassNode relation = read(root + "HumanProjectileRelations");
+        check(calls(relation, "protectsPlayer", root + "HumanRelationshipPolicy", "ownedHumanAlliedToPlayer") == 1,
+                "player immunity is applied before collision using owner/PvP rule");
+        check(calls(relation, "passesThrough", root + "HumanProjectileRelations", "protectsPlayer") == 1,
+                "collision uses the shared owner/PvP player protection");
+        check(calls(relation, "onProtectedPlayerAttack", root + "HumanProjectileRelations", "protectsPlayer") == 1,
+                "early damage protection uses the same rule");
+        check(calls(relation, "onProjectileExplosion", "java/util/List", "removeIf") == 1,
+                "explosion removes protected entities before damage and knockback");
         check(calls(relation, "passesThrough", root + "HumanGunner", "areCombatAllies") == 2,
                 "collision gate checks both directions, preserving hired/wild combat");
         check(calls(read(root + "mixin/HumanProjectileCollisionMixin"), "humanGunner$skipMutualAllies",

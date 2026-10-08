@@ -470,6 +470,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.setTier(type);
         this.initTeam(type);
         this.moveControl = new HumanMoveControl(this);
+        this.jumpControl = new club.someoneice.humangunner.HumanSafeJumpControl(this);
         this.waterNavigation = new WaterBoundPathNavigation((Mob)this, level);
         this.groundNavigation = new com.craftix.hostile_humans.entity.ai.HumanNavigation((Mob)this, level);
         // HumanEntity enables floating on the navigation created by the
@@ -1523,6 +1524,20 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         return super.canAttack(entity);
     }
 
+    /** Read-only conservative estimate; never simulate damage by calling causeFallDamage. */
+    public int expectedRawFallDamage(float distance) {
+        return Math.max(0, calculateFallDamage(distance, 1.0F));
+    }
+
+    @Override public int getMaxFallDistance() {
+        int allowed = 0;
+        for (int drop = 1; drop <= club.someoneice.humangunner.HumanFallPolicy.MAX_PLANNED_DROP; drop++) {
+            if (!club.someoneice.humangunner.HumanFallPolicy.accepts(getHealth(), drop, expectedRawFallDamage(drop))) break;
+            allowed = drop;
+        }
+        return allowed;
+    }
+
     public boolean isAngryAt(LivingEntity entity) {
         Human otherHuman;
         if (entity instanceof Human && (otherHuman = (Human)entity).isAlive()) {
@@ -2255,6 +2270,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public void travel(Vec3 p_32394_) {
+        p_32394_ = club.someoneice.humangunner.HumanTerrainSafety.guardTravel(this, p_32394_);
         if (this.isEffectiveAi() && this.shouldUseWaterMovement()) {
             this.moveRelative(0.01f, p_32394_);
             Vec3 motion = this.getDeltaMovement();

@@ -9,6 +9,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.pathfinder.*;
+import com.craftix.hostile_humans.entity.entities.Human;
+import club.someoneice.humangunner.HumanTerrainSafety;
 
 /** Human-only navigation. Other mobs' fence/door classification is untouched. */
 public final class HumanNavigation extends GroundPathNavigation {
@@ -39,6 +41,21 @@ public final class HumanNavigation extends GroundPathNavigation {
                 && temporarilyBlockedNode.equals(pos);
     }
 
+    @Override public boolean moveTo(Path path, double speed) {
+        if (mob instanceof Human human && path != null && !path.isDone()
+                && !HumanTerrainSafety.safePath(human, path)) return false;
+        return super.moveTo(path, speed);
+    }
+
+    @Override public void tick() {
+        if (mob instanceof Human human && path != null && !path.isDone()
+                && !HumanTerrainSafety.safeTransition(human, human.blockPosition(), path.getNextNodePos())) {
+            avoidWaypoint(path.getNextNodePos(), level.getGameTime() + 40);
+            stop();
+        }
+        super.tick();
+    }
+
     @Override protected PathFinder createPathFinder(int budget) {
         nodeEvaluator = new HumanNodeEvaluator();
         nodeEvaluator.setCanPassDoors(true);
@@ -57,8 +74,17 @@ public final class HumanNavigation extends GroundPathNavigation {
         }
         @Override public int getNeighbors(Node[] neighbors, Node node) {
             int count = super.getNeighbors(neighbors, node);
-            if (count >= neighbors.length) return count;
-            return HumanUtil.createLadderNodeFor(count, neighbors, node, this::getNode, level, mob);
+            if (count < neighbors.length)
+                count = HumanUtil.createLadderNodeFor(count, neighbors, node, this::getNode, level, mob);
+            if (!(mob instanceof Human human)) return count;
+            int accepted = 0;
+            BlockPos from = new BlockPos(node.x, node.y, node.z);
+            for (int index = 0; index < count; index++) {
+                Node next = neighbors[index];
+                if (next != null && HumanTerrainSafety.safeTransition(human, from, new BlockPos(next.x, next.y, next.z)))
+                    neighbors[accepted++] = next;
+            }
+            return accepted;
         }
     }
 }

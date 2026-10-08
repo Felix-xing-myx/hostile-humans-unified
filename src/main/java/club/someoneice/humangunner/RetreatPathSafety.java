@@ -28,6 +28,7 @@ public final class RetreatPathSafety {
     }
     public static boolean isSafe(Human human, net.minecraft.world.entity.Entity threat, Path path, boolean requireGain) {
         if (path == null || !path.canReach() || path.isDone() || threat == null) return false;
+        if (!HumanTerrainSafety.safePath(human, path)) return false;
         int first = path.getNextNodeIndex();
         // A freshly planned route includes the occupied source block. Its
         // center rounding is not an actual approach step; vanilla advances it.

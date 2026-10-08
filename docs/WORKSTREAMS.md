@@ -531,3 +531,14 @@
 - 接入：Human.canAttack阻止全部武器的攻击许可，setTarget拦截直接赋值，HumanTargeting主动分类入口排除中立女仆，LivingChangeTargetEvent覆盖外部赋目标；服务端tick清理既存无故女仆目标并停止旧导航。已雇佣/临时控制人类及女仆反向身份牌选敌逻辑保持。
 - 验证：309份Java树解析无错误，核心可选依赖门控、真实受击入口、git diff --check及原用户CHANGELOG片段哈希保护通过。扩展MaidHumanRelationTest至281项预期检查，含中立/自卫/控制权分类和五个实际入口；已注册check，尚未编译执行。静态核查不代表编译或游戏行为验收。
 - 版本仍3.6.5，未运行Gradle/javac、未改测试实例JAR/配置、未启动游戏或推送。待游戏验收：高阶/同阶/无牌主人的女仆附近野生各阶及信标人类不主动选敌，已有锁定在新版清理，女仆实际开火后野生人类正常自卫；雇佣/临时控制与其它生物目标保持，缺少女仆前置时启动正常。
+
+
+## 2026-10-08 弓弩地形战斗、安全落差与雇佣弹丸玩家保护（源码整合，未构建）
+
+- 需求：弓弩走位考虑峡谷、高低落差及流动浅岩浆，视线受阻不长期发呆，无法风筝时沿安全路径靠近/切近战绕障；全人类按当前生命评估自主下降。补充雇主永受保护，其他玩家分别按PVP关闭/开启过滤。基线main f8334d105b846e6eefc7f3a3c6418ac6b297285d；主控/root独立编辑主工作树。fall_safety_audit 使用GPT6.1 Sol medium只读审查，无编辑工作树；未创建其它agent，公共Human、导航、弓弩、托管及构建注册由主控接入。
+- 审查依据：原combat STRAFE直接写输入绕过原版walkability；原生Mob最大下降随高生命/目标扩大。javap只读确认当前Forge JumpControl.jump、摔伤评估、PathNavigation和碰撞形状API。HumanFallPolicy预算=min(当前生命20%,当前生命-4,6)，几何最大12格；Human.expectedRawFallDamage只读原始计算，未调用causeFallDamage或更改真实摔伤。
+- 公共接口：HumanTerrainSafety.safeTransition/safePath/safeStep用于节点、安装路径、退路和射界候选，HumanSafeJumpControl接管自主跳跃；Human.travel做最后输入/非受击惯性检查。地形变更/生命降低后下一路径节点重查。危险检查读取FluidTags.LAVA并扫四分之一格步长及五个足面采样；碰撞形状支持半砖/台阶，水、梯子和既有岩浆逃生入口保留，不能用安全门获得击退免疫。只读复审指出零输入仍有惯性缺口，已补入deltaMovement检查。
+- RangedTerrainCombat共用弓弩安全侧移、搜索失败计数、射界下限放宽与安全靠近；共享导航预算等待不算失败。两次已完成失败且至少40tick遮挡或20次侧移失败时，在有备用武器且不违反驻守/护卫/退避条件下调用既有RangedWeaponCustody.beginCloseMelee，不新建攻击控制器。托管最少80tick，射界与活动空间持续20tick再恢复远程，最长400tick允许重试；无备用近战武器不凭空生成武器。同tick hand交换后tickShot禁射，使用原攻击动画及CloseDefenseHold。
+- HumanProjectileRelations共用玩家边界：有效雇主始终跳过，其他玩家在allow_hired_pvp_damage关闭时跳过，开启可误伤；野生发射者不套用此规则。原生/TaCZ碰撞Mixin复用新条件，在点燃/药箭/击退/反馈前过滤。TaCZ ProjectileExplosion实际先发Forge Detonate再遍历命中列表，新增该事件过滤弹丸来源爆炸实体，防止单独范围伤害和爆炸击退；LivingAttackEvent在伤害反馈/报复记录前兜底，方块爆炸和环境火保持原规则。
+- 验证：315份Java树解析无错误，git diff --check及原用户CHANGELOG片段SHA256保护通过；只读复审未发现台阶/梯子、水面跟随和托管的明确新增阻塞。新增RangedTerrainSafetyTest预期432项、扩展HumanProjectileRelationsTest预期23项，注册check，尚未编译或执行。静态解析及API核对不代表编译、Mixin加载或游戏行为验收。
+- 版本保持3.6.5，无本轮构建授权，未运行Gradle/javac、未改实例配置/JAR、未启动游戏或推送。待构建及游戏验收：弓弩崖边绕行、流动浅岩浆、窄廊绕障/近战切回、半砖与梯子、低血量下降/高血量上限、被击退仍正常、水面跟随与脱困；雇主及其他玩家分别在PVP两种状态下测试枪线、火矢/药箭、三叉戟及爆炸弹，且原人类互为友军与野生/雇佣敌对边界保持。

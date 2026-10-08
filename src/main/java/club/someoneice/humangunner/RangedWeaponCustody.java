@@ -76,6 +76,7 @@ public final class RangedWeaponCustody {
 
     static void tick(Human human) {
         if (hasGunPriority(human) || !HumanAmmo.hasArrows(human)) {
+            RangedTerrainCombat.clear(human);
             clearLease(human);
             return;
         }
@@ -140,6 +141,7 @@ public final class RangedWeaponCustody {
     }
 
     static void prepareForManualInventory(Human human) {
+        RangedTerrainCombat.clear(human);
         CloseDefenseHold.clear(human);
         if (!isActive(human)) return;
         if (human.isUsingItem()) human.stopUsingItem();
@@ -147,6 +149,7 @@ public final class RangedWeaponCustody {
     }
 
     static void adoptManualLoadout(Human human) {
+        RangedTerrainCombat.clear(human);
         CloseDefenseHold.clear(human);
         clearLease(human);
         clearPrimaryMarker(human.getMainHandItem());
@@ -273,6 +276,7 @@ public final class RangedWeaponCustody {
 
     private static boolean shouldReturnToRanged(Human human) {
         LivingTarget state = targetState(human);
+        if (RangedTerrainCombat.holdsMelee(human)) return false;
         return !state.valid() || state.distanceSqr() >= RANGED_RETURN_DISTANCE_SQR;
     }
 

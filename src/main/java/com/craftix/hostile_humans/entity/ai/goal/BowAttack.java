@@ -151,14 +151,14 @@ extends Goal {
                 this.seeTime = 0;
             }
             this.seeTime = flag ? ++this.seeTime : --this.seeTime;
+            if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.observe(human, livingentity, flag);
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
             boolean waterApproach = this.mob instanceof Human human
                     && human.shouldUseWaterMovement() && d0 > 22.0D * 22.0D;
             boolean pursuing = BowRangePolicy.shouldPursue(d0, this.attackRadiusSqr)
                     || waterApproach;
-            boolean retreating = !holdingPosition && BowRangePolicy.shouldPathRetreat(d0)
-                    && (flag || !(this.mob instanceof Human human && human.isInWater()));
+            boolean retreating = !holdingPosition && BowRangePolicy.shouldPathRetreat(d0) && flag;
             boolean blockedWhileEngaging = !flag
                     && !retreating
                     && !holdingPosition
@@ -182,7 +182,7 @@ extends Goal {
                         this.mob.getNavigation().moveTo(away.x, away.y, away.z, this.speedModifier * 1.1D);
                     } else {
                         this.mob.getNavigation().stop();
-                        this.mob.getMoveControl().strafe(
+                        strafe(
                                 -1.0F, this.strafingClockwise ? 0.45F : -0.45F
                         );
                     }
@@ -197,19 +197,21 @@ extends Goal {
                     if (this.mob.tickCount >= this.nextFiringPositionTick) {
                         Path firingPath = this.mob instanceof Human human
                                 ? RangedFiringPosition.findVisiblePath(
-                                        human, livingentity, 14.0D,
+                                        human, livingentity, club.someoneice.humangunner.RangedTerrainCombat.minimumFiringRange(human, 14.0D),
                                         Math.sqrt(this.attackRadiusSqr), 10, 12)
                                 : null;
                         if (firingPath != null) {
-                            if (this.mob.getNavigation().moveTo(firingPath, this.speedModifier)
-                                    && this.mob instanceof Human human)
+                            boolean moved = this.mob.getNavigation().moveTo(firingPath, this.speedModifier);
+                            if (moved && this.mob instanceof Human human)
                                 club.someoneice.humangunner.SoldierDialogue.event(human, "reposition");
+                            if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.searchCompleted(human, livingentity, moved, speedModifier);
                             this.updatePathDelay = 0;
                         } else if (!(this.mob instanceof Human human && RangedFiringPosition.hasPendingVisibleSearch(human))) {
                             if (this.mob instanceof Human human && human.isInWater()) {
                                 human.beginCombatFiringShore(livingentity, this.speedModifier);
                             } else {
                                 this.mob.getNavigation().stop();
+                                if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.searchCompleted(human, livingentity, false, speedModifier);
                             }
                             this.updatePathDelay = 0;
                         }
@@ -253,7 +255,7 @@ extends Goal {
                 // The 14-16 block buffer deliberately mixes backward and side
                 // input so circling cannot silently erase the retreat margin.
                 float side = BowRangePolicy.orbitSideInput(d0);
-                this.mob.getMoveControl().strafe(
+                strafe(
                         BowRangePolicy.orbitForwardInput(d0),
                         this.strafingClockwise ? side : -side
                 );
@@ -261,7 +263,7 @@ extends Goal {
             } else if (retreating && this.mob.getNavigation().isDone()) {
                 // Pathfinding can fail in cramped terrain; keep backpedalling
                 // and firing instead of freezing beside the attacker.
-                this.mob.getMoveControl().strafe(-1.0F, this.strafingClockwise ? 0.45F : -0.45F);
+                strafe(-1.0F, this.strafingClockwise ? 0.45F : -0.45F);
                 this.mob.lookAt((Entity)livingentity, 30.0F, 30.0F);
             } else {
                 this.mob.getLookControl().setLookAt((Entity)livingentity, 30.0f, 30.0f);
@@ -287,6 +289,7 @@ extends Goal {
     }
 
     private void tickShot(LivingEntity target, boolean visible) {
+        if (mob instanceof Human human && RangedWeaponCustody.isActive(human)) return;
         if (this.mob instanceof Human human && !HumanAmmo.hasArrows(human)) {
             if (this.mob.isUsingItem() && this.mob.getUseItem().getItem() instanceof BowItem)
                 this.mob.stopUsingItem();
@@ -315,10 +318,15 @@ extends Goal {
         if (this.mob instanceof Human human) {
             human.clearRangedStrafeMotion();
         } else {
-            this.mob.getMoveControl().strafe(0.0F, 0.0F);
+            strafe(0.0F, 0.0F);
         }
         this.mob.setZza(0.0F);
         this.mob.setXxa(0.0F);
+    }
+
+    private void strafe(float forward, float right) {
+        if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.strafe(human, forward, right);
+        else mob.getMoveControl().strafe(forward, right);
     }
 
     private void setOrbitSpeed(boolean orbiting) {
