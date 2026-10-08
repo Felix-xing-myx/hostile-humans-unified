@@ -48,8 +48,11 @@ extends Goal {
     }
 
     public boolean canUse() {
+        // One retreat controller at a time; this is the fallback when adaptive AI is disabled.
+        if (club.someoneice.humangunner.CombatAiConfig.forHuman(this.human).enabled()) return false;
         if (club.someoneice.humangunner.LowHealthCombatController.shouldHoldGround(this.human, this.human.getTarget())) return false;
-        if (club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this.human)) return false;
+        if (club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this.human)
+                && !club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(this.human)) return false;
         boolean desperate = club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(this.human);
         if (!desperate && this.human.getOffhandItem().is(Items.TOTEM_OF_UNDYING)) {
             return false;
@@ -99,7 +102,8 @@ extends Goal {
 
     public boolean canContinueToUse() {
         if (club.someoneice.humangunner.LowHealthCombatController.shouldHoldGround(this.human, this.human.toAvoid)) return false;
-        if (club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this.human)) return false;
+        if (club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this.human)
+                && !club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(this.human)) return false;
         Player player;
         if (!club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(this.human)
                 && !HumanUtil.isLowHp((LivingEntity)this.human)) {
@@ -147,7 +151,7 @@ extends Goal {
         this.path = null;
         this.targetPos = null;
         this.stalledTicks = 0;
-        this.human.isFleeing = false;
+        if (this.human.explosionThreat == null) this.human.isFleeing = false;
         if (this.human.getTarget() == null) club.someoneice.humangunner.MovementSpeedController.normal(this.human);
         else club.someoneice.humangunner.MovementSpeedController.combat(this.human, false);
         LivingEntity previousThreat = this.human.toAvoid;

@@ -142,8 +142,11 @@ public final class TridentHybridGoal extends Goal {
         } else {
             boolean spacing = MeleeSpacing.control(human, target);
             if (pathCooldown <= 0) {
-                if (!spacing) human.getNavigation().moveTo(target, 1.0D);
-                pathCooldown = 4 + human.getRandom().nextInt(3);
+                if (!spacing && !BasicNavigationBudget.tryAcquire(human, 1)) pathCooldown = 1;
+                else {
+                    if (!spacing) human.getNavigation().moveTo(target, 1.0D);
+                    pathCooldown = 4 + human.getRandom().nextInt(3);
+                }
             }
         }
         if (!SoldierOrder.isHoldingPosition(human)) {
@@ -195,8 +198,10 @@ public final class TridentHybridGoal extends Goal {
         }
         if (!visible || distanceSqr > MAX_THROW_DISTANCE_SQR || waterApproach) {
             if (pathCooldown <= 0) {
-                human.getNavigation().moveTo(target, 1.0D);
-                pathCooldown = 5 + human.getRandom().nextInt(4);
+                if (BasicNavigationBudget.tryAcquire(human, 1)) {
+                    human.getNavigation().moveTo(target, 1.0D);
+                    pathCooldown = 5 + human.getRandom().nextInt(4);
+                } else pathCooldown = 1;
             }
             human.approachCombatTargetInWater(target, waterApproach ? 22.0D : 4.0D, 1.0D);
             throwTridentIfReady(distanceSqr, visible);

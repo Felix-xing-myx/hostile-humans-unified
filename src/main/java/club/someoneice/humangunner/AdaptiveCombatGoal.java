@@ -416,7 +416,7 @@ public final class AdaptiveCombatGoal extends Goal {
             MovementSpeedController.combat(human, false);
         }
         if (ShoreSeekingPolicy.shouldClearFleeingAfterCombatStop(ownsFleeFlag)) {
-            human.isFleeing = false;
+            if (human.explosionThreat == null) human.isFleeing = false;
         }
         if (ownsFleeFlag) {
             ownsFleeFlag = false;
@@ -1953,7 +1953,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void setFleeing(boolean fleeing) {
-        human.isFleeing = fleeing;
+        human.isFleeing = fleeing || human.explosionThreat != null;
         ownsFleeFlag = fleeing;
     }
 

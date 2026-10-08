@@ -81,7 +81,7 @@ public final class RangedHybridMeleeGoal extends Goal {
             if (!SoldierOrder.isReturningToHoldPosition(human)) {
                 human.getNavigation().stop();
             }
-        } else if (pathCooldown <= 0) {
+        } else if (pathCooldown <= 0 && BasicNavigationBudget.tryAcquire(human, 1)) {
             double currentDistanceSqr = human.distanceToSqr(target);
             Vec3 away = DefaultRandomPos.getPosAway(human, 10, 5, target.position());
             if (away != null && target.distanceToSqr(away) > currentDistanceSqr + 4.0D

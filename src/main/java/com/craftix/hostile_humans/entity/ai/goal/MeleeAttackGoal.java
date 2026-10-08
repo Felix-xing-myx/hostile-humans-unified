@@ -75,6 +75,11 @@ extends Goal {
             this.path = null;
             return true;
         }
+        if (this.mob instanceof Human human
+                && !club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1)) {
+            this.path = null;
+            return true;
+        }
         this.path = this.mob.getNavigation().createPath((Entity)livingEntity, 0);
         if (this.path != null) {
             return true;
@@ -202,7 +207,10 @@ extends Goal {
                 } else if (distance > 256.0) {
                     this.ticksUntilNextPathRecalculation += 5;
                 }
-                if (!this.mob.getNavigation().moveTo((Entity)livingEntity, this.speedModifier)) {
+                if (this.mob instanceof Human human
+                        && !club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1)) {
+                    this.ticksUntilNextPathRecalculation = 1;
+                } else if (!this.mob.getNavigation().moveTo((Entity)livingEntity, this.speedModifier)) {
                     this.ticksUntilNextPathRecalculation += 15;
                 }
                 this.ticksUntilNextPathRecalculation = this.adjustedTickDelay(this.ticksUntilNextPathRecalculation);
@@ -272,6 +280,8 @@ extends Goal {
     }
 
     private void recoverPursuit(LivingEntity target) {
+        if (this.mob instanceof Human human
+                && !club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1)) return;
         // One bounded flank path attempt per stall, not a scan or forced push.
         Path oldPath = this.mob.getNavigation().getPath();
         if (oldPath != null && !oldPath.isDone()
@@ -284,7 +294,7 @@ extends Goal {
             recoveryTargetId = target.getId();
             return;
         }
-        this.mob.getNavigation().stop();
+        if (oldPath != null && !oldPath.isDone()) this.mob.getNavigation().moveTo(oldPath, this.speedModifier);
         if (this.mob.onGround() && this.mob.horizontalCollision && oldPath != null && !oldPath.isDone()
                 && oldPath.getNextNodePos().getY() > this.mob.getY()
                 && oldPath.getNextNodePos().getY() <= this.mob.getY() + 1.0D)

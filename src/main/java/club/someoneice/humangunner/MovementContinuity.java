@@ -17,6 +17,7 @@ public final class MovementContinuity {
         final MovementContinuityProgress progress = new MovementContinuityProgress();
         int failures, nextFullSearch, stepUntil;
         boolean pendingFullSearch;
+        double climbY;
         Vec3 step;
         Vec3 progressPosition;
         Path route;
@@ -40,6 +41,14 @@ public final class MovementContinuity {
             OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.CONTINUITY);
             return;
         }
+        if (human.onClimbable() && Math.abs(human.getY() - state.climbY) >= 0.05) {
+            state.climbY = human.getY();
+            state.progress.stalled(human.tickCount, human.getX(), human.getZ(), 0, false);
+            state.failures = 0;
+            state.pendingFullSearch = false;
+            return;
+        }
+        if (!human.onClimbable()) state.climbY = human.getY();
         double minimum = Math.max(0.005D, Math.min(0.08D,
                 human.getAttributeValue(Attributes.MOVEMENT_SPEED) * 0.5D));
         if (state.progressPosition == null
@@ -57,7 +66,7 @@ public final class MovementContinuity {
                 path.advance();
             if (path.isDone()) return;
             Vec3 next = path.getNextEntityPos(human);
-            human.getMoveControl().setWantedPosition(next.x, next.y, next.z, 1.0D);
+            human.getMoveControl().setWantedPosition(next.x, next.y, next.z, routeSpeed(human));
             if (state.failures > 1 && !human.isInWater() && !human.isInLava()) {
                 NavigationSupport.openBlockingPassage(human);
                 Vec3 toward = next.subtract(human.position()).multiply(1, 0, 1).normalize();
@@ -85,7 +94,10 @@ public final class MovementContinuity {
                 ? ground.createFreshPath(goal) : human.getNavigation().createPath(goal, 0);
         boolean success = replacement != null && replacement != path && replacement.canReach()
                 && pickupRouteAllowed(human, replacement)
-                && human.getNavigation().moveTo(replacement, 1.0D);
+                && (!human.isFleeing || RetreatPathSafety.isSafe(human, escapeThreat(human), replacement, false))
+                && human.getNavigation().moveTo(replacement, routeSpeed(human));
+        if (!success && !path.isDone() && human.getNavigation().getPath() != path)
+            human.getNavigation().moveTo(path, routeSpeed(human));
         state.nextFullSearch = human.tickCount + (success ? 20 : Math.min(80, 20 + state.failures * 5));
         state.pendingFullSearch = false;
         if (success) {
@@ -107,6 +119,22 @@ public final class MovementContinuity {
         return state != null && state.repairedFrom == assigned && state.repairedRoute == current;
     }
 
+    private static net.minecraft.world.entity.Entity escapeThreat(Human human) {
+        if (human.explosionThreat != null && human.explosionThreat.isAlive()) return human.explosionThreat;
+        if (human.toAvoid != null && human.toAvoid.isAlive()) return human.toAvoid;
+        return human.getTarget();
+    }
+
+    private static double routeSpeed(Human human) {
+        if (SoldierOrder.shouldFollowThroughWater(human) && human.getTarget() == null) {
+            var owner = human.hasOwner() ? BodyguardProtection.owner(human)
+                    : human.level().getPlayerByUUID(human.getPersistentData().getUUID(HumanRelations.TEMP_OWNER));
+            if (owner != null) return UnifiedConfig.get().followSpeed(TierAttributes.key(human),
+                    human.distanceToSqr(owner) > 144);
+        }
+        return 1.0;
+    }
+
     private static boolean tryStep(Human human, State state, Path route, Vec3 offset) {
         if (offset.lengthSqr() < 0.01D) return false;
         Vec3 candidate = human.position().add(offset);
@@ -117,6 +145,20 @@ public final class MovementContinuity {
                 || !human.level().getFluidState(feet).isEmpty()
                 || !human.level().getBlockState(feet.below()).isFaceSturdy(human.level(), feet.below(), Direction.UP)
                 || !human.level().noCollision(human, human.getBoundingBox().move(offset))) return false;
+        if (human.isFleeing) {
+            var threat = escapeThreat(human);
+            if (threat == null || !RetreatPathSafetyPolicy.isSafe(human.getX(), human.getZ(),
+                    threat.getX(), threat.getZ(), new double[][] {{candidate.x, candidate.z}}, false)) return false;
+        }
+        var swept = human.getBoundingBox().expandTowards(offset);
+        if (!human.level().noCollision(human, swept)) return false;
+        int probes = 0;
+        for (BlockPos pos : BlockPos.betweenClosed(BlockPos.containing(swept.minX, swept.minY - 0.01, swept.minZ),
+                BlockPos.containing(swept.maxX, swept.maxY, swept.maxZ))) {
+            if (++probes > 32 || !human.level().hasChunkAt(pos)
+                    || !human.level().getWorldBorder().isWithinBounds(pos)
+                    || RetreatPathSafety.isHazard(human, pos)) return false;
+        }
         state.step = candidate;
         state.route = route;
         state.stepUntil = human.tickCount + 5;
@@ -145,6 +187,17 @@ public final class MovementContinuity {
         }
     }
 
+    /** The caller validates its short escape step; reuse the existing post-navigation input lease. */
+    public static void requestEscapeStep(Human human, Vec3 destination) {
+        if (!human.isFleeing || !human.getNavigation().isDone() || !human.isAlive()
+                || !Double.isFinite(destination.x) || !Double.isFinite(destination.y)
+                || !Double.isFinite(destination.z)) return;
+        State state = STATES.computeIfAbsent(human, ignored -> new State());
+        state.step = destination;
+        state.route = null;
+        state.stepUntil = human.tickCount + 2;
+    }
+
     /** Called after navigation writes its input, before the movement controller consumes it. */
     public static void applyStep(Human human) {
         State state = STATES.get(human);
@@ -156,6 +209,6 @@ public final class MovementContinuity {
             state.step = null;
             return;
         }
-        human.getMoveControl().setWantedPosition(state.step.x, state.step.y, state.step.z, 1.0D);
+        human.getMoveControl().setWantedPosition(state.step.x, state.step.y, state.step.z, routeSpeed(human));
     }
 }

@@ -96,10 +96,15 @@ extends Goal {
             this.hasInvestigated = true;
         } else {
             if (this.mob.getNavigation().isDone()) {
-                ++this.failedNavigationTicks;
                 if (this.mob.tickCount >= this.nextPathAttemptTick) {
-                    this.mob.getNavigation().moveTo(this.pos.getX(), this.pos.getY(),
-                            this.pos.getZ(), this.speedModifier);
+                    if (this.mob instanceof com.craftix.hostile_humans.entity.entities.Human human
+                            && !club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1)) {
+                        this.nextPathAttemptTick = this.mob.tickCount + 1;
+                        return;
+                    }
+                    if (!this.mob.getNavigation().moveTo(this.pos.getX(), this.pos.getY(),
+                            this.pos.getZ(), this.speedModifier)) this.failedNavigationTicks += 10;
+                    else this.failedNavigationTicks = 0;
                     this.nextPathAttemptTick = this.mob.tickCount + 10;
                 }
             } else {

@@ -18,7 +18,10 @@ final class SoldierOrderGoal extends Goal {
     public boolean canUse() {
         return human.hasOwner() && (SoldierOrder.get(human) != SoldierOrder.BODYGUARD
                 || BodyguardProtection.owner(human) == null || SoldierOrder.isReturningFromRetreat(human))
-                && !human.isFleeing && human.getTarget() == null;
+                && !human.isFleeing && human.getTarget() == null
+                && !human.isInLava() && !human.isSeekingShore() && !human.isNoAi()
+                && !human.isSleeping() && !human.isPassenger()
+                && !HumanGunner.isManualInventoryOpen(human);
     }
 
     @Override
@@ -31,9 +34,10 @@ final class SoldierOrderGoal extends Goal {
         return true;
     }
 
+    @Override public void stop() { SoldierOrder.stopMovement(human); }
+
     @Override
     public void tick() {
-        // Movement is processed once by the server lifecycle; this goal only
-        // reserves idle movement so unrelated wandering cannot override orders.
+        SoldierOrder.tickMovement(human);
     }
 }

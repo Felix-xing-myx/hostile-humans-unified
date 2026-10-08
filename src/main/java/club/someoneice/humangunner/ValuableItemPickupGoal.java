@@ -210,6 +210,10 @@ final class ValuableItemPickupGoal extends Goal {
 
     private void moveToItem() {
         if (targetItem != null) {
+            if (!BasicNavigationBudget.tryAcquire(human, 1)) {
+                nextRepathTick = human.tickCount + 1;
+                return;
+            }
             net.minecraft.world.level.pathfinder.Path path = human.getNavigation().createPath(targetItem, 0);
             if (path != null) {
                 for (int i = 0; i < path.getNodeCount(); i++) {

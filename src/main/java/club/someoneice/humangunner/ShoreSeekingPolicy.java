@@ -18,7 +18,7 @@ public final class ShoreSeekingPolicy {
     public static final int MAX_SHORE_PATH_PROBES_PER_SEARCH = 2;
     /** Pathfinding runs on the server thread; stagger Humans as well as probes. */
     public static final int MAX_SHORE_PATH_DISTANCE = 40;
-    private static final Map<Object, Integer> LAST_SHORE_SEARCH_TICK = new WeakHashMap<>();
+    private static final Map<Object, dev.felix.hostilehumans.core.FairWorkBudget<java.util.UUID>> SHORE_BUDGETS = new WeakHashMap<>();
     private static final float SUBMERGED_WATER_PATH_MALUS = 8.0F;
     private static final float ACTIVE_SHORE_WATER_PATH_MALUS = 16.0F;
     private static final float COMBAT_WATER_PATH_MALUS = 0.0F;
@@ -64,13 +64,17 @@ public final class ShoreSeekingPolicy {
         return currentTick >= nextSearchTick;
     }
 
-    public static boolean reserveShorePathSearch(Object server, int serverTick) {
-        Integer lastTick = LAST_SHORE_SEARCH_TICK.get(server);
-        if (lastTick != null && lastTick == serverTick) {
-            return false;
-        }
-        LAST_SHORE_SEARCH_TICK.put(server, serverTick);
-        return true;
+    public static boolean reserveShorePathSearch(Object server, int tick) {
+        return reserveShorePathSearch(server, tick, new java.util.UUID(0, 0));
+    }
+    public static boolean reserveShorePathSearch(Object server, int tick, java.util.UUID human) {
+        return SHORE_BUDGETS.computeIfAbsent(server,
+                ignored -> new dev.felix.hostilehumans.core.FairWorkBudget<>(1, 1, 3))
+                .claim(tick, human, 1) == 1;
+    }
+    public static void cancelShorePathSearch(Object server, java.util.UUID human) {
+        var budget = SHORE_BUDGETS.get(server);
+        if (budget != null) budget.cancel(human);
     }
 
     /** The ranged goal yields movement to shore navigation but keeps aiming and attacking. */

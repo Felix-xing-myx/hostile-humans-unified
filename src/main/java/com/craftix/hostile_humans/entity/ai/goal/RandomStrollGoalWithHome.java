@@ -9,6 +9,7 @@ import net.minecraft.world.phys.Vec3;
 
 public class RandomStrollGoalWithHome
 extends RandomStrollGoal {
+    private boolean pendingPosition;
     Human human;
 
     public RandomStrollGoalWithHome(Human human, double p_25742_, int p_25743_, boolean p_25744_) {
@@ -18,8 +19,16 @@ extends RandomStrollGoal {
 
     @Override
     public boolean canUse() {
-        return !club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this.human)
-                && super.canUse();
+        if ((this.human.hasOwner() || this.human.getPersistentData().hasUUID(club.someoneice.humangunner.HumanRelations.TEMP_OWNER)
+                || club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this.human))) {
+            pendingPosition = false;
+            return false;
+        }
+        if (!pendingPosition && !super.canUse()) return false;
+        pendingPosition = true;
+        if (!club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(this.human, 1)) return false;
+        pendingPosition = false;
+        return true;
     }
 
     @Override

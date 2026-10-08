@@ -85,6 +85,8 @@ extends Goal {
         if (vec3 == null) {
             return false;
         }
+        if (this.mob instanceof Human human && club.someoneice.humangunner.OptionalPathBudget.claim(
+                human, club.someoneice.humangunner.OptionalPathBudget.Kind.EXPLOSION, 1) == 0) return false;
         this.path = this.mob.getNavigation().createPath(vec3.x, vec3.y, vec3.z, 0);
         return this.path != null;
     }
@@ -117,7 +119,7 @@ extends Goal {
         PathfinderMob pathfinderMob = this.mob;
         if (pathfinderMob instanceof Human) {
             Human human = (Human)pathfinderMob;
-            human.isFleeing = false;
+            if (human.explosionThreat == null) human.isFleeing = false;
             if (human.toAvoid == this.toAvoid) {
                 human.toAvoid = null;
             }

@@ -15,7 +15,7 @@ public final class RetreatShoreEscape {
                 && !human.getNavigation().isStuck()
                 && !RetreatRouteContinuity.needsExtension(human, threat)) return current;
         if (human.tickCount >= nextSearchTick) {
-            int budget = RetreatRouteContinuity.claimSearch(human, 4);
+            int budget = OptionalPathBudget.claimFull(human, OptionalPathBudget.Kind.RETREAT, 4);
             // A bank candidate may need both ground and water navigation.
             if (budget == 4) {
                 Path shore = human.findNearestShorePath(null, threat);

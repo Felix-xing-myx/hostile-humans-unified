@@ -249,7 +249,8 @@ extends Goal {
                     this.pursuingTarget = false;
                 }
                 --this.updatePathDelay;
-                if (this.updatePathDelay <= 0) {
+                if (this.updatePathDelay <= 0 && (!(this.mob instanceof Human human)
+                        || club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1))) {
                     Vec3 away = DefaultRandomPos.getPosAway(this.mob, 14, 6, livingentity.position());
                     if (away != null && livingentity.distanceToSqr(away) > d0 + 4.0D) {
                         this.mob.getNavigation().moveTo(
@@ -267,7 +268,8 @@ extends Goal {
                     || (this.mob instanceof Human human && human.shouldUseWaterMovement()
                     && d0 > HOLD_DISTANCE_SQR)) {
                 --this.updatePathDelay;
-                if (this.updatePathDelay <= 0) {
+                if (this.updatePathDelay <= 0 && (!(this.mob instanceof Human human)
+                        || club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1))) {
                     // On land, close only beyond firing reach. In water,
                     // continue toward the 24-block tactical band even while
                     // the target remains within crossbow firing reach.

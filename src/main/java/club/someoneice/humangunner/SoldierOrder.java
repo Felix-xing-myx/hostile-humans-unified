@@ -15,6 +15,7 @@ public enum SoldierOrder {
     PATROL,
     BODYGUARD;
 
+    private static final java.util.Map<Human, net.minecraft.world.level.pathfinder.Path> ROUTES = new java.util.WeakHashMap<>();
     static final String ORDER = "humangunner:soldier_order";
     private static final String ANCHOR = "humangunner:order_anchor";
     private static final String NEXT_PATROL = "humangunner:next_patrol_move";
@@ -77,7 +78,37 @@ public enum SoldierOrder {
         return human.getPersistentData().getBoolean(RETURNING_FROM_RETREAT);
     }
 
+    /** Lifecycle validation must never assign or stop a navigation route. */
     static void tick(Human human) {
+        if (!human.hasOwner() || !(human.level() instanceof ServerLevel level)) return;
+        SoldierOrder order = get(human);
+        LivingEntity target = human.getTarget();
+        ServerPlayer owner = BodyguardProtection.owner(human);
+        if (order == BODYGUARD) BodyguardProtection.update(human);
+        if (order == GUARD) {
+            if (distanceFromAnchorSqr(human, anchor(human)) <= 4.0D) human.guardCombatState.returnedToPost();
+            human.guardCombatState.tick(level.getGameTime(),
+                    !insideGuardArea(human, human.getX(), human.getZ()), target != null);
+        }
+        if (target != null && (!target.isAlive() || HumanRelations.allied(human, target)
+                || !allowsTarget(human, target)
+                || human.soldierCombatMemory.timedOut(target.getUUID(), level.getGameTime())
+                || (order == GUARD && human.guardCombatState.returning())
+                || ((order == FOLLOW || order == BODYGUARD) && owner != null
+                && human.distanceToSqr(owner) > FOLLOW_COMBAT_RANGE_SQR))) human.forgetSoldierTargetWithoutMovement();
+    }
+
+    /** An available owner grants surface crossing to follow and protection orders. */
+    public static boolean shouldFollowThroughWater(Human human) {
+        if (human.isFleeing || human.isInLava()) return false;
+        if (human.hasOwner()) return (get(human) == FOLLOW || get(human) == BODYGUARD)
+                && BodyguardProtection.owner(human) != null;
+        if (!human.getPersistentData().hasUUID(HumanRelations.TEMP_OWNER)) return false;
+        var player = human.level().getPlayerByUUID(human.getPersistentData().getUUID(HumanRelations.TEMP_OWNER));
+        return player != null && player.isAlive() && !player.isSpectator();
+    }
+
+    static void tickMovement(Human human) {
         if (!human.hasOwner() || !(human.level() instanceof ServerLevel level)) return;
         // LavaEscapeGoal owns its route without setting the retreat flag.
         // Neither follow nor a guard anchor may replace that emergency route.
@@ -92,8 +123,7 @@ public enum SoldierOrder {
         // Survival navigation owns movement until the retreat has actually
         // ended; neither an anchor leash nor owner-follow may pull it back.
         if (human.isFleeing) return;
-        Player rawOwner = level.getPlayerByUUID(human.getOwnerUUID());
-        ServerPlayer owner = rawOwner instanceof ServerPlayer player && player.isAlive() ? player : null;
+        ServerPlayer owner = BodyguardProtection.owner(human);
 
         SoldierOrder order = get(human);
         if (order == PATROL && human.getTarget() == null) {
@@ -118,17 +148,15 @@ public enum SoldierOrder {
                         SoldierFollowNavigation.tick(human, owner);
                     } else if (owner != null) {
                         human.getPersistentData().remove(RETURNING_FROM_RETREAT);
-                        human.getNavigation().stop();
+                        stopMovement(human);
                     }
                 } else if (distanceFromAnchorSqr(human, anchor) > 4.0D) {
                     if (human.tickCount % 10 == 0 || human.getNavigation().isDone()) {
-                        human.getNavigation().moveTo(
-                                anchor.getX() + 0.5D, anchor.getY(), anchor.getZ() + 0.5D,
-                                order == PATROL ? PATROL_WALK_NAVIGATION_SPEED : 1.1D);
+                        moveToPost(human, anchor, order == PATROL ? PATROL_WALK_NAVIGATION_SPEED : 1.1D);
                     }
                 } else {
                     human.getPersistentData().remove(RETURNING_FROM_RETREAT);
-                    human.getNavigation().stop();
+                    stopMovement(human);
                 }
                 return;
             }
@@ -139,7 +167,7 @@ public enum SoldierOrder {
                 if (target != null && !allowsTarget(human, target)) human.forgetSoldierTarget();
                 BodyguardProtection.clear(human);
                 if (human.getTarget() == null) {
-                    human.getNavigation().stop();
+                    stopMovement(human);
                     MovementSpeedController.normal(human);
                 }
                 return;
@@ -156,9 +184,6 @@ public enum SoldierOrder {
             return; // The MOVE goal owns protection routes, not this lifecycle callback.
         }
         if (order == GUARD) {
-            if (distanceFromAnchorSqr(human, anchor) <= 4.0D) human.guardCombatState.returnedToPost();
-            human.guardCombatState.tick(level.getGameTime(), !insideGuardArea(human, human.getX(), human.getZ()),
-                    target != null);
             if (human.guardCombatState.returning() && target != null) {
                 human.forgetSoldierTarget();
                 target = null;
@@ -179,7 +204,7 @@ public enum SoldierOrder {
         if (order == FOLLOW) {
             // Preserve combat navigation when following has no available owner.
             if (owner == null) {
-                if (target == null) human.getNavigation().stop();
+                if (target == null) stopMovement(human);
                 return;
             }
             if (human.distanceToSqr(owner) > FOLLOW_COMBAT_RANGE_SQR) {
@@ -196,16 +221,14 @@ public enum SoldierOrder {
             return;
         }
 
-        double distanceFromAnchor = horizontalDistanceSqr(human.getX(), human.getZ(), anchor);
+        double distanceFromAnchor = distanceFromAnchorSqr(human, anchor);
         if (order == HOLD_POSITION) {
             if (distanceFromAnchorSqr(human, anchor) > HOLD_RETURN_DISTANCE_SQR) {
                 if (human.tickCount % 5 == 0 || human.getNavigation().isDone()) {
-                    human.getNavigation().moveTo(
-                            anchor.getX() + 0.5D, anchor.getY(), anchor.getZ() + 0.5D, 1.1D
-                    );
+                    moveToPost(human, anchor, 1.1D);
                 }
             } else {
-                human.getNavigation().stop();
+                stopMovement(human);
             }
             return;
         }
@@ -219,9 +242,9 @@ public enum SoldierOrder {
 
         if (order == GUARD) {
             if (distanceFromAnchor > 4.0D && human.tickCount % 10 == 0) {
-                human.getNavigation().moveTo(anchor.getX() + 0.5D, anchor.getY(), anchor.getZ() + 0.5D, 1.1D);
+                moveToPost(human, anchor, 1.1D);
             } else if (distanceFromAnchor <= 4.0D) {
-                human.getNavigation().stop();
+                stopMovement(human);
             }
             return;
         }
@@ -229,21 +252,45 @@ public enum SoldierOrder {
         long now = level.getGameTime();
         if (distanceFromAnchor > PATROL_RANGE_SQR) {
             if (human.tickCount % 10 != 0) return;
-            human.getNavigation().moveTo(anchor.getX() + 0.5D, anchor.getY(), anchor.getZ() + 0.5D,
-                    PATROL_WALK_NAVIGATION_SPEED);
+            moveToPost(human, anchor, PATROL_WALK_NAVIGATION_SPEED);
             human.getPersistentData().putLong(NEXT_PATROL, now + 80L);
         } else if (human.getNavigation().isDone() && now >= human.getPersistentData().getLong(NEXT_PATROL)) {
-            for (int attempt = 0; attempt < 8; attempt++) {
+            if (!BasicNavigationBudget.tryAcquire(human, 4)) return;
+            int paths = 0;
+            for (int attempt = 0; attempt < 8 && paths < 4; attempt++) {
                 int dx = human.getRandom().nextInt(65) - 32;
                 int dz = human.getRandom().nextInt(65) - 32;
                 if (dx * dx + dz * dz > 32 * 32) continue;
                 BlockPos destination = SafePositions.nearFloor(level, anchor.getX() + dx, anchor.getZ() + dz, anchor.getY());
                 if (destination == null) continue;
-                if (human.getNavigation().moveTo(destination.getX() + 0.5D, destination.getY(),
-                        destination.getZ() + 0.5D, PATROL_WALK_NAVIGATION_SPEED)) break;
+                paths++;
+                if (moveToPostWithGrant(human, destination, PATROL_WALK_NAVIGATION_SPEED)) break;
             }
+            BasicNavigationBudget.cancel(human);
             human.getPersistentData().putLong(NEXT_PATROL, now + 80L + human.getRandom().nextInt(81));
         }
+    }
+
+    static void stopMovement(Human human) {
+        SoldierFollowNavigation.stopOwned(human);
+        var route = ROUTES.remove(human);
+        if (MovementContinuity.ownsRoute(human, route)) human.getNavigation().stop();
+        BasicNavigationBudget.cancel(human);
+    }
+    private static void moveToPost(Human human, BlockPos anchor, double speed) {
+        if (!BasicNavigationBudget.tryAcquire(human, 1)) return;
+        moveToPostWithGrant(human, anchor, speed);
+        BasicNavigationBudget.cancel(human);
+    }
+    private static boolean moveToPostWithGrant(Human human, BlockPos anchor, double speed) {
+        var old = human.getNavigation().getPath();
+        var path = human.getNavigation().createPath(anchor, 0);
+        if (path != null && path.canReach() && human.getNavigation().moveTo(path, speed)) {
+            ROUTES.put(human, path);
+            return true;
+        }
+        if (old != null && !old.isDone()) human.getNavigation().moveTo(old, speed);
+        return false;
     }
 
     public static boolean allowsTarget(Human human, LivingEntity target) {
@@ -354,19 +401,20 @@ public enum SoldierOrder {
         return dx * dx + dy * dy + dz * dz;
     }
 
-    private static void teleportBesideOwner(Human human, ServerPlayer owner) {
-        if (human.tickCount % 10 != 0) return;
+    static boolean teleportBesideOwner(Human human, ServerPlayer owner) {
+        if (human.tickCount % 10 != 0 || owner.level() != human.level()
+                || human.isFleeing || human.isInLava() || human.isPassenger()) return false;
         for (int attempt = 0; attempt < 12; attempt++) {
             int dx = human.getRandom().nextInt(7) - 3;
             int dz = human.getRandom().nextInt(7) - 3;
-            BlockPos pos = SafePositions.nearFloor(owner.serverLevel(), owner.getBlockX() + dx,
-                    owner.getBlockZ() + dz, owner.getBlockY());
+            var pos = SafePositions.nearOwner(human, owner, owner.getBlockX() + dx, owner.getBlockZ() + dz);
             if (pos == null) continue;
             SoldierFollowNavigation.clear(human);
-            human.teleportTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
+            human.teleportTo(pos.x, pos.y, pos.z);
             human.getNavigation().stop();
-            return;
+            return true;
         }
         // No blind fallback into a block or onto the surface above a cave.
+        return false;
     }
 }

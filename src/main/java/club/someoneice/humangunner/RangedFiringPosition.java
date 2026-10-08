@@ -37,10 +37,11 @@ public final class RangedFiringPosition {
     public static boolean hasPendingVisibleSearch(Human human) { return VISIBLE_SEARCHES.containsKey(human); }
     public static void cancelVisibleSearch(Human human) {
         VISIBLE_SEARCHES.remove(human);
+        human.cancelCombatShoreSearch();
         OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.FIRING_LANE);
     }
     public static int retryDelay(Human human, Path result, int failureDelay) {
-        return retryDelay(hasPendingVisibleSearch(human), result != null, failureDelay);
+        return retryDelay(hasPendingVisibleSearch(human) || human.isCombatShoreSearchPending(), result != null, failureDelay);
     }
     static int retryDelay(boolean pending, boolean found, int failureDelay) {
         return pending ? 1 : found ? 10 : failureDelay;

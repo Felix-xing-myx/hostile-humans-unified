@@ -174,7 +174,8 @@ extends Goal {
                 this.strafingTime = -1;
             } else if (retreating) {
                 --this.updatePathDelay;
-                if (this.updatePathDelay <= 0) {
+                if (this.updatePathDelay <= 0 && (!(this.mob instanceof Human human)
+                        || club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1))) {
                     Vec3 away = DefaultRandomPos.getPosAway(this.mob, 12, 6, livingentity.position());
                     if (away != null && BowRangePolicy.usefulRetreatDestination(
                             d0, livingentity.distanceToSqr(away))) {
@@ -229,7 +230,9 @@ extends Goal {
                 this.updatePathDelay = 0;
                 ++this.strafingTime;
             } else {
-                if (!waterApproach || this.mob.tickCount >= this.nextWaterApproachPathTick) {
+                if (this.mob.tickCount >= this.nextWaterApproachPathTick
+                        && (!(this.mob instanceof Human human)
+                        || club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1))) {
                     this.mob.getNavigation().moveTo((Entity)livingentity, this.speedModifier);
                     this.nextWaterApproachPathTick = this.mob.tickCount + 12;
                 }

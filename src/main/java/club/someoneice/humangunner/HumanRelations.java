@@ -24,7 +24,7 @@ import java.util.UUID;
 
 public final class HumanRelations {
     static final String HIRED_TIER = "humangunner:hired_tier";
-    static final String TEMP_OWNER = "humangunner:temporary_owner";
+    public static final String TEMP_OWNER = "humangunner:temporary_owner";
     static final String TEMP_UNTIL = "humangunner:temporary_until";
     static final String NO_DROPS = "humangunner:no_equipment_drops";
     static final String FORCED_HOSTILE_TARGET = "humangunner:forced_hostile_target";

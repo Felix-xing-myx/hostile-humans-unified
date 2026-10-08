@@ -17,6 +17,8 @@ final class BodyguardMovementGoal extends Goal {
     private final Human human;
     private int nextPlan, blockUntil, nextBlock;
     private ItemStack ownedShield;
+    private net.minecraft.world.level.pathfinder.Path ownedPath;
+    private boolean followFallback;
     BodyguardMovementGoal(Human human) {
         this.human = human;
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
@@ -57,6 +59,7 @@ final class BodyguardMovementGoal extends Goal {
     @Override public void tick() {
         ServerPlayer owner = BodyguardProtection.owner(human);
         if (owner == null) return;
+        if (SoldierFollowNavigation.rescueIfStuck(human, owner, 4.0)) return;
         Vec3 goal = destination(owner);
         boolean returning = human.distanceToSqr(owner) > 36.0D;
         MovementSpeedController.combat(human, returning);
@@ -65,11 +68,32 @@ final class BodyguardMovementGoal extends Goal {
         if (human.tickCount >= nextPlan) {
             nextPlan = human.tickCount + 5;
             if (human.position().distanceToSqr(goal) > 1.0D) {
-                BlockPos floor = SafePositions.nearFloor(owner.serverLevel(), Mth.floor(goal.x), Mth.floor(goal.z), owner.getBlockY());
-                if (floor != null) human.getNavigation().moveTo(floor.getX() + 0.5D, floor.getY(), floor.getZ() + 0.5D, speed);
-                else if (human.distanceToSqr(owner) > 16.0D) SoldierFollowNavigation.tick(human, owner);
+                if (followFallback) {
+                    SoldierFollowNavigation.tick(human, owner);
+                    followFallback = false;
+                } else if (BasicNavigationBudget.tryAcquire(human, 3)) {
+                    var old = human.getNavigation().getPath();
+                    boolean accepted = false;
+                    for (int attempt = 0; attempt < 3 && !accepted; attempt++) {
+                        Vec3 point = SafePositions.nearOwner(human, owner,
+                                Mth.floor(goal.x) + (attempt == 1 ? 1 : attempt == 2 ? -1 : 0), Mth.floor(goal.z));
+                        if (point == null) continue;
+                        var path = human.getNavigation().createPath(BlockPos.containing(point), 0);
+                        if (path != null && path.canReach() && human.getNavigation().moveTo(path, speed)) {
+                            ownedPath = path;
+                            accepted = true;
+                        }
+                    }
+                    if (!accepted) {
+                        if (old != null && !old.isDone()) human.getNavigation().moveTo(old, speed);
+                        followFallback = true;
+                        nextPlan = human.tickCount + 1;
+                    }
+                    BasicNavigationBudget.cancel(human);
+                } else nextPlan = human.tickCount + 1;
             } else {
-                human.getNavigation().stop();
+                if (MovementContinuity.ownsRoute(human, ownedPath)) human.getNavigation().stop();
+                SoldierFollowNavigation.stopOwned(human);
                 MovementSpeedController.normal(human);
             }
         }
@@ -99,7 +123,10 @@ final class BodyguardMovementGoal extends Goal {
     }
     @Override public void stop() {
         releaseShield();
-        SoldierFollowNavigation.clear(human);
-        human.getNavigation().stop();
+        SoldierFollowNavigation.stopOwned(human);
+        if (MovementContinuity.ownsRoute(human, ownedPath)) human.getNavigation().stop();
+        ownedPath = null;
+        followFallback = false;
+        BasicNavigationBudget.cancel(human);
     }
 }

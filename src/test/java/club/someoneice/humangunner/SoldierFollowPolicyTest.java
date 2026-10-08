@@ -13,6 +13,28 @@ public final class SoldierFollowPolicyTest {
         check(!SoldierFollowNavigation.shouldChase(false, 9), "idle inside start radius");
         check(!SoldierFollowNavigation.shouldChase(true, 6.25), "stop at two and a half blocks");
         check(SoldierFollowNavigation.shouldChase(true, 6.26), "continue above stop radius");
+        check(!SoldierFollowNavigation.rescueDue(199, 100), "short stalls cannot teleport");
+        check(SoldierFollowNavigation.rescueDue(200, 100), "long stalls may rescue nearby soldiers");
+        check(!SoldierFollowNavigation.rescueDue(300, 6.25), "no rescue inside follow spacing");
+        check(SoldierFollowNavigation.retryDelay(1) == 10, "failed follow searches back off");
+        check(SoldierFollowNavigation.retryDelay(100) == 40, "retry delay stays bounded");
+        Object server = new Object();
+        java.util.UUID first = new java.util.UUID(0, 1), second = new java.util.UUID(0, 2);
+        check(ShoreSeekingPolicy.reserveShorePathSearch(server, 1, first), "first swimmer gets this tick");
+        ShoreSeekingPolicy.cancelShorePathSearch(server, first);
+        check(!ShoreSeekingPolicy.reserveShorePathSearch(server, 1, second), "one shore search per tick");
+        check(!ShoreSeekingPolicy.reserveShorePathSearch(server, 2, first), "first swimmer cannot starve queued peer");
+        check(ShoreSeekingPolicy.reserveShorePathSearch(server, 2, second), "queued swimmer gets next tick");
+        var batches = new dev.felix.hostilehumans.core.FairWorkBudget<Integer>(32, 4, 40);
+        boolean[] served = new boolean[11];
+        for (int tick = 1; tick <= 3; tick++) {
+            for (int id = 0; id < served.length; id++) {
+                int grant = batches.claimFull(tick, id, 3);
+                check(grant == 0 || grant == 3, "a three-search operation never consumes a partial grant");
+                served[id] |= grant == 3;
+            }
+        }
+        for (boolean value : served) check(value, "all callers receive full capacity despite a two-slot remainder");
         UnifiedConfig defaults = new UnifiedConfig(new JsonObject());
         for (String rank : new String[]{"roamer", "tier1", "tier2", "tier3"}) {
             check(defaults.followSpeed(rank, false) == 1.35, "normal default " + rank);

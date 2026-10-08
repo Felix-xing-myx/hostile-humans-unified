@@ -24,6 +24,9 @@ public final class RetreatPathSafety {
     }
 
     public static boolean isSafe(Human human, LivingEntity threat, Path path, boolean requireGain) {
+        return isSafe(human, (net.minecraft.world.entity.Entity)threat, path, requireGain);
+    }
+    public static boolean isSafe(Human human, net.minecraft.world.entity.Entity threat, Path path, boolean requireGain) {
         if (path == null || !path.canReach() || path.isDone() || threat == null) return false;
         int first = path.getNextNodeIndex();
         // A freshly planned route includes the occupied source block. Its
@@ -37,7 +40,7 @@ public final class RetreatPathSafety {
         double[][] nodes = new double[count][2];
         for (int i = 0; i < count; i++) {
             BlockPos pos = path.getNodePos(first + i);
-            if (!human.level().hasChunkAt(pos) || isHazard(human, pos)
+            if (!human.level().hasChunkAt(pos) || !human.level().getWorldBorder().isWithinBounds(pos) || isHazard(human, pos)
                     || isHazard(human, pos.above()) || isHazard(human, pos.below())) return false;
             nodes[i][0] = pos.getX() + 0.5D;
             nodes[i][1] = pos.getZ() + 0.5D;
@@ -46,7 +49,7 @@ public final class RetreatPathSafety {
                 nodes, requireGain);
     }
 
-    static boolean isHazard(Human human, BlockPos pos) {
+    public static boolean isHazard(Human human, BlockPos pos) {
         var state = human.level().getBlockState(pos);
         return human.level().getFluidState(pos).is(FluidTags.LAVA)
                 || state.is(Blocks.FIRE) || state.is(Blocks.SOUL_FIRE) || state.is(Blocks.MAGMA_BLOCK)

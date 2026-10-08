@@ -35,6 +35,7 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (club.someoneice.humangunner.SoldierOrder.shouldFollowThroughWater(this.human)) return false;
         if (!ShoreSeekingPolicy.shouldAttemptShore(
                     !this.human.level().isClientSide,
                     this.human.isEffectiveAi(),
@@ -48,6 +49,7 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
 
         if (this.maySearchForShorePath()) {
             this.shorePath = this.human.findNearestShorePath(null);
+            ShoreSeekingPolicy.cancelShorePathSearch(this.human.getServer(), this.human.getUUID());
             this.nextPathAttemptTick = this.human.tickCount + (this.shorePath == null
                     ? FAILED_PATH_RETRY_TICKS
                     : REPATH_DELAY_TICKS);
@@ -64,7 +66,8 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return ShoreSeekingPolicy.shouldContinueSeekingShore(
+        return !club.someoneice.humangunner.SoldierOrder.shouldFollowThroughWater(this.human)
+                && ShoreSeekingPolicy.shouldContinueSeekingShore(
                 this.human.isInWater(), this.human.isInLava(),
                 this.hasLivingCombatTarget(), this.human.isFleeing,
                 this.human.isPursuingWaterLoot());
@@ -75,7 +78,10 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
         if (this.shorePath != null) {
             this.progress.reset(this.human.tickCount);
             this.lastDestination = this.shorePath.getTarget();
-            this.human.startSeekingShore(this.shorePath, MOVE_SPEED);
+            if (!this.human.startSeekingShore(this.shorePath, MOVE_SPEED)) {
+                this.shorePath = null;
+                this.human.startSeekingShoreWithoutPath();
+            }
         } else {
             this.progress.reset(this.human.tickCount);
             this.human.startSeekingShoreWithoutPath();
@@ -88,9 +94,9 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
         // A brief water/land boundary crossing can release Human's shore lease
         // while this Goal is still running. Reacquire it without waiting for damage.
         if (!this.human.isSeekingShore()) {
-            if (this.shorePath != null && !this.shorePath.isDone())
-                this.human.startSeekingShore(this.shorePath, MOVE_SPEED);
-            else this.human.startSeekingShoreWithoutPath();
+            if (this.shorePath == null || this.shorePath.isDone()
+                    || !this.human.startSeekingShore(this.shorePath, MOVE_SPEED))
+                this.human.startSeekingShoreWithoutPath();
         }
         Path livePath = this.human.getNavigation().getPath();
         BlockPos waypoint = livePath != null && !livePath.isDone()
@@ -112,6 +118,7 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
         if (pathNeedsRefresh && this.maySearchForShorePath()) {
             Path nextPath = this.human.findNearestShorePath(
                     stalled ? this.lastDestination : null);
+            ShoreSeekingPolicy.cancelShorePathSearch(this.human.getServer(), this.human.getUUID());
             if (nextPath == null) {
                 this.shorePath = null;
                 // Stop the old live route and switch to direct bank steering;
@@ -125,16 +132,18 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
                 this.nextPathAttemptTick = this.human.tickCount + FAILED_PATH_RETRY_TICKS;
                 return;
             }
-            this.shorePath = nextPath;
-            this.lastDestination = nextPath.getTarget();
-            this.progress.reset(this.human.tickCount);
-            this.nextPathAttemptTick = this.human.tickCount + REPATH_DELAY_TICKS;
-            this.human.continueSeekingShore(nextPath, MOVE_SPEED);
+            if (this.human.continueSeekingShore(nextPath, MOVE_SPEED)) {
+                this.shorePath = nextPath;
+                this.lastDestination = nextPath.getTarget();
+                this.progress.reset(this.human.tickCount);
+                this.nextPathAttemptTick = this.human.tickCount + REPATH_DELAY_TICKS;
+            } else this.nextPathAttemptTick = this.human.tickCount + FAILED_PATH_RETRY_TICKS;
         }
     }
 
     @Override
     public void stop() {
+        ShoreSeekingPolicy.cancelShorePathSearch(this.human.getServer(), this.human.getUUID());
         this.shorePath = null;
         this.lastDestination = null;
         this.progress.reset(this.human.tickCount);
@@ -155,7 +164,7 @@ public final class LeaveWaterWhenIdleGoal extends Goal {
         return ShoreSeekingPolicy.shouldSearchForShorePath(
                 this.human.tickCount, this.nextPathAttemptTick)
                 && ShoreSeekingPolicy.reserveShorePathSearch(
-                this.human.getServer(), this.human.getServer().getTickCount());
+                this.human.getServer(), this.human.getServer().getTickCount(), this.human.getUUID());
     }
 
 }

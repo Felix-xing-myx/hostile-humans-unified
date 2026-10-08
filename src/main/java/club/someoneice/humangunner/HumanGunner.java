@@ -205,13 +205,7 @@ public final class HumanGunner {
                         human.discard();
                         return;
                     }
-                    Player owner = human.level().getPlayerByUUID(
-                            human.getPersistentData().getUUID(HumanRelations.TEMP_OWNER));
-                    if (owner != null && human.distanceToSqr(owner) > 100.0D
-                            && human.getTarget() == null && !human.isSeekingShore()
-                            && human.tickCount % 20 == 0) {
-                        human.getNavigation().moveTo(owner, 1.15D);
-                    }
+
                 }
             }
             RecoverySupplies.tickRegenerationHealing(human);
@@ -845,6 +839,7 @@ public final class HumanGunner {
     private static void configureSoldierOrders(Human human) {
         if (!SOLDIER_ORDERS_CONFIGURED.add(human)) return;
         human.addCombatGoal(-6, new SoldierOrderGoal(human));
+        human.addCombatGoal(-6, new TemporarySupportFollowGoal(human));
         human.addTargetGoal(-10, new GuardCombatTargetGoal(human));
         human.addTargetGoal(-11, new BodyguardTargetGoal(human));
         human.addCombatGoal(-5, new BodyguardMovementGoal(human));
