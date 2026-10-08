@@ -1081,9 +1081,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private double firingRangeSqr(GunRangePolicy.Band range) {
         // A sniper can use the full configured discovery range, including the
         // beacon's temporary follow-range extension, once it has a target.
-        double reach = range.fireRange() > 64.0D
-                ? Math.max(range.fireRange(), mob.getAttributeValue(Attributes.FOLLOW_RANGE))
-                : range.fireRange();
+        double reach = GunRangePolicy.firingReach(range, mob.getAttributeValue(Attributes.FOLLOW_RANGE));
         return reach * reach;
     }
 

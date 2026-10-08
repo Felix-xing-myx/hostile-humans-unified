@@ -307,7 +307,7 @@ public enum SoldierOrder {
                 || human.guardCombatState.retainsTarget(target.getUUID()))
                 && !human.guardCombatState.returning();
         if (!target.isAlive() || target.level() != human.level()
-                || (!guardRetaliation && !guardChase
+                || (order != BODYGUARD && !guardRetaliation && !guardChase
                 && human.distanceToSqr(target) > FOLLOW_COMBAT_RANGE_SQR)
                 || (!explosionRescue && !human.soldierCombatMemory.allowed(target.getUUID(), human.level().getGameTime()))
                 || !SoldierCombatMode.allowsTarget(human, target)) return false;

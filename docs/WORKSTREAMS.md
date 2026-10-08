@@ -503,3 +503,13 @@
 - 保留女仆战斗任务门控、和平难度、队伍关系、MaidNoAttack名称、全局忽略名单与手工FRIENDLY分类；搜索/视线/距离及武器动作由女仆原生Brain控制，不接管导航或另建选敌循环。服务端每tick重检已有ATTACK_TARGET，仅清除失效目标和指向其的WALK_TARGET/LOOK_TARGET及路径；Mob目标同步清理。LivingAttackEvent为已飞出弹丸提供关系防误伤保护。
 - 验证：305份Java树解析无错误，mixin JSON/测试注册、diff检查和原用户CHANGELOG哈希保护通过；javap只读确认两套女仆选敌入口、攻击名单API，以及当前Forge的EntityTracker/WalkTarget/受伤记录API。新增MaidHumanRelationTest（271项矩阵与实际接入检查）注册check，尚未编译或执行。未运行Gradle/javac，不声称Mixin加载及游戏行为已验收。
 - 版本仍3.6.5，无构建、实例配置/JAR替换、游戏启动或推送。待用户要求构建后执行全套回归；游戏验收：无牌/低阶牌主动识别四阶野生人类、同阶/高阶和平及切牌即时停追、雇佣/临时控制后停止攻击、自卫与信标例外、弓弩/TaCZ弹丸防误伤、工作任务与黑名单保留、未安装女仆时可启动。
+
+
+## 2026-10-08 主动贴身保护远射与友军弹丸穿透（源码整合，未构建）
+
+- 需求：主动模式护卫可在武器射程内先发攻击远处敌人；互为友军的人类不挡枪弹、箭矢和三叉戟；正式雇佣/野生同阶人类不能因同类而获得此保护。基线main 232af9c，主控/root独立编辑，无新agent；上一任务女仆源码保留，用户明确暂不构建，本轮未授权构建/同步。
+- 范围/接口：BodyguardProtection/BodyguardPolicy与SoldierOrder的公共选敌门控由主控顺序接入；GunRangePolicy.firingReach供GunnerGoal和护卫共享；HumanProjectileRelations.passesThrough(Projectile,Entity)为原生与TaCZ共用边界，仅人类发射者/人类目标参与，读取双向areCombatAllies，避免单向免伤被误认为互为友军。
+- 远射：主动远程护卫按实际射程从士兵位置判断，按射程+12扩大主人中心的感知缓存，近距离威胁优先级保持；非主动模式不额外授予许可。移除BODYGUARD入口前遗留的通用48格目标截断，由护卫自身射程与12格士兵离主距离判定，FOLLOW/GUARD其它规则保持。远处射击沿用已有保持位置门控，不追离主人。
+- 碰撞：Projectile.canHitEntity的SRG入口m_150171_在HEAD排除互为友军的人类，覆盖AbstractArrow及ThrownTrident派生碰撞，在点燃/伤害/反馈之前跳过。TaCZ EntityUtil绕过此原生谓词，故可选@Pseudo Redirect在findEntityOnPath和findEntitiesOnPath的Level.m_6249_候选查询中附加同一过滤，require=2保证两条都接入，在排序、穿透次数及命中副作用之前过滤。未重写或复制TaCZ射线算法，不改变地形碰撞。
+- 验证：309份Java树解析无错误，mixin JSON、测试任务注册、共用射程及双向友军断言、git diff --check和原用户CHANGELOG片段哈希保护通过。javap只读确认当前Forge AbstractArrow调用Projectile.canHitEntity、ThrownTrident调用箭矢查找、TaCZ1.1.8两条EntityUtil候选查询与方法签名。新增HumanProjectileRelationsTest读取真实依赖字节码核查两条入口、双向友军接线与野生/雇佣不对称；扩展BodyguardAndVanillaModeTest射程/近威胁/许可边界；均已注册check但未编译执行。
+- 版本仍3.6.5；未运行Gradle/javac、未改实例JAR/配置、未启动游戏或推送。待构建及游戏验收：主动枪/狙击在远处先发、弓弩各自射程边界、近威胁打断远射与12格不追离；同阵营野生枪线穿透/无击退受伤动画、火矢/药箭不对友军生效、穿透弹友军不消耗穿透次数、三叉戟穿过友军后命中敌人；野生与雇佣三阶战斗仍正常碰撞，PVP开关/控制权改变实时生效，女仆兼容及无TaCZ环境不受影响。

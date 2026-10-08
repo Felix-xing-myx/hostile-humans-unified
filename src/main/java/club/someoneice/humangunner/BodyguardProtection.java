@@ -13,12 +13,14 @@ import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.TridentItem;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
 /** Threat selection only; actual damage and weapon control remain in existing goals. */
 public final class BodyguardProtection {
     private static final Map<Human, State> STATES = new WeakHashMap<>();
     private static final Map<ServerPlayer, Nearby> NEARBY = new WeakHashMap<>();
-    private record Nearby(long tick, net.minecraft.world.phys.Vec3 center, String dimension, List<UUID> ids) { }
+    private record Nearby(long tick, net.minecraft.world.phys.Vec3 center, String dimension, double radius, List<UUID> ids) { }
     private static final class State {
         UUID threat, attack;
         int nextScan;
@@ -54,6 +56,14 @@ public final class BodyguardProtection {
         return GunSupport.get().isGun(item) || item.getItem() instanceof ProjectileWeaponItem
                 || item.getItem() instanceof TridentItem;
     }
+    static double rangedReach(Human human) {
+        var item = human.getMainHandItem();
+        if (GunSupport.get().isGun(item)) return GunRangePolicy.firingReach(
+                GunRangePolicy.forType(GunSupport.get().gunType(item)), human.getAttributeValue(Attributes.FOLLOW_RANGE));
+        if (item.getItem() instanceof CrossbowItem) return 48.0D;
+        if (item.getItem() instanceof ProjectileWeaponItem || item.getItem() instanceof TridentItem) return 36.0D;
+        return 0.0D;
+    }
     private static boolean recentAttacker(LivingEntity victim, LivingEntity candidate) {
         int elapsed = victim.tickCount - victim.getLastHurtByMobTimestamp();
         return victim.getLastHurtByMob() == candidate && elapsed >= 0 && elapsed <= 200;
@@ -64,9 +74,11 @@ public final class BodyguardProtection {
     }
     static boolean allowsTarget(Human human, LivingEntity target) {
         ServerPlayer owner = owner(human);
+        double reach = rangedReach(human);
         return owner != null && BodyguardPolicy.attackInRange(human.distanceToSqr(owner),
                 target.distanceToSqr(owner), ranged(human), directed(human, owner, target)
-                || SoldierCombatMode.isExplicitlyAuthorizedAgainst(human, target));
+                || SoldierCombatMode.isExplicitlyAuthorizedAgainst(human, target),
+                SoldierCombatMode.get(human) == SoldierCombatMode.ACTIVE, human.distanceToSqr(target), reach * reach);
     }
     static LivingEntity threat(Human human) { return resolve(human, STATES.get(human), false); }
     static LivingEntity attack(Human human) { return resolve(human, STATES.get(human), true); }
@@ -87,7 +99,10 @@ public final class BodyguardProtection {
         state.nextScan = human.tickCount + 5;
         LivingEntity bestThreat = null, bestAttack = null;
         double threatScore = Double.MAX_VALUE, attackScore = Double.MAX_VALUE;
-        for (UUID id : nearby(owner)) {
+        boolean active = SoldierCombatMode.get(human) == SoldierCombatMode.ACTIVE;
+        double reach = rangedReach(human);
+        double searchRadius = active && reach > 0.0D ? Math.max(48.0D, reach + 12.0D) : 48.0D;
+        for (UUID id : nearby(owner, searchRadius)) {
             var entity = ((ServerLevel) human.level()).getEntity(id);
             if (!(entity instanceof LivingEntity candidate)) continue;
             if (candidate == owner || candidate == human || !candidate.isAlive() || candidate.isRemoved()
@@ -97,8 +112,9 @@ public final class BodyguardProtection {
             boolean hostile = hostileToOwner(human, owner, candidate);
             boolean rescuing = protectingFromExplosion(human, candidate);
             double distance = candidate.distanceToSqr(owner);
-            if ((!aimed && !authorized && !hostile) || distance > BodyguardPolicy.RANGED_SQUARED
-                    || (distance > BodyguardPolicy.CHASE_SQUARED && !aimed && !authorized)
+            boolean proactiveShot = active && reach > 0.0D && human.distanceToSqr(candidate) <= reach * reach;
+            if ((!aimed && !authorized && !hostile) || distance > searchRadius * searchRadius
+                    || (distance > BodyguardPolicy.CHASE_SQUARED && !aimed && !authorized && !proactiveShot)
                     || (!aimed && !authorized && !rescuing && !human.getSensing().hasLineOfSight(candidate))) continue;
             double score = BodyguardPolicy.priority(distance, aimed, candidate == human.getTarget());
             if (rescuing) score -= 1000000.0D;
@@ -116,17 +132,18 @@ public final class BodyguardProtection {
         state.attack = bestAttack == null ? null : bestAttack.getUUID();
     }
 
-    private static List<UUID> nearby(ServerPlayer owner) {
+    private static List<UUID> nearby(ServerPlayer owner, double radius) {
         long now = owner.level().getGameTime();
         String dimension = owner.level().dimension().location().toString();
         Nearby cached = NEARBY.get(owner);
         if (cached != null && now >= cached.tick() && now - cached.tick() < 5
-                && cached.dimension().equals(dimension) && cached.center().distanceToSqr(owner.position()) < 4.0D)
+                && cached.radius() >= radius && cached.dimension().equals(dimension)
+                && cached.center().distanceToSqr(owner.position()) < 4.0D)
             return cached.ids();
         List<UUID> ids = owner.level().getEntitiesOfClass(LivingEntity.class,
-                owner.getBoundingBox().inflate(48.0D, 16.0D, 48.0D), entity -> entity != owner && entity.isAlive())
+                owner.getBoundingBox().inflate(radius), entity -> entity != owner && entity.isAlive())
                 .stream().map(LivingEntity::getUUID).toList();
-        NEARBY.put(owner, new Nearby(now, owner.position(), dimension, ids));
+        NEARBY.put(owner, new Nearby(now, owner.position(), dimension, radius, ids));
         return ids;
     }
 

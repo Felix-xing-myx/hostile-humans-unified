@@ -8,6 +8,10 @@ final class GunRangePolicy {
 
     private GunRangePolicy() {}
 
+    static double firingReach(Band band, double followRange) {
+        return band.fireRange() > 64.0D ? Math.max(band.fireRange(), followRange) : band.fireRange();
+    }
+
     static Band forType(String rawType) {
         String type = rawType == null ? "" : rawType.toLowerCase(Locale.ROOT);
         return switch (type) {
