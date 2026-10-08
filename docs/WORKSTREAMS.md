@@ -513,3 +513,12 @@
 - 碰撞：Projectile.canHitEntity的SRG入口m_150171_在HEAD排除互为友军的人类，覆盖AbstractArrow及ThrownTrident派生碰撞，在点燃/伤害/反馈之前跳过。TaCZ EntityUtil绕过此原生谓词，故可选@Pseudo Redirect在findEntityOnPath和findEntitiesOnPath的Level.m_6249_候选查询中附加同一过滤，require=2保证两条都接入，在排序、穿透次数及命中副作用之前过滤。未重写或复制TaCZ射线算法，不改变地形碰撞。
 - 验证：309份Java树解析无错误，mixin JSON、测试任务注册、共用射程及双向友军断言、git diff --check和原用户CHANGELOG片段哈希保护通过。javap只读确认当前Forge AbstractArrow调用Projectile.canHitEntity、ThrownTrident调用箭矢查找、TaCZ1.1.8两条EntityUtil候选查询与方法签名。新增HumanProjectileRelationsTest读取真实依赖字节码核查两条入口、双向友军接线与野生/雇佣不对称；扩展BodyguardAndVanillaModeTest射程/近威胁/许可边界；均已注册check但未编译执行。
 - 版本仍3.6.5；未运行Gradle/javac、未改实例JAR/配置、未启动游戏或推送。待构建及游戏验收：主动枪/狙击在远处先发、弓弩各自射程边界、近威胁打断远射与12格不追离；同阵营野生枪线穿透/无击退受伤动画、火矢/药箭不对友军生效、穿透弹友军不消耗穿透次数、三叉戟穿过友军后命中敌人；野生与雇佣三阶战斗仍正常碰撞，PVP开关/控制权改变实时生效，女仆兼容及无TaCZ环境不受影响。
+
+
+## 2026-10-08 女仆识别、主动护卫远射与友军弹丸过滤构建同步
+
+- 用户明确授权“构建并同步”；主控/root在main执行，实际构建提交8ee0f0fc8302211bf75b85ba73afd68fba8918bc，包含女仆兼容8d4297c及远射/碰撞7984308。版本保持3.6.5。
+- Java17及三个显式API参数执行build lootScreeningTest --offline，BUILD SUCCESSFUL in 1m 2s，46任务44执行2最新，无需源码修补。MaidHumanRelationTest271、BodyguardAndVanillaModeTest81、HumanProjectileRelationsTest14、LootScreeningTest13391及其余check任务通过；OptionalRuntimeTest无TaCZ/Curios/Maid链接396核心类通过。坏JSON/schema的ERROR为预期测试诊断。日志维护目录/验证日志/build-bodyguard-projectiles-20261008.log。
+- 唯一目标E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21；备份前/替换前无非Gradle Java进程。旧JAR和14份配置共15文件已备份并逐一核对SHA256，备份维护目录/部署备份/20261008-225403-bodyguard-projectiles-Forge_47.4.21/deployment.json。
+- 源/目标JAR SHA256均B53F20FC40504A1374AE2CFD99F171DF72D9906A0B4B4D027A3D3116C870B058，目标仅一份本模组JAR；manifest版本及三个新增可选/原生碰撞Mixin类和清单确认已打包。14配置哈希不变，原用户CHANGELOG片段保护哈希仍340C905E8C54142D3C0FC15961D82539DA50BD9FAC7C416055A43C4E7D039EC2。
+- 未启动游戏、未推送、未同步其它实例。自动检查证明编译、关系/射程边界、真实TaCZ入口及依赖隔离，不替代启动时Mixin应用或游戏验收。待重启实例验证女仆按身份牌识別/切牌停追、主动护卫远射且近威胁优先、枪线/火矢/药箭/三叉戟穿过友军无命中副作用，以及野生与雇佣三阶仍可互相命中。
