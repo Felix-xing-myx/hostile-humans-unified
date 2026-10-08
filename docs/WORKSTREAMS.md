@@ -493,3 +493,13 @@
 - 唯一目标E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21；备份前及替换前无非Gradle Java进程。旧JAR及14份配置共15文件已备份并逐份核对SHA256，备份维护目录/部署备份/20261008-181658-supply-config-Forge_47.4.21/deployment.json。
 - 源/目标JAR SHA256均BC6832DC0A34F66B0D83A1DFF5FE48F1F623E272329BEEBA42FC36124AFE6AA8；目标仅一份本模组JAR，14配置哈希全部不变。已有阶文件缺food时继续使用默认配额，自定义食物需按docs/SUPPLY_CONFIG_AUDIT.md添加food组；重启后仅新生成单位领取出生配置物品。
 - 未启动游戏、未推送、未同步其它实例。待游戏验收：新生成各阶单一自定义食物池/数量、注册药水ID及零配额、护甲单套（关闭成长/自动导入），背包容量与旧士兵不补发。原用户CHANGELOG片段保护哈希仍340C905E8C54142D3C0FC15961D82539DA50BD9FAC7C416055A43C4E7D039EC2。
+
+
+## 2026-10-08 女仆识别人类与身份牌关系兼容（源码整合，未构建）
+
+- 用户批准上一轮建议的关系/行为。基线main 08745de8a26f231fe5f9514cd58057898e93c79e；主控/root独立编辑当前主工作树，无新agent。公共TouhouMaidCompat、mixin清单、构建注册与文档由主控负责，原用户CHANGELOG修改保留。
+- 证据：Human经HumanMobEntityData继承TamableAnimal；女仆1.5.3的IAttackTask排除有主人的可驯服实体，DefaultMonsterType把其它可驯服实体归FRIENDLY，故野生人类也默认不进入主动攻击列表。实际测试实例原版女仆和只读modified-all API均有EntityMaid.m_6779_(LivingEntity)入口；近战/远程选敌均调用该入口，近邻感知不额外剔除人类。
+- 接入：可选@Pseudo TouhouMaidHumanTargetMixin仅为已驯服女仆的人类目标改写canAttack，显式匹配开发/生产名，已安装目标类要求注入成功；非人类与未驯服女仆沿用原规则。TouhouMaidCompat复用IdentityBadgeAccess与HumanRelations，最高身份牌含Curios；野生敌对、同阶中立、高阶友好；正式/临时控制人类优先保护（含其它主人的士兵，延续女仆原默认不攻击已驯服对象）；未知/离线主人不判敌；实际攻击主人/女仆可还击、信标强制敌人覆盖身份牌。
+- 保留女仆战斗任务门控、和平难度、队伍关系、MaidNoAttack名称、全局忽略名单与手工FRIENDLY分类；搜索/视线/距离及武器动作由女仆原生Brain控制，不接管导航或另建选敌循环。服务端每tick重检已有ATTACK_TARGET，仅清除失效目标和指向其的WALK_TARGET/LOOK_TARGET及路径；Mob目标同步清理。LivingAttackEvent为已飞出弹丸提供关系防误伤保护。
+- 验证：305份Java树解析无错误，mixin JSON/测试注册、diff检查和原用户CHANGELOG哈希保护通过；javap只读确认两套女仆选敌入口、攻击名单API，以及当前Forge的EntityTracker/WalkTarget/受伤记录API。新增MaidHumanRelationTest（271项矩阵与实际接入检查）注册check，尚未编译或执行。未运行Gradle/javac，不声称Mixin加载及游戏行为已验收。
+- 版本仍3.6.5，无构建、实例配置/JAR替换、游戏启动或推送。待用户要求构建后执行全套回归；游戏验收：无牌/低阶牌主动识别四阶野生人类、同阶/高阶和平及切牌即时停追、雇佣/临时控制后停止攻击、自卫与信标例外、弓弩/TaCZ弹丸防误伤、工作任务与黑名单保留、未安装女仆时可启动。

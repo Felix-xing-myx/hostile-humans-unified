@@ -1,0 +1,65 @@
+package club.someoneice.humangunner;
+
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+
+/** Badge matrix, custody precedence and actual optional compatibility entrypoints. */
+public final class MaidHumanRelationTest {
+    private static int checks;
+
+    public static void main(String[] args) throws Exception {
+        for (int rank = 0; rank <= 3; rank++) {
+            for (int clearance = -1; clearance <= 4; clearance++) {
+                check(MaidHumanRelationPolicy.allowsAttack(true, false, clearance, rank, false, false)
+                        == (clearance < rank), "wild badge relation " + clearance + "/" + rank);
+                check(MaidHumanRelationPolicy.allowsAttack(true, false, clearance, rank, true, false),
+                        "beacon threat overrides badge");
+                check(MaidHumanRelationPolicy.allowsAttack(true, false, clearance, rank, false, true),
+                        "actual attack permits self/owner defense");
+                for (boolean forced : new boolean[]{false, true}) {
+                    for (boolean defense : new boolean[]{false, true}) {
+                        check(!MaidHumanRelationPolicy.allowsAttack(true, true, clearance, rank, forced, defense),
+                                "hired/temporary custody always wins");
+                        check(!MaidHumanRelationPolicy.allowsAttack(false, false, clearance, rank, forced, defense),
+                                "unresolved owner never invents hostility");
+                    }
+                }
+            }
+        }
+        // A clearance change must change the decision without a stored faction classification.
+        check(MaidHumanRelationPolicy.allowsAttack(true, false, 0, 3, false, false)
+                && !MaidHumanRelationPolicy.allowsAttack(true, false, 3, 3, false, false)
+                && !MaidHumanRelationPolicy.allowsAttack(true, false, 4, 3, false, false),
+                "switching badges removes hostility for neutral as well as friendly humans");
+        String compat = "club/someoneice/humangunner/TouhouMaidCompat";
+        String mixin = "club/someoneice/humangunner/mixin/TouhouMaidHumanTargetMixin";
+        check(calls(mixin, "humanGunner$recognizeHumans", compat, "humanAttackDecision"), "maid canAttack hook");
+        check(calls(compat, "relationAllowsAttack", "club/someoneice/humangunner/IdentityBadgeAccess", "highestClearance"),
+                "owner inventory and Curios badge access");
+        check(calls(compat, "relationAllowsAttack", "club/someoneice/humangunner/HumanRelations", "effectiveOwner"),
+                "hired and temporary owner gate");
+        check(calls(compat, "onMaidTick", compat, "humanAttackDecision"), "brain target revalidation");
+        check(calls(compat, "onMaidTick", "net/minecraft/world/entity/ai/Brain", "eraseMemory"), "stale brain memory removed");
+        check(calls(compat, "onMaidHumanAttack", compat, "relationAllowsAttack"), "in-flight projectile relationship guard");
+        System.out.println("MaidHumanRelationTest: " + checks + " checks passed; maid brain gameplay acceptance remains required");
+    }
+
+    private static boolean calls(String owner, String method, String target, String name) throws Exception {
+        ClassNode node = new ClassNode();
+        try (var stream = MaidHumanRelationTest.class.getClassLoader().getResourceAsStream(owner + ".class")) {
+            if (stream == null) throw new AssertionError("Missing compiled " + owner);
+            new ClassReader(stream).accept(node, 0);
+        }
+        for (var entry : node.methods) if (entry.name.equals(method)) {
+            for (var instruction : entry.instructions)
+                if (instruction instanceof MethodInsnNode call && call.owner.equals(target) && call.name.equals(name)) return true;
+        }
+        return false;
+    }
+
+    private static void check(boolean condition, String message) {
+        checks++;
+        if (!condition) throw new AssertionError(message);
+    }
+}

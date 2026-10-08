@@ -67,3 +67,6 @@
 药水在各阶 `potions.recovery/tactical.pool` 填瓶形 `item`（通常 `minecraft:potion` 或 `minecraft:splash_potion`）、药水注册 ID `potion` 和 `weight`；药水 ID 不等于效果 ID或物品 ID。`count_min/count_max` 是瓶数，普通药水每瓶通常占一格，背包满会限制实际发放。可以携带自定义注册药水，但 AI 主动使用仍按已支持的治疗、再生、力量、速度及减益策略判断，不会任意饮用所有模组效果。食物/药水自动补给还依赖全局 `ai.enabled` 与本阶 `ai.item_recovery_enabled`；关闭 `potions.enabled` 只禁用出生药水，不会移除玩家后续交给士兵的药水。
 
 护甲在 `equipment_loadout.armor_sets` 按整套权重抽取，`head/chest/legs/feet` 填对应部位的物品 ID；空数组不配护甲。任一填写部位未注册或部位错误则整套跳过，日志会给出原因。自动装备导入仍可追加候选，且自然生成/自动战斗的装备成长可在抽取后替换护甲：需要严格使用自定义套装时，关闭全局 `equipment_integration.auto_import_enabled` 和 `equipment_growth.enabled`，并删除池内不需要的已有候选。修改后重启服务器，对新生成单位生效，已有单位不重新发放。
+
+
+车万女仆处于近战、弓弩或枪械等战斗任务时，按主人的最高身份牌（含Curios）识别野生人类：低于目标阶级或无牌时可主动攻击，同阶中立、高阶友好；正式雇佣与临时援军不作为敌人。野生人类实际攻击主人/女仆时可反击，敌对信标指定攻击主人的人类不受身份牌保护。主人不在当前世界时不凭空判敌。关系变化后清除旧攻击目标及指向该目标的追击记忆，已发射弹丸也检查关系避免误伤。女仆的攻击黑名单、MaidNoAttack名称和手工设为友好的目标设置继续有效；工作任务不自动切换战斗，视线、搜索范围与武器行为沿用女仆自身实现。

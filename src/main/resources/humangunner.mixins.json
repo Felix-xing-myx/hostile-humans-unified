@@ -9,6 +9,7 @@
     "PolymorphConcurrencyMixin",
     "SpartanWeaponryItemRandomizerMixin",
     "TouhouMaidGunHurtMixin",
+    "TouhouMaidHumanTargetMixin",
     "TaczHumanReloadMixin",
     "TaczHumanShootMixin",
     "TaczHumanGunScriptMixin",
