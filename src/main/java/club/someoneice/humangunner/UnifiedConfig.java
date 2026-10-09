@@ -210,7 +210,9 @@ public final class UnifiedConfig {
         return value;
     }
     static synchronized UnifiedConfig reloadForServer() {
-        return instance = load(FMLPaths.CONFIGDIR.get());
+        instance = load(FMLPaths.CONFIGDIR.get());
+        GrowthRewards.configurationReloaded(instance.growth().enabled());
+        return instance;
     }
     public Tier tier(String key) { return tiers.getOrDefault(key, tiers.get("roamer")); }
     public AmmoReserve ammoReserve(String rank) { return ammunition.getOrDefault(rank, ammunition.get("roamer")); }

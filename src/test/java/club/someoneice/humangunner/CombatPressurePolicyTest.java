@@ -35,12 +35,13 @@ public final class CombatPressurePolicyTest {
                         && !RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
                         new double[][] {{Double.NaN, 0}}, true),
                 "whole-route inspection is finite and rejects missing or oversized paths");
-        check(MaxHealthCompatibilityPolicy.shouldApplyRoll(60.0D, 75, 60.0D)
-                        && MaxHealthCompatibilityPolicy.shouldApplyRoll(75.0D, 75, 60.0D)
-                        && !MaxHealthCompatibilityPolicy.shouldApplyRoll(500.0D, 75, 60.0D)
-                        && !MaxHealthCompatibilityPolicy.shouldApplyRoll(500.0D, 0, 60.0D)
-                        && MaxHealthCompatibilityPolicy.shouldApplyRoll(50.0D, 90, 50.0D),
-                "tier health repairs only its own roll or an original base, not another mod's maximum health");
+        check(MaxHealthCompatibilityPolicy.initialOwnership(60.0D, 75, 60.0D)
+                        && MaxHealthCompatibilityPolicy.initialOwnership(75.0D, 75, 60.0D)
+                        && !MaxHealthCompatibilityPolicy.initialOwnership(500.0D, 75, 60.0D)
+                        && !MaxHealthCompatibilityPolicy.initialOwnership(500.0D, 0, 60.0D)
+                        && MaxHealthCompatibilityPolicy.retainsOwnership(true, 50, 90, 50)
+                        && !MaxHealthCompatibilityPolicy.retainsOwnership(false, 40, 40, 60),
+                "growth preserves explicit external base ownership even when values coincide");
         ShoreProgressTracker shoreProgress = new ShoreProgressTracker();
         shoreProgress.reset(0);
         for (int tick = 0; tick <= 60; tick++) shoreProgress.observe(tick, 0, 8.0D + Math.sin(tick) * 0.05D);

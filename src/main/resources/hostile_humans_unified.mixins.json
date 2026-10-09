@@ -5,6 +5,7 @@
   "plugin": "club.someoneice.humangunner.compat.OptionalMixinPlugin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "LivingEntityGrowthDamageMixin",
     "AbstractArrowBallisticsMixin",
     "HumanProjectileCollisionMixin",
     "TaczHumanProjectileCollisionMixin",

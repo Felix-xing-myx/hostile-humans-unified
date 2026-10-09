@@ -685,3 +685,17 @@
 - 将canUse的搜索、玩家警戒、25格同队警戒传播、15格玩家围攻数量检查分拆为命名方法；构造器只接收Human，移除入口冗余instanceof/条件表达式。人数查询捕获本次Player候选和观察者，不再在过滤回调中读取可变目标字段；0上限仍立即拒绝，正上限仍使用有上限的getEntities。保留原普通搜索间隔、枪手目标死亡后的快速重选、撤退门控和对话；canContinueToUse逐字比较未变。HotSpot仍可能内联新方法，因此仅为候选结构加固，不声称修复JVM或稳定性已证明。
 - 更新既有ASM回归以跟随新搜索入口，并覆盖普通/快速搜索、玩家警戒、限额查询及超额拒绝的调用接入。静态核对控制流、范围、查询上限和持续目标逻辑，以及git diff --check通过；本轮未获构建指令，未运行Gradle/javac/回归，未替换JAR/修改实例参数、配置或存档，未启动游戏/push。待授权构建及保持其余条件一致的运行测试。
 - 用户确认测试始终使用同一个旧存档，其中残留旧命名空间实体和方块；日志旧ID跳过警告可由该背景解释，不能据此认定新模组继续注册或引用旧ID。此次不新增旧ID兼容，也不删除或迁移存档内容。若需精确定位重复警告来源，应另查实体/方块/客户端预览等具体载入路径，当前不将其判为原生崩溃根因。
+
+
+## 2026-10-10 统一成长系统（源码完成，未构建）
+
+- 基线32a9a4e1e98e40157e14d0b53e9a8bdff356b5b2，开始时main干净；不修改历史维护资料、其它工作树或测试实例，不构建/编译/启动游戏/push。
+- 主控/root负责main中的Human成长生命周期、健康与伤害入口、实际扣血Mixin、死亡确认、奖励保存及文档整合。配置负责人/root/growth_config使用GPT-6.1 Sol medium，独立worktrees/unified-growth-config、feature/unified-growth-config，允许UnifiedConfig/GrowthConfig/EquipmentGrowthPolicy/配置投影及默认/配置回归；提交301195109c18c896df54d20622d84845158df459，已cherry-pick为f3d9514。
+- UI负责人/root/growth_ui使用GPT-6.1 Sol medium，独立worktrees/unified-growth-ui、feature/unified-growth-ui，允许HumanCommandNetwork/SoldierCommandScreen/GrowthSnapshot/语言文件/协议静态测试；提交9685ce50669713e9dcc4243ce81529eb773b185a，已cherry-pick为a129155。只读审查/root/growth_review同模型medium，不编辑源码。
+- 公共接口：UnifiedConfig.growth()为服务器策略，装备共享其曲线与总开关；Tier.maxHealth()为完整基础生命；HumanGrowth.snapshot(Human)提供只读GrowthSnapshot；GrowthCombat.onTick调用HumanCommandNetwork.tickServer。协议7，token/UUID/entityId/维度/雇主/距离核验，10tick合并变化，客户端不读本地配置计算成长或决定显示。
+- 成长0～5级默认50/60/70/80/90/100%，每级40成长值；经验出生90～110%，每12成长值增1个百分点，封顶125%。生命默认40/60/80/100，先阶段后经验，枪伤不变。全部成长规则和四阶日期/装备早期参数集中global.growth，不增加旧配置迁移或继承文件。
+- 伤害采用LivingEntity.hurt及setHealth稳定SRG入口观察实际扣血并剔除嵌套重复，避免同次受伤内治疗/图腾抹去伤害；生物确认KILLED或玩家死亡重生后结算，第一击致死也先记贡献。每10实际生命伤害0.25，基础封顶4，严格超过300另加4，不要求尾刀、不识别Boss、不专门排除人偶，允许回血伤害累计。出生快照、贡献与未加载士兵奖励持久化；禁用失效未完成战斗但保留已赚奖励和培养记录，关闭时实际系数100%且UI隐藏。
+- 审查修正：外部生命base明确所有权，避免成长值碰巧相等后接管；奖励规则保存目标首次参战快照，配置修改不追溯；reload记录禁用代次，避免同tick切换漏失效；命令NBT加载通过join.loadedFromDisk区分新生和旧实体；升级不免费回血，原版模式保持20基础生命。
+- 最终边界修正：玩家死亡重生通过PlayerEvent.Clone确认，在END tick合并结算，避免立即重生漏记最终一击；普通DISCARDED不奖励。当前命名空间已有士兵在原版模式下保存的外部基础生命仍可恢复，成长升级/开关变化不额外回血，不接管其他模组独立修改的基础值。
+- 静态验证：Python UI契约9项、服务器源码契约10项全部通过；资源JSON解析、成长双语字段、废弃Java接口引用和git diff --check通过。只读javap及现有SRG映射核对LivingEntity.hurt/setHealth和Forge PlayerEvent.Clone接口；没有执行编译或启动验证。新增Java成长算术/奖励边界/持久化回归已接入既有UnifiedConfigTest，尚未编译运行。
+- 待授权构建与游戏验收：Mixin实际注入；真实生命扣除与回血/图腾/取消死亡、多方尾刀；卸载/保存/重启及奖励恰好领取一次；外部生命/原版模式/总开关；多人面板切换、服务器客户端不同配置；多士兵战斗性能。没有更新测试实例配置/JAR、启动游戏或push。版本保持3.7.0，配置/UI提交已整合，主控提交覆盖核心与说明。

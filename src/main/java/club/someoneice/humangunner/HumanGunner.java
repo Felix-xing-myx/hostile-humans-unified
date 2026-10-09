@@ -118,6 +118,11 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanGunner::onHumanFriendlyFire);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingHurt);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onSoldierDamage);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GrowthCombat::onDeath);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GrowthCombat::onLeave);
+        MinecraftForge.EVENT_BUS.addListener(GrowthCombat::onTick);
+        MinecraftForge.EVENT_BUS.addListener(GrowthCombat::onStopped);
+        MinecraftForge.EVENT_BUS.addListener(GrowthCombat::onPlayerClone);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingDamage);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanGunner::onLivingDeath);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, OfflineSoldierDeathReports::onDeath);
@@ -195,7 +200,7 @@ public final class HumanGunner {
             }
             OwnerOfflinePolicy.tick(human);
             HumanRelations.tick(human);
-            RandomizedHumanHealth.ensureApplied(human);
+            HumanGrowth.tick(human);
             HiredHumanHealthWarning.tick(human);
             if (human.getPersistentData().hasUUID(HumanRelations.TEMP_OWNER)) {
                 if (human.hasOwner()) {
@@ -307,6 +312,7 @@ public final class HumanGunner {
         if (!(event.getEntity() instanceof Human human)) {
             return;
         }
+        HumanGrowth.onJoin(human, event.loadedFromDisk());
         if (PeacefulHumanPolicy.onJoin(event, human)
                 && event.getLevel() instanceof ServerLevel level
                 && level.getServer().isSameThread()) initializeHumanIfReady(human);
@@ -354,7 +360,8 @@ public final class HumanGunner {
         if (human.getData() == null) {
             return false;
         }
-        RandomizedHumanHealth.applyOnce(human);
+        HumanGrowth.state(human);
+        GrowthHealth.apply(human);
         if (!HumanSpawnEquipment.completeIfReady(human)) return false;
         TierAttributes.apply(human);
         MovementSpeedController.normal(human);
@@ -456,6 +463,7 @@ public final class HumanGunner {
             if (directEntity == attacker) {
                 if (UnifiedConfig.get().vanillaMode()) return;
                 float multiplier = (float) TierAttributes.of(humanAttacker).meleeDamage();
+                multiplier *= (float) HumanGrowth.multiplier(humanAttacker);
                 Human human = humanAttacker;
                 if (human.getMainHandItem().getItem() instanceof net.minecraft.world.item.TridentItem) {
                     // The requested trident reduction applies to both the
@@ -471,10 +479,12 @@ public final class HumanGunner {
                 event.setAmount(event.getAmount() * multiplier);
             } else if (directEntity instanceof ThrownTrident) {
                 event.setAmount(event.getAmount()
-                        * (float) TierAttributes.of(humanAttacker).tridentDamage());
+                        * (float) TierAttributes.of(humanAttacker).tridentDamage()
+                        * (float) HumanGrowth.multiplier(humanAttacker));
             } else if (directEntity instanceof AbstractArrow) {
                 event.setAmount(event.getAmount()
-                        * (float) TierAttributes.of(humanAttacker).bowDamage());
+                        * (float) TierAttributes.of(humanAttacker).bowDamage()
+                        * (float) HumanGrowth.multiplier(humanAttacker));
             }
             return;
         }

@@ -1400,6 +1400,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     @Nullable
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficulty, MobSpawnType mobSpawnType, @Nullable SpawnGroupData spawnGroupData, @Nullable CompoundTag compoundTag) {
+        club.someoneice.humangunner.HumanGrowth.markBirth(this, serverLevelAccessor);
         if (mobSpawnType == MobSpawnType.NATURAL || mobSpawnType == MobSpawnType.CHUNK_GENERATION
                 || (mobSpawnType == MobSpawnType.EVENT
                     && club.someoneice.humangunner.NaturalHumanSpawnRules.isAutomaticBattleMember(serverLevelAccessor.getLevel()))) {
@@ -1499,6 +1500,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     public void readAdditionalSaveData(CompoundTag compound) {
         super.readAdditionalSaveData(compound);
+        club.someoneice.humangunner.HumanGrowth.onLoad(this);
         // tickCount is not persisted. A saved gunfire-until tick must not look
         // like a fresh hit when this entity is loaded with tickCount zero.
         getPersistentData().remove("hostile_humans_unified:incoming_gunfire_until");

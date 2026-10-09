@@ -5,6 +5,8 @@ import com.google.gson.*;
 /** Shared curve, global ownership and invalid-input regression checks. */
 public final class GrowthConfigTest {
     public static void main(String[] args) {
+        GrowthProgressionTest.main(args);
+        GrowthPersistenceTest.main(args);
         UnifiedConfig config = new UnifiedConfig(new JsonObject());
         GrowthConfig growth = config.growth();
         check(growth.enabled(), "default enabled");
@@ -33,7 +35,7 @@ public final class GrowthConfigTest {
                 && growth.stageAt("roamer", 70) == 3 && growth.stageAt("roamer", 90) == 4, "piecewise custom nodes");
         var profile = new UnifiedConfig(custom).equipmentGrowth().tiers().get("roamer");
         check(Math.abs(profile.progress(60) - .5) < 1e-12, "equipment shares curve interpolation");
-        check(new UnifiedConfig(json("{\"growth\":{\"enabled\":false}}")).growth().stageAt("roamer", 1) == 5, "disabled stage full");
+        check(new UnifiedConfig(json("{\"growth\":{\"enabled\":false}}")).growth().stageAt("roamer", 1) == 0, "disabled retains latent birth stage");
         check(!new UnifiedConfig(json("{\"growth\":{\"enabled\":false}}")).equipmentGrowth().enabled(), "same equipment switch");
         JsonObject bad = json("""
                 {"growth":{"stage_percent":[50,60,60,80,90,100],"stage_cost":[0,40,40,40,40],

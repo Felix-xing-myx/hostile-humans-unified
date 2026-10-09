@@ -71,7 +71,6 @@ public final class GrowthConfig {
     public double bonusDamageThreshold() { return bonusDamageThreshold; }
     public double bonusReward() { return bonusReward; }
     public int stageAt(String rank, long day) {
-        if (!enabled) return 5;
         EquipmentGrowthPolicy.Profile profile = equipmentGrowth.tiers().get(rank);
         if (profile == null) throw new IllegalArgumentException("Unknown growth rank: " + rank);
         return Math.max(0, Math.min(5, (int) Math.floor(profile.progress(day) * 5)));
