@@ -588,3 +588,12 @@
 - 静态验证：323份Java源码tree-sitter解析无错误，JSON/启用与停用入口/必要钩子/任务接线检查和git diff --check通过。Mixin0.8.5 javap确认无名通配签名解析及0..MAX选择数量，缺少正文签名不阻止reload内联回退；TaCZ当前三个换弹调用及射击/tick边界各一次。新增TaczAmmoMixinContractTest、扩展MaidHumanRelationTest及StructureCompatTest，已接入check但未编译执行。
 - 用户CHANGELOG完整文件SHA256 b05c6d8643feb7669502a7e1de0dd99d5d5d5a720f32f8f8263c85e0bf97dcbe保持。本轮版本仍3.6.5；没有Gradle/javac/构建/同步/游戏启动或push。README及docs/COMPATIBILITY.md已说明暂停范围、剩余内部契约和回退行为。
 - 后续构建与游戏验收：有无可选前置启动、TaCZ各类换弹及费用/通知/取消、PlayerAnimator有无两种动画和护甲及音轨、女仆身份牌/显式排除/爆炸、友军/PVP弹丸过滤、旧结构覆盖不启用且农夫乐事保持；静态检查不证明Mixin实际应用或未来各版本语义兼容。
+
+## 2026-10-09 兼容接口规范化与追击源码构建同步
+
+- 用户明确授权“构建并同步”，唯一目标E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21。版本保持3.6.5；构建基线0ff90b02aaffad4230794f513e1487bad3197ff3。
+- 首次构建遇PursuitNavigationTest错误要求TridentHybridGoal.tick直接调用追击，实际tickMelee/tickRanged均已接入。修正测试为检查tick到两个分支的调用及各自追击入口；提交ffab811d7aac0c406d6b9517f9f3989f68fa2ad7，仅修改测试，不改游戏逻辑。
+- Java17、三个显式API参数执行build lootScreeningTest --offline，重试BUILD SUCCESSFUL in 41s，49任务45执行4最新。TaCZ弹药Mixin契约、女仆285、追击23、地形434、弹丸23、结构679、可选依赖隔离409核心类、掉落13391及全部check通过；无效配置/结构ERROR为预期回退测试输出。日志：验证日志/build-compat-boundaries-20261009-retry.log；首次失败另存build-compat-boundaries-20261009.log。
+- 最终JAR版本/ZIP完整性、新适配器类、插件及停用Mixin清单核查通过。备份前与替换前均无非Gradle Java进程；旧JAR与14份相关配置逐一备份核对，备份：部署备份/20261009-181122-compat-boundaries-Forge_47.4.21/deployment.json。
+- 源/目标SHA256均19CC34D9E42BB048CF5F983D9E8C80594BA138A26F53980346D9C31FA13DE4B3，目标仅一份统一模组JAR（3831714字节），14份配置哈希保持。原用户CHANGELOG完整文件SHA256 b05c6d8643feb7669502a7e1de0dd99d5d5d5a720f32f8f8263c85e0bf97dcbe保持。
+- 未启动游戏、未推送或同步其它实例。构建与字节码合约测试不等同启动时Mixin应用及游戏验收；待重启实例验证普通/逐发/脚本换弹扣费及通知/取消、动画/护甲/音轨、有无PlayerAnimator、女仆身份牌与爆炸、友军/PVP弹丸、水面/地形追击连续性及旧兼容停用。
