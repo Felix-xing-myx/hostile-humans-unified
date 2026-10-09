@@ -19,14 +19,13 @@ final class TierConfigProjection {
         globalAi.addProperty("_说明_中文", "增强战斗AI总开关；具体撤退、恢复、盾牌与战术参数在四阶文件的ai中独立设置。");
         globalAi.addProperty("_description_en", "Enhanced combat AI master switch. Configure retreat, recovery, shields and tactics in each rank file's ai section.");
         if (ai.has("enabled")) globalAi.add("enabled", ai.get("enabled").deepCopy());
+        for (String key : List.of("_说明_enabled_中文", "_description_enabled_en"))
+            if (ai.has(key)) globalAi.add(key, ai.get(key).deepCopy());
         result.add("ai", globalAi);
         JsonObject tacz = object(result, "tacz");
         for (String rank : RANKS) tacz.remove(rank + "_gun_chance");
         removeRanks(tacz, "tier_damage_multipliers");
         removeRanks(tacz, "tier_gun_type_weights");
-        JsonObject recruitment = object(result, "recruitment");
-        removeRanks(recruitment, "max_hired_by_tier");
-        removeRanks(recruitment, "payment_by_tier");
         removeRanks(object(object(result, "spawning"), "progression"), "first_spawn_day_by_tier");
         // These groups have no global options after their four ranks move out.
         // Remove only shipped guidance, retaining unknown user extensions/notes.
@@ -74,14 +73,6 @@ final class TierConfigProjection {
         copyAt(root, "tacz.tier_damage_multipliers." + rank, tacz, "damage_multiplier");
         copyAt(root, "tacz.tier_gun_type_weights." + rank, tacz, "gun_type_weights");
         result.add("tacz", tacz);
-        JsonObject recruitment = object(metadata, "recruitment").deepCopy();
-        copyAt(root, "recruitment.max_hired_by_tier." + rank, recruitment, "max_hired");
-        JsonElement recruitmentRoot = root.get("recruitment");
-        JsonElement payments = at(root, "recruitment.payment_by_tier");
-        if ((recruitmentRoot != null && !recruitmentRoot.isJsonObject())
-                || (payments != null && !payments.isJsonObject())) recruitment.add("payment", JsonNull.INSTANCE);
-        else copyAt(root, "recruitment.payment_by_tier." + rank, recruitment, "payment");
-        result.add("recruitment", recruitment);
         JsonElement tierAi = at(root, "tier_ai." + rank);
         JsonObject ai = tierAi != null && tierAi.isJsonObject() ? tierAi.getAsJsonObject().deepCopy()
                 : object(root, "ai").deepCopy();
@@ -94,9 +85,10 @@ final class TierConfigProjection {
     static JsonObject arrange(JsonObject source, boolean rank) {
         JsonObject result = source.deepCopy();
         removeRetiredControls(result, rank);
+        enforceOwnership(result, rank);
         List<String> sections = rank
                 ? List.of("schema_version", "_说明_中文", "_description_en", "attributes", "spawning",
-                    "equipment_loadout", "ammunition", "food", "potions", "recruitment", "damage_multipliers",
+                    "equipment_loadout", "ammunition", "food", "potions", "damage_multipliers",
                     "combat", "ai", "movement", "weapon_spread_degrees", "tacz", "equipment_growth")
                 : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "ammunition",
                     "equipment_integration", "ai", "spawning", "recruitment", "damage", "tacz",
@@ -110,19 +102,55 @@ final class TierConfigProjection {
         orderGroup(result, "spawning", rank ? List.of("spawn_multiplier", "first_spawn_day")
                 : List.of("enabled", "admission_chance", "battle_admission_chance", "progression",
                     "encounter_cooldown_ticks", "nearby_horizontal_radius", "nearby_vertical_radius", "density_divisor"));
-        orderGroup(result, "recruitment", rank ? List.of("max_hired", "payment")
-                : List.of("allow_hired_pvp_damage", "soldier_messages"));
+        orderGroup(result, "recruitment", List.of("max_hired_by_tier", "payment_by_tier", "allow_hired_pvp_damage", "soldier_messages"));
         orderGroup(result, "ai", List.of("enabled", "item_recovery_enabled", "retreat_health_ratio", "low_health_combat", "critical_health_ratio",
                 "resume_health_ratio", "gradual_heal_interval_ticks", "food_recovery_min_health", "food_recovery_max_health",
                 "recovery_damage_tolerance_ratio", "recovery_commit_ticks", "shield_block_chance_after_hit",
                 "shield_block_duration_min_ticks", "shield_block_duration_max_ticks", "shield_block_cooldown_ticks"));
         orderGroup(result, "tacz", rank ? List.of("gun_chance", "damage_multiplier", "gun_type_weights")
                 : List.of("enabled", "natural_spawn_firearms_enabled", "auto_add_new_guns", "auto_added_gun_weight",
-                    "excluded_auto_gun_types", "excluded_gun_namespaces", "gun_blacklist", "human_gun_damage_multiplier",
+                    "excluded_auto_gun_types", "excluded_gun_namespaces", "gun_blacklist",
                     "pillager_gun_damage_multiplier", "shield_damage_multiplier", "tamed_maid_damage_multiplier",
                     "forced_ranged_gun_chance", "gun_drop_chance", "gun_whitelist",
                     "hired_gun_additional_whitelist"));
         return ordered(result, sections);
+    }
+
+    private static void enforceOwnership(JsonObject data, boolean rank) {
+        JsonObject defaults = UnifiedConfig.defaults();
+        if (rank) {
+            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay")) data.remove(key);
+            removeOptions(object(data, "ai"), List.of("enabled"));
+            removeOptions(object(data, "ammunition"), List.of("consume_ammunition"));
+            removeOptions(object(data, "equipment_growth"), List.of("enabled"));
+            for (String key : object(defaults, "spawning").keySet())
+                if (!key.startsWith("_")) removeOptions(object(data, "spawning"), List.of(key));
+            for (String key : object(defaults, "damage").keySet())
+                if (!key.startsWith("_")) removeOptions(object(data, "damage_multipliers"), List.of(key));
+            JsonObject tacz = object(data, "tacz");
+            for (String key : object(defaults, "tacz").keySet()) {
+                if (!key.startsWith("_") && !List.of("gun_chance", "damage_multiplier", "gun_type_weights").contains(key))
+                    removeOptions(tacz, List.of(key));
+            }
+        } else {
+            for (String group : List.of("tiers", "equipment_loadouts", "tier_ai", "_tier_file_metadata")) removeRanks(data, group);
+            removeRanks(object(data, "equipment_growth"), "tiers");
+            removeRanks(object(object(data, "spawning"), "progression"), "first_spawn_day_by_tier");
+            JsonObject ai = object(data, "ai");
+            for (String key : object(defaults, "ai").keySet())
+                if (!key.startsWith("_") && !key.equals("enabled")) removeOptions(ai, List.of(key));
+            JsonObject tacz = object(data, "tacz");
+            for (String tier : RANKS) removeOptions(tacz, List.of(tier + "_gun_chance"));
+            removeRanks(tacz, "tier_damage_multipliers");
+            removeRanks(tacz, "tier_gun_type_weights");
+            for (String key : List.of("damage_multipliers", "attributes", "movement", "combat", "weapon_spread_degrees", "equipment_loadout", "food", "potions")) data.remove(key);
+            removeOptions(object(data, "ammunition"), List.of("arrows", "magazines"));
+            for (String key : object(object(object(defaults, "equipment_growth"), "tiers"), "roamer").keySet())
+                if (!key.startsWith("_")) removeOptions(object(data, "equipment_growth"), List.of(key));
+            removeOptions(object(data, "spawning"), List.of("spawn_multiplier", "first_spawn_day"));
+            removeOptions(object(data, "tacz"), List.of("gun_chance", "damage_multiplier", "gun_type_weights", "human_gun_damage_multiplier"));
+            removeOptions(object(data, "damage"), List.of("melee_damage_multiplier", "arrow_damage_multiplier", "thrown_trident_damage_multiplier"));
+        }
     }
 
     private static void removeRetiredControls(JsonObject data, boolean rank) {
@@ -227,18 +255,13 @@ final class TierConfigProjection {
         copyTo(file, "tacz.gun_chance", root, "tacz." + rank + "_gun_chance");
         copyTo(file, "tacz.damage_multiplier", root, "tacz.tier_damage_multipliers." + rank);
         copyTo(file, "tacz.gun_type_weights", root, "tacz.tier_gun_type_weights." + rank);
-        copyTo(file, "recruitment.max_hired", root, "recruitment.max_hired_by_tier." + rank);
-        JsonElement recruitment = file.get("recruitment");
-        if (recruitment != null && !recruitment.isJsonObject()) put(root, "recruitment.payment_by_tier." + rank, JsonNull.INSTANCE);
-        else copyTo(file, "recruitment.payment", root, "recruitment.payment_by_tier." + rank);
         JsonObject ai = object(file, "ai").deepCopy();
         ai.remove("enabled");
         put(root, "tier_ai." + rank, ai);
         // Unknown metadata in the new grouped areas remains available for future readers.
-        for (String group : List.of("tacz", "recruitment")) {
+        for (String group : List.of("tacz")) {
             JsonObject extras = object(file, group).deepCopy();
-            for (String key : group.equals("tacz") ? List.of("gun_chance", "damage_multiplier", "gun_type_weights")
-                    : List.of("max_hired", "payment")) extras.remove(key);
+            for (String key : List.of("gun_chance", "damage_multiplier", "gun_type_weights")) extras.remove(key);
             if (extras.size() != 0) put(root, "_tier_file_metadata." + rank + "." + group, extras);
         }
     }
@@ -248,7 +271,7 @@ final class TierConfigProjection {
         for (var entry : defaults.entrySet()) {
             String key = entry.getKey(), child = path.isEmpty() ? key : path + "." + key;
             if (!data.has(key)) data.add(key, entry.getValue().deepCopy());
-            else if (!child.equals("recruitment.payment") && !child.equals("tacz.gun_type_weights") && !child.equals("tacz.gun_whitelist")
+            else if (!CurrentConfigDefaults.userMap(child) && !child.equals("tacz.gun_type_weights") && !child.equals("tacz.gun_whitelist")
                     && !child.equals("tacz.hired_gun_additional_whitelist")
                     && data.get(key).isJsonObject() && entry.getValue().isJsonObject())
                 fill(data.getAsJsonObject(key), entry.getValue().getAsJsonObject(), child);
@@ -303,23 +326,45 @@ final class TierConfigProjection {
     /** Keep each field's bilingual help directly above the value, including projected fields. */
     private static JsonObject adjacentGuidance(JsonObject source) {
         JsonObject result = new JsonObject();
+        if (source.has("schema_version")) result.add("schema_version", source.get("schema_version"));
+        for (String key : List.of("_说明_中文", "_description_en")) if (source.has(key)) result.add(key, source.get(key));
         for (var entry : source.entrySet()) {
             String key = entry.getKey();
-            if (guidance(key)) {
-                String field = key.startsWith("_说明_") && key.endsWith("_中文") && key.length() > 7
-                        ? key.substring(4, key.length() - 3)
-                        : key.startsWith("_description_") && key.endsWith("_en") && key.length() > 16
-                        ? key.substring(13, key.length() - 3) : "";
-                if (!field.isEmpty() && source.has(field)) continue;
-            } else {
-                for (String note : List.of("_说明_" + key + "_中文", "_description_" + key + "_en"))
-                    if (source.has(note)) result.add(note, source.get(note));
-            }
-            JsonElement value = entry.getValue();
-            result.add(key, value.isJsonObject() ? adjacentGuidance(value.getAsJsonObject()) : value);
+            if (guidance(key) || key.equals("schema_version")) continue;
+            for (String note : List.of("_说明_" + key + "_中文", "_description_" + key + "_en"))
+                if (source.has(note)) result.add(note, source.get(note));
+            result.add(key, arrangeValue(entry.getValue()));
         }
+        // Unknown user notes remain available, after the controls they supplement.
+        for (var entry : source.entrySet()) if (guidance(entry.getKey()) && !result.has(entry.getKey())) result.add(entry.getKey(), entry.getValue());
         return result;
     }
+    private static JsonElement arrangeValue(JsonElement value) {
+        if (value.isJsonObject()) return adjacentGuidance(value.getAsJsonObject());
+        if (value.isJsonArray()) {
+            JsonArray array = new JsonArray();
+            for (JsonElement entry : value.getAsJsonArray()) array.add(arrangeValue(entry));
+            return array;
+        }
+        return value;
+    }
+
+    /** Refresh shipped help only; never insert a missing gameplay value into an existing file. */
+    static void refreshGuidance(JsonObject data, JsonObject defaults) {
+        for (var entry : defaults.entrySet()) {
+            String key = entry.getKey();
+            if (guidance(key)) {
+                String field = key.startsWith("_说明_") && key.endsWith("_中文") ? key.substring(4, key.length() - 3)
+                        : key.startsWith("_description_") && key.endsWith("_en") ? key.substring(13, key.length() - 3) : "";
+                if (key.equals("_说明_中文") || key.equals("_description_en") || data.has(field)) data.add(key, entry.getValue().deepCopy());
+            } else if (entry.getValue().isJsonObject() && data.has(key) && data.get(key).isJsonObject())
+                refreshGuidance(data.getAsJsonObject(key), entry.getValue().getAsJsonObject());
+        }
+        // Shipped paragraph blocks have been replaced by field-specific guidance.
+        for (String key : List.copyOf(data.keySet())) if (guidance(key) && !defaults.has(key)
+                && ConfigFieldHelp.isShippedParagraph(key)) data.remove(key);
+    }
+
     private static JsonObject ensure(JsonObject root, String key) {
         if (!root.has(key) || !root.get(key).isJsonObject()) root.add(key, new JsonObject());
         return root.getAsJsonObject(key);

@@ -109,25 +109,23 @@ public final class UnifiedConfigTest {
                 && config.recruitmentLimit(2) == 6 && config.recruitmentLimit(3) == 3,
                 "legacy recruitment limits retained as defaults");
         check(!config.allowHiredPvpDamage(), "hired PvP damage defaults off");
-        check(Math.abs(config.damage("arrow_damage_multiplier", 0) - 1.8144D) < 1.0E-9D
-                        && Math.abs(config.damage("thrown_trident_damage_multiplier", 0) - 1.26D) < 1.0E-9D
-                        && Math.abs(config.damage("trident_stab_damage_multiplier", 0) / 0.6D - 0.7D) < 1.0E-9D,
-                "combined arrow and thrown-trident defaults preserve previous total multipliers");
+        check(Math.abs(config.tier("tier1").bowDamage() - 1.8144D) < 1.0E-9D
+                        && Math.abs(config.tier("tier1").tridentDamage() - 1.26D) < 1.0E-9D
+                        && config.tier("tier1").meleeDamage() == 1.7D,
+                "rank output defaults preserve previous combined multipliers");
         UnifiedConfig damageOverrides = new UnifiedConfig(JsonParser.parseString("""
-                {"damage":{"arrow_damage_multiplier":72,"thrown_trident_damage_multiplier":999,
-                "melee_damage_multiplier":0},"tiers":{"tier1":{"damage_multipliers":{
-                "arrow_damage_multiplier":2,"thrown_trident_damage_multiplier":3,"damage_taken_multiplier":0.5}}}}
+                {"tiers":{"tier1":{"damage_multipliers":{"melee_damage_multiplier":0,
+                "arrow_damage_multiplier":72,"thrown_trident_damage_multiplier":9999,"damage_taken_multiplier":0.5}}},
+                "tacz":{"tier_damage_multipliers":{"tier1":2.5,"tier2":999}}}
                 """).getAsJsonObject());
-        check(damageOverrides.damage("arrow_damage_multiplier", 0) == 72
-                && damageOverrides.damage("thrown_trident_damage_multiplier", 0) == 100
-                && damageOverrides.damage("melee_damage_multiplier", 1) == 0,
-                "current damage controls support combined range, clamping and explicit zero");
-        check(damageOverrides.tier("tier1").bowDamage() == 2
-                && damageOverrides.tier("tier1").tridentDamage() == 3
-                && damageOverrides.tier("tier1").incomingDamage() == 0.5
-                && damageOverrides.tier("tier2").bowDamage() == 1, "renamed rank controls are independent");
-        check(HumanGunnerConfig.parse(config.gunConfig()).humanGunDamageMultiplier() == 0.5D,
-                "human firearm damage is half the TaCZ base before tier-specific scaling");
+        check(damageOverrides.tier("tier1").bowDamage() == 72
+                && damageOverrides.tier("tier1").tridentDamage() == 1000
+                && damageOverrides.tier("tier1").meleeDamage() == 0,
+                "rank output supports combined ranges, clamping and explicit zero");
+        check(damageOverrides.tier("tier1").incomingDamage() == 0.5
+                && damageOverrides.tier("tier2").bowDamage() == 1.8144D, "rank controls are independent");
+        check(config.tierGunDamage("tier1") == 0.5D && damageOverrides.tierGunDamage("tier1") == 2.5D
+                && damageOverrides.tierGunDamage("tier2") == 100D, "sole rank firearm output factor and clamp");
 
         JsonObject accuracyOverride = JsonParser.parseString("""
                 {"tiers":{"tier2":{"weapon_spread_degrees":{
@@ -236,8 +234,6 @@ public final class UnifiedConfigTest {
                         Map.of(id("test:hired_only"), "rifle"), s -> false
                 ).containsKey(id("test:hired_only")),
                 "hired-only guns never enter the wild spawn pool");
-        disabled.addProperty("human_gun_damage_multiplier", 2.5);
-        check(HumanGunnerConfig.parse(disabled).humanGunDamageMultiplier() == 2.5, "gun multipliers above one allowed");
 
         JsonObject bad = JsonParser.parseString("""
                 {"tiers":{"roamer":{"attributes":{"health_min":900,"health_max":5,"attack_damage":-30},

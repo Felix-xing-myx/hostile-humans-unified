@@ -143,8 +143,7 @@ final class TaczIntegration implements GunSupport {
                 return;
             }
             event.setBaseAmount(event.getBaseAmount()
-                    * (float) (HumanGunnerConfig.get().humanGunDamageMultiplier()
-                    * UnifiedConfig.get().tierGunDamage(TierAttributes.key(attacker))));
+                    * (float) UnifiedConfig.get().tierGunDamage(TierAttributes.key(attacker)));
         } else if (event.getAttacker() instanceof Pillager) {
             event.setBaseAmount(event.getBaseAmount()
                     * (float) HumanGunnerConfig.get().pillagerGunDamageMultiplier());

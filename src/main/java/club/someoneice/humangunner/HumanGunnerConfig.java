@@ -18,7 +18,6 @@ public record HumanGunnerConfig(
         double roamerGunChance,
         double forcedRangedChance,
         double gunDropChance,
-        double humanGunDamageMultiplier,
         double pillagerGunDamageMultiplier,
         boolean autoAddNewGuns,
         int autoAddedGunWeight,
@@ -160,8 +159,6 @@ public record HumanGunnerConfig(
                     ? root.get("roamer_gun_chance").getAsDouble() : 0.08D;
             double dropChance = root.has("gun_drop_chance")
                     ? root.get("gun_drop_chance").getAsDouble() : 0.01D;
-            double damageMultiplier = root.has("human_gun_damage_multiplier")
-                    ? root.get("human_gun_damage_multiplier").getAsDouble() : 0.5D;
             double pillagerDamageMultiplier = root.has("pillager_gun_damage_multiplier")
                     ? root.get("pillager_gun_damage_multiplier").getAsDouble() : 0.4D;
             boolean autoAddNew = root.has("auto_add_new_guns")
@@ -204,7 +201,6 @@ public record HumanGunnerConfig(
                     clamp(roamerChance),
                     clamp(forcedChance),
                     clamp(dropChance),
-                    clampDamageMultiplier(damageMultiplier),
                     clampDamageMultiplier(pillagerDamageMultiplier),
                     autoAddNew,
                     autoAddedWeight,
@@ -228,7 +224,6 @@ public record HumanGunnerConfig(
                 0.08D,
                 0.33D,
                 0.01D,
-                0.5D,
                 0.4D,
                 false,
                 5,

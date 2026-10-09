@@ -112,11 +112,11 @@ public final class UnifiedConfig {
                     number(object(t, "attributes"), "follow_range",
                             defaultAttributes.get("follow_range").getAsDouble(), 8, 128),
                     number(object(t, "damage_multipliers"), "melee_damage_multiplier",
-                            defaultDamage.get("melee_damage_multiplier").getAsDouble(), 0, 10),
+                            defaultDamage.get("melee_damage_multiplier").getAsDouble(), 0, 100),
                     number(object(t, "damage_multipliers"), "arrow_damage_multiplier",
-                            defaultDamage.get("arrow_damage_multiplier").getAsDouble(), 0, 10),
+                            defaultDamage.get("arrow_damage_multiplier").getAsDouble(), 0, 1000),
                     number(object(t, "damage_multipliers"), "thrown_trident_damage_multiplier",
-                            defaultDamage.get("thrown_trident_damage_multiplier").getAsDouble(), 0, 10),
+                            defaultDamage.get("thrown_trident_damage_multiplier").getAsDouble(), 0, 1000),
                     number(object(t, "damage_multipliers"), "damage_taken_multiplier",
                             defaultDamage.get("damage_taken_multiplier").getAsDouble(), 0, 10),
                     number(object(t, "spawning"), "spawn_multiplier",
@@ -272,14 +272,10 @@ public final class UnifiedConfig {
     public boolean betterCombatSoldierMeleeEnabled() { return betterCombatSoldierMeleeEnabled; }
     public boolean taczEnabled() { return bool(object(root, "tacz"), "enabled", true); }
     public boolean blacklisted(String id) { return blacklist.contains(id); }
-    public double damage(String key, double fallback) {
-        // Combined projectile factors retain the old two-factor range (10 × 10).
-        double maximum = key.equals("arrow_damage_multiplier") || key.equals("thrown_trident_damage_multiplier") ? 100 : 10;
-        return number(object(root, "damage"), key, fallback, 0, maximum);
-    }
+    public double damage(String key, double fallback) { return number(object(root, "damage"), key, fallback, 0, 10); }
     public double gunSetting(String key, double fallback) { return number(object(root, "tacz"), key, fallback, 0, 10); }
     public double tierGunDamage(String key) {
-        return number(object(object(root, "tacz"), "tier_damage_multipliers"), key, 1, 0, 10);
+        return number(object(object(root, "tacz"), "tier_damage_multipliers"), key, .5, 0, 100);
     }
     public String disabledStructures() { return string(object(root, "native_gameplay"), "disabled_structures", ""); }
     public int maxTargeting() { return (int) number(object(root, "native_gameplay"), "max_targeting", 3, 0, 10000); }

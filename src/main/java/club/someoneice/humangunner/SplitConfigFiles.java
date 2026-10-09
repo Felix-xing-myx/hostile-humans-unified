@@ -72,10 +72,10 @@ final class SplitConfigFiles {
             byte[] original = Files.readAllBytes(path);
             JsonObject data = read(path, 2);
             boolean imported = rank && integrations.test(rankName(path), data);
+            TierConfigProjection.refreshGuidance(data, defaults);
             JsonObject arranged = TierConfigProjection.arrange(data, rank);
             byte[] output = GSON.toJson(arranged).getBytes(StandardCharsets.UTF_8);
-            // Reorder only raw fields. Missing defaults remain in memory; user values,
-            // custom notes and empty pools are not replaced by a layout refresh.
+            // Refresh help and ownership; missing values remain in memory and explicit pools stay authoritative.
             if ((imported || !Arrays.equals(original, output)) && !writeCurrent(path, original, arranged))
                 data = read(path, 2);
             else data = arranged;
@@ -85,8 +85,10 @@ final class SplitConfigFiles {
         } catch (Exception invalid) {
             LogUtils.getLogger().error("Cannot load human configuration {}; leaving input untouched and using defaults in memory", path, invalid);
             JsonObject data = defaults.deepCopy();
-            if (rank) TierConfigProjection.put(data, "recruitment.payment", JsonNull.INSTANCE);
-            else TierConfigProjection.put(data, "equipment_integration.auto_import_enabled", new JsonPrimitive(false));
+            if (!rank) {
+                TierConfigProjection.put(data, "recruitment.payment_by_tier", JsonNull.INSTANCE);
+                TierConfigProjection.put(data, "equipment_integration.auto_import_enabled", new JsonPrimitive(false));
+            }
             return data;
         }
     }
@@ -120,10 +122,10 @@ final class SplitConfigFiles {
 
     private static void describe(JsonObject data, boolean rank) {
         if (!data.has("_说明_中文")) data.addProperty("_说明_中文", rank
-                ? "本阶属性、装备、弹药、战斗 AI、生成、枪械与招聘设置。修改后重启生效；本阶常用设置在前，细节参数在后。"
+                ? "本阶属性、装备、弹药、战斗 AI、生成与枪械设置。修改后重启生效；本阶常用设置在前，细节参数在后。"
                 : "全局开关、伤害、自然生成、装备成长、招聘与兼容设置。修改后重启生效；分阶设置在各阶文件中。" );
         if (!data.has("_description_en")) data.addProperty("_description_en", rank
-                ? "This rank's attributes, equipment, ammunition, AI, spawning, firearms and hiring. Restart to apply; common settings precede detailed tuning."
+                ? "This rank's attributes, equipment, ammunition, AI, spawning and firearms. Restart to apply; common settings precede detailed tuning."
                 : "Global switches, damage, spawning, equipment growth, hiring and integrations. Restart to apply; rank options live in the rank files.");
     }
 

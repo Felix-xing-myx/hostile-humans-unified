@@ -455,8 +455,7 @@ public final class HumanGunner {
                     || GunSupport.get().isBullet(event.getSource())) return;
             if (directEntity == attacker) {
                 if (UnifiedConfig.get().vanillaMode()) return;
-                float multiplier = (float) (UnifiedConfig.get().damage("melee_damage_multiplier", 1.7)
-                        * TierAttributes.of(humanAttacker).meleeDamage());
+                float multiplier = (float) TierAttributes.of(humanAttacker).meleeDamage();
                 Human human = humanAttacker;
                 if (human.getMainHandItem().getItem() instanceof net.minecraft.world.item.TridentItem) {
                     // The requested trident reduction applies to both the
@@ -472,12 +471,10 @@ public final class HumanGunner {
                 event.setAmount(event.getAmount() * multiplier);
             } else if (directEntity instanceof ThrownTrident) {
                 event.setAmount(event.getAmount()
-                        * (float) (UnifiedConfig.get().damage("thrown_trident_damage_multiplier", 1.26)
-                        * TierAttributes.of(humanAttacker).tridentDamage()));
+                        * (float) TierAttributes.of(humanAttacker).tridentDamage());
             } else if (directEntity instanceof AbstractArrow) {
                 event.setAmount(event.getAmount()
-                        * (float) (UnifiedConfig.get().damage("arrow_damage_multiplier", 1.8144)
-                        * TierAttributes.of(humanAttacker).bowDamage()));
+                        * (float) TierAttributes.of(humanAttacker).bowDamage());
             }
             return;
         }
