@@ -3,6 +3,7 @@ package club.someoneice.humangunner.compat;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +29,7 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
         else return true;
         try {
             ClassNode target = MixinService.getService().getBytecodeProvider().getClassNode(targetClassName, false);
-            if (hasMethod(target, contract)) return true;
+            if (hasMethod(target, contract, contract.equals(SPARTAN_RANDOMIZER))) return true;
             LOGGER.warn("Skipping optional upstream fix {}: {} no longer exposes {}. "
                     + "The upstream behavior is retained; this fix needs a compatibility review.",
                     mixinClassName, targetClassName, contract);
@@ -41,8 +42,10 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
         }
     }
 
-    public static boolean hasMethod(ClassNode target, String contract) {
-        return target.methods.stream().anyMatch(method -> (method.name + method.desc).equals(contract));
+    public static boolean hasMethod(ClassNode target, String contract, boolean isStatic) {
+        return target.methods.stream().anyMatch(method -> (method.name + method.desc).equals(contract)
+                && ((method.access & Opcodes.ACC_STATIC) != 0) == isStatic
+                && (method.access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE)) == 0);
     }
     @Override public void onLoad(String mixinPackage) { }
     @Override public String getRefMapperConfig() { return null; }

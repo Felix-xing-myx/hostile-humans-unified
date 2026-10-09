@@ -38,6 +38,13 @@ public final class StructureCompatTest {
         Map<String, Set<String>> namespaces = new TreeMap<>();
         Set<String> leaks = new TreeSet<>();
         try (var fs = FileSystems.newFileSystem(artifact); var jar = new ZipFile(artifact.toFile())) {
+            var mixins = JsonParser.parseString(Files.readString(fs.getPath("/humangunner.mixins.json"))).getAsJsonObject();
+            var enabledMixins = new HashSet<String>();
+            mixins.getAsJsonArray("mixins").forEach(value -> enabledMixins.add(value.getAsString()));
+            check(!enabledMixins.contains("PolymorphConcurrencyMixin"), "legacy Polymorph fix not activated");
+            check(!enabledMixins.contains("PillagersGunAmmoMixin"), "legacy Pillagers Gun fix not activated");
+            check(enabledMixins.contains("TaczHumanReloadMixin") && enabledMixins.contains("TaczHumanProjectileCollisionMixin"),
+                    "required ammo and friendly collision hooks remain enabled");
             for (String pack : PACKS) {
                 var loaded = EventHandlerMod.readAddon(fs.getPath("/datapacks/" + pack), pack);
                 check(loaded.isPresent(), "real metadata reader loads " + pack);

@@ -578,3 +578,13 @@
 - tacz_boundary：worktrees/tacz-compat-boundaries，refactor/tacz-compat-boundaries，仅TaCZ换弹/射击边界及相关测试；保留弹药交易与友军规则，不修改共享JSON/构建/日志。
 - client_boundary：worktrees/client-compat-boundaries，refactor/client-compat-boundaries，仅客户端TaCZ/BetterCombat/PlayerAnimator反射适配及诊断；不修改共享JSON/构建/日志。
 - 接口：禁止用静默跳过必要Mixin来实现兼容；公开API优先，必要内部接口集中管理，保留可选依赖隔离。主控审核双方交付提交和静态验证后顺序整合。
+
+### 接口规范化交付与整合结果
+
+- 主控提交754f080：暂停Traveler's Backpack出生装备及渲染、Dungeons Mobs信标替换、Villager Names触发命名、Quark/mctb及Waystones结构覆盖；Mixin清单移除Polymorph/Pillagers Gun。仅farmers覆盖可自动选中，保留原结构资源但不启用；旧存档物品/名字/实体不删除。
+- tacz_boundary使用GPT6.1 Sol medium，交付38710e884563c79817b2d1baf20e4cff09763171，主控cherry-pick d053410。TaczAmmoMixinContract集中方法及调用描述符，reload正文按无名签名与调用点识别，支持重命名/编号变化/内联，require=1/allow=1维持扣费唯一性；交易算法、线程、通知顺序和弹丸保护不改。
+- client_boundary使用GPT6.1 Sol medium，交付acb2be010c4e3f3b85a5d2e843ff6c2e98a737a0，主控cherry-pick 072689c。ClientAnimationCompatibility集中客户端反射，按功能与操作诊断，缓存失败解析；保留TaCZ原生回退、现有攻击/护甲动画。javap核对35个可选类型，两个TaCZ非公开契约无等价公开NPC接口，仍明确保留，不宣称完全脱离内部API。
+- 主控MaidTargetRules隔离上游排除配置，使用IAttackTask命名排除常量，异常时拒绝攻击人类并明确诊断；OptionalMixinPlugin只对女仆爆炸/斯巴达随机数两个非核心补丁检查精确签名、实例/静态及可注入正文，缺失警告跳过保留上游行为，必需弹药/友军钩子不允许被静默跳过。当前女仆1.5.3/斯巴达3.2.1字节码签名核对通过。
+- 静态验证：323份Java源码tree-sitter解析无错误，JSON/启用与停用入口/必要钩子/任务接线检查和git diff --check通过。Mixin0.8.5 javap确认无名通配签名解析及0..MAX选择数量，缺少正文签名不阻止reload内联回退；TaCZ当前三个换弹调用及射击/tick边界各一次。新增TaczAmmoMixinContractTest、扩展MaidHumanRelationTest及StructureCompatTest，已接入check但未编译执行。
+- 用户CHANGELOG完整文件SHA256 b05c6d8643feb7669502a7e1de0dd99d5d5d5a720f32f8f8263c85e0bf97dcbe保持。本轮版本仍3.6.5；没有Gradle/javac/构建/同步/游戏启动或push。README及docs/COMPATIBILITY.md已说明暂停范围、剩余内部契约和回退行为。
+- 后续构建与游戏验收：有无可选前置启动、TaCZ各类换弹及费用/通知/取消、PlayerAnimator有无两种动画和护甲及音轨、女仆身份牌/显式排除/爆炸、友军/PVP弹丸过滤、旧结构覆盖不启用且农夫乐事保持；静态检查不证明Mixin实际应用或未来各版本语义兼容。
