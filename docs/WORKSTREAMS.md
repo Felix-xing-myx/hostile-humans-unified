@@ -705,3 +705,11 @@
 - 主控 /root 基于 fb5522a 在 main 复核，不派生编辑会话、不修改实例。前一轮属于有效进展：配置/UI/核心提交已整合并产生静态证据；本轮继续检查生命周期与配置切换。
 - 发现原版模式重载仅刷新生命、近战基础属性仍停留在初始化值。抽出 TierAttributes.applyCombatBase，在 HumanGrowth 检测服务器配置实例变化时刷新该值，保留移动、护甲及外部 attribute modifiers；不改变成长总开关、枪伤和其他配置职责。
 - 扩展服务器源码契约至11项并通过；UI契约仍9项通过。新增 docs/GROWTH_ACCEPTANCE.md，逐项列出当前接入证据、未运行验证和后续验收顺序。未执行构建/Java回归/同步/游戏测试，完整目标继续等待适当运行证据，不作完成验收声明。
+
+## 2026-10-10 统一成长3.7.0构建及测试实例同步
+
+- 用户明确授权构建并同步。主控main独立执行；运行时代码基线655c61c，补充回归断言提交f50c84c。第一次构建源码编译通过，旧ASM断言仍在TierAttributes.apply查attackBase；第二次构建成长算术/持久化/配置测试通过后，旧默认JSON最后章节必须为TaCZ断言失败。分别改为核验初始化/重载均接入共用攻击基础方法，以及唯一全局growth和分阶不重复定义。未放宽成长计算或伤害规则，失败产物不投放。
+- Java17、仓库gradlew.bat及三个显式只读API路径执行build lootScreeningTest --offline；最终BUILD SUCCESSFUL in 45s，50任务46执行4最新。GrowthProgressionTest 23、GrowthPersistenceTest 5、GrowthConfigTest、UnifiedConfigTest 128、TierConfigFilesTest 2068、LootScreeningTest 13391及全部check通过。三次日志保存在验证日志/build-3.7.0-growth-20261010*.log。
+- 备份与替换前检查无Java游戏进程。原3.7.0 JAR及五份配置备份至部署备份/20261010-011704-3.7.0-growth-Forge_47.4.21，deployment.json包含源码提交及前后哈希。配置把原equipment_growth参数集中global.growth.profiles，保留原开关/日期/早期装备设置；增加阶段、经验与奖励项；各阶用完整生命40/60/80/100替换生命上下限随机项。逐值比较确认其他有效配置、自定义池及显式空池未改变，没有新增继承/迁移文件。
+- 唯一投放E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\hostile-humans-unified-1.20.1-3.7.0.jar，3829613字节；源/目标SHA-256一致496A34D8FFA8477FD5468003674D3787A4F2E5A7CE0B952F9B08615198B468CD。独立复核备份/现件哈希、五配置归属/默认生命、产物新Mixin类及重映射目标字符串通过。
+- docs/GROWTH_ACCEPTANCE.md已更新自动化证据。未启动游戏/修改存档/同步其他实例/push；版本仍3.7.0测试中，用户自行进行成长/奖励/存档/UI/性能游戏验收，目标不因构建通过而标记全部验收完成。
