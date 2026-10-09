@@ -4,10 +4,6 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import com.github.tartaricacid.touhoulittlemaid.api.event.MaidHurtEvent;
 import com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid;
 import com.github.tartaricacid.touhoulittlemaid.api.task.IAttackTask;
-import com.github.tartaricacid.touhoulittlemaid.config.subconfig.MaidConfig;
-import com.github.tartaricacid.touhoulittlemaid.init.InitTaskData;
-import com.github.tartaricacid.touhoulittlemaid.entity.data.inner.AttackListData;
-import com.github.tartaricacid.touhoulittlemaid.entity.misc.MonsterType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -17,7 +13,6 @@ import net.minecraft.world.Difficulty;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
-import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.eventbus.api.EventPriority;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -52,11 +47,7 @@ public final class TouhouMaidCompat {
         if (!(maid.getTask() instanceof IAttackTask) || !human.isAlive()
                 || maid.level().getDifficulty() == Difficulty.PEACEFUL
                 || maid.isAlliedTo(human) || human.isAlliedTo(maid)) return false;
-        if (human.getCustomName() != null && human.getCustomName().getString().startsWith("MaidNoAttack")) return false;
-        var id = ForgeRegistries.ENTITY_TYPES.getKey(human.getType());
-        if (id == null || MaidConfig.MAID_ATTACK_IGNORE.get().contains(id.toString())) return false;
-        AttackListData list = maid.getData(InitTaskData.ATTACK_LIST);
-        if (list != null && list.attackGroups().get(id) == MonsterType.FRIENDLY) return false;
+        if (!MaidTargetRules.permits(maid, human)) return false;
         return relationAllowsAttack(maid, human);
     }
 

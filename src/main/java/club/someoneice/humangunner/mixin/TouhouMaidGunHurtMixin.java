@@ -19,7 +19,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
         remap = false
 )
 public abstract class TouhouMaidGunHurtMixin {
-    @Inject(method = "onExplosionDetonateEvent", at = @At("HEAD"), cancellable = true, require = 0)
+    @Inject(method = club.someoneice.humangunner.compat.OptionalMixinPlugin.MAID_EXPLOSION,
+            at = @At("HEAD"), cancellable = true, require = 1, allow = 1)
     private void humanGunner$keepMaidsInTaczExplosion(ExplosionEvent.Detonate event, CallbackInfo ci) {
         if (club.someoneice.humangunner.GunSupport.get().enabled()) ci.cancel();
     }

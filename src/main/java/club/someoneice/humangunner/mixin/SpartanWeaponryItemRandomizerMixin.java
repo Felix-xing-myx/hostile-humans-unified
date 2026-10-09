@@ -26,7 +26,8 @@ import java.util.List;
 @Pseudo
 @Mixin(targets = "com.oblivioussp.spartanweaponry.util.ItemRandomizer", remap = false)
 public abstract class SpartanWeaponryItemRandomizerMixin {
-    @Inject(method = "generate", at = @At("HEAD"), cancellable = true, require = 0)
+    @Inject(method = club.someoneice.humangunner.compat.OptionalMixinPlugin.SPARTAN_RANDOMIZER,
+            at = @At("HEAD"), cancellable = true, require = 1, allow = 1)
     private static void humanGunner$useWorkerLocalRandom(
             Level level,
             List<Item> items,

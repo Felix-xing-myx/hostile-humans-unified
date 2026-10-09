@@ -27,13 +27,9 @@ public class EventHandlerMod {
 
     /** One mutually exclusive overlay; no third-party classes are referenced. */
     static Optional<String> selectPack(Predicate<String> installed, boolean disableWaystones) {
-        boolean craftin = installed.test("quark") && installed.test("mctb");
-        boolean farmers = installed.test("farmersdelight");
-        boolean waystones = installed.test("waystones") && !disableWaystones;
-        String name = craftin ? "craftin" : "";
-        if (farmers) name += name.isEmpty() ? "farmers" : "_farmers";
-        if (waystones) name += name.isEmpty() ? "waystones" : "_waystones";
-        return name.isEmpty() ? Optional.empty() : Optional.of(name);
+        // Keep this argument for the existing caller/config contract. Legacy
+        // Quark/mctb and Waystones overlays remain packaged but never activated.
+        return installed.test("farmersdelight") ? Optional.of("farmers") : Optional.empty();
     }
 
     private static void registerAddon(AddPackFindersEvent event, String packName) {

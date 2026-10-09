@@ -2,7 +2,6 @@ package com.craftix.hostile_humans.entity.entities;
 
 import com.craftix.hostile_humans.Config;
 import com.craftix.hostile_humans.HumanUtil;
-import com.craftix.hostile_humans.compat.DungeonMobs;
 import com.craftix.hostile_humans.entity.entities.Human;
 import com.craftix.hostile_humans.entity.entities.ModEntityType;
 import java.util.ArrayList;
@@ -24,7 +23,6 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.NaturalSpawner;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraftforge.fml.ModList;
 
 public class SpawnerEntity
 extends Mob {
@@ -106,9 +104,7 @@ extends Mob {
         if (this.random.nextFloat() < 0.05f) {
             return EntityType.RAVAGER;
         }
-        if (this.random.nextFloat() < 0.05f && ModList.get().isLoaded("dungeon_mobs")) {
-            return DungeonMobs.getRedstoneGolem() == null ? EntityType.RAVAGER : DungeonMobs.getRedstoneGolem();
-        }
+        // Legacy Dungeons Mobs summon substitution is suspended.
         EntityType[] list = new EntityType[]{EntityType.PILLAGER, EntityType.PILLAGER, EntityType.EVOKER, EntityType.PILLAGER, EntityType.ILLUSIONER, EntityType.VINDICATOR, EntityType.VINDICATOR, EntityType.VINDICATOR};
         return list[(int)((float)list.length * this.random.nextFloat())];
     }

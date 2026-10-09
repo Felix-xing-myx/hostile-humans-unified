@@ -4,7 +4,6 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import com.craftix.hostile_humans.entity.data.HumanData;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.fml.ModList;
 
 /** Authoritative weighted pools -> firearm allocation -> reserves -> growth pipeline. */
 public final class HumanSpawnEquipment {
@@ -74,8 +73,7 @@ public final class HumanSpawnEquipment {
         ItemStack gun = FirearmSpawnEquipment.roll(human, ranged);
         ConfiguredHumanEquipment.generate(human, ranged, gun.isEmpty());
         InventoryTotemProtection.stowOffhandTotem(human);
-        if (ModList.get().isLoaded("travelersbackpack") && ModList.get().isLoaded("curios"))
-            com.craftix.hostile_humans.compat.TravelersBackpack.apply(human);
+        // Legacy automatic Traveler's Backpack equipment is suspended.
         FirearmSpawnEquipment.equip(human, gun);
         ConfiguredHumanEquipment.finishRanged(human, ranged);
         GuaranteedShieldLoadout.applyOnce(human);

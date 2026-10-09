@@ -1,6 +1,5 @@
 package com.craftix.hostile_humans.client.renderer;
 
-import com.craftix.hostile_humans.client.renderer.HumanBackpackLayer;
 import com.craftix.hostile_humans.entity.entities.Human;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
@@ -34,7 +33,6 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.ToolActions;
-import net.minecraftforge.fml.ModList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -56,9 +54,7 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         this.addLayer((RenderLayer)new CustomHeadLayer((RenderLayerParent)this, context.getModelSet(), context.getItemInHandRenderer()));
         this.addLayer((RenderLayer)new ElytraLayer((RenderLayerParent)this, context.getModelSet()));
         this.addLayer((RenderLayer)new BeeStingerLayer((LivingEntityRenderer)this));
-        if (ModList.get().isLoaded("travelersbackpack") && ModList.get().isLoaded("curios")) {
-            this.addLayer(new HumanBackpackLayer((RenderLayerParent<Human, PlayerModel<Human>>)this));
-        }
+        // Legacy Traveler's Backpack render layer is suspended together with equipment generation.
     }
 
     @Nullable

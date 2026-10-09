@@ -23,15 +23,13 @@ public final class StructureCompatTest {
             if ((mask & 8) != 0) installed.add("waystones");
             boolean disableWaystones = (mask & 16) != 0;
             String pack = EventHandlerMod.selectPack(installed::contains, disableWaystones).orElse("");
-            check(pack.contains("waystones") == (installed.contains("waystones") && !disableWaystones),
-                    "Waystones gate " + mask);
+            check(!pack.contains("waystones"), "legacy Waystones overlay suspended " + mask);
             check(pack.contains("farmers") == installed.contains("farmersdelight"), "Farmer gate " + mask);
-            check(pack.contains("craftin") == (installed.contains("quark") && installed.contains("mctb")),
-                    "Craftin dependency pair " + mask);
+            check(!pack.contains("craftin"), "legacy Quark/mctb overlay suspended " + mask);
             check(pack.isEmpty() || PACKS.contains(pack), "known pack " + mask);
             if (!pack.isEmpty()) selected.add(pack);
         }
-        check(selected.equals(PACKS), "all seven overlays selectable");
+        check(selected.equals(Set.of("farmers")), "only supported Farmer overlay selectable");
         check(EventHandlerMod.selectPack(mod -> false, false).isEmpty(), "vanilla has no overlay");
         SharedConstants.tryDetectVersion();
         Path artifact = Path.of(args[0]);

@@ -99,15 +99,7 @@ public class EventHandler {
             }
             entity.addTag(this.randomTag);
         }
-        if (entity instanceof Human) {
-            Human human = (Human)entity;
-            if (ModList.get().isLoaded("villagernames") && !human.hasCustomName()
-                    && !HostileHumans.patreonNames.isEmpty()) {
-                var names = HostileHumans.patreonNames;
-                human.setCustomName(net.minecraft.network.chat.Component.literal(
-                        names.get(human.getRandom().nextInt(names.size()))));
-            }
-        }
+        // Legacy Villager Names-triggered automatic naming is suspended.
     }
 }
 

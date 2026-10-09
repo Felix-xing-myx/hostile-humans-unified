@@ -31,6 +31,8 @@
 
 这些都是可选兼容模组，不是本模组的运行依赖。
 
+旧版继承的 Traveler's Backpack、Dungeons Mobs、Villager Names、Quark／mctb、Waystones 自动接入，以及 Polymorph、Pillagers Gun 内部修补已暂时停用。不会自动生成／渲染旅行者背包、替换信标召唤物、触发旧自动命名或启用这些结构覆盖包；已有物品、实体、名字和玩家文件不删除。农夫乐事结构覆盖与食物、Curios 身份牌、斯巴达装备和沉浸式盔甲继续保留。接口边界、失败处理和验证范围见[兼容维护说明](docs/COMPATIBILITY.md)。
+
 ## 界面预览
 
 **士兵命令面板**

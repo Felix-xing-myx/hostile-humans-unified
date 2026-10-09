@@ -50,6 +50,17 @@ public final class MaidHumanRelationTest {
         check(calls(targeting, "allowsWildHumanTarget", "club/someoneice/humangunner/HumanRelations", "isRecentHumanAttacker"),
                 "self-defense requires a real recent attacker rather than anger alone");
         check(calls(mixin, "humanGunner$recognizeHumans", compat, "humanAttackDecision"), "maid canAttack hook");
+        check(calls(compat, "humanAttackDecision", "club/someoneice/humangunner/MaidTargetRules", "permits"),
+                "upstream explicit exclusions remain separate from badge/faction decisions");
+        var upstream = new ClassNode();
+        upstream.methods.add(new org.objectweb.asm.tree.MethodNode(0, "generate",
+                "(Lnet/minecraft/world/level/Level;Ljava/util/List;)Lnet/minecraft/world/item/ItemStack;", null, null));
+        check(club.someoneice.humangunner.compat.OptionalMixinPlugin.hasMethod(upstream,
+                club.someoneice.humangunner.compat.OptionalMixinPlugin.SPARTAN_RANDOMIZER), "known optional fix contract accepted");
+        upstream.methods.clear();
+        upstream.methods.add(new org.objectweb.asm.tree.MethodNode(0, "generate", "()V", null, null));
+        check(!club.someoneice.humangunner.compat.OptionalMixinPlugin.hasMethod(upstream,
+                club.someoneice.humangunner.compat.OptionalMixinPlugin.SPARTAN_RANDOMIZER), "changed overload must not receive the fix");
         check(calls(compat, "relationAllowsAttack", "club/someoneice/humangunner/IdentityBadgeAccess", "highestClearance"),
                 "owner inventory and Curios badge access");
         check(calls(compat, "relationAllowsAttack", "club/someoneice/humangunner/HumanRelations", "effectiveOwner"),

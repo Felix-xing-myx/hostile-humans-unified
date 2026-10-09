@@ -570,3 +570,11 @@
 - 待构建及游戏验收：持续跑动和急转弯目标、移动目标跨块/同块、追到旧终点不长时等待、障碍绕行与局部不可达、多人多单位下共享预算排队、水面跨岸、近战/弓弩/枪/三叉戟切换、驻守/贴身保护不越界；自动策略检查不能证明服务器帧时间或实际追击已验收。
 
 - 本任务源码交付提交：3e48c190bf0c0bd51ae0b0b9bfde9e167585c53b；已本地整合到main，未构建/同步/推送，原用户CHANGELOG修改仍单独保留。
+
+## 2026-10-09 可选联动接口规范化（进行中，未构建）
+
+- 基线：97b4126b48d24b247c1aea64bdf12e9dd1036785。用户要求规范高风险兼容并暂关旧兼容；保留用户CHANGELOG，禁止构建/同步/推送。
+- 主控/root：主工作树main，负责旧兼容停用、共享Mixin配置、README、集成审查及交付记录。
+- tacz_boundary：worktrees/tacz-compat-boundaries，refactor/tacz-compat-boundaries，仅TaCZ换弹/射击边界及相关测试；保留弹药交易与友军规则，不修改共享JSON/构建/日志。
+- client_boundary：worktrees/client-compat-boundaries，refactor/client-compat-boundaries，仅客户端TaCZ/BetterCombat/PlayerAnimator反射适配及诊断；不修改共享JSON/构建/日志。
+- 接口：禁止用静默跳过必要Mixin来实现兼容；公开API优先，必要内部接口集中管理，保留可选依赖隔离。主控审核双方交付提交和静态验证后顺序整合。
