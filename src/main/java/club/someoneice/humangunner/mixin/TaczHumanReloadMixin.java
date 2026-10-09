@@ -1,5 +1,7 @@
 package club.someoneice.humangunner.mixin;
 
+import club.someoneice.humangunner.TaczAmmoMixinContract;
+
 import club.someoneice.humangunner.TaczHumanReloadTransactions;
 import club.someoneice.humangunner.HumanAmmo;
 import com.tacz.guns.network.NetworkHandler;
@@ -21,14 +23,14 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Exact TaCZ 1.1.8-hotfix boundaries; absent TaCZ is supported by @Pseudo. */
+/** Required TaCZ ammo boundaries; absent TaCZ is supported by @Pseudo. */
 @Pseudo
 @Mixin(targets = "com.tacz.guns.entity.shooter.LivingEntityReload", remap = false)
 public abstract class TaczHumanReloadMixin {
     @Shadow @Final private LivingEntity shooter;
     @Shadow @Final private ShooterDataHolder data;
 
-    @Inject(method = "reload", at = @At("HEAD"), cancellable = true, require = 1)
+    @Inject(method = TaczAmmoMixinContract.RELOAD, at = @At("HEAD"), cancellable = true, require = 1)
     private void humanGunner$discardFinishedPayment(CallbackInfo ci) {
         if (shooter instanceof Human human) {
             var server = human.getServer();
@@ -49,7 +51,7 @@ public abstract class TaczHumanReloadMixin {
         }
     }
 
-    @Inject(method = "cancelReload", at = @At("HEAD"), cancellable = true, require = 1)
+    @Inject(method = TaczAmmoMixinContract.CANCEL_RELOAD, at = @At("HEAD"), cancellable = true, require = 1)
     private void humanGunner$cancelOnServerThread(CallbackInfo ci) {
         if (shooter instanceof Human human) {
             var server = human.getServer();
@@ -69,14 +71,14 @@ public abstract class TaczHumanReloadMixin {
         }
     }
 
-    @Redirect(method = "lambda$reload$0", at = @At(value = "INVOKE", target =
-            "Lcom/tacz/guns/api/item/gun/AbstractGunItem;useInventoryAmmo(Lnet/minecraft/world/item/ItemStack;)Z"), require = 1)
+    @Redirect(method = {TaczAmmoMixinContract.RELOAD, TaczAmmoMixinContract.RELOAD_BODY}, at = @At(value = "INVOKE", target =
+            TaczAmmoMixinContract.RELOAD_INVENTORY_AMMO), require = 1, allow = 1)
     private boolean humanGunner$useNpcMagazine(AbstractGunItem gun, ItemStack weapon) {
         return !(shooter instanceof Human) && gun.useInventoryAmmo(weapon);
     }
 
-    @Redirect(method = "lambda$reload$0", at = @At(value = "INVOKE", target =
-            "Lcom/tacz/guns/api/item/gun/AbstractGunItem;startReload(Lcom/tacz/guns/entity/shooter/ShooterDataHolder;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Z"), require = 1)
+    @Redirect(method = {TaczAmmoMixinContract.RELOAD, TaczAmmoMixinContract.RELOAD_BODY}, at = @At(value = "INVOKE", target =
+            TaczAmmoMixinContract.START_RELOAD), require = 1, allow = 1)
     private boolean humanGunner$paidStart(AbstractGunItem gun, ShooterDataHolder holder,
                                          ItemStack weapon, LivingEntity entity) {
         boolean started = TaczHumanReloadTransactions.start(gun, holder, weapon, entity);
@@ -88,20 +90,20 @@ public abstract class TaczHumanReloadMixin {
         return started;
     }
 
-    @Redirect(method = "lambda$reload$0", at = @At(value = "INVOKE", target =
-            "Lcom/tacz/guns/network/NetworkHandler;sendToTrackingEntity(Ljava/lang/Object;Lnet/minecraft/world/entity/Entity;)V"), require = 1)
+    @Redirect(method = {TaczAmmoMixinContract.RELOAD, TaczAmmoMixinContract.RELOAD_BODY}, at = @At(value = "INVOKE", target =
+            TaczAmmoMixinContract.RELOAD_NOTIFICATION), require = 1, allow = 1)
     private void humanGunner$deferReloadNotification(Object message, Entity entity) {
         if (!(shooter instanceof Human)) NetworkHandler.sendToTrackingEntity(message, entity);
     }
 
-    @Redirect(method = "tickReloadState", at = @At(value = "INVOKE", target =
-            "Lcom/tacz/guns/api/item/gun/AbstractGunItem;tickReload(Lcom/tacz/guns/entity/shooter/ShooterDataHolder;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/LivingEntity;)Lcom/tacz/guns/api/entity/ReloadState;"), require = 1)
+    @Redirect(method = TaczAmmoMixinContract.TICK_RELOAD, at = @At(value = "INVOKE", target =
+            TaczAmmoMixinContract.GUN_TICK_RELOAD), require = 1, allow = 1)
     private ReloadState humanGunner$paidTick(AbstractGunItem gun, ShooterDataHolder holder,
                                             ItemStack weapon, LivingEntity entity) {
         return TaczHumanReloadTransactions.tick(gun, holder, weapon, entity);
     }
 
-    @Inject(method = "cancelReload", at = @At("RETURN"), require = 1)
+    @Inject(method = TaczAmmoMixinContract.CANCEL_RELOAD, at = @At("RETURN"), require = 1)
     private void humanGunner$endPayment(CallbackInfo ci) {
         if (shooter instanceof Human) TaczHumanReloadTransactions.end(data);
     }
