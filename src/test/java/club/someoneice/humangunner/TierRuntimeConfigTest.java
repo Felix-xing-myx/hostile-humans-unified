@@ -42,10 +42,10 @@ public final class TierRuntimeConfigTest {
                 """);
         check(invalid.ammoReserve("roamer").equals(defaults.ammoReserve("roamer")), "invalid budgets preserve defaults");
         UnifiedConfig nativeSettings = config("""
-                {"native_gameplay":{"max_targeting":7,"no_waystones":true,"battle_event":"Disabled"},
+                {"native_gameplay":{"max_targeting":7,"battle_event":"Disabled"},
                  "tier_ai":{"tier1":{"flee_hp":0.6,"greet_chance":0.8}}}
                 """);
-        check(nativeSettings.maxTargeting() == 7 && nativeSettings.noWaystones()
+        check(nativeSettings.maxTargeting() == 7
                 && nativeSettings.battleEvent().equals("Disabled"), "native global settings");
         check(nativeSettings.combatAi("tier1").legacyFleeHealthRatio() == 0.6
                 && nativeSettings.combatAi("tier1").greetChance() == 0.8

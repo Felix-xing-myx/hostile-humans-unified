@@ -90,9 +90,10 @@ final class TierConfigProjection {
         return arrange(result, true);
     }
 
-    /** Common controls first, detailed tuning last; field names and values never change. */
+    /** Common controls first; remove retired controls without retaining runtime aliases. */
     static JsonObject arrange(JsonObject source, boolean rank) {
         JsonObject result = source.deepCopy();
+        removeRetiredControls(result, rank);
         List<String> sections = rank
                 ? List.of("schema_version", "_说明_中文", "_description_en", "attributes", "spawning",
                     "equipment_loadout", "ammunition", "food", "potions", "recruitment", "damage_multipliers",
@@ -122,6 +123,42 @@ final class TierConfigProjection {
                     "gunner_spread_degrees", "forced_ranged_gun_chance", "gun_drop_chance", "gun_whitelist",
                     "hired_gun_additional_whitelist"));
         return ordered(result, sections);
+    }
+
+    private static void removeRetiredControls(JsonObject data, boolean rank) {
+        JsonObject damage = object(data, rank ? "damage_multipliers" : "damage");
+        List<String> retired = rank
+                ? List.of("bow_damage_multiplier", "trident_damage_multiplier", "incoming_damage_multiplier")
+                : List.of("human_melee_damage_multiplier", "human_bow_damage_multiplier",
+                    "human_trident_damage_multiplier", "bow_velocity_damage_multiplier",
+                    "trident_velocity_damage_multiplier", "tamed_maid_melee_damage_multiplier");
+        for (String key : retired) {
+            damage.remove(key);
+            damage.remove("_说明_" + key + "_中文");
+            damage.remove("_description_" + key + "_en");
+        }
+        // Retired names inside shipped formula comments are no longer valid help.
+        for (String key : List.of("_说明_中文", "_description_en", "_说明_近战计算_中文",
+                "_description_melee_formula_en", "_说明_弹射物计算_中文", "_description_projectile_formula_en",
+                "_说明_特殊倍率_中文", "_description_special_factors_en")) {
+            JsonElement value = damage.get(key);
+            if (value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
+                    && retired.stream().anyMatch(value.getAsString()::contains)) damage.remove(key);
+        }
+        if (!rank) {
+            JsonObject nativeGameplay = object(data, "native_gameplay");
+            for (String key : List.of("no_waystones", "_说明_no_waystones_中文", "_description_no_waystones_en")) nativeGameplay.remove(key);
+            for (String key : List.of("_说明_中文", "_description_en")) {
+                JsonElement note = nativeGameplay.get(key);
+                if (note != null && note.isJsonPrimitive() && note.getAsJsonPrimitive().isString()
+                        && (note.getAsString().contains("no_waystones") || note.getAsString().contains("waystone")))
+                    nativeGameplay.remove(key);
+            }
+        }
+        if (rank) {
+            JsonObject potions = object(data, "potions");
+            for (String key : List.of("bonus", "_说明_bonus_中文", "_description_bonus_en")) potions.remove(key);
+        }
     }
 
     private static void orderGroup(JsonObject parent, String key, List<String> fields) {

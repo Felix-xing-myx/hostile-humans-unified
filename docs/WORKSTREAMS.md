@@ -638,3 +638,13 @@
 - 恢复池饮用strong_healing/long_regeneration/strong_regeneration权重2/1/1；战术池long_slowness/long_weakness/long_strength/strong_poison/strong_strength/long_swiftness权重5/1/10/2/5/8，迟缓/虚弱/剧毒为喷溅，其余饮用。现有喷溅选取原仅识别迟缓/虚弱，增加POISON以让新剧毒实际参与原投掷入口；冷却、射程及友军附近拒投规则保持。
 - 已有配置的数量/池继续权威，不用新默认覆写；旧bonus不再读取、不自动迁移或删除用户字段，需手动把迅捷纳入tactical.pool。各阶potions.recovery/tactical.count_min/count_max已开放0–30瓶配置，修改重启后只对新生成且未领取补给的实体生效。
 - 静态JSON核查四阶范围/全部权重/单一迅捷入口通过，对比HEAD确认非potions默认完全不变；两项测试的文本块JSON解析及git diff --check通过。更新默认池/瓶形、零配额、磁盘自定义战术9瓶迅捷池回归，尚未编译执行。用户本轮未要求构建，未运行Gradle/javac、未同步、未启动游戏或push。待后续授权构建及游戏验收新生各阶瓶数/重复迅捷/再生II和剧毒投掷。
+
+
+## 2026-10-09 伤害配置合并、更名与测试实例配置清理（源码完成，未构建）
+
+- 主控/root，main主工作树独立实施，基线ae5837079d8f543ef201db991591383299323a33；范围HumanGunner伤害入口、UnifiedConfig、女仆近战读取、TierConfigProjection废弃项清理、Waystones无效API及相关默认/配置回归/文档，无额外Agent。
+- 弓弩旧全局1.2096×1.5合并为damage.arrow_damage_multiplier=1.8144，投掷三叉戟0.84×1.5合并为damage.thrown_trident_damage_multiplier=1.26；两个命中分支各只读取一次全局因子。新全局投射物范围0–100，容纳旧两个0–10有效值的乘积；各阶0–10独立倍率保留。近战全局改melee_damage_multiplier，近战对驯服女仆改human_melee_vs_tamed_maid_multiplier；分阶bow/trident/incoming分别改arrow_damage_multiplier/thrown_trident_damage_multiplier/damage_taken_multiplier，内存record访问器保留实现组织名称。
+- 近刺、跳劈、目标承伤、枪械与女仆条件倍率用途不同，继续保留；非重复倍率不机械删除。no_waystones虽有读取与参数传递，但选择器已经固定不使用该参数，移除默认/说明、读取API、调用实参及无意义测试维度，保持农夫乐事覆盖。
+- arrange在正常重排时删除明确废弃的旧伤害字段/相邻说明、失效的已知公式说明、potions.bonus及no_waystones，不为旧名建立数值读取别名或迁移档；未知扩展保留。更新默认、双语说明和CONFIGURATION.md。新增实际五文件回归，覆盖新值优先、72倍范围、清理持久化、未知扩展和只有五文件；更新默认/显式零/分阶独立/上限与结构选择测试，尚未编译运行。
+- 用户回复已退出游戏，进程复核无非Gradle Java。单次备份14份旧配置至配置备份/20261009-193247-damage-potion-cleanup，update.json记录5份当前JSON的前后SHA256及9份归档路径。转换当前伤害值/分阶名并保留乘积；将仍为旧默认的各阶药水数量和池更新为上一项新规则，无检测到自定义药水覆盖；其余有效值/未知字段保留。旧单文件JSON、TOML和历史bak归档后从实例删除，主配置目录当前五JSON；最终哈希及JSON复核通过。未修改JAR/存档或其它实例。
+- 静态核查伤害乘积、唯一实际入口、四阶字段与说明、无无效读取、默认非伤害设置（除no_waystones及相关说明）不变、测试文本块JSON、配置收据哈希及diff检查通过；未执行Gradle/javac或自动化回归，未启动游戏/push。测试实例JAR仍为上次3.7.0，不含本轮及药水更新，下一次游戏验收应先构建并同步新源码。待验收同武器伤害/单因子生效、各阶承伤、原版模式、女仆/枪械条件及新生成药水补给。

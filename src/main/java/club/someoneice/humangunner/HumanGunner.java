@@ -455,7 +455,7 @@ public final class HumanGunner {
                     || GunSupport.get().isBullet(event.getSource())) return;
             if (directEntity == attacker) {
                 if (UnifiedConfig.get().vanillaMode()) return;
-                float multiplier = (float) (UnifiedConfig.get().damage("human_melee_damage_multiplier", 1.7)
+                float multiplier = (float) (UnifiedConfig.get().damage("melee_damage_multiplier", 1.7)
                         * TierAttributes.of(humanAttacker).meleeDamage());
                 Human human = humanAttacker;
                 if (human.getMainHandItem().getItem() instanceof net.minecraft.world.item.TridentItem) {
@@ -472,14 +472,12 @@ public final class HumanGunner {
                 event.setAmount(event.getAmount() * multiplier);
             } else if (directEntity instanceof ThrownTrident) {
                 event.setAmount(event.getAmount()
-                        * (float) (UnifiedConfig.get().damage("human_trident_damage_multiplier", .84)
-                        * TierAttributes.of(humanAttacker).tridentDamage()
-                        * UnifiedConfig.get().damage("trident_velocity_damage_multiplier", 1.5)));
+                        * (float) (UnifiedConfig.get().damage("thrown_trident_damage_multiplier", 1.26)
+                        * TierAttributes.of(humanAttacker).tridentDamage()));
             } else if (directEntity instanceof AbstractArrow) {
                 event.setAmount(event.getAmount()
-                        * (float) (UnifiedConfig.get().damage("human_bow_damage_multiplier", 1.2096)
-                        * TierAttributes.of(humanAttacker).bowDamage()
-                        * UnifiedConfig.get().damage("bow_velocity_damage_multiplier", 1.5)));
+                        * (float) (UnifiedConfig.get().damage("arrow_damage_multiplier", 1.8144)
+                        * TierAttributes.of(humanAttacker).bowDamage()));
             }
             return;
         }

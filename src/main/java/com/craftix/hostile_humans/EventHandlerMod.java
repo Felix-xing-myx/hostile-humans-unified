@@ -21,14 +21,13 @@ public class EventHandlerMod {
         if (event.getPackType() != PackType.SERVER_DATA) {
             return;
         }
-        selectPack(ModList.get()::isLoaded, Config.noWaystones())
+        selectPack(ModList.get()::isLoaded)
                 .ifPresent(name -> registerAddon(event, name));
     }
 
     /** One mutually exclusive overlay; no third-party classes are referenced. */
-    static Optional<String> selectPack(Predicate<String> installed, boolean disableWaystones) {
-        // Keep this argument for the existing caller/config contract. Legacy
-        // Quark/mctb and Waystones overlays remain packaged but never activated.
+    static Optional<String> selectPack(Predicate<String> installed) {
+        // Legacy Quark/mctb and Waystones overlays are not activated.
         return installed.test("farmersdelight") ? Optional.of("farmers") : Optional.empty();
     }
 

@@ -12,7 +12,7 @@
 
 阶级文件直接使用 `attributes`、`movement`、`damage_multipliers`、`weapon_spread_degrees`、`combat`、`spawning`、`equipment_loadout`、`equipment_growth`、`ammunition`、`ai`、`tacz`、`recruitment` 等顶层区域，不再套 `tiers.tier1`。各文件的 `ai` 参数独立；只有增强 AI 总开关 `global.json` 的 `ai.enabled` 控制所有阶级。
 
-四阶文件使用一致的阅读顺序：**属性 → 生成 → 装备 → 弹药 → 药水 → 雇佣 → 伤害 → 近战 → 战斗AI → 移动与散布 → TaCZ → 装备成长**。全局顺序为 **原版模式 → 弹药消耗 → 装备自动导入 → AI总开关 → 生成 → 雇佣 → 伤害 → TaCZ → Better Combat → 装备成长 → 结构及其他规则**。装备区域先列职业概率、联动开关与数量，再列各装备池和详细规则；枪械区域先列开关、过滤与伤害，较长的名单放在后面。已有有效文件也会在启动时重排，配置键和数值不变。
+四阶文件使用一致的阅读顺序：**属性 → 生成 → 装备 → 弹药 → 药水 → 雇佣 → 伤害 → 近战 → 战斗AI → 移动与散布 → TaCZ → 装备成长**。全局顺序为 **原版模式 → 弹药消耗 → 装备自动导入 → AI总开关 → 生成 → 雇佣 → 伤害 → TaCZ → Better Combat → 装备成长 → 结构及其他规则**。装备区域先列职业概率、联动开关与数量，再列各装备池和详细规则；枪械区域先列开关、过滤与伤害，较长的名单放在后面。已有有效文件也会在启动时重排，保留有效配置与自定义扩展；已明确废弃的选项及对应说明会移除，不生成继承/更新/迁移文件。
 
 JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 字段，紧贴在对应配置值前；大段说明用于解释池格式、公式和跨文件关系。这些字段仅供阅读，调整其文字不会改变行为。修改真正的配置键即可；`schema_version` 保持 `2`。时间注明tick（20 tick=1秒）、距离注明格、生命值注明点（2点=1颗心）、概率用0–1，数量用物品个数而非组数。不要向JSON加入 `//` 或 `/* */` 注释。
 
@@ -64,7 +64,7 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 - `attributes.attack_damage`、`armor`、`armor_toughness`、`knockback_resistance`、`follow_range`：基础攻击伤害、防护属性和目标探测距离。
 - `movement.base_speed`：本阶人类的基础移动速度，默认 `0.105`，即普通玩家基础移速 `0.1` 的 1.05 倍；允许范围 `0.01–0.2`。疾跑与迅捷等效果继续沿用原版属性修正；自定义动作减速也作为属性修正参与计算。
 - `movement.follow_speed_multiplier`、`follow_catch_up_multiplier`：已雇佣士兵闲置跟随的导航速度倍率，默认 `1.35`、`1.6`，范围 `0.1–3`；相距超过12格使用追赶倍率，追赶不会低于普通跟随。距离超过6格疾跑，超过4格开始追随，追至2.5格内停止。也用于贴身保护的归队/站位导航；基础移速、战斗及药水修正仍各自生效。既有阶级文件可在 `movement` 中添加这两个字段；缺项使用默认值。
-- `damage_multipliers.melee_damage_multiplier`、`bow_damage_multiplier`、`trident_damage_multiplier`、`incoming_damage_multiplier`：本阶造成或承受的伤害倍率。
+- `damage_multipliers.melee_damage_multiplier`、`arrow_damage_multiplier`、`thrown_trident_damage_multiplier`、`damage_taken_multiplier`：本阶造成或承受的伤害倍率。
 - `spawning.spawn_multiplier`：本阶自然生成准入倍率。设为 0 可关闭对应的普通自然生成入口；不影响结构固定生成和信号装置召唤。
 - `combat.melee_cooldown_min`、`melee_cooldown_max`：近战攻击冷却范围，单位为 tick。
 - `weapon_spread_degrees.firearms`：本阶每种枪械分类的独立散布值，单位为度。可分别设置 `sniper`、`rifle`、`mg`、`pistol`、`smg`、`shotgun`；其他或无法识别的枪种使用 `other`。数值越小越精准。
@@ -75,7 +75,20 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 
 ## `damage`：通用伤害倍率
 
-全局倍率与各阶对应倍率相乘，不互相覆盖。例如全局近战倍率为 0.8、该阶倍率为 1.5，则此部分合计为 1.2 倍。近战、弓箭和三叉戟按各自路径应用，TaCZ 子弹不再叠加近战倍率；枪伤由 `tacz` 中的全局与阶级倍率控制。目标的人类承伤倍率、护甲、附魔和其他模组仍会参与伤害处理，配置倍率不是最终扣血比例。投射速度是弹道参数，不是伤害倍率。`tamed_maid_melee_damage_multiplier` 控制人类近战对已驯服女仆造成的伤害，不是女仆对人类造成的伤害。
+| 全局配置项 | 默认值 | 用途 |
+|---|---:|---|
+| `melee_damage_multiplier` | 1.7 | 人类近战伤害，乘本阶同名倍率 |
+| `arrow_damage_multiplier` | 1.8144 | 人类弓/弩箭直接命中伤害，乘本阶同名倍率 |
+| `thrown_trident_damage_multiplier` | 1.26 | 人类投掷三叉戟命中伤害，乘本阶同名倍率 |
+| `trident_stab_damage_multiplier` | 0.42 | 仅三叉戟近刺的附加条件倍率，继续使用近战全局/分阶倍率 |
+| `jump_attack_damage_multiplier` | 1.5 | 仅符合跳劈判定的下落近战攻击附加倍率 |
+| `human_melee_vs_tamed_maid_multiplier` | 0.25 | 人类近战攻击已驯服女仆的附加倍率 |
+
+弓弩和投掷三叉戟的全局倍率范围为0–100（容纳原两个0–10倍率的乘积），其余全局倍率与各阶倍率范围0–10。各阶 `damage_multipliers.damage_taken_multiplier` 控制本阶承受的伤害（含环境与枪伤），不是攻击输出。箭矢倍率不额外放大后续独立燃烧或药水效果。
+
+旧的 `human_bow_damage_multiplier` 与 `bow_velocity_damage_multiplier` 已合并为 `arrow_damage_multiplier`；旧的 `human_trident_damage_multiplier` 与 `trident_velocity_damage_multiplier` 已合并为 `thrown_trident_damage_multiplier`。手动更新配置时，新值为两个旧值各自限于0–10后的乘积，不要只复制其中一项。旧全局 `human_melee_damage_multiplier` 改为 `melee_damage_multiplier`，`tamed_maid_melee_damage_multiplier` 改为 `human_melee_vs_tamed_maid_multiplier`；旧分阶 `bow_damage_multiplier`、`trident_damage_multiplier`、`incoming_damage_multiplier` 分别改为 `arrow_damage_multiplier`、`thrown_trident_damage_multiplier`、`damage_taken_multiplier`。没有旧名称读取别名或自动数值迁移；请在使用新JAR前更新旧配置，并在实例关闭时修改。当前维护的测试实例已由主控单次备份转换。暂停Waystones结构联动后无效的 `native_gameplay.no_waystones` 已删除；农夫乐事结构覆盖保持。
+
+全局倍率与各阶对应倍率相乘，不互相覆盖。例如全局近战倍率为 0.8、该阶倍率为 1.5，则此部分合计为 1.2 倍。近战、弓箭和三叉戟按各自路径应用，TaCZ 子弹不再叠加近战倍率；枪伤由 `tacz` 中的全局与阶级倍率控制。目标的人类承伤倍率、护甲、附魔和其他模组仍会参与伤害处理，配置倍率不是最终扣血比例。投射速度是弹道参数，不是伤害倍率。`human_melee_vs_tamed_maid_multiplier` 控制人类近战对已驯服女仆造成的伤害，不是女仆对人类造成的伤害。
 
 ## `spawning`：自然生成与密度
 
@@ -171,13 +184,13 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 - `gun_blacklist`、`excluded_gun_namespaces`：禁止指定枪械 ID 或来源命名空间。
 - `human_gun_damage_multiplier`、`tier_damage_multipliers`：调整人类枪械伤害的基础倍率和各阶额外倍率。
 - `shield_damage_multiplier`：人类举盾格挡 TaCZ 子弹后实际承受的生命伤害比例；例如 `0.3` 表示保留 30% 伤害（减伤 70%）。
-- `tamed_maid_damage_multiplier`：已驯服女仆受到的 TaCZ 子弹伤害比例，默认 `0.15`。它不检查攻击者类型，因此人类枪击女仆也会应用该倍率；人类枪械基础倍率和阶级倍率会先作用。女仆受到人类近战攻击则由 `damage.tamed_maid_melee_damage_multiplier` 控制。
+- `tamed_maid_damage_multiplier`：已驯服女仆受到的 TaCZ 子弹伤害比例，默认 `0.15`。它不检查攻击者类型，因此人类枪击女仆也会应用该倍率；人类枪械基础倍率和阶级倍率会先作用。女仆受到人类近战攻击则由 `damage.human_melee_vs_tamed_maid_multiplier` 控制。
 
 野生枪手抽取和玩家手动给已雇佣人类输入枪械使用不同规则。基础白名单为空时，已雇佣人类可接受能识别的 TaCZ 枪械；基础白名单非空时，只接受其中正权重枪械，以及 `hired_gun_additional_whitelist` 中正权重枪械。`auto_add_new_guns` 不会放宽手动输入限制。
 
 ## 原 TOML 设置
 
-`global.json` 的 `native_gameplay` 包含 `disabled_structures`（逗号分隔结构禁用名单）、`max_targeting`（同时攻击玩家的人类上限，默认 3）、`no_waystones`（默认 false）、`battle_event`（HumanVsHuman、HumanVsPillager、Random、Disabled，默认 Random）。
+`global.json` 的 `native_gameplay` 包含 `disabled_structures`（逗号分隔结构禁用名单）、`max_targeting`（同时攻击玩家的人类上限，默认 3）、`battle_event`（HumanVsHuman、HumanVsPillager、Random、Disabled，默认 Random）。
 
 各阶 `ai` 中还包含 `flee_hp`（旧低血量判断，默认 0.35）、`run_away_middle_fight_chance`（默认 0.5）、`mid_battle_buff_instead_of_run_chance`（原二阶临战恢复判定，默认 0.1）及 `greet_chance`（敌对台词概率，默认 0.05）。这些概率范围为 0–1；增强 AI 的 `retreat_health_ratio` 等仍控制对应增强行为。
 

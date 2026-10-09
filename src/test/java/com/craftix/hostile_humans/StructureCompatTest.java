@@ -15,14 +15,13 @@ public final class StructureCompatTest {
     private static int checks;
     public static void main(String[] args) throws Exception {
         Set<String> selected = new HashSet<>();
-        for (int mask = 0; mask < 32; mask++) {
+        for (int mask = 0; mask < 16; mask++) {
             Set<String> installed = new HashSet<>();
             if ((mask & 1) != 0) installed.add("quark");
             if ((mask & 2) != 0) installed.add("mctb");
             if ((mask & 4) != 0) installed.add("farmersdelight");
             if ((mask & 8) != 0) installed.add("waystones");
-            boolean disableWaystones = (mask & 16) != 0;
-            String pack = EventHandlerMod.selectPack(installed::contains, disableWaystones).orElse("");
+            String pack = EventHandlerMod.selectPack(installed::contains).orElse("");
             check(!pack.contains("waystones"), "legacy Waystones overlay suspended " + mask);
             check(pack.contains("farmers") == installed.contains("farmersdelight"), "Farmer gate " + mask);
             check(!pack.contains("craftin"), "legacy Quark/mctb overlay suspended " + mask);
@@ -30,7 +29,7 @@ public final class StructureCompatTest {
             if (!pack.isEmpty()) selected.add(pack);
         }
         check(selected.equals(Set.of("farmers")), "only supported Farmer overlay selectable");
-        check(EventHandlerMod.selectPack(mod -> false, false).isEmpty(), "vanilla has no overlay");
+        check(EventHandlerMod.selectPack(mod -> false).isEmpty(), "vanilla has no overlay");
         SharedConstants.tryDetectVersion();
         Path artifact = Path.of(args[0]);
         int nbts = 0, jsons = 0, files = 0;

@@ -114,7 +114,7 @@ public final class TouhouMaidCompat {
         Entity attacker = event.getSource().getEntity();
         if (attacker instanceof Human && event.getSource().getDirectEntity() == attacker) {
             if (UnifiedConfig.get().vanillaMode()) return;
-            event.setAmount(event.getAmount() * (float) UnifiedConfig.get().damage("tamed_maid_melee_damage_multiplier", .25));
+            event.setAmount(event.getAmount() * (float) UnifiedConfig.get().damage("human_melee_vs_tamed_maid_multiplier", .25));
             if (LOGGED_FIRST_MELEE_HIT.compareAndSet(false, true)) {
                 HumanGunner.LOGGER.info(
                         "Hostile Humans Unified applied configured human melee multiplier to tamed maid {}",

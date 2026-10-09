@@ -12,11 +12,51 @@ public final class TierConfigFilesTest {
         checkMasterIntegrationSwitch();
         checkDefaultIntegrationRetry();
         checkProjection();
+        checkRetiredControls();
         checkReadableDefaults();
         checkBrokenNewFilesAndPayments();
         checkCurrentLayoutOnly();
         checkCreationCollision();
         System.out.println("TierConfigFilesTest: " + assertions + " checks passed");
+    }
+
+    private static void checkRetiredControls() throws Exception {
+        var dir = Files.createTempDirectory("human-retired-controls-");
+        try {
+            var defaults = UnifiedConfig.defaults();
+            SplitConfigFiles.load(dir, defaults, (rank, data) -> false);
+            var globalPath = dir.resolve(SplitConfigFiles.DIRECTORY).resolve("global.json");
+            var global = JsonParser.parseString(Files.readString(globalPath)).getAsJsonObject();
+            global.getAsJsonObject("native_gameplay").addProperty("no_waystones", true);
+            var damage = global.getAsJsonObject("damage");
+            damage.addProperty("human_bow_damage_multiplier", 8);
+            damage.addProperty("bow_velocity_damage_multiplier", 9);
+            damage.addProperty("_description_bow_velocity_damage_multiplier_en", "retired");
+            damage.addProperty("arrow_damage_multiplier", 72);
+            damage.addProperty("custom_extension", 42);
+            Files.writeString(globalPath, global.toString());
+            var rankPath = dir.resolve(SplitConfigFiles.DIRECTORY).resolve("tier1.json");
+            var rank = JsonParser.parseString(Files.readString(rankPath)).getAsJsonObject();
+            rank.getAsJsonObject("potions").add("bonus", json("{\"chance\":1}"));
+            rank.getAsJsonObject("damage_multipliers").addProperty("bow_damage_multiplier", 9);
+            rank.getAsJsonObject("damage_multipliers").addProperty("arrow_damage_multiplier", 2);
+            Files.writeString(rankPath, rank.toString());
+            var loaded = new UnifiedConfig(SplitConfigFiles.load(dir, defaults, (r, data) -> false));
+            check(loaded.damage("arrow_damage_multiplier", 0) == 72 && loaded.tier("tier1").bowDamage() == 2,
+                    "combined range and explicit current tier value survive disk cleanup");
+            global = JsonParser.parseString(Files.readString(globalPath)).getAsJsonObject();
+            damage = global.getAsJsonObject("damage");
+            check(!damage.has("human_bow_damage_multiplier") && !damage.has("bow_velocity_damage_multiplier")
+                    && !damage.has("_description_bow_velocity_damage_multiplier_en"), "retired global keys and comments removed on disk");
+            check(damage.get("custom_extension").getAsInt() == 42, "unknown extension preserved");
+            check(!global.getAsJsonObject("native_gameplay").has("no_waystones"), "inactive Waystones switch removed");
+            rank = JsonParser.parseString(Files.readString(rankPath)).getAsJsonObject();
+            check(!rank.getAsJsonObject("potions").has("bonus")
+                    && !rank.getAsJsonObject("damage_multipliers").has("bow_damage_multiplier"), "retired rank controls removed on disk");
+            try (var files = Files.list(globalPath.getParent())) {
+                check(files.count() == 5, "cleanup creates no inheritance, backup or migration files");
+            }
+        } finally { cleanup(dir); }
     }
 
     private static void checkProjection() {

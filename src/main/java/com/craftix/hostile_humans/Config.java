@@ -6,6 +6,5 @@ public final class Config {
     private Config() {}
     public static String disabledStructures() { return UnifiedConfig.get().disabledStructures(); }
     public static int maxTargeting() { return UnifiedConfig.get().maxTargeting(); }
-    public static boolean noWaystones() { return UnifiedConfig.get().noWaystones(); }
     public static SpawnerEntity.SpawnType eventType() { return SpawnerEntity.SpawnType.valueOf(UnifiedConfig.get().battleEvent()); }
 }
