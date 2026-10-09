@@ -20,11 +20,16 @@ public final class TierAttributes {
         set(human, Attributes.MOVEMENT_SPEED, tier.baseMovementSpeed());
         // Player-like base damage: weapon modifiers, enchantments and effects
         // are still calculated by the native attack, without a tier bonus.
-        set(human, Attributes.ATTACK_DAMAGE, VanillaModePolicy.attackBase(UnifiedConfig.get().vanillaMode(), tier.attackDamage()));
+        applyCombatBase(human);
         set(human, Attributes.ARMOR, tier.armor());
         set(human, Attributes.ARMOR_TOUGHNESS, tier.armorToughness());
         set(human, Attributes.KNOCKBACK_RESISTANCE, tier.knockbackResistance());
         set(human, Attributes.FOLLOW_RANGE, tier.followRange());
+    }
+    /** Re-evaluate the weapon-only rule when the server replaces its configuration. */
+    static void applyCombatBase(Human human) {
+        set(human, Attributes.ATTACK_DAMAGE, VanillaModePolicy.attackBase(
+                UnifiedConfig.get().vanillaMode(), of(human).attackDamage()));
     }
     private static void set(Human human, Attribute key, double value) {
         var attribute = human.getAttribute(key);

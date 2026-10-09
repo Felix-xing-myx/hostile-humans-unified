@@ -85,6 +85,7 @@ public final class HumanGrowth {
     static void tick(Human human) {
         UnifiedConfig config = UnifiedConfig.get();
         boolean changed = CONFIGS.put(human, config) != config;
+        if (changed) TierAttributes.applyCombatBase(human);
         boolean rewarded = GrowthRewards.claim(human);
         if (changed && config.growth().enabled() && human.hasOwner()) award(human, 0);
         if (changed || rewarded || human.tickCount % 20 == 0) GrowthHealth.apply(human);

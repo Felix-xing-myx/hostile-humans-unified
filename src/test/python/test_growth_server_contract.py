@@ -102,6 +102,14 @@ class GrowthServerContractTest(unittest.TestCase):
         self.assertIn("VanillaModePolicy.clampedHealth", health)
         self.assertNotIn("removeModifier", health)
 
+    def test_server_reload_reapplies_weapon_only_base_without_resetting_other_attributes(self):
+        source = read("HumanGrowth.java")
+        self.assertIn("if (changed) TierAttributes.applyCombatBase(human)", source)
+        helper = read("TierAttributes.java").split("static void applyCombatBase", 1)[1].split("private static void set", 1)[0]
+        self.assertIn("Attributes.ATTACK_DAMAGE", helper)
+        self.assertIn("VanillaModePolicy.attackBase", helper)
+        self.assertNotIn("Attributes.MOVEMENT_SPEED", helper)
+
     def test_progress_is_discrete_and_experience_is_one_percent(self):
         policy = read("GrowthProgression.java")
         self.assertIn("level++", policy)
