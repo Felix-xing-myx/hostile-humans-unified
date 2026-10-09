@@ -2,6 +2,16 @@
 
 ## 未发布 / Unreleased
 
+## 3.7.0 — 2026-10-09（测试中 / Testing）
+
+- **模组 ID 与命名空间变更，可能不兼容旧版本存档。** 原 `hostile_humans` 与 `humangunner` 统一改为 `hostile_humans_unified`，模组列表仅保留一个 **Hostile Humans Unified**。本版本仅面向新存档，完全移除旧注册 ID 的迁移与别名兼容；旧实体、物品等不能依靠旧 ID 自动恢复。命令、脚本和数据包中的引用需同步使用新命名空间。
+- 合并 Forge 初始化入口，统一实体、物品、音效、菜单、网络通道、翻译键、资源与持久化标识。更新模型、配方、战利品、自然生成和结构 NBT 引用；配置目录继续使用 `config/hostile_humans_unified/`。
+- 规范高风险联动入口：TaCZ 换弹不再绑定编译器生成的 lambda 方法名，按签名与精确调用匹配并保留弹药扣除的严格检查；集中 TaCZ、Better Combat、Player Animator 客户端反射契约及失败诊断，保留原生动画回退。仍依赖部分上游内部接口，不承诺任意未来版本自动兼容。
+- 隔离女仆显式排除规则，接口异常时拒绝攻击人类并记录原因；女仆爆炸及斯巴达随机数修补增加精确接口能力检查。修复该检查插件请求 ModLauncher 不支持的未转换字节码，导致 `humangunner.mixins.json` 在启动准备阶段失败的问题，改用受支持的读取入口。
+- 暂停旧版继承的 Traveler’s Backpack 自动装备及专用渲染、Dungeons Mobs 信标替换、Villager Names 触发命名、Quark／mctb 与 Waystones 结构覆盖，以及 Polymorph、Pillagers Gun 内部修补。保留农夫乐事、Curios、斯巴达装备、沉浸式盔甲和当前枪械／动画／女仆联动。
+- 增加单一模组身份、资源命名空间、换弹契约和 ModLauncher 读取方式检查；修正三叉戟追击测试，使其覆盖实际近战与远程分支。自动检查不替代启动和游戏内验收。
+
+
 - 改善移动目标追击连续性：近战、弓弩、枪械与三叉戟在目标明显移动或旧路径将结束时限频预刷新，失败/预算等待保留有效旧路，避免追到旧位置后长时停等；静止有效路不固定重算，无法到达的目标采用退避重试。
 
 - 优化弓弩地形走位与遮挡响应：安全寻找射界、沿路靠近和持续近战绕障；全人类按当前生命限制自主落差并检查跳跃及停止后的惯性。补齐雇佣弹丸的玩家过滤：雇主始终保护，非雇主按PVP开关判定，覆盖TaCZ范围爆炸伤害与击退。
@@ -75,47 +85,28 @@
 
 ## 3.6.0 — 2026-10-03
 
+### 简体中文
+
 本版本汇总 3.5.5 发布后的装备、配置、个人进度、士兵反馈和战斗导航重构。以下内容记录实现与修复，不将自动检查视为游戏内验收结果。
 
-This release consolidates equipment, configuration, personal progression, soldier feedback and combat-navigation changes since 3.5.5. Automated checks do not replace in-game acceptance testing.
-
-### 战斗与行为连续性 / Combat and movement continuity
+#### 战斗与行为连续性
 
 - 撤退路线在接近终点时提前续接，并根据近处追兵的实时方向检查路线是否仍安全；寻找新路线时保留旧路线，地面路线耗尽时用经过碰撞与落脚检查的短步暂时拉开距离。闲置回血和移动辅助不再覆盖撤退速度。通用无进展检测缩短为 5 tick，先恢复移动输入，再尝试局部脱困，最后使用独立共享预算重寻路；主动攻击、原地驻守和正常站定射击不因该检测被强制移动。
-- Retreats anticipate route endpoints and close pursuers' changing direction, retain existing routes while planning, and bridge exhausted ground routes with collision/floor-checked local steps. Idle recovery and movement helpers no longer overwrite retreat speed. Five-tick progress checks restore movement input before local recovery and independently budgeted path repair, without forcing intentional stationary behavior to move.
-
 - 提升受击与落地后的移动连续性：原生逃跑不再每次落地先停路，失败重规划保留现有路线并限频重试；受击中的撤退只记录反击授权，不把路线交回进攻。通用停滞检测跨路线/路点更换记录真实位移，近期受伤及撤退时缩短恢复等待，移动恢复物品使用不屏蔽检测。废弃路线清理残留移动输入，避免原地奔跑；战术撤退能识别被替换路线，缺失导航不再被反击阻止重规划。
-- Movement continuity after hits/landings now preserves native escape routes until replacements are ready, keeps retaliation from preempting retreat, and tracks actual progress across path changes. Shared navigation recovery handles moving recovery actions, clears stale movement input, and repairs interrupted retreat routes despite counterfire.
-
 - 完善 Better Combat 高低差攻击：攻击、控距共用原点及目标碰撞箱内的可达瞄准点，控距不再被旧俯仰角误判；起手、前摇和延迟出伤保留俯仰，避免普通看向控制重置。高大、正上方及斜下方目标使用有限三维方向，仍保留距离、视线及实际出伤命中盒检查。
-- Better Combat elevation handling shares attack origins and reachable in-box aim points across spacing and attacks, preserves pitch through windup, and handles tall/overhead/lowered targets without relaxing live range or visibility checks.
-
 - 正式雇佣人类死亡时完整掉落背包全部物品、主副手及四件护甲，保留死亡前的数量、耐久与 NBT，不应用野生掉落概率。按死亡时雇佣身份保存物品快照并清理旧掉落副本，避免漏掉或重复；正式雇佣的援军不受临时援军无掉落标记影响。野生人类及未雇佣临时援军保持原有规则。
-- Formally hired humans drop their full backpack and equipped inventory with original counts, durability and NBT. Death snapshots preserve hiring status and replace duplicate owned drops; hired reinforcements bypass temporary no-drop flags. Wild humans and unhired temporary support retain their existing rules.
-
 - Better Combat 延迟出伤阶段持续朝向本次攻击目标，路径推进或后退不再把身体立即转向路点；地面与水中移动沿用原路径，出伤后解除朝向约束。撤退、目标失效或武器切换不会被攻击朝向占用，仍按实时范围与视线判断命中，不保证必中。
-- Better Combat windups retain opponent-facing orientation through delayed impact instead of turning toward navigation nodes. Ground/water movement remains available; facing releases after impact and yields to retreat or invalidated attacks. Hits still use live geometry and visibility.
-
 - 主人离线不再强制士兵待命、清除仇恨或禁止拾取，保留玩家设置的移动及攻击模式。跟随模式在主人缺席时暂停跟随而不阻断已授权战斗；清理旧存档自动待命标记，恢复此前坐下状态。
-- Owner logout preserves movement and combat orders, target acquisition and configured pickup. Following pauses when the owner is unavailable without stopping authorized combat; legacy automatic-standby flags are cleared.
-
 - 士兵自动聊天改为按主人共享限额：普通台词默认 60 秒间隔、每 5 分钟最多 3 条；重要状态报告使用独立限额、去重及有界合并队列，优先显示低血量警告，避免多名士兵同时刷屏。限额写入雇佣配置并保留双语说明，主动雇佣及命令确认仍即时反馈。
-- Automatic soldier messages now share per-owner budgets. Chatter defaults to a 60-second interval and three messages per five minutes; status reports have separate limits, bounded batching and deduplication, with critical health prioritized. Limits are configurable with bilingual comments; player-initiated hiring and command confirmations remain immediate.
-
 - 修复防御状态占用移动后站桩：远程防御检查真实导航状态，缺失路线时按武器射程后撤或推进；失败路线及时交回武器 AI，不再假设旧走位路线仍存在。近战持盾按实际命中范围继续推进，普通战斗格挡也使用移动盾牌入口。
 - 近战在有效攻击距离内受击后短时尝试小幅、安全侧移，不再直接锁定静止控距；侧面被挡时交回正常追击。近战持盾复用同一控距规则，食物、拉弓及撤退不受影响，不修改攻击冷却。
 - 持盾不再禁用导航停滞检测，5 tick 无进展时先恢复移动输入，持续受阻才执行局部脱困与限额重寻路；持盾仍可开门和按实际上坡路点起跳，不触发随机战斗跳跃。近战被防御打断时保留有效路线并解除重新起步的检查等待。
 - 人类受击的基础击退力度减半，站在陆地时限制额外上抛至 0.12，保留原版击退抗性、事件及伤害无敌时间，避免将更快反应变成额外高频伤害。
-- Mobile shield defense now restores interrupted ranged routes, preserves melee pursuit and participates in navigation stall recovery. Physical hit reactions are shortened without resetting damage immunity.
-
 - 难度时间改为按玩家 UUID 保存累计在线游戏 tick，24000 tick 为个人一天；取消世界日历偏移与 `day sync`，离线、暂停、睡觉跳夜和原版时间命令不推进个人难度。旧日历不迁移，首次使用从个人第 1 天开始。
 - 普通自然刷新、区块初始生成、自然大型遭遇和装备成长统一按生成点同维度最近的存活非旁观玩家的个人进度决定；两类信号召唤及既有实体不变。管理员日期指令增加可选玩家参数，控制台须指定在线玩家。
 - 在线计时每 200 tick 批量结算，退出和停服补齐余量，沿用世界正常保存；异步生成只读取不可变玩家快照，不访问存档或可变计时表。保留通用配置缺项补全与错误保护，本轮不新增旧配置迁移分支。
-- Personal online progression replaces the world calendar. Rank unlocks and spawn equipment use the same nearby player's progress; sleep and vanilla time commands no longer advance difficulty. Commands can target an online player; world-time synchronization is removed. Timers settle in 200-tick batches with logout/shutdown settlement and read-only snapshots for asynchronous spawn queries.
 
-### 装备、配置与维护重构 / Equipment, configuration and maintenance
-
-### 简体中文
+#### 装备、配置与维护重构
 
 - 重构装备联动：首次识别斯巴达武器/盾牌时，将可用条目写入原生配置权重池并保存导入记录，实体生成不再事后替换。玩家删除已导入条目后不重复补回，支持自定义权重；空盾牌池不再强制补原版盾牌。刷新旧内置说明但保留自定义备注。
 - 增加 `natural_spawn_firearms_enabled` 总开关，控制自然生成及自然大型战斗的人类是否额外携带枪械；原有枪械概率、白名单和成长倍率保留，关闭不影响其他装备与已有单位。成功生成枪械时保留配置池近战备用，均计入总武器数量。
@@ -145,6 +136,22 @@ This release consolidates equipment, configuration, personal progression, soldie
 - 删除未参与构建的 `basePatch` 资源覆盖，更新中英文 README、配置指南与性能审查记录。新增库存守恒、存档空槽、成长边界、入口连接和发行 JAR 残留检查；这些独立检查不替代实际游戏测试。
 
 ### English
+
+This release consolidates equipment, configuration, personal progression, soldier feedback and combat-navigation changes since 3.5.5. Automated checks do not replace in-game acceptance testing.
+
+#### Combat and movement continuity
+
+- Retreats anticipate route endpoints and close pursuers' changing direction, retain existing routes while planning, and bridge exhausted ground routes with collision/floor-checked local steps. Idle recovery and movement helpers no longer overwrite retreat speed. Five-tick progress checks restore movement input before local recovery and independently budgeted path repair, without forcing intentional stationary behavior to move.
+- Movement continuity after hits/landings now preserves native escape routes until replacements are ready, keeps retaliation from preempting retreat, and tracks actual progress across path changes. Shared navigation recovery handles moving recovery actions, clears stale movement input, and repairs interrupted retreat routes despite counterfire.
+- Better Combat elevation handling shares attack origins and reachable in-box aim points across spacing and attacks, preserves pitch through windup, and handles tall/overhead/lowered targets without relaxing live range or visibility checks.
+- Formally hired humans drop their full backpack and equipped inventory with original counts, durability and NBT. Death snapshots preserve hiring status and replace duplicate owned drops; hired reinforcements bypass temporary no-drop flags. Wild humans and unhired temporary support retain their existing rules.
+- Better Combat windups retain opponent-facing orientation through delayed impact instead of turning toward navigation nodes. Ground/water movement remains available; facing releases after impact and yields to retreat or invalidated attacks. Hits still use live geometry and visibility.
+- Owner logout preserves movement and combat orders, target acquisition and configured pickup. Following pauses when the owner is unavailable without stopping authorized combat; legacy automatic-standby flags are cleared.
+- Automatic soldier messages now share per-owner budgets. Chatter defaults to a 60-second interval and three messages per five minutes; status reports have separate limits, bounded batching and deduplication, with critical health prioritized. Limits are configurable with bilingual comments; player-initiated hiring and command confirmations remain immediate.
+- Mobile shield defense now restores interrupted ranged routes, preserves melee pursuit and participates in navigation stall recovery. Physical hit reactions are shortened without resetting damage immunity.
+- Personal online progression replaces the world calendar. Rank unlocks and spawn equipment use the same nearby player's progress; sleep and vanilla time commands no longer advance difficulty. Commands can target an online player; world-time synchronization is removed. Timers settle in 200-tick batches with logout/shutdown settlement and read-only snapshots for asynchronous spawn queries.
+
+#### Equipment, configuration and maintenance
 
 - Reworked equipment integration: registered Spartan weapons/shields are imported once into native weighted configuration pools with persistent receipts. Spawn-time replacements were removed; deleting imported rows keeps them deleted. Custom weights are respected, and empty shield pools no longer create vanilla shields. Known stock guidance is refreshed without overwriting custom notes.
 - Added `natural_spawn_firearms_enabled` for extra firearms in natural spawns and automatic natural battles. Existing firearm chances, whitelists and growth scaling remain; disabling it leaves other gear and existing entities untouched. Gunners retain their configured melee weapon, with both weapons counted toward the spawn cap.
