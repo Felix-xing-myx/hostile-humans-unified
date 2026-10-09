@@ -36,7 +36,12 @@ public final class PursuitNavigationTest {
         for (String goal : new String[]{"MeleeAttackGoal", "BowAttack", "CrossbowGoal"})
             check(calls("com/craftix/hostile_humans/entity/ai/goal/" + goal, "tick", root + "PursuitNavigation", "update"), "native weapon pursuit wired: " + goal);
         check(calls(root + "GunnerGoal", "approachTarget", root + "PursuitNavigation", "update"), "gun approach uses same continuity gate");
-        check(calls(root + "TridentHybridGoal", "tick", root + "PursuitNavigation", "update"), "trident pursuit uses same gate");
+        for (String branch : new String[]{"tickMelee", "tickRanged"}) {
+            check(calls(root + "TridentHybridGoal", "tick", root + "TridentHybridGoal", branch),
+                    "trident tick dispatches pursuit branch: " + branch);
+            check(calls(root + "TridentHybridGoal", branch, root + "PursuitNavigation", "update"),
+                    "trident pursuit uses same gate: " + branch);
+        }
         check(calls(root + "PursuitNavigation", "update", root + "BasicNavigationBudget", "tryAcquire"), "all refresh work shares FIFO budget");
         check(calls(root + "PursuitNavigation", "update", root + "HumanTerrainSafety", "safePath"), "replacement retains terrain safety");
         check(calls(root + "PursuitNavigation", "update", "com/craftix/hostile_humans/entity/ai/HumanNavigation", "createFreshPath"), "moving target refresh bypasses obsolete cached route");
