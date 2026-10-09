@@ -274,7 +274,8 @@ public final class RecoverySupplies {
             }
             boolean useful = PotionUtils.getMobEffects(stack).stream().anyMatch(effect ->
                     effect.getEffect() == MobEffects.MOVEMENT_SLOWDOWN
-                            || effect.getEffect() == MobEffects.WEAKNESS);
+                            || effect.getEffect() == MobEffects.WEAKNESS
+                            || effect.getEffect() == MobEffects.POISON);
             if (useful) {
                 return i;
             }

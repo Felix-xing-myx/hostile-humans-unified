@@ -35,16 +35,11 @@ final class SpawnPotionConfig {
     private record Available(ItemStack stack, int weight) { }
     final boolean enabled;
     final Pool recovery, tactical;
-    final Entry bonus;
-    final double bonusChance;
 
     SpawnPotionConfig(JsonObject root) {
         enabled = UnifiedConfig.bool(root, "enabled", true);
         recovery = parsePool(UnifiedConfig.object(root, "recovery"));
         tactical = parsePool(UnifiedConfig.object(root, "tactical"));
-        JsonObject extra = UnifiedConfig.object(root, "bonus");
-        bonus = parseEntry(extra);
-        bonusChance = UnifiedConfig.number(extra, "chance", 0, 0, 1);
     }
 
     static Pool parsePool(JsonObject root) {
@@ -85,12 +80,7 @@ final class SpawnPotionConfig {
     Granted grant(HumanData data, RandomSource random) {
         if (!enabled) return new Granted(0, 0);
         int first = insertPool(data, random, recovery, recovery.rollCount(random));
-        int requested = tactical.entries.isEmpty() ? 0 : tactical.rollCount(random), inserted = 0;
-        if (requested > 0 && bonus != null && random.nextDouble() < bonusChance) {
-            ItemStack extra = bonus.resolve();
-            if (!extra.isEmpty() && RecoverySupplies.insertInventory(data, extra)) inserted++;
-        }
-        inserted += insertPool(data, random, tactical, requested - inserted);
+        int inserted = insertPool(data, random, tactical, tactical.rollCount(random));
         return new Granted(first, inserted);
     }
 

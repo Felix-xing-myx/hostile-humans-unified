@@ -8,13 +8,16 @@ import net.minecraft.util.RandomSource;
 public final class SpawnPotionConfigTest {
     public static void main(String[] args) {
         UnifiedConfig config = new UnifiedConfig(new JsonObject());
-        int[] recoveryMin = {2, 2, 4, 6}, recoveryMax = {4, 5, 7, 8};
-        int[] tacticalMin = {1, 2, 3, 5}, tacticalMax = {2, 3, 5, 7};
+        int[] recoveryMin = {1, 2, 4, 6}, recoveryMax = {2, 4, 7, 8};
+        int[] tacticalMin = {1, 2, 4, 6}, tacticalMax = {2, 4, 7, 8};
         String[] ranks = {"roamer", "tier1", "tier2", "tier3"};
         for (int i = 0; i < ranks.length; i++) {
             var value = config.spawnPotions(ranks[i]);
             check(value.recovery.minimum() == recoveryMin[i] && value.recovery.maximum() == recoveryMax[i], "recovery defaults");
             check(value.tactical.minimum() == tacticalMin[i] && value.tactical.maximum() == tacticalMax[i], "tactical defaults");
+            checkPool(value.recovery, new String[]{"strong_healing", "long_regeneration", "strong_regeneration"}, new int[]{2, 1, 1});
+            checkPool(value.tactical, new String[]{"long_slowness", "long_weakness", "long_strength", "strong_poison", "strong_strength", "long_swiftness"}, new int[]{5, 1, 10, 2, 5, 8});
+            check(!UnifiedConfig.defaults().getAsJsonObject("tiers").getAsJsonObject(ranks[i]).getAsJsonObject("potions").has("bonus"), "no separate speed probability entry");
             JsonObject projected = TierConfigProjection.tier(UnifiedConfig.defaults(), ranks[i]);
             check(projected.getAsJsonObject("potions").getAsJsonObject("recovery").has("pool"), "rank-file projection includes potions");
         }
@@ -26,10 +29,14 @@ public final class SpawnPotionConfigTest {
         check(custom.spawnPotions("tier1").grant(null, RandomSource.create(1)).equals(new SpawnPotionConfig.Granted(0, 0)), "disabled config does not touch inventory");
         var empty = new SpawnPotionConfig(json("""
                 {"recovery":{"count_min":2,"count_max":4,"pool":[]},
-                 "tactical":{"count_min":1,"count_max":2,"pool":[]},
-                 "bonus":{"item":"minecraft:potion","potion":"minecraft:long_swiftness","chance":1}}
+                 "tactical":{"count_min":1,"count_max":2,"pool":[]}}
                 """));
-        check(empty.grant(null, RandomSource.create(2)).equals(new SpawnPotionConfig.Granted(0, 0)), "empty pools also suppress tactical bonus");
+        check(empty.grant(null, RandomSource.create(2)).equals(new SpawnPotionConfig.Granted(0, 0)), "empty pools grant no potions");
+        var zero = new UnifiedConfig(json("""
+                {"tiers":{"tier2":{"potions":{"tactical":{"count_min":0,"count_max":0,"pool":[]}}}}}
+                """));
+        check(zero.spawnPotions("tier2").tactical.maximum() == 0
+                && zero.spawnPotions("tier2").tactical.entries().isEmpty(), "explicit zero tactical count and pool stay disabled");
         var pool = SpawnPotionConfig.parsePool(json("""
                 {"count_min":12,"count_max":3,"pool":[
                  {"item":"minecraft:splash_potion","potion":"othermod:custom_potion","weight":5},
@@ -44,6 +51,15 @@ public final class SpawnPotionConfigTest {
         var bounded = SpawnPotionConfig.parsePool(json("{\"count_min\":-2,\"count_max\":999,\"pool\":[]}"));
         check(bounded.minimum() == 0 && bounded.maximum() == 30, "bounded bottle totals");
         System.out.println("PASS: per-rank potion configuration, projection, empty/disabled safety and bounds");
+    }
+    private static void checkPool(SpawnPotionConfig.Pool pool, String[] ids, int[] weights) {
+        check(pool.entries().size() == ids.length, "default pool size");
+        for (int i = 0; i < ids.length; i++) {
+            var entry = pool.entries().get(i);
+            check(entry.potion().toString().equals("minecraft:" + ids[i]) && entry.weight() == weights[i], "default potion and weight");
+            boolean splash = ids[i].equals("long_slowness") || ids[i].equals("long_weakness") || ids[i].equals("strong_poison");
+            check(entry.item().toString().equals(splash ? "minecraft:splash_potion" : "minecraft:potion"), "default bottle form");
+        }
     }
     private static JsonObject json(String text) { return JsonParser.parseString(text).getAsJsonObject(); }
     private static void check(boolean condition, String message) { if (!condition) throw new AssertionError(message); }

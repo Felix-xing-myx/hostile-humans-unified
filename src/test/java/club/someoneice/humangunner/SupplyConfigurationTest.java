@@ -24,7 +24,8 @@ public final class SupplyConfigurationTest {
             file.add("potions", json("""
                     {"enabled":true,"recovery":{"count_min":3,"count_max":3,"pool":[
                      {"item":"minecraft:potion","potion":"example:custom_healing","weight":4}]},
-                     "tactical":{"count_min":0,"count_max":0,"pool":[]},"bonus":{"chance":0}}
+                     "tactical":{"count_min":9,"count_max":9,"pool":[
+                     {"item":"minecraft:potion","potion":"minecraft:long_swiftness","weight":8}]}}
                     """));
             file.getAsJsonObject("equipment_loadout").add("armor_sets", JsonParser.parseString("""
                     [{"weight":1,"head":"example:helmet","chest":"example:chestplate",
@@ -45,8 +46,10 @@ public final class SupplyConfigurationTest {
                     && potions.recovery.entries().get(0).potion().toString().equals("example:custom_healing"),
                     "disk custom potion ID replaces default registered potion candidates");
             check(potions.recovery.rollCount(RandomSource.create(3)) == 3, "custom bottle count survives full load");
-            check(potions.tactical.entries().isEmpty() && potions.tactical.maximum() == 0,
-                    "zero tactical supply is not repopulated");
+            check(potions.tactical.rollCount(RandomSource.create(4)) == 9
+                    && potions.tactical.entries().size() == 1
+                    && potions.tactical.entries().get(0).potion().toString().equals("minecraft:long_swiftness"),
+                    "disk tactical total and speed-only weighted pool survive full load without one-bottle cap");
             var armor = config.equipmentLoadout("tier2").armorSets.entries();
             check(armor.size() == 1 && armor.get(0).head().toString().equals("example:helmet")
                     && armor.get(0).feet().toString().equals("example:boots"), "custom armor set survives full load");

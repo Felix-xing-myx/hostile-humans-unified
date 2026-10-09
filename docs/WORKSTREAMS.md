@@ -629,3 +629,12 @@
 - 备份前及替换前检查无非Gradle Java进程。备份旧3.6.5 JAR和14份相关配置，逐文件SHA256验证；部署备份/20261009-183134-3.7.0-Forge_47.4.21/deployment.json记录完整清单。
 - 唯一部署目标E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\hostile-humans-unified-1.20.1-3.7.0.jar；3802307字节，源/目标SHA256均46DA766D3FDB2DF83918B5100D30DD74F1BFE630B8A5E0DD3CFC010CA80C332F。新JAR核对后移除旧3.6.5，目标仅一份统一模组JAR；14份原配置哈希不变，没有修改存档。
 - 未启动游戏或推送GitHub；3.7.0保持测试中，尚非正式发布。待用户以新存档验收真实Mixin准备/启动、单一模组列表、资源/配方/结构/自然生成、持久化、TaCZ换弹/动画/友军过滤、女仆与斯巴达联动及追击导航；构建成功不代表这些游戏行为已验收。
+
+
+## 2026-10-09 统一出生药水抽取与默认配额（源码完成，未构建）
+
+- 主控/root独立实施，主工作树main，基线f6c2ff9；范围SpawnPotionConfig、RecoverySupplies、默认配置、两项既有配置回归及说明/日志，无新Agent或外部实例修改。
+- 删除迅捷bonus字段解析、独立概率及预留名额逻辑，全部战术候选统一由insertPool按weight逐瓶抽取，允许重复且无单种上限。四阶恢复和战术总数分别独立可配置，默认均为1–2/2–4/4–7/6–8。
+- 恢复池饮用strong_healing/long_regeneration/strong_regeneration权重2/1/1；战术池long_slowness/long_weakness/long_strength/strong_poison/strong_strength/long_swiftness权重5/1/10/2/5/8，迟缓/虚弱/剧毒为喷溅，其余饮用。现有喷溅选取原仅识别迟缓/虚弱，增加POISON以让新剧毒实际参与原投掷入口；冷却、射程及友军附近拒投规则保持。
+- 已有配置的数量/池继续权威，不用新默认覆写；旧bonus不再读取、不自动迁移或删除用户字段，需手动把迅捷纳入tactical.pool。各阶potions.recovery/tactical.count_min/count_max已开放0–30瓶配置，修改重启后只对新生成且未领取补给的实体生效。
+- 静态JSON核查四阶范围/全部权重/单一迅捷入口通过，对比HEAD确认非potions默认完全不变；两项测试的文本块JSON解析及git diff --check通过。更新默认池/瓶形、零配额、磁盘自定义战术9瓶迅捷池回归，尚未编译执行。用户本轮未要求构建，未运行Gradle/javac、未同步、未启动游戏或push。待后续授权构建及游戏验收新生各阶瓶数/重复迅捷/再生II和剧毒投掷。

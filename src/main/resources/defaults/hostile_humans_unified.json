@@ -262,10 +262,10 @@
         "recovery": {
           "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
           "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
-          "count_min": 2,
+          "count_min": 1,
           "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
           "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
-          "count_max": 4,
+          "count_max": 2,
           "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
           "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
@@ -277,6 +277,11 @@
             {
               "item": "minecraft:potion",
               "potion": "minecraft:long_regeneration",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_regeneration",
               "weight": 1
             }
           ],
@@ -296,7 +301,7 @@
             {
               "item": "minecraft:splash_potion",
               "potion": "minecraft:long_slowness",
-              "weight": 1
+              "weight": 5
             },
             {
               "item": "minecraft:splash_potion",
@@ -306,24 +311,26 @@
             {
               "item": "minecraft:potion",
               "potion": "minecraft:long_strength",
+              "weight": 10
+            },
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:strong_poison",
               "weight": 2
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_strength",
+              "weight": 5
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_swiftness",
+              "weight": 8
             }
           ],
-          "_说明_中文": "战术药水储备；额外迅捷药水计入此类数量。",
-          "_description_en": "Tactical potion reserves; bonus Speed potions count toward this total."
-        },
-        "bonus": {
-          "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
-          "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
-          "_说明_item_中文": "额外药水的瓶形物品ID；例如minecraft:potion。",
-          "_description_item_en": "Bottle item ID for the bonus potion, e.g. minecraft:potion.",
-          "item": "minecraft:potion",
-          "_说明_potion_中文": "额外药水注册ID；例如minecraft:swiftness。",
-          "_description_potion_en": "Registered bonus potion ID, e.g. minecraft:swiftness.",
-          "potion": "minecraft:long_swiftness",
-          "_说明_chance_中文": "用额外药水替代一个战术瓶的概率，0–1；不会增加战术瓶总量。",
-          "_description_chance_en": "Chance to replace one tactical bottle, 0–1; does not increase the tactical total.",
-          "chance": 0.1
+          "_说明_中文": "战术药水储备；包括迅捷，所有种类按权重独立抽取，可重复，不设单种瓶数上限。",
+          "_description_en": "Tactical reserves including Speed; all types use independent weighted draws with repeats and no per-type bottle cap."
         }
       }
     },
@@ -582,7 +589,7 @@
           "count_min": 2,
           "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
           "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
-          "count_max": 5,
+          "count_max": 4,
           "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
           "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
@@ -595,6 +602,11 @@
               "item": "minecraft:potion",
               "potion": "minecraft:long_regeneration",
               "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_regeneration",
+              "weight": 1
             }
           ],
           "_说明_中文": "恢复药水储备。",
@@ -606,14 +618,14 @@
           "count_min": 2,
           "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
           "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
-          "count_max": 3,
+          "count_max": 4,
           "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
           "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
               "potion": "minecraft:long_slowness",
-              "weight": 1
+              "weight": 5
             },
             {
               "item": "minecraft:splash_potion",
@@ -623,24 +635,26 @@
             {
               "item": "minecraft:potion",
               "potion": "minecraft:long_strength",
+              "weight": 10
+            },
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:strong_poison",
               "weight": 2
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_strength",
+              "weight": 5
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_swiftness",
+              "weight": 8
             }
           ],
-          "_说明_中文": "战术药水储备；额外迅捷药水计入此类数量。",
-          "_description_en": "Tactical potion reserves; bonus Speed potions count toward this total."
-        },
-        "bonus": {
-          "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
-          "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
-          "_说明_item_中文": "额外药水的瓶形物品ID；例如minecraft:potion。",
-          "_description_item_en": "Bottle item ID for the bonus potion, e.g. minecraft:potion.",
-          "item": "minecraft:potion",
-          "_说明_potion_中文": "额外药水注册ID；例如minecraft:swiftness。",
-          "_description_potion_en": "Registered bonus potion ID, e.g. minecraft:swiftness.",
-          "potion": "minecraft:long_swiftness",
-          "_说明_chance_中文": "用额外药水替代一个战术瓶的概率，0–1；不会增加战术瓶总量。",
-          "_description_chance_en": "Chance to replace one tactical bottle, 0–1; does not increase the tactical total.",
-          "chance": 0.2
+          "_说明_中文": "战术药水储备；包括迅捷，所有种类按权重独立抽取，可重复，不设单种瓶数上限。",
+          "_description_en": "Tactical reserves including Speed; all types use independent weighted draws with repeats and no per-type bottle cap."
         }
       }
     },
@@ -912,6 +926,11 @@
               "item": "minecraft:potion",
               "potion": "minecraft:long_regeneration",
               "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_regeneration",
+              "weight": 1
             }
           ],
           "_说明_中文": "恢复药水储备。",
@@ -920,17 +939,17 @@
         "tactical": {
           "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
           "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
-          "count_min": 3,
+          "count_min": 4,
           "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
           "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
-          "count_max": 5,
+          "count_max": 7,
           "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
           "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
               "potion": "minecraft:long_slowness",
-              "weight": 1
+              "weight": 5
             },
             {
               "item": "minecraft:splash_potion",
@@ -940,24 +959,26 @@
             {
               "item": "minecraft:potion",
               "potion": "minecraft:long_strength",
+              "weight": 10
+            },
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:strong_poison",
               "weight": 2
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_strength",
+              "weight": 5
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_swiftness",
+              "weight": 8
             }
           ],
-          "_说明_中文": "战术药水储备；额外迅捷药水计入此类数量。",
-          "_description_en": "Tactical potion reserves; bonus Speed potions count toward this total."
-        },
-        "bonus": {
-          "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
-          "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
-          "_说明_item_中文": "额外药水的瓶形物品ID；例如minecraft:potion。",
-          "_description_item_en": "Bottle item ID for the bonus potion, e.g. minecraft:potion.",
-          "item": "minecraft:potion",
-          "_说明_potion_中文": "额外药水注册ID；例如minecraft:swiftness。",
-          "_description_potion_en": "Registered bonus potion ID, e.g. minecraft:swiftness.",
-          "potion": "minecraft:long_swiftness",
-          "_说明_chance_中文": "用额外药水替代一个战术瓶的概率，0–1；不会增加战术瓶总量。",
-          "_description_chance_en": "Chance to replace one tactical bottle, 0–1; does not increase the tactical total.",
-          "chance": 0.3
+          "_说明_中文": "战术药水储备；包括迅捷，所有种类按权重独立抽取，可重复，不设单种瓶数上限。",
+          "_description_en": "Tactical reserves including Speed; all types use independent weighted draws with repeats and no per-type bottle cap."
         }
       }
     },
@@ -1229,6 +1250,11 @@
               "item": "minecraft:potion",
               "potion": "minecraft:long_regeneration",
               "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_regeneration",
+              "weight": 1
             }
           ],
           "_说明_中文": "恢复药水储备。",
@@ -1237,17 +1263,17 @@
         "tactical": {
           "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
           "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
-          "count_min": 5,
+          "count_min": 6,
           "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
           "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
-          "count_max": 7,
+          "count_max": 8,
           "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
           "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
               "potion": "minecraft:long_slowness",
-              "weight": 1
+              "weight": 5
             },
             {
               "item": "minecraft:splash_potion",
@@ -1257,24 +1283,26 @@
             {
               "item": "minecraft:potion",
               "potion": "minecraft:long_strength",
+              "weight": 10
+            },
+            {
+              "item": "minecraft:splash_potion",
+              "potion": "minecraft:strong_poison",
               "weight": 2
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_strength",
+              "weight": 5
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_swiftness",
+              "weight": 8
             }
           ],
-          "_说明_中文": "战术药水储备；额外迅捷药水计入此类数量。",
-          "_description_en": "Tactical potion reserves; bonus Speed potions count toward this total."
-        },
-        "bonus": {
-          "_说明_中文": "该药水按chance抽取，成功加入时占用一个战术药水名额，不额外增加总数。chance=0关闭；战术数量为0时不发放。",
-          "_description_en": "Chance to reserve one tactical bottle for this potion; does not add to the tactical count. Set chance=0 to disable; a zero tactical count grants none.",
-          "_说明_item_中文": "额外药水的瓶形物品ID；例如minecraft:potion。",
-          "_description_item_en": "Bottle item ID for the bonus potion, e.g. minecraft:potion.",
-          "item": "minecraft:potion",
-          "_说明_potion_中文": "额外药水注册ID；例如minecraft:swiftness。",
-          "_description_potion_en": "Registered bonus potion ID, e.g. minecraft:swiftness.",
-          "potion": "minecraft:long_swiftness",
-          "_说明_chance_中文": "用额外药水替代一个战术瓶的概率，0–1；不会增加战术瓶总量。",
-          "_description_chance_en": "Chance to replace one tactical bottle, 0–1; does not increase the tactical total.",
-          "chance": 0.4
+          "_说明_中文": "战术药水储备；包括迅捷，所有种类按权重独立抽取，可重复，不设单种瓶数上限。",
+          "_description_en": "Tactical reserves including Speed; all types use independent weighted draws with repeats and no per-type bottle cap."
         }
       }
     }
