@@ -597,3 +597,10 @@
 - 最终JAR版本/ZIP完整性、新适配器类、插件及停用Mixin清单核查通过。备份前与替换前均无非Gradle Java进程；旧JAR与14份相关配置逐一备份核对，备份：部署备份/20261009-181122-compat-boundaries-Forge_47.4.21/deployment.json。
 - 源/目标SHA256均19CC34D9E42BB048CF5F983D9E8C80594BA138A26F53980346D9C31FA13DE4B3，目标仅一份统一模组JAR（3831714字节），14份配置哈希保持。原用户CHANGELOG完整文件SHA256 b05c6d8643feb7669502a7e1de0dd99d5d5d5a720f32f8f8263c85e0bf97dcbe保持。
 - 未启动游戏、未推送或同步其它实例。构建与字节码合约测试不等同启动时Mixin应用及游戏验收；待重启实例验证普通/逐发/脚本换弹扣费及通知/取消、动画/护甲/音轨、有无PlayerAnimator、女仆身份牌与爆炸、友军/PVP弹丸、水面/地形追击连续性及旧兼容停用。
+
+## 2026-10-09 修复兼容检查插件的ModLauncher字节码读取错误（源码，未构建）
+
+- 用户反馈humangunner Mixin启动失败；读取测试实例latest.log定位18:13:11首次FATAL为SpartanWeaponryItemRandomizerMixin PREPARE，根因OptionalMixinPlugin.shouldApplyMixin调用getClassNode(name,false)。这是上一轮主控新引入错误，非TaCZ扣费钩子/斯巴达API签名失配；日志中的其它可选渲染ClassNotFound警告不是本次首个致命原因。
+- 对当前实例实际Mixin0.8.5 javap：MixinLaunchPluginLegacy.getClassNode(name,false)直接抛IllegalArgumentException，单参getClassNode(name)委托true。改为readTarget(provider,name)使用单参服务入口，仍读取ClassNode而不定义/初始化目标Java类，不捕获并隐藏真实探测错误；两项可选补丁与必需弹药/友军门控保持。
+- 新增ModLauncher约束provider夹具，拒绝false并验证真实插件边界使用受支持入口，防止只检查方法签名而漏掉服务模式。仅源码/静态验证，未重新编译或执行该测试；已有构建成功不能证明真实启动时服务模式可用。
+- 本轮用户要求检查报错，未重新要求构建/同步，遵守只修改源码；测试实例仍为先前JAR，不能视为已修复部署。待构建同步后由用户重启验证Mixin准备与后续加载。保留用户CHANGELOG，未启动游戏或push。

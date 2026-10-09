@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
+import org.spongepowered.asm.service.IClassBytecodeProvider;
 import org.spongepowered.asm.service.MixinService;
 
 /** Capability checks for nonessential upstream implementation fixes only.
@@ -28,7 +29,7 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
         else if (mixinClassName.endsWith(".SpartanWeaponryItemRandomizerMixin")) contract = SPARTAN_RANDOMIZER;
         else return true;
         try {
-            ClassNode target = MixinService.getService().getBytecodeProvider().getClassNode(targetClassName, false);
+            ClassNode target = readTarget(MixinService.getService().getBytecodeProvider(), targetClassName);
             if (hasMethod(target, contract, contract.equals(SPARTAN_RANDOMIZER))) return true;
             LOGGER.warn("Skipping optional upstream fix {}: {} no longer exposes {}. "
                     + "The upstream behavior is retained; this fix needs a compatibility review.",
@@ -40,6 +41,15 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
             // Do not conceal unreadable bytecode as an absent/compatible dependency.
             throw new IllegalStateException("Cannot inspect optional compatibility target " + targetClassName, error);
         }
+    }
+
+    /** The one-argument service API selects the loader-supported transformation
+     * mode. Forge's ModLauncher explicitly rejects getClassNode(name, false).
+     * Reading a ClassNode does not define or initialize the target Java class.
+     */
+    public static ClassNode readTarget(IClassBytecodeProvider provider, String targetClassName)
+            throws ClassNotFoundException, IOException {
+        return provider.getClassNode(targetClassName);
     }
 
     public static boolean hasMethod(ClassNode target, String contract, boolean isStatic) {

@@ -63,6 +63,27 @@ public final class MaidHumanRelationTest {
         upstream.methods.add(new org.objectweb.asm.tree.MethodNode(0, "generate", "()V", null, null));
         check(!club.someoneice.humangunner.compat.OptionalMixinPlugin.hasMethod(upstream,
                 club.someoneice.humangunner.compat.OptionalMixinPlugin.SPARTAN_RANDOMIZER, true), "changed overload must not receive the fix");
+        // Model ModLauncher's supported provider mode and its real failure condition.
+        int[] providerReads = {0};
+        var loaderProvider = new org.spongepowered.asm.service.IClassBytecodeProvider() {
+            @Override public ClassNode getClassNode(String name) {
+                return getClassNode(name, true);
+            }
+            @Override public ClassNode getClassNode(String name, boolean runTransformers) {
+                if (!runTransformers) throw new IllegalArgumentException(
+                        "ModLauncher service does not currently support retrieval of untransformed bytecode");
+                providerReads[0]++;
+                return upstream;
+            }
+        };
+        check(club.someoneice.humangunner.compat.OptionalMixinPlugin.readTarget(loaderProvider, "fixture.Target") == upstream
+                && providerReads[0] == 1, "optional probe uses ModLauncher-supported bytecode mode");
+        boolean rejectsRawMode = false;
+        try { loaderProvider.getClassNode("fixture.Target", false); }
+        catch (IllegalArgumentException expected) { rejectsRawMode = true; }
+        check(rejectsRawMode, "fixture preserves actual Forge unsupported-raw-bytecode failure");
+        check(calls("club/someoneice/humangunner/compat/OptionalMixinPlugin", "shouldApplyMixin",
+                "club/someoneice/humangunner/compat/OptionalMixinPlugin", "readTarget"), "actual plugin uses loader boundary");
         check(calls(compat, "relationAllowsAttack", "club/someoneice/humangunner/IdentityBadgeAccess", "highestClearance"),
                 "owner inventory and Curios badge access");
         check(calls(compat, "relationAllowsAttack", "club/someoneice/humangunner/HumanRelations", "effectiveOwner"),
