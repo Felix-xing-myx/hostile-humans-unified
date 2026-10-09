@@ -9,8 +9,9 @@ public final class UnifiedConfigTest {
     public static void main(String[] args) throws Exception {
         GrowthConfigTest.main(args);
         JsonObject defaults = UnifiedConfig.defaults();
-        List<String> gameplaySections = defaults.keySet().stream().filter(key -> !key.startsWith("_")).toList();
-        check(gameplaySections.get(gameplaySections.size()-1).equals("tacz"), "TaCZ last gameplay section, ignoring guidance metadata");
+        check(defaults.has("growth") && !defaults.has("equipment_growth"), "one global growth section replaces equipment-only settings");
+        for (String rank : TierConfigProjection.RANKS)
+            check(!defaults.getAsJsonObject("tiers").getAsJsonObject(rank).has("growth"), "rank attributes do not duplicate global growth policy");
         UnifiedConfig config = new UnifiedConfig(new JsonObject());
         check(!config.vanillaMode(), "vanilla mode defaults off for existing configs");
         checkEquipmentLoadouts(config);
