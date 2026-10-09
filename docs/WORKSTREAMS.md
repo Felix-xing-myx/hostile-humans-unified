@@ -611,3 +611,13 @@
 - 基线76bf1840738b969ff8b201b3df163fffa3efc2dc；主控/root负责Java运行入口、注册/网络/持久化标识、测试、mods.toml、Mixin配置、构建/打包检查及共享文档，主工作树main；原用户CHANGELOG保留。
 - namespace_resources：独立worktrees/unified-namespace-resources，分支refactor/unified-namespace-resources，GPT6.1 Sol medium，只负责src/main/resources内assets/data/datapacks（含NBT）移动及引用更新，不编辑META-INF、Mixin JSON、Java、build.gradle、文档。原公共外部create/curios等命名空间不改。
 - Java包路径保持实现组织，游戏运行身份/注册ID统一；禁止对Java包、第三方mod ID或用户实例文件进行盲目替换。源资源同路径合并前检查碰撞，不覆写冲突；仅静态解析核验，交付本地提交后主控整合。
+
+### 单一身份与命名空间源码交付
+
+- 主控71baa0a合并Forge入口：仅HostileHumans保留@Mod，HumanGunner由统一入口构造一次，共享事件总线，统一依赖表。HumanGunner.MOD_ID引用HostileHumans.MOD_ID；原生物品/实体/音效注册也使用同一常量。删除MissingMappingsEvent和三阶旧注册ID映射，以及已停用的旧名字缓存读取。
+- 73份Java源码/测试中的运行字符串按语法节点更新，保留Java包/ASM类路径和版权来源。统一注册/资源引用、网络通道、翻译键、持久化标记及SavedData名称；配置目录仍hostile_humans_unified。旧配置不读取的测试夹具保持原文件名，不能视为运行别名兼容。
+- namespace_resources（GPT6.1 Sol medium）交付f5dfc08f1ac50f7cd37ac681701dda9d472ac1e3，主控cherry-pick 6e12032。500资源路径迁移，509源文件合并为507；两语言文件各186键、共372键，无重复键冲突。160/160 NBT共1804字符串更新，非字符串payload及外部命名空间保持；64贴图字节保持；无旧tier_three_human别名资源。
+- Mixin清单更名hostile_humans_unified.mixins.json、hostile_humans_unified.world.mixins.json及hostile_humans_unified.refmap.json，构建manifest和测试引用一致；Java包名仅是内部代码组织，保留原路径。新增UnifiedNamespaceTest接入check，检查最终JAR单身份/唯一初始化/无旧迁移/资源与refmap路径。已有打包审计改为核对维护后的源资源，不再要求与旧模组JAR字节相同。
+- 静态验证通过：324份Java语法、全部资源JSON/mcmeta、精确UI翻译键、Mixin类与refmap/manifest接线、Python工具语法、metadata单身份/依赖、主源码无旧ID字面量；namespace_resources_check.py按76bf184基线复跑通过283 JSON、160 NBT、372翻译键、64PNG及全部507资源保真；额外99本地模型/纹理/结构/pool引用存在；git diff --check通过。
+- 原用户CHANGELOG SHA256 b05c6d8643feb7669502a7e1de0dd99d5d5d5a720f32f8f8263c85e0bf97dcbe保持。未执行Gradle/javac或新测试，不构建/同步/启动游戏/push，版本暂保持3.6.5。测试实例仍为上次部署JAR；此前ModLauncher读取修复76bf184已包含源码，但尚未部署。
+- 新存档限定为用户明确选择，无旧ID迁移/别名；后续验收需构建后验证单模组列表、无重复注册、物品/刷怪蛋/身份牌/弹药/配方/贴图、结构生成/战利品/自然生成、菜单与网络、持久化和可选联动。需更新外部脚本/数据包引用，当前没有改用户实例文件。
