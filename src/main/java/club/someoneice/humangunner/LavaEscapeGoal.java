@@ -54,7 +54,7 @@ public final class LavaEscapeGoal extends Goal {
         MovementSpeedController.retreat(human, true);
         human.stopUsingItem();
         human.setSprinting(true);
-        human.getPersistentData().putString("humangunner:ai_phase", "escaping_lava");
+        human.getPersistentData().putString("hostile_humans_unified:ai_phase", "escaping_lava");
         findAndFollowShorePath();
     }
 
@@ -85,7 +85,7 @@ public final class LavaEscapeGoal extends Goal {
             human.setSprinting(false);
             if (human.getTarget() == null) {
                 MovementSpeedController.normal(human);
-                human.getPersistentData().putString("humangunner:ai_phase", "idle");
+                human.getPersistentData().putString("hostile_humans_unified:ai_phase", "idle");
             } else {
                 MovementSpeedController.combat(human, false);
             }

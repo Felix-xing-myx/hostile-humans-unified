@@ -16,10 +16,10 @@ public enum SoldierOrder {
     BODYGUARD;
 
     private static final java.util.Map<Human, net.minecraft.world.level.pathfinder.Path> ROUTES = new java.util.WeakHashMap<>();
-    static final String ORDER = "humangunner:soldier_order";
-    private static final String ANCHOR = "humangunner:order_anchor";
-    private static final String NEXT_PATROL = "humangunner:next_patrol_move";
-    private static final String RETURNING_FROM_RETREAT = "humangunner:returning_from_retreat";
+    static final String ORDER = "hostile_humans_unified:soldier_order";
+    private static final String ANCHOR = "hostile_humans_unified:order_anchor";
+    private static final String NEXT_PATROL = "hostile_humans_unified:next_patrol_move";
+    private static final String RETURNING_FROM_RETREAT = "hostile_humans_unified:returning_from_retreat";
     private static final double FOLLOW_COMBAT_RANGE_SQR = 48.0D * 48.0D;
     private static final double PATROL_RANGE_SQR = 32.0D * 32.0D;
     // Match the native idle stroll goals instead of using combat/return speed.

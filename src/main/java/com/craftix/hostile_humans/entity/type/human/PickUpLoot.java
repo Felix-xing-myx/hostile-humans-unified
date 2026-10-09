@@ -16,7 +16,7 @@ import net.minecraftforge.event.server.ServerAboutToStartEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid="hostile_humans")
+@Mod.EventBusSubscriber(modid="hostile_humans_unified")
 public class PickUpLoot
 extends HumanAbility {
     private static final short TICK_RATE = 60;

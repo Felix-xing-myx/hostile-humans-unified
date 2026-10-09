@@ -18,10 +18,10 @@ public enum SoldierCombatMode {
         OWNER_ASSAULT
     }
 
-    static final String MODE = "humangunner:soldier_combat_mode";
-    private static final String AUTHORIZED_TARGET = "humangunner:authorized_combat_target";
-    private static final String AUTHORIZED_CAUSE = "humangunner:authorized_combat_cause";
-    private static final String AUTHORIZED_UNTIL = "humangunner:authorized_combat_until";
+    static final String MODE = "hostile_humans_unified:soldier_combat_mode";
+    private static final String AUTHORIZED_TARGET = "hostile_humans_unified:authorized_combat_target";
+    private static final String AUTHORIZED_CAUSE = "hostile_humans_unified:authorized_combat_cause";
+    private static final String AUTHORIZED_UNTIL = "hostile_humans_unified:authorized_combat_until";
     private static final int MAX_AUTHORIZED_TARGETS = 8;
     private static final long AUTHORIZATION_TICKS = 200L;
 

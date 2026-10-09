@@ -4,7 +4,7 @@ import com.craftix.hostile_humans.entity.entities.Human;
 
 /** Short-lived movement hint preventing pursuit hops during a gun attack. */
 final class GunAttackMovementState {
-    private static final String SUPPRESS_JUMP_UNTIL = "humangunner:gun_attack_suppress_jump_until";
+    private static final String SUPPRESS_JUMP_UNTIL = "hostile_humans_unified:gun_attack_suppress_jump_until";
 
     private GunAttackMovementState() {
     }

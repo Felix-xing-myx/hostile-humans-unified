@@ -229,8 +229,8 @@ public final class EncounterCooldownTest {
                 "retained obsolete config cannot reintroduce the roamer gate");
         int roamerWeight = 0, tier1Weight = 0, roamerEntries = 0;
         for (String resource : new String[]{
-                "/data/hostile_humans/forge/biome_modifier/human_spawns.json",
-                "/data/humangunner/forge/biome_modifier/human_squad_spawns.json"}) {
+                "/data/hostile_humans_unified/forge/biome_modifier/human_spawns.json",
+                "/data/hostile_humans_unified/forge/biome_modifier/human_squad_spawns.json"}) {
             try (var reader = new java.io.InputStreamReader(
                     java.util.Objects.requireNonNull(EncounterCooldownTest.class.getResourceAsStream(resource)),
                     java.nio.charset.StandardCharsets.UTF_8)) {
@@ -238,12 +238,12 @@ public final class EncounterCooldownTest {
                 for (var element : spawners) {
                     var row = element.getAsJsonObject();
                     String type = row.get("type").getAsString();
-                    if (type.equals("hostile_humans:human_roamer")) {
+                    if (type.equals("hostile_humans_unified:human_roamer")) {
                         roamerEntries++;
                         roamerWeight += row.get("weight").getAsInt();
                         check(row.get("minCount").getAsInt() == 1 && row.get("maxCount").getAsInt() == 1,
                                 "roamers stay solitary");
-                    } else if (type.equals("hostile_humans:human_tier1")) tier1Weight += row.get("weight").getAsInt();
+                    } else if (type.equals("hostile_humans_unified:human_tier1")) tier1Weight += row.get("weight").getAsInt();
                 }
             } catch (java.io.IOException error) { throw new AssertionError("Cannot inspect spawn resources", error); }
         }

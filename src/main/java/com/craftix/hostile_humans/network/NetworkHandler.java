@@ -15,7 +15,7 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 public final class NetworkHandler {
     private static final String PROTOCOL_VERSION = "3";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation("hostile_humans", "network"), () -> PROTOCOL_VERSION,
+            new ResourceLocation("hostile_humans_unified", "network"), () -> PROTOCOL_VERSION,
             PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
     public static void registerNetworkHandler(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {

@@ -51,7 +51,7 @@ public final class IdleRecoveryGoal extends Goal {
         nextUseTick = human.tickCount;
         mealsInBatch = 0;
         MovementSpeedController.normal(human);
-        human.getPersistentData().putString("humangunner:ai_phase", "idle_recovery");
+        human.getPersistentData().putString("hostile_humans_unified:ai_phase", "idle_recovery");
     }
 
     @Override
@@ -62,7 +62,7 @@ public final class IdleRecoveryGoal extends Goal {
             session = null;
         }
         mealsInBatch = 0;
-        human.getPersistentData().putString("humangunner:ai_phase", "idle");
+        human.getPersistentData().putString("hostile_humans_unified:ai_phase", "idle");
         if (human.isFleeing) {
             MovementSpeedController.retreat(human, true);
         } else if (human.getTarget() == null) {

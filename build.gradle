@@ -58,7 +58,7 @@ tasks.withType(AbstractArchiveTask).configureEach {
 tasks.named('jar', Jar).configure {
     manifest { attributes('Implementation-Version': project.version,
         'Implementation-Title': 'Hostile Humans Unified',
-        'MixinConfigs': 'humangunner.mixins.json,mixins.hostile_humans.json') }
+        'MixinConfigs': 'hostile_humans_unified.mixins.json,hostile_humans_unified.world.mixins.json') }
     finalizedBy 'reobfJar'
 }
 tasks.register('encounterPolicyTest', JavaExec) {
@@ -224,6 +224,14 @@ tasks.register('taczAmmoMixinContractTest', JavaExec) {
     args taczApiJar.absolutePath
 }
 tasks.named('check').configure { dependsOn tasks.named('taczAmmoMixinContractTest') }
+
+tasks.register('unifiedNamespaceTest', JavaExec) {
+    dependsOn tasks.named('testClasses'), tasks.named('reobfJar')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.UnifiedNamespaceTest'
+    args tasks.named('jar', Jar).flatMap { it.archiveFile }.get().asFile.absolutePath
+}
+tasks.named('check').configure { dependsOn tasks.named('unifiedNamespaceTest') }
 
 // Explicit maintenance action; never runs during build/check.
 tasks.register('sanitizeStructureWaystones', JavaExec) {

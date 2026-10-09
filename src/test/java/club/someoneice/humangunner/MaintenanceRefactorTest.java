@@ -137,13 +137,13 @@ public final class MaintenanceRefactorTest {
                     "club/someoneice/humangunner/TierThreeLoadout.class",
                     "club/someoneice/humangunner/RangedSpawnChance.class",
                     "data/curios/slots/identity_badge.json",
-                    "data/hostile_humans/human_loadouts/roamer.json"))
+                    "data/hostile_humans_unified/human_loadouts/roamer.json"))
                 check(jar.getEntry(removed) == null, "obsolete artifact absent: " + removed);
             for (String present : List.of("club/someoneice/humangunner/HumanSpawnEquipment.class",
                     "club/someoneice/humangunner/HumanInventoryCustody.class",
                     "club/someoneice/humangunner/ShieldDurability.class",
-                    "data/humangunner/curios/slots/identity_badge.json",
-                    "data/humangunner/curios/entities/identity_badge_players.json"))
+                    "data/hostile_humans_unified/curios/slots/identity_badge.json",
+                    "data/hostile_humans_unified/curios/entities/identity_badge_players.json"))
                 check(jar.getEntry(present) != null, "maintained module/resource packaged: " + present);
         }
         System.out.println("MaintenanceRefactorTest: " + checks + " inventory, codec, growth and architecture checks passed");

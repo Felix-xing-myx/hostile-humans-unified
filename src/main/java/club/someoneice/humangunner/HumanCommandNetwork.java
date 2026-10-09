@@ -45,7 +45,7 @@ public final class HumanCommandNetwork {
     static void openFor(ServerPlayer player, Human human) {
         if (!HumanRelations.isOwnedBy(human, player) || player.distanceToSqr(human) > 64.0D * 64.0D) {
             player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                    "message.humangunner.command.failed"), false);
+                    "message.hostile_humans_unified.command.failed"), false);
             return;
         }
         SESSIONS.put(player, new Session(human.getUUID(), human.getId(), player.serverLevel().getGameTime() + 1200L));
@@ -76,7 +76,7 @@ public final class HumanCommandNetwork {
                 && HumanRelations.isOwnedBy(human, player)
                 && player.distanceToSqr(human) <= 64.0D * 64.0D) return human;
         player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                "message.humangunner.command.failed"), false);
+                "message.hostile_humans_unified.command.failed"), false);
         return null;
     }
 
@@ -206,7 +206,7 @@ public final class HumanCommandNetwork {
                 HumanRelations.dismiss(player, human);
                 SESSIONS.remove(player);
                 player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                        "message.humangunner.dismissed.manual"), true);
+                        "message.hostile_humans_unified.dismissed.manual"), true);
             });
             context.setPacketHandled(true);
         }

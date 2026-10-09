@@ -333,14 +333,14 @@ final class SoldierRosterNetwork {
                     saved.humanGunner$removeHuman(packet.human);
                 }
                 player.displayClientMessage(Component.translatable(
-                        live == null ? "message.humangunner.roster.dismissed_offline"
-                                : "message.humangunner.dismissed.manual"), false);
+                        live == null ? "message.hostile_humans_unified.roster.dismissed_offline"
+                                : "message.hostile_humans_unified.dismissed.manual"), false);
             } else if (packet.action == 2) {
                 HiredHumanRecall.recallAll(player);
             } else if (packet.action == 3) {
                 if (!HiredHumanRecall.recallOne(player, packet.human)) {
                     player.displayClientMessage(Component.translatable(
-                            "message.humangunner.roster.recall_failed"), false);
+                            "message.hostile_humans_unified.roster.recall_failed"), false);
                 }
             } else if (packet.action >= 4 && packet.action <= 6) {
                 RecruitmentLedger ledger = RecruitmentLedger.get(player.server);

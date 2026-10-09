@@ -19,10 +19,10 @@ public final class HumanAmmoItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.humangunner.human_ammo.tooltip")
+        tooltip.add(Component.translatable("item.hostile_humans_unified.human_ammo.tooltip")
                 .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable(magazine
-                ? "item.humangunner.human_magazine.tooltip"
-                : "item.humangunner.human_arrow.tooltip").withStyle(ChatFormatting.GRAY));
+                ? "item.hostile_humans_unified.human_magazine.tooltip"
+                : "item.hostile_humans_unified.human_arrow.tooltip").withStyle(ChatFormatting.GRAY));
     }
 }

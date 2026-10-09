@@ -8,8 +8,8 @@ import net.minecraft.world.item.ItemStack;
 
 /** Physical reserves stay in the backpack; configuration can waive their use, never gun reload timing. */
 public final class HumanAmmo {
-    public static final ResourceLocation ARROW_ID = new ResourceLocation("humangunner", "human_arrow");
-    public static final ResourceLocation MAGAZINE_ID = new ResourceLocation("humangunner", "human_magazine");
+    public static final ResourceLocation ARROW_ID = new ResourceLocation("hostile_humans_unified", "human_arrow");
+    public static final ResourceLocation MAGAZINE_ID = new ResourceLocation("hostile_humans_unified", "human_magazine");
 
     private HumanAmmo() {}
 

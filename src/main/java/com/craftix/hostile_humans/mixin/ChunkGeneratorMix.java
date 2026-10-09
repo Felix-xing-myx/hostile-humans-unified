@@ -25,7 +25,7 @@ public abstract class ChunkGeneratorMix {
     @Inject(method={"tryGenerateStructure"}, at={@At(value="HEAD")}, cancellable=true)
     private void injected(StructureSet.StructureSelectionEntry structureSelectionEntry, StructureManager structureManager, RegistryAccess registryAccess, RandomState randomState, StructureTemplateManager structureTemplateManager, long seed, ChunkAccess chunkAccess, ChunkPos chunkPos, SectionPos sectionPos, CallbackInfoReturnable<Boolean> cir) {
         Optional key = structureSelectionEntry.structure().unwrapKey();
-        if (key.isPresent() && ((ResourceKey)key.get()).location().toString().contains("hostile_humans")) {
+        if (key.isPresent() && ((ResourceKey)key.get()).location().toString().contains("hostile_humans_unified")) {
             ChunkGenerator chunkGenerator;
             int z;
             int x = chunkPos.getMiddleBlockX();

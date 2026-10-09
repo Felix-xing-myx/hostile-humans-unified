@@ -89,7 +89,7 @@ public final class CombatConsumableGoal extends Goal {
             nextDecisionTick = human.tickCount + 40;
         } else {
             human.getPersistentData().putString(
-                    "humangunner:ai_phase",
+                    "hostile_humans_unified:ai_phase",
                     action == Action.ENCHANTED_APPLE ? "combat_enchanted_apple" : "combat_drinking_buff"
             );
         }
@@ -138,7 +138,7 @@ public final class CombatConsumableGoal extends Goal {
                 SoundEvents.SPLASH_POTION_THROW, SoundSource.HOSTILE, 0.8F,
                 0.9F + human.getRandom().nextFloat() * 0.2F
         );
-        human.getPersistentData().putString("humangunner:ai_phase", "combat_throwing_debuff");
+        human.getPersistentData().putString("hostile_humans_unified:ai_phase", "combat_throwing_debuff");
     }
 
     private boolean noAllyNearTarget(LivingEntity target) {

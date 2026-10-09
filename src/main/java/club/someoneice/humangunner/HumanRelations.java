@@ -23,14 +23,14 @@ import java.util.WeakHashMap;
 import java.util.UUID;
 
 public final class HumanRelations {
-    static final String HIRED_TIER = "humangunner:hired_tier";
-    public static final String TEMP_OWNER = "humangunner:temporary_owner";
-    static final String TEMP_UNTIL = "humangunner:temporary_until";
-    static final String NO_DROPS = "humangunner:no_equipment_drops";
-    static final String FORCED_HOSTILE_TARGET = "humangunner:forced_hostile_target";
-    static final String HOSTILE_BEACON_ORIGIN = "humangunner:hostile_beacon_origin";
-    private static final String GUARD_TARGET = "humangunner:guard_target";
-    private static final String GUARD_UNTIL = "humangunner:guard_until";
+    static final String HIRED_TIER = "hostile_humans_unified:hired_tier";
+    public static final String TEMP_OWNER = "hostile_humans_unified:temporary_owner";
+    static final String TEMP_UNTIL = "hostile_humans_unified:temporary_until";
+    static final String NO_DROPS = "hostile_humans_unified:no_equipment_drops";
+    static final String FORCED_HOSTILE_TARGET = "hostile_humans_unified:forced_hostile_target";
+    static final String HOSTILE_BEACON_ORIGIN = "hostile_humans_unified:hostile_beacon_origin";
+    private static final String GUARD_TARGET = "hostile_humans_unified:guard_target";
+    private static final String GUARD_UNTIL = "hostile_humans_unified:guard_until";
     private static final double BADGE_GUARD_RADIUS_SQR = 48.0D * 48.0D;
     private static final int BEACON_RETALIATION_TICKS = 200;
     private static final double BEACON_RETALIATION_RANGE_SQR = 64.0D * 64.0D;

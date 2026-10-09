@@ -6,7 +6,7 @@ import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid = "hostile_humans", value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = "hostile_humans_unified", value = Dist.CLIENT)
 public final class ClientSessionEvents {
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut event) {
         HumansClientData.clear();

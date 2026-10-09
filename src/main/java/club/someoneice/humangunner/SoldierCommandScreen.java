@@ -24,7 +24,7 @@ public final class SoldierCommandScreen extends Screen {
 
     private SoldierCommandScreen(int entityId, Component soldierName, SoldierOrder selectedOrder,
                                  SoldierCombatMode selectedCombatMode, boolean pickupEnabled) {
-        super(Component.translatable("screen.humangunner.soldier.title"));
+        super(Component.translatable("screen.hostile_humans_unified.soldier.title"));
         this.entityId = entityId;
         this.soldierName = soldierName;
         this.selectedOrder = selectedOrder;
@@ -72,15 +72,15 @@ public final class SoldierCommandScreen extends Screen {
         graphics.fill(left + 9, top + 43, left + PANEL_WIDTH - 9, top + 44, EDGE);
 
         int movementX = left + 10, combatX = left + 180;
-        graphics.drawString(font, Component.translatable("screen.humangunner.soldier.movement"),
+        graphics.drawString(font, Component.translatable("screen.hostile_humans_unified.soldier.movement"),
                 movementX + 3, top + 51, MUTED, false);
-        graphics.drawString(font, Component.translatable("screen.humangunner.soldier.combat"),
+        graphics.drawString(font, Component.translatable("screen.hostile_humans_unified.soldier.combat"),
                 combatX + 3, top + 51, MUTED, false);
         SoldierOrder[] orders = SoldierOrder.values();
         for (int i = 0; i < orders.length; i++) {
             SoldierOrder order = orders[i];
             int y = top + 65 + i * 22;
-            drawButton(graphics, Component.translatable("screen.humangunner.soldier."
+            drawButton(graphics, Component.translatable("screen.hostile_humans_unified.soldier."
                             + order.name().toLowerCase(Locale.ROOT)), movementX, y, 160, 19,
                     hit(mouseX, mouseY, movementX, y, 160, 19), selectedOrder == order, false);
         }
@@ -89,24 +89,24 @@ public final class SoldierCommandScreen extends Screen {
         for (int i = 0; i < modes.length; i++) {
             SoldierCombatMode mode = modes[i];
             int y = top + 65 + i * 22;
-            drawButton(graphics, Component.translatable("screen.humangunner.soldier.combat."
+            drawButton(graphics, Component.translatable("screen.hostile_humans_unified.soldier.combat."
                             + mode.name().toLowerCase(Locale.ROOT)), combatX, y, 160, 19,
                     hit(mouseX, mouseY, combatX, y, 160, 19), selectedCombatMode == mode, false);
         }
         drawButton(graphics, Component.translatable(pickupEnabled
-                        ? "screen.humangunner.soldier.pickup.enabled"
-                        : "screen.humangunner.soldier.pickup.disabled"), combatX, top + 153, 160, 19,
+                        ? "screen.hostile_humans_unified.soldier.pickup.enabled"
+                        : "screen.hostile_humans_unified.soldier.pickup.disabled"), combatX, top + 153, 160, 19,
                 hit(mouseX, mouseY, combatX, top + 153, 160, 19), pickupEnabled, false);
         graphics.drawString(font, font.plainSubstrByWidth(
-                        Component.translatable("screen.humangunner.soldier.help").getString(),
+                        Component.translatable("screen.hostile_humans_unified.soldier.help").getString(),
                         PANEL_WIDTH - 20), left + 10, top + 181, MUTED, false);
-        drawButton(graphics, Component.translatable("screen.humangunner.soldier.close"),
+        drawButton(graphics, Component.translatable("screen.hostile_humans_unified.soldier.close"),
                 left + 10, top + 202, 90, 18,
                 hit(mouseX, mouseY, left + 10, top + 202, 90, 18), false, false);
         boolean confirming = System.currentTimeMillis() < dismissConfirmUntil;
         drawButton(graphics, Component.translatable(confirming
-                        ? "screen.humangunner.soldier.dismiss.confirm"
-                        : "screen.humangunner.soldier.dismiss"),
+                        ? "screen.hostile_humans_unified.soldier.dismiss.confirm"
+                        : "screen.hostile_humans_unified.soldier.dismiss"),
                 left + 208, top + 202, 132, 18,
                 hit(mouseX, mouseY, left + 208, top + 202, 132, 18), false, true);
     }

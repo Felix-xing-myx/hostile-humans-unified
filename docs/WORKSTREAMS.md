@@ -604,3 +604,10 @@
 - 对当前实例实际Mixin0.8.5 javap：MixinLaunchPluginLegacy.getClassNode(name,false)直接抛IllegalArgumentException，单参getClassNode(name)委托true。改为readTarget(provider,name)使用单参服务入口，仍读取ClassNode而不定义/初始化目标Java类，不捕获并隐藏真实探测错误；两项可选补丁与必需弹药/友军门控保持。
 - 新增ModLauncher约束provider夹具，拒绝false并验证真实插件边界使用受支持入口，防止只检查方法签名而漏掉服务模式。仅源码/静态验证，未重新编译或执行该测试；已有构建成功不能证明真实启动时服务模式可用。
 - 本轮用户要求检查报错，未重新要求构建/同步，遵守只修改源码；测试实例仍为先前JAR，不能视为已修复部署。待构建同步后由用户重启验证Mixin准备与后续加载。保留用户CHANGELOG，未启动游戏或push。
+
+## 2026-10-09 单一模组身份与命名空间（进行中）
+
+- 用户确认仅统一本模组，显示名称Hostile Humans Unified，命名空间hostile_humans_unified；完全移除旧ID迁移兼容，仅面向新存档。本轮未授权构建/同步。
+- 基线76bf1840738b969ff8b201b3df163fffa3efc2dc；主控/root负责Java运行入口、注册/网络/持久化标识、测试、mods.toml、Mixin配置、构建/打包检查及共享文档，主工作树main；原用户CHANGELOG保留。
+- namespace_resources：独立worktrees/unified-namespace-resources，分支refactor/unified-namespace-resources，GPT6.1 Sol medium，只负责src/main/resources内assets/data/datapacks（含NBT）移动及引用更新，不编辑META-INF、Mixin JSON、Java、build.gradle、文档。原公共外部create/curios等命名空间不改。
+- Java包路径保持实现组织，游戏运行身份/注册ID统一；禁止对Java包、第三方mod ID或用户实例文件进行盲目替换。源资源同路径合并前检查碰撞，不覆写冲突；仅静态解析核验，交付本地提交后主控整合。

@@ -30,7 +30,7 @@ final class SoldierMessageDispatcher {
     static void report(ServerPlayer owner, Human human, String key, Component message, boolean urgent) {
         Inbox inbox = INBOXES.computeIfAbsent(owner, ignored -> new Inbox());
         String id = human.getUUID() + ":" + key;
-        Component named = Component.translatable("message.humangunner.soldier.speech", human.getDisplayName(), message);
+        Component named = Component.translatable("message.hostile_humans_unified.soldier.speech", human.getDisplayName(), message);
         if (inbox.pending.containsKey(id) || inbox.pending.size() < 32) {
             inbox.pending.put(id, new Report(named, urgent));
         } else if (urgent) {
@@ -55,7 +55,7 @@ final class SoldierMessageDispatcher {
             batch.append(reports.get(i).message);
         }
         int extra = reports.size() - details + inbox.overflow;
-        if (extra > 0) batch.append(Component.translatable("message.humangunner.soldier.reports_merged", extra));
+        if (extra > 0) batch.append(Component.translatable("message.hostile_humans_unified.soldier.reports_merged", extra));
         owner.displayClientMessage(batch, false);
         inbox.pending.clear();
         inbox.overflow = 0;

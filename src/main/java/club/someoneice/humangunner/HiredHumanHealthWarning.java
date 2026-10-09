@@ -7,7 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 /** Sends one chat warning per critical-health episode to the online owner. */
 final class HiredHumanHealthWarning {
-    private static final String WARNED = "humangunner:critical_health_warned";
+    private static final String WARNED = "hostile_humans_unified:critical_health_warned";
     private static final double WARNING_RATIO = 0.15D;
     private static final double REARM_RATIO = 0.20D;
 
@@ -33,7 +33,7 @@ final class HiredHumanHealthWarning {
         }
         int percent = Math.max(0, (int) Math.floor(healthRatio * 100.0D));
         SoldierMessageDispatcher.report(owner, human, "critical_health", Component.translatable(
-                "dialogue.humangunner.critical_health", percent
+                "dialogue.hostile_humans_unified.critical_health", percent
         ).withStyle(ChatFormatting.RED), true);
         human.getPersistentData().putBoolean(WARNED, true);
     }

@@ -18,7 +18,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /** Coalesced metadata updates; queued keys never retain entities or levels. */
-@Mod.EventBusSubscriber(modid = "hostile_humans")
+@Mod.EventBusSubscriber(modid = "hostile_humans_unified")
 public final class HumanManagerEventHandler {
     private record Key(ResourceKey<Level> dimension, UUID uuid) {}
     private static final Map<MinecraftServer, dev.felix.hostilehumans.core.BudgetedUpdates<Key>> QUEUES = new WeakHashMap<>();

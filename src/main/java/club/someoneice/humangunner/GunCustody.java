@@ -20,11 +20,11 @@ import java.util.WeakHashMap;
  * diagnostic metadata and cannot reconstruct missing owned weapons.</p>
  */
 final class GunCustody {
-    private static final String PRIMARY_OWNER = "humangunner:primary_gun_owner";
-    private static final String ACTIVE = "humangunner:gun_custody_active";
-    private static final String RESERVED_SLOT = "humangunner:gun_custody_slot";
-    private static final String SNAPSHOT = "humangunner:gun_custody_snapshot";
-    private static final String CLOSE_DEFENSE = "humangunner:gun_close_melee_defense";
+    private static final String PRIMARY_OWNER = "hostile_humans_unified:primary_gun_owner";
+    private static final String ACTIVE = "hostile_humans_unified:gun_custody_active";
+    private static final String RESERVED_SLOT = "hostile_humans_unified:gun_custody_slot";
+    private static final String SNAPSHOT = "hostile_humans_unified:gun_custody_snapshot";
+    private static final String CLOSE_DEFENSE = "hostile_humans_unified:gun_close_melee_defense";
     private static final double CLOSE_DEFENSE_EXIT_DISTANCE_SQR = 16.0D;
     private static final Map<Human, GunSnapshot> AUDIT = new WeakHashMap<>();
 

@@ -37,7 +37,7 @@ public final class SoldierRosterScreen extends Screen {
     private SoldierRosterScreen(UUID token, int tier, int page, int total,
                                 List<SoldierRosterNetwork.Entry> entries,
                                 int[] counts, int[] limits) {
-        super(Component.translatable("screen.humangunner.roster.title"));
+        super(Component.translatable("screen.hostile_humans_unified.roster.title"));
         this.token = token;
         this.entries = entries;
         this.tier = tier;
@@ -104,9 +104,9 @@ public final class SoldierRosterScreen extends Screen {
         SoldierRosterNetwork.request(token, 8, NONE, target);
     }
     private static Component tr(String key) { return Component.translatable(key); }
-    private static Component tierName(int tier) { return tr("screen.humangunner.roster.tier." + tier); }
+    private static Component tierName(int tier) { return tr("screen.hostile_humans_unified.roster.tier." + tier); }
     private static Component statusName(String status) {
-        return tr("screen.humangunner.roster.status_short." + status);
+        return tr("screen.hostile_humans_unified.roster.status_short." + status);
     }
 
     private static boolean hit(double mx, double my, int x, int y, int w, int h) {
@@ -206,7 +206,7 @@ public final class SoldierRosterScreen extends Screen {
         int x = left(), y = top();
         for (int i = 0; i < 5; i++) {
             int filter = i - 1, bx = x + 9 + i * 78;
-            Component label = filter < 0 ? tr("screen.humangunner.roster.all") : tierName(filter);
+            Component label = filter < 0 ? tr("screen.hostile_humans_unified.roster.all") : tierName(filter);
             button(graphics, label, bx, y + 31, 76, 18,
                     hit(mx, my, bx, y + 31, 76, 18), true, tier == filter, false);
         }
@@ -218,11 +218,11 @@ public final class SoldierRosterScreen extends Screen {
             graphics.fill(bx + 3, by + 3, bx + 5, by + 23, statusColor(entry.status()));
             tierBadge(graphics, entry.tier(), bx + 9, by + 4);
             String name = entry.name().isBlank()
-                    ? tr("screen.humangunner.roster.unnamed").getString() : entry.name();
+                    ? tr("screen.hostile_humans_unified.roster.unnamed").getString() : entry.name();
             graphics.drawString(font, font.plainSubstrByWidth(name, 65), bx + 66, by + 4, TEXT, false);
             healthBar(graphics, entry, bx + 9, by + 20, 122);
             if (hovered) {
-                button(graphics, tr("screen.humangunner.roster.recall_short"), bx + 177, by + 4,
+                button(graphics, tr("screen.hostile_humans_unified.roster.recall_short"), bx + 177, by + 4,
                         31, 18, hit(mx, my, bx + 177, by + 4, 31, 18), true, false, false);
                 button(graphics, Component.literal("▲"), bx + 210, by + 4,
                         14, 18, hit(mx, my, bx + 210, by + 4, 14, 18),
@@ -234,7 +234,7 @@ public final class SoldierRosterScreen extends Screen {
                 graphics.drawString(font, font.plainSubstrByWidth(statusName(entry.status()).getString(), 98),
                         bx + 137, by + 4, statusColor(entry.status()), false);
                 String health = entry.health() >= 0 ? entry.health() + "/" + entry.maxHealth()
-                        : tr("screen.humangunner.roster.last_known_short").getString();
+                        : tr("screen.hostile_humans_unified.roster.last_known_short").getString();
                 graphics.drawString(font, health, bx + 234 - font.width(health), by + 15, MUTED, false);
             }
         }
@@ -258,28 +258,28 @@ public final class SoldierRosterScreen extends Screen {
         graphics.drawCenteredString(font, (page + 1) + " / " + (maxPage + 1), x + 54, y + 207, MUTED);
         button(graphics, Component.literal("▶"), x + 78, y + 202, 23, 18,
                 hit(mx, my, x + 78, y + 202, 23, 18), page < maxPage, false, false);
-        button(graphics, tr("screen.humangunner.roster.refresh"), x + 110, y + 202, 84, 18,
+        button(graphics, tr("screen.hostile_humans_unified.roster.refresh"), x + 110, y + 202, 84, 18,
                 hit(mx, my, x + 110, y + 202, 84, 18), true, false, false);
-        button(graphics, tr("screen.humangunner.roster.recall"), x + 200, y + 202, 200, 18,
+        button(graphics, tr("screen.hostile_humans_unified.roster.recall"), x + 200, y + 202, 200, 18,
                 hit(mx, my, x + 200, y + 202, 200, 18), true, false, false);
         if (hovered != null) {
             int by = y + 58 + entries.indexOf(hovered) * 29;
             Component hint = hit(mx, my, x + 185, by, 31, 18)
-                    ? tr("screen.humangunner.roster.recall_one")
+                    ? tr("screen.hostile_humans_unified.roster.recall_one")
                     : hit(mx, my, x + 218, by, 14, 18)
-                    ? tr("screen.humangunner.roster.move_earlier")
+                    ? tr("screen.hostile_humans_unified.roster.move_earlier")
                     : hit(mx, my, x + 234, by, 14, 18)
-                    ? tr("screen.humangunner.roster.move_later") : null;
+                    ? tr("screen.hostile_humans_unified.roster.move_later") : null;
             if (hint != null) graphics.renderTooltip(font, hint, mx, my);
         }
     }
 
     private void renderOverview(GuiGraphics graphics, SoldierRosterNetwork.Entry entry, int x, int y) {
-        graphics.drawString(font, tr("screen.humangunner.roster.overview"), x, y, GOLD, false);
+        graphics.drawString(font, tr("screen.hostile_humans_unified.roster.overview"), x, y, GOLD, false);
         if (entry == null) {
-            graphics.drawString(font, tr("screen.humangunner.roster.hover_hint"), x, y + 22, MUTED, false);
+            graphics.drawString(font, tr("screen.hostile_humans_unified.roster.hover_hint"), x, y + 22, MUTED, false);
             for (int i = 0; i < 4; i++) {
-                Component count = Component.translatable("message.humangunner.roster.tier." + i,
+                Component count = Component.translatable("message.hostile_humans_unified.roster.tier." + i,
                         counts[i], limits[i]);
                 graphics.drawString(font, font.plainSubstrByWidth(count.getString(), 126),
                         x, y + 44 + i * 18, MUTED, false);
@@ -287,7 +287,7 @@ public final class SoldierRosterScreen extends Screen {
             return;
         }
         String name = entry.name().isBlank()
-                ? tr("screen.humangunner.roster.unnamed").getString() : entry.name();
+                ? tr("screen.hostile_humans_unified.roster.unnamed").getString() : entry.name();
         graphics.drawString(font, font.plainSubstrByWidth(name, 126), x, y + 16, TEXT, false);
         graphics.drawString(font, tierName(entry.tier()), x, y + 30, tierColor(entry.tier()), false);
         graphics.drawString(font, statusName(entry.status()), x, y + 44,
@@ -296,11 +296,11 @@ public final class SoldierRosterScreen extends Screen {
             graphics.drawString(font, entry.health() + " / " + entry.maxHealth(), x, y + 62, TEXT, false);
             healthBar(graphics, entry, x, y + 75, 126);
         } else {
-            graphics.drawString(font, tr("screen.humangunner.roster.last_known_short"),
+            graphics.drawString(font, tr("screen.hostile_humans_unified.roster.last_known_short"),
                     x, y + 62, MUTED, false);
         }
         graphics.fill(x, y + 85, x + 126, y + 86, EDGE);
-        Component order = tr("screen.humangunner.soldier."
+        Component order = tr("screen.hostile_humans_unified.soldier."
                 + entry.order().toLowerCase(Locale.ROOT));
         graphics.drawString(font, font.plainSubstrByWidth(order.getString(), 126), x, y + 93, MUTED, false);
         graphics.drawString(font, font.plainSubstrByWidth(entry.dimension(), 126), x, y + 108, MUTED, false);
@@ -313,7 +313,7 @@ public final class SoldierRosterScreen extends Screen {
         if (entry == null) return;
         int x = left(), y = top(), lx = x + 9, rx = x + 209;
         String name = entry.name().isBlank()
-                ? tr("screen.humangunner.roster.unnamed").getString() : entry.name();
+                ? tr("screen.hostile_humans_unified.roster.unnamed").getString() : entry.name();
         tierBadge(graphics, entry.tier(), x + 10, y + 30);
         graphics.drawString(font, font.plainSubstrByWidth(name, 140), x + 67, y + 32, TEXT, false);
         graphics.drawString(font, statusName(entry.status()), x + 218, y + 32,
@@ -323,21 +323,21 @@ public final class SoldierRosterScreen extends Screen {
         graphics.drawString(font, entry.x() + ", " + entry.y() + ", " + entry.z(),
                 x + 218, y + 45, MUTED, false);
         if (entry.health() >= 0) {
-            graphics.drawString(font, Component.translatable("screen.humangunner.roster.health",
+            graphics.drawString(font, Component.translatable("screen.hostile_humans_unified.roster.health",
                     entry.health(), entry.maxHealth()), x + 10, y + 57, TEXT, false);
             healthBar(graphics, entry, x + 218, y + 61, 180);
         } else {
-            graphics.drawString(font, tr("screen.humangunner.roster.last_known"),
+            graphics.drawString(font, tr("screen.hostile_humans_unified.roster.last_known"),
                     x + 10, y + 57, GOLD, false);
         }
-        graphics.drawString(font, tr("screen.humangunner.soldier.movement"), lx + 3, y + 73, GOLD, false);
-        graphics.drawString(font, tr("screen.humangunner.soldier.combat"), rx + 3, y + 73, GOLD, false);
+        graphics.drawString(font, tr("screen.hostile_humans_unified.soldier.movement"), lx + 3, y + 73, GOLD, false);
+        graphics.drawString(font, tr("screen.hostile_humans_unified.soldier.combat"), rx + 3, y + 73, GOLD, false);
         boolean loaded = "online".equals(entry.status());
         SoldierOrder[] orders = SoldierOrder.values();
         for (int i = 0; i < orders.length; i++) {
             SoldierOrder order = orders[i];
             int by = y + 86 + i * 22;
-            button(graphics, tr("screen.humangunner.soldier." + order.name().toLowerCase(Locale.ROOT)),
+            button(graphics, tr("screen.hostile_humans_unified.soldier." + order.name().toLowerCase(Locale.ROOT)),
                     lx, by, 190, 19, hit(mx, my, lx, by, 190, 19), loaded,
                     entry.order().equals(order.name()), false);
         }
@@ -346,22 +346,22 @@ public final class SoldierRosterScreen extends Screen {
         for (int i = 0; i < modes.length; i++) {
             SoldierCombatMode mode = modes[i];
             int by = y + 86 + i * 22;
-            button(graphics, tr("screen.humangunner.soldier.combat."
+            button(graphics, tr("screen.hostile_humans_unified.soldier.combat."
                             + mode.name().toLowerCase(Locale.ROOT)), rx, by, 190, 19,
                     hit(mx, my, rx, by, 190, 19), loaded,
                     entry.combat().equals(mode.name()), false);
         }
-        button(graphics, tr(entry.pickup() ? "screen.humangunner.soldier.pickup.enabled"
-                        : "screen.humangunner.soldier.pickup.disabled"),
+        button(graphics, tr(entry.pickup() ? "screen.hostile_humans_unified.soldier.pickup.enabled"
+                        : "screen.hostile_humans_unified.soldier.pickup.disabled"),
                 rx, y + 174, 190, 19, hit(mx, my, rx, y + 174, 190, 19), loaded, false, false);
-        button(graphics, tr("screen.humangunner.roster.recall_one"), lx, y + 201, 190, 18,
+        button(graphics, tr("screen.hostile_humans_unified.roster.recall_one"), lx, y + 201, 190, 18,
                 hit(mx, my, lx, y + 201, 190, 18), true, false, false);
-        button(graphics, tr("screen.humangunner.roster.refresh"), rx, y + 201, 190, 18,
+        button(graphics, tr("screen.hostile_humans_unified.roster.refresh"), rx, y + 201, 190, 18,
                 hit(mx, my, rx, y + 201, 190, 18), true, false, false);
-        button(graphics, tr("screen.humangunner.roster.back"), lx, y + 223, 190, 18,
+        button(graphics, tr("screen.hostile_humans_unified.roster.back"), lx, y + 223, 190, 18,
                 hit(mx, my, lx, y + 223, 190, 18), true, false, false);
         button(graphics, tr(System.currentTimeMillis() < dismissConfirmUntil
-                        ? "screen.humangunner.roster.confirm" : "screen.humangunner.soldier.dismiss"),
+                        ? "screen.hostile_humans_unified.roster.confirm" : "screen.hostile_humans_unified.soldier.dismiss"),
                 rx, y + 223, 190, 18, hit(mx, my, rx, y + 223, 190, 18), true, false, true);
     }
 

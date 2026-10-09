@@ -26,7 +26,7 @@ import static club.someoneice.humangunner.HumanGunner.LOGGER;
 
 /** Loaded exclusively by the installed-and-enabled TaCZ branch in GunSupport. */
 final class TaczIntegration implements GunSupport {
-    private static final String INCOMING_GUNFIRE_UNTIL = "humangunner:incoming_gunfire_until";
+    private static final String INCOMING_GUNFIRE_UNTIL = "hostile_humans_unified:incoming_gunfire_until";
     private static final AtomicBoolean LOGGED_FIRST_GUN_HIT = new AtomicBoolean();
     private static final AtomicBoolean LOGGED_FIRST_ROAMER_GUN_HIT = new AtomicBoolean();
     public boolean enabled() { return true; }
@@ -168,7 +168,7 @@ final class TaczIntegration implements GunSupport {
                 && event.getAmount() > 0.0F
                 && LOGGED_FIRST_ROAMER_GUN_HIT.compareAndSet(false, true)) {
             LOGGER.info(
-                    "Human Gunner confirmed roamer friendly-fire compatibility: {} hit {} with {} for {} damage",
+                    "Hostile Humans Unified confirmed roamer friendly-fire compatibility: {} hit {} with {} for {} damage",
                     attacker.getUUID(),
                     target.getUUID(),
                     event.getGunId(),
@@ -179,7 +179,7 @@ final class TaczIntegration implements GunSupport {
                 && event.getAmount() > 0.0F
                 && LOGGED_FIRST_GUN_HIT.compareAndSet(false, true)) {
             LOGGER.info(
-                    "Human Gunner first confirmed projectile hit: {} hit {} with {} for {} damage",
+                    "Hostile Humans Unified first confirmed projectile hit: {} hit {} with {} for {} damage",
                     event.getAttacker().getUUID(),
                     BuiltInRegistries.ENTITY_TYPE.getKey(event.getHurtEntity().getType()),
                     event.getGunId(),

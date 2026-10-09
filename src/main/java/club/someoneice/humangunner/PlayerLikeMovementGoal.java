@@ -83,7 +83,7 @@ public final class PlayerLikeMovementGoal extends Goal {
         boolean travelling = human.distanceToSqr(target) > 9.0D
                 || human.isFleeing
                 || human.horizontalCollision;
-        boolean retreatBackpedaling = human.getPersistentData().getBoolean("humangunner:retreat_backpedaling");
+        boolean retreatBackpedaling = human.getPersistentData().getBoolean("hostile_humans_unified:retreat_backpedaling");
         if (human.isFleeing) {
             MovementSpeedController.retreat(human, travelling && !retreatBackpedaling);
         } else {

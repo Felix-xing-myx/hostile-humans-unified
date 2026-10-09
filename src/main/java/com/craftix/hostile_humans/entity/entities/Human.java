@@ -304,7 +304,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private void bootstrapMissingHumanData() {
         Human human = this;
         if (human.level().isClientSide || (human.getData() != null
-                && !human.getPersistentData().getBoolean("hostile_humans:pending_loadout"))) {
+                && !human.getPersistentData().getBoolean("hostile_humans_unified:pending_loadout"))) {
             return;
         }
         HumanServerData serverData = HumanServerData.get();
@@ -321,12 +321,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 break;
             }
         }
-        boolean pending = human.getPersistentData().getBoolean("hostile_humans:pending_loadout");
+        boolean pending = human.getPersistentData().getBoolean("hostile_humans_unified:pending_loadout");
         if (!hasExplicitEquipment || pending) {
             HumanSpawnEquipment.generate(human,
-                    human.getPersistentData().getBoolean("hostile_humans:pending_ranged"));
-            human.getPersistentData().remove("hostile_humans:pending_loadout");
-            human.getPersistentData().remove("hostile_humans:pending_ranged");
+                    human.getPersistentData().getBoolean("hostile_humans_unified:pending_ranged"));
+            human.getPersistentData().remove("hostile_humans_unified:pending_loadout");
+            human.getPersistentData().remove("hostile_humans_unified:pending_ranged");
         }
     
     }
@@ -368,7 +368,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private static final Map<String, ResourceLocation> TEXTURE_BY_VARIANT = (Map)Util.make(Maps.newHashMap(), hashMap -> {
         for (int i = 1; i <= 37; ++i) {
             String name = "skin" + i;
-            hashMap.put(name, new ResourceLocation("hostile_humans", "textures/entity/human/" + name + ".png"));
+            hashMap.put(name, new ResourceLocation("hostile_humans_unified", "textures/entity/human/" + name + ".png"));
         }
     });
     private final MeleeAttackGoal meleeAttackGoal = new MeleeAttackGoal(this, 1.05, true);
@@ -1501,7 +1501,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         super.readAdditionalSaveData(compound);
         // tickCount is not persisted. A saved gunfire-until tick must not look
         // like a fresh hit when this entity is loaded with tickCount zero.
-        getPersistentData().remove("humangunner:incoming_gunfire_until");
+        getPersistentData().remove("hostile_humans_unified:incoming_gunfire_until");
     }
 
     public boolean canAttack(LivingEntity entity) {
@@ -1797,7 +1797,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
         if (inWater) {
             resistance.addTransientModifier(new AttributeModifier(WATER_KNOCKBACK_ID,
-                    "hostile_humans.water_knockback_resistance", 1.0D,
+                    "hostile_humans_unified.water_knockback_resistance", 1.0D,
                     AttributeModifier.Operation.ADDITION));
         } else {
             resistance.removeModifier(WATER_KNOCKBACK_ID);
@@ -2025,7 +2025,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             ThrownTrident projectile = new ThrownTrident(human.level(), human, projectileStack);
             projectile.pickup = AbstractArrow.Pickup.DISALLOWED;
             projectile.getPersistentData().putBoolean(
-                    "humangunner:drowned_style_trident", true
+                    "hostile_humans_unified:drowned_style_trident", true
             );
 
             double dx = target.getX() - projectile.getX();

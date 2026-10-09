@@ -13,9 +13,9 @@ import java.util.WeakHashMap;
 
 /** Server-only dialogue. Does not acquire targets, navigate, or modify inventory. */
 public final class SoldierDialogue {
-    private static final String FOOD_WARNED = "humangunner:dialogue_food_empty";
-    private static final String NEXT_IDLE = "humangunner:dialogue_next_idle";
-    private static final String REPORT_OWNER = "humangunner:dialogue_report_owner";
+    private static final String FOOD_WARNED = "hostile_humans_unified:dialogue_food_empty";
+    private static final String NEXT_IDLE = "hostile_humans_unified:dialogue_next_idle";
+    private static final String REPORT_OWNER = "hostile_humans_unified:dialogue_report_owner";
     private static final Map<Human, State> STATES = new WeakHashMap<>();
     private static final class State {
         UUID owner;
@@ -30,8 +30,8 @@ public final class SoldierDialogue {
         human.getPersistentData().putLong(NEXT_IDLE, human.level().getGameTime() + 2400);
         STATES.remove(human);
         SoldierCommandFeedback.say(owner, human, Component.translatable(
-                "dialogue.humangunner.hired." + human.getRandom().nextInt(3))
-                .append(" ").append(Component.translatable("message.humangunner.hired")));
+                "dialogue.hostile_humans_unified.hired." + human.getRandom().nextInt(3))
+                .append(" ").append(Component.translatable("message.hostile_humans_unified.hired")));
     }
 
     public static void hostile(Human human, ServerPlayer player) {
@@ -40,7 +40,7 @@ public final class SoldierDialogue {
                 || human.getRandom().nextDouble() >= CombatAiConfig.forHuman(human).greetChance()) return;
         human.addTag("greeted");
         SoldierCommandFeedback.say(player, human, Component.translatable(
-                "dialogue.humangunner.hostile." + human.getRandom().nextInt(6)));
+                "dialogue.hostile_humans_unified.hostile." + human.getRandom().nextInt(6)));
     }
 
     static void tick(Human human) {
@@ -69,7 +69,7 @@ public final class SoldierDialogue {
             if (food) human.getPersistentData().remove(FOOD_WARNED);
             else if (!human.getPersistentData().getBoolean(FOOD_WARNED)) {
                 SoldierMessageDispatcher.report(owner, human, "food_empty",
-                        Component.translatable("dialogue.humangunner.food_empty"), false);
+                        Component.translatable("dialogue.hostile_humans_unified.food_empty"), false);
                 human.getPersistentData().putBoolean(FOOD_WARNED, true);
             }
         }
@@ -78,7 +78,7 @@ public final class SoldierDialogue {
             state.fighting = fighting;
             if (now >= state.quietUntil) {
                 SoldierMessageDispatcher.chatter(owner, human, Component.translatable(fighting
-                        ? "dialogue.humangunner.combat.start" : "dialogue.humangunner.combat.end"));
+                        ? "dialogue.hostile_humans_unified.combat.start" : "dialogue.hostile_humans_unified.combat.end"));
                 state.quietUntil = now + 1200;
             }
         }
@@ -100,7 +100,7 @@ public final class SoldierDialogue {
                 - human.blockPosition().getY()) >= 1) key = "rough_terrain";
         else if (human.getNavigation().isDone() && human.getRandom().nextInt(4) == 0) key = "rest";
         else key = "idle." + human.getRandom().nextInt(12);
-        SoldierMessageDispatcher.chatter(owner, human, Component.translatable("dialogue.humangunner." + key));
+        SoldierMessageDispatcher.chatter(owner, human, Component.translatable("dialogue.hostile_humans_unified." + key));
         human.getPersistentData().putLong(NEXT_IDLE, now + 2400 + human.getRandom().nextInt(2400));
     }
 
@@ -118,7 +118,7 @@ public final class SoldierDialogue {
         State state = STATES.computeIfAbsent(human, ignored -> new State());
         long now = human.level().getGameTime();
         if (now < state.quietUntil) return;
-        SoldierMessageDispatcher.chatter(owner, human, Component.translatable("dialogue.humangunner." + event));
+        SoldierMessageDispatcher.chatter(owner, human, Component.translatable("dialogue.hostile_humans_unified." + event));
         state.quietUntil = now + 1200;
     }
 
@@ -127,7 +127,7 @@ public final class SoldierDialogue {
         if (owner == null) return;
         String type = slot.getType() == EquipmentSlot.Type.ARMOR ? "armor" : shield ? "shield" : "weapon";
         SoldierMessageDispatcher.report(owner, human, "broken_" + slot.name(),
-                Component.translatable("dialogue.humangunner.broken." + type, itemName), false);
+                Component.translatable("dialogue.hostile_humans_unified.broken." + type, itemName), false);
     }
 
     private static ServerPlayer owner(Human human) {

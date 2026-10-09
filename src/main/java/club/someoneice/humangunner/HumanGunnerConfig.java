@@ -258,7 +258,7 @@ public record HumanGunnerConfig(
                 destination.put(gunId, Math.max(0, entry.getValue().getAsInt()));
             } catch (RuntimeException exception) {
                 HumanGunner.LOGGER.warn(
-                        "Ignoring invalid Human Gunner config entry {}.{}",
+                        "Ignoring invalid Hostile Humans Unified config entry {}.{}",
                         configKey, entry.getKey()
                 );
             }

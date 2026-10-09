@@ -7,12 +7,12 @@ import net.minecraft.world.item.ItemStack;
 
 /** Authoritative weighted pools -> firearm allocation -> reserves -> growth pipeline. */
 public final class HumanSpawnEquipment {
-    // Keep the saved key unchanged so elite gear from older releases keeps its drop rules.
-    public static final String BOUND_GEAR = "humangunner:tier3_bound_gear";
-    private static final String PENDING = "humangunner:spawn_equipment_pending";
-    private static final String GENERATED = "humangunner:spawn_equipment_generated";
-    private static final String FORCE_RANGED = "humangunner:spawn_force_ranged";
-    private static final String RANGED_REQUESTED = "humangunner:spawn_ranged_requested";
+    // Elite gear's bound-drop marker belongs to the unified save namespace.
+    public static final String BOUND_GEAR = "hostile_humans_unified:tier3_bound_gear";
+    private static final String PENDING = "hostile_humans_unified:spawn_equipment_pending";
+    private static final String GENERATED = "hostile_humans_unified:spawn_equipment_generated";
+    private static final String FORCE_RANGED = "hostile_humans_unified:spawn_force_ranged";
+    private static final String RANGED_REQUESTED = "hostile_humans_unified:spawn_ranged_requested";
     private HumanSpawnEquipment() { }
 
     public static boolean isBoundGear(ItemStack stack) {
@@ -26,8 +26,8 @@ public final class HumanSpawnEquipment {
             forceRanged |= human.getCustomName().getString().contains("ranged");
         }
         if (human.getData() == null) {
-            human.getPersistentData().putBoolean("hostile_humans:pending_loadout", true);
-            human.getPersistentData().putBoolean("hostile_humans:pending_ranged", forceRanged);
+            human.getPersistentData().putBoolean("hostile_humans_unified:pending_loadout", true);
+            human.getPersistentData().putBoolean("hostile_humans_unified:pending_ranged", forceRanged);
             return;
         }
         if (human.getPersistentData().getBoolean(GENERATED) || human.getPersistentData().getBoolean(PENDING)) return;
@@ -45,7 +45,7 @@ public final class HumanSpawnEquipment {
     public static void generateRequested(Human human, boolean forceRanged) {
         if (human.hasOwner()) return;
         if (human.getPersistentData().getBoolean(PENDING)
-                || human.getPersistentData().getBoolean("hostile_humans:pending_loadout")) {
+                || human.getPersistentData().getBoolean("hostile_humans_unified:pending_loadout")) {
             // finalizeSpawn already honored the special name. Do not clear/re-roll its gear.
             return;
         }
@@ -54,10 +54,10 @@ public final class HumanSpawnEquipment {
         }
         var tag = human.getPersistentData();
         tag.remove(GENERATED);
-        tag.remove("humangunner:spartan_loadout_generated");
-        tag.remove("humangunner:guaranteed_shields_generated");
-        tag.remove("humangunner:spawn_shield_count");
-        tag.remove("humangunner:gun_roll_done");
+        tag.remove("hostile_humans_unified:spartan_loadout_generated");
+        tag.remove("hostile_humans_unified:guaranteed_shields_generated");
+        tag.remove("hostile_humans_unified:spawn_shield_count");
+        tag.remove("hostile_humans_unified:gun_roll_done");
         NaturalEquipmentGrowth.excludeRequestedSpawn(human);
         generate(human, forceRanged);
     }

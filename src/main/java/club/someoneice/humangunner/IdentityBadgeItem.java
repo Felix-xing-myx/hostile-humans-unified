@@ -23,7 +23,7 @@ public final class IdentityBadgeItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.humangunner.identity_badge.tooltip." + clearance)
+        tooltip.add(Component.translatable("item.hostile_humans_unified.identity_badge.tooltip." + clearance)
                 .withStyle(ChatFormatting.GRAY));
     }
 }

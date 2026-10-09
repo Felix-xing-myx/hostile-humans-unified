@@ -31,9 +31,9 @@ final class SoldierRosterItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.humangunner.soldier_roster.tooltip")
+        tooltip.add(Component.translatable("item.hostile_humans_unified.soldier_roster.tooltip")
                 .withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("item.humangunner.soldier_roster.recall_tooltip")
+        tooltip.add(Component.translatable("item.hostile_humans_unified.soldier_roster.recall_tooltip")
                 .withStyle(ChatFormatting.GOLD));
     }
 }

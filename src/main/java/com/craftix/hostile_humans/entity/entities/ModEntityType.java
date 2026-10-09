@@ -15,9 +15,9 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.IForgeRegistry;
 import net.minecraftforge.registries.RegistryObject;
 
-@Mod.EventBusSubscriber(modid="hostile_humans", bus=Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid="hostile_humans_unified", bus=Mod.EventBusSubscriber.Bus.MOD)
 public class ModEntityType {
-    public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create((IForgeRegistry)ForgeRegistries.ENTITY_TYPES, (String)"hostile_humans");
+    public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create((IForgeRegistry)ForgeRegistries.ENTITY_TYPES, com.craftix.hostile_humans.HostileHumans.MOD_ID);
     public static final RegistryObject<EntityType<Human>> HUMAN1 = ENTITIES.register("human_tier1", () -> EntityType.Builder.<Human>of((entityEntityType, level) -> new Human((EntityType<? extends HumanEntity>)entityEntityType, level, HumanTier.LEVEL1), (MobCategory)HumanEntity.CATEGORY).sized(0.6f, 1.8f).clientTrackingRange(16).build("human_tier1"));
     public static final RegistryObject<EntityType<Human>> HUMAN2 = ENTITIES.register("human_tier2", () -> EntityType.Builder.<Human>of((entityEntityType, level) -> new Human((EntityType<? extends HumanEntity>)entityEntityType, level, HumanTier.LEVEL2), (MobCategory)HumanEntity.CATEGORY).sized(0.6f, 1.8f).clientTrackingRange(16).build("human_tier2"));
     public static final RegistryObject<EntityType<TierThreeHuman>> HUMAN3 = ENTITIES.register("human_tier3", () -> EntityType.Builder.of(TierThreeHuman::new, (MobCategory)HumanEntity.CATEGORY).sized(0.6f, 1.8f).clientTrackingRange(16).build("human_tier3"));

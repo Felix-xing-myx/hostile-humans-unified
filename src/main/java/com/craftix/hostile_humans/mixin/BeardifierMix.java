@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin(value={Beardifier.class})
 public abstract class BeardifierMix {
     @Unique
-    private static final ResourceLocation HOSTILE_HUMANS$FORTRESS_BOTTOM = new ResourceLocation("hostile_humans", "fortress_bottom");
+    private static final ResourceLocation HOSTILE_HUMANS$FORTRESS_BOTTOM = new ResourceLocation("hostile_humans_unified", "fortress_bottom");
 
     @Redirect(method={"m_223937_(Lnet/minecraft/world/level/StructureManager;Lnet/minecraft/world/level/ChunkPos;)Lnet/minecraft/world/level/levelgen/Beardifier;"}, at=@At(value="INVOKE", target="Lnet/minecraft/world/level/StructureManager;m_220477_(Lnet/minecraft/world/level/ChunkPos;Ljava/util/function/Predicate;)Ljava/util/List;"), remap=false, require=1)
     private static List<StructureStart> hostileHumans$filterFortressBottom(StructureManager structureManager, ChunkPos chunkPos, Predicate<Structure> structurePredicate) {

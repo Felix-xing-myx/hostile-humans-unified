@@ -42,7 +42,7 @@ final class HiredHumanRecall {
             {-1, 0}, {-1, -1}, {0, -1}, {1, -1}
     };
     private static final TicketType<UUID> RECALL_TICKET = TicketType.create(
-            "humangunner_recall", UUID::compareTo, (int) RECALL_TIMEOUT_TICKS
+            "hostile_humans_unified_recall", UUID::compareTo, (int) RECALL_TIMEOUT_TICKS
     );
     private static final Map<MinecraftServer, Map<UUID, PlayerLocation>> PLAYER_LOCATIONS =
             new WeakHashMap<>();

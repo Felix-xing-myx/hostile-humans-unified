@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Optional reflection boundary for Spartan Weaponry's non-vanilla bolt API. */
 public final class SpartanRangedCompat {
-    public static final String NPC_BOLT = "humangunner:spartan_heavy_crossbow_bolt";
+    public static final String NPC_BOLT = "hostile_humans_unified:spartan_heavy_crossbow_bolt";
     private static final AtomicBoolean WARNED_BOLT_FAILURE = new AtomicBoolean();
     private static volatile Method createBoltMethod;
     private static volatile boolean createBoltLookupComplete;

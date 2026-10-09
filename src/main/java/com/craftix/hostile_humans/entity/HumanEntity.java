@@ -40,7 +40,7 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraftforge.fml.common.Mod;
 
-@Mod.EventBusSubscriber(modid="hostile_humans")
+@Mod.EventBusSubscriber(modid="hostile_humans_unified")
 public class HumanEntity
 extends HumanMobEntityData {
     public void advanceUseTime(int ticks) {

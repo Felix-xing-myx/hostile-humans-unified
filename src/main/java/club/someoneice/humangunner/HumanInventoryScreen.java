@@ -42,11 +42,11 @@ public final class HumanInventoryScreen extends AbstractContainerScreen<HumanInv
     @Override
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(font, title, 8, titleLabelY, 0xFFFFFF, false);
-        graphics.drawString(font, Component.translatable("screen.humangunner.inventory.equipment"),
+        graphics.drawString(font, Component.translatable("screen.hostile_humans_unified.inventory.equipment"),
                 8, 6, 0xE5EAF0, false);
-        graphics.drawString(font, Component.translatable("screen.humangunner.inventory.backpack"),
+        graphics.drawString(font, Component.translatable("screen.hostile_humans_unified.inventory.backpack"),
                 62, 6, 0xE5EAF0, false);
-        graphics.drawString(font, Component.translatable("screen.humangunner.inventory.gun_rule"),
+        graphics.drawString(font, Component.translatable("screen.hostile_humans_unified.inventory.gun_rule"),
                 62, 78, 0xF2C66D, false);
         graphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY,
                 0xE5EAF0, false);

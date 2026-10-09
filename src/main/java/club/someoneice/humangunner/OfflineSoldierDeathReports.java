@@ -20,8 +20,8 @@ import net.minecraftforge.event.server.ServerStoppedEvent;
 
 /** Capture a proposed death, then persist only an actual KILLED removal. */
 final class OfflineSoldierDeathReports {
-    private static final String ID = "humangunner_offline_deaths";
-    static final String CANDIDATE = "humangunner:offline_death_candidate";
+    private static final String ID = "hostile_humans_unified_offline_deaths";
+    static final String CANDIDATE = "hostile_humans_unified:offline_death_candidate";
     static final int MAX_REPORTS = 32;
     // Weak keys prevent cancelled deaths from retaining living entities or worlds.
     private static final Map<Human, Death> PENDING = new WeakHashMap<>();
@@ -114,12 +114,12 @@ final class OfflineSoldierDeathReports {
             } catch (RuntimeException malformed) {
                 cause = null;
             }
-            if (cause == null) cause = Component.translatable("message.humangunner.offline_death.unknown");
-            player.displayClientMessage(Component.translatable("message.humangunner.offline_death",
+            if (cause == null) cause = Component.translatable("message.hostile_humans_unified.offline_death.unknown");
+            player.displayClientMessage(Component.translatable("message.hostile_humans_unified.offline_death",
                     death.name(), cause, death.dimension(), death.x(), death.y(), death.z()), false);
         }
         if (batch.overflow() > 0) player.displayClientMessage(Component.translatable(
-                "message.humangunner.offline_death.overflow", batch.overflow()), false);
+                "message.hostile_humans_unified.offline_death.overflow", batch.overflow()), false);
         store.clear(player.getUUID());
     }
 

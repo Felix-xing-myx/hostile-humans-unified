@@ -61,9 +61,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 
-@Mod(HumanGunner.MOD_ID)
 public final class HumanGunner {
-    public static final String MOD_ID = "humangunner";
+    public static final String MOD_ID = com.craftix.hostile_humans.HostileHumans.MOD_ID;
     // Keep weapon-family classification valid even if NPC firearm support is
     // disabled. This registry tag needs no optional-mod API; absent TaCZ it is empty.
     private static final net.minecraft.tags.TagKey<net.minecraft.world.damagesource.DamageType> TACZ_BULLET_DAMAGE =
@@ -466,9 +465,9 @@ public final class HumanGunner {
                 }
                 if (!human.onGround()
                         && human.getDeltaMovement().y < -0.02D
-                        && human.getPersistentData().getInt("humangunner:jump_attack_until") >= human.tickCount) {
+                        && human.getPersistentData().getInt("hostile_humans_unified:jump_attack_until") >= human.tickCount) {
                     multiplier *= (float) UnifiedConfig.get().damage("jump_attack_damage_multiplier", 1.5);
-                    human.getPersistentData().remove("humangunner:jump_attack_until");
+                    human.getPersistentData().remove("hostile_humans_unified:jump_attack_until");
                 }
                 event.setAmount(event.getAmount() * multiplier);
             } else if (directEntity instanceof ThrownTrident) {
@@ -518,7 +517,7 @@ public final class HumanGunner {
                 human.setTame(false);
                 IdentityBadgeAccess.rememberPlayerAttack(human, player);
                 human.setTarget(player);
-                player.displayClientMessage(Component.translatable("message.humangunner.dismissed"), true);
+                player.displayClientMessage(Component.translatable("message.hostile_humans_unified.dismissed"), true);
             }
         }
     }

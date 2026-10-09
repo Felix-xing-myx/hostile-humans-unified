@@ -13,7 +13,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 
 /** Backpack arrows pay for a shot, never for a projectile query or interrupted draw. */
 public final class HumanArrowCombat {
-    private static final String NPC_LOAD = "humangunner:NpcArrowLoad";
+    private static final String NPC_LOAD = "hostile_humans_unified:NpcArrowLoad";
     private HumanArrowCombat() {}
 
     public static boolean canShoot(Human human, LivingEntity target) {

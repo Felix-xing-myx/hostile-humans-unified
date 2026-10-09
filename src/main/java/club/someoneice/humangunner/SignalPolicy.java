@@ -7,7 +7,7 @@ final class SignalPolicy {
 
     static String cooldownKey(boolean hostile, int tier) {
         if (tier < 0 || tier > 3) throw new IllegalArgumentException("tier");
-        return "humangunner:" + (hostile ? "hostile_signal_ready_" : "friendly_signal_ready_") + tier;
+        return "hostile_humans_unified:" + (hostile ? "hostile_signal_ready_" : "friendly_signal_ready_") + tier;
     }
 
     static long cooldownTicks(boolean hostile) {

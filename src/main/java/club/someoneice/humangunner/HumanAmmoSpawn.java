@@ -6,7 +6,7 @@ import net.minecraft.world.item.ItemStack;
 
 /** Initial reserves only, after all weapon allocation and early-game substitutions finish. */
 final class HumanAmmoSpawn {
-    private static final String GRANTED = "humangunner:initial_ammo_granted";
+    private static final String GRANTED = "hostile_humans_unified:initial_ammo_granted";
 
     private HumanAmmoSpawn() { }
 

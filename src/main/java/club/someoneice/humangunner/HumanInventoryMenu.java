@@ -30,14 +30,14 @@ public final class HumanInventoryMenu extends AbstractContainerMenu {
                 || player.distanceToSqr(human) > 64.0D || human.getData() == null
                 || HumanInventorySession.isEditing(human)) {
             player.displayClientMessage(Component.translatable(
-                    "message.humangunner.inventory.unavailable"), false);
+                    "message.hostile_humans_unified.inventory.unavailable"), false);
             return;
         }
         NetworkHooks.openScreen(
                 player,
                 new net.minecraft.world.SimpleMenuProvider(
                         (id, inventory, ignored) -> new HumanInventoryMenu(id, inventory, human),
-                        Component.translatable("screen.humangunner.inventory.title", human.getDisplayName())
+                        Component.translatable("screen.hostile_humans_unified.inventory.title", human.getDisplayName())
                 ),
                 buffer -> buffer.writeVarInt(human.getId())
         );

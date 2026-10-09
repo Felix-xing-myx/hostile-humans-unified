@@ -20,8 +20,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(value={DamageSources.class}, priority=999)
 public class DamageSourceMix {
-    private static final ResourceKey<DamageType> HUMAN_DAMAGE_TYPE = ResourceKey.create((ResourceKey)Registries.DAMAGE_TYPE, (ResourceLocation)new ResourceLocation("hostile_humans", "human"));
-    private static final ResourceKey<DamageType> HUMAN_WITH_NAME_DAMAGE_TYPE = ResourceKey.create((ResourceKey)Registries.DAMAGE_TYPE, (ResourceLocation)new ResourceLocation("hostile_humans", "human_with_name"));
+    private static final ResourceKey<DamageType> HUMAN_DAMAGE_TYPE = ResourceKey.create((ResourceKey)Registries.DAMAGE_TYPE, (ResourceLocation)new ResourceLocation("hostile_humans_unified", "human"));
+    private static final ResourceKey<DamageType> HUMAN_WITH_NAME_DAMAGE_TYPE = ResourceKey.create((ResourceKey)Registries.DAMAGE_TYPE, (ResourceLocation)new ResourceLocation("hostile_humans_unified", "human_with_name"));
     @Shadow(remap=false)
     @Final
     private Registry<DamageType> f_268645_;

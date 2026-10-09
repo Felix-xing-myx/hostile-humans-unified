@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.UUID;
 
 final class RecruitmentLedger extends SavedData {
-    private static final String ID = "humangunner_recruits";
+    private static final String ID = "hostile_humans_unified_recruits";
     private final Map<UUID, Entry> entries = new LinkedHashMap<>();
     private final Map<UUID, RosterView> orderedByOwner = new HashMap<>();
     private final Map<UUID, UUID> pendingDismissals = new HashMap<>();

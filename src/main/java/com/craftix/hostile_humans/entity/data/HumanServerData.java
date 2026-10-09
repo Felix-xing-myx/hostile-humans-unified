@@ -24,7 +24,7 @@ public final class HumanServerData extends SavedData implements HumanServerDataC
     private final ListTag unreadableRecords = new ListTag();
     private final dev.felix.hostilehumans.core.OwnerIndex ownership = new dev.felix.hostilehumans.core.OwnerIndex();
 
-    public static String getFileId() { return "hostile_humans"; }
+    public static String getFileId() { return "hostile_humans_unified"; }
     public static void prepare(MinecraftServer server) { if (server != null) forServer(server); }
     private static HumanServerData forServer(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(HumanServerData::load, HumanServerData::new, getFileId());

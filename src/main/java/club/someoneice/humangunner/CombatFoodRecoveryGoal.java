@@ -58,7 +58,7 @@ final class CombatFoodRecoveryGoal extends Goal {
     public void start() {
         mealsInBatch = 0;
         human.getPersistentData().putBoolean(ACTIVE_KEY, true);
-        human.getPersistentData().putString("humangunner:ai_phase", "combat_eating");
+        human.getPersistentData().putString("hostile_humans_unified:ai_phase", "combat_eating");
     }
 
     @Override

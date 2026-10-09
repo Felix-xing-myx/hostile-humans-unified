@@ -6,8 +6,8 @@ import net.minecraft.world.item.ItemStack;
 
 /** Grants the configured finite, persistent zero-to-three-shield loadout at spawn. */
 final class GuaranteedShieldLoadout {
-    private static final String GENERATED = "humangunner:guaranteed_shields_generated";
-    private static final String TARGET_COUNT = "humangunner:spawn_shield_count";
+    private static final String GENERATED = "hostile_humans_unified:guaranteed_shields_generated";
+    private static final String TARGET_COUNT = "hostile_humans_unified:spawn_shield_count";
 
     private GuaranteedShieldLoadout() {
     }

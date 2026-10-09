@@ -19,9 +19,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 @OnlyIn(value=Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = "hostile_humans", bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = "hostile_humans_unified", bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ClientRenderer {
-    public static final ModelLayerLocation HUMAN_MODEL_LAYER = new ModelLayerLocation(new ResourceLocation("hostile_humans", "human"), "main");
+    public static final ModelLayerLocation HUMAN_MODEL_LAYER = new ModelLayerLocation(new ResourceLocation("hostile_humans_unified", "human"), "main");
 
     protected ClientRenderer() {
     }

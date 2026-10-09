@@ -38,7 +38,7 @@ public final class StructureCompatTest {
         Map<String, Set<String>> namespaces = new TreeMap<>();
         Set<String> leaks = new TreeSet<>();
         try (var fs = FileSystems.newFileSystem(artifact); var jar = new ZipFile(artifact.toFile())) {
-            var mixins = JsonParser.parseString(Files.readString(fs.getPath("/humangunner.mixins.json"))).getAsJsonObject();
+            var mixins = JsonParser.parseString(Files.readString(fs.getPath("/hostile_humans_unified.mixins.json"))).getAsJsonObject();
             var enabledMixins = new HashSet<String>();
             mixins.getAsJsonArray("mixins").forEach(value -> enabledMixins.add(value.getAsString()));
             check(!enabledMixins.contains("PolymorphConcurrencyMixin"), "legacy Polymorph fix not activated");
@@ -48,25 +48,25 @@ public final class StructureCompatTest {
             for (String pack : PACKS) {
                 var loaded = EventHandlerMod.readAddon(fs.getPath("/datapacks/" + pack), pack);
                 check(loaded.isPresent(), "real metadata reader loads " + pack);
-                check(loaded.orElseThrow().getId().equals("hostile_humans:" + pack), "stable pack ID");
+                check(loaded.orElseThrow().getId().equals("hostile_humans_unified:" + pack), "stable pack ID");
             }
             check(EventHandlerMod.readAddon(fs.getPath("/datapacks/not_present"), "not_present").isEmpty(),
                     "missing optional pack returns empty instead of blocking a world");
             for (var entry : Collections.list(jar.entries())) {
-                if (entry.getName().startsWith("data/hostile_humans/loot_tables/") && entry.getName().endsWith(".json")) {
+                if (entry.getName().startsWith("data/hostile_humans_unified/loot_tables/") && entry.getName().endsWith(".json")) {
                     try (var stream = jar.getInputStream(entry)) {
                         String content = new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
                         check(!content.contains("farmersdelight:") && !content.contains("waystones:"),
                                 "base loot cannot require optional items: " + entry.getName());
                     }
                 }
-                if (entry.getName().startsWith("data/hostile_humans/structures/") && entry.getName().endsWith(".nbt")) {
+                if (entry.getName().startsWith("data/hostile_humans_unified/structures/") && entry.getName().endsWith(".nbt")) {
                     try (var stream = jar.getInputStream(entry)) {
                         Set<String> ids = new TreeSet<>();
                         collectIds(NbtIo.readCompressed(stream), ids);
                         for (String id : ids) {
                             if (!(id.startsWith("minecraft:") || id.startsWith("forge:")
-                                    || id.startsWith("hostile_humans:") || id.startsWith("humangunner:")))
+                                    || id.startsWith("hostile_humans_unified:") || id.startsWith("hostile_humans_unified:")))
                                 leaks.add(entry.getName() + " -> " + id);
                         }
                         baseStructures++;

@@ -47,6 +47,8 @@
 
 适用于 Minecraft 1.20.1 Forge。将统一版 JAR 放入实例的 `mods` 文件夹即可；不要同时安装独立的 Hostile Humans 或 Human Gunner JAR。
 
+模组列表只显示一个 **Hostile Humans Unified**，模组 ID 与注册命名空间统一为 `hostile_humans_unified`。本次命名空间整理仅面向新存档：旧 `hostile_humans`／`humangunner` 实体、物品等 ID 不提供迁移或别名兼容。命令、数据包和脚本中的自定义引用也应使用新 ID。配置仍位于 `config/hostile_humans_unified/`，无需改目录。源码中的历史 Java 包名保留用于组织代码，不是游戏注册命名空间或额外模组身份。
+
 配置位于 `config/hostile_humans_unified/`，由 global.json 和 roamer/tier1/tier2/tier3.json 五个文件组成，各阶独立设置属性、AI、装备和出生弹药；全局管理总开关与共享规则，保留中英文说明。仅使用这五份当前配置，不再读取或转换旧 JSON/TOML，也不生成迁移、升级或导入备份文件。缺失文件直接生成当前默认值；已有文件按常用设置优先重排，保留自定义值。可调整分阶解锁日期、随日期成长的装备品质、四阶装备池、属性与散布、战斗行为、雇佣费用及枪械名单等。装备自定义直接使用配置文件，不再使用旧装备数据包。完整说明见[配置文件指南](CONFIGURATION.md)。多人游戏以服务器配置为准。
 
 ## 许可证与来源

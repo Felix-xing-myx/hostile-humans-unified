@@ -139,7 +139,7 @@ public final class AdaptiveCombatGoal extends Goal {
         // Spread nearby-entity queries across six ticks so a large battle does
         // not make every Human scan its surroundings on the same server tick.
         this.nextCrowdScanTick = human.tickCount + Math.floorMod(human.getId(), 6);
-        human.getPersistentData().remove("humangunner:ai_visible_threats");
+        human.getPersistentData().remove("hostile_humans_unified:ai_visible_threats");
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
     }
 
@@ -369,7 +369,7 @@ public final class AdaptiveCombatGoal extends Goal {
         } else {
             MovementSpeedController.combat(human, phase != Phase.DEFEND && !isUsingTaczGun());
         }
-        human.getPersistentData().putString("humangunner:ai_phase", phase.name().toLowerCase());
+        human.getPersistentData().putString("hostile_humans_unified:ai_phase", phase.name().toLowerCase());
     }
 
     @Override
@@ -430,7 +430,7 @@ public final class AdaptiveCombatGoal extends Goal {
         if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
             human.stopUsingItem();
         }
-        human.getPersistentData().putString("humangunner:ai_phase", "native_combat");
+        human.getPersistentData().putString("hostile_humans_unified:ai_phase", "native_combat");
     }
 
     @Override
@@ -527,7 +527,7 @@ public final class AdaptiveCombatGoal extends Goal {
             if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) human.stopUsingItem();
             projectileDefenseUntil = 0;
             phaseTicks = 0;
-            human.getPersistentData().putString("humangunner:ai_phase", "shield_threat_gone");
+            human.getPersistentData().putString("hostile_humans_unified:ai_phase", "shield_threat_gone");
             return;
         }
         if (defendingProjectile && isDedicatedRangedCombatant()
@@ -550,7 +550,7 @@ public final class AdaptiveCombatGoal extends Goal {
             phaseTicks = 0;
             boolean attacked = performShieldCounterattack();
             human.getPersistentData().putString(
-                    "humangunner:ai_phase",
+                    "hostile_humans_unified:ai_phase",
                     attacked ? "shield_counterattack" : "shield_counter_window"
             );
             return;
@@ -564,7 +564,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 human.stopUsingItem();
             }
             phaseTicks = 0;
-            human.getPersistentData().putString("humangunner:ai_phase", "shield_pursuit_release");
+            human.getPersistentData().putString("hostile_humans_unified:ai_phase", "shield_pursuit_release");
             return;
         }
 
@@ -839,7 +839,7 @@ public final class AdaptiveCombatGoal extends Goal {
         if (retreatSafe() && recoverySession == null
                 && !CombatFoodRecoveryGoal.isActive(human)) {
             phaseTicks = 0;
-            human.getPersistentData().putString("humangunner:ai_phase", "retreat_safe_to_return");
+            human.getPersistentData().putString("hostile_humans_unified:ai_phase", "retreat_safe_to_return");
             return;
         }
         boolean counterfiring = tickRetreatCounterattack();
@@ -1027,7 +1027,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void setRetreatBackpedaling(boolean backpedaling) {
-        human.getPersistentData().putBoolean("humangunner:retreat_backpedaling", backpedaling);
+        human.getPersistentData().putBoolean("hostile_humans_unified:retreat_backpedaling", backpedaling);
         if (!backpedaling) {
             return;
         }
@@ -1044,7 +1044,7 @@ public final class AdaptiveCombatGoal extends Goal {
         human.swing(InteractionHand.MAIN_HAND);
         human.doHurtTarget(threat);
         nextRetreatMeleeTick = human.tickCount + MeleeAttackTiming.nextCooldown(human);
-        human.getPersistentData().putString("humangunner:ai_phase", "retreat_melee_counterattack");
+        human.getPersistentData().putString("hostile_humans_unified:ai_phase", "retreat_melee_counterattack");
     }
 
     private void switchToRetreatMelee() {
@@ -1071,7 +1071,7 @@ public final class AdaptiveCombatGoal extends Goal {
         phase = Phase.RETREAT;
         phaseTicks = Math.max(phaseTicks, 120);
         MovementSpeedController.retreat(human, true);
-        human.getPersistentData().putString("humangunner:ai_phase", "retreat_recovering");
+        human.getPersistentData().putString("hostile_humans_unified:ai_phase", "retreat_recovering");
         if (activePath == null || human.getNavigation().isDone()) {
             planRetreat();
         }
@@ -1105,7 +1105,7 @@ public final class AdaptiveCombatGoal extends Goal {
             recoverySession = null;
             nextRecoveryUseTick = human.tickCount + (completed ? 6 : 16);
             human.getPersistentData().putString(
-                    "humangunner:ai_phase",
+                    "hostile_humans_unified:ai_phase",
                     completed ? "retreat_recovery_chain" : "retreat_interrupted_use"
             );
             if (healthRatio() > config.criticalHealthRatio()
@@ -1121,7 +1121,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 && RecoverySupplies.hasCombatRecoverySupply(human)) {
             recoverySession = RecoverySupplies.beginCombatRecoveryUse(human);
             if (recoverySession != null) {
-                human.getPersistentData().putString("humangunner:ai_phase", "retreat_using_recovery_item");
+                human.getPersistentData().putString("hostile_humans_unified:ai_phase", "retreat_using_recovery_item");
             }
         }
     }
@@ -1383,8 +1383,8 @@ public final class AdaptiveCombatGoal extends Goal {
         focusedThreat = target;
         focusLockUntil = human.tickCount + FOCUS_LOCK_TICKS;
         keepTarget(target);
-        human.getPersistentData().putInt("humangunner:focus_target_until", focusLockUntil);
-        human.getPersistentData().putUUID("humangunner:focus_target", target.getUUID());
+        human.getPersistentData().putInt("hostile_humans_unified:focus_target_until", focusLockUntil);
+        human.getPersistentData().putUUID("hostile_humans_unified:focus_target", target.getUUID());
     }
 
     private LivingEntity activeFocusedThreat() {
@@ -1413,8 +1413,8 @@ public final class AdaptiveCombatGoal extends Goal {
     private void clearFocusLock() {
         focusedThreat = null;
         focusLockUntil = 0;
-        human.getPersistentData().remove("humangunner:focus_target_until");
-        human.getPersistentData().remove("humangunner:focus_target");
+        human.getPersistentData().remove("hostile_humans_unified:focus_target_until");
+        human.getPersistentData().remove("hostile_humans_unified:focus_target");
     }
 
     private boolean crowdPressureActive() {
@@ -1433,7 +1433,7 @@ public final class AdaptiveCombatGoal extends Goal {
             human.stopUsingItem();
         }
         GunCustody.restorePrimaryGun(human, "crowd_retreat");
-        human.getPersistentData().putString("humangunner:ai_phase", "crowd_retreat");
+        human.getPersistentData().putString("hostile_humans_unified:ai_phase", "crowd_retreat");
     }
 
     private boolean canCounterFromCurrentRange() {

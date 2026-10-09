@@ -38,13 +38,13 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private static final int MIN_AIM_TICKS = 2;
     private static final long RELOAD_RETRY_TICKS = 4L;
     private static final double MAX_LEAD_TICKS = 8.0D;
-    private static final String GUN_STATE = "humangunner:gun_state";
-    private static final String RELOAD_DEADLINE = "humangunner:gun_reload_deadline";
-    private static final String RELOAD_HARD_DEADLINE = "humangunner:gun_reload_hard_deadline";
-    private static final String RELOAD_GUN_ID = "humangunner:gun_reloading_id";
-    private static final String NEXT_RELOAD_ATTEMPT = "humangunner:gun_next_reload_attempt";
-    private static final String STALL_DEADLINE = "humangunner:gun_stall_deadline";
-    private static final String BOLT_HARD_DEADLINE = "humangunner:gun_bolt_hard_deadline";
+    private static final String GUN_STATE = "hostile_humans_unified:gun_state";
+    private static final String RELOAD_DEADLINE = "hostile_humans_unified:gun_reload_deadline";
+    private static final String RELOAD_HARD_DEADLINE = "hostile_humans_unified:gun_reload_hard_deadline";
+    private static final String RELOAD_GUN_ID = "hostile_humans_unified:gun_reloading_id";
+    private static final String NEXT_RELOAD_ATTEMPT = "hostile_humans_unified:gun_next_reload_attempt";
+    private static final String STALL_DEADLINE = "hostile_humans_unified:gun_stall_deadline";
+    private static final String BOLT_HARD_DEADLINE = "hostile_humans_unified:gun_bolt_hard_deadline";
     private final T mob;
     private final IGunOperator operator;
     private int aimTicks;
@@ -256,7 +256,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 }
                 ensureGunDrawn(mob, operator);
                 human.getPersistentData().putString(
-                        "humangunner:ai_phase", "gun_close_defense_return"
+                        "hostile_humans_unified:ai_phase", "gun_close_defense_return"
                 );
                 range = preferredRange(weapon);
             } else {
@@ -397,7 +397,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         clearNpcSprintLock(mob, operator);
         human.getLookControl().setLookAt(target, 45.0F, 35.0F);
         human.getPersistentData().putString(
-                "humangunner:ai_phase", "gun_close_melee_defense"
+                "hostile_humans_unified:ai_phase", "gun_close_melee_defense"
         );
 
         if (shoreSeeking) {
@@ -433,7 +433,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         long gameTime = mob.level().getGameTime();
         mob.getPersistentData().putString(GUN_STATE, result.name().toLowerCase());
         if (result == ShootResult.SUCCESS) {
-            mob.getPersistentData().putLong("humangunner:last_gunshot_game_time", gameTime);
+            mob.getPersistentData().putLong("hostile_humans_unified:last_gunshot_game_time", gameTime);
             clearRecoveryTimers(mob);
             return;
         }
@@ -572,8 +572,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             drawCurrentGun(mob, operator);
             mob.setSprinting(false);
             mob.getPersistentData().putInt(
-                    "humangunner:gun_recovery_count",
-                    mob.getPersistentData().getInt("humangunner:gun_recovery_count") + 1
+                    "hostile_humans_unified:gun_recovery_count",
+                    mob.getPersistentData().getInt("hostile_humans_unified:gun_recovery_count") + 1
             );
             HumanGunner.LOGGER.debug(
                     "Recovered stalled TaCZ gun {} for NPC {} after {}",
@@ -908,7 +908,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         lastThreatDistance = distance;
         if (mob instanceof Human human) {
             human.getPersistentData().putInt(
-                    "humangunner:gun_retreat_failure_ticks", retreatFailureTicks
+                    "hostile_humans_unified:gun_retreat_failure_ticks", retreatFailureTicks
             );
         }
     }

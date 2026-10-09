@@ -50,7 +50,7 @@ final class RecruitmentConfigNetwork {
             var payment = config.recruitmentCost(tier);
             Item currency = currency(payment);
             prices.add(new Price(currency == null ? null : payment, config.recruitmentLimit(tier),
-                    currency == null ? Component.translatable("message.humangunner.hire.invalid_payment")
+                    currency == null ? Component.translatable("message.hostile_humans_unified.hire.invalid_payment")
                             : currency.getDescription()));
         }
         return new Snapshot(prices);

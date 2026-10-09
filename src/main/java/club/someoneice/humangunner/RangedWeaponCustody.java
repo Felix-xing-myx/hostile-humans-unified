@@ -16,10 +16,10 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
  * so a full 30-slot HumanData backpack cannot consume either weapon.
  */
 public final class RangedWeaponCustody {
-    private static final String PRIMARY_OWNER = "humangunner:primary_bow_owner";
-    private static final String ACTIVE = "humangunner:ranged_custody_active";
-    private static final String RESERVED_SLOT = "humangunner:ranged_custody_slot";
-    private static final String SNAPSHOT = "humangunner:ranged_custody_snapshot";
+    private static final String PRIMARY_OWNER = "hostile_humans_unified:primary_bow_owner";
+    private static final String ACTIVE = "hostile_humans_unified:ranged_custody_active";
+    private static final String RESERVED_SLOT = "hostile_humans_unified:ranged_custody_slot";
+    private static final String SNAPSHOT = "hostile_humans_unified:ranged_custody_snapshot";
     private static final double MELEE_ENTER_DISTANCE_SQR = 16.0D;
     private static final double RANGED_RETURN_DISTANCE_SQR = 36.0D;
 
@@ -96,7 +96,7 @@ public final class RangedWeaponCustody {
                 && SpartanEquipmentCompat.isShield(human.getUseItem())) {
             boolean returningToRanged = shouldReturnToRanged(human);
             boolean defenseActive = "defend".equals(human.getPersistentData()
-                    .getString("humangunner:ai_phase"));
+                    .getString("hostile_humans_unified:ai_phase"));
             if (shouldReleaseReturnShield(returningToRanged, defenseActive,
                     human.getTicksUsingItem(), CombatAiConfig.forHuman(human).shieldBlockDurationMaxTicks())) {
                 // A lingering off-hand block must not hold the melee lease

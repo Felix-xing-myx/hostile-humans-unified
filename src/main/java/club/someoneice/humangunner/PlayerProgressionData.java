@@ -35,7 +35,7 @@ final class PlayerProgressionData extends SavedData {
         PlayerProgressionData data = LOADED.get(server);
         if (data == null && server.isSameThread()) {
             data = server.overworld().getDataStorage().computeIfAbsent(PlayerProgressionData::load,
-                    PlayerProgressionData::new, "hostile_humans_player_progression");
+                    PlayerProgressionData::new, "hostile_humans_unified_player_progression");
             LOADED.put(server, data);
         }
         return data;

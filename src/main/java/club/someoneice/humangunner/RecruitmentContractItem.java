@@ -27,9 +27,9 @@ public final class RecruitmentContractItem extends Item {
         var price = net.minecraftforge.fml.loading.FMLEnvironment.dist == net.minecraftforge.api.distmarker.Dist.CLIENT
                 ? RecruitmentConfigClient.price(tier) : RecruitmentConfigNetwork.serverTooltipPrice(tier);
         var payment = price == null ? null : price.payment();
-        tooltip.add((price == null ? Component.translatable("item.humangunner.contract.awaiting_server")
-                : payment == null ? Component.translatable("message.humangunner.hire.invalid_payment")
-                : Component.translatable("item.humangunner.contract.payment_tooltip",
+        tooltip.add((price == null ? Component.translatable("item.hostile_humans_unified.contract.awaiting_server")
+                : payment == null ? Component.translatable("message.hostile_humans_unified.hire.invalid_payment")
+                : Component.translatable("item.hostile_humans_unified.contract.payment_tooltip",
                 payment.count(), price.name(), price.limit()))
                 .withStyle(ChatFormatting.GRAY));
     }
@@ -58,7 +58,7 @@ public final class RecruitmentContractItem extends Item {
             Item currency = RecruitmentConfigNetwork.currency(payment);
             if (currency == null) return fail(player, "invalid_payment");
             if (!RecruitmentConfigNetwork.pay(terms, inventory.items, stack)) {
-                player.displayClientMessage(Component.translatable("message.humangunner.hire.payment",
+                player.displayClientMessage(Component.translatable("message.hostile_humans_unified.hire.payment",
                         payment.count(), terms.name()).withStyle(ChatFormatting.RED), true);
                 return InteractionResult.FAIL;
             }
@@ -86,7 +86,7 @@ public final class RecruitmentContractItem extends Item {
     }
 
     private static InteractionResult fail(Player player, String reason) {
-        player.displayClientMessage(Component.translatable("message.humangunner.hire." + reason)
+        player.displayClientMessage(Component.translatable("message.hostile_humans_unified.hire." + reason)
                 .withStyle(ChatFormatting.RED), true);
         return InteractionResult.CONSUME;
     }

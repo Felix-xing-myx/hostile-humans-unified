@@ -26,7 +26,7 @@ import net.minecraftforge.fml.ModList;
 
 public class EventHandler {
     static boolean addedFarmerItems;
-    private static final String randomTag = "hostile_humans:structure_gear_initialized";
+    private static final String randomTag = "hostile_humans_unified:structure_gear_initialized";
 
     @SubscribeEvent
     public void explode(ExplosionEvent.Detonate event) {

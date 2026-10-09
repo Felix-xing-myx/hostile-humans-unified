@@ -28,14 +28,14 @@ import java.util.WeakHashMap;
  */
 public final class RecoverySupplies {
     static final int MEALS_PER_BATCH = 5;
-    private static final String KIT_GRANTED = "humangunner:recovery_kit_granted_v2";
-    private static final String PENDING_HEAL = "humangunner:pending_food_heal";
-    private static final String NEXT_HEAL_TICK = "humangunner:next_food_heal_tick";
-    private static final String SHIELD_REBLOCK_UNTIL = "humangunner:shield_reblock_until";
-    private static final String TIER_THREE_MARKER = "humangunner:tier_three";
+    private static final String KIT_GRANTED = "hostile_humans_unified:recovery_kit_granted_v2";
+    private static final String PENDING_HEAL = "hostile_humans_unified:pending_food_heal";
+    private static final String NEXT_HEAL_TICK = "hostile_humans_unified:next_food_heal_tick";
+    private static final String SHIELD_REBLOCK_UNTIL = "hostile_humans_unified:shield_reblock_until";
+    private static final String TIER_THREE_MARKER = "hostile_humans_unified:tier_three";
     // Removed fixed-slot lease metadata. Retain the key only to clean old
     // entities when they are first reconciled by the inventory custody logic.
-    private static final String RECOVERY_LEASE = "humangunner:recovery_offhand_lease_v3";
+    private static final String RECOVERY_LEASE = "hostile_humans_unified:recovery_offhand_lease_v3";
 
     /**
      * One authoritative owner for a temporary hand/inventory exchange. Goal
@@ -112,11 +112,11 @@ public final class RecoverySupplies {
         int enchantedApples = provisionEnchantedGoldenApple(human, foodConfig);
         int foodCount = preset.food().roll(random);
         int insertedFood = provisionFoodVariety(human, data, foodCount, foodConfig);
-        human.getPersistentData().putInt("humangunner:recovery_kit_potions", insertedPotions);
-        human.getPersistentData().putInt("humangunner:tactical_kit_potions", tacticalPotions);
-        human.getPersistentData().putInt("humangunner:recovery_kit_food", insertedFood);
-        human.getPersistentData().putInt("humangunner:recovery_kit_golden_apples", insertedApples);
-        human.getPersistentData().putInt("humangunner:recovery_kit_enchanted_apples", enchantedApples);
+        human.getPersistentData().putInt("hostile_humans_unified:recovery_kit_potions", insertedPotions);
+        human.getPersistentData().putInt("hostile_humans_unified:tactical_kit_potions", tacticalPotions);
+        human.getPersistentData().putInt("hostile_humans_unified:recovery_kit_food", insertedFood);
+        human.getPersistentData().putInt("hostile_humans_unified:recovery_kit_golden_apples", insertedApples);
+        human.getPersistentData().putInt("hostile_humans_unified:recovery_kit_enchanted_apples", enchantedApples);
     }
 
     public static boolean hasUsableSupply(Human human) {
@@ -1047,7 +1047,7 @@ public final class RecoverySupplies {
                 NEXT_HEAL_TICK,
                 human.tickCount + config.gradualHealIntervalTicks()
         );
-        human.getPersistentData().putFloat("humangunner:last_food_heal_value", amount);
+        human.getPersistentData().putFloat("hostile_humans_unified:last_food_heal_value", amount);
     }
 
     private static float foodHealingValue(Human human, ItemStack food) {
@@ -1067,7 +1067,7 @@ public final class RecoverySupplies {
 
     private static void rememberRecoveryItem(Human human, ItemStack item) {
         human.getPersistentData().putString(
-                "humangunner:last_recovery_item",
+                "hostile_humans_unified:last_recovery_item",
                 BuiltInRegistries.ITEM.getKey(item.getItem()).toString()
         );
     }

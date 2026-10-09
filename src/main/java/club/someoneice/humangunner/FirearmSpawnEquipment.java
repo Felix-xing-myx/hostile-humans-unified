@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /** TaCZ equipment adapter; no TaCZ classes are linked by the native generator. */
 final class FirearmSpawnEquipment {
     private static final org.slf4j.Logger LOGGER = HumanGunner.LOGGER;
-    private static final String GUN_ROLL_DONE = "humangunner:gun_roll_done";
+    private static final String GUN_ROLL_DONE = "hostile_humans_unified:gun_roll_done";
     private static final AtomicBoolean WARNED_EMPTY_GUN_POOL = new AtomicBoolean();
     private static final AtomicBoolean LOGGED_FIRST_EQUIP = new AtomicBoolean();
 
@@ -23,7 +23,7 @@ final class FirearmSpawnEquipment {
         human.getPersistentData().putBoolean(GUN_ROLL_DONE, true);
         if (HumanGunnerConfig.get().availableGunCount() == 0) {
             if (WARNED_EMPTY_GUN_POOL.compareAndSet(false, true)) {
-                LOGGER.warn("Human Gunner found no configured firearms in the loaded TaCZ common gun index");
+                LOGGER.warn("Hostile Humans Unified found no configured firearms in the loaded TaCZ common gun index");
             }
             return ItemStack.EMPTY;
         }
@@ -70,7 +70,7 @@ final class FirearmSpawnEquipment {
             // The spawn pipeline provides reserves after all
             // providers have finished; this adapter only supplies the firearm.
             if (LOGGED_FIRST_EQUIP.compareAndSet(false, true)) {
-                LOGGER.info("Human Gunner first successful additional firearm allocation: {}", human.getTier());
+                LOGGER.info("Hostile Humans Unified first successful additional firearm allocation: {}", human.getTier());
             }
             LOGGER.debug(
                     "Equipped npc={} tier={} with an additional TaCZ firearm",

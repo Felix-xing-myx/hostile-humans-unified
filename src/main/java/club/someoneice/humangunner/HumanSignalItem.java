@@ -31,8 +31,8 @@ public final class HumanSignalItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable(hostile ? "item.humangunner.hostile_beacon.tooltip"
-                : "item.humangunner.signal_flare.tooltip", RecruitmentPolicy.waveSize(tier)).withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable(hostile ? "item.hostile_humans_unified.hostile_beacon.tooltip"
+                : "item.hostile_humans_unified.signal_flare.tooltip", RecruitmentPolicy.waveSize(tier)).withStyle(ChatFormatting.GRAY));
     }
 
     @Override
@@ -44,20 +44,20 @@ public final class HumanSignalItem extends Item {
         long now = server.getGameTime();
         long ready = player.getPersistentData().getLong(key);
         if (now < ready) {
-            player.displayClientMessage(Component.translatable("message.humangunner.signal.cooldown",
+            player.displayClientMessage(Component.translatable("message.hostile_humans_unified.signal.cooldown",
                     (ready - now + 19) / 20).withStyle(ChatFormatting.RED), true);
             return InteractionResultHolder.fail(stack);
         }
         int spawned = spawnWave(server, serverPlayer);
         if (spawned == 0) {
-            player.displayClientMessage(Component.translatable("message.humangunner.signal.no_space")
+            player.displayClientMessage(Component.translatable("message.hostile_humans_unified.signal.no_space")
                     .withStyle(ChatFormatting.RED), true);
             return InteractionResultHolder.fail(stack);
         }
         player.getPersistentData().putLong(key, now + SignalPolicy.cooldownTicks(hostile));
         if (!player.getAbilities().instabuild) stack.shrink(1);
         player.displayClientMessage(Component.translatable(hostile
-                ? "message.humangunner.hostile_wave" : "message.humangunner.reinforcements", spawned), true);
+                ? "message.hostile_humans_unified.hostile_wave" : "message.hostile_humans_unified.reinforcements", spawned), true);
         return InteractionResultHolder.consume(stack);
     }
 

@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ThrownTrident.class)
 public abstract class ThrownTridentLifecycleMixin {
     @Unique
-    private static final String HUMAN_AMMUNITION = "humangunner:drowned_style_trident";
+    private static final String HUMAN_AMMUNITION = "hostile_humans_unified:drowned_style_trident";
     @Unique
     private static final int MAX_LIFETIME_TICKS = 100;
 

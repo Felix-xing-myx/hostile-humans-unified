@@ -32,9 +32,9 @@ final class ProgressionCommands {
 
     private static int show(CommandSourceStack source, ServerPlayer player) {
         long day = NaturalSpawnProgression.dayAt(PlayerProgressionData.time(player));
-        source.sendSuccess(() -> Component.translatable("commands.humangunner.day.status", player.getDisplayName(), day), false);
+        source.sendSuccess(() -> Component.translatable("commands.hostile_humans_unified.day.status", player.getDisplayName(), day), false);
         if (!UnifiedConfig.get().spawn().progression().enabled()) {
-            source.sendSuccess(() -> Component.translatable("commands.humangunner.day.disabled"), false);
+            source.sendSuccess(() -> Component.translatable("commands.hostile_humans_unified.day.disabled"), false);
         }
         return (int) Math.min(Integer.MAX_VALUE, day);
     }
@@ -42,7 +42,7 @@ final class ProgressionCommands {
     private static int change(CommandSourceStack source, ServerPlayer player, int days, boolean absolute) {
         PlayerProgressionData.change(player, days, absolute);
         long day = NaturalSpawnProgression.dayAt(PlayerProgressionData.time(player));
-        source.sendSuccess(() -> Component.translatable("commands.humangunner.day.changed", player.getDisplayName(), day), true);
+        source.sendSuccess(() -> Component.translatable("commands.hostile_humans_unified.day.changed", player.getDisplayName(), day), true);
         return (int) Math.min(Integer.MAX_VALUE, day);
     }
 }

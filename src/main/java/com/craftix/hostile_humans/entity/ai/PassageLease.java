@@ -21,7 +21,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /** One bounded close lease per passage, shared by normal goals and collision recovery. */
-@Mod.EventBusSubscriber(modid = "hostile_humans")
+@Mod.EventBusSubscriber(modid = "hostile_humans_unified")
 public final class PassageLease {
     private static final Map<Level, Map<BlockPos, Lease>> LEVELS = new WeakHashMap<>();
     private record Lease(long openedAt, net.minecraft.world.level.block.Block block) {}

@@ -37,7 +37,7 @@ public final class TouhouMaidCompat {
                 MaidHurtEvent.class,
                 TouhouMaidCompat::onTamedMaidHurt
         );
-        HumanGunner.LOGGER.info("Human Gunner enabled optional Touhou Little Maid relation and damage integration");
+        HumanGunner.LOGGER.info("Hostile Humans Unified enabled optional Touhou Little Maid relation and damage integration");
     }
 
     /** Null leaves every non-human target and untamed maid's original rules alone. */
@@ -104,7 +104,7 @@ public final class TouhouMaidCompat {
             event.setAmount(event.getAmount() * (float) UnifiedConfig.get().gunSetting("tamed_maid_damage_multiplier", .15));
             if (LOGGED_FIRST_GUN_HIT.compareAndSet(false, true)) {
                 HumanGunner.LOGGER.info(
-                        "Human Gunner applied configured TaCZ damage multiplier to tamed maid {}",
+                        "Hostile Humans Unified applied configured TaCZ damage multiplier to tamed maid {}",
                         maid.getUUID()
                 );
             }
@@ -117,7 +117,7 @@ public final class TouhouMaidCompat {
             event.setAmount(event.getAmount() * (float) UnifiedConfig.get().damage("tamed_maid_melee_damage_multiplier", .25));
             if (LOGGED_FIRST_MELEE_HIT.compareAndSet(false, true)) {
                 HumanGunner.LOGGER.info(
-                        "Human Gunner applied configured human melee multiplier to tamed maid {}",
+                        "Hostile Humans Unified applied configured human melee multiplier to tamed maid {}",
                         maid.getUUID()
                 );
             }

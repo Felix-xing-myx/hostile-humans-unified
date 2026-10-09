@@ -1,6 +1,6 @@
 """Offline structural audit; never launches Minecraft or a server.
 
-Checks resource preservation, JSON/TOML, class-file versions, self-owned symbol
+Checks maintained resources, JSON/TOML, class-file versions, self-owned symbol
 linkage after SRG remapping, and the absence of embedded original mod jars.
 This is deliberately NOT a runtime/Mixin integration test.
 """
@@ -83,16 +83,14 @@ class ClassFile:
 
 
 def audit(artifact, original, addon, minecraft, jdk, compat_mods=None):
-    repairs = json.loads((Path(__file__).parent / "structure_compat_repairs.json").read_text(encoding="utf-8"))
-    checked_repairs = set()
     with zipfile.ZipFile(artifact) as package:
         names = set(package.namelist())
         assert len(names) == len(package.namelist()), "duplicate zip entries"
         assert not any(n.endswith(".jar") for n in names), "embedded binary mod"
         assert not any(n.startswith(("net/minecraft/", "net/minecraftforge/", "com/tacz/")) for n in names)
         metadata = tomllib.loads(package.read("META-INF/mods.toml").decode())
-        assert {m["modId"] for m in metadata["mods"]} == {"hostile_humans", "humangunner"}
-        tacz = [d for d in metadata["dependencies"]["hostile_humans"] if d["modId"] == "tacz"]
+        assert {m["modId"] for m in metadata["mods"]} == {"hostile_humans_unified"}
+        tacz = [d for d in metadata["dependencies"]["hostile_humans_unified"] if d["modId"] == "tacz"]
         assert len(tacz) == 1 and tacz[0]["mandatory"] is False, "TaCZ must be optional"
         json_count = 0
         metadata_count = 0
@@ -106,26 +104,21 @@ def audit(artifact, original, addon, minecraft, jdk, compat_mods=None):
                     json_count += 1
                 else:
                     metadata_count += 1
+        # Namespace consolidation intentionally changes former upstream paths and
+        # NBT strings. Validate the maintained resource tree, not byte identity
+        # against legacy mod JARs whose registry identifiers are unsupported.
         resource_count = 0
-        for source in (original, addon):
-            with zipfile.ZipFile(source) as upstream:
-                for n in upstream.namelist():
-                    if n.startswith(("assets/", "data/", "datapacks/")) and not n.endswith("/"):
-                        assert n in names, f"missing resource: {n}"
-                        # Only addon/extension assets override matching base paths.
-                        if source == addon or n.startswith(("assets/hostile_humans/", "data/hostile_humans/", "datapacks/")):
-                            if n in repairs:
-                                expected = repairs[n]
-                                assert hashlib.sha256(upstream.read(n)).hexdigest() == expected["upstream_sha256"], f"repair source changed: {n}"
-                                assert hashlib.sha256(package.read(n)).hexdigest() == expected["repaired_sha256"], f"repair output changed: {n}"
-                                checked_repairs.add(n)
-                            elif n == "data/hostile_humans/worldgen/structure_set/all_houses.json":
-                                legacy = re.sub(r"(?m)^\s*//[^\r\n]*", "", upstream.read(n).decode())
-                                assert json.loads(legacy) == json.loads(package.read(n)), n
-                            else:
-                                assert upstream.read(n) == package.read(n), f"changed legacy resource: {n}"
-                        resource_count += 1
-        assert checked_repairs == set(repairs), "unverified structure repair entries"
+        resource_root = Path(__file__).resolve().parent.parent / "src/main/resources"
+        for root in ("assets", "data", "datapacks"):
+            for source in (resource_root / root).rglob("*"):
+                if not source.is_file():
+                    continue
+                name = source.relative_to(resource_root).as_posix()
+                assert name in names, f"missing maintained resource: {name}"
+                assert source.read_bytes() == package.read(name), f"packaged resource differs: {name}"
+                resource_count += 1
+        assert not any(n.startswith(("assets/hostile_humans/", "assets/humangunner/",
+                                     "data/hostile_humans/", "data/humangunner/")) for n in names)
         classes = {n[:-6]: ClassFile(package.read(n)) for n in names if n.endswith(".class")}
         assert all(c.version == 61 for c in classes.values()), "non-Java-17 bytecode"
         optional_tacz = ("GunnerGoal", "TaczIntegration", "TaczMaidIntegration")
@@ -146,7 +139,7 @@ def audit(artifact, original, addon, minecraft, jdk, compat_mods=None):
                      "HumanCombatCompatMix", "WalkNodeMix", "ThrownTridentMix", "LocateMixin")
         assert not any(n.rsplit("/", 1)[-1][:-6] in forbidden for n in names if n.endswith(".class"))
         mixins = []
-        for config_name in ("humangunner.mixins.json", "mixins.hostile_humans.json"):
+        for config_name in ("hostile_humans_unified.mixins.json", "hostile_humans_unified.world.mixins.json"):
             cfg = json.loads(package.read(config_name))
             for name in cfg.get("mixins", []) + cfg.get("client", []):
                 path = cfg["package"].replace(".", "/") + "/" + name
@@ -206,7 +199,7 @@ def audit(artifact, original, addon, minecraft, jdk, compat_mods=None):
             targets += [n.replace(".", "/") for n in re.findall(r'"([\w.]+)"', declaration)]
             assert not any(t in classes for t in targets), f"internal overwrite remains: {path}"
             mappings = {}
-            refmap_name = "mixins.hostile_humans.refmap.json"
+            refmap_name = "hostile_humans_unified.refmap.json"
             if path.startswith("com/craftix/"):
                 mappings = json.loads(package.read(refmap_name))["mappings"].get(path, {})
             for target in targets:
@@ -248,7 +241,7 @@ def audit(artifact, original, addon, minecraft, jdk, compat_mods=None):
     result = {"artifact": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest(),
               "java_classes": len(classes), "json_files": json_count, "pack_metadata_files": metadata_count,
               "preserved_resource_entries": resource_count, "own_symbol_references_checked": checked,
-              "documented_resource_repairs": len(checked_repairs),
+              "resource_identity_basis": "maintained unified namespace source tree",
               "references_with_unavailable_parent": unresolved_external_parents,
               "external_mixin_classes": len(mixins), "mixin_selectors_and_shadows_checked": selector_checks,
               "uninstalled_optional_targets": skipped_optional,

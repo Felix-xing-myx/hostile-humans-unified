@@ -16,7 +16,7 @@ public final class StructureWaystoneSanitizer {
         try (var walk = Files.walk(root)) {
             for (Path file : walk.filter(p -> p.toString().endsWith(".nbt")).sorted().toList()) {
                 String name = root.relativize(file).toString().replace('\\', '/');
-                if (!name.startsWith("data/hostile_humans/structures/")
+                if (!name.startsWith("data/hostile_humans_unified/structures/")
                         && !name.startsWith("datapacks/")) continue;
                 if (name.startsWith("datapacks/") && name.split("/")[1].contains("waystones")) continue;
                 CompoundTag nbt;

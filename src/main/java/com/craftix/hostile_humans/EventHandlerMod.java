@@ -14,7 +14,7 @@ import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.resource.PathPackResources;
 
-@Mod.EventBusSubscriber(modid="hostile_humans", bus=Mod.EventBusSubscriber.Bus.MOD)
+@Mod.EventBusSubscriber(modid="hostile_humans_unified", bus=Mod.EventBusSubscriber.Bus.MOD)
 public class EventHandlerMod {
     @SubscribeEvent
     public static void addPacks(AddPackFindersEvent event) {
@@ -34,7 +34,7 @@ public class EventHandlerMod {
 
     private static void registerAddon(AddPackFindersEvent event, String packName) {
         event.addRepositorySource(packConsumer -> {
-            Path path = ModList.get().getModFileById("hostile_humans").getFile()
+            Path path = ModList.get().getModFileById("hostile_humans_unified").getFile()
                     .findResource("datapacks", packName);
             readAddon(path, packName).ifPresent(packConsumer);
         });
@@ -43,7 +43,7 @@ public class EventHandlerMod {
     /** Missing/broken optional overlays must not prevent base-world loading. */
     static Optional<Pack> readAddon(Path path, String packName) {
         try {
-            Pack pack = Pack.readMetaAndCreate("hostile_humans:" + packName,
+            Pack pack = Pack.readMetaAndCreate("hostile_humans_unified:" + packName,
                     Component.literal(packName), true, id -> new PathPackResources(id, true, path),
                     PackType.SERVER_DATA, Pack.Position.TOP, PackSource.DEFAULT);
             if (pack != null) return Optional.of(pack);

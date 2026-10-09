@@ -17,11 +17,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** One final pass after native and optional-mod loadouts, before combat goals start. */
 public final class NaturalEquipmentGrowth {
-    private static final String DAY = "humangunner:equipment_spawn_day";
-    private static final String APPLIED = "humangunner:equipment_growth_applied";
-    private static final String GUN_MULTIPLIER = "humangunner:spawn_gun_chance_multiplier";
+    private static final String DAY = "hostile_humans_unified:equipment_spawn_day";
+    private static final String APPLIED = "hostile_humans_unified:equipment_growth_applied";
+    private static final String GUN_MULTIPLIER = "hostile_humans_unified:spawn_gun_chance_multiplier";
     private static final Set<String> KEPT_MARKERS = Set.of(HumanSpawnEquipment.BOUND_GEAR,
-            "humangunner:durability_enchantment_rolled", "humangunner:primary_bow_owner");
+            "hostile_humans_unified:durability_enchantment_rolled", "hostile_humans_unified:primary_bow_owner");
     private static final Set<String> WARNED_IDS = ConcurrentHashMap.newKeySet();
 
     private NaturalEquipmentGrowth() { }
