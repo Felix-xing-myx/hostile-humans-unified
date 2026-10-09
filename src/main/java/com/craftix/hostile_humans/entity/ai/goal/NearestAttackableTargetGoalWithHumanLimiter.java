@@ -49,49 +49,66 @@ extends NearestAttackableTargetGoal<T> {
         return true;
     }
 
+    @Override
     public boolean canUse() {
-        LivingEntity livingEntity;
-        if (this.mob instanceof com.craftix.hostile_humans.entity.entities.Human lowHuman
-                ? club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(lowHuman) || lowHuman.isFleeing
-                : HumanUtil.isLowHp((LivingEntity)this.mob)) {
+        if (club.someoneice.humangunner.RetreatRecoveryPolicy.shouldForceRetreat(this.human)
+                || this.human.isFleeing) {
             return false;
         }
-        this.targetConditions.range(this.getFollowDistance());
-        boolean usable;
-        if (reacquireAfterDeath || human.humanGunner$shouldFastGunRetarget()) {
-            reacquireAfterDeath = false;
-            this.findTarget();
-            usable = this.target != null;
-        } else usable = super.canUse();
-        if (usable && (livingEntity = this.target) instanceof Player) {
-            Player player = (Player)livingEntity;
-            if (HumanUtil.isLookingAtTarget((LivingEntity)this.human, (Entity)this.target)) {
-                this.human.isAlert = true;
-                List<Human> otherHumansOnTeam = this.human.level().getEntitiesOfClass(Human.class,
-                        this.human.getBoundingBox().inflate(25.0), otherHuman ->
-                                otherHuman != this.human && otherHuman.team.equals(this.human.team));
-                for (Human otherHuman : otherHumansOnTeam) {
-                    otherHuman.isAlert = true;
-                }
-            } else if (!this.human.isAlert) {
-                return false;
-            }
-            int limit = Config.maxTargeting();
-            List<Human> targetters = new java.util.ArrayList<>(Math.min(Math.max(0, limit), 16));
-            if (limit > 0) {
-                player.level().getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(Human.class),
-                        player.getBoundingBox().inflate(15.0),
-                        human -> human.getTarget() == this.target && human != this.mob, targetters, limit);
-            }
-            if (targetters.size() >= limit) {
-                this.setTarget(null);
-                return false;
-            }
-        }
-        if (usable && this.target instanceof net.minecraft.server.level.ServerPlayer player) {
+        if (!findCandidate()) return false;
+        LivingEntity candidate = this.target;
+        if (candidate == null) return false;
+        if (candidate instanceof Player player && !canSelectPlayer(player)) return false;
+        if (candidate instanceof net.minecraft.server.level.ServerPlayer player) {
             club.someoneice.humangunner.SoldierDialogue.hostile(this.human, player);
         }
-        return usable;
+        return true;
+    }
+
+    // Keep candidate search, player alerting and population queries out of the
+    // entry method implicated in the C2 crash report. This is not a JVM fix:
+    // HotSpot can still inline these methods during optimization.
+    private boolean findCandidate() {
+        this.targetConditions.range(this.getFollowDistance());
+        if (reacquireAfterDeath || this.human.humanGunner$shouldFastGunRetarget()) {
+            reacquireAfterDeath = false;
+            this.findTarget();
+            return this.target != null;
+        }
+        return super.canUse();
+    }
+
+    private boolean canSelectPlayer(Player player) {
+        if (HumanUtil.isLookingAtTarget(this.human, player)) {
+            this.human.isAlert = true;
+            alertNearbyAllies();
+        } else if (!this.human.isAlert) {
+            return false;
+        }
+        if (isPlayerTargetLimitReached(player)) {
+            this.setTarget(null);
+            return false;
+        }
+        return true;
+    }
+
+    private void alertNearbyAllies() {
+        Human observer = this.human;
+        List<Human> allies = observer.level().getEntitiesOfClass(Human.class,
+                observer.getBoundingBox().inflate(25.0),
+                other -> other != observer && other.team.equals(observer.team));
+        for (Human ally : allies) ally.isAlert = true;
+    }
+
+    private boolean isPlayerTargetLimitReached(Player player) {
+        int limit = Config.maxTargeting();
+        if (limit <= 0) return true;
+        Human observer = this.human;
+        List<Human> targetters = new java.util.ArrayList<>(Math.min(limit, 16));
+        // Capture this query's candidate, not the goal's mutable target field.
+        player.level().getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(Human.class),
+                player.getBoundingBox().inflate(15.0),
+                other -> other.getTarget() == player && other != observer, targetters, limit);
+        return targetters.size() >= limit;
     }
 }
-

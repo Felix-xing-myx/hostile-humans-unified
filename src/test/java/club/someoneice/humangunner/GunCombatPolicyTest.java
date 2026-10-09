@@ -52,8 +52,20 @@ public final class GunCombatPolicyTest {
                 && !calls(MOD + "GunnerGoal", "start", "draw"), "goal restart avoids unconditional draw");
         for (String targetGoal : new String[]{"NearestAttackableTargetGoalCustom", "NearestAttackableTargetGoalWithHumanLimiter"}) {
             check(calls(GOALS + targetGoal, "canContinueToUse", "isAlive"), "dead target rejected " + targetGoal);
-            check(calls(GOALS + targetGoal, "canUse", "humanGunner$shouldFastGunRetarget"), "bounded rapid reacquisition " + targetGoal);
+            String searchEntry = targetGoal.equals("NearestAttackableTargetGoalWithHumanLimiter") ? "findCandidate" : "canUse";
+            check(calls(GOALS + targetGoal, searchEntry, "humanGunner$shouldFastGunRetarget"), "bounded rapid reacquisition " + targetGoal);
         }
+        String limitedGoal = GOALS + "NearestAttackableTargetGoalWithHumanLimiter";
+        check(calls(limitedGoal, "canUse", "findCandidate") && calls(limitedGoal, "canUse", "canSelectPlayer"),
+                "limiter entry preserves search and player authorization");
+        check(calls(limitedGoal, "findCandidate", "canUse") && calls(limitedGoal, "findCandidate", "findTarget"),
+                "ordinary search interval and fast search both remain available");
+        check(calls(limitedGoal, "canSelectPlayer", "isLookingAtTarget")
+                && calls(limitedGoal, "canSelectPlayer", "isPlayerTargetLimitReached"),
+                "player alert and population checks remain connected");
+        check(calls(limitedGoal, "isPlayerTargetLimitReached", "getEntities")
+                && calls(limitedGoal, "canSelectPlayer", "setTarget"),
+                "bounded population query still rejects excess attackers");
         for (String entry : new String[]{"canUse", "tick"}) {
             int aliveChecks = 0;
             for (var instruction : method(MOD + "GuardCombatTargetGoal", entry).instructions)
