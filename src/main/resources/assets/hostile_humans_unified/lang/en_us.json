@@ -184,5 +184,11 @@
   "screen.hostile_humans_unified.soldier.bodyguard": "Close Protection",
   "screen.hostile_humans_unified.soldier.combat.authorized": "Authorized Attack",
   "dialogue.hostile_humans_unified.order.bodyguard": "I will stay close and prioritize threats near you.",
-  "dialogue.hostile_humans_unified.combat.authorized": "I will join your attacks, defend you when attacked, and defend myself without starting fights."
+  "dialogue.hostile_humans_unified.combat.authorized": "I will join your attacks, defend you when attacked, and defend myself without starting fights.",
+  "screen.hostile_humans_unified.soldier.growth.level": "Growth level: %s / 5",
+  "screen.hostile_humans_unified.soldier.growth.stage": "Training: %s%% (%s / %s)",
+  "screen.hostile_humans_unified.soldier.growth.max_level": "Training: maximum level reached",
+  "screen.hostile_humans_unified.soldier.growth.experience": "Experience: %s%% (range %s–%s%%)",
+  "screen.hostile_humans_unified.soldier.growth.next_point": "Next percentage point: %s / %s",
+  "screen.hostile_humans_unified.soldier.growth.experience_capped": "Experience: percentage cap reached"
 }

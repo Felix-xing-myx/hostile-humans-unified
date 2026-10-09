@@ -16,30 +16,108 @@ public final class SoldierCommandScreen extends Screen {
     private static final int GOLD = 0xFFF2C66D;
 
     private final int entityId;
+    private final java.util.UUID humanId;
+    private final java.util.UUID sessionToken;
     private final Component soldierName;
+    private GrowthSnapshot growth;
     private SoldierOrder selectedOrder;
     private SoldierCombatMode selectedCombatMode;
     private boolean pickupEnabled;
     private long dismissConfirmUntil;
 
-    private SoldierCommandScreen(int entityId, Component soldierName, SoldierOrder selectedOrder,
-                                 SoldierCombatMode selectedCombatMode, boolean pickupEnabled) {
+    private SoldierCommandScreen(int entityId, java.util.UUID humanId, Component soldierName, SoldierOrder selectedOrder,
+                                 SoldierCombatMode selectedCombatMode, boolean pickupEnabled,
+                                 java.util.UUID sessionToken, GrowthSnapshot growth) {
         super(Component.translatable("screen.hostile_humans_unified.soldier.title"));
         this.entityId = entityId;
+        this.humanId = humanId;
+        this.sessionToken = sessionToken;
+        this.growth = growth;
         this.soldierName = soldierName;
         this.selectedOrder = selectedOrder;
         this.selectedCombatMode = selectedCombatMode;
         this.pickupEnabled = pickupEnabled;
     }
 
-    static void open(int entityId, Component soldierName, SoldierOrder selectedOrder,
-                     SoldierCombatMode selectedCombatMode, boolean pickupEnabled) {
+    static void open(int entityId, java.util.UUID humanId, Component soldierName, SoldierOrder selectedOrder,
+                     SoldierCombatMode selectedCombatMode, boolean pickupEnabled,
+                     java.util.UUID sessionToken, GrowthSnapshot growth) {
         Minecraft.getInstance().setScreen(new SoldierCommandScreen(
-                entityId, soldierName, selectedOrder, selectedCombatMode, pickupEnabled));
+                entityId, humanId, soldierName, selectedOrder, selectedCombatMode, pickupEnabled, sessionToken, growth));
     }
 
-    private int left() { return width / 2 - PANEL_WIDTH / 2; }
-    private int top() { return height / 2 - PANEL_HEIGHT / 2; }
+    static void updateGrowth(java.util.UUID token, java.util.UUID humanId, int entityId, GrowthSnapshot growth) {
+        if (Minecraft.getInstance().screen instanceof SoldierCommandScreen screen
+                && screen.sessionToken.equals(token) && screen.humanId.equals(humanId) && screen.entityId == entityId) {
+            screen.growth = growth;
+        }
+    }
+
+    static void invalidate(java.util.UUID token) {
+        if (Minecraft.getInstance().screen instanceof SoldierCommandScreen screen
+                && screen.sessionToken.equals(token)) screen.onClose();
+    }
+
+    private float panelScale() {
+        return Math.min(1.0F, Math.min(width / (PANEL_WIDTH + 12.0F), height / (panelHeight() + 12.0F)));
+    }
+    private int left() { return (int) (width / panelScale() / 2) - PANEL_WIDTH / 2; }
+    private int growthHeight() { return growth.enabled() ? 96 : 0; }
+    private int panelHeight() { return PANEL_HEIGHT + growthHeight(); }
+    private int top() { return (int) (height / panelScale() / 2) - panelHeight() / 2; }
+
+    @Override
+    public void removed() {
+        if (Minecraft.getInstance().getConnection() != null) HumanCommandNetwork.closeScreen(sessionToken);
+        super.removed();
+    }
+
+    private static String amount(double value) {
+        return String.format(Locale.ROOT, "%.1f", Double.isFinite(value) ? Math.max(0.0D, value) : 0.0D);
+    }
+
+    private static double fraction(double current, double required) {
+        if (!Double.isFinite(current) || !Double.isFinite(required) || required <= 0.0D) return 0.0D;
+        return Math.max(0.0D, Math.min(1.0D, current / required));
+    }
+
+    private void drawProgress(GuiGraphics graphics, int x, int y, int w, double progress, boolean slider) {
+        graphics.fill(x, y, x + w, y + 5, SURFACE);
+        int filled = (int) Math.round(w * progress);
+        graphics.fill(x, y, x + filled, y + 5, GOLD);
+        if (slider) {
+            int marker = x + Math.max(1, Math.min(w - 2, filled));
+            graphics.fill(marker - 1, y - 2, marker + 2, y + 7, TEXT);
+        }
+    }
+
+    /** All numbers and visibility come from the server snapshot; these bars are read-only. */
+    private void renderGrowth(GuiGraphics graphics, int left, int top) {
+        if (!growth.enabled()) return;
+        int x = left + 13, w = PANEL_WIDTH - 26;
+        graphics.drawString(font, Component.translatable("screen.hostile_humans_unified.soldier.growth.level",
+                Math.max(0, Math.min(5, growth.level()))), x, top + 51, GOLD, false);
+        boolean maxLevel = growth.level() >= 5;
+        graphics.drawString(font, maxLevel
+                        ? Component.translatable("screen.hostile_humans_unified.soldier.growth.max_level")
+                        : Component.translatable("screen.hostile_humans_unified.soldier.growth.stage",
+                        growth.stagePercent(), amount(growth.stageProgress()), amount(growth.stageRequired())),
+                x, top + 65, TEXT, false);
+        drawProgress(graphics, x, top + 78, w, maxLevel ? 1.0D
+                : fraction(growth.stageProgress(), growth.stageRequired()), false);
+        graphics.drawString(font, Component.translatable("screen.hostile_humans_unified.soldier.growth.experience",
+                growth.experiencePercent(), growth.experienceMinPercent(), growth.experienceCapPercent()),
+                x, top + 90, TEXT, false);
+        drawProgress(graphics, x, top + 103, w,
+                fraction((double) growth.experiencePercent() - growth.experienceMinPercent(),
+                        (double) growth.experienceCapPercent() - growth.experienceMinPercent()), true);
+        graphics.drawString(font, growth.experiencePercent() >= growth.experienceCapPercent()
+                        ? Component.translatable("screen.hostile_humans_unified.soldier.growth.experience_capped")
+                        : Component.translatable("screen.hostile_humans_unified.soldier.growth.next_point",
+                        amount(growth.experienceProgress()), amount(growth.experienceRequired())),
+                x, top + 117, MUTED, false);
+        graphics.fill(left + 9, top + 139, left + PANEL_WIDTH - 9, top + 140, EDGE);
+    }
 
     private static boolean hit(double mx, double my, int x, int y, int w, int h) {
         return mx >= x && mx < x + w && my >= y && my < y + h;
@@ -60,16 +138,24 @@ public final class SoldierCommandScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
+        float scale = panelScale();
+        graphics.pose().pushPose();
+        graphics.pose().scale(scale, scale, 1.0F);
+        mouseX = (int) (mouseX / scale);
+        mouseY = (int) (mouseY / scale);
         int left = left(), top = top();
-        graphics.fill(left, top, left + PANEL_WIDTH, top + PANEL_HEIGHT, PANEL);
+        int panelHeight = panelHeight();
+        graphics.fill(left, top, left + PANEL_WIDTH, top + panelHeight, PANEL);
         graphics.fill(left, top, left + PANEL_WIDTH, top + 2, EDGE);
-        graphics.fill(left, top + PANEL_HEIGHT - 2, left + PANEL_WIDTH, top + PANEL_HEIGHT, EDGE);
-        graphics.fill(left, top, left + 2, top + PANEL_HEIGHT, EDGE);
-        graphics.fill(left + PANEL_WIDTH - 2, top, left + PANEL_WIDTH, top + PANEL_HEIGHT, EDGE);
+        graphics.fill(left, top + panelHeight - 2, left + PANEL_WIDTH, top + panelHeight, EDGE);
+        graphics.fill(left, top, left + 2, top + panelHeight, EDGE);
+        graphics.fill(left + PANEL_WIDTH - 2, top, left + PANEL_WIDTH, top + panelHeight, EDGE);
         graphics.drawString(font, title, left + 10, top + 9, TEXT, false);
         graphics.drawString(font, font.plainSubstrByWidth(soldierName.getString(), PANEL_WIDTH - 20),
                 left + 10, top + 25, GOLD, false);
         graphics.fill(left + 9, top + 43, left + PANEL_WIDTH - 9, top + 44, EDGE);
+        renderGrowth(graphics, left, top);
+        top += growthHeight();
 
         int movementX = left + 10, combatX = left + 180;
         graphics.drawString(font, Component.translatable("screen.hostile_humans_unified.soldier.movement"),
@@ -109,6 +195,7 @@ public final class SoldierCommandScreen extends Screen {
                         : "screen.hostile_humans_unified.soldier.dismiss"),
                 left + 208, top + 202, 132, 18,
                 hit(mouseX, mouseY, left + 208, top + 202, 132, 18), false, true);
+        graphics.pose().popPose();
     }
 
     @Override
@@ -116,7 +203,9 @@ public final class SoldierCommandScreen extends Screen {
         if (mouseButton != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             return super.mouseClicked(mouseX, mouseY, mouseButton);
         }
-        int left = left(), top = top();
+        mouseX /= panelScale();
+        mouseY /= panelScale();
+        int left = left(), top = top() + growthHeight();
         int movementX = left + 10, combatX = left + 180;
         SoldierOrder[] orders = SoldierOrder.values();
         for (int i = 0; i < orders.length; i++) {
@@ -147,7 +236,7 @@ public final class SoldierCommandScreen extends Screen {
         if (hit(mouseX, mouseY, left + 208, top + 202, 132, 18)) {
             long now = System.currentTimeMillis();
             if (now < dismissConfirmUntil) {
-                HumanCommandNetwork.sendDismiss(entityId);
+                HumanCommandNetwork.sendDismiss(entityId, sessionToken);
                 onClose();
             } else {
                 dismissConfirmUntil = now + 3000L;
