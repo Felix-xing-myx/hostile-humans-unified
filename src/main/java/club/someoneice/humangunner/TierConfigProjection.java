@@ -120,12 +120,25 @@ final class TierConfigProjection {
                 : List.of("enabled", "natural_spawn_firearms_enabled", "auto_add_new_guns", "auto_added_gun_weight",
                     "excluded_auto_gun_types", "excluded_gun_namespaces", "gun_blacklist", "human_gun_damage_multiplier",
                     "pillager_gun_damage_multiplier", "shield_damage_multiplier", "tamed_maid_damage_multiplier",
-                    "gunner_spread_degrees", "forced_ranged_gun_chance", "gun_drop_chance", "gun_whitelist",
+                    "forced_ranged_gun_chance", "gun_drop_chance", "gun_whitelist",
                     "hired_gun_additional_whitelist"));
         return ordered(result, sections);
     }
 
     private static void removeRetiredControls(JsonObject data, boolean rank) {
+        List<String> flatTierControls = List.of("health_min", "health_max", "attack_damage", "armor",
+                "armor_toughness", "knockback_resistance", "follow_range", "spawn_multiplier",
+                "melee_damage_multiplier", "bow_damage_multiplier", "trident_damage_multiplier", "incoming_damage_multiplier",
+                "normal_movement_speed", "combat_movement_speed", "retreat_movement_speed",
+                "gun_spread_degrees", "projectile_spread_degrees");
+        if (rank) {
+            removeOptions(data, flatTierControls);
+            removeOptions(object(data, "movement"), List.of("normal_movement_speed", "combat_movement_speed", "retreat_movement_speed"));
+        } else {
+            removeOptions(object(data, "tacz"), List.of("gunner_spread_degrees"));
+            removeOptions(object(data, "spawning"), List.of("roamer_legacy_roll"));
+        }
+        removeObsoleteGuidance(data);
         JsonObject damage = object(data, rank ? "damage_multipliers" : "damage");
         List<String> retired = rank
                 ? List.of("bow_damage_multiplier", "trident_damage_multiplier", "incoming_damage_multiplier")
@@ -158,6 +171,38 @@ final class TierConfigProjection {
         if (rank) {
             JsonObject potions = object(data, "potions");
             for (String key : List.of("bonus", "_说明_bonus_中文", "_description_bonus_en")) potions.remove(key);
+        }
+    }
+
+    private static void removeOptions(JsonObject data, List<String> keys) {
+        for (String key : keys) {
+            data.remove(key);
+            data.remove("_说明_" + key + "_中文");
+            data.remove("_description_" + key + "_en");
+        }
+    }
+
+    private static void removeObsoleteGuidance(JsonObject data) {
+        for (String key : List.copyOf(data.keySet())) {
+            JsonElement value = data.get(key);
+            if (guidance(key) && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()) {
+                String text = value.getAsString();
+                if (key.equals("_说明_旧原生行为_中文")) {
+                    data.remove(key);
+                    continue;
+                }
+                if (text.contains("Per-rank legacy AI:")) {
+                    data.remove(key);
+                    continue;
+                }
+                if (List.of("roamer_legacy_roll", "normal_movement_speed", "combat_movement_speed",
+                        "retreat_movement_speed", "gun_spread_degrees", "projectile_spread_degrees", "gunner_spread_degrees",
+                        "human_bow_damage_multiplier", "bow_velocity_damage_multiplier", "human_trident_damage_multiplier",
+                        "trident_velocity_damage_multiplier", "human_melee_damage_multiplier", "tamed_maid_melee_damage_multiplier",
+                        "incoming_damage_multiplier", "no_waystones", "bonus.chance", "human_loadouts",
+                        "Old world-calendar offsets", "sync is removed.", "旧世界日历", "已移除 sync")
+                        .stream().anyMatch(text::contains)) data.remove(key);
+            } else if (value.isJsonObject()) removeObsoleteGuidance(value.getAsJsonObject());
         }
     }
 

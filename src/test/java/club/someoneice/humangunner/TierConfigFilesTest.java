@@ -28,6 +28,9 @@ public final class TierConfigFilesTest {
             var globalPath = dir.resolve(SplitConfigFiles.DIRECTORY).resolve("global.json");
             var global = JsonParser.parseString(Files.readString(globalPath)).getAsJsonObject();
             global.getAsJsonObject("native_gameplay").addProperty("no_waystones", true);
+            global.getAsJsonObject("tacz").addProperty("gunner_spread_degrees", 7);
+            global.getAsJsonObject("spawning").addProperty("roamer_legacy_roll", 200);
+            global.getAsJsonObject("spawning").addProperty("_description_roamer_fix_en", "roamer_legacy_roll ignored");
             var damage = global.getAsJsonObject("damage");
             damage.addProperty("human_bow_damage_multiplier", 8);
             damage.addProperty("bow_velocity_damage_multiplier", 9);
@@ -37,6 +40,10 @@ public final class TierConfigFilesTest {
             Files.writeString(globalPath, global.toString());
             var rankPath = dir.resolve(SplitConfigFiles.DIRECTORY).resolve("tier1.json");
             var rank = JsonParser.parseString(Files.readString(rankPath)).getAsJsonObject();
+            rank.addProperty("normal_movement_speed", 0.42);
+            rank.addProperty("gun_spread_degrees", 4);
+            rank.getAsJsonObject("movement").addProperty("retreat_movement_speed", 0.8);
+            rank.getAsJsonObject("ai").addProperty("_说明_旧原生行为_中文", "outdated heading");
             rank.getAsJsonObject("potions").add("bonus", json("{\"chance\":1}"));
             rank.getAsJsonObject("damage_multipliers").addProperty("bow_damage_multiplier", 9);
             rank.getAsJsonObject("damage_multipliers").addProperty("arrow_damage_multiplier", 2);
@@ -50,9 +57,15 @@ public final class TierConfigFilesTest {
                     && !damage.has("_description_bow_velocity_damage_multiplier_en"), "retired global keys and comments removed on disk");
             check(damage.get("custom_extension").getAsInt() == 42, "unknown extension preserved");
             check(!global.getAsJsonObject("native_gameplay").has("no_waystones"), "inactive Waystones switch removed");
+            check(!global.getAsJsonObject("tacz").has("gunner_spread_degrees")
+                    && !global.getAsJsonObject("spawning").has("roamer_legacy_roll")
+                    && !global.getAsJsonObject("spawning").has("_description_roamer_fix_en"), "unused global controls and explanation removed");
             rank = JsonParser.parseString(Files.readString(rankPath)).getAsJsonObject();
             check(!rank.getAsJsonObject("potions").has("bonus")
                     && !rank.getAsJsonObject("damage_multipliers").has("bow_damage_multiplier"), "retired rank controls removed on disk");
+            check(!rank.has("normal_movement_speed") && !rank.has("gun_spread_degrees")
+                    && !rank.getAsJsonObject("movement").has("retreat_movement_speed")
+                    && !rank.getAsJsonObject("ai").has("_说明_旧原生行为_中文"), "ignored tier controls and obsolete heading removed");
             try (var files = Files.list(globalPath.getParent())) {
                 check(files.count() == 5, "cleanup creates no inheritance, backup or migration files");
             }

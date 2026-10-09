@@ -109,7 +109,7 @@
         "_description_first_spawn_day_en": "First eligible personal online day, 1–1000000; global safe_days also applies. 24000 online ticks = 1 day. Unlocking does not guarantee spawning."
       },
       "ammunition": {
-        "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；加载旧存档、雇佣或补给不会重新配发。",
+        "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；实体重载、雇佣或补给不会重新配发。",
         "_description_en": "Initial reserves for actual owned bows/crossbows or firearms, chosen inclusively between min and max. Zero disables initial supplies; inverted bounds are normalized. Integers only, arrows capped at 1920 and magazines at 720; invalid values use defaults. Full inventories retain equipment protection and overflow drops. Loading saves, hiring or resupplying never grants another initial reserve.",
         "arrows": {
           "_说明_min_中文": "出生数量下限，0–1920整数；0允许不配发。",
@@ -433,7 +433,7 @@
         "_description_first_spawn_day_en": "First eligible personal online day, 1–1000000; global safe_days also applies. 24000 online ticks = 1 day. Unlocking does not guarantee spawning."
       },
       "ammunition": {
-        "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；加载旧存档、雇佣或补给不会重新配发。",
+        "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；实体重载、雇佣或补给不会重新配发。",
         "_description_en": "Initial reserves for actual owned bows/crossbows or firearms, chosen inclusively between min and max. Zero disables initial supplies; inverted bounds are normalized. Integers only, arrows capped at 1920 and magazines at 720; invalid values use defaults. Full inventories retain equipment protection and overflow drops. Loading saves, hiring or resupplying never grants another initial reserve.",
         "arrows": {
           "_说明_min_中文": "出生数量下限，0–1920整数；0允许不配发。",
@@ -757,7 +757,7 @@
         "_description_first_spawn_day_en": "First eligible personal online day, 1–1000000; global safe_days also applies. 24000 online ticks = 1 day. Unlocking does not guarantee spawning."
       },
       "ammunition": {
-        "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；加载旧存档、雇佣或补给不会重新配发。",
+        "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；实体重载、雇佣或补给不会重新配发。",
         "_description_en": "Initial reserves for actual owned bows/crossbows or firearms, chosen inclusively between min and max. Zero disables initial supplies; inverted bounds are normalized. Integers only, arrows capped at 1920 and magazines at 720; invalid values use defaults. Full inventories retain equipment protection and overflow drops. Loading saves, hiring or resupplying never grants another initial reserve.",
         "arrows": {
           "_说明_min_中文": "出生数量下限，0–1920整数；0允许不配发。",
@@ -1081,7 +1081,7 @@
         "_description_first_spawn_day_en": "First eligible personal online day, 1–1000000; global safe_days also applies. 24000 online ticks = 1 day. Unlocking does not guarantee spawning."
       },
       "ammunition": {
-        "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；加载旧存档、雇佣或补给不会重新配发。",
+        "_说明_中文": "首次生成时按实际持有弓弩/枪械配给，箭矢与弹匣数量分别在min和max之间随机。零可禁用该类初始补给；范围倒置会自动归正。箭矢上限1920，弹匣上限720；仅整数，非法值回退默认。满背包沿用装备保护与溢出掉落规则；实体重载、雇佣或补给不会重新配发。",
         "_description_en": "Initial reserves for actual owned bows/crossbows or firearms, chosen inclusively between min and max. Zero disables initial supplies; inverted bounds are normalized. Integers only, arrows capped at 1920 and magazines at 720; invalid values use defaults. Full inventories retain equipment protection and overflow drops. Loading saves, hiring or resupplying never grants another initial reserve.",
         "arrows": {
           "_说明_min_中文": "出生数量下限，0–1920整数；0允许不配发。",
@@ -1343,8 +1343,8 @@
     "auto_import_enabled": true
   },
   "equipment_loadouts": {
-    "_说明_中文": "四阶生成装备的唯一配置入口：roamer=流浪者，tier1=一阶，tier2=二阶，tier3=三阶。位于 config/hostile_humans_unified/<rank>.json: equipment_loadout。只影响之后生成的人类，已有实体和主人手动放入的物品不重置。修改后重启游戏/服务器；/reload 不重读本配置。旧数据包 human_loadouts 已停止读取，不会自动迁移第三方数据包的自定义条目，需手动填入这里。",
-    "_description_en": "The sole spawn-loadout config for roamer and tier1-3, in config/hostile_humans_unified/<rank>.json: equipment_loadout. Applies only to future spawns, never resets existing entities or owner-supplied items. Restart the game/server to apply; /reload does not reload these settings. The old human_loadouts datapack loader is removed; third-party datapack customizations must be copied here manually.",
+    "_说明_中文": "四阶生成装备的唯一配置入口：roamer=流浪者，tier1=一阶，tier2=二阶，tier3=三阶。位于 config/hostile_humans_unified/<rank>.json: equipment_loadout。只影响之后生成的人类，已有实体和主人手动放入的物品不重置。修改后重启游戏/服务器；/reload 不重读本配置。",
+    "_description_en": "The sole spawn-loadout config for roamer and tier1-3, in config/hostile_humans_unified/<rank>.json: equipment_loadout. Applies only to future spawns, never resets existing entities or owner-supplied items. Restart the game/server to apply; /reload does not reload these settings.",
     "_说明_格式_中文": "数组里的每一项用花括号，物品用完整 item ID 字符串，例如 {\"item\":\"minecraft:iron_sword\",\"weight\":3} 与 {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}；两项之间用逗号。所有 ID/键使用双引号，数量、权重和概率不加引号。weight 为 0 至 1000000 的整数，0 禁用，正数按可用条目的相对权重分配，不必合计 100。count 可选，默认 1，范围 1-64 并限制到物品最大堆叠数。requires_mod 可选。未安装的模组物品会跳过；非法 ID 条目启动时告警并跳过。说明文本中的 \\\" 是 JSON 字符串转义，实际 item 字段只写 \"minecraft:iron_sword\"，不要把反斜杠复制到 ID 里。",
     "_description_format_en": "Each array row is an object, e.g. {\"item\":\"minecraft:iron_sword\",\"weight\":3} and {\"item\":\"spartanweaponry:iron_longsword\",\"weight\":1,\"requires_mod\":\"spartanweaponry\"}, separated by commas. Quote keys/IDs, not numbers. weight is an integer 0-1000000; 0 disables a row. Positive weights are relative among available rows and need not sum to 100. Optional count defaults to 1, accepts 1-64 and is capped at the item's maximum stack size. Optional requires_mod gates a row. Missing mod items are skipped; malformed ID rows are warned and skipped at startup. Backslash-escaped quotes inside these description strings are JSON syntax: the actual item field is \"minecraft:iron_sword\", without backslashes in the ID.",
     "_说明_池_中文": "mainhand=普通主手池；ranged_mainhand=支持的非枪械远程池；inventory=备用近战池，供远程备用与额外武器名额抽取；offhand.chance/entries=副手概率和池；bonus_mainhand.chance/entries=额外武器名额选择奖励池的概率和池，不替换主手。武器每条生成 1 把，数量统一受本阶上限控制。armor_sets 按权重选整套，head/chest/legs/feet 为四部位 ID，省略或 null 表示不穿，空数组表示不生成护甲。任一填写部位不存在或不匹配则跳过整套。主手/远程池全部失效仍使用安全武器，但空备用池不制造额外武器。",
@@ -2196,8 +2196,6 @@
     }
   },
   "spawning": {
-    "_说明_流浪者修复_中文": "流浪者与一至三阶共用准入公式，已取消旧的 1/200 额外判定。默认主世界群系选择权重为流浪者 10、一阶 3、二阶 2、三阶 1；流浪者每次 1 只，一至三阶每队 2-5 只，因此选择权重不是最终实体数量比例。旧配置中保留的 roamer_legacy_roll 已不再读取；需要调少流浪者时使用 对应阶级文件 中 roamer.spawning.spawn_multiplier。天数、安全距离、灯光、密度和遭遇冷却仍生效，信号弹/信标召唤不受影响。",
-    "_description_roamer_fix_en": "Roamers share the tier I-III admission formula; the old extra 1/200 roll is removed. Default Overworld biome-selection weights are roamer 10, tier I 3, tier II 2, tier III 1. Roamers spawn singly and tiers I-III in squads of 2-5, so weights are not final entity-count ratios. Any roamer_legacy_roll retained in an old config is ignored; use roamer.spawning.spawn_multiplier in the corresponding rank file to reduce roamers. Day gates, safe distance, light, density and encounter cooldown remain; flare/beacon summons are unchanged.",
     "_说明_中文": "自然遭遇生成总开关、准入概率、遭遇冷却、搜索半径和附近人类密度限制。admission_chance 与 battle_admission_chance 均支持 0–1 的小数：1=100%、0.1=10%、0.01=1%、0.001=0.1%、0=禁止对应遭遇。直接填写 JSON 数字，不加引号或百分号；这不是每 tick 的实际刷新概率。",
     "_description_en": "Controls natural encounters: master toggle, admission probabilities, encounter cooldown, search radii and local human-density scaling. admission_chance and battle_admission_chance accept decimals from 0 to 1: 1=100%, 0.1=10%, 0.01=1%, 0.001=0.1%, and 0 disables the corresponding encounter. Enter JSON numbers without quotes or a percent sign; these are not actual per-tick spawn probabilities.",
     "_说明_概率与倍率_中文": "普通自然遭遇的概率环节为 min(1, admission_chance × 对应阶级文件 中本阶的 spawn_multiplier)。例如 0.08 × 0.1 = 0.008，即 0.8% 的基础准入机会，之后仍要通过密度、安全位置、冷却和解锁天数等条件；四阶均无额外隐藏概率。自然大型战斗另用 battle_admission_chance，不乘本阶 spawn_multiplier，且仍要通过其原有生成条件。只减某一阶的普通自然生成，改 对应阶级文件；降低所有普通自然遭遇，改 admission_chance；减少自然大型战斗，改 battle_admission_chance。信号弹/敌对信标召唤不受这些准入概率影响。",
@@ -2205,8 +2203,8 @@
     "enabled": true,
     "admission_chance": 0.08,
     "progression": {
-      "_说明_中文": "按玩家 UUID 独立保存累计在线时间，从第 1 天开始，24000 个在线游戏 tick 为一天（20 TPS 时约 20 分钟）。离线或单人暂停不累计，睡觉、/time、doDaylightCycle 不影响进度。生成点以同维度最近的存活非旁观玩家为依据，装备成长使用同一个计时来源；多人共用世界，已生成敌人仍可遇到其他玩家。每 200 tick 批量结算，正常退出结算余量，随世界正常保存，不在生成查询中读写文件。旧世界日历和偏移不迁移。/hostilehumans day get [玩家] 查看，set <天数> [玩家]、add <增减天数> [玩家] 由管理员调整；不带玩家时操作自己，控制台需指定玩家；已移除 sync。仅限制自然生成和自然大型战斗，不影响两类信号召唤、刷怪蛋、命令、结构固定单位或已有实体。关闭 enabled 取消解锁日期限制，不关闭独立的装备成长。",
-      "_description_en": "Accumulates online game ticks independently by player UUID, starting on day 1. One day is 24000 ticks (about 20 minutes at 20 TPS). Offline time and single-player pauses do not count; sleep, /time and doDaylightCycle do not affect progress. Uses the nearest living non-spectator player in the spawn dimension for both unlocks and equipment growth. Spawned enemies are shared and may encounter other players. Settles every 200 ticks and at normal logout, saved with the world; spawn queries perform no file I/O. Old world-calendar offsets are not migrated. /hostilehumans day get [player] queries; administrator set <day> [player] and add <days> [player] adjust personal progress. Omit player to target yourself; console must specify one. sync is removed. Applies only to natural spawns and automatic battles, not flares, beacons, eggs, commands, fixed structure units or existing entities. Disabling enabled removes unlock gates, not independent equipment growth.",
+      "_说明_中文": "按玩家 UUID 独立保存累计在线时间，从第 1 天开始，24000 个在线游戏 tick 为一天（20 TPS 时约 20 分钟）。离线或单人暂停不累计，睡觉、/time、doDaylightCycle 不影响进度。生成点以同维度最近的存活非旁观玩家为依据，装备成长使用同一个计时来源；多人共用世界，已生成敌人仍可遇到其他玩家。每 200 tick 批量结算，正常退出结算余量，随世界正常保存，不在生成查询中读写文件。/hostilehumans day get [玩家] 查看，set <天数> [玩家]、add <增减天数> [玩家] 由管理员调整；不带玩家时操作自己，控制台需指定玩家。仅限制自然生成和自然大型战斗，不影响两类信号召唤、刷怪蛋、命令、结构固定单位或已有实体。关闭 enabled 取消解锁日期限制，不关闭独立的装备成长。",
+      "_description_en": "Accumulates online game ticks independently by player UUID, starting on day 1. One day is 24000 ticks (about 20 minutes at 20 TPS). Offline time and single-player pauses do not count; sleep, /time and doDaylightCycle do not affect progress. Uses the nearest living non-spectator player in the spawn dimension for both unlocks and equipment growth. Spawned enemies are shared and may encounter other players. Settles every 200 ticks and at normal logout, saved with the world; spawn queries perform no file I/O. /hostilehumans day get [player] queries; administrator set <day> [player] and add <days> [player] adjust personal progress. Omit player to target yourself; console must specify one. Applies only to natural spawns and automatic battles, not flares, beacons, eggs, commands, fixed structure units or existing entities. Disabling enabled removes unlock gates, not independent equipment growth.",
       "enabled": true,
       "_说明_安全日_中文": "safe_days 为开局完全禁止自然刷新人类的完整天数（0–1000000）。安全日和各阶解锁日同时生效，按较晚者开放；默认第 1 天安全，第 2 天仍无阶级解锁，第 3 天才开始流浪者自然生成。",
       "_description_safe_days_en": "safe_days is the number of complete opening days without natural human spawns (0–1000000). Both the safety period and tier unlock day must have elapsed. Defaults protect day 1; no tier is unlocked on day 2, and roamers begin on day 3.",
@@ -2224,7 +2222,9 @@
     "encounter_cooldown_ticks": 2400,
     "nearby_horizontal_radius": 48,
     "nearby_vertical_radius": 16,
-    "density_divisor": 4
+    "density_divisor": 4,
+    "_说明_生成数量_中文": "默认主世界群系候选权重：流浪者10、一阶3、二阶2、三阶1。流浪者每次1只，其余阶级每队2–5只；权重不是最终数量比例。实际自然生成还受准入概率、各阶生成倍率、解锁日期、灯光、安全距离、密度及遭遇冷却限制。",
+    "_description_spawn_counts_en": "Default Overworld candidate weights: roamer 10, tier I 3, tier II 2, tier III 1. Roamers spawn singly; other ranks in squads of 2–5. Weights are not final count ratios. Natural spawns also obey admission, rank multipliers, unlock dates, light, safe distance, density and encounter cooldown."
   },
   "ai": {
     "_说明_中文": "战斗 AI、逃跑与恢复、举盾、战术走位、队友间距、跳跃、物品恢复和动作速度修正。时长和间隔单位为 tick（20 tick=1 秒）；概率为 0 到 1，动作倍率为 0.1 到 1。",
@@ -2338,8 +2338,8 @@
     "_说明_greet_chance_中文": "原生问候行为概率，0–1。",
     "_description_greet_chance_en": "Native greeting probability, 0–1.",
     "greet_chance": 0.05,
-    "_说明_旧原生行为_中文": "以下选项也按阶独立：flee_hp旧低血量比例；run_away_middle_fight_chance逃跑选择概率；mid_battle_buff_instead_of_run_chance原二阶临战恢复概率；greet_chance敌对台词概率。均为0至1。",
-    "_description_native_ai_en": "Per-rank legacy AI: flee_hp health ratio, run_away_middle_fight_chance retreat choice, mid_battle_buff_instead_of_run_chance existing tier-2 recovery choice, and greet_chance hostile dialogue. Each uses a 0-1 range."
+    "_description_native_ai_en": "Independent rank settings: flee_hp low-health threshold, run_away_middle_fight_chance retreat choice, mid_battle_buff_instead_of_run_chance tier-II combat recovery choice, and greet_chance hostile dialogue probability. Range 0–1.",
+    "_说明_战斗与台词_中文": "各阶独立设置：flee_hp为低血量判定比例；run_away_middle_fight_chance为撤退选择概率；mid_battle_buff_instead_of_run_chance为二阶临战恢复选择概率；greet_chance为敌对台词概率。各值范围0–1。"
   },
   "recruitment": {
     "_说明_中文": "全局雇佣关系与消息设置；人数上限和费用在各阶recruitment中设置。",
@@ -2472,8 +2472,7 @@
     "shield_damage_multiplier": 0.3,
     "tamed_maid_damage_multiplier": 0.15,
     "_说明_兼容字段_中文": "仅供非 Hostile Humans 实体使用的枪手散布回退值；Hostile Humans 人类枪手使用 tiers 中逐阶、逐枪械类型的 weapon_spread_degrees。",
-    "_description_compat_fields_en": "Fallback gunner spread for non-Hostile-Humans entities only. Hostile Humans gunners use per-tier, per-firearm weapon_spread_degrees under tiers.",
-    "gunner_spread_degrees": 0.6
+    "_description_compat_fields_en": "Fallback gunner spread for non-Hostile-Humans entities only. Hostile Humans gunners use per-tier, per-firearm weapon_spread_degrees under tiers."
   },
   "_tier_file_metadata": {
     "roamer": {

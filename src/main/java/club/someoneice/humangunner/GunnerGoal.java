@@ -687,7 +687,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private AimRotation applyShotSpread(AimRotation exactAim, ItemStack weapon) {
         double standardDeviation = mob instanceof Human human
                 ? RangedAccuracy.gunSpreadDegrees(human, weapon)
-                : HumanGunnerConfig.get().gunnerSpreadDegrees();
+                : 0.6D;
         if (standardDeviation <= 0.0D) {
             return exactAim;
         }

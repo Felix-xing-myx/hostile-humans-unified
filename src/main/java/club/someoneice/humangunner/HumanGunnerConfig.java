@@ -20,7 +20,6 @@ public record HumanGunnerConfig(
         double gunDropChance,
         double humanGunDamageMultiplier,
         double pillagerGunDamageMultiplier,
-        double gunnerSpreadDegrees,
         boolean autoAddNewGuns,
         int autoAddedGunWeight,
         Set<String> excludedAutoGunTypes,
@@ -165,8 +164,6 @@ public record HumanGunnerConfig(
                     ? root.get("human_gun_damage_multiplier").getAsDouble() : 0.5D;
             double pillagerDamageMultiplier = root.has("pillager_gun_damage_multiplier")
                     ? root.get("pillager_gun_damage_multiplier").getAsDouble() : 0.4D;
-            double spreadDegrees = root.has("gunner_spread_degrees")
-                    ? root.get("gunner_spread_degrees").getAsDouble() : 0.6D;
             boolean autoAddNew = root.has("auto_add_new_guns")
                     ? root.get("auto_add_new_guns").getAsBoolean()
                     : true;
@@ -209,7 +206,6 @@ public record HumanGunnerConfig(
                     clamp(dropChance),
                     clampDamageMultiplier(damageMultiplier),
                     clampDamageMultiplier(pillagerDamageMultiplier),
-                    clampSpread(spreadDegrees),
                     autoAddNew,
                     autoAddedWeight,
                     Set.copyOf(excludedTypes),
@@ -234,7 +230,6 @@ public record HumanGunnerConfig(
                 0.01D,
                 0.5D,
                 0.4D,
-                0.6D,
                 false,
                 5,
                 Set.of("rpg"),
@@ -352,10 +347,6 @@ public record HumanGunnerConfig(
 
     private static double clamp(double value) {
         return Double.isFinite(value) ? Math.max(0.0D, Math.min(1.0D, value)) : 0.0D;
-    }
-
-    private static double clampSpread(double value) {
-        return Double.isFinite(value) ? Math.max(0.0D, Math.min(10.0D, value)) : 1.0D;
     }
 
     private static double clampDamageMultiplier(double value) {

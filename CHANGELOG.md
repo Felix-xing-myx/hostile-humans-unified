@@ -2,6 +2,8 @@
 
 ## 未发布 / Unreleased
 
+- 全面核查当前配置读取与实际调用，删除不再影响人类枪手的全局散布项，统一使用各阶武器分类散布。清理失效的平铺属性、移速/散布与流浪者旧判定残留；配置说明仅保留当前字段、公式和指令用法，去除旧名称及迁移解释。当前有效数值与自定义装备池保持。
+
 - 清理并统一伤害配置：弓弩两个全局倍率合并为 `damage.arrow_damage_multiplier`（默认1.8144），投掷三叉戟合并为 `damage.thrown_trident_damage_multiplier`（默认1.26），不改变默认总伤害。近战全局项改为 `melee_damage_multiplier`，人类近战对驯服女仆改为 `human_melee_vs_tamed_maid_multiplier`；分阶弓弩、投掷三叉戟与承伤项分别改为 `arrow_damage_multiplier`、`thrown_trident_damage_multiplier`、`damage_taken_multiplier`。保留全局与分阶用途及近刺/跳劈条件倍率，更新双语说明；删除旧重复velocity项、旧迅捷bonus及已失效的no_waystones开关/调用，不保留旧名称读取别名，不生成兼容文件。旧配置需按说明更新，新弹射物全局倍率支持0–100以容纳原两项乘积。
 
 - 统一出生药水权重抽取：移除迅捷单独概率入口，加入战术池且允许重复；新增饮用生命恢复II、力量II和喷溅剧毒II。恢复池权重为治疗II 2、长效再生I 1、再生II 1；战术池为长效迟缓I 5、长效虚弱I 1、长效力量I 10、剧毒II 2、力量II 5、长效迅捷I 8。四阶恢复与战术各自默认总数均为流浪者1–2、一阶2–4、二阶4–7、三阶6–8瓶，各阶count_min/max继续开放配置；保留已有自定义池与数量，旧bonus不再生效。
