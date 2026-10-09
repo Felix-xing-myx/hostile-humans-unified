@@ -1,6 +1,7 @@
 package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
+import com.craftix.hostile_humans.client.renderer.ClientAnimationCompatibility;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.event.common.GunReloadEvent;
 import com.tacz.guns.api.item.IGun;
@@ -12,8 +13,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.InputStreamReader;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -31,8 +30,6 @@ import net.minecraftforge.event.TickEvent;
 final class TaczReloadSoundClient {
     private static final Map<ReloadCueKey, List<ReloadCue>> RELOAD_CUES = new HashMap<>();
     private static final List<PendingReload> PENDING_RELOADS = new ArrayList<>();
-    private static Field displayField;
-    private static Method animationLocationMethod;
 
     private TaczReloadSoundClient() {}
 
@@ -110,28 +107,15 @@ final class TaczReloadSoundClient {
     }
 
     private static ResourceLocation getAnimationFile(Object displayInstance) {
-        try {
-            if (displayField == null) {
-                displayField = displayInstance.getClass().getDeclaredField("display");
-                displayField.setAccessible(true);
-            }
-            Object display = displayField.get(displayInstance);
-            if (display == null) return null;
-            if (animationLocationMethod == null) {
-                animationLocationMethod = display.getClass().getMethod("getAnimationLocation");
-            }
-            Object value = animationLocationMethod.invoke(display);
-            if (!(value instanceof ResourceLocation animationId)) return null;
-            String path = animationId.getPath();
-            if (path.startsWith("animations/")) {
-                if (!path.endsWith(".animation.json")) path += ".animation.json";
-            } else {
-                path = "animations/" + path + ".animation.json";
-            }
-            return new ResourceLocation(animationId.getNamespace(), path);
-        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
-            return null;
+        ResourceLocation animationId = ClientAnimationCompatibility.reloadAnimationLocation(displayInstance);
+        if (animationId == null) return null;
+        String path = animationId.getPath();
+        if (path.startsWith("animations/")) {
+            if (!path.endsWith(".animation.json")) path += ".animation.json";
+        } else {
+            path = "animations/" + path + ".animation.json";
         }
+        return new ResourceLocation(animationId.getNamespace(), path);
     }
 
     private static List<ReloadCue> readReloadCues(ResourceLocation animationFile, boolean empty) {
@@ -175,7 +159,9 @@ final class TaczReloadSoundClient {
             }
             cues.sort(Comparator.comparingDouble(ReloadCue::timeSeconds));
             return List.copyOf(cues);
-        } catch (Exception ignored) {
+        } catch (Exception exception) {
+            ClientAnimationCompatibility.warnOnce("TaCZ reload sounds",
+                    "Cannot parse reload cues from " + animationFile, exception);
             return List.of();
         }
     }

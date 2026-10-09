@@ -1,7 +1,6 @@
 package com.craftix.hostile_humans.client.renderer;
 
 import com.craftix.hostile_humans.entity.entities.Human;
-import com.mojang.logging.LogUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import java.lang.ref.WeakReference;
@@ -26,7 +25,6 @@ import net.minecraft.world.item.CrossbowItem;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.fml.ModList;
-import org.slf4j.Logger;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -37,11 +35,9 @@ import org.joml.Vector3f;
  * This intentionally does not require Mob Player Animator.
  */
 final class BetterCombatNpcAnimator {
-    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<Human, Playback> PLAYBACKS = new WeakHashMap<>();
     private static volatile Api api;
     private static volatile boolean apiLookupAttempted;
-    private static volatile boolean warnedAboutApi;
     private static volatile boolean tickListenerRegistered;
 
     private BetterCombatNpcAnimator() {}
@@ -490,140 +486,7 @@ final class BetterCombatNpcAnimator {
         if (!apiLookupAttempted) synchronized (BetterCombatNpcAnimator.class) {
             if (!apiLookupAttempted) {
                 try {
-                    ClassLoader loader = BetterCombatNpcAnimator.class.getClassLoader();
-                    Class<?> animationRegistry = Class.forName(
-                            "net.bettercombat.client.animation.AnimationRegistry", false, loader);
-                    Field animationField = animationRegistry.getField("animations");
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> animations = (Map<String, Object>) animationField.get(null);
-
-                    Class<?> animationType = Class.forName(
-                            "dev.kosmx.playerAnim.core.data.KeyframeAnimation", false, loader);
-                    Class<?> builderType = Class.forName(
-                            "dev.kosmx.playerAnim.core.data.KeyframeAnimation$AnimationBuilder", false, loader);
-                    Class<?> stateCollectionType = Class.forName(
-                            "dev.kosmx.playerAnim.core.data.KeyframeAnimation$StateCollection", false, loader);
-                    Class<?> stateType = Class.forName(
-                            "dev.kosmx.playerAnim.core.data.KeyframeAnimation$StateCollection$State", false, loader);
-                    Method mutableCopy = animationType.getMethod("mutableCopy");
-                    Method build = builderType.getMethod("build");
-                    Method fullyEnablePart = stateCollectionType.getMethod("fullyEnablePart", boolean.class);
-                    Method setEnabled = stateType.getMethod("setEnabled", boolean.class);
-                    Class<?> stateHelper = Class.forName(
-                            "net.bettercombat.client.animation.StateCollectionHelper", false, loader);
-                    Method configurePart = stateHelper.getMethod("configure", stateCollectionType,
-                            boolean.class, boolean.class);
-
-                    Class<?> animationPlayer = Class.forName(
-                            "net.bettercombat.client.animation.CustomAnimationPlayer", false, loader);
-                    Constructor<?> playerConstructor = animationPlayer.getConstructor(animationType, int.class);
-                    Class<?> animationInterface = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.IAnimation", false, loader);
-                    Class<?> modifierLayer = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.ModifierLayer", false, loader);
-                    Class<?> mirrorModifier = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.modifier.MirrorModifier", false, loader);
-                    Method setMirrorEnabled = mirrorModifier.getMethod("setEnabled", boolean.class);
-
-                    Class<?> adjustmentModifier = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier", false, loader);
-
-                    Class<?> speedModifier = Class.forName(
-                            "net.bettercombat.client.animation.modifier.TransmissionSpeedModifier", false, loader);
-                    Method setSpeed = speedModifier.getMethod("set", float.class, List.class);
-                    Class<?> gearType = Class.forName(
-                            "net.bettercombat.client.animation.modifier.TransmissionSpeedModifier$Gear", false, loader);
-                    Constructor<?> gearConstructor = gearType.getConstructor(float.class, float.class);
-
-                    Class<?> attackStackType = Class.forName(
-                            "net.bettercombat.client.animation.AttackAnimationSubStack", false, loader);
-                    Constructor<?> attackStackConstructor = attackStackType.getConstructor(adjustmentModifier);
-                    Field attackStackBase = attackStackType.getField("base");
-                    Field attackStackSpeed = attackStackType.getField("speed");
-                    Field attackStackMirror = attackStackType.getField("mirror");
-                    Class<?> poseStackType = Class.forName(
-                            "net.bettercombat.client.animation.PoseSubStack", false, loader);
-                    Class<?> abstractModifier = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.modifier.AbstractModifier", false, loader);
-                    Constructor<?> poseConstructor = poseStackType.getConstructor(
-                            abstractModifier, boolean.class, boolean.class);
-                    Field poseBase = poseStackType.getField("base");
-                    Method setPose = poseStackType.getMethod("setPose", animationType, boolean.class);
-                    Class<?> weaponRegistry = Class.forName(
-                            "net.bettercombat.logic.WeaponRegistry", false, loader);
-                    Method getWeaponAttributes = weaponRegistry.getMethod("getAttributes", ItemStack.class);
-                    Class<?> weaponAttributes = Class.forName(
-                            "net.bettercombat.api.WeaponAttributes", false, loader);
-                    Method mainHandPoseName = weaponAttributes.getMethod("pose");
-                    Method offHandPoseName = weaponAttributes.getMethod("offHandPose");
-                    Method isTwoHanded = weaponAttributes.getMethod("isTwoHanded");
-
-                    Class<?> fadeType = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.modifier.AbstractFadeModifier", false, loader);
-                    Class<?> easeType = Class.forName("dev.kosmx.playerAnim.core.util.Ease", false, loader);
-                    Object inOutSine = easeType.getField("INOUTSINE").get(null);
-                    Method standardFadeIn = fadeType.getMethod("standardFadeIn", int.class, easeType);
-                    Method replaceAnimationWithFade = modifierLayer.getMethod(
-                            "replaceAnimationWithFade", fadeType, animationInterface);
-                    Method layerIsActive = modifierLayer.getMethod("isActive");
-
-                    Class<?> animationStack = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.AnimationStack", false, loader);
-                    Constructor<?> stackConstructor = animationStack.getConstructor();
-                    Method stackTick = animationStack.getMethod("tick");
-                    Method stackAddLayer = animationStack.getMethod(
-                            "addAnimLayer", int.class, animationInterface);
-                    Class<?> partModifier = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.modifier.AdjustmentModifier$PartModifier",
-                            false, loader);
-                    Class<?> vector3f = Class.forName(
-                            "dev.kosmx.playerAnim.core.util.Vec3f", false, loader);
-                    Constructor<?> adjustmentConstructor = adjustmentModifier.getConstructor(Function.class);
-                    Constructor<?> partModifierConstructor = partModifier.getConstructor(vector3f, vector3f);
-                    Constructor<?> vectorConstructor = vector3f.getConstructor(float.class, float.class, float.class);
-
-                    Class<?> applierType = Class.forName(
-                            "dev.kosmx.playerAnim.impl.animation.AnimationApplier", false, loader);
-                    Constructor<?> applierConstructor = applierType.getConstructor(animationInterface);
-                    Method setTickDelta = applierType.getMethod("setTickDelta", float.class);
-                    Method updatePart = applierType.getMethod("updatePart", String.class, ModelPart.class);
-                    Class<?> transformType = Class.forName(
-                            "dev.kosmx.playerAnim.api.TransformType", false, loader);
-                    Method get3DTransform = applierType.getMethod("get3DTransform", String.class,
-                            transformType, vector3f);
-                    Object positionTransform = transformType.getField("POSITION").get(null);
-                    Object rotationTransform = transformType.getField("ROTATION").get(null);
-                    Object bendTransform = transformType.getField("BEND").get(null);
-                    Object zeroVector = vector3f.getField("ZERO").get(null);
-                    Method vectorX = vector3f.getMethod("getX");
-                    Method vectorY = vector3f.getMethod("getY");
-                    Method vectorZ = vector3f.getMethod("getZ");
-                    Class<?> playerAnimatorHelper = Class.forName(
-                            "dev.kosmx.playerAnim.impl.Helper", false, loader);
-                    Method isBendEnabled = playerAnimatorHelper.getMethod("isBendEnabled");
-                    Class<?> betterCombat = Class.forName("net.bettercombat.BetterCombat", false, loader);
-                    Field configField = betterCombat.getField("config");
-                    Class<?> configType = Class.forName("net.bettercombat.config.ServerConfig", false, loader);
-                    Method getUpswingMultiplier = configType.getMethod("getUpswingMultiplier");
-
-                    api = new Api(animations, playerConstructor, attackStackConstructor,
-                            attackStackBase, attackStackSpeed, attackStackMirror, stackConstructor,
-                            applierConstructor,
-                            mutableCopy, build, fullyEnablePart, setEnabled, configurePart,
-                            builderType.getField("torso"), builderType.getField("head"),
-                            builderType.getField("rightLeg"), builderType.getField("leftLeg"),
-                            Class.forName("dev.kosmx.playerAnim.core.data.KeyframeAnimation$StateCollection", false, loader)
-                                    .getField("pitch"),
-                            animationType.getField("endTick"), animationType.getField("beginTick"),
-                            setMirrorEnabled, setSpeed,
-                            gearConstructor, standardFadeIn, inOutSine, replaceAnimationWithFade,
-                            stackTick, stackAddLayer, adjustmentConstructor, partModifierConstructor,
-                            vectorConstructor, layerIsActive, setTickDelta, updatePart, configField,
-                            getUpswingMultiplier, poseConstructor, poseBase, setPose,
-                            getWeaponAttributes, mainHandPoseName, offHandPoseName, isTwoHanded,
-                            get3DTransform, positionTransform, rotationTransform, bendTransform,
-                            zeroVector,
-                            vectorX, vectorY, vectorZ, isBendEnabled);
+                    api = ClientAnimationCompatibility.resolveBetterCombat();
                 } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
                     warnOnce("Better Combat or Player Animator does not expose its expected client animation API", exception);
                 }
@@ -634,15 +497,10 @@ final class BetterCombatNpcAnimator {
     }
 
     private static void warnOnce(String message, Throwable exception) {
-        if (!warnedAboutApi) synchronized (BetterCombatNpcAnimator.class) {
-            if (!warnedAboutApi) {
-                LOGGER.warn(message, exception);
-                warnedAboutApi = true;
-            }
-        }
+        ClientAnimationCompatibility.warnOnce("BetterCombatNpcAnimator", message, exception);
     }
 
-    private record Api(Map<String, Object> animations, Constructor<?> playerConstructor,
+    record Api(Map<String, Object> animations, Constructor<?> playerConstructor,
                        Constructor<?> attackStackConstructor, Field attackStackBaseField,
                        Field attackStackSpeedField, Field attackStackMirrorField,
                        Constructor<?> stackConstructor,

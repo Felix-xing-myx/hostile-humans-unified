@@ -1,7 +1,6 @@
 package com.craftix.hostile_humans.client.renderer;
 
 import com.craftix.hostile_humans.entity.entities.Human;
-import com.mojang.logging.LogUtils;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.ref.WeakReference;
@@ -14,11 +13,9 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.ModList;
-import org.slf4j.Logger;
 
 /** Optional resource keyframes with native TaCZ model animation as a fallback. */
 public final class TaczNpcAnimator {
-    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<Human, State> STATES = new WeakHashMap<>();
     private static final int LOWER_LAYER_PRIORITY = 93;
     private static final int UPPER_LAYER_PRIORITY = 94;
@@ -27,7 +24,6 @@ public final class TaczNpcAnimator {
     private static final int FADE_TICKS = 8;
     private static volatile Api api;
     private static volatile boolean lookupAttempted;
-    private static volatile boolean warned;
 
     private TaczNpcAnimator() {}
 
@@ -367,58 +363,7 @@ public final class TaczNpcAnimator {
         if (!lookupAttempted) synchronized (TaczNpcAnimator.class) {
             if (!lookupAttempted) {
                 try {
-                    ClassLoader loader = TaczNpcAnimator.class.getClassLoader();
-                    Class<?> timeless = Class.forName("com.tacz.guns.api.TimelessAPI", false, loader);
-                    Method getGunDisplay = timeless.getMethod("getGunDisplay", ItemStack.class);
-                    Class<?> displayType = Class.forName(
-                            "com.tacz.guns.client.resource.GunDisplayInstance", false, loader);
-                    Method getPlayerAnimator3rd = displayType.getMethod("getPlayerAnimator3rd");
-                    Class<?> assetManagerType = Class.forName(
-                            "com.tacz.guns.compat.playeranimator.animation.PlayerAnimatorAssetManager",
-                            false, loader);
-                    Method getAssetManager = assetManagerType.getMethod("get");
-                    Method containsKey = assetManagerType.getMethod("containsKey",
-                            Class.forName("net.minecraft.resources.ResourceLocation", false, loader));
-                    Method getAnimations = assetManagerType.getDeclaredMethod("getAnimations",
-                            Class.forName("net.minecraft.resources.ResourceLocation", false, loader),
-                            String.class);
-                    getAnimations.setAccessible(true);
-
-                    Class<?> animationType = Class.forName(
-                            "dev.kosmx.playerAnim.core.data.KeyframeAnimation", false, loader);
-                    Class<?> animationInterface = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.IAnimation", false, loader);
-                    Class<?> stackType = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.AnimationStack", false, loader);
-                    Constructor<?> stackConstructor = stackType.getConstructor();
-                    Method stackAddLayer = stackType.getMethod("addAnimLayer", int.class, animationInterface);
-                    Method stackTick = stackType.getMethod("tick");
-                    Class<?> modifierLayer = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.ModifierLayer", false, loader);
-                    Constructor<?> layerConstructor = modifierLayer.getConstructor();
-                    Method layerIsActive = modifierLayer.getMethod("isActive");
-                    Method layerSetAnimation = modifierLayer.getMethod("setAnimation", animationInterface);
-                    Class<?> fadeType = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.modifier.AbstractFadeModifier", false, loader);
-                    Class<?> easeType = Class.forName("dev.kosmx.playerAnim.core.util.Ease", false, loader);
-                    Object inOutSine = easeType.getField("INOUTSINE").get(null);
-                    Method standardFadeIn = fadeType.getMethod("standardFadeIn", int.class, easeType);
-                    Method replaceAnimationWithFade = modifierLayer.getMethod(
-                            "replaceAnimationWithFade", fadeType, animationInterface);
-                    Class<?> playerType = Class.forName(
-                            "dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer", false, loader);
-                    Constructor<?> playerConstructor = playerType.getConstructor(animationType);
-
-                    Class<?> applierType = Class.forName(
-                            "dev.kosmx.playerAnim.impl.animation.AnimationApplier", false, loader);
-                    Constructor<?> applierConstructor = applierType.getConstructor(animationInterface);
-                    Method setTickDelta = applierType.getMethod("setTickDelta", float.class);
-                    Method updatePart = applierType.getMethod("updatePart", String.class, ModelPart.class);
-                    api = new Api(getGunDisplay, getPlayerAnimator3rd, getAssetManager, containsKey,
-                            getAnimations, stackConstructor,
-                            stackAddLayer, stackTick, layerConstructor, layerIsActive,
-                            layerSetAnimation, replaceAnimationWithFade, standardFadeIn,
-                            inOutSine, playerConstructor, applierConstructor, setTickDelta, updatePart);
+                    api = ClientAnimationCompatibility.resolveTacz();
                 } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
                     warnOnce("TaCZ or Player Animator does not expose the expected animation API", exception);
                 }
@@ -429,12 +374,7 @@ public final class TaczNpcAnimator {
     }
 
     private static void warnOnce(String message, Throwable exception) {
-        if (!warned) synchronized (TaczNpcAnimator.class) {
-            if (!warned) {
-                LOGGER.warn(message, exception);
-                warned = true;
-            }
-        }
+        ClientAnimationCompatibility.warnOnce("TaczNpcAnimator", message, exception);
     }
 
     private enum Channel {
@@ -443,7 +383,7 @@ public final class TaczNpcAnimator {
         ROTATION
     }
 
-    private record Api(Method getGunDisplay, Method getPlayerAnimator3rd, Method getAssetManager,
+    record Api(Method getGunDisplay, Method getPlayerAnimator3rd, Method getAssetManager,
                        Method containsKey, Method getAnimations, Constructor<?> stackConstructor,
                        Method stackAddLayer, Method stackTick, Constructor<?> layerConstructor,
                        Method layerIsActive, Method layerSetAnimation, Method replaceAnimationWithFade,
