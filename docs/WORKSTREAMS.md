@@ -621,3 +621,11 @@
 - 静态验证通过：324份Java语法、全部资源JSON/mcmeta、精确UI翻译键、Mixin类与refmap/manifest接线、Python工具语法、metadata单身份/依赖、主源码无旧ID字面量；namespace_resources_check.py按76bf184基线复跑通过283 JSON、160 NBT、372翻译键、64PNG及全部507资源保真；额外99本地模型/纹理/结构/pool引用存在；git diff --check通过。
 - 原用户CHANGELOG SHA256 b05c6d8643feb7669502a7e1de0dd99d5d5d5a720f32f8f8263c85e0bf97dcbe保持。未执行Gradle/javac或新测试，不构建/同步/启动游戏/push，版本暂保持3.6.5。测试实例仍为上次部署JAR；此前ModLauncher读取修复76bf184已包含源码，但尚未部署。
 - 新存档限定为用户明确选择，无旧ID迁移/别名；后续验收需构建后验证单模组列表、无重复注册、物品/刷怪蛋/身份牌/弹药/配方/贴图、结构生成/战利品/自然生成、菜单与网络、持久化和可选联动。需更新外部脚本/数据包引用，当前没有改用户实例文件。
+
+## 2026-10-09 3.7.0 测试构建与部署完成
+
+- 用户授权版本3.7.0并构建同步测试实例。源码提交197ed5b1b0fde788dd3ef74f9dca25373955f224；CHANGELOG将此前未发布内容归入3.7.0（测试中），明确MODID与命名空间统一为hostile_humans_unified、删除旧ID迁移并仅面向新存档，可能不兼容旧版本存档。保留已有更新内容；修改前日志备份backups/changelog-before-3.7.0-20261009/CHANGELOG.md。
+- Java17及三个显式只读API参数运行build lootScreeningTest --offline：BUILD SUCCESSFUL in 54s，50任务48执行2最新。单身份/资源871、女仆及ModLauncher读取288、配置分阶286/统一123、追击23、地形434、结构679、掉落13391检查及全部check通过；TaCZ弹药Mixin契约测试通过。日志：验证日志/build-3.7.0-20261009.log。错误配置诊断属于预期测试，不是构建失败。
+- 备份前及替换前检查无非Gradle Java进程。备份旧3.6.5 JAR和14份相关配置，逐文件SHA256验证；部署备份/20261009-183134-3.7.0-Forge_47.4.21/deployment.json记录完整清单。
+- 唯一部署目标E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\hostile-humans-unified-1.20.1-3.7.0.jar；3802307字节，源/目标SHA256均46DA766D3FDB2DF83918B5100D30DD74F1BFE630B8A5E0DD3CFC010CA80C332F。新JAR核对后移除旧3.6.5，目标仅一份统一模组JAR；14份原配置哈希不变，没有修改存档。
+- 未启动游戏或推送GitHub；3.7.0保持测试中，尚非正式发布。待用户以新存档验收真实Mixin准备/启动、单一模组列表、资源/配方/结构/自然生成、持久化、TaCZ换弹/动画/友军过滤、女仆与斯巴达联动及追击导航；构建成功不代表这些游戏行为已验收。
