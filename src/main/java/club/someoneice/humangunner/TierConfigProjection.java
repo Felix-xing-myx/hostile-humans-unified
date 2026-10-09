@@ -13,7 +13,6 @@ final class TierConfigProjection {
         result.addProperty("schema_version", 2);
         // Keep group-level notes and unknown ranks/options, including custom guidance.
         for (String group : List.of("tiers", "equipment_loadouts", "tier_ai", "_tier_file_metadata")) removeRanks(result, group);
-        removeRanks(object(result, "equipment_growth"), "tiers");
         JsonObject ai = object(result, "ai");
         JsonObject globalAi = new JsonObject();
         globalAi.addProperty("_说明_中文", "增强战斗AI总开关；具体撤退、恢复、盾牌与战术参数在四阶文件的ai中独立设置。");
@@ -40,8 +39,6 @@ final class TierConfigProjection {
             removeShippedGuidance(object(result, group), object(defaults, group), List.of());
             if (result.has(group) && result.get(group).isJsonObject() && object(result, group).size() == 0) result.remove(group);
         }
-        removeShippedGuidance(object(result, "equipment_growth"), object(defaults, "equipment_growth"),
-                List.of("_说明_中文", "_description_en", "_说明_enabled_中文", "_description_enabled_en"));
         for (String key : List.of("_说明_枪械分布_中文", "_description_gun_type_weights_en")) tacz.remove(key);
         return arrange(result, false);
     }
@@ -58,11 +55,8 @@ final class TierConfigProjection {
         }
         result.addProperty("schema_version", 2);
         copyAt(root, "equipment_loadouts." + rank, result, "equipment_loadout");
-        copyAt(root, "equipment_growth.tiers." + rank, result, "equipment_growth");
         if (result.has("equipment_loadout") && result.get("equipment_loadout").isJsonObject())
             copyGuidance(object(root, "equipment_loadouts"), result.getAsJsonObject("equipment_loadout"));
-        if (result.has("equipment_growth") && result.get("equipment_growth").isJsonObject())
-            copyGuidance(object(root, "equipment_growth"), result.getAsJsonObject("equipment_growth"));
         JsonObject spawning = ensure(result, "spawning");
         copyAt(root, "spawning.progression.first_spawn_day_by_tier." + rank, spawning, "first_spawn_day");
         JsonObject metadata = object(object(root, "_tier_file_metadata"), rank);
@@ -89,15 +83,15 @@ final class TierConfigProjection {
         List<String> sections = rank
                 ? List.of("schema_version", "_说明_中文", "_description_en", "attributes", "spawning",
                     "equipment_loadout", "ammunition", "food", "potions", "damage_multipliers",
-                    "combat", "ai", "movement", "weapon_spread_degrees", "tacz", "equipment_growth")
+                    "combat", "ai", "movement", "weapon_spread_degrees", "tacz")
                 : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "ammunition",
                     "equipment_integration", "ai", "spawning", "recruitment", "damage", "tacz",
-                    "better_combat", "equipment_growth", "native_gameplay");
+                    "better_combat", "growth", "native_gameplay");
         orderGroup(result, "equipment_loadout", List.of("ranged_chance", "ranged_in_backpack", "allow_tacz_firearms",
                 "automatic_spartan_weapons", "automatic_spartan_shields", "automatic_immersive_armors",
                 "weapon_count", "guaranteed_shields_min", "guaranteed_shields_max", "automatic_shield_enchantments",
                 "mainhand", "ranged_mainhand", "armor_sets", "shield_pool", "inventory", "offhand", "bonus_mainhand", "rules"));
-        orderGroup(result, "attributes", List.of("health_min", "health_max", "attack_damage", "armor",
+        orderGroup(result, "attributes", List.of("max_health", "attack_damage", "armor",
                 "armor_toughness", "knockback_resistance", "follow_range"));
         orderGroup(result, "spawning", rank ? List.of("spawn_multiplier", "first_spawn_day")
                 : List.of("enabled", "admission_chance", "battle_admission_chance", "progression",
@@ -119,10 +113,9 @@ final class TierConfigProjection {
     private static void enforceOwnership(JsonObject data, boolean rank) {
         JsonObject defaults = UnifiedConfig.defaults();
         if (rank) {
-            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay")) data.remove(key);
+            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay", "growth")) data.remove(key);
             removeOptions(object(data, "ai"), List.of("enabled"));
             removeOptions(object(data, "ammunition"), List.of("consume_ammunition"));
-            removeOptions(object(data, "equipment_growth"), List.of("enabled"));
             for (String key : object(defaults, "spawning").keySet())
                 if (!key.startsWith("_")) removeOptions(object(data, "spawning"), List.of(key));
             for (String key : object(defaults, "damage").keySet())
@@ -134,7 +127,6 @@ final class TierConfigProjection {
             }
         } else {
             for (String group : List.of("tiers", "equipment_loadouts", "tier_ai", "_tier_file_metadata")) removeRanks(data, group);
-            removeRanks(object(data, "equipment_growth"), "tiers");
             removeRanks(object(object(data, "spawning"), "progression"), "first_spawn_day_by_tier");
             JsonObject ai = object(data, "ai");
             for (String key : object(defaults, "ai").keySet())
@@ -145,8 +137,6 @@ final class TierConfigProjection {
             removeRanks(tacz, "tier_gun_type_weights");
             for (String key : List.of("damage_multipliers", "attributes", "movement", "combat", "weapon_spread_degrees", "equipment_loadout", "food", "potions")) data.remove(key);
             removeOptions(object(data, "ammunition"), List.of("arrows", "magazines"));
-            for (String key : object(object(object(defaults, "equipment_growth"), "tiers"), "roamer").keySet())
-                if (!key.startsWith("_")) removeOptions(object(data, "equipment_growth"), List.of(key));
             removeOptions(object(data, "spawning"), List.of("spawn_multiplier", "first_spawn_day"));
             removeOptions(object(data, "tacz"), List.of("gun_chance", "damage_multiplier", "gun_type_weights", "human_gun_damage_multiplier"));
             removeOptions(object(data, "damage"), List.of("melee_damage_multiplier", "arrow_damage_multiplier", "thrown_trident_damage_multiplier"));
@@ -154,6 +144,8 @@ final class TierConfigProjection {
     }
 
     private static void removeRetiredControls(JsonObject data, boolean rank) {
+        data.remove("equipment_growth");
+        if (rank) removeOptions(object(data, "attributes"), List.of("health_min", "health_max"));
         List<String> flatTierControls = List.of("health_min", "health_max", "attack_damage", "armor",
                 "armor_toughness", "knockback_resistance", "follow_range", "spawn_multiplier",
                 "melee_damage_multiplier", "bow_damage_multiplier", "trident_damage_multiplier", "incoming_damage_multiplier",
@@ -244,14 +236,13 @@ final class TierConfigProjection {
     static void applyTier(JsonObject root, String rank, JsonObject file) {
         JsonObject tier = file.deepCopy();
         tier.remove("schema_version");
-        for (String key : List.of("equipment_loadout", "equipment_growth", "tacz", "recruitment", "ai")) tier.remove(key);
+        for (String key : List.of("equipment_loadout", "equipment_growth", "growth", "tacz", "recruitment", "ai")) tier.remove(key);
         JsonObject spawning = object(tier, "spawning");
         if (spawning.has("first_spawn_day")) {
             put(root, "spawning.progression.first_spawn_day_by_tier." + rank, spawning.remove("first_spawn_day"));
         }
         put(root, "tiers." + rank, tier);
         copyTo(file, "equipment_loadout", root, "equipment_loadouts." + rank);
-        copyTo(file, "equipment_growth", root, "equipment_growth.tiers." + rank);
         copyTo(file, "tacz.gun_chance", root, "tacz." + rank + "_gun_chance");
         copyTo(file, "tacz.damage_multiplier", root, "tacz.tier_damage_multipliers." + rank);
         copyTo(file, "tacz.gun_type_weights", root, "tacz.tier_gun_type_weights." + rank);

@@ -123,10 +123,10 @@ final class SplitConfigFiles {
     private static void describe(JsonObject data, boolean rank) {
         if (!data.has("_说明_中文")) data.addProperty("_说明_中文", rank
                 ? "本阶属性、装备、弹药、战斗 AI、生成与枪械设置。修改后重启生效；本阶常用设置在前，细节参数在后。"
-                : "全局开关、伤害、自然生成、装备成长、招聘与兼容设置。修改后重启生效；分阶设置在各阶文件中。" );
+                : "全局开关、伤害、自然生成、统一成长、招聘与兼容设置。修改后重启生效；分阶设置在各阶文件中。" );
         if (!data.has("_description_en")) data.addProperty("_description_en", rank
                 ? "This rank's attributes, equipment, ammunition, AI, spawning and firearms. Restart to apply; common settings precede detailed tuning."
-                : "Global switches, damage, spawning, equipment growth, hiring and integrations. Restart to apply; rank options live in the rank files.");
+                : "Global switches, damage, spawning, unified growth, hiring and integrations. Restart to apply; rank options live in the rank files.");
     }
 
     static JsonObject read(Path path, int version) throws IOException {

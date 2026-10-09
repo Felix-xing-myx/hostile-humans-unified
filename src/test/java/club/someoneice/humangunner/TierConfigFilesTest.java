@@ -163,17 +163,16 @@ public final class TierConfigFilesTest {
         check(!global.has("tiers") && !global.has("equipment_loadouts"), "no orphan rank/loadout guidance in global");
         check(TierConfigProjection.at(global, "spawning.progression.first_spawn_day_by_tier") == null,
                 "no orphan rank unlock guidance in global");
-        check(!global.getAsJsonObject("equipment_growth").has("_description_item_ids_en"), "growth item guidance moves to ranks");
+        check(global.has("growth") && !global.has("equipment_growth"), "unified growth lives in global");
         check(!global.getAsJsonObject("tacz").has("_description_gun_type_weights_en"), "type-weight guidance moves to ranks");
         JsonObject custom = defaults.deepCopy();
         custom.getAsJsonObject("tiers").addProperty("_description_custom_extension_en", "Keep my custom notes");
         check(TierConfigProjection.global(custom).getAsJsonObject("tiers").has("_description_custom_extension_en"),
                 "unknown custom guidance is not discarded");
         TierConfigProjection.put(custom, "equipment_loadouts.tier1", JsonNull.INSTANCE);
-        TierConfigProjection.put(custom, "equipment_growth.tiers.tier1", JsonNull.INSTANCE);
         TierConfigProjection.put(custom, "tiers.tier1.damage_multipliers", JsonNull.INSTANCE);
         JsonObject invalid = TierConfigProjection.tier(custom, "tier1");
-        check(invalid.get("equipment_loadout").isJsonNull() && invalid.get("equipment_growth").isJsonNull()
+        check(invalid.get("equipment_loadout").isJsonNull() && !invalid.has("growth") && !invalid.has("equipment_growth")
                 && invalid.get("damage_multipliers").isJsonNull(), "guidance does not replace explicit invalid values");
         Path directory = Files.createTempDirectory("human-readable-config-");
         try {
@@ -188,8 +187,8 @@ public final class TierConfigFilesTest {
                 check(sections.indexOf("attributes") < sections.indexOf("ai")
                         && sections.indexOf("equipment_loadout") < sections.indexOf("ai")
                         && sections.indexOf("equipment_loadout") < sections.indexOf("ammunition"), "consistent section order " + rank);
-                for (String path : List.of("attributes.health_min", "movement.base_speed", "ai.retreat_health_ratio",
-                        "equipment_loadout.ranged_chance", "equipment_growth.start_day", "ammunition.arrows.min",
+                for (String path : List.of("attributes.max_health", "movement.base_speed", "ai.retreat_health_ratio",
+                        "equipment_loadout.ranged_chance", "ammunition.arrows.min",
                         "potions.recovery.count_min", "tacz.gun_chance", "spawning.first_spawn_day")) {
                     int dot = path.lastIndexOf('.');
                     JsonObject section = TierConfigProjection.at(file, path.substring(0, dot)).getAsJsonObject();
@@ -254,11 +253,11 @@ public final class TierConfigFilesTest {
             Files.writeString(modules.resolve("global.json"), priceGlobal.toString());
             check(new UnifiedConfig(SplitConfigFiles.load(directory)).recruitmentCost(1).count() == 37, "valid global modded currency preserved");
             JsonObject global = read(modules.resolve("global.json"));
-            TierConfigProjection.put(global, "tiers.tier1.attributes.health_min", new JsonPrimitive(999));
+            TierConfigProjection.put(global, "tiers.tier1.attributes.max_health", new JsonPrimitive(999));
             TierConfigProjection.put(global, "recruitment.max_hired_by_tier.tier1", new JsonPrimitive(999));
             Files.writeString(modules.resolve("global.json"), global.toString());
             JsonObject loaded = SplitConfigFiles.load(directory);
-            check(TierConfigProjection.at(loaded, "tiers.tier1.attributes.health_min").getAsInt() != 999, "global cannot override rank attributes");
+            check(TierConfigProjection.at(loaded, "tiers.tier1.attributes.max_health").getAsInt() != 999, "global cannot override rank attributes");
             check(TierConfigProjection.at(loaded, "recruitment.max_hired_by_tier.tier1").getAsInt() == 999, "global owns rank hiring limits");
         } finally { cleanup(directory); }
     }
@@ -398,7 +397,7 @@ public final class TierConfigFilesTest {
                 Path path = ranks.resolve(rank + ".json");
                 JsonObject data = read(path);
                 data.addProperty("_custom_note", "Preserve this note");
-                data.getAsJsonObject("attributes").addProperty("health_min", 21);
+                data.getAsJsonObject("attributes").addProperty("max_health", 21);
                 Files.writeString(path, data.toString());
                 originals.put(rank, Files.readAllBytes(path));
                 check(!data.getAsJsonObject("equipment_loadout").has("_imported_spartanweaponry"),
@@ -415,7 +414,7 @@ public final class TierConfigFilesTest {
                     check(gear.getAsJsonArray(pool).size() > TierConfigProjection.tier(defaults, rank)
                             .getAsJsonObject("equipment_loadout").getAsJsonArray(pool).size(), "full stock pool seeded " + rank + pool);
                 check(data.get("_custom_note").getAsString().equals("Preserve this note")
-                        && data.getAsJsonObject("attributes").get("health_min").getAsInt() == 21,
+                        && data.getAsJsonObject("attributes").get("max_health").getAsInt() == 21,
                         "unrelated edits retained " + rank);
                 try (var paths = Files.list(ranks)) {
                     check(paths.count() == 5, "import leaves exactly five files " + rank);
@@ -489,12 +488,12 @@ public final class TierConfigFilesTest {
             check(new UnifiedConfig(loaded).tier("tier1").equals(new UnifiedConfig(defaults).tier("tier1")), "obsolete sources do not change gameplay defaults");
             try (var paths = Files.list(ranks)) { check(paths.count() == 12, "only five current files added beside seven existing old files"); }
             Path tier = ranks.resolve("tier1.json");
-            JsonObject custom = json("{\"schema_version\":2,\"_custom_note\":\"keep\",\"recruitment\":{\"payment\":null},\"ammunition\":{\"arrows\":{\"min\":5}},\"equipment_loadout\":{\"mainhand\":[]},\"attributes\":{\"health_min\":31}}");
+            JsonObject custom = json("{\"schema_version\":2,\"_custom_note\":\"keep\",\"recruitment\":{\"payment\":null},\"ammunition\":{\"arrows\":{\"min\":5}},\"equipment_loadout\":{\"mainhand\":[]},\"attributes\":{\"max_health\":31}}");
             Files.writeString(tier, custom.toString());
             SplitConfigFiles.load(directory, defaults, (rank, data) -> false);
             JsonObject saved = read(tier);
             check(saved.get("_custom_note").getAsString().equals("keep")
-                    && TierConfigProjection.at(saved, "attributes.health_min").getAsInt() == 31
+                    && TierConfigProjection.at(saved, "attributes.max_health").getAsInt() == 31
                     && TierConfigProjection.at(saved, "equipment_loadout.mainhand").getAsJsonArray().isEmpty()
                     && TierConfigProjection.at(saved, "ammunition.arrows.min").getAsInt() == 5,
                     "help refresh preserves explicit gameplay values, custom notes and empty pools");

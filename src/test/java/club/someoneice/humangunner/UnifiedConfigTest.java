@@ -7,6 +7,7 @@ import java.util.*;
 public final class UnifiedConfigTest {
     private static int assertions;
     public static void main(String[] args) throws Exception {
+        GrowthConfigTest.main(args);
         JsonObject defaults = UnifiedConfig.defaults();
         List<String> gameplaySections = defaults.keySet().stream().filter(key -> !key.startsWith("_")).toList();
         check(gameplaySections.get(gameplaySections.size()-1).equals("tacz"), "TaCZ last gameplay section, ignoring guidance metadata");
@@ -39,8 +40,8 @@ public final class UnifiedConfigTest {
         check(new UnifiedConfig(betterCombatOverride).betterCombatSoldierMeleeEnabled(),
                 "soldier Better Combat option can be enabled");
         check(config.taczEnabled(), "auto enable when installed");
-        check(config.tier("roamer").healthMin() == 50, "legacy health min");
-        check(config.tier("tier3").healthMax() == 100, "legacy health max");
+        check(config.tier("roamer").maxHealth() == 40, "roamer base maximum health");
+        check(config.tier("tier3").maxHealth() == 100, "tier3 base maximum health");
         check(config.tier("roamer").baseMovementSpeed() == .105D
                         && config.tier("tier3").baseMovementSpeed() == .105D,
                 "new per-tier base speed defaults preserve current movement");
@@ -236,14 +237,14 @@ public final class UnifiedConfigTest {
                 "hired-only guns never enter the wild spawn pool");
 
         JsonObject bad = JsonParser.parseString("""
-                {"tiers":{"roamer":{"attributes":{"health_min":900,"health_max":5,"attack_damage":-30},
+                {"tiers":{"roamer":{"attributes":{"max_health":-5,"attack_damage":-30},
                  "movement":{"base_speed":"NaN"},"damage_multipliers":{"damage_taken_multiplier":10000}}},"spawning":{
                  "enabled":false,"admission_chance":2,"encounter_cooldown_ticks":-3,"density_divisor":0},
                  "recruitment":{"max_hired_by_tier":{"roamer":-3,"tier3":20000},
                  "allow_hired_pvp_damage":true}}
                 """).getAsJsonObject();
         config = new UnifiedConfig(bad);
-        check(config.tier("roamer").healthMin() == 5 && config.tier("roamer").healthMax() == 900, "normalize reversed health range");
+        check(config.tier("roamer").maxHealth() == 40, "invalid maximum health uses safe default");
         check(config.tier("roamer").baseMovementSpeed() == .105D, "NaN base movement speed fallback");
         check(config.tier("roamer").attackDamage() == 0, "negative attack clamp");
         check(config.tier("roamer").incomingDamage() == 10, "damage clamp");

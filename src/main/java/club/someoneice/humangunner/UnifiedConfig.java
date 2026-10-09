@@ -15,6 +15,7 @@ public final class UnifiedConfig {
     private final Set<String> blacklist;
     private final Spawn spawn;
     private final EquipmentGrowthPolicy equipmentGrowth;
+    private final GrowthConfig growth;
     private final Map<String, ConfiguredEquipmentLoadout> equipmentLoadouts;
     private final Recruitment recruitment;
     private final boolean betterCombatSoldierMeleeEnabled;
@@ -29,7 +30,7 @@ public final class UnifiedConfig {
     public record SoldierMessages(int chatterIntervalTicks, int chatterMaxPerFiveMinutes,
             int reportIntervalTicks, int reportMaxPerMinute, int reportDetailsPerMessage) { }
 
-    public record Tier(int healthMin, int healthMax, double baseMovementSpeed,
+    public record Tier(double maxHealth, double baseMovementSpeed,
             double attackDamage, double armor, double armorToughness,
             double knockbackResistance, double followRange, double meleeDamage, double bowDamage,
             double tridentDamage, double incomingDamage, double spawnMultiplier,
@@ -78,10 +79,8 @@ public final class UnifiedConfig {
             JsonObject defaultDamage = object(d, "damage_multipliers");
             JsonObject defaultCombat = object(d, "combat");
             JsonObject defaultSpawning = object(d, "spawning");
-            int low = (int) number(object(t, "attributes"), "health_min",
-                    defaultAttributes.get("health_min").getAsDouble(), 1, 1024);
-            int high = (int) number(object(t, "attributes"), "health_max",
-                    defaultAttributes.get("health_max").getAsDouble(), 1, 1024);
+            double maxHealth = GrowthConfig.number(object(t, "attributes"), "max_health",
+                    defaultAttributes.get("max_health").getAsDouble(), 1, 1024, "tiers." + key + ".attributes.");
             int meleeCooldownLow = (int) number(object(t, "combat"), "melee_cooldown_min",
                     defaultCombat.get("melee_cooldown_min").getAsDouble(), 1, 200);
             int meleeCooldownHigh = (int) number(object(t, "combat"), "melee_cooldown_max",
@@ -98,7 +97,7 @@ public final class UnifiedConfig {
                 projectileSpreads.put(type, number(object(object(t, "weapon_spread_degrees"), "projectiles"), type,
                         defaultProjectiles.get(type).getAsDouble(), 0, 45));
             }
-            values.put(key, new Tier(Math.min(low, high), Math.max(low, high),
+            values.put(key, new Tier(maxHealth,
                     number(object(t, "movement"), "base_speed",
                             number(object(d, "movement"), "base_speed", .105D, .01D, .2D), .01D, .2D),
                     number(object(t, "attributes"), "attack_damage",
@@ -175,25 +174,8 @@ public final class UnifiedConfig {
                         (int) number(firstDays, "tier1", 5, 1, 1000000),
                         (int) number(firstDays, "tier2", 10, 1, 1000000),
                         (int) number(firstDays, "tier3", 20, 1, 1000000)));
-        JsonObject growth = object(root, "equipment_growth");
-        Map<String, EquipmentGrowthPolicy.Profile> growthTiers = new LinkedHashMap<>();
-        for (String key : List.of("roamer", "tier1", "tier2", "tier3")) {
-            JsonObject g = object(object(growth, "tiers"), key);
-            JsonObject d = object(object(object(defaults, "equipment_growth"), "tiers"), key);
-            growthTiers.put(key, new EquipmentGrowthPolicy.Profile(
-                    (int) number(g, "start_day", number(d, "start_day", 1, 1, 1000000), 1, 1000000),
-                    (int) number(g, "full_quality_day", number(d, "full_quality_day", 80, 1, 1000000), 1, 1000000),
-                    number(g, "early_baseline_gear_chance", 0, 0, 1),
-                    number(g, "early_gun_chance_multiplier", .25, 0, 1),
-                    number(g, "early_enchantment_keep_chance", .15, 0, 1),
-                    number(g, "early_enchantment_level_multiplier", .25, 0, 1),
-                    number(g, "early_totem_keep_chance", 0, 0, 1),
-                    number(g, "early_trident_keep_chance", 0, 0, 1),
-                    string(g, "early_spartan_material", string(d, "early_spartan_material", "wooden")),
-                    growthItems(object(g, "early_melee"), object(d, "early_melee")),
-                    growthItems(object(g, "early_armor"), object(d, "early_armor"))));
-        }
-        equipmentGrowth = new EquipmentGrowthPolicy(bool(growth, "enabled", true), Map.copyOf(growthTiers));
+        growth = GrowthConfig.parse(GrowthConfig.group(root, "growth", ""), object(defaults, "growth"));
+        equipmentGrowth = growth.equipmentGrowth();
         JsonObject r = object(root, "recruitment");
         JsonObject limits = object(r, "max_hired_by_tier");
         recruitment = new Recruitment(
@@ -243,6 +225,7 @@ public final class UnifiedConfig {
         return catchUp ? Math.max(normal, number(movement, "follow_catch_up_multiplier", 1.6D, 0.1D, 3.0D)) : normal;
     }
     public Spawn spawn() { return spawn; }
+    public GrowthConfig growth() { return growth; }
     EquipmentGrowthPolicy equipmentGrowth() { return equipmentGrowth; }
     public ConfiguredEquipmentLoadout equipmentLoadout(String rank) {
         return equipmentLoadouts.getOrDefault(rank, equipmentLoadouts.get("roamer"));
@@ -317,14 +300,6 @@ public final class UnifiedConfig {
         CurrentConfigDefaults.fill(result, defaults, "");
         return result;
     }
-    private static Map<String, String> growthItems(JsonObject configured, JsonObject defaults) {
-        Map<String, String> items = new LinkedHashMap<>();
-        for (String key : defaults.keySet()) {
-            if (!key.startsWith("_")) items.put(key, string(configured, key, defaults.get(key).getAsString()));
-        }
-        return Map.copyOf(items);
-    }
-
     private static String string(JsonObject data, String key, String fallback) {
         JsonElement value = data.get(key);
         return value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
