@@ -354,9 +354,13 @@ final class TierConfigProjection {
         for (var entry : defaults.entrySet()) {
             String key = entry.getKey();
             if (guidance(key)) {
+                if (key.equals("_说明_中文") || key.equals("_description_en")) {
+                    data.add(key, entry.getValue().deepCopy());
+                    continue;
+                }
                 String field = key.startsWith("_说明_") && key.endsWith("_中文") ? key.substring(4, key.length() - 3)
                         : key.startsWith("_description_") && key.endsWith("_en") ? key.substring(13, key.length() - 3) : "";
-                if (key.equals("_说明_中文") || key.equals("_description_en") || data.has(field)) data.add(key, entry.getValue().deepCopy());
+                if (data.has(field)) data.add(key, entry.getValue().deepCopy());
             } else if (entry.getValue().isJsonObject() && data.has(key) && data.get(key).isJsonObject())
                 refreshGuidance(data.getAsJsonObject(key), entry.getValue().getAsJsonObject());
         }
