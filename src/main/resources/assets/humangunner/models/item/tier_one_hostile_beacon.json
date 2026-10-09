@@ -1,4 +1,0 @@
-{
-  "parent": "minecraft:item/generated",
-  "textures": { "layer0": "humangunner:item/tier_one_hostile_beacon" }
-}

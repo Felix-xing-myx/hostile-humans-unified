@@ -1,5 +1,0 @@
-{
-  "parent": "minecraft:item/generated",
-  "render_type": "minecraft:cutout",
-  "textures": { "layer0": "humangunner:item/soldier_roster" }
-}

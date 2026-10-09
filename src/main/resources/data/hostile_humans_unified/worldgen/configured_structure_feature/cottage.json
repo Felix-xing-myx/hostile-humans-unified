@@ -1,0 +1,10 @@
+{
+  "config": {
+    "start_pool": "hostile_humans_unified:cottage_pool",
+    "size": 3
+  },
+  "biomes": "#hostile_humans_unified:has_structure/cottage",
+  "adapt_noise": true,
+  "spawn_overrides": {},
+  "type": "minecraft:village"
+}

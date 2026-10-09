@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "hostile_humans_unified:item/tier_three_identity_badge"
+  }
+}

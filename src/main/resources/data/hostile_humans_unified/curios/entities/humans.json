@@ -1,0 +1,11 @@
+{
+  "entities": [
+    "hostile_humans_unified:human_tier1",
+    "hostile_humans_unified:human_tier2",
+    "hostile_humans_unified:human_tier3",
+    "hostile_humans_unified:human_roamer"
+  ],
+  "slots": [
+    "back"
+  ]
+}

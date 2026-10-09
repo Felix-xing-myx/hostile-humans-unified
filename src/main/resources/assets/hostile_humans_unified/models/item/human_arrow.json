@@ -1,0 +1,6 @@
+{
+  "textures": {
+    "layer0": "hostile_humans_unified:item/human_arrow"
+  },
+  "parent": "minecraft:item/generated"
+}
