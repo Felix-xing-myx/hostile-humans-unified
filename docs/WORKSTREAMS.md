@@ -946,3 +946,13 @@
 - 举盾接管只释放本Goal持有的脱离路线/搜索，保留当前普通近战会话和攻击冷却；失去托管时清理旧追击路线，不清除合法仇恨。RangedFiringPosition射界检查仅扩大为同包可用。更新Human/RangedTerrainCombat过时策略注释、MODULE_INTERFACES、CHANGELOG及对应测试。
 - 验证：99项Python源码契约通过；全部358份Java使用Java17仅parse，语法错误0；git diff --check通过。扩展Java周期边界/搜索超时/停滞/持续脱离/安全边界及ASM接入测试，尚未编译执行。没有运行Gradle、构建、更新实例配置、同步、启动游戏或push。
 - 待游戏验收：弓与弩被逼近后的连续追击/站位，窄路与转角、举盾反击交接，四秒战斗后安全拉开距离，敌人持续追击和无安全射界时回归近战，BC前摇完整后归还，驻守/护卫活动范围及多士兵预算公平性。交付为包含本记录的本地提交。
+
+## 2026-10-10 雇主误伤正式士兵保护
+
+- 基线：fd4645d95100fa4c3a66057063e3b16268d0e4ad；负责人主控/root，main主工作树project，单人实施。用户报告枪械、近战和远程均可伤害自己的正式雇佣士兵，要求禁止该方向误伤。
+- 原因：现有HumanProjectileRelations只保护Human射手到Player/友军Human，Human.hurt没有雇主来源拒绝；TaCZ Pre仅在攻击者是Human时保护玩家和友军，雇主Player攻击Human方向缺失。
+- 新增HumanOwnerProtection统一正式归属判断：Human.hurt最前置拒绝、公开Forge AttackEntityEvent/LivingAttackEvent拦截、Projectile碰撞候选跳过、Explosion Detonate目标移除及TaCZ可取消Pre事件共用入口。伤害来源优先causingEntity，缺少时读取直接Projectile的owner；不从环境伤害推测雇主。
+- HumanRelations.isOwnedBy使用纯UUID正式归属判定；当前主人始终保护，不读取PVP或身份牌。其他玩家与野生/临时人类规则保持；解雇/转让按实体最新owner立即生效，不新增保存或缓存。复用已有两处TaCZ普通/穿透候选注入，不增加Mixin目标。
+- 接口/共享文件：HumanOwnerProtection、HumanRelationshipPolicy、HumanRelations、HumanProjectileRelations、HumanGunner、Human.hurt、TaczIntegration均由主控维护，更新MODULE_INTERFACES及CHANGELOG；Java归属矩阵/ASM与Python契约同步扩展。
+- 验证：104项Python源码契约通过；Java17仅parse全部359份Java，0语法错误；git diff --check通过。只读javap确认Explosion公开来源接口；TaCZ1.1.8-hotfix Pre有Cancelable，原生EntityKineticBullet根据事件post取消结果立即返回。Java正式归属与调用链测试新增但未编译执行。
+- 待游戏验收：雇主剑/斧/横扫、火矢弓弩/穿透/三叉戟、TaCZ普通/穿透/爆炸弹，护盾及护甲耐久、受击反馈与反击；PVP开关两种状态、多玩家转让/解雇、重载后归属。未运行Gradle、构建、实例配置更新、同步、启动游戏或push；交付为包含本记录的本地提交。

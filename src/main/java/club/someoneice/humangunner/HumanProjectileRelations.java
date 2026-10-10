@@ -18,18 +18,26 @@ public final class HumanProjectileRelations {
 
     /** Explosion hit lists are independent of projectile collision candidates. */
     static void onProjectileExplosion(ExplosionEvent.Detonate event) {
-        if (event.getExplosion().getDirectSourceEntity() instanceof Projectile projectile)
-            event.getAffectedEntities().removeIf(candidate -> passesThrough(projectile, candidate));
+        Entity direct = event.getExplosion().getDirectSourceEntity();
+        Entity attacker = event.getExplosion().getIndirectSourceEntity();
+        if (!(attacker instanceof Player) && !(direct instanceof Projectile)) return;
+        event.getAffectedEntities().removeIf(candidate -> HumanOwnerProtection.protects(candidate, attacker)
+                || (direct instanceof Projectile projectile && passesThrough(projectile, candidate)));
     }
 
-    /** Stop owner-attributed damage before hurt feedback and retaliation listeners. */
+    /** Protect both owner/soldier directions before hurt feedback and retaliation listeners. */
     static void onProtectedPlayerAttack(LivingAttackEvent event) {
+        if (event.getEntity() instanceof Human human && HumanOwnerProtection.blocksDamage(human, event.getSource())) {
+            event.setCanceled(true);
+            return;
+        }
         if (event.getSource().getEntity() instanceof Human shooter
                 && event.getEntity() instanceof Player player && protectsPlayer(shooter, player))
             event.setCanceled(true);
     }
 
     public static boolean passesThrough(Projectile projectile, Entity candidate) {
+        if (HumanOwnerProtection.protects(candidate, projectile.getOwner())) return true;
         if (!(projectile.getOwner() instanceof Human shooter)) return false;
         if (candidate instanceof Player player) {
             return protectsPlayer(shooter, player);

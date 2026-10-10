@@ -12,6 +12,12 @@ public final class HumanProjectileRelationsTest {
     public static void main(String[] args) throws Exception {
         var owner = java.util.UUID.fromString("00000000-0000-0000-0000-000000000001");
         var other = java.util.UUID.fromString("00000000-0000-0000-0000-000000000002");
+        check(HumanRelationshipPolicy.isFormalOwner(true, owner, owner), "formal owner cannot harm own soldier");
+        check(!HumanRelationshipPolicy.isFormalOwner(true, owner, other), "other players do not gain owner immunity");
+        check(!HumanRelationshipPolicy.isFormalOwner(false, owner, owner), "dismissal removes owner damage protection");
+        check(!HumanRelationshipPolicy.isFormalOwner(true, null, owner), "missing owner does not protect against arbitrary players");
+        check(!HumanRelationshipPolicy.isFormalOwner(true, other, owner), "former owner cannot use stale immunity after transfer");
+        check(HumanRelationshipPolicy.isFormalOwner(true, other, other), "new owner is protected immediately after transfer");
         for (boolean pvp : new boolean[]{false, true})
             check(HumanRelationshipPolicy.ownedHumanAlliedToPlayer(owner, owner, pvp), "owner is protected in both PvP modes");
         check(HumanRelationshipPolicy.ownedHumanAlliedToPlayer(owner, other, false), "PvP off: other players are skipped");
@@ -25,6 +31,14 @@ public final class HumanProjectileRelationsTest {
         check(!HumanRelationshipPolicy.blockHumanDamage(true, true, false), "authorized hired PvP remains hittable");
         String root = "club/someoneice/humangunner/";
         ClassNode relation = read(root + "HumanProjectileRelations");
+        check(calls(read("com/craftix/hostile_humans/entity/entities/Human"), "hurt",
+                root + "HumanOwnerProtection", "blocksDamage") == 1, "native Human damage boundary protects against owner attacks");
+        check(calls(relation, "passesThrough", root + "HumanOwnerProtection", "protects") == 1,
+                "owner projectiles are filtered before fire and collision effects");
+        check(calls(relation, "onProtectedPlayerAttack", root + "HumanOwnerProtection", "blocksDamage") == 1,
+                "Forge attack boundary shares the same owner damage protection");
+        check(calls(read(root + "TaczIntegration"), "onGunDamagePre", root + "HumanOwnerProtection", "protects") == 1,
+                "TaCZ uses shared owner protection before gun mitigation");
         check(calls(relation, "protectsPlayer", root + "HumanRelationshipPolicy", "ownedHumanAlliedToPlayer") == 1,
                 "player immunity is applied before collision using owner/PvP rule");
         check(calls(relation, "passesThrough", root + "HumanProjectileRelations", "protectsPlayer") == 1,

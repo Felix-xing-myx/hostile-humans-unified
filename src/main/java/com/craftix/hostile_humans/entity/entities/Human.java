@@ -1164,6 +1164,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public boolean hurt(@NotNull DamageSource damageSource, float amount) {
+        if (club.someoneice.humangunner.HumanOwnerProtection.blocksDamage(this, damageSource)) return false;
         this.lastCombatTime = this.tickCount;
         Entity equipmentSlotArray = damageSource.getEntity();
         LivingEntity attacker = equipmentSlotArray instanceof LivingEntity living && living != this

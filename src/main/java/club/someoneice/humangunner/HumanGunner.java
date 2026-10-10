@@ -110,6 +110,7 @@ public final class HumanGunner {
         FirstAidCompat.register();
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanProjectileRelations::onProjectileExplosion);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanProjectileRelations::onProtectedPlayerAttack);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanOwnerProtection::onPlayerAttack);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingChangeTarget);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanGunner::onHumanFriendlyFire);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingHurt);

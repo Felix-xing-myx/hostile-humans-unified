@@ -41,6 +41,14 @@
 
 已安装上岸路线用ShoreProgressTracker观察下一节点的实际接近与推进，停滞后暂避路段并排除该出口。PursuitNavigation、MovementContinuity和Human的水面状态维护让位于此租约；失效、目标变化或生存撤退时只释放自己拥有的路线。没有可达出口时按预算重试，不将任意崖顶当作可执行路线。
 
+## 雇主对正式士兵的伤害保护
+
+HumanOwnerProtection统一判断当前玩家是否为目标Human的正式雇主，HumanRelations.isOwnedBy复用HumanRelationshipPolicy.isFormalOwner的UUID判定。此方向不读取PVP、身份牌或野生阵营，也不把临时援军当成正式士兵。
+
+Human.hurt在任何战斗计时、护甲损耗、受击/自卫处理之前拒绝雇主来源；Forge AttackEntityEvent和LivingAttackEvent使用同一规则，间接伤害优先读取DamageSource.getEntity，缺失时回退到直接Projectile的owner。HumanProjectileRelations在碰撞候选阶段跳过雇主自己的正式士兵，复用既有原版/TaCZ普通及穿透弹入口；爆炸Detonate删除受保护目标，避免外置爆炸击退。TaCZ Pre使用公开可取消事件，在护盾/枪火压力/身份牌记忆之前取消并清零伤害。本地只读API字节码确认该事件可取消且原生子弹在取消后直接返回。
+
+所有规则实时读取实体正式归属，解雇及转让即时改变保护，不缓存雇主、不新增存档字段。其他玩家、士兵对玩家的既有PVP逻辑、友军人类碰撞及环境伤害保持原有职责；失去来源归属的环境效果不推测为雇主攻击。
+
 ## 弓弩临时近战与主动脱离
 
 RangedHybridMeleeGoal继承普通MeleeAttackGoal，近战阶段直接super.tick，避免第二套追击、站位和命中调度。MeleeAttackGoal.tickAttackOnly仅抽取原有冷却递减与checkAndPerformAttack，使主动拉开距离时仍可沿用相同反击规则而不再下达追击移动。

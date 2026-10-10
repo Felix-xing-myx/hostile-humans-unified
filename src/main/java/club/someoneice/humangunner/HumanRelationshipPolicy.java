@@ -4,6 +4,9 @@ import java.util.UUID;
 
 /** Pure decisions shared by vanilla, TaCZ and command-event relationship paths. */
 final class HumanRelationshipPolicy {
+    static boolean isFormalOwner(boolean hired, UUID owner, UUID player) {
+        return hired && owner != null && owner.equals(player);
+    }
     static final double BEACON_PLAYER_REACQUIRE_RANGE_SQR = 128.0D * 128.0D;
     private HumanRelationshipPolicy() {}
 

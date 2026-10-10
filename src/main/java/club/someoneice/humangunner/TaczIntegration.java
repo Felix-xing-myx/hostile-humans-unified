@@ -132,6 +132,11 @@ final class TaczIntegration implements GunSupport {
                 && human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem());
     }
     private static void onGunDamagePre(EntityHurtByGunEvent.Pre event) {
+        if (HumanOwnerProtection.protects(event.getHurtEntity(), event.getAttacker())) {
+            event.setBaseAmount(0.0F);
+            event.setCanceled(true);
+            return;
+        }
         if (event.getHurtEntity() instanceof Human defender
                 && event.getAttacker() instanceof Player player
                 && !HumanRelations.isControlledBy(defender, player)) {

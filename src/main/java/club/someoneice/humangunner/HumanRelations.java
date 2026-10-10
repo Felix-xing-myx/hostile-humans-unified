@@ -50,7 +50,7 @@ public final class HumanRelations {
     private HumanRelations() {}
 
     static boolean isOwnedBy(Human human, Player player) {
-        return human.hasOwner() && player.getUUID().equals(human.getOwnerUUID());
+        return HumanRelationshipPolicy.isFormalOwner(human.hasOwner(), human.getOwnerUUID(), player.getUUID());
     }
 
     static boolean isTemporaryFor(Human human, Player player) {
