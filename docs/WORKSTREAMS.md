@@ -996,3 +996,9 @@
 - 修改范围：CombatEatingMovementGoal、现有Python源码契约、模块接口说明及CHANGELOG。跳跃须上一tick水平位移>0.07格、移动与路线方向均远离目标、疾跑且在近战命中范围外，无顶墙、挥击及攻击前摇；复用原分阶跳跃参数与安全检查，保留进食反击及普通追击/正式逃跑跳跃。
 - 验证：109项Python源码检查通过；Java17显式四API依赖，`build lootScreeningTest --offline`成功，52项任务（48执行、4项已是最新）；版本3.7.0与单一modId校验通过。日志在维护目录 `验证日志/3.7.0-eating-retreat-hop-build.log`。
 - 交付：本节随实现提交；部署与推送结果补记于下节。待游戏确认近身进食不随机跳、实际疾跑远离时可跳、正常跳砍/追击/撤退未受影响。
+
+### 本次3.7.0部署结果
+
+- 构建代码提交：`f34e45d298a8fbbe5f63a36f549fa31de719ec38`。替换前确认测试实例未运行，已同步到 `E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\hostile-humans-unified-1.20.1-3.7.0.jar`，未改实例配置。
+- 旧JAR备份：`E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261010-205536-3.7.0-eating-hop-Forge_47.4.21`；旧SHA-256 `A0D9A6EE71B636F50DFC7820CC21888AFC98247193CC098F4F4F58F679DD98BE`，备份一致，deployment.json已登记。
+- 新JAR源/目标SHA-256均为 `BD47E926A0DFF65D8BDD94D10219CC9DC2F84B7C4509829F273ECCFC8E06117F`。本记录提交后推送origin/main并核对远端HEAD；未创建GitHub Release或启动游戏，游戏内验收由用户进行。
