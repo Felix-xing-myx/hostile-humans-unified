@@ -71,7 +71,7 @@ public final class TridentHybridGoal extends Goal {
         if (human.isCombatFiringShore()) {
             human.stopSeekingShore();
         }
-        human.getNavigation().stop();
+        if (!CombatTerrainNavigation.ownsRoute(human)) human.getNavigation().stop();
         clearStuckUseState();
         human.setAggressive(false);
         target = null;
@@ -135,7 +135,7 @@ public final class TridentHybridGoal extends Goal {
                 human.getNavigation().stop();
             }
         } else {
-            boolean spacing = MeleeSpacing.control(human, target);
+            boolean spacing = !CombatTerrainNavigation.hasWork(human, target) && MeleeSpacing.control(human, target);
             if (!spacing) PursuitNavigation.update(human, target, 1.0D);
         }
         if (!SoldierOrder.isHoldingPosition(human)) {
@@ -170,6 +170,11 @@ public final class TridentHybridGoal extends Goal {
         }
         boolean waterApproach = human.shouldUseWaterMovement()
                 && distanceSqr > 22.0D * 22.0D;
+        if (CombatTerrainNavigation.update(human, target, 1.0D,
+                visible && distanceSqr <= MAX_THROW_DISTANCE_SQR).ownsMovement()) {
+            throwTridentIfReady(distanceSqr, visible);
+            return;
+        }
         if (!visible && human.isInWater() && distanceSqr <= MAX_THROW_DISTANCE_SQR) {
             if ((human.getNavigation().isDone() || human.getNavigation().isStuck())
                     && human.tickCount >= nextFiringPositionTick) {

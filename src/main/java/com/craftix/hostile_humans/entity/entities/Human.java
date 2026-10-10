@@ -440,6 +440,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private void recoverStalledNavigation() {
+        if (!level().isClientSide) club.someoneice.humangunner.CombatTerrainNavigation.validate(this);
         club.someoneice.humangunner.MovementContinuity.tick(this);
     }
 

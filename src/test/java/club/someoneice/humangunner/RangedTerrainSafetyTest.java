@@ -26,7 +26,7 @@ public final class RangedTerrainSafetyTest {
         check(!RangedTerrainPolicy.switchAfterFailures(39, 2), "short occlusion does not switch weapon");
         check(!RangedTerrainPolicy.switchAfterFailures(100, 1), "one failed lane does not abandon ranged mode");
         check(RangedTerrainPolicy.switchAfterFailures(40, 2), "repeated confirmed lane failure permits melee");
-        check(!RangedTerrainPolicy.switchAfterBlockedSteps(19) && RangedTerrainPolicy.switchAfterBlockedSteps(20), "cramped orbit requires sustained blockage");
+        check(!RangedTerrainPolicy.shouldReportBlockedSteps(19) && RangedTerrainPolicy.shouldReportBlockedSteps(20), "cramped orbit reports only sustained blockage");
         check(RangedTerrainPolicy.keepMelee(79, 100), "finish attack cycles before returning to ranged");
         check(RangedTerrainPolicy.keepMelee(80, 19), "briefly open lane does not oscillate weapon");
         check(!RangedTerrainPolicy.keepMelee(100, 20), "sustained clear open terrain restores ranged");
@@ -36,7 +36,7 @@ public final class RangedTerrainSafetyTest {
         check(calls(human, "travel", root + "HumanTerrainSafety", "guardTravel"), "all locomotion inputs use final safety guard");
         check(calls(human, "getMaxFallDistance", root + "HumanFallPolicy", "accepts"), "A-star descent uses live health budget");
         check(calls(human, "expectedRawFallDamage", null, "calculateFallDamage"), "fall assessment never causes real damage");
-        check(calls("com/craftix/hostile_humans/entity/ai/HumanNavigation", "moveTo", root + "HumanTerrainSafety", "safePath"), "installed routes are checked");
+        check(calls("com/craftix/hostile_humans/entity/ai/HumanNavigation", "moveTo", root + "HumanTerrainSafety", "assessPath"), "installed routes return terrain reasons");
         check(calls(root + "HumanSafeJumpControl", "jump", root + "HumanTerrainSafety", "safeCombatJump"), "voluntary jumps check landing including extra height");
         check(calls(root + "RetreatPathSafety", "isSafe", root + "HumanTerrainSafety", "safePath"), "retreat shares height safety");
         for (String goal : new String[]{"BowAttack", "CrossbowGoal"}) {

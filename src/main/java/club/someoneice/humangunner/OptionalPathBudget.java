@@ -10,7 +10,7 @@ import java.util.WeakHashMap;
 
 /** Shared server-main-thread budget for multi-candidate searches, not basic navigation. */
 public final class OptionalPathBudget {
-    public enum Kind { FIRING_LANE, SHORE_FIRING, RETREAT, LAVA, EXPLOSION, CONTINUITY }
+    public enum Kind { FIRING_LANE, SHORE_FIRING, RETREAT, LAVA, EXPLOSION, CONTINUITY, COMBAT_TERRAIN }
     private record Key(UUID human, Kind kind) {}
     private record Pools(FairWorkBudget<Key> combat, FairWorkBudget<Key> emergency,
                          FairWorkBudget<Key> continuity) {}

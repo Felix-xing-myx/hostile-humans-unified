@@ -154,6 +154,15 @@ extends Goal {
             if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.observe(human, livingentity, flag);
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
+            if (mob instanceof Human human && club.someoneice.humangunner.CombatTerrainNavigation
+                    .update(human, livingentity, speedModifier, flag && d0 <= attackRadiusSqr).ownsMovement()) {
+                setOrbitSpeed(false);
+                clearStrafeInput();
+                this.strafingTime = -1;
+                mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
+                tickShot(livingentity, flag && d0 <= attackRadiusSqr);
+                return;
+            }
             boolean waterApproach = this.mob instanceof Human human
                     && human.shouldUseWaterMovement() && d0 > 22.0D * 22.0D;
             boolean pursuing = BowRangePolicy.shouldPursue(d0, this.attackRadiusSqr)
@@ -204,14 +213,14 @@ extends Goal {
                             boolean moved = this.mob.getNavigation().moveTo(firingPath, this.speedModifier);
                             if (moved && this.mob instanceof Human human)
                                 club.someoneice.humangunner.SoldierDialogue.event(human, "reposition");
-                            if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.searchCompleted(human, livingentity, moved, speedModifier);
+                            if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.searchCompleted(human, livingentity, moved);
                             this.updatePathDelay = 0;
                         } else if (!(this.mob instanceof Human human && RangedFiringPosition.hasPendingVisibleSearch(human))) {
                             if (this.mob instanceof Human human && human.isInWater()) {
                                 human.beginCombatFiringShore(livingentity, this.speedModifier);
                             } else {
                                 this.mob.getNavigation().stop();
-                                if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.searchCompleted(human, livingentity, false, speedModifier);
+                                if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.searchCompleted(human, livingentity, false);
                             }
                             this.updatePathDelay = 0;
                         }

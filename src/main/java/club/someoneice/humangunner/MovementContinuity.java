@@ -25,10 +25,23 @@ public final class MovementContinuity {
     }
     private MovementContinuity() {}
 
+    /** A final terrain veto must invalidate a previously requested local input as well. */
+    public static void cancelStep(Human human) {
+        State state = STATES.get(human);
+        if (state != null) state.step = null;
+    }
+
     public static void tick(Human human) {
         if (human.level().isClientSide) return;
         State state = STATES.computeIfAbsent(human, ignored -> new State());
         Path path = human.getNavigation().getPath();
+        if (CombatTerrainNavigation.ownsRoute(human)) {
+            // The combat planner monitors its own progress. Do not replace its waypoint goal.
+            state.step = null;
+            state.pendingFullSearch = false;
+            OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.CONTINUITY);
+            return;
+        }
         boolean moving = path != null && !path.isDone() && !human.isNoAi()
                 && human.isAlive() && !human.isSleeping() && !human.isPassenger()
                 && (human.onGround() || human.isInWater());

@@ -1,5 +1,13 @@
 # 开发任务与整合记录
 
+## 2026-10-10 地形受阻、绕路与悬崖战术（源码接入，未构建）
+
+- 用户批准上一轮完整改进方案，并要求纳入现有AI正式判断。基线b518cd488ad34eb4074e5408a2753cd062136b1a，main初始干净。主控/root独立编辑当前project工作树，负责地形判断反馈、导航/追击、弓弩枪械与防御接入、测试和说明；公共HumanNavigation/HumanTerrainSafety/PursuitNavigation/AdaptiveCombatGoal等均由主控接入。不改变防摔预算、低血量撤退、攻击许可、弹药、水下游泳或传送策略；不构建/同步/启动游戏/push。
+- 只读审查/root/terrain_review使用GPT-6.1 Sol medium，只读当前main并反馈调用冲突与命令约束，不编辑文件、不构建、无需编辑工作树。不得代替实际游戏验收。
+- 已接入：HumanTerrainSafety只读Assessment与执行否决反馈，HumanNavigation最多12条定向短期通行记录；CombatTerrainNavigation/CombatTerrainPolicy统一受阻、8/16/24格分批绕路、多高度候选、可射击保持远程、受击掩护、实际位移进展及16个末端记忆。PursuitNavigation使用实际路径末端，记录导航实际安装对象，避免等价Path复用造成归属丢失；弓弩/枪械/三叉戟、防御/战术/脱困及MovementContinuity共享决定，不注册新MOVE Goal。原武器Goal仍负责攻击、动画与弹药。命令节点受限，水中/撤退/上岸不接管。详见docs/COMBAT_TERRAIN.md。
+- 只读复核修正了移动目标清空绕路记忆、头顶平台遮蔽候选、FIRE未停止普通追击、修复路径读取旧对象、近战重启覆盖路线及清侧移时零STRAFE覆盖问题。补齐路径拐角有限前视，保留危险移动制动及真实击退。静态审查没有发现其余确定覆盖点，不能替代实际地形验收。
+- 验证：Python源码契约检查35项通过（新增9项）；git diff --check通过。只读javap核对本机Forge47.4.16的Path实际末端/下一节点、Entity.distanceToSqr(Vec3)、Level建造高度/已加载区块及导航速度/当前路径接口。新增Java CombatTerrainPolicyTest决策边界和编译后调用链，更新RangedTerrainSafetyTest适配Assessment，并登记check；按用户约定未编译或执行Java测试。未构建/实例同步/启动游戏/push。待有构建要求后编译验证，再由用户测试坡道绕路、隔崖对射/掩护、桥下多层、转角窄路、移动目标、命令切换、水边/撤退及多士兵性能。
+
 ## 2026-10-10 人类弹射物受伤冷却范围调整（源码完成，未构建）
 
 - 用户确认范围：本模组人类射出的弹射物命中非玩家目标，以及本模组人类受到弹射物，绕过受伤冷却；原版模式禁用本调整。主控/root在main独立处理，基线3ec1984b68088a0f8f6fc7b20712011517f8d91d，初始工作区干净；未派发编辑Agent，不修改其他工作树。范围独立ProjectileCooldownPolicy/LivingEntityProjectileCooldownMixin、Mixin清单、回归测试和构建测试登记、配置说明/日志；公共接入与审核均由主控负责。

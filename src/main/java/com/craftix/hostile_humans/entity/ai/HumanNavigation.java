@@ -11,11 +11,14 @@ import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.pathfinder.*;
 import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.HumanTerrainSafety;
+import club.someoneice.humangunner.CombatTerrainNavigation;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /** Human-only navigation. Other mobs' fence/door classification is untouched. */
 public final class HumanNavigation extends GroundPathNavigation {
-    private BlockPos temporarilyBlockedNode;
-    private long blockedUntilTick;
+    private record BlockedEdge(BlockPos from, BlockPos to, long until) {}
+    private final Deque<BlockedEdge> blockedEdges = new ArrayDeque<>();
 
     public HumanNavigation(Mob mob, Level level) { super(mob, level); }
 
@@ -43,26 +46,42 @@ public final class HumanNavigation extends GroundPathNavigation {
 
     /** Exclude a waypoint that repeatedly traps this human from the next path search. */
     public void avoidWaypoint(BlockPos node, long untilTick) {
-        temporarilyBlockedNode = node.immutable();
-        blockedUntilTick = untilTick;
+        avoidTransition(mob.blockPosition(), node, untilTick);
     }
 
-    private boolean isAvoided(BlockPos pos) {
-        return temporarilyBlockedNode != null && level.getGameTime() < blockedUntilTick
-                && temporarilyBlockedNode.equals(pos);
+    public void avoidTransition(BlockPos from, BlockPos to, long untilTick) {
+        if (from.equals(to)) return;
+        blockedEdges.removeIf(edge -> edge.until() <= level.getGameTime()
+                || edge.from().equals(from) && edge.to().equals(to));
+        while (blockedEdges.size() >= 12) blockedEdges.removeFirst();
+        blockedEdges.addLast(new BlockedEdge(from.immutable(), to.immutable(), untilTick));
+    }
+
+    private boolean isAvoided(BlockPos from, BlockPos to) {
+        if (blockedEdges == null) return false; // Navigation superclass construction precedes our fields.
+        blockedEdges.removeIf(edge -> edge.until() <= level.getGameTime());
+        for (BlockedEdge edge : blockedEdges)
+            if (edge.from().equals(from) && edge.to().equals(to)) return true;
+        return false;
     }
 
     @Override public boolean moveTo(Path path, double speed) {
-        if (mob instanceof Human human && path != null && !path.isDone()
-                && !HumanTerrainSafety.safePath(human, path)) return false;
+        if (mob instanceof Human human && path != null && !path.isDone()) {
+            var assessment = HumanTerrainSafety.assessPath(human, path);
+            if (!assessment.safe()) { CombatTerrainNavigation.blocked(human, assessment); return false; }
+        }
         return super.moveTo(path, speed);
     }
 
     @Override public void tick() {
-        if (mob instanceof Human human && path != null && !path.isDone()
-                && !HumanTerrainSafety.safeTransition(human, human.blockPosition(), path.getNextNodePos())) {
-            avoidWaypoint(path.getNextNodePos(), level.getGameTime() + 40);
-            stop();
+        if (mob instanceof Human human && path != null && !path.isDone()) {
+            var from = human.blockPosition();
+            var to = path.getNextNodePos();
+            var reason = HumanTerrainSafety.transitionReason(human, from, to);
+            if (reason != HumanTerrainSafety.Reason.SAFE) {
+                CombatTerrainNavigation.blocked(human, new HumanTerrainSafety.Assessment(reason, from, to));
+                stop();
+            }
         }
         super.tick();
     }
@@ -75,7 +94,6 @@ public final class HumanNavigation extends GroundPathNavigation {
     private final class HumanNodeEvaluator extends WalkNodeEvaluator {
         @Override public BlockPathTypes getBlockPathType(BlockGetter getter, int x, int y, int z) {
             BlockPos pos = new BlockPos(x, y, z);
-            if (isAvoided(pos)) return BlockPathTypes.BLOCKED;
             var state = getter.getBlockState(pos);
             if (state.getBlock() instanceof FenceGateBlock && state.getBlockPathType(getter, pos, mob) == null)
                 return state.getValue(FenceGateBlock.OPEN) ? BlockPathTypes.WALKABLE : BlockPathTypes.DOOR_WOOD_CLOSED;
@@ -92,7 +110,8 @@ public final class HumanNavigation extends GroundPathNavigation {
             BlockPos from = new BlockPos(node.x, node.y, node.z);
             for (int index = 0; index < count; index++) {
                 Node next = neighbors[index];
-                if (next != null && HumanTerrainSafety.safeTransition(human, from, new BlockPos(next.x, next.y, next.z)))
+                if (next != null && !isAvoided(from, new BlockPos(next.x, next.y, next.z))
+                        && HumanTerrainSafety.safeTransition(human, from, new BlockPos(next.x, next.y, next.z)))
                     neighbors[accepted++] = next;
             }
             return accepted;

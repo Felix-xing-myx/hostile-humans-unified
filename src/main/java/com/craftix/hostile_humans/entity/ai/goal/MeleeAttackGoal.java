@@ -76,6 +76,11 @@ extends Goal {
             return true;
         }
         if (this.mob instanceof Human human
+                && club.someoneice.humangunner.CombatTerrainNavigation.hasWork(human, livingEntity)) {
+            this.path = null;
+            return true;
+        }
+        if (this.mob instanceof Human human
                 && !club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1)) {
             this.path = null;
             return true;
@@ -110,6 +115,8 @@ extends Goal {
             return false;
         }
         if (!this.followingTargetEvenIfNotSeen) {
+            if (this.mob instanceof Human human
+                    && club.someoneice.humangunner.CombatTerrainNavigation.hasWork(human, livingEntity)) return true;
             return !this.mob.getNavigation().isDone();
         }
         return this.mob.isWithinRestriction(livingEntity.blockPosition());
@@ -127,7 +134,8 @@ extends Goal {
                         > MeleeSpacing.preferredDistance(MeleeCombatRange.reach(human, target)));
             }
         }
-        if (canPursue) {
+        if (canPursue && !(this.mob instanceof Human human
+                && club.someoneice.humangunner.CombatTerrainNavigation.hasWork(human, this.mob.getTarget()))) {
             if (this.path != null) this.mob.getNavigation().moveTo(this.path, this.speedModifier);
             else this.mob.getNavigation().stop();
         }
@@ -177,6 +185,7 @@ extends Goal {
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
             boolean spacing = !holdingPosition && this.mob instanceof Human human
+                    && !club.someoneice.humangunner.CombatTerrainNavigation.hasWork(human, livingEntity)
                     && MeleeSpacing.control(human, livingEntity);
             boolean stalled = pursuitProgress.stalled(this.mob.tickCount, livingEntity.getId(),
                     this.mob.getX(), this.mob.getY(), this.mob.getZ(),
@@ -286,8 +295,12 @@ extends Goal {
     }
 
     private void recoverPursuit(LivingEntity target) {
-        if (this.mob instanceof Human human
-                && !club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1)) return;
+        if (this.mob instanceof Human human) {
+            if (!club.someoneice.humangunner.CombatTerrainNavigation.hasWork(human, target))
+                club.someoneice.humangunner.CombatTerrainNavigation.failed(human, target);
+            club.someoneice.humangunner.PursuitNavigation.update(human, target, this.speedModifier);
+            return;
+        }
         // One bounded flank path attempt per stall, not a scan or forced push.
         Path oldPath = this.mob.getNavigation().getPath();
         if (oldPath != null && !oldPath.isDone()

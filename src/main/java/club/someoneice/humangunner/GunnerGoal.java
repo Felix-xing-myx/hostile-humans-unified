@@ -736,6 +736,18 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     private void moveForFiringPosition(LivingEntity target, double distance,
                                        GunRangePolicy.Band range, boolean obscured) {
+        if (mob instanceof Human human) {
+            if (CombatTerrainNavigation.hasWork(human, target)) stopLateralMovement();
+            var terrain = CombatTerrainNavigation.update(human, target, 1.0D,
+                    !obscured && distance * distance <= firingRangeSqr(range)
+                            && HumanAmmo.canUseGun(human, mob.getMainHandItem()));
+            if (terrain.ownsMovement()) {
+                clearLateralInputPreservingNavigation();
+                approachingTarget = terrain == CombatTerrainNavigation.Decision.ROUTE;
+                seekingFiringPosition = false;
+                return;
+            }
+        }
         if (obscured) {
             stopLateralMovement();
             boolean seekCloserAngle = unseenTargetTicks >= OBSCURED_ADVANCE_AFTER_TICKS
@@ -797,12 +809,14 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                     // Pending is not failure: do not abandon the lane search
                     // for a different movement/shore policy after its first batch.
                 } else if (seekCloserAngle) {
+                    CombatTerrainNavigation.failed(human, target);
                     seekingFiringPosition = false;
                     approachTarget(target, OBSCURED_ADVANCE_DISTANCE);
                     if (!approachingTarget && human.isInWater()) {
                         human.beginCombatFiringShore(target, 1.0D);
                     }
                 } else {
+                    CombatTerrainNavigation.failed(human, target);
                     if (human.isInWater()) {
                         human.beginCombatFiringShore(target, 1.0D);
                     } else {
@@ -1034,10 +1048,12 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         if (!strafing && !strafePathActive && manualStrafeUntilTick == 0) {
             return;
         }
-        if (strafePathActive) {
+        boolean terrainRoute = mob instanceof Human human && CombatTerrainNavigation.ownsRoute(human);
+        if (strafePathActive && !terrainRoute) {
             mob.getNavigation().stop();
         }
-        mob.getMoveControl().strafe(0.0F, 0.0F);
+        if (!terrainRoute) mob.getMoveControl().strafe(0.0F, 0.0F);
+        else if (mob instanceof Human human) human.clearRangedStrafeMotion();
         mob.setZza(0.0F);
         mob.setXxa(0.0F);
         strafing = false;

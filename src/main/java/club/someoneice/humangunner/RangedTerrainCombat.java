@@ -12,7 +12,7 @@ public final class RangedTerrainCombat {
     private static final Map<Human, State> STATES = new WeakHashMap<>();
     private static final class State {
         UUID target;
-        int blockedSince, failedSearches, blockedSteps, meleeSince, clearSince, nextApproach;
+        int blockedSince, failedSearches, blockedSteps, meleeSince, clearSince;
         boolean terrainMelee;
     }
     private RangedTerrainCombat() {}
@@ -37,25 +37,22 @@ public final class RangedTerrainCombat {
         return state != null && human.tickCount - state.blockedSince >= 20 ? Math.min(4.0D, normal) : normal;
     }
 
-    public static void searchCompleted(Human human, LivingEntity target, boolean success, double speed) {
+    public static void searchCompleted(Human human, LivingEntity target, boolean success) {
         State state = state(human, target);
         if (success) { state.failedSearches = 0; return; }
         state.failedSearches++;
+        CombatTerrainNavigation.failed(human, target);
         if (RangedTerrainPolicy.switchAfterFailures(human.tickCount - state.blockedSince, state.failedSearches)
                 && beginTerrainMelee(human, target, state)) return;
         // A finished search with no lane is different from waiting for the shared budget.
         // Approach cover along a real safe path; never stand forever at the old firing point.
-        if (SoldierOrder.isHoldingPosition(human) || human.isFleeing || human.isInWater()
-                || human.tickCount < state.nextApproach || !BasicNavigationBudget.tryAcquire(human, 1)) return;
-        state.nextApproach = human.tickCount + 20;
-        var path = human.getNavigation().createPath(target, 0);
-        if (path != null && !path.isDone() && path.getNodeCount() >= 2 && HumanTerrainSafety.safePath(human, path))
-            human.getNavigation().moveTo(path, speed);
+        // The next weapon tick advances the shared planner; do not install a competing route here.
     }
 
     private static boolean beginTerrainMelee(Human human, LivingEntity target, State state) {
         if (human.isFleeing || human.isInWater() || SoldierOrder.isHoldingPosition(human)
-                || human.distanceToSqr(target) > 24.0D * 24.0D || !human.canAttack(target)) return false;
+                || human.distanceToSqr(target) > 24.0D * 24.0D || !human.canAttack(target)
+                || !CombatTerrainNavigation.canApproachForMelee(human, target)) return false;
         if (!RangedWeaponCustody.beginCloseMelee(human)) return false;
         state.terrainMelee = true; state.meleeSince = human.tickCount; state.clearSince = 0;
         RangedFiringPosition.cancelVisibleSearch(human);
@@ -78,22 +75,12 @@ public final class RangedTerrainCombat {
         // Finish at least a full attack cycle; periodically retry ranged if a target stays unreachable.
         if (human.tickCount - state.meleeSince < 80) return true;
         boolean open = human.distanceToSqr(target) >= 8.0D * 8.0D
-                && human.getSensing().hasLineOfSight(target) && openOrbit(human);
+                && human.getSensing().hasLineOfSight(target);
         if (!open) state.clearSince = 0;
         else if (state.clearSince == 0) state.clearSince = human.tickCount;
         if (!RangedTerrainPolicy.keepMelee(human.tickCount - state.meleeSince,
                 state.clearSince == 0 ? 0 : human.tickCount - state.clearSince)) { STATES.remove(human); return false; }
         return true;
-    }
-
-    private static boolean openOrbit(Human human) {
-        int safe = 0;
-        for (Vec3 offset : new Vec3[]{new Vec3(1.25, 0, 0), new Vec3(-1.25, 0, 0),
-                new Vec3(0, 0, 1.25), new Vec3(0, 0, -1.25)}) {
-            if (HumanTerrainSafety.safeStep(human, offset)
-                    && human.level().noCollision(human, human.getBoundingBox().expandTowards(offset))) safe++;
-        }
-        return safe >= 2;
     }
 
     public static void strafe(Human human, float forward, float right) {
@@ -116,7 +103,8 @@ public final class RangedTerrainCombat {
         LivingEntity target = human.getTarget();
         if (target != null) {
             State state = state(human, target);
-            if (RangedTerrainPolicy.switchAfterBlockedSteps(++state.blockedSteps)) beginTerrainMelee(human, target, state);
+            if (RangedTerrainPolicy.shouldReportBlockedSteps(++state.blockedSteps))
+                CombatTerrainNavigation.failed(human, target);
         }
     }
 }

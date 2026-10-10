@@ -230,6 +230,9 @@ public final class AdaptiveCombatGoal extends Goal {
             }
         }
 
+        // Survival and fresh shield reactions above retain priority. Ordinary tactical
+        // repositioning must not replace a terrain route owned by the weapon controller.
+        if (CombatTerrainNavigation.hasWork(human, currentThreat)) return false;
         updateStationaryState();
         // A gunner holding its configured firing band is expected to pause
         // between lateral relocations. Do not let this higher-priority MOVE
@@ -284,6 +287,8 @@ public final class AdaptiveCombatGoal extends Goal {
         if (!isValidThreat(threat) || !human.isAlive()) {
             return false;
         }
+        if ((phase == Phase.FLANK || phase == Phase.PRESSURE || phase == Phase.UNSTUCK)
+                && CombatTerrainNavigation.hasWork(human, threat)) return false;
         if ((human.distanceToSqr(threat) > 4096.0D
                 && !(phase == Phase.DEFEND && human.tickCount < projectileDefenseUntil))
                 || phaseTicks <= 0) {
@@ -568,6 +573,11 @@ public final class AdaptiveCombatGoal extends Goal {
             return;
         }
 
+        if (CombatTerrainNavigation.update(human, threat, 1.0D,
+                canFireFromTerrainPosition()).ownsMovement()) {
+            if (!human.isUsingItem()) startShieldBlockIfAvailable();
+            return;
+        }
         if (SoldierOrder.isHoldingPosition(human)) {
             human.getNavigation().stop();
         } else if (isUsingTaczGun() || HumanUtil.isRangedWeapon(human.getMainHandItem())
@@ -1436,6 +1446,24 @@ public final class AdaptiveCombatGoal extends Goal {
         human.getPersistentData().putString("hostile_humans_unified:ai_phase", "crowd_retreat");
     }
 
+    /** Terrain decisions use weapon reach/ammunition, independently of shield reaction timing. */
+    private boolean canFireFromTerrainPosition() {
+        if (threat == null || !human.getSensing().hasLineOfSight(threat)) return false;
+        var held = human.getMainHandItem();
+        double reach;
+        if (GunSupport.isGunItem(held)) {
+            if (!HumanAmmo.canUseGun(human, held)) return false;
+            reach = GunRangePolicy.firingReach(GunRangePolicy.forType(GunSupport.get().gunType(held)),
+                    human.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE));
+        } else if (HumanUtil.isTrident(held)) {
+            reach = 36;
+        } else if (HumanUtil.isRangedWeapon(held)) {
+            if (!HumanAmmo.hasArrows(human)) return false;
+            reach = RangedWeaponCustody.isCrossbowWeapon(held) ? 48 : 36;
+        } else return false;
+        return human.distanceToSqr(threat) <= reach * reach;
+    }
+
     private boolean canCounterFromCurrentRange() {
         if (threat == null || !human.getSensing().hasLineOfSight(threat)) {
             return false;
@@ -1679,6 +1707,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void planTacticalMove() {
+        if (CombatTerrainNavigation.update(human, threat, 1.0D, canFireFromTerrainPosition()).ownsMovement()) return;
         if (lastTacticalPlanningTick == human.tickCount) return;
         lastTacticalPlanningTick = human.tickCount;
         if (tacticalFallbackPending) {
@@ -1723,6 +1752,8 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void planUnstuckMove() {
+        CombatTerrainNavigation.failed(human, threat);
+        if (CombatTerrainNavigation.update(human, threat, 1.0D, canFireFromTerrainPosition()).ownsMovement()) return;
         if (!BasicNavigationBudget.tryAcquire(human, 1)) {
             repathTicks = 1;
             return;
@@ -1738,6 +1769,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void planPressureMove() {
+        if (CombatTerrainNavigation.update(human, threat, 1.0D, canFireFromTerrainPosition()).ownsMovement()) return;
         // At most the direct path and one local approach alternative.
         if (!BasicNavigationBudget.tryAcquire(human, 2)) {
             repathTicks = 1;
@@ -1852,8 +1884,13 @@ public final class AdaptiveCombatGoal extends Goal {
     /** Caller reserves the single ordinary path request before entering. */
     private boolean moveToThreat(double speed) {
         Path path = human.getNavigation().createPath(threat, 1);
-        if (!RetreatPathSafety.tryMove(human, path, speed)) return false;
-        activePath = path;
+        if (!CombatTerrainNavigation.usefulPath(human, threat, path)
+                || !RetreatPathSafety.tryMove(human, path, speed)) {
+            CombatTerrainNavigation.failed(human, threat);
+            return false;
+        }
+        CombatTerrainNavigation.accepted(human, threat);
+        activePath = human.getNavigation().getPath();
         return true;
     }
 

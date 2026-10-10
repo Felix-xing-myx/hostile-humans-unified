@@ -17,21 +17,33 @@ public final class PursuitNavigation {
         Vec3 sampled;
         int attempt;
         boolean failed;
+        Path route;
     }
     private PursuitNavigation() {}
 
     public static boolean update(Human human, LivingEntity target, double speed) {
         var nav = human.getNavigation();
-        Path previous = nav.getPath();
-        boolean hasRoute = previous != null && !previous.isDone();
         if (target == null || !target.isAlive() || !human.canAttack(target)
-                || human.isFleeing || SoldierOrder.isHoldingPosition(human)) return hasRoute;
+                || human.isFleeing || SoldierOrder.isHoldingPosition(human)) {
+            clear(human);
+            return false;
+        }
         State state = STATES.get(human);
         if (state == null || !target.getUUID().equals(state.target) || human.tickCount < state.attempt) {
+            if (state != null) clearOrdinaryRoute(human);
             state = new State(); state.target = target.getUUID(); state.attempt = human.tickCount - 4;
-            state.sampled = hasRoute ? Vec3.atBottomCenterOf(previous.getTarget()) : target.position();
+            state.sampled = target.position();
             STATES.put(human, state);
         }
+        if (MeleeCombatRange.canStrike(human, target)) {
+            CombatTerrainNavigation.clear(human);
+            return false;
+        }
+        var terrain = CombatTerrainNavigation.update(human, target, speed, false);
+        if (terrain.ownsMovement()) return terrain == CombatTerrainNavigation.Decision.ROUTE;
+        Path previous = nav.getPath();
+        boolean hasRoute = state.route != null && MovementContinuity.ownsRoute(human, state.route)
+                && previous != null && !previous.isDone();
         boolean nearEnd = hasRoute && previous.getNodeCount() - previous.getNextNodeIndex() <= 2;
         if (!PursuitRefreshPolicy.due(human.tickCount - state.attempt, hasRoute, nearEnd,
                 target.position().distanceToSqr(state.sampled), state.failed)) return hasRoute;
@@ -43,12 +55,27 @@ public final class PursuitNavigation {
                 ? ground.createFreshPath(target, 0) : nav.createPath(target, 0);
         boolean useful = replacement != null && !replacement.isDone()
                 && HumanTerrainSafety.safePath(human, replacement)
-                && (replacement.canReach() || Vec3.atBottomCenterOf(replacement.getTarget())
-                        .distanceToSqr(human.position()) > 1.0D);
-        if (useful && nav.moveTo(replacement, speed)) { state.failed = false; return true; }
+                && CombatTerrainNavigation.usefulPath(human, target, replacement);
+        if (useful && nav.moveTo(replacement, speed)) {
+            state.route = nav.getPath(); state.failed = false;
+            CombatTerrainNavigation.accepted(human, target);
+            return true;
+        }
         state.failed = true;
+        CombatTerrainNavigation.failed(human, target);
         // Never install null: ordinary moveTo(Entity) would discard its old path on failure.
         if (hasRoute && nav.getPath() != previous) nav.moveTo(previous, speed);
         return nav.getPath() != null && !nav.isDone();
+    }
+
+    static void clear(Human human) {
+        clearOrdinaryRoute(human);
+        CombatTerrainNavigation.clear(human);
+    }
+
+    private static void clearOrdinaryRoute(Human human) {
+        State state = STATES.remove(human);
+        if (state != null && state.route != null && MovementContinuity.ownsRoute(human, state.route))
+            human.getNavigation().stop();
     }
 }

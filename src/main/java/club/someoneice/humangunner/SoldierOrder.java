@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 /** Persistent owner-issued movement policy for hired humans. */
 public enum SoldierOrder {
@@ -40,6 +41,7 @@ public enum SoldierOrder {
     }
 
     static void set(Human human, SoldierOrder order, boolean preserveNavigation) {
+        PursuitNavigation.clear(human);
         BodyguardProtection.clear(human);
         SoldierFollowNavigation.clear(human);
         human.guardCombatState.reset();
@@ -58,6 +60,7 @@ public enum SoldierOrder {
     }
 
     static void clear(Human human) {
+        PursuitNavigation.clear(human);
         BodyguardProtection.clear(human);
         SoldierFollowNavigation.clear(human);
         human.guardCombatState.reset();
@@ -332,6 +335,29 @@ public enum SoldierOrder {
         return horizontalDistanceSqr(target.getX(), target.getZ(), anchor(human))
                 <= (order == GUARD || order == HOLD_POSITION
                 ? FOLLOW_COMBAT_RANGE_SQR : PATROL_RANGE_SQR);
+    }
+
+    /** Movement destinations share command limits; target permission alone is not a route leash. */
+    public static boolean allowsCombatPosition(Human human, Vec3 point) {
+        if (!human.hasOwner()) return true;
+        SoldierOrder order = get(human);
+        if (order == HOLD_POSITION) return false;
+        if (order == BODYGUARD) {
+            Player owner = BodyguardProtection.owner(human);
+            return owner != null ? owner.distanceToSqr(point) <= BodyguardPolicy.CHASE_SQUARED
+                    : horizontalDistanceSqr(point.x, point.z, anchor(human)) <= BodyguardPolicy.CHASE_SQUARED;
+        }
+        if (order == FOLLOW) {
+            Player owner = human.level().getPlayerByUUID(human.getOwnerUUID());
+            return owner == null || !owner.isAlive() || owner.distanceToSqr(point) <= FOLLOW_COMBAT_RANGE_SQR;
+        }
+        if (order == GUARD) {
+            if (human.guardCombatState.returning()) return false;
+            LivingEntity target = human.getTarget();
+            // Retain the existing guard chase/retaliation exception.
+            if (target != null && allowsTarget(human, target)) return true;
+        }
+        return horizontalDistanceSqr(point.x, point.z, anchor(human)) <= PATROL_RANGE_SQR;
     }
 
     public static boolean isHoldingPosition(Human human) {
