@@ -25,5 +25,13 @@ class CombatEatingMovementContract(unittest.TestCase):
         self.assertIn('if (!human.isFleeing && RecoverySupplies.isEatingFood(human)) return;', source('PlayerLikeMovementGoal'))
     def test_routes_and_hops_share_existing_safety_and_budgets(self):
         goal = source('CombatEatingMovementGoal')
-        for gate in ['BasicNavigationBudget.tryAcquire', 'RetreatPathSafety.isSafe', 'SoldierOrder.allowsCombatPosition', 'HumanTerrainSafety.safeCombatJump', '!human.humanGunner$hasPendingMeleeAttack()', 'config.combatJumpChance()', 'nextPathTick = human.tickCount + 12']:
+        for gate in ['BasicNavigationBudget.tryAcquire', 'RetreatPathSafety.isSafe', 'SoldierOrder.allowsCombatPosition', 'HumanTerrainSafety.safeCombatJump', 'human.humanGunner$hasPendingMeleeAttack()', 'config.combatJumpChance()', 'nextPathTick = human.tickCount + 12']:
             self.assertIn(gate, goal)
+
+    def test_food_hops_require_actual_sprinting_retreat_not_just_a_route(self):
+        body = source('CombatEatingMovementGoal').split('private boolean retreatHopReady', 1)[1]
+        for guard in ['!human.isSprinting()', '!human.onGround()', 'human.horizontalCollision',
+                      'human.swinging', 'MeleeCombatRange.canStrike(human, target)',
+                      'progress.lengthSqr() > 0.0049D', 'progress.normalize().dot(away) >= 0.75D',
+                      'pathDirection.dot(away) >= 0.80D']:
+            self.assertIn(guard, body)

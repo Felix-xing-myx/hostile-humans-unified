@@ -13,6 +13,7 @@ final class CombatEatingMovementGoal extends MeleeAttackGoal {
     private int nextPathTick;
     private int nextJumpTick;
     private Path route;
+    private Vec3 previousPosition;
 
     CombatEatingMovementGoal(Human human) {
         super(human, 1.05D, true);
@@ -31,6 +32,7 @@ final class CombatEatingMovementGoal extends MeleeAttackGoal {
 
     @Override public void start() {
         route = null;
+        previousPosition = human.position();
         nextPathTick = human.tickCount;
         human.getNavigation().stop();
         human.setAggressive(true);
@@ -76,8 +78,9 @@ final class CombatEatingMovementGoal extends MeleeAttackGoal {
         }
         boolean moving = route != null && human.getNavigation().getPath() == route && !route.isDone();
         MovementSpeedController.combat(human, moving);
-        if (moving && human.onGround() && !human.humanGunner$hasPendingMeleeAttack()
-                && human.tickCount >= nextJumpTick) {
+        boolean retreatHop = retreatHopReady(target, moving);
+        previousPosition = human.position();
+        if (retreatHop && human.tickCount >= nextJumpTick) {
             CombatAiConfig config = CombatAiConfig.forHuman(human);
             nextJumpTick = human.tickCount + config.combatJumpIntervalMin()
                     + human.getRandom().nextInt(Math.max(1,
@@ -85,5 +88,18 @@ final class CombatEatingMovementGoal extends MeleeAttackGoal {
             if (human.getRandom().nextDouble() < config.combatJumpChance()
                     && HumanTerrainSafety.safeCombatJump(human)) human.getJumpControl().jump();
         }
+    }
+    /** A queued route alone is not movement: require actual progress away from the opponent. */
+    private boolean retreatHopReady(LivingEntity target, boolean moving) {
+        if (!moving || !human.isSprinting() || !human.onGround() || human.horizontalCollision
+                || human.swinging || human.humanGunner$hasPendingMeleeAttack()
+                || MeleeCombatRange.canStrike(human, target) || previousPosition == null) return false;
+        Vec3 progress = human.position().subtract(previousPosition).multiply(1, 0, 1);
+        Vec3 away = NavigationSupport.horizontalDirection(target.position(), human.position());
+        Vec3 pathDirection = NavigationSupport.horizontalDirection(human.position(),
+                Vec3.atBottomCenterOf(route.getNextNodePos()));
+        return progress.lengthSqr() > 0.0049D && away.lengthSqr() > 0.01D
+                && progress.normalize().dot(away) >= 0.75D
+                && pathDirection.dot(away) >= 0.80D;
     }
 }

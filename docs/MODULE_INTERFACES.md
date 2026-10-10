@@ -69,4 +69,4 @@ RangedMeleeCycle只累计实际运行的近战tick，默认80 tick后在无前�
 
 `RecoverySupplies.isEatingFood` 只认可受统一物品托管管理、正在副手使用的食物，不包含药品、盾牌或完成后的归还等待。`CombatEatingMovementGoal` 在普通武器控制器之前持有 MOVE/LOOK，复用 `MeleeAttackGoal.tickAttackOnly` 的攻击冷却、Better Combat 前摇与伤害入口；近处经 GunCustody/RangedWeaponCustody 精确交换主手备用近战武器，副手食物继续使用。无备用近战武器时不强制裸手覆盖远程物品。
 
-拉距每12 tick至多尝试一个共享预算内的路径，保留仍安全有效的路线；候选位置必须符合 SoldierOrder，完整路线经 RetreatPathSafety 检查。跳跃复用分阶 combatJump 参数与 HumanTerrainSafety，不在待命中前摇中起跳。PlayerLikeMovementGoal 和自适应普通侧移/追击阶段让出控制权；真正撤退、防御及紧急脱险继续优先，不重定义低血量策略。水中/上岸期间不接管移动，原地驻守不拉距。
+拉距每12 tick至多尝试一个共享预算内的路径，保留仍安全有效的路线；候选位置必须符合 SoldierOrder，完整路线经 RetreatPathSafety 检查。跳跃复用分阶 combatJump 参数与 HumanTerrainSafety；须疾跑、上一tick水平位移超过0.07格且朝远离目标方向、下一路径节点同样远离目标，已离开近战命中范围，未顶墙/挥击/待命中前摇。仅持有路线不视为实际撤离。PlayerLikeMovementGoal 和自适应普通侧移/追击阶段让出控制权；真正撤退、防御及紧急脱险继续优先，不重定义低血量策略。水中/上岸期间不接管移动，原地驻守不拉距。
