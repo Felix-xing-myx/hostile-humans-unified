@@ -1,5 +1,13 @@
 # 开发任务与整合记录
 
+## 2026-10-10 水域高崖受阻与追击绕行修复（源码）
+
+- 基线f17df9333b5098bdc2badd2efdfe00a6dbafc534；主控/main/源码主工作树顺序编辑，不分派编辑Agent。范围：Human水面追击/上岸生命周期、HumanNavigation失败边、HumanTerrainSafety、PursuitNavigation/MovementContinuity、CombatTerrainNavigation及共用搜索预算；没有修改配置、版本或实例。
+- 证据：approachCombatTargetInWater无进展时直接朝目标施力；CombatTerrainNavigation.eligible排除水中单位；transitionReason只计算下落、对上岸上升及站立碰撞豁免；computeShouldUseWaterMovement原本会因仇恨或跟随主动撤销上岸租约。浮水起点与实体脚部高度不同也会使失败边记录失配。
+- 接口：WaterCombatNavigation复用现有shore planner、ShoreProgressTracker和OptionalPathBudget，以独立WATER_PURSUIT预算键协调水面上岸绕行；Human.startCombatShoreDetour拒绝水下导航候选。新入口不注册另一MOVE目标，不清仇恨、不传送，不改撤退优先级。无可达出口时限频重试。
+- 修复水到干地出口的真实水面高度、完整站立体积与横跨空间校验；普通追击与通用修路让位于自有上岸路线，水面状态维护保留战斗绕行租约。约40 tick追击停滞后查可达出口，路线停滞后避开失败边和出口；直接水中追击加入碰撞检查。
+- 验证：91项Python源码约束通过；357个Java文件语法解析0错误，git差异检查通过。补充Java浅岸/高崖/流动水/未知水面边界用例但未执行。未编译、未构建、未同步、未推送、未启动游戏；需验收图示高墙旁绕到可登岸点、岸边一格台阶保留、野生/跟随/护卫及驻守活动范围、多单位预算和无出口持续受阻情况。
+
 ## 2026-10-10 3.7.0 配置/医疗/盾牌测试构建与同步
 
 - 用户明确要求构建并同步；基线06ab9037fc56369fecec6b0f1d3574dcbe3f8dee，主控/main/主工作树，目标仅E:/MC/game/.minecraft/versions/1.20.1-Forge_47.4.21。版本保持3.7.0，未推送GitHub。

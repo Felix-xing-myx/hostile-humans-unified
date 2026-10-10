@@ -47,6 +47,15 @@ public final class HumanNavigation extends GroundPathNavigation {
     /** Exclude a waypoint that repeatedly traps this human from the next path search. */
     public void avoidWaypoint(BlockPos node, long untilTick) {
         avoidTransition(mob.blockPosition(), node, untilTick);
+        // Floating walk nodes start at the surface, not at the entity's submerged feet.
+        if (mob.isInWater()) {
+            BlockPos surface = mob.blockPosition();
+            for (int i = 0; i < 16 && level.getFluidState(surface).is(net.minecraft.tags.FluidTags.WATER); i++)
+                surface = surface.above();
+            avoidTransition(surface, node, untilTick);
+        }
+        if (path != null && !path.isDone() && path.getNextNodePos().equals(node) && path.getNextNodeIndex() > 0)
+            avoidTransition(path.getNodePos(path.getNextNodeIndex() - 1), node, untilTick);
     }
 
     public void avoidTransition(BlockPos from, BlockPos to, long untilTick) {

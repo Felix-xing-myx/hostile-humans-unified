@@ -23,6 +23,7 @@ public final class PursuitNavigation {
 
     public static boolean update(Human human, LivingEntity target, double speed) {
         var nav = human.getNavigation();
+        if (human.isSeekingShore() || human.isShoreTransitionPending()) return false;
         if (target == null || !target.isAlive() || !human.canAttack(target)
                 || human.isFleeing || SoldierOrder.isHoldingPosition(human)) {
             clear(human);

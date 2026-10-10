@@ -8,6 +8,12 @@ import org.objectweb.asm.tree.MethodInsnNode;
 public final class CombatTerrainPolicyTest {
     private static int checks;
     public static void main(String[] args) throws Exception {
+        check(ShoreSeekingPolicy.canExitToDryHeight(64, 64), "level dry bank remains reachable");
+        check(ShoreSeekingPolicy.canExitToDryHeight(64, 65), "one-block bank remains reachable");
+        check(!ShoreSeekingPolicy.canExitToDryHeight(64, 66), "two-block cliff is not a bank");
+        check(!ShoreSeekingPolicy.canExitToDryHeight(64, 80), "tall cliff never becomes a shore step");
+        check(ShoreSeekingPolicy.canExitToDryHeight(63.25, 65), "flowing water keeps one dry block allowance");
+        check(!ShoreSeekingPolicy.canExitToDryHeight(Double.NaN, 65), "unknown surface fails closed");
         check(!CombatTerrainPolicy.partialUseful(0, 100, 0, false), "logical target cannot disguise a stationary endpoint");
         check(!CombatTerrainPolicy.partialUseful(3.99, 100, 50, false), "tiny partial paths are not progress");
         check(CombatTerrainPolicy.partialUseful(4, 100, 98, false), "actual useful frontier accepted");

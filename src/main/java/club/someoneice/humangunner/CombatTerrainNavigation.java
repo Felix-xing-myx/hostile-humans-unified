@@ -228,6 +228,8 @@ public final class CombatTerrainNavigation {
             // Budget waiting may retain an old route only while it is safe and actually progressing.
             if (human.tickCount - state.progressTick >= CombatTerrainPolicy.STALL_TICKS
                     || current == null || !HumanTerrainSafety.safePath(human, current) || !allowedPath(human, current)) {
+                if (current != null && !current.isDone() && human.getNavigation() instanceof HumanNavigation ground)
+                    ground.avoidWaypoint(current.getNextNodePos(), human.level().getGameTime() + 100);
                 human.getNavigation().stop(); state.approach = null;
             }
         }

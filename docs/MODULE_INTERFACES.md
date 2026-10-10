@@ -32,3 +32,11 @@
 ## 行为配置入口
 
 `UnifiedConfig.jumpAttack()` 与 `firstAid()` 是不可变的服务器配置快照。跳砍消费全局专用参数，普通移动跳跃消费各阶CombatAiConfig，不互相覆盖。FirstAidSettings只控制人类效果/品质；公开API继续负责原生敷用与恢复节奏。既有医疗疗程使用已保存的消费快照，关闭识别不清空已付款效果。
+
+## 水面追击与高崖出口
+
+`HumanTerrainSafety.transitionReason`在落差豁免之前检查水到陆地转换：真实水面的一格出口高度预算、站立体积及相邻节点跨越空间；只检查已加载区块。HumanNavigation的临时失败边同时匹配浮水起始节点和实际前一节点。
+
+`WaterCombatNavigation`是水中追击的停滞观察与上岸租约协调器，不注册新MOVE目标、不另建寻路器。约40 tick无水平位移才调用现有findNearestShorePath，每次最多四次路径预算，失败40 tick后重试；已能在距离和视线内攻击的单位不判为追击停滞。只接受可达、安全且符合SoldierOrder活动范围的水面地面路线，拒绝水下导航回退；不清除目标、不传送、不破坏地形。
+
+已安装上岸路线用ShoreProgressTracker观察下一节点的实际接近与推进，停滞后暂避路段并排除该出口。PursuitNavigation、MovementContinuity和Human的水面状态维护让位于此租约；失效、目标变化或生存撤退时只释放自己拥有的路线。没有可达出口时按预算重试，不将任意崖顶当作可执行路线。

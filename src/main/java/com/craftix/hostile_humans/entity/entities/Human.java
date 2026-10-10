@@ -448,6 +448,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private void recoverStalledNavigation() {
+        club.someoneice.humangunner.WaterCombatNavigation.tick(this);
         if (!level().isClientSide) club.someoneice.humangunner.CombatTerrainNavigation.validate(this);
         club.someoneice.humangunner.MovementContinuity.tick(this);
     }
@@ -644,13 +645,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 this.shoreFallbackTarget = local.get(0);
                 for (int attempt = 0; attempt < Math.min(2, local.size()); attempt++) {
                     BlockPos point = local.get(Math.floorMod(this.localShoreCursor++, local.size()));
-                    Path localPath = this.groundNavigation.createPath(point, 0);
+                    Path localPath = ((com.craftix.hostile_humans.entity.ai.HumanNavigation)this.groundNavigation).createFreshPath(point);
                     boolean water = false;
                     if (localPath == null || !localPath.canReach()) {
                         localPath = this.waterNavigation.createPath(point, 0);
                         water = localPath != null && localPath.canReach();
                     }
                     if (localPath != null && localPath.canReach()
+                            && club.someoneice.humangunner.HumanTerrainSafety.safePath(this, localPath)
                             && (retreatThreat == null || club.someoneice.humangunner.RetreatPathSafety
                             .isSafe(this, retreatThreat, localPath, true))) {
                         this.shorePathUsesWaterNavigation = water;
@@ -723,12 +725,13 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 // its walk evaluator can finish the last shallow-water/shore
                 // step; water navigation is only a fallback for routes the
                 // ground navigator cannot reach.
-                Path path = this.groundNavigation.createPath(candidate, 0);
+                Path path = ((com.craftix.hostile_humans.entity.ai.HumanNavigation)this.groundNavigation).createFreshPath(candidate);
                 boolean usesWaterNavigation = false;
                 if (path == null || !path.canReach()) {
                     path = this.waterNavigation.createPath(candidate, 0);
                     usesWaterNavigation = path != null && path.canReach();
                 }
+                if (path != null && !club.someoneice.humangunner.HumanTerrainSafety.safePath(this, path)) path = null;
                 if (path != null && path.canReach() && retreatThreat != null
                         && !club.someoneice.humangunner.RetreatPathSafety.isSafe(this, retreatThreat, path, true))
                     path = null;
@@ -799,8 +802,15 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         return this.level().getBlockState(floorPos).isFaceSturdy(this.level(), floorPos, Direction.UP);
     }
 
+    /** Surface-only combat detours never re-enable submerged swim paths. */
+    public boolean startCombatShoreDetour(Path path, double speed) {
+        if (path == null || this.shoreCandidateNavigators.getOrDefault(path, this.shorePathUsesWaterNavigation)) return false;
+        return this.startSeekingShore(path, speed);
+    }
+
     public boolean startSeekingShore(Path path, double speed) {
-        if (path == null || !path.canReach()) return false;
+        if (path == null || !path.canReach()
+                || !club.someoneice.humangunner.HumanTerrainSafety.safePath(this, path)) return false;
         boolean water = this.shoreCandidateNavigators.getOrDefault(path, this.shorePathUsesWaterNavigation);
         var chosen = water ? this.waterNavigation : this.groundNavigation;
         Path old = this.navigation.getPath();
@@ -1000,6 +1010,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     /** Fall back to direct water steering when a live path makes no progress toward combat range. */
     public void approachCombatTargetInWater(LivingEntity target, double maximumRange, double speed) {
+        if (club.someoneice.humangunner.WaterCombatNavigation.update(this, target, maximumRange, speed)) return;
         if (!this.level().isClientSide && this.shouldUseWaterMovement()
                 && target != null && target.isAlive() && !this.isFleeing
                 && !this.seekingShore
@@ -1020,6 +1031,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             }
             if (this.getNavigation().isDone() || this.getNavigation().isStuck()
                     || this.tickCount < this.waterCombatDirectUntilTick) {
+                // Direct fallback must not continuously push a swimmer into a cliff face.
+                Vec3 toward = target.position().subtract(this.position()).multiply(1, 0, 1).normalize().scale(0.75);
+                if (!this.level().noCollision(this, this.getBoundingBox().expandTowards(toward))) return;
                 this.directWaterCombatSteeringTick = this.tickCount;
                 this.getMoveControl().setWantedPosition(
                         target.getX(), target.getY(), target.getZ(), speed);
@@ -2112,14 +2126,16 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             this.stopSeekingShore();
             return false;
         }
-        if (this.seekingShore && club.someoneice.humangunner.SoldierOrder.shouldFollowThroughWater(this))
+        if (this.seekingShore && club.someoneice.humangunner.SoldierOrder.shouldFollowThroughWater(this)
+                && !club.someoneice.humangunner.WaterCombatNavigation.ownsRoute(this))
             this.stopSeekingShore();
         LivingEntity combatTarget = this.getTarget();
         if (this.combatFiringShore && (combatTarget == null || !combatTarget.isAlive()
                 || !combatTarget.getUUID().equals(this.combatFiringShoreTarget)
                 || this.tickCount >= this.combatFiringShoreUntilTick)) this.stopSeekingShore();
         if (this.seekingShore && combatTarget != null && combatTarget.isAlive()
-                && !this.isFleeing && !this.combatFiringShore) {
+                && !this.isFleeing && !this.combatFiringShore
+                && !club.someoneice.humangunner.WaterCombatNavigation.ownsRoute(this)) {
             // The idle shore goal has yielded to combat. Release its route
             // immediately, even before GoalSelector runs its next stop pass.
             this.stopSeekingShore();

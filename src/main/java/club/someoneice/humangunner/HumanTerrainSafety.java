@@ -11,7 +11,7 @@ import net.minecraft.world.phys.Vec3;
 public final class HumanTerrainSafety {
     private HumanTerrainSafety() {}
 
-    public enum Reason { SAFE, UNAVAILABLE, HAZARD, EXCESSIVE_DROP, UNSUPPORTED }
+    public enum Reason { SAFE, UNAVAILABLE, HAZARD, EXCESSIVE_DROP, UNSUPPORTED, BLOCKED_SHORE }
     public record Assessment(Reason reason, BlockPos from, BlockPos to) {
         private static final Assessment CLEAR = new Assessment(Reason.SAFE, null, null);
         public boolean safe() { return reason == Reason.SAFE; }
@@ -25,11 +25,45 @@ public final class HumanTerrainSafety {
         if (!human.level().hasChunkAt(to) || !human.level().getWorldBorder().isWithinBounds(to)) return Reason.UNAVAILABLE;
         if (!human.isInLava() && (RetreatPathSafety.isHazard(human, to)
                 || RetreatPathSafety.isHazard(human, to.above()) || RetreatPathSafety.isHazard(human, to.below()))) return Reason.HAZARD;
+        Reason exit = shoreExitReason(human, from, to);
+        if (exit != Reason.SAFE) return exit;
         double drop = Math.max(0, from.getY() - to.getY());
         if (drop == 0 || human.level().getFluidState(to).is(FluidTags.WATER)
                 || human.level().getBlockState(to).is(net.minecraft.tags.BlockTags.CLIMBABLE)) return Reason.SAFE;
         return HumanFallPolicy.accepts(human.getHealth(), drop, human.expectedRawFallDamage((float) drop))
                 ? Reason.SAFE : Reason.EXCESSIVE_DROP;
+    }
+
+    /** A high dry wall is not a shallow bank. Validate both rise and full standing clearance. */
+    private static Reason shoreExitReason(Human human, BlockPos from, BlockPos to) {
+        var level = human.level();
+        if ((!level.getFluidState(from).is(FluidTags.WATER)
+                && !level.getFluidState(from.below()).is(FluidTags.WATER))
+                || level.getFluidState(to).is(FluidTags.WATER)
+                || level.getFluidState(to.below()).is(FluidTags.WATER)
+                || level.getBlockState(to).is(net.minecraft.tags.BlockTags.CLIMBABLE)) return Reason.SAFE;
+        BlockPos water = level.getFluidState(from).is(FluidTags.WATER) ? from : from.below();
+        // Bounded inspection of the existing column; never treat an internal water block as its surface.
+        int scanned = 0;
+        while (level.getFluidState(water.above()).is(FluidTags.WATER)) {
+            if (++scanned >= 16 || level.isOutsideBuildHeight(water.above())) return Reason.UNAVAILABLE;
+            water = water.above();
+        }
+        double surface = water.getY() + level.getFluidState(water).getHeight(level, water);
+        if (!ShoreSeekingPolicy.canExitToDryHeight(surface, to.getY())) return Reason.BLOCKED_SHORE;
+        Vec3 feet = Vec3.atBottomCenterOf(to);
+        var landing = human.getBoundingBox().move(feet.subtract(human.position())).deflate(1.0E-4);
+        // Check chunks before collision queries, including the entity's full width.
+        if (!level.hasChunksAt(BlockPos.containing(landing.minX, landing.minY, landing.minZ),
+                BlockPos.containing(landing.maxX, landing.maxY, landing.maxZ))) return Reason.UNAVAILABLE;
+        if (!level.noCollision(human, landing)) return Reason.BLOCKED_SHORE;
+        if (Math.abs(from.getX() - to.getX()) <= 1 && Math.abs(from.getZ() - to.getZ()) <= 1) {
+            var crossing = landing.expandTowards(from.getX() - to.getX(), 0, from.getZ() - to.getZ());
+            if (!level.hasChunksAt(BlockPos.containing(crossing.minX, crossing.minY, crossing.minZ),
+                    BlockPos.containing(crossing.maxX, crossing.maxY, crossing.maxZ))) return Reason.UNAVAILABLE;
+            if (!level.noCollision(human, crossing)) return Reason.BLOCKED_SHORE;
+        }
+        return Reason.SAFE;
     }
 
     public static boolean safePath(Human human, Path path) {

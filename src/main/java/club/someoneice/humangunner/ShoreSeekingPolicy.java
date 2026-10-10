@@ -118,6 +118,11 @@ public final class ShoreSeekingPolicy {
         return Math.ceil(actualSurfaceY) + 1.0D;
     }
 
+    public static boolean canExitToDryHeight(double actualSurfaceY, double landingFeetY) {
+        return Double.isFinite(actualSurfaceY) && Double.isFinite(landingFeetY)
+                && landingFeetY <= oneBlockShoreLandingLimit(actualSurfaceY);
+    }
+
     public static boolean isSurfaceLootReachable(double surfaceY, double itemY) {
         return surfaceY - itemY <= 1.5D;
     }
