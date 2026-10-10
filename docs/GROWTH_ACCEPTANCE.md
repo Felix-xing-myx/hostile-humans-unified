@@ -57,3 +57,7 @@ Java分档培养61项、GrowthConfigTest及完整build/check/lootScreeningTest�
 ## 配置归属整理（源码，未构建）
 
 共用growth继续全局；各阶曲线和早期装备细项现位于各阶growth_profile，不再放在global.growth.profiles。当前用户值安全搬移后才清理来源，不生成继承文件。新增经验档宽band_width_percent默认5，培养成本及枪械散布共用。文件增加分区标题和字段组留白、装备细项后置；默认有效平衡数值保持。新增Java文件搬移/格式稳定/优先级/坏文件与档宽回归待构建，45项Python源码契约已通过；此前部署仍是旧配置布局，本轮没有改实例。
+
+### 配置整理构建与同步完成
+
+本轮完整build/check/lootScreeningTest通过，Java配置搬移10项、分档培养61项、GrowthConfigTest与TierConfigFilesTest 2083项通过。使用正式加载器整理配置副本，静态比较除profile搬移及新增档宽5外全部有效值一致，随后备份并更新测试实例JAR和五配置，哈希核对通过。修复稀疏自定义块标题导致元数据往返变化的问题，失败产物未部署。实际游戏内配置效果与受困救援仍待用户测试。

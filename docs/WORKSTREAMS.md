@@ -786,3 +786,13 @@
 - 范围：GrowthConfig/UnifiedConfig、TierConfigProjection/SplitConfigFiles、新GrowthProfileFiles、默认资源、Java与Python回归及配置说明。没有构建、实例配置写入、同步或push。新增Java文件搬移/优先级/坏文件/格式稳定和可配置档宽回归，等待明确构建后执行。
 
 - 本轮结果：45项Python源码契约检查通过、281个资源JSON解析通过、git diff --check通过；默认有效值在结构搬移前后逐项比较一致（仅新增档宽默认5），不改变当前平衡。Java回归已更新并新增文件搬移与坏文件保留检查，未编译运行。
+
+
+## 构建同步：受困救援与配置归属整理
+
+- 用户明确要求构建同步；源码5f1359b89e4519707c8d3ef4f31adf8cce93f669，版本3.7.0。首次构建在TierConfigFilesTest的原始配置往返检查失败：分区标题为没有原说明的稀疏自定义块新增了元数据。修正为只装饰已有说明，保留用户块元数据；修复单独提交5f1359b，失败产物未投放。
+- Java17、仓库gradlew.bat、三个显式只读API路径，重新执行build lootScreeningTest --offline：BUILD SUCCESSFUL in 45s（52任务，48执行4最新）；SoldierFollowPolicyTest 115项、GrowthProfileFilesTest 10项、GrowthProgressionTest 61项、GrowthConfigTest、TierConfigFilesTest 2083项及全部check通过；45项Python源码契约通过。
+- 使用临时维护入口调用正式SplitConfigFiles加载器，在维护目录配置副本上完成profile搬移及格式整理，禁用维护阶段装备自动导入以免追加装备；补入档宽5。比较五文件所有有效字段，除批准的结构搬移/新增档宽外完全保持，自定义数值和装备池保留；不会向实例生成继承文件。维护入口及日志留在验证日志/config-layout-20261010-135100，不提交Git。
+- 再次确认无游戏或未知Java进程；备份旧JAR及五配置、保留新配置副本后投放，源/目标JAR与五配置逐文件SHA-256一致。未启动游戏、改动存档、同步其它实例或push。
+- 目标：E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21；JAR 3865964字节；SHA-256 07659D567B6F7B1F981FABADD97ADD3E4E443F6B1471E519CF02D5CABE44772B。备份：E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261010-135221-3.7.0-config-rescue-Forge_47.4.21；deployment.json保存完整哈希。构建日志：验证日志/build-3.7.0-config-rescue-20261010-134952.log。
+- 待游戏内验收：持续仇恨坑洞中四种命令的受困救援、传送落点/暂缓选敌、正常站定攻击不误触发，以及配置修改后的分阶曲线/装备成长/经验档宽与面板表现。
