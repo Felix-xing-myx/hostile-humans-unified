@@ -73,6 +73,16 @@ public final class HumanGrowth {
                 * (state.getInt("experience_percent") / 100.0);
     }
 
+    static double gunSpreadMultiplier(Human human) {
+        GrowthConfig config = UnifiedConfig.get().growth();
+        return config.enabled() ? config.gunSpreadMultiplier(state(human).getInt("experience_percent")) : 1;
+    }
+
+    static double gunDamageMultiplier(Human human) {
+        GrowthConfig config = UnifiedConfig.get().growth();
+        return config.enabled() ? config.gunDamageMultiplier(state(human).getInt("experience_percent")) : 1;
+    }
+
     static double fullHealth(Human human) {
         double staged = TierAttributes.of(human).maxHealth();
         GrowthConfig config = UnifiedConfig.get().growth();
@@ -118,6 +128,7 @@ public final class HumanGrowth {
         return new GrowthSnapshot(config.enabled(), stage, (int) Math.round(config.stagePercent(stage)),
                 state.getInt("experience_percent"), (int) Math.round(config.experienceMinPercent()),
                 (int) Math.round(config.experienceCapPercent()), progress(state, "stage_progress"),
-                stage == 5 ? 0 : config.stageCost(stage), progress(state, "experience_progress"), config.experienceCost());
+                stage == 5 ? 0 : config.stageCost(stage), progress(state, "experience_progress"), state.getInt("experience_percent") >= config.experienceCapPercent()
+                        ? 0 : config.experienceCost(state.getInt("experience_percent")));
     }
 }

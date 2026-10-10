@@ -8,7 +8,9 @@ import java.util.*;
 public final class GrowthConfig {
     private final boolean enabled;
     private final List<Double> stagePercent, stageCost;
-    private final double experienceMinPercent, experienceMaxPercent, experienceCapPercent, experienceCost;
+    private final double experienceMinPercent, experienceMaxPercent, experienceCapPercent, belowBaseCost;
+    private final List<Double> experienceBandCost;
+    private final double gunSpreadStepPercent, gunSpreadFloorPercent, gunDamageBonusPercent;
     private final double damageUnit, rewardUnit, baseRewardCap, bonusDamageThreshold, bonusReward;
     private final EquipmentGrowthPolicy equipmentGrowth;
 
@@ -28,7 +30,12 @@ public final class GrowthConfig {
             min = 90; max = 110; cap = 125;
         }
         experienceMinPercent = min; experienceMaxPercent = max; experienceCapPercent = cap;
-        experienceCost = number(e, "cost", 12, .001, 1000000, "growth.experience.");
+        belowBaseCost = number(e, "below_base_cost", 3, .001, 1000000, "growth.experience.");
+        experienceBandCost = array(e, "cost_by_band", List.of(3D, 5D, 8D, 12D, 16D), .001, 1000000, false, false, "growth.experience.");
+        JsonObject guns = group(data, "firearms", "growth.");
+        gunSpreadStepPercent = number(guns, "spread_reduction_per_band_percent", 5, 0, 100, "growth.firearms.");
+        gunSpreadFloorPercent = number(guns, "minimum_spread_percent", 75, 0, 100, "growth.firearms.");
+        gunDamageBonusPercent = number(guns, "maximum_damage_bonus_percent", 10, 0, 1000, "growth.firearms.");
         JsonObject combat = group(data, "combat", "growth.");
         damageUnit = number(combat, "damage_unit", 10, .001, 1000000, "growth.combat.");
         rewardUnit = number(combat, "reward_unit", .25, 0, 1000000, "growth.combat.");
@@ -71,7 +78,21 @@ public final class GrowthConfig {
     public double experienceMinPercent() { return experienceMinPercent; }
     public double experienceMaxPercent() { return experienceMaxPercent; }
     public double experienceCapPercent() { return experienceCapPercent; }
-    public double experienceCost() { return experienceCost; }
+    /** Cost of the NEXT percentage point; bands start at 100, 105, 110, 115, 120. */
+    public double experienceCost(int percent) {
+        if (percent < 100) return belowBaseCost;
+        return experienceBandCost.get(Math.min(4, (percent - 100) / 5));
+    }
+    public double gunSpreadMultiplier(int percent) {
+        if (!enabled) return 1;
+        int bands = (int) Math.floor((percent - 100) / 5.0);
+        return Math.max(gunSpreadFloorPercent / 100.0, 1 - bands * gunSpreadStepPercent / 100.0);
+    }
+    public double gunDamageMultiplier(int percent) {
+        if (!enabled || experienceCapPercent <= 100) return 1;
+        double progress = Math.max(0, Math.min(1, (percent - 100) / (experienceCapPercent - 100)));
+        return 1 + progress * gunDamageBonusPercent / 100.0;
+    }
     public double damageUnit() { return damageUnit; }
     public double rewardUnit() { return rewardUnit; }
     public double baseRewardCap() { return baseRewardCap; }

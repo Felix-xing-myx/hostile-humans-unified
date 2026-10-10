@@ -2468,9 +2468,23 @@
       "_说明_cap_percent_中文": "经验属性成长上限，1–1000整数百分比。",
       "_description_cap_percent_en": "Experience attribute percentage cap, integer 1–1000.",
       "cap_percent": 125,
-      "_说明_cost_中文": "每增加1个百分点消耗成长点，0.001–1000000。",
-      "_description_cost_en": "Growth points per one percentage point, 0.001–1000000.",
-      "cost": 12
+      "_说明_below_base_cost_中文": "经验低于100%时，每增加1个百分点所需成长值；正数0.001–1000000。",
+      "_description_below_base_cost_en": "Growth points per next percentage point below 100%; positive 0.001–1000000.",
+      "below_base_cost": 3,
+      "_说明_cost_by_band_中文": "五档每增加1个百分点所需成长值，依次对应当前经验100–104%、105–109%、110–114%、115–119%、120%以上；跨档逐点扣费，每项正数0.001–1000000。",
+      "_description_cost_by_band_en": "Five next-point costs for current experience 100–104, 105–109, 110–114, 115–119 and 120 or higher; consume separately across bands; each 0.001–1000000.",
+      "cost_by_band": [3, 5, 8, 12, 16]
+    },
+    "firearms": {
+      "_说明_spread_reduction_per_band_percent_中文": "100%经验为基础散布，每高5个百分点减少此百分比的基础散布；低于100%反向增加，按完整5个百分点分档；0–100。仅改变人类附加瞄准误差，不改变枪包自带散布。",
+      "_description_spread_reduction_per_band_percent_en": "Baseline at 100% experience; subtract this percentage of NPC spread per complete five-point band (inverse below 100%); 0–100. Does not alter gun-pack inherent spread.",
+      "spread_reduction_per_band_percent": 5,
+      "_说明_minimum_spread_percent_中文": "经验收缩后的最低附加散布，基础散布的百分比，0–100；默认75%。",
+      "_description_minimum_spread_percent_en": "Minimum NPC spread as a percentage of baseline, 0–100; default 75%.",
+      "minimum_spread_percent": 75,
+      "_说明_maximum_damage_bonus_percent_中文": "经验从100%到配置的培养上限时，枪伤额外加成从0线性增加到此百分比；低于100%不减伤，上限不高于100%时无加成；0–1000。成长关闭或原版模式时不生效。",
+      "_description_maximum_damage_bonus_percent_en": "Linear extra gun damage from zero at 100% experience to this percentage at configured cap; no penalty below 100%, no bonus if cap <=100; 0–1000. Disabled with growth or in vanilla mode.",
+      "maximum_damage_bonus_percent": 10
     },
     "combat": {
       "_说明_damage_unit_中文": "每份奖励所需有效伤害点数，0.001–1000000；2点生命=1颗心。",

@@ -11,7 +11,8 @@ public final class RangedAccuracy {
     private RangedAccuracy() {}
 
     public static double gunSpreadDegrees(Human human, ItemStack weapon) {
-        return TierAttributes.of(human).gunSpreadDegrees(GunSupport.get().gunType(weapon));
+        return TierAttributes.of(human).gunSpreadDegrees(GunSupport.get().gunType(weapon))
+                * HumanGrowth.gunSpreadMultiplier(human);
     }
 
     public static double projectileSpreadDegrees(Human human, boolean crossbow) {

@@ -745,3 +745,14 @@
 - GrowthConfig在构造服务器策略时采用configuredEnabled && !vanillaMode；不分别在各消费点拼接条件、不改写持久配置。装备策略与属性/奖励/UI共用这一有效值，出生曲线仍可确定潜在状态。现有reload通知与奖励epoch机制自然覆盖进入原版模式后的未完成贡献失效，已获待领取奖励和实体培养记录保留。
 - GrowthHealth、VanillaModePolicy、TierAttributes、HumanGunner原版生命/近战分支均未改动；成长停用使其额外倍率归1，基础生命仍由原版规则固定20，原有远程倍率等不变，装备不追溯替换。默认注释补充互斥优先级，并纠正此前残留的按生命比例切换描述，文档跟随当前不额外治疗的实现。
 - 扩展GrowthConfigTest覆盖原版模式×成长开关四组合、装备有效开关一致、潜在出生阶段、配置偏好不被改写及退出模式恢复，尚未编译运行。Python服务器源码契约12项通过；JSON解析与git diff检查通过。游戏内总开关切换/奖励保存/面板隐藏与原版模式回归待后续授权构建及用户验收。
+
+
+## 枪械经验与分档培养
+
+- 基线：1210364c59aca5e1ae96d1de23a6aaa45e6ced4e；负责人主控；工作树为源码主仓库，分支main，开始时干净；本任务单人顺序实施，无并行编辑。
+- 范围：GrowthConfig/Progression/HumanGrowth、RangedAccuracy、TaczIntegration、TierConfigProjection、默认全局配置、成长回归和文档；共享接口及配置由主控统一接入。
+- 接口：experienceCost(currentPercent)提供下一百分点成本，服务器快照同步该值；gunSpreadMultiplier/gunDamageMultiplier统一读取服务器保存的经验及有效成长开关，不使用阶段倍率或客户端配置。TaCZ原伤害入口只追加一次经验因子。100%为枪械基准，低于100%按既定散布方案增加误差而不减少枪伤；出生随机范围保持90–110%。
+- 规则：低于100%每点3；其后五档3/5/8/12/16；枪械每5百分点减少基础附加误差5%，最低75%；100%到经验上限线性增伤至10%。全局开放参数，移除旧cost及说明，不更改实例配置。
+- 验证：新增Java边界/余数/可配置参数/禁用规则回归，尚未编译执行；Python源码契约与JSON/差异检查结果见本条后续记录。构建、同步、游戏验收和push未执行。
+
+- 本轮结果：37项Python源码契约检查通过、281个资源JSON解析通过、git diff --check通过；Java回归已补充但未编译执行。提交包含本任务明确文件；实例配置/JAR未改动。

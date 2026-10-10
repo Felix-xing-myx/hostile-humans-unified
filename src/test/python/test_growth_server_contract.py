@@ -117,12 +117,35 @@ class GrowthServerContractTest(unittest.TestCase):
         self.assertIn("VanillaModePolicy.attackBase", helper)
         self.assertNotIn("Attributes.MOVEMENT_SPEED", helper)
 
+    def test_firearm_growth_uses_existing_damage_and_both_accuracy_paths(self):
+        tacz = read("TaczIntegration.java")
+        self.assertEqual(tacz.count("HumanGrowth.gunDamageMultiplier(attacker)"), 1)
+        self.assertNotIn("HumanGrowth.multiplier", tacz)
+        self.assertNotIn("gunDamageMultiplier", read("HumanGunner.java"))
+        self.assertIn("HumanGrowth.gunSpreadMultiplier(human)", read("RangedAccuracy.java"))
+        for goal in ("GunnerGoal.java", "AdaptiveCombatGoal.java"):
+            self.assertIn("RangedAccuracy.gunSpreadDegrees", read(goal))
+        self.assertIn('config.experienceCost(state.getInt("experience_percent"))', read("HumanGrowth.java"))
+
+    def test_banded_cost_and_gun_defaults_are_global(self):
+        data = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
+        experience = data["growth"]["experience"]
+        self.assertNotIn("cost", experience)
+        self.assertEqual(experience["below_base_cost"], 3)
+        self.assertEqual(experience["cost_by_band"], [3, 5, 8, 12, 16])
+        firearms = data["growth"]["firearms"]
+        self.assertEqual(firearms["spread_reduction_per_band_percent"], 5)
+        self.assertEqual(firearms["minimum_spread_percent"], 75)
+        self.assertEqual(firearms["maximum_damage_bonus_percent"], 10)
+        for tier in data["tiers"].values():
+            self.assertNotIn("growth", tier)
+
     def test_progress_is_discrete_and_experience_is_one_percent(self):
         policy = read("GrowthProgression.java")
         self.assertIn("level++", policy)
         self.assertIn("config.stageCost(level)", policy)
-        self.assertIn("experience += gains", policy)
-        self.assertIn("config.experienceCost()", policy)
+        self.assertIn("experience++", policy)
+        self.assertIn("config.experienceCost(experience)", policy)
         self.assertIn("GrowthProgression.advance", read("HumanGrowth.java"))
 
 

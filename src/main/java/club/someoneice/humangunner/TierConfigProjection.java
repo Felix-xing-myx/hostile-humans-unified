@@ -145,6 +145,7 @@ final class TierConfigProjection {
 
     private static void removeRetiredControls(JsonObject data, boolean rank) {
         data.remove("equipment_growth");
+        if (!rank) removeOptions(object(object(data, "growth"), "experience"), List.of("cost"));
         if (rank) removeOptions(object(data, "attributes"), List.of("health_min", "health_max"));
         List<String> flatTierControls = List.of("health_min", "health_max", "attack_damage", "armor",
                 "armor_toughness", "knockback_resistance", "follow_range", "spawn_multiplier",

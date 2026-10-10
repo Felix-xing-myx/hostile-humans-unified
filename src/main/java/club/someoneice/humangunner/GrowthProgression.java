@@ -16,9 +16,12 @@ final class GrowthProgression {
             stageProgress = rounded(stageProgress - config.stageCost(level));
             level++;
         }
-        int gains = (int) Math.min(cap - experience, Math.floor((experienceProgress + 1E-8) / config.experienceCost()));
-        experience += gains;
-        experienceProgress = rounded(experienceProgress - gains * config.experienceCost());
+        // Consume each next-point cost separately, including jumps across bands.
+        // The configured cap bounds this event-driven loop to at most 999 iterations.
+        while (experience < cap && experienceProgress + 1E-8 >= config.experienceCost(experience)) {
+            experienceProgress = rounded(experienceProgress - config.experienceCost(experience));
+            experience++;
+        }
         return new Result(level, experience, level == 5 ? 0 : Math.max(0, stageProgress),
                 experience == cap ? 0 : Math.max(0, experienceProgress));
     }
