@@ -27,6 +27,7 @@ public final class SoldierDialogue {
 
     static void hired(ServerPlayer owner, Human human) {
         human.getPersistentData().remove(FOOD_WARNED);
+        HiredHumanAmmoWarning.reset(human);
         human.getPersistentData().putLong(NEXT_IDLE, human.level().getGameTime() + 2400);
         STATES.remove(human);
         SoldierCommandFeedback.say(owner, human, Component.translatable(
@@ -58,9 +59,11 @@ public final class SoldierDialogue {
             if (!human.getPersistentData().hasUUID(REPORT_OWNER)
                     || !owner.getUUID().equals(human.getPersistentData().getUUID(REPORT_OWNER))) {
                 human.getPersistentData().remove(FOOD_WARNED);
+                HiredHumanAmmoWarning.reset(human);
                 human.getPersistentData().putUUID(REPORT_OWNER, owner.getUUID());
             }
         }
+        if (HiredHumanAmmoWarning.tick(human, owner)) return;
         HumanData data = human.getData();
         if (data != null && !RecoverySupplies.hasActiveUse(human)) {
             boolean food = edible(human.getMainHandItem()) || edible(human.getOffhandItem());

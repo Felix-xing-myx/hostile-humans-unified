@@ -27,6 +27,17 @@ final class SoldierMessageDispatcher {
         SoldierCommandFeedback.say(owner, human, message);
         return true;
     }
+    /** Caller retries an unsent status. Share report budget, but never batch several ammo speakers. */
+    static boolean tryStatus(ServerPlayer owner, Human human, Component message) {
+        Inbox inbox = INBOXES.computeIfAbsent(owner, ignored -> new Inbox());
+        if (!inbox.pending.isEmpty()) return false; // Queued health/equipment reports retain priority.
+        var settings = UnifiedConfig.get().soldierMessages();
+        if (!inbox.reports.allow(owner.getServer().overworld().getGameTime(), settings.reportIntervalTicks(),
+                1200, settings.reportMaxPerMinute())) return false;
+        SoldierCommandFeedback.say(owner, human, message);
+        return true;
+    }
+
     static void report(ServerPlayer owner, Human human, String key, Component message, boolean urgent) {
         Inbox inbox = INBOXES.computeIfAbsent(owner, ignored -> new Inbox());
         String id = human.getUUID() + ":" + key;
