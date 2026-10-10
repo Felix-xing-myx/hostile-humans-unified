@@ -10,6 +10,30 @@ import net.minecraftforge.common.ToolActions;
 public final class ShieldDurability {
     private ShieldDurability() { }
 
+    /** Normal enchanted durability for every effective passive hit, including small hits. */
+    public static void damagePassiveOffhandShield(Human human, float incomingDamage) {
+        ItemStack shield = human.getOffhandItem();
+        if (!Float.isFinite(incomingDamage) || incomingDamage <= 0.0F
+                || !GunnerShieldProtection.isUsableShield(shield) || !shield.isDamageableItem()) {
+            return;
+        }
+        ItemStack shieldBeforeDamage = shield.copy();
+        int cost = (int) Math.min(shield.getMaxDamage(), 1.0D + Math.floor(incomingDamage));
+        // hurtAndBreak preserves Unbreaking and custom item durability behavior;
+        // isDamageableItem also leaves Unbreakable/non-damageable shields intact.
+        shield.hurtAndBreak(cost, human, broken -> {
+            EquipmentBreakSounds.playNow(human, EquipmentSlot.OFFHAND, shieldBeforeDamage);
+            human.broadcastBreakEvent(EquipmentSlot.OFFHAND);
+        });
+        if (shield.isEmpty()) {
+            human.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+            // Never stop main-hand gun use/reloading when the passive shield breaks.
+            if (human.isUsingItem() && human.getUsedItemHand() == InteractionHand.OFF_HAND) {
+                human.stopUsingItem();
+            }
+        }
+    }
+
     /** Wild shields keep their old cost; hired shields use player-style durability. */
     public static void damageShield(Human human, float blockedDamage) {
         if (!Float.isFinite(blockedDamage) || blockedDamage <= 0.0F) {

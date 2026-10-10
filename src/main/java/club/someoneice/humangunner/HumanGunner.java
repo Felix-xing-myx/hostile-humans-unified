@@ -118,6 +118,8 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanGunner::onHumanFriendlyFire);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingHurt);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, ShieldDefenseController::onShieldBlock);
+        // Apply final passive mitigation before our health-loss observers.
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GunnerShieldProtection::onDamage);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onSoldierDamage);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GrowthCombat::onDeath);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GrowthCombat::onLeave);
