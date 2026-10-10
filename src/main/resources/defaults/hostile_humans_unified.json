@@ -2,8 +2,8 @@
   "schema_version": 2,
   "_说明_中文": "全局配置。修改后完整重启生效；只填写JSON配置值，以下_说明和_description字段仅供阅读。阶级独立属性、装备、AI、弹药与药水见roamer/tier1/tier2/tier3.json。",
   "_description_en": "Global configuration. Fully restart after editing. _说明 and _description fields are documentation only. Independent rank settings are in roamer/tier1/tier2/tier3.json.",
-  "_说明_vanilla_mode_中文": "原版模式，默认关闭；所有人类（含雇佣士兵）基础生命20、基础近战1并取消本模组近战/跳跃/三叉戟刺击倍率。武器、附魔、状态效果及外部生命修饰保留；不改变远程伤害、护甲、AI或装备。完整重启生效，已有实体按生命比例切换；关闭恢复保存的阶级生命。",
-  "_description_vanilla_mode_en": "Default-off vanilla mode: all Humans, including hired soldiers, use 20 base health and 1 base melee damage without this mod's melee/jump/trident-stab multipliers. Keep weapons, enchantments, effects and external health modifiers. Ranged damage, armor, AI and equipment are unchanged. Restart; preserve health percentage and restore stored tier health when disabled.",
+  "_说明_vanilla_mode_中文": "原版模式，默认关闭；所有人类（含雇佣士兵）基础生命20、基础近战1并取消本模组近战/跳跃/三叉戟刺击倍率。武器、附魔、状态效果及外部生命修饰保留；原有远程倍率、护甲、AI与装备池规则不变。开启时统一成长整体停用并隐藏成长面板，保留已保存培养状态；不改写growth.enabled。完整重启生效，生命切换不额外治疗，超过新上限时截断。",
+  "_description_vanilla_mode_en": "Default-off vanilla mode: all Humans use 20 base health and 1 base melee damage without this mod's melee/jump/trident-stab multipliers. Keep weapons, enchantments, effects, external health modifiers, existing ranged factors, armor, AI and equipment pools. Suppresses unified growth and its UI while preserving saved cultivation and the growth.enabled preference. Restart to apply; no free healing, clamp health to the new maximum.",
   "vanilla_mode": false,
   "tiers": {
     "_说明_中文": "本阶独立设置；数量为物品个数，20 tick=1秒，2点生命=1颗心。",
@@ -2436,8 +2436,8 @@
     }
   },
   "growth": {
-    "_说明_enabled_中文": "统一成长总开关：装备、出生阶段、经验及战斗成长；关闭时完整属性与装备品质。修改后重启。",
-    "_description_enabled_en": "Unified growth switch: equipment, spawn stage, experience and combat growth; disabled uses full attributes and gear. Restart to apply.",
+    "_说明_enabled_中文": "统一成长总开关：装备、出生阶段、经验及战斗成长；关闭时完整属性与装备品质。原版模式开启时优先禁用成长，不改写此项；关闭原版模式后恢复按此项决定是否启用。修改后重启。",
+    "_description_enabled_en": "Unified growth master switch for equipment, birth stages, experience and cultivation. Disabled uses full attributes and gear quality. Vanilla mode overrides growth without changing this preference; leaving vanilla mode restores this setting. Restart to apply.",
     "enabled": true,
     "_说明_stage_percent_中文": "阶段0–5的属性百分比，6个严格递增整数，范围1–100；100表示完整基础属性。",
     "_description_stage_percent_en": "Attribute percentages for stages 0–5: six strictly increasing integers in 1–100; 100 means full base attributes.",

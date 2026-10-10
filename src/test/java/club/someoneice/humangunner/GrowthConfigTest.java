@@ -47,6 +47,20 @@ public final class GrowthConfigTest {
         check(Math.abs(profile.progress(60) - .5) < 1e-12, "equipment shares curve interpolation");
         check(new UnifiedConfig(json("{\"growth\":{\"enabled\":false}}")).growth().stageAt("roamer", 1) == 0, "disabled retains latent birth stage");
         check(!new UnifiedConfig(json("{\"growth\":{\"enabled\":false}}")).equipmentGrowth().enabled(), "same equipment switch");
+        for (boolean vanilla : new boolean[]{false, true}) {
+            for (boolean configuredEnabled : new boolean[]{false, true}) {
+                JsonObject settings = json("{\"vanilla_mode\":" + vanilla
+                        + ",\"growth\":{\"enabled\":" + configuredEnabled + "}}");
+                UnifiedConfig combination = new UnifiedConfig(settings);
+                check(combination.vanillaMode() == vanilla, "growth cannot change vanilla mode");
+                check(combination.growth().enabled() == (configuredEnabled && !vanilla), "vanilla mode takes precedence over growth");
+                check(combination.equipmentGrowth().enabled() == combination.growth().enabled(), "equipment uses effective growth policy");
+                check(combination.growth().stageAt("tier2", 10) == 0, "suppression retains latent birth stage");
+                check(settings.getAsJsonObject("growth").get("enabled").getAsBoolean() == configuredEnabled, "effective override cannot rewrite saved growth preference");
+                settings.addProperty("vanilla_mode", false);
+                check(new UnifiedConfig(settings).growth().enabled() == configuredEnabled, "leaving vanilla mode restores configured preference");
+            }
+        }
         JsonObject bad = json("""
                 {"growth":{"stage_percent":[50,60,60,80,90,100],"stage_cost":[0,40,40,40,40],
                 "experience":{"min_percent":120,"max_percent":110,"cap_percent":125,"cost":-2},

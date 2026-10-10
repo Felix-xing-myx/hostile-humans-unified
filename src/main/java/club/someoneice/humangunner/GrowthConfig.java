@@ -12,8 +12,11 @@ public final class GrowthConfig {
     private final double damageUnit, rewardUnit, baseRewardCap, bonusDamageThreshold, bonusReward;
     private final EquipmentGrowthPolicy equipmentGrowth;
 
-    private GrowthConfig(JsonObject data, JsonObject defaults) {
-        enabled = flag(data, "enabled", true, "growth.");
+    private GrowthConfig(JsonObject data, JsonObject defaults, boolean vanillaMode) {
+        boolean configuredEnabled = flag(data, "enabled", true, "growth.");
+        // One effective server policy gates attributes, rewards, gear and UI alike.
+        // Keep the configured preference untouched for leaving vanilla mode.
+        enabled = configuredEnabled && !vanillaMode;
         stagePercent = array(data, "stage_percent", List.of(50D, 60D, 70D, 80D, 90D, 100D), 1, 100, true, true, "growth.");
         stageCost = array(data, "stage_cost", List.of(40D, 40D, 40D, 40D, 40D), .001, 1000000, false, false, "growth.");
         JsonObject e = group(data, "experience", "growth.");
@@ -56,7 +59,9 @@ public final class GrowthConfig {
         equipmentGrowth = new EquipmentGrowthPolicy(enabled, Map.copyOf(values));
     }
 
-    static GrowthConfig parse(JsonObject data, JsonObject defaults) { return new GrowthConfig(data, defaults); }
+    static GrowthConfig parse(JsonObject data, JsonObject defaults, boolean vanillaMode) {
+        return new GrowthConfig(data, defaults, vanillaMode);
+    }
     public boolean enabled() { return enabled; }
     public double stagePercent(int level) { return stagePercent.get(Math.max(0, Math.min(5, level))); }
     public double stageCost(int level) {

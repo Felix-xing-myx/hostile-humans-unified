@@ -174,7 +174,7 @@ public final class UnifiedConfig {
                         (int) number(firstDays, "tier1", 5, 1, 1000000),
                         (int) number(firstDays, "tier2", 10, 1, 1000000),
                         (int) number(firstDays, "tier3", 20, 1, 1000000)));
-        growth = GrowthConfig.parse(GrowthConfig.group(root, "growth", ""), object(defaults, "growth"));
+        growth = GrowthConfig.parse(GrowthConfig.group(root, "growth", ""), object(defaults, "growth"), vanillaMode);
         equipmentGrowth = growth.equipmentGrowth();
         JsonObject r = object(root, "recruitment");
         JsonObject limits = object(r, "max_hired_by_tier");
