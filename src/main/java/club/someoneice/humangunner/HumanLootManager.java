@@ -263,6 +263,7 @@ public final class HumanLootManager {
         if (ground.isEmpty() || !HumanGunAcceptance.accepts(ground)) {
             return false;
         }
+        if (SpartanEquipmentCompat.isShield(ground)) return ShieldPickupPolicy.collect(human, entity);
         EquipmentSlot slot = preferredEquipmentSlot(ground);
         if (isEquipment(ground) && !HumanManagedLoadout.isArmourLocked(human, slot)
                 && shouldEquip(human, ground, slot)) {
@@ -313,6 +314,7 @@ public final class HumanLootManager {
                 || !HumanGunAcceptance.accepts(stack)) {
             return 0.0D;
         }
+        if (SpartanEquipmentCompat.isShield(stack)) return ShieldPickupPolicy.benefit(human, stack, capacity);
         EquipmentSlot slot = preferredEquipmentSlot(stack);
         if (isEquipment(stack) && shouldEquip(human, stack, slot)) {
             ItemStack equipped = human.getItemBySlot(slot);

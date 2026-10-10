@@ -659,7 +659,7 @@ public final class RecoverySupplies {
 
     /**
      * Reconciles off-hand custody after food, potion, gun and weapon-switch
-     * actions. The best shield is selected from the whole inventory by value.
+     * actions. The best shield is selected from the whole inventory by maximum durability.
      * The selected slot and off-hand are exchanged directly, so reconciliation
      * never depends on a free backpack slot and cannot evict either stack.
      */
@@ -682,15 +682,12 @@ public final class RecoverySupplies {
         if (data == null) {
             return SpartanEquipmentCompat.isShield(human.getMainHandItem());
         }
-        // A valid equipped shield owns the off-hand until it actually breaks
-        // or an explicit pickup upgrade replaces it. Do not rotate to a
-        // slightly less-damaged backpack shield every reconciliation tick;
-        // that made a safe swap look like shield consumption and spread wear
-        // across every stored shield during one fight.
-        if (SpartanEquipmentCompat.isShield(offhand)) {
+        int bestShieldSlot = findBestStoredShieldSlot(data);
+        // Keep the equipped shield on ties, independent of wear. Upgrade only maximum durability.
+        if (SpartanEquipmentCompat.isShield(offhand) && (bestShieldSlot < 0
+                || !SpartanEquipmentCompat.betterShield(data.getInventoryItem(bestShieldSlot), offhand))) {
             return true;
         }
-        int bestShieldSlot = findBestStoredShieldSlot(data);
         if (bestShieldSlot < 0) {
             return SpartanEquipmentCompat.isShield(human.getMainHandItem());
         }
@@ -914,7 +911,7 @@ public final class RecoverySupplies {
         if (!SpartanEquipmentCompat.isShield(shield)) {
             return Long.MIN_VALUE;
         }
-        return Math.round(SpartanEquipmentCompat.shieldValue(shield) * 1_000.0D);
+        return SpartanEquipmentCompat.shieldEquipRank(shield);
     }
 
     /**

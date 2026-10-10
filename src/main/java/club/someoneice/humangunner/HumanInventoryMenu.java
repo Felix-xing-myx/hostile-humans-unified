@@ -10,6 +10,12 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.Items;
+import net.minecraft.resources.ResourceLocation;
+import com.mojang.datafixers.util.Pair;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkHooks;
 
@@ -86,6 +92,19 @@ public final class HumanInventoryMenu extends AbstractContainerMenu {
             }
 
             @Override
+            public Pair<ResourceLocation, ResourceLocation> getNoItemIcon() {
+                ResourceLocation icon = switch (index) {
+                    case HumanInventoryContainer.HEAD -> InventoryMenu.EMPTY_ARMOR_SLOT_HELMET;
+                    case HumanInventoryContainer.CHEST -> InventoryMenu.EMPTY_ARMOR_SLOT_CHESTPLATE;
+                    case HumanInventoryContainer.LEGS -> InventoryMenu.EMPTY_ARMOR_SLOT_LEGGINGS;
+                    case HumanInventoryContainer.FEET -> InventoryMenu.EMPTY_ARMOR_SLOT_BOOTS;
+                    case HumanInventoryContainer.OFF_HAND -> InventoryMenu.EMPTY_ARMOR_SLOT_SHIELD;
+                    default -> null;
+                };
+                return icon == null ? null : Pair.of(InventoryMenu.BLOCK_ATLAS, icon);
+            }
+
+            @Override
             public int getMaxStackSize() {
                 return singleItem ? 1 : super.getMaxStackSize();
             }
@@ -102,12 +121,32 @@ public final class HumanInventoryMenu extends AbstractContainerMenu {
         if (index < HUMAN_SLOT_COUNT) {
             moved = moveItemStackTo(source, HUMAN_SLOT_COUNT, slots.size(), true);
         } else {
-            moved = moveItemStackTo(source, 0, HumanInventoryContainer.BACKPACK_SIZE, false);
+            int equipment = quickEquipmentSlot(source);
+            moved = equipment >= 0 && !slots.get(equipment).hasItem()
+                    && moveItemStackTo(source, equipment, equipment + 1, false);
+            if (!source.isEmpty())
+                moved |= moveItemStackTo(source, 0, HumanInventoryContainer.BACKPACK_SIZE, false);
         }
         if (!moved) return ItemStack.EMPTY;
         if (source.isEmpty()) slot.set(ItemStack.EMPTY);
         else slot.setChanged();
+        slot.onTake(player, source);
         return original;
+    }
+
+    private static int quickEquipmentSlot(ItemStack stack) {
+        EquipmentSlot slot = Mob.getEquipmentSlotForItem(stack);
+        if (slot.getType() == EquipmentSlot.Type.ARMOR) return switch (slot) {
+            case HEAD -> HumanInventoryContainer.HEAD;
+            case CHEST -> HumanInventoryContainer.CHEST;
+            case LEGS -> HumanInventoryContainer.LEGS;
+            case FEET -> HumanInventoryContainer.FEET;
+            default -> -1;
+        };
+        if (SpartanEquipmentCompat.isShield(stack) || stack.is(Items.TOTEM_OF_UNDYING))
+            return HumanInventoryContainer.OFF_HAND;
+        return HumanLootManager.isNonGunWeapon(stack) || GunSupport.get().isGun(stack)
+                ? HumanInventoryContainer.MAIN_HAND : -1;
     }
 
     @Override

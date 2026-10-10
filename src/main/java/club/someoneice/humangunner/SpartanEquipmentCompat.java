@@ -43,11 +43,26 @@ public final class SpartanEquipmentCompat {
                 && (id.getPath().endsWith("_longbow") || id.getPath().endsWith("_heavy_crossbow"));
     }
 
+    /** Stable equipment ordering: maximum durability only, never remaining durability or mod name. */
+    public static long shieldEquipRank(ItemStack shield) {
+        if (!isShield(shield)) return Long.MIN_VALUE;
+        boolean canBlock = shield.getItem() instanceof ShieldItem
+                || shield.canPerformAction(ToolActions.SHIELD_BLOCK)
+                || shield.getUseAnimation() == net.minecraft.world.item.UseAnim.BLOCK;
+        if (!shield.isDamageableItem() && canBlock) return Long.MAX_VALUE;
+        return Math.max(0, shield.getMaxDamage());
+    }
+
+    public static boolean betterShield(ItemStack candidate, ItemStack current) {
+        return isShield(candidate) && shieldEquipRank(candidate) > shieldEquipRank(current);
+    }
+
     public static double shieldValue(ItemStack shield) {
         if (!isShield(shield)) return 0;
         double durabilityRatio = shield.isDamageableItem()
                 ? Math.max(0, 1.0D - (double) shield.getDamageValue() / shield.getMaxDamage()) : 1;
         int levels = EnchantmentHelper.getEnchantments(shield).values().stream().mapToInt(Integer::intValue).sum();
+        if (shieldEquipRank(shield) == Long.MAX_VALUE) return 10_000 + Math.min(200, levels * 12);
         double score = 220 + durabilityRatio * 55 + Math.min(40, shield.getMaxDamage() * .025) + levels * 12;
         ResourceLocation id = BuiltInRegistries.ITEM.getKey(shield.getItem());
         if (id.getNamespace().equals("spartanshields")) {
