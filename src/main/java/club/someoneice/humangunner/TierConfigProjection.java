@@ -131,6 +131,8 @@ final class TierConfigProjection {
         JsonObject group = root.getAsJsonObject(key);
         String heading = "========== " + title + " ==========";
         JsonElement existing = group.get("_说明_中文");
+        // A sparse user-authored block owns its metadata too; do not invent a heading there.
+        if (existing == null) return;
         if (existing != null && existing.isJsonPrimitive() && existing.getAsJsonPrimitive().isString()) {
             String note = existing.getAsString();
             if (note.startsWith(heading)) return;
