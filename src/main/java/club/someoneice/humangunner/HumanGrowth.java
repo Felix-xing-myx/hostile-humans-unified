@@ -122,9 +122,23 @@ public final class HumanGrowth {
     static double rounded(double value) { return GrowthProgression.rounded(value); }
 
     static GrowthSnapshot snapshot(Human human) {
+        return snapshotState(state(human));
+    }
+
+    /** Last saved server state; absent records stay unknown rather than inventing a birth. */
+    static GrowthSnapshot savedSnapshot(CompoundTag persistentData) {
+        return persistentData.contains(STATE, net.minecraft.nbt.Tag.TAG_COMPOUND)
+                ? snapshotState(persistentData.getCompound(STATE)) : null;
+    }
+
+    private static GrowthSnapshot snapshotState(CompoundTag saved) {
         GrowthConfig config = UnifiedConfig.get().growth();
-        CompoundTag state = state(human);
-        int stage = state.getInt("level");
+        CompoundTag state = saved.copy();
+        int stage = Math.max(0, Math.min(5, state.getInt("level")));
+        int cap = (int) Math.round(config.experienceCapPercent());
+        state.putInt("experience_percent", Math.max(1, Math.min(cap, state.getInt("experience_percent"))));
+        if (stage == 5) state.putDouble("stage_progress", 0);
+        if (state.getInt("experience_percent") == cap) state.putDouble("experience_progress", 0);
         return new GrowthSnapshot(config.enabled(), stage, (int) Math.round(config.stagePercent(stage)),
                 state.getInt("experience_percent"), (int) Math.round(config.experienceMinPercent()),
                 (int) Math.round(config.experienceCapPercent()), progress(state, "stage_progress"),

@@ -190,5 +190,6 @@
   "screen.hostile_humans_unified.soldier.growth.max_level": "培养进度：已达最高等级",
   "screen.hostile_humans_unified.soldier.growth.experience": "经验：%s%%（范围 %s–%s%%）",
   "screen.hostile_humans_unified.soldier.growth.next_point": "下一百分点：%s / %s",
-  "screen.hostile_humans_unified.soldier.growth.experience_capped": "经验：已达百分比上限"
+  "screen.hostile_humans_unified.soldier.growth.experience_capped": "经验：已达百分比上限",
+  "screen.hostile_humans_unified.roster.growth_summary": "等级%s · 经验%s%%"
 }

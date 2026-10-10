@@ -80,7 +80,12 @@ public final class SoldierRosterScreen extends Screen {
     }
 
     private int left() { return width / 2 - WIDTH / 2; }
-    private int top() { return height / 2 - HEIGHT / 2; }
+    private int growthHeight() {
+        SoldierRosterNetwork.Entry entry = selectedEntry();
+        return detail && entry != null && entry.growth() != null && entry.growth().enabled() ? 56 : 0;
+    }
+    private int panelHeight() { return HEIGHT + growthHeight(); }
+    private int top() { return height / 2 - panelHeight() / 2; }
     private int maxPage() { return Math.max(0, (total - 1) / SoldierRosterNetwork.PAGE_SIZE); }
     private int thumbHeight() {
         return Math.max(14, 142 / (maxPage() + 1));
@@ -191,11 +196,11 @@ public final class SoldierRosterScreen extends Screen {
     public void render(GuiGraphics graphics, int mx, int my, float partialTick) {
         renderBackground(graphics);
         int x = left(), y = top();
-        graphics.fill(x, y, x + WIDTH, y + HEIGHT, PANEL);
+        graphics.fill(x, y, x + WIDTH, y + panelHeight(), PANEL);
         graphics.fill(x, y, x + WIDTH, y + 2, EDGE);
-        graphics.fill(x, y + HEIGHT - 2, x + WIDTH, y + HEIGHT, EDGE);
-        graphics.fill(x, y, x + 2, y + HEIGHT, EDGE);
-        graphics.fill(x + WIDTH - 2, y, x + WIDTH, y + HEIGHT, EDGE);
+        graphics.fill(x, y + panelHeight() - 2, x + WIDTH, y + panelHeight(), EDGE);
+        graphics.fill(x, y, x + 2, y + panelHeight(), EDGE);
+        graphics.fill(x + WIDTH - 2, y, x + WIDTH, y + panelHeight(), EDGE);
         graphics.drawString(font, title, x + 10, y + 10, TEXT, false);
         graphics.fill(x + 9, y + 24, x + WIDTH - 9, y + 25, EDGE);
         if (detail) renderDetail(graphics, mx, my);
@@ -233,9 +238,14 @@ public final class SoldierRosterScreen extends Screen {
             } else {
                 graphics.drawString(font, font.plainSubstrByWidth(statusName(entry.status()).getString(), 98),
                         bx + 137, by + 4, statusColor(entry.status()), false);
-                String health = entry.health() >= 0 ? entry.health() + "/" + entry.maxHealth()
+                GrowthSnapshot growth = entry.growth();
+                String summary = growth != null && growth.enabled()
+                        ? Component.translatable("screen.hostile_humans_unified.roster.growth_summary",
+                                growth.level(), growth.experiencePercent()).getString()
+                        : entry.health() >= 0 ? entry.health() + "/" + entry.maxHealth()
                         : tr("screen.hostile_humans_unified.roster.last_known_short").getString();
-                graphics.drawString(font, health, bx + 234 - font.width(health), by + 15, MUTED, false);
+                summary = font.plainSubstrByWidth(summary, 98);
+                graphics.drawString(font, summary, bx + 234 - font.width(summary), by + 15, MUTED, false);
             }
         }
         if (total > SoldierRosterNetwork.PAGE_SIZE) {
@@ -308,6 +318,28 @@ public final class SoldierRosterScreen extends Screen {
                 x, y + 122, MUTED, false);
     }
 
+    /** Read-only server snapshot; unloaded entries are explicitly labelled last-saved above. */
+    private void renderGrowth(GuiGraphics graphics, SoldierRosterNetwork.Entry entry, int x, int y) {
+        if (growthHeight() == 0) return;
+        GrowthSnapshot growth = entry.growth();
+        String prefix = "screen.hostile_humans_unified.soldier.growth.";
+        graphics.drawString(font, Component.translatable(prefix + "level", growth.level()), x, y, GOLD, false);
+        graphics.drawString(font, Component.translatable(prefix + "experience", growth.experiencePercent(),
+                growth.experienceMinPercent(), growth.experienceCapPercent()), x, y + 24, TEXT, false);
+        graphics.drawString(font, growth.level() >= 5 ? tr(prefix + "max_level")
+                : Component.translatable(prefix + "stage", growth.stagePercent(),
+                growthAmount(growth.stageProgress()), growthAmount(growth.stageRequired())), x, y + 12, MUTED, false);
+        graphics.drawString(font, growth.experiencePercent() >= growth.experienceCapPercent()
+                ? tr(prefix + "experience_capped") : Component.translatable(prefix + "next_point",
+                growthAmount(growth.experienceProgress()), growthAmount(growth.experienceRequired())),
+                x, y + 36, MUTED, false);
+        graphics.fill(x, y + 49, x + 390, y + 50, EDGE);
+    }
+
+    private static String growthAmount(double value) {
+        return String.format(Locale.ROOT, "%.2f", value).replaceAll("0+$", "").replaceAll("\\.$", "");
+    }
+
     private void renderDetail(GuiGraphics graphics, int mx, int my) {
         SoldierRosterNetwork.Entry entry = selectedEntry();
         if (entry == null) return;
@@ -354,15 +386,16 @@ public final class SoldierRosterScreen extends Screen {
         button(graphics, tr(entry.pickup() ? "screen.hostile_humans_unified.soldier.pickup.enabled"
                         : "screen.hostile_humans_unified.soldier.pickup.disabled"),
                 rx, y + 174, 190, 19, hit(mx, my, rx, y + 174, 190, 19), loaded, false, false);
-        button(graphics, tr("screen.hostile_humans_unified.roster.recall_one"), lx, y + 201, 190, 18,
-                hit(mx, my, lx, y + 201, 190, 18), true, false, false);
-        button(graphics, tr("screen.hostile_humans_unified.roster.refresh"), rx, y + 201, 190, 18,
-                hit(mx, my, rx, y + 201, 190, 18), true, false, false);
-        button(graphics, tr("screen.hostile_humans_unified.roster.back"), lx, y + 223, 190, 18,
-                hit(mx, my, lx, y + 223, 190, 18), true, false, false);
+        renderGrowth(graphics, entry, lx, y + 201);
+        button(graphics, tr("screen.hostile_humans_unified.roster.recall_one"), lx, y + 201 + growthHeight(), 190, 18,
+                hit(mx, my, lx, y + 201 + growthHeight(), 190, 18), true, false, false);
+        button(graphics, tr("screen.hostile_humans_unified.roster.refresh"), rx, y + 201 + growthHeight(), 190, 18,
+                hit(mx, my, rx, y + 201 + growthHeight(), 190, 18), true, false, false);
+        button(graphics, tr("screen.hostile_humans_unified.roster.back"), lx, y + 223 + growthHeight(), 190, 18,
+                hit(mx, my, lx, y + 223 + growthHeight(), 190, 18), true, false, false);
         button(graphics, tr(System.currentTimeMillis() < dismissConfirmUntil
                         ? "screen.hostile_humans_unified.roster.confirm" : "screen.hostile_humans_unified.soldier.dismiss"),
-                rx, y + 223, 190, 18, hit(mx, my, rx, y + 223, 190, 18), true, false, true);
+                rx, y + 223 + growthHeight(), 190, 18, hit(mx, my, rx, y + 223 + growthHeight(), 190, 18), true, false, true);
     }
 
     @Override
@@ -484,20 +517,20 @@ public final class SoldierRosterScreen extends Screen {
                 return true;
             }
         }
-        if (hit(mx, my, lx, y + 201, 190, 18)) {
+        if (hit(mx, my, lx, y + 201 + growthHeight(), 190, 18)) {
             SoldierRosterNetwork.request(token, 3, entry.id());
             return true;
         }
-        if (hit(mx, my, rx, y + 201, 190, 18)) {
+        if (hit(mx, my, rx, y + 201 + growthHeight(), 190, 18)) {
             SoldierRosterNetwork.request(token, 0, NONE);
             return true;
         }
-        if (hit(mx, my, lx, y + 223, 190, 18)) {
+        if (hit(mx, my, lx, y + 223 + growthHeight(), 190, 18)) {
             detail = false;
             dismissConfirmUntil = 0;
             return true;
         }
-        if (hit(mx, my, rx, y + 223, 190, 18)) {
+        if (hit(mx, my, rx, y + 223 + growthHeight(), 190, 18)) {
             if (System.currentTimeMillis() < dismissConfirmUntil) {
                 SoldierRosterNetwork.request(token, 1, entry.id());
                 dismissConfirmUntil = 0;

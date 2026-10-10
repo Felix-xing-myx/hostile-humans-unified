@@ -190,5 +190,6 @@
   "screen.hostile_humans_unified.soldier.growth.max_level": "Training: maximum level reached",
   "screen.hostile_humans_unified.soldier.growth.experience": "Experience: %s%% (range %s–%s%%)",
   "screen.hostile_humans_unified.soldier.growth.next_point": "Next percentage point: %s / %s",
-  "screen.hostile_humans_unified.soldier.growth.experience_capped": "Experience: percentage cap reached"
+  "screen.hostile_humans_unified.soldier.growth.experience_capped": "Experience: percentage cap reached",
+  "screen.hostile_humans_unified.roster.growth_summary": "Lv%s · XP%s%%"
 }

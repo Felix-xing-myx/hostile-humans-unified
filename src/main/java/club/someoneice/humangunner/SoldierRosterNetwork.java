@@ -29,7 +29,7 @@ import net.minecraftforge.event.server.ServerStoppedEvent;
 
 /** Owner-only roster snapshots and dismissal commands. Never trusts client roster contents. */
 final class SoldierRosterNetwork {
-    private static final String PROTOCOL = "5";
+    private static final String PROTOCOL = "6";
     static final int PAGE_SIZE = 5;
     private static final Map<ServerPlayer, Session> SESSIONS = new WeakHashMap<>();
     private static final Map<ServerPlayer, Long> LAST_REORDER_TICK = new WeakHashMap<>();
@@ -42,7 +42,7 @@ final class SoldierRosterNetwork {
     record Entry(UUID id, int tier, String name, String status, String dimension,
                  int x, int y, int z, int health, int maxHealth,
                  String order, String combat, boolean pickup,
-                 boolean canMoveEarlier, boolean canMoveLater) {}
+                 boolean canMoveEarlier, boolean canMoveLater, GrowthSnapshot growth) {}
     private record Session(UUID token, int filter, int page) {}
     private record Snapshot(UUID token, boolean opening, int filter, int page, int total,
                             List<Entry> entries, int[] counts, int[] limits) {}
@@ -157,7 +157,8 @@ final class SoldierRosterNetwork {
                     pos == null ? 0 : pos.getX(), pos == null ? 0 : pos.getY(), pos == null ? 0 : pos.getZ(),
                     live == null ? -1 : Math.round(live.getHealth()),
                     live == null ? -1 : Math.round(live.getMaxHealth()),
-                    order, combat, pickup, canMoveEarlier, canMoveLater));
+                    order, combat, pickup, canMoveEarlier, canMoveLater,
+                    live != null ? HumanGrowth.snapshot(live) : HumanGrowth.savedSnapshot(lastData)));
         }
         int[] counts = new int[4], limits = new int[4];
         for (int tier = 0; tier < 4; tier++) {
@@ -209,6 +210,8 @@ final class SoldierRosterNetwork {
             buffer.writeBoolean(entry.pickup);
             buffer.writeBoolean(entry.canMoveEarlier);
             buffer.writeBoolean(entry.canMoveLater);
+            buffer.writeBoolean(entry.growth != null);
+            if (entry.growth != null) entry.growth.encode(buffer);
         }
         for (int i = 0; i < 4; i++) {
             buffer.writeVarInt(packet.counts[i]);
@@ -230,7 +233,8 @@ final class SoldierRosterNetwork {
             entries.add(new Entry(buffer.readUUID(), buffer.readVarInt(), buffer.readUtf(256),
                     buffer.readUtf(32), buffer.readUtf(256), buffer.readInt(), buffer.readInt(),
                     buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readUtf(32), buffer.readUtf(32),
-                    buffer.readBoolean(), buffer.readBoolean(), buffer.readBoolean()));
+                    buffer.readBoolean(), buffer.readBoolean(), buffer.readBoolean(),
+                    buffer.readBoolean() ? GrowthSnapshot.decode(buffer) : null));
         }
         int[] counts = new int[4], limits = new int[4];
         for (int i = 0; i < 4; i++) {
