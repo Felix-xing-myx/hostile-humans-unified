@@ -11,11 +11,11 @@ HUMAN = (JAVA / "com/craftix/hostile_humans/entity/entities/Human.java").read_te
 class PursuitJumpContract(unittest.TestCase):
     def test_distance_and_time_share_weapon_budget(self):
         for condition in ("attackCooldown > 2", "12 - upswing", "closing * approachTicks",
-                          "reach - 0.5D", "closing < 0.04D", "Math.abs(target.getY() - human.getY()) > 0.75D"):
+                          "reach - 0.5D", "closing < 0.04D", "Math.abs(target.getY() - human.getY()) > jump.maxHeightDifference()"):
             self.assertIn(condition, JUMP)
         self.assertIn("BetterCombatMeleeCombat.upswingTicks(human)", JUMP)
-        self.assertIn("combatJumpChance()", JUMP)
-        self.assertIn("combatJumpIntervalMin()", JUMP)
+        self.assertIn("jump.chance()", JUMP)
+        self.assertIn("jump.intervalMinTicks()", JUMP)
 
     def test_only_safe_intentional_pursuit(self):
         for condition in ("human.onGround()", "human.isFleeing", "human.isUsingItem()",
@@ -39,7 +39,7 @@ class PursuitJumpContract(unittest.TestCase):
         self.assertEqual(HUMAN.count("PursuitJumpAttack.strike(this,"), 1)
         self.assertIn("() -> super.doHurtTarget(entityIn)", HUMAN)
         self.assertIn('"Pursuit jump critical", multiplier - 1.0D', JUMP)
-        self.assertIn('damage("jump_attack_damage_multiplier", 1.5D)', JUMP)
+        self.assertIn('jumpAttack().damageMultiplier()', JUMP)
         self.assertIn("AttributeModifier.Operation.MULTIPLY_TOTAL", JUMP)
         self.assertIn("finally { damage.removeModifier(CRITICAL); }", JUMP)
         self.assertIn("UnifiedConfig.get().vanillaMode()", JUMP)

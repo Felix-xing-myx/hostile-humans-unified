@@ -5,9 +5,33 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.*;
 
 public final class UnifiedConfigTest {
+    private static void checkConfigRefresh() {
+        JsonObject input = JsonParser.parseString("{\"jump_attack\":{\"chance\":2,\"attempt_interval_min_ticks\":30.8,\"attempt_interval_max_ticks\":5},\"first_aid\":{\"plaster_healing\":0,\"morphine_duration_seconds\":2.9,\"morphine_resistance_level\":3,\"quality\":{\"morphine\":123}}}").getAsJsonObject();
+        UnifiedConfig config = new UnifiedConfig(input);
+        check(config.jumpAttack().chance() == 1 && config.jumpAttack().intervalMinTicks() == 5
+                && config.jumpAttack().intervalMaxTicks() == 30, "jump bounds clamp, truncate and normalize");
+        check(config.firstAid().plasterHealing() == 0 && config.firstAid().morphineTicks() == 40
+                && config.firstAid().resistanceAmplifier() == 2 && config.firstAid().morphineQuality() == 123,
+                "First Aid server settings control effects and quality");
+        JsonObject old = JsonParser.parseString("{\"damage\":{\"jump_attack_damage_multiplier\":2.2},\"ai\":{\"shield_block_chance_after_hit\":0.2,\"_description_shield_block_chance_after_hit_en\":\"obsolete\"}}").getAsJsonObject();
+        JsonObject arranged = TierConfigProjection.arrange(old, false);
+        check(TierConfigProjection.at(arranged, "jump_attack.damage_multiplier").getAsDouble() == 2.2
+                && TierConfigProjection.at(arranged, "damage.jump_attack_damage_multiplier") == null,
+                "relocation preserves custom jump multiplier and removes duplicate source");
+        check(TierConfigProjection.at(arranged, "ai.shield_block_chance_after_hit") == null
+                && TierConfigProjection.at(arranged, "ai._description_shield_block_chance_after_hit_en") == null,
+                "retired shield setting and guidance removed");
+        TierConfigProjection.put(old, "jump_attack.damage_multiplier", new JsonPrimitive(3));
+        arranged = TierConfigProjection.arrange(old, false);
+        check(TierConfigProjection.at(arranged, "jump_attack.damage_multiplier").getAsDouble() == 3,
+                "explicit new destination wins over moved source");
+        check(TierConfigProjection.arrange(arranged, false).equals(arranged), "layout refresh is idempotent");
+    }
+
     private static int assertions;
     public static void main(String[] args) throws Exception {
         GrowthConfigTest.main(args);
+        checkConfigRefresh();
         JsonObject defaults = UnifiedConfig.defaults();
         check(defaults.has("growth") && !defaults.has("equipment_growth"), "one global growth section replaces equipment-only settings");
         for (String rank : TierConfigProjection.RANKS)

@@ -85,8 +85,8 @@ final class TierConfigProjection {
                     "ammunition", "food", "potions", "combat", "ai", "movement",
                     "weapon_spread_degrees", "tacz", "growth_profile", "equipment_loadout")
                 : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "growth", "ammunition",
-                    "equipment_integration", "ai", "recruitment", "spawning", "damage",
-                    "better_combat", "tacz", "native_gameplay");
+                    "equipment_integration", "ai", "recruitment", "spawning", "damage", "jump_attack",
+                    "better_combat", "first_aid", "tacz", "native_gameplay");
         orderGroup(result, "equipment_loadout", List.of("ranged_chance", "ranged_in_backpack", "allow_tacz_firearms",
                 "automatic_spartan_weapons", "automatic_spartan_shields", "automatic_immersive_armors",
                 "weapon_count", "guaranteed_shields_min", "guaranteed_shields_max", "automatic_shield_enchantments",
@@ -98,21 +98,31 @@ final class TierConfigProjection {
                     "encounter_cooldown_ticks", "nearby_horizontal_radius", "nearby_vertical_radius", "density_divisor"));
         orderGroup(result, "recruitment", List.of("max_hired_by_tier", "payment_by_tier", "allow_hired_pvp_damage", "soldier_messages"));
         orderGroup(result, "ai", List.of("enabled", "item_recovery_enabled", "retreat_health_ratio", "low_health_combat", "critical_health_ratio",
-                "resume_health_ratio", "gradual_heal_interval_ticks", "food_recovery_min_health", "food_recovery_max_health",
+                "resume_health_ratio", "flee_hp", "run_away_middle_fight_chance", "mid_battle_buff_instead_of_run_chance", "gradual_heal_interval_ticks", "food_recovery_min_health", "food_recovery_max_health",
                 "recovery_damage_tolerance_ratio", "recovery_commit_ticks",
-                "shield_block_duration_min_ticks", "shield_block_duration_max_ticks", "shield_block_cooldown_ticks"));
+                "food_use_speed_multiplier", "shield_block_duration_min_ticks", "shield_block_duration_max_ticks", "shield_block_cooldown_ticks",
+                "shield_use_speed_multiplier", "cover_search_radius", "cover_search_attempts",
+                "tactical_reposition_interval", "ally_spacing_radius", "combat_jump_chance",
+                "combat_jump_interval_min", "combat_jump_interval_max", "greet_chance"));
         orderGroup(result, "tacz", rank ? List.of("gun_chance", "damage_multiplier", "gun_type_weights")
                 : List.of("enabled", "natural_spawn_firearms_enabled", "auto_add_new_guns", "auto_added_gun_weight",
                     "excluded_auto_gun_types", "excluded_gun_namespaces", "gun_blacklist",
                     "pillager_gun_damage_multiplier", "shield_damage_multiplier", "offhand_shield_damage_reduction", "tamed_maid_damage_multiplier",
                     "forced_ranged_gun_chance", "gun_drop_chance", "gun_whitelist",
                     "hired_gun_additional_whitelist"));
+        orderGroup(result, "jump_attack", List.of("enabled", "damage_multiplier", "chance",
+                "attempt_interval_min_ticks", "attempt_interval_max_ticks", "max_approach_distance_extra",
+                "max_target_height_difference"));
+        orderGroup(result, "first_aid", List.of("enabled", "plaster_healing", "bandage_healing",
+                "morphine_duration_seconds", "morphine_resistance_level", "quality"));
         orderGroup(result, "growth", List.of("enabled", "stage_percent", "stage_cost", "experience", "firearms", "combat"));
         orderGroup(object(result, "growth"), "experience", List.of("min_percent", "max_percent", "cap_percent", "below_base_cost", "band_width_percent", "cost_by_band"));
         orderGroup(result, "growth_profile", List.of("start_day", "duration_days", "progress_nodes",
                 "early_baseline_gear_chance", "early_gun_chance_multiplier", "early_enchantment_keep_chance",
                 "early_enchantment_level_multiplier", "early_totem_keep_chance", "early_trident_keep_chance",
                 "early_spartan_material", "early_melee", "early_armor"));
+        sectionHeader(result, "jump_attack", "追击跳砍 / Pursuit jump attack");
+        sectionHeader(result, "first_aid", "First Aid 联动 / First Aid integration");
         sectionHeader(result, "attributes", "基础属性 / Base attributes");
         sectionHeader(result, "damage_multipliers", "伤害倍率 / Damage multipliers");
         sectionHeader(result, "growth", "共用成长规则 / Shared growth rules");
@@ -144,7 +154,7 @@ final class TierConfigProjection {
     private static void enforceOwnership(JsonObject data, boolean rank) {
         JsonObject defaults = UnifiedConfig.defaults();
         if (rank) {
-            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay", "growth")) data.remove(key);
+            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay", "growth", "jump_attack", "first_aid")) data.remove(key);
             removeOptions(object(data, "ai"), List.of("enabled"));
             removeOptions(object(data, "ammunition"), List.of("consume_ammunition"));
             for (String key : object(defaults, "spawning").keySet())
@@ -176,6 +186,16 @@ final class TierConfigProjection {
 
     private static void removeRetiredControls(JsonObject data, boolean rank) {
         data.remove("equipment_growth");
+        removeOptions(object(data, "ai"), List.of("shield_block_chance_after_hit"));
+        if (!rank) {
+            JsonObject damage = object(data, "damage");
+            if (damage.has("jump_attack_damage_multiplier")) {
+                JsonObject jump = ensure(data, "jump_attack");
+                if (!jump.has("damage_multiplier"))
+                    jump.add("damage_multiplier", damage.get("jump_attack_damage_multiplier").deepCopy());
+            }
+            removeOptions(damage, List.of("jump_attack_damage_multiplier"));
+        } else removeOptions(object(data, "damage_multipliers"), List.of("jump_attack_damage_multiplier"));
         if (!rank) removeOptions(object(object(data, "growth"), "experience"), List.of("cost"));
         if (rank) removeOptions(object(data, "attributes"), List.of("health_min", "health_max"));
         List<String> flatTierControls = List.of("health_min", "health_max", "attack_damage", "armor",

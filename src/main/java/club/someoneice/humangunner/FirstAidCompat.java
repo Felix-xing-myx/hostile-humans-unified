@@ -22,7 +22,6 @@ public final class FirstAidCompat {
     private static final ResourceLocation BANDAGE = new ResourceLocation("firstaid", "bandage");
     private static final ResourceLocation MORPHINE = new ResourceLocation("firstaid", "morphine");
     private static final String STATE = HumanGunner.MOD_ID + ":first_aid";
-    private static final int MORPHINE_TICKS = 90 * 20;
 
     record HealingSchedule(int pulses, int intervalTicks) {
     }
@@ -42,11 +41,11 @@ public final class FirstAidCompat {
     }
 
     public static boolean isMedicine(ItemStack stack) {
-        return matches(stack, PLASTER) || matches(stack, BANDAGE);
+        return (matches(stack, PLASTER) || matches(stack, BANDAGE)) && UnifiedConfig.get().firstAid().enabled();
     }
 
     public static boolean isMorphine(ItemStack stack) {
-        return matches(stack, MORPHINE);
+        return matches(stack, MORPHINE) && UnifiedConfig.get().firstAid().enabled();
     }
 
     public static boolean isSupply(ItemStack stack) {
@@ -55,14 +54,18 @@ public final class FirstAidCompat {
 
     /** Unit quality; the existing inventory policy handles stack count separately. */
     public static double inventoryValue(ItemStack stack) {
-        if (matches(stack, PLASTER)) return 60.0D;
-        if (matches(stack, BANDAGE)) return 65.0D;
-        return isMorphine(stack) ? 94.0D : 0.0D;
+        if (!isSupply(stack)) return 0.0D;
+        FirstAidSettings settings = UnifiedConfig.get().firstAid();
+        if (matches(stack, PLASTER)) return settings.plasterQuality();
+        if (matches(stack, BANDAGE)) return settings.bandageQuality();
+        return settings.morphineQuality();
     }
 
     public static boolean canUse(Human human, ItemStack stack) {
         CompoundTag state = human.getPersistentData().getCompound(STATE);
-        if (isMedicine(stack)) return state.getInt("pulses") <= 0;
+        if (isMedicine(stack)) return state.getInt("pulses") <= 0
+                && (matches(stack, PLASTER) ? UnifiedConfig.get().firstAid().plasterHealing()
+                    : UnifiedConfig.get().firstAid().bandageHealing()) > 0;
         if (isMorphine(stack)) return state.getInt("morphine_ticks") <= 0
                 && !human.hasEffect(MobEffects.DAMAGE_RESISTANCE);
         return false;
@@ -108,14 +111,17 @@ public final class FirstAidCompat {
         }
         CompoundTag state = human.getPersistentData().getCompound(STATE);
         if (schedule != null) {
-            float total = matches(before, PLASTER) ? 20.0F : 40.0F;
+            FirstAidSettings settings = UnifiedConfig.get().firstAid();
+            float total = matches(before, PLASTER) ? settings.plasterHealing() : settings.bandageHealing();
             state.putInt("pulses", schedule.pulses());
             state.putInt("interval", schedule.intervalTicks());
             state.putInt("next_pulse", schedule.intervalTicks());
             state.putFloat("heal_per_pulse", total / schedule.pulses());
         } else {
-            state.putInt("morphine_ticks", MORPHINE_TICKS);
-            human.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, MORPHINE_TICKS, 0));
+            FirstAidSettings settings = UnifiedConfig.get().firstAid();
+            state.putInt("morphine_ticks", settings.morphineTicks());
+            human.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE,
+                    settings.morphineTicks(), settings.resistanceAmplifier()));
         }
         human.getPersistentData().put(STATE, state);
     }

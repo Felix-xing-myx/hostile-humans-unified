@@ -8,6 +8,7 @@ import java.util.*;
 public final class TierConfigFilesTest {
     private static int assertions;
     public static void main(String[] args) throws Exception {
+        checkNewBehaviorSections();
         checkImmersiveArmorImport();
         checkMasterIntegrationSwitch();
         checkDefaultIntegrationRetry();
@@ -19,6 +20,29 @@ public final class TierConfigFilesTest {
         checkCurrentLayoutOnly();
         checkCreationCollision();
         System.out.println("TierConfigFilesTest: " + assertions + " checks passed");
+    }
+
+    private static void checkNewBehaviorSections() throws Exception {
+        Path directory = Files.createTempDirectory("human-behavior-config-");
+        try {
+            Path global = directory.resolve(SplitConfigFiles.DIRECTORY).resolve("global.json");
+            Files.createDirectories(global.getParent());
+            Files.writeString(global, "{\"schema_version\":2,\"damage\":{\"jump_attack_damage_multiplier\":2.4},\"custom\":17}");
+            JsonObject defaults = UnifiedConfig.defaults();
+            UnifiedConfig loaded = new UnifiedConfig(SplitConfigFiles.load(directory, defaults, (r, d) -> false));
+            JsonObject saved = read(global);
+            check(saved.has("jump_attack") && saved.has("first_aid"), "new behavior sections are editable on disk");
+            check(loaded.jumpAttack().damageMultiplier() == 2.4 && saved.get("custom").getAsInt() == 17,
+                    "existing custom multiplier and extensions survive new section creation");
+            check(!saved.has("growth") && !saved.has("recruitment"), "unrelated missing settings remain memory-only");
+            String stable = Files.readString(global);
+            SplitConfigFiles.load(directory, defaults, (r, d) -> false);
+            check(stable.equals(Files.readString(global)), "new section creation is idempotent");
+            try (var files = Files.list(global.getParent())) {
+                check(files.allMatch(path -> path.getFileName().toString().endsWith(".json")),
+                        "no migration or inherited files created");
+            }
+        } finally { cleanup(directory); }
     }
 
     private static void checkOwnership() throws Exception {

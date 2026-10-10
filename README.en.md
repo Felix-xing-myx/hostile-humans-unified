@@ -1,6 +1,6 @@
 # Hostile Humans Unified
 
-Optional First Aid integration: humans can use plaster (20 total HP), bandage (40 total HP), and morphine (Resistance I for 90 seconds). Medical supplies follow First Aid's public application and healing timing API and share a full-course cooldown. Morphine is not reused during its cooldown or an existing Resistance effect. Supply these through pickup or soldier inventory; default spawn kits are unchanged. Player body-part treatment remains First Aid's own behavior.
+Optional First Aid integration: humans can use plaster (default 20 total HP), bandage (default 40 total HP), and morphine (default Resistance I for 90 seconds). Effects and pickup quality are configurable in global `first_aid`. Medical supplies follow First Aid's public application and healing timing API and share a full-course cooldown. Morphine is not reused during its cooldown or an existing Resistance effect. Supply these through pickup or soldier inventory; default spawn kits are unchanged. Player body-part treatment remains First Aid's own behavior.
 
 [简体中文](README.md) | [English](README.en.md)
 
@@ -53,3 +53,5 @@ The unified release is licensed under the GNU GPL v2.0; see the full text in the
 
 
 Shared growth settings live in global `growth`; each rank owns its time curve and equipment details under `growth_profile`: equipment and birth levels share the personal online-day curve, while hired soldiers earn cultivation from actual damage after a confirmed target death, without needing the final hit. Levels 0–5 default to 50–100% attributes; experience starts at 90–110% and can reach 125%. Levels change attributes only on upgrade; experience changes them per percentage point. Firearms use a separate experience policy: each five-point band reduces NPC-added spread by 5% of baseline, down to 75%; damage scales linearly from no bonus at 100% experience to +10% at the default 125% cap. Stage levels do not scale firearm damage. Turning growth off applies 100% stage and experience factors, stops cultivation and hides growth UI while retaining saved progress and existing equipment. The server controls calculations, rewards and UI visibility; local client settings do not override it. See the [configuration guide](CONFIGURATION.md).
+
+NPC First Aid healing, morphine effects and pickup values are configurable in global `first_aid`. Pursuit jump attacks use global `jump_attack`; ordinary movement hops remain rank AI settings. See [configuration](CONFIGURATION.md).

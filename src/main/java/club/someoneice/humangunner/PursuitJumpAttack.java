@@ -23,6 +23,8 @@ public final class PursuitJumpAttack {
     private PursuitJumpAttack() { }
 
     public static void tryStart(Human human, LivingEntity target, int attackCooldown) {
+        JumpAttackConfig jump = UnifiedConfig.get().jumpAttack();
+        if (!jump.enabled()) return;
         State state = STATES.computeIfAbsent(human, ignored -> new State());
         if (active(human) || human.tickCount < state.nextAttempt || attackCooldown > 2
                 || !human.onGround() || human.isFleeing || human.isUsingItem()
@@ -32,7 +34,7 @@ public final class PursuitJumpAttack {
                 || com.craftix.hostile_humans.HumanUtil.isRangedWeapon(human.getMainHandItem())
                 || com.craftix.hostile_humans.HumanUtil.isTrident(human.getMainHandItem())
                 || !human.canAttack(target) || !human.getSensing().hasLineOfSight(target)
-                || Math.abs(target.getY() - human.getY()) > 0.75D
+                || Math.abs(target.getY() - human.getY()) > jump.maxHeightDifference()
                 || CombatTerrainNavigation.hasWork(human, target)) return;
         state.nextAttempt = human.tickCount + 4;
         var path = human.getNavigation().getPath();
@@ -46,17 +48,17 @@ public final class PursuitJumpAttack {
         double closing = forward - target.getDeltaMovement().multiply(1, 0, 1).dot(direction);
         double reach = MeleeCombatRange.reach(human, target);
         double distance = human.distanceTo(target);
-        if (closing < 0.04D || distance > reach + 1.5D
+        if (closing < 0.04D || distance > reach + jump.approachExtra()
                 || distance <= Math.max(MeleeSpacing.preferredDistance(reach) + 0.35D, reach - 0.5D)) return;
         int upswing = BetterCombatMeleeCombat.upswingTicks(human);
         // Normal jump flight is about 12 ticks. Reserve takeoff, remaining cooldown and impact time.
         int approachTicks = 12 - upswing - Math.max(0, attackCooldown) - 2;
-        if (approachTicks < 2 || distance > reach + Math.min(1.5D, closing * approachTicks)) return;
+        if (approachTicks < 2 || distance > reach + Math.min(jump.approachExtra(), closing * approachTicks)) return;
         CombatAiConfig config = CombatAiConfig.forHuman(human);
         if (!config.enabled()) return;
         state.nextAttempt = human.tickCount + human.getRandom().nextInt(
-                config.combatJumpIntervalMin(), config.combatJumpIntervalMax() + 1);
-        if (human.getRandom().nextDouble() >= config.combatJumpChance()
+                jump.intervalMinTicks(), jump.intervalMaxTicks() + 1);
+        if (human.getRandom().nextDouble() >= jump.chance()
                 || !HumanTerrainSafety.safeCombatJump(human)) return;
         state.target = target.getUUID();
         state.weapon = human.getMainHandItem().copy();
@@ -69,7 +71,7 @@ public final class PursuitJumpAttack {
         State state = STATES.get(human);
         if (state == null || state.target == null) return false;
         LivingEntity target = human.getTarget();
-        if (target == null || !target.isAlive() || !state.target.equals(target.getUUID())
+        if (!UnifiedConfig.get().jumpAttack().enabled() || target == null || !target.isAlive() || !state.target.equals(target.getUUID())
                 || human.isFleeing || !human.humanGunner$canMeleeAttack()
                 || !net.minecraft.world.item.ItemStack.isSameItemSameTags(state.weapon, human.getMainHandItem())
                 || human.tickCount - state.started > 30 || human.isInWater() || human.isInLava()
@@ -96,7 +98,7 @@ public final class PursuitJumpAttack {
             return attack.getAsBoolean();
         var damage = human.getAttribute(Attributes.ATTACK_DAMAGE);
         if (damage == null) return attack.getAsBoolean();
-        double multiplier = UnifiedConfig.get().damage("jump_attack_damage_multiplier", 1.5D);
+        double multiplier = UnifiedConfig.get().jumpAttack().damageMultiplier();
         damage.addTransientModifier(new AttributeModifier(CRITICAL, "Pursuit jump critical", multiplier - 1.0D,
                 AttributeModifier.Operation.MULTIPLY_TOTAL));
         try { return attack.getAsBoolean(); }

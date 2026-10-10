@@ -73,10 +73,21 @@ final class SplitConfigFiles {
             byte[] original = Files.readAllBytes(path);
             JsonObject data = read(path, 2);
             boolean imported = rank && integrations.test(rankName(path), data);
+            if (!rank) {
+                for (String key : List.of("jump_attack", "first_aid")) {
+                    if (!data.has(key) && defaults.has(key)) {
+                        JsonObject section = defaults.getAsJsonObject(key).deepCopy();
+                        if (key.equals("jump_attack") && TierConfigProjection.at(data, "damage.jump_attack_damage_multiplier") != null)
+                            section.add("damage_multiplier", TierConfigProjection.at(data, "damage.jump_attack_damage_multiplier").deepCopy());
+                        data.add(key, section);
+                    }
+                }
+            }
             TierConfigProjection.refreshGuidance(data, defaults);
             JsonObject arranged = TierConfigProjection.arrange(data, rank);
             byte[] output = format(arranged).getBytes(StandardCharsets.UTF_8);
-            // Refresh help and ownership; missing values remain in memory and explicit pools stay authoritative.
+            // Refresh help/ownership and expose new feature sections; other missing values
+            // remain in memory and explicit pools stay authoritative.
             if ((imported || !Arrays.equals(original, output)) && !writeCurrent(path, original, arranged))
                 data = read(path, 2);
             else data = arranged;

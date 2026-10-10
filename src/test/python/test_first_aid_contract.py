@@ -4,6 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+SETTINGS = (PKG / "FirstAidSettings.java").read_text(encoding="utf-8")
 COMPAT = (PKG / "FirstAidCompat.java").read_text(encoding="utf-8")
 BRIDGE = (PKG / "FirstAidApiBridge.java").read_text(encoding="utf-8")
 RECOVERY = (PKG / "RecoverySupplies.java").read_text(encoding="utf-8")
@@ -40,12 +41,12 @@ class FirstAidContract(unittest.TestCase):
         self.assertIn("FirstAidCompat.useDuration(stack)", RECOVERY)
 
     def test_shared_course_and_morphine_block_reuse(self):
-        self.assertIn('if (isMedicine(stack)) return state.getInt("pulses") <= 0;', COMPAT)
+        self.assertIn('if (isMedicine(stack)) return state.getInt("pulses") <= 0', COMPAT)
         self.assertIn("!human.hasEffect(MobEffects.DAMAGE_RESISTANCE)", COMPAT)
-        self.assertIn("MORPHINE_TICKS = 90 * 20", COMPAT)
+        self.assertIn('"morphine_duration_seconds", 90', SETTINGS)
         self.assertIn("LivingEntityUseItemEvent.Tick", COMPAT)
         self.assertIn("event.setCanceled(true)", COMPAT)
-        self.assertIn("MobEffects.DAMAGE_RESISTANCE, MORPHINE_TICKS, 0", COMPAT)
+        self.assertIn("settings.morphineTicks(), settings.resistanceAmplifier()", COMPAT)
 
     def test_course_persists_and_ticks_even_without_food_pending(self):
         tick = RECOVERY.split("static void tickEffects(Human human)", 1)[1].split("private static void consumeCompletedPotion", 1)[0]
@@ -61,9 +62,9 @@ class FirstAidContract(unittest.TestCase):
         self.assertIn("FirstAidCompat.isMorphine(stack) && FirstAidCompat.canUse(human, stack)", RECOVERY)
         self.assertIn("FirstAidCompat.isMedicine(stack)", LOOT)
         self.assertIn("FirstAidCompat.inventoryValue(stack)", LOOT)
-        self.assertIn("60.0D", COMPAT)
-        self.assertIn("65.0D", COMPAT)
-        self.assertIn("94.0D", COMPAT)
+        self.assertIn(", 60, 0, 1000)", SETTINGS)
+        self.assertIn(", 65, 0, 1000)", SETTINGS)
+        self.assertIn(", 94, 0, 1000)", SETTINGS)
 
 
 if __name__ == "__main__":
