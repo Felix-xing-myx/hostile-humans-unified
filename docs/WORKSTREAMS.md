@@ -1034,3 +1034,13 @@
 - 未执行：Gradle/Java编译、构建、实例配置更新、JAR同步、推送、启动游戏，本轮未获构建要求。
 - 待游戏验收：普通近战/Better Combat前摇、弓弩拉弓装填、枪手射击换弹期间进食不停车；撤退/驻守/水域路径仍由原控制器决定；食物逐份扣除、五份批次、容器余物、紧急瞬间治疗中断和盾牌归还；多人客户端视觉与服务器状态一致。
 - 交付：包含本记录的本地源码提交，列入Unreleased，待用户明确要求后构建同步。
+
+## 2026-10-10 3.7.0副手并行进食与新封面发布
+
+- 用户明确要求重新构建3.7.0、把当前更新标记已发布、同步测试实例并推送GitHub。
+- 主控 `/root`，主工作树main；基线8610d08；发布源码 `4fd14b1be5164a99c25b139d3a5dba14d5046aa6`。CHANGELOG将Unreleased的并行进食与英文封面并入3.7.0，删除被替代的进食移动接管说明，保留历史构建记录并新增本次记录。
+- Java17 `build lootScreeningTest --offline`成功，52项任务（50执行、2项已是最新），109项Python源码检查通过；构建日志 `验证日志/3.7.0-parallel-food-build.log`。编译、配置/恢复/武器等既有检查通过；日志中的错误配置读取异常来自测试临时目录的预期失败样例，测试最终通过。
+- JAR核对：Manifest版本3.7.0、唯一modId hostile_humans_unified；新logo与源码字节一致；包含OffhandFoodUse、不包含已删除CombatEatingMovementGoal；默认配置不存在food_use_speed_multiplier。
+- 部署前再次核对测试实例未运行。仅同步 `E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21`；旧JAR和五份配置已备份至 `部署备份/20261010-213922-3.7.0-parallel-food-Forge_47.4.21`，附deployment.json。
+- 四阶配置仅删除food_use_speed_multiplier及两条对应帮助，经JSON结构比较其余值一致；global.json不改。旧JAR SHA-256为9F94C76D52145B0083F2C0B3F680938B9ACAAAAA9E95FB39369AED1868EE6543；新构建与实例一致，为DCE740D5044250E5313C8F888BF8FB1E349229AE21D85A58C8C50F56E2341232。
+- 本记录提交后推送origin/main并核对远端HEAD。仅推源码，不创建GitHub Release。未启动游戏，边进食边移动/近战/弓弩/枪械攻击及盾牌归还需用户游戏内验收。此前未提交Python缓存保留、不纳入提交。
