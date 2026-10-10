@@ -136,7 +136,7 @@ public final class AdaptiveCombatGoal extends Goal {
         // life-saving retreat or blocking a projectile headed into its post.
         if (SoldierOrder.isHoldingPosition(human)
                 && !RetreatRecoveryPolicy.shouldForceRetreat(human)
-                && incomingArrow == null) {
+                && incomingArrow == null && !shields.underGunfirePressure()) {
             return false;
         }
 
@@ -422,7 +422,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 if (!moveToThreat(1.0D)) {
                     // Hand failed routes back to the melee pursuit watchdog;
                     // a shield must not own MOVE while making no progress.
-                    phaseTicks = 0;
+                    if (!shields.underGunfirePressure()) phaseTicks = 0;
                 }
             }
             defenseMovementTarget = threat;
@@ -472,10 +472,11 @@ public final class AdaptiveCombatGoal extends Goal {
         } else {
             // Already in a valid firing band: release promptly so the weapon
             // goal resumes instead of waiting through a long damage reaction.
-            if (human.tickCount - defenseStartTick >= CombatPressurePolicy.MINIMUM_EFFECTIVE_BLOCK_TICKS)
+            if (!shields.underGunfirePressure()
+                    && human.tickCount - defenseStartTick >= CombatPressurePolicy.MINIMUM_EFFECTIVE_BLOCK_TICKS)
                 phaseTicks = 0;
         }
-        if (!moved) phaseTicks = 0;
+        if (!moved && !shields.underGunfirePressure()) phaseTicks = 0;
     }
 
 
@@ -840,6 +841,10 @@ public final class AdaptiveCombatGoal extends Goal {
             }
             rememberThreat(attacker);
 
+            // A real rear ranged hit permits retaliation, but never steals an urgent close fight.
+            if (isValidThreat(current) && current != attacker
+                    && human.distanceToSqr(current) <= 36.0D
+                    && isRangedThreat(attacker)) return applySurroundingThreatPriority(current);
             LivingEntity locked = activeFocusedThreat();
             if (locked != null) {
                 return applySurroundingThreatPriority(locked);
