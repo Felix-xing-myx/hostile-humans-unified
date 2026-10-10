@@ -62,7 +62,7 @@ public final class SoldierCommandScreen extends Screen {
         return Math.min(1.0F, Math.min(width / (PANEL_WIDTH + 12.0F), height / (panelHeight() + 12.0F)));
     }
     private int left() { return (int) (width / panelScale() / 2) - PANEL_WIDTH / 2; }
-    private int growthHeight() { return growth.enabled() ? 96 : 0; }
+    private int growthHeight() { return growth.enabled() ? 72 : 0; }
     private int panelHeight() { return PANEL_HEIGHT + growthHeight(); }
     private int top() { return (int) (height / panelScale() / 2) - panelHeight() / 2; }
 
@@ -81,14 +81,11 @@ public final class SoldierCommandScreen extends Screen {
         return Math.max(0.0D, Math.min(1.0D, current / required));
     }
 
-    private void drawProgress(GuiGraphics graphics, int x, int y, int w, double progress, boolean slider) {
-        graphics.fill(x, y, x + w, y + 5, SURFACE);
+    private void drawProgress(GuiGraphics graphics, int x, int y, int w, double progress) {
+        // A flat, read-only meter has no thumb or drag affordance.
+        graphics.fill(x, y, x + w, y + 3, SURFACE);
         int filled = (int) Math.round(w * progress);
-        graphics.fill(x, y, x + filled, y + 5, GOLD);
-        if (slider) {
-            int marker = x + Math.max(1, Math.min(w - 2, filled));
-            graphics.fill(marker - 1, y - 2, marker + 2, y + 7, TEXT);
-        }
+        graphics.fill(x, y, x + filled, y + 3, GOLD);
     }
 
     /** All numbers and visibility come from the server snapshot; these bars are read-only. */
@@ -102,21 +99,21 @@ public final class SoldierCommandScreen extends Screen {
                         ? Component.translatable("screen.hostile_humans_unified.soldier.growth.max_level")
                         : Component.translatable("screen.hostile_humans_unified.soldier.growth.stage",
                         growth.stagePercent(), amount(growth.stageProgress()), amount(growth.stageRequired())),
-                x, top + 65, TEXT, false);
-        drawProgress(graphics, x, top + 78, w, maxLevel ? 1.0D
-                : fraction(growth.stageProgress(), growth.stageRequired()), false);
+                x, top + 62, TEXT, false);
+        drawProgress(graphics, x, top + 73, w, maxLevel ? 1.0D
+                : fraction(growth.stageProgress(), growth.stageRequired()));
         graphics.drawString(font, Component.translatable("screen.hostile_humans_unified.soldier.growth.experience",
                 growth.experiencePercent(), growth.experienceMinPercent(), growth.experienceCapPercent()),
-                x, top + 90, TEXT, false);
-        drawProgress(graphics, x, top + 103, w,
+                x, top + 82, TEXT, false);
+        drawProgress(graphics, x, top + 93, w,
                 fraction((double) growth.experiencePercent() - growth.experienceMinPercent(),
-                        (double) growth.experienceCapPercent() - growth.experienceMinPercent()), true);
+                        (double) growth.experienceCapPercent() - growth.experienceMinPercent()));
         graphics.drawString(font, growth.experiencePercent() >= growth.experienceCapPercent()
                         ? Component.translatable("screen.hostile_humans_unified.soldier.growth.experience_capped")
                         : Component.translatable("screen.hostile_humans_unified.soldier.growth.next_point",
                         amount(growth.experienceProgress()), amount(growth.experienceRequired())),
-                x, top + 117, MUTED, false);
-        graphics.fill(left + 9, top + 139, left + PANEL_WIDTH - 9, top + 140, EDGE);
+                x, top + 102, MUTED, false);
+        graphics.fill(left + 9, top + 115, left + PANEL_WIDTH - 9, top + 116, EDGE);
     }
 
     private static boolean hit(double mx, double my, int x, int y, int w, int h) {

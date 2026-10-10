@@ -27,6 +27,16 @@ public final class GrowthConfigTest {
             }
             check(growth.stageAt(rank, Long.MIN_VALUE) == 0 && growth.stageAt(rank, Long.MAX_VALUE) == 5, "long bounds");
         }
+        // Compare pre-experience base health at every relevant default birth day.
+        // Wild snapshots do not grow later, so monotonic curves also bound older lower-rank units.
+        for (long day = 0; day <= 200; day++) {
+            double lower = 0;
+            for (String rank : TierConfigProjection.RANKS) {
+                double health = config.tier(rank).maxHealth() * growth.stagePercent(growth.stageAt(rank, day)) / 100.0;
+                check(health > lower, "higher rank has higher pre-experience birth health: day=" + day + " rank=" + rank);
+                lower = health;
+            }
+        }
         JsonObject custom = json("""
                 {"growth":{"profiles":{"roamer":{"start_day":10,"duration_days":100,"progress_nodes":[0.1,0.3,0.7,0.9]}}}}
                 """);

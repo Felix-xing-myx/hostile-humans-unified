@@ -40,7 +40,9 @@ public final class GrowthConfig {
             JsonObject d = UnifiedConfig.object(UnifiedConfig.object(defaults, "profiles"), rank);
             int start = integer(p, "start_day", d.get("start_day").getAsInt(), 1, 1000000, path);
             int duration = integer(p, "duration_days", d.get("duration_days").getAsInt(), 1, 1000000, path);
-            List<Double> nodes = array(p, "progress_nodes", List.of(.2D, .4D, .6D, .8D), Math.nextUp(0D), Math.nextDown(1D), true, false, path);
+            List<Double> defaultNodes = new ArrayList<>();
+            for (JsonElement node : d.getAsJsonArray("progress_nodes")) defaultNodes.add(node.getAsDouble());
+            List<Double> nodes = array(p, "progress_nodes", List.copyOf(defaultNodes), Math.nextUp(0D), Math.nextDown(1D), true, false, path);
             values.put(rank, new EquipmentGrowthPolicy.Profile(start, start + duration, nodes,
                     number(p, "early_baseline_gear_chance", d.get("early_baseline_gear_chance").getAsDouble(), 0, 1, path),
                     number(p, "early_gun_chance_multiplier", d.get("early_gun_chance_multiplier").getAsDouble(), 0, 1, path),

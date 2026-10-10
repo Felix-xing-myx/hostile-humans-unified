@@ -13,7 +13,7 @@ final class SoldierFollowNavigation {
     private static final Map<Human, State> STATES = new WeakHashMap<>();
     private static final class State {
         boolean chasing;
-        int nextSearch, failures, progressTick, node;
+        int nextSearch, failures, progressTick, approachTick, node;
         double bestDistance;
         BlockPos goal;
         Path route, observed;
@@ -25,6 +25,9 @@ final class SoldierFollowNavigation {
     static int retryDelay(int failures) { return Math.min(40, 5 + Math.max(0, failures) * 5); }
     static boolean rescueDue(int elapsed, double distanceSquared) {
         return elapsed >= 200 && distanceSquared > 6.25;
+    }
+    static boolean meaningfulApproach(double distance, double bestDistance, double acceptableDistance) {
+        return distance < bestDistance - 0.5 || distance <= acceptableDistance;
     }
     static void clear(Human human) { STATES.remove(human); }
     static void stopOwned(Human human) {
@@ -42,19 +45,23 @@ final class SoldierFollowNavigation {
         if (!state.chasing) {
             state.chasing = true;
             state.progressTick = human.tickCount;
+            state.approachTick = human.tickCount;
             state.bestDistance = distance;
         }
         Path current = human.getNavigation().getPath();
         boolean nodeProgress = current != null && current == state.observed
                 && current.getNextNodeIndex() > state.node;
-        if (distance < state.bestDistance - 0.5 || nodeProgress || distance <= acceptableDistance) {
+        // Node indices can advance repeatedly on partial/replaced routes without
+        // bringing the soldier nearer. They must never reset the rescue deadline.
+        if (meaningfulApproach(distance, state.bestDistance, acceptableDistance)) {
             state.bestDistance = distance;
+            state.approachTick = human.tickCount;
             state.progressTick = human.tickCount;
             state.failures = 0;
-        }
+        } else if (nodeProgress) state.progressTick = human.tickCount;
         state.observed = current;
         state.node = current == null ? 0 : current.getNextNodeIndex();
-        return distance > acceptableDistance && (human.distanceToSqr(owner) > 48 * 48 || rescueDue(human.tickCount - state.progressTick,
+        return distance > acceptableDistance && (human.distanceToSqr(owner) > 48 * 48 || rescueDue(human.tickCount - state.approachTick,
                 human.distanceToSqr(owner))) && SoldierOrder.teleportBesideOwner(human, owner);
     }
     static void tick(Human human, ServerPlayer owner) {

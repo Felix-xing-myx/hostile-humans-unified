@@ -66,12 +66,18 @@ class GrowthUiContractTest(unittest.TestCase):
         self.assertIn("screen.sessionToken.equals(token)", section(SCREEN, "static void invalidate", "private float panelScale"))
 
     def test_disabled_growth_hides_block_and_removes_layout_space(self):
-        self.assertIn("return growth.enabled() ? 96 : 0", SCREEN)
+        self.assertIn("return growth.enabled() ? 72 : 0", SCREEN)
         self.assertIn("if (!growth.enabled()) return", SCREEN)
         self.assertIn("top += growthHeight()", SCREEN)
         click = section(SCREEN, "public boolean mouseClicked", "public boolean isPauseScreen")
         self.assertIn("top = top() + growthHeight()", click)
         self.assertNotIn("growth.", click)
+
+    def test_experience_meter_has_no_draggable_thumb(self):
+        meter = section(SCREEN, "private void drawProgress", "/** All numbers")
+        self.assertNotIn("boolean slider", meter)
+        self.assertNotIn("marker", meter)
+        self.assertIn("y + 3", meter)
 
     def test_existing_command_and_dismiss_validation_remain(self):
         validate = section(NETWORK, "private static Human ownedHumanForCommand", "private record OpenScreenPacket")

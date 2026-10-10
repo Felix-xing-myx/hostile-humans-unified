@@ -16,6 +16,11 @@ public final class SoldierFollowPolicyTest {
         check(!SoldierFollowNavigation.rescueDue(199, 100), "short stalls cannot teleport");
         check(SoldierFollowNavigation.rescueDue(200, 100), "long stalls may rescue nearby soldiers");
         check(!SoldierFollowNavigation.rescueDue(300, 6.25), "no rescue inside follow spacing");
+        check(!SoldierFollowNavigation.meaningfulApproach(10, 10, 2.5), "node changes without physical approach do not defer rescue");
+        check(!SoldierFollowNavigation.meaningfulApproach(9.75, 10, 2.5), "small obstacle jitter does not defer rescue");
+        check(SoldierFollowNavigation.meaningfulApproach(9.49, 10, 2.5), "real approach refreshes rescue timer");
+        check(SoldierFollowNavigation.meaningfulApproach(2.5, 2.5, 2.5), "arrival ends rescue pressure");
+        check(SoldierFollowNavigation.rescueDue(200, 400), "twenty-block obstruction is eligible without the long-distance teleport gate");
         check(SoldierFollowNavigation.retryDelay(1) == 10, "failed follow searches back off");
         check(SoldierFollowNavigation.retryDelay(100) == 40, "retry delay stays bounded");
         Object server = new Object();
