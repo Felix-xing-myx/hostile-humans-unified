@@ -1002,3 +1002,13 @@
 - 构建代码提交：`f34e45d298a8fbbe5f63a36f549fa31de719ec38`。替换前确认测试实例未运行，已同步到 `E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\hostile-humans-unified-1.20.1-3.7.0.jar`，未改实例配置。
 - 旧JAR备份：`E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261010-205536-3.7.0-eating-hop-Forge_47.4.21`；旧SHA-256 `A0D9A6EE71B636F50DFC7820CC21888AFC98247193CC098F4F4F58F679DD98BE`，备份一致，deployment.json已登记。
 - 新JAR源/目标SHA-256均为 `BD47E926A0DFF65D8BDD94D10219CC9DC2F84B7C4509829F273ECCFC8E06117F`。本记录提交后推送origin/main并核对远端HEAD；未创建GitHub Release或启动游戏，游戏内验收由用户进行。
+
+## 2026-10-10 枪械白名单示例转义说明补充
+
+- 需求：补回全局枪械白名单示例反斜杠填写说明，重新构建同步3.7.0并推送GitHub。
+- 基线 `f32c46da1986b7b85baf46ec5deec5ac4acfa148`；负责人主控 `/root`；源码主工作树、`main`，无并行编辑。构建源码提交 `39aa697ada2b900c3e550a289bd60a43367c2895`。
+- 修改：默认JSON中普通枪械白名单及雇佣额外白名单的四条中英文帮助，明确示例说明字符串中的反斜杠是JSON转义，填写实际白名单对象时删除反斜杠并保留键名双引号；白名单默认值与加载逻辑不变。现有refreshGuidance入口可在服务器加载时刷新帮助。
+- 验证：默认JSON语法与非帮助字段一致性检查通过；109项Python源码检查通过；Java17 `build lootScreeningTest --offline`成功，52项任务（48执行、4项已是最新）。构建日志 `验证日志/3.7.0-whitelist-help-build.log`，JAR中3.7.0版本、单一模组身份及四条帮助核对通过。
+- 同步：替换前确认目标实例未运行；仅更新Forge47.4.21测试实例。旧JAR及global.json备份于 `E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261010-210216-3.7.0-whitelist-help-Forge_47.4.21`，附deployment.json。实例global.json仅原位更新四条说明，解析后其余全部配置值一致。
+- 旧JAR SHA-256 `BD47E926A0DFF65D8BDD94D10219CC9DC2F84B7C4509829F273ECCFC8E06117F`；新构建与实例SHA-256均为 `9F94C76D52145B0083F2C0B3F680938B9ACAAAAA9E95FB39369AED1868EE6543`。
+- 交付：本记录随发布提交推送origin/main并核对远端HEAD；未启动游戏，不创建GitHub Release或上传二进制附件。
