@@ -192,7 +192,7 @@
   "screen.hostile_humans_unified.soldier.growth.next_point": "Next percentage point: %s / %s",
   "screen.hostile_humans_unified.soldier.growth.experience_capped": "Experience: percentage cap reached",
   "screen.hostile_humans_unified.roster.growth_summary": "Lv%s · XP%s%%",
-  "dialogue.hostile_humans_unified.ammo_empty.arrows": "I'm out of universal arrows. I need supplies before I can use my bow or crossbow!",
-  "dialogue.hostile_humans_unified.ammo_empty.magazines": "My gun is empty and I don't have enough universal magazines to reload. I need supplies!",
-  "dialogue.hostile_humans_unified.ammo_empty.both": "I'm out of arrows and can't reload my gun. I need universal arrows and magazines!"
+  "dialogue.hostile_humans_unified.ammo_empty.arrows": "I'm out of arrows. Got any more for me?",
+  "dialogue.hostile_humans_unified.ammo_empty.magazines": "My gun's dry, and I'm short on magazines. Got any spares?",
+  "dialogue.hostile_humans_unified.ammo_empty.both": "No arrows, no rounds. Could use some arrows and magazines!"
 }

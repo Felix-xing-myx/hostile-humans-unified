@@ -192,7 +192,7 @@
   "screen.hostile_humans_unified.soldier.growth.next_point": "下一百分点：%s / %s",
   "screen.hostile_humans_unified.soldier.growth.experience_capped": "经验：已达百分比上限",
   "screen.hostile_humans_unified.roster.growth_summary": "等级%s · 经验%s%%",
-  "dialogue.hostile_humans_unified.ammo_empty.arrows": "通用箭矢用完了，弓弩暂时用不了了，需要补给！",
-  "dialogue.hostile_humans_unified.ammo_empty.magazines": "枪里没子弹了，通用弹匣也不够换弹，需要补给！",
-  "dialogue.hostile_humans_unified.ammo_empty.both": "箭矢用完了，枪也无法装填，需要补充通用箭矢和弹匣！"
+  "dialogue.hostile_humans_unified.ammo_empty.arrows": "箭用光了，给我补点箭吧！",
+  "dialogue.hostile_humans_unified.ammo_empty.magazines": "枪打空了，弹匣也不够换了，给我补点吧！",
+  "dialogue.hostile_humans_unified.ammo_empty.both": "箭射光了，枪也没弹了，帮我补点箭和弹匣吧！"
 }
