@@ -13,8 +13,7 @@ final class AmmoWeaponSelection {
 
     static boolean usableGun(Human human, ItemStack stack) {
         return HumanAmmo.canUseGun(human, stack)
-                || (stack == human.getMainHandItem() && GunSupport.get().isGun(stack)
-                && GunSupport.get().isReloading(human));
+                || (GunSupport.get().isGun(stack) && GunSupport.get().isReloading(human, stack));
     }
 
     static boolean hasUsableGun(Human human) {

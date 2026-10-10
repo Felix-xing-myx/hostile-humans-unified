@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 public final class TaczHumanReloadTransactions {
     private static final ReloadPaymentLedger<ShooterDataHolder, ItemStack> PAYMENTS = new ReloadPaymentLedger<>();
     private static final java.util.Map<ShooterDataHolder, Long> INVENTORY_FEED_END = new java.util.WeakHashMap<>();
+    private static final java.util.Map<ShooterDataHolder, net.minecraft.resources.ResourceLocation> GUN_IDS = new java.util.WeakHashMap<>();
     private TaczHumanReloadTransactions() {}
 
     public static boolean start(AbstractGunItem gun, ShooterDataHolder data,
@@ -62,6 +63,8 @@ public final class TaczHumanReloadTransactions {
             // backpack during start. Failed authorization cannot create ammunition.
             gun.setCurrentAmmoCount(weapon, loaded);
             gun.setBulletInBarrel(weapon, chambered);
+        } else {
+            GUN_IDS.put(data, gun.getGunId(weapon));
         }
         return started;
     }
@@ -69,9 +72,9 @@ public final class TaczHumanReloadTransactions {
     public static ReloadState tick(AbstractGunItem gun, ShooterDataHolder data,
                                    ItemStack weapon, LivingEntity shooter) {
         if (!(shooter instanceof Human human)) return gun.tickReload(data, weapon, shooter);
-        if (human.level().isClientSide || weapon != human.getMainHandItem()
+        if (human.level().isClientSide || !ownsReloadWeapon(human, weapon) || !sameGun(data, weapon)
                 || !PAYMENTS.authorized(data, weapon, human.level().getGameTime())) {
-            end(data);
+            finish(human, data);
             return new ReloadState();
         }
         Long feedEnd = INVENTORY_FEED_END.get(data);
@@ -93,24 +96,77 @@ public final class TaczHumanReloadTransactions {
                     gun.setBulletInBarrel(weapon, false);
                 }
             }
-            end(data);
+            finish(human, data);
             return state;
         }
         ReloadState state = gun.tickReload(data, weapon, shooter);
-        if (!state.getStateType().isReloading()) PAYMENTS.end(data);
+        if (human.getData() != null && weapon != human.getMainHandItem()) human.getData().markInventoryDirty();
+        if (!state.getStateType().isReloading()) finish(human, data);
         return state;
     }
 
     public static boolean isPaidReloading(Human human, ShooterDataHolder data) {
+        ItemStack weapon = PAYMENTS.weapon(data, human.level().getGameTime());
         boolean active = data.reloadTimestamp != -1L && data.reloadStateType.isReloading()
-                && PAYMENTS.authorized(data, human.getMainHandItem(), human.level().getGameTime());
+                && weapon != null && ownsReloadWeapon(human, weapon) && sameGun(data, weapon);
         // Queries must not cancel native state; cleanup belongs to tick/cancel.
         return active;
+    }
+
+    public static boolean isReloadingWeapon(Human human, ShooterDataHolder data, ItemStack weapon) {
+        return PAYMENTS.weapon(data, human.level().getGameTime()) == weapon && isPaidReloading(human, data);
+    }
+
+    /** Called before native reload ticks, including while its combat Goal is stopped. */
+    public static boolean prepareNativeTick(Human human, ShooterDataHolder data) {
+        if (data.reloadTimestamp == -1L) {
+            end(data);
+            return true;
+        }
+        ItemStack weapon = PAYMENTS.weapon(data, human.level().getGameTime());
+        if (!human.isAlive() || HumanInventorySession.isEditing(human)
+                || weapon == null || !ownsReloadWeapon(human, weapon) || !sameGun(data, weapon)) {
+            finish(human, data);
+            return false;
+        }
+        // The dynamic main-hand supplier would yield a sword during close
+        // defense. Bind native reload scripts only for this tick's call.
+        data.currentGunItem = () -> weapon;
+        return true;
+    }
+
+    private static boolean sameGun(ShooterDataHolder data, ItemStack weapon) {
+        return weapon.getItem() instanceof AbstractGunItem gun
+                && java.util.Objects.equals(GUN_IDS.get(data), gun.getGunId(weapon));
+    }
+
+    private static boolean ownsReloadWeapon(Human human, ItemStack weapon) {
+        if (weapon.isEmpty()) return false;
+        if (weapon == human.getMainHandItem()) return true;
+        // Only the existing temporary melee custody can continue in background.
+        // A dropped, removed, copied or manually replaced gun cannot inherit it.
+        if (!GunCustody.isCloseDefenseActive(human) || human.getData() == null) return false;
+        for (int slot = 0; slot < human.getData().getInventoryItemsSize(); slot++) {
+            if (human.getData().getInventoryItem(slot) == weapon) return true;
+        }
+        return false;
+    }
+
+    private static void finish(Human human, ShooterDataHolder data) {
+        end(data);
+        restoreHeldBinding(human, data);
+        if (human.getData() != null) human.getData().markInventoryDirty();
+    }
+
+    /** Other native operations must see the real held item, not a stowed gun. */
+    public static void restoreHeldBinding(Human human, ShooterDataHolder data) {
+        data.currentGunItem = human::getMainHandItem;
     }
 
     public static void end(ShooterDataHolder data) {
         PAYMENTS.end(data);
         INVENTORY_FEED_END.remove(data);
+        GUN_IDS.remove(data);
         data.reloadTimestamp = -1L;
         data.reloadStateType = ReloadState.StateType.NOT_RELOADING;
     }
@@ -119,6 +175,7 @@ public final class TaczHumanReloadTransactions {
         if (!data.reloadStateType.isReloading() || data.reloadTimestamp == -1L) {
             PAYMENTS.end(data);
             INVENTORY_FEED_END.remove(data);
+            GUN_IDS.remove(data);
         }
     }
 }

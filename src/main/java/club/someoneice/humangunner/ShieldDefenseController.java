@@ -68,6 +68,8 @@ public final class ShieldDefenseController {
 
     boolean wantsCombat(LivingEntity threat, IncomingArrow incomingArrow) {
         if (human.isFleeing || !canBlockWithShield()) return false;
+        if (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem())
+                && !RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) return false;
         // Fresh suppressive fire can interrupt an open weapon-use/counter window.
         if (underGunfirePressure()) return true;
         if (human.tickCount < nextCounterGuardTick) return false;
@@ -106,7 +108,7 @@ public final class ShieldDefenseController {
         defendingGunfire = underGunfirePressure();
         // Bow drawing and shield use cannot coexist; stop drawing, without releasing a shot.
         if (defendingGunfire && human.isUsingItem()
-                && !SpartanEquipmentCompat.isShield(human.getUseItem())) human.stopUsingItem();
+                && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
         defendingProjectile = human.tickCount < projectileDefenseUntil || rangedWarning;
         int projectileWindow = projectileDefenseUntil - human.tickCount;
         int duration = defendingProjectile && isDedicatedRangedCombatant()
@@ -293,6 +295,7 @@ public final class ShieldDefenseController {
                     bounds.inflate(32.0D, 16.0D, 32.0D),
                     candidate -> candidate.isAlive() && candidate.getOwner() != human
                             && candidate.getDeltaMovement().lengthSqr() >= 0.04D)) {
+                if (!inFront(arrow.position())) continue;
                 if (arrow.getOwner() instanceof LivingEntity shooter && HumanRelations.allied(human, shooter)) continue;
                 if (bounds.getCenter().subtract(arrow.position()).dot(arrow.getDeltaMovement()) < 0.0D) continue;
                 nearest.offer(arrow);
@@ -516,7 +519,7 @@ public final class ShieldDefenseController {
     }
 
     private boolean isHoldingTaczGun() {
-        return GunSupport.get().isGun(human.getMainHandItem());
+        return GunSupport.isGunItem(human.getMainHandItem());
     }
 
     private boolean isGunThreat(LivingEntity target) {

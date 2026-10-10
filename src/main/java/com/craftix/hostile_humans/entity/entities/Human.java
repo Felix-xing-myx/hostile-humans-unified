@@ -1443,10 +1443,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         ItemStack requested = human.getItemInHand(hand);
         if (humanGunner$hasPendingMeleeAttack()
                 && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)) return;
-        boolean holdingGun = club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())
-                || club.someoneice.humangunner.GunSupport.get().isGun(human.getOffhandItem());
-        if (holdingGun && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)
-                && !humanGunner$movementShieldAllowance) {
+        boolean holdingGun = club.someoneice.humangunner.GunSupport.isGunItem(human.getMainHandItem());
+        if (holdingGun && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)) {
             return;
         }
     

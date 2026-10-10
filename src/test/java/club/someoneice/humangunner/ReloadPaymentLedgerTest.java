@@ -48,6 +48,10 @@ public final class ReloadPaymentLedgerTest {
         for (int shell = 1; shell < 10; shell++)
             check(ledger.authorized(holder, gun, shell), "one paid manual cycle covers later shells");
         check(magazines[0] == 1, "manual cycle paid once");
+        check(ledger.weapon(holder, 10) == gun, "background lookup retains the original paid gun");
+        Object mainHandSword = new Object();
+        check(ledger.weapon(holder, 11) != mainHandSword && ledger.authorized(holder, gun, 11),
+                "temporary melee hand does not replace the bound background weapon or pay again");
         check(!ledger.authorized(holder, new Object(), 10), "replacement gun cannot reuse payment");
         check(!ledger.authorized(holder, gun, 11), "switching back does not revive payment");
         check(ledger.begin(holder, gun, 100, () -> true, () -> true,
@@ -55,6 +59,7 @@ public final class ReloadPaymentLedgerTest {
         check(magazines[0] == 0 && ledger.authorized(holder, gun, 99),
                 "last paid magazine retains active cycle");
         check(!ledger.authorized(holder, gun, 100), "hard deadline removes authorization");
+        check(ledger.weapon(holder, 100) == null, "expired background cycle has no retrievable weapon");
         check(!ledger.begin(holder, gun, 200, () -> magazines[0] > 0, () -> true, () -> true),
                 "timeout never gives a free retry");
         magazines[0] = 1;

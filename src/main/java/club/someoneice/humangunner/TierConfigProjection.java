@@ -104,7 +104,7 @@ final class TierConfigProjection {
         orderGroup(result, "tacz", rank ? List.of("gun_chance", "damage_multiplier", "gun_type_weights")
                 : List.of("enabled", "natural_spawn_firearms_enabled", "auto_add_new_guns", "auto_added_gun_weight",
                     "excluded_auto_gun_types", "excluded_gun_namespaces", "gun_blacklist",
-                    "pillager_gun_damage_multiplier", "shield_damage_multiplier", "tamed_maid_damage_multiplier",
+                    "pillager_gun_damage_multiplier", "shield_damage_multiplier", "offhand_shield_damage_reduction", "tamed_maid_damage_multiplier",
                     "forced_ranged_gun_chance", "gun_drop_chance", "gun_whitelist",
                     "hired_gun_additional_whitelist"));
         orderGroup(result, "growth", List.of("enabled", "stage_percent", "stage_cost", "experience", "firearms", "combat"));

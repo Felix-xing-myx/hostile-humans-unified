@@ -40,6 +40,9 @@ public interface GunSupport {
     default Control control(Human human) { return Control.NONE; }
     default void tickIdleReload(Human human) {}
     default boolean isReloading(Human human) { return false; }
+    default boolean isReloading(Human human, ItemStack weapon) {
+        return weapon == human.getMainHandItem() && isReloading(human);
+    }
     default void registerEvents() {}
 
     interface Control {

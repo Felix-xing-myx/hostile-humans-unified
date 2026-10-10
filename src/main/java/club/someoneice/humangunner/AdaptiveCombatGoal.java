@@ -152,14 +152,7 @@ public final class AdaptiveCombatGoal extends Goal {
         updateCombatSession(currentThreat);
         if (BodyguardProtection.protectingFromExplosion(human, currentThreat)) return false;
 
-        double health = healthRatio();
-        if (!LowHealthCombatController.shouldHoldGround(human, currentThreat)
-                && (RetreatRecoveryPolicy.shouldForceRetreat(human)
-                || (HumanUtil.isLowHp(human) && human.shouldStartFleeingThisCombat())
-                || (health < config.retreatHealthRatio()
-                && projectedHealthRatio() < config.resumeHealthRatio()
-                && config.itemRecoveryEnabled()
-                && RecoverySupplies.hasCombatRecoverySupply(human)))) {
+        if (shouldEnterRetreat(currentThreat)) {
             pendingPhase = Phase.RETREAT;
             return true;
         }
@@ -219,6 +212,16 @@ public final class AdaptiveCombatGoal extends Goal {
         return false;
     }
 
+    private boolean shouldEnterRetreat(LivingEntity currentThreat) {
+        return !LowHealthCombatController.shouldHoldGround(human, currentThreat)
+                && (RetreatRecoveryPolicy.shouldForceRetreat(human)
+                || (HumanUtil.isLowHp(human) && human.shouldStartFleeingThisCombat())
+                || (healthRatio() < config.retreatHealthRatio()
+                && projectedHealthRatio() < config.resumeHealthRatio()
+                && config.itemRecoveryEnabled()
+                && RecoverySupplies.hasCombatRecoverySupply(human)));
+    }
+
     @Override
     public boolean canContinueToUse() {
         if (BodyguardProtection.isBodyguard(human)) {
@@ -228,6 +231,9 @@ public final class AdaptiveCombatGoal extends Goal {
         if (!isValidThreat(threat) || !human.isAlive()) {
             return false;
         }
+        // Suppressive fire can extend DEFEND indefinitely; it must not trap a
+        // injured fighter in that phase instead of allowing ordinary retreat.
+        if (phase == Phase.DEFEND && shouldEnterRetreat(threat)) return false;
         if ((phase == Phase.FLANK || phase == Phase.PRESSURE || phase == Phase.UNSTUCK)
                 && CombatTerrainNavigation.hasWork(human, threat)) return false;
         if ((human.distanceToSqr(threat) > 4096.0D

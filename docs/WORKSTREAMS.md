@@ -865,3 +865,15 @@
 - 待游戏验收：实际第一箭能否及时挡住、射手警戒与短反击、静止近战敌人第一击及多敌连击、双方举盾1秒后破僵持、模组取消格挡、BC前摇、弩装填/枪械换弹、恢复托管及100名士兵混战耗时。高速箭/刷新间隔/候选预算及反击窗口内仍可能命中，不保证全挡；非常规模组弹射物无通用轨迹保证。
 
 - 边界复核：Goal在start同tick即递减阶段时长，近战等待租期至少21 tick以确保held=20的超时反击判断实际运行，而不是在held=19时自然结束；增加该时序契约。
+
+## 2026-10-10 持续枪火防御与后台换弹（进行中）
+- 基线：c84b93c41469fe64a2c3054707dd12ddcb506c65；主控 /root，main，主工作树 project。
+- shield_fire：GPT-6.1 Sol / medium；worktrees/shield-fire-pressure，feature/shield-fire-pressure；负责 ShieldDefenseController、AdaptiveCombatGoal、弩举盾装填独立模块及相关策略/测试，不修改枪械事务、HumanGunner或配置。
+- passive_shield：GPT-6.1 Sol / medium；worktrees/gunner-passive-shield，feature/gunner-passive-shield；负责枪手副手盾全类型20%减伤、正常扣耐久；仅修改独立模块、ShieldDurability和HumanGunner，配置由主控接入。
+- 主控负责 TaCZ 事务/托管/原生生命周期、全局配置、共享接口、文档与最终整合。没有构建/部署授权。
+- 接口约定：枪在主手时禁止主动举盾；持续枪伤与近战/箭矢反击窗口分开；后台换弹仅绑定已授权的同一实际枪，不能复制枪、额外付费或让玩家枪械改变。
+- 已整合：shield_fire交付17e961a8a5007f4ff2ce60517e93591600d53855→main a230b15；passive_shield交付16fc62cb98272b68f6a5b0f03c43b207ee6be6d6→main 1775b53。主控最终接入随本节提交。
+- 主控：GunCustody移动同一实际枪；GunSupport增加按具体枪查询换弹资格；TaCZ原生tick HEAD绑定已付费枪、RETURN恢复真实主手；原生脚本推进且仅支付一次，失去实际所有权/枪ID变化/编辑/取消/超时终止。副手盾减伤配置入全局；Human底层禁止主手枪主动举盾；持续防御复用原撤退入口，前方过滤放到候选限额之前，不抢断食药。
+- 验证：76项Python源码集成契约通过；281份资源JSON解析通过；Java17仅parse全部350份Java文件，语法错误0（未类型检查/编译）；git diff --check通过。检查本机TaCZ 1.1.8-hotfix及Forge映射字节码，原生reload tick不依赖战斗Goal。
+- Java账本/ASM测试仅扩展未执行；未运行Gradle、构建、同步、实例配置更新、启动游戏或push。
+- 待游戏验收：持续枪火与0.3秒静默收盾/低血撤退，持盾移动/弩装填（含斯巴达重弩），后方箭与护卫优先级，20%减伤/破盾/附魔，长换弹切近战后提前归还及后台完成后归还、缺弹匣、移除枪/取消以及多人服务器。事务不跨卸载/重启恢复；非标准枪包脚本及其他模组后续修改伤害事件需实际验证。

@@ -68,7 +68,9 @@ final class GunCustody {
         if (human.isUsingItem()) {
             return false;
         }
-        ItemStack gun = human.getMainHandItem().copy();
+        // Move the actual authorized stack: native TaCZ reload scripts and the
+        // payment lease must keep writing into the gun that will be restored.
+        ItemStack gun = human.getMainHandItem();
         if (!club.someoneice.humangunner.GunSupport.get().isGun(gun)) {
             return false;
         }
@@ -132,12 +134,12 @@ final class GunCustody {
         }
 
         int gunSlot = findPrimaryGunSlot(human, data);
-        if (gunSlot < 0 || !HumanAmmo.canUseGun(human, data.getInventoryItem(gunSlot))) {
+        if (gunSlot < 0 || !AmmoWeaponSelection.usableGun(human, data.getInventoryItem(gunSlot))) {
             gunSlot = findUsableGunSlot(human, data);
         }
         ItemStack gun;
         if (gunSlot >= 0) {
-            gun = data.getInventoryItem(gunSlot).copy();
+            gun = data.getInventoryItem(gunSlot);
             registerPrimaryGun(human, gun);
             ItemStack displaced = human.getMainHandItem().copy();
             // Duplicate transiently, then complete the exact two-location swap.
@@ -303,7 +305,7 @@ final class GunCustody {
 
     private static int findUsableGunSlot(Human human, HumanData data) {
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            if (HumanAmmo.canUseGun(human, data.getInventoryItem(i))) return i;
+            if (AmmoWeaponSelection.usableGun(human, data.getInventoryItem(i))) return i;
         }
         return -1;
     }

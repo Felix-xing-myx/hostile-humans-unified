@@ -22,6 +22,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Required TaCZ ammo boundaries; absent TaCZ is supported by @Pseudo. */
 @Pseudo
@@ -29,6 +30,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class TaczHumanReloadMixin {
     @Shadow @Final private LivingEntity shooter;
     @Shadow @Final private ShooterDataHolder data;
+
+    @Inject(method = TaczAmmoMixinContract.TICK_RELOAD, at = @At("HEAD"), cancellable = true, require = 1)
+    private void humanGunner$bindBackgroundReload(CallbackInfoReturnable<ReloadState> cir) {
+        if (shooter instanceof Human human && !human.level().isClientSide
+                && !TaczHumanReloadTransactions.prepareNativeTick(human, data)) {
+            cir.setReturnValue(new ReloadState());
+        }
+    }
+
+    @Inject(method = TaczAmmoMixinContract.TICK_RELOAD, at = @At("RETURN"), require = 1)
+    private void humanGunner$restoreHeldBinding(CallbackInfoReturnable<ReloadState> cir) {
+        if (shooter instanceof Human human && !human.level().isClientSide)
+            TaczHumanReloadTransactions.restoreHeldBinding(human, data);
+    }
 
     @Inject(method = TaczAmmoMixinContract.RELOAD, at = @At("HEAD"), cancellable = true, require = 1)
     private void humanGunner$discardFinishedPayment(CallbackInfo ci) {
@@ -63,9 +78,14 @@ public abstract class TaczHumanReloadMixin {
             }
             // Inventory-feed cancellation belongs to the NPC transaction, not
             // a gun-pack script designed for an endless inventory supply.
-            ItemStack weapon = human.getMainHandItem();
+            if (!TaczHumanReloadTransactions.prepareNativeTick(human, data)) {
+                ci.cancel();
+                return;
+            }
+            ItemStack weapon = data.currentGunItem == null ? human.getMainHandItem() : data.currentGunItem.get();
             if (weapon.getItem() instanceof AbstractGunItem gun && gun.useInventoryAmmo(weapon)) {
                 TaczHumanReloadTransactions.end(data);
+                TaczHumanReloadTransactions.restoreHeldBinding(human, data);
                 ci.cancel();
             }
         }
@@ -105,6 +125,9 @@ public abstract class TaczHumanReloadMixin {
 
     @Inject(method = TaczAmmoMixinContract.CANCEL_RELOAD, at = @At("RETURN"), require = 1)
     private void humanGunner$endPayment(CallbackInfo ci) {
-        if (shooter instanceof Human) TaczHumanReloadTransactions.end(data);
+        if (shooter instanceof Human human) {
+            TaczHumanReloadTransactions.end(data);
+            TaczHumanReloadTransactions.restoreHeldBinding(human, data);
+        }
     }
 }

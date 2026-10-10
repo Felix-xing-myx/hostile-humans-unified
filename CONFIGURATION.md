@@ -24,6 +24,8 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 
 ## 出生弹药与全局消耗开关
 
+全局 `tacz.offhand_shield_damage_reduction` 为枪手主手持枪＋副手可用盾的全类型减伤比例，默认 `0.2`（20%），范围0–1；设为0取消该奖励及其耐久损耗。开枪和换弹均可生效，换下枪或盾即失效，每次有效伤害正常损耗盾耐久。它与近战/弓弩主动举盾承受枪伤的 `tacz.shield_damage_multiplier` 是不同装备状态，不能叠加。
+
 `global.json` 中设置：
 
 ```json

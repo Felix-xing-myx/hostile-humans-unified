@@ -28,4 +28,14 @@ final class ReloadPaymentLedger<K, W> {
     }
 
     void end(K holder) { cycles.remove(holder); }
+
+    W weapon(K holder, long now) {
+        Cycle<W> cycle = cycles.get(holder);
+        if (cycle == null) return null;
+        if (now >= cycle.deadline()) {
+            cycles.remove(holder);
+            return null;
+        }
+        return cycle.weapon();
+    }
 }

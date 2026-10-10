@@ -75,6 +75,11 @@ final class TaczIntegration implements GunSupport {
         if (human.level().isClientSide) return operator.getSynReloadState().getStateType().isReloading();
         return TaczHumanReloadTransactions.isPaidReloading(human, operator.getDataHolder());
     }
+    public boolean isReloading(Human human, ItemStack weapon) {
+        if (human.level().isClientSide) return weapon == human.getMainHandItem() && isReloading(human);
+        return TaczHumanReloadTransactions.isReloadingWeapon(human,
+                IGunOperator.fromLivingEntity(human).getDataHolder(), weapon);
+    }
     public void tickIdleReload(Human human) {
         // A staggered one-second check avoids a reload attempt on every tick
         // for every gunner. GunCustody has already restored an idle backpack
@@ -123,7 +128,8 @@ final class TaczIntegration implements GunSupport {
         }
     }
     private static boolean isActivelyBlockingWithShield(Human human) {
-        return human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem());
+        return !GunSupport.isGunItem(human.getMainHandItem())
+                && human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem());
     }
     private static void onGunDamagePre(EntityHurtByGunEvent.Pre event) {
         if (event.getHurtEntity() instanceof Human defender
