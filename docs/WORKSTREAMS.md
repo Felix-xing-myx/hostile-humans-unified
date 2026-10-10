@@ -756,3 +756,10 @@
 - 验证：新增Java边界/余数/可配置参数/禁用规则回归，尚未编译执行；Python源码契约与JSON/差异检查结果见本条后续记录。构建、同步、游戏验收和push未执行。
 
 - 本轮结果：37项Python源码契约检查通过、281个资源JSON解析通过、git diff --check通过；Java回归已补充但未编译执行。提交包含本任务明确文件；实例配置/JAR未改动。
+
+## 构建同步：枪械经验与地形更新
+
+- 用户明确要求构建并同步；源码6e0d7b6c4c90b6fa08c1181d8e1ee52433e9b486，版本保持3.7.0。Java17及三个显式只读API路径，仓库gradlew.bat执行build lootScreeningTest --offline，BUILD SUCCESSFUL in 1m 49s（52任务，50执行、2最新）。GrowthProgressionTest 61项、GrowthConfigTest、CombatTerrainPolicyTest 28项及全部check通过。坏配置回归的预期ERROR不代表构建失败。
+- 再次检查无游戏或未知Java进程后，备份旧JAR和五份配置；更新唯一模组JAR及global.json中的新经验/枪械参数，删除旧cost及说明。已有自定义值保留，四阶配置逐字节保持；未修改存档、其它实例或启动游戏。
+- 目标：E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21；产物hostile-humans-unified-1.20.1-3.7.0.jar，3855678字节；源/目标SHA-256一致：4F53C860D6F95EEA60E39E7FC49CD9A1B285F4166C81B4826F9C978BDB227533。
+- 备份：E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261010-131457-3.7.0-firearm-growth-Forge_47.4.21；deployment.json保存文件哈希与配置变更。构建日志：E:\MC\Create-Delight\HostileHumansUnified-维护\验证日志\build-3.7.0-firearm-growth-20261010-131237.log。游戏内散布/伤害、跨档培养/UI、地形绕路/悬崖策略仍待用户验收；未push。
