@@ -12,8 +12,8 @@ import net.minecraft.world.phys.Vec3;
 /**
  * A flag-free terrain companion which can run beside the weapon goals. It may
  * open a blocked passage, sprint along an existing melee pursuit path, or
- * hop during a purposeful retreat. Pursuit jumps are coordinated by the melee goal. It does not create
- * paths and suppresses hops while a gunner is aiming/firing.
+ * hop during distant pursuit and retreat. Near-target jump attacks belong to
+ * the melee goal. It does not create paths or hop while a gunner is aiming/firing.
  */
 public final class PlayerLikeMovementGoal extends Goal {
     private final Human human;
@@ -120,9 +120,10 @@ public final class PlayerLikeMovementGoal extends Goal {
                 || human.tickCount < nextCombatJumpTick) {
             return;
         }
-        // Pursuit jump attacks belong to the melee goal so distance, cooldown and upswing agree.
-        // Retain movement hops only during a genuine retreat; terrain step-up remains above.
-        if (isRetreatingFrom(target) && human.getRandom().nextDouble() < config.combatJumpChance()) {
+        // Movement hops remain available far away, independently of attack readiness.
+        // Inside the jump-attack approach band, only the melee goal schedules a combat hop.
+        boolean movementHop = isRetreatingFrom(target) || isDistantPursuit(target);
+        if (movementHop && human.getRandom().nextDouble() < config.combatJumpChance()) {
             human.getJumpControl().jump();
             scheduleCombatJump();
         } else {
@@ -130,6 +131,13 @@ public final class PlayerLikeMovementGoal extends Goal {
             // than waiting out a full hop interval after movement resumes.
             nextCombatJumpTick = human.tickCount + 4 + human.getRandom().nextInt(5);
         }
+    }
+
+    private boolean isDistantPursuit(LivingEntity target) {
+        return isPursuing(target)
+                && !human.humanGunner$hasPendingMeleeAttack()
+                && !PursuitJumpAttack.active(human)
+                && human.distanceTo(target) > Math.max(3.0D, MeleeCombatRange.reach(human, target) + 1.5D);
     }
 
     private boolean pathSuggestsStepUp() {

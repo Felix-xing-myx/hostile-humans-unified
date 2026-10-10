@@ -23,8 +23,17 @@ class PursuitJumpContract(unittest.TestCase):
                           "CombatTerrainNavigation.hasWork", "route.dot(direction) < 0.80D"):
             self.assertIn(condition, JUMP)
         movement = (PKG / "PlayerLikeMovementGoal.java").read_text(encoding="utf-8")
-        self.assertIn("if (isRetreatingFrom(target) &&", movement)
+        self.assertIn("isRetreatingFrom(target) || isDistantPursuit(target)", movement)
         self.assertNotIn("if (movingWithCombatIntent && human.getRandom()", movement)
+
+    def test_distant_movement_hops_do_not_require_attack_readiness(self):
+        movement = (PKG / "PlayerLikeMovementGoal.java").read_text(encoding="utf-8")
+        distant = movement.split("private boolean isDistantPursuit", 1)[1].split("private boolean pathSuggestsStepUp", 1)[0]
+        for condition in ("isPursuing(target)", "!human.humanGunner$hasPendingMeleeAttack()",
+                          "!PursuitJumpAttack.active(human)", "MeleeCombatRange.reach(human, target) + 1.5D"):
+            self.assertIn(condition, distant)
+        self.assertNotIn("attackCooldown", distant)
+        self.assertIn("if (movementHop && human.getRandom().nextDouble() < config.combatJumpChance())", movement)
 
     def test_single_actual_impact_hook_and_cleanup(self):
         self.assertEqual(HUMAN.count("PursuitJumpAttack.strike(this,"), 1)
