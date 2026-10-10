@@ -89,7 +89,7 @@ public final class IdleRecoveryGoal extends Goal {
             session = RecoverySupplies.beginIdleUse(human);
             return;
         }
-        if (human.isUsingItem()) {
+        if (RecoverySupplies.isUseInProgress(human, session)) {
             return;
         }
         boolean completed = RecoverySupplies.completed(human, session);

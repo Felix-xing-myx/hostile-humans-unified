@@ -67,6 +67,8 @@ RangedMeleeCycle只累计实际运行的近战tick，默认80 tick后在无前�
 
 ## 普通战斗进食与反击
 
-`RecoverySupplies.isEatingFood` 只认可受统一物品托管管理、正在副手使用的食物，不包含药品、盾牌或完成后的归还等待。`CombatEatingMovementGoal` 在普通武器控制器之前持有 MOVE/LOOK，复用 `MeleeAttackGoal.tickAttackOnly` 的攻击冷却、Better Combat 前摇与伤害入口；近处经 GunCustody/RangedWeaponCustody 精确交换主手备用近战武器，副手食物继续使用。无备用近战武器时不强制裸手覆盖远程物品。
+`RecoverySupplies` 是选食物、申请 UseSession、托管副手与库存、连续进食和恢复结算的唯一入口；`OffhandFoodUse` 只负责服务器上的食物动作计时、有限消耗及视觉状态。普通食物和金苹果均不调用原版 startUsingItem，不占用主手弓弩/枪械的使用状态，不拥有 MOVE/LOOK，不停止导航、不控制攻击目标、不附加移动减速。正常武器控制器继续负责攻击、切换近战、追击及撤退。删除了原先抢占战斗导航的 CombatEatingMovementGoal。
 
-拉距每12 tick至多尝试一个共享预算内的路径，保留仍安全有效的路线；候选位置必须符合 SoldierOrder，完整路线经 RetreatPathSafety 检查。跳跃复用分阶 combatJump 参数与 HumanTerrainSafety；须疾跑、上一tick水平位移超过0.07格且朝远离目标方向、下一路径节点同样远离目标，已离开近战命中范围，未顶墙/挥击/待命中前摇。仅持有路线不视为实际撤离。PlayerLikeMovementGoal 和自适应普通侧移/追击阶段让出控制权；真正撤退、防御及紧急脱险继续优先，不重定义低血量策略。水中/上岸期间不接管移动，原地驻守不拉距。
+所有恢复 Goal 使用 RecoverySupplies.isUseInProgress 等待自己的会话，不能以“主手正在使用物品”判断副手食物是否完成。每个食物动作每 tick 仅推进一次，完成前标记终态，经物品 finishUsingItem 和 Forge 开始/完成钩子执行真实消耗；未消耗不追加本模组食物回血。中断、紧急治疗和手动背包操作结束动作，副手盾及容器余物仍通过原有精确交换与安静等待流程归还。客户端同步的进食标志仅用于视觉，不决定物品消耗或恢复。
+
+进食本身不发起跳跃或专属拉距。PlayerLikeMovementGoal 只在确实沿远离目标方向疾跑时允许进食中的随机撤离跳跃；地形跳跃与正常跳砍仍由原控制器决定。药水和 First Aid 药品继续使用原恢复会话，不纳入食物并行动作。移除失效的 food_use_speed_multiplier 配置，举盾减速配置保持独立。

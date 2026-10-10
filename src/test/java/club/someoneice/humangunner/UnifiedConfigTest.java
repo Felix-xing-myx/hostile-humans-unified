@@ -178,16 +178,15 @@ public final class UnifiedConfigTest {
         UnifiedConfig movementConfig = new UnifiedConfig(JsonParser.parseString("""
                 {"tiers":{"roamer":{"movement":{"base_speed":0.08}},
                  "tier2":{"movement":{"base_speed":0.11}}},
-                 "ai":{"food_use_speed_multiplier":0.7,"shield_use_speed_multiplier":0.35}}
+                 "ai":{"shield_use_speed_multiplier":0.35}}
                 """).getAsJsonObject());
         check(movementConfig.tier("roamer").baseMovementSpeed() == .08D
                         && movementConfig.tier("tier1").baseMovementSpeed() == .105D
                         && movementConfig.tier("tier2").baseMovementSpeed() == .11D,
                 "new movement formula exposes independently adjustable tier base speeds");
         CombatAiConfig actionSpeeds = CombatAiConfig.parse(movementConfig.ai());
-        check(actionSpeeds.foodUseSpeedMultiplier() == .7D
-                        && actionSpeeds.shieldUseSpeedMultiplier() == .35D,
-                "food and shield action speed multipliers are configurable");
+        check(actionSpeeds.shieldUseSpeedMultiplier() == .35D,
+                "shield action speed multiplier remains configurable");
 
         LowHealthCombatConfig lowHealthDefaults = CombatAiConfig.parse(new JsonObject()).lowHealthCombat();
         check(lowHealthDefaults.equals(new LowHealthCombatConfig(.15D, 25.0D, .5D, 40, 80, 80, 100, 1.1D)),

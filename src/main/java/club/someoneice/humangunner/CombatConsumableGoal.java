@@ -66,8 +66,7 @@ public final class CombatConsumableGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return session != null && human.isAlive()
-                && (human.isUsingItem() || !RecoverySupplies.completed(human, session));
+        return session != null && human.isAlive();
     }
 
     @Override
@@ -97,7 +96,7 @@ public final class CombatConsumableGoal extends Goal {
 
     @Override
     public void tick() {
-        if (session == null || human.isUsingItem()) {
+        if (session == null || RecoverySupplies.isUseInProgress(human, session)) {
             return;
         }
         finishSession();

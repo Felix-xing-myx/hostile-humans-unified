@@ -32,7 +32,7 @@ final class CombatFoodRecoveryGoal extends Goal {
                 && config.itemRecoveryEnabled()
                 && human.isAlive()
                 && (urgent || (human.getTarget() != null && mayStartFood()))
-                && !human.isUsingItem()
+                && (urgent ? !human.isUsingItem() : RecoverySupplies.canStartCombatFood(human))
                 && !RecoverySupplies.hasActiveUse(human)
                 && (urgent || (human.tickCount >= nextUseTick && needsCombatFood()
                 && RecoverySupplies.hasOrdinaryFood(human)));
@@ -90,7 +90,7 @@ final class CombatFoodRecoveryGoal extends Goal {
             }
             return;
         }
-        if (human.isUsingItem()) {
+        if (RecoverySupplies.isUseInProgress(human, session)) {
             return;
         }
         boolean completed = RecoverySupplies.completed(human, session);

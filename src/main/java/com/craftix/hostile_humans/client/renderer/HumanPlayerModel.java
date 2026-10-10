@@ -111,6 +111,16 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         // procedural actions remain available without Player Animator.
         TaczNpcAnimator.apply(human, this, ageInTicks);
         BetterCombatNpcAnimator.apply(human, this, ageInTicks);
+        // Cosmetic only. Two-handed weapons and attack animations always retain their arms.
+        if (human.isNpcOffhandEating() && !human.isUsingItem() && !human.swinging
+                && !customMeleeAnimation && !isRangedStance(human)) {
+            ModelPart foodArm = human.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT
+                    ? this.leftArm : this.rightArm;
+            foodArm.xRot = -1.35F + 0.08F * Mth.sin(ageInTicks * 1.3F);
+            foodArm.yRot = human.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT ? 0.4F : -0.4F;
+            if (foodArm == this.leftArm) this.leftSleeve.copyFrom(foodArm);
+            else this.rightSleeve.copyFrom(foodArm);
+        }
         // Keep the separate skin overlay on the same animated head pose.
         this.hat.copyFrom(this.head);
     }

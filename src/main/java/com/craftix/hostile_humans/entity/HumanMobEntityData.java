@@ -42,6 +42,7 @@ implements HumansDataSync {
     private static final EntityDataAccessor<Integer> DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_BETTER_COMBAT_ATTACK_ANIMATION_DURATION = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> DATA_BETTER_COMBAT_ATTACK_ANIMATION_UPSWING = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Boolean> DATA_OFFHAND_EATING = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.BOOLEAN);
     private static final int DATA_SYNC_TICK = 10;
     public String team = "";
     protected UUID persistentAngerTarget;
@@ -83,6 +84,12 @@ implements HumansDataSync {
 
     public void setCharging(boolean charging) {
         this.entityData.set(DATA_IS_CHARGING, charging);
+    }
+
+    public boolean isNpcOffhandEating() { return this.entityData.get(DATA_OFFHAND_EATING); }
+
+    public void setNpcOffhandEating(boolean eating) {
+        if (!level().isClientSide) this.entityData.set(DATA_OFFHAND_EATING, eating);
     }
 
     public boolean isNpcBetterCombatMeleeEnabled() {
@@ -265,6 +272,7 @@ implements HumansDataSync {
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(DATA_NAME, "");
+        this.entityData.define(DATA_OFFHAND_EATING, false);
         this.entityData.define(DATA_IS_CHARGING, false);
         this.entityData.define(DATA_IS_SLEEPING_THIS_NIGHT, false);
         this.entityData.define(DATA_HAS_DECIDED_ON_SLEEP, false);

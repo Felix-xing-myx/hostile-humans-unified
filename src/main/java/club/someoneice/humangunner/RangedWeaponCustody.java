@@ -167,7 +167,7 @@ public final class RangedWeaponCustody {
         if (!isBowOrCrossbow(held)) {
             return false;
         }
-        if (human.isUsingItem() && !RecoverySupplies.isEatingFood(human)) {
+        if (human.isUsingItem()) {
             if (!isBowOrCrossbow(human.getUseItem())) {
                 return false;
             }

@@ -807,7 +807,6 @@ public final class HumanGunner {
                 new AdaptiveCombatGoal(human));
         human.addCombatGoal(-3, new PlayerLikeMovementGoal(human));
         human.addCombatGoal(-3, new CombatConsumableGoal(human));
-        human.addCombatGoal(-5, new CombatEatingMovementGoal(human));
         human.addCombatGoal(-2, new CombatFoodRecoveryGoal(human));
         human.addCombatGoal(-2, new IdleRecoveryGoal(human));
         // Item search must briefly outrank the hired-order idle movement lock;

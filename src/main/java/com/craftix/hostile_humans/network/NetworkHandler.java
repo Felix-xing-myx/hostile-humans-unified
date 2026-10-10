@@ -13,7 +13,7 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 
 /** Explicit direction and bounded decoders. No global per-player packet suppression. */
 public final class NetworkHandler {
-    private static final String PROTOCOL_VERSION = "3";
+    private static final String PROTOCOL_VERSION = "4";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("hostile_humans_unified", "network"), () -> PROTOCOL_VERSION,
             PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);

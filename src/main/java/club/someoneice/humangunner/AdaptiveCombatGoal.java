@@ -165,8 +165,6 @@ public final class AdaptiveCombatGoal extends Goal {
             return true;
         }
 
-        if (RecoverySupplies.isEatingFood(human)) return false;
-
         // Survival and fresh shield reactions above retain priority. Ordinary tactical
         // repositioning must not replace a terrain route owned by the weapon controller.
         if (CombatTerrainNavigation.hasWork(human, currentThreat)) return false;
@@ -238,8 +236,7 @@ public final class AdaptiveCombatGoal extends Goal {
         // injured fighter in that phase instead of allowing ordinary retreat.
         if (phase == Phase.DEFEND && shouldEnterRetreat(threat)) return false;
         if ((phase == Phase.FLANK || phase == Phase.PRESSURE || phase == Phase.UNSTUCK)
-                && (RecoverySupplies.isEatingFood(human)
-                || CombatTerrainNavigation.hasWork(human, threat))) return false;
+                && CombatTerrainNavigation.hasWork(human, threat)) return false;
         if ((human.distanceToSqr(threat) > 4096.0D
                 && !(phase == Phase.DEFEND && shields.awaitingProjectile()))
                 || phaseTicks <= 0) {
@@ -760,7 +757,9 @@ public final class AdaptiveCombatGoal extends Goal {
                 nextRecoveryUseTick = human.tickCount;
                 return;
             }
-            if (human.isUsingItem()) {
+            if (RecoverySupplies.isUseInProgress(human, recoverySession)) {
+                // Food is parallel to combat, so proximity cannot cancel it or take movement away.
+                if (recoverySession.food()) return;
                 boolean unsafeProximity = RetreatRecoveryPolicy.shouldBreakOffUse(
                         human.distanceToSqr(threat), human.getSensing().hasLineOfSight(threat),
                         human.getUseItemRemainingTicks()

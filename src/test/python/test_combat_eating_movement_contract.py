@@ -1,37 +1,40 @@
-"""Food movement authority and hand-custody integration guards (source only)."""
+"""Source architecture guards; these do not replace live combat tests."""
 import unittest
 from pathlib import Path
-PKG = Path(__file__).resolve().parents[3] / 'src/main/java/club/someoneice/humangunner'
+ROOT = Path(__file__).resolve().parents[3]
+PKG = ROOT / 'src/main/java/club/someoneice/humangunner'
 def source(name):
     return (PKG / (name + '.java')).read_text(encoding='utf-8')
 class CombatEatingMovementContract(unittest.TestCase):
-    def test_native_counterattack_and_food_custody(self):
-        goal = source('CombatEatingMovementGoal')
-        self.assertIn('extends MeleeAttackGoal', goal)
-        self.assertIn('tickAttackOnly(target)', goal)
-        self.assertNotIn('stopUsingItem', goal)
+    def test_food_never_acquires_movement_or_weapon_use(self):
+        self.assertFalse((PKG / 'CombatEatingMovementGoal.java').exists())
+        action = source('OffhandFoodUse')
+        for forbidden in ['getNavigation(', 'setTarget(', 'startUsingItem(', 'stopUsingItem(', 'setSprinting(', 'MOVEMENT_SPEED']:
+            self.assertNotIn(forbidden, action)
+        self.assertIn('human.getUsedItemHand() == InteractionHand.MAIN_HAND', action)
+    def test_single_tick_and_finite_completion(self):
+        action = source('OffhandFoodUse')
+        for guard in ['state.lastTick == human.tickCount', 'state.ended', 'ItemStack.isSameItemSameTags', 'stack.getCount()', 'stack.finishUsingItem(human.level(), human)', 'ForgeEventFactory.onItemUseStart', 'ForgeEventFactory.onItemUseFinish', 'result.getCount() < before.getCount()']:
+            self.assertIn(guard, action)
+        self.assertLess(action.index('state.ended = true;', action.index('// Mark terminal')), action.index('stack.finishUsingItem'))
+    def test_goals_wait_for_own_session_not_main_hand(self):
+        for name in ['CombatFoodRecoveryGoal', 'IdleRecoveryGoal', 'CombatConsumableGoal']:
+            self.assertIn('RecoverySupplies.isUseInProgress(human, session)', source(name))
+        recovery = source('RecoverySupplies')
+        for gate in ['ACTIVE_USES.containsKey(human)', 'OffhandFoodUse.tick(human)', 'OffhandFoodUse.completed(human, session)', 'pending.completed()', 'settleExchange(human, session)', 'boolean parallelFood = isRecoveryFood']:
+            self.assertIn(gate, recovery)
+        self.assertIn('hasUrgentInstantHealing(human)', source('CombatFoodRecoveryGoal'))
+    def test_food_does_not_suspend_combat_or_add_stationary_hops(self):
+        self.assertNotIn('if (RecoverySupplies.isEatingFood(human)) return false', source('AdaptiveCombatGoal'))
+        movement = source('PlayerLikeMovementGoal')
+        self.assertNotIn('if (!human.isFleeing && RecoverySupplies.isEatingFood(human)) return;', movement)
+        self.assertIn('boolean movementHop = isRetreatingFrom(target)', movement)
+        self.assertIn('movementHop && human.isSprinting()', movement)
         for name in ['GunCustody', 'RangedWeaponCustody']:
-            self.assertIn('human.isUsingItem() && !RecoverySupplies.isEatingFood(human)', source(name))
-    def test_only_real_offhand_food_qualifies(self):
-        body = source('RecoverySupplies').split('public static boolean isEatingFood', 1)[1].split('/**', 1)[0]
-        for condition in ['session.food()', 'human.isUsingItem()', 'InteractionHand.OFF_HAND', 'UseAnim.EAT']:
-            self.assertIn(condition, body)
-    def test_single_movement_owner_and_emergency_priority(self):
-        goal = source('CombatEatingMovementGoal')
-        for condition in ['!human.isFleeing', '!human.isInWater()', 'SoldierOrder.isHoldingPosition']:
-            self.assertIn(condition, goal)
-        adaptive = source('AdaptiveCombatGoal')
-        self.assertLess(adaptive.index('shouldEnterRetreat(currentThreat)'), adaptive.index('if (RecoverySupplies.isEatingFood(human)) return false'))
-        self.assertIn('if (!human.isFleeing && RecoverySupplies.isEatingFood(human)) return;', source('PlayerLikeMovementGoal'))
-    def test_routes_and_hops_share_existing_safety_and_budgets(self):
-        goal = source('CombatEatingMovementGoal')
-        for gate in ['BasicNavigationBudget.tryAcquire', 'RetreatPathSafety.isSafe', 'SoldierOrder.allowsCombatPosition', 'HumanTerrainSafety.safeCombatJump', 'human.humanGunner$hasPendingMeleeAttack()', 'config.combatJumpChance()', 'nextPathTick = human.tickCount + 12']:
-            self.assertIn(gate, goal)
-
-    def test_food_hops_require_actual_sprinting_retreat_not_just_a_route(self):
-        body = source('CombatEatingMovementGoal').split('private boolean retreatHopReady', 1)[1]
-        for guard in ['!human.isSprinting()', '!human.onGround()', 'human.horizontalCollision',
-                      'human.swinging', 'MeleeCombatRange.canStrike(human, target)',
-                      'progress.lengthSqr() > 0.0049D', 'progress.normalize().dot(away) >= 0.75D',
-                      'pathDirection.dot(away) >= 0.80D']:
-            self.assertIn(guard, body)
+            self.assertNotIn('&& !RecoverySupplies.isEatingFood(human)', source(name))
+    def test_server_visual_state_and_no_food_speed_penalty(self):
+        entity = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/HumanMobEntityData.java').read_text(encoding='utf-8')
+        self.assertIn('if (!level().isClientSide) this.entityData.set(DATA_OFFHAND_EATING, eating)', entity)
+        defaults = (ROOT / 'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8')
+        self.assertNotIn('food_use_speed_multiplier', defaults)
+        self.assertNotIn('foodUseSpeedMultiplier', source('CombatAiConfig'))

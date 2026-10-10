@@ -100,7 +100,7 @@ final class TierConfigProjection {
         orderGroup(result, "ai", List.of("enabled", "item_recovery_enabled", "retreat_health_ratio", "low_health_combat", "critical_health_ratio",
                 "resume_health_ratio", "flee_hp", "run_away_middle_fight_chance", "mid_battle_buff_instead_of_run_chance", "gradual_heal_interval_ticks", "food_recovery_min_health", "food_recovery_max_health",
                 "recovery_damage_tolerance_ratio", "recovery_commit_ticks",
-                "food_use_speed_multiplier", "shield_block_duration_min_ticks", "shield_block_duration_max_ticks", "shield_block_cooldown_ticks",
+                "shield_block_duration_min_ticks", "shield_block_duration_max_ticks", "shield_block_cooldown_ticks",
                 "shield_use_speed_multiplier", "cover_search_radius", "cover_search_attempts",
                 "tactical_reposition_interval", "ally_spacing_radius", "combat_jump_chance",
                 "combat_jump_interval_min", "combat_jump_interval_max", "greet_chance"));

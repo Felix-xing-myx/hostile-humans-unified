@@ -65,7 +65,7 @@ final class GunCustody {
             human.getPersistentData().putBoolean(CLOSE_DEFENSE, true);
             return true;
         }
-        if (human.isUsingItem() && !RecoverySupplies.isEatingFood(human)) {
+        if (human.isUsingItem()) {
             return false;
         }
         // Move the actual authorized stack: native TaCZ reload scripts and the

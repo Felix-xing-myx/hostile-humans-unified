@@ -65,8 +65,6 @@ public final class PlayerLikeMovementGoal extends Goal {
         if (target == null) {
             return;
         }
-        // The food controller owns spacing, sprint and safe hops for this item-use window.
-        if (!human.isFleeing && RecoverySupplies.isEatingFood(human)) return;
         // AdaptiveCombatGoal owns the defensive stance. This flag-free helper
         // must not restart navigation or a weapon switch while the shield is
         // raised. A melee soldier may still sprint along its existing attack
@@ -124,8 +122,11 @@ public final class PlayerLikeMovementGoal extends Goal {
         }
         // Movement hops remain available far away, independently of attack readiness.
         // Inside the jump-attack approach band, only the melee goal schedules a combat hop.
-        boolean movementHop = isRetreatingFrom(target) || isDistantPursuit(target);
-        if (movementHop && human.getRandom().nextDouble() < config.combatJumpChance()) {
+        boolean movementHop = isRetreatingFrom(target)
+                || (!RecoverySupplies.isEatingFood(human) && isDistantPursuit(target));
+        if (movementHop && human.isSprinting()
+                && !human.humanGunner$hasPendingMeleeAttack()
+                && human.getRandom().nextDouble() < config.combatJumpChance()) {
             human.getJumpControl().jump();
             scheduleCombatJump();
         } else {

@@ -1472,24 +1472,18 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         super.startUsingItem(hand);
         ItemStack itemstack = this.getItemInHand(hand);
         boolean shield = itemstack.canPerformAction(ToolActions.SHIELD_BLOCK);
-        boolean food = itemstack.getUseAnimation() == UseAnim.EAT;
-        if (this.isUsingItem() && this.getUsedItemHand() == hand && (shield || food)) {
+        if (this.isUsingItem() && this.getUsedItemHand() == hand && shield) {
             AttributeInstance modifiableattributeinstance = this.getAttribute(Attributes.MOVEMENT_SPEED);
             if (modifiableattributeinstance != null) {
                 modifiableattributeinstance.removeModifier(MODIFIER_UUID);
-                double multiplier;
-                if (shield) {
-                    double configuredShieldMultiplier =
-                            club.someoneice.humangunner.CombatAiConfig.forHuman(this).shieldUseSpeedMultiplier();
-                    multiplier = humanGunner$movementShieldAllowance
-                            ? Math.max(0.4D, configuredShieldMultiplier)
-                            : configuredShieldMultiplier;
-                } else {
-                    multiplier = club.someoneice.humangunner.CombatAiConfig.forHuman(this).foodUseSpeedMultiplier();
-                }
+                double configuredShieldMultiplier =
+                        club.someoneice.humangunner.CombatAiConfig.forHuman(this).shieldUseSpeedMultiplier();
+                double multiplier = humanGunner$movementShieldAllowance
+                        ? Math.max(0.4D, configuredShieldMultiplier)
+                        : configuredShieldMultiplier;
                 if (multiplier < 1.0D) {
                     modifiableattributeinstance.addTransientModifier(new AttributeModifier(MODIFIER_UUID,
-                            shield ? "Shield use speed penalty" : "Food use speed penalty",
+                            "Shield use speed penalty",
                             multiplier - 1.0D, AttributeModifier.Operation.MULTIPLY_TOTAL));
                 }
             }

@@ -127,14 +127,18 @@ public final class RecoverySupplies {
         return ACTIVE_USES.containsKey(human);
     }
 
-    /** True only while our offhand food animation is actually running. */
+    /** Server-owned parallel food state; never use it to suppress combat goals. */
     public static boolean isEatingFood(Human human) {
         UseSession session = ACTIVE_USES.get(human);
-        return session != null && session.food() && human.isUsingItem()
-                && session.hand() == net.minecraft.world.InteractionHand.OFF_HAND
-                && human.getUsedItemHand() == session.hand()
-                && human.getUseItem().getUseAnimation() == net.minecraft.world.item.UseAnim.EAT;
+        return session != null && OffhandFoodUse.running(human, session);
     }
+
+    public static boolean isUseInProgress(Human human, UseSession session) {
+        return OffhandFoodUse.owns(human, session) ? OffhandFoodUse.running(human, session)
+                : human.isUsingItem() && human.getUsedItemHand() == session.hand();
+    }
+
+    static boolean canStartCombatFood(Human human) { return OffhandFoodUse.canStart(human); }
 
     /** Optional item adapters may settle only our inventory-backed use session. */
     static boolean ownsSupplyUse(Human human, ItemStack stack) {
@@ -247,7 +251,7 @@ public final class RecoverySupplies {
 
     /** Starts food-only recovery without selecting potions or either golden apple. */
     public static UseSession beginCombatFoodUse(Human human) {
-        if (human.isUsingItem()) {
+        if (!canStartCombatFood(human)) {
             return null;
         }
         HumanData data = human.getData();
@@ -334,12 +338,13 @@ public final class RecoverySupplies {
         if (data == null
                 || slot < 0
                 || slot >= data.getInventoryItemsSize()
-                || human.isUsingItem()
                 || ACTIVE_USES.containsKey(human)) {
             return null;
         }
         ItemStack supply = data.getInventoryItem(slot).copy();
-        if (supply.isEmpty() || !canUsePotionNow(human, supply)) {
+        boolean parallelFood = isRecoveryFood(human, supply);
+        if (supply.isEmpty() || !canUsePotionNow(human, supply)
+                || (parallelFood ? !OffhandFoodUse.canStart(human) : human.isUsingItem())) {
             return null;
         }
 
@@ -356,9 +361,14 @@ public final class RecoverySupplies {
         ACTIVE_USES.put(human, session);
         data.setInventoryItem(slot, displaced.copy());
         human.setItemSlot(EquipmentSlot.OFFHAND, supply);
-        human.startUsingItem(InteractionHand.OFF_HAND);
-        accelerateFoodUse(human, supply);
-        if (!human.isUsingItem() || human.getUsedItemHand() != InteractionHand.OFF_HAND) {
+        if (parallelFood) {
+            OffhandFoodUse.start(human, session);
+        } else {
+            human.startUsingItem(InteractionHand.OFF_HAND);
+            accelerateFoodUse(human, supply);
+        }
+        if (!isUseInProgress(human, session)) {
+            OffhandFoodUse.clear(human);
             ACTIVE_USES.remove(human, session);
             rollbackExchange(human, data, slot);
             return null;
@@ -428,14 +438,25 @@ public final class RecoverySupplies {
         if (pending != null && pending.session() == completedSession) {
             PENDING_FINISHES.remove(human, pending);
         }
-        human.startUsingItem(completedSession.hand());
-        accelerateFoodUse(human, nextFood);
-        if (!isUsingSessionHand(human, nextSession)) {
+        boolean parallelFood = isRecoveryFood(human, nextFood);
+        if (parallelFood) {
+            OffhandFoodUse.start(human, nextSession);
+        } else {
+            human.startUsingItem(completedSession.hand());
+            accelerateFoodUse(human, nextFood);
+        }
+        if (!isUseInProgress(human, nextSession)) {
+            OffhandFoodUse.clear(human);
             ACTIVE_USES.put(human, completedSession);
             if (nextSlot >= 0) {
                 human.setItemSlot(EquipmentSlot.OFFHAND, currentHand);
                 data.setInventoryItem(nextSlot, nextFood);
             }
+            // The previous meal really finished even when a hook rejects the
+            // next one. Preserve that receipt independently of main-hand use.
+            PENDING_FINISHES.put(human, new PendingFinish(
+                    completedSession, true, human.tickCount, currentHand, 0
+            ));
             return null;
         }
 
@@ -450,6 +471,9 @@ public final class RecoverySupplies {
     }
 
     public static boolean completed(Human human, UseSession session) {
+        if (OffhandFoodUse.owns(human, session)) return OffhandFoodUse.completed(human, session);
+        PendingFinish pending = PENDING_FINISHES.get(human);
+        if (pending != null && pending.session() == session) return pending.completed();
         return !human.isUsingItem() && human.tickCount >= session.expectedCompletionTick() - 1;
     }
 
@@ -470,8 +494,10 @@ public final class RecoverySupplies {
      * when no exchange is active.
      */
     public static void tickHandCustody(Human human) {
+        OffhandFoodUse.tick(human);
         UseSession session = ACTIVE_USES.get(human);
         if (session == null) {
+            OffhandFoodUse.clear(human);
             PENDING_FINISHES.remove(human);
             restoreShieldAfterRecovery(human);
             return;
@@ -483,8 +509,8 @@ public final class RecoverySupplies {
             return;
         }
 
-        if (isUsingSessionHand(human, session)
-                && human.tickCount <= session.expectedCompletionTick() + 40) {
+        if (OffhandFoodUse.running(human, session) || (isUsingSessionHand(human, session)
+                && human.tickCount <= session.expectedCompletionTick() + 40)) {
             return;
         }
         boolean completed = completed(human, session);
@@ -499,6 +525,7 @@ public final class RecoverySupplies {
 
     /** Settles any temporary recovery hand swap before an owner edits slots. */
     public static void prepareForManualInventory(Human human) {
+        OffhandFoodUse.clear(human);
         UseSession session = ACTIVE_USES.remove(human);
         PENDING_FINISHES.remove(human);
         if (session == null) {
@@ -584,6 +611,7 @@ public final class RecoverySupplies {
             }
             return;
         }
+        if (OffhandFoodUse.owns(human, session)) OffhandFoodUse.clear(human);
         if (isUsingSessionHand(human, session)) {
             human.stopUsingItem();
         }

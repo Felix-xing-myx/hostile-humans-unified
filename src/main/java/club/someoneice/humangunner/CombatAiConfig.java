@@ -25,7 +25,6 @@ public record CombatAiConfig(
         int combatJumpIntervalMax,
         double combatJumpChance,
         boolean itemRecoveryEnabled,
-        double foodUseSpeedMultiplier,
         double shieldUseSpeedMultiplier,
         double legacyFleeHealthRatio,
         double runAwayMiddleFightChance,
@@ -60,7 +59,6 @@ public record CombatAiConfig(
                     integer(root, "combat_jump_interval_max", defaults.combatJumpIntervalMax, 5, 60),
                     bounded(root, "combat_jump_chance", defaults.combatJumpChance, 0.0D, 1.0D),
                     bool(root, "item_recovery_enabled", defaults.itemRecoveryEnabled),
-                    bounded(root, "food_use_speed_multiplier", defaults.foodUseSpeedMultiplier, 0.1D, 1.0D),
                     bounded(root, "shield_use_speed_multiplier", defaults.shieldUseSpeedMultiplier, 0.1D, 1.0D),
                     bounded(root, "flee_hp", defaults.legacyFleeHealthRatio, 0, 1),
                     bounded(root, "run_away_middle_fight_chance", defaults.runAwayMiddleFightChance, 0, 1),
@@ -97,7 +95,6 @@ public record CombatAiConfig(
                 Math.max(combatJumpIntervalMin + 1, combatJumpIntervalMax),
                 combatJumpChance,
                 itemRecoveryEnabled,
-                foodUseSpeedMultiplier,
                 shieldUseSpeedMultiplier, legacyFleeHealthRatio, runAwayMiddleFightChance, midBattleBuffInsteadOfRunChance, greetChance, lowHealthCombat
         );
     }
@@ -124,7 +121,6 @@ public record CombatAiConfig(
                 22,
                 0.60D,
                 true,
-                0.7D,
                 0.2D, 0.35D, 0.5D, 0.1D, 0.05D, LowHealthCombatConfig.defaults()
         );
     }

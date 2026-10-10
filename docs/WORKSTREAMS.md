@@ -1021,3 +1021,16 @@
 - 原封面备份：维护目录 `部署备份/20261010-211900-old-cover/logo.png`。新图1536×1024、PNG；SHA-256 `8292E387A0950E333779C9ADA4D8BC632B75F12F25AFC3F5F63F54AE611E408C`。
 - 验证：PNG签名、尺寸、现有资源引用与git空白检查；本轮无代码变动，不运行构建或游戏，未同步实例、未推送。模组列表中的实际缩略图显示仍待后续构建游戏验收。
 - 交付：包含本记录的本地提交，更新日志列入Unreleased，已部署3.7.0仍使用之前的封面。
+
+## 2026-10-10 副手进食与战斗控制解耦
+
+- 需求：修复副手进食导致停止移动，统一入口，让正常攻击与移动不被进食接管。
+- 基线 `ca23406c8259d640167feb5097088bdc445f42fd`；负责人主控 `/root`；主工作树 `E:\MC\Create-Delight\HostileHumansUnified-维护\project`、main；无并行编辑。开始时干净，保留此前封面提交。
+- 原因：旧 CombatEatingMovementGoal 抢占 MOVE/LOOK 并在 start 停止导航，安全拉距选路失败时留下原地进食；原版副手 startUsingItem 同时阻塞主手武器使用，Human 还附加食物减速。
+- 接口：RecoverySupplies 继续独占选品、会话、库存交换和恢复结算；新增 OffhandFoodUse 管理服务器食物计时及真实有限消耗，不取得导航/攻击/原版物品使用权。所有恢复 Goal 用 isUseInProgress 等待自己的会话，保留紧急治疗及连续进食、容器余物和盾牌归还。
+- 范围：删除旧进食移动 Goal，恢复 AdaptiveCombatGoal 与普通武器/移动控制器协作；普通食物与金苹果使用并行动作，药品仍走现有机制。移除 food_use_speed_multiplier；正常地形跳跃与跳砍保留，进食中的随机移动跳跃要求实际疾跑撤离。增加服务器同步的纯视觉进食标志，武器动画优先；NetworkHandler 协议3→4，客户端/服务端需一致。
+- 文件：恢复/消耗 Goal、RecoverySupplies、新 OffhandFoodUse、武器托管、HumanGunner、PlayerLikeMovementGoal、Human/HumanMobEntityData/HumanPlayerModel/NetworkHandler、CombatAiConfig/TierConfigProjection/default JSON、相应源码检查与接口文档/更新日志。共享文件由主控统一修改。
+- 验证：109项Python源码检查通过；360个Java文件Tree-sitter解析无语法错误；默认JSON解析通过；git diff --check通过；javap核对当前本地Forge API的开始/完成使用钩子及ItemStack完成/音效方法签名。以上为静态验证，不等于Java编译或游戏行为验收。
+- 未执行：Gradle/Java编译、构建、实例配置更新、JAR同步、推送、启动游戏，本轮未获构建要求。
+- 待游戏验收：普通近战/Better Combat前摇、弓弩拉弓装填、枪手射击换弹期间进食不停车；撤退/驻守/水域路径仍由原控制器决定；食物逐份扣除、五份批次、容器余物、紧急瞬间治疗中断和盾牌归还；多人客户端视觉与服务器状态一致。
+- 交付：包含本记录的本地源码提交，列入Unreleased，待用户明确要求后构建同步。
