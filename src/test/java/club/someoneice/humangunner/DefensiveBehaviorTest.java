@@ -11,6 +11,7 @@ import org.objectweb.asm.tree.TypeInsnNode;
 
 /** Geometry/policy and compiled wiring checks, not a live-world acceptance test. */
 public final class DefensiveBehaviorTest {
+    private static final String SHIELDS = "club/someoneice/humangunner/ShieldDefenseController";
     private static final String HUMAN = "com/craftix/hostile_humans/entity/entities/Human";
     private static final String BASE = "com/craftix/hostile_humans/entity/HumanEntity";
     private static final String ADAPTIVE = "club/someoneice/humangunner/AdaptiveCombatGoal";
@@ -82,9 +83,14 @@ public final class DefensiveBehaviorTest {
                 "defensive facing restored after navigation and body controls");
         check(calls(HUMAN + "$HumanMoveControl", "tick", "moveWhileShieldFacing"),
                 "movement keeps target-facing shield orientation before travel, not only visually");
-        check(calls(ADAPTIVE, "tickDefend", "markShieldFacing")
-                        && calls(ADAPTIVE, "tickDefend", "shouldReleaseUnpressuredBlock"),
+        check(calls(SHIELDS, "tickCombat", "markShieldFacing")
+                        && calls(SHIELDS, "tickCombat", "shouldReleaseUnpressuredBlock"),
                 "defensive goal uses one-tick facing lease and timely release policy");
+        check(calls(ADAPTIVE, "tickDefend", "tickCombat")
+                        && calls("club/someoneice/humangunner/BodyguardMovementGoal", "tick", "tickBodyguard"),
+                "combat and interception both delegate shield strategy to one controller");
+        check(calls(SHIELDS, "release", "ownsCurrentShield"),
+                "ending one defense owner cannot cancel another owner's item use");
         check(!calls(ADAPTIVE, "tickDefend", "jump"), "defense phase never requests random combat jumps");
         check(calls(ADAPTIVE, "tickDefend", "moveWhileDefendingRanged"),
                 "ranged defense restores an interrupted route instead of assuming it survived");
@@ -92,7 +98,7 @@ public final class DefensiveBehaviorTest {
                 "close guarded melee shares impact spacing instead of forcing a separate standstill");
         check(calls("club/someoneice/humangunner/MeleeSpacing", "control", "getLastHurtByMobTimestamp"),
                 "recent close-range damage opens a small movement reaction without resetting attack cooldown");
-        check(calls(ADAPTIVE, "startShieldBlockIfAvailable", "humanGunner$startMovementShield"),
+        check(calls(SHIELDS, "raise", "humanGunner$startMovementShield"),
                 "ordinary combat defense uses mobile shield allowance");
         check(calls(HUMAN, "recoverStalledNavigation", "tick"),
                 "navigation recovery uses the unified continuity module");
@@ -129,8 +135,8 @@ public final class DefensiveBehaviorTest {
                 "directly overhead aim is finite and vertical");
         check(calls(HUMAN + "$HumanMoveControl", "tick", "facePendingBetterCombatAttack"),
                 "navigation cannot rotate pending attacks toward a path node");
-        check(calls(ADAPTIVE, "findIncomingArrow", "impactTicks")
-                        && calls(ADAPTIVE, "findIncomingArrow", "shouldGuardRangedUser"),
+        check(calls(SHIELDS, "findIncomingArrow", "impactTicks")
+                        && calls(SHIELDS, "findIncomingArrow", "shouldGuardRangedUser"),
                 "live arrow entrypoint uses swept collision prediction and ranged interruption bound");
         check(calls(HUMAN, "readAdditionalSaveData", "remove"),
                 "reload clears tick-count based gunfire memory instead of treating it as fresh pressure");

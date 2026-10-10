@@ -840,3 +840,15 @@
 - 原始原因：RecoverySupplies.restoreShieldAfterRecovery发现副手是盾就直接返回，因此无法升级背包盾。新shieldEquipRank仅按maxDamage排序；无耐久且ShieldItem/SHIELD_BLOCK/UseAnim.BLOCK确认可用时最高。严格大于才交换，同档保持当前；活动恢复、延迟恢复完成和使用副手状态仍优先。拾取品质保留现有耐久/附魔价值；无耐久可格挡盾增加对应价值。
 - 主动盾牌拾取独立一面事务，搜索benefit与提交均用同一策略并在提交重查。>=3只替换价值高出1.5的单面非绑定备用盾；旧盾世界插入被取消则不改背包/地面物品。<3仍走原容量/食物保留槽与淘汰规则，无法增存时也可改善旧盾。空副手且无物品使用/恢复托管时可直接装备，不依赖背包空位；不会吸收整堆导致超上限；已有可堆叠多面盾不会为替换而整堆丢弃。
 - 验证：64项Python静态契约通过（新增5项菜单、上限事务和排序检查），git diff --check通过；通过只读javap核对当前Forge映射包InventoryMenu的全部图标常量与BLOCK_ATLAS以及ItemStack.getUseAnimation存在。未编译、构建、同步、游戏启动或push。待游戏内验收空槽轮廓、Shift护甲匹配/占用回退/模组装备、菜单关闭后护甲锁，多模组盾最大耐久/无耐久排序，举盾和喝药换弹托管，以及3面边界、手动超量保留、低品质替换与掉落取消。
+
+
+## 举盾策略统一入口（2026-10-10）
+
+- 基线：628eee8094bf019327ed2a92bf9a49efa5944af9；负责人：主控 /root；工作树：源码主工作树；分支：main；单人顺序实施，无并行编辑。公共Human、AdaptiveCombatGoal及恢复接入由主控负责。
+- 范围：新增ShieldDefenseController，接入Human、AdaptiveCombatGoal、BodyguardMovementGoal、RecoverySupplies，更新DefensiveBehaviorTest、新增源码契约、维护说明及更新日志。无版本、配置、伤害处理或实例变更。
+- 用户最新选择：先仅统一入口，近战防御节奏继续讨论。已认可箭矢下一步方向为取消阶级概率、首次轨迹预判、受同一可见射手攻击后提前警戒，并保留一轮格挡后的反击窗口；本提交未实施这些策略变更。
+- 公共接口：Human.humanGunner$shieldDefense()返回每实体延迟创建的控制模块；战斗Goal调用findIncomingArrow/wantsCombat/beginCombat/tickCombat/maintainCombat/endCombat，护卫Goal调用tickBodyguard/endBodyguard，恢复用品仅提交requestRecoveryReblock。控制模块保留原有时长、概率、请求存档键和冷却，管理实际使用盾牌与来源；不新增Goal、导航、实际攻击、全局实体缓存或世界扫描。
+- 所有权核验：仅在原生举盾成功后登记使用手/实际ItemStack；结束时必须来源匹配且仍在使用同一盾。近战前摇拒绝举盾时不会登记虚假占用；战斗接管前释放护卫举盾，其他应急/物品使用仍由原入口负责。
+- 验证：68项Python源码契约通过；新增4项共同入口/来源核验/恢复请求归属/导航攻击隔离契约。Java17 JavacTask仅parse六个改动Java文件，0语法错误，未做类型解析或编译；19个迁移判定/感知辅助函数与基线去空白和行注释后逐体一致，战斗启动分支仅替换委托及返回结果。git diff --check通过。ASM检查已按新入口更新，因未构建尚未运行；未同步、启动游戏或push。
+- 查证：当前Forge映射JAR只读javap确认原生isBlocking要求至少5 tick；旧远程箭矢启动窗口2.5 tick、保持最多3 tick不匹配，列为后续策略改造问题。本次按范围不修改。
+- 待游戏内验收：普通/预测/护卫举盾切换、近战前摇不被打断、恢复用品托管、持枪换弹、护卫收盾来源与装备替换；原有近战过早收盾及箭矢防御有效性仍待后续策略解决。交付提交见本节对应Git提交。

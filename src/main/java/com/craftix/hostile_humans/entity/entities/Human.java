@@ -373,6 +373,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     });
     private final MeleeAttackGoal meleeAttackGoal = new MeleeAttackGoal(this, 1.05, true);
     public int shieldCoolDown;
+    private club.someoneice.humangunner.ShieldDefenseController humanGunner$shieldDefense;
+
+    public club.someoneice.humangunner.ShieldDefenseController humanGunner$shieldDefense() {
+        if (humanGunner$shieldDefense == null)
+            humanGunner$shieldDefense = new club.someoneice.humangunner.ShieldDefenseController(this);
+        return humanGunner$shieldDefense;
+    }
+
     public int shieldUpTicks;
     public int switchingWeaponCoolDown;
     private boolean resolvedFleeThisCombat;

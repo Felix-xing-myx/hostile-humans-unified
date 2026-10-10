@@ -31,7 +31,6 @@ public final class RecoverySupplies {
     private static final String KIT_GRANTED = "hostile_humans_unified:recovery_kit_granted_v2";
     private static final String PENDING_HEAL = "hostile_humans_unified:pending_food_heal";
     private static final String NEXT_HEAL_TICK = "hostile_humans_unified:next_food_heal_tick";
-    private static final String SHIELD_REBLOCK_UNTIL = "hostile_humans_unified:shield_reblock_until";
     private static final String TIER_THREE_MARKER = "hostile_humans_unified:tier_three";
     // Removed fixed-slot lease metadata. Retain the key only to clean old
     // entities when they are first reconciled by the inventory custody logic.
@@ -960,11 +959,7 @@ public final class RecoverySupplies {
     }
 
     private static void requestShieldReblock(Human human) {
-        if (human.getTarget() != null
-                && (SpartanEquipmentCompat.isShield(human.getOffhandItem())
-                || SpartanEquipmentCompat.isShield(human.getMainHandItem()))) {
-            human.getPersistentData().putInt(SHIELD_REBLOCK_UNTIL, human.tickCount + 80);
-        }
+        human.humanGunner$shieldDefense().requestRecoveryReblock();
     }
 
     /** Extra regeneration never spends or resets the separately queued food healing. */
@@ -1101,18 +1096,6 @@ public final class RecoverySupplies {
         return totalCount - remaining;
     }
 
-    public static boolean consumeShieldReblockRequest(Human human) {
-        int until = human.getPersistentData().getInt(SHIELD_REBLOCK_UNTIL);
-        if (until < human.tickCount) {
-            human.getPersistentData().remove(SHIELD_REBLOCK_UNTIL);
-            return false;
-        }
-        if (until == 0) {
-            return false;
-        }
-        human.getPersistentData().remove(SHIELD_REBLOCK_UNTIL);
-        return true;
-    }
 
     private static int provisionEnchantedGoldenApple(Human human, SpawnFoodConfig config) {
         if (!config.enabled) return 0;

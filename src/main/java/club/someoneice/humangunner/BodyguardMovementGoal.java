@@ -5,9 +5,7 @@ import java.util.EnumSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.phys.Vec3;
@@ -15,8 +13,7 @@ import net.minecraft.world.phys.Vec3;
 /** MOVE/LOOK arbitration for interception; no attacks or inventory swaps here. */
 final class BodyguardMovementGoal extends Goal {
     private final Human human;
-    private int nextPlan, blockUntil, nextBlock;
-    private ItemStack ownedShield;
+    private int nextPlan;
     private net.minecraft.world.level.pathfinder.Path ownedPath;
     private boolean followFallback;
     BodyguardMovementGoal(Human human) {
@@ -100,29 +97,12 @@ final class BodyguardMovementGoal extends Goal {
         var threat = BodyguardProtection.threat(human);
         if (threat != null) {
             human.getLookControl().setLookAt(threat, 75.0F, 35.0F);
-            // Passive interception blocks without assigning an attack target.
-            // Active firing resumes once this positioning goal yields MOVE.
-            if (ownedShield != null && human.tickCount >= blockUntil) releaseShield();
-            if (human.getTarget() == null && human.shieldCoolDown <= 0 && !human.isUsingItem()
-                    && human.tickCount >= nextBlock && human.distanceToSqr(owner) <= 16.0D) {
-                for (InteractionHand hand : new InteractionHand[] {InteractionHand.OFF_HAND, InteractionHand.MAIN_HAND}) {
-                    if (!SpartanEquipmentCompat.isShield(human.getItemInHand(hand))) continue;
-                    ownedShield = human.getItemInHand(hand);
-                    human.humanGunner$startProjectileShield(hand);
-                    blockUntil = human.tickCount + 8;
-                    nextBlock = human.tickCount + 16;
-                    break;
-                }
-            }
-            if (ownedShield != null) human.markShieldFacing(threat);
-        } else releaseShield();
+        }
+        human.humanGunner$shieldDefense().tickBodyguard(owner, threat);
     }
-    private void releaseShield() {
-        if (ownedShield != null && human.isUsingItem() && human.getUseItem() == ownedShield) human.stopUsingItem();
-        ownedShield = null;
-    }
+
     @Override public void stop() {
-        releaseShield();
+        human.humanGunner$shieldDefense().endBodyguard();
         SoldierFollowNavigation.stopOwned(human);
         if (MovementContinuity.ownsRoute(human, ownedPath)) human.getNavigation().stop();
         ownedPath = null;
