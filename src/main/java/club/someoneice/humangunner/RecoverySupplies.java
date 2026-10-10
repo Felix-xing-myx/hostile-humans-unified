@@ -127,6 +127,15 @@ public final class RecoverySupplies {
         return ACTIVE_USES.containsKey(human);
     }
 
+    /** True only while our offhand food animation is actually running. */
+    public static boolean isEatingFood(Human human) {
+        UseSession session = ACTIVE_USES.get(human);
+        return session != null && session.food() && human.isUsingItem()
+                && session.hand() == net.minecraft.world.InteractionHand.OFF_HAND
+                && human.getUsedItemHand() == session.hand()
+                && human.getUseItem().getUseAnimation() == net.minecraft.world.item.UseAnim.EAT;
+    }
+
     /** Optional item adapters may settle only our inventory-backed use session. */
     static boolean ownsSupplyUse(Human human, ItemStack stack) {
         UseSession session = ACTIVE_USES.get(human);

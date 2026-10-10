@@ -65,6 +65,8 @@ public final class PlayerLikeMovementGoal extends Goal {
         if (target == null) {
             return;
         }
+        // The food controller owns spacing, sprint and safe hops for this item-use window.
+        if (!human.isFleeing && RecoverySupplies.isEatingFood(human)) return;
         // AdaptiveCombatGoal owns the defensive stance. This flag-free helper
         // must not restart navigation or a weapon switch while the shield is
         // raised. A melee soldier may still sprint along its existing attack

@@ -956,3 +956,14 @@
 - 接口/共享文件：HumanOwnerProtection、HumanRelationshipPolicy、HumanRelations、HumanProjectileRelations、HumanGunner、Human.hurt、TaczIntegration均由主控维护，更新MODULE_INTERFACES及CHANGELOG；Java归属矩阵/ASM与Python契约同步扩展。
 - 验证：104项Python源码契约通过；Java17仅parse全部359份Java，0语法错误；git diff --check通过。只读javap确认Explosion公开来源接口；TaCZ1.1.8-hotfix Pre有Cancelable，原生EntityKineticBullet根据事件post取消结果立即返回。Java正式归属与调用链测试新增但未编译执行。
 - 待游戏验收：雇主剑/斧/横扫、火矢弓弩/穿透/三叉戟、TaCZ普通/穿透/爆炸弹，护盾及护甲耐久、受击反馈与反击；PVP开关两种状态、多玩家转让/解雇、重载后归属。未运行Gradle、构建、实例配置更新、同步、启动游戏或push；交付为包含本记录的本地提交。
+
+## 2026-10-10 普通战斗进食反击与跳跃拉距
+
+- 任务：普通非撤退进食时能够反击，安全拉距时可以跳跃；不改变食物/药品恢复量、正式撤退及活动范围。
+- 基线：`35f68cedc6ebd60773718edb833f09b315e7e6a6`；负责人主控 `/root`；单会话在主工作树 `E:\MC\Create-Delight\HostileHumansUnified-维护\project`、`main` 实施，无并行编辑。
+- 原因：弓弩/枪械在其他物品使用期间停止攻击，可能保留旧移动路线；普通战术阶段只移动而不负责近战反击，通用跳跃又排除了所有物品使用。
+- 文件范围：新增 CombatEatingMovementGoal；RecoverySupplies、HumanGunner、AdaptiveCombatGoal、PlayerLikeMovementGoal、GunCustody、RangedWeaponCustody；源码契约检查、模块接口说明和更新日志。公共入口主控统一负责。
+- 接口：严格区分真实副手进食与其他物品；单一 MOVE/LOOK 所有者复用正常近战攻击与两个精确主手交换接口；寻路预算、路线安全、士兵命令与跳跃配置继续共用现有接口。
+- 验证：108项Python源码检查通过；360个Java文件仅解析，语法错误0；git差异空白检查通过。未执行Java编译、Gradle、实例同步或GitHub推送。
+- 待游戏验收：近战边吃边反击、Better Combat前摇、弓弩/枪手备用武器精确交换及恢复、食物和盾牌无丢失、跳跃拉距、悬崖水边安全、驻守与紧急撤退接管。无备用武器时只拉距，不凭空生成武器。
+- 交付：包含本记录的本地提交。
