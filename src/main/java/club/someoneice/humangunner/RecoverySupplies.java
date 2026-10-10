@@ -126,6 +126,14 @@ public final class RecoverySupplies {
         return ACTIVE_USES.containsKey(human);
     }
 
+    /** Optional item adapters may settle only our inventory-backed use session. */
+    static boolean ownsSupplyUse(Human human, ItemStack stack) {
+        UseSession session = ACTIVE_USES.get(human);
+        return session != null && ItemStack.isSameItemSameTags(session.itemAtStart(), stack)
+                && session.itemAtStart().getCount() == stack.getCount()
+                && (!human.isUsingItem() || human.getUsedItemHand() == session.hand());
+    }
+
     /** Includes the deferred swap-back after the use animation finishes. */
     static boolean hasHandCustody(Human human) {
         return ACTIVE_USES.containsKey(human) || PENDING_FINISHES.containsKey(human);
@@ -156,25 +164,25 @@ public final class RecoverySupplies {
                 if (allowEnchantedApple) return true;
                 continue;
             }
-            if (stack.is(Items.GOLDEN_APPLE) || (isHealingPotion(stack) && canUsePotionNow(human, stack))
+            if (stack.is(Items.GOLDEN_APPLE) || ((isHealingPotion(stack) || FirstAidCompat.isMedicine(stack)) && canUsePotionNow(human, stack))
                     || (allowFood && isRecoveryFood(human, stack))) return true;
         }
         return false;
     }
 
     public static boolean isRecoverySupply(Human human, ItemStack stack) {
-        return isSupportedSupplyPotion(stack)
+        return FirstAidCompat.isSupply(stack) || isSupportedSupplyPotion(stack)
                 || stack.is(Items.GOLDEN_APPLE)
                 || stack.is(Items.ENCHANTED_GOLDEN_APPLE)
                 || isRecoveryFood(human, stack);
     }
 
     public static boolean hasPendingGradualHealing(Human human) {
-        return human.getPersistentData().getFloat(PENDING_HEAL) > 0.0F;
+        return pendingGradualHealing(human) > 0.0F;
     }
 
     public static float pendingGradualHealing(Human human) {
-        return Math.max(0.0F, human.getPersistentData().getFloat(PENDING_HEAL));
+        return Math.max(0.0F, human.getPersistentData().getFloat(PENDING_HEAL)) + FirstAidCompat.pendingHealing(human);
     }
 
     public static float projectedHealth(Human human) {
@@ -967,6 +975,7 @@ public final class RecoverySupplies {
     }
 
     private static boolean canUsePotionNow(Human human, ItemStack stack) {
+        if (FirstAidCompat.isSupply(stack)) return FirstAidCompat.canUse(human, stack);
         if (!stack.is(Items.POTION)) return true;
         MobEffectInstance active = human.getEffect(MobEffects.REGENERATION);
         return active == null || !PotionRecoveryPolicy.regenerationActive(active.getDuration())
@@ -988,6 +997,7 @@ public final class RecoverySupplies {
     }
 
     public static void tickGradualHealing(Human human) {
+        FirstAidCompat.tick(human);
         float pending = human.getPersistentData().getFloat(PENDING_HEAL);
         if (pending <= 0.0F || !human.isAlive()) {
             return;
@@ -1105,6 +1115,7 @@ public final class RecoverySupplies {
         }
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
             ItemStack stack = data.getInventoryItem(i);
+            if (FirstAidCompat.isMorphine(stack) && FirstAidCompat.canUse(human, stack)) return i;
             if (!stack.is(Items.POTION) || !canUsePotionNow(human, stack)) {
                 continue;
             }
@@ -1152,6 +1163,7 @@ public final class RecoverySupplies {
     }
 
     private static void accelerateFoodUse(Human human, ItemStack stack) {
+        if (FirstAidCompat.isSupply(stack)) return;
         if (stack.getUseAnimation() != net.minecraft.world.item.UseAnim.EAT && !isInstantHealingPotion(stack)) {
             return;
         }
@@ -1161,6 +1173,8 @@ public final class RecoverySupplies {
     }
 
     private static int recoveryUseDuration(ItemStack stack) {
+        int medicalDuration = FirstAidCompat.useDuration(stack);
+        if (medicalDuration > 0) return medicalDuration;
         return isInstantHealingPotion(stack)
                 ? PotionRecoveryPolicy.instantHealingUseDuration(stack.getUseDuration())
                 : acceleratedUseDuration(stack.getUseDuration(),
@@ -1310,6 +1324,10 @@ public final class RecoverySupplies {
     }
 
     private static int healingPotionScore(Human human, ItemStack stack) {
+        if (FirstAidCompat.isMedicine(stack)) {
+            return FirstAidCompat.canUse(human, stack)
+                    ? (int) FirstAidCompat.inventoryValue(stack) * 2 : Integer.MIN_VALUE;
+        }
         if (!stack.is(Items.POTION) || !canUsePotionNow(human, stack)) return Integer.MIN_VALUE;
         int score = 0;
         boolean healing = false;

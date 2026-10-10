@@ -11,6 +11,11 @@
 | 女仆身份牌与阵营 | `TouhouMaidCompat`、`MaidTargetRules` | 任务公共接口和显式排除规则；规则读取不兼容时拒绝攻击人类并报错 |
 | 女仆爆炸、斯巴达异步随机数补丁 | `OptionalMixinPlugin` | 只在精确方法签名存在时启用；方法改变时明确警告并保留上游行为 |
 | TaCZ 友军弹丸过滤 | `TaczHumanProjectileCollisionMixin` | 两条射线查询的调用结构；仍严格要求两个注入 |
+| First Aid 医疗／战术用品 | `FirstAidCompat`、`FirstAidApiBridge` | 公开ItemHealing敷用毫秒值、AbstractPartHealer分次与间隔；Forge Start/Finish消费语义；不接入玩家身体模型 |
+
+First Aid对照本机`1.20.1-1.1`只读JAR实现。可选依赖声明及ModList门控隔离API类，核心代码不暴露First Aid类型；使用公开API，不读内部配置字段、不用反射或Mixin。Forge Finish收到原物品快照与原生结果，敷料补扣一件，吗啡保留原生扣除，使用中断不结算。原生默认敷料敷用3000毫秒、每22秒一次共2次，绷带2500毫秒、每18秒一次共4次；人类每次分别恢复10点，共20／40点。上游服务器配置调整后，新疗程读取公开接口的新节奏，已开始疗程按保存快照完成；满血时该次治疗不溢出、不提前清冷却，卸载期间暂停剩余加载tick。没有新增持续扫描或竞争Goal。
+
+构建新增只读compileOnly参数`-PfirstAidApiJar=<First Aid JAR完整路径>`（与路径作为一个参数正确引用）；工作树必须显式指定，未安装First Aid的运行环境不需要该JAR。默认路径指向约定测试实例，具体命令见AGENTS.md；不得将依赖JAR提交或打入产物。
 
 TaCZ 换弹按方法描述符及精确调用匹配，不再依赖编译器合成的 lambda 方法名字。允许正文重命名或内联到 reload；必需调用仍要求恰好一次，避免静默跳过造成免费换弹、提前通知或重复扣费。上游方法参数、字段或语义改变仍需要适配。
 

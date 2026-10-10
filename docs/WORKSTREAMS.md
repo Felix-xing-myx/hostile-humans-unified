@@ -1,5 +1,14 @@
 # 开发任务与整合记录
 
+## 2026-10-10 First Aid正规可选联动（源码接入，未构建）
+
+- 基线eb3ef7826202295d04260ba22d63aea1f65e06f8；负责人主控，主源码工作树/main，顺序单人实施。范围FirstAidCompat、FirstAidApiBridge、RecoverySupplies、HumanLootManager、HumanGunner、构建只读API依赖、可选依赖声明及回归与文档；共享文件由主控负责，无其他编辑会话接入。
+- 用户确认只改本模组人类，玩家继续First Aid身体部位机制。以本机First Aid 1.20.1-1.1 JAR公开API及Forge 47.4.16 Start/Finish事件源码为依据，毫秒换算为tick；无私有反射、新Mixin或新增AI Goal。
+- 敷料20HP、绷带40HP，沿用公开API分次节奏，共用疗程；吗啡90秒抗性I，不覆盖已有抗性或在冷却内重用。消费接入现有库存托管，原生吗啡已扣除不重复扣；中断不授予效果。疗程/冷却剩余加载tick存实体NBT，食物/生命恢复可叠加，满血不提早结束疗程。
+- 拾取单位品质60/65/94，敷料/绷带作为恢复药品进入现有最后一份保护；不默认添加出生物资或更改玩家物品效果。API桥只在安装First Aid时调用，新增firstAidApiJar只读compileOnly路径，不复制或打包JAR。
+- 交付：本节对应本地First Aid接入提交；82项Python源码契约通过（新增6项），352份Java文件仅Java17语法parse、0错误（未类型检查/编译），281份资源JSON解析、可选依赖TOML及git diff --check通过。OptionalRuntimeTest已扩展First Aid缺席链接检查，尚未编译或执行。本轮无构建、实例配置更新、同步、游戏启动或push。
+- 待游戏验收：First Aid缺席启动及客户端/专服隔离；单件/堆叠敷料与绷带正确扣除、共用44/72秒默认疗程及中断/重载；吗啡40tick使用、抗性I持续90秒及禁重用（含外部抗性/效果移除）；满血不提前解除冷却、食物/恢复buff叠加，持盾/持枪时物品托管恢复与拾取品质保护。静态检查不代表这些行为已经验收。
+
 ## 2026-10-10 地形受阻、绕路与悬崖战术（源码接入，未构建）
 
 - 用户批准上一轮完整改进方案，并要求纳入现有AI正式判断。基线b518cd488ad34eb4074e5408a2753cd062136b1a，main初始干净。主控/root独立编辑当前project工作树，负责地形判断反馈、导航/追击、弓弩枪械与防御接入、测试和说明；公共HumanNavigation/HumanTerrainSafety/PursuitNavigation/AdaptiveCombatGoal等均由主控接入。不改变防摔预算、低血量撤退、攻击许可、弹药、水下游泳或传送策略；不构建/同步/启动游戏/push。

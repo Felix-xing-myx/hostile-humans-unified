@@ -10,7 +10,8 @@ public final class OptionalRuntimeTest {
         ClassLoader loader = OptionalRuntimeTest.class.getClassLoader();
         for (String type : List.of("com.tacz.guns.api.item.IGun",
                 "com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid",
-                "top.theillusivec4.curios.api.CuriosApi")) {
+                "top.theillusivec4.curios.api.CuriosApi",
+                "ichttt.mods.firstaid.api.healing.ItemHealing")) {
             try { Class.forName(type, false, loader); throw new AssertionError("Optional dependency leaked onto test classpath: " + type); }
             catch (ClassNotFoundException expected) { }
         }
@@ -20,7 +21,7 @@ public final class OptionalRuntimeTest {
             for (Path file : paths.filter(p -> p.toString().endsWith(".class")).sorted().toList()) {
                 String name = root.relativize(file).toString().replace('\\', '.').replace('/', '.').replaceAll("\\.class$", "");
                 // These adapters are deliberately loadable only with their dependency installed.
-                if (name.matches(".*\\.(GunnerGoal|TaczIntegration|TaczGunItemIdentity|TaczHumanReloadTransactions|TaczHumanReloadMixin|TaczHumanShootMixin|TaczReloadSoundClient|TaczMaidIntegration|TouhouMaidCompat|MaidTargetRules|TravelersBackpack|HumanBackpackLayer|CuriosBadgeAccess)(\\$.*)?")) continue;
+                if (name.matches(".*\\.(FirstAidApiBridge|GunnerGoal|TaczIntegration|TaczGunItemIdentity|TaczHumanReloadTransactions|TaczHumanReloadMixin|TaczHumanShootMixin|TaczReloadSoundClient|TaczMaidIntegration|TouhouMaidCompat|MaidTargetRules|TravelersBackpack|HumanBackpackLayer|CuriosBadgeAccess)(\\$.*)?")) continue;
                 Class<?> type = Class.forName(name, false, loader);
                 type.getDeclaredFields();
                 type.getDeclaredMethods();
@@ -36,6 +37,6 @@ public final class OptionalRuntimeTest {
         vanilla.control(null).clearSprintLock();
         vanilla.control(null).shoot(null, 0, 0);
         vanilla.registerEvents();
-        System.out.println("OptionalRuntimeTest: linked " + loaded + " core classes without TaCZ, Curios or Maid; vanilla adapter passed");
+        System.out.println("OptionalRuntimeTest: linked " + loaded + " core classes without TaCZ, Curios, Maid or First Aid; vanilla adapter passed");
     }
 }

@@ -37,7 +37,7 @@
 
 - 当前基线为 Minecraft 1.20.1、Forge 47.4.16、Java 17；每次以 `gradle.properties`、`build.gradle` 和实际环境重新核对。Java 路径为 `D:\Java\17`，使用仓库的 `gradlew.bat`。
 - 没有用户的“构建”要求，不运行 Gradle 构建或会触发编译的验证任务。已有授权后按修改选择验证；自动检查不能替代游戏内验收。
-- `build.gradle` 的三个 compileOnly API 默认路径依赖工作树位置。独立工作树显式传入完整参数；公共 API JAR 只读，不复制整套实例，不提交 API JAR、构建缓存、日志、存档或凭据。
+- `build.gradle` 的四个 compileOnly API 默认路径依赖工作树位置。独立工作树显式传入完整参数；公共 API JAR 只读，不复制整套实例，不提交 API JAR、构建缓存、日志、存档或凭据。
 - PowerShell 构建参考（仅在用户要求构建后执行；额外测试按任务选择）：
 
 ```powershell
@@ -45,7 +45,8 @@ $env:JAVA_HOME = 'D:\Java\17'
 & .\gradlew.bat build lootScreeningTest --offline `
   '-PtaczApiJar=E:\MC\Create-Delight\versions\Create-Delight-Remake\mods\tacz-1.20.1-1.1.8-hotfix.jar' `
   '-PcuriosApiJar=E:\MC\Create-Delight\versions\Create-Delight-Remake\mods\curios-forge-5.14.1+1.20.1.jar' `
-  '-PmaidApiJar=E:\MC\Create-Delight\最初二创内容\mods\[车万女仆]touhoulittlemaid-1.5.3-modified-all.jar'
+  '-PmaidApiJar=E:\MC\Create-Delight\最初二创内容\mods\[车万女仆]touhoulittlemaid-1.5.3-modified-all.jar' `
+  '-PfirstAidApiJar=E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\[急救／医疗护理] firstaid-1.20.1-1.1.jar'
 ```
 
 ## 同步、发布与验收

@@ -17,14 +17,16 @@ def baselineModsDir = new File(workspaceRootDir, 'versions/Create-Delight-Remake
 def legacyModsDir = new File(workspaceRootDir, '最初二创内容/mods')
 // Public clones do not contain this maintenance workspace's modpack. Supply
 // these API-only JARs with -PtaczApiJar=..., -PcuriosApiJar=..., and
-// -PmaidApiJar=...; the local defaults preserve the established workflow.
+// -PmaidApiJar=... and -PfirstAidApiJar=...; local defaults preserve the workflow.
 def taczApiJar = file(findProperty('taczApiJar') ?: new File(baselineModsDir, 'tacz-1.20.1-1.1.8-hotfix.jar'))
 def curiosApiJar = file(findProperty('curiosApiJar') ?: new File(baselineModsDir, 'curios-forge-5.14.1+1.20.1.jar'))
 def maidApiJar = file(findProperty('maidApiJar') ?: new File(legacyModsDir, '[车万女仆]touhoulittlemaid-1.5.3-modified-all.jar'))
+def firstAidApiJar = file(findProperty('firstAidApiJar') ?: new File(workspaceRootDir, '../game/.minecraft/versions/1.20.1-Forge_47.4.21/mods/[急救／医疗护理] firstaid-1.20.1-1.1.jar'))
 [
         taczApiJar: taczApiJar,
         curiosApiJar: curiosApiJar,
-        maidApiJar: maidApiJar
+        maidApiJar: maidApiJar,
+        firstAidApiJar: firstAidApiJar
 ].each { label, apiJar ->
     if (!apiJar.isFile()) {
         throw new GradleException("Missing ${label} at ${apiJar}. Supply -P${label}=<path-to-jar>; see README.md.")
@@ -38,6 +40,8 @@ dependencies {
     // Create Delight Remake currently has no Touhou Little Maid. Keep the exact
     // legacy API JAR as a compile-only compatibility input; it is not packaged.
     compileOnly files(maidApiJar)
+    // Public ItemHealing / AbstractPartHealer API only; never bundled or required at runtime.
+    compileOnly files(firstAidApiJar)
 }
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'

@@ -1,5 +1,7 @@
 # Hostile Humans Unified
 
+Optional First Aid integration: humans can use plaster (20 total HP), bandage (40 total HP), and morphine (Resistance I for 90 seconds). Medical supplies follow First Aid's public application and healing timing API and share a full-course cooldown. Morphine is not reused during its cooldown or an existing Resistance effect. Supply these through pickup or soldier inventory; default spawn kits are unchanged. Player body-part treatment remains First Aid's own behavior.
+
 [简体中文](README.md) | [English](README.en.md)
 
 Derived from [Hostile Humans](https://www.curseforge.com/minecraft/mc-mods/hostile-humans), this mod brings together content from **Human Gunner** and adds original gameplay. It is a standalone Forge mod; the original Hostile Humans and Human Gunner JARs are not required. The mod enhances hostile humans' attributes, combat, and survival mechanics, and is suited to modded worlds and modpacks. GPT assisted with modifications and builds.
