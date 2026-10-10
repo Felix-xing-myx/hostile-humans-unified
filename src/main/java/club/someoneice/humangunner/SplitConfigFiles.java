@@ -26,6 +26,7 @@ final class SplitConfigFiles {
     static JsonObject load(Path configDirectory, JsonObject defaults,
                            java.util.function.BiPredicate<String, JsonObject> integrations) {
         Path directory = configDirectory.resolve(DIRECTORY);
+        GrowthProfileFiles.relocate(directory, defaults);
         JsonObject result = loadFile(directory.resolve("global.json"), TierConfigProjection.global(defaults),
                 false, integrations);
         // Discard recognized per-tier values accidentally left in a global file. This
@@ -74,7 +75,7 @@ final class SplitConfigFiles {
             boolean imported = rank && integrations.test(rankName(path), data);
             TierConfigProjection.refreshGuidance(data, defaults);
             JsonObject arranged = TierConfigProjection.arrange(data, rank);
-            byte[] output = GSON.toJson(arranged).getBytes(StandardCharsets.UTF_8);
+            byte[] output = format(arranged).getBytes(StandardCharsets.UTF_8);
             // Refresh help and ownership; missing values remain in memory and explicit pools stay authoritative.
             if ((imported || !Arrays.equals(original, output)) && !writeCurrent(path, original, arranged))
                 data = read(path, 2);
@@ -103,7 +104,7 @@ final class SplitConfigFiles {
         try {
             if (!Arrays.equals(original, Files.readAllBytes(path))) return false;
             temporary = Files.createTempFile(path.getParent(), "human-config-save-", ".tmp");
-            try (Writer writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) { GSON.toJson(data, writer); }
+            try (Writer writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) { writer.write(format(data)); }
             if (!Arrays.equals(original, Files.readAllBytes(path))) return false;
             try { Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING); }
             catch (AtomicMoveNotSupportedException unavailable) { Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING); }
@@ -142,10 +143,24 @@ final class SplitConfigFiles {
         }
     }
 
+    /** Strict JSON with a blank line between described controls; no editor-specific syntax. */
+    static String format(JsonObject data) {
+        StringBuilder result = new StringBuilder();
+        String previous = "";
+        for (String line : GSON.toJson(data).split("\\n")) {
+            String trimmed = line.stripLeading();
+            boolean fieldHelp = trimmed.startsWith("\"_说明_") && !trimmed.startsWith("\"_说明_中文\"");
+            if (fieldHelp && !previous.isEmpty() && !previous.endsWith("{")) result.append('\n');
+            result.append(line).append('\n');
+            previous = line.stripTrailing();
+        }
+        return result.toString();
+    }
+
     static void writeNew(Path path, JsonObject data) throws IOException {
         Path temporary = Files.createTempFile(path.getParent(), "human-config-", ".tmp");
         try {
-            try (Writer writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) { GSON.toJson(data, writer); }
+            try (Writer writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) { writer.write(format(data)); }
             // A move with no REPLACE_EXISTING must fail if another process creates the
             // target. Do not use ATOMIC_MOVE: its replacement behavior is provider-specific.
             Files.move(temporary, path);

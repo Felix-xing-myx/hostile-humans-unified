@@ -81,12 +81,12 @@ final class TierConfigProjection {
         removeRetiredControls(result, rank);
         enforceOwnership(result, rank);
         List<String> sections = rank
-                ? List.of("schema_version", "_说明_中文", "_description_en", "attributes", "spawning",
-                    "equipment_loadout", "ammunition", "food", "potions", "damage_multipliers",
-                    "combat", "ai", "movement", "weapon_spread_degrees", "tacz")
-                : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "ammunition",
-                    "equipment_integration", "ai", "spawning", "recruitment", "damage", "tacz",
-                    "better_combat", "growth", "native_gameplay");
+                ? List.of("schema_version", "_说明_中文", "_description_en", "attributes", "damage_multipliers", "spawning",
+                    "ammunition", "food", "potions", "combat", "ai", "movement",
+                    "weapon_spread_degrees", "tacz", "growth_profile", "equipment_loadout")
+                : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "growth", "ammunition",
+                    "equipment_integration", "ai", "recruitment", "spawning", "damage",
+                    "better_combat", "tacz", "native_gameplay");
         orderGroup(result, "equipment_loadout", List.of("ranged_chance", "ranged_in_backpack", "allow_tacz_firearms",
                 "automatic_spartan_weapons", "automatic_spartan_shields", "automatic_immersive_armors",
                 "weapon_count", "guaranteed_shields_min", "guaranteed_shields_max", "automatic_shield_enchantments",
@@ -107,7 +107,36 @@ final class TierConfigProjection {
                     "pillager_gun_damage_multiplier", "shield_damage_multiplier", "tamed_maid_damage_multiplier",
                     "forced_ranged_gun_chance", "gun_drop_chance", "gun_whitelist",
                     "hired_gun_additional_whitelist"));
+        orderGroup(result, "growth", List.of("enabled", "stage_percent", "stage_cost", "experience", "firearms", "combat"));
+        orderGroup(object(result, "growth"), "experience", List.of("min_percent", "max_percent", "cap_percent", "below_base_cost", "band_width_percent", "cost_by_band"));
+        orderGroup(result, "growth_profile", List.of("start_day", "duration_days", "progress_nodes",
+                "early_baseline_gear_chance", "early_gun_chance_multiplier", "early_enchantment_keep_chance",
+                "early_enchantment_level_multiplier", "early_totem_keep_chance", "early_trident_keep_chance",
+                "early_spartan_material", "early_melee", "early_armor"));
+        sectionHeader(result, "attributes", "基础属性 / Base attributes");
+        sectionHeader(result, "damage_multipliers", "伤害倍率 / Damage multipliers");
+        sectionHeader(result, "growth", "共用成长规则 / Shared growth rules");
+        sectionHeader(result, "spawning", "生成规则 / Spawning");
+        sectionHeader(result, "ammunition", "弹药 / Ammunition");
+        sectionHeader(result, "food", "食物 / Food");
+        sectionHeader(result, "potions", "药水 / Potions");
+        sectionHeader(result, "recruitment", "雇佣管理 / Recruitment");
+        sectionHeader(result, "growth_profile", "本阶成长曲线与装备细项 / Rank growth curve and equipment details");
+        sectionHeader(result, "equipment_loadout", "装备池与细项 / Equipment pools and details");
         return ordered(result, sections);
+    }
+
+    private static void sectionHeader(JsonObject root, String key, String title) {
+        if (!root.has(key) || !root.get(key).isJsonObject()) return;
+        JsonObject group = root.getAsJsonObject(key);
+        String heading = "========== " + title + " ==========";
+        JsonElement existing = group.get("_说明_中文");
+        if (existing != null && existing.isJsonPrimitive() && existing.getAsJsonPrimitive().isString()) {
+            String note = existing.getAsString();
+            if (note.startsWith(heading)) return;
+            heading += " " + note;
+        }
+        group.addProperty("_说明_中文", heading);
     }
 
     private static void enforceOwnership(JsonObject data, boolean rank) {
@@ -135,7 +164,7 @@ final class TierConfigProjection {
             for (String tier : RANKS) removeOptions(tacz, List.of(tier + "_gun_chance"));
             removeRanks(tacz, "tier_damage_multipliers");
             removeRanks(tacz, "tier_gun_type_weights");
-            for (String key : List.of("damage_multipliers", "attributes", "movement", "combat", "weapon_spread_degrees", "equipment_loadout", "food", "potions")) data.remove(key);
+            for (String key : List.of("damage_multipliers", "attributes", "movement", "combat", "weapon_spread_degrees", "equipment_loadout", "food", "potions", "growth_profile")) data.remove(key);
             removeOptions(object(data, "ammunition"), List.of("arrows", "magazines"));
             removeOptions(object(data, "spawning"), List.of("spawn_multiplier", "first_spawn_day"));
             removeOptions(object(data, "tacz"), List.of("gun_chance", "damage_multiplier", "gun_type_weights", "human_gun_damage_multiplier"));

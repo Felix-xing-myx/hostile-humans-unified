@@ -26,7 +26,7 @@ class GrowthServerContractTest(unittest.TestCase):
 
     def test_vanilla_mode_suppresses_one_shared_growth_policy(self):
         self.assertIn("enabled = configuredEnabled && !vanillaMode", read("GrowthConfig.java"))
-        self.assertIn('object(defaults, "growth"), vanillaMode)', read("UnifiedConfig.java"))
+        self.assertIn('object(root, "tiers"), defaults, vanillaMode)', read("UnifiedConfig.java"))
         self.assertIn("new EquipmentGrowthPolicy(enabled,", read("GrowthConfig.java"))
         self.assertIn("new GrowthSnapshot(config.enabled()", read("HumanGrowth.java"))
         self.assertIn("GrowthRewards.configurationReloaded(instance.growth().enabled())", read("UnifiedConfig.java"))

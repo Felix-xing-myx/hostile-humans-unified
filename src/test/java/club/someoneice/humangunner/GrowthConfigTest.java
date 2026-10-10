@@ -4,7 +4,8 @@ import com.google.gson.*;
 
 /** Shared curve, global ownership and invalid-input regression checks. */
 public final class GrowthConfigTest {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        GrowthProfileFilesTest.run();
         GrowthProgressionTest.main(args);
         GrowthPersistenceTest.main(args);
         UnifiedConfig config = new UnifiedConfig(new JsonObject());
@@ -33,6 +34,9 @@ public final class GrowthConfigTest {
         JsonObject retired = json("{\"growth\":{\"experience\":{\"cost\":12,\"_description_cost_en\":\"old\",\"below_base_cost\":7}}}");
         JsonObject cleaned = TierConfigProjection.arrange(retired, false).getAsJsonObject("growth").getAsJsonObject("experience");
         check(!cleaned.has("cost") && !cleaned.has("_description_cost_en") && cleaned.get("below_base_cost").getAsInt() == 7, "retired cost and help removed without overwriting custom costs");
+        GrowthConfig wider = new UnifiedConfig(json("{\"growth\":{\"experience\":{\"band_width_percent\":10}}}")).growth();
+        check(wider.experienceCost(109) == 3 && wider.experienceCost(110) == 5, "custom band width changes cost boundaries");
+        check(wider.gunSpreadMultiplier(105) == 1 && Math.abs(wider.gunSpreadMultiplier(110) - .95) < 1e-8, "spread shares configured band width");
         int[] start = {3, 5, 10, 20}, duration = {37, 45, 60, 60};
         for (int i = 0; i < 4; i++) {
             String rank = TierConfigProjection.RANKS.get(i);
@@ -55,7 +59,7 @@ public final class GrowthConfigTest {
             }
         }
         JsonObject custom = json("""
-                {"growth":{"profiles":{"roamer":{"start_day":10,"duration_days":100,"progress_nodes":[0.1,0.3,0.7,0.9]}}}}
+                {"tiers":{"roamer":{"growth_profile":{"start_day":10,"duration_days":100,"progress_nodes":[0.1,0.3,0.7,0.9]}}}}
                 """);
         growth = new UnifiedConfig(custom).growth();
         check(growth.stageAt("roamer", 30) == 0 && growth.stageAt("roamer", 50) == 1
@@ -85,7 +89,7 @@ public final class GrowthConfigTest {
         JsonObject bad = json("""
                 {"growth":{"stage_percent":[50,60,60,80,90,100],"stage_cost":[0,40,40,40,40],
                 "experience":{"min_percent":120,"max_percent":110,"cap_percent":125,"below_base_cost":-2,"cost_by_band":[3,5,0,12,16]},
-                "combat":{"damage_unit":0},"profiles":{"roamer":{"duration_days":0,"progress_nodes":[0.4,0.2,0.6,0.8]}}}}
+                "combat":{"damage_unit":0}},"tiers":{"roamer":{"growth_profile":{"duration_days":0,"progress_nodes":[0.4,0.2,0.6,0.8]}}}}
                 """);
         growth = new UnifiedConfig(bad).growth();
         check(growth.stagePercent(2) == 70 && growth.stageCost(0) == 40, "bad arrays safe defaults without sorting");
@@ -94,10 +98,11 @@ public final class GrowthConfigTest {
         check(new UnifiedConfig(json("{\"growth\":{\"experience\":{\"min_percent\":90.5}}}")).growth().experienceMinPercent() == 90, "fractional percentage rejected");
         check(new UnifiedConfig(json("{\"growth\":null}")).growth().enabled(), "invalid group default");
         JsonObject defaults = UnifiedConfig.defaults(), global = TierConfigProjection.global(defaults);
-        check(global.has("growth") && global.getAsJsonObject("growth").has("profiles"), "all growth in global");
+        check(global.has("growth") && !global.getAsJsonObject("growth").has("profiles"), "shared growth only in global");
         for (String rank : TierConfigProjection.RANKS) {
             JsonObject tier = TierConfigProjection.tier(defaults, rank);
-            check(!tier.has("growth") && !tier.has("equipment_growth"), "no rank growth");
+            check(!tier.has("growth") && !tier.has("equipment_growth"), "no rank master override");
+            check(tier.has("growth_profile"), "rank owns its curve and equipment growth");
             JsonObject attributes = tier.getAsJsonObject("attributes");
             check(attributes.has("max_health") && !attributes.has("health_min") && !attributes.has("health_max"), "single maximum health");
             tier.add("growth", json("{\"enabled\":false}"));

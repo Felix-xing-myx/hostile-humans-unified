@@ -185,8 +185,9 @@ public final class TierConfigFilesTest {
                 List<String> sections = new ArrayList<>(file.keySet());
                 check(sections.get(0).equals("schema_version"), "schema first " + rank);
                 check(sections.indexOf("attributes") < sections.indexOf("ai")
-                        && sections.indexOf("equipment_loadout") < sections.indexOf("ai")
-                        && sections.indexOf("equipment_loadout") < sections.indexOf("ammunition"), "consistent section order " + rank);
+                        && sections.indexOf("ammunition") < sections.indexOf("ai")
+                        && sections.indexOf("ai") < sections.indexOf("growth_profile")
+                        && sections.indexOf("growth_profile") < sections.indexOf("equipment_loadout"), "consistent section order " + rank);
                 for (String path : List.of("attributes.max_health", "movement.base_speed", "ai.retreat_health_ratio",
                         "equipment_loadout.ranged_chance", "ammunition.arrows.min",
                         "potions.recovery.count_min", "tacz.gun_chance", "spawning.first_spawn_day")) {

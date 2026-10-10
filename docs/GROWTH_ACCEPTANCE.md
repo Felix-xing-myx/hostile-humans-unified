@@ -53,3 +53,7 @@
 ### 本次构建同步结果
 
 Java分档培养61项、GrowthConfigTest及完整build/check/lootScreeningTest通过。3.7.0新JAR已备份后同步Forge_47.4.21测试实例，global.json补齐新参数并清理旧cost，分阶自定义配置未改；SHA-256核对一致。详细部署记录见WORKSTREAMS及部署备份中的deployment.json。没有启动游戏，枪械散布/实际伤害与服务器面板仍待游戏内测试。
+
+## 配置归属整理（源码，未构建）
+
+共用growth继续全局；各阶曲线和早期装备细项现位于各阶growth_profile，不再放在global.growth.profiles。当前用户值安全搬移后才清理来源，不生成继承文件。新增经验档宽band_width_percent默认5，培养成本及枪械散布共用。文件增加分区标题和字段组留白、装备细项后置；默认有效平衡数值保持。新增Java文件搬移/格式稳定/优先级/坏文件与档宽回归待构建，45项Python源码契约已通过；此前部署仍是旧配置布局，本轮没有改实例。

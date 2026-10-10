@@ -10,11 +10,12 @@ public final class GrowthConfig {
     private final List<Double> stagePercent, stageCost;
     private final double experienceMinPercent, experienceMaxPercent, experienceCapPercent, belowBaseCost;
     private final List<Double> experienceBandCost;
+    private final int experienceBandWidth;
     private final double gunSpreadStepPercent, gunSpreadFloorPercent, gunDamageBonusPercent;
     private final double damageUnit, rewardUnit, baseRewardCap, bonusDamageThreshold, bonusReward;
     private final EquipmentGrowthPolicy equipmentGrowth;
 
-    private GrowthConfig(JsonObject data, JsonObject defaults, boolean vanillaMode) {
+    private GrowthConfig(JsonObject data, JsonObject tiers, JsonObject defaults, boolean vanillaMode) {
         boolean configuredEnabled = flag(data, "enabled", true, "growth.");
         // One effective server policy gates attributes, rewards, gear and UI alike.
         // Keep the configured preference untouched for leaving vanilla mode.
@@ -31,6 +32,7 @@ public final class GrowthConfig {
         }
         experienceMinPercent = min; experienceMaxPercent = max; experienceCapPercent = cap;
         belowBaseCost = number(e, "below_base_cost", 3, .001, 1000000, "growth.experience.");
+        experienceBandWidth = integer(e, "band_width_percent", 5, 1, 100, "growth.experience.");
         experienceBandCost = array(e, "cost_by_band", List.of(3D, 5D, 8D, 12D, 16D), .001, 1000000, false, false, "growth.experience.");
         JsonObject guns = group(data, "firearms", "growth.");
         gunSpreadStepPercent = number(guns, "spread_reduction_per_band_percent", 5, 0, 100, "growth.firearms.");
@@ -42,12 +44,11 @@ public final class GrowthConfig {
         baseRewardCap = number(combat, "base_cap", 4, 0, 1000000, "growth.combat.");
         bonusDamageThreshold = number(combat, "bonus_threshold", 300, 0, 1000000, "growth.combat.");
         bonusReward = number(combat, "bonus", 4, 0, 1000000, "growth.combat.");
-        JsonObject profiles = group(data, "profiles", "growth.");
         Map<String, EquipmentGrowthPolicy.Profile> values = new LinkedHashMap<>();
         for (String rank : TierConfigProjection.RANKS) {
-            String path = "growth.profiles." + rank + ".";
-            JsonObject p = group(profiles, rank, "growth.profiles.");
-            JsonObject d = UnifiedConfig.object(UnifiedConfig.object(defaults, "profiles"), rank);
+            String path = "tiers." + rank + ".growth_profile.";
+            JsonObject p = group(UnifiedConfig.object(tiers, rank), "growth_profile", "tiers." + rank + ".");
+            JsonObject d = UnifiedConfig.object(UnifiedConfig.object(UnifiedConfig.object(defaults, "tiers"), rank), "growth_profile");
             int start = integer(p, "start_day", d.get("start_day").getAsInt(), 1, 1000000, path);
             int duration = integer(p, "duration_days", d.get("duration_days").getAsInt(), 1, 1000000, path);
             List<Double> defaultNodes = new ArrayList<>();
@@ -66,8 +67,8 @@ public final class GrowthConfig {
         equipmentGrowth = new EquipmentGrowthPolicy(enabled, Map.copyOf(values));
     }
 
-    static GrowthConfig parse(JsonObject data, JsonObject defaults, boolean vanillaMode) {
-        return new GrowthConfig(data, defaults, vanillaMode);
+    static GrowthConfig parse(JsonObject data, JsonObject tiers, JsonObject defaults, boolean vanillaMode) {
+        return new GrowthConfig(data, tiers, defaults, vanillaMode);
     }
     public boolean enabled() { return enabled; }
     public double stagePercent(int level) { return stagePercent.get(Math.max(0, Math.min(5, level))); }
@@ -78,14 +79,14 @@ public final class GrowthConfig {
     public double experienceMinPercent() { return experienceMinPercent; }
     public double experienceMaxPercent() { return experienceMaxPercent; }
     public double experienceCapPercent() { return experienceCapPercent; }
-    /** Cost of the NEXT percentage point; bands start at 100, 105, 110, 115, 120. */
+    /** Cost of the NEXT percentage point; bands start at 100 and use the configured percentage-point width. */
     public double experienceCost(int percent) {
         if (percent < 100) return belowBaseCost;
-        return experienceBandCost.get(Math.min(4, (percent - 100) / 5));
+        return experienceBandCost.get(Math.min(4, (percent - 100) / experienceBandWidth));
     }
     public double gunSpreadMultiplier(int percent) {
         if (!enabled) return 1;
-        int bands = (int) Math.floor((percent - 100) / 5.0);
+        int bands = (int) Math.floor((percent - 100) / (double) experienceBandWidth);
         return Math.max(gunSpreadFloorPercent / 100.0, 1 - bands * gunSpreadStepPercent / 100.0);
     }
     public double gunDamageMultiplier(int percent) {
