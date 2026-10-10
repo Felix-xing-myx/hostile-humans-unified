@@ -1,5 +1,12 @@
 # 开发任务与整合记录
 
+## 2026-10-10 人类弹射物受伤冷却范围调整（源码完成，未构建）
+
+- 用户确认范围：本模组人类射出的弹射物命中非玩家目标，以及本模组人类受到弹射物，绕过受伤冷却；原版模式禁用本调整。主控/root在main独立处理，基线3ec1984b68088a0f8f6fc7b20712011517f8d91d，初始工作区干净；未派发编辑Agent，不修改其他工作树。范围独立ProjectileCooldownPolicy/LivingEntityProjectileCooldownMixin、Mixin清单、回归测试和构建测试登记、配置说明/日志；公共接入与审核均由主控负责。
+- 精确重定向LivingEntity.hurt中BYPASSES_COOLDOWN标签查询，Slice由该标签字段至首个lastHurt字段，require/allow均1；不改原DamageSource，不清空invulnerableTime，不新增伤害/生命写入，不改变Forge取消、护甲/盾牌、友军碰撞及成长实际扣血观察入口。玩家目标、无关生物交战、近战、爆炸与非弹射物状态伤害不新增绕过规则；归属优先DamageSource显式攻击者，缺失时读取Projectile.owner。
+- 原版1.20.1/Forge47.4.16实际缓存字节码核对：受伤计时>10时，仅一次BYPASSES_COOLDOWN查询；其后lastHurt差额分支。现有TaCZ1.1.8-hotfix自身在直接命中前清理受伤计时，保持上游行为，不把本次调整误称为撤销TaCZ原有行为。分类复用IS_PROJECTILE和可选GunSupport.isBullet，不直接引用可选依赖。
+- Python源码契约共26项通过（新增4项，原成长/UI 22项），git diff检查通过；核对缓存Forge字节码及SRG映射与精确注入边界。新增Java范围矩阵与真实Forge字节码Slice唯一性回归，登记至check，尚未编译执行。源码本地整合，不构建/同步/改实例/启动游戏/push。游戏内待验收双弓手同tick命中、箭/三叉戟连续伤害、玩家/友军/PVP过滤、盾牌/护甲、成长贡献和原版模式，以及其他模组同时修改hurt时的Mixin启动兼容。
+
 由主控维护。此处状态是有日期的核查记录；开始任务前重新检查 Git 和文件，不能将历史快照当作当前状态。
 
 ## 首次接管：2026-10-06

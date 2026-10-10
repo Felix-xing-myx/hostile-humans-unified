@@ -203,7 +203,7 @@ tasks.register('humanAmmoPolicyTest', JavaExec) {
 
 tasks.named('check').configure { dependsOn tasks.named('humanAmmoPolicyTest') }
 
-['HumanArrowCombatTest', 'AmmoWeaponSelectionTest', 'ReloadPaymentLedgerTest', 'TierRuntimeConfigTest', 'HumanAmmoConfigSwitchTest', 'TierConfigFilesTest', 'SpawnPotionConfigTest', 'SoldierFollowPolicyTest', 'OfflineSoldierDeathReportsTest', 'GunCombatPolicyTest', 'SupplyAndCloseDefenseTest', 'PotionRecoveryTest', 'BodyguardAndVanillaModeTest', 'InteractionSafetyPolicyTest', 'TntEscapeSourceTest', 'SupplyConfigurationTest', 'MaidHumanRelationTest', 'HumanProjectileRelationsTest', 'RangedTerrainSafetyTest', 'PursuitNavigationTest'].each { testClass ->
+['HumanArrowCombatTest', 'AmmoWeaponSelectionTest', 'ReloadPaymentLedgerTest', 'TierRuntimeConfigTest', 'HumanAmmoConfigSwitchTest', 'TierConfigFilesTest', 'SpawnPotionConfigTest', 'SoldierFollowPolicyTest', 'OfflineSoldierDeathReportsTest', 'GunCombatPolicyTest', 'SupplyAndCloseDefenseTest', 'PotionRecoveryTest', 'BodyguardAndVanillaModeTest', 'InteractionSafetyPolicyTest', 'TntEscapeSourceTest', 'SupplyConfigurationTest', 'MaidHumanRelationTest', 'HumanProjectileRelationsTest', 'ProjectileCooldownPolicyTest', 'RangedTerrainSafetyTest', 'PursuitNavigationTest'].each { testClass ->
     def taskName = testClass.substring(0, 1).toLowerCase() + testClass.substring(1)
     tasks.register(taskName, JavaExec) {
         dependsOn tasks.named('testClasses')
