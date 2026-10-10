@@ -644,7 +644,7 @@ public final class RecoverySupplies {
         }
         // An interrupted use returns its shield promptly. Completed uses
         // retain the longer quiet window for the final consumed-item remainder.
-        requestShieldReblock(human);
+
         if (!pending.completed()) return;
         if (session.food()) {
             queueFoodHealing(human, session.itemAtStart());
@@ -698,7 +698,6 @@ public final class RecoverySupplies {
         ItemStack bestShield = data.getInventoryItem(bestShieldSlot).copy();
         data.setInventoryItem(bestShieldSlot, offhand.copy());
         human.setItemSlot(EquipmentSlot.OFFHAND, bestShield);
-        requestShieldReblock(human);
         return true;
     }
 
@@ -716,11 +715,7 @@ public final class RecoverySupplies {
                 // including its durability/NBT, is returned.
                 data.setInventoryItem(slot, usedRemainder);
                 human.setItemSlot(handSlot, reserved);
-                if (SpartanEquipmentCompat.isShield(reserved)) {
-                    requestShieldReblock(human);
-                } else {
-                    restoreShieldAfterRecovery(human);
-                }
+                if (!SpartanEquipmentCompat.isShield(reserved)) restoreShieldAfterRecovery(human);
                 return;
             }
         }
@@ -749,9 +744,6 @@ public final class RecoverySupplies {
             );
         }
         human.setItemSlot(handSlot, recovered);
-        if (SpartanEquipmentCompat.isShield(recovered)) {
-            requestShieldReblock(human);
-        }
     }
 
     private static void rollbackExchange(Human human, HumanData data, int slot) {
@@ -956,10 +948,6 @@ public final class RecoverySupplies {
         drop.setPickUpDelay(80);
         source.setCount(0);
         return true;
-    }
-
-    private static void requestShieldReblock(Human human) {
-        human.humanGunner$shieldDefense().requestRecoveryReblock();
     }
 
     /** Extra regeneration never spends or resets the separately queued food healing. */

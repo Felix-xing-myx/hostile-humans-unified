@@ -3,6 +3,13 @@ package club.someoneice.humangunner;
 /** Pure combat decisions shared by the live goal and behavior regression tests. */
 final class CombatPressurePolicy {
     static final int MINIMUM_EFFECTIVE_BLOCK_TICKS = 6;
+    static final int MAX_GUARD_WAIT_TICKS = 20;
+    static final int COUNTER_WINDOW_TICKS = 10;
+
+    static boolean shouldCounterAfterGuard(int heldTicks, boolean blocked, boolean awaitingProjectile) {
+        return heldTicks >= MINIMUM_EFFECTIVE_BLOCK_TICKS
+                && ((!awaitingProjectile && blocked) || heldTicks >= MAX_GUARD_WAIT_TICKS);
+    }
     static final int QUIET_RELEASE_TICKS = 10;
     static final int RECENT_HIT_TICKS = 6;
     static final int GUNFIRE_MEMORY_TICKS = 40;
@@ -11,13 +18,6 @@ final class CombatPressurePolicy {
     static final int NEARBY_THREAT_DAMAGE_WINDOW_TICKS = 60;
 
     private CombatPressurePolicy() {
-    }
-
-    static boolean shouldOpenCounterWindow(
-            int heldTicks, int quietTicks, boolean canCounterFromCurrentRange
-    ) {
-        return heldTicks >= MINIMUM_EFFECTIVE_BLOCK_TICKS
-                && (canCounterFromCurrentRange || quietTicks >= QUIET_RELEASE_TICKS);
     }
 
     static boolean isRecentHit(int currentTick, int hurtTick) {
@@ -38,7 +38,7 @@ final class CombatPressurePolicy {
                 || approachSpeed <= -0.025D) {
             return false;
         }
-        return swinging || (distanceSqr <= 9.0D && approachSpeed >= 0.035D);
+        return swinging || distanceSqr <= 9.0D || approachSpeed >= 0.035D;
     }
 
     static boolean shouldReleaseForPursuit(

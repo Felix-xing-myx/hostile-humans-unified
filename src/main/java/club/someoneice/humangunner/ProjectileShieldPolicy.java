@@ -5,8 +5,8 @@ import net.minecraft.world.phys.Vec3;
 
 /** Keeps predictive projectile blocks from repeatedly pre-empting ranged attacks. */
 final class ProjectileShieldPolicy {
-    private static final double RANGED_IMPACT_WINDOW_TICKS = 2.5D;
-    private static final int MAX_RANGED_GUARD_WINDOW_TICKS = 3;
+    private static final double RANGED_IMPACT_WINDOW_TICKS = 10.0D;
+    private static final int MAX_RANGED_GUARD_WINDOW_TICKS = 12;
     static final int MAX_PREDICTION_TICKS = 12;
 
     private ProjectileShieldPolicy() {
@@ -22,13 +22,13 @@ final class ProjectileShieldPolicy {
         if (!rangedCombatant) {
             return Double.isFinite(ticksToImpact) && ticksToImpact >= 0.0D
                     && ticksToImpact <= MAX_PREDICTION_TICKS
-                    ? Math.max(2, (int) Math.ceil(ticksToImpact) + 2) : 0;
+                    ? Math.max(6, (int) Math.ceil(ticksToImpact) + 2) : 0;
         }
         if (!shouldGuardRangedUser(ticksToImpact)) {
             return 0;
         }
         return Math.min(MAX_RANGED_GUARD_WINDOW_TICKS,
-                Math.max(1, (int) Math.ceil(ticksToImpact) + 1));
+                Math.max(6, (int) Math.ceil(ticksToImpact) + 2));
     }
 
     /** Swept, drag-aware trajectory; proximity alone never counts as impact. */

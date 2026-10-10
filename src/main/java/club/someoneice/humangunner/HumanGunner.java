@@ -117,6 +117,7 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingChangeTarget);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanGunner::onHumanFriendlyFire);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingHurt);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, ShieldDefenseController::onShieldBlock);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onSoldierDamage);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GrowthCombat::onDeath);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GrowthCombat::onLeave);
@@ -434,6 +435,8 @@ public final class HumanGunner {
     }
 
     private static void onLivingHurt(LivingHurtEvent event) {
+        if (event.getEntity() instanceof Human defender && event.getAmount() > 0.0F)
+            defender.humanGunner$shieldDefense().observeAttack(event.getSource(), false);
         Entity attacker = event.getSource().getEntity();
         Entity directEntity = event.getSource().getDirectEntity();
         if (event.getEntity() instanceof Player protectedPlayer && attacker instanceof LivingEntity livingAttacker) {

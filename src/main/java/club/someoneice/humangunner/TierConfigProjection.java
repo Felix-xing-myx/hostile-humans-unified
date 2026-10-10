@@ -99,7 +99,7 @@ final class TierConfigProjection {
         orderGroup(result, "recruitment", List.of("max_hired_by_tier", "payment_by_tier", "allow_hired_pvp_damage", "soldier_messages"));
         orderGroup(result, "ai", List.of("enabled", "item_recovery_enabled", "retreat_health_ratio", "low_health_combat", "critical_health_ratio",
                 "resume_health_ratio", "gradual_heal_interval_ticks", "food_recovery_min_health", "food_recovery_max_health",
-                "recovery_damage_tolerance_ratio", "recovery_commit_ticks", "shield_block_chance_after_hit",
+                "recovery_damage_tolerance_ratio", "recovery_commit_ticks",
                 "shield_block_duration_min_ticks", "shield_block_duration_max_ticks", "shield_block_cooldown_ticks"));
         orderGroup(result, "tacz", rank ? List.of("gun_chance", "damage_multiplier", "gun_type_weights")
                 : List.of("enabled", "natural_spawn_firearms_enabled", "auto_add_new_guns", "auto_added_gun_weight",

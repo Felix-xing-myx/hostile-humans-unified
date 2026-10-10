@@ -142,21 +142,22 @@ public final class CombatPressurePolicyTest {
                         && ShoreSeekingPolicy.shouldReturnToOwnerAfterCombatStop(true, false),
                 "a shore handoff releases the stopped combat owner's flee flag without starting owner return");
         check(ProjectileShieldPolicy.shouldGuardRangedUser(0.5D)
-                        && ProjectileShieldPolicy.shouldGuardRangedUser(2.5D)
-                        && !ProjectileShieldPolicy.shouldGuardRangedUser(2.51D)
-                        && !ProjectileShieldPolicy.shouldGuardRangedUser(8.0D),
-                "ranged projectile defense waits until an arrow is within the immediate impact window");
-        check(ProjectileShieldPolicy.guardWindowTicks(true, 2.5D) == 3
-                        && ProjectileShieldPolicy.guardWindowTicks(true, 0.5D) == 2
+                        && ProjectileShieldPolicy.shouldGuardRangedUser(10.0D)
+                        && !ProjectileShieldPolicy.shouldGuardRangedUser(10.01D)
+                        && !ProjectileShieldPolicy.shouldGuardRangedUser(Double.NaN),
+                "ranged defense anticipates impact with enough time to establish a shield");
+        check(ProjectileShieldPolicy.guardWindowTicks(true, 2.5D) == 6
+                        && ProjectileShieldPolicy.guardWindowTicks(true, 10.0D) == 12
                         && ProjectileShieldPolicy.guardWindowTicks(false, 12.0D) == 14
                         && ProjectileShieldPolicy.guardWindowTicks(false, 20.0D) == 0,
-                "ranged shield interruption lasts only through the imminent shot while other defenders retain their window");
-        check(!CombatPressurePolicy.shouldOpenCounterWindow(5, 0, true),
-                "shield remains up through the effective block wind-up");
-        check(CombatPressurePolicy.shouldOpenCounterWindow(6, 0, true),
-                "melee/ranged counter opens immediately after the minimum block");
-        check(CombatPressurePolicy.shouldOpenCounterWindow(6, 10, false),
-                "a quiet defense releases even when the target is currently out of range");
+                "all valid projectile holds include the five-tick shield establishment budget");
+        check(!CombatPressurePolicy.shouldCounterAfterGuard(5, true, false), "a block cannot bypass startup");
+        check(CombatPressurePolicy.shouldCounterAfterGuard(6, true, false), "observed block opens a counter");
+        check(!CombatPressurePolicy.shouldCounterAfterGuard(19, false, false), "nearby target alone does not release guard");
+        check(CombatPressurePolicy.shouldCounterAfterGuard(20, false, false), "one-second wait breaks a standoff");
+        check(!CombatPressurePolicy.shouldCounterAfterGuard(10, true, true), "imminent projectile preserves guard");
+        check(CombatPressurePolicy.predictsIncomingMelee(8, false, true, true, 0),
+                "stationary melee intent is predicted before the swing/hit tick");
         check(CombatPressurePolicy.isRecentHit(106, 100)
                         && !CombatPressurePolicy.isRecentHit(107, 100),
                 "a distant hit opens an immediate shield reaction, not a delayed chase-time block");
@@ -272,7 +273,7 @@ public final class CombatPressurePolicyTest {
                 defending = true;
                 held = 0;
             }
-            if (defending && CombatPressurePolicy.shouldOpenCounterWindow(++held, 0, true)) {
+            if (defending && CombatPressurePolicy.shouldCounterAfterGuard(++held, true, false)) {
                 counters++;
                 defending = false;
                 cooldown = tick + 5;

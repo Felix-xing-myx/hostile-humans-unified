@@ -17,7 +17,7 @@ public final class TierRuntimeConfigTest {
                  "tiers":{"tier1":{"ammunition":{"arrows":{"min":8,"max":4},
                            "magazines":{"min":0,"max":0}}}},
                  "ai":{"retreat_health_ratio":0.4},
-                 "tier_ai":{"tier1":{"retreat_health_ratio":0.7,"shield_block_chance_after_hit":0.1},
+                 "tier_ai":{"tier1":{"retreat_health_ratio":0.7,"shield_block_cooldown_ticks":15},
                             "tier2":{"retreat_health_ratio":0.2}}}
                 """);
         check(!configured.ammoConsumptionEnabled(), "global free-ammo switch");
@@ -26,7 +26,7 @@ public final class TierRuntimeConfigTest {
         check(configured.combatAi("tier1").retreatHealthRatio() == 0.7, "tier1 AI override");
         check(configured.combatAi("tier2").retreatHealthRatio() == 0.2, "tier2 AI override");
         check(configured.combatAi("roamer").retreatHealthRatio() == 0.4, "legacy common AI inherited");
-        check(configured.combatAi("tier1").shieldBlockChanceAfterHit() == 0.1, "tier shield override");
+        check(configured.combatAi("tier1").shieldBlockCooldownTicks() == 15, "tier shield override");
         UnifiedConfig disabled = config("""
                 {"ai":{"enabled":false},"tier_ai":{"tier1":{"enabled":true}}}
                 """);
