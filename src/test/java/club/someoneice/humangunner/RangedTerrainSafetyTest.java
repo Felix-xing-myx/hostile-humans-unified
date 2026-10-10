@@ -8,6 +8,36 @@ import org.objectweb.asm.tree.MethodInsnNode;
 public final class RangedTerrainSafetyTest {
     private static int checks;
     public static void main(String[] args) throws Exception {
+        RangedMeleeCycle cycle = new RangedMeleeCycle();
+        for (int tick = 0; tick < 79; tick++) cycle.tick(true, true);
+        check(!cycle.searching(), "fight before voluntarily separating");
+        cycle.interrupt();
+        cycle.tick(true, true);
+        check(cycle.searching(), "shield interruption preserves accumulated fight time");
+        for (int tick = 0; tick < 39; tick++) cycle.tick(true, true);
+        check(cycle.searching(), "budgeted search retains its session while waiting");
+        cycle.tick(true, true);
+        check(!cycle.searching() && !cycle.separating(), "search timeout returns to melee");
+        for (int tick = 0; tick < 80; tick++) cycle.tick(true, true);
+        check(cycle.searching(), "failed separation can be retried after more fighting");
+        cycle.beginSeparation();
+        for (int tick = 0; tick < 19; tick++) cycle.tick(true, false);
+        check(cycle.separating(), "brief positional pause does not replace route");
+        cycle.tick(true, false);
+        check(!cycle.separating(), "sustained stalled separation resumes melee");
+        cycle.beginSeparation();
+        for (int tick = 0; tick < 79; tick++) cycle.tick(true, true);
+        check(cycle.separating(), "progressing separation keeps its assigned route");
+        cycle.tick(true, true);
+        check(!cycle.separating(), "separation has a bounded duration even if pursued");
+        cycle.beginSeparation();
+        cycle.tick(false, true);
+        check(!cycle.separating(), "commands and survival preempt voluntary separation");
+        cycle.reset();
+        for (int tick = 0; tick < 100; tick++) cycle.tick(false, true);
+        check(!cycle.searching(), "held positions or committed attacks cannot initiate separation");
+        cycle.tick(true, true);
+        check(cycle.searching(), "completed fight timer waits for a safe attack boundary");
         check(HumanFallPolicy.damageBudget(1000) == 6, "high-health units never gain unlimited descent");
         check(HumanFallPolicy.damageBudget(20) == 4, "twenty health risks at most twenty percent");
         check(HumanFallPolicy.damageBudget(5) == 1, "reserve four health when low");
@@ -47,7 +77,9 @@ public final class RangedTerrainSafetyTest {
         }
         check(calls(root + "RangedWeaponCustody", "shouldReturnToRanged", root + "RangedTerrainCombat", "holdsMelee"), "terrain melee is a real sustained custody lease");
         check(calls(human, "humanGunner$isMeleeMode", root + "RangedTerrainCombat", "isTerrainMelee"), "terrain melee enables native obstacle pursuit");
-        check(calls(root + "RangedHybridMeleeGoal", "canUse", root + "RangedTerrainCombat", "isTerrainMelee"), "terrain pursuit excludes short backpedal defense goal");
+        check(calls(root + "RangedHybridMeleeGoal", "canUse", root + "RangedTerrainCombat", "isTerrainMelee"), "terrain leases retain the native melee goal");
+        check(calls(root + "RangedHybridMeleeGoal", "tick", "com/craftix/hostile_humans/entity/ai/goal/MeleeAttackGoal", "tick"), "temporary fighters reuse ordinary melee movement and attacks");
+        check(calls(root + "RangedHybridMeleeGoal", "tick", root + "RangedFiringPosition", "findVisiblePath"), "voluntary separation shares the budgeted firing-lane planner");
         System.out.println("RangedTerrainSafetyTest: " + checks + " checks passed; voxel terrain gameplay remains to be tested");
     }
     private static boolean calls(String owner, String method, String target, String name) throws Exception {

@@ -41,6 +41,14 @@
 
 已安装上岸路线用ShoreProgressTracker观察下一节点的实际接近与推进，停滞后暂避路段并排除该出口。PursuitNavigation、MovementContinuity和Human的水面状态维护让位于此租约；失效、目标变化或生存撤退时只释放自己拥有的路线。没有可达出口时按预算重试，不将任意崖顶当作可执行路线。
 
+## 弓弩临时近战与主动脱离
+
+RangedHybridMeleeGoal继承普通MeleeAttackGoal，近战阶段直接super.tick，避免第二套追击、站位和命中调度。MeleeAttackGoal.tickAttackOnly仅抽取原有冷却递减与checkAndPerformAttack，使主动拉开距离时仍可沿用相同反击规则而不再下达追击移动。
+
+RangedMeleeCycle只累计实际运行的近战tick，默认80 tick后在无前摇/挥击的安全边界开始找射界；复用RangedFiringPosition的增量搜索与共享预算，等待期间继续普通近战。合格路线必须完整可达、安全、沿路服从士兵活动范围，且终点有射界并能增大距离。先成功安装新路才释放旧追击元数据；已安装路线不按每tick随机重选，10 tick核验目标位移与路线安全，停滞20 tick或脱离80 tick则回归近战。搜索最多40 tick，失败后重新进行近战周期再尝试。
+
+武器仍由RangedWeaponCustody独占托管，至少六格且有射界时尝试原入口归还，CloseDefenseHold保护未完成攻击。举盾或生存Goal打断时只释放本Goal所属脱离路线，不清除仇恨、不停止接管方路线；原地驻守和水中/上岸不主动脱离。常规近战累计时间在短暂举盾后保留，目标或实际武器改变才重置会话。
+
 ## 盾牌损耗与破盾
 
 `ShieldDurability`统一主动格挡与枪手副手盾的损耗事务：服务器按`1 + floor(damage * 1.5)`调用ItemStack.hurtAndBreak，保留原生耐久附魔及物品钩子。每个人类共用10 tick损耗冷却，换手/换盾不绕过；根据调用前后的耐久或数量确认实际损耗，完全免损不进入冷却。破损副手盾只结束该手正在进行的物品使用，不中断主手枪械换弹。

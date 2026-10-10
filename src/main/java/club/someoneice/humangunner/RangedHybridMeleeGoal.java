@@ -1,23 +1,28 @@
 package club.someoneice.humangunner;
 
+import com.craftix.hostile_humans.entity.ai.goal.MeleeAttackGoal;
 import com.craftix.hostile_humans.entity.entities.Human;
-import net.minecraft.world.InteractionHand;
+import java.util.UUID;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.ai.util.DefaultRandomPos;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.EnumSet;
-
-/** Close-range half of bow/crossbow hybrid combat without target-clearing stop logic. */
-public final class RangedHybridMeleeGoal extends Goal {
+/** Ordinary melee authority, with an occasional budgeted attempt to regain bow/crossbow range. */
+public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
     private final Human human;
-    private int attackCooldown;
-    private int pathCooldown;
+    private final RangedMeleeCycle cycle = new RangedMeleeCycle();
+    private UUID sessionTarget;
+    private ItemStack sessionWeapon;
+    private Path separationRoute;
+    private boolean ownsSeparationSearch;
+    private Vec3 separationTarget, progressPosition;
+    private int nextRouteCheck;
 
     public RangedHybridMeleeGoal(Human human) {
+        super(human, 1.05D, true);
         this.human = human;
-        setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
     @Override
@@ -32,80 +37,137 @@ public final class RangedHybridMeleeGoal extends Goal {
     }
 
     @Override
-    public boolean canContinueToUse() {
-        return canUse();
-    }
+    public boolean canContinueToUse() { return canUse(); }
 
     @Override
     public void start() {
-        if (human.getTarget() != null && human.distanceToSqr(human.getTarget()) <= 16)
-            SoldierDialogue.event(human, "melee_switch");
-        attackCooldown = 0;
-        pathCooldown = 0;
-        // A bow/crossbow orbit can have issued movement later in the same
-        // tick. Hand the controller and speed back to melee before moving.
+        LivingEntity target = human.getTarget();
+        if (target != null && (!target.getUUID().equals(sessionTarget) || sessionWeapon != human.getMainHandItem())) {
+            cycle.reset();
+            sessionTarget = target.getUUID();
+            sessionWeapon = human.getMainHandItem();
+            if (human.distanceToSqr(target) <= 16) SoldierDialogue.event(human, "melee_switch");
+        }
+        // Do not reset the ordinary attack cooldown or discard an effective
+        // pursuit route every time a shield reaction returns movement to us.
         RangedStrafeSpeed.clear(human);
         human.clearRangedStrafeMotion();
-        human.getNavigation().stop();
         human.setAggressive(true);
     }
 
     @Override
     public void stop() {
-        if (!human.isFleeing) human.getNavigation().stop();
-        human.setAggressive(false);
-        // Never clear Human#getTarget here: reaching the six-block return
-        // threshold must hand the same target directly back to bow/crossbow AI.
-    }
-
-    @Override
-    public boolean requiresUpdateEveryTick() {
-        return true;
+        releaseSeparation();
+        cycle.interrupt();
+        super.stop();
+        if (!RangedWeaponCustody.isActive(human)) {
+            PursuitNavigation.clear(human);
+            cycle.reset();
+            sessionTarget = null;
+            sessionWeapon = null;
+        }
     }
 
     @Override
     public void tick() {
-        if (!human.humanGunner$canMeleeAttack()) return;
+        if (!canUse()) return;
         LivingEntity target = human.getTarget();
-        if (!isValidTarget(target)) {
+        if (!target.getUUID().equals(sessionTarget) || sessionWeapon != human.getMainHandItem()) {
+            releaseSeparation();
+            cycle.reset();
+            sessionTarget = target.getUUID();
+            sessionWeapon = human.getMainHandItem();
+        }
+        boolean maySeparate = !SoldierOrder.isHoldingPosition(human)
+                && !human.isInWater() && !human.isInLava() && !human.isSeekingShore()
+                && !human.isShoreTransitionPending() && !human.onClimbable()
+                && (cycle.separating() || (!human.humanGunner$hasPendingMeleeAttack() && !human.swinging))
+                && !human.isUsingItem() && !CombatTerrainNavigation.hasWork(human, target);
+        boolean progressed = progressPosition == null || human.position().distanceToSqr(progressPosition) >= 0.04D
+                || (human.distanceToSqr(target) >= 36 && human.getSensing().hasLineOfSight(target));
+        if (progressed) progressPosition = human.position();
+        cycle.tick(maySeparate, progressed);
+
+        if (cycle.searching()) {
+            // Searching never takes movement away from ordinary melee. The existing
+            // firing-lane planner spreads candidate paths over the shared budget.
+            Path candidate = RangedFiringPosition.findVisiblePath(human, target, 7, 10, 10, 16);
+            ownsSeparationSearch = RangedFiringPosition.hasPendingVisibleSearch(human);
+            if (candidate != null && allowedSeparation(target, candidate)
+                    && RetreatPathSafety.tryMove(human, candidate, 1.05D)) {
+                // Install before releasing old planner metadata: a rejected candidate
+                // must never delete the live melee route.
+                PursuitNavigation.clear(human);
+                separationRoute = human.getNavigation().getPath();
+                separationTarget = target.position();
+                progressPosition = human.position();
+                nextRouteCheck = human.tickCount + 10;
+                human.clearRangedStrafeMotion();
+                cycle.beginSeparation();
+            } else if (!RangedFiringPosition.hasPendingVisibleSearch(human)) {
+                cycle.retry();
+            }
+        }
+        if (cycle.separating() && tickSeparation(target)) {
+            if (!RangedWeaponCustody.isActive(human)) return;
+            human.getLookControl().setLookAt(target, 45, 35);
+            MeleeCombatRange.faceTarget(human, target);
+            tickAttackOnly(target);
             return;
         }
-        if (attackCooldown > 0) {
-            attackCooldown--;
+        if (!cycle.separating() && !cycle.searching()) releaseSeparation();
+        // Same pursuit, safe spacing, terrain detours, jumps, oriented hit checks,
+        // attack cooldown and Better Combat windup as an ordinary melee fighter.
+        super.tick();
+    }
+
+    private boolean tickSeparation(LivingEntity target) {
+        if (human.distanceToSqr(target) >= 36 && human.getSensing().hasLineOfSight(target)) {
+            stopOwnedSeparationRoute();
+            // Custody restores the bow only after any already-committed attack ends.
+            RangedWeaponCustody.restorePreferred(human, "close_defense_separated");
+            return true;
         }
-        if (pathCooldown > 0) {
-            pathCooldown--;
+        if (!MovementContinuity.ownsRoute(human, separationRoute) || human.getNavigation().isDone()) {
+            cycle.retry();
+            return false;
         }
-        human.getLookControl().setLookAt(target, 45.0F, 35.0F);
-        if (SoldierOrder.isHoldingPosition(human)) {
-            if (!SoldierOrder.isReturningToHoldPosition(human)) {
-                human.getNavigation().stop();
+        if (human.tickCount >= nextRouteCheck) {
+            nextRouteCheck = human.tickCount + 10;
+            if (target.position().distanceToSqr(separationTarget) > 4
+                    || !allowedSeparation(target, human.getNavigation().getPath())) {
+                cycle.retry();
+                return false;
             }
-        } else if (pathCooldown <= 0 && BasicNavigationBudget.tryAcquire(human, 1)) {
-            double currentDistanceSqr = human.distanceToSqr(target);
-            Vec3 away = DefaultRandomPos.getPosAway(human, 10, 5, target.position());
-            if (away != null && target.distanceToSqr(away) > currentDistanceSqr + 4.0D
-                    && human.getNavigation().moveTo(away.x, away.y, away.z, 1.0D)) {
-                // Continue along a route which actually grows the gap.
-            } else {
-                // A failed route is not a reason to keep the old ranged
-                // strafing movement active while the melee weapon is held.
-                human.getNavigation().stop();
-            }
-            pathCooldown = 3 + human.getRandom().nextInt(3);
         }
-        if (human.distanceToSqr(target) <= meleeReachSqr(target) && attackCooldown <= 0) {
-            human.swing(InteractionHand.MAIN_HAND);
-            human.doHurtTarget(target);
-            attackCooldown = MeleeAttackTiming.nextCooldown(human);
+        return true;
+    }
+
+    private boolean allowedSeparation(LivingEntity target, Path path) {
+        if (!RetreatPathSafety.isSafe(human, target, path, true)) return false;
+        for (int index = path.getNextNodeIndex(); index < path.getNodeCount(); index++) {
+            if (!SoldierOrder.allowsCombatPosition(human, Vec3.atBottomCenterOf(path.getNodePos(index)))) return false;
         }
+        var node = path.getEndNode();
+        BlockPos end = new BlockPos(node.x, node.y, node.z);
+        Vec3 feet = Vec3.atBottomCenterOf(end);
+        return target.distanceToSqr(feet) >= 36 && SoldierOrder.allowsCombatPosition(human, feet)
+                && RangedFiringPosition.hasClearShot(human, feet.add(0, human.getEyeHeight(), 0), target.getEyePosition());
+    }
+
+    private void stopOwnedSeparationRoute() {
+        if (MovementContinuity.ownsRoute(human, separationRoute)) human.getNavigation().stop();
+        separationRoute = null;
+    }
+
+    private void releaseSeparation() {
+        stopOwnedSeparationRoute();
+        if (ownsSeparationSearch) RangedFiringPosition.cancelVisibleSearch(human);
+        ownsSeparationSearch = false;
+        separationTarget = progressPosition = null;
     }
 
     private boolean isValidTarget(LivingEntity target) {
         return target != null && target.isAlive() && human.canAttack(target);
-    }
-
-    private double meleeReachSqr(LivingEntity target) {
-        return MeleeCombatRange.reachSqr(human, target);
     }
 }

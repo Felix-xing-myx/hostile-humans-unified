@@ -284,8 +284,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     private static boolean humanGunner$isMeleeMode(Human human) {
         if (!human.humanGunner$canMeleeAttack()) return false;
-        // Cramped-terrain leases pursue obstacles with the ordinary melee path
-        // watchdog; the short ranged counterattack goal deliberately retreats.
+        // Cramped-terrain leases retain ordinary melee without the temporary
+        // close-defense goal's periodic attempt to regain ranged space.
         if (club.someoneice.humangunner.RangedTerrainCombat.isTerrainMelee(human)) return true;
         ItemStack mainHand = human.getMainHandItem();
         ItemStack offHand = human.getOffhandItem();

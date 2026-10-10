@@ -60,7 +60,7 @@ public final class RangedTerrainCombat {
         return true;
     }
 
-    /** Select native obstacle pursuit rather than the short close-defense backpedal goal. */
+    /** Keep obstacle pursuit in melee rather than periodically trying to regain ranged space. */
     public static boolean isTerrainMelee(Human human) {
         State state = STATES.get(human);
         return state != null && state.terrainMelee && RangedWeaponCustody.isActive(human);

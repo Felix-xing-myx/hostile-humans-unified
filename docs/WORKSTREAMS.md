@@ -936,3 +936,13 @@
 - JAR检查：Implementation-Version为3.7.0，mods.toml只有hostile_humans_unified一个身份。构建代码提交32c1509，发布文档提交为包含本记录的提交；此前82个本地领先提交及发布记录统一推送origin/main，无强制推送。
 - 部署：确认无相关游戏进程；仅目标E:/MC/game/.minecraft/versions/1.20.1-Forge_47.4.21/mods/hostile-humans-unified-1.20.1-3.7.0.jar。备份E:/MC/Create-Delight/HostileHumansUnified-维护/部署备份/20261010-200934-3.7.0-release-Forge_47.4.21，内含旧JAR与deployment.json；备份旧哈希及部署后新哈希均核验。
 - 新JAR SHA-256：48E675D59057598BFE0F3A5336778565BD58ABC050770E5FDB6CC1A30DBA10A0。没有启动游戏；新存档启动、水面高崖绕行、斧头破盾、耐久附魔与枪手被动盾等游戏内验收由用户进行。
+
+## 2026-10-10 弓弩临时近战连续性与主动脱离
+
+- 基线：15b2c857ad9abb981a63a00d5dbf3e654608722a；负责人主控/root，main主工作树project，单人实施。用户确认按核查建议修复，使临时近战类似普通近战，并在战斗一段时间后尝试拉开距离换回远程。
+- RangedHybridMeleeGoal继承现有MeleeAttackGoal；近战直接复用普通追击/站位/地形绕障/水面接近/跳砍/冷却/真实命中与BC前摇，不再维护第二套攻击。普通MeleeAttackGoal仅等价抽取冷却递减及checkAndPerformAttack为protected final tickAttackOnly；脱离期间也沿用该攻击入口。
+- RangedMeleeCycle记录实际Goal运行的战斗时间；默认80 tick后在无待命中/挥击的边界尝试射界搜索，最多40 tick等待共享增量预算，等待时继续普通近战。仅完整安全且沿路符合SoldierOrder范围、终点有射界且能拉开距离的路线可提交，安装成功后才释放旧追击元数据。
+- 脱离沿已提交路线持续移动；10 tick核验目标位移及安全，停滞20 tick或持续80 tick仍无法脱离则回到近战，经过新的近战周期再尝试。至少六格并有射界时通过原Custody归还弓弩，保留CloseDefenseHold对攻击动画的保护；原地驻守、水中/上岸及生存撤退不主动脱离。
+- 举盾接管只释放本Goal持有的脱离路线/搜索，保留当前普通近战会话和攻击冷却；失去托管时清理旧追击路线，不清除合法仇恨。RangedFiringPosition射界检查仅扩大为同包可用。更新Human/RangedTerrainCombat过时策略注释、MODULE_INTERFACES、CHANGELOG及对应测试。
+- 验证：99项Python源码契约通过；全部358份Java使用Java17仅parse，语法错误0；git diff --check通过。扩展Java周期边界/搜索超时/停滞/持续脱离/安全边界及ASM接入测试，尚未编译执行。没有运行Gradle、构建、更新实例配置、同步、启动游戏或push。
+- 待游戏验收：弓与弩被逼近后的连续追击/站位，窄路与转角、举盾反击交接，四秒战斗后安全拉开距离，敌人持续追击和无安全射界时回归近战，BC前摇完整后归还，驻守/护卫活动范围及多士兵预算公平性。交付为包含本记录的本地提交。

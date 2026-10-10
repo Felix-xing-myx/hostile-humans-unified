@@ -237,9 +237,14 @@ extends Goal {
                 human.approachCombatTargetInWater(livingEntity,
                         Math.sqrt(this.getAttackReachSqr(livingEntity)), this.speedModifier);
             }
-            this.ticksUntilNextAttack = Math.max(this.ticksUntilNextAttack - 1, 0);
-            this.checkAndPerformAttack(livingEntity);
+            this.tickAttackOnly(livingEntity);
         }
+    }
+
+    /** Reuse the same cooldown and committed hit checks without issuing pursuit movement. */
+    protected final void tickAttackOnly(LivingEntity target) {
+        this.ticksUntilNextAttack = Math.max(this.ticksUntilNextAttack - 1, 0);
+        this.checkAndPerformAttack(target);
     }
 
     protected void checkAndPerformAttack(LivingEntity livingEntity) {

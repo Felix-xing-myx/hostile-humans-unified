@@ -263,7 +263,7 @@ public final class RangedFiringPosition {
         return bestPath;
     }
 
-    private static boolean hasClearShot(Human human, Vec3 from, Vec3 to) {
+    static boolean hasClearShot(Human human, Vec3 from, Vec3 to) {
         return human.level().clip(new ClipContext(
                 from,
                 to,
