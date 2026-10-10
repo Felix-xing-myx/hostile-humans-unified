@@ -160,7 +160,8 @@ public final class TaczHumanReloadTransactions {
 
     /** Other native operations must see the real held item, not a stowed gun. */
     public static void restoreHeldBinding(Human human, ShooterDataHolder data) {
-        data.currentGunItem = human::getMainHandItem;
+        // A never-drawn operator must remain unbound until the real draw API.
+        if (data.currentGunItem != null) data.currentGunItem = human::getMainHandItem;
     }
 
     public static void end(ShooterDataHolder data) {

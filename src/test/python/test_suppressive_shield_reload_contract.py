@@ -56,6 +56,8 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         mixin = source('mixin/TaczHumanReloadMixin.java')
         self.assertIn('TaczAmmoMixinContract.TICK_RELOAD, at = @At("HEAD")', mixin)
         self.assertIn('prepareNativeTick(human, data)', mixin)
+        self.assertIn('if (humanGunner$reboundReload && shooter instanceof Human human', mixin)
+        self.assertIn('if (data.currentGunItem != null) data.currentGunItem = human::getMainHandItem;', reload)
 
     def test_guarded_crossbow_uses_existing_native_ammo_path(self):
         charge = source('GuardedCrossbowCharge.java')

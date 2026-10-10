@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -30,19 +31,26 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class TaczHumanReloadMixin {
     @Shadow @Final private LivingEntity shooter;
     @Shadow @Final private ShooterDataHolder data;
+    @Unique private boolean humanGunner$reboundReload;
 
     @Inject(method = TaczAmmoMixinContract.TICK_RELOAD, at = @At("HEAD"), cancellable = true, require = 1)
     private void humanGunner$bindBackgroundReload(CallbackInfoReturnable<ReloadState> cir) {
-        if (shooter instanceof Human human && !human.level().isClientSide
-                && !TaczHumanReloadTransactions.prepareNativeTick(human, data)) {
-            cir.setReturnValue(new ReloadState());
+        humanGunner$reboundReload = false;
+        if (shooter instanceof Human human && !human.level().isClientSide) {
+            boolean active = data.reloadTimestamp != -1L;
+            if (!TaczHumanReloadTransactions.prepareNativeTick(human, data)) {
+                cir.setReturnValue(new ReloadState());
+            } else {
+                humanGunner$reboundReload = active;
+            }
         }
     }
 
     @Inject(method = TaczAmmoMixinContract.TICK_RELOAD, at = @At("RETURN"), require = 1)
     private void humanGunner$restoreHeldBinding(CallbackInfoReturnable<ReloadState> cir) {
-        if (shooter instanceof Human human && !human.level().isClientSide)
+        if (humanGunner$reboundReload && shooter instanceof Human human && !human.level().isClientSide)
             TaczHumanReloadTransactions.restoreHeldBinding(human, data);
+        humanGunner$reboundReload = false;
     }
 
     @Inject(method = TaczAmmoMixinContract.RELOAD, at = @At("HEAD"), cancellable = true, require = 1)
