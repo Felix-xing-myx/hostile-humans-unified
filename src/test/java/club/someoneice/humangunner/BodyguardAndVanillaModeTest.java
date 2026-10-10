@@ -86,7 +86,8 @@ public final class BodyguardAndVanillaModeTest {
         check(calls(prefix + "BodyguardProtection", "update", prefix + "BodyguardPolicy", "priority"), "runtime uses owner-centered priority");
         check(calls(prefix + "SoldierOrder", "allowsTarget", prefix + "BodyguardProtection", "allowsTarget"), "all attack goals share leash gate");
         check(!calls(prefix + "BodyguardTargetGoal", "tick", null, "forgetSoldierTarget"), "switching priority does not erase supplies/self-attacker or blacklist target");
-        check(calls(prefix + "HumanGunner", "onLivingHurt", prefix + "UnifiedConfig", "vanillaMode"), "native melee multiplier bypass installed");
+        check(calls(prefix + "HumanGunner", "onLivingHurt", prefix + "HumanDamageScaling", "outgoing")
+                && calls(prefix + "HumanDamageScaling", "outgoing", prefix + "UnifiedConfig", "vanillaMode"), "native melee multiplier bypass installed");
         check(calls(prefix + "TierAttributes", "apply", prefix + "TierAttributes", "applyCombatBase"), "initial attributes install weapon-only base");
         check(calls(prefix + "HumanGrowth", "tick", prefix + "TierAttributes", "applyCombatBase"), "server config reload refreshes weapon-only base");
         check(calls(prefix + "TierAttributes", "applyCombatBase", prefix + "VanillaModePolicy", "attackBase"), "shared weapon-only base installed");

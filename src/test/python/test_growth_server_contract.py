@@ -43,9 +43,12 @@ class GrowthServerContractTest(unittest.TestCase):
     def test_only_server_ticks_and_existing_nonfirearm_branches_scale(self):
         source = read("HumanGunner.java")
         self.assertIn("human && !human.level().isClientSide", source)
-        self.assertEqual(source.count("HumanGrowth.multiplier(humanAttacker)"), 3)
-        hurt = source.split("private static void onLivingHurt", 1)[1].split("private static void onLivingDamage", 1)[0]
+        self.assertEqual(source.count("HumanDamageScaling.outgoing("), 1)
+        hurt = read("HumanDamageScaling.java")
+        self.assertEqual(hurt.count("HumanGrowth.multiplier(attacker)"), 1)
         self.assertLess(hurt.index("GunSupport.get().isBullet"), hurt.index("HumanGrowth.multiplier"))
+        for branch in ("meleeDamage()", "tridentDamage()", "bowDamage()"):
+            self.assertIn(branch, hurt)
         self.assertIn("GrowthCombat::onTick", source)
 
     def test_actual_health_boundary_registered_with_srg_signature(self):

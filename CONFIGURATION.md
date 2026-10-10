@@ -86,7 +86,7 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 | `tacz.damage_multiplier` | 0.5 | 0–100；本阶人类TaCZ子弹伤害 |
 | `damage_multipliers.damage_taken_multiplier` | 1 | 0–10；本阶承伤，包括环境与枪伤 |
 
-全局 `damage` 仅负责条件修正：手持三叉戟近刺 `trident_stab_damage_multiplier=0.42`、跳劈 `jump_attack_damage_multiplier=1.5`、近战命中驯服女仆 `human_melee_vs_tamed_maid_multiplier=0.25`，范围均0–10。条件满足时才乘对应攻击伤害。TaCZ盾牌、女仆目标和其他模组枪手修正仍由全局 `tacz` 管理，职责与本阶人类输出不同。实际掉血还受目标护甲、减伤和其他模组影响。
+全局 `damage` 仅负责条件修正：手持三叉戟近刺 `trident_stab_damage_multiplier=0.42`、主动追击跳砍 `jump_attack_damage_multiplier=1.5`、近战命中驯服女仆 `human_melee_vs_tamed_maid_multiplier=0.25`，范围均0–10。跳砍在真实离地后的上升或下降命中时修正基础近战属性，普通移动跳跃、远程攻击不生效，原版模式停用；其他条件满足时才乘对应攻击伤害。TaCZ盾牌、女仆目标和其他模组枪手修正仍由全局 `tacz` 管理，职责与本阶人类输出不同。实际掉血还受目标护甲、减伤和其他模组影响。
 
 
 ## `spawning`：自然生成与密度

@@ -38,7 +38,8 @@ class PursuitJumpContract(unittest.TestCase):
     def test_single_actual_impact_hook_and_cleanup(self):
         self.assertEqual(HUMAN.count("PursuitJumpAttack.strike(this,"), 1)
         self.assertIn("() -> super.doHurtTarget(entityIn)", HUMAN)
-        self.assertIn('"Pursuit jump critical", 0.5D', JUMP)
+        self.assertIn('"Pursuit jump critical", multiplier - 1.0D', JUMP)
+        self.assertIn('damage("jump_attack_damage_multiplier", 1.5D)', JUMP)
         self.assertIn("AttributeModifier.Operation.MULTIPLY_TOTAL", JUMP)
         self.assertIn("finally { damage.removeModifier(CRITICAL); }", JUMP)
         self.assertIn("UnifiedConfig.get().vanillaMode()", JUMP)

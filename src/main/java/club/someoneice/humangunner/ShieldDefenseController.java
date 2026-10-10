@@ -8,7 +8,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -505,41 +504,15 @@ public final class ShieldDefenseController {
     }
 
     private boolean isRangedCombat() {
-        if (AmmoWeaponSelection.usableGun(human, human.getMainHandItem())) {
-            return true;
-        }
-        // Tridents and bow/crossbow users now own their distance transitions.
-        // Do not stack this higher-priority random FLANK layer on top: the
-        // native bow goal already performs measured backward strafing, while
-        // custody switches to melee at five blocks and back at six.
-        return (human.getMainHandItem().getItem() instanceof ProjectileWeaponItem
-                && !RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem()))
-                || (human.getOffhandItem().getItem() instanceof ProjectileWeaponItem
-                && !RangedWeaponCustody.isBowOrCrossbow(human.getOffhandItem()));
+        return CombatWeaponPolicy.usesTacticalRangedMovement(human);
     }
 
     private boolean isHoldingTaczGun() {
         return GunSupport.isGunItem(human.getMainHandItem());
     }
 
-    private boolean isGunThreat(LivingEntity target) {
-        return club.someoneice.humangunner.GunSupport.get().isGun(target.getMainHandItem())
-                || club.someoneice.humangunner.GunSupport.get().isGun(target.getOffhandItem());
-    }
-
     private boolean isRangedThreat(LivingEntity target) {
-        // A stowed ranged weapon in the off-hand does not make a sword user a
-        // ranged attacker while the active main hand is clearly melee.
-        if (HumanUtil.isMeleeWeapon(target.getMainHandItem())) {
-            return false;
-        }
-        if (isGunThreat(target)) {
-            return true;
-        }
-        return target.getMainHandItem().getItem() instanceof ProjectileWeaponItem
-                || target.getOffhandItem().getItem() instanceof ProjectileWeaponItem
-                || target.getMainHandItem().getItem() instanceof TridentItem
-                || target.getOffhandItem().getItem() instanceof TridentItem;
+        return CombatWeaponPolicy.isRangedThreat(target);
     }
 
     private double healthRatio() { return human.getHealth() / Math.max(1.0F, human.getMaxHealth()); }

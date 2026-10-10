@@ -48,8 +48,8 @@ class FirstAidContract(unittest.TestCase):
         self.assertIn("MobEffects.DAMAGE_RESISTANCE, MORPHINE_TICKS, 0", COMPAT)
 
     def test_course_persists_and_ticks_even_without_food_pending(self):
-        tick = RECOVERY.split("public static void tickGradualHealing(Human human)", 1)[1]
-        self.assertLess(tick.index("FirstAidCompat.tick(human)"), tick.index("pending <= 0.0F"))
+        tick = RECOVERY.split("static void tickEffects(Human human)", 1)[1].split("private static void consumeCompletedPotion", 1)[0]
+        self.assertLess(tick.index("FirstAidCompat.tick(human)"), tick.index("tickGradualHealing(human)"))
         self.assertIn("human.getPersistentData().put(STATE, state)", COMPAT)
         self.assertIn('state.getInt("next_pulse") - 1', COMPAT)
         self.assertNotIn("getGameTime", COMPAT)

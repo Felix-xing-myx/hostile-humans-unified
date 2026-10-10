@@ -63,11 +63,6 @@ import java.util.WeakHashMap;
 
 public final class HumanGunner {
     public static final String MOD_ID = com.craftix.hostile_humans.HostileHumans.MOD_ID;
-    // Keep weapon-family classification valid even if NPC firearm support is
-    // disabled. This registry tag needs no optional-mod API; absent TaCZ it is empty.
-    private static final net.minecraft.tags.TagKey<net.minecraft.world.damagesource.DamageType> TACZ_BULLET_DAMAGE =
-            net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.DAMAGE_TYPE,
-                    new ResourceLocation("tacz", "bullets"));
     public static final Logger LOGGER = LogUtils.getLogger();
     private static final String INCOMING_GUNFIRE_UNTIL = MOD_ID + ":incoming_gunfire_until";
     private static final AtomicBoolean LOGGED_FIRST_ADAPTIVE_ARROW = new AtomicBoolean();
@@ -223,7 +218,7 @@ public final class HumanGunner {
 
                 }
             }
-            RecoverySupplies.tickRegenerationHealing(human);
+            RecoverySupplies.tickEffects(human);
             // The menu is backed directly by HumanData/equipment. While it is
             // open, no AI inventory writer may race the player's slot actions.
             if (HumanInventorySession.isEditing(human)) {
@@ -251,7 +246,6 @@ public final class HumanGunner {
                     }
                 }
             }
-            RecoverySupplies.tickGradualHealing(human);
             // Settle interrupted hand/inventory exchanges and reconcile a
             // stored shield. TaCZ may keep MAIN_HAND in an item-use state, so
             // custody tracks the exact recovery hand instead of treating any
@@ -449,7 +443,7 @@ public final class HumanGunner {
             HumanRelations.followOwnerAssault(attackingPlayer, event.getEntity());
         }
         if (event.getEntity() instanceof Human damagedHuman) {
-            event.setAmount(event.getAmount() * (float) TierAttributes.of(damagedHuman).incomingDamage());
+            event.setAmount(HumanDamageScaling.incoming(damagedHuman, event.getAmount()));
         }
         if (event.getEntity() instanceof Human defender && attacker instanceof Player player
                 && !HumanRelations.isControlledBy(defender, player)) {
@@ -461,38 +455,7 @@ public final class HumanGunner {
                 event.setCanceled(true);
                 return;
             }
-            // TaCZ's pretend_melee_damage_on tag can make a bullet's direct
-            // entity equal its shooter. Classify the damage before testing
-            // entity identity, otherwise gun global/tier factors incorrectly
-            // stack with the unrelated melee global/tier factors.
-            if (event.getSource().is(TACZ_BULLET_DAMAGE)
-                    || GunSupport.get().isBullet(event.getSource())) return;
-            if (directEntity == attacker) {
-                if (UnifiedConfig.get().vanillaMode()) return;
-                float multiplier = (float) TierAttributes.of(humanAttacker).meleeDamage();
-                multiplier *= (float) HumanGrowth.multiplier(humanAttacker);
-                Human human = humanAttacker;
-                if (human.getMainHandItem().getItem() instanceof net.minecraft.world.item.TridentItem) {
-                    // The requested trident reduction applies to both the
-                    // thrown projectile and the newly supported close stab.
-                    multiplier *= (float) UnifiedConfig.get().damage("trident_stab_damage_multiplier", .42);
-                }
-                if (!human.onGround()
-                        && human.getDeltaMovement().y < -0.02D
-                        && human.getPersistentData().getInt("hostile_humans_unified:jump_attack_until") >= human.tickCount) {
-                    multiplier *= (float) UnifiedConfig.get().damage("jump_attack_damage_multiplier", 1.5);
-                    human.getPersistentData().remove("hostile_humans_unified:jump_attack_until");
-                }
-                event.setAmount(event.getAmount() * multiplier);
-            } else if (directEntity instanceof ThrownTrident) {
-                event.setAmount(event.getAmount()
-                        * (float) TierAttributes.of(humanAttacker).tridentDamage()
-                        * (float) HumanGrowth.multiplier(humanAttacker));
-            } else if (directEntity instanceof AbstractArrow) {
-                event.setAmount(event.getAmount()
-                        * (float) TierAttributes.of(humanAttacker).bowDamage()
-                        * (float) HumanGrowth.multiplier(humanAttacker));
-            }
+            event.setAmount(HumanDamageScaling.outgoing(humanAttacker, event.getSource(), event.getAmount()));
             return;
         }
 

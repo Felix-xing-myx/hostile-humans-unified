@@ -96,7 +96,8 @@ public final class PursuitJumpAttack {
             return attack.getAsBoolean();
         var damage = human.getAttribute(Attributes.ATTACK_DAMAGE);
         if (damage == null) return attack.getAsBoolean();
-        damage.addTransientModifier(new AttributeModifier(CRITICAL, "Pursuit jump critical", 0.5D,
+        double multiplier = UnifiedConfig.get().damage("jump_attack_damage_multiplier", 1.5D);
+        damage.addTransientModifier(new AttributeModifier(CRITICAL, "Pursuit jump critical", multiplier - 1.0D,
                 AttributeModifier.Operation.MULTIPLY_TOTAL));
         try { return attack.getAsBoolean(); }
         finally { damage.removeModifier(CRITICAL); }

@@ -1,5 +1,13 @@
 # 开发任务与整合记录
 
+## 2026-10-10 联动复查与行为模块接口收敛（源码，未构建）
+
+- 基线c909232fd2e9c11164ebed5715ad4fc5e1d1fa1e；主控，源码主工作树/main，顺序修改共享HumanGunner、Human、RecoverySupplies等。module_audit为GPT-6.1 Sol / medium只读子Agent，不编辑文件，不需编辑工作树；确认无写入的跳砍旧路径、分类差异与重复威胁判断。没有让多个编辑会话共享目录。
+- 范围：恢复生命周期/FirstAid完成消费，CombatWeaponPolicy，HumanDamageScaling，PursuitJumpAttack配置接入，HumanUtil/RangedWeaponCustody/战术/盾牌调用点，默认说明、回归和模块文档。详见docs/MODULE_INTERFACES.md；不重建已有盾牌、成长、装备生成或导航控制器。
+- 修复：菜单锁只冻结装备写入，疗程/回血照常；食物持久计时不依赖重载归零的实体tickCount；FirstAid标签变化不漏扣；暴击读取现有配置且只在真实命中计算一次；兼容弓弩识别统一。保留物理枪禁盾与可用枪作战两种语义、枪伤独立倍率、友军/PVP授权顺序。
+- 交付：本节对应行为模块收敛本地提交。88项Python源码契约通过（新增6项），354份Java文件仅Java17语法parse、0错误，281份资源JSON及mods.toml解析、git diff --check通过；两项已有ASM回归已调整调用链断言，未编译或执行。本轮未编译、构建、实例配置更新、同步、游戏启动或push。
+- 待游戏验收：菜单打开期间的医疗/食物/再生推进；食物回血跨卸载/重启；FirstAid单件/堆叠/外部NBT变化/中断；模组弓预判与切近战；跳砍倍率0/1/1.5/2与原版模式；枪伤、友军过滤与盾牌减伤顺序。静态通过不等同于这些行为已验证。
+
 ## 2026-10-10 First Aid正规可选联动（源码接入，未构建）
 
 - 基线eb3ef7826202295d04260ba22d63aea1f65e06f8；负责人主控，主源码工作树/main，顺序单人实施。范围FirstAidCompat、FirstAidApiBridge、RecoverySupplies、HumanLootManager、HumanGunner、构建只读API依赖、可选依赖声明及回归与文档；共享文件由主控负责，无其他编辑会话接入。

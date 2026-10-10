@@ -55,15 +55,18 @@ public final class PotionRecoveryTest {
         }
         String human = "com/craftix/hostile_humans/entity/entities/Human";
         int nativeFinish = callIndex(human, "completeUsingItem", "com/craftix/hostile_humans/entity/HumanEntity", "completeUsingItem");
-        check(nativeFinish >= 0 && callIndex(human, "completeUsingItem", recovery, "consumeCompletedPotion") > nativeFinish,
+        check(nativeFinish >= 0 && callIndex(human, "completeUsingItem", recovery, "onUseCompleted") > nativeFinish
+                && callIndex(recovery, "onUseCompleted", recovery, "consumeCompletedPotion") >= 0,
                 "charge follows native completion and effect application");
         check(callIndex(recovery, "tickRegenerationHealing", recovery, "queueFoodHealing") < 0
                 && callIndex(recovery, "tickRegenerationHealing", null, "getPersistentData") < 0,
                 "regeneration neither queues nor spends food healing");
         String hook = "club/someoneice/humangunner/HumanGunner";
-        int bonus = callIndex(hook, "onLivingTick", recovery, "tickRegenerationHealing");
+        int bonus = callIndex(hook, "onLivingTick", recovery, "tickEffects");
         check(bonus >= 0 && bonus < callIndex(hook, "onLivingTick", null, "isEditing"),
                 "buff continues while owner edits inventory");
+        for (String effect : new String[] {"tickRegenerationHealing", "tickGradualHealing"})
+            check(callIndex(recovery, "tickEffects", recovery, effect) >= 0, "all healing uses one clock entry: " + effect);
         System.out.println("PotionRecoveryTest: " + checks + " checks passed");
     }
 

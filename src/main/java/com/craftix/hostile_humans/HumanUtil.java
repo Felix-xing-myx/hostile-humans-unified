@@ -33,9 +33,7 @@ public class HumanUtil {
     }
 
     public static boolean isRangedWeapon(ItemStack value) {
-        if (club.someoneice.humangunner.GunSupport.get().isGun(value) || club.someoneice.humangunner.SpartanEquipmentCompat.isSpartanRangedWeapon(value)) return true;
-
-        return value.is(Items.CROSSBOW) || value.is(Items.BOW);
+        return club.someoneice.humangunner.CombatWeaponPolicy.isRangedWeapon(value);
     }
 
     public static boolean isMeleeWeapon(ItemStack value) {

@@ -5,7 +5,6 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -31,9 +30,7 @@ public final class RangedWeaponCustody {
     }
 
     public static boolean isBowOrCrossbow(ItemStack stack) {
-        return !stack.isEmpty() && (stack.getItem() instanceof BowItem
-                || stack.getItem() instanceof CrossbowItem
-                || SpartanEquipmentCompat.isSpartanRangedWeapon(stack));
+        return CombatWeaponPolicy.isBowOrCrossbow(stack);
     }
 
     /** Loaded ammunition, a payable reload or a paid reload in progress outranks bows. */
@@ -42,8 +39,7 @@ public final class RangedWeaponCustody {
     }
 
     public static boolean isCrossbowWeapon(ItemStack stack) {
-        return !stack.isEmpty() && (stack.getItem() instanceof CrossbowItem
-                || SpartanRangedCompat.isHeavyCrossbow(stack));
+        return CombatWeaponPolicy.isCrossbow(stack);
     }
 
     public static boolean isBowWeapon(ItemStack stack) {

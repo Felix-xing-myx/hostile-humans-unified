@@ -97,7 +97,10 @@ public final class FirstAidCompat {
         // Preserve other finish handlers' container/consumed results, charging only
         // an unchanged stack. Never edit a registry item or affect a player's use.
         ItemStack after = event.getResultStack();
-        if (PotionRecoveryPolicy.needsPotionCharge(ItemStack.isSameItemSameTags(before, after),
+        boolean sameItem = before.getItem() == after.getItem();
+        if (sameItem && after.getCount() > before.getCount()) return;
+        // A finish handler may update tags without consuming the supply.
+        if (PotionRecoveryPolicy.needsPotionCharge(sameItem,
                 before.getCount(), after.getCount())) {
             after = after.copy();
             after.shrink(1);

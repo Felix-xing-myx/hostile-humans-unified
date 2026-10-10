@@ -31,6 +31,7 @@ public final class RecoverySupplies {
     private static final String KIT_GRANTED = "hostile_humans_unified:recovery_kit_granted_v2";
     private static final String PENDING_HEAL = "hostile_humans_unified:pending_food_heal";
     private static final String NEXT_HEAL_TICK = "hostile_humans_unified:next_food_heal_tick";
+    private static final String FOOD_HEAL_DELAY = "hostile_humans_unified:food_heal_delay";
     private static final String TIER_THREE_MARKER = "hostile_humans_unified:tier_three";
     // Removed fixed-slot lease metadata. Retain the key only to clean old
     // entities when they are first reconciled by the inventory custody logic.
@@ -959,7 +960,7 @@ public final class RecoverySupplies {
     }
 
     /** Extra regeneration never spends or resets the separately queued food healing. */
-    public static void tickRegenerationHealing(Human human) {
+    private static void tickRegenerationHealing(Human human) {
         MobEffectInstance regeneration = human.getEffect(MobEffects.REGENERATION);
         if (human.level().isClientSide || !human.isAlive() || regeneration == null
                 || !PotionRecoveryPolicy.regenerationActive(regeneration.getDuration())) {
@@ -982,8 +983,23 @@ public final class RecoverySupplies {
                 || PotionUtils.getMobEffects(stack).stream().noneMatch(effect -> effect.getEffect() == MobEffects.REGENERATION);
     }
 
-    /** Called only after native completion; preserve modded finish results that already consumed the bottle. */
-    public static void consumeCompletedPotion(Human human, InteractionHand hand, ItemStack before) {
+    /** Called after native completion; all NPC-specific potion settlement belongs here. */
+    public static void onUseCompleted(Human human, InteractionHand hand, ItemStack before) {
+        if (human.level().isClientSide || !human.isAlive()) return;
+        consumeCompletedPotion(human, hand, before);
+        if (isStrongInstantHealingPotion(before)) human.heal(12.0F);
+    }
+
+    /** Advance effects even while inventory editing pauses AI equipment writers. */
+    static void tickEffects(Human human) {
+        if (human.level().isClientSide || !human.isAlive()) return;
+        tickRegenerationHealing(human);
+        FirstAidCompat.tick(human);
+        tickGradualHealing(human);
+    }
+
+    /** Preserve modded finish results that already consumed the bottle. */
+    private static void consumeCompletedPotion(Human human, InteractionHand hand, ItemStack before) {
         if (human.level().isClientSide || !before.is(Items.POTION)) return;
         ItemStack after = human.getItemInHand(hand);
         if (!PotionRecoveryPolicy.needsPotionCharge(ItemStack.isSameItemSameTags(before, after),
@@ -996,19 +1012,30 @@ public final class RecoverySupplies {
         if (!remainder.isEmpty()) HumanInventoryCustody.stowOrDrop(human, new ItemStack(Items.GLASS_BOTTLE));
     }
 
-    public static void tickGradualHealing(Human human) {
-        FirstAidCompat.tick(human);
+    private static void tickGradualHealing(Human human) {
         float pending = human.getPersistentData().getFloat(PENDING_HEAL);
-        if (pending <= 0.0F || !human.isAlive()) {
+        if (!human.isAlive()) return;
+        if (pending <= 0.0F) {
+            human.getPersistentData().remove(FOOD_HEAL_DELAY);
+            human.getPersistentData().remove(NEXT_HEAL_TICK);
             return;
         }
         if (human.getHealth() >= human.getMaxHealth()) {
             human.getPersistentData().remove(PENDING_HEAL);
             human.getPersistentData().remove(NEXT_HEAL_TICK);
+            human.getPersistentData().remove(FOOD_HEAL_DELAY);
             return;
         }
-        int nextTick = human.getPersistentData().getInt(NEXT_HEAL_TICK);
-        if (human.tickCount < nextTick) {
+        // Entity.tickCount resets on load. Persist a remaining delay instead of
+        // a deadline in that transient clock; old saved courses resume in one interval.
+        if (!human.getPersistentData().contains(FOOD_HEAL_DELAY)) {
+            human.getPersistentData().putInt(FOOD_HEAL_DELAY,
+                    CombatAiConfig.forHuman(human).gradualHealIntervalTicks());
+        }
+        human.getPersistentData().remove(NEXT_HEAL_TICK);
+        int remaining = human.getPersistentData().getInt(FOOD_HEAL_DELAY) - 1;
+        if (remaining > 0) {
+            human.getPersistentData().putInt(FOOD_HEAL_DELAY, remaining);
             return;
         }
         float step = Math.min(1.0F, pending);
@@ -1017,11 +1044,12 @@ public final class RecoverySupplies {
         if (pending <= 0.0F) {
             human.getPersistentData().remove(PENDING_HEAL);
             human.getPersistentData().remove(NEXT_HEAL_TICK);
+            human.getPersistentData().remove(FOOD_HEAL_DELAY);
         } else {
             human.getPersistentData().putFloat(PENDING_HEAL, pending);
             human.getPersistentData().putInt(
-                    NEXT_HEAL_TICK,
-                    human.tickCount + CombatAiConfig.forHuman(human).gradualHealIntervalTicks()
+                    FOOD_HEAL_DELAY,
+                    CombatAiConfig.forHuman(human).gradualHealIntervalTicks()
             );
         }
     }
@@ -1035,8 +1063,8 @@ public final class RecoverySupplies {
         float pending = human.getPersistentData().getFloat(PENDING_HEAL);
         human.getPersistentData().putFloat(PENDING_HEAL, pending + amount);
         human.getPersistentData().putInt(
-                NEXT_HEAL_TICK,
-                human.tickCount + config.gradualHealIntervalTicks()
+                FOOD_HEAL_DELAY,
+                config.gradualHealIntervalTicks()
         );
         human.getPersistentData().putFloat("hostile_humans_unified:last_food_heal_value", amount);
     }
