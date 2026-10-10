@@ -1012,3 +1012,12 @@
 - 同步：替换前确认目标实例未运行；仅更新Forge47.4.21测试实例。旧JAR及global.json备份于 `E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261010-210216-3.7.0-whitelist-help-Forge_47.4.21`，附deployment.json。实例global.json仅原位更新四条说明，解析后其余全部配置值一致。
 - 旧JAR SHA-256 `BD47E926A0DFF65D8BDD94D10219CC9DC2F84B7C4509829F273ECCFC8E06117F`；新构建与实例SHA-256均为 `9F94C76D52145B0083F2C0B3F680938B9ACAAAAA9E95FB39369AED1868EE6543`。
 - 交付：本记录随发布提交推送origin/main并核对远端HEAD；未启动游戏，不创建GitHub Release或上传二进制附件。
+
+## 2026-10-10 英文标题封面更换
+
+- 用户需求：参考Minecraft模组标题标志，以英文名称为中心，少量主题元素修饰字体，替换旧封面。
+- 基线 `1fcc28037b8f5fd90ab67d8300abcf8a37594192`；主控 `/root`；主工作树、main，无并行编辑。
+- 使用内置imagegen技能生成，人工视觉核查标题HOSTILE/HUMANS/UNIFIED、完整边界及主题道具；更换 `src/main/resources/logo.png`，沿用mods.toml的logoFile入口。完整提示词与资产说明在 `docs/branding/COVER.md`。
+- 原封面备份：维护目录 `部署备份/20261010-211900-old-cover/logo.png`。新图1536×1024、PNG；SHA-256 `8292E387A0950E333779C9ADA4D8BC632B75F12F25AFC3F5F63F54AE611E408C`。
+- 验证：PNG签名、尺寸、现有资源引用与git空白检查；本轮无代码变动，不运行构建或游戏，未同步实例、未推送。模组列表中的实际缩略图显示仍待后续构建游戏验收。
+- 交付：包含本记录的本地提交，更新日志列入Unreleased，已部署3.7.0仍使用之前的封面。

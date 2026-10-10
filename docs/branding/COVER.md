@@ -1,0 +1,11 @@
+# Cover design
+
+- Asset: `src/main/resources/logo.png` (1536 × 1024 PNG).
+- Method: built-in image generation tool; no CLI/API fallback.
+- Exact title: HOSTILE / HUMANS / UNIFIED.
+- Visual check: title spelling and hierarchy, clean framing, shield/sword/rifle/tag decorations checked. PNG signature and dimensions verified; existing `mods.toml` logo reference retained. No build or game deployment in this change.
+- Previous cover backup: maintenance parent `部署备份/20261010-211900-old-cover/logo.png`.
+
+## Generation prompt
+
+Use case: logo-brand. Asset: replacement cover/logo for a Minecraft Forge mod named Hostile Humans Unified. Create ONE finished logo, not a sheet of concepts. Centered, compact three-line wordmark, readable as a square mod thumbnail. Exact English text, no other words: top line "HOSTILE", middle line "HUMANS", bottom line "UNIFIED". HOSTILE and HUMANS are the large dominant title, UNIFIED is a slightly smaller but clearly readable integrated subtitle. Typography-led Minecraft mod logo, inspired by the supplied references' chunky voxel-built 3D lettering and integrated game props, while making an original design with no borrowed logos. Handcrafted clean pixel-art bevels, crisp stair-stepped edges, consistent block grid, shallow dark extrusion, disciplined detail. The subject is armed hostile human NPCs, medieval melee plus modern firearms, shields and recruitable soldiers. Express this through a FEW restrained pixel-art props physically integrated around the edges of the lettering: a small blocky shield, a compact rifle silhouette and a diamond sword, and a tiny recruitment dog tag. Keep every letter fully legible; decorations must be subordinate, never covering text. Iron-grey/ivory metal title with muted brass details and restrained deep-red accents; strong dark outlines for legibility on light or dark sites. No characters, faces, landscape, cinematic poster scene, photorealistic painting, smoke, particles, bloom, glossy plastic, excessive scratches or random decorative clutter. Authentic tidy Minecraft mod branding with the name as the unmistakable focal point. Balanced centered layout, complete silhouette within frame, generous transparent padding, real transparent background, no checkerboard painted into the picture. Render high resolution with pixel-crisp construction and exact text.
