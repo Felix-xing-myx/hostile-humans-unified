@@ -1044,3 +1044,11 @@
 - 部署前再次核对测试实例未运行。仅同步 `E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21`；旧JAR和五份配置已备份至 `部署备份/20261010-213922-3.7.0-parallel-food-Forge_47.4.21`，附deployment.json。
 - 四阶配置仅删除food_use_speed_multiplier及两条对应帮助，经JSON结构比较其余值一致；global.json不改。旧JAR SHA-256为9F94C76D52145B0083F2C0B3F680938B9ACAAAAA9E95FB39369AED1868EE6543；新构建与实例一致，为DCE740D5044250E5313C8F888BF8FB1E349229AE21D85A58C8C50F56E2341232。
 - 本记录提交后推送origin/main并核对远端HEAD。仅推源码，不创建GitHub Release。未启动游戏，边进食边移动/近战/弓弩/枪械攻击及盾牌归还需用户游戏内验收。此前未提交Python缓存保留、不纳入提交。
+
+## 2026-10-10 原生物品纹理封面重做
+
+- 用户不接受额外生成的物品装饰，要求真实模组纹理与相似风格；主控/root、主工作树main，无并行编辑，基线0a39cba86cd7cf4f2f3c2d8ac92442fd44a902d2。
+- 使用canvas-design排版流程与确定性像素合成，标题HOSTILE/HUMANS/UNIFIED；三阶身份牌、三阶契约、通用箭矢、通用弹匣均直接来自assets/hostile_humans_unified/textures/item，最近邻整数放大，未重绘、未改色、未修改物品原图。具体来源/哈希/位置记录docs/branding/COVER.md。
+- 仅替换logo.png、封面说明、Unreleased更新日志和本记录。旧封面已备份在维护目录部署备份，预览及合成辅助文件在维护目录封面设计。
+- 验证：四件物品的所有不透明像素与源纹理放大结果逐像素一致；PNG RGBA、1536×1024、真实透明背景检查通过；人工检查标题拼写与完整边界，沿用mods.toml的logoFile入口。未构建、未同步实例、未推送；已部署3.7.0仍用此前封面。
+- 交付：本地源码提交，最终视觉效果由用户评阅。
