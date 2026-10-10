@@ -7,6 +7,7 @@
 - 已接入：HumanTerrainSafety只读Assessment与执行否决反馈，HumanNavigation最多12条定向短期通行记录；CombatTerrainNavigation/CombatTerrainPolicy统一受阻、8/16/24格分批绕路、多高度候选、可射击保持远程、受击掩护、实际位移进展及16个末端记忆。PursuitNavigation使用实际路径末端，记录导航实际安装对象，避免等价Path复用造成归属丢失；弓弩/枪械/三叉戟、防御/战术/脱困及MovementContinuity共享决定，不注册新MOVE Goal。原武器Goal仍负责攻击、动画与弹药。命令节点受限，水中/撤退/上岸不接管。详见docs/COMBAT_TERRAIN.md。
 - 只读复核修正了移动目标清空绕路记忆、头顶平台遮蔽候选、FIRE未停止普通追击、修复路径读取旧对象、近战重启覆盖路线及清侧移时零STRAFE覆盖问题。补齐路径拐角有限前视，保留危险移动制动及真实击退。静态审查没有发现其余确定覆盖点，不能替代实际地形验收。
 - 验证：Python源码契约检查35项通过（新增9项）；git diff --check通过。只读javap核对本机Forge47.4.16的Path实际末端/下一节点、Entity.distanceToSqr(Vec3)、Level建造高度/已加载区块及导航速度/当前路径接口。新增Java CombatTerrainPolicyTest决策边界和编译后调用链，更新RangedTerrainSafetyTest适配Assessment，并登记check；按用户约定未编译或执行Java测试。未构建/实例同步/启动游戏/push。待有构建要求后编译验证，再由用户测试坡道绕路、隔崖对射/掩护、桥下多层、转角窄路、移动目标、命令切换、水边/撤退及多士兵性能。
+- 本地源码提交：4b8093b68b32c502d2a24dd7dcdbe648ce307888（main，25个文件）；未推送。源码与静态接入已交付，编译及游戏行为尚未验收，不标记整体验收完成。
 
 ## 2026-10-10 人类弹射物受伤冷却范围调整（源码完成，未构建）
 
