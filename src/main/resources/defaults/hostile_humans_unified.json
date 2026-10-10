@@ -2604,8 +2604,8 @@
         "shotgun": 25
       }
     },
-    "_说明_gun_whitelist_中文": "野生枪手枪械注册ID→非负整数权重。例：{\"tacz:ak47\":5}；同类按正权重比例抽取，总和无需100，0排除。基础表为空时已雇佣人类接受所有可识别枪械。",
-    "_description_gun_whitelist_en": "Wild registered gun ID to non-negative integer weight, e.g. {\"tacz:ak47\":5}. Positive weights select proportionally within type; total need not be 100. Zero excludes. An empty base table allows hired humans to accept all recognized guns.",
+    "_说明_gun_whitelist_中文": "野生枪手枪械注册ID→非负整数权重。例：{\"tacz:ak47\":5}；同类按正权重比例抽取，总和无需100，0排除。基础表为空时已雇佣人类接受所有可识别枪械。 示例中的反斜杠仅用于说明字符串内双引号的JSON转义；填写实际白名单对象时需去掉这些反斜杠，保留键名两侧的双引号。",
+    "_description_gun_whitelist_en": "Wild registered gun ID to non-negative integer weight, e.g. {\"tacz:ak47\":5}. Positive weights select proportionally within type; total need not be 100. Zero excludes. An empty base table allows hired humans to accept all recognized guns. Backslashes in the example only escape quotes inside this help string. Omit those backslashes when writing the actual whitelist object, but keep double quotes around its keys.",
     "gun_whitelist": {},
     "_说明_auto_add_new_guns_中文": "自动将未列出的合格枪械加入抽取候选；false时只使用白名单中的正权重枪械。",
     "_description_auto_add_new_guns_en": "Automatically include eligible unlisted guns; false restricts selection to positive whitelist entries.",
@@ -2618,8 +2618,8 @@
     "excluded_auto_gun_types": [
       "rpg"
     ],
-    "_说明_hired_gun_additional_whitelist_中文": "额外允许放入已雇佣人类背包的枪械ID→正整数，如{\"some_gunpack:example\":1}；不参与野生抽取，数字大小不影响许可。",
-    "_description_hired_gun_additional_whitelist_en": "Additional registered gun IDs permitted in hired inventories, e.g. {\"some_gunpack:example\":1}; positive values grant permission, do not affect wild selection.",
+    "_说明_hired_gun_additional_whitelist_中文": "额外允许放入已雇佣人类背包的枪械ID→正整数，如{\"some_gunpack:example\":1}；不参与野生抽取，数字大小不影响许可。 示例中的反斜杠仅用于说明字符串内双引号的JSON转义；填写实际白名单对象时需去掉这些反斜杠，保留键名两侧的双引号。",
+    "_description_hired_gun_additional_whitelist_en": "Additional registered gun IDs permitted in hired inventories, e.g. {\"some_gunpack:example\":1}; positive values grant permission, do not affect wild selection. Backslashes in the example only escape quotes inside this help string. Omit those backslashes when writing the actual whitelist object, but keep double quotes around its keys.",
     "hired_gun_additional_whitelist": {},
     "_说明_gun_blacklist_中文": "禁止的枪械注册ID列表，格式namespace:path。",
     "_description_gun_blacklist_en": "Excluded registered gun ID list, namespace:path.",
