@@ -40,3 +40,11 @@
 `WaterCombatNavigation`是水中追击的停滞观察与上岸租约协调器，不注册新MOVE目标、不另建寻路器。约40 tick无水平位移才调用现有findNearestShorePath，每次最多四次路径预算，失败40 tick后重试；已能在距离和视线内攻击的单位不判为追击停滞。只接受可达、安全且符合SoldierOrder活动范围的水面地面路线，拒绝水下导航回退；不清除目标、不传送、不破坏地形。
 
 已安装上岸路线用ShoreProgressTracker观察下一节点的实际接近与推进，停滞后暂避路段并排除该出口。PursuitNavigation、MovementContinuity和Human的水面状态维护让位于此租约；失效、目标变化或生存撤退时只释放自己拥有的路线。没有可达出口时按预算重试，不将任意崖顶当作可执行路线。
+
+## 盾牌损耗与破盾
+
+`ShieldDurability`统一主动格挡与枪手副手盾的损耗事务：服务器按`1 + floor(damage * 1.5)`调用ItemStack.hurtAndBreak，保留原生耐久附魔及物品钩子。每个人类共用10 tick损耗冷却，换手/换盾不绕过；根据调用前后的耐久或数量确认实际损耗，完全免损不进入冷却。破损副手盾只结束该手正在进行的物品使用，不中断主手枪械换弹。
+
+调用者继续提供现有阶段的伤害：原生活动格挡提供被挡伤害，TaCZ主动格挡提供减伤前枪伤，枪手被动盾提供护甲等结算后、20%减伤前的LivingDamageEvent金额。此次统一公式，不迁移伤害事件阶段。损耗冷却不取消减伤或格挡反馈。
+
+主动破盾复用Human.blockUsingShield与ItemStack.canDisableShield，不硬编码斧头类型；成功后shieldCoolDown至少100 tick。Human.startUsingItem在所有主动举盾入口执行禁用检查，弓弩射击不缩短已有禁用。GunnerShieldProtection不读取此冷却，主手枪＋副手盾的被动减伤独立，副手盾损坏/移除后按既有装备检查失效。

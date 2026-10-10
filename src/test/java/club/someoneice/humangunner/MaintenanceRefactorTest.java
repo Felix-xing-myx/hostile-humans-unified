@@ -27,6 +27,16 @@ public final class MaintenanceRefactorTest {
         flag.setAccessible(true);
         flag.setBoolean(null, true);
         BuiltInRegistries.bootStrap();
+        check(ShieldDurability.wearCost(0) == 0 && ShieldDurability.wearCost(-1) == 0
+                && ShieldDurability.wearCost(Float.NaN) == 0
+                && ShieldDurability.wearCost(Float.POSITIVE_INFINITY) == 0, "invalid hits cannot wear shields");
+        check(ShieldDurability.wearCost(1) == 2 && ShieldDurability.wearCost(2) == 4
+                && ShieldDurability.wearCost(3) == 5 && ShieldDurability.wearCost(10) == 16
+                && ShieldDurability.wearCost(1.9f) == 3, "shield wear floors after multiplying damage");
+        check(ShieldDurability.wearCost(Float.MAX_VALUE) == Integer.MAX_VALUE, "large wear cannot overflow");
+        check(!ShieldDurability.actuallyWorn(7, 1, 7, 1), "fully prevented wear does not start cooldown");
+        check(ShieldDurability.actuallyWorn(7, 1, 8, 1), "partial enchanted wear starts cooldown");
+        check(ShieldDurability.actuallyWorn(7, 1, 0, 0), "breaking still starts cooldown after damage resets");
         Random random = new Random(3855);
         for (int trial = 0; trial < 500; trial++) {
             CompoundTag record = new CompoundTag();

@@ -1404,18 +1404,23 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     protected void blockUsingShield(LivingEntity entityIn) {
         super.blockUsingShield(entityIn);
-        if (entityIn.getMainHandItem().canDisableShield(this.useItem, (LivingEntity)this, entityIn)) {
+        if (!club.someoneice.humangunner.GunSupport.isGunItem(this.getMainHandItem())
+                && this.isUsingItem() && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(this.getUseItem())
+                && entityIn.getMainHandItem().canDisableShield(this.getUseItem(), this, entityIn)) {
             this.disableShield(true);
         }
     }
 
     public void disableShield(boolean increase) {
+        if (this.level().isClientSide || !this.isUsingItem()
+                || club.someoneice.humangunner.GunSupport.isGunItem(this.getMainHandItem())
+                || !club.someoneice.humangunner.SpartanEquipmentCompat.isShield(this.getUseItem())) return;
         float chance = 0.25f + (float)EnchantmentHelper.getBlockEfficiency((LivingEntity)this) * 0.05f;
         if (increase) {
             chance = (float)((double)chance + 0.75);
         }
         if (this.random.nextFloat() < chance) {
-            this.shieldCoolDown = 100;
+            this.shieldCoolDown = Math.max(this.shieldCoolDown, 100);
             this.stopUsingItem();
             this.level().broadcastEntityEvent((Entity)this, (byte)30);
         }
@@ -1458,7 +1463,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (humanGunner$hasPendingMeleeAttack()
                 && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)) return;
         boolean holdingGun = club.someoneice.humangunner.GunSupport.isGunItem(human.getMainHandItem());
-        if (holdingGun && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)) {
+        if ((holdingGun || this.shieldCoolDown > 0)
+                && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)) {
             return;
         }
     
@@ -1991,7 +1997,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             SpartanRangedCompat.fire(this, target);
             return;
         }
-        this.shieldCoolDown = 8;
+        this.shieldCoolDown = Math.max(this.shieldCoolDown, 8);
         InteractionHand weaponHand = ProjectileUtil.getWeaponHoldingHand((LivingEntity)this,
                 this::canFireProjectileWeapon);
         ItemStack weaponStack = this.getItemInHand(weaponHand);
