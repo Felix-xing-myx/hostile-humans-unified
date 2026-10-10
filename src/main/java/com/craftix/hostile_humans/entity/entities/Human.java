@@ -1355,7 +1355,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private boolean doHurtTargetSingle(Entity entityIn, boolean animate, boolean wearWeapon) {
         if (!humanGunner$canMeleeAttack()) return false;
         this.resetFallDistance();
-        boolean hit = super.doHurtTarget(entityIn);
+        boolean hit = club.someoneice.humangunner.PursuitJumpAttack.strike(this,
+                () -> super.doHurtTarget(entityIn));
         if (animate) {
             club.someoneice.humangunner.CloseDefenseHold.attack(this, 8);
             swing(InteractionHand.MAIN_HAND);

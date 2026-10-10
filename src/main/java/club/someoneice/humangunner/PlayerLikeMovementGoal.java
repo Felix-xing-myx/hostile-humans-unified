@@ -12,7 +12,7 @@ import net.minecraft.world.phys.Vec3;
 /**
  * A flag-free terrain companion which can run beside the weapon goals. It may
  * open a blocked passage, sprint along an existing melee pursuit path, or
- * repeatedly hop during purposeful pursuit and retreat. It does not create
+ * hop during a purposeful retreat. Pursuit jumps are coordinated by the melee goal. It does not create
  * paths and suppresses hops while a gunner is aiming/firing.
  */
 public final class PlayerLikeMovementGoal extends Goal {
@@ -120,7 +120,9 @@ public final class PlayerLikeMovementGoal extends Goal {
                 || human.tickCount < nextCombatJumpTick) {
             return;
         }
-        if (movingWithCombatIntent && human.getRandom().nextDouble() < config.combatJumpChance()) {
+        // Pursuit jump attacks belong to the melee goal so distance, cooldown and upswing agree.
+        // Retain movement hops only during a genuine retreat; terrain step-up remains above.
+        if (isRetreatingFrom(target) && human.getRandom().nextDouble() < config.combatJumpChance()) {
             human.getJumpControl().jump();
             scheduleCombatJump();
         } else {

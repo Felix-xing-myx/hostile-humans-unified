@@ -117,6 +117,13 @@ public final class BetterCombatMeleeCombat {
         return new AttackPlan(profile, List.copyOf(targets));
     }
 
+    /** Same selected weapon/combo timing as the eventual attack; never advances the combo. */
+    public static int upswingTicks(Human human) {
+        if (!isEnabled(human) || !hasWeaponProfile(human)) return 0;
+        Profile current = profile(human);
+        return Math.max(1, Math.round(current.cooldownTicks() * current.animationUpswing()));
+    }
+
     public static boolean applyDamageMultiplier(Human human, Profile profile, int targetCount,
                                                 BooleanSupplier attack) {
         AttributeInstance damage = human.getAttribute(Attributes.ATTACK_DAMAGE);

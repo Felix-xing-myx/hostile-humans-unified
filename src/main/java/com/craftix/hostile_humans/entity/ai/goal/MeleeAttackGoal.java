@@ -184,7 +184,10 @@ extends Goal {
             this.ticksUntilNextPathRecalculation = Math.max(this.ticksUntilNextPathRecalculation - 1, 0);
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
+            if (this.mob instanceof Human human)
+                club.someoneice.humangunner.PursuitJumpAttack.tryStart(human, livingEntity, this.ticksUntilNextAttack);
             boolean spacing = !holdingPosition && this.mob instanceof Human human
+                    && !club.someoneice.humangunner.PursuitJumpAttack.active(human)
                     && !club.someoneice.humangunner.CombatTerrainNavigation.hasWork(human, livingEntity)
                     && MeleeSpacing.control(human, livingEntity);
             boolean stalled = pursuitProgress.stalled(this.mob.tickCount, livingEntity.getId(),
@@ -240,7 +243,8 @@ extends Goal {
     }
 
     protected void checkAndPerformAttack(LivingEntity livingEntity) {
-        if (this.mob instanceof Human human && human.humanGunner$hasPendingMeleeAttack()) return;
+        if (this.mob instanceof Human human && (human.humanGunner$hasPendingMeleeAttack()
+                || club.someoneice.humangunner.PursuitJumpAttack.awaitingTakeoff(human))) return;
         if (canStrike(livingEntity) && this.ticksUntilNextAttack <= 0) {
             HumanEntity humanEntity;
             this.resetAttackCooldown();
