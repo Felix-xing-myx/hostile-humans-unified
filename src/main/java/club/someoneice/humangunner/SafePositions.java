@@ -26,6 +26,19 @@ final class SafePositions {
                 break;
             }
         }
+        return checkedPlacement(human, candidate);
+    }
+
+    static net.minecraft.world.phys.Vec3 nearPost(com.craftix.hostile_humans.entity.entities.Human human, BlockPos post, int x, int z) {
+        if (!(human.level() instanceof ServerLevel level)) return null;
+        BlockPos floor = nearFloor(level, x, z, post.getY());
+        return checkedPlacement(human, floor == null ? null
+                : new net.minecraft.world.phys.Vec3(x + 0.5, floor.getY(), z + 0.5));
+    }
+
+    private static net.minecraft.world.phys.Vec3 checkedPlacement(
+            com.craftix.hostile_humans.entity.entities.Human human, net.minecraft.world.phys.Vec3 candidate) {
+        if (!(human.level() instanceof ServerLevel level)) return null;
         if (candidate == null || !level.getWorldBorder().isWithinBounds(BlockPos.containing(candidate))) return null;
         AABB box = human.getBoundingBox().move(candidate.subtract(human.position()));
         if (box.minY <= level.getMinBuildHeight() || box.maxY >= level.getMaxBuildHeight()) return null;

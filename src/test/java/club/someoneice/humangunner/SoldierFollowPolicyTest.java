@@ -23,6 +23,16 @@ public final class SoldierFollowPolicyTest {
         check(SoldierFollowNavigation.rescueDue(200, 400), "twenty-block obstruction is eligible without the long-distance teleport gate");
         check(SoldierFollowNavigation.retryDelay(1) == 10, "failed follow searches back off");
         check(SoldierFollowNavigation.retryDelay(100) == 40, "retry delay stays bounded");
+        for (SoldierOrder order : SoldierOrder.values()) {
+            check(SoldierStuckRecovery.eligibleOrder(order) == (order != SoldierOrder.HOLD_POSITION),
+                    "rescue applies only to requested mobile orders: " + order);
+        }
+        check(!SoldierStuckRecovery.due(199, 100, true), "combat rescue waits ten seconds");
+        check(SoldierStuckRecovery.due(200, 100, true), "target presence cannot disable combat rescue deadline");
+        check(!SoldierStuckRecovery.due(200, 6.25, true), "follow spacing excluded");
+        check(SoldierStuckRecovery.due(200, 6.26, true), "follow displacement beyond spacing");
+        check(!SoldierStuckRecovery.due(200, 2.25, false), "standing at guard or patrol destination excluded");
+        check(SoldierStuckRecovery.due(200, 2.26, false), "guard and patrol use tighter arrival spacing");
         Object server = new Object();
         java.util.UUID first = new java.util.UUID(0, 1), second = new java.util.UUID(0, 2);
         check(ShoreSeekingPolicy.reserveShorePathSearch(server, 1, first), "first swimmer gets this tick");

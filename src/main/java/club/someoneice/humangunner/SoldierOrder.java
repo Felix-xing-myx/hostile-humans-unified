@@ -19,6 +19,7 @@ public enum SoldierOrder {
     private static final java.util.Map<Human, net.minecraft.world.level.pathfinder.Path> ROUTES = new java.util.WeakHashMap<>();
     static final String ORDER = "hostile_humans_unified:soldier_order";
     private static final String ANCHOR = "hostile_humans_unified:order_anchor";
+    private static final String PATROL_DESTINATION = "hostile_humans_unified:patrol_destination";
     private static final String NEXT_PATROL = "hostile_humans_unified:next_patrol_move";
     private static final String RETURNING_FROM_RETREAT = "hostile_humans_unified:returning_from_retreat";
     private static final double FOLLOW_COMBAT_RANGE_SQR = 48.0D * 48.0D;
@@ -44,6 +45,8 @@ public enum SoldierOrder {
         PursuitNavigation.clear(human);
         BodyguardProtection.clear(human);
         SoldierFollowNavigation.clear(human);
+        SoldierStuckRecovery.clear(human);
+        human.getPersistentData().remove(PATROL_DESTINATION);
         human.guardCombatState.reset();
         human.getPersistentData().putString(ORDER, order.name());
         human.getPersistentData().putLong(ANCHOR, human.blockPosition().asLong());
@@ -63,6 +66,8 @@ public enum SoldierOrder {
         PursuitNavigation.clear(human);
         BodyguardProtection.clear(human);
         SoldierFollowNavigation.clear(human);
+        SoldierStuckRecovery.clear(human);
+        human.getPersistentData().remove(PATROL_DESTINATION);
         human.guardCombatState.reset();
         human.getPersistentData().remove(ORDER);
         human.getPersistentData().remove(ANCHOR);
@@ -290,6 +295,7 @@ public enum SoldierOrder {
         var path = human.getNavigation().createPath(anchor, 0);
         if (path != null && path.canReach() && human.getNavigation().moveTo(path, speed)) {
             ROUTES.put(human, path);
+            if (get(human) == PATROL) human.getPersistentData().putLong(PATROL_DESTINATION, anchor.asLong());
             return true;
         }
         if (old != null && !old.isDone()) human.getNavigation().moveTo(old, speed);
@@ -301,6 +307,8 @@ public enum SoldierOrder {
         // canContinueToUse. A missing target is an ordinary stop condition,
         // never an exceptional soldier-order state.
         if (target == null) return false;
+        if (human.hasOwner() && SoldierStuckRecovery.recovering(human)
+                && !BodyguardProtection.protectingFromExplosion(human, target)) return false;
         if (!human.hasOwner() || human.level().isClientSide) return true;
         SoldierOrder order = get(human);
         boolean explosionRescue = BodyguardProtection.protectingFromExplosion(human, target);
@@ -400,6 +408,12 @@ public enum SoldierOrder {
         if (BodyguardProtection.isBodyguard(human)) return false;
         return isHoldingPosition(human)
                 && distanceFromAnchorSqr(human, anchor(human)) > HOLD_RETURN_DISTANCE_SQR;
+    }
+
+    /** Last accepted idle patrol endpoint; combat paths must never replace this destination. */
+    static BlockPos recoveryPost(Human human) {
+        return get(human) == PATROL && human.getPersistentData().contains(PATROL_DESTINATION)
+                ? BlockPos.of(human.getPersistentData().getLong(PATROL_DESTINATION)) : anchor(human);
     }
 
     private static BlockPos anchor(Human human) {

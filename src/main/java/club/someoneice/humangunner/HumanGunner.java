@@ -232,6 +232,7 @@ public final class HumanGunner {
             }
             EquipmentBreakSounds.tick(human);
             SoldierOrder.tick(human);
+            SoldierStuckRecovery.tick(human);
             // The external Hostile Humans index can lag an entity's owner
             // after a transfer or reload. The entity NBT is authoritative;
             // repair only mismatches and spread these checks across ticks.
