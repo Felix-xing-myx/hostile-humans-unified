@@ -928,3 +928,11 @@
 - 主动格挡复用canDisableShield，破盾冷却至少100 tick；底层举盾入口核验冷却，弓弩射击不缩短破盾禁用。枪手被动20%减伤不读取主动禁用冷却，损耗冷却也不取消减伤。
 - 验证：95项Python源码契约通过；全部357份Java仅语法解析0错误；git diff --check通过。新增Java公式/非法伤害/部分免损/破损边界测试，未编译或执行。281份资源JSON解析通过。
 - 待游戏验收：原版斧与模组破盾武器、不同主动举盾来源、五秒冷却及弓弩射击、连续枪火10 tick损耗限制、耐久附魔完全/部分免损、盾破损后枪手被动保护失效且换弹继续。未运行Gradle、构建、实例配置更新、同步、启动游戏或push。交付提交为包含本记录的本地提交。
+
+## 2026-10-10 3.7.0正式发布与测试实例同步
+
+- 基线：32c1509；负责人主控/root，main主工作树project，用户授权正式发布、push及构建同步。build.gradle版本已为3.7.0，无需重复改号；合并未发布内容与原3.7.0测试记录为2026-10-10正式发布说明，保留命名空间变更与旧存档风险。
+- 构建：Java17，仓库gradlew.bat，build lootScreeningTest --offline及四个显式API路径；BUILD SUCCESSFUL，52 tasks（50 executed、2 up-to-date）。包含新增盾损耗边界测试、维护接口/命名空间检查及所有check依赖；95项Python源码契约通过。测试中无效配置与结构资源故障是主动注入的回退用例，相关测试通过。
+- JAR检查：Implementation-Version为3.7.0，mods.toml只有hostile_humans_unified一个身份。构建代码提交32c1509，发布文档提交为包含本记录的提交；此前82个本地领先提交及发布记录统一推送origin/main，无强制推送。
+- 部署：确认无相关游戏进程；仅目标E:/MC/game/.minecraft/versions/1.20.1-Forge_47.4.21/mods/hostile-humans-unified-1.20.1-3.7.0.jar。备份E:/MC/Create-Delight/HostileHumansUnified-维护/部署备份/20261010-200934-3.7.0-release-Forge_47.4.21，内含旧JAR与deployment.json；备份旧哈希及部署后新哈希均核验。
+- 新JAR SHA-256：48E675D59057598BFE0F3A5336778565BD58ABC050770E5FDB6CC1A30DBA10A0。没有启动游戏；新存档启动、水面高崖绕行、斧头破盾、耐久附魔与枪手被动盾等游戏内验收由用户进行。
