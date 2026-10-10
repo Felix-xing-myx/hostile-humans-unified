@@ -18,7 +18,7 @@ class ShieldDurabilityContract(unittest.TestCase):
 
     def test_shared_wear_cooldown_requires_actual_wear(self):
         source = (PKG / 'ShieldDurability.java').read_text(encoding='utf-8')
-        self.assertIn('WEAR_COOLDOWN_TICKS = 10', source)
+        self.assertIn('WEAR_COOLDOWN_TICKS = 4', source)
         self.assertIn('Map<Human, Long>', source)
         self.assertIn('now < NEXT_WEAR.getOrDefault(human, Long.MIN_VALUE)', source)
         self.assertIn('if (actuallyWorn(before.getDamageValue(), before.getCount(), shield.getDamageValue(), shield.getCount()))\n'

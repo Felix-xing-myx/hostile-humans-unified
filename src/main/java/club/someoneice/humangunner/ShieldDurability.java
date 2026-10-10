@@ -10,7 +10,7 @@ import net.minecraftforge.common.ToolActions;
 
 /** One enchanted wear transaction and one cooldown for all shields carried by a human. */
 public final class ShieldDurability {
-    private static final int WEAR_COOLDOWN_TICKS = 10;
+    private static final int WEAR_COOLDOWN_TICKS = 4;
     private static final Map<Human, Long> NEXT_WEAR = new WeakHashMap<>();
     private ShieldDurability() { }
 
