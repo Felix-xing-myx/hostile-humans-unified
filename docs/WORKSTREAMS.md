@@ -1,5 +1,13 @@
 # 开发任务与整合记录
 
+## 2026-10-10 3.7.0 配置/医疗/盾牌测试构建与同步
+
+- 用户明确要求构建并同步；基线06ab9037fc56369fecec6b0f1d3574dcbe3f8dee，主控/main/主工作树，目标仅E:/MC/game/.minecraft/versions/1.20.1-Forge_47.4.21。版本保持3.7.0，未推送GitHub。
+- 首次真实编译发现此前重构遗留：AdaptiveCombatGoal引用已移到盾牌控制器的defenseStartTick、缺少ClipContext/HitResult导入，ShieldPickupPolicy无法访问私有库存价值接口。修复为控制器最短防御判断、补导入、同包只读价值接口；不复制举盾状态。
+- Java17、四份显式compileOnly API、离线build lootScreeningTest成功（52任务）；配置文件回归2121项、UnifiedConfig134项、恢复39项、盾牌1121项、可选模组缺席链接454类等构建检查通过；88项Python检查通过。故意损坏配置/结构包的测试会产生预期错误日志并验证回退，不是构建失败。
+- 投放前复查目标游戏进程未运行。备份：../部署备份/20261010-190128-3.7.0-config-medical-shield-Forge_47.4.21，含旧JAR、启动前配置及deployment.json。目标仅保留一份本模组JAR，源/目标SHA256一致：3BEEEC62A949753993F5301155D175A117EF8824D5845CF5726D112A72C0F246。旧文件SHA256：07659D567B6F7B1F981FABADD97ADD3E4E443F6B1471E519CF02D5CABE44772B。
+- 实例配置未手工重写，下次启动由当前配置入口补入新分区；未启动游戏。待验收跳砍/普通移动跳跃独立、医疗消费与持续治疗、盾牌防御/切枪及配置界面可读性。交付提交见本节对应Git提交。
+
 ## 2026-10-10 配置复查、行为参数开放与分组（源码，未构建）
 
 - 基线 `cf68c130c1e4961f06f49d81dc3ce55aeb5c337b`；主控负责源码主工作树/main的全部编辑。config_audit为GPT-6.1 Sol / medium只读审查，不编辑文件、不建立编辑工作树；本项未并行编辑共享文件。

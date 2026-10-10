@@ -421,7 +421,7 @@ public final class HumanLootManager {
         return total;
     }
 
-    private static double inventoryValue(Human human, ItemStack stack) {
+    static double inventoryValue(Human human, ItemStack stack) {
         if (FirstAidCompat.isSupply(stack)) return FirstAidCompat.inventoryValue(stack);
         if (HumanAmmo.isAmmo(stack)) {
             HumanData data = human.getData();

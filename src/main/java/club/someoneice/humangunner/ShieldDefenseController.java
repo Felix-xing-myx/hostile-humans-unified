@@ -102,6 +102,10 @@ public final class ShieldDefenseController {
                 && human.distanceToSqr(threat) > 12.25D);
     }
 
+    boolean hasHeldMinimumCombatGuard() {
+        return human.tickCount - defenseStartTick >= CombatPressurePolicy.MINIMUM_EFFECTIVE_BLOCK_TICKS;
+    }
+
     int beginCombat(LivingEntity threat) {
         release(Owner.BODYGUARD);
         defendingGunfire = underGunfirePressure();

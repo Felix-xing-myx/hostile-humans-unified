@@ -15,7 +15,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayDeque;
@@ -478,7 +480,7 @@ public final class AdaptiveCombatGoal extends Goal {
             // Already in a valid firing band: release promptly so the weapon
             // goal resumes instead of waiting through a long damage reaction.
             if (!shields.underGunfirePressure()
-                    && human.tickCount - defenseStartTick >= CombatPressurePolicy.MINIMUM_EFFECTIVE_BLOCK_TICKS)
+                    && shields.hasHeldMinimumCombatGuard())
                 phaseTicks = 0;
         }
         if (!moved && !shields.underGunfirePressure()) phaseTicks = 0;
