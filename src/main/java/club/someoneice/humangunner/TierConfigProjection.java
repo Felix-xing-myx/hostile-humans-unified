@@ -154,7 +154,7 @@ final class TierConfigProjection {
     private static void enforceOwnership(JsonObject data, boolean rank) {
         JsonObject defaults = UnifiedConfig.defaults();
         if (rank) {
-            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay", "growth", "jump_attack", "first_aid")) data.remove(key);
+            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay", "growth", "jump_attack", "first_aid", "scguns")) data.remove(key);
             removeOptions(object(data, "ai"), List.of("enabled"));
             removeOptions(object(data, "ammunition"), List.of("consume_ammunition"));
             for (String key : object(defaults, "spawning").keySet())

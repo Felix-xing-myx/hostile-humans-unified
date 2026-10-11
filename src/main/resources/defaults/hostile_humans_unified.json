@@ -1829,7 +1829,8 @@
         }
       ],
       "automatic_scguns_armor": true,
-      "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。"
+      "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。",
+      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts."
     },
     "tier1": {
       "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。",
@@ -1989,7 +1990,8 @@
         }
       ],
       "automatic_scguns_armor": true,
-      "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。"
+      "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。",
+      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts."
     },
     "tier2": {
       "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。",
@@ -2144,7 +2146,8 @@
         }
       ],
       "automatic_scguns_armor": true,
-      "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。"
+      "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。",
+      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts."
     },
     "tier3": {
       "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。",
@@ -2283,7 +2286,8 @@
         }
       ],
       "automatic_scguns_armor": true,
-      "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。"
+      "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。",
+      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts."
     }
   },
   "spawning": {
@@ -2827,12 +2831,14 @@
   "scguns": {
     "_说明_中文": "Scorched Guns可选联动；仅调用原生枪械/投掷物/袭击API，移动与战术由本模组管理。修改后重启生效。",
     "enabled": true,
-    "_说明_散布_中文": "AI瞄准精度系数越大越准：原生AI误差锥角=min(25度,5×难度系数÷此值)。武器及配件本身的散布另由原模组数据控制；经验收缩只作用于AI误差，不重复叠加各阶TaCZ角度散布。",
+    "_说明_ai_accuracy_modifier_中文": "AI瞄准精度系数越大越准：原生AI误差锥角=min(25度,5×难度系数÷此值)。武器及配件本身的散布另由原模组数据控制；经验收缩只作用于AI误差，不重复叠加各阶TaCZ角度散布。",
+    "_description_ai_accuracy_modifier_en": "Higher means more accurate: native NPC error is min(25 degrees, 5 * difficulty factor / accuracy). Native weapon/attachment spread remains separate. Experience affects AI error only.",
     "ai_accuracy_modifier": 2.0,
-    "_说明_枪伤_中文": "在原模组原生NPC难度/枪伤系数之后，再乘此值、各阶枪伤系数和战斗培养枪伤系数；不修改玩家枪伤。",
+    "_说明_npc_damage_multiplier_中文": "在原模组原生NPC难度/枪伤系数之后，再乘此值、各阶枪伤系数和战斗培养枪伤系数；不修改玩家枪伤。",
+    "_description_npc_damage_multiplier_en": "Multiplies native NPC gun damage, followed by rank and combat-training factors. Does not change player damage.",
     "npc_damage_multiplier": 1.0,
-    "_说明_能量_中文": "能量枪通过Forge能量能力读取、扣除和充满能量；不足一次射击时按原生换弹时长补能，同样消耗通用弹匣。不给没有充放电能力的枪写假能量。",
-    "_说明_弹匣费用_中文": "每次装满或补满能量按原生武器类型一次计费；普通枪与能量枪相同，战斗中不足一次射击才装填；全局关闭弹药消耗时不扣弹匣。",
+    "_说明_magazines_per_reload_by_type_中文": "每次装满或补满能量按原生武器类型一次计费；普通枪与能量枪相同，战斗中不足一次射击才装填；全局关闭弹药消耗时不扣弹匣。 能量枪通过Forge能量能力读取、扣除和充满能量；不足一次射击时按原生换弹时长补能，同样消耗通用弹匣。不给没有充放电能力的枪写假能量。",
+    "_description_magazines_per_reload_by_type_en": "One payment per native weapon-type reload, including energy recharge through Forge energy capabilities. Native reload duration applies; ammunition master switch can waive magazine consumption.",
     "magazines_per_reload_by_type": {
       "pistol": 1,
       "magnum": 1,
