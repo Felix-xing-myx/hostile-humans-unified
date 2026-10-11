@@ -39,7 +39,7 @@ final class HiredHumanAmmoWarning {
             ItemStack stack = slot == -2 ? human.getMainHandItem()
                     : slot == -1 ? human.getOffhandItem() : data.getInventoryItem(slot);
             bow |= RangedWeaponCustody.isBowOrCrossbow(stack);
-            if (!guns.isGun(stack)) continue;
+            if (!guns.isGun(stack) || !HumanGunAcceptance.accepts(stack)) continue;
             gun = true;
             int cost = HumanAmmo.magazineCost(stack);
             reloadCost = Math.min(reloadCost, cost);

@@ -17,12 +17,24 @@ class GrowthServerContractTest(unittest.TestCase):
         data = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
         self.assertNotIn("equipment_growth", data)
         self.assertTrue(data["growth"]["enabled"])
+        self.assertEqual(data['spawning']['progression']['first_spawn_day_by_tier']['roamer'], 2)
         self.assertEqual(data["growth"]["stage_percent"], [50, 60, 70, 80, 90, 100])
-        for rank, hp in zip(("roamer", "tier1", "tier2", "tier3"), (40, 60, 80, 100)):
+        self.assertEqual(data["growth"]["damage_stage_percent"], [75, 80, 85, 90, 95, 100])
+        for rank, hp in zip(("roamer", "tier1", "tier2", "tier3"), (40, 40, 60, 80)):
             attributes = data["tiers"][rank]["attributes"]
             self.assertEqual(attributes["max_health"], hp)
             self.assertNotIn("health_min", attributes)
             self.assertNotIn("health_max", attributes)
+            self.assertEqual(data['tiers'][rank]['growth_profile']['duration_days'], 50)
+        for rank, attack, trident in zip(("roamer", "tier1", "tier2", "tier3"),
+                                         (1.2, 1.4, 1.6, 1.8), (1, 1.1, 1.2, 1.3)):
+            damage = data['tiers'][rank]['damage_multipliers']
+            self.assertEqual(damage['melee_damage_multiplier'], attack)
+            self.assertEqual(damage['bow_damage_multiplier'], dict(roamer=1.1, tier1=1.2, tier2=1.3, tier3=1.4)[rank])
+            self.assertEqual(damage['crossbow_damage_multiplier'], dict(roamer=1.4, tier1=1.5, tier2=1.6, tier3=1.7)[rank])
+            self.assertNotIn('arrow_damage_multiplier', damage)
+            self.assertEqual(damage['thrown_trident_damage_multiplier'], trident)
+            self.assertEqual(damage['damage_taken_multiplier'], 1)
 
     def test_vanilla_mode_suppresses_one_shared_growth_policy(self):
         self.assertIn("enabled = configuredEnabled && !vanillaMode", read("GrowthConfig.java"))
@@ -30,6 +42,24 @@ class GrowthServerContractTest(unittest.TestCase):
         self.assertIn("new EquipmentGrowthPolicy(enabled,", read("GrowthConfig.java"))
         self.assertIn("new GrowthSnapshot(config.enabled()", read("HumanGrowth.java"))
         self.assertIn("GrowthRewards.configurationReloaded(instance.growth().enabled())", read("UnifiedConfig.java"))
+
+    def test_damage_curve_is_separate_from_health_and_never_used_by_firearms(self):
+        growth = read("HumanGrowth.java")
+        damage = growth.split('static double multiplier(Human human)', 1)[1].split('static double gunSpreadMultiplier', 1)[0]
+        health = growth.split('static double fullHealth(Human human)', 1)[1].split('static void tick', 1)[0]
+        self.assertIn('config.damageStagePercent(', damage)
+        self.assertNotIn('config.stagePercent(', damage)
+        self.assertIn('config.stagePercent(', health)
+        self.assertNotIn('damageStagePercent', health)
+        for backend in ('TaczIntegration.java', 'ScgunsIntegration.java'):
+            text = read(backend)
+            self.assertIn('HumanGrowth.gunDamageMultiplier(attacker)', text)
+            self.assertNotIn('HumanGrowth.multiplier(', text)
+            self.assertNotIn('damageStagePercent', text)
+        gun_curve = read('GrowthConfig.java').split('public double gunDamageMultiplier(int percent)', 1)[1].split('public double damageUnit()', 1)[0]
+        self.assertIn('Math.max(0, Math.min(1,', gun_curve)
+        self.assertNotIn('stagePercent', gun_curve)
+        self.assertIn('!growth.has("damage_stage_percent")', read('SplitConfigFiles.java'))
 
     def test_birth_snapshot_not_recomputed_from_current_date(self):
         source = read("HumanGrowth.java")

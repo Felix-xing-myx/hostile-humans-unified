@@ -4,12 +4,15 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.ModList;
 import java.util.Map;
 
 /** Optional weapon boundary. Public signatures contain only Minecraft/JDK types. */
 public interface GunSupport {
+    record GunChoice(String backend, ResourceLocation id) {}
+
     static GunSupport get() { return Holder.INSTANCE; }
 
     /** Physical gun identity must not depend on the NPC integration toggle. */
@@ -43,7 +46,13 @@ public interface GunSupport {
     default String gunType(ItemStack stack) { return ""; }
     default ResourceLocation gunId(ItemStack stack) { return null; }
     default boolean isBullet(DamageSource source) { return false; }
+    default String backendId() { return ""; }
+    default String backendId(ItemStack stack) { return isGun(stack) ? backendId() : ""; }
+    default Map<String, Map<ResourceLocation, String>> catalogsByBackend() { return Map.of(); }
     default Map<ResourceLocation, String> catalog() { return Map.of(); }
+    default ItemStack createLoadedGun(GunChoice choice) {
+        return backendId().equals(choice.backend()) ? createLoadedGun(choice.id()) : ItemStack.EMPTY;
+    }
     default ItemStack createLoadedGun(ResourceLocation id) { return ItemStack.EMPTY; }
     default boolean hasLoadedAmmo(ItemStack gun) { return false; }
     default Goal goal(Human human) { return new Goal() { public boolean canUse() { return false; } }; }
@@ -55,6 +64,13 @@ public interface GunSupport {
     }
     default double projectileSpeed(ItemStack weapon) { return 0; }
     default double projectileGravity(ItemStack weapon) { return 0; }
+    /** Physics for obstruction prediction; independent of who owns aiming/leading. */
+    default double clearanceProjectileSpeed(ItemStack weapon) { return projectileSpeed(weapon); }
+    default double clearanceProjectileGravity(ItemStack weapon) { return projectileGravity(weapon); }
+    /** Server projectile aim, independent of the rendered muzzle or player camera. */
+    default net.minecraft.world.phys.Vec3 shotTargetPoint(ItemStack weapon, LivingEntity target) {
+        return GunAimPoint.forTarget(target);
+    }
     default boolean ownsShotSpread(ItemStack weapon) { return false; }
     default void registerEvents() {}
 
@@ -65,6 +81,6 @@ public interface GunSupport {
         default boolean ensureDrawn() { draw(); return false; }
         default void clearSprintLock() {}
         default void prepareUrgentShot() {}
-        default void shoot(ItemStack weapon, float pitch, float yaw) {}
+        default void shoot(ItemStack weapon, LivingEntity target, float pitch, float yaw) {}
     }
 }

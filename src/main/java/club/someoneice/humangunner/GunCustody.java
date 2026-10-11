@@ -78,6 +78,36 @@ final class GunCustody {
         if (data == null) {
             return false;
         }
+        int meleeSlot = bestMeleeSlot(data);
+        if (meleeSlot < 0) {
+            return false;
+        }
+
+        registerPrimaryGun(human, gun);
+        CompoundTag ownerData = human.getPersistentData();
+        ownerData.putBoolean(ACTIVE, true);
+        ownerData.putBoolean(CLOSE_DEFENSE, true);
+        ownerData.putInt(RESERVED_SLOT, meleeSlot);
+        ownerData.put(SNAPSHOT, gun.save(new CompoundTag()));
+
+        ItemStack melee = data.getInventoryItem(meleeSlot).copy();
+        // Publish the reservation before moving either actual stack.
+        data.setInventoryItem(meleeSlot, gun);
+        human.setItemSlot(EquipmentSlot.MAINHAND, melee);
+        CloseDefenseHold.begin(human);
+        CloseGunTactics.beginMelee(human);
+        human.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
+        HumanGunner.LOGGER.debug("Gun custody begin npc={} slot={} gun={} melee={}",
+                human.getUUID(), meleeSlot, itemId(gun), itemId(melee));
+        return true;
+    }
+
+    static boolean canBeginPressureDefense(Human human) {
+        return !GunSupport.isGunItem(human.getMainHandItem()) || isActive(human)
+                || human.getData() != null && bestMeleeSlot(human.getData()) >= 0;
+    }
+
+    private static int bestMeleeSlot(HumanData data) {
         int meleeSlot = -1;
         double meleeScore = Double.NEGATIVE_INFINITY;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
@@ -91,36 +121,17 @@ final class GunCustody {
                 meleeSlot = i;
             }
         }
-        if (meleeSlot < 0) {
-            return false;
-        }
-
-        registerPrimaryGun(human, gun);
-        CompoundTag ownerData = human.getPersistentData();
-        ownerData.putBoolean(ACTIVE, true);
-        ownerData.putBoolean(CLOSE_DEFENSE, true);
-        ownerData.putInt(RESERVED_SLOT, meleeSlot);
-        ownerData.put(SNAPSHOT, gun.save(new CompoundTag()));
-
-        ItemStack melee = data.getInventoryItem(meleeSlot).copy();
-        // Publish the reservation first. A synchronous equipment callback can
-        // therefore never observe a gun that has left both owned locations.
-        data.setInventoryItem(meleeSlot, gun);
-        human.setItemSlot(EquipmentSlot.MAINHAND, melee);
-        CloseDefenseHold.begin(human);
-        human.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
-        HumanGunner.LOGGER.debug(
-                "Gun custody begin npc={} slot={} gun={} melee={}",
-                human.getUUID(), meleeSlot, itemId(gun), itemId(melee)
-        );
-        return true;
+        return meleeSlot;
     }
 
     static boolean restorePrimaryGun(Human human, String reason) {
+        if (isActive(human) && CloseGunTactics.keepDefense(human)) return false;
+        if (isActive(human) && human.humanGunner$shieldDefense().shouldSuppressRecovery()) return false;
         if (isActive(human) && CloseDefenseHold.shouldHold(human)) return false;
         ItemStack held = human.getMainHandItem();
         if (AmmoWeaponSelection.usableGun(human, held)) {
             registerPrimaryGun(human, held);
+            if (isActive(human)) CloseGunTactics.returnedToGun(human);
             clearLease(human);
             human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
             return true;
@@ -147,6 +158,7 @@ final class GunCustody {
             // the high-value gun.
             human.setItemSlot(EquipmentSlot.MAINHAND, gun);
             data.setInventoryItem(gunSlot, displaced);
+            if (isActive(human)) CloseGunTactics.returnedToGun(human);
             human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
             HumanGunner.LOGGER.debug(
                     "Gun custody restore npc={} reason={} slot={} gun={} displaced={}",

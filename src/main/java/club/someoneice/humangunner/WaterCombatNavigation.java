@@ -15,13 +15,37 @@ public final class WaterCombatNavigation {
     private static final Map<Human, State> STATES = new WeakHashMap<>();
     private static final class State {
         UUID target;
-        Vec3 anchor;
         int progressTick, nextSearch;
+        double targetDistance;
+        Vec3 anchor, targetSample;
         BlockPos avoid;
         Path route;
         final ShoreProgressTracker progress = new ShoreProgressTracker();
     }
     private WaterCombatNavigation() { }
+
+    /** Surface-only combat must not select a navigator whose nodes require diving. */
+    public static boolean surfaceCombat(Human human) {
+        LivingEntity target = human.getTarget();
+        return human.isInWater() && !human.isFleeing && !human.isSeekingShore()
+                && target != null && target.isAlive();
+    }
+
+    public static boolean isMeleePursuit(Human human, LivingEntity target) {
+        return human.isInWater() && target != null && target == human.getTarget() && target.isAlive() && human.canAttack(target)
+                && !human.isFleeing && human.humanGunner$canMeleeAttack()
+                && !CombatWeaponPolicy.isRangedWeapon(human.getMainHandItem())
+                && !(human.getMainHandItem().getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem)
+                && !(human.getMainHandItem().getItem() instanceof net.minecraft.world.item.TridentItem);
+    }
+
+    /** Ordinary and shielded melee share pursuit; neither installs a second movement goal. */
+    public static boolean controlMelee(Human human, LivingEntity target, double speed) {
+        if (human.level().isClientSide || human.isNoAi() || human.isSleeping() || human.isPassenger()
+                || !isMeleePursuit(human, target) || SoldierOrder.isHoldingPosition(human)) return false;
+        PursuitNavigation.update(human, target, speed);
+        return true;
+    }
 
     public static boolean ownsRoute(Human human) {
         State state = STATES.get(human);
@@ -36,20 +60,35 @@ public final class WaterCombatNavigation {
         State state = STATES.computeIfAbsent(human, ignored -> new State());
         if (!target.getUUID().equals(state.target)) {
             release(human, state);
-            state.target = target.getUUID(); state.anchor = human.position();
+            state.target = target.getUUID();
             state.progressTick = human.tickCount; state.nextSearch = human.tickCount;
+            state.targetDistance = target.position().subtract(human.position()).horizontalDistance();
+            state.anchor = human.position(); state.targetSample = target.position();
             state.avoid = null;
         }
-        if (ownsRoute(human)) return true;
-        if (human.isSeekingShore()) return false; // Another shore owner retains its lease.
-        if (human.distanceToSqr(target) <= maximumRange * maximumRange && human.getSensing().hasLineOfSight(target)) {
-            state.anchor = human.position(); state.progressTick = human.tickCount;
+        boolean canFight = isMeleePursuit(human, target) ? MeleeCombatRange.canStrike(human, target)
+                : human.distanceToSqr(target) <= maximumRange * maximumRange && human.getSensing().hasLineOfSight(target);
+        if (canFight) {
+            if (ownsRoute(human)) release(human, state);
+            state.progressTick = human.tickCount;
+            state.targetDistance = target.position().subtract(human.position()).horizontalDistance();
+            state.anchor = human.position(); state.targetSample = target.position();
             OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.WATER_PURSUIT);
             return false; // A stationary unit already able to attack is not stuck.
         }
-        // Ignore vertical bobbing. Repath success alone is not physical progress.
-        if (human.position().subtract(state.anchor).horizontalDistanceSqr() >= .25) {
-            state.anchor = human.position(); state.progressTick = human.tickCount;
+        if (ownsRoute(human)) return true;
+        if (human.isSeekingShore()) return false; // Another shore owner retains its lease.
+        // Circling is displacement, but not progress toward the opponent.
+        Vec3 toward = target.position().subtract(human.position()).multiply(1, 0, 1).normalize();
+        Vec3 moved = human.position().subtract(state.anchor).multiply(1, 0, 1);
+        boolean chasing = WaterCombatPolicy.chasingMovingTarget(
+                target.position().subtract(state.targetSample).horizontalDistanceSqr(), moved.dot(toward),
+                moved.x * toward.z - moved.z * toward.x);
+        if (WaterCombatPolicy.closingProgress(state.targetDistance,
+                target.position().subtract(human.position()).horizontalDistance()) || chasing) {
+            state.progressTick = human.tickCount;
+            state.targetDistance = target.position().subtract(human.position()).horizontalDistance();
+            state.anchor = human.position(); state.targetSample = target.position();
         }
         if (human.tickCount - state.progressTick < CombatTerrainPolicy.STALL_TICKS
                 || human.tickCount < state.nextSearch) return false;
@@ -100,7 +139,8 @@ public final class WaterCombatNavigation {
         release(human, state);
         state.nextSearch = human.tickCount + 10;
         state.progressTick = human.tickCount - CombatTerrainPolicy.STALL_TICKS;
-        state.anchor = human.position();
+        state.targetDistance = target.position().subtract(human.position()).horizontalDistance();
+        state.anchor = human.position(); state.targetSample = target.position();
     }
 
     private static void release(Human human, State state) {

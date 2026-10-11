@@ -260,7 +260,9 @@ public final class HumanLootManager {
         if (!SoldierPickupPolicy.canCollectNow(human) || !entity.isAlive() || entity.hasPickUpDelay()
                 || !SoldierOrder.allowsLootPosition(human, entity.getX(), entity.getZ())) return false;
         ItemStack ground = entity.getItem();
-        if (ground.isEmpty() || !HumanGunAcceptance.accepts(ground)) {
+        if (ground.isEmpty() || !SoldierPickupPolicy.canCollectItem(human, ground)
+                || !HumanGunAcceptance.accepts(ground)
+                || isEquipment(ground) && !EquipmentCondition.canAutomaticallyCollect(ground)) {
             return false;
         }
         if (SpartanEquipmentCompat.isShield(ground)) return ShieldPickupPolicy.collect(human, entity);
@@ -311,7 +313,9 @@ public final class HumanLootManager {
 
     private static double benefit(Human human, ItemStack stack, StorageSummary capacity) {
         if (stack.isEmpty() || stack.getItem() instanceof IdentityBadgeItem
-                || !HumanGunAcceptance.accepts(stack)) {
+                || !SoldierPickupPolicy.canCollectItem(human, stack)
+                || !HumanGunAcceptance.accepts(stack)
+                || isEquipment(stack) && !EquipmentCondition.canAutomaticallyCollect(stack)) {
             return 0.0D;
         }
         if (SpartanEquipmentCompat.isShield(stack)) return ShieldPickupPolicy.benefit(human, stack, capacity);
@@ -407,10 +411,7 @@ public final class HumanLootManager {
         int enchantmentLevels = 0;
         for (int level : EnchantmentHelper.getEnchantments(stack).values()) enchantmentLevels += level;
         score += enchantmentLevels * 2.5D;
-        if (stack.isDamageableItem()) {
-            score *= 0.55D + 0.45D * (1.0D - (double) stack.getDamageValue() / stack.getMaxDamage());
-        }
-        return score;
+        return EquipmentCondition.value(stack, score);
     }
 
     private static double attribute(java.util.Collection<AttributeModifier> modifiers) {
@@ -451,7 +452,9 @@ public final class HumanLootManager {
                     : foodValue(food);
         }
         if (isEquipment(stack)) {
-            return 35.0D + equipmentScore(stack, preferredEquipmentSlot(stack));
+            // Scale the storage premium too, without applying wear twice to attributes.
+            return EquipmentCondition.value(stack, 35.0D)
+                    + equipmentScore(stack, preferredEquipmentSlot(stack));
         }
         return 0.0D;
     }

@@ -8,6 +8,7 @@ import java.util.*;
 public final class TierConfigFilesTest {
     private static int assertions;
     public static void main(String[] args) throws Exception {
+        checkGunPools();
         checkNewBehaviorSections();
         checkIndependentGunDamage();
         checkImmersiveArmorImport();
@@ -22,6 +23,45 @@ public final class TierConfigFilesTest {
         checkCurrentLayoutOnly();
         checkCreationCollision();
         System.out.println("TierConfigFilesTest: " + assertions + " checks passed");
+    }
+
+    private static void checkGunPools() throws Exception {
+        Path directory = Files.createTempDirectory("human-gun-pools-");
+        try {
+            JsonObject defaults = UnifiedConfig.defaults();
+            SplitConfigFiles.load(directory, defaults, (r, d) -> false);
+            Path folder = directory.resolve(SplitConfigFiles.DIRECTORY);
+            Path globalPath = folder.resolve("global.json");
+            Path rankPath = folder.resolve("tier1.json");
+            JsonObject global = read(globalPath), rank = read(rankPath);
+            check(TierConfigProjection.at(global, "tacz.spawn_pool_source").getAsString().equals("global"), "TaCZ global default");
+            check(TierConfigProjection.at(global, "scguns.spawn_pool_source").getAsString().equals("tier"), "Scguns rank default");
+            check(!rank.getAsJsonObject("tacz").has("gun_blacklist") && !rank.getAsJsonObject("scguns").has("gun_blacklist"),
+                    "both high priority bans are global only");
+            TierConfigProjection.put(global, "tacz.gun_blacklist", JsonParser.parseString("[\"pack:blocked\"]"));
+            TierConfigProjection.put(global, "scguns.gun_blacklist", JsonParser.parseString("[\"scguns:stigg\"]"));
+            TierConfigProjection.put(global, "tacz.gun_whitelist", JsonParser.parseString("{\"pack:custom\":17}"));
+            TierConfigProjection.put(global, "tacz.hired_gun_additional_whitelist", new JsonObject());
+            TierConfigProjection.put(rank, "tacz.gun_whitelist", JsonParser.parseString("{\"pack:rank\":3}"));
+            TierConfigProjection.put(rank, "scguns.gun_whitelist", new JsonObject());
+            Files.writeString(globalPath, global.toString());
+            Files.writeString(rankPath, rank.toString());
+            JsonObject loaded = SplitConfigFiles.load(directory, defaults, (r, d) -> false);
+            check(TierConfigProjection.at(loaded, "tacz.gun_whitelist.pack:custom").getAsInt() == 17, "global custom pool preserved");
+            check(TierConfigProjection.at(loaded, "_tier_file_metadata.tier1.tacz.gun_whitelist.pack:rank").getAsInt() == 3,
+                    "TaCZ rank whitelist survives projection");
+            check(TierConfigProjection.at(loaded, "tiers.tier1.scguns.gun_whitelist").getAsJsonObject().size() == 0,
+                    "explicit empty Scguns rank list remains empty, never refilled");
+            check(!GunSpawnPools.parse(loaded).allows("tacz", new net.minecraft.resources.ResourceLocation("pack:blocked")),
+                    "saved TaCZ ban affects equipment");
+            check(!GunSpawnPools.parse(loaded).allows("scguns", new net.minecraft.resources.ResourceLocation("scguns:stigg")),
+                    "saved Scguns ban affects equipment");
+            check(!read(globalPath).getAsJsonObject("tacz").has("hired_gun_additional_whitelist"), "retired hired pool removed on disk");
+            String stable = Files.readString(globalPath), stableRank = Files.readString(rankPath);
+            SplitConfigFiles.load(directory, defaults, (r, d) -> false);
+            check(stable.equals(Files.readString(globalPath)) && stableRank.equals(Files.readString(rankPath)),
+                    "pool exposure and cleanup idempotent");
+        } finally { cleanup(directory); }
     }
 
     private static void checkNewBehaviorSections() throws Exception {
@@ -96,7 +136,7 @@ public final class TierConfigFilesTest {
             TierConfigProjection.put(rank, "ammunition.consume_ammunition", new JsonPrimitive(false));
             TierConfigProjection.put(rank, "tacz.enabled", new JsonPrimitive(false));
             TierConfigProjection.put(rank, "tacz.damage_multiplier", new JsonPrimitive(2.5));
-            TierConfigProjection.put(rank, "damage_multipliers.arrow_damage_multiplier", new JsonPrimitive(3));
+            TierConfigProjection.put(rank, "damage_multipliers.bow_damage_multiplier", new JsonPrimitive(3));
             Files.writeString(modules.resolve("tier1.json"), rank.toString());
             UnifiedConfig loaded = new UnifiedConfig(SplitConfigFiles.load(directory, defaults, (r, d) -> false));
             check(loaded.recruitmentLimit(1) == 123 && loaded.tier("tier1").bowDamage() == 3
@@ -145,10 +185,11 @@ public final class TierConfigFilesTest {
             rank.getAsJsonObject("potions").add("bonus", json("{\"chance\":1}"));
             rank.getAsJsonObject("damage_multipliers").addProperty("bow_damage_multiplier", 9);
             rank.getAsJsonObject("damage_multipliers").addProperty("arrow_damage_multiplier", 2);
+            rank.getAsJsonObject("damage_multipliers").remove("crossbow_damage_multiplier");
             Files.writeString(rankPath, rank.toString());
             var loaded = new UnifiedConfig(SplitConfigFiles.load(dir, defaults, (r, data) -> false));
-            check(loaded.tier("tier1").bowDamage() == 2,
-                    "rank damage is the sole outgoing source");
+            check(loaded.tier("tier1").bowDamage() == 9 && loaded.tier("tier1").crossbowDamage() == 1.5,
+                    "explicit bow survives while missing crossbow uses its independent default");
             global = JsonParser.parseString(Files.readString(globalPath)).getAsJsonObject();
             damage = global.getAsJsonObject("damage");
             check(!damage.has("arrow_damage_multiplier") && !damage.has("human_bow_damage_multiplier") && !damage.has("bow_velocity_damage_multiplier")
@@ -160,7 +201,7 @@ public final class TierConfigFilesTest {
                     && !global.getAsJsonObject("spawning").has("_description_roamer_fix_en"), "unused global controls and explanation removed");
             rank = JsonParser.parseString(Files.readString(rankPath)).getAsJsonObject();
             check(!rank.getAsJsonObject("potions").has("bonus")
-                    && !rank.getAsJsonObject("damage_multipliers").has("bow_damage_multiplier"), "retired rank controls removed on disk");
+                    && !rank.getAsJsonObject("damage_multipliers").has("arrow_damage_multiplier"), "retired rank controls removed on disk");
             check(!rank.has("normal_movement_speed") && !rank.has("gun_spread_degrees")
                     && !rank.getAsJsonObject("movement").has("retreat_movement_speed")
                     && !rank.getAsJsonObject("ai").has("_说明_旧原生行为_中文"), "ignored tier controls and obsolete heading removed");
@@ -338,7 +379,7 @@ public final class TierConfigFilesTest {
             for (int i = baseSize; i < armor.size(); i++) {
                 var row = armor.get(i).getAsJsonObject();
                 check(row.get("requires_mod").getAsString().equals("immersive_armors"), "import retains mod requirement");
-                check(row.get("weight").getAsInt() == (rank.equals("tier3") ? 38 : 1), "original tier armor weight retained");
+                check(row.get("weight").getAsInt() == 1, "balanced default armor weight retained");
             }
             armor.remove(armor.size() - 1);
             JsonArray deleted = armor.deepCopy();

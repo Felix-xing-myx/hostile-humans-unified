@@ -46,6 +46,7 @@ public final class BetterCombatMeleeCombat {
                           int cooldownTicks, String animationName, float animationUpswing) {}
     public enum Shape { FORWARD_BOX, VERTICAL_PLANE, HORIZONTAL_PLANE }
     public record AttackPlan(Profile profile, List<LivingEntity> targets) {}
+    record CreeperForecast(Profile subsequent, double firstDamageMultiplier) {}
 
     private static final class ComboState {
         private ItemStack weapon = ItemStack.EMPTY;
@@ -122,6 +123,33 @@ public final class BetterCombatMeleeCombat {
         if (!isEnabled(human) || !hasWeaponProfile(human)) return 0;
         Profile current = profile(human);
         return Math.max(1, Math.round(current.cooldownTicks() * current.animationUpswing()));
+    }
+
+    /** Conservative combo forecast; only queried during a nearby creeper's active fuse. */
+    static CreeperForecast creeperForecast(Human human, LivingEntity target) {
+        Profile current = profile(human);
+        double minimumDamage = current.damageMultiplier();
+        float maximumUpswing = current.animationUpswing();
+        Object attacks = call(weaponAttributes(human), "attacks");
+        if (attacks != null && attacks.getClass().isArray()) {
+            int length = Array.getLength(attacks);
+            if (length > 64) return new CreeperForecast(new Profile(current.range(), current.shape(), 0,
+                    current.angleDegrees(), current.cooldownTicks(), "", 1), 0);
+            for (int i = 0; i < length; i++) {
+                Object step = Array.get(attacks, i);
+                minimumDamage = Math.min(minimumDamage, Math.max(0, number(call(step, "damageMultiplier"), 1)));
+                maximumUpswing = Math.max(maximumUpswing,
+                        (float) Math.min(1, Math.max(0.05, number(call(step, "upswing"), 0.5))));
+            }
+        }
+        // Reuse the actual attack hitbox rather than penalizing an isolated creeper as a full crowd.
+        // Avoidance rechecks this estimate as the fuse advances and nearby targets change.
+        AttackPlan plan = createAttackPlan(human, target);
+        int targets = plan == null ? 65 : Math.max(1, plan.targets().size());
+        double sweep = sweepDamageMultiplier(human, targets);
+        return new CreeperForecast(new Profile(current.range(), current.shape(), minimumDamage * sweep,
+                current.angleDegrees(), current.cooldownTicks(), "", maximumUpswing),
+                current.damageMultiplier() * sweep);
     }
 
     public static boolean applyDamageMultiplier(Human human, Profile profile, int targetCount,

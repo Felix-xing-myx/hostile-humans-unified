@@ -1129,3 +1129,519 @@
 - 双枪：HumanRenderer把实际渲染bodyYaw传给HumanPlayerModel；焦燃瞄准超过躯干±25度的部分由完整模型视觉转向吸收，setupAnim抵消同一转向。ScgunsNativePose双枪把两个肩枢轴作为同一刚体转向，保留单次原生枪体/附件/火光渲染，不拆枪、不修改AI或命中。
 - 依据：当前本地Minecraft ItemRenderer与BlockEntityWithoutLevelRenderer字节码、原版shield.json、斯巴达盾牌烘焙模型；无网络资料依赖。
 - 验证：119项Python源码/配置/原生JAR接口检查通过、git diff --check通过；未构建、未同步、未推送、未启动游戏。待验收原版/斯巴达背盾上下方向与位置、左利手/蹲伏/鞘翅、大角度双枪及枪口火光；未知资源包的自定义模型仍需视觉确认。
+
+## 2026-10-11 Obsidian 机制、数值与联动知识库
+
+- 用户授权创建 `E:\个人知识库\Hostile Humans Unified` 的全面中文分层 Markdown 文档，并记录每次开发同步要求；允许子 Agent，复杂分析仅 gpt-6.1-sol 中/低思考。
+- 基线 `e18ee5ba488d84cbf2324b80bacba5bb5b6c897d`；主控 `/root`，main主工作树；开始已有未跟踪 `src/test/python/__pycache__/`，保留不动。
+- 分工：systems_docs（gpt-6.1-sol medium）独占知识库01-人类与士兵；combat_docs（同设置）独占02-战斗与生存；compat_plans（同设置）独占03-模组联动及05-计划与验收。三者只读源码，不开源码工作树、不修改共享源码、不构建、不提交。主控负责04-配置与数值、06-维护与来源、导航及仓库规则/生成工具。
+- 不改游戏功能、实例配置/JAR；不构建、不启动游戏、不推送。当前源码、资源及最新工作记录为依据；旧配置和旧发布说明只作历史参照。
+- 状态：整理中；完成后追加覆盖、静态文档验证与限制。
+
+- 用户追加授权清理过时说明：三Agent分别维护原联动/成长补给/盾地形接口MD，仍不修改Java。主控修CONFIGURATION、README中英文、PERFORMANCE_AUDIT、COVER和AGENTS旧FirstAid只读API示例路径；默认资源仅修盾冷却与成长结算中英帮助，语言资源仅修付款错误提示指向global.json。
+- 交付：知识库34份MD、六类主题目录；五配置默认值展开1082叶子条目（共享值和候选逐项计算），20基础配方、25注册物品、26结构、41基础箱表索引与实体战利品、完整中文对话/消息。Java内部临时算法常量、结构NBT逐方块内容与运行时随机结果不是逐行复刻范围，已在覆盖页说明。
+- 旧文档：维护根部五份9月配置/交接资料移至历史文档/2026-09旧交接，保留原文与历史哈希；重写根部接管说明/配置说明为当前入口，新增历史索引。未删除备份、JAR、实例配置或存档。
+- 验证：34份MD仅Markdown，Wiki链接及本地来源链接有效、无重复页面名、代码围栏成对；所有资源JSON解析通过；导出工具--check核对六份附录一致；默认JSON去说明后的结构与HEAD完全相同；两语言资源仅付款错误提示键变化；git diff --check通过。没有Java/Gradle编译、构建、实例同步、游戏测试、Git提交或推送。
+- 待办边界：最新背盾/双枪修正和本次帮助文字仍未重构建；Scguns+女仆无TaCZ的注册门控静态疑点列入游戏验收，未证实故障、不擅自改功能。后续开发必须同任务同步知识库，并记录来源SHA/状态。
+- 状态：知识库与旧说明整理完成；规则是开发时同步，不是后台实时监听。
+
+
+## 2026-10-11 全局/分阶枪械出生池与高优先级禁用
+
+- 用户授权：TaCZ/Scguns各自可选global或tier出生白名单；空表按自动开关收录，非空严格限制；雇佣后使用全部可识别枪，增加两套独立全局最高优先级黑名单，同时限制生成和雇佣装备。
+- 基线完整SHA：`e18ee5ba488d84cbf2324b80bacba5bb5b6c897d`；负责人主控`/root`；主工作树`E:\MC\Create-Delight\HostileHumansUnified-维护\project`、分支main；本轮顺序实施，不开新编辑会话。接入前已有知识库/说明/默认帮助/语言提示修改与未跟踪导出工具、缓存，保留；可能重叠文件在临时目录hhu-gunpools-baseline-tj889758留存基线副本。
+- 范围：GunSupport/CompositeGunSupport提供实际后端目录与带提供者的GunChoice，GunSpawnPools保存不可变选择/禁用快照；UnifiedConfig接入；HumanGunnerConfig按本阶池再按既有类型权重选择，FirearmSpawnEquipment按提供者创建枪，避免枪包ID碰撞误交另一后端。
+- 装备接口：HumanGunAcceptance统一拾取及雇主输入，AmmoWeaponSelection/GunCustody既有可用性链排除禁用枪，HumanAmmo禁止换弹付费/可用检查，GunnerGoal与Composite最终开火兜底；补给提示忽略被禁用枪。已有物品不删除，沿既有替换/收纳/满包掉落规则保留。
+- 配置：TaCZ默认global且空表，Scguns默认tier且分阶精选候选；独立global gun_blacklist默认[]，全局/tier不合并、不回退；空表仅在auto_add_new_guns为true时发现，非空/全0/无效表不自动扩充。保留玩家显式名单/空表，既有配置只补新字段、清理退休雇佣追加名单及其字段帮助。类型权重、配枪概率、枪伤与成长保持既有职责。
+- 文档：更新CONFIGURATION、Scguns联动说明、CHANGELOG及Obsidian枪械战斗/联动/配置索引/验收/维护来源；运行导出工具刷新六份默认附录并--check一致。未改测试实例配置。
+- 验证：123项Python静态/资源/原生JAR接口检查通过（含实际Scguns JAR中分阶候选存在性）；全部打包JSON解析、知识库Wiki链接、git diff --check核对。新增Java回归覆盖全局/分阶互斥、空池与显式禁用、独立高优先级禁用、后端ID碰撞、配置保存/空池保留和雇佣接受；本轮未编译或执行Java测试。
+- 交付状态：源码及文档在当前工作区，尚未提交；保留其他任务未提交修改。本轮没有Gradle构建、实例同步、游戏测试或push。待用户要求构建后运行Java回归，再验收单装/同装、手动/Shift输入、拾取、已有枪切换和保存重启。
+
+
+## 2026-10-11 16:47 3.7.0枪械池与黑名单测试构建同步
+
+- 用户要求“构建同步”；主控main当前工作区（基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加未提交源码/资源）。包含最新背盾/双枪修正、枪械池/禁用及当前帮助文字。没有混入其他任务到Git提交，本轮未提交或推送。
+- 首次编译发现HumanPlayerModel.updateStance局部bodyYaw与新增参数重名，局部改为movementBodyYaw，保留原计算；弹药开关字节码测试补齐新增accepts调用模拟及禁用枪在免费/收费模式均拒绝、不扣弹匣的12项断言。
+- Java17离线build lootScreeningTest成功：52任务，48执行、4已是最新；UnifiedConfigTest 144、TierConfigFilesTest 2280、SoldierCombatModeTest 50、HumanAmmoConfigSwitchTest 70项检查通过；可选依赖缺席链接478个核心类。123项Python检查、六份附录一致性及git diff --check通过。故意损坏配置/结构的回退测试出现预期错误日志，测试通过。
+- 替换前复查无游戏进程；仅同步Forge 47.4.21测试实例hostile-humans-unified-1.20.1-3.7.0.jar，3985591字节；旧JAR与配置备份：E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261011-164712-3.7.0-gun-pools-blacklists-Forge_47.4.21。旧JAR哈希319D7D6F5644696FA3388E16F38A07E18E3E8E4FD9905A53936C0040F23C42FE。
+- 新构建/目标SHA-256一致：`6F9D0E0DAA873AD3E5BE987E63241B4933F925039FF72FA181E975E43094E08B`。deployment.json保存在备份目录；未手工修改实例配置，启动新版时配置加载器仅补新字段、保留自定义池并清理退休项。
+- 未启动游戏、未推送；待游戏验收全局/分阶出生、雇佣输入/Shift/拾取禁用、禁用库存枪切换及最新背盾双枪视觉。
+
+
+## 2026-10-11 原版背盾正反面修正
+
+- 用户反馈测试JAR原版盾腕带朝外；主控/root顺序修正，main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加现有工作区；保留所有其他未提交修改。
+- 仅HumanAnimatedItemInHandLayer.renderBackShield的Items.SHIELD专用分支，在中心补偿之前追加局部Y轴180度转向；保持躯干锚点、25度倾斜、上下朝向、原生旗帜/附魔渲染。普通烘焙/斯巴达盾不增加该旋转，TaCZ/Scguns仍共用背负入口。
+- 更新CHANGELOG、盾牌说明和知识库盾牌/枪械联动、维护与验收状态。静态变换顺序核对与既有Python检查；未构建、未同步、未启动游戏、未推送。上次已投放3.7.0不会自动包含本修正，正反面最终效果待重构建后游戏验收。
+
+
+## 2026-10-11 斯巴达塔盾背负独立渲染适配
+
+- 基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前工作区；主控/root顺序修改main主工作树；保留其他任务修改。共享入口HumanAnimatedItemInHandLayer、独立客户端BackShieldPose由主控负责。
+- 文件范围：上述两个客户端类、既有test_scguns_contract、CHANGELOG、盾牌及Scguns联动说明、知识库相关页。用户未要求构建，本次不运行Gradle或替换实例。
+- 交付：当前工作区未提交源码；123项Python检查通过，未Java编译或游戏测试。证据与接口如下。
+
+## 2026-10-11 斯巴达塔盾背负位置及正反面（源码待构建）
+
+实际检查SpartanShields 3.1.1：basic_shield_base使用builtin/generated；tower_shield_base使用builtin/entity，TowerShieldBEWLR原生渲染中对Y/Z翻转，塔盾模型以零为中心。此前把所有非原版盾当烘焙物品，遗漏塔盾的中心补偿，形成截图中的侧移与朝向错误。
+
+背负定位改由BackShieldPose统一入口分三条路径：原版盾；斯巴达盾（按Minecraft当前BakedModel.isCustomRenderer区分塔盾实体模型和普通烘焙模型）；其他盾的既有烘焙回退。原版与斯巴达实体盾分别进行上下/正反面校正并抵消ItemRenderer的半格原点平移；普通斯巴达盾不套实体中心补偿。按实际模型识别，未硬编码具体塔盾物品列表、未引用斯巴达私有类。
+
+保留躯干锚点、25度倾斜及鞘翅偏移；旗帜、附魔和额外模型层仍由对应原生渲染器绘制。TaCZ/焦燃共用入口，服务端库存、防护和耐久不变。123项Python检查及差异检查通过；本次未构建、未同步、未启动游戏，待视觉验收原版盾/基础盾/塔盾、左右手、蹲伏、鞘翅及资源包覆盖。
+
+## 2026-10-11 统一背盾显示配置
+
+负责人：主控；main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d；保留全部已有修改，未使用其他编辑会话。范围：BackShieldPose、HumanAnimatedItemInHandLayer、ClientRenderer、客户端back_shields资源、契约检查和说明。共享渲染文件由主控顺序接入。接口：资源重载发布不可变规则快照，显示层统一resolve；未知模型使用原生third_person，offhand回退。交付：未提交、未构建、未同步；原版/斯巴达数据与未知盾需游戏视觉验收。
+
+验证：123项Python契约/资源检查通过；三个新增JSON解析、实体中心补偿等价与斯巴达模型筛选互斥检查通过；git diff --check通过。未执行Java编译和游戏内测试。
+
+## 2026-10-11 Sulfurhead伤害兼容
+
+负责人主控；main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d；保留已有修改。范围：ScgunsSulfurheadDamageMixin、OptionalMixinPlugin、Mixin清单、焦燃契约检查、文档。共享文件顺序接入；接口：只对真实Human来源调用Monster.hurt，可选目标方法及父类检查。未提交；未构建同步；游戏伤害/事件/成长归属待验收。
+
+验证：124项Python契约/资源/API签名检查通过，git diff --check通过。未执行Java编译、Mixin运行注入或游戏验收。
+
+## 2026-10-11 17:15 构建与测试投放完成
+
+版本保持3.7.0。已包含统一背盾资源配置及Sulfurhead人类伤害放行，并保留此前枪械池/黑名单改动。Java17离线build lootScreeningTest成功：52任务，50执行、2已是最新；124项Python检查通过；482个核心类在无可选模组条件下链接成功。成品字节码确认Sulfurhead修补调用已映射的Monster.m_6469_，没有递归调用自身伤害覆盖。
+
+检测测试实例无运行中游戏进程后，备份旧JAR及配置，替换唯一3.7.0 JAR并核对SHA-256一致。目标：E:/MC/game/.minecraft/versions/1.20.1-Forge_47.4.21/mods/hostile-humans-unified-1.20.1-3.7.0.jar；大小3,995,873字节。
+
+SHA-256：E44F6DAB456BADDBF940EE39A78A9FC9694EA1674308496D5D6E40B258C46C99。
+备份：E:/MC/Create-Delight/HostileHumansUnified-维护/部署备份/20261011-171514-3.7.0-back-shields-sulfurhead-Forge_47.4.21。
+源码基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前未提交工作区。未编辑实例配置、未启动游戏、未推送。Mixin实际运行注入、Sulfurhead近战/弓弩/两种枪械伤害及背盾正反面/资源包重载仍待用户游戏验收；自动化成功不代表这些行为已验证。
+
+## 2026-10-11 原版背盾贴近调整（源码待构建）
+
+仅修改back_shields/vanilla.json中minecraft:shield的局部Z平移：0.5改为0.4375，向躯干贴近1/16格（一个模型像素）。保留高度、倾角、正反面、缩放和鞘翅后移；斯巴达两份配置未修改。通过现有独立物品配置实现，不新增渲染分支。JSON解析通过、斯巴达配置修改前后哈希一致；本轮未构建同步，贴近程度及是否穿模待游戏视觉验收。
+
+负责人主控；main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加既有未提交修改；范围：原版背盾资源及相关说明；公共接口不变；未提交。
+
+## 2026-10-11 闲置注视玩家调整（源码待构建）
+
+原HumanLookAtPlayerGoal复制了原版注视逻辑，但实际构造默认概率0.8、注册距离64格，造成闲置时连续盯人。现复用原版LookAtPlayerGoal：范围4格、每次候选检查2%概率、原版短暂注视时长；结束后等待100～200服务器tick（5～10秒）才允许下一次候选检查。保留RandomLookAroundGoal，空闲间隔可以自然转头。并非按秒计算2%概率，不保证固定周期看玩家。
+
+仅在无战斗目标时启动或继续，战斗瞄准交由近战/弓弩/枪械Goal；没有修改跟随、护卫、导航、仇恨与创造模式规则。注视是低优先级LOOK任务，其他行为可以抢占；被抢占后同样进入间隔。全部在服务端AI中执行，所有阶级及野生/已雇佣单位均适用。
+
+来源：HumanLookAtPlayerGoal.java、Human.registerGoals；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d上的当前工作区。未构建、未同步。待游戏验收：创造模式及友好玩家在4格外不再被闲置注视，近处偶尔短暂注视，转头间隔与战斗/跟随无冲突。
+
+负责人主控；main主工作树；范围限上述两个Java文件及文档；公共Human.java顺序修改；保留既有背盾等未提交内容；未提交。
+
+本轮验证：124项既有Python检查与差异检查通过；不包含新注视行为的运行测试，未编译或启动游戏。
+
+## 2026-10-11 焦燃人类开火音量与换弹声音（源码待构建）
+
+ScgunsIntegration：本模组人类开火音量在之前计算结果基础上乘0.5，公式为max(0,焦燃mobGunfireVolume−0.5)×0.5。原生配置依旧生效；不修改玩家、焦燃原生生物或TaCZ音量。
+
+换弹过去已有固定手枪声音入口；现改为实际Gun.getSounds().getReload()与getCock()：成功支付并建立换弹事务后播放一次换弹声，装填完成时播放一次上膛声。优先使用已注册SoundEvent保留原声配置；原生定义为空时沿用通用手枪对应音效。由服务端在士兵位置向附近玩家广播，HOSTILE分类，换弹/上膛音量保持1。后台换弹仍以士兵位置为声源，不在每tick或换武器时重复播放。未成功开始换弹（例如缺弹匣）不播放。客户端不增加换弹动画或动画计时器。
+
+通过已安装ScorchedGuns-0.5.5的javap确认公开声音读取接口；未修改上游JAR。没有证据能仅凭源码判定用户听不到旧声音的唯一原因，实际响度与播放仍需游戏复测。源码基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前未提交工作区；本轮未编译、构建或同步。
+
+负责人主控；main主工作树；范围ScgunsIntegration、焦燃API契约检查及说明；共享文件顺序接入；公共接口无变化；保留其他未提交修改。
+
+验证结果：124项Python检查通过（包括新增原生getReload/getCock公开签名核对），差异检查通过；尚未Java编译与游戏音频验收。
+
+## 2026-10-11 焦燃人类独立全局枪伤（源码待构建）
+
+全局文件global.json的scguns.human_gun_damage_multiplier，默认0.5，即保留50%伤害；0无枪伤，1不额外减伤，允许0～100。替代旧scguns.npc_damage_multiplier，旧项及对应说明由当前布局整理移除，不沿用旧含义或旧值、不生成继承文件。已有新项的自定义值保留；启动加载时将缺失的新项写入当前全局文件。各阶scguns.damage_multiplier默认1及经验枪伤加成继续生效，TaCZ不变。
+
+实查上游AIGunEvent：子弹additionalDamage和持久字段AIDamageScale均包含“原生难度倍率×mobGunDamageMultiplier”；ProjectileEntity.getDamage还会乘通用globalDamageMultiplier；bullet伤害类型又设置了when_caused_by_living_non_player，使玩家受伤再经原版难度缩放。不能只在最终伤害事件除以原倍率，否则零倍率、简单难度的非线性公式和附加伤害都会有问题。
+
+实现：在Forge EntityJoinLevelEvent的服务端入口，仅对Human发射且存在原生AI缩放标记的焦燃ProjectileEntity，将附加伤害通过公开Gun.getAdditionalDamage/ProjectileEntity.setAdditionalDamage还原，移除AIDamageScale；去标记使重新加入世界不会重复处理。其余弹射物字段、物理、特效、射手归属不变。不修改全局上游配置，不重新实现射击或弹道。AIDamageScale是上游没有公开setter的原生数据字段，访问集中在这一个边界，未来上游修改该结构仍需复核。
+
+其次经原版DamageSource.scalesWithDifficulty（1.20.1 SRG m_7986_）窄Mixin，仅对Human来源的焦燃子弹返回false，避免命中玩家时再缩放；核心Mixin通过ScgunsCompat隔离可选模组类。玩家射击、焦燃原生生物、其他生物/弹射物的难度行为不变。
+
+最终仍保留武器/配件/附魔、焦燃通用globalDamageMultiplier、其他模组伤害事件、护甲/抗性。全局0.5 × 本阶scguns.damage_multiplier × 战斗经验枪伤加成仅在现有LivingHurtEvent入口应用一次，不替换伤害类型，不直接扣血，不伪装成玩家。
+
+验证：125项Python契约/资源/API签名检查通过；新覆盖公开getWeapon/setAdditionalDamage/Gun.getAdditionalDamage及两层缩放入口范围。尚未Java编译、构建或同步；需游戏验收简单/普通/困难下同武器同目标同护甲伤害一致（随机暴击/部位等因素须固定），分别测试目标为玩家与怪物、附魔附加伤害、原生NPC倍率为0、其他生物原规则、分阶倍率/经验与友军保护。客户端无需单独计算伤害。
+
+源码基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前工作区；来源ScgunsIntegration、ScgunsHumanDifficultyMixin、ScgunsCompat、ScgunsSettings、SplitConfigFiles、TierConfigProjection及打包默认配置。
+
+负责人主控；main主工作树；相关共用配置文件由主控顺序接入，保留其他已有修改；未提交。
+
+## 2026-10-11 焦燃投掷物全开放与共享战术池（源码待构建）
+
+默认使用名单开放当前焦燃10种徒手投掷物：grenade、stun_grenade、nail_bomb、gas_grenade、choke_bomb、molotov_cocktail、hellfire_bomb、swarm_bomb、beacon_grenade、shotball。GrenadeItem原生工厂已覆盖其StunGrenadeItem子类，新增Shotball的原生公开实体构造接入；Shotball按原生0.04重力计算，其余沿用0.03，拖曳0.99。信号枪发射的袭击信号弹及榴弹枪弹药不是徒手投掷物，不纳入该库存投掷入口。仍消耗真实库存，由原生实体负责爆炸/特效；不增设自动无限投掷或第二套攻击目标。
+
+所有阶级potions.tactical.pool新增item-only条目：scguns:grenade权重3、scguns:stun_grenade权重1、scguns:nail_bomb权重3。药水六种权重5/1/10/2/5/8不变，合计38。药水条目仍填写item+potion+weight；投掷物填写item+weight，省略potion。新生人类在同一池中逐件抽取，数量合计：流浪者1～2、一阶2～4、二阶4～7、三阶6～8。并非另外附送这些数量的手榴弹；没有保证每个单位都有手榴弹。不改变恢复药水池与恢复药水数量。
+
+非药水仅允许已接入、全局允许且功能开启的焦燃投掷物；恢复池仍拒绝item-only条目。可选物品在出生时解析，未安装焦燃或投掷被禁用时剔除候选后重新按剩余权重抽取，不减少请求的战术总数。背包满时沿用插入失败停止规则。初始补给仍受分阶potions.enabled与ai.item_recovery_enabled控制，不给已生成单位补发。投掷物作为出生库存进入现有死亡掉落流程，不另加死亡战利品表，避免重复制造掉落。
+
+TacticalSupplyDefaults只更新与此前完整默认列表精确相同的战术池/投掷使用名单；玩家非默认名单、自定义权重、空池与数量设置保留。当前配置原位更新，不生成继承或更新文件。全局使用名单与分阶出生池分开：默认允许使用全部10种，默认出生仅有三种；玩家可自行调整两者。
+
+战斗使用保留冷却、许可、视线、友军安全与弧线检查。修复候选遍历：一种道具安全检查失败时继续寻找其他候选，防止毒气弹的较大安全半径阻止可用手榴弹。服务器拒绝生成实体时仍不扣物品、不重复重试。群体战斗/火焰/毒气/蜂群的实际伤害由焦燃负责，投出后队友进入区域仍可能危险。
+
+验证：126项Python契约/默认配置/API检查通过，确认10个物品均在实际JAR注册表、Shotball公开构造存在、三种出生权重和总数不变。已补Java配置测试覆盖混合池解析、恢复池拒绝、默认更新与自定义/空池保留，但本轮未编译运行Java测试。未构建、未同步、未启动游戏。待验收自然新生库存、未安装焦燃、不同投掷物效果/弹道、友军安全、耗材与死亡库存掉落。
+
+来源：SpawnPotionConfig、ScgunsThrowables、TacticalSupplyDefaults、SplitConfigFiles、RecoverySupplies、默认配置；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前未提交工作区。
+
+负责人主控；main主工作树；公共配置由主控顺序接入，保留其他任务修改；未提交。
+
+
+## 2026-10-11 17:59 3.7.0 当前源码构建与测试实例同步
+
+用户明确授权构建并同步，主控在main主工作树执行，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前未提交修改，未提交或推送。包含上次17:15构建后的原版背盾贴近、原版式闲置短暂注视、焦燃开枪音量减半及换弹/上膛声音、焦燃独立难度伤害过滤（全局默认0.5）、10种徒手投掷物与三种野外共享战术池。以上源码待构建记录现已完成编译与部署，游戏行为仍待用户验收。
+
+Java17离线build lootScreeningTest成功，耗时1分9秒，52个任务（50执行、2最新）；包括混合战术池、默认更新/自定义保留测试与484核心类无可选依赖加载检查。Python126项：123通过、3跳过；六份知识库默认附录一致。配置/结构异常日志来自故意损坏输入的回退测试，测试最终通过。
+
+替换前检查测试实例未运行，备份旧JAR及当前模组配置至 E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261011-175907-3.7.0-scguns-tactical-Forge_47.4.21 。仅同步 E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\hostile-humans-unified-1.20.1-3.7.0.jar ，大小3,999,383字节，源/目标SHA-256均为345FB65478472151B94B07160E21B3C75D4E43B7B2D97DEEA77B4E66586F486F。旧哈希E44F6DAB456BADDBF940EE39A78A9FC9694EA1674308496D5D6E40B258C46C99。未手工修改实例配置，启动时按当前配置入口处理精确默认列表更新并保留自定义值；未启动游戏，未改变Java运行设置，先前JVM崩溃未作为本次修复处理。
+
+待游戏验收：不同难度下焦燃伤害、开枪/换弹声音、10种投掷物耗材与友军安全、新生人类三种投掷物/药水共享数量、原版背盾距离及闲置注视。
+
+
+## 2026-10-11 焦燃声音与玩家节奏换弹修正（源码待构建）
+
+用户实测17:59构建版声音调整未生效，追加要求换弹与玩家节奏一致；已明确接受“复用原生公开参数及动画时长，由士兵现有控制器执行”，不直接调用只接受Player的玩家入口。
+
+声音：测试实例mobGunfireVolume=8，旧入口将7.5减半为3.75仍超过混音上限；普通SoundEvent通道也没有使用焦燃的换弹距离。现集中到ScgunsSounds，使用公开PacketHandler/FrameworkNetwork/S2CMessageGunSound：射击和换弹分别读取焦燃gunShotMaxDistance/reloadMaxDistance，服务端附近广播，HOSTILE分类；muzzle=false避免重复火光，reload=true正确选择换弹衰减。原生GunShotSound对输入音量及距离因子作平方，因此枪声参数为sqrt(min(1,max(0,mobGunfireVolume−0.5))×0.5)，在未饱和输入下保留比例、饱和输入下近距离最大增益0.5，避免再次因大数截顶而听不出变化。换弹/上膛读取Gun.Sounds，缺项用原生通用手枪声音，输入1。未修改玩家、原生NPC、TaCZ声音或全局焦燃配置。换弹仍需实测是否清晰可闻，不能仅凭静态检查宣称所有静音原因已消除。
+
+换弹：旧代码用reloadTimer除以getModifiedReloadSpeed(stack,1)，误把原生“所需时间的修正”当作速度；且忽略动画完成门槛。现在ScgunsReloadTiming使用GunEnchantmentHelper.getRealReloadSpeed/getMagReloadSpeed、武器容量/reloadAmount和现有RELOAD_SPEED属性（没有该属性时按1），不重复手写附魔/配件公式。ScgunsReloadPlan按原生动画length×20×修正后时间/原始reloadTimer建立阶段。弹匣式是一整段；manual为准备、按缺弹量及reloadAmount重复装填、收尾，逐次加入真实枪内弹药，收尾期间仍禁止射击。通用弹匣只在建立整笔事务时扣一次，能量枪一次计费/结束充满，不按FE数量建循环。闲置低于25%及战斗打空规则保持。
+
+原生动画是公开格式资源而不是玩家换弹API：从焦燃JAR assets/<namespace>/animations/item/<item>.animation.json只读按需缓存，不扫描整个JAR、不加载客户端或Gecko动画控制器、不访问私有字段、不伪造玩家。当前原生枪均具备此路径；未知/缺失/无效资源退回公开时间参数。选择对应carbine动画（如存在）。客户端资源包对动画的覆盖不会改变服务端计时，非标准路径的额外枪包需要复核该资源边界；此项不保证未来任意架构更新自动兼容，也未复制每一条原生动画音效关键帧，仅对齐阶段计时并广播换弹/上膛声。
+
+事务仍绑定枪上UUID，进度/步骤保存在Human服务端NBT，同tick最多推进一次；临时近战、卸载/重启不重启已支付事务，原枪离开库存则作废且不填充替代枪。旧已支付且无steps的事务仅按原计时完成一次。每阶段改变弹量而非每tick修改装备NBT，声音仅在阶段开始/最终完成广播。标准Player库存/外骨骼/副产物机制没有被冒充调用，士兵仍使用通用弹匣规则。
+
+构建新增只读compileOnly Framework API参数 -PframeworkApiJar；默认本机framework-forge-1.20.1-0.8.0.jar，依赖不打包。所有可选引用仍隔离在Scguns适配器，缺席链接测试排除ScgunsSounds/ScgunsReloadTiming，纯ScgunsReloadPlan保留在核心链接检查。
+
+验证：127项Python静态/配置/实际Scguns JAR公开API检查全部通过，无跳过。新增Java ScgunsReloadPlanTest使用实际双枪动画确认普通56tick、半时间修正28tick，覆盖manual每次装填、末次不足批量、空缺与缺资源回退；已接入check，但未编译运行。未构建、未同步、未推送、未启动游戏。待验收近远距离枪声与换弹声、双枪/普通弹匣/逐发枪/能量枪时长、快手附魔与配件、后台近战、存档恢复和通用弹匣扣费。
+
+负责人主控；main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前未提交工作区，共用文件顺序修改，保留此前修改。涉及ScgunsIntegration、ScgunsSounds、ScgunsReloadTiming、ScgunsReloadPlan、build.gradle及测试/文档。
+
+## 2026-10-11 焦燃投掷准确性修正
+
+- 基线：e18ee5ba488d84cbf2324b80bacba5bb5b6c897d；主控 /root，主工作树 main，保留全部既有修改，不另开编辑会话。
+- 范围：ScgunsThrowables、ScgunsSettings、TacticalSupplyDefaults、默认资源、配置测试及联动说明。增加 initial_speed；移除震撼弹；原生工厂与消耗接口不变。
+- 验证：Python静态/实际JAR API检查127项通过；离线平地模型核对8、10、15、20格的反弹补偿。未编译、未构建、未同步，无新增提交。
+- 待验收：移动目标、高低落差、墙壁、水域、原生特殊弹丸、烟雾扩散及多士兵性能。
+
+## 2026-10-11 背盾侧面间隙微调
+
+- 主控/root；主工作树main；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d，保留全部既有修改。
+- 范围：back_shields三份JSON及机制/更新文档；三种模型局部Z均减少0.125格，无公共Java接口改动。
+- 验证：JSON解析、平移与旋转参数核对、差异检查；无新增提交。未构建、未同步，贴合程度及穿模待实机验收。
+
+## 2026-10-11 弓弩反复举盾压制修正
+
+- 主控/root，主工作树main；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d，保留全部既有修改。
+- 范围：GuardedCrossbowCharge重命名为GuardedRangedCharge；ShieldDefenseController、AdaptiveCombatGoal、BowAttack、CrossbowGoal及契约测试。共享文件主控串行修改。
+- 接口：盾控制器提供暂停/恢复武器使用进度与反击窗口；真实发射仍属于原武器Goal。
+- 验证：130项Python静态/API检查通过；未运行Java编译、未构建、未同步，无新增提交。机制、模块接口和知识库已同步；实机压制、重弩、破盾、弹药、换武器与撤退待验收。
+
+## 2026-10-11 战术生成池扩展
+
+- 主控/root；main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d，保留既有修改。
+- 范围：默认JSON、TacticalSupplyDefaults及配置测试、联动文档。新增燃烧瓶/窒息弹/虫群炸弹各权重3，数量不变；原有自定义池保留。
+- 验证：130项Python静态/API检查通过，默认附录生成及核对；Java测试未编译，未构建同步，无新增提交。
+
+## 2026-10-11 高压恢复中断与枪手主动格挡
+
+- 主控/root，main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d，保留既有工作区修改；共享文件由主控串行接入。
+- 范围：RecoveryPressureWindow、ShieldPressureConfig、ShieldDefenseController、RecoverySupplies、Human.hurt、HumanGunner、GunCustody、CombatFoodRecoveryGoal、AdaptiveCombatGoal、全局配置投影及测试/文档。
+- 接口：实际扣血→统一压力窗口→恢复抑制/归还盾牌→枪械保管交换→DEFEND；成功格挡续期，安静期解除。复用原后台换弹，不新增撤退触发或范围扫描。
+- 验证：133项Python静态/API检查、配置附录生成核对、git diff --check通过。Java测试仅补充未执行；无新增提交，未构建、未同步。源码机制与知识库已更新，枪手换手、持续压制、破盾及库存结算待游戏验收。
+
+
+## 2026-10-11 焦燃默认枪伤70%
+
+主控/root，main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d，保留既有修改。范围ScgunsSettings、默认JSON、既有配置契约断言及说明。仅调整全局缺省值为0.7，不改分阶、经验、TaCZ或已有显式配置。133项静态/API检查及默认附录核对通过；未编译、未构建、未同步，无新增提交，伤害待游戏验收。
+
+
+## 2026-10-11 初期伤害与枪械成长核查
+
+主控/root，main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加既有修改。范围GrowthConfig/HumanGrowth、全局配置/投影/补项、面板文字、测试与机制文档。新damage_stage_percent仅驱动非枪械输出，生命和枪伤维持独立入口；公共文件串行接入。四阶默认及实例倍率只读核对。134项静态/API检查、默认附录生成核对与差异检查通过；Java未执行，未构建同步，无新增提交。待游戏验收各级伤害、经验叠乘及枪伤无阶段削减。
+
+
+## 2026-10-11 四阶生命与伤害重设
+
+主控/root，main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加既有修改。仅改默认JSON四阶完整生命及非枪械伤害、测试预期、配置说明与知识库。公共成长接口未变；保留所有已有显式配置，出生曲线不变。旧的跨阶严格生命排序与新需求不相容，测试改为逐阶合法曲线范围。134项静态/API检查及默认附录核对通过；Java测试未执行，未构建同步，无新增提交。
+
+
+## 2026-10-11 四阶时间成长统一50天
+
+主控/root，main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d，保留既有修改。仅改四阶默认duration_days为50、配置说明及边界测试/知识库，接口不变；起点与节点保留，满成长日53/55/60/70。134项静态/API检查和6份默认附录核对通过，Java测试未执行；无新增提交，未构建同步，已有实例配置未改。
+
+
+## 2026-10-11 流浪者默认生成日提前
+
+主控/root，main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加既有修改。默认JSON及UnifiedConfig缺省值改为2，测试/配置说明/知识库同步；成长起点不变，公共接口不变。134项静态/API检查及6份默认附录核对通过；Java测试未执行，无新增提交，未构建同步，实例配置未改。
+
+
+## 2026-10-11 19:44 3.7.0测试构建与同步
+
+已用Java17执行离线build lootScreeningTest，BUILD SUCCESSFUL（43秒，53任务）；134项Python静态/实际API检查及6份默认附录核对通过。构建中修复了遭遇解锁日、装备满成长日的旧测试预期，以及高压参数/投掷初速度的双语说明格式。成功日志：E:\MC\Create-Delight\HostileHumansUnified-维护\验证日志\build-3.7.0-pressure-growth-20261011-194301.log。先前失败日志保留，失败产物未部署。
+
+当前工作区3.7.0已同步到E:/MC/game/.minecraft/versions/1.20.1-Forge_47.4.21；投放前确认无Minecraft游戏进程。唯一目标JAR 4020836字节，源/目标SHA-256：9CAB70A9F9A4BB87722E528F07E3F58D30016E494AA11E6DB24462D1F8793B24。
+
+备份旧JAR及global/roamer/tier1/tier2/tier3五份配置至：E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261011-194424-3.7.0-pressure-growth-Forge_47.4.21。deployment.json记录逐项变更及配置哈希。本次同步明确指定的新默认：完整生命40/40/60/80、近战/弓弩1.2/1.4/1.6/1.8、投戟1.0/1.1/1.2/1.3、四阶时间成长50日、流浪者最早第2日、焦燃全局枪伤0.7；补入非枪械阶段75/80/85/90/95/100及高压防御配置。其他阶级设置逐项核对保持不变，既有的新曲线/高压自定义项不强制覆盖。
+
+包含此前待构建的声音/换弹时长、投掷弹道与战术池、背盾贴近、弓弩防御后台准备、高压中断恢复及枪手换近战举盾等源码修改。源码基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前未提交工作区，无新增提交或推送。未启动游戏；格挡衔接、声音、投掷落点、渲染、后台换弹和实际伤害/成长仍待用户游戏验收。以上测试投放状态覆盖本页此前对应修改的“待构建”状态，不表示已通过游戏验收。
+
+## 2026-10-11 TaCZ连续瞄准、枪口火光与盾减伤
+
+主控/root，main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加既有工作区，保留所有现有修改。范围：TaczNativeAnimation/TaczNpcAnimator/TaczAnimationPolicy、TaczNpcEffects新客户端入口、HumanAnimatedItemInHandLayer、可选TaczNpcMuzzleFlashMixin及签名门控、TaczIntegration、默认JSON、配置/兼容/盾牌说明、测试及知识库。公共接口：持续瞄准读原生同步意图，火光从原生已接受开火通知进入，在本次人类主手渲染范围取得原生枪口节点矩阵，完整枪模型之后绘制；不修改原生玩家火光静态状态。原生爆炸包已带粒子，保留原路径而不重复爆炸。盾减伤默认70%→60%，已有实例配置未改。
+
+139项Python静态/API检查通过，无跳过；已核对本机TaCZ 1.1.8-hotfix的接口描述符、原生节点挂接、爆炸同步路径。Java瞄准过渡测试已扩展但未执行，本轮无构建、同步、游戏启动、提交或推送。待游戏验收：慢射速泵动枪、无遮挡与丢失目标的姿势过渡、不同枪包火光位置/消焰、多人类同时射击以及榴弹爆炸。知识库机制页及6份默认附录已同步。
+
+
+## 2026-10-11 苦力怕近战击杀承诺
+
+主控/root独立完成，main主工作树E:/MC/Create-Delight/HostileHumansUnified-维护/project；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d及既有未提交工作区。范围：CreeperFinishPolicy/CreeperMeleeCommitment新增，AvoidCreeperGoal、MeleeAttackTiming、BetterCombatMeleeCombat、Human只读前摇接口及Creeper实际引信AT；Python契约/Java边界测试、更新日志、地形说明及知识库。公共文件由主控顺序编辑，保留既有修改；未新建工作树或交付提交。
+
+当前目标可在引信前击杀时继续近战，其他苦力怕、无法确认的路径、低血撤退与救主例外各按原职责处理。142项Python静态/API检查通过；Java9项新增用例待构建执行，游戏风险评估待验收。本轮无构建、同步、推送。
+
+
+## 2026-10-11 盾牌磨损冷却缩短
+
+主控/root，main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d及既有工作区。ShieldDurability统一耐久损耗冷却4→2 tick（0.1秒），主动格挡及持枪副手盾均生效；扣损公式和耐久附魔免损不启动冷却规则保留。同步静态契约、资源帮助、配置说明、盾牌文档、默认值导出器及知识库。无构建、同步、提交、推送，待游戏验证。
+
+
+## 2026-10-11 核心敌对怪物选敌统一入口
+
+负责人主控/root；main主工作树E:/MC/Create-Delight/HostileHumansUnified-维护/project，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d及既有工作区。修改范围：新增HostileHumanTargeting、HostileTargetingConfig；HumanGunner服务端加入事件、UnifiedConfig及全局分阶布局、默认JSON、Python契约/Java配置测试、文档和知识库。公共文件顺序由主控维护，保留已有修改，无分派/新增提交。
+
+公共接口：核心统一安装原生NearestAttackableTargetGoal<Human>，不引用可选模组、不接管移动和攻击；标准Enemy自动接入，NeutralMob默认排除，OwnableEntity/Human始终排除。额外接入和优先排除由全局hostile_mob_targeting管理。146项Python静态/API检查通过，Java用例与实际游戏AI待验证。无构建、部署、推送；独立Brain或只攻击Player的生物不承诺通用适配。
+
+
+## 2026-10-11 默认战术池燃烧瓶换毒气手雷
+
+主控/root，main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d及当前既有工作区。修改四阶默认战术池、TacticalSupplyDefaults精确默认池刷新、Python默认池契约及Java替换用例、说明和知识库。毒气手雷权重3，不改变总数或燃烧瓶的库存使用支持；保留自定义配置。146项静态/API检查通过，Java用例未执行，无构建、同步、提交或推送。
+
+
+## 2026-10-11 水面战斗推进与控制权修复
+
+主控/root，main主工作树E:/MC/Create-Delight/HostileHumansUnified-维护/project；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加既有工作区，保留全部此前修改。本任务顺序修改Human、MeleeAttackGoal、AdaptiveCombatGoal、PursuitNavigation、WaterCombatNavigation、MovementContinuity、SoldierPickupPolicy，新增WaterCombatPolicy；更新Python契约、Java边界用例、说明、日志及知识库。统一水面近战移动，真实命中范围停步，盾牌朝向保护，目标切换与拾取局部输入清理；停滞看接近目标而不是任意位移，保留追击移动目标、岸路预算和命令边界。
+
+150项Python静态/API检查通过；12项Java新用例待构建。知识库机制、维护记录和验收清单已同步。未构建/部署/启动游戏/提交/推送；水面双近战、远处枪击、掉落物、崖壁、高压/低血、临时近战与多人性能待游戏验收。
+
+## 2026-10-11 枪手局部迂回与近距离试射
+
+主控/root；main主工作树E:/MC/Create-Delight/HostileHumansUnified-维护/project；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加既有未提交工作区，保留此前全部修改。顺序修改GunnerGoal、GunCustody、ShieldDefenseController，新增CloseGunTactics、Python契约、docs/CLOSE_GUN_TACTICS.md；公共文件由主控独占编辑。统一局部机动时机，完整路径8格边界与命令约束，60 tick近战后试射、100 tick射击观察/失败防守，真实敌对掉血判断；复用武器托管、盾牌和后台装填。未新增配置项或改变枪伤/减伤数值。
+
+154项Python静态/API检查通过；未编译Java，未构建、同步、启动游戏、提交或推送。知识库机制、维护来源与游戏验收同步。接口和具体待验收场景见docs/CLOSE_GUN_TACTICS.md。
+
+## 2026-10-11 护甲池等权与阶级审查
+
+主控/root，main主工作树E:/MC/Create-Delight/HostileHumansUnified-维护/project；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加既有工作区，保留之前全部修改。核对ConfiguredEquipmentLoadout过滤/整套抽取、EquipmentIntegrationDefaults一次性导入、NaturalEquipmentGrowth早期替换及实际Immersive Armors 1.7.2/Scorched Guns 0.5.5字节码。仅修改默认资源护甲权重与两项阶级归属，未改变公共Java接口：原版所有套装和两种联动模板均weight=1；Scrap真实21点从流浪者/一阶移至三阶，凋灵11点从二阶移至一阶。完整各部位护甲、各阶名单和概率见docs/ARMOR_POOL_AUDIT.md及知识库[[盔甲池与阶级护甲值]]。
+
+154项Python静态/API检查通过，6份数值附录重新导出并核对；未编译Java、未构建、部署、提交或推送。现有实例配置与导入记录未改，玩家自定义池保留；新生成概率仍受成长早期替换和可用模组影响，待实际新配置/新生成单位验收。
+
+## 2026-10-11 高压换盾无效近战动画
+
+主控/root，main主工作树E:/MC/Create-Delight/HostileHumansUnified-维护/project，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加既有工作区。统一MeleeCombatRange.canStartAttack，Human最终入口在动画前校验；GunnerGoal、AdaptiveCombatGoal、TridentHybridGoal和原生盾后反击移除先挥刀再调用的路径，保留实际伤害、盾牌策略、后台换弹和前摇。相关公共文件由主控顺序编辑，保留之前全部工作。156项Python静态/API检查通过，6份默认数值附录未改变。说明、CHANGELOG与知识库机制/来源/验收同步；未编译、构建、同步、启动游戏、提交或推送。
+
+
+## 2026-10-11 高压强制防御超时破局
+
+主控/root，main主工作树E:/MC/Create-Delight/HostileHumansUnified-维护/project；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前工作区，保留已有全部修改。主控顺序负责ShieldDefenseController、AdaptiveCombatGoal、ShieldPressureConfig、RecoveryPressureWindow、SplitConfigFiles、TierConfigProjection及默认资源；新增PressureDefenseCycle，补Java边界用例与Python契约。公共接口仍为shouldSuppressRecovery，isPressureBreakAttempt用于普通举盾和战术Goal让权；独立模块只管时间与本轮新扣血。
+
+默认140tick强制举盾后尝试60tick破局，原条件决定撤退恢复/反击，新扣血重达高压则提前回盾并重新计时。已有全局配置只补缺失新项，不改自定义参数。159项Python静态/API检查通过，6份默认附录核对通过，docs/SHIELD_DEFENSE、CONFIGURATION、接口文档、CHANGELOG与对应Obsidian机制/维护页面同步。Java边界测试未编译或运行，未构建、同步、启动游戏、提交或推送。游戏验收以持续压制、低血撤退/恢复、普通反击、归还枪械和回盾切换为重点。
+
+
+## 2026-10-11 举盾后台装填不得加速弓弩射击
+
+主控/root，main主工作树E:/MC/Create-Delight/HostileHumansUnified-维护/project；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前工作区。保留此前全部修改，公共文件由主控顺序编辑。本任务范围：新增ArrowAttackCadence；HumanArrowCombat统一服务器射击节奏；GuardedRangedCharge捕获已有进度、同tick去重并遵守弓射后冷却；BowAttack改用跨Goal中断的时间门槛；CrossbowGoal恢复完整随机等待，背景装好也不直接就绪；Human和SpartanRangedCompat实际弹射物插入成功后提交节奏。反击保护窗口为正常装填及等待留足预算。无新配置，无并行会话或新增提交。
+
+164项Python静态/实际JAR接口检查通过；新增Java射速/等待边界测试但未编译执行；6份默认附录核对通过。盾牌说明、接口、CHANGELOG及Obsidian弓弩/盾牌/来源/状态/验收同步。未构建、同步或推送；受击连续射速与半装填继承需游戏验收。
+
+本项补核：ShieldDefenseController.pauseRangedUseForGuard同时识别普通与高压强制举盾，在旧武器Goal停止前捕获使用进度，防止高压分支没有preparingCombatGuard标记而丢失半装填。相关静态契约纳入上述164项。
+
+
+## 2026-10-11 拆分弓弩默认伤害
+
+主控/root，main主工作树E:/MC/Create-Delight/HostileHumansUnified-维护/project；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加既有工作区。主控顺序修改UnifiedConfig.Tier、HumanDamageScaling、HumanArrowCombat、TierConfigProjection、SplitConfigFiles、默认JSON及Java/Python测试。公共接口新增crossbowDamage，弩来源通过已保存弹射物标记判断；每阶bow_damage_multiplier默认1.1/1.2/1.3/1.4，crossbow_damage_multiplier默认1.4/1.5/1.6/1.7，旧arrow_damage_multiplier清理，已有独立值保留，不映射旧共用值。
+
+167项Python静态/API检查通过，6份默认附录重新生成并核对。Java配置用例未编译执行；CONFIGURATION、接口、CHANGELOG与Obsidian人类属性/弓弩/配置/来源/验收同步。未修改实例、构建、同步、启动游戏、提交或推送；实际命中、切武器与联动弩分类待游戏验收。
+
+
+## 2026-10-11 人类近战绕过目标受伤冷却
+
+主控/root，main主工作树E:/MC/Create-Delight/HostileHumansUnified-维护/project；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加已有工作区。保留全部既有修改。新增HumanAttackCooldownPolicy统一入口，复用LivingEntityProjectileCooldownMixin原单次查询；仅服务器人类直接mob_attack/mob_attack_no_aggro且非枪弹/爆炸绕过，包含玩家目标，原版模式不扩展，既有ProjectileCooldownPolicy及其玩家排除范围不变。
+
+公共文件由主控顺序编辑；CreeperMeleeCommitment/CreeperFinishPolicy读取同一规则修正击杀预测，旧签名保留原受伤保护预算。未改MeleeAttackTiming、攻击Goal、动画或伤害倍率，无新配置/网络/存档状态。Java范围/字节码与预测边界测试已补但未编译运行，170项Python静态/API检查通过，6份默认附录核对通过。HIT_COOLDOWN、接口、CHANGELOG及Obsidian机制/来源/状态/验收同步。未构建、实例修改、游戏启动、提交或推送；实际连续快刀、友伤、玩家/怪物目标、原版模式、盾牌与Better Combat待游戏验收。
+
+
+## 2026-10-11 21:35 3.7.0测试构建与同步
+
+当前main基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加保留的未提交工作区，由主控/root统一构建投放；未创建其他编辑会话、未提交或推送。已包含此前水中战斗、枪手近战迂回、均衡护甲默认池、高压防御破局、后台弓弩射速与进度继承、独立弓弩倍率及近战绕过受伤冷却等修改。
+
+Java17离线build lootScreeningTest完整成功，170项Python静态/API检查通过，6份知识库数值附录核对通过；可选依赖缺席时503个核心类链接通过。构建中修正两条过时测试：TaCZ特效适配器归入可选依赖清单，沉浸式盔甲默认权重断言改为均衡后的1。JAR压缩完整性、唯一modId、3.7.0版本和新近战策略类检查通过。
+
+仅同步E:/MC/game/.minecraft/versions/1.20.1-Forge_47.4.21。替换前确认游戏未运行，旧JAR及五份配置已备份到E:/MC/Create-Delight/HostileHumansUnified-维护/部署备份/3.7.0-20261011-213521。新JAR 4,061,181字节，源/目标SHA-256均为1EF4E96245FB710453D91CA3038649A2963DEEE8CF494A7922C3943B2163DAAF；deployment.json保存部署证据。
+
+本次保留实例自定义配置，新增缺项由模组下次启动补齐；不强制替换既有护甲池及已导入权重，新默认护甲池不能视为已覆盖实例自定义池。未启动游戏；快刀连续伤害与攻击节奏、弓弩后台装填、持续高压破局及水中战斗仍待游戏验收。本条覆盖此前各任务“未构建/未投放”的当前状态，历史记录保留。
+
+
+## 2026-10-11 焦燃投掷初速度再次修正（源码待构建）
+
+实际核查ScgunsThrowables及ScorchedGuns-0.5.5原生ThrowableItemEntity：发射入口确实将plan.velocity传入原生实体，并非未接入配置。旧求解器把initial_speed视为上限，只按整数tick选择速度，尤其短距离反弹候选会自动降速；极短候选还受最少2tick限制。统一新增无外部依赖的ThrowableBallistics，按实际配置初速度求最早可达低弧线，并以原生“移动→0.99阻力→重力”顺序计算末尾不足一tick的位移。发射速度不再随候选距离自行变小，不在求解后直接放大速度破坏落点。
+
+全局scguns.throwables.initial_speed仍默认1.6格/tick，范围0.5～3，含义改为实际初速度。最大主动投掷距离仍默认20格，未擅自扩张；命中/反弹预测、视线、攻击许可、友军安全检查和消耗真实库存保留。仍使用原生工厂及实体负责引爆和效果，不修改玩家投掷、不新增制导。无法求解或安全校验失败时不投掷。
+
+主控/root顺序编辑main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加既有工作区，保留已有全部修改。涉及ScgunsThrowables、ThrowableBallistics、默认配置说明、CombatPressurePolicyTest及新Python契约；公共接口无变化。173项Python静态/API检查通过；独立数值参考核算36组速度/重力/距离的初速和离散落点通过，另核对默认初速可达32格（不代表主动距离设置变更）。Java数值测试已补，尚未编译运行；6份数值附录重新导出。未构建、实例同步、游戏启动、提交或推送，当前安装JAR仍为21:35构建。待游戏检验近/远距离、移动目标、地面反弹及毒气/窒息弹实际效果位置。
+
+
+## 2026-10-11 TaCZ换弹动画等比缩放（源码待构建）
+
+主控/root独占main主工作树E:/MC/Create-Delight/HostileHumansUnified-维护/project；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加全部既有未提交工作区，无并行编辑或新提交。新增TaczReloadVisualTimeline服务器视觉快照与TaczReloadPlayback纯播放策略；顺序接入TaczHumanReloadTransactions、HumanMobEntityData、TaczNpcAnimator、TaczNativeAnimation、ClientAnimationCompatibility。实际装填与弹药不受动画控制；公共接口仅增加临时快照get/set，主网络协议升级5避免新旧实体同步布局混用。
+
+以原生数据估算总时长、首阶段实际倒计时修正倍率、收尾阶段校准终点；公开SpeedModifier仅作用于动作层，结束/取消淡出，切回武器或重新渲染按服务器进度恢复。未知脚本延长可保留末尾姿势，不退回固定长度动画或无限重播。接口/关键帧/时间线不可用时程序动作回退，未安装Player Animator也按时间线缩放程序手势。完整机制与限制见docs/TACZ_RELOAD_ANIMATION.md。
+
+178项Python静态/API检查通过，6份默认附录核对通过；Java回归用例已补但未编译运行。未构建、实例更新、启动游戏、提交或推送，已安装仍为21:35测试JAR；本项及上一项投掷速度修正均尚未投放。游戏验收重点：空仓/战术/逐发换弹、配件修正、特殊脚本、后台换弹切回、重新渲染、多人同步和第一发开火。
+
+
+## 2026-10-11 持枪误触发近战修正（源码待构建）
+
+TaCZ近距离紧急开火准备曾把meleePrepTickCount清为0，但原生LivingEntityMelee.scheduleTickMelee在0时执行枪托攻击、-1才是不排队。因此这个攻击不经过Human.doHurtTarget，能够绕过已有持枪近战限制，造成单体伤害与击退。本次改为-1，保留清除疾跑和近战时间锁的原用途，不改变正常射速、装填或后台换弹。
+
+防护分三层：既有Human普通近战与Better Combat延迟命中继续核验主手物理枪械身份；安装TaCZ时使用公开可取消的GunMeleeEvent阻止本模组人类启动枪托攻击（不影响玩家，独立于NPC枪械联动开关）；新增GunMeleeProtection在服务器LivingAttackEvent最高优先级拦截持枪人类的直接近战。包括原版mobAttack/noAggro/playerAttack及DamageSourceMix替换的human/human_with_name伤害类型；排除间接命中、弹射物、已识别枪伤和爆炸，不将荆棘/状态效果误认作近战。焦燃与TaCZ均通过GunSupport物理身份识别覆盖，关闭联动仍不能拿枪平A。切到主手近战武器后可以正常攻击，枪放副手不妨碍主手武器近战。
+
+未来枪械联动应接入GunSupport的物理身份边界，不能仅依赖可开关的射击后端；若上游新增独立攻击入口或自定义直接近战伤害类型，仍应核对其公开取消接口和伤害分类，不能保证任意未知模组都自动覆盖。
+
+主控/root顺序编辑main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加全部既有未提交修改，未建立并行编辑。修改TaczGunMechanics、TaczGunItemIdentity、HumanGunner；新增GunMeleeProtection，补GunCombatPolicyTest字节码回归和4项Python契约。182项Python静态/API检查通过（包括只读核对原生零计数触发路径和公开事件可取消）；Java回归尚未编译运行。未构建、同步、启动游戏、提交或推送；当前安装仍是21:35测试JAR，之前投掷初速度和换弹缩放修正也仍待构建。
+
+待游戏验收：TaCZ贴身连续开枪不额外平A或枪托击退；焦燃同场景；两种联动分别关闭时主手枪仍不能近战；Better Combat安装/缺席；普通子弹与爆炸伤害保持；切近战后正常反击、切回继续装填；单装/双装/皆不装可选枪械模组。
+
+
+## 2026-10-11 枪手主动进入优势射程（源码待构建）
+
+核查确认两个停步入口：GunnerGoal.canUse原先以最大开火距离限制整个Goal，超距后射击与追击一起停用；CombatTerrainNavigation的原地射击回退只检查可开火，在安全否决或寻路失败记录存在时，会使仍在优势距离之外的枪手持续停步。
+
+现在枪手Goal按有效目标、攻击许可和武器状态运行，不再以开火距离决定是否追击；硬开火距离在tick中瞄准/发射之前独立核验，超距只逼近、不发射并允许现有追击疾跑。地形原地射击回退增加GunRangePolicy.withinPreferredRange判定，只有处于对应类型优势距离带内才可以因此停止移动。仍在带外时沿用PursuitNavigation、移动目标路径刷新、地形绕路、寻路预算和安全检查；无安全路线时不强行越崖。射击可及范围、各枪型优势距离带、原地驻守、贴身保护追击边界、上岸与高压/低血生存控制不变，不新增第二个移动Goal或持续范围扫描。
+
+适用TaCZ和焦燃的共同GunnerGoal。不能把本次修复理解为任何地形都能走通，或驻守士兵会无视命令远追。目标仍由既有目标选择和攻击模式授权，不增加索敌范围。
+
+主控/root顺序编辑main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加全部既有未提交修改；共享文件GunnerGoal/GunRangePolicy由主控负责。涉及这两个生产文件、GunCombatPolicyTest和test_gunner_approach_contract.py；无配置项/网络/存档结构变更，无新提交。185项Python静态/API检查通过，补充Java优势距离边界与编译后字节码回归但未编译运行；未构建、实例同步或推送，游戏行为待验收。
+
+待验收：手枪/霰弹枪/步枪/狙击枪远距离取得目标后连续逼近优势距离；障碍解除或绕路可达时不因旧失败记录持续站桩；硬射程外不发射；移动目标连续追击；原地驻守不追、贴身保护不越主人12格边界；水域上岸和高压防御仍有移动优先权。
+
+
+## 2026-10-11 护卫拾取期间TaCZ对空气开枪（源码待构建）
+
+用户确认TaCZ、主动攻击、贴身保护且允许拾取时，周围无敌人仍向四周开枪；是否始于最后一名敌人死亡尚不明确。只读核查发现拾取目标是独立ItemEntity，不直接写入战斗目标；普通开火与撤退反击分别持有目标，TaCZ最终operator.shoot之前缺少共用权限校验，也没有公开GunShootEvent处的目标复核。现有日志未保存该次目标UUID/状态，不能宣称已复现或确定唯一触发路径。
+
+新增GunFireAuthorization作为普通射击、撤退反击、后端和TaCZ原生事件的统一只读开火许可。Control.shoot新增显式LivingEntity target参数，射击者、主手真实枪栈、黑名单许可、目标有效性、同维度/实际仍被服务器登记、视线、硬射程、阵营、攻击许可和当前护卫选择均必须有效。正在主动拾取、无目标、目标死亡/移除/卸载/旁观、目标与当前战斗目标不一致、护卫已换目标等状态禁止发射。焦燃原生AIGunEvent使用同一个显式目标，不再重新取可能不同的human.getTarget。TaCZ通过公开可取消GunShootEvent在服务器最高优先级再次拦截，取消发生在原生开枪通知之前；玩家不受影响。不增加射速或额外扫描，不停止后台换弹、不取消已发出的弹射物。GunnerGoal失效目标分支立即清除瞄准显示。
+
+主控/root顺序编辑main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加全部既有未提交修改。范围：GunFireAuthorization、GunSupport/CompositeGunSupport、GunnerGoal/AdaptiveCombatGoal、TaczIntegration/ScgunsIntegration及接口回归测试。公共接口变更仅内部Control.shoot显式目标参数；配置/网络/存档不变。189项Python静态/API检查通过，Java字节码回归已补但未编译；未构建、实例同步、启动游戏、提交或推送，用户场景尚待游戏验收。
+
+待验收：TaCZ主动攻击+贴身保护+拾取开关启用，击杀最后目标后正常拾取且不空放；无敌人持续闲置；目标卸载/死亡/切换、护卫更近威胁抢占；普通/撤退反击保持正常；焦燃同条件及无枪械联动启动。若仍出现枪声/火光，应区分真实弹药消耗和客户端表现，并记录目标/枪械与发生时刻后进一步定位。
+
+
+## 2026-10-11 装备品质纳入真实剩余耐久（源码待构建）
+
+旧equipmentScore的耐久因子为0.55+0.45×剩余比例，即将损坏时仍保留55%评分；inventoryValue还固定增加35，使破损的高阶装备持续有拾取价值。统一新增EquipmentCondition：正常可损坏装备的整体装备分按剩余耐久比例线性折损，原背包固定35加分也乘同一比例，属性分不重复乘算。剩余50%价值约按50%计，剩余10%约按10%计，零剩余价值为0；真正不可损坏或Unbreakable装备不降分，数值截断避免异常耐久造成负分或超满分。
+
+主动搜索、原版贴近拾取、拾取提交和盾牌专用提交都拒收剩余耐久不超过10%的装备（EquipmentCondition.MIN_AUTOMATIC_PICKUP_PERCENT=10，当前为内部统一常量，未新增配置项）。装备范围沿用既有识别：护甲、近战工具/武器、弓弩、三叉戟、盾牌和可识别枪械；仅对采用物品耐久机制的物品折损，不把枪械弹量/能量当耐久。即使空装备栏的穿戴加分很高，也不能绕过残破拒收。高于门槛的装备继续比较品质、背包容量和补给预留。
+
+背包内护甲优化与备用近战选择复用折损后的equipmentScore。盾牌拾取及达到3面上限后的替换改用同一inventoryValue，防止盾牌旧高底分绕过耐久折损；实际副手盾牌的稳定穿戴排序仍遵守此前用户约定，按最大耐久选择，真正无耐久且能格挡的盾最高，不按每次磨损来回换盾。食物/弹药/医疗品质与保护槽位不变。玩家手动放入的装备、现有库存和生成装备不被强制删除，菜单操作不经过自动拾取门槛。
+
+主控/root顺序编辑main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加全部既有未提交修改。范围EquipmentCondition、HumanLootManager、ShieldPickupPolicy、LootScreeningTest及新增Python契约；公共配置/网络/存档结构不变。192项Python静态/API检查通过；Java物品级回归补充耐久全区间单调性、精确10%边界、满损/不可损坏和破钻石甲对完好铁甲比较，但未编译运行。未构建、实例同步、游戏启动、提交或推送。
+
+待验收：满地破甲/破武器/破盾不捡；较高耐久的低阶装备胜过严重磨损高阶装备；已满背包按折损价值替换；盾牌到3面上限只用更好的一面替换；玩家手动超量及低耐久装备保留、食物药品保护不变。
+
+
+## 2026-10-11 盾牌按短窗口累计损耗（源码待构建）
+
+将“首击扣损、冷却期间丢弃后续伤害”替换为2 tick（0.1秒）累计结算。每面实际盾栈分别累计已承接伤害，窗口内不因弹丸多而漏计；窗口到期按`1 + floor(累计伤害 × 1.5)`调用一次原生hurtAndBreak，固定+1及向下取整均只做一次。8颗各4点的命中累计32点，对应49耐久。伤害和减伤立即结算，只有耐久最多延后2 tick。
+
+主动普通格挡/主动TaCZ盾/枪手被动盾仍统一经ShieldDurability；保持既有伤害口径和减伤比例。TaCZ主动盾在原生穿甲拆分前登记一次，不重复登记两种伤害源；被动盾累计各部分实际最终伤害。耐久附魔在合并事务中正常判定，完全避免磨损时没有额外惩罚冷却；新窗口继续累计。不可损坏盾不强扣耐久。
+
+服务器只处理有待结算记录的单位，不扫描弹丸或附近实体。换装备前、开启装备编辑前、序列化前、死亡/离开维度及服务器停止前结清旧盾债务；先移除队列再调用原生回调，防止递归重复扣除。盾碎只清理仍指向该盾的槽位，不清除替换盾或无关主手动作。刷新相同物品引用不提前结算。
+
+主控/root独立顺序编辑main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d及全部既有未提交修改。涉及ShieldDurability、HumanGunner事件注册、Human装备/保存入口、HumanInventorySession、TaCZ说明及相关测试/默认注释。未新增配置键、网络包或存档格式。194项Python静态/API契约通过；Java数值边界回归已补，未编译执行。未构建、同步、游戏启动、提交或推送。
+
+待游戏验收：霰弹枪多弹丸、连射跨窗口、TaCZ穿甲/非穿甲两段、焦燃及普通箭、耐久附魔、临界破盾、换盾/手动转移、死亡掉落和保存重启；核对总损耗、减伤与后台换弹不受意外影响。
+
+## 2026-10-11 22:52 当前3.7.0源码构建与测试同步完成
+
+本轮当前源码通过Java17 `build lootScreeningTest --offline`，53项Gradle任务成功（51执行、2最新），以及194项Python静态/API检查和6份默认数值附录核对。Java维护回归7324项、装备拾取回归13391项通过；可选依赖缺失时512个核心类链接检查通过。测试中的无效结构包/配置报错为故意构造的回退用例，任务均通过。
+
+包含最近新增的盾牌2 tick累计损耗、装备耐久折损拾取、最终开火目标校验、枪手射程外追击、持枪近战封堵、TaCZ换弹动画缩放及焦燃投掷弹道修复。前述对应“源码待构建”状态更新为“已构建投放，待游戏验收”；构建成功不能证明游戏动作、联动伤害及多人表现正确。
+
+用户确认退出并再次核验目标无游戏进程后，备份旧JAR和当前模组配置，替换测试实例唯一3.7.0 JAR并核验SHA-256一致。保留玩家现有配置内容，不重置自定义值。未启动游戏、未提交或推送GitHub。
+
+- 目标：`E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\hostile-humans-unified-1.20.1-3.7.0.jar`。
+- 大小：4,079,784字节。
+- SHA-256：`1DFEDBC335311E2EF2DC62348A7302D15833F2FFD81DFA53094BC8A134B01099`。
+- 备份：`E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\3.7.0-20261011-225239`，含deployment.json。
+- 源码基线：main / e18ee5ba488d84cbf2324b80bacba5bb5b6c897d，加全部既有未提交源码；本次不是新Git发布提交。
+- 优先验收：霰弹枪多弹丸/连射盾损耗、耐久附魔/换盾/临界破盾；TaCZ换弹缩放、无目标不空放、持枪不近战；枪手逼近射程、焦燃投掷落点及残破装备拾取。
+
+## 2026-10-11 焦燃投掷轨道、距离与集群目标（源码待构建）
+
+用户补充确认投掷物能飞出，问题主要是轨道/落点，不再以“原地零速度”作为已确认故障。实际核查ScorchedGuns-0.5.5-1.20.1.jar：普通手榴弹及其派生的毒气/窒息/钉子/虫群/燃烧瓶/地狱火道具，公开工厂使用的带投掷者构造继承ThrowableGrenadeEntity的0.05F重力；旧预测用了ThrowableItemEntity基础0.03，造成实际下坠更快、落点偏近。信标手雷独立0.025F且反弹；Shotball为0.04F、物理会反弹但首次碰撞即产生效果，因此以首次碰撞预测效果点，不等待160tick寿命。原生效果不改。
+
+ScgunsThrowables.flightProfile集中维护已支持工厂的物理/效果时间映射：普通手榴弹按fuse，毒气按第21tick、窒息按第41tick激活，信标按fuse，触碰型按首次命中。使用原生float精度，复用ThrowableBallistics固定初速度离散低弧求解。反弹落点搜索上限由8增至12次；延时投掷物按真实效果时间预判水平运动，水平速度最多0.4格/tick、预判最多60tick及12格位移，避免长引信无限外推。预测仍不保证目标不会转向，碰到中途生物也可能改变原生反弹/引爆时机。
+
+出手点移至身体前方（半身宽+0.2格），先检查眼睛到出手点之间没有碰撞方块，不能隔墙生成。调用原生Projectile.shoot初始化速度及朝向，速度等于求解结果长度、不增加随机散布；保留原生工厂、所有权、引爆/云/爆炸及真实库存消耗。不是修改玩家物品或强行制导，也没有重置飞行中实体的速度。
+
+全局scguns.throwables新默认：maximum_range=32格（原20），initial_speed=2.0格/tick（原1.6）。新增cluster_radius=4格、cluster_minimum_targets=3、cluster_cooldown_ticks=100tick。当前合法仇恨目标附近最多16名合法可见敌人参与密度比较，优先投向集中位置的实际敌人，避免平均点落在墙里或悬崖；中立动物不因为可受伤就自动算敌人，仍检查自主敌人分类/反击授权/仇恨和士兵命令。只改变战术投掷瞄准点，不改变主战斗目标。达到3名集群时成功投掷冷却默认5秒（普通仍10秒，实际取两者更小值），保留友军安全/视线/弹道/最低距离及禁用品限制。毒气/窒息仍至少16格安全半径，不为集群放宽。
+
+没有可用投掷物的单位不扫描敌群。现有20tick分散检查、失败40tick节流保留，密度比较最多16×16；不增加常驻Goal/范围扫描。所有新参数位于同一throwables配置区域，注释紧邻对应值。旧配置/测试实例本轮不改写，已有明确设置的20格/1.6仍会优先于新默认；需在未来明确配置更新时调整，不能把源码新默认宣称已同步生效。
+
+主控/root顺序编辑main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d及所有既有未提交修改。涉及ScgunsThrowables、ScgunsSettings、默认资源、CombatPressurePolicyTest和Python投掷/API契约。198项Python静态/API检查通过，包含实际原生构造重力继承及特殊重力契约；独立平地数值参考核查16组距离/效果时间的反弹位置。Java数值测试扩充32格、2.0初速及0.05F重力边界，但未编译运行。6份默认附录同步。未构建、同步实例、启动游戏、提交或推送；安装包仍为22:52构建。
+
+待验收：各五种出生炸弹在近/远、静止/移动、高低差与反弹场景落点；信标与Shotball首次效果时机；集中3个以上敌人时更密集投掷；友军介入、墙前发射、主动/许可/被动权限；实际耗材与性能。重点区分触碰引爆与延时反弹，不以统一“落地处”解释全部原生物品。
+
+## 2026-10-11 焦燃投掷物品质与冷却调整（源码待构建）
+
+投掷物品质统一从50提高为170，沿用HumanLootManager.inventoryValue→ScgunsSettings.throwableQuality的共用入口，同时作用于拾取、背包保留及替换。该值高于一般战术药水和非职业优先弹药140/近战职业弹药160，低于本职业优先弹药180；不会保证无限保留所有投掷物。食物槽位、最后恢复药品和必要武器预留沿原规则，未改出生抽取权重、投掷伤害或物品堆叠。
+
+普通投掷cooldown_ticks由200降为160tick（10→8秒）；集群cluster_cooldown_ticks由刚加入的100降为80tick（5→4秒），实际集群冷却取两者较小值。均在全局scguns.throwables配置，注释紧邻数值；失败预检40tick、每20tick分散检查及全部友军/权限/弹道约束不变。
+
+主控/root在main主工作树顺序修改ScgunsSettings、默认JSON、既有Python配置/拾取接线契约，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d及全部既有未提交修改。198项Python静态/API检查通过，6份默认附录已导出核对。未运行Java编译/构建、未同步实例或推送，原有实例的quality=50/cooldown_ticks=200等明确值不会自动被新默认覆盖，需以后指定配置更新时处理。源码待构建与游戏验收。
+
+待验收：有其他低价值物品时优先保留/拾取炸弹，饱和背包仍保护食物药品；单体与密集敌群投掷间隔，真实库存消耗和友军安全；不把出生抽取权重误当背包品质。
+
+## 2026-10-11 远程弹道障碍检测（源码待构建）
+
+远程感知视线与实际开火路径分开。原先眼睛到目标眼睛无遮挡便被用于开火/站位判断；箭矢的服务端出手点是眼睛下方0.1格，枪械瞄准躯干而非目标眼睛，都会出现“看得见，弹道被方块边缘挡住”。实际核对本机TaCZ/焦燃JAR：两者原生服务端子弹使用投掷者前后位置的平均值加眼高，不等于第三人称模型枪口；不能把画面枪口的位置直接当作碰撞起点。
+
+新增RangedShotClearance作为共用服务端检查入口。枪手、弓手和弩手的开火条件与射击位置搜索使用同一几何检查；枪械最终许可和弓弩实际出手入口再复核。被挡时停止无效开火，交给原有受预算约束的射击换位/地形回退，不新建移动Goal；驻守、撤退及上岸的移动控制权保持原约束。普通与撤退枪械射击共用起点、瞄准点及预判，避免两处不同公式。
+
+弓弩/斯巴达重弩复用HumanGunner既有低弧求解器，并沿名义弹道逐tick检查方块碰撞形状；三叉戟也检查既有补偿弹道。不是简单拿较低出手点到敌人拉直线，因此保留已有越过矮掩体的弹道空间。不会抽取随机散布、消耗库存、重置装填/拉弓或缩短攻击间隔。枪械后端经GunSupport提供瞄准点与检查所需速度/重力；焦燃使用原生公开配件、附魔速度/重力修正，检查用物理参数与原生负责瞄准分开，避免重复预测。TaCZ与焦燃可单独安装。
+
+同一tick、同一实体/武器与双方位置/运动状态复用一次检查；候选位置沿用OptionalPathBudget。每条弹道至多60段，到目标平面截止，不检测目标背后的无关墙。没有新增范围扫描或客户端弹道计算。这里是名义轨道障碍检查，不承诺散布后每颗弹丸命中，也不把敌人后续变向、移动方块、特殊子弹制导/穿墙或水中阻力当作已完整仿真。原有眼睛感知视线仍作为发现/攻击前提。
+
+主控/root顺序修改main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d，保留全部既有未提交修改。涉及RangedShotClearance、GunSupport/CompositeGunSupport/ScgunsIntegration、GunFireAuthorization/HumanArrowCombat、GunnerGoal/AdaptiveCombatGoal、BowAttack/CrossbowGoal、RangedFiringPosition和共用箭矢求解器可见性。201项Python静态/API契约检查通过，核对了本机原生箭矢出手偏移及焦燃瞄准/起点字节码；未运行Java编译/构建、未更新实例、未启动游戏、未提交推送。
+
+待游戏验收：台阶/半砖/栅栏/窗沿和高低差处能看见头部但躯干或出手位置被挡；正常换位后恢复开火；弓弩可越过矮障碍且射速/装填保持；TaCZ/焦燃普通及撤退射击、重弩/三叉戟；驻守不越界、上岸与撤退不抢移动、多名士兵对遮挡目标的性能。
+
+## 2026-10-11 23:35 3.7.0 构建与测试实例同步完成
+
+- 源码：main / e18ee5ba488d84cbf2324b80bacba5bb5b6c897d 加既有未提交工作区；未提交或推送GitHub。
+- 目标：E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\hostile-humans-unified-1.20.1-3.7.0.jar。
+- 大小：4,090,331字节；SHA-256：36A32817F3AB7B0AB9F129F840AB595324A27522B74DBAB7F30CE6853B0DDAE0，构建产物与目标一致；测试实例仅一个本模组JAR。
+- 备份：E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\3.7.0-20261011-233552，含旧JAR、现有配置及deployment.json；旧包SHA-256：1DFEDBC335311E2EF2DC62348A7302D15833F2FFD81DFA53094BC8A134B01099。
+- 本轮包含：远程发射起点/名义弹道障碍检测及射击换位共用检查，普通/撤退枪械瞄准统一；焦燃投掷物实际重力与轨道预测、集群投掷、新默认品质170及冷却8秒/4秒等全部当前源码。
+- 首次编译发现临时近战分离路径仍引用旧hasClearShot，已改用RangedShotClearance。RangedWeaponCustody增加只读首选弓弩预览，临时持近战时按将恢复的真实弓弩/重弩检查，持枪时不被陈旧弓弩保管状态覆盖；RangedTerrainCombat返回远程同样使用该入口。已重新完整编译验证。
+- 使用Java17、仓库gradlew.bat及六个只读API路径，build lootScreeningTest --offline成功：53任务，51执行、2已更新。离线Forge插件另触发远端证书预检失败，本次命令级关闭Forge证书预检后仅使用离线依赖，未改项目或系统网络设置。
+- 自动检查：201项Python静态/API检查通过；Java维护7324、战斗压力421、战利品筛选13391、可选模组缺席加载514核心类及其余构建任务通过；6份知识库默认附录核对通过。结构/损坏配置测试的故意错误输入日志属于回退测试，最终任务成功。
+- 替换前两次检查测试实例未运行，备份哈希通过后替换，源/目标SHA-256一致。未启动游戏，游戏行为尚待玩家验收。
+- 保留实例原有配置，未把新默认强制覆盖玩家数值。实例之前显式的投掷品质50/普通冷却200tick/最大距离20/初速1.6等仍优先于打包新默认；本次JAR包含新轨道与集群逻辑，不能把新默认宣称为现有配置已变更。
+
+待验收：台阶/窗沿/半砖挡住躯干或出手高度时停止无效射击并换位，弓弩保留抛物线、原装填与射速；临时近战后返回弓弩/重弩的位置；TaCZ/焦燃单独安装与普通/撤退开火；投掷物静止/移动目标、高低差、集群及友军安全；品质与冷却测试需结合现有实例自定义配置。
+
+## 2026-10-11 弹药主动拾取按实际武器限制（源码待构建）
+
+没有弓或弩（含支持的斯巴达远程武器）就不主动拾取通用箭矢；没有已启用联动支持的枪械就不主动拾取通用弹匣。检查主手、副手及真实背包，不只看职业或当前拿着的武器；枪手/弓手临时切换近战但背包保留远程武器时仍可补给。只判断武器存在，不要求枪内/背包还有弹药，因此打空的枪手仍可拾取弹匣恢复作战。
+
+SoldierPickupPolicy.canCollectItem作为物品资格入口，HumanLootManager.benefit搜索评分与collect最终收取同时调用，避免无武器仍追逐弹药或途中武器变化后照样收取。复用HumanData武器存在缓存与GunCustody.hasOwnedGun，不新增范围扫描。沿共同拾取入口作用于野生人类及已开启拾取的雇佣士兵。手动向士兵背包放入弹药、原有弹药保留及已设补给槽位保护不受此资格过滤影响。
+
+主控/root顺序修改main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d，保留既有修改；涉及SoldierPickupPolicy.java和HumanLootManager.java。201项既有Python静态/API检查通过，不代表本次新规则已在游戏实测。未编译、构建或同步实例，实例仍为23:35部署的包。待验收：无对应武器拒收、仅背包有武器可收、弹药耗尽可补给、临时近战不影响补给、地面追逐期间丢失武器后取消收取、手动放入不受影响。
+
+## 2026-10-11 3.8.0 正式发布整合
+
+主控/root、main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d；整合全部当前授权功能、用户知识库规则与最新弹药拾取修改。版本升级3.8.0，最终CHANGELOG按功能整理，保留历史于docs/releases/3.8.0-development-history.md。无需修改业务源码处理本次JVM C2原生崩溃；只补正焦燃分阶伤害说明。完整诊断、验证、备份与部署见docs/releases/3.8.0-release.md；源码main与v3.8.0发布标签推送后核对，不启动游戏。
+
+## 构建与部署结果
+
+- 版本：3.8.0，已发布；源码以main及v3.8.0标签定位。
+- Java17离线build lootScreeningTest成功，53任务，51执行、2已更新。
+- 201项Python静态/API契约检查通过；Java维护7324、战斗压力421、战利品筛选13391、缺少全部可选模组时514核心类加载及其他构建任务通过。结构/损坏配置输入中的预期ERROR属于回退验证，最终构建成功。
+- JAR身份由Manifest Implementation-Version=3.8.0与mods.toml统一modid核对；没有打入TaCZ、焦燃或Minecraft依赖类，最新弹道/装填类存在。
+- 测试实例：E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\hostile-humans-unified-1.20.1-3.8.0.jar；4,090,756字节。
+- SHA-256：9225B2C557F788D1D4A8B46D302C2B7D50C9E654C093C93339B0BC048688C9D2，源与部署文件一致。
+- 备份：E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\3.8.0-20261011-235355，含旧3.7.0包、现有配置、完整构建日志及deployment.json；旧SHA-256：36A32817F3AB7B0AB9F129F840AB595324A27522B74DBAB7F30CE6853B0DDAE0。
+- 替换前确认实例停止，原3.7.0包移出mods，当前只有一个3.8.0包。保留玩家自定义配置和存档，未启动游戏，游戏内验收待完成。
+- 现有实例投掷配置quality=50/cooldown_ticks=200/maximum_range=20/initial_speed=1.6未覆盖；新打包默认170/160/32/2.0不会覆盖这些明确值。
+- 原C2虚拟机崩溃未有本模组Java异常证据，本次不修改JVM、启动器或其他模组。已提交文件不含原始启动认证参数、日志、构建产物和缓存。

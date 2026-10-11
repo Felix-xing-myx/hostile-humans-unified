@@ -5,9 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.pathfinder.Path;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import dev.felix.hostilehumans.core.IncrementalBestSearch;
 import java.util.ArrayList;
@@ -108,8 +106,7 @@ public final class RangedFiringPosition {
             if (candidateRangeSqr < minimumRangeSqr || candidateRangeSqr > maximumRangeSqr
                     || candidateFeet.distanceToSqr(human.position()) < 4.0D
                     || !human.level().hasChunkAt(candidateBlock)
-                    || !clearShots.computeIfAbsent(candidateBlock, pos -> hasClearShot(human,
-                    Vec3.atBottomCenterOf(pos).add(0.0D, human.getEyeHeight(), 0.0D), target.getEyePosition()))) {
+                    || !clearShots.computeIfAbsent(candidateBlock, pos -> RangedShotClearance.fromPosition(human, Vec3.atBottomCenterOf(pos), target))) {
                 return null;
             }
             Path path = human.getNavigation().createPath(candidateBlock, 0);
@@ -125,9 +122,8 @@ public final class RangedFiringPosition {
                 return Double.NEGATIVE_INFINITY;
             }
 
-            Vec3 destinationEye = destination.add(0.0D, human.getEyeHeight(), 0.0D);
             if (!clearShots.computeIfAbsent(path.getTarget(), pos ->
-                    hasClearShot(human, destinationEye, target.getEyePosition()))) {
+                    RangedShotClearance.fromPosition(human, destination, target))) {
                 return Double.NEGATIVE_INFINITY;
             }
 
@@ -222,8 +218,7 @@ public final class RangedFiringPosition {
             if (candidateRangeSqr < minimumRangeSqr || candidateRangeSqr > maximumRangeSqr
                     || candidateFeet.distanceToSqr(human.position()) < 30.25D
                     || !human.level().hasChunkAt(candidateBlock)
-                    || !hasClearShot(human, candidateFeet
-                    .add(0.0D, human.getEyeHeight(), 0.0D), target.getEyePosition())) {
+                    || !RangedShotClearance.fromPosition(human, candidateFeet, target)) {
                 continue;
             }
             Path path = human.getNavigation().createPath(candidateBlock, 0);
@@ -244,9 +239,8 @@ public final class RangedFiringPosition {
                     || travelDistanceSqr < 30.25D) {
                 continue;
             }
-            Vec3 destinationEye = destination.add(0.0D, human.getEyeHeight(), 0.0D);
             if (!path.getTarget().equals(candidateBlock)
-                    && !hasClearShot(human, destinationEye, target.getEyePosition())) {
+                    && !RangedShotClearance.fromPosition(human, destination, target)) {
                 continue;
             }
 
@@ -263,13 +257,4 @@ public final class RangedFiringPosition {
         return bestPath;
     }
 
-    static boolean hasClearShot(Human human, Vec3 from, Vec3 to) {
-        return human.level().clip(new ClipContext(
-                from,
-                to,
-                ClipContext.Block.COLLIDER,
-                ClipContext.Fluid.NONE,
-                human
-        )).getType() == HitResult.Type.MISS;
-    }
 }

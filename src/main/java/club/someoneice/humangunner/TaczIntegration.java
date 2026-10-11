@@ -5,6 +5,8 @@ import com.craftix.hostile_humans.entity.entities.HumanTier;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.entity.IGunOperator;
 import com.tacz.guns.api.event.common.EntityHurtByGunEvent;
+import com.tacz.guns.api.event.common.GunShootEvent;
+import net.minecraft.world.entity.LivingEntity;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.api.item.builder.GunItemBuilder;
 import com.tacz.guns.util.AttachmentDataUtils;
@@ -52,6 +54,7 @@ final class TaczIntegration implements GunSupport {
         return source.is(com.tacz.guns.init.ModDamageTypes.BULLETS_TAG)
                 || source.getDirectEntity() instanceof com.tacz.guns.entity.EntityKineticBullet;
     }
+    public String backendId() { return "tacz"; }
     public Map<ResourceLocation, String> catalog() {
         Map<ResourceLocation, String> result = new LinkedHashMap<>();
         TimelessAPI.getAllCommonGunIndex().stream().sorted(Map.Entry.comparingByKey())
@@ -125,18 +128,27 @@ final class TaczIntegration implements GunSupport {
             public boolean ensureDrawn() { return TaczGunMechanics.ensureGunDrawn(human, operator); }
             public void clearSprintLock() { TaczGunMechanics.clearNpcSprintLock(human, operator); }
             public void prepareUrgentShot() { TaczGunMechanics.prepareUrgentCloseShot(human, operator); }
-            public void shoot(ItemStack weapon, float pitch, float yaw) {
+            public void shoot(ItemStack weapon, LivingEntity target, float pitch, float yaw) {
+                if (!GunFireAuthorization.allows(human, weapon, target)) return;
                 if (TaczGunMechanics.ensureGunDrawn(human, operator)) return;
                 TaczGunMechanics.handleShootResult(human, operator, weapon, operator.shoot(() -> pitch, () -> yaw));
             }
         };
     }
     public void registerEvents() {
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, TaczIntegration::onGunShoot);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, TaczIntegration::onGunDamagePre);
         MinecraftForge.EVENT_BUS.addListener(TaczIntegration::onGunDamagePost);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             TaczReloadSoundClient.register();
+            com.craftix.hostile_humans.client.renderer.TaczNpcEffects.register();
         }
+    }
+    private static void onGunShoot(GunShootEvent event) {
+        if (event.getLogicalSide() == net.minecraftforge.fml.LogicalSide.SERVER
+                && event.getShooter() instanceof Human human
+                && !GunFireAuthorization.allows(human, event.getGunItemStack(), human.getTarget()))
+            event.setCanceled(true);
     }
     private static boolean isActivelyBlockingWithShield(Human human) {
         return !GunSupport.isGunItem(human.getMainHandItem())
@@ -176,10 +188,10 @@ final class TaczIntegration implements GunSupport {
             if (isActivelyBlockingWithShield(defender)) {
                 // TaCZ does not pass through vanilla projectile shield handling,
                 // so apply both the shield durability cost and the requested
-                // 70% reduction at its own damage event.
+                // 60% reduction at its own damage event; native AP sources stay intact.
                 defender.humanGunner$shieldDefense().observeBlockedHit();
                 ShieldDurability.damageShield(defender, event.getBaseAmount());
-                event.setBaseAmount(event.getBaseAmount() * (float) UnifiedConfig.get().gunSetting("shield_damage_multiplier", .3));
+                event.setBaseAmount(event.getBaseAmount() * (float) UnifiedConfig.get().gunSetting("shield_damage_multiplier", .4));
             }
         }
     }

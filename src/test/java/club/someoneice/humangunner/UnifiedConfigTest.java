@@ -30,6 +30,11 @@ public final class UnifiedConfigTest {
 
     private static int assertions;
     public static void main(String[] args) throws Exception {
+        check(HostileTargetingConfig.parse(new JsonObject()).enabled(), "hostile discovery defaults on without optional mods");
+        var targeting = HostileTargetingConfig.parse(JsonParser.parseString(
+                "{\"enabled\":false,\"included_entities\":[\" test:enemy \",4],\"excluded_entities\":[\"test:enemy\"]}").getAsJsonObject());
+        check(!targeting.enabled() && targeting.includedEntities().equals(java.util.Set.of("test:enemy"))
+                && targeting.excludedEntities().contains("test:enemy"), "targeting config validates ID entries");
         GrowthConfigTest.main(args);
         checkConfigRefresh();
         JsonObject defaults = UnifiedConfig.defaults();
@@ -66,7 +71,8 @@ public final class UnifiedConfigTest {
                 "soldier Better Combat option can be enabled");
         check(config.taczEnabled(), "auto enable when installed");
         check(config.tier("roamer").maxHealth() == 40, "roamer base maximum health");
-        check(config.tier("tier3").maxHealth() == 100, "tier3 base maximum health");
+        check(config.tier("tier1").maxHealth() == 40 && config.tier("tier2").maxHealth() == 60
+                && config.tier("tier3").maxHealth() == 80, "rank base maximum health");
         check(config.tier("roamer").baseMovementSpeed() == .105D
                         && config.tier("tier3").baseMovementSpeed() == .105D,
                 "new per-tier base speed defaults preserve current movement");
@@ -120,7 +126,7 @@ public final class UnifiedConfigTest {
         check(config.spawn().admissionChance() == .08, "legacy spawn chance");
         NaturalSpawnProgression defaultProgression = config.spawn().progression();
         check(defaultProgression.enabled() && defaultProgression.safeDays() == 1
-                        && defaultProgression.roamerFirstDay() == 3 && defaultProgression.tier1FirstDay() == 5
+                        && defaultProgression.roamerFirstDay() == 2 && defaultProgression.tier1FirstDay() == 5
                         && defaultProgression.tier2FirstDay() == 10 && defaultProgression.tier3FirstDay() == 20,
                 "new world protection and rank dates default correctly");
         NaturalSpawnProgression boundedProgression = new UnifiedConfig(JsonParser.parseString("""
@@ -135,21 +141,24 @@ public final class UnifiedConfigTest {
                 && config.recruitmentLimit(2) == 6 && config.recruitmentLimit(3) == 3,
                 "legacy recruitment limits retained as defaults");
         check(!config.allowHiredPvpDamage(), "hired PvP damage defaults off");
-        check(Math.abs(config.tier("tier1").bowDamage() - 1.8144D) < 1.0E-9D
-                        && Math.abs(config.tier("tier1").tridentDamage() - 1.26D) < 1.0E-9D
-                        && config.tier("tier1").meleeDamage() == 1.7D,
+        check(Math.abs(config.tier("tier1").bowDamage() - 1.2D) < 1.0E-9D
+                        && config.tier("tier1").crossbowDamage() == 1.5D
+                        && Math.abs(config.tier("tier1").tridentDamage() - 1.1D) < 1.0E-9D
+                        && config.tier("tier1").meleeDamage() == 1.4D,
                 "rank output defaults preserve previous combined multipliers");
         UnifiedConfig damageOverrides = new UnifiedConfig(JsonParser.parseString("""
                 {"tiers":{"tier1":{"damage_multipliers":{"melee_damage_multiplier":0,
-                "arrow_damage_multiplier":72,"thrown_trident_damage_multiplier":9999,"damage_taken_multiplier":0.5}}},
+                "bow_damage_multiplier":72,"crossbow_damage_multiplier":3,"thrown_trident_damage_multiplier":9999,"damage_taken_multiplier":0.5}}},
                 "tacz":{"tier_damage_multipliers":{"tier1":2.5,"tier2":999}}}
                 """).getAsJsonObject());
         check(damageOverrides.tier("tier1").bowDamage() == 72
+                && damageOverrides.tier("tier1").crossbowDamage() == 3
                 && damageOverrides.tier("tier1").tridentDamage() == 1000
                 && damageOverrides.tier("tier1").meleeDamage() == 0,
                 "rank output supports combined ranges, clamping and explicit zero");
         check(damageOverrides.tier("tier1").incomingDamage() == 0.5
-                && damageOverrides.tier("tier2").bowDamage() == 1.8144D, "rank controls are independent");
+                && damageOverrides.tier("tier2").bowDamage() == 1.3D
+                && damageOverrides.tier("tier2").crossbowDamage() == 1.6D, "rank controls are independent");
         check(config.tierGunDamage("tier1") == 0.5D && damageOverrides.tierGunDamage("tier1") == 2.5D
                 && damageOverrides.tierGunDamage("tier2") == 100D, "sole rank firearm output factor and clamp");
 
@@ -239,26 +248,55 @@ public final class UnifiedConfigTest {
         config = new UnifiedConfig(current);
         HumanGunnerConfig weapon = HumanGunnerConfig.parse(config.gunConfig());
         check(weapon.tier2GunChance() == .9, "current tier firearm chance");
-        var pool = weapon.selectAvailable(Map.of(
+        var catalogs = Map.of("tacz", Map.of(
                 id("test:keep"), "rifle", id("test:zero"), "rifle", id("test:black"), "rifle",
-                id("banned:gun"), "rifle", id("test:auto"), "rifle", id("test:rpg"), "rpg"), config::blacklisted);
-        check(pool.size() == 2 && pool.get(id("test:keep")) == 7 && pool.containsKey(id("test:auto")),
-                "blacklist/namespace/zero precedence and automatic category exclusion");
-        check(weapon.selectAvailable(Map.of(), config::blacklisted).isEmpty(), "empty/unloaded gun index safe");
-        JsonObject disabled = config.gunConfig();
-        disabled.addProperty("auto_add_new_guns", false);
-        check(HumanGunnerConfig.parse(disabled).selectAvailable(Map.of(id("test:auto"), "rifle"), s -> false).isEmpty(),
-                "strict whitelist mode");
-        disabled.add("hired_gun_additional_whitelist", JsonParser.parseString(
-                "{\"test:hired_only\":4,\"test:disabled_hired\":0}"
-        ));
-        HumanGunnerConfig hiredConfig = HumanGunnerConfig.parse(disabled);
-        check(hiredConfig.hiredGunAdditionalWhitelist().get(id("test:hired_only")) == 4,
-                "hired-only gun whitelist parsed independently");
-        check(!hiredConfig.selectAvailable(
-                        Map.of(id("test:hired_only"), "rifle"), s -> false
-                ).containsKey(id("test:hired_only")),
-                "hired-only guns never enter the wild spawn pool");
+                id("banned:gun"), "rifle", id("test:auto"), "rifle", id("test:rpg"), "rpg"),
+                "scguns", Map.of(id("addon:other"), "rifle"));
+        var pool = config.gunSpawnPools().select("tier2", catalogs);
+        check(pool.size() == 1 && pool.get(new GunSupport.GunChoice("tacz", id("test:keep"))) == 7,
+                "nonempty whitelist is strict; blacklist/namespace/zero take precedence");
+        check(config.gunSpawnPools().select("tier2", Map.of()).isEmpty(), "unloaded catalogs safe");
+        TierConfigProjection.put(current, "tacz.gun_whitelist", new JsonObject());
+        pool = new UnifiedConfig(current).gunSpawnPools().select("tier2", catalogs);
+        check(pool.containsKey(new GunSupport.GunChoice("tacz", id("test:auto"))) && !pool.containsKey(new GunSupport.GunChoice("tacz", id("test:rpg")))
+                && !pool.containsKey(new GunSupport.GunChoice("tacz", id("test:black"))), "empty pool discovers with exclusions and bans");
+        TierConfigProjection.put(current, "tacz.auto_add_new_guns", new JsonPrimitive(false));
+        check(new UnifiedConfig(current).gunSpawnPools().select("tier2", catalogs).isEmpty(), "empty auto off disables");
+        TierConfigProjection.put(current, "tacz.auto_add_new_guns", new JsonPrimitive(true));
+        TierConfigProjection.put(current, "tacz.gun_whitelist", JsonParser.parseString("{\"test:keep\":0}"));
+        check(new UnifiedConfig(current).gunSpawnPools().select("tier2", catalogs).isEmpty(), "all-zero list never auto expands");
+        TierConfigProjection.put(current, "tacz.spawn_pool_source", new JsonPrimitive("tier"));
+        TierConfigProjection.put(current, "_tier_file_metadata.tier2.tacz.gun_whitelist", JsonParser.parseString("{\"test:auto\":3}"));
+        pool = new UnifiedConfig(current).gunSpawnPools().select("tier2", catalogs);
+        check(pool.size() == 1 && pool.get(new GunSupport.GunChoice("tacz", id("test:auto"))) == 3, "tier selection excludes global list");
+        TierConfigProjection.put(current, "scguns.spawn_pool_source", new JsonPrimitive("global"));
+        TierConfigProjection.put(current, "scguns.gun_whitelist", JsonParser.parseString("{\"addon:other\":9}"));
+        pool = new UnifiedConfig(current).gunSpawnPools().select("tier2", catalogs);
+        check(pool.get(new GunSupport.GunChoice("scguns", id("addon:other"))) == 9, "catalog provider determines backend, not addon namespace");
+        TierConfigProjection.put(current, "scguns.gun_blacklist", JsonParser.parseString("[\"addon:other\"]"));
+        check(!new UnifiedConfig(current).gunSpawnPools().select("tier2", catalogs).containsKey(new GunSupport.GunChoice("scguns", id("addon:other"))),
+                "independent Scguns global bans override explicit global pool");
+        TierConfigProjection.put(current, "tacz.spawn_pool_source", new JsonPrimitive("invalid"));
+        check(new UnifiedConfig(current).gunSpawnPools().select("tier2", catalogs).isEmpty(), "invalid source fails closed");
+
+        TierConfigProjection.put(current, "tacz.spawn_pool_source", new JsonPrimitive("global"));
+        for (String malformed : java.util.List.of("[]", "{\"bad ID\":4}", "{\"test:auto\":-1}", "{\"test:auto\":0.5}")) {
+            TierConfigProjection.put(current, "tacz.gun_whitelist", JsonParser.parseString(malformed));
+            check(new UnifiedConfig(current).gunSpawnPools().select("tier2", catalogs).isEmpty(),
+                    "malformed nonempty pool never discovers: " + malformed);
+        }
+        check(new UnifiedConfig(current).gunSpawnPools().select("unknown", catalogs).isEmpty(), "unknown rank never discovers");
+
+        JsonObject collision = JsonParser.parseString("""
+                {"tacz":{"spawn_pool_source":"global","gun_whitelist":{"pack:same":2}},
+                 "scguns":{"spawn_pool_source":"global","gun_whitelist":{"pack:same":7}}}
+                """).getAsJsonObject();
+        var sharedId = id("pack:same");
+        var collisionPool = GunSpawnPools.parse(collision).select("tier2", Map.of(
+                "tacz", Map.of(sharedId, "rifle"), "scguns", Map.of(sharedId, "rifle")));
+        check(collisionPool.size() == 2 && collisionPool.get(new GunSupport.GunChoice("tacz", sharedId)) == 2
+                && collisionPool.get(new GunSupport.GunChoice("scguns", sharedId)) == 7,
+                "identical resource IDs in distinct providers keep separate selection identities");
 
         JsonObject bad = JsonParser.parseString("""
                 {"tiers":{"roamer":{"attributes":{"max_health":-5,"attack_damage":-30},

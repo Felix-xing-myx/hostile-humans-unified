@@ -16,7 +16,9 @@ final class TaczNativeAnimation {
     static Sample sample(Human human) {
         IGunOperator operator = IGunOperator.fromLivingEntity(human);
         ReloadState reload = operator.getSynReloadState();
-        return new Sample(operator.getSynAimingProgress(),
+        // The synchronized intent survives the intervals between individual shots.
+        // Do not infer ADS solely from a short shoot cooldown pulse.
+        return new Sample(operator.getSynIsAiming(), operator.getSynAimingProgress(),
                 reload != null && reload.getStateType() != null && reload.getStateType().isReloading(),
                 operator.getSynShootCoolDown(), operator.getSynDrawCoolDown(),
                 operator.getSynMeleeCoolDown(), operator.getSynIsBolting());
@@ -45,7 +47,12 @@ final class TaczNativeAnimation {
         // These are readable procedural gestures, not a resource pack's exact
         // magazine/hand keyframes. Vanilla walking/riding legs remain intact.
         if (sample.reloading) {
-            float motion = TaczAnimationPolicy.reloadMotion(age - reloadStart);
+            var timing = human.getTaczReloadVisual();
+            boolean timed = !timing.isEmpty() && timing.getString("Gun").equals(TaczNpcEffects.gunId(human.getMainHandItem()));
+            double now = human.level().getGameTime() + (age - Math.floor(age));
+            float phase = timed ? (float) TaczReloadPlayback.progress(timing.getLong("Start"), timing.getLong("End"), now) * 20
+                    : age - reloadStart;
+            float motion = TaczAnimationPolicy.reloadMotion(phase);
             main.xRot += 0.25F;
             support.xRot = -0.8F - motion * 0.6F + model.head.xRot;
             support.yRot = model.head.yRot + (leftHanded ? -0.5F : 0.5F);
@@ -65,10 +72,13 @@ final class TaczNativeAnimation {
         }
     }
 
-    record Sample(float aim, boolean reloading, long shootCooldown, long drawCooldown,
+    record Sample(boolean aiming, float aim, boolean reloading, long shootCooldown, long drawCooldown,
                   long meleeCooldown, boolean bolting) {
+        Sample withAim(float progress) {
+            return new Sample(aiming, progress, reloading, shootCooldown, drawCooldown, meleeCooldown, bolting);
+        }
         boolean actionActive() {
-            return aim > 0.0F || reloading || bolting || drawCooldown > 0L || meleeCooldown > 0L;
+            return aiming || aim > 0.0F || reloading || bolting || drawCooldown > 0L || meleeCooldown > 0L;
         }
     }
 }

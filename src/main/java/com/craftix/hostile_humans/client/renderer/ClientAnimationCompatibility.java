@@ -231,6 +231,19 @@ public final class ClientAnimationCompatibility {
                 inOutSine, playerConstructor, applierConstructor, setTickDelta, updatePart);
     }
 
+    static TaczNpcAnimator.ReloadApi resolveTaczReload() throws ReflectiveOperationException {
+        ClassLoader loader = ClientAnimationCompatibility.class.getClassLoader();
+        Class<?> animation = Class.forName("dev.kosmx.playerAnim.core.data.KeyframeAnimation", false, loader);
+        Class<?> player = Class.forName("dev.kosmx.playerAnim.api.layered.KeyframeAnimationPlayer", false, loader);
+        Class<?> speed = Class.forName("dev.kosmx.playerAnim.api.layered.modifier.SpeedModifier", false, loader);
+        Class<?> modifier = Class.forName("dev.kosmx.playerAnim.api.layered.modifier.AbstractModifier", false, loader);
+        Class<?> layer = Class.forName("dev.kosmx.playerAnim.api.layered.ModifierLayer", false, loader);
+        return new TaczNpcAnimator.ReloadApi(player.getConstructor(animation, int.class),
+                animation.getMethod("getLength"), animation.getMethod("isInfinite"), player.getMethod("getStopTick"),
+                player.getMethod("getCurrentTick"), speed.getConstructor(float.class),
+                speed.getField("speed"), layer.getMethod("addModifierLast", modifier));
+    }
+
     static PlayerAnimatorModelBridge.Access resolveModel() throws ReflectiveOperationException {
         ClassLoader loader = ClientAnimationCompatibility.class.getClassLoader();
         Class<?> mutableModel = Class.forName(

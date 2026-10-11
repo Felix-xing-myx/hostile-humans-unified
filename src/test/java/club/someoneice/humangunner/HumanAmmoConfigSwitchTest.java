@@ -57,6 +57,13 @@ public final class HumanAmmoConfigSwitchTest {
         check(calls(SPAWN, "applyOnce", "net/minecraft/nbt/CompoundTag", "getBoolean")
                 && calls(SPAWN, "applyOnce", "net/minecraft/nbt/CompoundTag", "putBoolean"),
                 "initial grant retains the persistent one-time guard");
+        for (String name : List.of("canReload", "consumeMagazines", "canUseGun")) {
+            for (boolean enabled : new boolean[]{false, true}) {
+                int[] reserve = {19};
+                check(!evaluate(name, enabled, true, false, reserve), "blacklist overrides ammo switch: " + name);
+                check(reserve[0] == 19, "banned gun never spends reserves: " + name);
+            }
+        }
         freeReloadCycle();
         System.out.println("HumanAmmoConfigSwitchTest: " + checks + " checks passed; live TaCZ acceptance remains required");
     }
@@ -89,6 +96,10 @@ public final class HumanAmmoConfigSwitchTest {
 
     /** Follow actual compiled short-circuit branches, rejecting any reserve access in disabled mode. */
     private static boolean evaluate(String name, boolean enabled, boolean gun, int[] inventory) throws Exception {
+        return evaluate(name, enabled, gun, true, inventory);
+    }
+
+    private static boolean evaluate(String name, boolean enabled, boolean gun, boolean allowed, int[] inventory) throws Exception {
         var stack = new ArrayList<Object>();
         AbstractInsnNode instruction = method(AMMO, name).instructions.getFirst();
         while (instruction != null) {
@@ -101,8 +112,9 @@ public final class HumanAmmoConfigSwitchTest {
                 switch (call.name) {
                     case "get" -> result = new Object();
                     case "isGun" -> result = gun ? 1 : 0;
+                    case "accepts" -> result = allowed ? 1 : 0;
                     case "hasLoadedAmmo" -> result = 0;
-                    case "canReload" -> result = evaluate("canReload", enabled, gun, inventory) ? 1 : 0;
+                    case "canReload" -> result = evaluate("canReload", enabled, gun, allowed, inventory) ? 1 : 0;
                     case "consumptionEnabled" -> result = enabled ? 1 : 0;
                     case "arrowCount", "magazineCount", "magazineCost", "consume" -> {
                         if (!enabled) throw new AssertionError("Disabled mode accessed reserves in " + name + ": " + call.name);

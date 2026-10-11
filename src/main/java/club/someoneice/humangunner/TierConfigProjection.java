@@ -85,12 +85,14 @@ final class TierConfigProjection {
                     "ammunition", "food", "potions", "combat", "ai", "movement",
                     "weapon_spread_degrees", "tacz", "scguns", "growth_profile", "equipment_loadout")
                 : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "growth", "ammunition",
-                    "equipment_integration", "ai", "recruitment", "spawning", "damage", "jump_attack",
+                    "equipment_integration", "ai", "hostile_mob_targeting", "shield_pressure", "recruitment", "spawning", "damage", "jump_attack",
                     "better_combat", "first_aid", "scguns", "tacz", "native_gameplay");
         orderGroup(result, "equipment_loadout", List.of("ranged_chance", "ranged_in_backpack", "allow_tacz_firearms",
                 "automatic_spartan_weapons", "automatic_spartan_shields", "automatic_immersive_armors", "automatic_scguns_armor",
                 "weapon_count", "guaranteed_shields_min", "guaranteed_shields_max", "automatic_shield_enchantments",
                 "mainhand", "ranged_mainhand", "armor_sets", "shield_pool", "inventory", "offhand", "bonus_mainhand", "rules"));
+        orderGroup(result, "damage_multipliers", List.of("melee_damage_multiplier", "bow_damage_multiplier",
+                "crossbow_damage_multiplier", "thrown_trident_damage_multiplier", "damage_taken_multiplier"));
         orderGroup(result, "attributes", List.of("max_health", "attack_damage", "armor",
                 "armor_toughness", "knockback_resistance", "follow_range"));
         orderGroup(result, "spawning", rank ? List.of("spawn_multiplier", "first_spawn_day")
@@ -104,24 +106,27 @@ final class TierConfigProjection {
                 "shield_use_speed_multiplier", "cover_search_radius", "cover_search_attempts",
                 "tactical_reposition_interval", "ally_spacing_radius", "combat_jump_chance",
                 "combat_jump_interval_min", "combat_jump_interval_max", "greet_chance"));
-        orderGroup(result, "tacz", rank ? List.of("gun_chance", "damage_multiplier", "gun_type_weights")
-                : List.of("enabled", "natural_spawn_firearms_enabled", "auto_add_new_guns", "auto_added_gun_weight",
-                    "excluded_auto_gun_types", "excluded_gun_namespaces", "gun_blacklist",
+        orderGroup(result, "tacz", rank ? List.of("gun_chance", "gun_whitelist", "damage_multiplier", "gun_type_weights")
+                : List.of("enabled", "natural_spawn_firearms_enabled", "spawn_pool_source", "gun_blacklist", "gun_whitelist", "auto_add_new_guns", "auto_added_gun_weight",
+                    "excluded_auto_gun_types", "excluded_gun_namespaces",
                     "pillager_gun_damage_multiplier", "shield_damage_multiplier", "offhand_shield_damage_reduction", "tamed_maid_damage_multiplier",
-                    "forced_ranged_gun_chance", "gun_drop_chance", "gun_whitelist",
-                    "hired_gun_additional_whitelist"));
+                    "forced_ranged_gun_chance", "gun_drop_chance"));
+        orderGroup(result, "shield_pressure", List.of("enabled", "max_guard_ticks", "break_attempt_ticks", "window_ticks", "damage_ratio",
+                "frequent_hits", "frequent_damage_ratio", "quiet_ticks"));
         orderGroup(result, "jump_attack", List.of("enabled", "damage_multiplier", "chance",
                 "attempt_interval_min_ticks", "attempt_interval_max_ticks", "max_approach_distance_extra",
                 "max_target_height_difference"));
-        if (rank) orderGroup(result, "scguns", List.of("damage_multiplier"));
+        orderGroup(result, "scguns", rank ? List.of("gun_whitelist", "damage_multiplier")
+                : List.of("enabled", "spawn_pool_source", "gun_blacklist", "gun_whitelist", "auto_add_new_guns", "auto_added_gun_weight"));
         orderGroup(result, "first_aid", List.of("enabled", "plaster_healing", "bandage_healing",
                 "morphine_duration_seconds", "morphine_resistance_level", "quality"));
-        orderGroup(result, "growth", List.of("enabled", "stage_percent", "stage_cost", "experience", "firearms", "combat"));
+        orderGroup(result, "growth", List.of("enabled", "stage_percent", "damage_stage_percent", "stage_cost", "experience", "firearms", "combat"));
         orderGroup(object(result, "growth"), "experience", List.of("min_percent", "max_percent", "cap_percent", "below_base_cost", "band_width_percent", "cost_by_band"));
         orderGroup(result, "growth_profile", List.of("start_day", "duration_days", "progress_nodes",
                 "early_baseline_gear_chance", "early_gun_chance_multiplier", "early_enchantment_keep_chance",
                 "early_enchantment_level_multiplier", "early_totem_keep_chance", "early_trident_keep_chance",
                 "early_spartan_material", "early_melee", "early_armor"));
+        sectionHeader(result, "shield_pressure", "高压防御 / High-pressure defense");
         sectionHeader(result, "jump_attack", "追击跳砍 / Pursuit jump attack");
         sectionHeader(result, "first_aid", "First Aid 联动 / First Aid integration");
         sectionHeader(result, "attributes", "基础属性 / Base attributes");
@@ -155,9 +160,9 @@ final class TierConfigProjection {
     private static void enforceOwnership(JsonObject data, boolean rank) {
         JsonObject defaults = UnifiedConfig.defaults();
         if (rank) {
-            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay", "growth", "jump_attack", "first_aid")) data.remove(key);
+            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay", "growth", "jump_attack", "first_aid", "shield_pressure")) data.remove(key);
             for (String key : object(defaults, "scguns").keySet())
-                if (!key.startsWith("_")) removeOptions(object(data, "scguns"), List.of(key));
+                if (!key.startsWith("_") && !key.equals("gun_whitelist")) removeOptions(object(data, "scguns"), List.of(key));
             removeOptions(object(data, "ai"), List.of("enabled"));
             removeOptions(object(data, "ammunition"), List.of("consume_ammunition"));
             for (String key : object(defaults, "spawning").keySet())
@@ -166,10 +171,11 @@ final class TierConfigProjection {
                 if (!key.startsWith("_")) removeOptions(object(data, "damage_multipliers"), List.of(key));
             JsonObject tacz = object(data, "tacz");
             for (String key : object(defaults, "tacz").keySet()) {
-                if (!key.startsWith("_") && !List.of("gun_chance", "damage_multiplier", "gun_type_weights").contains(key))
+                if (!key.startsWith("_") && !List.of("gun_chance", "gun_whitelist", "damage_multiplier", "gun_type_weights").contains(key))
                     removeOptions(tacz, List.of(key));
             }
         } else {
+            removeOptions(object(data, "scguns"), List.of("npc_damage_multiplier"));
             for (String group : List.of("tiers", "equipment_loadouts", "tier_ai", "_tier_file_metadata")) removeRanks(data, group);
             removeRanks(object(object(data, "spawning"), "progression"), "first_spawn_day_by_tier");
             JsonObject ai = object(data, "ai");
@@ -183,12 +189,13 @@ final class TierConfigProjection {
             removeOptions(object(data, "ammunition"), List.of("arrows", "magazines"));
             removeOptions(object(data, "spawning"), List.of("spawn_multiplier", "first_spawn_day"));
             removeOptions(object(data, "tacz"), List.of("gun_chance", "damage_multiplier", "gun_type_weights", "human_gun_damage_multiplier"));
-            removeOptions(object(data, "damage"), List.of("melee_damage_multiplier", "arrow_damage_multiplier", "thrown_trident_damage_multiplier"));
+            removeOptions(object(data, "damage"), List.of("melee_damage_multiplier", "arrow_damage_multiplier", "bow_damage_multiplier", "crossbow_damage_multiplier", "thrown_trident_damage_multiplier"));
         }
     }
 
     private static void removeRetiredControls(JsonObject data, boolean rank) {
         data.remove("equipment_growth");
+        removeOptions(object(data, "tacz"), List.of("hired_gun_additional_whitelist"));
         removeOptions(object(data, "ai"), List.of("shield_block_chance_after_hit"));
         if (!rank) {
             JsonObject damage = object(data, "damage");
@@ -216,7 +223,7 @@ final class TierConfigProjection {
         removeObsoleteGuidance(data);
         JsonObject damage = object(data, rank ? "damage_multipliers" : "damage");
         List<String> retired = rank
-                ? List.of("bow_damage_multiplier", "trident_damage_multiplier", "incoming_damage_multiplier")
+                ? List.of("arrow_damage_multiplier", "trident_damage_multiplier", "incoming_damage_multiplier")
                 : List.of("human_melee_damage_multiplier", "human_bow_damage_multiplier",
                     "human_trident_damage_multiplier", "bow_velocity_damage_multiplier",
                     "trident_velocity_damage_multiplier", "tamed_maid_melee_damage_multiplier");
@@ -318,7 +325,6 @@ final class TierConfigProjection {
             String key = entry.getKey(), child = path.isEmpty() ? key : path + "." + key;
             if (!data.has(key)) data.add(key, entry.getValue().deepCopy());
             else if (!CurrentConfigDefaults.userMap(child) && !child.equals("tacz.gun_type_weights") && !child.equals("tacz.gun_whitelist")
-                    && !child.equals("tacz.hired_gun_additional_whitelist")
                     && data.get(key).isJsonObject() && entry.getValue().isJsonObject())
                 fill(data.getAsJsonObject(key), entry.getValue().getAsJsonObject(), child);
         }

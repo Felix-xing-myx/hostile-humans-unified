@@ -30,15 +30,15 @@ public final class HumanAmmo {
         return GunSupport.get().magazineCost(gun);
     }
     public static boolean canReload(Human human, ItemStack gun) {
-        return GunSupport.get().isGun(gun)
+        return GunSupport.get().isGun(gun) && HumanGunAcceptance.accepts(gun)
                 && (!consumptionEnabled() || magazineCount(human) >= magazineCost(gun));
     }
     public static boolean consumeMagazines(Human human, ItemStack gun) {
-        return GunSupport.get().isGun(gun)
+        return GunSupport.get().isGun(gun) && HumanGunAcceptance.accepts(gun)
                 && (!consumptionEnabled() || consume(human, MAGAZINE_ID, magazineCost(gun)));
     }
     public static boolean canUseGun(Human human, ItemStack gun) {
-        return GunSupport.get().isGun(gun)
+        return GunSupport.get().isGun(gun) && HumanGunAcceptance.accepts(gun)
                 && (GunSupport.get().hasLoadedAmmo(gun) || canReload(human, gun));
     }
 

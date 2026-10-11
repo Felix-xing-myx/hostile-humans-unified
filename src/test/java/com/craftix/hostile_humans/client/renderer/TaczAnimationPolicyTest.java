@@ -3,6 +3,25 @@ package com.craftix.hostile_humans.client.renderer;
 /** Standalone policy checks; no Minecraft, TaCZ or Player Animator runtime required. */
 public final class TaczAnimationPolicyTest {
     public static void main(String[] args) {
+        check(TaczReloadPlayback.progress(100, 180, 140) == .5, "server reload timeline drives halfway seek");
+        check(TaczReloadPlayback.progress(100, 180, 90) == 0, "early packets never seek backwards");
+        check(TaczReloadPlayback.progress(100, 180, 200) == .98, "late script completion retains a safe final pose");
+        check(TaczReloadPlayback.progress(100, 100, 110) == 0, "invalid timeline is safe");
+        check(TaczReloadPlayback.seek(40, .5) == 20, "retracking or weapon return restores progress");
+        check(TaczReloadPlayback.seek(40, 1) == 38, "seek cannot deactivate the animation");
+        check(Math.abs(TaczReloadPlayback.speed(42, 0, 80) - .5F) < 1.0E-5F,
+                "long reload plays at half speed");
+        check(TaczReloadPlayback.speed(42, 0, 20) == 2, "short reload can play faster");
+        check(TaczReloadPlayback.speed(42, 40, 80) == 0, "last pose waits for server completion");
+        check(TaczReloadPlayback.speed(42, 20, 80) < TaczReloadPlayback.speed(42, 20, 20),
+                "native extended deadline slows the remaining action without restart");
+        float aim = 0;
+        for (int tick = 0; tick < 6; tick++) aim = TaczAnimationPolicy.blendAim(aim, true, 1);
+        check(Math.abs(aim - 1) < 1.0E-5F, "sustained intent reaches full aim between shots");
+        check(TaczAnimationPolicy.blendAim(aim, true, 1) == 1, "shot intervals do not release aim");
+        check(TaczAnimationPolicy.blendAim(aim, false, 1) > 0, "release blends instead of snapping");
+        check(TaczAnimationPolicy.blendAim(.5F, true, 0) == .5F, "same-age render is idempotent");
+        check(TaczAnimationPolicy.blendAim(.5F, true, -1) == .5F, "clock rollback cannot reverse blending");
         check(!reset(100, 101, 500, 501, 0.04D), "ordinary movement retains playback");
         check(!reset(100, 100, 500, 500, 0.0D), "multiple frames do not reset playback");
         check(reset(100, 3, 500, 501, 0.0D), "entity clock reset rebuilds layers");

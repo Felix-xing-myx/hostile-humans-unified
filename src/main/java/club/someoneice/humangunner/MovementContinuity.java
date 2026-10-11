@@ -35,7 +35,8 @@ public final class MovementContinuity {
         if (human.level().isClientSide) return;
         State state = STATES.computeIfAbsent(human, ignored -> new State());
         Path path = human.getNavigation().getPath();
-        if (CombatTerrainNavigation.ownsRoute(human) || WaterCombatNavigation.ownsRoute(human)) {
+        if (CombatTerrainNavigation.ownsRoute(human) || WaterCombatNavigation.ownsRoute(human)
+                || human.hasWaterCombatMovementInput()) {
             // The combat planner monitors its own progress. Do not replace its waypoint goal.
             state.step = null;
             state.pendingFullSearch = false;
@@ -214,6 +215,10 @@ public final class MovementContinuity {
     /** Called after navigation writes its input, before the movement controller consumes it. */
     public static void applyStep(Human human) {
         State state = STATES.get(human);
+        if (human.hasWaterCombatMovementInput()) {
+            if (state != null) state.step = null;
+            return;
+        }
         if (state == null || state.step == null) return;
         boolean escapeStep = state.route == null && human.isFleeing && human.getNavigation().isDone();
         if (human.tickCount >= state.stepUntil || (!escapeStep

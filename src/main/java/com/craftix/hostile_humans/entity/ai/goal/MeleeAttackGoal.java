@@ -184,6 +184,13 @@ extends Goal {
             this.ticksUntilNextPathRecalculation = Math.max(this.ticksUntilNextPathRecalculation - 1, 0);
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
+            if (!holdingPosition && this.mob instanceof Human human
+                    && club.someoneice.humangunner.WaterCombatNavigation.controlMelee(human, livingEntity, this.speedModifier)) {
+                pursuitProgress.stalled(this.mob.tickCount, livingEntity.getId(),
+                        this.mob.getX(), this.mob.getY(), this.mob.getZ(), false);
+                this.tickAttackOnly(livingEntity);
+                return;
+            }
             if (this.mob instanceof Human human)
                 club.someoneice.humangunner.PursuitJumpAttack.tryStart(human, livingEntity, this.ticksUntilNextAttack);
             boolean spacing = !holdingPosition && this.mob instanceof Human human
@@ -272,7 +279,8 @@ extends Goal {
             return false;
         }
         if (this.mob instanceof Human human) MeleeCombatRange.faceTarget(human, target);
-        if (!canStrike(target)) return false;
+        if (this.mob instanceof Human human ? !MeleeCombatRange.canStartAttack(human, target)
+                : !canStrike(target)) return false;
         if (this.mob.isBlocking()) {
             this.mob.stopUsingItem();
         }
@@ -280,7 +288,7 @@ extends Goal {
         if (this.mob instanceof Human human) {
             human.lastCombatTime = human.tickCount;
         }
-        this.mob.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        // Human.doHurtTarget owns the animation after the final shared validation.
         return this.mob.doHurtTarget(target);
     }
 

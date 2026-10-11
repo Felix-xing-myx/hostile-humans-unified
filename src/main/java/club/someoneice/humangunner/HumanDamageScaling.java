@@ -38,8 +38,9 @@ final class HumanDamageScaling {
                 multiplier *= (float) UnifiedConfig.get().damage("trident_stab_damage_multiplier", .42);
         } else if (source.getDirectEntity() instanceof ThrownTrident) {
             multiplier = (float) TierAttributes.of(attacker).tridentDamage();
-        } else if (source.getDirectEntity() instanceof AbstractArrow) {
-            multiplier = (float) TierAttributes.of(attacker).bowDamage();
+        } else if (source.getDirectEntity() instanceof AbstractArrow arrow) {
+            multiplier = (float) (HumanArrowCombat.isCrossbowProjectile(arrow)
+                    ? TierAttributes.of(attacker).crossbowDamage() : TierAttributes.of(attacker).bowDamage());
         } else {
             return amount;
         }

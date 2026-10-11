@@ -16,7 +16,6 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ElytraItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 /** Vanilla held-item placement plus Better Combat's animated item channels for Humans. */
 final class HumanAnimatedItemInHandLayer extends ItemInHandLayer<Human, PlayerModel<Human>> {
@@ -38,8 +37,11 @@ final class HumanAnimatedItemInHandLayer extends ItemInHandLayer<Human, PlayerMo
         try {
             if (arm != human.getMainArm() && GunSupport.isGunItem(human.getMainHandItem())
                     && SpartanEquipmentCompat.isShield(item)) {
-                renderBackShield(human, item, poseStack, buffer, packedLight);
-                return;
+                BackShieldPose.Profile profile = BackShieldPose.resolve(human, item);
+                if (!profile.offhand()) {
+                    renderBackShield(human, item, profile, arm, poseStack, buffer, packedLight);
+                    return;
+                }
             }
             getParentModel().translateToHand(arm, poseStack);
             BetterCombatNpcAnimator.applyHeldItemBend(human, arm, poseStack);
@@ -48,32 +50,33 @@ final class HumanAnimatedItemInHandLayer extends ItemInHandLayer<Human, PlayerMo
             poseStack.translate((arm == HumanoidArm.LEFT ? -1.0F : 1.0F) / 16.0F,
                     0.125F, -0.625F);
             BetterCombatNpcAnimator.applyHeldItemTransform(human, arm, poseStack);
-            if (!ScgunsNpcAnimator.render(human, item, displayContext, poseStack, buffer, packedLight))
-                itemRenderer.renderItem(human, item, displayContext,
-                        arm == HumanoidArm.LEFT, poseStack, buffer, packedLight);
+            if (!ScgunsNpcAnimator.render(human, item, displayContext, poseStack, buffer, packedLight)) {
+                if (GunSupport.isTaczGunItem(item) && arm == human.getMainArm()) {
+                    var previous = TaczNpcEffects.begin(human, item, buffer);
+                    try {
+                        itemRenderer.renderItem(human, item, displayContext,
+                                arm == HumanoidArm.LEFT, poseStack, buffer, packedLight);
+                    } finally { TaczNpcEffects.end(previous); }
+                } else {
+                    itemRenderer.renderItem(human, item, displayContext,
+                            arm == HumanoidArm.LEFT, poseStack, buffer, packedLight);
+                }
+            }
         } finally {
             poseStack.popPose();
         }
     }
 
     /** Visual placement only: shield custody, protection and durability remain server-owned. */
-    private void renderBackShield(Human human, ItemStack shield, PoseStack poses,
+    private void renderBackShield(Human human, ItemStack shield, BackShieldPose.Profile profile,
+                                  HumanoidArm arm, PoseStack poses,
                                   MultiBufferSource buffer, int light) {
         getParentModel().body.translateAndRotate(poses);
         boolean elytra = human.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof ElytraItem;
         poses.translate(0, .30, elytra ? .55 : .38);
         poses.mulPose(Axis.ZP.rotationDegrees(human.getMainArm() == HumanoidArm.RIGHT ? 25 : -25));
-        // Item models use Y-up; the humanoid layer uses Y-down. Turn the shield upright,
-        // with its face toward the rear, before rendering in this torso-local frame.
-        poses.mulPose(Axis.XP.rotationDegrees(180));
-        if (shield.is(Items.SHIELD)) {
-            // Vanilla's special renderer is centered at zero, unlike baked item models.
-            // Cancel ItemRenderer's (-.5, -.5, -.5) origin shift. Its native Y/Z
-            // inversion already cancels our upright turn above; do not invert it again.
-            // Keep the native renderer for banner patterns and enchantment foil.
-            poses.translate(.5, .5, .5);
-        }
-        // NONE avoids item-frame and hand transforms pushing different mod shields sideways.
-        itemRenderer.renderItem(human, shield, ItemDisplayContext.NONE, false, poses, buffer, light);
+        ItemDisplayContext context = profile.apply(poses, arm);
+        itemRenderer.renderItem(human, shield, context,
+                profile.thirdPerson() && arm == HumanoidArm.LEFT, poses, buffer, light);
     }
 }

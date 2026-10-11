@@ -32,6 +32,23 @@ public final class ProjectileCooldownPolicyTest {
         check(!ProjectileCooldownPolicy.allows(false, false, false, false, true, false),
                 "unrelated mob combat remains unchanged");
 
+        check(HumanAttackCooldownPolicy.allowsMelee(false, true, true, true, false, false),
+                "human direct melee ignores hurt cooldown at its existing attack rate, including player victims");
+        check(!HumanAttackCooldownPolicy.allowsMelee(true, true, true, true, false, false),
+                "vanilla mode retains melee cooldown");
+        check(!HumanAttackCooldownPolicy.allowsMelee(false, false, true, true, false, false),
+                "ordinary mobs attacking humans keep their melee cooldown");
+        check(!HumanAttackCooldownPolicy.allowsMelee(false, true, false, true, false, false),
+                "indirect human damage cannot qualify as melee");
+        check(!HumanAttackCooldownPolicy.allowsMelee(false, true, true, false, false, false),
+                "thorns, fire and other damage types are not direct attacks");
+        check(!HumanAttackCooldownPolicy.allowsMelee(false, true, true, true, true, false)
+                && !HumanAttackCooldownPolicy.allowsMelee(false, true, true, true, false, true),
+                "projectiles and explosions retain their own policy");
+        check(CreeperFinishPolicy.canFinish(20, 10, 10, 1, 4, 10, true)
+                && !CreeperFinishPolicy.canFinish(20, 10, 10, 1, 4, 10, false),
+                "creeper forecast recognizes actual fast melee hits without speeding up attacks");
+
         ClassNode living = read("net/minecraft/world/entity/LivingEntity");
         var hurt = living.methods.stream().filter(m -> (m.name.equals("hurt") || m.name.equals("m_6469_"))
                 && m.desc.equals("(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
@@ -58,7 +75,7 @@ public final class ProjectileCooldownPolicyTest {
         }
         check(starts == 1 && ends == 1 && queries == 1,
                 "the real Forge slice contains exactly one cooldown tag query");
-        for (String name : new String[]{"ProjectileCooldownPolicy", "mixin/LivingEntityProjectileCooldownMixin"}) {
+        for (String name : new String[]{"HumanAttackCooldownPolicy", "ProjectileCooldownPolicy", "mixin/LivingEntityProjectileCooldownMixin"}) {
             for (var method : read("club/someoneice/humangunner/" + name).methods) {
                 for (var instruction : method.instructions) {
                     if (instruction instanceof FieldInsnNode field)

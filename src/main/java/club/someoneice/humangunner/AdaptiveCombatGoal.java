@@ -5,7 +5,6 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -137,7 +136,7 @@ public final class AdaptiveCombatGoal extends Goal {
         // life-saving retreat or blocking a projectile headed into its post.
         if (SoldierOrder.isHoldingPosition(human)
                 && !RetreatRecoveryPolicy.shouldForceRetreat(human)
-                && incomingArrow == null && !shields.underGunfirePressure()) {
+                && incomingArrow == null && !shields.underGunfirePressure() && !shields.wantsHighPressureGuard()) {
             return false;
         }
 
@@ -153,6 +152,10 @@ public final class AdaptiveCombatGoal extends Goal {
         updateCombatSession(currentThreat);
         if (BodyguardProtection.protectingFromExplosion(human, currentThreat)) return false;
 
+        if (shields.wantsHighPressureGuard()) {
+            pendingPhase = Phase.DEFEND;
+            return true;
+        }
         if (shouldEnterRetreat(currentThreat)) {
             pendingPhase = Phase.RETREAT;
             return true;
@@ -164,6 +167,8 @@ public final class AdaptiveCombatGoal extends Goal {
             pendingPhase = Phase.DEFEND;
             return true;
         }
+        // Let the weapon goal spend its protected firing window; flanking must not steal it.
+        if (shields.hasRangedCounterWindow()) return false;
 
         // Survival and fresh shield reactions above retain priority. Ordinary tactical
         // repositioning must not replace a terrain route owned by the weapon controller.
@@ -225,6 +230,8 @@ public final class AdaptiveCombatGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (phase == Phase.DEFEND && shields.isPressureBreakAttempt()) return false;
+        if (phase != Phase.DEFEND && shields.wantsHighPressureGuard()) return false;
         if (BodyguardProtection.isBodyguard(human)) {
             BodyguardProtection.update(human);
             if (BodyguardProtection.protectingFromExplosion(human, BodyguardProtection.threat(human))) return false;
@@ -234,11 +241,11 @@ public final class AdaptiveCombatGoal extends Goal {
         }
         // Suppressive fire can extend DEFEND indefinitely; it must not trap a
         // injured fighter in that phase instead of allowing ordinary retreat.
-        if (phase == Phase.DEFEND && shouldEnterRetreat(threat)) return false;
+        if (phase == Phase.DEFEND && shouldEnterRetreat(threat) && !shields.wantsHighPressureGuard()) return false;
         if ((phase == Phase.FLANK || phase == Phase.PRESSURE || phase == Phase.UNSTUCK)
                 && CombatTerrainNavigation.hasWork(human, threat)) return false;
         if ((human.distanceToSqr(threat) > 4096.0D
-                && !(phase == Phase.DEFEND && shields.awaitingProjectile()))
+                && !(phase == Phase.DEFEND && (shields.awaitingProjectile() || shields.wantsHighPressureGuard())))
                 || phaseTicks <= 0) {
             return false;
         }
@@ -406,6 +413,10 @@ public final class AdaptiveCombatGoal extends Goal {
             return;
         }
         boolean advancingMelee = shouldAdvanceToMeleeThreat();
+        if (WaterCombatNavigation.controlMelee(human, threat, 1.0D)) {
+            if (!human.isUsingItem()) shields.maintainCombat(threat);
+            return;
+        }
         if (CombatTerrainNavigation.update(human, threat, 1.0D,
                 canFireFromTerrainPosition()).ownsMovement()) {
             if (!human.isUsingItem()) shields.maintainCombat(threat);
@@ -429,7 +440,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 if (!moveToThreat(1.0D)) {
                     // Hand failed routes back to the melee pursuit watchdog;
                     // a shield must not own MOVE while making no progress.
-                    if (!shields.underGunfirePressure()) phaseTicks = 0;
+                    if (!shields.underGunfirePressure() && !shields.wantsHighPressureGuard()) phaseTicks = 0;
                 }
             }
             defenseMovementTarget = threat;
@@ -480,10 +491,11 @@ public final class AdaptiveCombatGoal extends Goal {
             // Already in a valid firing band: release promptly so the weapon
             // goal resumes instead of waiting through a long damage reaction.
             if (!shields.underGunfirePressure()
+                    && !shields.wantsHighPressureGuard()
                     && shields.hasHeldMinimumCombatGuard())
                 phaseTicks = 0;
         }
-        if (!moved && !shields.underGunfirePressure()) phaseTicks = 0;
+        if (!moved && !shields.underGunfirePressure() && !shields.wantsHighPressureGuard()) phaseTicks = 0;
     }
 
 
@@ -660,10 +672,8 @@ public final class AdaptiveCombatGoal extends Goal {
             gunOperator.prepareUrgentShot();
         }
         gunOperator.aim(true);
-        Vec3 origin = human.getEyePosition();
-        Vec3 targetPoint = GunAimPoint.forTarget(threat);
-        double leadTicks = Mth.clamp(origin.distanceTo(targetPoint) / 5.0D, 0.0D, 5.0D);
-        Vec3 aimPoint = targetPoint.add(threat.getDeltaMovement().scale(leadTicks));
+        Vec3 origin = RangedShotClearance.gunOrigin(human);
+        Vec3 aimPoint = RangedShotClearance.gunAim(origin, weapon, threat);
         Vec3 delta = aimPoint.subtract(origin);
         double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
         float exactYaw = (float) (Mth.atan2(delta.z, delta.x) * Mth.RAD_TO_DEG) - 90.0F;
@@ -680,7 +690,7 @@ public final class AdaptiveCombatGoal extends Goal {
         if (++retreatAimTicks < 2) {
             return true;
         }
-        gunOperator.shoot(weapon, pitch, yaw);
+        gunOperator.shoot(weapon, threat, pitch, yaw);
         return true;
     }
 
@@ -704,13 +714,12 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private void performRetreatMeleeCounter() {
-        if (!human.humanGunner$canMeleeAttack()) return;
+        if (!MeleeCombatRange.canStartAttack(human, threat)) return;
         if (!(HumanUtil.isMeleeWeapon(human.getMainHandItem())
                 || human.getMainHandItem().getItem() instanceof TridentItem)
                 || human.tickCount < nextRetreatMeleeTick) {
             return;
         }
-        human.swing(InteractionHand.MAIN_HAND);
         human.doHurtTarget(threat);
         nextRetreatMeleeTick = human.tickCount + MeleeAttackTiming.nextCooldown(human);
         human.getPersistentData().putString("hostile_humans_unified:ai_phase", "retreat_melee_counterattack");
@@ -852,7 +861,9 @@ public final class AdaptiveCombatGoal extends Goal {
 
             // A real rear ranged hit permits retaliation, but never steals an urgent close fight.
             if (isValidThreat(current) && current != attacker
-                    && human.distanceToSqr(current) <= 36.0D
+                    && (human.distanceToSqr(current) <= 36.0D
+                    || (WaterCombatNavigation.isMeleePursuit(human, current) && current.isInWater()
+                        && human.distanceToSqr(current) <= 144.0D && human.getSensing().hasLineOfSight(current)))
                     && isRangedThreat(attacker)) return applySurroundingThreatPriority(current);
             LivingEntity locked = activeFocusedThreat();
             if (locked != null) {
@@ -1113,7 +1124,7 @@ public final class AdaptiveCombatGoal extends Goal {
 
     /** Terrain decisions use weapon reach/ammunition, independently of shield reaction timing. */
     private boolean canFireFromTerrainPosition() {
-        if (threat == null || !human.getSensing().hasLineOfSight(threat)) return false;
+        if (threat == null || !RangedShotClearance.canShoot(human, threat)) return false;
         var held = human.getMainHandItem();
         double reach;
         if (GunSupport.isGunItem(held)) {

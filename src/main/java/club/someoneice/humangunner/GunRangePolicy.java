@@ -8,6 +8,11 @@ final class GunRangePolicy {
 
     private GunRangePolicy() {}
 
+    /** A clear shot at long range is not a reason to abandon a safe approach. */
+    static boolean withinPreferredRange(double distance, Band band) {
+        return Double.isFinite(distance) && distance >= band.minimum() && distance <= band.maximum();
+    }
+
     static double firingReach(Band band, double followRange) {
         return band.fireRange() > 64.0D ? Math.max(band.fireRange(), followRange) : band.fireRange();
     }

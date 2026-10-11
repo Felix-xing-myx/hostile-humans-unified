@@ -27,6 +27,7 @@ final class CombatFoodRecoveryGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (human.humanGunner$shieldDefense().shouldSuppressRecovery()) return false;
         boolean urgent = RecoverySupplies.hasUrgentInstantHealing(human);
         return config.enabled()
                 && config.itemRecoveryEnabled()
@@ -40,6 +41,7 @@ final class CombatFoodRecoveryGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if (human.humanGunner$shieldDefense().shouldSuppressRecovery()) return false;
         return human.isAlive()
                 && (session != null
                 || RecoverySupplies.hasUrgentInstantHealing(human)
@@ -69,6 +71,7 @@ final class CombatFoodRecoveryGoal extends Goal {
 
     @Override
     public void tick() {
+        if (human.humanGunner$shieldDefense().shouldSuppressRecovery()) { stop(); return; }
         boolean urgent = RecoverySupplies.hasUrgentInstantHealing(human);
         if (session != null && session.food() && urgent) {
             boolean completed = RecoverySupplies.completed(human, session);

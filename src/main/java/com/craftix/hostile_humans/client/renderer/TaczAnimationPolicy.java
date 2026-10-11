@@ -4,6 +4,11 @@ package com.craftix.hostile_humans.client.renderer;
 final class TaczAnimationPolicy {
     private TaczAnimationPolicy() {}
 
+    static float blendAim(float previous, boolean aiming, float elapsedTicks) {
+        float step = Math.max(0.0F, Math.min(elapsedTicks, 5.0F)) / 6.0F;
+        return aiming ? Math.min(1.0F, previous + step) : Math.max(0.0F, previous - step);
+    }
+
     static boolean needsReset(int previousTick, int tick, long previousTime, long time,
                               double distanceSqr) {
         return tick < previousTick || tick - previousTick > 20

@@ -11,12 +11,19 @@ import net.minecraft.world.item.alchemy.PotionUtils;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Per-rank startup snapshot; optional potion registrations resolve only at spawn time. */
+/** Per-rank recovery and tactical reserves; optional registrations resolve at spawn time. */
 final class SpawnPotionConfig {
     private static final java.util.Set<String> UNAVAILABLE = java.util.concurrent.ConcurrentHashMap.newKeySet();
     record Entry(ResourceLocation item, ResourceLocation potion, int weight) {
         ItemStack resolve() {
             var registeredItem = BuiltInRegistries.ITEM.getOptional(item);
+            if (potion == null) {
+                if (registeredItem.isEmpty()) return ItemStack.EMPTY; // Optional mod absent.
+                ItemStack stack = new ItemStack(registeredItem.get());
+                var settings = UnifiedConfig.get().scguns();
+                return ScgunsCompat.throwItem(stack) && settings.throwablesEnabled()
+                        && settings.allowedThrowables().contains(item.toString()) ? stack : ItemStack.EMPTY;
+            }
             var registeredPotion = BuiltInRegistries.POTION.getOptional(potion);
             if (registeredItem.isEmpty() || !(registeredItem.get() instanceof PotionItem)
                     || registeredPotion.isEmpty()) {
@@ -39,10 +46,14 @@ final class SpawnPotionConfig {
     SpawnPotionConfig(JsonObject root) {
         enabled = UnifiedConfig.bool(root, "enabled", true);
         recovery = parsePool(UnifiedConfig.object(root, "recovery"));
-        tactical = parsePool(UnifiedConfig.object(root, "tactical"));
+        tactical = parsePool(UnifiedConfig.object(root, "tactical"), true);
     }
 
     static Pool parsePool(JsonObject root) {
+        return parsePool(root, false);
+    }
+
+    static Pool parsePool(JsonObject root, boolean tactical) {
         int low = count(root, "count_min"), high = count(root, "count_max");
         List<Entry> entries = new ArrayList<>();
         if (root.has("pool") && root.get("pool").isJsonArray()) {
@@ -50,7 +61,7 @@ final class SpawnPotionConfig {
             for (var element : root.getAsJsonArray("pool")) {
                 if (inspected++ >= 128) break;
                 if (!element.isJsonObject()) continue;
-                Entry entry = parseEntry(element.getAsJsonObject());
+                Entry entry = parseEntry(element.getAsJsonObject(), tactical);
                 if (entry != null) entries.add(entry);
             }
         }
@@ -65,11 +76,16 @@ final class SpawnPotionConfig {
         } catch (RuntimeException invalid) { return 0; }
     }
 
-    private static Entry parseEntry(JsonObject root) {
+    private static Entry parseEntry(JsonObject root, boolean tactical) {
         try {
-            String item = root.get("item").getAsString(), potion = root.get("potion").getAsString();
-            ResourceLocation itemId = ResourceLocation.tryParse(item), potionId = ResourceLocation.tryParse(potion);
-            if (!item.contains(":") || !potion.contains(":") || itemId == null || potionId == null) return null;
+            String item = root.get("item").getAsString();
+            ResourceLocation itemId = ResourceLocation.tryParse(item), potionId = null;
+            if (!item.contains(":") || itemId == null) return null;
+            if (root.has("potion")) {
+                String potion = root.get("potion").getAsString();
+                potionId = ResourceLocation.tryParse(potion);
+                if (!potion.contains(":") || potionId == null) return null;
+            } else if (!tactical) return null;
             if (root.has("weight") && (!root.get("weight").isJsonPrimitive()
                     || !root.get("weight").getAsJsonPrimitive().isNumber())) return null;
             int weight = root.has("weight") ? root.get("weight").getAsBigDecimal().intValueExact() : 1;

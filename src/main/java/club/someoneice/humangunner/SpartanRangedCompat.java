@@ -74,6 +74,7 @@ public final class SpartanRangedCompat {
         // packet and server simulation begin with the same bolt trajectory.
         HumanGunner.applyFirstTickArrowBallistics(human, projectile, target);
         if (!human.level().addFreshEntity(projectile)) return false;
+        HumanArrowCombat.recordCrossbowShot(human);
         HumanAmmo.consumeArrow(human);
 
         EquipmentSlot slot = hand == InteractionHand.MAIN_HAND

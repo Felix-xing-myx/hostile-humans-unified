@@ -12,13 +12,15 @@ public final class UnifiedConfig {
     private static volatile UnifiedConfig instance;
     private final JsonObject root;
     private final Map<String, Tier> tiers;
-    private final Set<String> blacklist;
+    private final GunSpawnPools gunSpawnPools;
     private final Spawn spawn;
     private final EquipmentGrowthPolicy equipmentGrowth;
     private final GrowthConfig growth;
     private final JumpAttackConfig jumpAttack;
     private final FirstAidSettings firstAid;
     private final ScgunsSettings scguns;
+    private final ShieldPressureConfig shieldPressure;
+    private final HostileTargetingConfig hostileTargeting;
     private final Map<String, ConfiguredEquipmentLoadout> equipmentLoadouts;
     private final Recruitment recruitment;
     private final boolean betterCombatSoldierMeleeEnabled;
@@ -35,7 +37,7 @@ public final class UnifiedConfig {
 
     public record Tier(double maxHealth, double baseMovementSpeed,
             double attackDamage, double armor, double armorToughness,
-            double knockbackResistance, double followRange, double meleeDamage, double bowDamage,
+            double knockbackResistance, double followRange, double meleeDamage, double bowDamage, double crossbowDamage,
             double tridentDamage, double incomingDamage, double spawnMultiplier,
             Map<String, Double> firearmSpreadDegrees, Map<String, Double> projectileSpreadDegrees,
             int meleeCooldownMin, int meleeCooldownMax) {
@@ -69,7 +71,10 @@ public final class UnifiedConfig {
         root = merge(defaults, configured);
         jumpAttack = JumpAttackConfig.parse(object(root, "jump_attack"));
         firstAid = FirstAidSettings.parse(object(root, "first_aid"));
+        gunSpawnPools = GunSpawnPools.parse(root);
         scguns = ScgunsSettings.parse(object(root, "scguns"));
+        shieldPressure = ShieldPressureConfig.parse(object(root, "shield_pressure"));
+        hostileTargeting = HostileTargetingConfig.parse(object(root, "hostile_mob_targeting"));
         vanillaMode = bool(root, "vanilla_mode", false);
         Map<String, ConfiguredEquipmentLoadout> loadouts = new LinkedHashMap<>();
         for (String rank : List.of("roamer", "tier1", "tier2", "tier3")) {
@@ -118,8 +123,10 @@ public final class UnifiedConfig {
                             defaultAttributes.get("follow_range").getAsDouble(), 8, 128),
                     number(object(t, "damage_multipliers"), "melee_damage_multiplier",
                             defaultDamage.get("melee_damage_multiplier").getAsDouble(), 0, 100),
-                    number(object(t, "damage_multipliers"), "arrow_damage_multiplier",
-                            defaultDamage.get("arrow_damage_multiplier").getAsDouble(), 0, 1000),
+                    number(object(t, "damage_multipliers"), "bow_damage_multiplier",
+                            defaultDamage.get("bow_damage_multiplier").getAsDouble(), 0, 1000),
+                    number(object(t, "damage_multipliers"), "crossbow_damage_multiplier",
+                            defaultDamage.get("crossbow_damage_multiplier").getAsDouble(), 0, 1000),
                     number(object(t, "damage_multipliers"), "thrown_trident_damage_multiplier",
                             defaultDamage.get("thrown_trident_damage_multiplier").getAsDouble(), 0, 1000),
                     number(object(t, "damage_multipliers"), "damage_taken_multiplier",
@@ -176,7 +183,7 @@ public final class UnifiedConfig {
                 number(s, "density_divisor", 4, .1, 1000),
                 new NaturalSpawnProgression(bool(progression, "enabled", true),
                         (int) number(progression, "safe_days", 1, 0, 1000000),
-                        (int) number(firstDays, "roamer", 3, 1, 1000000),
+                        (int) number(firstDays, "roamer", 2, 1, 1000000),
                         (int) number(firstDays, "tier1", 5, 1, 1000000),
                         (int) number(firstDays, "tier2", 10, 1, 1000000),
                         (int) number(firstDays, "tier3", 20, 1, 1000000)));
@@ -198,14 +205,6 @@ public final class UnifiedConfig {
                 (int) number(messages, "report_interval_ticks", 100, 20, 1200),
                 (int) number(messages, "report_max_per_minute", 6, 1, 20),
                 (int) number(messages, "report_details_per_message", 3, 1, 5));
-        Set<String> banned = new HashSet<>();
-        JsonElement list = object(root, "tacz").get("gun_blacklist");
-        if (list != null && list.isJsonArray()) {
-            for (JsonElement item : list.getAsJsonArray()) {
-                if (item.isJsonPrimitive() && item.getAsJsonPrimitive().isString()) banned.add(item.getAsString());
-            }
-        }
-        blacklist = Set.copyOf(banned);
     }
 
     public static UnifiedConfig get() {
@@ -237,6 +236,8 @@ public final class UnifiedConfig {
     public JumpAttackConfig jumpAttack() { return jumpAttack; }
     public FirstAidSettings firstAid() { return firstAid; }
     public ScgunsSettings scguns() { return scguns; }
+    public ShieldPressureConfig shieldPressure() { return shieldPressure; }
+    public HostileTargetingConfig hostileTargeting() { return hostileTargeting; }
     EquipmentGrowthPolicy equipmentGrowth() { return equipmentGrowth; }
     public ConfiguredEquipmentLoadout equipmentLoadout(String rank) {
         return equipmentLoadouts.getOrDefault(rank, equipmentLoadouts.get("roamer"));
@@ -265,7 +266,7 @@ public final class UnifiedConfig {
     public SoldierMessages soldierMessages() { return soldierMessages; }
     public boolean betterCombatSoldierMeleeEnabled() { return betterCombatSoldierMeleeEnabled; }
     public boolean taczEnabled() { return bool(object(root, "tacz"), "enabled", true); }
-    public boolean blacklisted(String id) { return blacklist.contains(id); }
+    GunSpawnPools gunSpawnPools() { return gunSpawnPools; }
     public double damage(String key, double fallback) { return number(object(root, "damage"), key, fallback, 0, 10); }
     public double gunSetting(String key, double fallback) { return number(object(root, "tacz"), key, fallback, 0, 10); }
     public double tierGunDamage(String key) {
@@ -315,7 +316,7 @@ public final class UnifiedConfig {
         CurrentConfigDefaults.fill(result, defaults, "");
         return result;
     }
-    private static String string(JsonObject data, String key, String fallback) {
+    static String string(JsonObject data, String key, String fallback) {
         JsonElement value = data.get(key);
         return value != null && value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()
                 ? value.getAsString() : fallback;

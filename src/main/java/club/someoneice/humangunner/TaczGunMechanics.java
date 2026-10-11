@@ -221,7 +221,8 @@ final class TaczGunMechanics {
     static void prepareUrgentCloseShot(PathfinderMob mob, IGunOperator operator) {
         clearNpcSprintLock(mob, operator);
         operator.getDataHolder().meleeTimestamp = -1L;
-        operator.getDataHolder().meleePrepTickCount = 0;
+        // TaCZ executes a queued gun-butt hit at zero; -1 means no pending melee.
+        operator.getDataHolder().meleePrepTickCount = -1;
     }
 
     private static int nativeReloadRecoveryDelay(ItemStack weapon, IGun gun) {

@@ -24,15 +24,26 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
             "generate(Lnet/minecraft/world/level/Level;Ljava/util/List;)Lnet/minecraft/world/item/ItemStack;";
     public static final String SCGUNS_NPC_FLASH =
             "onRenderLivingPost(Lnet/minecraftforge/client/event/RenderLivingEvent$Post;)V";
+    public static final String TACZ_NPC_FLASH =
+            "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/minecraft/world/item/ItemDisplayContext;II)V";
+    public static final String SCGUNS_SULFURHEAD_DAMAGE =
+            "m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z";
 
     @Override public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         String contract;
         if (mixinClassName.endsWith(".TouhouMaidGunHurtMixin")) contract = MAID_EXPLOSION;
         else if (mixinClassName.endsWith(".SpartanWeaponryItemRandomizerMixin")) contract = SPARTAN_RANDOMIZER;
         else if (mixinClassName.endsWith(".ScgunsNpcMuzzleFlashMixin")) contract = SCGUNS_NPC_FLASH;
+        else if (mixinClassName.endsWith(".TaczNpcMuzzleFlashMixin")) contract = TACZ_NPC_FLASH;
+        else if (mixinClassName.endsWith(".ScgunsSulfurheadDamageMixin")) contract = SCGUNS_SULFURHEAD_DAMAGE;
         else return true;
         try {
             ClassNode target = readTarget(MixinService.getService().getBytecodeProvider(), targetClassName);
+            if (contract.equals(SCGUNS_SULFURHEAD_DAMAGE)
+                    && !"net/minecraft/world/entity/monster/Monster".equals(target.superName)) {
+                LOGGER.warn("Skipping Sulfurhead damage compatibility: superclass changed to {}", target.superName);
+                return false;
+            }
             if (hasMethod(target, contract, contract.equals(SPARTAN_RANDOMIZER))) return true;
             LOGGER.warn("Skipping optional upstream fix {}: {} no longer exposes {}. "
                     + "The upstream behavior is retained; this fix needs a compatibility review.",

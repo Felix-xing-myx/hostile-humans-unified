@@ -4,6 +4,7 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.ModList;
 import java.util.*;
@@ -31,11 +32,26 @@ final class CompositeGunSupport implements GunSupport {
     public boolean isBullet(DamageSource source) { return providers.stream().anyMatch(p -> p.isBullet(source)); }
     public double projectileSpeed(ItemStack stack) { return forWeapon(stack).projectileSpeed(stack); }
     public double projectileGravity(ItemStack stack) { return forWeapon(stack).projectileGravity(stack); }
+    public double clearanceProjectileSpeed(ItemStack stack) { return forWeapon(stack).clearanceProjectileSpeed(stack); }
+    public double clearanceProjectileGravity(ItemStack stack) { return forWeapon(stack).clearanceProjectileGravity(stack); }
+    public net.minecraft.world.phys.Vec3 shotTargetPoint(ItemStack stack, LivingEntity target) {
+        return forWeapon(stack).shotTargetPoint(stack, target);
+    }
     public boolean ownsShotSpread(ItemStack stack) { return forWeapon(stack).ownsShotSpread(stack); }
+    public String backendId(ItemStack stack) { return forWeapon(stack).backendId(); }
+    public Map<String, Map<ResourceLocation, String>> catalogsByBackend() {
+        Map<String, Map<ResourceLocation, String>> result = new LinkedHashMap<>();
+        providers.forEach(p -> result.put(p.backendId(), p.catalog()));
+        return result;
+    }
     public Map<ResourceLocation, String> catalog() {
         Map<ResourceLocation, String> result = new LinkedHashMap<>();
         providers.forEach(p -> result.putAll(p.catalog()));
         return result;
+    }
+    public ItemStack createLoadedGun(GunChoice choice) {
+        return providers.stream().filter(p -> p.backendId().equals(choice.backend())).findFirst()
+                .map(p -> p.createLoadedGun(choice.id())).orElse(ItemStack.EMPTY);
     }
     public ItemStack createLoadedGun(ResourceLocation id) {
         for (GunSupport provider : providers) {
@@ -45,7 +61,9 @@ final class CompositeGunSupport implements GunSupport {
         return ItemStack.EMPTY;
     }
     public Goal goal(Human human) { return new GunnerGoal<>(human); }
-    public void tickIdleReload(Human human) { providers.forEach(p -> p.tickIdleReload(human)); }
+    public void tickIdleReload(Human human) { providers.forEach(p -> {
+        if (HumanGunAcceptance.accepts(human.getMainHandItem())) p.tickIdleReload(human);
+    }); }
     public boolean isReloading(Human human) { return providers.stream().anyMatch(p -> p.isReloading(human)); }
     public boolean isReloading(Human human, ItemStack weapon) { return forWeapon(weapon).isReloading(human, weapon); }
     public void registerEvents() { providers.forEach(GunSupport::registerEvents); }
@@ -63,8 +81,12 @@ final class CompositeGunSupport implements GunSupport {
             public boolean ensureDrawn() { return current().ensureDrawn(); }
             public void clearSprintLock() { human.setSprinting(false); current().clearSprintLock(); }
             public void prepareUrgentShot() { current().prepareUrgentShot(); }
-            public void shoot(ItemStack weapon, float pitch, float yaw) {
-                controls.computeIfAbsent(forWeapon(weapon), p -> p.control(human)).shoot(weapon, pitch, yaw);
+            public void shoot(ItemStack weapon, LivingEntity target, float pitch, float yaw) {
+                if (!GunFireAuthorization.allows(human, weapon, target)) {
+                    current().aim(false);
+                    return;
+                }
+                controls.computeIfAbsent(forWeapon(weapon), p -> p.control(human)).shoot(weapon, target, pitch, yaw);
             }
         };
     }

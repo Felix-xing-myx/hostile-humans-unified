@@ -82,9 +82,9 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         double dz = human.getZ() - human.zOld;
         double distanceSqr = dx * dx + dz * dz;
         if (distanceSqr >= MIN_STEP_DISTANCE_SQR && distanceSqr <= MAX_STEP_DISTANCE_SQR) {
-            float bodyYaw = Mth.rotLerp(partialTick, human.yBodyRotO, human.yBodyRot);
+            float movementBodyYaw = Mth.rotLerp(partialTick, human.yBodyRotO, human.yBodyRot);
             float moveYaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90.0F;
-            float relativeMoveYaw = Mth.wrapDegrees(moveYaw - bodyYaw);
+            float relativeMoveYaw = Mth.wrapDegrees(moveYaw - movementBodyYaw);
             float stepWeight = Mth.clamp((float) Math.sqrt(distanceSqr) * 8.0F, 0.0F, 1.0F);
             // Side steps turn the stance; forward and backward steps do not.
             targetYaw = MAX_STANCE_TURN_DEGREES

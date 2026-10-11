@@ -107,6 +107,11 @@ public final class HumanGunner {
             TouhouMaidCompat.register();
         }
         GunSupport.get().registerEvents();
+        GunMeleeProtection.register();
+        MinecraftForge.EVENT_BUS.addListener(ShieldDurability::onTick);
+        MinecraftForge.EVENT_BUS.addListener(ShieldDurability::onLeave);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, ShieldDurability::onDeath);
+        MinecraftForge.EVENT_BUS.addListener(ShieldDurability::onStopping);
         FirstAidCompat.register();
         ScgunsMedical.register();
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanProjectileRelations::onProjectileExplosion);
@@ -253,6 +258,7 @@ public final class HumanGunner {
             // custody tracks the exact recovery hand instead of treating any
             // active use as a reason to postpone the check indefinitely.
             RecoverySupplies.tickHandCustody(human);
+            human.humanGunner$shieldDefense().prepareHighPressureDefense();
             SoldierDialogue.tick(human);
             GunCustody.tick(human);
             RangedWeaponCustody.tick(human);
@@ -303,6 +309,8 @@ public final class HumanGunner {
         if (event.getLevel().isClientSide) {
             return;
         }
+        if (event.getEntity() instanceof net.minecraft.world.entity.Mob mob)
+            HostileHumanTargeting.onJoin(mob);
         // Internal launchers apply ballistics before insertion with their
         // explicit target. This join hook is a fallback for externally-created
         // Human tridents, whose separate trajectory is finalized on join.
@@ -671,7 +679,7 @@ public final class HumanGunner {
      * horizontal-distance multiplier, this accounts for 0.99 air drag and
      * applies the configured 0.06 aim compensation for vanilla's 0.05 gravity.
      */
-    private static Vec3 solveArrowBallistics(
+    static Vec3 solveArrowBallistics(
             Vec3 origin, Vec3 targetPoint, Vec3 targetMotion, double launchSpeed
     ) {
         Vec3 boundedMotion = new Vec3(

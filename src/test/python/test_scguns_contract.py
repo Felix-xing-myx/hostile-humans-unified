@@ -52,6 +52,44 @@ def public_methods(blob):
     return methods
 
 class ScgunsBoundary(unittest.TestCase):
+    def test_sounds_and_reload_use_native_boundaries(self):
+        integration = source("ScgunsIntegration")
+        audio = source("ScgunsSounds")
+        timing = source("ScgunsReloadTiming")
+        self.assertIn("ScgunsSounds.fire(human, gun)", integration)
+        self.assertNotIn("playSound(", integration)
+        self.assertIn("new S2CMessageGunSound", audio)
+        self.assertIn("human.getId(), false, reload", audio)
+        self.assertIn("Math.sqrt(Math.min(1, original) * .5)", audio)
+        self.assertIn("sendToNearbyPlayers", audio)
+        self.assertIn("Config.SERVER.reloadMaxDistance.get()", audio)
+        self.assertIn("GunEnchantmentHelper.getRealReloadSpeed(stack)", timing)
+        self.assertIn("GunEnchantmentHelper.getMagReloadSpeed(stack)", timing)
+        self.assertNotIn("net.minecraft.client", timing + audio)
+        self.assertNotIn("FakePlayer", timing + integration)
+        self.assertIn('state.put("steps", steps)', integration)
+        self.assertLess(integration.index("ScgunsReloadTiming.plan("), integration.index("HumanAmmo.consumeMagazines(human, stack)"))
+
+    def test_sulfurhead_restores_only_human_damage_pipeline(self):
+        mixin = source("mixin/ScgunsSulfurheadDamageMixin")
+        self.assertIn("@Pseudo", mixin)
+        self.assertIn("source.getEntity() instanceof Human", mixin)
+        self.assertIn("!level().isClientSide", mixin)
+        self.assertIn("super.hurt(source, amount)", mixin)
+        self.assertNotIn("setHealth", mixin)
+        self.assertNotIn("getOwner", mixin)
+        plugin = source("compat/OptionalMixinPlugin")
+        self.assertIn("SCGUNS_SULFURHEAD_DAMAGE", plugin)
+        self.assertIn('equals(target.superName)', plugin)
+        config = json.loads((ROOT / "src/main/resources/hostile_humans_unified.mixins.json").read_text(encoding="utf-8"))
+        self.assertIn("ScgunsSulfurheadDamageMixin", config["mixins"])
+        jar = os.environ.get("SCGUNS_API_JAR")
+        if not jar:
+            self.skipTest("SCGUNS_API_JAR not configured")
+        with zipfile.ZipFile(jar) as archive:
+            methods = public_methods(archive.read("top/ribs/scguns/entity/monster/SulfurheadEntity.class"))
+        self.assertIn(("m_6469_", "(Lnet/minecraft/world/damagesource/DamageSource;F)Z"), methods)
+
     def test_client_grips_shields_and_flash_share_one_weapon_transform(self):
         client = ROOT / "src/main/java/com/craftix/hostile_humans/client/renderer"
         pose = (client / "ScgunsNativePose.java").read_text(encoding="utf-8")
@@ -69,9 +107,15 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertLess(layer.index("renderBackShield(human"), layer.index("translateToHand(arm"))
         self.assertIn("getParentModel().body.translateAndRotate(poses)", layer)
         self.assertIn("? 25 : -25", layer)
-        self.assertIn("shield.is(Items.SHIELD)", layer)
-        self.assertIn("poses.translate(.5, .5, .5)", layer)
-        self.assertIn("Axis.XP.rotationDegrees(180)", layer)
+        placement = (ROOT / "src/main/java/com/craftix/hostile_humans/client/renderer/BackShieldPose.java").read_text(encoding="utf-8")
+        self.assertIn("BackShieldPose.resolve(human, item)", layer)
+        self.assertIn("if (!profile.offhand())", layer)
+        self.assertIn(".isCustomRenderer()", placement)
+        self.assertIn("SimpleJsonResourceReloadListener", placement)
+        self.assertIn("ItemDisplayContext.THIRD_PERSON_LEFT_HAND", placement)
+        self.assertNotIn("spartanshields", placement)
+        self.assertNotIn("Items.SHIELD", placement)
+        self.assertNotIn("com.oblivioussp", placement)
         shield_branch = layer.split("if (arm != human.getMainArm()", 1)[1].split("getParentModel().translateToHand", 1)[0]
         self.assertIn("GunSupport.isGunItem", shield_branch)
         self.assertNotIn("Scguns", shield_branch)
@@ -87,6 +131,51 @@ class ScgunsBoundary(unittest.TestCase):
         config = json.loads((ROOT / "src/main/resources/hostile_humans_unified.mixins.json").read_text(encoding="utf-8"))
         self.assertIn("ScgunsNpcMuzzleFlashMixin", config["client"])
         self.assertNotIn("ScgunsNpcMuzzleFlashMixin", config["mixins"])
+
+    def test_throwables_share_tactical_counts_and_all_native_hand_items_are_allowed(self):
+        config = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
+        allowed = config["scguns"]["throwables"]["allowed_items"]
+        self.assertEqual(len(allowed), 9)
+        self.assertIn("scguns:shotball", allowed)
+        for rank, counts in zip(("roamer", "tier1", "tier2", "tier3"), ((1,2), (2,4), (4,7), (6,8))):
+            tactical = config["tiers"][rank]["potions"]["tactical"]
+            self.assertEqual((tactical["count_min"], tactical["count_max"]), counts)
+            tools = {row["item"]: row["weight"] for row in tactical["pool"] if "potion" not in row}
+            self.assertEqual(tools, {"scguns:grenade":3, "scguns:nail_bomb":3, "scguns:gas_grenade":3, "scguns:choke_bomb":3, "scguns:swarm_bomb":3})
+            self.assertTrue(set(tools).issubset(allowed))
+            self.assertEqual(sum("potion" in row for row in tactical["pool"]), 6)
+        native = source("ScgunsThrowables")
+        self.assertIn("new top.ribs.scguns.entity.throwable.ThrowableShotballEntity(human.level(), human)", native)
+        self.assertIn("new FlightProfile((double) .04F, false, fuse)", native)
+        self.assertIn("new FlightProfile((double) .025F, true, fuse)", native)
+        self.assertNotIn("scguns:stun_grenade", allowed)
+        self.assertEqual(config["scguns"]["throwables"]["initial_speed"], 2.0)
+        self.assertIn("!safeArea(human, plan.impact(), safety)", native)
+        self.assertLess(native.index("human.level().addFreshEntity(projectile)"), native.index("remainder.shrink(1)"))
+        if os.environ.get("SCGUNS_API_JAR"):
+            with zipfile.ZipFile(os.environ["SCGUNS_API_JAR"]) as jar:
+                registrations = jar.read("top/ribs/scguns/init/ModItems.class")
+                for item in allowed:
+                    self.assertIn(item.split(":")[1].upper().encode(), registrations)
+
+    def test_human_damage_replaces_both_difficulty_layers(self):
+        adapter = source("ScgunsIntegration")
+        join = adapter.split("private static void onProjectileJoin", 1)[1].split("private static void onProjectileHit", 1)[0]
+        self.assertIn("event.getLevel().isClientSide", join)
+        self.assertIn("projectile.getShooter() instanceof Human", join)
+        self.assertIn('contains("AIDamageScale")', join)
+        self.assertIn("projectile.setAdditionalDamage(Gun.getAdditionalDamage(weapon))", join)
+        self.assertIn('remove("AIDamageScale")', join)
+        self.assertNotIn("/", join.split("static boolean isHumanBullet", 1)[0])
+        hook = source("mixin/ScgunsHumanDifficultyMixin")
+        self.assertIn('method = "m_7986_()Z"', hook)
+        self.assertIn("ScgunsCompat.usesIndependentDamage", hook)
+        self.assertNotIn("top.ribs", hook)
+        config = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
+        self.assertEqual(config["scguns"]["human_gun_damage_multiplier"], .7)
+        self.assertNotIn("npc_damage_multiplier", config["scguns"])
+        self.assertIn('removeOptions(object(data, "scguns"), List.of("npc_damage_multiplier"))', source("TierConfigProjection"))
+        self.assertIn('!scguns.has("human_gun_damage_multiplier")', source("SplitConfigFiles"))
 
     def test_independent_rank_damage_keeps_shared_training(self):
         config = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
@@ -104,7 +193,7 @@ class ScgunsBoundary(unittest.TestCase):
         goal = source("GunnerGoal")
         self.assertNotIn("com.tacz.", goal)
         self.assertNotIn("top.ribs.scguns", goal)
-        self.assertIn("operator.shoot(weapon, shotAim.pitch(), shotAim.yaw())", goal)
+        self.assertIn("operator.shoot(weapon, target, shotAim.pitch(), shotAim.yaw())", goal)
         self.assertIn("previous.aim(false)", source("CompositeGunSupport"))
         self.assertNotIn("new GunAttackGoal", source("ScgunsIntegration"))
         animator = (ROOT / "src/main/java/com/craftix/hostile_humans/client/renderer/TaczNpcAnimator.java").read_text(encoding="utf-8")
@@ -198,16 +287,20 @@ class ScgunsBoundary(unittest.TestCase):
                 ("renderWeapon", "(" + entity + stack + "Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IF)V")],
             "client/handler/DualWieldShotTracker": [("incrementShotCount", "(I)V"), ("clearShotCount", "(I)V")],
             "client/handler/EntityMuzzleFlashHandler": [("onRenderLivingPost", "(Lnet/minecraftforge/client/event/RenderLivingEvent$Post;)V")],
-            "common/Gun": [("getAmmoCount", "(" + stack + ")I"), ("getBurstCooldown", "(" + stack + ")I"), ("getProjectile", "(" + stack + ")Ltop/ribs/scguns/common/Gun$Projectile;")],
+            "common/Gun": [("getAdditionalDamage", "(" + stack + ")F"), ("getAmmoCount", "(" + stack + ")I"), ("getBurstCooldown", "(" + stack + ")I"), ("getProjectile", "(" + stack + ")Ltop/ribs/scguns/common/Gun$Projectile;")],
             "common/Gun$Projectile": [("getEnergyUse", "()I")],
-            "common/Gun$Reloads": [("getReloadTimer", "()I")],
+            "common/Gun$Reloads": [("getReloadTimer", "()I"), ("getReloadAmount", "()I")],
+            "util/GunEnchantmentHelper": [("getRealReloadSpeed", "(" + stack + ")I"), ("getMagReloadSpeed", "(" + stack + ")I")],
+            "network/message/S2CMessageGunSound": [("<init>", "(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraft/sounds/SoundSource;FFFFFIZZ)V")],
+            "common/Gun$Sounds": [("getReload", "()Lnet/minecraft/resources/ResourceLocation;"), ("getCock", "()Lnet/minecraft/resources/ResourceLocation;")],
             "config/RaidFlareConfig$FlareData": [("burstDelay", "()I")],
             "item/GrenadeItem": [("create", "(" + level + entity + "I)Ltop/ribs/scguns/entity/throwable/ThrowableGrenadeEntity;")],
             "item/GasGrenadeItem": [("create", "(" + level + entity + "IF)Ltop/ribs/scguns/entity/throwable/ThrowableGrenadeEntity;")],
+            "entity/throwable/ThrowableShotballEntity": [("<init>", "(" + level + entity + ")V")],
             "entity/projectile/RaidFlareEntity": [("<init>", "(" + level + entity + "Ljava/lang/String;)V")],
             "config/RaidConfig": [("getRaidByRaidId", "(Ljava/lang/String;)Ltop/ribs/scguns/config/RaidConfig$RaidData;")],
             "event/GunProjectileHitEvent": [("getProjectile", "()Ltop/ribs/scguns/entity/projectile/ProjectileEntity;")],
-            "entity/projectile/ProjectileEntity": [("getShooter", "()" + entity)],
+            "entity/projectile/ProjectileEntity": [("getShooter", "()" + entity), ("getWeapon", "()" + stack), ("setAdditionalDamage", "(F)V")],
         }
         with zipfile.ZipFile(os.environ["SCGUNS_API_JAR"]) as jar:
             for cls, expected in checks.items():

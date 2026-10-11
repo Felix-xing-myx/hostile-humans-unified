@@ -21,7 +21,7 @@ public final class OptionalRuntimeTest {
             for (Path file : paths.filter(p -> p.toString().endsWith(".class")).sorted().toList()) {
                 String name = root.relativize(file).toString().replace('\\', '.').replace('/', '.').replaceAll("\\.class$", "");
                 // These adapters are deliberately loadable only with their dependency installed.
-                if (name.matches(".*\\.(FirstAidApiBridge|TaczGunMechanics|ScgunsIntegration|ScgunsNativePose|ScgunsMedicalBridge|ScgunsGunIdentity|ScgunsRaidBridge|ScgunsThrowables|TaczIntegration|TaczGunItemIdentity|TaczHumanReloadTransactions|TaczHumanReloadMixin|TaczHumanShootMixin|TaczReloadSoundClient|TaczMaidIntegration|TouhouMaidCompat|MaidTargetRules|TravelersBackpack|HumanBackpackLayer|CuriosBadgeAccess)(\\$.*)?")) continue;
+                if (name.matches(".*\\.(FirstAidApiBridge|TaczNpcEffects|TaczGunMechanics|ScgunsIntegration|ScgunsSounds|ScgunsReloadTiming|ScgunsNativePose|ScgunsMedicalBridge|ScgunsGunIdentity|ScgunsRaidBridge|ScgunsThrowables|TaczIntegration|TaczGunItemIdentity|TaczHumanReloadTransactions|TaczHumanReloadMixin|TaczHumanShootMixin|TaczReloadSoundClient|TaczMaidIntegration|TouhouMaidCompat|MaidTargetRules|TravelersBackpack|HumanBackpackLayer|CuriosBadgeAccess)(\\$.*)?")) continue;
                 Class<?> type = Class.forName(name, false, loader);
                 type.getDeclaredFields();
                 type.getDeclaredMethods();
@@ -35,7 +35,7 @@ public final class OptionalRuntimeTest {
         vanilla.control(null).aim(false);
         vanilla.control(null).draw();
         vanilla.control(null).clearSprintLock();
-        vanilla.control(null).shoot(null, 0, 0);
+        vanilla.control(null).shoot(null, null, 0, 0);
         vanilla.registerEvents();
         System.out.println("OptionalRuntimeTest: linked " + loaded + " core classes without TaCZ, Curios, Maid First Aid or Scorched Guns; vanilla adapter passed");
     }

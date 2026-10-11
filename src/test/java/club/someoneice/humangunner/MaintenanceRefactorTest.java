@@ -34,9 +34,12 @@ public final class MaintenanceRefactorTest {
                 && ShieldDurability.wearCost(3) == 5 && ShieldDurability.wearCost(10) == 16
                 && ShieldDurability.wearCost(1.9f) == 3, "shield wear floors after multiplying damage");
         check(ShieldDurability.wearCost(Float.MAX_VALUE) == Integer.MAX_VALUE, "large wear cannot overflow");
-        check(!ShieldDurability.actuallyWorn(7, 1, 7, 1), "fully prevented wear does not start cooldown");
-        check(ShieldDurability.actuallyWorn(7, 1, 8, 1), "partial enchanted wear starts cooldown");
-        check(ShieldDurability.actuallyWorn(7, 1, 0, 0), "breaking still starts cooldown after damage resets");
+        check(ShieldDurability.wearCost(8 * 4.0) == 49,
+                "all shotgun pellets count; flat cost occurs once per batch");
+        check(ShieldDurability.wearCost(0.4 + 0.4) == 2,
+                "fractional hits sum before flooring");
+        check(ShieldDurability.wearCost(70 + 30) == ShieldDurability.wearCost(100),
+                "AP and normal components retain the same total durability cost");
         Random random = new Random(3855);
         for (int trial = 0; trial < 500; trial++) {
             CompoundTag record = new CompoundTag();
@@ -94,7 +97,7 @@ public final class MaintenanceRefactorTest {
             check(restored.stream().allMatch(ItemStack::isEmpty), "out-of-bounds unsigned slot ignored: " + key);
         }
         var config = new UnifiedConfig(new com.google.gson.JsonObject());
-        int[] start = {3, 5, 10, 20}, finish = {40, 50, 70, 80};
+        int[] start = {3, 5, 10, 20}, finish = {53, 55, 60, 70};
         int rank = 0;
         for (String key : List.of("roamer", "tier1", "tier2", "tier3")) {
             var profile = config.equipmentGrowth().tiers().get(key);

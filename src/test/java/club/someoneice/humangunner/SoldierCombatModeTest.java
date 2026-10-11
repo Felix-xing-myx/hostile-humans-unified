@@ -128,27 +128,19 @@ public final class SoldierCombatModeTest {
         check(SoldierCombatMode.selectAuthorizationSlot(third, targets, expiries, 100L) == 5,
                 "ninth attacker replaces the authorization closest to expiry");
 
-        ResourceLocation allowedGun = new ResourceLocation("tacz", "allowed");
-        ResourceLocation blockedGun = new ResourceLocation("tacz", "blocked");
-        check(HumanGunAcceptance.acceptsGunId(Map.of(), allowedGun),
-                "an empty manual whitelist accepts every valid gun id");
-        check(!HumanGunAcceptance.acceptsGunId(Map.of(), null),
-                "an unreadable gun id is never accepted");
-        check(HumanGunAcceptance.acceptsGunId(Map.of(allowedGun, 5), allowedGun),
-                "a positive whitelist entry accepts that gun");
-        check(!HumanGunAcceptance.acceptsGunId(Map.of(allowedGun, 5), blockedGun),
-                "a nonempty whitelist rejects unlisted guns");
-        check(!HumanGunAcceptance.acceptsGunId(Map.of(allowedGun, 0), allowedGun),
-                "a zero-weight whitelist entry rejects that gun");
-        check(HumanGunAcceptance.acceptsHiredGunId(
-                        Map.of(allowedGun, 5), Map.of(blockedGun, 1), blockedGun),
-                "the hired-only whitelist extends a nonempty wild whitelist");
-        check(!HumanGunAcceptance.acceptsHiredGunId(
-                        Map.of(allowedGun, 5), Map.of(), blockedGun),
-                "an empty hired-only whitelist adds no guns");
-        check(HumanGunAcceptance.acceptsHiredGunId(
-                        Map.of(), Map.of(blockedGun, 0), blockedGun),
-                "an empty wild whitelist retains the accept-all rule for hired humans");
+        ResourceLocation allowedGun = new ResourceLocation("addon", "allowed");
+        ResourceLocation blockedGun = new ResourceLocation("addon", "blocked");
+        var pools = GunSpawnPools.parse(com.google.gson.JsonParser.parseString("""
+                {"tacz":{"gun_whitelist":{"addon:other":5},"gun_blacklist":["addon:blocked"]}}
+                """).getAsJsonObject());
+        check(HumanGunAcceptance.acceptsGunId(pools, "tacz", allowedGun),
+                "birth whitelist does not restrict hired input");
+        check(!HumanGunAcceptance.acceptsGunId(pools, "tacz", blockedGun),
+                "global ban overrides unrestricted hired input");
+        check(HumanGunAcceptance.acceptsGunId(pools, "scguns", blockedGun),
+                "backend bans are independent, never inferred from ID namespace");
+        check(!HumanGunAcceptance.acceptsGunId(pools, "tacz", null), "unknown gun rejected");
+        check(!HumanGunAcceptance.acceptsGunId(pools, "missing", allowedGun), "unsupported backend rejected");
 
         System.out.println("SoldierCombatModeTest: " + checks + " behavior checks passed");
     }

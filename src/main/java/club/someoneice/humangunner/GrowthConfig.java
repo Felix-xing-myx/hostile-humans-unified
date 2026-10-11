@@ -7,7 +7,7 @@ import java.util.*;
 /** Immutable global growth settings. Percentages use 100 = full base value. */
 public final class GrowthConfig {
     private final boolean enabled;
-    private final List<Double> stagePercent, stageCost;
+    private final List<Double> stagePercent, damageStagePercent, stageCost;
     private final double experienceMinPercent, experienceMaxPercent, experienceCapPercent, belowBaseCost;
     private final List<Double> experienceBandCost;
     private final int experienceBandWidth;
@@ -21,6 +21,7 @@ public final class GrowthConfig {
         // Keep the configured preference untouched for leaving vanilla mode.
         enabled = configuredEnabled && !vanillaMode;
         stagePercent = array(data, "stage_percent", List.of(50D, 60D, 70D, 80D, 90D, 100D), 1, 100, true, true, "growth.");
+        damageStagePercent = array(data, "damage_stage_percent", List.of(75D, 80D, 85D, 90D, 95D, 100D), 1, 100, true, true, "growth.");
         stageCost = array(data, "stage_cost", List.of(40D, 40D, 40D, 40D, 40D), .001, 1000000, false, false, "growth.");
         JsonObject e = group(data, "experience", "growth.");
         double min = integer(e, "min_percent", 90, 1, 1000, "growth.experience.");
@@ -72,6 +73,7 @@ public final class GrowthConfig {
     }
     public boolean enabled() { return enabled; }
     public double stagePercent(int level) { return stagePercent.get(Math.max(0, Math.min(5, level))); }
+    public double damageStagePercent(int level) { return damageStagePercent.get(Math.max(0, Math.min(5, level))); }
     public double stageCost(int level) {
         if (level < 0 || level >= 5) throw new IllegalArgumentException("Stage cost requires level 0..4: " + level);
         return stageCost.get(level);

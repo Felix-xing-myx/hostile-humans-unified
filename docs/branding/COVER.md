@@ -6,4 +6,4 @@
 - 入口：沿用`META-INF/mods.toml`的`logoFile="logo.png"`。
 - SHA-256：`B4B1808CBB1169E681A388349A03812F9515A7AF426FA71833CEC78696ED3B5E`。
 - 前一封面备份：`E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261011-122741-cover-before-user-image\logo.png`。
-- 核查：PNG解码/尺寸/文件大小、原图哈希未变化、人工检查标题及物品清晰度。只更新源码资源，未构建、未同步、未推送。
+- 核查：PNG解码/尺寸/文件大小、原图哈希未变化、人工检查标题及物品清晰度。封面修改当时只更新源码资源；后续2026-10-11测试构建已包含压缩封面并同步Forge 47.4.21测试实例，见CHANGELOG与WORKSTREAMS中的投放记录。游戏内显示验收仍待反馈，后续最新背盾/双枪修正未构建。

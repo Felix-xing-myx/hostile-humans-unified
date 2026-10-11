@@ -75,7 +75,7 @@ public final class RangedTerrainCombat {
         // Finish at least a full attack cycle; periodically retry ranged if a target stays unreachable.
         if (human.tickCount - state.meleeSince < 80) return true;
         boolean open = human.distanceToSqr(target) >= 8.0D * 8.0D
-                && human.getSensing().hasLineOfSight(target);
+                && RangedShotClearance.canShoot(human, target);
         if (!open) state.clearSince = 0;
         else if (state.clearSince == 0) state.clearSince = human.tickCount;
         if (!RangedTerrainPolicy.keepMelee(human.tickCount - state.meleeSince,

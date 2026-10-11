@@ -17,7 +17,7 @@ public final class EncounterCooldownTest {
         UnifiedConfig defaultConfig = new UnifiedConfig(new JsonObject());
         checkRoamerAdmission(defaultConfig);
         NaturalSpawnProgression progression = defaultConfig.spawn().progression();
-        int[] firstDays = {3, 5, 10, 20};
+        int[] firstDays = {2, 5, 10, 20};
         for (int tier = 0; tier < 4; tier++) {
             long firstTick = (firstDays[tier] - 1L) * 24000L;
             check(!progression.allowsTier(firstTick - 1L, tier), "tier locked before its opening day");

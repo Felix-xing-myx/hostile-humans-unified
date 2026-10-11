@@ -25,3 +25,7 @@ local.properties
 
 # Local pre-publication working notes
 PUBLICATION_AUDIT.md
+
+# Python verification caches
+__pycache__/
+*.py[cod]

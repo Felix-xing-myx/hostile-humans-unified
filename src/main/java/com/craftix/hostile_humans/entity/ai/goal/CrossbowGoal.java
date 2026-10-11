@@ -96,6 +96,7 @@ extends Goal {
         ((CrossbowAttackMob)this.mob).setChargingCrossbow(false);
         if (this.mob.isUsingItem() && this.mob.getUseItem().getItem() instanceof CrossbowItem) {
             ItemStack used = this.mob.getUseItem();
+            if (this.mob instanceof Human human) human.humanGunner$shieldDefense().pauseRangedUseForGuard();
             this.mob.stopUsingItem();
             ((CrossbowAttackMob)this.mob).setChargingCrossbow(false);
             if (used.getItem() instanceof CrossbowItem) CrossbowItem.setCharged(used, false);
@@ -133,7 +134,10 @@ extends Goal {
         ItemStack held = this.mob.getItemInHand(ProjectileUtil.getWeaponHoldingHand(
                 this.mob, item -> item instanceof CrossbowItem));
         this.crossbowState = CrossbowItem.isCharged(held)
-                ? CrossbowState.READY_TO_ATTACK : CrossbowState.UNCHARGED;
+                ? (mob instanceof Human ? CrossbowState.CHARGED : CrossbowState.READY_TO_ATTACK)
+                : CrossbowState.UNCHARGED;
+        if (mob instanceof Human human && CrossbowItem.isCharged(held))
+            club.someoneice.humangunner.HumanArrowCombat.crossbowLoaded(human, held);
         this.attackDelay = 0;
     }
 
@@ -146,7 +150,6 @@ extends Goal {
             ItemStack active = mob.isUsingItem() ? mob.getUseItem() : mob.getMainHandItem();
             if (!(active.getItem() instanceof CrossbowItem)) active = mob.getOffhandItem();
             boolean heavy = club.someoneice.humangunner.SpartanRangedCompat.isHeavyCrossbow(active);
-            if (attackDelay > 0) attackDelay = Math.max(1, attackDelay - (heavy ? ((mob.tickCount & 1) == 0 ? 2 : 1) : 4));
             if (mob.isUsingItem() && mob.getUseItem().getItem() instanceof CrossbowItem)
                 mob.advanceUseTime(heavy ? 1 : 3);
         }
@@ -156,7 +159,7 @@ extends Goal {
                 human.updateCombatFiringShore(livingentity, this.speedModifier);
             }
             boolean flag1;
-            boolean flag = this.mob.getSensing().hasLineOfSight((Entity)livingentity);
+            boolean flag = (this.mob instanceof Human shotHuman ? club.someoneice.humangunner.RangedShotClearance.canShoot(shotHuman, livingentity) : this.mob.getSensing().hasLineOfSight((Entity)livingentity));
             boolean bl = flag1 = this.seeTime > 0;
             if (flag != flag1) {
                 this.seeTime = 0;
@@ -384,7 +387,11 @@ extends Goal {
             }
             if (this.crossbowState == CrossbowState.UNCHARGED) {
                 if (canEngage) {
+                    if (mob instanceof Human human)
+                        club.someoneice.humangunner.HumanArrowCombat.beginCrossbowLoad(human,
+                                mob.getItemInHand(ProjectileUtil.getWeaponHoldingHand(mob, item -> item instanceof CrossbowItem)));
                     this.mob.startUsingItem(ProjectileUtil.getWeaponHoldingHand(this.mob, item -> item instanceof CrossbowItem));
+                    if (this.mob instanceof Human human) human.humanGunner$shieldDefense().restoreRangedUseAfterGuard();
                     this.crossbowState = CrossbowState.CHARGING;
                     ((CrossbowAttackMob)this.mob).setChargingCrossbow(true);
                 }
@@ -414,12 +421,13 @@ extends Goal {
                     }
                     if (this.mob instanceof Human)
                         club.someoneice.humangunner.HumanArrowCombat.markNpcLoad(itemstack);
-                    // Charging and the loaded-crossbow wait both advance faster
-                    // than real time. Increasing the internal wait by 40 from
-                    // the previous release lengthens the complete shot cycle
-                    // to roughly 1/0.7 for both light and heavy crossbows.
-                    this.attackDelay = SHOT_DELAY_MIN
+                    // Humans convert the existing accelerated loaded wait into a server-tick
+                    // deadline shared with background loading. Goal restarts cannot skip it.
+                    // Non-Human callers retain their original local delay.
+                    if (!(mob instanceof Human)) this.attackDelay = SHOT_DELAY_MIN
                             + this.mob.getRandom().nextInt(SHOT_DELAY_VARIANCE);
+                    if (this.mob instanceof Human human)
+                        club.someoneice.humangunner.HumanArrowCombat.crossbowLoaded(human, itemstack);
                     ((CrossbowAttackMob)this.mob).setChargingCrossbow(false);
                     T t = this.mob;
                     if (t instanceof Human) {
@@ -428,11 +436,15 @@ extends Goal {
                     }
                 }
             } else if (this.crossbowState == CrossbowState.CHARGED) {
-                --this.attackDelay;
-                if (this.attackDelay == 0) {
+                ItemStack held = this.mob.getItemInHand(ProjectileUtil.getWeaponHoldingHand(
+                        this.mob, item -> item instanceof CrossbowItem));
+                if (mob instanceof Human human
+                        ? club.someoneice.humangunner.HumanArrowCombat.crossbowWaitFinished(human, held)
+                        : --this.attackDelay == 0) {
                     this.crossbowState = CrossbowState.READY_TO_ATTACK;
                 }
-            } else if (this.crossbowState == CrossbowState.READY_TO_ATTACK && visible) {
+            } else if (this.crossbowState == CrossbowState.READY_TO_ATTACK && visible
+                    && (!(mob instanceof Human human) || club.someoneice.humangunner.HumanArrowCombat.canShoot(human, livingentity))) {
                 ((RangedAttackMob)this.mob).performRangedAttack(livingentity, 1.0f);
                 ItemStack itemstack1 = this.mob.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this.mob, item -> item instanceof CrossbowItem));
                 CrossbowItem.setCharged((ItemStack)itemstack1, (boolean)false);

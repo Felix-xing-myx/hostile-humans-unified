@@ -17,7 +17,7 @@ class ProjectileCooldownContractTest(unittest.TestCase):
         self.assertIn('LivingEntity;f_20898_:F", ordinal = 0', mixin)
         self.assertIn('DamageSource;m_269533_(Lnet/minecraft/tags/TagKey;)Z', mixin)
         self.assertIn('remap = false, require = 1, allow = 1', mixin)
-        self.assertIn('return source.is(tag) || ProjectileCooldownPolicy.bypassesCooldown', mixin)
+        self.assertIn('return source.is(tag) || HumanAttackCooldownPolicy.bypassesCooldown', mixin)
 
     def test_server_vanilla_player_and_explosion_guards(self):
         policy = (JAVA / "ProjectileCooldownPolicy.java").read_text(encoding="utf-8")
@@ -30,7 +30,7 @@ class ProjectileCooldownContractTest(unittest.TestCase):
         self.assertNotIn('com.tacz', policy)
 
     def test_original_damage_and_shared_timer_are_not_mutated(self):
-        for name in ('ProjectileCooldownPolicy.java', 'mixin/LivingEntityProjectileCooldownMixin.java'):
+        for name in ('HumanAttackCooldownPolicy.java', 'ProjectileCooldownPolicy.java', 'mixin/LivingEntityProjectileCooldownMixin.java'):
             source = (JAVA / name).read_text(encoding="utf-8")
             for mutation in ('.invulnerableTime', '.hurtTime', '.setHealth(', '.hurt(', 'new DamageSource('):
                 self.assertNotIn(mutation, source)

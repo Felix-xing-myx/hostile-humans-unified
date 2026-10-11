@@ -2,6 +2,7 @@ package com.craftix.hostile_humans.entity.ai.goal;
 
 import club.someoneice.humangunner.BodyguardProtection;
 import club.someoneice.humangunner.CreeperSafetyPolicy;
+import club.someoneice.humangunner.CreeperMeleeCommitment;
 import com.craftix.hostile_humans.entity.entities.Human;
 import java.util.EnumSet;
 import java.util.List;
@@ -96,10 +97,12 @@ extends Goal {
     }
 
     private boolean shouldEscape(@Nullable Creeper creeper) {
-        return creeper != null && CreeperSafetyPolicy.escape(creeper.isAlive() && !creeper.isRemoved(),
+        if (creeper == null) return false;
+        boolean escape = CreeperSafetyPolicy.escape(creeper.isAlive() && !creeper.isRemoved(),
                 creeper.isIgnited(), creeper.swell, creeper.getSwellDir(), creeper.distanceToSqr(this.mob),
                 creeper.isPowered(), this.mob instanceof Human human
                         && BodyguardProtection.protectingFromExplosion(human, creeper));
+        return escape && !(this.mob instanceof Human human && CreeperMeleeCommitment.canFinish(human, creeper));
     }
 
     @Override public boolean requiresUpdateEveryTick() { return true; }

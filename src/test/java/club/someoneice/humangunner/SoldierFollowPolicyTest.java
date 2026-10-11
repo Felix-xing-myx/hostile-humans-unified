@@ -7,6 +7,18 @@ import com.google.gson.JsonParser;
 public final class SoldierFollowPolicyTest {
     private static int checks;
     public static void main(String[] args) throws Exception {
+        check(WaterCombatPolicy.closingProgress(8, 7.5), "half block water approach counts");
+        check(!WaterCombatPolicy.closingProgress(8, 8), "circling without approach is not progress");
+        check(!WaterCombatPolicy.closingProgress(8, 7.8), "water jitter does not reset watchdog");
+        check(!WaterCombatPolicy.closingProgress(8, Double.NaN), "invalid progress is rejected");
+        check(WaterCombatPolicy.directApproach(true, 64, 1.5, true), "bounded visible surface pursuit");
+        check(!WaterCombatPolicy.directApproach(true, 64.01, 0, true), "distant combat keeps path planning");
+        check(!WaterCombatPolicy.directApproach(true, 4, 2, true), "deep target does not force diving");
+        check(!WaterCombatPolicy.directApproach(true, 4, 0, false), "wall occlusion prevents eager direct pursuit");
+        check(WaterCombatPolicy.chasingMovingTarget(1, .6, .1), "equally fast fleeing target still permits progress");
+        check(!WaterCombatPolicy.chasingMovingTarget(0, .6, .1), "static target requires closing distance");
+        check(!WaterCombatPolicy.chasingMovingTarget(1, .6, 1), "lateral circling is not forward pursuit");
+        check(!WaterCombatPolicy.chasingMovingTarget(1, -.6, 0), "moving away is not pursuit");
         check(!SoldierFollowNavigation.shouldChase(false, 16), "start boundary");
         check(SoldierFollowNavigation.shouldChase(false, 16.01), "start beyond four blocks");
         check(SoldierFollowNavigation.shouldChase(true, 9), "keep chasing inside start radius");

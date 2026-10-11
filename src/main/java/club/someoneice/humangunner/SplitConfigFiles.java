@@ -73,10 +73,31 @@ final class SplitConfigFiles {
             byte[] original = Files.readAllBytes(path);
             JsonObject data = read(path, 2);
             boolean imported = rank && integrations.test(rankName(path), data);
+            // Split direct arrow damage into independent bow/crossbow controls; preserve explicit new values.
+            if (rank) {
+                JsonObject damage = data.has("damage_multipliers") && data.get("damage_multipliers").isJsonObject()
+                        ? data.getAsJsonObject("damage_multipliers") : new JsonObject();
+                if (!data.has("damage_multipliers")) data.add("damage_multipliers", damage);
+                JsonObject template = defaults.getAsJsonObject("damage_multipliers");
+                for (String key : List.of("bow_damage_multiplier", "crossbow_damage_multiplier"))
+                    if (!damage.has(key)) damage.add(key, template.get(key).deepCopy());
+            }
             // Expose the independent backend factor in existing rank files without copying TaCZ values.
             if (rank && !data.has("scguns")) data.add("scguns", defaults.getAsJsonObject("scguns").deepCopy());
             if (!rank) {
-                for (String key : List.of("jump_attack", "first_aid", "scguns")) {
+                if (data.has("growth") && data.get("growth").isJsonObject()) {
+                    JsonObject growth = data.getAsJsonObject("growth");
+                    if (!growth.has("damage_stage_percent")) {
+                        JsonObject template = defaults.getAsJsonObject("growth");
+                        for (String key : List.of("damage_stage_percent", "_说明_damage_stage_percent_中文", "_description_damage_stage_percent_en"))
+                            growth.add(key, template.get(key).deepCopy());
+                    }
+                }
+                JsonObject scguns = data.has("scguns") && data.get("scguns").isJsonObject()
+                        ? data.getAsJsonObject("scguns") : null;
+                if (scguns != null && !scguns.has("human_gun_damage_multiplier"))
+                    scguns.add("human_gun_damage_multiplier", defaults.getAsJsonObject("scguns").get("human_gun_damage_multiplier").deepCopy());
+                for (String key : List.of("jump_attack", "first_aid", "scguns", "shield_pressure")) {
                     if (!data.has(key) && defaults.has(key)) {
                         JsonObject section = defaults.getAsJsonObject(key).deepCopy();
                         if (key.equals("jump_attack") && TierConfigProjection.at(data, "damage.jump_attack_damage_multiplier") != null)
@@ -85,10 +106,29 @@ final class SplitConfigFiles {
                     }
                 }
             }
+            if (!rank && data.has("shield_pressure") && data.get("shield_pressure").isJsonObject()) {
+                JsonObject pressure = data.getAsJsonObject("shield_pressure");
+                JsonObject template = defaults.getAsJsonObject("shield_pressure");
+                for (String key : List.of("max_guard_ticks", "break_attempt_ticks"))
+                    if (!pressure.has(key)) pressure.add(key, template.get(key).deepCopy());
+            }
             if (rank && data.has("equipment_loadout") && data.get("equipment_loadout").isJsonObject()) {
                 JsonObject loadout = data.getAsJsonObject("equipment_loadout");
                 if (!loadout.has("automatic_scguns_armor")) loadout.addProperty("automatic_scguns_armor", true);
             }
+            // Add only the new pool controls; never merge a player's explicit pool.
+            for (String backend : GunSpawnPools.BACKENDS) {
+                JsonObject section = data.has(backend) && data.get(backend).isJsonObject()
+                        ? data.getAsJsonObject(backend) : new JsonObject();
+                if (!data.has(backend)) data.add(backend, section);
+                JsonObject template = defaults.getAsJsonObject(backend);
+                for (String key : rank ? List.of("gun_whitelist") : List.of("spawn_pool_source", "gun_blacklist",
+                        "gun_whitelist", "auto_add_new_guns", "auto_added_gun_weight", "excluded_auto_gun_types",
+                        "excluded_gun_namespaces")) {
+                    if (!section.has(key) && template.has(key)) section.add(key, template.get(key).deepCopy());
+                }
+            }
+            TacticalSupplyDefaults.refresh(data, defaults, rank);
             TierConfigProjection.refreshGuidance(data, defaults);
             JsonObject arranged = TierConfigProjection.arrange(data, rank);
             byte[] output = format(arranged).getBytes(StandardCharsets.UTF_8);

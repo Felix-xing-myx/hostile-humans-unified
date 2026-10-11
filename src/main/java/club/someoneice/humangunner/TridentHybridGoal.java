@@ -2,7 +2,6 @@ package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.util.Mth;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.item.TridentItem;
@@ -146,8 +145,8 @@ public final class TridentHybridGoal extends Goal {
     }
 
     private void attackMeleeIfReady(double distanceSqr) {
-        if (distanceSqr <= meleeReachSqr(target) && attackCooldown <= 0) {
-            human.swing(InteractionHand.MAIN_HAND);
+        if (distanceSqr <= meleeReachSqr(target) && attackCooldown <= 0
+                && MeleeCombatRange.canStartAttack(human, target)) {
             human.doHurtTarget(target);
             attackCooldown = MeleeAttackTiming.nextCooldown(human);
         }

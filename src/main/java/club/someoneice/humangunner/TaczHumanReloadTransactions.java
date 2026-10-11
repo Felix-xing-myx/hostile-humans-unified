@@ -16,6 +16,7 @@ public final class TaczHumanReloadTransactions {
     private static final ReloadPaymentLedger<ShooterDataHolder, ItemStack> PAYMENTS = new ReloadPaymentLedger<>();
     private static final java.util.Map<ShooterDataHolder, Long> INVENTORY_FEED_END = new java.util.WeakHashMap<>();
     private static final java.util.Map<ShooterDataHolder, net.minecraft.resources.ResourceLocation> GUN_IDS = new java.util.WeakHashMap<>();
+    private static final java.util.Map<ShooterDataHolder, java.lang.ref.WeakReference<Human>> VISUAL_OWNERS = new java.util.WeakHashMap<>();
     private TaczHumanReloadTransactions() {}
 
     public static boolean start(AbstractGunItem gun, ShooterDataHolder data,
@@ -65,6 +66,25 @@ public final class TaczHumanReloadTransactions {
             gun.setBulletInBarrel(weapon, chambered);
         } else {
             GUN_IDS.put(data, gun.getGunId(weapon));
+            // Gun data cooldown is an endpoint, not an extra delay after feeding.
+            double visualSeconds = reload.getCooldown() == null ? 0
+                    : empty ? reload.getCooldown().getEmptyTime() : reload.getCooldown().getTacticalTime();
+            if (reload.getType() == FeedType.MANUAL) {
+                double feedSeconds = reload.getFeed() == null ? 0
+                        : empty ? reload.getFeed().getEmptyTime() : reload.getFeed().getTacticalTime();
+                visualSeconds += Math.max(0, missing - 1) * feedSeconds;
+            }
+            int visualTicks = inventoryFeed ? feedDelay
+                    : (int) Math.max(1, Math.min(72000, Math.ceil(visualSeconds * 20)));
+            double visualFeed = reload.getFeed() == null ? 0
+                    : empty ? reload.getFeed().getEmptyTime() : reload.getFeed().getTacticalTime();
+            double visualCooldown = reload.getCooldown() == null ? visualFeed
+                    : empty ? reload.getCooldown().getEmptyTime() : reload.getCooldown().getTacticalTime();
+            int visualTail = inventoryFeed ? 0
+                    : (int) Math.max(0, Math.min(72000, Math.ceil((visualCooldown - visualFeed) * 20)));
+            int visualFeedTicks = (int) Math.max(0, Math.min(72000, Math.ceil(visualFeed * 20)));
+            TaczReloadVisualTimeline.begin(human, gun.getGunId(weapon).toString(), visualTicks, visualTail, visualFeedTicks);
+            VISUAL_OWNERS.put(data, new java.lang.ref.WeakReference<>(human));
         }
         return started;
     }
@@ -83,6 +103,7 @@ public final class TaczHumanReloadTransactions {
             if (human.level().getGameTime() < feedEnd) {
                 state.setStateType(data.reloadStateType);
                 state.setCountDown((feedEnd - human.level().getGameTime()) * 50L);
+                TaczReloadVisualTimeline.update(human, state.getCountDown(), true);
                 return state;
             }
             var index = TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
@@ -100,6 +121,8 @@ public final class TaczHumanReloadTransactions {
             return state;
         }
         ReloadState state = gun.tickReload(data, weapon, shooter);
+        if (state.getStateType().isReloading())
+            TaczReloadVisualTimeline.update(human, state.getCountDown(), state.getStateType().isReloadFinishing());
         if (human.getData() != null && weapon != human.getMainHandItem()) human.getData().markInventoryDirty();
         if (!state.getStateType().isReloading()) finish(human, data);
         return state;
@@ -153,6 +176,7 @@ public final class TaczHumanReloadTransactions {
     }
 
     private static void finish(Human human, ShooterDataHolder data) {
+        TaczReloadVisualTimeline.clear(human);
         end(data);
         restoreHeldBinding(human, data);
         if (human.getData() != null) human.getData().markInventoryDirty();
@@ -165,6 +189,7 @@ public final class TaczHumanReloadTransactions {
     }
 
     public static void end(ShooterDataHolder data) {
+        clearVisual(data);
         PAYMENTS.end(data);
         INVENTORY_FEED_END.remove(data);
         GUN_IDS.remove(data);
@@ -174,9 +199,16 @@ public final class TaczHumanReloadTransactions {
 
     public static void forgetFinished(ShooterDataHolder data) {
         if (!data.reloadStateType.isReloading() || data.reloadTimestamp == -1L) {
+            clearVisual(data);
             PAYMENTS.end(data);
             INVENTORY_FEED_END.remove(data);
             GUN_IDS.remove(data);
         }
+    }
+
+    private static void clearVisual(ShooterDataHolder data) {
+        var reference = VISUAL_OWNERS.remove(data);
+        Human human = reference == null ? null : reference.get();
+        if (human != null) TaczReloadVisualTimeline.clear(human);
     }
 }

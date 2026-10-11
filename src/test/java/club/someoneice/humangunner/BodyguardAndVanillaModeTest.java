@@ -10,6 +10,15 @@ import org.objectweb.asm.tree.MethodInsnNode;
 public final class BodyguardAndVanillaModeTest {
     private static int checks;
     public static void main(String[] args) throws Exception {
+        check(CreeperFinishPolicy.canFinish(20, 20, 5, 5, 20, 30), "current combo can kill in one hit");
+        check(CreeperFinishPolicy.canFinish(20, 10, 10, 5, 12, 30), "two attacks fit the fuse");
+        check(!CreeperFinishPolicy.canFinish(20, 10, 10, 5, 24, 30), "slow second attack cannot fit");
+        check(!CreeperFinishPolicy.canFinish(20, 20, 20, 28, 20, 30), "no last-tick explosion race");
+        check(!CreeperFinishPolicy.canFinish(21, 20, 20, 20, 1, 30), "hurt immunity imposes ten tick interval");
+        check(!CreeperFinishPolicy.canFinish(20, 20, 20, 5, 20, 6), "short configured fuse respected");
+        check(!CreeperFinishPolicy.canFinish(24, 20, 20, 8, 20, 30), "absorption counts toward required damage");
+        check(!CreeperFinishPolicy.canFinish(20, Double.NaN, 20, 0, 20, 30), "invalid damage cannot authorize risk");
+        check(!CreeperFinishPolicy.canFinish(20, 0, 20, 0, 20, 30), "immune target cannot authorize risk");
         UnifiedConfig defaults = new UnifiedConfig(new JsonObject());
         check(!defaults.vanillaMode(), "old configs default vanilla mode off");
         check(new UnifiedConfig(JsonParser.parseString("{\"vanilla_mode\":true}").getAsJsonObject()).vanillaMode(), "global mode can enable");

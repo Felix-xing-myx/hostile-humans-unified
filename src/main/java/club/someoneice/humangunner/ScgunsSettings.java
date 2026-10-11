@@ -7,7 +7,8 @@ import java.util.*;
 /** Immutable server configuration. No optional API types cross this boundary. */
 public record ScgunsSettings(boolean enabled, double accuracyModifier, double damageMultiplier,
         boolean throwablesEnabled, int throwCooldownTicks, double throwMinRange, double throwMaxRange,
-        double friendlySafetyRadius, int fuseTicks, double throwableQuality, java.util.Set<String> allowedThrowables,
+        double friendlySafetyRadius, int fuseTicks, double throwSpeed, double clusterRadius, int clusterMinimumTargets,
+        int clusterCooldownTicks, double throwableQuality, java.util.Set<String> allowedThrowables,
         boolean flareEnabled, String raidId, int flareCooldownTicks, Map<String, Medicine> medicines, Map<String, Integer> magazineCosts) {
     public record Medicine(float healing, int useTicks, int cooldownTicks, double quality, List<Effect> effects) {}
     public record Effect(ResourceLocation id, int durationTicks, int amplifier) {
@@ -58,13 +59,17 @@ public record ScgunsSettings(boolean enabled, double accuracyModifier, double da
         double min = UnifiedConfig.number(throwing, "minimum_range", 6, 1, 32);
         return new ScgunsSettings(UnifiedConfig.bool(data, "enabled", true),
                 UnifiedConfig.number(data, "ai_accuracy_modifier", 2, .05, 1000),
-                UnifiedConfig.number(data, "npc_damage_multiplier", 1, 0, 100),
+                UnifiedConfig.number(data, "human_gun_damage_multiplier", .7, 0, 100),
                 UnifiedConfig.bool(throwing, "enabled", true),
-                (int) UnifiedConfig.number(throwing, "cooldown_ticks", 200, 1, 72000), min,
-                Math.max(min, UnifiedConfig.number(throwing, "maximum_range", 20, 1, 64)),
+                (int) UnifiedConfig.number(throwing, "cooldown_ticks", 160, 1, 72000), min,
+                Math.max(min, UnifiedConfig.number(throwing, "maximum_range", 32, 1, 64)),
                 UnifiedConfig.number(throwing, "friendly_safety_radius", 8, 1, 64),
                 (int) UnifiedConfig.number(throwing, "fuse_ticks", 60, 20, 200),
-                UnifiedConfig.number(throwing, "quality", 50, 0, 1000), Set.copyOf(allowed),
+                UnifiedConfig.number(throwing, "initial_speed", 2.0, .5, 3),
+                UnifiedConfig.number(throwing, "cluster_radius", 4, 1, 12),
+                (int) UnifiedConfig.number(throwing, "cluster_minimum_targets", 3, 2, 16),
+                (int) UnifiedConfig.number(throwing, "cluster_cooldown_ticks", 80, 1, 72000),
+                UnifiedConfig.number(throwing, "quality", 170, 0, 1000), Set.copyOf(allowed),
                 UnifiedConfig.bool(flare, "enabled", true), raid,
                 (int) UnifiedConfig.number(flare, "cooldown_ticks", 1200, 20, 72000), Map.copyOf(medicines), Map.copyOf(costs));
     }

@@ -15,6 +15,7 @@ final class HumanInventorySession {
 
     static synchronized boolean begin(Human human, ServerPlayer editor, int menuId) {
         if (isEditing(human)) return false;
+        ShieldDurability.flush(human);
         // Any item-use state belongs to the loadout that was visible before
         // the owner started editing it. Never let a bow draw, shield block or
         // TaCZ hand state survive while its backing stack is moved elsewhere.

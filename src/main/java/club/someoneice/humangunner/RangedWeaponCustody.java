@@ -306,6 +306,14 @@ public final class RangedWeaponCustody {
         return bestSlot;
     }
 
+    /** Read-only preview of the same weapon restorePreferred will choose. */
+    static ItemStack preferredForClearance(Human human) {
+        if (isBowOrCrossbow(human.getMainHandItem()) || GunSupport.isGunItem(human.getMainHandItem())
+                || !isActive(human)) return human.getMainHandItem();
+        int slot = findBestStoredRangedSlot(human);
+        return slot >= 0 ? human.getData().getInventoryItem(slot) : human.getMainHandItem();
+    }
+
     private static int findBestStoredRangedSlot(Human human) {
         HumanData data = human.getData();
         if (data == null) {

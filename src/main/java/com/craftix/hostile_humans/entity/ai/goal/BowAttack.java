@@ -41,12 +41,14 @@ extends Goal {
         this.mob = p_25792_;
         this.speedModifier = p_25793_;
         this.attackIntervalMin = interval;
+        if (mob instanceof Human human) club.someoneice.humangunner.HumanArrowCombat.configureBowInterval(human, interval);
         this.attackRadiusSqr = p_25795_ * p_25795_;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
     public void setMinAttackInterval(int p_25798_) {
         this.attackIntervalMin = p_25798_;
+        if (mob instanceof Human human) club.someoneice.humangunner.HumanArrowCombat.configureBowInterval(human, p_25798_);
     }
 
     public boolean canUse() {
@@ -87,9 +89,10 @@ extends Goal {
         setOrbitSpeed(false);
         this.mob.setAggressive(false);
         this.seeTime = 0;
-        this.attackTime = -1;
+        if (!(mob instanceof Human)) this.attackTime = -1;
         this.strafingTime = -1;
         if (this.mob.isUsingItem() && this.mob.getUseItem().getItem() instanceof BowItem) {
+            if (this.mob instanceof Human human) human.humanGunner$shieldDefense().pauseRangedUseForGuard();
             this.mob.stopUsingItem();
         }
         boolean isSit = this.mob.isOrderedToSit();
@@ -114,7 +117,6 @@ extends Goal {
             return;
         }
         if (mob instanceof Human) {
-            if (attackTime > 0) attackTime = Math.max(1, attackTime - 1);
             if (mob.isUsingItem() && mob.getUseItem().getItem() instanceof net.minecraft.world.item.BowItem)
                 mob.advanceUseTime(2);
         }
@@ -134,7 +136,9 @@ extends Goal {
         if ((this.mob instanceof Human human && human.isFleeing) || shoreSeeking) {
             setOrbitSpeed(false);
             if (this.mob.isUsingItem() && !(this.mob.getUseItem().getItem() instanceof BowItem)) return;
-            boolean visible = this.mob.getSensing().hasLineOfSight(livingentity);
+            boolean visible = this.mob instanceof Human shotHuman
+                    ? club.someoneice.humangunner.RangedShotClearance.canShoot(shotHuman, livingentity)
+                    : this.mob.getSensing().hasLineOfSight(livingentity);
             this.seeTime = visible ? Math.max(1, this.seeTime + 1) : Math.min(-1, this.seeTime - 1);
             this.mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
             if (this.mob.distanceToSqr(livingentity) <= this.attackRadiusSqr) {
@@ -145,7 +149,7 @@ extends Goal {
         {
             boolean flag1;
             double d0 = this.mob.distanceToSqr(livingentity.getX(), livingentity.getY(), livingentity.getZ());
-            boolean flag = this.mob.getSensing().hasLineOfSight((Entity)livingentity);
+            boolean flag = (this.mob instanceof Human shotHuman ? club.someoneice.humangunner.RangedShotClearance.canShoot(shotHuman, livingentity) : this.mob.getSensing().hasLineOfSight((Entity)livingentity));
             boolean bl = flag1 = this.seeTime > 0;
             if (flag != flag1) {
                 this.seeTime = 0;
@@ -310,18 +314,22 @@ extends Goal {
             human.markRangedFacing(target);
         }
         if (this.mob.isUsingItem()) {
+            if (!(this.mob.getUseItem().getItem() instanceof BowItem)) return;
             int usedTicks;
             if (!visible && this.seeTime < -60) {
                 this.mob.stopUsingItem();
-            } else if (visible && (usedTicks = this.mob.getTicksUsingItem()) >= 20) {
+            } else if (visible && (usedTicks = this.mob.getTicksUsingItem()) >= 20
+                    && (!(mob instanceof Human human) || club.someoneice.humangunner.HumanArrowCombat.canShoot(human, target))) {
                 this.mob.stopUsingItem();
                 ((RangedAttackMob)this.mob).performRangedAttack(target,
                         BowItem.getPowerForTime(usedTicks));
                 this.attackTime = this.attackIntervalMin;
             }
-        } else if (--this.attackTime <= 0 && this.seeTime >= -60) {
+        } else if ((mob instanceof Human human ? club.someoneice.humangunner.HumanArrowCombat.canDrawBow(human)
+                : --this.attackTime <= 0) && this.seeTime >= -60) {
             this.mob.startUsingItem(ProjectileUtil.getWeaponHoldingHand(
                     this.mob, item -> item instanceof BowItem));
+            if (this.mob instanceof Human human) human.humanGunner$shieldDefense().restoreRangedUseAfterGuard();
         }
     }
 

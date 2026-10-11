@@ -21,12 +21,6 @@ final class FirearmSpawnEquipment {
                     && !UnifiedConfig.get().naturalFirearmsEnabled())) return ItemStack.EMPTY;
         if (human.getPersistentData().getBoolean(GUN_ROLL_DONE)) return ItemStack.EMPTY;
         human.getPersistentData().putBoolean(GUN_ROLL_DONE, true);
-        if (HumanGunnerConfig.get().availableGunCount() == 0) {
-            if (WARNED_EMPTY_GUN_POOL.compareAndSet(false, true)) {
-                LOGGER.warn("Hostile Humans Unified found no configured firearms in the loaded optional gun catalogs");
-            }
-            return ItemStack.EMPTY;
-        }
         HumanGunnerConfig config = HumanGunnerConfig.get();
         double chance;
         String tierGunTypeKey;
@@ -43,6 +37,12 @@ final class FirearmSpawnEquipment {
             chance = config.roamerGunChance();
             tierGunTypeKey = "roamer";
         } else {
+            return ItemStack.EMPTY;
+        }
+        if (config.availableGunCount(tierGunTypeKey) == 0) {
+            if (WARNED_EMPTY_GUN_POOL.compareAndSet(false, true)) {
+                LOGGER.warn("Hostile Humans Unified found no configured firearms in the loaded optional gun catalogs");
+            }
             return ItemStack.EMPTY;
         }
         chance *= NaturalEquipmentGrowth.gunChanceMultiplier(human);

@@ -64,12 +64,13 @@ public final class HumanGrowth {
         return state;
     }
 
+    /** Non-firearm outgoing damage only; health and firearms have separate curves. */
     static double multiplier(Human human) {
         GrowthConfig config = UnifiedConfig.get().growth();
         if (!config.enabled()) return 1;
         CompoundTag state = state(human);
         // The stage result is computed first, then the experience percentage is applied.
-        return config.stagePercent(state.getInt("level")) / 100.0
+        return config.damageStagePercent(state.getInt("level")) / 100.0
                 * (state.getInt("experience_percent") / 100.0);
     }
 

@@ -38,6 +38,45 @@ public final class GunCombatPolicyTest {
                 "cancelled switch is retried rather than marked drawn");
 
         check(calls(HUMAN, "humanGunner$canMeleeAttack", "isGunItem"), "physical identity guards melee");
+        check(calls(MOD + "TaczIntegration", "onGunShoot", "allows")
+                        && calls(MOD + "TaczIntegration", "onGunShoot", "setCanceled"),
+                "native public shoot event can reject unpermitted NPC fire");
+        check(calls(MOD + "GunFireAuthorization", "allows", "isActivelyCollectingLoot")
+                        && calls(MOD + "GunFireAuthorization", "allows", "getEntity")
+                        && calls(MOD + "GunFireAuthorization", "allows", "attack"),
+                "final authorization rejects loot, unloaded targets and obsolete bodyguard selection");
+        for (String type : new String[]{"shotgun", "pistol", "smg", "rifle", "mg", "sniper"}) {
+            var band = GunRangePolicy.forType(type);
+            check(GunRangePolicy.withinPreferredRange(band.minimum(), band)
+                            && GunRangePolicy.withinPreferredRange(band.maximum(), band),
+                    "preferred distance boundaries accepted: " + type);
+            check(!GunRangePolicy.withinPreferredRange(band.maximum() + 1, band)
+                            && !GunRangePolicy.withinPreferredRange(band.minimum() - .1, band),
+                    "firing reach does not imply preferred station: " + type);
+        }
+        check(!GunRangePolicy.withinPreferredRange(Double.NaN, GunRangePolicy.forType("rifle")),
+                "invalid distance cannot grant stationary fire");
+        check(!calls(MOD + "GunnerGoal", "canUse", "firingRangeSqr"),
+                "gunner pursuit remains active beyond firing reach");
+        check(calls(MOD + "GunnerGoal", "moveForFiringPosition", "withinPreferredRange"),
+                "terrain fire fallback respects preferred distance");
+        MethodNode urgentShot = method(MOD + "TaczGunMechanics", "prepareUrgentCloseShot");
+        int prepWrites = 0;
+        for (var instruction : urgentShot.instructions) {
+            if (instruction instanceof org.objectweb.asm.tree.FieldInsnNode field
+                    && field.name.equals("meleePrepTickCount")) {
+                var value = instruction.getPrevious();
+                while (value != null && value.getOpcode() < 0) value = value.getPrevious();
+                check(value != null && value.getOpcode() == org.objectweb.asm.Opcodes.ICONST_M1,
+                        "urgent shot cancels native melee rather than queueing a zero-tick hit");
+                prepWrites++;
+            }
+        }
+        check(prepWrites == 1, "native melee sentinel checked");
+        check(calls(MOD + "GunMeleeProtection", "blocks", "humanGunner$canMeleeAttack"),
+                "final damage guard uses the same held-gun gate as melee scheduling");
+        check(calls(MOD + "TaczGunItemIdentity", "onGunMelee", "setCanceled"),
+                "public TaCZ melee event cancels NPC gun-butt startup");
         for (String entry : new String[]{"humanGunner$isMeleeMode", "doHurtTarget", "hasPendingBetterCombatFacing",
                 "finishBetterCombatUpswing"})
             check(calls(HUMAN, entry, "humanGunner$canMeleeAttack"), "gun guard at " + entry);

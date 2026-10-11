@@ -34,6 +34,15 @@ public final class MeleeCombatRange {
                 && human.getSensing().hasLineOfSight(target);
     }
 
+    /** One pre-animation gate for native attacks and temporary defensive counters. */
+    public static boolean canStartAttack(Human human, LivingEntity target) {
+        if (target == null || !target.isAlive() || !human.canAttack(target)
+                || !human.humanGunner$canMeleeAttack() || human.humanGunner$hasPendingMeleeAttack()
+                || human.humanGunner$shieldDefense().shouldSuppressRecovery()) return false;
+        if (BetterCombatMeleeCombat.hasWeaponProfile(human)) faceTarget(human, target);
+        return canStrike(human, target);
+    }
+
     /** Aim the active melee hitbox before testing it, including opponents above/below us. */
     public static void faceTarget(Human human, LivingEntity target) {
         Vec3 point = aimPoint(attackOrigin(human), target.getBoundingBox());

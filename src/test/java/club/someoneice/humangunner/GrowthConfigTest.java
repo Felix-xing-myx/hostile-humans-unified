@@ -12,6 +12,13 @@ public final class GrowthConfigTest {
         GrowthConfig growth = config.growth();
         check(growth.enabled(), "default enabled");
         check(growth.stagePercent(0) == 50 && growth.stagePercent(5) == 100, "stage attributes");
+        for (int level = 0; level <= 5; level++)
+            check(growth.damageStagePercent(level) == 75 + 5 * level, "independent damage stages");
+        GrowthConfig customDamage = new UnifiedConfig(json("{\"growth\":{\"damage_stage_percent\":[60,65,70,80,90,100]}}")).growth();
+        check(customDamage.damageStagePercent(0) == 60 && customDamage.stagePercent(0) == 50,
+                "custom damage stages do not change health");
+        GrowthConfig invalidDamage = new UnifiedConfig(json("{\"growth\":{\"damage_stage_percent\":[75,80,80,90,95,100]}}")).growth();
+        check(invalidDamage.damageStagePercent(2) == 85, "invalid damage curve falls back safely");
         for (int level = 0; level < 5; level++) check(growth.stageCost(level) == 40, "stage cost");
         check(growth.experienceMinPercent() == 90 && growth.experienceMaxPercent() == 110
                 && growth.experienceCapPercent() == 125 && growth.experienceCost(100) == 3, "experience defaults");
@@ -37,7 +44,7 @@ public final class GrowthConfigTest {
         GrowthConfig wider = new UnifiedConfig(json("{\"growth\":{\"experience\":{\"band_width_percent\":10}}}")).growth();
         check(wider.experienceCost(109) == 3 && wider.experienceCost(110) == 5, "custom band width changes cost boundaries");
         check(wider.gunSpreadMultiplier(105) == 1 && Math.abs(wider.gunSpreadMultiplier(110) - .95) < 1e-8, "spread shares configured band width");
-        int[] start = {3, 5, 10, 20}, duration = {37, 45, 60, 60};
+        int[] start = {3, 5, 10, 20}, duration = {50, 50, 50, 50};
         for (int i = 0; i < 4; i++) {
             String rank = TierConfigProjection.RANKS.get(i);
             check(growth.stageAt(rank, start[i]) == 0 && growth.stageAt(rank, start[i] + duration[i]) == 5, "curve endpoints " + rank);
@@ -48,14 +55,13 @@ public final class GrowthConfigTest {
             }
             check(growth.stageAt(rank, Long.MIN_VALUE) == 0 && growth.stageAt(rank, Long.MAX_VALUE) == 5, "long bounds");
         }
-        // Compare pre-experience base health at every relevant default birth day.
-        // Wild snapshots do not grow later, so monotonic curves also bound older lower-rank units.
+        // Each rank keeps its own curve. Equal final health for roamer/tier1 is intentional;
+        // different birth schedules no longer promise strict cross-rank ordering.
         for (long day = 0; day <= 200; day++) {
-            double lower = 0;
             for (String rank : TierConfigProjection.RANKS) {
                 double health = config.tier(rank).maxHealth() * growth.stagePercent(growth.stageAt(rank, day)) / 100.0;
-                check(health > lower, "higher rank has higher pre-experience birth health: day=" + day + " rank=" + rank);
-                lower = health;
+                check(health >= config.tier(rank).maxHealth() * .5 && health <= config.tier(rank).maxHealth(),
+                        "birth health remains within its rank curve: day=" + day + " rank=" + rank);
             }
         }
         JsonObject custom = json("""
@@ -94,7 +100,7 @@ public final class GrowthConfigTest {
         growth = new UnifiedConfig(bad).growth();
         check(growth.stagePercent(2) == 70 && growth.stageCost(0) == 40, "bad arrays safe defaults without sorting");
         check(growth.experienceMinPercent() == 90 && growth.experienceCost(100) == 3 && growth.damageUnit() == 10, "invalid bounds safe defaults");
-        check(growth.stageAt("roamer", 40) == 5, "invalid duration and curve use defaults");
+        check(growth.stageAt("roamer", 52) < 5 && growth.stageAt("roamer", 53) == 5, "invalid duration and curve use defaults");
         check(new UnifiedConfig(json("{\"growth\":{\"experience\":{\"min_percent\":90.5}}}")).growth().experienceMinPercent() == 90, "fractional percentage rejected");
         check(new UnifiedConfig(json("{\"growth\":null}")).growth().enabled(), "invalid group default");
         JsonObject defaults = UnifiedConfig.defaults(), global = TierConfigProjection.global(defaults);

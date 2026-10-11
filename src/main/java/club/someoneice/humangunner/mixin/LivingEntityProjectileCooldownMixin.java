@@ -1,6 +1,6 @@
 package club.someoneice.humangunner.mixin;
 
-import club.someoneice.humangunner.ProjectileCooldownPolicy;
+import club.someoneice.humangunner.HumanAttackCooldownPolicy;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.Slice;
 
-/** Forge 1.20.1 SRG contract: intercept only the BYPASSES_COOLDOWN tag query. */
+/** Forge 1.20.1 SRG contract: one tag query shared by scoped melee/projectile policies. */
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityProjectileCooldownMixin {
     @Redirect(method = "m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z",
@@ -20,6 +20,6 @@ public abstract class LivingEntityProjectileCooldownMixin {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/damagesource/DamageSource;m_269533_(Lnet/minecraft/tags/TagKey;)Z"),
             remap = false, require = 1, allow = 1)
     private boolean hostileHumansUnified$projectileCooldown(DamageSource source, TagKey<DamageType> tag) {
-        return source.is(tag) || ProjectileCooldownPolicy.bypassesCooldown((LivingEntity) (Object) this, source);
+        return source.is(tag) || HumanAttackCooldownPolicy.bypassesCooldown((LivingEntity) (Object) this, source);
     }
 }

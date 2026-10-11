@@ -103,7 +103,7 @@ public final class RecoverySupplies {
         SpawnPotionConfig.Granted potions = UnifiedConfig.get().spawnPotions(TierAttributes.key(human))
                 .grant(data, random);
         int insertedPotions = potions.recovery();
-        int tacticalPotions = potions.tactical();
+        int tacticalItems = potions.tactical();
 
         int appleCount = preset.goldenApples().roll(random);
         ItemStack apples = new ItemStack(Items.GOLDEN_APPLE, appleCount);
@@ -113,7 +113,7 @@ public final class RecoverySupplies {
         int foodCount = preset.food().roll(random);
         int insertedFood = provisionFoodVariety(human, data, foodCount, foodConfig);
         human.getPersistentData().putInt("hostile_humans_unified:recovery_kit_potions", insertedPotions);
-        human.getPersistentData().putInt("hostile_humans_unified:tactical_kit_potions", tacticalPotions);
+        human.getPersistentData().putInt("hostile_humans_unified:tactical_kit_items", tacticalItems);
         human.getPersistentData().putInt("hostile_humans_unified:recovery_kit_food", insertedFood);
         human.getPersistentData().putInt("hostile_humans_unified:recovery_kit_golden_apples", insertedApples);
         human.getPersistentData().putInt("hostile_humans_unified:recovery_kit_enchanted_apples", enchantedApples);
@@ -330,6 +330,7 @@ public final class RecoverySupplies {
     }
 
     private static UseSession beginInventoryUse(Human human, HumanData data, int slot) {
+        if (human.humanGunner$shieldDefense().shouldSuppressRecovery()) return null;
         // Item-use animation can end before the owning goal receives its stop
         // callback. During that small window isUsingItem() is already false,
         // but the old two-location exchange is not settled yet. Starting a
@@ -390,6 +391,7 @@ public final class RecoverySupplies {
             UseSession completedSession,
             double targetHealthRatio
     ) {
+        if (human.humanGunner$shieldDefense().shouldSuppressRecovery()) return null;
         if (hasUrgentInstantHealing(human)) return null;
         if (completedSession == null
                 || ACTIVE_USES.get(human) != completedSession
@@ -494,6 +496,11 @@ public final class RecoverySupplies {
      * when no exchange is active.
      */
     public static void tickHandCustody(Human human) {
+        // Check before advancing parallel food: an interrupted last bite must not finish later.
+        if (human.humanGunner$shieldDefense().shouldSuppressRecovery()) {
+            UseSession active = ACTIVE_USES.get(human);
+            if (active != null) finishUse(human, active, completed(human, active));
+        }
         OffhandFoodUse.tick(human);
         UseSession session = ACTIVE_USES.get(human);
         if (session == null) {
@@ -624,6 +631,11 @@ public final class RecoverySupplies {
                 human.getUUID(), session.exchangeSlot(), completed,
                 itemId(observed), countOwnedShields(human)
         );
+    }
+
+    static boolean hasRecoverableShield(Human human) {
+        UseSession active = ACTIVE_USES.get(human);
+        return active != null && SpartanEquipmentCompat.isShield(active.displacedHandItem());
     }
 
     private static void tickPendingFinish(Human human, PendingFinish pending) {

@@ -152,7 +152,7 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
         BlockPos end = new BlockPos(node.x, node.y, node.z);
         Vec3 feet = Vec3.atBottomCenterOf(end);
         return target.distanceToSqr(feet) >= 36 && SoldierOrder.allowsCombatPosition(human, feet)
-                && RangedFiringPosition.hasClearShot(human, feet.add(0, human.getEyeHeight(), 0), target.getEyePosition());
+                && RangedShotClearance.fromPosition(human, feet, target);
     }
 
     private void stopOwnedSeparationRoute() {

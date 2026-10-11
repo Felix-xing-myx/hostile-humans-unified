@@ -26,6 +26,28 @@ public final class LootScreeningTest {
         bootstrapFlag.setAccessible(true);
         bootstrapFlag.setBoolean(null, true);
         BuiltInRegistries.bootStrap();
+        for (var item : List.of(Items.DIAMOND_CHESTPLATE, Items.IRON_SWORD, Items.BOW, Items.CROSSBOW, Items.SHIELD)) {
+            ItemStack worn = new ItemStack(item);
+            double previous = EquipmentCondition.value(worn, 100);
+            for (int damage = 0; damage <= worn.getMaxDamage(); damage++) {
+                worn.setDamageValue(damage);
+                double value = EquipmentCondition.value(worn, 100);
+                check(value >= 0 && value <= previous, "wear monotonically lowers total quality");
+                check(EquipmentCondition.canAutomaticallyCollect(worn)
+                                == ((long) (worn.getMaxDamage() - damage) * 100 > (long) worn.getMaxDamage() * 10),
+                        "automatic pickup threshold uses exact remaining durability");
+                previous = value;
+            }
+            check(previous == 0, "fully damaged equipment has no remaining value");
+            worn.getOrCreateTag().putBoolean("Unbreakable", true);
+            check(EquipmentCondition.value(worn, 100) == 100 && EquipmentCondition.canAutomaticallyCollect(worn),
+                    "genuinely indestructible gear is not mistaken for worn gear");
+        }
+        ItemStack nearBrokenDiamond = new ItemStack(Items.DIAMOND_CHESTPLATE);
+        nearBrokenDiamond.setDamageValue(nearBrokenDiamond.getMaxDamage() - 1);
+        check(EquipmentCondition.value(nearBrokenDiamond, 100) < EquipmentCondition.value(new ItemStack(Items.IRON_CHESTPLATE), 60),
+                "one-hit high-tier armor loses to usable lower-tier armor");
+        check(!EquipmentCondition.canAutomaticallyCollect(ItemStack.EMPTY), "empty stack has no pickup value");
         ItemStack equipped = new ItemStack(Items.IRON_CHESTPLATE);
         ItemStack snapshot = equipped.copy();
         check(ValuableItemPickupGoal.sameScreeningEquipment(snapshot, equipped), "unchanged equipment");

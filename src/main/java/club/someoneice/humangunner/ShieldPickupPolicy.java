@@ -20,10 +20,10 @@ final class ShieldPickupPolicy {
             if (!SpartanEquipmentCompat.isShield(stored)) continue;
             count += stored.getCount(); // Count physical shields, including stackable addon shields.
             if (HumanSpawnEquipment.isBoundGear(stored) || stored.getCount() != 1) continue;
-            double score = SpartanEquipmentCompat.shieldValue(stored);
+            double score = HumanLootManager.inventoryValue(human, stored);
             if (score < lowest) { lowest = score; worst = i; }
         }
-        double improvement = SpartanEquipmentCompat.shieldValue(incoming) - lowest;
+        double improvement = HumanLootManager.inventoryValue(human, incoming) - lowest;
         return new Reserve(count, improvement > 1.5D ? worst : -1, improvement);
     }
 
@@ -33,12 +33,13 @@ final class ShieldPickupPolicy {
     }
 
     static double benefit(Human human, ItemStack incoming, HumanLootManager.StorageSummary capacity) {
+        if (!EquipmentCondition.canAutomaticallyCollect(incoming)) return 0;
         Reserve reserve = inspect(human, incoming);
         if (reserve.count() >= BACKPACK_LIMIT)
             return reserve.replaceSlot() < 0 ? 0 : 24 + reserve.improvement();
         var data = human.getData();
         if (data == null) return 0;
-        if (canEquipEmptyHand(human)) return 80 + SpartanEquipmentCompat.shieldValue(incoming);
+        if (canEquipEmptyHand(human)) return 80 + HumanLootManager.inventoryValue(human, incoming);
         var summary = capacity == null ? new HumanLootManager.StorageSummary(human, data) : capacity;
         double value = HumanLootManager.inventoryValue(human, incoming.copyWithCount(1));
         return summary.canStore(incoming.copyWithCount(1), value) ? value
@@ -49,6 +50,7 @@ final class ShieldPickupPolicy {
         var data = human.getData();
         if (human.level().isClientSide || data == null || HumanInventorySession.isEditing(human)) return false;
         ItemStack ground = entity.getItem();
+        if (!EquipmentCondition.canAutomaticallyCollect(ground)) return false;
         Reserve reserve = inspect(human, ground); // Recheck live inventory at commit, not the search snapshot.
         ItemStack replacement = ground.copyWithCount(1);
         if (reserve.count() < BACKPACK_LIMIT && canEquipEmptyHand(human)) {

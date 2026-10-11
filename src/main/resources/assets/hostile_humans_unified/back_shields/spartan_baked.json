@@ -1,0 +1,15 @@
+{
+  "namespace": "spartanshields",
+  "custom_renderer": false,
+  "context": "none",
+  "translation": [
+    0,
+    0,
+    -0.125
+  ],
+  "rotation": [
+    180,
+    0,
+    0
+  ]
+}

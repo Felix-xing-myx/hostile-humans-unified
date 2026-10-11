@@ -32,7 +32,10 @@ public final class ShieldDefenseController {
     private final CombatAiConfig config;
     private Owner owner;
     private boolean defendingGunfire;
-    private final GuardedCrossbowCharge guardedCharge = new GuardedCrossbowCharge();
+    private final GuardedRangedCharge guardedCharge = new GuardedRangedCharge();
+    private boolean preparingCombatGuard;
+    private final RecoveryPressureWindow recoveryPressure = new RecoveryPressureWindow();
+    private final PressureDefenseCycle pressureCycle = new PressureDefenseCycle();
     private ItemStack ownedShield;
     private int guardBlockUntil, nextGuardBlock;
     private int nextDefenseTick;
@@ -66,10 +69,80 @@ public final class ShieldDefenseController {
     }
 
     boolean wantsCombat(LivingEntity threat, IncomingArrow incomingArrow) {
+        preparingCombatGuard = wantsCombatNow(threat, incomingArrow);
+        return preparingCombatGuard;
+    }
+
+    /** Called before the weapon goal releases vanilla's sole active-use slot. */
+    public void pauseRangedUseForGuard() {
+        if (preparingCombatGuard || wantsHighPressureGuard()) guardedCharge.capture(human);
+    }
+
+    public void restoreRangedUseAfterGuard() { guardedCharge.restore(human); }
+
+    public boolean hasRangedCounterWindow() {
+        return isPressureBreakAttempt() || RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem())
+                && human.tickCount < nextCounterGuardTick;
+    }
+
+    /** Actual health loss only; environmental or allied damage cannot demand a shield. */
+    public void recordPressureDamage(DamageSource source, float damage) {
+        if (human.level().isClientSide
+                || !(source.getEntity() instanceof LivingEntity attacker) || !isValidThreat(attacker)) return;
+        CloseGunTactics.damage(human, damage);
+        if (source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_SHIELD)) return;
+        ShieldPressureConfig rules = UnifiedConfig.get().shieldPressure();
+        updatePressureCycle();
+        recoveryPressure.record(human.tickCount, damage, human.getMaxHealth(), rules);
+        pressureCycle.damage(human.tickCount, damage, human.getMaxHealth(), rules);
+    }
+
+    public boolean shouldSuppressRecovery() {
+        updatePressureCycle();
+        return !pressureCycle.attempting() && pressureDefenseAvailable()
+                && recoveryPressure.active(human.tickCount, UnifiedConfig.get().shieldPressure());
+    }
+
+    boolean isPressureBreakAttempt() {
+        updatePressureCycle();
+        return pressureCycle.attempting();
+    }
+
+    private void updatePressureCycle() {
+        if (human.level().isClientSide) return;
+        if (!pressureDefenseAvailable()) { pressureCycle.clear(); return; }
+        ShieldPressureConfig rules = UnifiedConfig.get().shieldPressure();
+        if (pressureCycle.update(human.tickCount, recoveryPressure.active(human.tickCount, rules), rules))
+            recoveryPressure.clear();
+    }
+
+    private boolean pressureDefenseAvailable() {
+        return !human.level().isClientSide && config.enabled() && human.isAlive() && human.shieldCoolDown <= 0
+                && !HumanInventorySession.isEditing(human)
+                && human.explosionThreat == null
+                && (hasShieldInHands() || RecoverySupplies.hasRecoverableShield(human))
+                && GunCustody.canBeginPressureDefense(human);
+    }
+
+    boolean wantsHighPressureGuard() { return shouldSuppressRecovery() && canBlockWithShield(); }
+
+    void prepareHighPressureDefense() {
+        if (!shouldSuppressRecovery() || RecoverySupplies.hasActiveUse(human)) return;
+        if (isHoldingTaczGun()) {
+            if (human.isUsingItem()) human.stopUsingItem();
+            GunCustody.beginCloseMeleeCounter(human);
+        }
+    }
+
+    private boolean wantsCombatNow(LivingEntity threat, IncomingArrow incomingArrow) {
+        if (isPressureBreakAttempt()) return false;
+        if (wantsHighPressureGuard()) return true;
         if (human.isFleeing || !canBlockWithShield()) return false;
+        if (CloseGunTactics.keepDefense(human) && human.tickCount >= nextDefenseTick) return true;
         if (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem())
                 && !RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) return false;
-        // Fresh suppressive fire can interrupt an open weapon-use/counter window.
+        // Bow/crossbow counter windows must survive repeated hits long enough to fire.
+        if (hasRangedCounterWindow()) return false;
         if (underGunfirePressure()) return true;
         if (human.tickCount < nextCounterGuardTick) return false;
         if (incomingArrow != null) {
@@ -109,9 +182,9 @@ public final class ShieldDefenseController {
     int beginCombat(LivingEntity threat) {
         release(Owner.BODYGUARD);
         defendingGunfire = underGunfirePressure();
-        // Bow drawing and shield use cannot coexist; stop drawing, without releasing a shot.
-        if (defendingGunfire && human.isUsingItem()
-                && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
+        guardedCharge.capture(human);
+        preparingCombatGuard = false;
+        if (human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
         defendingProjectile = human.tickCount < projectileDefenseUntil || rangedWarning;
         int projectileWindow = projectileDefenseUntil - human.tickCount;
         int duration = defendingProjectile && isDedicatedRangedCombatant()
@@ -132,6 +205,8 @@ public final class ShieldDefenseController {
 
     void endCombat() {
         int reblockDelay = config.shieldBlockCooldownTicks();
+        if (RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem()))
+            reblockDelay = Math.max(reblockDelay, guardedCharge.counterWindowTicks(human));
         if (RangedWeaponCustody.isCrossbowWeapon(human.getMainHandItem())
                 || RangedWeaponCustody.isCrossbowWeapon(human.getOffhandItem())) {
             // Leave a complete crossbow charge-and-shot window after a block.
@@ -144,7 +219,6 @@ public final class ShieldDefenseController {
             nextProjectileGuardTick = human.tickCount + (isCrossbowCombatant() ? 32 : 24);
         }
         defendingGunfire = false;
-        guardedCharge.reset();
         defendingProjectile = false;
         projectileDefenseUntil = 0;
         rangedWarning = false;
@@ -164,6 +238,10 @@ public final class ShieldDefenseController {
     }
 
     CombatUpdate tickCombat(LivingEntity threat, int phaseTicks, boolean canCounterFromCurrentRange) {
+        if (isPressureBreakAttempt()) {
+            release(Owner.COMBAT);
+            return new CombatUpdate(0, false);
+        }
         if (human.isFleeing || human.humanGunner$hasPendingMeleeAttack()
                 || BodyguardProtection.protectingFromExplosion(human, threat)) {
             if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) release(Owner.COMBAT);
@@ -180,7 +258,7 @@ public final class ShieldDefenseController {
             return new CombatUpdate(0, false);
         }
 
-        if (!underGunfirePressure() && awaitingProjectile() && shouldDeferRangedProjectileGuard()) {
+        if (!wantsHighPressureGuard() && !underGunfirePressure() && awaitingProjectile() && shouldDeferRangedProjectileGuard()) {
             projectileDefenseUntil = 0;
             if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
                 release(Owner.COMBAT);
@@ -190,6 +268,8 @@ public final class ShieldDefenseController {
         }
 
         updateDefensePressure();
+        maintainCombat(threat);
+        guardedCharge.tick(human);
         IncomingArrow incomingArrow = findIncomingArrow();
         net.minecraft.world.entity.Entity facingThreat = threat;
         if (incomingArrow != null) {
@@ -220,15 +300,24 @@ public final class ShieldDefenseController {
             phaseTicks = Math.max(phaseTicks, projectileDefenseUntil - human.tickCount);
             if (incomingArrow != null) defensePressureTick = human.tickCount;
         }
+        // Survival pressure wins over treatment and ordinary ranged counter windows.
+        if (wantsHighPressureGuard()) {
+            maintainCombat(threat);
+            if (ownsCurrentShield()) pressureCycle.guarded(human.tickCount);
+            return new CombatUpdate(Math.max(phaseTicks, 2), false);
+        }
         if (underGunfirePressure()) {
             defendingGunfire = true;
             maintainCombat(threat);
-            guardedCharge.tick(human);
+            if (guardedCharge.ready(human)
+                    && human.tickCount - defenseStartTick >= CombatPressurePolicy.MAX_GUARD_WAIT_TICKS) {
+                release(Owner.COMBAT);
+                return new CombatUpdate(0, true);
+            }
             return new CombatUpdate(Math.max(phaseTicks, 2), false);
         }
         if (defendingGunfire) {
             release(Owner.COMBAT);
-            guardedCharge.reset();
             return new CombatUpdate(0, true);
         }
         int heldTicks = human.tickCount - defenseStartTick;
@@ -366,7 +455,10 @@ public final class ShieldDefenseController {
 
     /** TaCZ applies its shield reduction outside vanilla ShieldBlockEvent. */
     public void observeBlockedHit() {
-        if (!human.level().isClientSide) lastBlockedTick = human.tickCount;
+        if (!human.level().isClientSide) {
+            lastBlockedTick = human.tickCount;
+            recoveryPressure.blocked(human.tickCount, UnifiedConfig.get().shieldPressure());
+        }
     }
 
     private LivingEntity preparingKnownShot() {
@@ -413,7 +505,8 @@ public final class ShieldDefenseController {
         }
         if (human.isFleeing
                 || (AmmoWeaponSelection.hasUsableGun(human) && GunSupport.get().isReloading(human))
-                || (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem()))) {
+                || (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem())
+                && !RangedWeaponCustody.isBowOrCrossbow(human.getUseItem()))) {
             return true;
         }
         LivingEntity target = human.getTarget();
@@ -523,7 +616,7 @@ public final class ShieldDefenseController {
 
     /** Bodyguard interception is a request to the same shield owner, without assigning aggro. */
     void tickBodyguard(ServerPlayer player, LivingEntity threat) {
-        if (threat == null || human.isFleeing || isHoldingTaczGun()) { endBodyguard(); return; }
+        if (threat == null || human.isFleeing || isHoldingTaczGun() || isPressureBreakAttempt()) { endBodyguard(); return; }
         if (owner == Owner.BODYGUARD && human.tickCount >= guardBlockUntil) endBodyguard();
         if (human.getTarget() == null && human.shieldCoolDown <= 0 && !human.isUsingItem()
                 && human.tickCount >= nextGuardBlock && human.distanceToSqr(player) <= 16.0D) {

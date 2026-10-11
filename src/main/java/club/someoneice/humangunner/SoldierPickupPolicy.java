@@ -33,8 +33,22 @@ public final class SoldierPickupPolicy {
                 || HumanGunner.isManualInventoryOpen(human)
                 || RecoverySupplies.hasHandCustody(human)) return false;
         int sinceHit = human.tickCount - human.getLastHurtByMobTimestamp();
+        long sinceCombat = human.tickCount - human.lastCombatTime;
+        if (human.isInWater() && human.lastCombatTime > 0 && sinceCombat >= 0 && sinceCombat <= 60) return false;
         return (human.getLastHurtByMob() == null || sinceHit < 0 || sinceHit > 40)
                 && SoldierOrder.allowsLootPosition(human, human.getX(), human.getZ());
+    }
+
+    /** Resupply follows owned weapons, not current ammo or the temporary held weapon. */
+    static boolean canCollectItem(Human human, net.minecraft.world.item.ItemStack stack) {
+        if (!HumanAmmo.isAmmo(stack)) return true;
+        var data = human.getData();
+        if (HumanAmmo.isArrow(stack)) {
+            return RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem())
+                    || RangedWeaponCustody.isBowOrCrossbow(human.getOffhandItem())
+                    || data != null && data.hasStoredBowOrCrossbow(human.tickCount);
+        }
+        return GunCustody.hasOwnedGun(human);
     }
 
     static boolean enabled(boolean hired, boolean configured) {

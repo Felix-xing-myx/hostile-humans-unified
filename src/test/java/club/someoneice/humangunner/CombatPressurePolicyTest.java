@@ -4,6 +4,77 @@ public final class CombatPressurePolicyTest {
     private static int checks;
 
     public static void main(String[] args) {
+        checkThrowableSpeed();
+        ArrowAttackCadence shots = new ArrowAttackCadence();
+        shots.bowShot(100);
+        check(!shots.canDrawBow(115) && shots.canDrawBow(116), "shield use cannot erase bow recovery interval");
+        check(!shots.canFireBow(122) && shots.canFireBow(123), "background draw cannot overlap cooldown to accelerate shots");
+        check(ArrowAttackCadence.crossbowWaitTicks(0, 72, false) == 16
+                && ArrowAttackCadence.crossbowWaitTicks(0, 103, false) == 22, "normal light crossbow loaded wait preserved");
+        check(ArrowAttackCadence.crossbowWaitTicks(0, 73, true) == 31
+                && ArrowAttackCadence.crossbowWaitTicks(1, 73, true) == 30, "heavy crossbow retains alternating tick pacing");
+        Object crossbow = new Object();
+        shots.crossbowLoaded(crossbow, 0, 103, false);
+        shots.crossbowLoaded(crossbow, 10, 1, false);
+        check(!shots.canFireCrossbow(crossbow, 21) && shots.canFireCrossbow(crossbow, 22),
+                "guard/restart cannot resample the loaded wait or instantly shoot");
+        check(shots.crossbowWaitFinished(crossbow, 21), "ready transition precedes actual shot by one tick");
+        shots.crossbowShot();
+        check(!shots.hasLoadedCrossbow(crossbow), "a volley spends one loaded timing state");
+        shots.crossbowLoaded(crossbow, 23, 72, false);
+        check(!shots.canFireCrossbow(crossbow, 23), "previous charged state cannot grant a second instant shot");
+
+        ShieldPressureConfig pressure = new ShieldPressureConfig(true, 20, .15, 4, .05, 20, 140, 60);
+        PressureDefenseCycle cycle = new PressureDefenseCycle();
+        cycle.guarded(0);
+        check(!cycle.update(139, true, pressure) && !cycle.attempting(), "guard waits seven seconds");
+        check(!cycle.update(140, true, pressure) && cycle.attempting(), "exact boundary begins trial");
+        cycle.damage(141, 8, 100, pressure);
+        check(cycle.attempting(), "isolated trial hit permits action");
+        cycle.damage(142, 8, 100, pressure);
+        check(!cycle.attempting(), "fresh high damage abandons trial");
+        cycle.guarded(142);
+        cycle.update(281, true, pressure);
+        check(!cycle.attempting(), "failure does not immediately retry");
+        cycle.update(282, true, pressure);
+        check(cycle.attempting(), "new full guard interval permits another trial");
+        check(!cycle.update(341, false, pressure) && cycle.attempting(), "trial survives old pressure expiring");
+        check(cycle.update(342, false, pressure) && !cycle.attempting(), "successful trial clears old pressure once");
+        check(!cycle.update(343, false, pressure), "success cannot retire future damage twice");
+        cycle.guarded(400);
+        cycle.update(401, false, pressure);
+        cycle.update(540, true, pressure);
+        check(!cycle.attempting(), "quiet period resets guard clock");
+        cycle.guarded(540);
+        cycle.update(680, true, pressure);
+        cycle.update(681, true, new ShieldPressureConfig(false, 20, .15, 4, .05, 20, 140, 60));
+        check(!cycle.attempting(), "disable clears trial");
+
+        RecoveryPressureWindow burst = new RecoveryPressureWindow();
+        burst.record(0, 8, 100, pressure);
+        check(!burst.active(0, pressure), "one hit does not lock recovery");
+        burst.record(2, 8, 100, pressure);
+        check(burst.active(2, pressure), "two high damage hits trigger defense");
+        burst.blocked(21, pressure);
+        check(burst.active(40, pressure), "successful block preserves pressure after health loss stops");
+        check(!burst.active(41, pressure), "quiet boundary releases pressure exactly once");
+        burst.blocked(42, pressure);
+        check(!burst.active(42, pressure), "ordinary blocks cannot start high pressure alone");
+        RecoveryPressureWindow frequency = new RecoveryPressureWindow();
+        for (int tick = 0; tick < 3; tick++) frequency.record(tick, 2, 100, pressure);
+        check(!frequency.active(2, pressure), "frequency threshold not met at three small hits");
+        frequency.record(3, 2, 100, pressure);
+        check(frequency.active(3, pressure), "frequent meaningful hits trigger pressure");
+        RecoveryPressureWindow harmless = new RecoveryPressureWindow();
+        for (int tick = 0; tick < 10; tick++) harmless.record(tick, .1f, 100, pressure);
+        check(!harmless.active(10, pressure), "tiny chip damage cannot permanently suppress healing");
+        RecoveryPressureWindow stale = new RecoveryPressureWindow();
+        stale.record(0, 8, 100, pressure);
+        stale.record(21, 8, 100, pressure);
+        check(!stale.active(21, pressure), "old damage expires before a later isolated hit");
+        ShieldPressureConfig disabled = new ShieldPressureConfig(false, 20, .15, 4, .05, 20, 140, 60);
+        check(!frequency.active(4, disabled) && !frequency.active(4, pressure), "disable clears pending pressure");
+
         check(RetreatPathSafetyPolicy.isSafe(10, 0, 0, 0,
                         new double[][] {{9, 0}, {9, 3}, {12, 3}, {16, 0}}, true),
                 "safe whole retreat permits a short first step toward a wall-side threat");
@@ -385,6 +456,34 @@ public final class CombatPressurePolicyTest {
         check(!LowHealthCombatPolicy.healingCovers(2, 2, 1.1D)
                         && LowHealthCombatPolicy.healingCovers(3, 2, 1.1D),
                 "sustained fighting needs the configured healing safety margin");
+    }
+
+    private static void checkThrowableSpeed() {
+        for (double distance : new double[] {.5, 2, 6, 12, 24, 32})
+            for (double speed : new double[] {1.6, 2.0, 2.4})
+                for (double gravity : new double[] {(double) .025F, (double) .03F, (double) .04F, (double) .05F}) {
+                    var shot = ThrowableBallistics.solve(distance, -1.5, 0, gravity, speed, 60);
+                    check(shot != null, "ordinary grenade range remains reachable");
+                    double actual = Math.sqrt(shot.x() * shot.x() + shot.y() * shot.y() + shot.z() * shot.z());
+                    check(Math.abs(actual - speed) < 1.0E-8, "short landing/bounce aim cannot reduce launch speed");
+                    double x = 0, y = 0, vx = shot.x(), vy = shot.y();
+                    int whole = (int) shot.flightTicks();
+                    for (int tick = 0; tick < whole; tick++) {
+                        x += vx; y += vy;
+                        vx *= ThrowableBallistics.DRAG;
+                        vy = vy * ThrowableBallistics.DRAG - gravity;
+                    }
+                    double fraction = shot.flightTicks() - whole;
+                    x += vx * fraction; y += vy * fraction;
+                    check(Math.abs(x - distance) < 1.0E-8 && Math.abs(y + 1.5) < 1.0E-8,
+                            "fixed speed preserves native discrete trajectory endpoint");
+                }
+        check(ThrowableBallistics.solve(32, -1.5, 0, .03, 1.6, 60) != null,
+                "long throw remains reachable at default speed");
+        check(ThrowableBallistics.solve(1000, 0, 0, .03, 1.6, 60) == null,
+                "unreachable target does not bypass configured speed");
+        check(ThrowableBallistics.solve(10, 0, 0, .03, 0, 60) == null,
+                "invalid speed rejected");
     }
 
     private static void check(boolean condition, String message) {

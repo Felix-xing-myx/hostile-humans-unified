@@ -16,7 +16,8 @@ class WaterCliffNavigationContract(unittest.TestCase):
         for forbidden in ('setTarget(', 'teleportTo(', 'new PathFinder', 'getEntitiesOfClass'):
             self.assertNotIn(forbidden, WATER)
         self.assertIn('state.nextSearch = human.tickCount + 40', WATER)
-        self.assertIn('horizontalDistanceSqr()', WATER)
+        self.assertIn('WaterCombatPolicy.closingProgress(state.targetDistance,', WATER)
+        self.assertIn('horizontalDistance()', WATER)
         self.assertIn('maximumRange * maximumRange && human.getSensing().hasLineOfSight(target)', WATER)
 
     def test_owned_route_cannot_be_replaced_by_generic_pursuit_or_repair(self):

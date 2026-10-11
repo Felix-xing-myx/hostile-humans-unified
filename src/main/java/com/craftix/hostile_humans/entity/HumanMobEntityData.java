@@ -29,6 +29,14 @@ import net.minecraft.world.level.Level;
 public class HumanMobEntityData
 extends TamableAnimal
 implements HumansDataSync {
+    private static final EntityDataAccessor<CompoundTag> DATA_TACZ_RELOAD_VISUAL = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.COMPOUND_TAG);
+
+    /** Transient server-authored visual snapshot, independent of ammunition and saved attributes. */
+    public CompoundTag getTaczReloadVisual() { return this.entityData.get(DATA_TACZ_RELOAD_VISUAL).copy(); }
+
+    public void setTaczReloadVisual(CompoundTag snapshot) {
+        if (!level().isClientSide) this.entityData.set(DATA_TACZ_RELOAD_VISUAL, snapshot.copy());
+    }
     public static final EntityDataAccessor<BlockPos> DATA_SIT_POS = SynchedEntityData.defineId(HumanMobEntityData.class, (EntityDataSerializer)EntityDataSerializers.BLOCK_POS);
     public static final EntityDataAccessor<BlockPos> DATA_HOME_POS = SynchedEntityData.defineId(HumanMobEntityData.class, (EntityDataSerializer)EntityDataSerializers.BLOCK_POS);
     private static final EntityDataAccessor<Boolean> DATA_IS_SLEEPING_THIS_NIGHT = SynchedEntityData.defineId(HumanMobEntityData.class, (EntityDataSerializer)EntityDataSerializers.BOOLEAN);
@@ -271,6 +279,7 @@ implements HumansDataSync {
 
     protected void defineSynchedData() {
         super.defineSynchedData();
+        this.entityData.define(DATA_TACZ_RELOAD_VISUAL, new CompoundTag());
         this.entityData.define(DATA_NAME, "");
         this.entityData.define(DATA_OFFHAND_EATING, false);
         this.entityData.define(DATA_IS_CHARGING, false);

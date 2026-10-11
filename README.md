@@ -47,6 +47,12 @@
 
 ## 安装与配置
 
+### 本地 Obsidian 机制知识库
+
+维护用完整中文知识库位于 `E:\个人知识库\Hostile Humans Unified`，从 `00-总览与导航.md` 开始阅读。按人类与士兵、战斗与生存、模组联动、配置数值、计划验收及维护来源分层，收录完整打包默认值与来源。可在现有个人 Obsidian 知识库内查看，也可单独打开该文件夹。
+
+每次修改玩法、默认值、硬编码规则、联动或计划状态，开发者必须在同一任务内更新对应知识库页面，规则见 `AGENTS.md`。`python tools/export_knowledge_defaults.py` 重新生成数值附录，`--check` 检查附录是否过期；机制说明与验收状态仍需人工核对。此为开发同步约定，未运行后台自动监听；附录是模组源码默认值，不代表任意实例的自定义配置。
+
 适用于 Minecraft 1.20.1 Forge。将统一版 JAR 放入实例的 `mods` 文件夹即可；不要同时安装独立的 Hostile Humans 或 Human Gunner JAR。
 
 模组列表只显示一个 **Hostile Humans Unified**，模组 ID 与注册命名空间统一为 `hostile_humans_unified`。本次命名空间整理仅面向新存档：旧 `hostile_humans`／`humangunner` 实体、物品等 ID 不提供迁移或别名兼容。命令、数据包和脚本中的自定义引用也应使用新 ID。配置仍位于 `config/hostile_humans_unified/`，无需改目录。源码中的历史 Java 包名保留用于组织代码，不是游戏注册命名空间或额外模组身份。

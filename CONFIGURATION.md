@@ -1,5 +1,7 @@
 # 配置文件说明
 
+当前机制及完整默认值知识库：`E:\个人知识库\Hostile Humans Unified`，从 `00-总览与导航.md` 和 `04-配置与数值/配置索引.md` 阅读。本说明与当前源码同步；历史发布状态见 CHANGELOG 和 docs/WORKSTREAMS。
+
 战斗地形受阻与绕路复用现有AI、命令和寻路预算，不新增一组配置开关。危险落差仍按当前生命的防摔预算判断；能射击时保持远程，受阻时分批绕路或寻找实际遮挡。实现约束及游戏验收清单见 [战斗地形决策](docs/COMBAT_TERRAIN.md)。
 
 配置位于 `config/hostile_humans_unified/`，首次启动生成五个 JSON 文件，均为 `schema_version: 2`。修改后完整重启生效；多人游戏以服务端配置为准。请使用 UTF-8 和合法 JSON，保留 `_说明_中文`、`_description_en` 等说明字段。
@@ -14,17 +16,17 @@
 
 阶级文件直接使用 `attributes`、`movement`、`damage_multipliers`、`weapon_spread_degrees`、`combat`、`spawning`、`equipment_loadout`、`ammunition`、`ai`、`tacz` 等顶层区域。共用成长倍率与培养门槛放在 `global.json` 的 `growth`；各阶时间曲线与早期装备参数在本阶 `growth_profile`。各文件的 `ai` 参数独立；增强 AI 总开关为全局 `ai.enabled`。
 
-四阶文件使用一致的阅读顺序：**属性 → 伤害 → 生成 → 弹药 → 食物 → 药水 → 近战 → 战斗AI → 移动与散布 → TaCZ → 本阶成长 → 装备池**。全局顺序为 **原版模式 → 共用成长 → 弹药消耗 → 装备自动导入 → AI总开关 → 雇佣 → 生成 → 条件伤害 → 跳砍 → Better Combat → First Aid → TaCZ → 结构及其他规则**。装备区域先列职业概率、联动开关与数量，再列装备池和详细规则。已有有效文件启动时重排，保留有效配置与自定义扩展；废弃选项及对应说明移除，不生成继承/更新/迁移文件。
+四阶文件使用一致的阅读顺序：**属性 → 伤害 → 生成 → 弹药 → 食物 → 药水 → 近战 → 战斗AI → 移动与散布 → TaCZ／Scorched Guns → 本阶成长 → 装备池**。全局顺序为 **原版模式 → 共用成长 → 弹药消耗 → 装备自动导入 → AI总开关 → 雇佣 → 生成 → 条件伤害 → 跳砍 → Better Combat → First Aid → Scorched Guns → TaCZ → 结构及其他规则**。装备区域先列职业概率、联动开关与数量，再列装备池和详细规则。已有有效文件启动时重排，保留有效配置与自定义扩展；废弃选项及对应说明移除，不生成继承/更新/迁移文件。
 
 JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 字段，紧贴在对应配置值前；池格式和公式也放在对应池或控制项旁；区域开头仅保留简短用途说明。这些字段仅供阅读，调整其文字不会改变行为。修改真正的配置键即可；`schema_version` 保持 `2`。时间注明tick（20 tick=1秒）、距离注明格、生命值注明点（2点=1颗心）、概率用0–1，数量用物品个数而非组数。不要向JSON加入 `//` 或 `/* */` 注释。
 
-已有有效文件只调整键和说明的排列，保留数值、自定义字段、说明和明确留空的装备池。一般缺失字段仅在内存中补默认值，不因重排写回磁盘。本次新增的整块 `jump_attack`、`first_aid` 如缺失，会在启动时追加，便于直接编辑；已填写的值与空池不覆盖。坏文件及不支持的版本保留原样，在内存中使用默认值；雇佣支付只由全局管理，坏全局文件禁止生存雇佣；坏阶级文件不改动全局雇佣价格。自定义装备空池、权重表和招聘价格不会被默认条目填回。
+已有有效文件只调整键和说明的排列，保留数值、自定义字段、说明和明确留空的装备池。一般缺失字段仅在内存中补默认值，不因重排写回磁盘。本次新增的整块 `jump_attack`、`first_aid`、`scguns` 如缺失，会在启动时追加，便于直接编辑；已填写的值与空池不覆盖。坏文件及不支持的版本保留原样，在内存中使用默认值；雇佣支付只由全局管理，坏全局文件禁止生存雇佣；坏阶级文件不改动全局雇佣价格。自定义装备空池、权重表和招聘价格不会被默认条目填回。
 
 模组只读取上述五份当前 JSON；缺失文件按当前默认值生成，临时文件保存后清理。所有读取和重排在启动阶段完成；重新排序后的文件再次加载不会重复写入。装备联动追加仍受全局及各阶开关控制，原有导入记录保留。
 
 ## 出生弹药与全局消耗开关
 
-全局 `tacz.offhand_shield_damage_reduction` 为枪手主手持枪＋副手可用盾的全类型减伤比例，默认 `0.2`（20%），范围0–1；设为0取消该奖励及其耐久损耗。开枪和换弹均可生效，换下枪或盾即失效。主动格挡及副手盾统一按 `1 + floor(该次伤害 × 1.5)` 请求扣耐久，使用原生耐久附魔，每人共用10 tick（0.5秒）损耗冷却；只有实际损耗或损坏才启动冷却，冷却期间仍正常防御。标准斧头等具有破盾能力的武器命中主动格挡时，禁止再次举盾5秒；此禁用不影响枪手20%被动减伤。它与近战/弓弩主动举盾承受枪伤的 `tacz.shield_damage_multiplier` 是不同装备状态，不能叠加。
+全局 `tacz.offhand_shield_damage_reduction` 为枪手主手持枪＋副手可用盾的全类型减伤比例，默认 `0.2`（20%），范围0–1；设为0取消该奖励及其耐久损耗。开枪和换弹均可生效，换下枪或盾即失效。主动格挡及副手盾统一按 `1 + floor(该次伤害 × 1.5)` 请求扣耐久，使用原生耐久附魔，每人共用2 tick（0.1秒）损耗冷却；只有实际损耗或损坏才启动冷却，冷却期间仍正常防御。标准斧头等具有破盾能力的武器命中主动格挡时，禁止再次举盾5秒；此禁用不影响枪手20%被动减伤。它与近战/弓弩主动举盾承受枪伤的 `tacz.shield_damage_multiplier` 是不同装备状态，不能叠加。
 
 `global.json` 中设置：
 
@@ -56,34 +58,36 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 
 自动拾取保留三个食物槽位：优先保留数量与品质合计价值高的食物堆，不足三堆时留下相应空位；高分弹药、额外武器和护甲不能占用这些空间。另保留一份可饮用的治疗/再生药水、最佳备用近战武器，以及每个护甲位置的一件最佳备用护甲。同类更好的物品仍可升级替换；背包已塞满弹药时，食物可以优先置换普通弹药以恢复储备。主人的手动配装不受自动拾取预留规则限制。
 
-枪手优先弹匣，弓弩手优先通用箭矢，近战单位对两种弹药同等评分；按实际拥有的武器判断，临时近战或缺弹不会把枪手误判成近战单位。远程临时换近战后至少保持40 tick，之后还要等已开始的攻击动作结束；近身目标仍在时按原攻击冷却继续反击。Better Combat 使用其攻击周期预留收招时间，原版等待实际挥击结束；自动回枪/回弓、补给换武器和拾取优化都遵守这一规则。主人打开装备管理时可立即结束临时防卫状态。
+枪手优先弹匣，弓弩手优先通用箭矢，近战单位对两种弹药同等评分；按实际拥有的武器判断，临时近战或缺弹不会把枪手误判成近战单位。近身临时防卫至少保持40 tick，并等待已开始的攻击动作结束；弓弩地形近战另外累计实际近战时间，默认80 tick后尝试规划安全脱离路线，搜索最多40 tick，脱离停滞20 tick或持续80 tick则回到近战；近身目标仍在时按原攻击冷却继续反击。Better Combat 使用其攻击周期预留收招时间，原版等待实际挥击结束；自动回枪/回弓、补给换武器和拾取优化都遵守这一规则。主人打开装备管理时可立即结束临时防卫状态。
 
 ## 阶级文件：属性
 
 每个阶级拥有独立设置：
 
-- `attributes.max_health`：本阶完整基础生命，流浪者/一阶/二阶/三阶默认40/60/80/100；先乘成长等级系数，再乘战斗经验系数。2点生命相当于1颗心。
+- `attributes.max_health`：本阶完整基础生命，流浪者/一阶/二阶/三阶默认40/40/60/80；先乘成长等级系数，再乘战斗经验系数。2点生命相当于1颗心。
 - `attributes.attack_damage`、`armor`、`armor_toughness`、`knockback_resistance`、`follow_range`：基础攻击伤害、防护属性和目标探测距离。
 - `movement.base_speed`：本阶人类的基础移动速度，默认 `0.105`，即普通玩家基础移速 `0.1` 的 1.05 倍；允许范围 `0.01–0.2`。疾跑与迅捷等效果继续沿用原版属性修正；自定义动作减速也作为属性修正参与计算。
 - `movement.follow_speed_multiplier`、`follow_catch_up_multiplier`：已雇佣士兵闲置跟随的导航速度倍率，默认 `1.35`、`1.6`，范围 `0.1–3`；相距超过12格使用追赶倍率，追赶不会低于普通跟随。距离超过6格疾跑，超过4格开始追随，追至2.5格内停止。也用于贴身保护的归队/站位导航；基础移速、战斗及药水修正仍各自生效。既有阶级文件可在 `movement` 中添加这两个字段；缺项使用默认值。
-- `damage_multipliers.melee_damage_multiplier`、`arrow_damage_multiplier`、`thrown_trident_damage_multiplier`、`damage_taken_multiplier`：本阶造成或承受的伤害倍率。
+- `damage_multipliers.melee_damage_multiplier`、`bow_damage_multiplier`、`crossbow_damage_multiplier`、`thrown_trident_damage_multiplier`、`damage_taken_multiplier`：本阶造成或承受的伤害倍率。
 - `spawning.spawn_multiplier`：本阶自然生成准入倍率。设为 0 可关闭对应的普通自然生成入口；不影响结构固定生成和信号装置召唤。
 - `combat.melee_cooldown_min`、`melee_cooldown_max`：近战攻击冷却范围，单位为 tick。
-- `weapon_spread_degrees.firearms`：本阶每种枪械分类的独立散布值，单位为度。可分别设置 `sniper`、`rifle`、`mg`、`pistol`、`smg`、`shotgun`；其他或无法识别的枪种使用 `other`。数值越小越精准。
+- `weapon_spread_degrees.firearms`：本阶TaCZ每种枪械分类的独立散布值，单位为度。可分别设置 `sniper`、`rifle`、`mg`、`pistol`、`smg`、`shotgun`；其他或无法识别的枪种使用 `other`。数值越小越精准。Scorched Guns沿用其原生精度，再接受统一经验修正。
 - `weapon_spread_degrees.projectiles`：本阶 `bow`（弓）、`crossbow`（弩）、`trident`（三叉戟）的独立散布值，互不联动，单位为度。
 
-各阶的基础移速由 `movement.base_speed` 控制。`ai.food_use_speed_multiplier` 与 `ai.shield_use_speed_multiplier` 的范围为 `0.1–1`，分别控制进食和普通举盾时叠加的速度属性修正；默认 `0.7` 即进食时附加 `-30%` 修正，默认 `0.2` 即普通举盾时附加 `-80%` 修正。预判格挡来袭弹射物时，举盾移速至少保留 `0.7` 倍，以便继续移动。喝药不额外施加移速惩罚。
+各阶的基础移速由 `movement.base_speed` 控制。`ai.shield_use_speed_multiplier` 范围为 `0.1–1`，控制普通举盾时叠加的速度属性修正；默认 `0.2` 即附加 `-80%` 修正。普通食物与金苹果使用独立的副手并行动作，不额外降低移速，也不占用主手武器或导航；已移除旧进食减速配置。预判格挡来袭弹射物时，举盾移速至少保留 `0.7` 倍，以便继续移动。喝药不额外施加移速惩罚。
 
 ## 伤害配置的独立职责
 
-人类的基础输出只在各阶文件设置，不与另一份同名全局值相乘：
+人类的基础输出只在各阶文件设置，不与另一份同名全局值相乘。下表多值按流浪者/一阶/二阶/三阶排列：
 
 | 各阶配置项 | 默认值 | 范围及用途 |
 |---|---:|---|
-| `damage_multipliers.melee_damage_multiplier` | 1.7 | 0–100；武器、属性和附魔计算后近战伤害乘本值；原版模式跳过 |
-| `damage_multipliers.arrow_damage_multiplier` | 1.8144 | 0–1000；弓弩箭直接命中，不改变速度或独立火焰/药水效果 |
-| `damage_multipliers.thrown_trident_damage_multiplier` | 1.26 | 0–1000；投掷三叉戟命中，不用于近刺 |
+| `damage_multipliers.melee_damage_multiplier` | 1.2/1.4/1.6/1.8 | 0–100；武器、属性和附魔计算后近战伤害乘本值；原版模式跳过 |
+| `damage_multipliers.bow_damage_multiplier` | 1.1/1.2/1.3/1.4 | 0–1000；弓箭直接命中，不改变速度或独立火焰/药水效果 |
+| `damage_multipliers.crossbow_damage_multiplier` | 1.4/1.5/1.6/1.7 | 0–1000；弩箭直接命中，包含斯巴达重弩 |
+| `damage_multipliers.thrown_trident_damage_multiplier` | 1.0/1.1/1.2/1.3 | 0–1000；投掷三叉戟命中，不用于近刺 |
 | `tacz.damage_multiplier` | 0.5 | 0–100；本阶人类TaCZ子弹伤害 |
+| `scguns.damage_multiplier` | 1.0 | 0–100；本阶Scorched Guns枪伤，另乘全局联动倍率及经验枪伤加成 |
 | `damage_multipliers.damage_taken_multiplier` | 1 | 0–10；本阶承伤，包括环境与枪伤 |
 
 全局 `damage` 仅负责条件修正：手持三叉戟近刺 `trident_stab_damage_multiplier=0.42`、近战命中驯服女仆 `human_melee_vs_tamed_maid_multiplier=0.25`，范围均0–10。跳砍独立放在 `jump_attack`，在真实离地后的上升或下降命中时修正基础近战属性，普通移动跳跃、远程攻击不生效，原版模式停用；其他条件满足时才乘对应攻击伤害。TaCZ盾牌、女仆目标和其他模组枪手修正仍由全局 `tacz` 管理，职责与本阶人类输出不同。实际掉血还受目标护甲、减伤和其他模组影响。
@@ -102,7 +106,7 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 
 ### 新手保护与分阶解锁
 
-`spawning.progression.enabled` 默认开启。`safe_days` 为完全禁止自然生成人类的天数，默认 `1`；各阶级文件的 `spawning.first_spawn_day` 设置对应阶级最早出现的模组日期，默认流浪者第 3 天、一阶第 5 天、二阶第 10 天、三阶第 20 天。日期从第 1 天开始计数，每天为 24000 tick。各阶必须同时满足安全期结束和自身日期要求；因此默认第 2 天也不会自然生成人类。达到日期只是解锁生成资格，原有光照、密度、概率等条件仍然生效。安全天数允许 `0–1000000`，各阶日期允许 `1–1000000`。
+`spawning.progression.enabled` 默认开启。`safe_days` 为完全禁止自然生成人类的天数，默认 `1`；各阶级文件的 `spawning.first_spawn_day` 设置对应阶级最早出现的模组日期，默认流浪者第 2 天、一阶第 5 天、二阶第 10 天、三阶第 20 天。日期从第 1 天开始计数，每天为 24000 tick。各阶必须同时满足安全期结束和自身日期要求；因此默认第2天起流浪人类可参与自然生成判定。达到日期只是解锁生成资格，原有光照、密度、概率等条件仍然生效。安全天数允许 `0–1000000`，各阶日期允许 `1–1000000`。
 
 每位玩家按 UUID 独立保存累计在线游戏时间，所有维度沿用该玩家自己的进度。24000 个在线 tick 算一天，在 20 TPS 下约 20 分钟；离线、单人暂停不累计，睡觉跳夜、原版时间指令和 `doDaylightCycle` 不影响难度。个人计时从第 1 天开始。生成点按同维度最近的存活非旁观玩家决定解锁阶级和装备成长；已有敌人不会按遇到的新玩家降级，所以这不是多人之间完全隔离的安全保护。
 
@@ -165,7 +169,8 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 
 | 参数 | 默认值与含义 |
 |---|---|
-| `stage_percent` | `[50,60,70,80,90,100]`，依次对应0～5级；只在升级后改变属性 |
+| `stage_percent` | `[50,60,70,80,90,100]`，0～5级基础生命系数；仅升级时改变 |
+| `damage_stage_percent` | `[75,80,85,90,95,100]`，0～5级非枪械伤害系数；仅升级时改变，不影响生命或两种枪伤 |
 | `stage_cost` | `[40,40,40,40,40]`，五次升级分别需要的成长值 |
 | `experience.min_percent/max_percent` | `90/110`，新生单位随机经验系数，按整数百分点抽取 |
 | `experience.cap_percent` | `125`，雇佣后经验系数上限 |
@@ -179,9 +184,9 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 | `combat.base_cap` | `4`，单目标基础奖励上限 |
 | `combat.bonus_threshold/bonus` | `300/4`，个人伤害严格超过300点额外获得4，不识别Boss |
 
-完整生命或分阶伤害倍率先乘当前成长阶段系数，再乘经验系数。近战、弓弩箭与投掷三叉戟接入；枪械不使用阶段倍率：分阶枪伤倍率后追加经验加成，100%以下不减伤，默认125%经验时额外乘1.10；附加散布每5个百分点分档收缩，90/100/110/125%经验对应110/100/90/75%的附加误差，枪包固有散布保持。原版模式或成长关闭时，两项枪械修正停用。生命保留小数，成长提高最大生命不额外回血，降低时只截至新上限；不移除外部生命属性修饰。
+完整生命先乘stage_percent，分阶非枪械伤害先乘damage_stage_percent，然后各自乘经验系数。近战、弓弩箭与投掷三叉戟接入；枪械不使用阶段倍率：分阶枪伤倍率后追加经验加成，100%以下不减伤，默认125%经验时额外乘1.10；附加散布每5个百分点分档收缩，90/100/110/125%经验对应110/100/90/75%的附加误差，枪包固有散布保持。原版模式或成长关闭时，两项枪械修正停用。生命保留小数，成长提高最大生命不额外回血，降低时只截至新上限；不移除外部生命属性修饰。
 
-四阶文件各自的 `growth_profile` 设置本阶成长曲线和早期装备细项，全局 `growth` 只放共用规则。`start_day` 默认3/5/10/20，`duration_days` 默认37/45/60/60，分别在第40/50/70/80天达到满成长。`progress_nodes` 流浪者、一阶、三阶默认 `[0.2,0.4,0.6,0.8]`，二阶默认 `[0.2,0.45,0.6,0.8]`（稍提前中期升级，避免默认出生基础生命与一阶持平），表示持续时间20%、40%、60%、80%处的成长进度，节点之间线性插值；可独立调整各阶曲线，必须严格递增。装备采用连续进度，属性等级为 `floor(进度×5)`。各阶 `growth_profile.early_*` 设置早期装备、枪械概率、附魔、图腾与三叉戟品质规则。成长日期与生成解锁日期独立。
+四阶文件各自的 `growth_profile` 设置本阶成长曲线和早期装备细项，全局 `growth` 只放共用规则。`start_day` 默认3/5/10/20，`duration_days` 四阶默认均50，分别在第53/55/60/70个个人在线日达到满成长。`progress_nodes` 流浪者、一阶、三阶默认 `[0.2,0.4,0.6,0.8]`，二阶默认 `[0.2,0.45,0.6,0.8]`（二阶中期成长略提前），表示持续时间20%、40%、60%、80%处的成长进度，节点之间线性插值；可独立调整各阶曲线，必须严格递增。装备采用连续进度，属性等级为 `floor(进度×5)`。各阶 `growth_profile.early_*` 设置早期装备、枪械概率、附魔、图腾与三叉戟品质规则。成长日期与生成解锁日期独立。
 
 出生属性覆盖所有生成方式，按同维度最近有效玩家的个人在线日期确定；没有有效玩家时使用0级。出生后野生人类等级与经验固定，不因日期或战斗升级。正式雇佣后，合格目标死亡时按个人实际生命伤害发放成长值，同一奖励同时进入等级和经验进度。不会要求士兵尾刀，回血后再次受到的有效伤害继续累计；不计过量、取消或格挡伤害，暂不做专门人偶过滤。奖励规则按目标第一次记录贡献时的配置保存，避免修改配置追溯重算旧伤害。
 
@@ -193,7 +198,7 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 
 ## `ai`：战斗行为与动作速度
 
-全局 `ai.enabled` 控制增强战斗 AI；各阶文件的 `ai` 独立设置撤退与恢复血量阈值、寻找掩体范围、恢复动作间隔、盾牌格挡时长与冷却、战术走位和战斗跳跃等行为。`item_recovery_enabled` 控制 AI 是否使用可用恢复物品。`food_use_speed_multiplier` 和 `shield_use_speed_multiplier` 分别设置进食与普通举盾时使用的速度修正倍率；预判弹射物的短暂格挡会保留至少 `0.7` 倍移速。关闭增强 AI 不会关闭实体、雇佣关系或基本战斗。
+全局 `ai.enabled` 控制增强战斗 AI；各阶文件的 `ai` 独立设置撤退与恢复血量阈值、寻找掩体范围、恢复动作间隔、盾牌格挡时长与冷却、战术走位和战斗跳跃等行为。`item_recovery_enabled` 控制 AI 是否使用可用恢复物品。`shield_use_speed_multiplier` 设置普通举盾时使用的速度修正倍率；普通食物和金苹果采用独立副手并行动作，不抢占导航或主手攻击，不额外施加进食减速；预判弹射物的短暂格挡会保留至少 `0.7` 倍移速。关闭增强 AI 不会关闭实体、雇佣关系或基本战斗。
 
 战斗撤退仅由实际低血量及对应阶级的撤退/搏斗策略决定，不再因短时间累计高伤害或多人围攻直接触发；原有低血量逃跑概率和危急血量强制撤退保留。伤害记录只辅助判断目标威胁，恢复期间的 `recovery_damage_tolerance_ratio` 仍用于决定是否继续吃药/进食，不是逃跑触发条件。苦力怕、TNT、岩浆等环境避险单独处理。
 
@@ -201,7 +206,7 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 
 只有一个有效对手，且对手实际生命同时低于其最大生命的 `30%` 和 `30` 点时，`finish_chance` 默认 `0.5`（范围 `0–1`）决定是否尝试搏斗。概率结果固定一段时间，避免每 tick 重抽导致来回逃跑。缺少即时恢复手段，或再生/食物恢复已经生效时，可短暂试探实际恢复是否覆盖实际受伤；不会把尚未到账的预计治疗当作实际回血，也不会重新引入累计高伤害自动逃跑。
 
-`trial_ticks` 默认 `40`（范围 `20–200`）控制试探；`observation_ticks` 默认 `80`（`20–400`）控制实际治疗和伤害的测量窗口；`decision_hold_ticks` 默认 `80`（`20–400`）保持概率结果和决策；`retry_delay_ticks` 默认 `100`（`20–1200`）限制失败后再试。`healing_safety_multiplier` 默认 `1.1`（`1–3`），要求实际治疗至少达到伤害的对应倍率。硬撤退条件随时优先，20 tick=1秒。搏斗中可沿现有物品使用动作吃食物，消耗和延迟恢复规则不变，不额外赠送治疗。
+`trial_ticks` 默认 `40`（范围 `20–200`）控制试探；`observation_ticks` 默认 `80`（`20–400`）控制实际治疗和伤害的测量窗口；`decision_hold_ticks` 默认 `80`（`20–400`）保持概率结果和决策；`retry_delay_ticks` 默认 `100`（`20–1200`）限制失败后再试。`healing_safety_multiplier` 默认 `1.1`（`1–3`），要求实际治疗至少达到伤害的对应倍率。硬撤退条件随时优先，20 tick=1秒。搏斗中可通过独立副手动作吃食物，消耗和延迟恢复规则不变，不额外赠送治疗。
 
 闲置水中上岸会检测朝路径节点或岸边的水平进展；约60 tick没有有效接近时重选路线，不把浮沉或绕圈当作前进。寻路失败后切换直接岸边引导，并保留有效方向至实际卡住，约40 tick重试寻路；多个人类仍共用寻路预算。接战、撤退和水中拾取按原优先级接管移动。
 
@@ -225,26 +230,34 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 
 缺失配置项仅在内存中采用默认值；现有有效文件刷新说明和布局，不写入缺失的游戏控制值。
 
-## `tacz`：可选枪械兼容
+## `scguns`：焦燃枪械联动
 
-主手持有 TaCZ 枪械时禁止近战攻击，包括空枪、近战反击及 Better Combat 延迟出伤。需要近战时先切换主手武器；枪械放在背包或副手不阻止近战。枪手更换目标时复用同一把枪的操作状态，真实换枪才重新掏枪，仍遵循枪械射速、换弹、瞄准与视线要求。
+全局 `scguns` 管理联动开关、原生NPC精度（默认2.0）、额外全局枪伤倍率（默认1.0）、按枪种的弹匣费用、四种医疗用品、投掷物和玩家袭击信号弹。各阶 `scguns.damage_multiplier` 默认1.0，与本阶 `tacz.damage_multiplier` 独立；焦燃最终NPC枪伤继续保留原模组难度/枪械系数，再乘全局、本阶和战斗经验修正。精度使用焦燃原生规则及经验缩放，不使用TaCZ分枪种角度散布。完整范围、投掷/医疗默认值与验收边界见 [Scorched Guns联动说明](docs/SCORCHED_GUNS_COMPAT.md)。
 
-全局 `tacz` 管理兼容总开关与共享枪械池，各阶 `tacz` 管理 `gun_chance`、`damage_multiplier`、`gun_type_weights`。此区域仅在安装 TaCZ 且全局 `enabled` 开启时生效。相关字段控制各阶枪手获得枪械的概率、枪械掉落率、伤害倍率、枪械类型权重和枪械池。枪械掉落概率不限制正式雇佣单位：它们死亡时完整掉落背包及已装备物品，保留数量、耐久与 NBT；野生单位仍按概率掉落。
+## `tacz`：枪械共享池与TaCZ专用规则
+
+主手持有已接入的 TaCZ 或 Scorched Guns 枪械时禁止近战攻击，包括空枪、近战反击及 Better Combat 延迟出伤。需要近战时先切换主手武器；枪械放在背包或副手不阻止近战。枪手更换目标时复用同一把枪的操作状态，真实换枪才重新掏枪，仍遵循枪械射速、换弹、瞄准与视线要求。
+
+全局 `tacz` 中的 `enabled` 只控制TaCZ后端，`scguns.enabled` 只控制焦燃后端。两后端分别管理白名单、黑名单与自动收录；共享 `tacz` 下的掉落与配枪概率/类型选择规则；各阶 `tacz.gun_chance`、`gun_type_weights` 为共享选择参数，`tacz.damage_multiplier` 仅控制TaCZ，焦燃另用各阶 `scguns.damage_multiplier`。相关字段控制各阶枪手获得枪械的概率、枪械掉落率、伤害倍率、枪械类型权重和枪械池。枪械掉落概率不限制正式雇佣单位：它们死亡时完整掉落背包及已装备物品，保留数量、耐久与 NBT；野生单位仍按概率掉落。
 
 - 各阶文件 `tacz.gun_type_weights`：设置不同阶级对手枪、冲锋枪、步枪、机枪、狙击枪和霰弹枪等类型的抽取权重。权重越高，抽到该类枪的相对机会越大。
-- `gun_whitelist`：野生枪手的枪械 ID 与抽取权重表。键必须是 TaCZ 枪械注册 ID，格式为 `命名空间:枪械路径`。正整数是同类枪械中的相对权重，系统会按权重比例抽取；**权重总和不要求等于 100**。`0` 会明确排除该枪。
-- `auto_add_new_guns`：紧邻 `gun_whitelist` 的自动收录开关。开启时，未列出的可用枪械会按 `auto_added_gun_weight` 进入野生枪手的候选池；若只想让野生枪手使用白名单内正权重枪械，请关闭此项。`excluded_auto_gun_types` 可排除自动收录的枪械类别。
-- `hired_gun_additional_whitelist`：仅额外允许玩家把列出的枪械放入已雇佣人类背包，不影响野生枪手抽选。键格式相同；值为任意正整数即表示允许，具体大小不影响允许结果。基础 `gun_whitelist` 为空时，已雇佣人类可以接受所有能识别的 TaCZ 枪械；基础表非空时，只接受基础表中的正权重枪械或此追加表中的正权重枪械。
+- 全局 `tacz.spawn_pool_source` 和 `scguns.spawn_pool_source`：分别选择 `global`（只读本全局文件白名单）或 `tier`（只读对应阶级文件白名单）。两份名单不合并、不回退。TaCZ默认global，焦燃默认tier。
+- `tacz.gun_whitelist` / `scguns.gun_whitelist`：出生枪械ID→非负整数权重。TaCZ填写真实枪定义ID（可属于任意枪包命名空间），焦燃填写真实枪械物品ID。正权重是同类中的抽签份额，总和无需100；0明确排除。各阶文件同名字段仅在tier模式生效。
+- 空白名单 `{}`：仅在该后端 `auto_add_new_guns=true` 时自动收录合格枪械，默认权重由 `auto_added_gun_weight` 指定；false时无枪候选。非空名单始终严格限制，不自动扩充；全0或全部无效的非空名单不会意外放开所有枪。
+- 全局 `tacz.gun_blacklist` / `scguns.gun_blacklist`：高优先级禁用ID数组，默认 `[]`。同时阻止出生生成、主动拾取、雇主手动装配和实际使用，优先于所有白名单/自动收录。已有库存不删除，但不再拿出使用；不限制玩家自己用枪。
+- `excluded_auto_gun_types`：只排除空名单自动收录类别，显式正权重可覆盖；`excluded_gun_namespaces`：只过滤出生枪械来源，不限制雇佣装配，全面禁用请用黑名单。
 
-两个名单都是 JSON 对象，**每条枪械 ID 是一个用双引号括起的键**；键和值之间用冒号 `:`，ID 内的冒号用于分隔命名空间和路径；条目之间使用英文逗号 `,`。权重无需凑到 100，程序会按正权重之和计算比例。JSON 示例直接写在各名单前的双语说明字段中。请将示例 ID 替换成枪包实际注册的 ID，末项后不要加逗号，并保持整个文件为合法 JSON。`hired_gun_additional_whitelist` 的正权重值只表示允许，并不参与随机权重计算。
-- `gun_blacklist`、`excluded_gun_namespaces`：禁止指定枪械 ID 或来源命名空间。
-- 各阶文件 `tacz.damage_multiplier`：本阶人类枪械的唯一输出倍率。全局 `pillager_gun_damage_multiplier` 仅控制其他兼容枪手。
-- `shield_damage_multiplier`：人类举盾格挡 TaCZ 子弹后实际承受的生命伤害比例；例如 `0.3` 表示保留 30% 伤害（减伤 70%）。
-- `tamed_maid_damage_multiplier`：已驯服女仆受到的 TaCZ 子弹伤害比例，默认 `0.15`。它不检查攻击者类型，因此人类枪击女仆也会应用该倍率；人类枪械基础倍率和阶级倍率会先作用。女仆受到人类近战攻击则由 `damage.human_melee_vs_tamed_maid_multiplier` 控制。
+白名单为JSON对象，例如 `{"tacz:ak47":5}`；黑名单为JSON数组，例如 `["tacz:ak47"]`。实际ID不含说明字符串为展示引号而使用的反斜杠。焦燃填写自己的物品ID，例如 `["scguns:stigg"]`，不要填入TaCZ栏。两种后端按实际提供者识别，枪包命名空间不决定后端。
 
-野生枪手抽取和玩家手动给已雇佣人类输入枪械使用不同规则。基础白名单为空时，已雇佣人类可接受能识别的 TaCZ 枪械；基础白名单非空时，只接受其中正权重枪械，以及 `hired_gun_additional_whitelist` 中正权重枪械。`auto_add_new_guns` 不会放宽手动输入限制。
+焦燃默认分阶候选：流浪者longarm/pax/flintlock_pistol/repeating_musket/doublet；一阶mokova/scrapper/rusty_gnat/mak_mkii/handcannon/doublet/turnpike；二阶scrapper/greaser_smg/makeshift_rifle/kalaskah/grandle/birdfeeder/combat_shotgun/turnpike；三阶greaser_smg/valora/m3_carabine/iron_javelin/stigg/spirulida/combat_shotgun/mas_55/iron_spear。详细权重见各阶文件。类型权重和装备生成概率仍继续筛选候选，不表示每把均等或必定生成。
 
-## 原 TOML 设置
+- 各阶文件 `tacz.damage_multiplier`：本阶人类TaCZ枪械输出倍率，焦燃使用本阶 `scguns.damage_multiplier`。全局 `pillager_gun_damage_multiplier` 仅控制其他兼容枪手。
+- `shield_damage_multiplier`：人类举盾格挡 TaCZ 子弹后实际承受的生命伤害比例；默认 `0.4` 表示保留 40% 伤害（减伤 60%）。
+- `tamed_maid_damage_multiplier`：已驯服女仆受到已接入枪械子弹伤害的额外比例，默认 `0.15`。它不检查攻击者类型，因此人类枪击女仆也会应用该倍率；人类枪械基础倍率和阶级倍率会先作用。女仆受到人类近战攻击则由 `damage.human_melee_vs_tamed_maid_multiplier` 控制。
+
+正式雇佣后可以装备所有已接入且能识别的枪械，出生白名单和类型权重不限制雇佣使用；全局黑名单仍始终生效。旧雇佣追加名单已移除。修改配置后重启生效，本轮未更新任何测试实例配置。
+
+## `native_gameplay`：结构与旧原生玩法的当前JSON设置
 
 `global.json` 的 `native_gameplay` 包含 `disabled_structures`（逗号分隔结构禁用名单）、`max_targeting`（同时攻击玩家的人类上限，默认 3）、`battle_event`（HumanVsHuman、HumanVsPillager、Random、Disabled，默认 Random）。
 
@@ -388,3 +401,90 @@ JSON说明采用 `_说明_<配置键>_中文` 和 `_description_<配置键>_en` 
 - 伤害配置：各阶 `damage_multipliers` 控制近战/弓弩/三叉戟基础倍率，`tacz.damage_multiplier` 控制基础枪伤；`weapon_spread_degrees.firearms` 控制分类基础附加散布，全局 `growth.firearms` 决定经验带来的修正。共用培养门槛不在各阶重复。
 - 仍使用标准JSON：分区标题、说明和选项按组排列，组间增加空行；注释保留并紧邻对应值。字符串颜色由编辑器主题决定，文件不能强制改变配色。
 - 启动时把当前全局各阶profile设置移到对应文件，不生成继承/迁移文件；已明确填写在分阶目标位置的字段优先，其余保留原自定义值，保存成功后才清理全局来源。坏文件或并发写入时不清除来源，日志报告并留待处理。现有实体出生状态和装备不因此重新生成。
+
+## 2026-10-11 焦燃人类独立全局枪伤（源码待构建）
+
+全局文件global.json的scguns.human_gun_damage_multiplier，默认0.7，即保留70%伤害；0无枪伤，1不额外减伤，允许0～100。替代旧scguns.npc_damage_multiplier，旧项及对应说明由当前布局整理移除，不沿用旧含义或旧值、不生成继承文件。已有新项的自定义值保留；启动加载时将缺失的新项写入当前全局文件。各阶scguns.damage_multiplier默认1及经验枪伤加成继续生效，TaCZ不变。
+
+实查上游AIGunEvent：子弹additionalDamage和持久字段AIDamageScale均包含“原生难度倍率×mobGunDamageMultiplier”；ProjectileEntity.getDamage还会乘通用globalDamageMultiplier；bullet伤害类型又设置了when_caused_by_living_non_player，使玩家受伤再经原版难度缩放。不能只在最终伤害事件除以原倍率，否则零倍率、简单难度的非线性公式和附加伤害都会有问题。
+
+实现：在Forge EntityJoinLevelEvent的服务端入口，仅对Human发射且存在原生AI缩放标记的焦燃ProjectileEntity，将附加伤害通过公开Gun.getAdditionalDamage/ProjectileEntity.setAdditionalDamage还原，移除AIDamageScale；去标记使重新加入世界不会重复处理。其余弹射物字段、物理、特效、射手归属不变。不修改全局上游配置，不重新实现射击或弹道。AIDamageScale是上游没有公开setter的原生数据字段，访问集中在这一个边界，未来上游修改该结构仍需复核。
+
+其次经原版DamageSource.scalesWithDifficulty（1.20.1 SRG m_7986_）窄Mixin，仅对Human来源的焦燃子弹返回false，避免命中玩家时再缩放；核心Mixin通过ScgunsCompat隔离可选模组类。玩家射击、焦燃原生生物、其他生物/弹射物的难度行为不变。
+
+最终仍保留武器/配件/附魔、焦燃通用globalDamageMultiplier、其他模组伤害事件、护甲/抗性。全局0.5 × 本阶scguns.damage_multiplier × 战斗经验枪伤加成仅在现有LivingHurtEvent入口应用一次，不替换伤害类型，不直接扣血，不伪装成玩家。
+
+验证：125项Python契约/资源/API签名检查通过；新覆盖公开getWeapon/setAdditionalDamage/Gun.getAdditionalDamage及两层缩放入口范围。尚未Java编译、构建或同步；需游戏验收简单/普通/困难下同武器同目标同护甲伤害一致（随机暴击/部位等因素须固定），分别测试目标为玩家与怪物、附魔附加伤害、原生NPC倍率为0、其他生物原规则、分阶倍率/经验与友军保护。客户端无需单独计算伤害。
+
+源码基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前工作区；来源ScgunsIntegration、ScgunsHumanDifficultyMixin、ScgunsCompat、ScgunsSettings、SplitConfigFiles、TierConfigProjection及打包默认配置。
+
+## 2026-10-11 焦燃投掷物全开放与共享战术池（源码待构建）
+
+默认使用名单开放当前焦燃10种徒手投掷物：grenade、stun_grenade、nail_bomb、gas_grenade、choke_bomb、molotov_cocktail、hellfire_bomb、swarm_bomb、beacon_grenade、shotball。GrenadeItem原生工厂已覆盖其StunGrenadeItem子类，新增Shotball的原生公开实体构造接入；Shotball按原生0.04重力计算，其余沿用0.03，拖曳0.99。信号枪发射的袭击信号弹及榴弹枪弹药不是徒手投掷物，不纳入该库存投掷入口。仍消耗真实库存，由原生实体负责爆炸/特效；不增设自动无限投掷或第二套攻击目标。
+
+所有阶级potions.tactical.pool新增item-only条目：scguns:grenade权重3、scguns:stun_grenade权重1、scguns:nail_bomb权重3。药水六种权重5/1/10/2/5/8不变，合计38。药水条目仍填写item+potion+weight；投掷物填写item+weight，省略potion。新生人类在同一池中逐件抽取，数量合计：流浪者1～2、一阶2～4、二阶4～7、三阶6～8。并非另外附送这些数量的手榴弹；没有保证每个单位都有手榴弹。不改变恢复药水池与恢复药水数量。
+
+非药水仅允许已接入、全局允许且功能开启的焦燃投掷物；恢复池仍拒绝item-only条目。可选物品在出生时解析，未安装焦燃或投掷被禁用时剔除候选后重新按剩余权重抽取，不减少请求的战术总数。背包满时沿用插入失败停止规则。初始补给仍受分阶potions.enabled与ai.item_recovery_enabled控制，不给已生成单位补发。投掷物作为出生库存进入现有死亡掉落流程，不另加死亡战利品表，避免重复制造掉落。
+
+TacticalSupplyDefaults只更新与此前完整默认列表精确相同的战术池/投掷使用名单；玩家非默认名单、自定义权重、空池与数量设置保留。当前配置原位更新，不生成继承或更新文件。全局使用名单与分阶出生池分开：默认允许使用全部10种，默认出生仅有三种；玩家可自行调整两者。
+
+战斗使用保留冷却、许可、视线、友军安全与弧线检查。修复候选遍历：一种道具安全检查失败时继续寻找其他候选，防止毒气弹的较大安全半径阻止可用手榴弹。服务器拒绝生成实体时仍不扣物品、不重复重试。群体战斗/火焰/毒气/蜂群的实际伤害由焦燃负责，投出后队友进入区域仍可能危险。
+
+验证：126项Python契约/默认配置/API检查通过，确认10个物品均在实际JAR注册表、Shotball公开构造存在、三种出生权重和总数不变。已补Java配置测试覆盖混合池解析、恢复池拒绝、默认更新与自定义/空池保留，但本轮未编译运行Java测试。未构建、未同步、未启动游戏。待验收自然新生库存、未安装焦燃、不同投掷物效果/弹道、友军安全、耗材与死亡库存掉落。
+
+来源：SpawnPotionConfig、ScgunsThrowables、TacticalSupplyDefaults、SplitConfigFiles、RecoverySupplies、默认配置；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加当前未提交工作区。
+
+高压防御统一配置位于全局JSON的shield_pressure区域：总开关、伤害窗口、高额掉血比例、高频命中次数及比例、解除安静期。默认20tick窗口内2次/15%或4次/5%，安静20tick解除。适用于近战、弓弩和拥有备用近战武器的枪手；未消耗的恢复品保留，枪手复用后台换弹。详见docs/SHIELD_DEFENSE.md。源码待构建。
+
+
+## 敌对怪物主动选取人类
+
+全局`hostile_mob_targeting`是本模组的独立核心规则，不依赖焦燃是否安装：`enabled=true`默认让标准Enemy怪物主动发现野生和雇佣人类；`included_entities=[]`可按实体注册ID补充未声明Enemy的Goal生物；`excluded_entities=[]`高优先级排除不适用的单位。默认排除中立生物、宠物和Human；明确接入可放开中立类型，但不会突破宠物/人类排除、原生攻击许可或队伍关系。完整重启生效，只补充选敌，不改变原生攻击AI；独立Brain/Player专用攻击需要专项兼容。保持已有有效目标，搜索范围受原生发现距离和32格上限约束。
+
+
+## 2026-10-11 自然战术池：燃烧瓶替换为毒气手雷
+
+四阶默认potions.tactical.pool的scguns:molotov_cocktail替换为scguns:gas_grenade，权重保留3。当前自然生成投掷物为手榴弹、钉子炸弹、毒气手雷、窒息弹、虫群炸弹，均权重3，与原有六种战术药水共用数量和权重抽取；数量范围不变。燃烧瓶仍可由玩家交给士兵使用，未从全局可使用投掷物名单移除。
+
+精确匹配上一套完整默认战术池的配置会在现有默认池刷新入口替换；玩家自定义列表和显式空池保留，不改写已生成库存。毒气手雷复用现有原生GasGrenadeItem工厂、21 tick释放落点预测和至少16格友军安全半径。本轮未修改测试实例配置。
+
+146项Python静态/API检查通过；新增默认池替换的Java用例待编译执行。知识库及默认附录已同步，无构建、同步、推送；自然生成抽取和毒气区域友军风险待游戏验收。
+
+
+## 2026-10-11 高压防御超时破局（源码待构建）
+
+高压强制举盾不再无限续期。默认从实际进入强制举盾开始累计140 tick（7秒），压力中断则重新计时。到时暂时收盾，开放60 tick（3秒）的破局观察窗口：由原有AI按血量、恢复品、攻击许可和武器条件选择撤退恢复或反击。不会仅因举盾超时就无条件逃跑，也不修改驻守/护卫等命令边界。枪手可沿原有武器托管归还枪械，后台换弹保持；弓弩可使用保留的装填进度反击。
+
+观察期间，普通举盾请求与高压恢复压制一起让出控制权，避免刚开始进食或拉弓便被旧枪击记录中断。只用观察期中新发生的敌方、可盾挡的实际扣血判定失败：沿用20 tick内至少2次累计15%最大生命，或至少4次累计5%的默认高压门槛。成功格挡及观察开始前的旧伤害不计入这次失败判断。若失败，立即结束观察，恢复强制防御优先级，仍经原有恢复中断、换近战和举盾入口执行；重新实际举盾后再次累计7秒，不会每几tick反复尝试。观察到期未失败则清除之前的压力记录，后续新伤害可重新触发高压。
+
+全局global.json的shield_pressure区域，紧随enabled排列：max_guard_ticks=140（范围40～2400），break_attempt_ticks=60（范围10～400），随后为原有伤害门槛和安静期；单位均为tick，20 tick约1秒。已有配置只补缺失新项，保留自定义值；重启生效，不新增继承文件。不适合盾挡、破盾、库存编辑、爆炸避险等情况仍按原有例外处理。
+
+入口：ShieldDefenseController统一决定是否压制恢复、是否让出防御，以及攻击反击窗口；PressureDefenseCycle只管理时间与本轮新伤害，复用RecoveryPressureWindow的有界样本。AdaptiveCombatGoal释放DEFEND后由原有撤退/武器/恢复Goal接管。仅服务器计算，不新增范围扫描、不保存逐次战斗历史，不跨卸载保存临时计时。
+
+验证：159项Python静态/实际JAR接口检查通过；6份默认数值附录已生成并核对。Java边界用例覆盖7秒临界点、3秒观察到期、新伤害提前失败、失败重计时、安静期重置和开关关闭，但未编译执行。本轮未构建、投放或启动游戏。待游戏验收：持续枪火下收盾破局、低血恢复/撤退、近战与弓弩反击、枪手归还枪械与后台换弹、重新受压后中断恢复并回盾、停止来袭后的正常行动。
+
+
+## 2026-10-11 弓与弩独立伤害倍率（源码待构建）
+
+各阶文件roamer.json、tier1.json、tier2.json、tier3.json的damage_multipliers区域，按近战→弓→弩→投掷三叉戟→承伤排列；弓和弩配置项均开放0～1000。
+
+| 阶级 | bow_damage_multiplier（弓） | crossbow_damage_multiplier（弩） |
+|---|---:|---:|
+| 流浪者 | 1.1 | 1.4 |
+| 一阶 | 1.2 | 1.5 |
+| 二阶 | 1.3 | 1.6 |
+| 三阶 | 1.4 | 1.7 |
+
+旧共用arrow_damage_multiplier及其说明删除，不再参与计算。现有各阶配置下次由新代码加载时，缺失的独立项填入本阶新默认；已填写的独立项保留，不把旧共用值复制到两项，不产生兼容/继承文件。本轮更新源码默认与配置加载入口，未修改测试实例配置或JAR。
+
+命中时HumanDamageScaling依据弹射物自身的原生shotFromCrossbow标记、本模组NPC_CROSSBOW_PROJECTILE发射标记或斯巴达NPC_BOLT标记选取弩倍率；其余箭走弓倍率。已有标记在发射时写入、由弹射物保存，判断不读取命中时人类正拿哪件武器，避免发射后切近战误分类。先排除枪伤、先识别投掷三叉戟，再区分普通箭/弩弹；枪械、三叉戟和近战倍率不变。弓弩仍在这一层只乘一次分阶倍率，再乘已有阶段与战斗经验；速度、附魔、防护、独立燃烧/药水效果继续原规则。
+
+验证：167项Python静态/实际API检查通过，6份默认数值附录重新生成核对通过；已核对本地Forge映射JAR中AbstractArrow.shotFromCrossbow公开方法。Java配置测试已更新，含独立自定义、缺失弩项补全、旧项清除，但未编译运行；本轮未构建/同步。待游戏验收：弓与原版/斯巴达弩命中倍率分别正确、发射后切近战仍归原类型、成长/经验不重复乘算。
+
+源码：UnifiedConfig.Tier、HumanDamageScaling、HumanArrowCombat、TierConfigProjection、SplitConfigFiles及defaults/hostile_humans_unified.json。
+
+## 焦燃投掷弹道和集群投掷（2026-10-11，源码待构建）
+
+全局scguns.throwables集中配置：maximum_range默认32格、initial_speed默认2.0格/tick；cluster_radius默认4格，cluster_minimum_targets默认3名，cluster_cooldown_ticks默认100tick。达到集群人数后取集群与普通冷却的较小值；普通cooldown_ticks默认200tick。只有真实敌人参与集群，不改变主仇恨或放宽友军安全。已有配置数值保留，本轮没有更新测试实例配置。物理/效果预测和验证边界见docs/SCORCHED_GUNS_COMPAT.md。
+
+当前源码追加调整：scguns.throwables.quality默认170（原50）；普通cooldown_ticks默认160tick（8秒）；cluster_cooldown_ticks默认80tick（4秒），覆盖上段初定的100tick。品质影响背包拾取/替换，出生抽取weight和伤害不变。全部参数可修改；既有实例配置未更新。

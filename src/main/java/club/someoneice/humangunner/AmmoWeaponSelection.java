@@ -12,8 +12,8 @@ final class AmmoWeaponSelection {
     private AmmoWeaponSelection() {}
 
     static boolean usableGun(Human human, ItemStack stack) {
-        return HumanAmmo.canUseGun(human, stack)
-                || (GunSupport.get().isGun(stack) && GunSupport.get().isReloading(human, stack));
+        return HumanGunAcceptance.accepts(stack) && (HumanAmmo.canUseGun(human, stack)
+                || (GunSupport.get().isGun(stack) && GunSupport.get().isReloading(human, stack)));
     }
 
     static boolean hasUsableGun(Human human) {
@@ -49,7 +49,8 @@ final class AmmoWeaponSelection {
         if (CloseDefenseHold.shouldHold(human) && !isExhausted(human, human.getMainHandItem())) return;
         // A stale draw must not keep an exhausted off-hand bow blocking melee.
         if (human.isUsingItem() && isExhausted(human, human.getUseItem())) human.stopUsingItem();
-        if (human.isUsingItem() || GunSupport.get().isReloading(human)) return;
+        if (human.isUsingItem() || (HumanGunAcceptance.accepts(human.getMainHandItem())
+                && GunSupport.get().isReloading(human))) return;
 
         ItemStack current = human.getMainHandItem();
         boolean exhausted = isExhausted(human, current);

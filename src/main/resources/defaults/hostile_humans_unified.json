@@ -5,6 +5,19 @@
   "_说明_vanilla_mode_中文": "原版模式，默认关闭；所有人类（含雇佣士兵）基础生命20、基础近战1并取消本模组近战/跳跃/三叉戟刺击倍率。武器、附魔、状态效果及外部生命修饰保留；原有远程倍率、护甲、AI与装备池规则不变。开启时统一成长整体停用并隐藏成长面板，保留已保存培养状态；不改写growth.enabled。完整重启生效，生命切换不额外治疗，超过新上限时截断。",
   "_description_vanilla_mode_en": "Default-off vanilla mode: all Humans use 20 base health and 1 base melee damage without this mod's melee/jump/trident-stab multipliers. Keep weapons, enchantments, effects, external health modifiers, existing ranged factors, armor, AI and equipment pools. Suppresses unified growth and its UI while preserving saved cultivation and the growth.enabled preference. Restart to apply; no free healing, clamp health to the new maximum.",
   "vanilla_mode": false,
+  "hostile_mob_targeting": {
+    "_说明_中文": "敌对怪物主动发现本模组人类的统一入口，完整重启生效。仅补充选敌，移动、射击及攻击仍由原生AI负责；不保证独立Brain或仅攻击Player的特殊AI能够适配。野生及雇佣人类均可成为目标，遵守原生攻击许可、队伍和视线。",
+    "_description_en": "Restart-scoped target discovery for hostile mobs. Movement and attacks remain native. Brain-based or Player-only AI may require dedicated integration. Both wild and hired Humans are eligible, respecting native attack permission, teams and sight.",
+    "_说明_enabled_中文": "默认开启；自动接入Enemy敌对类型，排除中立生物、可拥有的宠物及本模组人类。只在没有有效目标时搜索，不覆盖既有玩家或反击目标；搜索沿用原生随机节奏，范围不超过原生发现距离及32格。",
+    "_description_enabled_en": "Default true. Auto-enroll Enemy mobs except NeutralMob, OwnableEntity and Humans. Discover targets only while no live target exists. Keep native randomized polling; range capped at native follow range and 32 blocks.",
+    "enabled": true,
+    "_说明_included_entities_中文": "额外明确接入的实体注册ID，例如modid:entity_id；适用于未标为Enemy的敌对Goal生物。此项可覆盖中立类型排除，不能覆盖宠物/人类排除或原生canAttack限制。默认空。",
+    "_description_included_entities_en": "Explicit entity registry IDs for hostile Goal-based mobs not marked Enemy. Can opt in NeutralMob, but never OwnableEntity/Human or override native canAttack. Default empty.",
+    "included_entities": [],
+    "_说明_excluded_entities_中文": "高优先级排除实体ID；存在AI冲突或不希望互相主动交战时填写。优先于自动识别和额外接入。默认空。",
+    "_description_excluded_entities_en": "High-priority entity registry ID exclusions, overriding both auto-enrollment and explicit inclusions. Default empty.",
+    "excluded_entities": []
+  },
   "tiers": {
     "_说明_中文": "本阶独立设置；数量为物品个数，20 tick=1秒，2点生命=1颗心。",
     "_description_en": "Independent rank settings; counts are items, 20 ticks=1 second, 2 health=1 heart.",
@@ -51,13 +64,16 @@
         "_description_en": "Independent outgoing and incoming damage factors for this rank.",
         "_说明_melee_damage_multiplier_中文": "本阶近战输出倍率，0–100；武器、攻击属性与附魔计算后的伤害乘本值。原版模式跳过此倍率。",
         "_description_melee_damage_multiplier_en": "Rank melee output, 0–100; multiplies native weapon/attribute/enchantment damage. Bypassed in vanilla mode.",
-        "melee_damage_multiplier": 1.7,
-        "_说明_arrow_damage_multiplier_中文": "本阶弓/弩箭直接命中倍率，0–1000；不改变速度或额外燃烧、药水效果。",
-        "_description_arrow_damage_multiplier_en": "Rank bow/crossbow direct arrow-hit factor, 0–1000; does not change speed or separate fire/potion effects.",
-        "arrow_damage_multiplier": 1.8144,
+        "melee_damage_multiplier": 1.2,
+        "_说明_bow_damage_multiplier_中文": "本阶弓箭直接命中倍率，0–1000；只作用于弓，不改变速度或额外燃烧、药水效果。",
+        "_description_bow_damage_multiplier_en": "Rank bow direct-hit factor, 0–1000; excludes crossbows, velocity and separate fire/potion effects.",
+        "bow_damage_multiplier": 1.1,
+        "_说明_crossbow_damage_multiplier_中文": "本阶弩箭直接命中倍率，0–1000；包含斯巴达重弩。按弹射物发射来源区分，不受命中时换武器影响。",
+        "_description_crossbow_damage_multiplier_en": "Rank crossbow direct-hit factor, 0–1000, including Spartan heavy crossbows. Classified by projectile origin rather than the weapon held at impact.",
+        "crossbow_damage_multiplier": 1.4,
         "_说明_thrown_trident_damage_multiplier_中文": "本阶投掷三叉戟直接命中倍率，0–1000；不用于近刺。",
         "_description_thrown_trident_damage_multiplier_en": "Rank thrown-trident direct-hit factor, 0–1000; excludes melee stabs.",
-        "thrown_trident_damage_multiplier": 1.26,
+        "thrown_trident_damage_multiplier": 1.0,
         "_说明_damage_taken_multiplier_中文": "本阶受到伤害的倍率，0–10；0可免除此层伤害，包括环境和枪伤。",
         "_description_damage_taken_multiplier_en": "Incoming damage multiplier for this rank, 0–10; 0 suppresses this layer, including environment/firearms.",
         "damage_taken_multiplier": 1
@@ -273,8 +289,8 @@
         ]
       },
       "potions": {
-        "_说明_中文": "本阶一次性出生药水。",
-        "_description_en": "One-time spawn potions for this rank.",
+        "_说明_中文": "本阶一次性出生恢复药水与战术道具。",
+        "_description_en": "One-time recovery potions and tactical supplies for this rank.",
         "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
         "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
@@ -308,16 +324,16 @@
           ]
         },
         "tactical": {
-          "_说明_中文": "战术药水储备；包括迅捷，所有种类按权重独立抽取，可重复，不设单种瓶数上限。",
-          "_description_en": "Tactical reserves including Speed; all types use independent weighted draws with repeats and no per-type bottle cap.",
-          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
-          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
+          "_说明_中文": "战术道具总库存：药水与焦燃投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装焦燃或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
+          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
+          "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
+          "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
           "count_min": 1,
-          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
-          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
+          "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
+          "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
           "count_max": 2,
-          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
-          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
+          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃投掷物；空池不发放。",
+          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns throwables. Empty pool grants none.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -348,6 +364,26 @@
               "item": "minecraft:potion",
               "potion": "minecraft:long_swiftness",
               "weight": 8
+            },
+            {
+              "item": "scguns:grenade",
+              "weight": 3
+            },
+            {
+              "item": "scguns:nail_bomb",
+              "weight": 3
+            },
+            {
+              "item": "scguns:gas_grenade",
+              "weight": 3
+            },
+            {
+              "item": "scguns:choke_bomb",
+              "weight": 3
+            },
+            {
+              "item": "scguns:swarm_bomb",
+              "weight": 3
             }
           ]
         }
@@ -358,7 +394,7 @@
         "start_day": 3,
         "_说明_duration_days_中文": "达到完整品质所需个人在线日数，1–1000000整数；终点=起点+持续日数。",
         "_description_duration_days_en": "Personal online days to full quality, integer 1–1000000; finish=start+duration.",
-        "duration_days": 37,
+        "duration_days": 50,
         "_说明_progress_nodes_中文": "持续时间20/40/60/80%处的成长进度，4个严格递增数字，均严格位于0与1之间；连接(0,0)与(1,1)分段线性插值。",
         "_description_progress_nodes_en": "Progress at 20/40/60/80% of duration: four strictly increasing numbers strictly between 0 and 1; piecewise linear interpolation with endpoints (0,0) and (1,1).",
         "progress_nodes": [
@@ -418,9 +454,18 @@
       "scguns": {
         "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
         "_description_en": "Independent Scorched Guns output factor for this rank.",
-        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。原模组NPC难度系数、全局联动倍率和战斗经验枪伤加成仍叠乘。",
-        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Native NPC difficulty, global integration and combat experience factors still multiply.",
-        "damage_multiplier": 1.0
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。全局联动倍率和战斗经验枪伤加成仍叠乘；原生NPC与玩家目标难度伤害缩放由全局人类枪伤规则替代。",
+        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Global integration and combat experience factors still multiply; human-only global rules replace native NPC/player-target difficulty damage scaling.",
+        "damage_multiplier": 1.0,
+        "gun_whitelist": {
+          "scguns:longarm": 8,
+          "scguns:pax": 4,
+          "scguns:flintlock_pistol": 3,
+          "scguns:repeating_musket": 4,
+          "scguns:doublet": 1
+        },
+        "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局scguns.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
+        "_description_gun_whitelist_en": "Rank birth gun pool, used only with global scguns.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
       }
     },
     "tier1": {
@@ -446,7 +491,7 @@
         "follow_range": 40,
         "_说明_max_health_中文": "完整基础最大生命值，1–1024点；2点=1颗心。统一成长会乘阶段和经验百分比。",
         "_description_max_health_en": "Full base maximum health, 1–1024 points; 2 points = 1 heart. Unified growth applies stage and experience percentages.",
-        "max_health": 60
+        "max_health": 40
       },
       "movement": {
         "_说明_中文": "新速度公式的基础移动速度（默认 0.105，即普通玩家基础移速的 1.05 倍；可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
@@ -466,13 +511,16 @@
         "_description_en": "Independent outgoing and incoming damage factors for this rank.",
         "_说明_melee_damage_multiplier_中文": "本阶近战输出倍率，0–100；武器、攻击属性与附魔计算后的伤害乘本值。原版模式跳过此倍率。",
         "_description_melee_damage_multiplier_en": "Rank melee output, 0–100; multiplies native weapon/attribute/enchantment damage. Bypassed in vanilla mode.",
-        "melee_damage_multiplier": 1.7,
-        "_说明_arrow_damage_multiplier_中文": "本阶弓/弩箭直接命中倍率，0–1000；不改变速度或额外燃烧、药水效果。",
-        "_description_arrow_damage_multiplier_en": "Rank bow/crossbow direct arrow-hit factor, 0–1000; does not change speed or separate fire/potion effects.",
-        "arrow_damage_multiplier": 1.8144,
+        "melee_damage_multiplier": 1.4,
+        "_说明_bow_damage_multiplier_中文": "本阶弓箭直接命中倍率，0–1000；只作用于弓，不改变速度或额外燃烧、药水效果。",
+        "_description_bow_damage_multiplier_en": "Rank bow direct-hit factor, 0–1000; excludes crossbows, velocity and separate fire/potion effects.",
+        "bow_damage_multiplier": 1.2,
+        "_说明_crossbow_damage_multiplier_中文": "本阶弩箭直接命中倍率，0–1000；包含斯巴达重弩。按弹射物发射来源区分，不受命中时换武器影响。",
+        "_description_crossbow_damage_multiplier_en": "Rank crossbow direct-hit factor, 0–1000, including Spartan heavy crossbows. Classified by projectile origin rather than the weapon held at impact.",
+        "crossbow_damage_multiplier": 1.5,
         "_说明_thrown_trident_damage_multiplier_中文": "本阶投掷三叉戟直接命中倍率，0–1000；不用于近刺。",
         "_description_thrown_trident_damage_multiplier_en": "Rank thrown-trident direct-hit factor, 0–1000; excludes melee stabs.",
-        "thrown_trident_damage_multiplier": 1.26,
+        "thrown_trident_damage_multiplier": 1.1,
         "_说明_damage_taken_multiplier_中文": "本阶受到伤害的倍率，0–10；0可免除此层伤害，包括环境和枪伤。",
         "_description_damage_taken_multiplier_en": "Incoming damage multiplier for this rank, 0–10; 0 suppresses this layer, including environment/firearms.",
         "damage_taken_multiplier": 1
@@ -688,8 +736,8 @@
         ]
       },
       "potions": {
-        "_说明_中文": "本阶一次性出生药水。",
-        "_description_en": "One-time spawn potions for this rank.",
+        "_说明_中文": "本阶一次性出生恢复药水与战术道具。",
+        "_description_en": "One-time recovery potions and tactical supplies for this rank.",
         "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
         "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
@@ -723,16 +771,16 @@
           ]
         },
         "tactical": {
-          "_说明_中文": "战术药水储备；包括迅捷，所有种类按权重独立抽取，可重复，不设单种瓶数上限。",
-          "_description_en": "Tactical reserves including Speed; all types use independent weighted draws with repeats and no per-type bottle cap.",
-          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
-          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
+          "_说明_中文": "战术道具总库存：药水与焦燃投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装焦燃或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
+          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
+          "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
+          "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
           "count_min": 2,
-          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
-          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
+          "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
+          "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
           "count_max": 4,
-          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
-          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
+          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃投掷物；空池不发放。",
+          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns throwables. Empty pool grants none.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -763,6 +811,26 @@
               "item": "minecraft:potion",
               "potion": "minecraft:long_swiftness",
               "weight": 8
+            },
+            {
+              "item": "scguns:grenade",
+              "weight": 3
+            },
+            {
+              "item": "scguns:nail_bomb",
+              "weight": 3
+            },
+            {
+              "item": "scguns:gas_grenade",
+              "weight": 3
+            },
+            {
+              "item": "scguns:choke_bomb",
+              "weight": 3
+            },
+            {
+              "item": "scguns:swarm_bomb",
+              "weight": 3
             }
           ]
         }
@@ -773,7 +841,7 @@
         "start_day": 5,
         "_说明_duration_days_中文": "达到完整品质所需个人在线日数，1–1000000整数；终点=起点+持续日数。",
         "_description_duration_days_en": "Personal online days to full quality, integer 1–1000000; finish=start+duration.",
-        "duration_days": 45,
+        "duration_days": 50,
         "_说明_progress_nodes_中文": "持续时间20/40/60/80%处的成长进度，4个严格递增数字，均严格位于0与1之间；连接(0,0)与(1,1)分段线性插值。",
         "_description_progress_nodes_en": "Progress at 20/40/60/80% of duration: four strictly increasing numbers strictly between 0 and 1; piecewise linear interpolation with endpoints (0,0) and (1,1).",
         "progress_nodes": [
@@ -833,9 +901,20 @@
       "scguns": {
         "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
         "_description_en": "Independent Scorched Guns output factor for this rank.",
-        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。原模组NPC难度系数、全局联动倍率和战斗经验枪伤加成仍叠乘。",
-        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Native NPC difficulty, global integration and combat experience factors still multiply.",
-        "damage_multiplier": 1.0
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。全局联动倍率和战斗经验枪伤加成仍叠乘；原生NPC与玩家目标难度伤害缩放由全局人类枪伤规则替代。",
+        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Global integration and combat experience factors still multiply; human-only global rules replace native NPC/player-target difficulty damage scaling.",
+        "damage_multiplier": 1.0,
+        "gun_whitelist": {
+          "scguns:mokova": 5,
+          "scguns:scrapper": 3,
+          "scguns:rusty_gnat": 5,
+          "scguns:mak_mkii": 2,
+          "scguns:handcannon": 2,
+          "scguns:doublet": 1,
+          "scguns:turnpike": 1
+        },
+        "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局scguns.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
+        "_description_gun_whitelist_en": "Rank birth gun pool, used only with global scguns.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
       }
     },
     "tier2": {
@@ -861,7 +940,7 @@
         "follow_range": 40,
         "_说明_max_health_中文": "完整基础最大生命值，1–1024点；2点=1颗心。统一成长会乘阶段和经验百分比。",
         "_description_max_health_en": "Full base maximum health, 1–1024 points; 2 points = 1 heart. Unified growth applies stage and experience percentages.",
-        "max_health": 80
+        "max_health": 60
       },
       "movement": {
         "_说明_中文": "新速度公式的基础移动速度（默认 0.105，即普通玩家基础移速的 1.05 倍；可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
@@ -881,13 +960,16 @@
         "_description_en": "Independent outgoing and incoming damage factors for this rank.",
         "_说明_melee_damage_multiplier_中文": "本阶近战输出倍率，0–100；武器、攻击属性与附魔计算后的伤害乘本值。原版模式跳过此倍率。",
         "_description_melee_damage_multiplier_en": "Rank melee output, 0–100; multiplies native weapon/attribute/enchantment damage. Bypassed in vanilla mode.",
-        "melee_damage_multiplier": 1.7,
-        "_说明_arrow_damage_multiplier_中文": "本阶弓/弩箭直接命中倍率，0–1000；不改变速度或额外燃烧、药水效果。",
-        "_description_arrow_damage_multiplier_en": "Rank bow/crossbow direct arrow-hit factor, 0–1000; does not change speed or separate fire/potion effects.",
-        "arrow_damage_multiplier": 1.8144,
+        "melee_damage_multiplier": 1.6,
+        "_说明_bow_damage_multiplier_中文": "本阶弓箭直接命中倍率，0–1000；只作用于弓，不改变速度或额外燃烧、药水效果。",
+        "_description_bow_damage_multiplier_en": "Rank bow direct-hit factor, 0–1000; excludes crossbows, velocity and separate fire/potion effects.",
+        "bow_damage_multiplier": 1.3,
+        "_说明_crossbow_damage_multiplier_中文": "本阶弩箭直接命中倍率，0–1000；包含斯巴达重弩。按弹射物发射来源区分，不受命中时换武器影响。",
+        "_description_crossbow_damage_multiplier_en": "Rank crossbow direct-hit factor, 0–1000, including Spartan heavy crossbows. Classified by projectile origin rather than the weapon held at impact.",
+        "crossbow_damage_multiplier": 1.6,
         "_说明_thrown_trident_damage_multiplier_中文": "本阶投掷三叉戟直接命中倍率，0–1000；不用于近刺。",
         "_description_thrown_trident_damage_multiplier_en": "Rank thrown-trident direct-hit factor, 0–1000; excludes melee stabs.",
-        "thrown_trident_damage_multiplier": 1.26,
+        "thrown_trident_damage_multiplier": 1.2,
         "_说明_damage_taken_multiplier_中文": "本阶受到伤害的倍率，0–10；0可免除此层伤害，包括环境和枪伤。",
         "_description_damage_taken_multiplier_en": "Incoming damage multiplier for this rank, 0–10; 0 suppresses this layer, including environment/firearms.",
         "damage_taken_multiplier": 1
@@ -1103,8 +1185,8 @@
         ]
       },
       "potions": {
-        "_说明_中文": "本阶一次性出生药水。",
-        "_description_en": "One-time spawn potions for this rank.",
+        "_说明_中文": "本阶一次性出生恢复药水与战术道具。",
+        "_description_en": "One-time recovery potions and tactical supplies for this rank.",
         "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
         "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
@@ -1138,16 +1220,16 @@
           ]
         },
         "tactical": {
-          "_说明_中文": "战术药水储备；包括迅捷，所有种类按权重独立抽取，可重复，不设单种瓶数上限。",
-          "_description_en": "Tactical reserves including Speed; all types use independent weighted draws with repeats and no per-type bottle cap.",
-          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
-          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
+          "_说明_中文": "战术道具总库存：药水与焦燃投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装焦燃或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
+          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
+          "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
+          "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
           "count_min": 4,
-          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
-          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
+          "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
+          "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
           "count_max": 7,
-          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
-          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
+          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃投掷物；空池不发放。",
+          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns throwables. Empty pool grants none.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -1178,6 +1260,26 @@
               "item": "minecraft:potion",
               "potion": "minecraft:long_swiftness",
               "weight": 8
+            },
+            {
+              "item": "scguns:grenade",
+              "weight": 3
+            },
+            {
+              "item": "scguns:nail_bomb",
+              "weight": 3
+            },
+            {
+              "item": "scguns:gas_grenade",
+              "weight": 3
+            },
+            {
+              "item": "scguns:choke_bomb",
+              "weight": 3
+            },
+            {
+              "item": "scguns:swarm_bomb",
+              "weight": 3
             }
           ]
         }
@@ -1188,7 +1290,7 @@
         "start_day": 10,
         "_说明_duration_days_中文": "达到完整品质所需个人在线日数，1–1000000整数；终点=起点+持续日数。",
         "_description_duration_days_en": "Personal online days to full quality, integer 1–1000000; finish=start+duration.",
-        "duration_days": 60,
+        "duration_days": 50,
         "_说明_progress_nodes_中文": "持续时间20/40/60/80%处的成长进度，4个严格递增数字，均严格位于0与1之间；连接(0,0)与(1,1)分段线性插值。",
         "_description_progress_nodes_en": "Progress at 20/40/60/80% of duration: four strictly increasing numbers strictly between 0 and 1; piecewise linear interpolation with endpoints (0,0) and (1,1).",
         "progress_nodes": [
@@ -1248,9 +1350,21 @@
       "scguns": {
         "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
         "_description_en": "Independent Scorched Guns output factor for this rank.",
-        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。原模组NPC难度系数、全局联动倍率和战斗经验枪伤加成仍叠乘。",
-        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Native NPC difficulty, global integration and combat experience factors still multiply.",
-        "damage_multiplier": 1.0
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。全局联动倍率和战斗经验枪伤加成仍叠乘；原生NPC与玩家目标难度伤害缩放由全局人类枪伤规则替代。",
+        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Global integration and combat experience factors still multiply; human-only global rules replace native NPC/player-target difficulty damage scaling.",
+        "damage_multiplier": 1.0,
+        "gun_whitelist": {
+          "scguns:scrapper": 2,
+          "scguns:greaser_smg": 3,
+          "scguns:makeshift_rifle": 5,
+          "scguns:kalaskah": 3,
+          "scguns:grandle": 1,
+          "scguns:birdfeeder": 2,
+          "scguns:combat_shotgun": 2,
+          "scguns:turnpike": 2
+        },
+        "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局scguns.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
+        "_description_gun_whitelist_en": "Rank birth gun pool, used only with global scguns.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
       }
     },
     "tier3": {
@@ -1276,7 +1390,7 @@
         "follow_range": 48,
         "_说明_max_health_中文": "完整基础最大生命值，1–1024点；2点=1颗心。统一成长会乘阶段和经验百分比。",
         "_description_max_health_en": "Full base maximum health, 1–1024 points; 2 points = 1 heart. Unified growth applies stage and experience percentages.",
-        "max_health": 100
+        "max_health": 80
       },
       "movement": {
         "_说明_中文": "新速度公式的基础移动速度（默认 0.105，即普通玩家基础移速的 1.05 倍；可设 0.01–0.2）。疾跑与迅捷等状态效果沿用原版属性修正。",
@@ -1296,13 +1410,16 @@
         "_description_en": "Independent outgoing and incoming damage factors for this rank.",
         "_说明_melee_damage_multiplier_中文": "本阶近战输出倍率，0–100；武器、攻击属性与附魔计算后的伤害乘本值。原版模式跳过此倍率。",
         "_description_melee_damage_multiplier_en": "Rank melee output, 0–100; multiplies native weapon/attribute/enchantment damage. Bypassed in vanilla mode.",
-        "melee_damage_multiplier": 1.7,
-        "_说明_arrow_damage_multiplier_中文": "本阶弓/弩箭直接命中倍率，0–1000；不改变速度或额外燃烧、药水效果。",
-        "_description_arrow_damage_multiplier_en": "Rank bow/crossbow direct arrow-hit factor, 0–1000; does not change speed or separate fire/potion effects.",
-        "arrow_damage_multiplier": 1.8144,
+        "melee_damage_multiplier": 1.8,
+        "_说明_bow_damage_multiplier_中文": "本阶弓箭直接命中倍率，0–1000；只作用于弓，不改变速度或额外燃烧、药水效果。",
+        "_description_bow_damage_multiplier_en": "Rank bow direct-hit factor, 0–1000; excludes crossbows, velocity and separate fire/potion effects.",
+        "bow_damage_multiplier": 1.4,
+        "_说明_crossbow_damage_multiplier_中文": "本阶弩箭直接命中倍率，0–1000；包含斯巴达重弩。按弹射物发射来源区分，不受命中时换武器影响。",
+        "_description_crossbow_damage_multiplier_en": "Rank crossbow direct-hit factor, 0–1000, including Spartan heavy crossbows. Classified by projectile origin rather than the weapon held at impact.",
+        "crossbow_damage_multiplier": 1.7,
         "_说明_thrown_trident_damage_multiplier_中文": "本阶投掷三叉戟直接命中倍率，0–1000；不用于近刺。",
         "_description_thrown_trident_damage_multiplier_en": "Rank thrown-trident direct-hit factor, 0–1000; excludes melee stabs.",
-        "thrown_trident_damage_multiplier": 1.26,
+        "thrown_trident_damage_multiplier": 1.3,
         "_说明_damage_taken_multiplier_中文": "本阶受到伤害的倍率，0–10；0可免除此层伤害，包括环境和枪伤。",
         "_description_damage_taken_multiplier_en": "Incoming damage multiplier for this rank, 0–10; 0 suppresses this layer, including environment/firearms.",
         "damage_taken_multiplier": 1
@@ -1518,8 +1635,8 @@
         ]
       },
       "potions": {
-        "_说明_中文": "本阶一次性出生药水。",
-        "_description_en": "One-time spawn potions for this rank.",
+        "_说明_中文": "本阶一次性出生恢复药水与战术道具。",
+        "_description_en": "One-time recovery potions and tactical supplies for this rank.",
         "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
         "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
@@ -1553,16 +1670,16 @@
           ]
         },
         "tactical": {
-          "_说明_中文": "战术药水储备；包括迅捷，所有种类按权重独立抽取，可重复，不设单种瓶数上限。",
-          "_description_en": "Tactical reserves including Speed; all types use independent weighted draws with repeats and no per-type bottle cap.",
-          "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
-          "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
+          "_说明_中文": "战术道具总库存：药水与焦燃投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装焦燃或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
+          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
+          "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
+          "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
           "count_min": 6,
-          "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
-          "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
+          "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
+          "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
           "count_max": 8,
-          "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
-          "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
+          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃投掷物；空池不发放。",
+          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns throwables. Empty pool grants none.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -1593,6 +1710,26 @@
               "item": "minecraft:potion",
               "potion": "minecraft:long_swiftness",
               "weight": 8
+            },
+            {
+              "item": "scguns:grenade",
+              "weight": 3
+            },
+            {
+              "item": "scguns:nail_bomb",
+              "weight": 3
+            },
+            {
+              "item": "scguns:gas_grenade",
+              "weight": 3
+            },
+            {
+              "item": "scguns:choke_bomb",
+              "weight": 3
+            },
+            {
+              "item": "scguns:swarm_bomb",
+              "weight": 3
             }
           ]
         }
@@ -1603,7 +1740,7 @@
         "start_day": 20,
         "_说明_duration_days_中文": "达到完整品质所需个人在线日数，1–1000000整数；终点=起点+持续日数。",
         "_description_duration_days_en": "Personal online days to full quality, integer 1–1000000; finish=start+duration.",
-        "duration_days": 60,
+        "duration_days": 50,
         "_说明_progress_nodes_中文": "持续时间20/40/60/80%处的成长进度，4个严格递增数字，均严格位于0与1之间；连接(0,0)与(1,1)分段线性插值。",
         "_description_progress_nodes_en": "Progress at 20/40/60/80% of duration: four strictly increasing numbers strictly between 0 and 1; piecewise linear interpolation with endpoints (0,0) and (1,1).",
         "progress_nodes": [
@@ -1663,9 +1800,22 @@
       "scguns": {
         "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
         "_description_en": "Independent Scorched Guns output factor for this rank.",
-        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。原模组NPC难度系数、全局联动倍率和战斗经验枪伤加成仍叠乘。",
-        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Native NPC difficulty, global integration and combat experience factors still multiply.",
-        "damage_multiplier": 1.0
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。全局联动倍率和战斗经验枪伤加成仍叠乘；原生NPC与玩家目标难度伤害缩放由全局人类枪伤规则替代。",
+        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Global integration and combat experience factors still multiply; human-only global rules replace native NPC/player-target difficulty damage scaling.",
+        "damage_multiplier": 1.0,
+        "gun_whitelist": {
+          "scguns:greaser_smg": 2,
+          "scguns:valora": 5,
+          "scguns:m3_carabine": 3,
+          "scguns:iron_javelin": 3,
+          "scguns:stigg": 4,
+          "scguns:spirulida": 1,
+          "scguns:combat_shotgun": 3,
+          "scguns:mas_55": 2,
+          "scguns:iron_spear": 2
+        },
+        "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局scguns.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
+        "_description_gun_whitelist_en": "Rank birth gun pool, used only with global scguns.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
       }
     }
   },
@@ -1797,14 +1947,14 @@
           "feet": "minecraft:iron_boots"
         },
         {
-          "weight": 6,
+          "weight": 1,
           "head": "minecraft:leather_helmet",
           "chest": "minecraft:leather_chestplate",
           "legs": "minecraft:leather_leggings",
           "feet": "minecraft:leather_boots"
         },
         {
-          "weight": 3,
+          "weight": 1,
           "head": "minecraft:chainmail_helmet",
           "chest": "minecraft:chainmail_chestplate",
           "legs": "minecraft:chainmail_leggings",
@@ -2261,7 +2411,7 @@
       "_description_armor_sets_en": "Armor-set pool: positive weight, head/chest/legs/feet item IDs; optional requires_mod dependency.",
       "armor_sets": [
         {
-          "weight": 186,
+          "weight": 1,
           "head": "minecraft:netherite_helmet",
           "chest": "minecraft:netherite_chestplate",
           "legs": "minecraft:netherite_leggings",
@@ -2339,7 +2489,7 @@
       "first_spawn_day_by_tier": {
         "_说明_中文": "各阶最早开始自然生成的模组日（1–1000000）。roamer=流浪者，tier1/tier2/tier3=一/二/三阶；独立配置，不要求按顺序递增。解锁只允许参与原有生成判定，不保证当天必定生成；自然大型战斗只能使用已解锁的一阶或二阶单位。",
         "_description_en": "First eligible mod day per tier (1–1000000). roamer, tier1, tier2 and tier3 are independently configurable; ascending order is not required. Unlocking permits existing spawn rules but does not guarantee a spawn. Automatic large battles use only unlocked tier I or tier II units.",
-        "roamer": 3,
+        "roamer": 2,
         "tier1": 5,
         "tier2": 10,
         "tier3": 20
@@ -2600,8 +2750,8 @@
     "_说明_gun_drop_chance_中文": "野生枪械掉落概率，0–1；正式雇佣死亡返还装备不受限。",
     "_description_gun_drop_chance_en": "Wild firearm drop probability, 0–1; hired inventory returns are exempt.",
     "gun_drop_chance": 0.01,
-    "_说明_excluded_gun_namespaces_中文": "禁止来源命名空间列表，如[\"some_gunpack\"]。",
-    "_description_excluded_gun_namespaces_en": "Excluded gun namespace list, e.g. [\"some_gunpack\"].",
+    "_说明_excluded_gun_namespaces_中文": "出生池排除这些枪械ID命名空间；只限制生成。若需同时禁止雇佣装备，请使用gun_blacklist。",
+    "_description_excluded_gun_namespaces_en": "Exclude these gun ID namespaces from birth pools only. Use gun_blacklist to also ban hired equipment.",
     "excluded_gun_namespaces": [],
     "_说明_pillager_gun_damage_multiplier_中文": "其他兼容枪手（灾厄村民）的枪伤倍率，0–10；不控制本模组人类。",
     "_description_pillager_gun_damage_multiplier_en": "Other compatible gunners (illagers) firearm factor, 0–10; does not control this mod's Humans.",
@@ -2641,35 +2791,35 @@
         "shotgun": 25
       }
     },
-    "_说明_gun_whitelist_中文": "野生枪手枪械注册ID→非负整数权重。例：{\"tacz:ak47\":5}；同类按正权重比例抽取，总和无需100，0排除。基础表为空时已雇佣人类接受所有可识别枪械。 示例中的反斜杠仅用于说明字符串内双引号的JSON转义；填写实际白名单对象时需去掉这些反斜杠，保留键名两侧的双引号。",
-    "_description_gun_whitelist_en": "Wild registered gun ID to non-negative integer weight, e.g. {\"tacz:ak47\":5}. Positive weights select proportionally within type; total need not be 100. Zero excludes. An empty base table allows hired humans to accept all recognized guns. Backslashes in the example only escape quotes inside this help string. Omit those backslashes when writing the actual whitelist object, but keep double quotes around its keys.",
+    "_说明_gun_whitelist_中文": "出生枪械ID→非负整数权重。空对象{}按自动收录开关收录合格枪械；非空仅允许正权重条目（全0表示禁用），自动收录不会扩充非空名单。黑名单优先。TaCZ填写枪械ID，焦燃填写物品ID；JSON示例转义用的反斜杠不要写入实际ID。",
+    "_description_gun_whitelist_en": "Birth gun ID to nonnegative integer weight. Empty {} discovers eligible guns only if automatic discovery is enabled; nonempty is strict (all zero disables). Bans win. TaCZ uses gun IDs; Scguns uses item IDs. Do not include example escape backslashes in IDs.",
     "gun_whitelist": {},
-    "_说明_auto_add_new_guns_中文": "自动将未列出的合格枪械加入抽取候选；false时只使用白名单中的正权重枪械。",
-    "_description_auto_add_new_guns_en": "Automatically include eligible unlisted guns; false restricts selection to positive whitelist entries.",
+    "_说明_auto_add_new_guns_中文": "仅当当前选定白名单为空时，自动收录已加载目录中的合格枪械；非空白名单始终严格限制。",
+    "_description_auto_add_new_guns_en": "Discover loaded eligible guns only when the selected whitelist is empty. Nonempty pools are always strict.",
     "auto_add_new_guns": true,
-    "_说明_auto_added_gun_weight_中文": "自动收录枪械的正整数权重。",
-    "_description_auto_added_gun_weight_en": "Positive integer selection weight for automatically included guns.",
+    "_说明_auto_added_gun_weight_中文": "空白名单自动收录时，各枪默认相对权重；0表示不生成。",
+    "_description_auto_added_gun_weight_en": "Default relative weight for empty-pool discovery; zero disables spawning.",
     "auto_added_gun_weight": 5,
-    "_说明_excluded_auto_gun_types_中文": "自动收录时排除的枪种列表；显式白名单仍按自身权重。",
-    "_description_excluded_auto_gun_types_en": "Gun types excluded from automatic inclusion; explicit whitelist entries retain their own weights.",
+    "_说明_excluded_auto_gun_types_中文": "仅从空名单自动收录中排除这些标准类型；显式白名单可包含它们。标准类型含pistol、smg、rifle、shotgun、sniper、mg、rpg。",
+    "_description_excluded_auto_gun_types_en": "Types excluded only from automatic discovery; explicit lists may include them. Standard types include pistol, smg, rifle, shotgun, sniper, mg, rpg.",
     "excluded_auto_gun_types": [
       "rpg"
     ],
-    "_说明_hired_gun_additional_whitelist_中文": "额外允许放入已雇佣人类背包的枪械ID→正整数，如{\"some_gunpack:example\":1}；不参与野生抽取，数字大小不影响许可。 示例中的反斜杠仅用于说明字符串内双引号的JSON转义；填写实际白名单对象时需去掉这些反斜杠，保留键名两侧的双引号。",
-    "_description_hired_gun_additional_whitelist_en": "Additional registered gun IDs permitted in hired inventories, e.g. {\"some_gunpack:example\":1}; positive values grant permission, do not affect wild selection. Backslashes in the example only escape quotes inside this help string. Omit those backslashes when writing the actual whitelist object, but keep double quotes around its keys.",
-    "hired_gun_additional_whitelist": {},
-    "_说明_gun_blacklist_中文": "禁止的枪械注册ID列表，格式namespace:path。",
-    "_description_gun_blacklist_en": "Excluded registered gun ID list, namespace:path.",
+    "_说明_gun_blacklist_中文": "全局高优先级枪械黑名单：列入的枪不能生成、拾取或交给雇佣士兵装配使用；优先于全局/分阶白名单及自动收录。TaCZ填写枪械ID，焦燃填写物品ID。修改后重启生效，已有库存物品不删除，但不再作为可用枪械。",
+    "_description_gun_blacklist_en": "Global high-priority gun bans: prevent spawning, pickup, owner equipment input and use. Override global/rank pools and discovery. TaCZ gun IDs / Scguns item IDs. Restart to apply; stored items are retained but cannot be selected.",
     "gun_blacklist": [],
-    "_说明_shield_damage_multiplier_中文": "人类主动举盾格挡TaCZ子弹时额外承受比例，0–10；0.3表示保留30%伤害，仍需真实命中格挡面。",
-    "_description_shield_damage_multiplier_en": "Additional received fraction for Human active-shield TaCZ blocks, 0–10; 0.3 retains 30% damage. A genuine frontal block is required.",
-    "shield_damage_multiplier": 0.3,
-    "_说明_offhand_shield_damage_reduction_中文": "主手持枪且副手持可用盾时的全类型伤害减免，0–1；0.2表示减免20%，开枪及换弹均生效，不受主动破盾禁用影响。盾耐久按1+floor(本次伤害×1.5)经过耐久附魔扣除，实际损耗后共用0.5秒损耗冷却；换下枪或盾即失效。",
-    "_description_offhand_shield_damage_reduction_en": "All-type damage reduction with a main-hand gun and usable offhand shield, 0–1; 0.2 reduces damage by 20%, including firing/reloading, independently of active shield disable. Wear is 1+floor(damage*1.5), processed through Unbreaking; actual wear starts a shared 0.5-second wear cooldown. Removing either item disables the bonus.",
+    "_说明_shield_damage_multiplier_中文": "人类主动举盾格挡TaCZ子弹时额外承受比例，0–10；默认0.4表示保留40%伤害、减伤60%，仍需真实命中格挡面。",
+    "_description_shield_damage_multiplier_en": "Additional received fraction for Human active-shield TaCZ blocks, 0–10; default 0.4 retains 40% damage (60% reduction). A genuine frontal block is required.",
+    "shield_damage_multiplier": 0.4,
+    "_说明_offhand_shield_damage_reduction_中文": "主手持枪且副手持可用盾时的全类型伤害减免，0–1；0.2表示减免20%，开枪及换弹均生效，不受主动破盾禁用影响。盾牌在0.1秒（2 tick）内累计承接伤害，按1+floor(累计伤害×1.5)统一经过耐久附魔扣除，不丢弃同窗口弹丸；换盾、保存或打开装备界面前结清。换下枪或盾即失去减伤。",
+    "_description_offhand_shield_damage_reduction_en": "All-type damage reduction with a main-hand gun and usable offhand shield, 0–1; 0.2 reduces damage by 20%, including firing/reloading, independently of active shield disable. Wear batches accepted damage for 0.1 seconds (2 ticks): 1+floor(totalDamage*1.5), processed through Unbreaking without discarding pellets. Settle before equipment transfer, saving or inventory editing. Removing either item disables the bonus.",
     "offhand_shield_damage_reduction": 0.2,
     "_说明_tamed_maid_damage_multiplier_中文": "人类TaCZ子弹命中已驯服女仆时的额外输出倍率，0–10；与本阶枪伤倍率相乘。",
     "_description_tamed_maid_damage_multiplier_en": "Additional factor for Human TaCZ bullets hitting tamed maids, 0–10; multiplies rank firearm output.",
-    "tamed_maid_damage_multiplier": 0.15
+    "tamed_maid_damage_multiplier": 0.15,
+    "spawn_pool_source": "global",
+    "_说明_spawn_pool_source_中文": "出生枪械池来源：global仅用本文件白名单；tier仅用对应阶级文件白名单，不合并或回退。正式雇佣后可使用该后端全部可识别枪械，但全局黑名单始终生效。",
+    "_description_spawn_pool_source_en": "Birth pool source: global uses only this file; tier uses only the rank file. No merging/fallback. Hired soldiers accept all recognized guns except global bans."
   },
   "_tier_file_metadata": {
     "roamer": {
@@ -2681,7 +2831,10 @@
         "_说明_damage_multiplier_中文": "仅控制本阶人类使用TaCZ的枪伤，0–100，默认0.5；Scorched Guns由本阶scguns.damage_multiplier独立控制。目标防护和战斗经验加成另算。",
         "_description_damage_multiplier_en": "TaCZ rank damage only, 0–100, default 0.5. Scorched Guns uses rank scguns.damage_multiplier independently. Target defenses and combat experience apply separately.",
         "_说明_gun_type_weights_中文": "枪种相对权重表，值为非负整数；0排除此类。pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击枪、mg机枪。空表不抽选枪种。",
-        "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types."
+        "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types.",
+        "gun_whitelist": {},
+        "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局tacz.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
+        "_description_gun_whitelist_en": "Rank birth gun pool, used only with global tacz.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
       }
     },
     "tier1": {
@@ -2693,7 +2846,10 @@
         "_说明_damage_multiplier_中文": "仅控制本阶人类使用TaCZ的枪伤，0–100，默认0.5；Scorched Guns由本阶scguns.damage_multiplier独立控制。目标防护和战斗经验加成另算。",
         "_description_damage_multiplier_en": "TaCZ rank damage only, 0–100, default 0.5. Scorched Guns uses rank scguns.damage_multiplier independently. Target defenses and combat experience apply separately.",
         "_说明_gun_type_weights_中文": "枪种相对权重表，值为非负整数；0排除此类。pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击枪、mg机枪。空表不抽选枪种。",
-        "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types."
+        "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types.",
+        "gun_whitelist": {},
+        "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局tacz.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
+        "_description_gun_whitelist_en": "Rank birth gun pool, used only with global tacz.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
       }
     },
     "tier2": {
@@ -2705,7 +2861,10 @@
         "_说明_damage_multiplier_中文": "仅控制本阶人类使用TaCZ的枪伤，0–100，默认0.5；Scorched Guns由本阶scguns.damage_multiplier独立控制。目标防护和战斗经验加成另算。",
         "_description_damage_multiplier_en": "TaCZ rank damage only, 0–100, default 0.5. Scorched Guns uses rank scguns.damage_multiplier independently. Target defenses and combat experience apply separately.",
         "_说明_gun_type_weights_中文": "枪种相对权重表，值为非负整数；0排除此类。pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击枪、mg机枪。空表不抽选枪种。",
-        "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types."
+        "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types.",
+        "gun_whitelist": {},
+        "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局tacz.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
+        "_description_gun_whitelist_en": "Rank birth gun pool, used only with global tacz.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
       }
     },
     "tier3": {
@@ -2717,7 +2876,10 @@
         "_说明_damage_multiplier_中文": "仅控制本阶人类使用TaCZ的枪伤，0–100，默认0.5；Scorched Guns由本阶scguns.damage_multiplier独立控制。目标防护和战斗经验加成另算。",
         "_description_damage_multiplier_en": "TaCZ rank damage only, 0–100, default 0.5. Scorched Guns uses rank scguns.damage_multiplier independently. Target defenses and combat experience apply separately.",
         "_说明_gun_type_weights_中文": "枪种相对权重表，值为非负整数；0排除此类。pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击枪、mg机枪。空表不抽选枪种。",
-        "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types."
+        "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types.",
+        "gun_whitelist": {},
+        "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局tacz.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
+        "_description_gun_whitelist_en": "Rank birth gun pool, used only with global tacz.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
       }
     }
   },
@@ -2725,8 +2887,18 @@
     "_说明_enabled_中文": "统一成长总开关：装备、出生阶段、经验及战斗成长；关闭时完整属性与装备品质。原版模式开启时优先禁用成长，不改写此项；关闭原版模式后恢复按此项决定是否启用。修改后重启。",
     "_description_enabled_en": "Unified growth master switch for equipment, birth stages, experience and cultivation. Disabled uses full attributes and gear quality. Vanilla mode overrides growth without changing this preference; leaving vanilla mode restores this setting. Restart to apply.",
     "enabled": true,
-    "_说明_stage_percent_中文": "阶段0–5的属性百分比，6个严格递增整数，范围1–100；100表示完整基础属性。",
-    "_description_stage_percent_en": "Attribute percentages for stages 0–5: six strictly increasing integers in 1–100; 100 means full base attributes.",
+    "_说明_stage_percent_中文": "阶段0–5的基础生命百分比，6个严格递增整数，范围1–100；默认50/60/70/80/90/100。不控制伤害；伤害由damage_stage_percent独立设置。",
+    "_description_stage_percent_en": "Base health percentages for stages 0–5: six strictly increasing integers in 1–100, default 50/60/70/80/90/100. Damage uses damage_stage_percent separately.",
+    "_说明_damage_stage_percent_中文": "阶段0–5的近战、弓弩箭及投掷三叉戟伤害百分比，默认75/80/85/90/95/100；6个严格递增整数，范围1–100。分阶伤害先乘此值，再乘战斗经验系数。TaCZ和焦燃枪伤均不使用此阶段削减；枪械经验增伤仍独立生效。",
+    "_description_damage_stage_percent_en": "Melee, bow/crossbow and thrown-trident damage percentages for stages 0–5, default 75/80/85/90/95/100. Six strictly increasing integers in 1–100. Applied after rank damage and before combat experience. Neither TaCZ nor Scorched Guns uses this stage reduction; firearm experience bonuses remain separate.",
+    "damage_stage_percent": [
+      75,
+      80,
+      85,
+      90,
+      95,
+      100
+    ],
     "stage_percent": [
       50,
       60,
@@ -2788,8 +2960,8 @@
       "_说明_reward_unit_中文": "每伤害单位奖励的成长点，0–1000000。",
       "_description_reward_unit_en": "Growth points per damage unit, 0–1000000.",
       "reward_unit": 0.25,
-      "_说明_base_cap_中文": "每次战斗基础成长点上限，0–1000000。",
-      "_description_base_cap_en": "Base growth point cap per combat, 0–1000000.",
+      "_说明_base_cap_中文": "每名士兵对每个确认死亡目标的基础成长点上限，0–1000000。",
+      "_description_base_cap_en": "Base growth point cap per soldier and confirmed dead target, 0–1000000.",
       "base_cap": 4,
       "_说明_bonus_threshold_中文": "额外奖励有效伤害门槛，0–1000000伤害点；必须严格大于，等于不奖励。",
       "_description_bonus_threshold_en": "Bonus effective damage threshold in damage points, 0–1000000; strictly greater only, equality grants no bonus.",
@@ -2862,9 +3034,9 @@
     "_说明_ai_accuracy_modifier_中文": "AI瞄准精度系数越大越准：原生AI误差锥角=min(25度,5×难度系数÷此值)。武器及配件本身的散布另由原模组数据控制；经验收缩只作用于AI误差，不重复叠加各阶TaCZ角度散布。",
     "_description_ai_accuracy_modifier_en": "Higher means more accurate: native NPC error is min(25 degrees, 5 * difficulty factor / accuracy). Native weapon/attachment spread remains separate. Experience affects AI error only.",
     "ai_accuracy_modifier": 2.0,
-    "_说明_npc_damage_multiplier_中文": "Scorched Guns全局联动枪伤倍率：在原模组NPC难度/枪伤系数之后，再乘此值、各阶scguns.damage_multiplier和战斗经验枪伤加成；不使用TaCZ分阶倍率，不修改玩家枪伤。",
-    "_description_npc_damage_multiplier_en": "Global Scorched Guns integration factor; multiplies native NPC damage, rank scguns.damage_multiplier and combat experience. Independent of TaCZ; player damage is unchanged.",
-    "npc_damage_multiplier": 1.0,
+    "_说明_human_gun_damage_multiplier_中文": "本模组人类使用焦燃枪械的全局伤害倍率，默认0.7表示同等枪械条件下保留玩家基准的70%伤害。替代焦燃NPC难度系数和mobGunDamageMultiplier，并取消该类子弹命中玩家时的原版难度缩放；继续叠乘各阶scguns.damage_multiplier及战斗经验枪伤加成。保留焦燃对所有枪械生效的globalDamageMultiplier、武器/附魔、护甲和抗性。0为无枪伤，1为不减伤；不修改玩家和焦燃原生生物。",
+    "_description_human_gun_damage_multiplier_en": "Human-only Scorched Guns damage factor: 0.7 retains 70% of the equivalent player weapon baseline, 1 applies no reduction. Replaces native NPC difficulty/mob damage scaling and vanilla player-target difficulty scaling. Rank damage and training remain multiplicative; universal gun config, armor and effects remain intact. Player shooters and native mobs are unchanged.",
+    "human_gun_damage_multiplier": 0.7,
     "_说明_magazines_per_reload_by_type_中文": "每次装满或补满能量按原生武器类型一次计费；普通枪与能量枪相同，战斗中不足一次射击才装填；全局关闭弹药消耗时不扣弹匣。 能量枪通过Forge能量能力读取、扣除和充满能量；不足一次射击时按原生换弹时长补能，同样消耗通用弹匣。不给没有充放电能力的枪写假能量。",
     "_description_magazines_per_reload_by_type_en": "One payment per native weapon-type reload, including energy recharge through Forge energy capabilities. Native reload duration applies; ammunition master switch can waive magazine consumption.",
     "magazines_per_reload_by_type": {
@@ -2949,25 +3121,99 @@
       }
     },
     "throwables": {
-      "_说明_中文": "只消耗背包里的真实物品，不自动发放；投掷前检查目标许可、落点友军和弹道，飞行后目标移动仍可能造成误伤或原生地形破坏。默认只开放手榴弹、震撼弹、钉子炸弹；其它原生工厂已接入，可按ID加入。气体/燃烧/蜂群/信标的持续范围效果由原模组控制。",
+      "_说明_中文": "消耗背包真实投掷物；除震撼弹外9种焦燃徒手道具可使用。出生池为手榴弹、钉子炸弹、毒气手雷、窒息弹、虫群炸弹，各权重3，与战术药水共用总数。预测使用原生工厂对应的重力和引爆/反弹方式；出手点在身体前方且不能穿墙。攻击许可、视线、弹道和友军安全检查通过才投掷；毒气/窒息弹至少16格友军安全半径。没有自动制导，投出后友军仍可能进入危险区。",
+      "_description_en": "Consumes inventory; nine supported native hand-thrown items excluding Stun Grenade. Spawn pool: Grenade, Nail Bomb, Gas Grenade, Choke Bomb, Swarm Bomb, weight 3 each, sharing tactical counts. Predict native constructor gravity, bounce and effect timing. Launch outside the owner without crossing walls. Preserve attack permission, line of sight, trajectory and friendly safety (gas/choke at least 16 blocks). No homing or guarantee against allies moving into hazards.",
       "enabled": true,
       "allowed_items": [
         "scguns:grenade",
-        "scguns:stun_grenade",
-        "scguns:nail_bomb"
+        "scguns:nail_bomb",
+        "scguns:gas_grenade",
+        "scguns:choke_bomb",
+        "scguns:molotov_cocktail",
+        "scguns:hellfire_bomb",
+        "scguns:swarm_bomb",
+        "scguns:beacon_grenade",
+        "scguns:shotball"
       ],
-      "cooldown_ticks": 200,
       "minimum_range": 6.0,
-      "maximum_range": 20.0,
+      "_说明_maximum_range_中文": "最大主动投掷距离，单位格；默认32，范围1～64且不小于minimum_range。距离许可不代表一定能越过障碍或抵达安全落点。",
+      "_description_maximum_range_en": "Maximum active throw range in blocks, default 32, 1–64 and no less than minimum_range. Range does not override trajectory or safety validation.",
+      "maximum_range": 32.0,
+      "_说明_initial_speed_中文": "实际初速度，单位格/tick；默认2.0，范围0.5～3。固定速度求低弧线，使用原生重力/阻力/反弹预测落点；不能安全到达时不投掷。",
+      "_description_initial_speed_en": "Actual launch speed in blocks/tick, default 2.0, range 0.5–3. Fixed-speed low arc using native gravity/drag/bounce; skip unsafe or unreachable endpoints.",
+      "initial_speed": 2.0,
+      "_说明_cooldown_ticks_中文": "普通目标成功投掷后的冷却，单位tick；默认160（8秒），范围1～72000。敌群达到集群人数时取该值与cluster_cooldown_ticks的较小值。",
+      "_description_cooldown_ticks_en": "Cooldown after successful ordinary throws, default 160 ticks (8 seconds), range 1–72000. Cluster throws use the smaller of this value and cluster_cooldown_ticks.",
+      "cooldown_ticks": 160,
+      "_说明_cluster_radius_中文": "敌群集中半径，单位格；默认4，范围1～12。以当前合法仇恨目标附近最多16名合法、可见敌人为候选，选择半径内敌人较多的实际敌人位置，不取可能位于悬崖或墙内的平均点。",
+      "_description_cluster_radius_en": "Cluster radius in blocks, default 4, range 1–12. Up to 16 local permitted visible enemies; aim at an actual enemy with dense neighbors, not an unsafe centroid.",
+      "cluster_radius": 4.0,
+      "_说明_cluster_minimum_targets_中文": "启用集群优先投掷的最少敌人数，包含中心目标；默认3，范围2～16。只改变战术投掷落点，不改变主战斗目标。",
+      "_description_cluster_minimum_targets_en": "Minimum enemies including the center for clustered throws, default 3, range 2–16. Does not switch the main combat target.",
+      "cluster_minimum_targets": 3,
+      "_说明_cluster_cooldown_ticks_中文": "成功向达到集群条件的目标投掷后冷却，单位tick；默认80（4秒），实际取它与普通cooldown_ticks的较小值。安全条件不放宽；普通失败预检仍间隔40tick。",
+      "_description_cluster_cooldown_ticks_en": "Cooldown after a successful clustered throw, default 80 ticks (4 seconds), capped by ordinary cooldown_ticks. Safety remains mandatory; failed preflight remains throttled to 40 ticks.",
+      "cluster_cooldown_ticks": 80,
       "friendly_safety_radius": 8.0,
       "fuse_ticks": 60,
-      "quality": 50.0
+      "_说明_quality_中文": "投掷物的背包品质评分，默认170，范围0～1000；统一影响拾取、满背包替换及保留判断，不是伤害或生成抽取权重。高于一般战术药水和非职业优先弹药，低于职业优先弹药180；仍遵守食物槽位、最后恢复药品及必要武器保护。",
+      "_description_quality_en": "Inventory value for supported throwables, default 170, range 0–1000. Used for pickup/replacement/retention, not damage or spawn weight. Above ordinary tactical potions and secondary ammo, below profession-preferred ammo (180). Food, last medicine and essential weapon reservations remain intact.",
+      "quality": 170.0
     },
     "signal_flare": {
       "_说明_中文": "新增本模组信号弹由玩家使用，触发Scorched Guns原生袭击；raid_id必须对应已加载的原生raid与flare数据。和平难度、无效维度、已有袭击时不消耗物品。",
       "enabled": true,
       "raid_id": "copper",
       "cooldown_ticks": 1200
-    }
+    },
+    "spawn_pool_source": "tier",
+    "gun_whitelist": {},
+    "gun_blacklist": [],
+    "auto_add_new_guns": true,
+    "auto_added_gun_weight": 5,
+    "excluded_auto_gun_types": [
+      "rpg"
+    ],
+    "excluded_gun_namespaces": [],
+    "_说明_spawn_pool_source_中文": "出生枪械池来源：global仅用本文件白名单；tier仅用对应阶级文件白名单，不合并或回退。正式雇佣后可使用该后端全部可识别枪械，但全局黑名单始终生效。",
+    "_description_spawn_pool_source_en": "Birth pool source: global uses only this file; tier uses only the rank file. No merging/fallback. Hired soldiers accept all recognized guns except global bans.",
+    "_说明_gun_whitelist_中文": "出生枪械ID→非负整数权重。空对象{}按自动收录开关收录合格枪械；非空仅允许正权重条目（全0表示禁用），自动收录不会扩充非空名单。黑名单优先。TaCZ填写枪械ID，焦燃填写物品ID；JSON示例转义用的反斜杠不要写入实际ID。",
+    "_description_gun_whitelist_en": "Birth gun ID to nonnegative integer weight. Empty {} discovers eligible guns only if automatic discovery is enabled; nonempty is strict (all zero disables). Bans win. TaCZ uses gun IDs; Scguns uses item IDs. Do not include example escape backslashes in IDs.",
+    "_说明_gun_blacklist_中文": "全局高优先级枪械黑名单：列入的枪不能生成、拾取或交给雇佣士兵装配使用；优先于全局/分阶白名单及自动收录。TaCZ填写枪械ID，焦燃填写物品ID。修改后重启生效，已有库存物品不删除，但不再作为可用枪械。",
+    "_description_gun_blacklist_en": "Global high-priority gun bans: prevent spawning, pickup, owner equipment input and use. Override global/rank pools and discovery. TaCZ gun IDs / Scguns item IDs. Restart to apply; stored items are retained but cannot be selected.",
+    "_说明_auto_add_new_guns_中文": "仅当当前选定白名单为空时，自动收录已加载目录中的合格枪械；非空白名单始终严格限制。",
+    "_description_auto_add_new_guns_en": "Discover loaded eligible guns only when the selected whitelist is empty. Nonempty pools are always strict.",
+    "_说明_auto_added_gun_weight_中文": "空白名单自动收录时，各枪默认相对权重；0表示不生成。",
+    "_description_auto_added_gun_weight_en": "Default relative weight for empty-pool discovery; zero disables spawning.",
+    "_说明_excluded_auto_gun_types_中文": "仅从空名单自动收录中排除这些标准类型；显式白名单可包含它们。标准类型含pistol、smg、rifle、shotgun、sniper、mg、rpg。",
+    "_description_excluded_auto_gun_types_en": "Types excluded only from automatic discovery; explicit lists may include them. Standard types include pistol, smg, rifle, shotgun, sniper, mg, rpg.",
+    "_说明_excluded_gun_namespaces_中文": "出生池排除这些枪械ID命名空间；只限制生成。若需同时禁止雇佣装备，请使用gun_blacklist。",
+    "_description_excluded_gun_namespaces_en": "Exclude these gun ID namespaces from birth pools only. Use gun_blacklist to also ban hired equipment."
+  },
+  "shield_pressure": {
+    "_说明_中文": "高压防御优先于进食、喝药和普通反击。仅统计敌方可用盾抵挡的攻击造成的实际生命损失；达到高额或高频门槛后，中断恢复、归还盾牌，枪手先换备用近战武器。随后实际受伤或成功格挡会延长高压，安静期结束恢复普通战术；持续举盾达到max_guard_ticks则主动尝试破局，试探中新扣血仍达高压门槛时重新防御。不直接触发高伤撤退，不统计环境/友军伤害；没有可用盾、破盾冷却、没有备用近战武器的持枪单位及躲避爆炸时不强制压制恢复。",
+    "_description_en": "Prioritize shields over recovery under pressure. Count actual health loss from hostile, shield-blockable attacks. Interrupt supplies and restore shields; gunners stow their gun for an owned melee weapon. Damage and successful blocks extend pressure until a quiet interval, with a timed breakout trial. Fresh high-pressure damage can end the trial early. Retreat still uses its normal conditions. No recovery suppression without a usable shield/melee swap, during shield disable, inventory editing or explosion escape.",
+    "enabled": true,
+    "_说明_max_guard_ticks_中文": "连续高压举盾达到此时间后尝试破局；默认140 tick（7秒），范围40～2400。只累计实际强制举盾时间；压力解除后重计。",
+    "_description_max_guard_ticks_en": "Try breaking a continuous pressure guard after this duration; default 140 ticks (7 seconds), range 40–2400. Starts on actual forced guarding and resets when pressure ends.",
+    "max_guard_ticks": 140,
+    "_说明_break_attempt_ticks_中文": "破局观察窗口，默认60 tick（3秒），范围10～400。允许按原条件撤退恢复或反击；仅窗口内的新扣血达到高压门槛才提前重新强制举盾，成功后清除旧压力。",
+    "_description_break_attempt_ticks_en": "Breakout trial duration; default 60 ticks (3 seconds), range 10–400. Normal retreat, recovery and attacks may run. Fresh trial damage meeting pressure thresholds resumes forced guarding early; a successful trial retires old pressure.",
+    "break_attempt_ticks": 60,
+    "_说明_window_ticks_中文": "伤害统计窗口，默认20 tick（1秒），范围5～100。只记有实际扣血的命中。",
+    "_description_window_ticks_en": "Actual health-loss sampling window, default 20 ticks (one second), range 5–100.",
+    "window_ticks": 20,
+    "_说明_damage_ratio_中文": "窗口内至少2次命中，合计损失达到最大生命的此比例就进入高压；0.15表示15%。",
+    "_description_damage_ratio_en": "At least two damaging hits in the window must remove this fraction of maximum health; 0.15 means 15%.",
+    "damage_ratio": 0.15,
+    "_说明_frequent_hits_中文": "高频分支所需的实际扣血命中次数；还必须满足frequent_damage_ratio，避免极轻微伤害一直锁盾。",
+    "_description_frequent_hits_en": "Damaging hit count for the frequency branch; frequent_damage_ratio must also be met to avoid locking shields for trivial chip damage.",
+    "frequent_hits": 4,
+    "_说明_frequent_damage_ratio_中文": "高频分支同时要求的累计掉血比例；0.05表示最大生命的5%。高额/高频任一分支满足即触发。",
+    "_description_frequent_damage_ratio_en": "Minimum cumulative health-loss fraction for frequent hits; 0.05 means 5%. Either pressure branch may trigger defense.",
+    "frequent_damage_ratio": 0.05,
+    "_说明_quiet_ticks_中文": "触发后，距离最后一次实际扣血或成功格挡达到此tick数才解除；默认20 tick（1秒）。无效攻击不会续期。",
+    "_description_quiet_ticks_en": "Release after this many ticks without actual health loss or a successful block; default 20 ticks. Invalid hits do not extend pressure.",
+    "quiet_ticks": 20
   }
 }

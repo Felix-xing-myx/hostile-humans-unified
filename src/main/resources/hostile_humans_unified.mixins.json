@@ -6,6 +6,8 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "LivingEntityGrowthDamageMixin",
+    "ScgunsSulfurheadDamageMixin",
+    "ScgunsHumanDifficultyMixin",
     "LivingEntityProjectileCooldownMixin",
     "AbstractArrowBallisticsMixin",
     "HumanProjectileCollisionMixin",
@@ -18,7 +20,7 @@
     "TaczHumanGunScriptMixin",
     "ThrownTridentLifecycleMixin"
   ],
-  "client": ["ScgunsNpcMuzzleFlashMixin"],
+  "client": ["ScgunsNpcMuzzleFlashMixin", "TaczNpcMuzzleFlashMixin"],
   "injectors": {
     "defaultRequire": 1
   }

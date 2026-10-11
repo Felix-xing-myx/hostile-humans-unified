@@ -22,6 +22,10 @@ public final class PursuitNavigation {
     private PursuitNavigation() {}
 
     public static boolean update(Human human, LivingEntity target, double speed) {
+        if (WaterCombatNavigation.isMeleePursuit(human, target) && !SoldierOrder.isHoldingPosition(human)) {
+            human.approachCombatTargetInWater(target, MeleeCombatRange.reach(human, target), speed);
+            if (human.hasWaterCombatMovementInput()) return true;
+        }
         var nav = human.getNavigation();
         if (human.isSeekingShore() || human.isShoreTransitionPending()) return false;
         if (target == null || !target.isAlive() || !human.canAttack(target)

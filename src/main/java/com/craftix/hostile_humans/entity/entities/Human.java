@@ -403,6 +403,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private BlockPos shoreFallbackTarget;
     private int shoreTransitionPendingTick = Integer.MIN_VALUE;
     private int directWaterCombatSteeringTick = Integer.MIN_VALUE;
+    private int waterCombatHoldingTick = Integer.MIN_VALUE;
+    private double directWaterCombatSpeed = 1.0D;
     @Nullable private UUID waterCombatTarget;
     private int waterCombatProgressTick;
     private int waterCombatDirectUntilTick;
@@ -1010,11 +1012,24 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     /** Fall back to direct water steering when a live path makes no progress toward combat range. */
     public void approachCombatTargetInWater(LivingEntity target, double maximumRange, double speed) {
+        if (this.level().isClientSide || !this.isInWater() || this.isFleeing || this.isShoreTransitionPending() || target == null
+                || !target.isAlive() || target != this.getTarget() || !this.canAttack(target)
+                || club.someoneice.humangunner.SoldierOrder.isHoldingPosition(this)) return;
+        boolean melee = club.someoneice.humangunner.WaterCombatNavigation.isMeleePursuit(this, target);
         if (club.someoneice.humangunner.WaterCombatNavigation.update(this, target, maximumRange, speed)) return;
+        if (melee && !this.seekingShore && club.someoneice.humangunner.MeleeCombatRange.canStrike(this, target)) {
+            // Stop at the real hitbox, not at a stale submerged waypoint behind the enemy.
+            this.getNavigation().stop();
+            this.clearRangedStrafeMotion();
+            club.someoneice.humangunner.MovementContinuity.cancelStep(this);
+            this.waterCombatHoldingTick = this.tickCount;
+            this.directWaterCombatSteeringTick = Integer.MIN_VALUE;
+            return;
+        }
         if (!this.level().isClientSide && this.shouldUseWaterMovement()
                 && target != null && target.isAlive() && !this.isFleeing
                 && !this.seekingShore
-                && this.distanceToSqr(target) > maximumRange * maximumRange) {
+                && (melee || this.distanceToSqr(target) > maximumRange * maximumRange)) {
             double distance = this.distanceTo(target);
             if (!target.getUUID().equals(this.waterCombatTarget)
                     || this.tickCount - this.waterCombatProgressTick > 30) {
@@ -1029,16 +1044,30 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 this.waterCombatDistance = distance;
                 this.waterCombatProgressTick = this.tickCount;
             }
-            if (this.getNavigation().isDone() || this.getNavigation().isStuck()
+            boolean clearSurfaceApproach = melee && club.someoneice.humangunner.WaterCombatPolicy.directApproach(
+                    target.isInWater(), this.distanceToSqr(target), target.getY() - this.getY(),
+                    this.getSensing().hasLineOfSight(target));
+            if (clearSurfaceApproach || this.getNavigation().isDone() || this.getNavigation().isStuck()
                     || this.tickCount < this.waterCombatDirectUntilTick) {
                 // Direct fallback must not continuously push a swimmer into a cliff face.
                 Vec3 toward = target.position().subtract(this.position()).multiply(1, 0, 1).normalize().scale(0.75);
-                if (!this.level().noCollision(this, this.getBoundingBox().expandTowards(toward))) return;
+                if (!this.level().noCollision(this, this.getBoundingBox().expandTowards(toward))
+                        || !club.someoneice.humangunner.SoldierOrder.allowsCombatPosition(this, this.position().add(toward))) return;
                 this.directWaterCombatSteeringTick = this.tickCount;
+                this.directWaterCombatSpeed = speed;
+                this.waterCombatHoldingTick = Integer.MIN_VALUE;
+                this.clearRangedStrafeMotion();
                 this.getMoveControl().setWantedPosition(
                         target.getX(), target.getY(), target.getZ(), speed);
             }
         }
+    }
+
+    /** Only the current frame's combat controller can reserve direct/hold movement. */
+    public boolean hasWaterCombatMovementInput() {
+        return this.isInWater() && !this.isFleeing && !this.seekingShore
+                && this.getTarget() != null && this.getTarget().isAlive()
+                && (this.directWaterCombatSteeringTick == this.tickCount || this.waterCombatHoldingTick == this.tickCount);
     }
 
     public void setPursuingWaterLoot(boolean pursuingWaterLoot) {
@@ -1062,6 +1091,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     public void approachWaterLoot(net.minecraft.world.entity.item.ItemEntity item, double speed) {
         if (this.level().isClientSide || !this.pursuingWaterLoot || this.seekingShore
+                || this.getTarget() != null || this.isFleeing
                 || item == null || !item.isAlive() || !item.isInWater()
                 || !this.getNavigation().isDone() || this.distanceToSqr(item) <= 2.25D) {
             return;
@@ -1196,6 +1226,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // while an escape/recovery controller still owns the route.
             if (!this.isFleeing && this.canAttack(attacker)) this.setTarget(attacker);
         }
+        // Self-defense permission must be established before validating the attacker.
+        humanGunner$shieldDefense().recordPressureDamage(damageSource,
+                Math.max(0.0F, previousHealth - this.getHealth()));
         return damaged;
     }
 
@@ -1268,7 +1301,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             this.goalSelector.addGoal(8, (Goal)new RandomStrollGoalWithHome(this, 0.65, 120, true));
         }
         this.goalSelector.addGoal(10, (Goal)new RandomLookAroundGoal((Mob)this));
-        this.goalSelector.addGoal(11, (Goal)new HumanLookAtPlayerGoal((Mob)this, Player.class, 64.0f));
+        this.goalSelector.addGoal(11, new HumanLookAtPlayerGoal(this));
         this.targetSelector.addGoal(0, (Goal)new HurtByTargetGoal((PathfinderMob)this, new Class[0]).setAlertOthers(new Class[0]));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoalCustom<LivingEntity>((Mob)this, LivingEntity.class, 13, true, false, this::isAngryAt));
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoalWithHumanLimiter<Player>(this, Player.class, true));
@@ -1288,6 +1321,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public boolean doHurtTarget(Entity entityIn) {
         if (!humanGunner$canMeleeAttack()) return false;
         if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return false;
+        if (entityIn instanceof LivingEntity target
+                && !club.someoneice.humangunner.MeleeCombatRange.canStartAttack(this, target)) return false;
         if (BetterCombatMeleeCombat.isEnabled(this) && entityIn instanceof LivingEntity requestedTarget) {
             if (pendingBetterCombatTarget != null) return false;
             if (BetterCombatMeleeCombat.hasWeaponProfile(this)) {
@@ -1327,6 +1362,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
     public boolean humanGunner$hasPendingMeleeAttack() {
         return pendingBetterCombatTarget != null;
+    }
+
+    /** Remaining committed upswing for this exact opponent; -1 means no valid pending hit. */
+    public int humanGunner$pendingMeleeTicks(LivingEntity target) {
+        return pendingBetterCombatTarget == target && hasPendingBetterCombatFacing()
+                ? Math.max(0, pendingBetterCombatUpswingTicks) : -1;
     }
 
     /** The delayed strike, not the next path node, owns yaw until its impact tick. */
@@ -1521,6 +1562,18 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     @Override
+    public void setItemSlot(EquipmentSlot slot, ItemStack stack) {
+        if (this.getItemBySlot(slot) != stack) ShieldDurability.flush(this);
+        super.setItemSlot(slot, stack);
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag compound) {
+        ShieldDurability.flush(this);
+        super.addAdditionalSaveData(compound);
+    }
+
+    @Override
     public void readAdditionalSaveData(CompoundTag compound) {
         super.readAdditionalSaveData(compound);
         club.someoneice.humangunner.HumanGrowth.onLoad(this);
@@ -1606,6 +1659,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 || !HumanGunner.canControlledHumanAttack(this, livingEntity)))
             livingEntity = null;
         LivingEntity previous = getTarget();
+        if (previous != livingEntity) {
+            this.directWaterCombatSteeringTick = Integer.MIN_VALUE;
+            this.waterCombatHoldingTick = Integer.MIN_VALUE;
+        }
         if (club.someoneice.humangunner.SoldierOrder.get(this)
                 == club.someoneice.humangunner.SoldierOrder.BODYGUARD
                 && pendingBetterCombatTarget != null && pendingBetterCombatTarget != livingEntity) {
@@ -1620,6 +1677,13 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             humanGunner$fastGunRetargetUntilTick = tickCount + 6;
         }
         super.setTarget(livingEntity);
+        if (livingEntity != null && (this.pursuingWaterLoot || this.activelyCollectingLoot)) {
+            this.pursuingWaterLoot = false;
+            this.activelyCollectingLoot = false;
+            this.directWaterLootSteeringTick = Integer.MIN_VALUE;
+            // The pickup goal will release its own path; discard only its leftover local request now.
+            this.getMoveControl().setWantedPosition(this.getX(), this.getY(), this.getZ(), 0);
+        }
     }
 
     public boolean humanGunner$shouldFastGunRetarget() {
@@ -1973,6 +2037,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             club.someoneice.humangunner.HumanArrowCombat.markNpcLoad(crossbow);
             // A cancelled insertion pays nothing; successful Multishot pays once.
             if (volley.stream().anyMatch(Projectile::isAddedToWorld)) {
+                club.someoneice.humangunner.HumanArrowCombat.recordCrossbowShot(this);
                 club.someoneice.humangunner.HumanAmmo.consumeArrow(this);
             }
         }
@@ -2016,6 +2081,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // a visibly low phantom trajectory despite a correct server hit.
             HumanGunner.applyFirstTickArrowBallistics(this, mobArrow, target);
             if (!this.level().addFreshEntity((Entity)mobArrow)) return;
+            club.someoneice.humangunner.HumanArrowCombat.recordBowShot(this);
             club.someoneice.humangunner.HumanAmmo.consumeArrow(this);
             this.playSound(SoundEvents.SKELETON_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
             if (weaponStack.getItem() instanceof BowItem) {
@@ -2369,7 +2435,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // those routes; keep their canFloat walking route into/out of water.
             boolean useWater = ShoreSeekingPolicy.shouldUseWaterNavigator(
                     this.isEffectiveAi(), this.shouldUseWaterMovement(),
-                    club.someoneice.humangunner.SoldierOrder.shouldFollowThroughWater(this),
+                    club.someoneice.humangunner.SoldierOrder.shouldFollowThroughWater(this)
+                            || club.someoneice.humangunner.WaterCombatNavigation.surfaceCombat(this),
                     this.seekingShore, this.shorePathUsesWaterNavigation);
             var desired = useWater ? this.waterNavigation : this.groundNavigation;
             if (this.navigation != desired) {
@@ -2446,6 +2513,19 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             this.speedModifier = Double.isFinite(this.speedModifier)
                     ? Mth.clamp(this.speedModifier, 0.0D, 3.0D) : 0.0D;
             if (this.human.hasShieldFacing()) clearCombatStrafe();
+            if (this.human.waterCombatHoldingTick == this.human.tickCount
+                    && this.human.hasWaterCombatMovementInput()) {
+                clearCombatStrafe();
+                this.operation = MoveControl.Operation.WAIT;
+                this.human.setSpeed(0);
+                this.human.setZza(0);
+                this.human.setXxa(0);
+                Vec3 motion = this.human.getDeltaMovement();
+                this.human.setDeltaMovement(motion.x * .6D, motion.y, motion.z * .6D);
+                if (this.human.hasShieldFacing()) this.human.applyShieldFacing();
+                else club.someoneice.humangunner.MeleeCombatRange.faceTarget(this.human, this.human.getTarget());
+                return;
+            }
             // Navigation runs after goals and can replace their STRAFE operation
             // with MOVE_TO. Keep the combat strafe requested this tick independent
             // of that operation, but never override a retreat or shore route.
@@ -2485,14 +2565,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                         this.human.shoreFallbackTarget != null,
                         this.human.getNavigation().isDone());
                 boolean directCombatFallback = this.human.directWaterCombatSteeringTick
-                        == this.human.tickCount && this.human.getTarget() != null
-                        && this.human.getTarget().isAlive() && !this.human.isFleeing;
+                        == this.human.tickCount && this.human.hasWaterCombatMovementInput();
                 if (directCombatFallback) {
                     LivingEntity target = this.human.getTarget();
                     this.wantedX = target.getX();
                     this.wantedY = target.getY();
                     this.wantedZ = target.getZ();
-                    this.speedModifier = 1.0D;
+                    this.speedModifier = Double.isFinite(this.human.directWaterCombatSpeed)
+                            ? Mth.clamp(this.human.directWaterCombatSpeed, 0, 3) : 0;
                     this.operation = MoveControl.Operation.MOVE_TO;
                 }
                 boolean directLootFallback = this.human.directWaterLootSteeringTick
@@ -2535,7 +2615,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                     return;
                 }
                 double horizontalDistance = Math.sqrt(d0 * d0 + d2 * d2);
-                if (horizontalDistance > 1.0E-4D && !this.human.hasPendingBetterCombatFacing()) {
+                if (this.human.hasShieldFacing()) this.human.applyShieldFacing();
+                if (horizontalDistance > 1.0E-4D && !this.human.hasPendingBetterCombatFacing()
+                        && !this.human.hasShieldFacing()) {
                     float yaw = (float)(Mth.atan2(d2, d0) * 57.2957763671875) - 90.0F;
                     this.human.setYRot(this.rotlerp(this.human.getYRot(), yaw, 90.0F));
                     this.human.yBodyRot = this.human.getYRot();

@@ -6,10 +6,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 public record HumanGunnerConfig(
         double tier1GunChance,
@@ -19,13 +17,7 @@ public record HumanGunnerConfig(
         double forcedRangedChance,
         double gunDropChance,
         double pillagerGunDamageMultiplier,
-        boolean autoAddNewGuns,
-        int autoAddedGunWeight,
-        Set<String> excludedAutoGunTypes,
-        Set<String> excludedGunNamespaces,
-        Map<String, Map<String, Integer>> tierGunTypeWeights,
-        Map<ResourceLocation, Integer> gunWhitelist,
-        Map<ResourceLocation, Integer> hiredGunAdditionalWhitelist
+        Map<String, Map<String, Integer>> tierGunTypeWeights
 ) {
     private static final String PATH = "hostile_humans_unified/global.json: tacz";
     private static volatile HumanGunnerConfig instance;
@@ -43,28 +35,24 @@ public record HumanGunnerConfig(
         return value;
     }
 
-    public Optional<ResourceLocation> rollAvailableGun(RandomSource random) {
-        return rollWeightedGun(random, availableGuns());
-    }
-
     /**
      * Selects a gun category for a newly created gunner, then applies the
      * existing per-gun whitelist weights inside that category. Categories
      * with no currently registered whitelist gun are omitted and the
      * remaining configured percentages are renormalized automatically.
      */
-    public Optional<ResourceLocation> rollAvailableGun(RandomSource random, String tierKey) {
+    public Optional<GunSupport.GunChoice> rollAvailableGun(RandomSource random, String tierKey) {
+        Map<String, Map<ResourceLocation, String>> catalogs = GunSupport.get().catalogsByBackend();
+        Map<GunSupport.GunChoice, Integer> allGuns = UnifiedConfig.get().gunSpawnPools().select(tierKey, catalogs);
         Map<String, Integer> configuredTypes = tierGunTypeWeights.get(tierKey);
         if (configuredTypes == null || configuredTypes.isEmpty()) {
-            return rollAvailableGun(random);
+            return rollWeightedGun(random, allGuns);
         }
 
-        Map<ResourceLocation, String> catalog = GunSupport.get().catalog();
-        Map<ResourceLocation, Integer> allGuns = availableGuns(catalog);
-        LinkedHashMap<String, LinkedHashMap<ResourceLocation, Integer>> gunsByType =
+        LinkedHashMap<String, LinkedHashMap<GunSupport.GunChoice, Integer>> gunsByType =
                 new LinkedHashMap<>();
-        for (Map.Entry<ResourceLocation, Integer> entry : allGuns.entrySet()) {
-            String type = catalog.getOrDefault(entry.getKey(), "");
+        for (Map.Entry<GunSupport.GunChoice, Integer> entry : allGuns.entrySet()) {
+            String type = catalogs.getOrDefault(entry.getKey().backend(), Map.of()).getOrDefault(entry.getKey().id(), "");
             if (configuredTypes.getOrDefault(type, 0) > 0) {
                 gunsByType.computeIfAbsent(type, ignored -> new LinkedHashMap<>())
                         .put(entry.getKey(), entry.getValue());
@@ -81,7 +69,7 @@ public record HumanGunnerConfig(
 
         double typeRoll = random.nextDouble() * totalTypeWeight;
         for (Map.Entry<String, Integer> entry : configuredTypes.entrySet()) {
-            LinkedHashMap<ResourceLocation, Integer> typedGuns = gunsByType.get(entry.getKey());
+            LinkedHashMap<GunSupport.GunChoice, Integer> typedGuns = gunsByType.get(entry.getKey());
             if (entry.getValue() <= 0 || typedGuns == null || typedGuns.isEmpty()) {
                 continue;
             }
@@ -93,8 +81,8 @@ public record HumanGunnerConfig(
         return Optional.empty();
     }
 
-    private static Optional<ResourceLocation> rollWeightedGun(
-            RandomSource random, Map<ResourceLocation, Integer> availableGuns
+    private static Optional<GunSupport.GunChoice> rollWeightedGun(
+            RandomSource random, Map<GunSupport.GunChoice, Integer> availableGuns
     ) {
         long totalWeight = availableGuns.values().stream().mapToLong(Integer::longValue).sum();
         if (totalWeight <= 0) {
@@ -102,7 +90,7 @@ public record HumanGunnerConfig(
         }
 
         double roll = random.nextDouble() * totalWeight;
-        for (Map.Entry<ResourceLocation, Integer> entry : availableGuns.entrySet()) {
+        for (Map.Entry<GunSupport.GunChoice, Integer> entry : availableGuns.entrySet()) {
             roll -= entry.getValue();
             if (roll < 0) {
                 return Optional.of(entry.getKey());
@@ -111,33 +99,10 @@ public record HumanGunnerConfig(
         return Optional.empty();
     }
 
-    public long availableGunCount() {
-        return availableGuns().size();
-    }
+    public long availableGunCount(String rank) { return availableGuns(rank).size(); }
 
-    private Map<ResourceLocation, Integer> availableGuns() {
-        return availableGuns(GunSupport.get().catalog());
-    }
-
-    private Map<ResourceLocation, Integer> availableGuns(Map<ResourceLocation, String> catalog) {
-        return selectAvailable(catalog, UnifiedConfig.get()::blacklisted);
-    }
-
-    Map<ResourceLocation, Integer> selectAvailable(Map<ResourceLocation, String> catalog,
-                                                 java.util.function.Predicate<String> blacklisted) {
-        LinkedHashMap<ResourceLocation, Integer> available = new LinkedHashMap<>();
-        catalog.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
-            ResourceLocation id = entry.getKey();
-            if (excludedGunNamespaces.contains(id.getNamespace()) || blacklisted.test(id.toString())) return;
-            Integer explicit = gunWhitelist.get(id);
-            // Explicit zero and blacklist both win over automatic discovery.
-            if (explicit != null) {
-                if (explicit > 0) available.put(id, explicit);
-            } else if (autoAddNewGuns && autoAddedGunWeight > 0 && !excludedAutoGunTypes.contains(entry.getValue())) {
-                available.put(id, autoAddedGunWeight);
-            }
-        });
-        return available;
+    private Map<GunSupport.GunChoice, Integer> availableGuns(String rank) {
+        return UnifiedConfig.get().gunSpawnPools().select(rank, GunSupport.get().catalogsByBackend());
     }
 
     private static HumanGunnerConfig load() {
@@ -161,39 +126,7 @@ public record HumanGunnerConfig(
                     ? root.get("gun_drop_chance").getAsDouble() : 0.01D;
             double pillagerDamageMultiplier = root.has("pillager_gun_damage_multiplier")
                     ? root.get("pillager_gun_damage_multiplier").getAsDouble() : 0.4D;
-            boolean autoAddNew = root.has("auto_add_new_guns")
-                    ? root.get("auto_add_new_guns").getAsBoolean()
-                    : true;
-            int autoAddedWeight = root.has("auto_added_gun_weight")
-                    ? Math.max(0, root.get("auto_added_gun_weight").getAsInt())
-                    : 5;
-            LinkedHashSet<String> excludedTypes = new LinkedHashSet<>();
-            if (root.has("excluded_auto_gun_types")) {
-                root.getAsJsonArray("excluded_auto_gun_types")
-                        .forEach(element -> excludedTypes.add(element.getAsString()));
-
-            } else {
-                excludedTypes.add("rpg");
-            }
-            LinkedHashSet<String> excludedNamespaces = new LinkedHashSet<>();
-            if (root.has("excluded_gun_namespaces")) {
-                root.getAsJsonArray("excluded_gun_namespaces")
-                        .forEach(element -> excludedNamespaces.add(element.getAsString()));
-            }
             Map<String, Map<String, Integer>> typeWeights = readTierGunTypeWeights(root);
-            LinkedHashMap<ResourceLocation, Integer> weights = new LinkedHashMap<>();
-            JsonObject gunObject = root.has("gun_whitelist")
-                    ? root.getAsJsonObject("gun_whitelist")
-                    : null;
-            readGunWeights(gunObject, "gun_whitelist", weights);
-            if (gunObject == null) {
-                weights.putAll(defaults().gunWhitelist());
-            }
-            LinkedHashMap<ResourceLocation, Integer> hiredAdditionalWeights = new LinkedHashMap<>();
-            JsonObject hiredAdditionalObject = root.has("hired_gun_additional_whitelist")
-                    ? root.getAsJsonObject("hired_gun_additional_whitelist")
-                    : null;
-            readGunWeights(hiredAdditionalObject, "hired_gun_additional_whitelist", hiredAdditionalWeights);
             return new HumanGunnerConfig(
                     clamp(tier1Chance),
                     clamp(chance),
@@ -202,13 +135,7 @@ public record HumanGunnerConfig(
                     clamp(forcedChance),
                     clamp(dropChance),
                     clampDamageMultiplier(pillagerDamageMultiplier),
-                    autoAddNew,
-                    autoAddedWeight,
-                    Set.copyOf(excludedTypes),
-                    Set.copyOf(excludedNamespaces),
-                    typeWeights,
-                    Map.copyOf(weights),
-                    Map.copyOf(hiredAdditionalWeights)
+                    typeWeights
             );
         } catch (Exception exception) {
             HumanGunner.LOGGER.error("Could not read {}; using defaults", PATH, exception);
@@ -225,34 +152,8 @@ public record HumanGunnerConfig(
                 0.33D,
                 0.01D,
                 0.4D,
-                false,
-                5,
-                Set.of("rpg"),
-                Set.of(),
-                defaultTierGunTypeWeights(),
-                Map.of(),
-                Map.of()
+                defaultTierGunTypeWeights()
         );
-    }
-
-    private static void readGunWeights(
-            JsonObject object, String configKey, Map<ResourceLocation, Integer> destination
-    ) {
-        if (object == null) return;
-        for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
-            try {
-                ResourceLocation gunId = ResourceLocation.tryParse(entry.getKey());
-                if (gunId == null) {
-                    throw new IllegalArgumentException("Invalid resource location");
-                }
-                destination.put(gunId, Math.max(0, entry.getValue().getAsInt()));
-            } catch (RuntimeException exception) {
-                HumanGunner.LOGGER.warn(
-                        "Ignoring invalid Hostile Humans Unified config entry {}.{}",
-                        configKey, entry.getKey()
-                );
-            }
-        }
     }
 
     private static Map<String, Map<String, Integer>> readTierGunTypeWeights(JsonObject root) {
