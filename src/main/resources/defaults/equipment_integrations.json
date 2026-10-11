@@ -87,5 +87,111 @@
         "feet": "immersive_armors:divine_boots"
       }
     ]
+  },
+  "scguns": {
+    "roamer": [
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:scrap_helmet",
+        "chest": "scguns:scrap_chestplate",
+        "legs": "scguns:scrap_leggings",
+        "feet": "scguns:scrap_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:redcoat_hat",
+        "chest": "scguns:redcoat_coat",
+        "legs": "scguns:redcoat_pants",
+        "feet": "scguns:redcoat_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:ridgetop",
+        "chest": "scguns:redcoat_coat",
+        "legs": "scguns:redcoat_pants",
+        "feet": "scguns:redcoat_boots"
+      }
+    ],
+    "tier1": [
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:scrap_helmet",
+        "chest": "scguns:scrap_chestplate",
+        "legs": "scguns:scrap_leggings",
+        "feet": "scguns:scrap_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:anthralite_helmet",
+        "chest": "scguns:anthralite_chestplate",
+        "legs": "scguns:anthralite_leggings",
+        "feet": "scguns:anthralite_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:cog_knight_helmet",
+        "chest": "scguns:cog_knight_chestplate",
+        "legs": "scguns:cog_knight_leggings",
+        "feet": "scguns:cog_knight_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:redcoat_hat",
+        "chest": "scguns:redcoat_coat",
+        "legs": "scguns:redcoat_pants",
+        "feet": "scguns:redcoat_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:iron_mask",
+        "chest": "scguns:anthralite_chestplate",
+        "legs": "scguns:anthralite_leggings",
+        "feet": "scguns:anthralite_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:brass_mask",
+        "chest": "scguns:cog_knight_chestplate",
+        "legs": "scguns:cog_knight_leggings",
+        "feet": "scguns:cog_knight_boots"
+      }
+    ],
+    "tier2": [
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:treated_brass_helmet",
+        "chest": "scguns:treated_brass_chestplate",
+        "legs": "scguns:treated_brass_leggings",
+        "feet": "scguns:treated_brass_boots"
+      },
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:adrien_helm",
+        "chest": "scguns:adrien_chestplate",
+        "legs": "scguns:adrien_leggings",
+        "feet": "scguns:adrien_boots"
+      }
+    ],
+    "tier3": [
+      {
+        "weight": 1,
+        "requires_mod": "scguns",
+        "head": "scguns:diamond_steel_helmet",
+        "chest": "scguns:diamond_steel_chestplate",
+        "legs": "scguns:diamond_steel_leggings",
+        "feet": "scguns:diamond_steel_boots"
+      }
+    ]
   }
 }

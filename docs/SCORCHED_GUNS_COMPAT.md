@@ -59,7 +59,7 @@ TaCZ专用动画只接受TaCZ枪。Scorched Guns使用基础双手持枪姿势�
 
 原生气体/燃烧/蜂群/信标范围效果可能持续、影响移动中的友军或破坏地形，未全局替换其伤害规则。默认关闭这些类型的自动使用；显式加入白名单前应验证。取消原生子弹友军命中发生在效果之前，但不是替换全部射线候选的保证，不能将它表述为所有场景均无阻碍穿透。
 
-护甲受既有全局自动导入开关及各阶 `equipment_loadout.automatic_scguns_armor` 控制。流浪者scrap；一阶scrap/anthralite/cog_knight；二阶treated_brass/adrien；三阶diamond_steel。仅追加已注册的完整套装，保留自定义池与权重，显式空池不补回。原生仅针对玩家的外骨骼模块、面罩与特殊护甲事件不自动复制到人类。
+护甲受既有全局自动导入开关及各阶 `equipment_loadout.automatic_scguns_armor` 控制。普通护甲名单集中于defaults/equipment_integrations.json，与沉浸式盔甲共用追加导入入口。流浪者scrap/redcoat及ridgetop头盔组合；一阶scrap/anthralite/cog_knight/redcoat及iron_mask/brass_mask头盔组合；二阶treated_brass/adrien；三阶diamond_steel。覆盖0.5.5注册的七种普通套装与三件独立头盔，共31件普通护甲。外骨骼四件套、核心和扩展模块不在自动导入表中。仅追加已注册的完整套装，保留自定义池与权重，显式空池不补回。原生仅针对玩家的外骨骼模块、面罩与特殊护甲事件不自动复制到人类。
 
 ## 玩家袭击信号弹
 

@@ -1,5 +1,13 @@
 # 开发任务与整合记录
 
+## 2026-10-11 Scorched Guns普通护甲池与散布接入复查（源码）
+
+- 基线 `4b1105cdd194bb9eac2fbfa5aadb8f2ff7897296`；主控/main/源码主工作树顺序编辑，不创建或编辑其他工作树。保留既存未跟踪Python缓存。范围EquipmentIntegrationDefaults、默认装备导入表及帮助、配置导入回归、联动文档与更新日志。
+- 本机0.5.5 JAR公开类型/字节码核对：ExoSuitItem依赖ExoSuitData/UpgradeManager与模块；七种普通套装及ridgetop/iron_mask/brass_mask是独立ArmorItem，不依赖该扩展系统。原名单已排除外骨骼，但漏redcoat及三件独立头盔。
+- 将Scguns分阶名单放入与沉浸式盔甲共用的equipment_integrations.json，补齐31件普通护甲；独立头盔与普通身体套装组合。自动导入表不包含外骨骼套装、核心或扩展模块。继续使用全局开关、各阶开关、已注册完整四部位校验、导入记录、空池和保留玩家权重规则；不强行重置既有导入记录，不删除玩家手填装备。
+- 散布只读复核：ScgunsIntegration将服务器AI精度除以既有经验散布系数，传给公开AIGunEvent.performGunAttack；原生getDirection负责难度误差与GunModifierHelper修正后的武器散布。ownsShotSpread跳过HHU随机散射，不重复加TaCZ散布；经验当前收缩AI误差，武器固有散布保留原生数据包职责，未修改此路径。
+- 验证：117项Python检查通过，包含31个普通护甲ID与真实JAR注册字段核对；修改Java及新增Java回归语法解析、默认JSON和git diff --check通过。扩展Java配置导入行为用例，未编译/执行。没有构建、实例配置写入、同步、push或游戏启动。待游戏验收新配置分阶导入、开关/自定义空池、普通护甲渲染及枪械精度效果；交付为本节对应本地提交。
+
 ## 2026-10-11 Scorched Guns医疗默认值与再生冷却调整（源码）
 
 - 基线 `d45c08aaccc92621d8a0c2365abb167b02a39934`；主控/main/源码主工作树顺序编辑，无并行编辑。范围仅ScgunsSettings、ScgunsMedical、默认配置、联动说明、更新日志及对应源码回归；既存未跟踪缓存保留、不暂存。

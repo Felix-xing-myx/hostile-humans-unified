@@ -10,6 +10,7 @@ public final class TierConfigFilesTest {
     public static void main(String[] args) throws Exception {
         checkNewBehaviorSections();
         checkImmersiveArmorImport();
+        checkScgunsArmorImport();
         checkMasterIntegrationSwitch();
         checkDefaultIntegrationRetry();
         checkProjection();
@@ -341,6 +342,42 @@ public final class TierConfigFilesTest {
         }
     }
 
+    private static void checkScgunsArmorImport() {
+        JsonObject defaults = UnifiedConfig.defaults();
+        Set<String> allIds = new HashSet<>();
+        for (String rank : TierConfigProjection.RANKS) {
+            JsonObject file = TierConfigProjection.tier(defaults, rank);
+            JsonObject gear = file.getAsJsonObject("equipment_loadout");
+            JsonArray before = gear.getAsJsonArray("armor_sets").deepCopy();
+            check(!EquipmentIntegrationDefaults.seedRank(rank, file, file, "scguns"::equals, id -> false),
+                    "Scguns unready registry cannot finalize " + rank);
+            check(!gear.has("_imported_scguns_armor"), "unready Scguns receipt absent " + rank);
+            check(EquipmentIntegrationDefaults.seedRank(rank, file, file, "scguns"::equals, id -> true),
+                    "Scguns ordinary armor imported " + rank);
+            JsonArray rows = gear.getAsJsonArray("armor_sets");
+            for (var row : before) check(rows.contains(row), "custom/original armor row retained " + rank);
+            for (var value : rows) {
+                JsonObject row = value.getAsJsonObject();
+                if (!row.has("requires_mod") || !row.get("requires_mod").getAsString().equals("scguns")) continue;
+                for (String slot : List.of("head", "chest", "legs", "feet")) {
+                    String id = row.get(slot).getAsString();
+                    check(!id.contains("exo_suit") && !id.contains("module"), "only ordinary armor " + id);
+                    allIds.add(id);
+                }
+            }
+            rows.get(rows.size() - 1).getAsJsonObject().addProperty("weight", 0);
+            JsonArray preserved = rows.deepCopy();
+            check(!EquipmentIntegrationDefaults.seedRank(rank, file, file, "scguns"::equals, id -> true)
+                    && rows.equals(preserved), "receipt preserves edits/weights " + rank);
+            file = TierConfigProjection.tier(defaults, rank);
+            file.getAsJsonObject("equipment_loadout").add("armor_sets", new JsonArray());
+            check(!EquipmentIntegrationDefaults.seedRank(rank, file, file, "scguns"::equals, id -> true),
+                    "Scguns empty armor pool remains empty " + rank);
+        }
+        check(allIds.size() == 31 && allIds.containsAll(Set.of("scguns:redcoat_hat", "scguns:ridgetop",
+                "scguns:iron_mask", "scguns:brass_mask")), "all registered ordinary Scguns armor covered");
+    }
+
     private static void checkMasterIntegrationSwitch() throws Exception {
         JsonObject defaults = UnifiedConfig.defaults();
         Path directory = Files.createTempDirectory("human-spartan-master-");
@@ -459,12 +496,14 @@ public final class TierConfigFilesTest {
                 gear.addProperty("automatic_spartan_weapons", false);
                 gear.addProperty("automatic_spartan_shields", false);
                 gear.addProperty("automatic_immersive_armors", false);
+                gear.addProperty("automatic_scguns_armor", false);
                 check(!ready.test(rank, file), "disabled flags prevent import " + rank);
                 file = TierConfigProjection.tier(defaults, rank);
                 gear = file.getAsJsonObject("equipment_loadout");
                 gear.add("automatic_spartan_weapons", JsonNull.INSTANCE);
                 gear.add("automatic_spartan_shields", JsonNull.INSTANCE);
                 gear.add("automatic_immersive_armors", JsonNull.INSTANCE);
+                gear.add("automatic_scguns_armor", JsonNull.INSTANCE);
                 check(!ready.test(rank, file), "malformed import flags preserved " + rank);
                 file = TierConfigProjection.tier(defaults, rank);
                 gear = file.getAsJsonObject("equipment_loadout");

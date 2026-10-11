@@ -123,6 +123,18 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertEqual(recipe["conditions"][0]["type"], "forge:or")
         self.assertEqual({c["modid"] for c in recipe["conditions"][0]["values"]}, {"tacz", "scguns"})
 
+    def test_ordinary_armor_table_excludes_exosuit_and_covers_registered_items(self):
+        groups = json.loads((ROOT / "src/main/resources/defaults/equipment_integrations.json").read_text(encoding="utf-8"))["scguns"]
+        self.assertEqual(set(groups), {"roamer", "tier1", "tier2", "tier3"})
+        ids = {row[slot] for rows in groups.values() for row in rows for slot in ("head", "chest", "legs", "feet")}
+        self.assertEqual(len(ids), 31)
+        self.assertFalse(any("exo_suit" in id or "module" in id for id in ids))
+        if os.environ.get("SCGUNS_API_JAR"):
+            with zipfile.ZipFile(os.environ["SCGUNS_API_JAR"]) as jar:
+                registrations = jar.read("top/ribs/scguns/init/ModItems.class")
+                for id in ids:
+                    self.assertIn(id.split(":")[1].upper().encode(), registrations, id)
+
     @unittest.skipUnless(os.environ.get("SCGUNS_API_JAR"), "Set SCGUNS_API_JAR for local API verification")
     def test_real_jar_public_signatures(self):
         entity = "Lnet/minecraft/world/entity/LivingEntity;"

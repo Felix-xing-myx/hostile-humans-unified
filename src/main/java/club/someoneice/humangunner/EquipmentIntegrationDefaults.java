@@ -72,7 +72,7 @@ final class EquipmentIntegrationDefaults {
                     && booleanOption(settings, "automatic_immersive_armors", true, false)
                     && !booleanOption(settings, "_imported_immersive_armors", false, true)) {
                 boolean anyArmor = false;
-                for (var row : ARMOR_DEFAULTS.getAsJsonArray(rank))
+                for (var row : ARMOR_DEFAULTS.getAsJsonObject("immersive_armors").getAsJsonArray(rank))
                     anyArmor |= appendArmor(settings, row.getAsJsonObject(), registered);
                 if (anyArmor) {
                     settings.addProperty("_imported_immersive_armors", true);
@@ -82,22 +82,10 @@ final class EquipmentIntegrationDefaults {
             if (eligible.test(rank, "armor_sets") && loaded.test("scguns")
                     && booleanOption(settings, "automatic_scguns_armor", true, false)
                     && !booleanOption(settings, "_imported_scguns_armor", false, true)) {
-                List<String> sets = switch (rank) {
-                    case "roamer" -> List.of("scrap");
-                    case "tier1" -> List.of("scrap", "anthralite", "cog_knight");
-                    case "tier2" -> List.of("treated_brass", "adrien");
-                    default -> List.of("diamond_steel");
-                };
+                // Explicit ordinary-armor tuples; ExoSuit/core/modules are never discovered into this pool.
                 boolean any = false;
-                for (String set : sets) {
-                    JsonObject row = new JsonObject();
-                    row.addProperty("weight", 1); row.addProperty("requires_mod", "scguns");
-                    row.addProperty("head", "scguns:" + set + (set.equals("adrien") ? "_helm" : "_helmet"));
-                    row.addProperty("chest", "scguns:" + set + "_chestplate");
-                    row.addProperty("legs", "scguns:" + set + "_leggings");
-                    row.addProperty("feet", "scguns:" + set + "_boots");
-                    any |= appendArmor(settings, row, registered);
-                }
+                for (var row : ARMOR_DEFAULTS.getAsJsonObject("scguns").getAsJsonArray(rank))
+                    any |= appendArmor(settings, row.getAsJsonObject(), registered);
                 if (any) { settings.addProperty("_imported_scguns_armor", true); changed = true; }
             }
             for (String mod : List.of("spartanweaponry", "spartanshields")) {
@@ -140,7 +128,7 @@ final class EquipmentIntegrationDefaults {
         try (var stream = EquipmentIntegrationDefaults.class.getResourceAsStream("/defaults/equipment_integrations.json")) {
             if (stream == null) throw new IllegalStateException("Missing packaged equipment integration defaults");
             try (var reader = new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8)) {
-                return com.google.gson.JsonParser.parseReader(reader).getAsJsonObject().getAsJsonObject("immersive_armors");
+                return com.google.gson.JsonParser.parseReader(reader).getAsJsonObject();
             }
         } catch (java.io.IOException error) {
             throw new IllegalStateException("Cannot read equipment integration defaults", error);
