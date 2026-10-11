@@ -2,16 +2,6 @@ package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
 import com.craftix.hostile_humans.HumanUtil;
-import com.tacz.guns.api.TimelessAPI;
-import com.tacz.guns.api.entity.IGunOperator;
-import com.tacz.guns.api.entity.ShootResult;
-import com.tacz.guns.api.item.IGun;
-import com.tacz.guns.resource.index.CommonGunIndex;
-import com.tacz.guns.resource.pojo.data.gun.BulletData;
-import com.tacz.guns.resource.pojo.data.gun.FeedType;
-import com.tacz.guns.resource.pojo.data.gun.GunReloadData;
-import com.tacz.guns.resource.pojo.data.gun.GunReloadTime;
-import com.tacz.guns.util.AttachmentDataUtils;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
@@ -25,28 +15,17 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
-import java.util.Map;
-import java.util.WeakHashMap;
 
 public final class GunnerGoal<T extends PathfinderMob> extends Goal {
-    private static final Map<PathfinderMob, GunDrawContinuity> DRAW_BINDINGS = new WeakHashMap<>();
     private static final double RETREAT_RANGE = 4.0D;
     private static final double CLOSE_MELEE_ENTER_RANGE = 2.0D;
     private static final double CLOSE_MELEE_EXIT_RANGE = 4.0D;
     private static final double OBSCURED_ADVANCE_DISTANCE = 10.0D;
     private static final int OBSCURED_ADVANCE_AFTER_TICKS = 30;
     private static final int MIN_AIM_TICKS = 2;
-    private static final long RELOAD_RETRY_TICKS = 4L;
     private static final double MAX_LEAD_TICKS = 8.0D;
-    private static final String GUN_STATE = "hostile_humans_unified:gun_state";
-    private static final String RELOAD_DEADLINE = "hostile_humans_unified:gun_reload_deadline";
-    private static final String RELOAD_HARD_DEADLINE = "hostile_humans_unified:gun_reload_hard_deadline";
-    private static final String RELOAD_GUN_ID = "hostile_humans_unified:gun_reloading_id";
-    private static final String NEXT_RELOAD_ATTEMPT = "hostile_humans_unified:gun_next_reload_attempt";
-    private static final String STALL_DEADLINE = "hostile_humans_unified:gun_stall_deadline";
-    private static final String BOLT_HARD_DEADLINE = "hostile_humans_unified:gun_bolt_hard_deadline";
     private final T mob;
-    private final IGunOperator operator;
+    private final GunSupport.Control operator;
     private int aimTicks;
     private int unseenTargetTicks;
     private int nextCloseMeleeAttackTick;
@@ -77,7 +56,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     public GunnerGoal(T mob) {
         this.mob = mob;
-        this.operator = IGunOperator.fromLivingEntity(mob);
+        this.operator = mob instanceof Human human ? GunSupport.get().control(human) : GunSupport.Control.NONE;
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
@@ -147,7 +126,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         nextApproachPathTick = mob.tickCount;
         movementTarget = mob.getTarget();
         if (isGun(mob.getMainHandItem())) {
-            ensureGunDrawn(mob, operator);
+            operator.ensureDrawn();
         }
     }
 
@@ -181,7 +160,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             MovementSpeedController.combat(human, false);
             GunAttackMovementState.clear(human);
         }
-        clearNpcSprintLock(mob, operator);
+        operator.clearSprintLock();
     }
 
     @Override
@@ -254,7 +233,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 if (!isGun(weapon)) {
                     return;
                 }
-                ensureGunDrawn(mob, operator);
+                operator.ensureDrawn();
                 human.getPersistentData().putString(
                         "hostile_humans_unified:ai_phase", "gun_close_defense_return"
                 );
@@ -275,13 +254,13 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // Clear sprint and TaCZ's independent sprint timer before combat
             // processing. Pursuit branches may re-enable sprint only when
             // they return without aiming or firing.
-            clearNpcSprintLock(mob, operator);
+            operator.clearSprintLock();
             if (!isShoreSeeking()) {
                 MovementSpeedController.combat(human, false);
             }
         }
 
-        if (ensureGunDrawn(mob, operator)) aimTicks = 0;
+        if (operator.ensureDrawn()) aimTicks = 0;
 
         mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
         double fireRangeSqr = firingRangeSqr(range);
@@ -357,7 +336,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // retains draw/melee/sprint locks independently from the held
             // ItemStack, so clear only those transient blockers before the
             // urgent counter-shot while continuing to retreat.
-            prepareUrgentCloseShot(mob, operator);
+            operator.prepareUrgentShot();
         }
         AimRotation aim = calculateAim(target, weapon);
         mob.setXRot(aim.pitch());
@@ -380,8 +359,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         // target independently. Supply the already calculated ballistic aim so
         // the projectile, animation and AI target all agree.
         AimRotation shotAim = applyShotSpread(aim, weapon);
-        ShootResult result = operator.shoot(shotAim::pitch, shotAim::yaw);
-        handleShootResult(mob, operator, weapon, result);
+        operator.shoot(weapon, shotAim.pitch(), shotAim.yaw());
     }
 
     private void tickCloseMeleeDefense(Human human, LivingEntity target, double distance) {
@@ -394,7 +372,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         } else {
             stopLateralMovement();
         }
-        clearNpcSprintLock(mob, operator);
+        operator.clearSprintLock();
         human.getLookControl().setLookAt(target, 45.0F, 35.0F);
         human.getPersistentData().putString(
                 "hostile_humans_unified:ai_phase", "gun_close_melee_defense"
@@ -427,236 +405,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         return MeleeCombatRange.reach(human, target);
     }
 
-    static void handleShootResult(
-            PathfinderMob mob, IGunOperator operator, ItemStack weapon, ShootResult result
-    ) {
-        long gameTime = mob.level().getGameTime();
-        mob.getPersistentData().putString(GUN_STATE, result.name().toLowerCase());
-        if (result == ShootResult.SUCCESS) {
-            mob.getPersistentData().putLong("hostile_humans_unified:last_gunshot_game_time", gameTime);
-            clearRecoveryTimers(mob);
-            return;
-        }
-
-        if (result == ShootResult.IS_SPRINTING) {
-            clearNpcSprintLock(mob, operator);
-            if (mob instanceof Human human) {
-                MovementSpeedController.combat(human, false);
-            }
-            return;
-        }
-
-        if (result == ShootResult.NO_AMMO || result == ShootResult.IS_RELOADING) {
-            operator.aim(false);
-            if (result == ShootResult.NO_AMMO && mob instanceof Human human
-                    && (human.isUsingItem() || !HumanAmmo.canReload(human, weapon))) {
-                // Eating/blocking and exhausted reserves are ordinary waiting states.
-                // Repeated draw recovery would reset the gun without fixing either.
-                clearRecoveryTimers(mob);
-                return;
-            }
-            IGun gun = IGun.getIGunOrNull(weapon);
-            if (gun == null) return;
-            String gunId = gun.getGunId(weapon).toString();
-            if (!gunId.equals(mob.getPersistentData().getString(RELOAD_GUN_ID))) {
-                clearRecoveryTimers(mob);
-                mob.getPersistentData().putString(RELOAD_GUN_ID, gunId);
-            }
-            long deadline = mob.getPersistentData().getLong(RELOAD_DEADLINE);
-            if (deadline <= 0) {
-                int delay = nativeReloadRecoveryDelay(weapon, gun);
-                deadline = gameTime + delay;
-                mob.getPersistentData().putLong(RELOAD_DEADLINE, deadline);
-                mob.getPersistentData().putLong(RELOAD_HARD_DEADLINE,
-                        gameTime + GunReloadPolicy.hardLimitTicks(delay));
-            }
-            if (result == ShootResult.NO_AMMO
-                    && gameTime >= mob.getPersistentData().getLong(NEXT_RELOAD_ATTEMPT)
-                    && (!(mob instanceof Human human) || HumanAmmo.canReload(human, weapon))) {
-                boolean wasReloading = operator.getDataHolder().reloadStateType.isReloading();
-                operator.reload();
-                mob.getPersistentData().putLong(NEXT_RELOAD_ATTEMPT, gameTime + RELOAD_RETRY_TICKS);
-                if (!wasReloading && operator.getDataHolder().reloadStateType.isReloading()) {
-                    // Waiting without reserves or under draw cooldown must not
-                    // spend most of the newly paid cycle's recovery budget.
-                    int delay = nativeReloadRecoveryDelay(weapon, gun);
-                    deadline = gameTime + delay;
-                    mob.getPersistentData().putLong(RELOAD_DEADLINE, deadline);
-                    mob.getPersistentData().putLong(RELOAD_HARD_DEADLINE,
-                            gameTime + GunReloadPolicy.hardLimitTicks(delay));
-                }
-            }
-            if (gameTime >= deadline) {
-                boolean stillReloading = operator.getSynReloadState().getStateType().isReloading();
-                if (stillReloading
-                        && gameTime < mob.getPersistentData().getLong(RELOAD_HARD_DEADLINE)) {
-                    // The game's own reload is progressing: do not replace it
-                    // with an instant full magazine at the expected deadline.
-                    mob.getPersistentData().putLong(RELOAD_DEADLINE, gameTime + 20L);
-                } else {
-                    recoverStalledGun(mob, operator, weapon, "reload_timeout");
-                }
-            }
-            return;
-        }
-
-        if (result == ShootResult.NEED_BOLT || result == ShootResult.IS_BOLTING) {
-            long deadline = mob.getPersistentData().getLong(STALL_DEADLINE);
-            if (deadline <= 0) {
-                int delay = nativeBoltRecoveryDelay(weapon);
-                deadline = gameTime + delay;
-                mob.getPersistentData().putLong(STALL_DEADLINE, deadline);
-                mob.getPersistentData().putLong(BOLT_HARD_DEADLINE,
-                        gameTime + GunReloadPolicy.hardLimitTicks(delay));
-            }
-            if (result == ShootResult.NEED_BOLT) {
-                operator.bolt();
-            }
-            if (gameTime >= deadline) {
-                if (operator.getSynIsBolting()
-                        && gameTime < mob.getPersistentData().getLong(BOLT_HARD_DEADLINE)) {
-                    mob.getPersistentData().putLong(STALL_DEADLINE, gameTime + 20L);
-                } else {
-                    recoverStalledGun(mob, operator, weapon, "bolt_timeout");
-                }
-            }
-            return;
-        }
-
-        if (result == ShootResult.NOT_DRAW) {
-            drawCurrentGun(mob, operator);
-            return;
-        }
-        if (result == ShootResult.IS_MELEE) {
-            prepareUrgentCloseShot(mob, operator);
-            return;
-        }
-        if (mob.getPersistentData().contains(BOLT_HARD_DEADLINE)) {
-            mob.getPersistentData().remove(STALL_DEADLINE);
-            mob.getPersistentData().remove(BOLT_HARD_DEADLINE);
-        }
-        if (result == ShootResult.COOL_DOWN
-                || result == ShootResult.IS_DRAWING
-                || result == ShootResult.OVERHEATED) {
-            return;
-        }
-
-        long deadline = mob.getPersistentData().getLong(STALL_DEADLINE);
-        if (deadline <= 0) {
-            mob.getPersistentData().putLong(STALL_DEADLINE, gameTime + 60L);
-        } else if (gameTime >= deadline) {
-            recoverStalledGun(mob, operator, weapon, result.name().toLowerCase());
-        }
-    }
-
-    private static void recoverStalledGun(
-            PathfinderMob mob, IGunOperator operator, ItemStack weapon, String reason
-    ) {
-        IGun gun = IGun.getIGunOrNull(weapon);
-        if (gun == null) {
-            clearRecoveryTimers(mob);
-            return;
-        }
-        TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).ifPresent(index -> {
-            LivingEntity target = mob.getTarget();
-            HumanGunner.LOGGER.debug(
-                    "TaCZ recovery context npc={} reason={} target={} rounds={} chamber={} usingItem={} reload={} reserves={}",
-                    mob.getUUID(), reason, target == null ? "none" : target.getUUID(),
-                    gun.getCurrentAmmoCount(weapon), gun.hasBulletInBarrel(weapon), mob.isUsingItem(),
-                    operator.getDataHolder().reloadStateType,
-                    mob instanceof Human human ? HumanAmmo.magazineCount(human) : -1);
-            operator.cancelReload();
-            // Recovery only clears stalled operator state. Native bolting must
-            // move a real magazine round into the chamber; recovery never adds
-            // rounds, even after a paid reload was interrupted or timed out.
-            drawCurrentGun(mob, operator);
-            mob.setSprinting(false);
-            mob.getPersistentData().putInt(
-                    "hostile_humans_unified:gun_recovery_count",
-                    mob.getPersistentData().getInt("hostile_humans_unified:gun_recovery_count") + 1
-            );
-            HumanGunner.LOGGER.debug(
-                    "Recovered stalled TaCZ gun {} for NPC {} after {}",
-                    gun.getGunId(weapon), mob.getUUID(), reason
-            );
-        });
-        clearRecoveryTimers(mob);
-    }
-
-    /**
-     * TaCZ remembers recent sprint time independently from LivingEntity's
-     * sprint flag. Swimming can therefore leave an NPC permanently returning
-     * IS_SPRINTING even after setSprinting(false).
-     */
-    static void clearNpcSprintLock(PathfinderMob mob, IGunOperator operator) {
-        mob.setSprinting(false);
-        operator.getDataHolder().sprintTimeS = 0.0F;
-        operator.getDataHolder().sprintTimestamp = -1L;
-    }
-
-    static boolean ensureGunDrawn(PathfinderMob mob, IGunOperator operator) {
-        ItemStack weapon = mob.getMainHandItem();
-        IGun gun = IGun.getIGunOrNull(weapon);
-        if (gun == null) return false;
-        var current = operator.getDataHolder().currentGunItem;
-        boolean bound = current != null && current.get() == weapon;
-        return DRAW_BINDINGS.computeIfAbsent(mob, ignored -> new GunDrawContinuity())
-                .ensure(weapon, gun.getGunId(weapon).toString(), bound, () -> drawCurrentGun(mob, operator));
-    }
-
-    private static boolean drawCurrentGun(PathfinderMob mob, IGunOperator operator) {
-        ItemStack weapon = mob.getMainHandItem();
-        IGun gun = IGun.getIGunOrNull(weapon);
-        if (gun == null) return false;
-        java.util.function.Supplier<ItemStack> requested = mob::getMainHandItem;
-        operator.draw(requested);
-        // TaCZ publishes the supplier only after an uncancelled GunDrawEvent.
-        if (operator.getDataHolder().currentGunItem != requested) return false;
-        DRAW_BINDINGS.computeIfAbsent(mob, ignored -> new GunDrawContinuity())
-                .drawn(weapon, gun.getGunId(weapon).toString());
-        return true;
-    }
-
-    static void prepareUrgentCloseShot(PathfinderMob mob, IGunOperator operator) {
-        clearNpcSprintLock(mob, operator);
-        operator.getDataHolder().meleeTimestamp = -1L;
-        operator.getDataHolder().meleePrepTickCount = 0;
-    }
-
-    private static int nativeReloadRecoveryDelay(ItemStack weapon, IGun gun) {
-        CommonGunIndex index = TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
-        if (index == null) return 100;
-        GunReloadData reload = index.getGunData().getReloadData();
-        if (reload == null) return 100;
-        GunReloadTime feed = reload.getFeed();
-        GunReloadTime cooldown = reload.getCooldown();
-        double feedSeconds = feed == null ? 0.0D : feed.getEmptyTime();
-        double cooldownSeconds = cooldown == null ? 0.0D : cooldown.getEmptyTime();
-        int capacity = Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(
-                weapon, index.getGunData()));
-        int missing = Math.max(1, capacity - gun.getCurrentAmmoCount(weapon));
-        return GunReloadPolicy.recoveryDelayTicks(reload.getType() == FeedType.MANUAL,
-                missing, feedSeconds, cooldownSeconds);
-    }
-
-    private static int nativeBoltRecoveryDelay(ItemStack weapon) {
-        IGun gun = IGun.getIGunOrNull(weapon);
-        if (gun == null) return 60;
-        CommonGunIndex index = TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
-        if (index == null) return 60;
-        return GunReloadPolicy.boltRecoveryDelayTicks(
-                index.getGunData().getBoltActionTime(), index.getGunData().getBoltFeedTime());
-    }
-
-    private static void clearRecoveryTimers(PathfinderMob mob) {
-        mob.getPersistentData().remove(RELOAD_DEADLINE);
-        mob.getPersistentData().remove(RELOAD_HARD_DEADLINE);
-        mob.getPersistentData().remove(RELOAD_GUN_ID);
-        mob.getPersistentData().remove(NEXT_RELOAD_ATTEMPT);
-        mob.getPersistentData().remove(STALL_DEADLINE);
-        mob.getPersistentData().remove(BOLT_HARD_DEADLINE);
-    }
-
     private void setAiming(boolean aiming) {
         operator.aim(aiming);
     }
@@ -665,16 +413,11 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         Vec3 origin = mob.getEyePosition();
         Vec3 aimPoint = GunAimPoint.forTarget(target);
 
-        IGun gun = IGun.getIGunOrNull(weapon);
-        CommonGunIndex index = gun == null
-                ? null
-                : TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
-        if (index != null) {
-            BulletData bullet = index.getBulletData();
-            double blocksPerTick = Math.max(0.1D, bullet.getSpeed() / 20.0D);
-            double travelTicks = Mth.clamp(origin.distanceTo(aimPoint) / blocksPerTick, 0.0D, MAX_LEAD_TICKS);
+        double blocksPerTick = GunSupport.get().projectileSpeed(weapon);
+        if (blocksPerTick > 0) {
+            double travelTicks = Mth.clamp(origin.distanceTo(aimPoint) / blocksPerTick, 0, MAX_LEAD_TICKS);
             aimPoint = aimPoint.add(target.getDeltaMovement().scale(travelTicks));
-            aimPoint = aimPoint.add(0.0D, 0.5D * bullet.getGravity() * travelTicks * travelTicks, 0.0D);
+            aimPoint = aimPoint.add(0, 0.5D * GunSupport.get().projectileGravity(weapon) * travelTicks * travelTicks, 0);
         }
 
         Vec3 delta = aimPoint.subtract(origin);
@@ -685,6 +428,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     private AimRotation applyShotSpread(AimRotation exactAim, ItemStack weapon) {
+        if (GunSupport.get().ownsShotSpread(weapon)) return exactAim;
         double standardDeviation = mob instanceof Human human
                 ? RangedAccuracy.gunSpreadDegrees(human, weapon)
                 : 0.6D;
@@ -1078,14 +822,11 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     private static boolean isGun(ItemStack stack) {
-        return !stack.isEmpty() && IGun.getIGunOrNull(stack) != null;
+        return GunSupport.get().isGun(stack);
     }
 
     private GunRangePolicy.Band preferredRange(ItemStack weapon) {
-        IGun gun = IGun.getIGunOrNull(weapon);
-        CommonGunIndex index = gun == null ? null
-                : TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
-        return GunRangePolicy.forType(index == null ? "" : index.getType());
+        return GunRangePolicy.forType(GunSupport.get().gunType(weapon));
     }
 
     private double firingRangeSqr(GunRangePolicy.Band range) {

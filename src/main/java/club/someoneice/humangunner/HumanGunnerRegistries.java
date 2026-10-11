@@ -20,6 +20,9 @@ public final class HumanGunnerRegistries {
     public static final RegistryObject<Item> HUMAN_MAGAZINE = ITEMS.register("human_magazine",
             () -> new HumanAmmoItem(true, new Item.Properties().stacksTo(24)));
 
+    public static final RegistryObject<Item> SCGUNS_SIGNAL_FLARE = ITEMS.register("scguns_signal_flare",
+            () -> new ScgunsSignalItem(new Item.Properties().stacksTo(16).rarity(Rarity.RARE)));
+
     public static final RegistryObject<MenuType<HumanInventoryMenu>> HUMAN_INVENTORY_MENU = MENUS.register(
             "human_inventory",
             () -> IForgeMenuType.create(HumanInventoryMenu::fromNetwork)

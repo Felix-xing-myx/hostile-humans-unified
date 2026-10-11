@@ -194,5 +194,8 @@
   "screen.hostile_humans_unified.roster.growth_summary": "Lv%s · XP%s%%",
   "dialogue.hostile_humans_unified.ammo_empty.arrows": "I'm out of arrows. Got any more for me?",
   "dialogue.hostile_humans_unified.ammo_empty.magazines": "My gun's dry, and I'm short on magazines. Got any spares?",
-  "dialogue.hostile_humans_unified.ammo_empty.both": "No arrows, no rounds. Could use some arrows and magazines!"
+  "dialogue.hostile_humans_unified.ammo_empty.both": "No arrows, no rounds. Could use some arrows and magazines!",
+  "item.hostile_humans_unified.scguns_signal_flare": "Scorched Guns Raid Signal Flare",
+  "message.hostile_humans_unified.scguns_flare.unavailable": "This raid is unavailable here. Check dimension, difficulty and raid configuration.",
+  "message.hostile_humans_unified.scguns_flare.busy": "A raid or signal flare is already active in this dimension."
 }

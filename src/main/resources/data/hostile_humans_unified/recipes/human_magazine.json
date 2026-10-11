@@ -1,14 +1,39 @@
 {
   "conditions": [
-    { "type": "forge:mod_loaded", "modid": "tacz" }
+    {
+      "type": "forge:or",
+      "values": [
+        {
+          "type": "forge:mod_loaded",
+          "modid": "tacz"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "scguns"
+        }
+      ]
+    }
   ],
   "type": "minecraft:crafting_shapeless",
   "ingredients": [
-    { "item": "minecraft:gunpowder" },
-    { "item": "minecraft:gunpowder" },
-    { "item": "minecraft:gunpowder" },
-    { "item": "minecraft:iron_ingot" },
-    { "item": "minecraft:iron_ingot" }
+    {
+      "item": "minecraft:gunpowder"
+    },
+    {
+      "item": "minecraft:gunpowder"
+    },
+    {
+      "item": "minecraft:gunpowder"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "minecraft:iron_ingot"
+    }
   ],
-  "result": { "item": "hostile_humans_unified:human_magazine", "count": 2 }
+  "result": {
+    "item": "hostile_humans_unified:human_magazine",
+    "count": 2
+  }
 }

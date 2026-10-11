@@ -69,6 +69,16 @@ final class TaczIntegration implements GunSupport {
         gun.setBulletInBarrel(stack, index.getGunData().getBolt() != com.tacz.guns.resource.pojo.data.gun.Bolt.OPEN_BOLT);
         return stack;
     }
+    public double projectileSpeed(ItemStack stack) {
+        IGun gun = IGun.getIGunOrNull(stack);
+        return gun == null ? 0 : TimelessAPI.getCommonGunIndex(gun.getGunId(stack))
+                .map(index -> index.getBulletData().getSpeed() / 20.0D).orElse(0.0D);
+    }
+    public double projectileGravity(ItemStack stack) {
+        IGun gun = IGun.getIGunOrNull(stack);
+        return gun == null ? 0 : TimelessAPI.getCommonGunIndex(gun.getGunId(stack))
+                .map(index -> (double) index.getBulletData().getGravity()).orElse(0.0D);
+    }
     public Goal goal(Human human) { return new GunnerGoal<>(human); }
     public boolean isReloading(Human human) {
         IGunOperator operator = IGunOperator.fromLivingEntity(human);
@@ -104,19 +114,20 @@ final class TaczIntegration implements GunSupport {
         // The native operator needs a current-gun supplier even when its combat
         // goal has never run. Drawing once may impose TaCZ's ordinary draw
         // cooldown; the next check will start a normal timed reload.
-        if (GunnerGoal.ensureGunDrawn(human, operator)) return;
+        if (TaczGunMechanics.ensureGunDrawn(human, operator)) return;
         operator.reload();
     }
     public Control control(Human human) {
         IGunOperator operator = IGunOperator.fromLivingEntity(human);
         return new Control() {
             public void aim(boolean aiming) { operator.aim(aiming); }
-            public void draw() { GunnerGoal.ensureGunDrawn(human, operator); }
-            public void clearSprintLock() { GunnerGoal.clearNpcSprintLock(human, operator); }
-            public void prepareUrgentShot() { GunnerGoal.prepareUrgentCloseShot(human, operator); }
+            public void draw() { ensureDrawn(); }
+            public boolean ensureDrawn() { return TaczGunMechanics.ensureGunDrawn(human, operator); }
+            public void clearSprintLock() { TaczGunMechanics.clearNpcSprintLock(human, operator); }
+            public void prepareUrgentShot() { TaczGunMechanics.prepareUrgentCloseShot(human, operator); }
             public void shoot(ItemStack weapon, float pitch, float yaw) {
-                if (GunnerGoal.ensureGunDrawn(human, operator)) return;
-                GunnerGoal.handleShootResult(human, operator, weapon, operator.shoot(() -> pitch, () -> yaw));
+                if (TaczGunMechanics.ensureGunDrawn(human, operator)) return;
+                TaczGunMechanics.handleShootResult(human, operator, weapon, operator.shoot(() -> pitch, () -> yaw));
             }
         };
     }

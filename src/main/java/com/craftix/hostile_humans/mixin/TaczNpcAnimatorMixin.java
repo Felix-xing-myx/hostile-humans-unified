@@ -25,7 +25,7 @@ public abstract class TaczNpcAnimatorMixin {
             float tickDelta,
             CallbackInfo callback
     ) {
-        if (entity instanceof Human human && GunSupport.get().isGun(human.getMainHandItem())) {
+        if (entity instanceof Human human && GunSupport.isTaczGunItem(human.getMainHandItem())) {
             callback.cancel();
         }
     }

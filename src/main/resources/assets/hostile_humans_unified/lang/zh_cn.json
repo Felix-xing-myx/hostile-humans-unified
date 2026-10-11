@@ -194,5 +194,8 @@
   "screen.hostile_humans_unified.roster.growth_summary": "等级%s · 经验%s%%",
   "dialogue.hostile_humans_unified.ammo_empty.arrows": "箭用光了，给我补点箭吧！",
   "dialogue.hostile_humans_unified.ammo_empty.magazines": "枪打空了，弹匣也不够换了，给我补点吧！",
-  "dialogue.hostile_humans_unified.ammo_empty.both": "箭射光了，枪也没弹了，帮我补点箭和弹匣吧！"
+  "dialogue.hostile_humans_unified.ammo_empty.both": "箭射光了，枪也没弹了，帮我补点箭和弹匣吧！",
+  "item.hostile_humans_unified.scguns_signal_flare": "Scorched Guns 袭击信号弹",
+  "message.hostile_humans_unified.scguns_flare.unavailable": "此处无法召唤该袭击，请检查维度、难度及袭击配置。",
+  "message.hostile_humans_unified.scguns_flare.busy": "此维度已有袭击或正在发射的信号弹。"
 }

@@ -2,6 +2,8 @@
 
 ## 未发布 / Unreleased
 
+- 新增Scorched Guns可选联动源码框架：原生NPC射击与统一枪手战术、普通枪／能量枪弹匣计费和后台装填、基础护甲追加导入、四种可配置医疗用品、原生投掷物工厂及玩家袭击信号弹。统一GunSupport和MedicalSupplies入口，TaCZ专用动画保持独立。未构建、未投放，完整范围见docs/SCORCHED_GUNS_COMPAT.md。
+
 - 更换为用户提供的封面，按原比例压缩为768×576的PNG，约203KiB，减少封面资源对模组体积的影响。
 
 ## 3.7.0 — 2026-10-10（已发布 / Released）

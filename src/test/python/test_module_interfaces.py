@@ -17,7 +17,7 @@ class ModuleInterfaces(unittest.TestCase):
         self.assertLess(hook.index("HumanInventorySession.isEditing(human)"), hook.index("RecoverySupplies.tickHandCustody(human)"))
         self.assertEqual(hook.count("RecoverySupplies.tickEffects(human)"), 1)
         effects = source("RecoverySupplies.java").split("static void tickEffects(Human human)", 1)[1].split("private static void consumeCompletedPotion", 1)[0]
-        for name in ("tickRegenerationHealing", "FirstAidCompat.tick", "tickGradualHealing"):
+        for name in ("tickRegenerationHealing", "MedicalSupplies.tick", "tickGradualHealing"):
             self.assertIn(name + "(human)", effects)
         for forbidden in ("tickHandCustody", "setItemInHand", "setInventoryItem", "restoreShield"):
             self.assertNotIn(forbidden, effects)

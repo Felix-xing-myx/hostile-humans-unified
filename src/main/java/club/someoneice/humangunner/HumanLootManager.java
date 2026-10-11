@@ -422,7 +422,8 @@ public final class HumanLootManager {
     }
 
     static double inventoryValue(Human human, ItemStack stack) {
-        if (FirstAidCompat.isSupply(stack)) return FirstAidCompat.inventoryValue(stack);
+        if (MedicalSupplies.isSupply(stack)) return MedicalSupplies.inventoryValue(stack);
+        if (ScgunsCompat.throwItem(stack)) return UnifiedConfig.get().scguns().throwableQuality();
         if (HumanAmmo.isAmmo(stack)) {
             HumanData data = human.getData();
             boolean gunner = GunCustody.hasOwnedGun(human);
@@ -493,7 +494,7 @@ public final class HumanLootManager {
         if (stack.isEmpty()) kind = SupplyInventoryPolicy.Kind.EMPTY;
         else if (stack.getFoodProperties(human) != null && RecoverySupplies.isRecoverySupply(human, stack))
             kind = SupplyInventoryPolicy.Kind.FOOD;
-        else if (FirstAidCompat.isMedicine(stack) || (stack.is(Items.POTION)
+        else if (MedicalSupplies.isMedicine(stack) || (stack.is(Items.POTION)
                 && PotionUtils.getMobEffects(stack).stream().anyMatch(effect ->
                 effect.getEffect() == MobEffects.HEAL || effect.getEffect() == MobEffects.REGENERATION)))
             kind = SupplyInventoryPolicy.Kind.MEDICINE;

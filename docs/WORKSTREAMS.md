@@ -1,5 +1,16 @@
 # 开发任务与整合记录
 
+## 2026-10-11 Scorched Guns联动框架（源码，未构建）
+
+- 基线 `fcf289ccb680f12438d7f71841b206350ea31075`；负责人主控，源码主工作树 `E:/MC/Create-Delight/HostileHumansUnified-维护/project`，分支main，顺序编辑，无并行编辑会话。既存未跟踪src/test/python/__pycache__/保留且不提交。
+- 用户授权先搭源码框架；枪械只复用原生武器/射击/弹道，决策与移动仍归HHU；医疗数值开放；玩家联动信号弹召唤原生Scguns袭击单位。补充确认能量枪同样按类型消耗通用弹匣后定时充满。
+- 修改范围：GunSupport/CompositeGunSupport、GunnerGoal与抽取的TaczGunMechanics、Scguns枪械/医疗/投掷物/袭击桥、HumanAmmo/RecoverySupplies/物品价值、护甲导入、客户端专属动画过滤、注册与资源、全局/分阶配置投影、compileOnly及文档/静态回归。全部共享文件由主控负责。
+- 公共接口：共用GunSupport.Control/ballistics/magazineCost；MedicalSupplies负责恢复用品边界；可选API类型不进入公共接口。Scguns使用公开NPC射击/投掷工厂/袭击管理器和Forge能量能力；无新Mixin、反射或移动Goal。TaCZ原生状态方法按原文抽取，专属动画不再接受其他后端的枪。
+- 配置：全局scguns精度、枪伤、原生类型弹匣费、四种医疗配置、投掷白名单/时机、玩家信号弹；各阶automatic_scguns_armor遵守既有全局导入开关、空池与自定义权重。现有tacz历史键中的共用选枪规则继续供两后端使用，详见docs/SCORCHED_GUNS_COMPAT.md。
+- 验证：115项Python检查通过，包含所给0.5.5原生JAR公开方法签名核查；372个Java文件仅语法解析、0错误；282份资源JSON及mods.toml解析通过；git diff --check通过。原TaCZ状态段与HEAD逐字比较一致。Java类型编译、可选缺席链接及游戏测试未执行；没有Gradle、构建、实例配置更新、同步、push或游戏启动。
+- 限制与待验收：原生玩家专属外骨骼/面罩效果未复制；枪械基础双手姿势，未移植玩家专属关键帧；持续范围投掷默认不自动使用；友军命中取消不保证所有射线场景完全无阻碍穿透；联动信号弹当前创造栏/命令获取且暂无合成配方。需后续验证双枪械后端、能量/特殊枪、后台换弹跨卸载、医疗消费、友军/PVP/盾、投掷安全、原生袭击生命周期和多士兵负载。
+- 交付提交：本节所在的Scorched Guns联动框架本地提交；版本仍为3.7.0，新增内容列入Unreleased，不标记为已发布。
+
 ## 2026-10-10 水域高崖受阻与追击绕行修复（源码）
 
 - 基线f17df9333b5098bdc2badd2efdfe00a6dbafc534；主控/main/源码主工作树顺序编辑，不分派编辑Agent。范围：Human水面追击/上岸生命周期、HumanNavigation失败边、HumanTerrainSafety、PursuitNavigation/MovementContinuity、CombatTerrainNavigation及共用搜索预算；没有修改配置、版本或实例。

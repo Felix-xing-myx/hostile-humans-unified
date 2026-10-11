@@ -16,20 +16,30 @@ public interface GunSupport {
     static boolean isGunItem(ItemStack stack) {
         return stack != null && !stack.isEmpty() && GunIdentityHolder.IDENTITY.test(stack);
     }
+    /** Provider-specific animation/hooks must not accept another backend's weapon. */
+    static boolean isTaczGunItem(ItemStack stack) {
+        return stack != null && !stack.isEmpty() && GunIdentityHolder.TACZ.test(stack);
+    }
+    static boolean isScgunsGunItem(ItemStack stack) {
+        return stack != null && !stack.isEmpty() && GunIdentityHolder.SCGUNS.test(stack);
+    }
     final class GunIdentityHolder {
-        private static final java.util.function.Predicate<ItemStack> IDENTITY = ModList.get().isLoaded("tacz")
+        private static final java.util.function.Predicate<ItemStack> TACZ = ModList.get().isLoaded("tacz")
                 ? new TaczGunItemIdentity() : stack -> false;
+        private static final java.util.function.Predicate<ItemStack> SCGUNS = ModList.get().isLoaded("scguns")
+                ? new ScgunsGunIdentity() : stack -> false;
+        private static final java.util.function.Predicate<ItemStack> IDENTITY = stack -> TACZ.test(stack) || SCGUNS.test(stack);
         private GunIdentityHolder() { }
     }
 
     final class Holder {
-        private static final GunSupport INSTANCE = ModList.get().isLoaded("tacz")
-                && UnifiedConfig.get().taczEnabled() ? new TaczIntegration() : new GunSupport() {};
+        private static final GunSupport INSTANCE = CompositeGunSupport.create();
         private Holder() {}
     }
 
     default boolean enabled() { return false; }
     default boolean isGun(ItemStack stack) { return false; }
+    default int magazineCost(ItemStack stack) { return HumanAmmoPolicy.magazineCost(gunType(stack)); }
     default String gunType(ItemStack stack) { return ""; }
     default ResourceLocation gunId(ItemStack stack) { return null; }
     default boolean isBullet(DamageSource source) { return false; }
@@ -43,12 +53,16 @@ public interface GunSupport {
     default boolean isReloading(Human human, ItemStack weapon) {
         return weapon == human.getMainHandItem() && isReloading(human);
     }
+    default double projectileSpeed(ItemStack weapon) { return 0; }
+    default double projectileGravity(ItemStack weapon) { return 0; }
+    default boolean ownsShotSpread(ItemStack weapon) { return false; }
     default void registerEvents() {}
 
     interface Control {
         Control NONE = new Control() {};
         default void aim(boolean aiming) {}
         default void draw() {}
+        default boolean ensureDrawn() { draw(); return false; }
         default void clearSprintLock() {}
         default void prepareUrgentShot() {}
         default void shoot(ItemStack weapon, float pitch, float yaw) {}

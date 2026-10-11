@@ -1827,7 +1827,9 @@
           "item": "minecraft:shield",
           "weight": 1
         }
-      ]
+      ],
+      "automatic_scguns_armor": true,
+      "_说明_automatic_scguns_armor_中文": "开启全局装备自动导入时，一次性追加本阶Scorched Guns默认防具；不覆盖自定义条目，显式空池保持为空。外骨骼模块、玩家专属护甲额外效果不移植。"
     },
     "tier1": {
       "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。",
@@ -1985,7 +1987,9 @@
           "item": "minecraft:shield",
           "weight": 1
         }
-      ]
+      ],
+      "automatic_scguns_armor": true,
+      "_说明_automatic_scguns_armor_中文": "开启全局装备自动导入时，一次性追加本阶Scorched Guns默认防具；不覆盖自定义条目，显式空池保持为空。外骨骼模块、玩家专属护甲额外效果不移植。"
     },
     "tier2": {
       "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。",
@@ -2138,7 +2142,9 @@
           "item": "minecraft:shield",
           "weight": 1
         }
-      ]
+      ],
+      "automatic_scguns_armor": true,
+      "_说明_automatic_scguns_armor_中文": "开启全局装备自动导入时，一次性追加本阶Scorched Guns默认防具；不覆盖自定义条目，显式空池保持为空。外骨骼模块、玩家专属护甲额外效果不移植。"
     },
     "tier3": {
       "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。",
@@ -2275,7 +2281,9 @@
           "item": "minecraft:shield",
           "weight": 1
         }
-      ]
+      ],
+      "automatic_scguns_armor": true,
+      "_说明_automatic_scguns_armor_中文": "开启全局装备自动导入时，一次性追加本阶Scorched Guns默认防具；不覆盖自定义条目，显式空池保持为空。外骨骼模块、玩家专属护甲额外效果不移植。"
     }
   },
   "spawning": {
@@ -2814,6 +2822,118 @@
       "_说明_morphine_中文": "吗啡的单件拾取品质。",
       "_description_morphine_en": "Per-item morphine pickup quality.",
       "morphine": 94
+    }
+  },
+  "scguns": {
+    "_说明_中文": "Scorched Guns可选联动；仅调用原生枪械/投掷物/袭击API，移动与战术由本模组管理。修改后重启生效。",
+    "enabled": true,
+    "_说明_散布_中文": "AI瞄准精度系数越大越准：原生AI误差锥角=min(25度,5×难度系数÷此值)。武器及配件本身的散布另由原模组数据控制；经验收缩只作用于AI误差，不重复叠加各阶TaCZ角度散布。",
+    "ai_accuracy_modifier": 2.0,
+    "_说明_枪伤_中文": "在原模组原生NPC难度/枪伤系数之后，再乘此值、各阶枪伤系数和战斗培养枪伤系数；不修改玩家枪伤。",
+    "npc_damage_multiplier": 1.0,
+    "_说明_能量_中文": "能量枪通过Forge能量能力读取、扣除和充满能量；不足一次射击时按原生换弹时长补能，同样消耗通用弹匣。不给没有充放电能力的枪写假能量。",
+    "_说明_弹匣费用_中文": "每次装满或补满能量按原生武器类型一次计费；普通枪与能量枪相同，战斗中不足一次射击才装填；全局关闭弹药消耗时不扣弹匣。",
+    "magazines_per_reload_by_type": {
+      "pistol": 1,
+      "magnum": 1,
+      "smg": 1,
+      "rifle": 2,
+      "shotgun": 2,
+      "sniper": 3,
+      "lmg": 4,
+      "heavy": 5,
+      "flamethrower": 5,
+      "shock": 2,
+      "laser": 2,
+      "plasma": 2,
+      "special": 2
+    },
+    "medical_supplies": {
+      "scguns:basic_poultice": {
+        "enabled": true,
+        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始；四种药品共用冷却。",
+        "healing": 4,
+        "use_ticks": 32,
+        "shared_cooldown_ticks": 100,
+        "quality": 60,
+        "effects": []
+      },
+      "scguns:honey_sulfur_poultice": {
+        "enabled": true,
+        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始；四种药品共用冷却。",
+        "healing": 8,
+        "use_ticks": 32,
+        "shared_cooldown_ticks": 100,
+        "quality": 65,
+        "effects": [
+          {
+            "id": "minecraft:regeneration",
+            "duration_ticks": 100,
+            "level": 1
+          }
+        ]
+      },
+      "scguns:enchanted_bandage": {
+        "enabled": true,
+        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始；四种药品共用冷却。",
+        "healing": 12,
+        "use_ticks": 32,
+        "shared_cooldown_ticks": 400,
+        "quality": 75,
+        "effects": [
+          {
+            "id": "minecraft:regeneration",
+            "duration_ticks": 100,
+            "level": 2
+          },
+          {
+            "id": "minecraft:absorption",
+            "duration_ticks": 400,
+            "level": 1
+          }
+        ]
+      },
+      "scguns:dragon_salve": {
+        "enabled": true,
+        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始；四种药品共用冷却。",
+        "healing": 16,
+        "use_ticks": 32,
+        "shared_cooldown_ticks": 700,
+        "quality": 85,
+        "effects": [
+          {
+            "id": "minecraft:regeneration",
+            "duration_ticks": 200,
+            "level": 2
+          },
+          {
+            "id": "minecraft:absorption",
+            "duration_ticks": 700,
+            "level": 1
+          }
+        ]
+      }
+    },
+    "throwables": {
+      "_说明_中文": "只消耗背包里的真实物品，不自动发放；投掷前检查目标许可、落点友军和弹道，飞行后目标移动仍可能造成误伤或原生地形破坏。默认只开放手榴弹、震撼弹、钉子炸弹；其它原生工厂已接入，可按ID加入。气体/燃烧/蜂群/信标的持续范围效果由原模组控制。",
+      "enabled": true,
+      "allowed_items": [
+        "scguns:grenade",
+        "scguns:stun_grenade",
+        "scguns:nail_bomb"
+      ],
+      "cooldown_ticks": 200,
+      "minimum_range": 6.0,
+      "maximum_range": 20.0,
+      "friendly_safety_radius": 8.0,
+      "fuse_ticks": 60,
+      "quality": 50.0
+    },
+    "signal_flare": {
+      "_说明_中文": "新增本模组信号弹由玩家使用，触发Scorched Guns原生袭击；raid_id必须对应已加载的原生raid与flare数据。和平难度、无效维度、已有袭击时不消耗物品。",
+      "enabled": true,
+      "raid_id": "copper",
+      "cooldown_ticks": 1200
     }
   }
 }

@@ -79,6 +79,27 @@ final class EquipmentIntegrationDefaults {
                     changed = true;
                 }
             }
+            if (eligible.test(rank, "armor_sets") && loaded.test("scguns")
+                    && booleanOption(settings, "automatic_scguns_armor", true, false)
+                    && !booleanOption(settings, "_imported_scguns_armor", false, true)) {
+                List<String> sets = switch (rank) {
+                    case "roamer" -> List.of("scrap");
+                    case "tier1" -> List.of("scrap", "anthralite", "cog_knight");
+                    case "tier2" -> List.of("treated_brass", "adrien");
+                    default -> List.of("diamond_steel");
+                };
+                boolean any = false;
+                for (String set : sets) {
+                    JsonObject row = new JsonObject();
+                    row.addProperty("weight", 1); row.addProperty("requires_mod", "scguns");
+                    row.addProperty("head", "scguns:" + set + (set.equals("adrien") ? "_helm" : "_helmet"));
+                    row.addProperty("chest", "scguns:" + set + "_chestplate");
+                    row.addProperty("legs", "scguns:" + set + "_leggings");
+                    row.addProperty("feet", "scguns:" + set + "_boots");
+                    any |= appendArmor(settings, row, registered);
+                }
+                if (any) { settings.addProperty("_imported_scguns_armor", true); changed = true; }
+            }
             for (String mod : List.of("spartanweaponry", "spartanshields")) {
                 String flag = mod.equals("spartanweaponry") ? "automatic_spartan_weapons" : "automatic_spartan_shields";
                 String receipt = "_imported_" + mod;

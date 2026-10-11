@@ -108,6 +108,7 @@ public final class HumanGunner {
         }
         GunSupport.get().registerEvents();
         FirstAidCompat.register();
+        ScgunsMedical.register();
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanProjectileRelations::onProjectileExplosion);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanProjectileRelations::onProtectedPlayerAttack);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanOwnerProtection::onPlayerAttack);
@@ -160,7 +161,7 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(SoldierRosterAudit::onServerStopped);
         MinecraftForge.EVENT_BUS.addListener(SoldierRosterNetwork::onPlayerLogout);
         MinecraftForge.EVENT_BUS.addListener(SoldierRosterNetwork::onServerStopped);
-        LOGGER.info("Hostile Humans Unified initialized; optional TaCZ firearms {}", GunSupport.get().enabled() ? "enabled" : "disabled");
+        LOGGER.info("Hostile Humans Unified initialized; optional firearms {}", GunSupport.get().enabled() ? "enabled" : "disabled");
     }
 
     private static void onRegisterSpawnPlacements(SpawnPlacementRegisterEvent event) {
@@ -264,6 +265,7 @@ public final class HumanGunner {
                 HumanLootManager.optimizeOwnedEquipment(human);
             }
             GunSupport.get().tickIdleReload(human);
+            ScgunsCompat.tick(human);
             if (human.getTarget() instanceof Player player
                     && HumanRelations.effectiveOwner(human) == null
                     && IdentityBadgeAccess.blocksInitiatedHostility(human, player)

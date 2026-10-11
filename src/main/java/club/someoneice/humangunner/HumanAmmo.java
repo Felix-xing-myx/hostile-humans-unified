@@ -27,7 +27,7 @@ public final class HumanAmmo {
     public static boolean consumeArrow(Human human) { return !consumptionEnabled() || consume(human, ARROW_ID, 1); }
     private static boolean consumptionEnabled() { return UnifiedConfig.get().ammoConsumptionEnabled(); }
     public static int magazineCost(ItemStack gun) {
-        return HumanAmmoPolicy.magazineCost(GunSupport.get().gunType(gun));
+        return GunSupport.get().magazineCost(gun);
     }
     public static boolean canReload(Human human, ItemStack gun) {
         return GunSupport.get().isGun(gun)

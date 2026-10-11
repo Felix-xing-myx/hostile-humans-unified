@@ -5,7 +5,7 @@
 | 职责 | 维护入口 | 调用约束 |
 | --- | --- | --- |
 | 恢复用品选择、使用与背包托管 | `RecoverySupplies` | 各恢复Goal申请同一UseSession，不自行扣物品或换回副手 |
-| 恢复效果推进 | `RecoverySupplies.tickEffects` | 每个服务器LivingTick一次，在菜单编辑锁之前；内部依次推进再生、First Aid、食物，不改装备 |
+| 恢复效果推进 | `RecoverySupplies.tickEffects` | 每个服务器LivingTick一次，在菜单编辑锁之前；内部依次推进再生、MedicalSupplies、食物，不改装备 |
 | 使用完成补充结算 | `RecoverySupplies.onUseCompleted` | Human先执行原生completeUsingItem，再在成功结束使用后调用；原生效果、药水消费和瞬间治疗II补充值不散落在实体里 |
 | First Aid可选适配 | `FirstAidCompat` / 内部`FirstAidApiBridge` | 仅Human且必须拥有实际UseSession；Forge完成事件处理原生结果，公开API桥在安装后才解析；不改玩家 |
 | 弓弩分类、远程威胁及战术走位资格 | `CombatWeaponPolicy` | 普通弓弩子类及斯巴达共用判断；威胁判断不授权攻击、不更换武器 |
@@ -72,3 +72,10 @@ RangedMeleeCycle只累计实际运行的近战tick，默认80 tick后在无前�
 所有恢复 Goal 使用 RecoverySupplies.isUseInProgress 等待自己的会话，不能以“主手正在使用物品”判断副手食物是否完成。每个食物动作每 tick 仅推进一次，完成前标记终态，经物品 finishUsingItem 和 Forge 开始/完成钩子执行真实消耗；未消耗不追加本模组食物回血。中断、紧急治疗和手动背包操作结束动作，副手盾及容器余物仍通过原有精确交换与安静等待流程归还。客户端同步的进食标志仅用于视觉，不决定物品消耗或恢复。
 
 进食本身不发起跳跃或专属拉距。PlayerLikeMovementGoal 只在确实沿远离目标方向疾跑时允许进食中的随机撤离跳跃；地形跳跃与正常跳砍仍由原控制器决定。药水和 First Aid 药品继续使用原恢复会话，不纳入食物并行动作。移除失效的 food_use_speed_multiplier 配置，举盾减速配置保持独立。
+
+## 可选枪械与医疗联动
+
+- `GunSupport`保留物理枪身份和可战斗枪两种语义，`CompositeGunSupport`按当前武器分派。`GunnerGoal`只管理共用战术，不引用TaCZ/Scguns API；`TaczGunMechanics`隔离原TaCZ原生状态操作，ScgunsIntegration只调用原生NPC射击接口，不注册原生MOVE目标。
+- `GunSupport.magazineCost`统一普通/能量枪计费入口；Scguns装填用稳定物品事务UUID和人类服务端剩余加载tick关联，切近战不重复收费、不每tick同步物品进度。
+- `MedicalSupplies`统一First Aid与Scguns用品识别、品质、时长、可使用性和效果推进。`RecoverySupplies`继续独占UseSession和物品托管；原生完成事件只在持有会话时授予效果，不改玩家。
+- `ScgunsCompat`为无可选类型签名的入口，投掷物与袭击API隔离在安装后才调用的桥内；完整范围及限制见[Scorched Guns说明](SCORCHED_GUNS_COMPAT.md)。

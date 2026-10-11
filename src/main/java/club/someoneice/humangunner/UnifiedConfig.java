@@ -18,6 +18,7 @@ public final class UnifiedConfig {
     private final GrowthConfig growth;
     private final JumpAttackConfig jumpAttack;
     private final FirstAidSettings firstAid;
+    private final ScgunsSettings scguns;
     private final Map<String, ConfiguredEquipmentLoadout> equipmentLoadouts;
     private final Recruitment recruitment;
     private final boolean betterCombatSoldierMeleeEnabled;
@@ -68,6 +69,7 @@ public final class UnifiedConfig {
         root = merge(defaults, configured);
         jumpAttack = JumpAttackConfig.parse(object(root, "jump_attack"));
         firstAid = FirstAidSettings.parse(object(root, "first_aid"));
+        scguns = ScgunsSettings.parse(object(root, "scguns"));
         vanillaMode = bool(root, "vanilla_mode", false);
         Map<String, ConfiguredEquipmentLoadout> loadouts = new LinkedHashMap<>();
         for (String rank : List.of("roamer", "tier1", "tier2", "tier3")) {
@@ -234,6 +236,7 @@ public final class UnifiedConfig {
     public GrowthConfig growth() { return growth; }
     public JumpAttackConfig jumpAttack() { return jumpAttack; }
     public FirstAidSettings firstAid() { return firstAid; }
+    public ScgunsSettings scguns() { return scguns; }
     EquipmentGrowthPolicy equipmentGrowth() { return equipmentGrowth; }
     public ConfiguredEquipmentLoadout equipmentLoadout(String rank) {
         return equipmentLoadouts.getOrDefault(rank, equipmentLoadouts.get("roamer"));

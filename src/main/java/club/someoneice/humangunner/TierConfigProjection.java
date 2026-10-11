@@ -86,9 +86,9 @@ final class TierConfigProjection {
                     "weapon_spread_degrees", "tacz", "growth_profile", "equipment_loadout")
                 : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "growth", "ammunition",
                     "equipment_integration", "ai", "recruitment", "spawning", "damage", "jump_attack",
-                    "better_combat", "first_aid", "tacz", "native_gameplay");
+                    "better_combat", "first_aid", "scguns", "tacz", "native_gameplay");
         orderGroup(result, "equipment_loadout", List.of("ranged_chance", "ranged_in_backpack", "allow_tacz_firearms",
-                "automatic_spartan_weapons", "automatic_spartan_shields", "automatic_immersive_armors",
+                "automatic_spartan_weapons", "automatic_spartan_shields", "automatic_immersive_armors", "automatic_scguns_armor",
                 "weapon_count", "guaranteed_shields_min", "guaranteed_shields_max", "automatic_shield_enchantments",
                 "mainhand", "ranged_mainhand", "armor_sets", "shield_pool", "inventory", "offhand", "bonus_mainhand", "rules"));
         orderGroup(result, "attributes", List.of("max_health", "attack_damage", "armor",

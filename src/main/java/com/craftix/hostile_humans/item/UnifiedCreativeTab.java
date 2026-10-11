@@ -55,7 +55,10 @@ public final class UnifiedCreativeTab {
                         items.addAll(HumanGunnerRegistries.ITEMS.getEntries());
                         for (RegistryObject<Item> item : items) {
                             if (item == HumanGunnerRegistries.HUMAN_MAGAZINE
-                                    && !net.minecraftforge.fml.ModList.get().isLoaded("tacz")) continue;
+                                    && !net.minecraftforge.fml.ModList.get().isLoaded("tacz")
+                                    && !net.minecraftforge.fml.ModList.get().isLoaded("scguns")) continue;
+                            if (item == HumanGunnerRegistries.SCGUNS_SIGNAL_FLARE
+                                    && !net.minecraftforge.fml.ModList.get().isLoaded("scguns")) continue;
                             output.accept(item.get());
                         }
                     })

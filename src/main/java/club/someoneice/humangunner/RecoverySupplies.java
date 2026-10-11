@@ -178,14 +178,14 @@ public final class RecoverySupplies {
                 if (allowEnchantedApple) return true;
                 continue;
             }
-            if (stack.is(Items.GOLDEN_APPLE) || ((isHealingPotion(stack) || FirstAidCompat.isMedicine(stack)) && canUsePotionNow(human, stack))
+            if (stack.is(Items.GOLDEN_APPLE) || ((isHealingPotion(stack) || MedicalSupplies.isMedicine(stack)) && canUsePotionNow(human, stack))
                     || (allowFood && isRecoveryFood(human, stack))) return true;
         }
         return false;
     }
 
     public static boolean isRecoverySupply(Human human, ItemStack stack) {
-        return FirstAidCompat.isSupply(stack) || isSupportedSupplyPotion(stack)
+        return MedicalSupplies.isSupply(stack) || isSupportedSupplyPotion(stack)
                 || stack.is(Items.GOLDEN_APPLE)
                 || stack.is(Items.ENCHANTED_GOLDEN_APPLE)
                 || isRecoveryFood(human, stack);
@@ -196,7 +196,7 @@ public final class RecoverySupplies {
     }
 
     public static float pendingGradualHealing(Human human) {
-        return Math.max(0.0F, human.getPersistentData().getFloat(PENDING_HEAL)) + FirstAidCompat.pendingHealing(human);
+        return Math.max(0.0F, human.getPersistentData().getFloat(PENDING_HEAL)) + MedicalSupplies.pendingHealing(human);
     }
 
     public static float projectedHealth(Human human) {
@@ -1013,7 +1013,7 @@ public final class RecoverySupplies {
     }
 
     private static boolean canUsePotionNow(Human human, ItemStack stack) {
-        if (FirstAidCompat.isSupply(stack)) return FirstAidCompat.canUse(human, stack);
+        if (MedicalSupplies.isSupply(stack)) return MedicalSupplies.canUse(human, stack);
         if (!stack.is(Items.POTION)) return true;
         MobEffectInstance active = human.getEffect(MobEffects.REGENERATION);
         return active == null || !PotionRecoveryPolicy.regenerationActive(active.getDuration())
@@ -1031,7 +1031,7 @@ public final class RecoverySupplies {
     static void tickEffects(Human human) {
         if (human.level().isClientSide || !human.isAlive()) return;
         tickRegenerationHealing(human);
-        FirstAidCompat.tick(human);
+        MedicalSupplies.tick(human);
         tickGradualHealing(human);
     }
 
@@ -1180,7 +1180,7 @@ public final class RecoverySupplies {
         }
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
             ItemStack stack = data.getInventoryItem(i);
-            if (FirstAidCompat.isMorphine(stack) && FirstAidCompat.canUse(human, stack)) return i;
+            if (MedicalSupplies.isMorphine(stack) && MedicalSupplies.canUse(human, stack)) return i;
             if (!stack.is(Items.POTION) || !canUsePotionNow(human, stack)) {
                 continue;
             }
@@ -1228,7 +1228,7 @@ public final class RecoverySupplies {
     }
 
     private static void accelerateFoodUse(Human human, ItemStack stack) {
-        if (FirstAidCompat.isSupply(stack)) return;
+        if (MedicalSupplies.isSupply(stack)) return;
         if (stack.getUseAnimation() != net.minecraft.world.item.UseAnim.EAT && !isInstantHealingPotion(stack)) {
             return;
         }
@@ -1238,7 +1238,7 @@ public final class RecoverySupplies {
     }
 
     private static int recoveryUseDuration(ItemStack stack) {
-        int medicalDuration = FirstAidCompat.useDuration(stack);
+        int medicalDuration = MedicalSupplies.useDuration(stack);
         if (medicalDuration > 0) return medicalDuration;
         return isInstantHealingPotion(stack)
                 ? PotionRecoveryPolicy.instantHealingUseDuration(stack.getUseDuration())
@@ -1389,9 +1389,9 @@ public final class RecoverySupplies {
     }
 
     private static int healingPotionScore(Human human, ItemStack stack) {
-        if (FirstAidCompat.isMedicine(stack)) {
-            return FirstAidCompat.canUse(human, stack)
-                    ? (int) FirstAidCompat.inventoryValue(stack) * 2 : Integer.MIN_VALUE;
+        if (MedicalSupplies.isMedicine(stack)) {
+            return MedicalSupplies.canUse(human, stack)
+                    ? (int) MedicalSupplies.inventoryValue(stack) * 2 : Integer.MIN_VALUE;
         }
         if (!stack.is(Items.POTION) || !canUsePotionNow(human, stack)) return Integer.MIN_VALUE;
         int score = 0;

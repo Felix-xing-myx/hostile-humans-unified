@@ -48,7 +48,7 @@ public final class GunCombatPolicyTest {
         for (String entry : new String[]{"canUse", "canContinueToUse", "tick", "humanGunner$tryImmediateCounterattack"})
             check(calls(GOALS + "MeleeAttackGoal", entry, "isGunItem"), "native goal guard " + entry);
         check(calls(MOD + "BetterCombatMeleeCombat", "isEnabled", "humanGunner$canMeleeAttack"), "BC disabled for held guns");
-        check(calls(MOD + "GunnerGoal", "start", "ensureGunDrawn")
+        check(calls(MOD + "GunnerGoal", "start", "ensureDrawn")
                 && !calls(MOD + "GunnerGoal", "start", "draw"), "goal restart avoids unconditional draw");
         for (String targetGoal : new String[]{"NearestAttackableTargetGoalCustom", "NearestAttackableTargetGoalWithHumanLimiter"}) {
             check(calls(GOALS + targetGoal, "canContinueToUse", "isAlive"), "dead target rejected " + targetGoal);
@@ -79,8 +79,8 @@ public final class GunCombatPolicyTest {
         for (String entry : new String[]{"canContinueToUse", "tick"})
             check(calls(MOD + "AdaptiveCombatGoal", entry, "isValidThreat"), "cached tactical threat revalidated: " + entry);
         check(calls(MOD + "GunnerGoal", "tick", "canAttack"), "live gun tick rechecks attack permission");
-        check(index(method(MOD + "GunnerGoal", "handleShootResult"), "isUsingItem")
-                < index(method(MOD + "GunnerGoal", "handleShootResult"), "reload"),
+        check(index(method(MOD + "TaczGunMechanics", "handleShootResult"), "isUsingItem")
+                < index(method(MOD + "TaczGunMechanics", "handleShootResult"), "reload"),
                 "ordinary item-use wait is checked before reload attempts");
         check(!calls(MOD + "TaczHumanReloadTransactions", "isPaidReloading", "end"),
                 "reload-state queries never cancel native reload state");

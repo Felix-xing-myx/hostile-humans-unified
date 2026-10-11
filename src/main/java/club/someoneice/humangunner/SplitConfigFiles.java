@@ -74,7 +74,7 @@ final class SplitConfigFiles {
             JsonObject data = read(path, 2);
             boolean imported = rank && integrations.test(rankName(path), data);
             if (!rank) {
-                for (String key : List.of("jump_attack", "first_aid")) {
+                for (String key : List.of("jump_attack", "first_aid", "scguns")) {
                     if (!data.has(key) && defaults.has(key)) {
                         JsonObject section = defaults.getAsJsonObject(key).deepCopy();
                         if (key.equals("jump_attack") && TierConfigProjection.at(data, "damage.jump_attack_damage_multiplier") != null)
@@ -82,6 +82,10 @@ final class SplitConfigFiles {
                         data.add(key, section);
                     }
                 }
+            }
+            if (rank && data.has("equipment_loadout") && data.get("equipment_loadout").isJsonObject()) {
+                JsonObject loadout = data.getAsJsonObject("equipment_loadout");
+                if (!loadout.has("automatic_scguns_armor")) loadout.addProperty("automatic_scguns_armor", true);
             }
             TierConfigProjection.refreshGuidance(data, defaults);
             JsonObject arranged = TierConfigProjection.arrange(data, rank);

@@ -1,0 +1,135 @@
+"""Optional integration boundaries and installed-JAR public API contracts; no game/compilation."""
+import json
+import os
+import struct
+import unittest
+import zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[3]
+PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+
+def source(name):
+    return (PKG / (name + ".java")).read_text(encoding="utf-8")
+
+def public_methods(blob):
+    """Read method descriptors without loading any optional class/dependency."""
+    cursor = 8
+    def u1():
+        nonlocal cursor
+        value = blob[cursor]; cursor += 1
+        return value
+    def u2():
+        nonlocal cursor
+        value = struct.unpack_from(">H", blob, cursor)[0]; cursor += 2
+        return value
+    def skip(n):
+        nonlocal cursor
+        cursor += n
+    cp = [None] * u2()
+    index = 1
+    while index < len(cp):
+        tag = u1()
+        if tag == 1:
+            length = u2(); cp[index] = blob[cursor:cursor+length].decode("utf-8", errors="replace"); skip(length)
+        elif tag in (3, 4, 9, 10, 11, 12, 17, 18): skip(4)
+        elif tag in (5, 6): skip(8); index += 1
+        elif tag in (7, 8, 16, 19, 20): skip(2)
+        elif tag == 15: skip(3)
+        else: raise AssertionError(f"Unknown constant pool tag {tag}")
+        index += 1
+    skip(6); skip(2 * u2())
+    def attributes():
+        nonlocal cursor
+        for _ in range(u2()):
+            skip(2); size = struct.unpack_from(">I", blob, cursor)[0]; skip(4 + size)
+    for _ in range(u2()): skip(6); attributes()
+    methods = set()
+    for _ in range(u2()):
+        flags, name, descriptor = u2(), u2(), u2()
+        if flags & 1: methods.add((cp[name], cp[descriptor]))
+        attributes()
+    return methods
+
+class ScgunsBoundary(unittest.TestCase):
+    def test_shared_tactics_do_not_link_optional_gun_api(self):
+        goal = source("GunnerGoal")
+        self.assertNotIn("com.tacz.", goal)
+        self.assertNotIn("top.ribs.scguns", goal)
+        self.assertIn("operator.shoot(weapon, shotAim.pitch(), shotAim.yaw())", goal)
+        self.assertIn("previous.aim(false)", source("CompositeGunSupport"))
+        self.assertNotIn("new GunAttackGoal", source("ScgunsIntegration"))
+        animator = (ROOT / "src/main/java/com/craftix/hostile_humans/client/renderer/TaczNpcAnimator.java").read_text(encoding="utf-8")
+        self.assertIn("GunSupport.isTaczGunItem", animator)
+        self.assertNotIn("GunSupport.get().isGun", animator)
+        self.assertIn("instanceof IEnergyGun", source("ScgunsIntegration"))
+
+    def test_energy_uses_public_capability_and_one_paid_reload_transaction(self):
+        adapter = source("ScgunsIntegration")
+        for api in ("ForgeCapabilities.ENERGY", "storage.receiveEnergy(", "extractEnergy(energyCost(weapon), false)"):
+            self.assertIn(api, adapter)
+        self.assertNotIn('putInt("Energy"', adapter)
+        self.assertLess(adapter.index("HumanAmmo.consumeMagazines(human, stack)"), adapter.index('state.putUUID("transaction"'))
+        self.assertIn('stack.getTag().getUUID(RELOAD).equals(state.getUUID("transaction"))', adapter)
+        self.assertIn('GunSupport.get().magazineCost(gun)', source("HumanAmmo"))
+        config = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
+        fees = config["scguns"]["magazines_per_reload_by_type"]
+        self.assertEqual([fees[k] for k in ("pistol", "rifle", "sniper", "lmg", "heavy")], [1, 2, 3, 4, 5])
+        self.assertEqual(fees["laser"], 2)
+
+    def test_medical_custody_and_original_first_aid_remain_connected(self):
+        facade = source("MedicalSupplies")
+        self.assertIn("FirstAidCompat.tick(human)", facade)
+        self.assertIn("ScgunsMedical.tick(human)", facade)
+        self.assertIn("MedicalSupplies.tick(human)", source("RecoverySupplies"))
+        medical = source("ScgunsMedical")
+        self.assertIn("RecoverySupplies.ownsSupplyUse", medical)
+        self.assertIn("PotionRecoveryPolicy.needsPotionCharge", medical)
+        self.assertIn("human.level().isClientSide", medical)
+        self.assertNotIn("getDeclaredField", medical)
+
+    def test_raid_is_player_owned_and_consumption_follows_acceptance(self):
+        item = source("ScgunsSignalItem")
+        self.assertLess(item.index("ScgunsCompat.launchFlare(serverPlayer)"), item.index("stack.shrink(1)"))
+        raid = source("ScgunsRaidBridge")
+        self.assertIn("new RaidFlareEntity(level, player", raid)
+        self.assertIn("RaidManager.hasActiveRaidInDimension", raid)
+        self.assertIn("validDimensions()", raid)
+        self.assertNotIn("new Human", raid)
+
+    def test_config_and_magazine_recipe_support_scguns_without_tacz(self):
+        config = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
+        scguns = config["scguns"]
+        self.assertEqual(len(scguns["medical_supplies"]), 4)
+        self.assertGreater(scguns["ai_accuracy_modifier"], 0)
+        self.assertEqual(scguns["signal_flare"]["raid_id"], "copper")
+        recipe = json.loads((ROOT / "src/main/resources/data/hostile_humans_unified/recipes/human_magazine.json").read_text())
+        self.assertEqual(recipe["conditions"][0]["type"], "forge:or")
+        self.assertEqual({c["modid"] for c in recipe["conditions"][0]["values"]}, {"tacz", "scguns"})
+
+    @unittest.skipUnless(os.environ.get("SCGUNS_API_JAR"), "Set SCGUNS_API_JAR for local API verification")
+    def test_real_jar_public_signatures(self):
+        entity = "Lnet/minecraft/world/entity/LivingEntity;"
+        level = "Lnet/minecraft/world/level/Level;"
+        stack = "Lnet/minecraft/world/item/ItemStack;"
+        checks = {
+            "entity/ai/AIGunEvent": [("performGunAttack", "(Lnet/minecraft/world/entity/Mob;" + entity + stack + "Ltop/ribs/scguns/common/Gun;F)V")],
+            "item/GunItem": [("getModifiedGun", "(" + stack + ")Ltop/ribs/scguns/common/Gun;")],
+            "common/Gun": [("getAmmoCount", "(" + stack + ")I"), ("getBurstCooldown", "(" + stack + ")I"), ("getProjectile", "(" + stack + ")Ltop/ribs/scguns/common/Gun$Projectile;")],
+            "common/Gun$Projectile": [("getEnergyUse", "()I")],
+            "common/Gun$Reloads": [("getReloadTimer", "()I")],
+            "config/RaidFlareConfig$FlareData": [("burstDelay", "()I")],
+            "item/GrenadeItem": [("create", "(" + level + entity + "I)Ltop/ribs/scguns/entity/throwable/ThrowableGrenadeEntity;")],
+            "item/GasGrenadeItem": [("create", "(" + level + entity + "IF)Ltop/ribs/scguns/entity/throwable/ThrowableGrenadeEntity;")],
+            "entity/projectile/RaidFlareEntity": [("<init>", "(" + level + entity + "Ljava/lang/String;)V")],
+            "config/RaidConfig": [("getRaidByRaidId", "(Ljava/lang/String;)Ltop/ribs/scguns/config/RaidConfig$RaidData;")],
+            "event/GunProjectileHitEvent": [("getProjectile", "()Ltop/ribs/scguns/entity/projectile/ProjectileEntity;")],
+            "entity/projectile/ProjectileEntity": [("getShooter", "()" + entity)],
+        }
+        with zipfile.ZipFile(os.environ["SCGUNS_API_JAR"]) as jar:
+            for cls, expected in checks.items():
+                methods = public_methods(jar.read("top/ribs/scguns/" + cls + ".class"))
+                for method in expected: self.assertIn(method, methods, cls)
+
+if __name__ == "__main__":
+    unittest.main()

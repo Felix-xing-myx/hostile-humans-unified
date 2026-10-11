@@ -37,8 +37,8 @@ class FirstAidContract(unittest.TestCase):
         self.assertIn("healer.maxHeal.getAsInt()", BRIDGE)
         self.assertIn("healer.ticksPerHeal.getAsInt()", BRIDGE)
         self.assertIn("(long) pulses * interval > Integer.MAX_VALUE", BRIDGE)
-        self.assertIn("if (FirstAidCompat.isSupply(stack)) return;", RECOVERY)
-        self.assertIn("FirstAidCompat.useDuration(stack)", RECOVERY)
+        self.assertIn("if (MedicalSupplies.isSupply(stack)) return;", RECOVERY)
+        self.assertIn("MedicalSupplies.useDuration(stack)", RECOVERY)
 
     def test_shared_course_and_morphine_block_reuse(self):
         self.assertIn('if (isMedicine(stack)) return state.getInt("pulses") <= 0', COMPAT)
@@ -50,18 +50,18 @@ class FirstAidContract(unittest.TestCase):
 
     def test_course_persists_and_ticks_even_without_food_pending(self):
         tick = RECOVERY.split("static void tickEffects(Human human)", 1)[1].split("private static void consumeCompletedPotion", 1)[0]
-        self.assertLess(tick.index("FirstAidCompat.tick(human)"), tick.index("tickGradualHealing(human)"))
+        self.assertLess(tick.index("MedicalSupplies.tick(human)"), tick.index("tickGradualHealing(human)"))
         self.assertIn("human.getPersistentData().put(STATE, state)", COMPAT)
         self.assertIn('state.getInt("next_pulse") - 1', COMPAT)
         self.assertNotIn("getGameTime", COMPAT)
         self.assertNotIn("getHealth() >=", COMPAT)
-        self.assertIn("FirstAidCompat.pendingHealing(human)", RECOVERY)
+        self.assertIn("MedicalSupplies.pendingHealing(human)", RECOVERY)
 
     def test_pickup_and_ai_keep_medical_and_tactical_roles(self):
-        self.assertIn("FirstAidCompat.isSupply(stack) || isSupportedSupplyPotion(stack)", RECOVERY)
-        self.assertIn("FirstAidCompat.isMorphine(stack) && FirstAidCompat.canUse(human, stack)", RECOVERY)
-        self.assertIn("FirstAidCompat.isMedicine(stack)", LOOT)
-        self.assertIn("FirstAidCompat.inventoryValue(stack)", LOOT)
+        self.assertIn("MedicalSupplies.isSupply(stack) || isSupportedSupplyPotion(stack)", RECOVERY)
+        self.assertIn("MedicalSupplies.isMorphine(stack) && MedicalSupplies.canUse(human, stack)", RECOVERY)
+        self.assertIn("MedicalSupplies.isMedicine(stack)", LOOT)
+        self.assertIn("MedicalSupplies.inventoryValue(stack)", LOOT)
         self.assertIn(", 60, 0, 1000)", SETTINGS)
         self.assertIn(", 65, 0, 1000)", SETTINGS)
         self.assertIn(", 94, 0, 1000)", SETTINGS)

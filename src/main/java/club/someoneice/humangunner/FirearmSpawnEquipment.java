@@ -23,7 +23,7 @@ final class FirearmSpawnEquipment {
         human.getPersistentData().putBoolean(GUN_ROLL_DONE, true);
         if (HumanGunnerConfig.get().availableGunCount() == 0) {
             if (WARNED_EMPTY_GUN_POOL.compareAndSet(false, true)) {
-                LOGGER.warn("Hostile Humans Unified found no configured firearms in the loaded TaCZ common gun index");
+                LOGGER.warn("Hostile Humans Unified found no configured firearms in the loaded optional gun catalogs");
             }
             return ItemStack.EMPTY;
         }
