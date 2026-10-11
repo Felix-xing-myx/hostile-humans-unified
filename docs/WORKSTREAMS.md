@@ -1120,3 +1120,12 @@
 - 再次检查无游戏Java进程，仅替换Forge 47.4.21测试实例本模组JAR，未改配置或其他模组；First Aid仅使用E:/MC/firstaid-1.20.1-1.1.jar只读编译，不安装到实例。
 - 旧JAR及deployment.json：部署备份/20261011-145139-3.7.0-scguns-render-Forge_47.4.21。旧SHA-256：0A26063D3923BEAC73EEC80DB702680FF24601006764B36B096F83F9FD50230D；新构建/实例一致：319D7D6F5644696FA3388E16F38A07E18E3E8E4FD9905A53936C0040F23C42FE，3,976,966字节，实例唯一HHU JAR。
 - 未推送、未启动游戏；待验收双枪/单手/重武器持握、背负盾与配件穿模、移动俯仰时枪口火光位置及独立枪伤配置。
+
+## 2026-10-11 背盾坐标与双枪大角度持握修正
+
+- 用户反馈盾牌上下倒置、原版盾牌插入躯干，以及双枪大角度转向时枪手分离；要求提高背盾位置、增加倾斜并确认TaCZ独立兼容。主控/root，main主工作树，基线03b5ddf；无并行编辑，保留原有Python缓存。
+- 范围/接口：HumanAnimatedItemInHandLayer负责背盾坐标，躯干锚点Y .45→.30、Z .26→.38（鞘翅.43→.55），倾角12→25度，并绕X转180度校正朝向。原版盾通过局部(.5,.5,.5)抵消ItemRenderer的中心位移，原生Y/Z翻转与公共转向抵消；仍由原生渲染器显示旗帜/附魔，普通烘焙盾不接受原版补偿。
+- TaCZ：背盾分支直接调用GunSupport.isGunItem，早于ScgunsNpcAnimator；GunIdentityHolder按安装情况独立创建TaCZ/焦燃身份提供者，缺少焦燃时无需加载其原生类，保持通用背盾行为。
+- 双枪：HumanRenderer把实际渲染bodyYaw传给HumanPlayerModel；焦燃瞄准超过躯干±25度的部分由完整模型视觉转向吸收，setupAnim抵消同一转向。ScgunsNativePose双枪把两个肩枢轴作为同一刚体转向，保留单次原生枪体/附件/火光渲染，不拆枪、不修改AI或命中。
+- 依据：当前本地Minecraft ItemRenderer与BlockEntityWithoutLevelRenderer字节码、原版shield.json、斯巴达盾牌烘焙模型；无网络资料依赖。
+- 验证：119项Python源码/配置/原生JAR接口检查通过、git diff --check通过；未构建、未同步、未推送、未启动游戏。待验收原版/斯巴达背盾上下方向与位置、左利手/蹲伏/鞘翅、大角度双枪及枪口火光；未知资源包的自定义模型仍需视觉确认。

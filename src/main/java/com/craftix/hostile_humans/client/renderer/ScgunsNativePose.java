@@ -41,6 +41,10 @@ final class ScgunsNativePose {
         if (grip.equals(GripType.DUAL_WIELD)) {
             aim(main, model.head, 0);
             aim(support, model.head, 0);
+            // Both weapons live in one rigid model anchored to the main hand. Rotate
+            // both shoulder pivots together so the support hand follows the second grip.
+            rotateShoulder(main, model.head.yRot);
+            rotateShoulder(support, model.head.yRot);
         } else if (grip.equals(GripType.ONE_HANDED) || grip.equals(GripType.ONE_HANDED_2)) {
             aim(main, model.head, -.05F * side);
             // Undo the native HumanoidModel Mixin's generic two-handed pose for the free arm.
@@ -61,6 +65,13 @@ final class ScgunsNativePose {
             // Two-handed rifle/shotgun/SMG and future unknown grips retain a safe hold.
             AnimationUtils.animateCrossbowHold(model.rightArm, model.leftArm, model.head, right);
         }
+    }
+
+    private static void rotateShoulder(ModelPart arm, float yaw) {
+        float x = arm.x;
+        float z = arm.z;
+        arm.x = Mth.cos(yaw) * x + Mth.sin(yaw) * z;
+        arm.z = -Mth.sin(yaw) * x + Mth.cos(yaw) * z;
     }
 
     private static void aim(ModelPart arm, ModelPart head, float yaw) {

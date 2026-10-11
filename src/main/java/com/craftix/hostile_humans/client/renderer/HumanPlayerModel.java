@@ -36,7 +36,7 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         this.root = root;
     }
 
-    float updateStance(Human human, float partialTick) {
+    float updateStance(Human human, float partialTick, float bodyYaw) {
         renderStanceYawDegrees = 0.0F;
         if (!human.isAlive() || !isRangedStance(human)
                 || human.isVisuallySwimming() || human.isFallFlying()) {
@@ -44,6 +44,17 @@ final class HumanPlayerModel extends PlayerModel<Human> {
             // the old sidestep pose while melee animation takes over.
             stances.remove(human);
             return 0.0F;
+        }
+
+        if (GunSupport.isScgunsGunItem(human.getMainHandItem()) && !human.isUsingItem()) {
+            // Native dual guns form one rigid item model. Turn the rendered body toward
+            // the aim instead of twisting that pair ninety degrees around one wrist.
+            // setupAnim subtracts this same offset; entity yaw/AI remain untouched.
+            stances.remove(human);
+            float relativeAim = Mth.wrapDegrees(Mth.rotLerp(partialTick,
+                    human.yHeadRotO, human.yHeadRot) - bodyYaw);
+            renderStanceYawDegrees = relativeAim - Mth.clamp(relativeAim, -25.0F, 25.0F);
+            return renderStanceYawDegrees;
         }
 
         if (GunSupport.get().isGun(human.getMainHandItem())

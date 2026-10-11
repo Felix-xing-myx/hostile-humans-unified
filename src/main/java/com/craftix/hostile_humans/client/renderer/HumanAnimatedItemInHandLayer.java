@@ -16,6 +16,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ElytraItem;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /** Vanilla held-item placement plus Better Combat's animated item channels for Humans. */
 final class HumanAnimatedItemInHandLayer extends ItemInHandLayer<Human, PlayerModel<Human>> {
@@ -60,8 +61,18 @@ final class HumanAnimatedItemInHandLayer extends ItemInHandLayer<Human, PlayerMo
                                   MultiBufferSource buffer, int light) {
         getParentModel().body.translateAndRotate(poses);
         boolean elytra = human.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof ElytraItem;
-        poses.translate(0, .45, elytra ? .43 : .26);
-        poses.mulPose(Axis.ZP.rotationDegrees(human.getMainArm() == HumanoidArm.RIGHT ? 12 : -12));
+        poses.translate(0, .30, elytra ? .55 : .38);
+        poses.mulPose(Axis.ZP.rotationDegrees(human.getMainArm() == HumanoidArm.RIGHT ? 25 : -25));
+        // Item models use Y-up; the humanoid layer uses Y-down. Turn the shield upright,
+        // with its face toward the rear, before rendering in this torso-local frame.
+        poses.mulPose(Axis.XP.rotationDegrees(180));
+        if (shield.is(Items.SHIELD)) {
+            // Vanilla's special renderer is centered at zero, unlike baked item models.
+            // Cancel ItemRenderer's (-.5, -.5, -.5) origin shift. Its native Y/Z
+            // inversion already cancels our upright turn above; do not invert it again.
+            // Keep the native renderer for banner patterns and enchantment foil.
+            poses.translate(.5, .5, .5);
+        }
         // NONE avoids item-frame and hand transforms pushing different mod shields sideways.
         itemRenderer.renderItem(human, shield, ItemDisplayContext.NONE, false, poses, buffer, light);
     }

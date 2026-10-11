@@ -77,7 +77,7 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     }
 
     protected void setupRotations(Human p_117802_, PoseStack p_117803_, float p_117804_, float p_117805_, float p_117806_) {
-        float stanceYaw = ((HumanPlayerModel)this.model).updateStance(p_117802_, p_117806_);
+        float stanceYaw = ((HumanPlayerModel)this.model).updateStance(p_117802_, p_117806_, p_117805_);
         float f = p_117802_.getSwimAmount(p_117806_);
         if (p_117802_.isFallFlying()) {
             super.setupRotations(p_117802_, p_117803_, p_117804_, p_117805_, p_117806_);
