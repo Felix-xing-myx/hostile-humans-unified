@@ -1103,3 +1103,12 @@
 - 范围：UnifiedConfig、ScgunsIntegration、TierConfigProjection、SplitConfigFiles、默认资源、配置回归检查及兼容说明/更新日志。焦燃原生难度系数保留；枪伤继续乘HumanGrowth.gunDamageMultiplier，精度继续除以HumanGrowth.gunSpreadMultiplier；TaCZ角度散布不套到焦燃。
 - 验证：118项Python源码/配置/原生JAR公开签名检查全部通过，git diff --check通过。新增Java文件加载回归覆盖独立倍率、旧文件补项、显式值保留及全局开关所有权，但依用户约定未运行编译或Java测试。
 - 交付：本地提交；未构建、未同步实例、未推送。游戏内枪伤与经验精度需后续构建后验收；保留原有未跟踪Python缓存。
+
+## 2026-10-11 焦燃持握、背负盾牌及附着枪口火光
+
+- 需求：依建议接入焦燃持握类型，持枪盾牌背负且略倾斜；追加核对火光错位。主控/root、主工作树main，基线3f05cf9770dd5dd10baabc94193defa449fb98af，无并行编辑。
+- 负责人/范围：主控独占HumanRenderer、HumanPlayerModel、HumanAnimatedItemInHandLayer及新增ScgunsNpcAnimator/ScgunsNativePose；共享接入OptionalMixinPlugin、客户端Mixin清单、测试及说明。服务端枪伤、弹药、盾牌功能不修改。
+- 接口：可选客户端提供者读取原生GripType，双枪分臂，单手/机枪/火箭筒适配，其余双手安全回退；物品层直接复用原生LivingEntity武器渲染，统一枪体/配件/火光矩阵，避免Minecraft.player替代。盾牌仅改显示位置，躯干锚点倾斜12度，鞘翅外移。
+- 审查发现：焦燃EntityMuzzleFlashHandler在生物Post阶段另按眼高/躯干旋转估算世界位置，不能跟随Human手臂。客户端窄Mixin仅在本次Human原生附着渲染成功后取消重复闪光；插件先核验完整方法契约，其他生物及失败回退保留。原生双枪枪口偏移通过接收火光令牌与公开Tracker去重计数；客户端卸载清理，无新网络协议。
+- 验证：119项Python源码/配置/安装JAR公开签名检查通过，git diff --check通过；新增客户端渲染入口、可选依赖边界、盾牌躯干锚点、火光Mixin仅客户端与成功条件回归。OptionalRuntimeTest补充可选提供者排除，依用户约定未执行编译或Java链接验证。
+- 交付：本地源码提交。未构建、未同步、未推送、未启动游戏。待游戏内核对双枪与各持握类型、配件枪口火光、俯仰/蹲伏/武器切换，以及大型模组盾牌与背部附件穿模。

@@ -18,7 +18,7 @@
     "TaczHumanGunScriptMixin",
     "ThrownTridentLifecycleMixin"
   ],
-  "client": [],
+  "client": ["ScgunsNpcMuzzleFlashMixin"],
   "injectors": {
     "defaultRequire": 1
   }

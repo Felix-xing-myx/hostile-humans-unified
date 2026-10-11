@@ -52,6 +52,32 @@ def public_methods(blob):
     return methods
 
 class ScgunsBoundary(unittest.TestCase):
+    def test_client_grips_shields_and_flash_share_one_weapon_transform(self):
+        client = ROOT / "src/main/java/com/craftix/hostile_humans/client/renderer"
+        pose = (client / "ScgunsNativePose.java").read_text(encoding="utf-8")
+        facade = (client / "ScgunsNpcAnimator.java").read_text(encoding="utf-8")
+        layer = (client / "HumanAnimatedItemInHandLayer.java").read_text(encoding="utf-8")
+        self.assertIn("getGeneral().getGripType(stack)", pose)
+        self.assertIn("GripType.DUAL_WIELD", pose)
+        self.assertIn("aim(support, model.head, 0)", pose)
+        self.assertIn("renderer.renderWeapon(human, stack, context", pose)
+        self.assertNotIn("getInstance().player", pose)
+        self.assertNotIn("top.ribs.scguns", facade)
+        self.assertIn("nativePoses.last().pose().set(poses.last().pose())", facade)
+        self.assertIn("DualWieldShotTracker.get().clearShotCount(human.getId())", pose)
+        self.assertIn("LAST_FLASH.get(human) != token", pose)
+        self.assertLess(layer.index("renderBackShield(human"), layer.index("translateToHand(arm"))
+        self.assertIn("getParentModel().body.translateAndRotate(poses)", layer)
+        self.assertIn("? 12 : -12", layer)
+        self.assertNotIn("setItemSlot", layer)
+        self.assertNotIn("setItemInHand", layer)
+        mixin = (PKG / "mixin/ScgunsNpcMuzzleFlashMixin.java").read_text(encoding="utf-8")
+        self.assertIn("event.getEntity() instanceof Human human", mixin)
+        self.assertIn("consumeAttachedRender(human)", mixin)
+        config = json.loads((ROOT / "src/main/resources/hostile_humans_unified.mixins.json").read_text(encoding="utf-8"))
+        self.assertIn("ScgunsNpcMuzzleFlashMixin", config["client"])
+        self.assertNotIn("ScgunsNpcMuzzleFlashMixin", config["mixins"])
+
     def test_independent_rank_damage_keeps_shared_training(self):
         config = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
         for rank in ("roamer", "tier1", "tier2", "tier3"):
@@ -155,6 +181,13 @@ class ScgunsBoundary(unittest.TestCase):
         checks = {
             "entity/ai/AIGunEvent": [("performGunAttack", "(Lnet/minecraft/world/entity/Mob;" + entity + stack + "Ltop/ribs/scguns/common/Gun;F)V")],
             "item/GunItem": [("getModifiedGun", "(" + stack + ")Ltop/ribs/scguns/common/Gun;")],
+            "common/Gun$General": [("getGripType", "(" + stack + ")Ltop/ribs/scguns/common/GripType;")],
+            "common/GripType": [("id", "()Lnet/minecraft/resources/ResourceLocation;")],
+            "client/handler/GunRenderingHandler": [
+                ("applyWeaponScale", "(" + stack + "Lcom/mojang/blaze3d/vertex/PoseStack;)V"),
+                ("renderWeapon", "(" + entity + stack + "Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IF)V")],
+            "client/handler/DualWieldShotTracker": [("incrementShotCount", "(I)V"), ("clearShotCount", "(I)V")],
+            "client/handler/EntityMuzzleFlashHandler": [("onRenderLivingPost", "(Lnet/minecraftforge/client/event/RenderLivingEvent$Post;)V")],
             "common/Gun": [("getAmmoCount", "(" + stack + ")I"), ("getBurstCooldown", "(" + stack + ")I"), ("getProjectile", "(" + stack + ")Ltop/ribs/scguns/common/Gun$Projectile;")],
             "common/Gun$Projectile": [("getEnergyUse", "()I")],
             "common/Gun$Reloads": [("getReloadTimer", "()I")],

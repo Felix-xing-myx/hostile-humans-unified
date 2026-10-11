@@ -110,13 +110,7 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         // Prefer optional resource keyframes; native hold/aim and synchronized
         // procedural actions remain available without Player Animator.
         TaczNpcAnimator.apply(human, this, ageInTicks);
-        if (GunSupport.isScgunsGunItem(human.getMainHandItem()) && human.isAlive()
-                && !human.isVisuallySwimming() && !human.isSleeping() && !human.isFallFlying()) {
-            // Vanilla two-handed NPC stance; native item renderer still owns the gun model.
-            net.minecraft.client.model.AnimationUtils.animateCrossbowHold(this.rightArm, this.leftArm,
-                    this.head, human.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT);
-            this.rightSleeve.copyFrom(this.rightArm); this.leftSleeve.copyFrom(this.leftArm);
-        }
+        ScgunsNpcAnimator.apply(human, this, limbSwing, limbSwingAmount);
         BetterCombatNpcAnimator.apply(human, this, ageInTicks);
         // Cosmetic only. Two-handed weapons and attack animations always retain their arms.
         if (human.isNpcOffhandEating() && !human.isUsingItem() && !human.swinging

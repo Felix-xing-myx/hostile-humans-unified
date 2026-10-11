@@ -78,3 +78,11 @@ TaCZ专用动画只接受TaCZ枪。Scorched Guns使用基础双手持枪姿势�
 四阶文件各自的 `scguns.damage_multiplier` 默认1.0，仅控制Scorched Guns；`tacz.damage_multiplier` 默认0.5，仅控制TaCZ。Scorched Guns继续叠乘原生NPC难度系数、全局 `scguns.npc_damage_multiplier` 以及共用战斗经验枪伤加成（默认满经验额外10%）。
 
 Scorched Guns不使用四阶 `weapon_spread_degrees.firearms`（TaCZ专用），保留原生武器/配件散布与NPC精度入口。共用成长配置的经验散布缩放继续应用于原生NPC瞄准误差，默认每5个百分点缩小5%、最低75%；不重复缩放武器固有散布。
+
+### NPC持握、背负盾牌和枪口火光
+
+- 客户端入口ScgunsNpcAnimator，依赖隔离在ScgunsNativePose。读取原生GunItem.getModifiedGun(stack).getGeneral().getGripType(stack)，不写死物品ID、不伪造Player、不读取本地玩家输入。双枪、单手、机枪及火箭筒做NPC姿势适配；其他双手和未知类型回退普通双手持枪。双枪原生模型已含两把枪，仅渲染一次，不复制实体或装备。手臂/袖子随士兵自身朝向，特殊姿势不是完整复制玩家换弹/近战动画。
+- 所有本模组枪手（TaCZ及焦燃）主手持枪、副手为已识别盾牌时，显示于躯干背部并倾斜12度，左右惯用手镜像；蹲伏随躯干，原版鞘翅额外外移。使用ItemDisplayContext.NONE避开手持/物品框额外变换；自定义大型盾牌和其他背部附件仍需游戏内检查。切回非枪械自然恢复手持，不改副手库存、防护、耐久或服务器判定。
+- 原生GunItemStackRenderer会传Minecraft.player；改为调用接受LivingEntity的GunRenderingHandler.renderWeapon(human, ...)，枪体、配件、原生枪口坐标/固有模型变换、火光共用同一矩阵。焦燃EntityMuzzleFlashHandler还在RenderLivingEvent.Post估算一次NPC世界坐标火光，新增仅客户端、仅Human、仅本次附着渲染成功时取消的窄Mixin，避免重复/错位；OptionalMixinPlugin读取目标方法完整签名，不存在或变化时跳过并警告，保留上游回退。不取消Forge事件，不影响玩家/原生枪手。
+- 原生NPC射击提供火光包，但不提供玩家双枪射击计数；利用每次接收的原生火光令牌更新DualWieldShotTracker，使原生备用枪口偏移可用于人类。同一包多次渲染不重复计数；客户端实体卸载清理，未新增战斗网络包或逐tick扫描。
+- 静态/原生公开签名检查已通过；尚未构建或游戏内验证。需要验收双枪、普通步枪、机枪、火箭筒；水平/俯仰射击及移动、蹲伏、左右手；消音器/枪口配件、双枪左右火光、不同盾牌/鞘翅和武器切换。原生枪包自身错误的枪口元数据不在本次自动修正范围。

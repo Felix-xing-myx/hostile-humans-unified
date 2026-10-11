@@ -118,6 +118,7 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     }
 
     public void render(Human human, float pEntityYaw, float pPartialTicks, @NotNull PoseStack pMatrixStack, @NotNull MultiBufferSource pBuffer, int pPackedLight) {
+        ScgunsNpcAnimator.beginRender(human);
         PlayerModel<Human> playerModel = this.model;
         playerModel.crouching = human.isCrouching();
         HumanoidModel.ArmPose mainPose = getArmPose(human, InteractionHand.MAIN_HAND);

@@ -22,11 +22,14 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
             "onExplosionDetonateEvent(Lnet/minecraftforge/event/level/ExplosionEvent$Detonate;)V";
     public static final String SPARTAN_RANDOMIZER =
             "generate(Lnet/minecraft/world/level/Level;Ljava/util/List;)Lnet/minecraft/world/item/ItemStack;";
+    public static final String SCGUNS_NPC_FLASH =
+            "onRenderLivingPost(Lnet/minecraftforge/client/event/RenderLivingEvent$Post;)V";
 
     @Override public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         String contract;
         if (mixinClassName.endsWith(".TouhouMaidGunHurtMixin")) contract = MAID_EXPLOSION;
         else if (mixinClassName.endsWith(".SpartanWeaponryItemRandomizerMixin")) contract = SPARTAN_RANDOMIZER;
+        else if (mixinClassName.endsWith(".ScgunsNpcMuzzleFlashMixin")) contract = SCGUNS_NPC_FLASH;
         else return true;
         try {
             ClassNode target = readTarget(MixinService.getService().getBytecodeProvider(), targetClassName);
