@@ -58,4 +58,4 @@ NPC First Aid healing, morphine effects and pickup values are configurable in gl
 
 ## Scorched Guns integration framework
 
-Optional support targets the public NPC APIs in Scorched Guns 0.5.5: native projectiles with HHU tactics, magazine-paid ammunition/energy reloads, additive armor pools, configurable medical supplies, native throwable factories, and a player-owned native raid flare. Settings live in the global `scguns` section. See [integration scope and verification](docs/SCORCHED_GUNS_COMPAT.md); this source framework still requires compilation and in-game acceptance.
+Optional support targets the public NPC APIs in Scorched Guns 0.5.5: native projectiles with HHU tactics, magazine-paid ammunition/energy reloads, additive armor pools, configurable medical supplies, native throwable factories, and a player-owned native raid flare. Settings live in the global `scguns` section. See [integration scope and verification](docs/SCORCHED_GUNS_COMPAT.md); this framework has passed compilation and automated checks; in-game acceptance remains required.

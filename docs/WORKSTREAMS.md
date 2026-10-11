@@ -1,5 +1,14 @@
 # 开发任务与整合记录
 
+## 2026-10-11 Scorched Guns联动3.7.0测试构建与同步
+
+- 用户明确要求构建并同步；基线bc2089591ba528b6daafb9deef9d303f2f4cfdf6，构建修正提交cff634cc4328da77215bd29bccc95b5127391b87；主控/main/源码主工作树，目标仅E:/MC/game/.minecraft/versions/1.20.1-Forge_47.4.21。版本仍3.7.0，新增联动保留Unreleased测试状态，不推送、不启动游戏。
+- 首次依赖路径检查发现实例已移除First Aid JAR，改用本机E:/MC/firstaid-1.20.1-1.1.jar只读API，不把该模组装回实例。正式Java编译通过；配置可读性回归发现新Scguns说明键未遵守命名/双语相邻规范，已修正并补齐全局分区归属，未改变枪械和医疗参数。
+- Java17、五份显式compileOnly API、离线build lootScreeningTest成功：52任务，49执行/3已是最新。配置文件2209、UnifiedConfig134、可选依赖缺席472核心类链接等检查通过；117项Python检查通过。故意损坏配置及结构包的回退测试产生预期错误日志，最终构建成功。
+- 核对发行包身份hostile_humans_unified、Implementation-Version=3.7.0，无TaCZ/FirstAid/Scguns依赖类打包，大小3,968,772字节（约3.78MiB）。同步前后检查目标无游戏进程，仅一份本模组JAR。
+- 备份：../部署备份/20261011-140905-3.7.0-scguns-Forge_47.4.21，含旧JAR、config-before及deployment.json。旧SHA256=DCE740D5044250E5313C8F888BF8FB1E349229AE21D85A58C8C50F56E2341232；源与目标新SHA256均为0A26063D3923BEAC73EEC80DB702680FF24601006764B36B096F83F9FD50230D。
+- 未手改实例配置；核实global.json尚无scguns分区，首次启动由正常配置入口补入当前默认值，各阶普通护甲按原自动导入开关追加。待用户测试普通/能量枪射击与计费、临时近战后台装填、四种医疗及再生冷却/吸收共存、分阶普通护甲、投掷物和玩家原生袭击信号弹。自动化成功不等于游戏验收。
+
 ## 2026-10-11 Scorched Guns普通护甲池与散布接入复查（源码）
 
 - 基线 `4b1105cdd194bb9eac2fbfa5aadb8f2ff7897296`；主控/main/源码主工作树顺序编辑，不创建或编辑其他工作树。保留既存未跟踪Python缓存。范围EquipmentIntegrationDefaults、默认装备导入表及帮助、配置导入回归、联动文档与更新日志。
