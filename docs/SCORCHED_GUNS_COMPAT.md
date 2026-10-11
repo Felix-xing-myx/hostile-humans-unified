@@ -72,3 +72,9 @@ TaCZ专用动画只接受TaCZ枪。Scorched Guns使用基础双手持枪姿势�
 源码契约、真实JAR公开签名、Java语法、JSON/TOML及差异检查可在不编译情况下进行。它们不替代类型编译、可选模组缺席链接测试、客户端/专服启动或实战。
 
 本次已执行构建检查及可选依赖缺席链接用例（472个核心类）。游戏重点检查：Scguns单独及与TaCZ同装、普通/能量/连发/特殊枪、弹匣费用与临时近战后台装填、跨卸载计时、出生物资及自定义池、四种医疗消费与中断、友军/雇主/PVP、持枪盾减伤、投掷物误伤与地形、原生袭击多人并发/保存/结束、客户端动画、专服及多士兵负载。
+
+### 独立枪伤配置
+
+四阶文件各自的 `scguns.damage_multiplier` 默认1.0，仅控制Scorched Guns；`tacz.damage_multiplier` 默认0.5，仅控制TaCZ。Scorched Guns继续叠乘原生NPC难度系数、全局 `scguns.npc_damage_multiplier` 以及共用战斗经验枪伤加成（默认满经验额外10%）。
+
+Scorched Guns不使用四阶 `weapon_spread_degrees.firearms`（TaCZ专用），保留原生武器/配件散布与NPC精度入口。共用成长配置的经验散布缩放继续应用于原生NPC瞄准误差，默认每5个百分点缩小5%、最低75%；不重复缩放武器固有散布。

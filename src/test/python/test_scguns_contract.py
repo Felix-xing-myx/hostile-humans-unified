@@ -52,6 +52,18 @@ def public_methods(blob):
     return methods
 
 class ScgunsBoundary(unittest.TestCase):
+    def test_independent_rank_damage_keeps_shared_training(self):
+        config = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
+        for rank in ("roamer", "tier1", "tier2", "tier3"):
+            self.assertEqual(config["tiers"][rank]["scguns"]["damage_multiplier"], 1)
+            self.assertEqual(config["tacz"]["tier_damage_multipliers"][rank], .5)
+        scguns = source("ScgunsIntegration")
+        self.assertIn("tierScgunsDamage(TierAttributes.key(attacker))", scguns)
+        self.assertNotIn("tierGunDamage(", scguns)
+        self.assertIn("HumanGrowth.gunDamageMultiplier(attacker)", scguns)
+        self.assertIn("HumanGrowth.gunSpreadMultiplier(human)", scguns)
+        self.assertIn("tierGunDamage(TierAttributes.key(attacker))", source("TaczIntegration"))
+
     def test_shared_tactics_do_not_link_optional_gun_api(self):
         goal = source("GunnerGoal")
         self.assertNotIn("com.tacz.", goal)

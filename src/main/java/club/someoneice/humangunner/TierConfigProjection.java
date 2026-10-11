@@ -83,7 +83,7 @@ final class TierConfigProjection {
         List<String> sections = rank
                 ? List.of("schema_version", "_说明_中文", "_description_en", "attributes", "damage_multipliers", "spawning",
                     "ammunition", "food", "potions", "combat", "ai", "movement",
-                    "weapon_spread_degrees", "tacz", "growth_profile", "equipment_loadout")
+                    "weapon_spread_degrees", "tacz", "scguns", "growth_profile", "equipment_loadout")
                 : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "growth", "ammunition",
                     "equipment_integration", "ai", "recruitment", "spawning", "damage", "jump_attack",
                     "better_combat", "first_aid", "scguns", "tacz", "native_gameplay");
@@ -113,6 +113,7 @@ final class TierConfigProjection {
         orderGroup(result, "jump_attack", List.of("enabled", "damage_multiplier", "chance",
                 "attempt_interval_min_ticks", "attempt_interval_max_ticks", "max_approach_distance_extra",
                 "max_target_height_difference"));
+        if (rank) orderGroup(result, "scguns", List.of("damage_multiplier"));
         orderGroup(result, "first_aid", List.of("enabled", "plaster_healing", "bandage_healing",
                 "morphine_duration_seconds", "morphine_resistance_level", "quality"));
         orderGroup(result, "growth", List.of("enabled", "stage_percent", "stage_cost", "experience", "firearms", "combat"));
@@ -154,7 +155,9 @@ final class TierConfigProjection {
     private static void enforceOwnership(JsonObject data, boolean rank) {
         JsonObject defaults = UnifiedConfig.defaults();
         if (rank) {
-            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay", "growth", "jump_attack", "first_aid", "scguns")) data.remove(key);
+            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay", "growth", "jump_attack", "first_aid")) data.remove(key);
+            for (String key : object(defaults, "scguns").keySet())
+                if (!key.startsWith("_")) removeOptions(object(data, "scguns"), List.of(key));
             removeOptions(object(data, "ai"), List.of("enabled"));
             removeOptions(object(data, "ammunition"), List.of("consume_ammunition"));
             for (String key : object(defaults, "spawning").keySet())

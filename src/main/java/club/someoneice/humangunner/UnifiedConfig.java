@@ -271,6 +271,10 @@ public final class UnifiedConfig {
     public double tierGunDamage(String key) {
         return number(object(object(root, "tacz"), "tier_damage_multipliers"), key, .5, 0, 100);
     }
+    /** Scorched Guns rank output is independent of TaCZ and native NPC difficulty scaling. */
+    public double tierScgunsDamage(String key) {
+        return number(object(object(object(root, "tiers"), key), "scguns"), "damage_multiplier", 1, 0, 100);
+    }
     public String disabledStructures() { return string(object(root, "native_gameplay"), "disabled_structures", ""); }
     public int maxTargeting() { return (int) number(object(root, "native_gameplay"), "max_targeting", 3, 0, 10000); }
     public String battleEvent() {

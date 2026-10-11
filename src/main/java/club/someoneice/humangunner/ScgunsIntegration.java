@@ -204,7 +204,7 @@ final class ScgunsIntegration implements GunSupport {
         if (event.getSource().getEntity() instanceof Human attacker) {
             if (HumanRelations.allied(attacker, event.getEntity())) { event.setCanceled(true); return; }
             event.setAmount(event.getAmount() * (float) UnifiedConfig.get().scguns().damageMultiplier()
-                    * (float) UnifiedConfig.get().tierGunDamage(TierAttributes.key(attacker))
+                    * (float) UnifiedConfig.get().tierScgunsDamage(TierAttributes.key(attacker))
                     * (float) HumanGrowth.gunDamageMultiplier(attacker));
         }
         if (event.getEntity() instanceof Human human) human.getPersistentData().putInt(

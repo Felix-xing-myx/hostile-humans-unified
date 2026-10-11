@@ -63,11 +63,11 @@
         "damage_taken_multiplier": 1
       },
       "weapon_spread_degrees": {
-        "_说明_中文": "该阶每一种枪械和弹射武器的独立瞄准散布角度；数值越小越精准。",
-        "_description_en": "Independent aiming spread angles for every firearm and projectile weapon used by this tier; lower values are more accurate.",
+        "_说明_中文": "本阶TaCZ枪械及弓弩、三叉戟的独立散布角度；越小越精准。Scorched Guns使用原生精度，另受共用经验散布缩放影响。",
+        "_description_en": "Rank aiming spread for TaCZ and ballistic weapons. Scorched Guns uses native accuracy with shared experience scaling.",
         "firearms": {
-          "_说明_中文": "枪械分类散布。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他/无法识别类型。",
-          "_description_en": "Firearm spread by category: sniper, rifle, mg (machine gun), pistol, smg, shotgun, and other (unrecognized types).",
+          "_说明_中文": "仅TaCZ枪械分类散布，不控制Scorched Guns。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他。",
+          "_description_en": "TaCZ-only category spread; does not control Scorched Guns. Categories: sniper, rifle, mg, pistol, smg, shotgun and other.",
           "_说明_sniper_中文": "狙击枪散布角度，0–45度；越小越精准。",
           "_description_sniper_en": "sniper spread in degrees, 0–45; smaller is more accurate.",
           "sniper": 0.8,
@@ -414,6 +414,13 @@
           "_description_feet_en": "Registered early replacement item ID; must match the weapon type/armor slot. Invalid IDs use a safe fallback.",
           "feet": "minecraft:leather_boots"
         }
+      },
+      "scguns": {
+        "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
+        "_description_en": "Independent Scorched Guns output factor for this rank.",
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。原模组NPC难度系数、全局联动倍率和战斗经验枪伤加成仍叠乘。",
+        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Native NPC difficulty, global integration and combat experience factors still multiply.",
+        "damage_multiplier": 1.0
       }
     },
     "tier1": {
@@ -471,11 +478,11 @@
         "damage_taken_multiplier": 1
       },
       "weapon_spread_degrees": {
-        "_说明_中文": "该阶每一种枪械和弹射武器的独立瞄准散布角度；数值越小越精准。",
-        "_description_en": "Independent aiming spread angles for every firearm and projectile weapon used by this tier; lower values are more accurate.",
+        "_说明_中文": "本阶TaCZ枪械及弓弩、三叉戟的独立散布角度；越小越精准。Scorched Guns使用原生精度，另受共用经验散布缩放影响。",
+        "_description_en": "Rank aiming spread for TaCZ and ballistic weapons. Scorched Guns uses native accuracy with shared experience scaling.",
         "firearms": {
-          "_说明_中文": "枪械分类散布。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他/无法识别类型。",
-          "_description_en": "Firearm spread by category: sniper, rifle, mg (machine gun), pistol, smg, shotgun, and other (unrecognized types).",
+          "_说明_中文": "仅TaCZ枪械分类散布，不控制Scorched Guns。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他。",
+          "_description_en": "TaCZ-only category spread; does not control Scorched Guns. Categories: sniper, rifle, mg, pistol, smg, shotgun and other.",
           "_说明_sniper_中文": "狙击枪散布角度，0–45度；越小越精准。",
           "_description_sniper_en": "sniper spread in degrees, 0–45; smaller is more accurate.",
           "sniper": 0.6,
@@ -822,6 +829,13 @@
           "_description_feet_en": "Registered early replacement item ID; must match the weapon type/armor slot. Invalid IDs use a safe fallback.",
           "feet": "minecraft:leather_boots"
         }
+      },
+      "scguns": {
+        "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
+        "_description_en": "Independent Scorched Guns output factor for this rank.",
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。原模组NPC难度系数、全局联动倍率和战斗经验枪伤加成仍叠乘。",
+        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Native NPC difficulty, global integration and combat experience factors still multiply.",
+        "damage_multiplier": 1.0
       }
     },
     "tier2": {
@@ -879,11 +893,11 @@
         "damage_taken_multiplier": 1
       },
       "weapon_spread_degrees": {
-        "_说明_中文": "该阶每一种枪械和弹射武器的独立瞄准散布角度；数值越小越精准。",
-        "_description_en": "Independent aiming spread angles for every firearm and projectile weapon used by this tier; lower values are more accurate.",
+        "_说明_中文": "本阶TaCZ枪械及弓弩、三叉戟的独立散布角度；越小越精准。Scorched Guns使用原生精度，另受共用经验散布缩放影响。",
+        "_description_en": "Rank aiming spread for TaCZ and ballistic weapons. Scorched Guns uses native accuracy with shared experience scaling.",
         "firearms": {
-          "_说明_中文": "枪械分类散布。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他/无法识别类型。",
-          "_description_en": "Firearm spread by category: sniper, rifle, mg (machine gun), pistol, smg, shotgun, and other (unrecognized types).",
+          "_说明_中文": "仅TaCZ枪械分类散布，不控制Scorched Guns。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他。",
+          "_description_en": "TaCZ-only category spread; does not control Scorched Guns. Categories: sniper, rifle, mg, pistol, smg, shotgun and other.",
           "_说明_sniper_中文": "狙击枪散布角度，0–45度；越小越精准。",
           "_description_sniper_en": "sniper spread in degrees, 0–45; smaller is more accurate.",
           "sniper": 0.4,
@@ -1230,6 +1244,13 @@
           "_description_feet_en": "Registered early replacement item ID; must match the weapon type/armor slot. Invalid IDs use a safe fallback.",
           "feet": "minecraft:iron_boots"
         }
+      },
+      "scguns": {
+        "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
+        "_description_en": "Independent Scorched Guns output factor for this rank.",
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。原模组NPC难度系数、全局联动倍率和战斗经验枪伤加成仍叠乘。",
+        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Native NPC difficulty, global integration and combat experience factors still multiply.",
+        "damage_multiplier": 1.0
       }
     },
     "tier3": {
@@ -1287,11 +1308,11 @@
         "damage_taken_multiplier": 1
       },
       "weapon_spread_degrees": {
-        "_说明_中文": "该阶每一种枪械和弹射武器的独立瞄准散布角度；数值越小越精准。",
-        "_description_en": "Independent aiming spread angles for every firearm and projectile weapon used by this tier; lower values are more accurate.",
+        "_说明_中文": "本阶TaCZ枪械及弓弩、三叉戟的独立散布角度；越小越精准。Scorched Guns使用原生精度，另受共用经验散布缩放影响。",
+        "_description_en": "Rank aiming spread for TaCZ and ballistic weapons. Scorched Guns uses native accuracy with shared experience scaling.",
         "firearms": {
-          "_说明_中文": "枪械分类散布。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他/无法识别类型。",
-          "_description_en": "Firearm spread by category: sniper, rifle, mg (machine gun), pistol, smg, shotgun, and other (unrecognized types).",
+          "_说明_中文": "仅TaCZ枪械分类散布，不控制Scorched Guns。sniper=狙击枪，rifle=步枪，mg=机枪，pistol=手枪，smg=冲锋枪，shotgun=霰弹枪，other=其他。",
+          "_description_en": "TaCZ-only category spread; does not control Scorched Guns. Categories: sniper, rifle, mg, pistol, smg, shotgun and other.",
           "_说明_sniper_中文": "狙击枪散布角度，0–45度；越小越精准。",
           "_description_sniper_en": "sniper spread in degrees, 0–45; smaller is more accurate.",
           "sniper": 0.2,
@@ -1638,6 +1659,13 @@
           "_description_feet_en": "Registered early replacement item ID; must match the weapon type/armor slot. Invalid IDs use a safe fallback.",
           "feet": "minecraft:diamond_boots"
         }
+      },
+      "scguns": {
+        "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
+        "_description_en": "Independent Scorched Guns output factor for this rank.",
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。原模组NPC难度系数、全局联动倍率和战斗经验枪伤加成仍叠乘。",
+        "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Native NPC difficulty, global integration and combat experience factors still multiply.",
+        "damage_multiplier": 1.0
       }
     }
   },
@@ -2650,8 +2678,8 @@
         "_description_en": "Rank TaCZ spawn chance, damage scaling and type weights; integration switches and gun ID lists are in global.json.",
         "_说明_gun_chance_中文": "本阶额外枪械携带概率，0–1；自然生成还受全局开关和装备成长倍率影响。",
         "_description_gun_chance_en": "Rank extra firearm chance, 0–1; natural spawning also uses global switches and equipment growth.",
-        "_说明_damage_multiplier_中文": "本阶人类枪械的唯一输出倍率，0–100；默认0.5。盾牌、目标防护和承伤倍率另算。",
-        "_description_damage_multiplier_en": "Sole rank Human firearm output factor, 0–100; default 0.5. Defender protections and incoming factors apply separately.",
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用TaCZ的枪伤，0–100，默认0.5；Scorched Guns由本阶scguns.damage_multiplier独立控制。目标防护和战斗经验加成另算。",
+        "_description_damage_multiplier_en": "TaCZ rank damage only, 0–100, default 0.5. Scorched Guns uses rank scguns.damage_multiplier independently. Target defenses and combat experience apply separately.",
         "_说明_gun_type_weights_中文": "枪种相对权重表，值为非负整数；0排除此类。pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击枪、mg机枪。空表不抽选枪种。",
         "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types."
       }
@@ -2662,8 +2690,8 @@
         "_description_en": "Rank TaCZ spawn chance, damage scaling and type weights; integration switches and gun ID lists are in global.json.",
         "_说明_gun_chance_中文": "本阶额外枪械携带概率，0–1；自然生成还受全局开关和装备成长倍率影响。",
         "_description_gun_chance_en": "Rank extra firearm chance, 0–1; natural spawning also uses global switches and equipment growth.",
-        "_说明_damage_multiplier_中文": "本阶人类枪械的唯一输出倍率，0–100；默认0.5。盾牌、目标防护和承伤倍率另算。",
-        "_description_damage_multiplier_en": "Sole rank Human firearm output factor, 0–100; default 0.5. Defender protections and incoming factors apply separately.",
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用TaCZ的枪伤，0–100，默认0.5；Scorched Guns由本阶scguns.damage_multiplier独立控制。目标防护和战斗经验加成另算。",
+        "_description_damage_multiplier_en": "TaCZ rank damage only, 0–100, default 0.5. Scorched Guns uses rank scguns.damage_multiplier independently. Target defenses and combat experience apply separately.",
         "_说明_gun_type_weights_中文": "枪种相对权重表，值为非负整数；0排除此类。pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击枪、mg机枪。空表不抽选枪种。",
         "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types."
       }
@@ -2674,8 +2702,8 @@
         "_description_en": "Rank TaCZ spawn chance, damage scaling and type weights; integration switches and gun ID lists are in global.json.",
         "_说明_gun_chance_中文": "本阶额外枪械携带概率，0–1；自然生成还受全局开关和装备成长倍率影响。",
         "_description_gun_chance_en": "Rank extra firearm chance, 0–1; natural spawning also uses global switches and equipment growth.",
-        "_说明_damage_multiplier_中文": "本阶人类枪械的唯一输出倍率，0–100；默认0.5。盾牌、目标防护和承伤倍率另算。",
-        "_description_damage_multiplier_en": "Sole rank Human firearm output factor, 0–100; default 0.5. Defender protections and incoming factors apply separately.",
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用TaCZ的枪伤，0–100，默认0.5；Scorched Guns由本阶scguns.damage_multiplier独立控制。目标防护和战斗经验加成另算。",
+        "_description_damage_multiplier_en": "TaCZ rank damage only, 0–100, default 0.5. Scorched Guns uses rank scguns.damage_multiplier independently. Target defenses and combat experience apply separately.",
         "_说明_gun_type_weights_中文": "枪种相对权重表，值为非负整数；0排除此类。pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击枪、mg机枪。空表不抽选枪种。",
         "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types."
       }
@@ -2686,8 +2714,8 @@
         "_description_en": "Rank TaCZ spawn chance, damage scaling and type weights; integration switches and gun ID lists are in global.json.",
         "_说明_gun_chance_中文": "本阶额外枪械携带概率，0–1；自然生成还受全局开关和装备成长倍率影响。",
         "_description_gun_chance_en": "Rank extra firearm chance, 0–1; natural spawning also uses global switches and equipment growth.",
-        "_说明_damage_multiplier_中文": "本阶人类枪械的唯一输出倍率，0–100；默认0.5。盾牌、目标防护和承伤倍率另算。",
-        "_description_damage_multiplier_en": "Sole rank Human firearm output factor, 0–100; default 0.5. Defender protections and incoming factors apply separately.",
+        "_说明_damage_multiplier_中文": "仅控制本阶人类使用TaCZ的枪伤，0–100，默认0.5；Scorched Guns由本阶scguns.damage_multiplier独立控制。目标防护和战斗经验加成另算。",
+        "_description_damage_multiplier_en": "TaCZ rank damage only, 0–100, default 0.5. Scorched Guns uses rank scguns.damage_multiplier independently. Target defenses and combat experience apply separately.",
         "_说明_gun_type_weights_中文": "枪种相对权重表，值为非负整数；0排除此类。pistol手枪、smg冲锋枪、rifle步枪、shotgun霰弹枪、sniper狙击枪、mg机枪。空表不抽选枪种。",
         "_description_gun_type_weights_en": "Relative non-negative integer weights: pistol, smg, rifle, shotgun, sniper and mg; zero excludes a type. An empty table selects no types."
       }
@@ -2834,8 +2862,8 @@
     "_说明_ai_accuracy_modifier_中文": "AI瞄准精度系数越大越准：原生AI误差锥角=min(25度,5×难度系数÷此值)。武器及配件本身的散布另由原模组数据控制；经验收缩只作用于AI误差，不重复叠加各阶TaCZ角度散布。",
     "_description_ai_accuracy_modifier_en": "Higher means more accurate: native NPC error is min(25 degrees, 5 * difficulty factor / accuracy). Native weapon/attachment spread remains separate. Experience affects AI error only.",
     "ai_accuracy_modifier": 2.0,
-    "_说明_npc_damage_multiplier_中文": "在原模组原生NPC难度/枪伤系数之后，再乘此值、各阶枪伤系数和战斗培养枪伤系数；不修改玩家枪伤。",
-    "_description_npc_damage_multiplier_en": "Multiplies native NPC gun damage, followed by rank and combat-training factors. Does not change player damage.",
+    "_说明_npc_damage_multiplier_中文": "Scorched Guns全局联动枪伤倍率：在原模组NPC难度/枪伤系数之后，再乘此值、各阶scguns.damage_multiplier和战斗经验枪伤加成；不使用TaCZ分阶倍率，不修改玩家枪伤。",
+    "_description_npc_damage_multiplier_en": "Global Scorched Guns integration factor; multiplies native NPC damage, rank scguns.damage_multiplier and combat experience. Independent of TaCZ; player damage is unchanged.",
     "npc_damage_multiplier": 1.0,
     "_说明_magazines_per_reload_by_type_中文": "每次装满或补满能量按原生武器类型一次计费；普通枪与能量枪相同，战斗中不足一次射击才装填；全局关闭弹药消耗时不扣弹匣。 能量枪通过Forge能量能力读取、扣除和充满能量；不足一次射击时按原生换弹时长补能，同样消耗通用弹匣。不给没有充放电能力的枪写假能量。",
     "_description_magazines_per_reload_by_type_en": "One payment per native weapon-type reload, including energy recharge through Forge energy capabilities. Native reload duration applies; ammunition master switch can waive magazine consumption.",

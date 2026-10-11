@@ -9,6 +9,7 @@ public final class TierConfigFilesTest {
     private static int assertions;
     public static void main(String[] args) throws Exception {
         checkNewBehaviorSections();
+        checkIndependentGunDamage();
         checkImmersiveArmorImport();
         checkScgunsArmorImport();
         checkMasterIntegrationSwitch();
@@ -43,6 +44,33 @@ public final class TierConfigFilesTest {
                 check(files.allMatch(path -> path.getFileName().toString().endsWith(".json")),
                         "no migration or inherited files created");
             }
+        } finally { cleanup(directory); }
+    }
+
+    private static void checkIndependentGunDamage() throws Exception {
+        Path directory = Files.createTempDirectory("human-independent-guns-");
+        try {
+            JsonObject defaults = UnifiedConfig.defaults();
+            SplitConfigFiles.load(directory, defaults, (r, d) -> false);
+            Path path = directory.resolve(SplitConfigFiles.DIRECTORY).resolve("tier1.json");
+            JsonObject rank = read(path);
+            rank.remove("scguns");
+            TierConfigProjection.put(rank, "tacz.damage_multiplier", new JsonPrimitive(2.5));
+            Files.writeString(path, rank.toString());
+            UnifiedConfig loaded = new UnifiedConfig(SplitConfigFiles.load(directory, defaults, (r, d) -> false));
+            check(loaded.tierGunDamage("tier1") == 2.5 && loaded.tierScgunsDamage("tier1") == 1,
+                    "existing TaCZ factor does not seed Scorched Guns factor");
+            rank = read(path);
+            check(TierConfigProjection.at(rank, "scguns.damage_multiplier").getAsDouble() == 1,
+                    "new Scorched Guns factor is exposed in existing rank file");
+            TierConfigProjection.put(rank, "scguns.damage_multiplier", new JsonPrimitive(.8));
+            TierConfigProjection.put(rank, "scguns.enabled", new JsonPrimitive(false));
+            Files.writeString(path, rank.toString());
+            loaded = new UnifiedConfig(SplitConfigFiles.load(directory, defaults, (r, d) -> false));
+            check(loaded.tierGunDamage("tier1") == 2.5 && loaded.tierScgunsDamage("tier1") == .8,
+                    "independent backend factors survive reload");
+            check(TierConfigProjection.at(read(path), "scguns.enabled") == null,
+                    "Scorched Guns master switch remains global only");
         } finally { cleanup(directory); }
     }
 

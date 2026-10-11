@@ -73,6 +73,8 @@ final class SplitConfigFiles {
             byte[] original = Files.readAllBytes(path);
             JsonObject data = read(path, 2);
             boolean imported = rank && integrations.test(rankName(path), data);
+            // Expose the independent backend factor in existing rank files without copying TaCZ values.
+            if (rank && !data.has("scguns")) data.add("scguns", defaults.getAsJsonObject("scguns").deepCopy());
             if (!rank) {
                 for (String key : List.of("jump_attack", "first_aid", "scguns")) {
                     if (!data.has(key) && defaults.has(key)) {

@@ -1095,3 +1095,11 @@
 - 范围：logo.png、COVER.md、Unreleased封面条目和本记录；游戏物品纹理及逻辑均未修改。旧logo备份`E:\MC\Create-Delight\HostileHumansUnified-维护\部署备份\20261011-122741-cover-before-user-image\logo.png`；新图SHA-256 `B4B1808CBB1169E681A388349A03812F9515A7AF426FA71833CEC78696ED3B5E`。
 - 核查：PNG可解码、尺寸及体积检查、桌面原图哈希未变、mods.toml沿用原logo入口，git空白检查。未构建、未同步、未推送，实际JAR体积等待下一次构建核对；不覆盖此前已部署3.7.0。
 - 交付：本地源码提交，原始大图不纳入Git；保留已有未提交Python缓存。
+
+## 2026-10-11 TaCZ与Scorched Guns分阶枪伤分离
+
+- 需求：两种枪械独立配置分阶输出，焦燃默认1.0；共用经验枪伤加成与焦燃原生精度的经验缩放继续生效。主控/root、主工作树main，无并行编辑，基线9e1fce0e491dfb7f00e1b973facb34d342a79d89。
+- 接口：新增UnifiedConfig.tierScgunsDamage，从tiers.<rank>.scguns.damage_multiplier读取；四阶文件直存scguns.damage_multiplier，默认1.0。原tierGunDamage仅供TaCZ，保持既有值。全局scguns参数保持全局所有权；现有四阶文件在下次加载时补入独立区块，不复制TaCZ倍率、不覆盖已有焦燃值。
+- 范围：UnifiedConfig、ScgunsIntegration、TierConfigProjection、SplitConfigFiles、默认资源、配置回归检查及兼容说明/更新日志。焦燃原生难度系数保留；枪伤继续乘HumanGrowth.gunDamageMultiplier，精度继续除以HumanGrowth.gunSpreadMultiplier；TaCZ角度散布不套到焦燃。
+- 验证：118项Python源码/配置/原生JAR公开签名检查全部通过，git diff --check通过。新增Java文件加载回归覆盖独立倍率、旧文件补项、显式值保留及全局开关所有权，但依用户约定未运行编译或Java测试。
+- 交付：本地提交；未构建、未同步实例、未推送。游戏内枪伤与经验精度需后续构建后验收；保留原有未跟踪Python缓存。
