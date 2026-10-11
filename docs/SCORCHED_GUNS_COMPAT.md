@@ -48,12 +48,12 @@ TaCZ专用动画只接受TaCZ枪。Scorched Guns使用基础双手持枪姿势�
 
 | 原生ID后缀 | 治疗生命点 | 使用tick | 共用冷却tick | 品质 | 附加效果 |
 | --- | ---: | ---: | ---: | ---: | --- |
-| basic_poultice | 4 | 32 | 100 | 60 | 无 |
-| honey_sulfur_poultice | 8 | 32 | 100 | 65 | 再生I，100 tick |
-| enchanted_bandage | 12 | 32 | 400 | 75 | 再生II，100 tick；伤害吸收I，400 tick |
-| dragon_salve | 16 | 32 | 700 | 85 | 再生II，200 tick；伤害吸收I，700 tick |
+| basic_poultice | 8 | 32 | 100 | 65 | 无 |
+| honey_sulfur_poultice | 16 | 32 | 200 | 70 | 再生I，200 tick |
+| enchanted_bandage | 24 | 32 | 200 | 80 | 再生II，200 tick；伤害吸收I，800 tick |
+| dragon_salve | 32 | 32 | 400 | 90 | 再生II，400 tick；伤害吸收I，1400 tick |
 
-治疗为完成敷用时恢复，持续效果由效果系统推进，不套用First Aid分次疗程。四种药共用冷却，已有对应附加效果时不重复使用；效果解除不绕过剩余冷却。继承最后一份恢复用品保护，原生已消费不重复扣除。原生撕裂效果在治疗完成后移除。
+治疗为完成敷用时恢复，持续效果由效果系统推进，不套用First Aid分次疗程。四种药共用冷却：无再生时使用shared_cooldown_ticks基础值（默认100），有再生则自动以配置的再生持续时间为冷却，多条再生取最长。已有再生时不重复使用带再生的药品；伤害吸收不阻止再用，也不延长冷却；效果提前解除不绕过剩余冷却。出生默认值调整不覆盖玩家已写入的自定义治疗量、时间与品质。继承最后一份恢复用品保护，原生已消费不重复扣除。原生撕裂效果在治疗完成后移除。
 
 投掷物从真实背包扣除，复用当前合法目标，不新增导航或目标选择器。默认白名单为grenade、stun_grenade、nail_bomb；工厂另支持gas_grenade、choke_bomb、molotov_cocktail、hellfire_bomb、swarm_bomb及beacon_grenade类型，以实际注册ID加入白名单。投掷间隔、距离、引信、友军排除半径和品质可配置。失败检查也限频，检查弹道与落点附近友军。
 

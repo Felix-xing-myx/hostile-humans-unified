@@ -23,7 +23,7 @@ final class ScgunsMedical {
     static boolean canUse(Human human, ItemStack stack) {
         var profile = profile(stack);
         return profile != null && human.getPersistentData().getInt(COOLDOWN) <= 0
-                && profile.effects().stream().noneMatch(effect -> {
+                && profile.effects().stream().filter(ScgunsSettings.Effect::isRegeneration).noneMatch(effect -> {
                     var type = BuiltInRegistries.MOB_EFFECT.get(effect.id());
                     return type != null && human.hasEffect(type);
                 });

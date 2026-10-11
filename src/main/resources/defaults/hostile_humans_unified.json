@@ -2851,55 +2851,35 @@
     "medical_supplies": {
       "scguns:basic_poultice": {
         "enabled": true,
-        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始；四种药品共用冷却。",
-        "healing": 4,
-        "use_ticks": 32,
-        "shared_cooldown_ticks": 100,
-        "quality": 60,
-        "effects": []
-      },
-      "scguns:honey_sulfur_poultice": {
-        "enabled": true,
-        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始；四种药品共用冷却。",
+        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始。四种药共用冷却；shared_cooldown_ticks是无再生时的基础冷却，有再生则自动使用配置的再生持续时间（多条取最长），伤害吸收不延长冷却或阻止再次使用。",
         "healing": 8,
         "use_ticks": 32,
         "shared_cooldown_ticks": 100,
         "quality": 65,
+        "effects": []
+      },
+      "scguns:honey_sulfur_poultice": {
+        "enabled": true,
+        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始。四种药共用冷却；shared_cooldown_ticks是无再生时的基础冷却，有再生则自动使用配置的再生持续时间（多条取最长），伤害吸收不延长冷却或阻止再次使用。",
+        "healing": 16,
+        "use_ticks": 32,
+        "shared_cooldown_ticks": 100,
+        "quality": 70,
         "effects": [
           {
             "id": "minecraft:regeneration",
-            "duration_ticks": 100,
+            "duration_ticks": 200,
             "level": 1
           }
         ]
       },
       "scguns:enchanted_bandage": {
         "enabled": true,
-        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始；四种药品共用冷却。",
-        "healing": 12,
+        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始。四种药共用冷却；shared_cooldown_ticks是无再生时的基础冷却，有再生则自动使用配置的再生持续时间（多条取最长），伤害吸收不延长冷却或阻止再次使用。",
+        "healing": 24,
         "use_ticks": 32,
-        "shared_cooldown_ticks": 400,
-        "quality": 75,
-        "effects": [
-          {
-            "id": "minecraft:regeneration",
-            "duration_ticks": 100,
-            "level": 2
-          },
-          {
-            "id": "minecraft:absorption",
-            "duration_ticks": 400,
-            "level": 1
-          }
-        ]
-      },
-      "scguns:dragon_salve": {
-        "enabled": true,
-        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始；四种药品共用冷却。",
-        "healing": 16,
-        "use_ticks": 32,
-        "shared_cooldown_ticks": 700,
-        "quality": 85,
+        "shared_cooldown_ticks": 100,
+        "quality": 80,
         "effects": [
           {
             "id": "minecraft:regeneration",
@@ -2908,7 +2888,27 @@
           },
           {
             "id": "minecraft:absorption",
-            "duration_ticks": 700,
+            "duration_ticks": 800,
+            "level": 1
+          }
+        ]
+      },
+      "scguns:dragon_salve": {
+        "enabled": true,
+        "_说明_中文": "仅作用于本模组人类；治疗为生命点，20 ticks=1秒，效果等级从1开始。四种药共用冷却；shared_cooldown_ticks是无再生时的基础冷却，有再生则自动使用配置的再生持续时间（多条取最长），伤害吸收不延长冷却或阻止再次使用。",
+        "healing": 32,
+        "use_ticks": 32,
+        "shared_cooldown_ticks": 100,
+        "quality": 90,
+        "effects": [
+          {
+            "id": "minecraft:regeneration",
+            "duration_ticks": 400,
+            "level": 2
+          },
+          {
+            "id": "minecraft:absorption",
+            "duration_ticks": 1400,
             "level": 1
           }
         ]

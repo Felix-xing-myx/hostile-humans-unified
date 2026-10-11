@@ -10,7 +10,14 @@ public record ScgunsSettings(boolean enabled, double accuracyModifier, double da
         double friendlySafetyRadius, int fuseTicks, double throwableQuality, java.util.Set<String> allowedThrowables,
         boolean flareEnabled, String raidId, int flareCooldownTicks, Map<String, Medicine> medicines, Map<String, Integer> magazineCosts) {
     public record Medicine(float healing, int useTicks, int cooldownTicks, double quality, List<Effect> effects) {}
-    public record Effect(ResourceLocation id, int durationTicks, int amplifier) {}
+    public record Effect(ResourceLocation id, int durationTicks, int amplifier) {
+        boolean isRegeneration() { return id.equals(REGENERATION); }
+    }
+    private static final ResourceLocation REGENERATION = new ResourceLocation("minecraft", "regeneration");
+    /** Regeneration owns the shared treatment duration; absorption never extends it. */
+    static int medicalCooldown(int baseTicks, List<Effect> effects) {
+        return effects.stream().filter(Effect::isRegeneration).mapToInt(Effect::durationTicks).max().orElse(baseTicks);
+    }
     static ScgunsSettings parse(JsonObject data) {
         JsonObject throwing = UnifiedConfig.object(data, "throwables");
         JsonObject flare = UnifiedConfig.object(data, "signal_flare");
@@ -30,10 +37,10 @@ public record ScgunsSettings(boolean enabled, double accuracyModifier, double da
                         (int) UnifiedConfig.number(effect, "level", 1, 1, 256) - 1));
             }
             if (ResourceLocation.tryParse(entry.getKey()) == null) continue;
-            medicines.put(entry.getKey(), new Medicine((float) UnifiedConfig.number(row, "healing", 4, 0, 2048),
+            medicines.put(entry.getKey(), new Medicine((float) UnifiedConfig.number(row, "healing", 8, 0, 2048),
                     (int) UnifiedConfig.number(row, "use_ticks", 32, 1, 1200),
-                    (int) UnifiedConfig.number(row, "shared_cooldown_ticks", 100, 1, 72000),
-                    UnifiedConfig.number(row, "quality", 60, 0, 1000), List.copyOf(effects)));
+                    medicalCooldown((int) UnifiedConfig.number(row, "shared_cooldown_ticks", 100, 1, 72000), effects),
+                    UnifiedConfig.number(row, "quality", 65, 0, 1000), List.copyOf(effects)));
         }
         Set<String> allowed = new LinkedHashSet<>();
         if (throwing.has("allowed_items") && throwing.get("allowed_items").isJsonArray())

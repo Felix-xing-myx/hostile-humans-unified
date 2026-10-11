@@ -88,6 +88,22 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertIn("human.level().isClientSide", medical)
         self.assertNotIn("getDeclaredField", medical)
 
+    def test_medical_regeneration_owns_cooldown_not_absorption(self):
+        medical = source("ScgunsMedical")
+        self.assertIn("filter(ScgunsSettings.Effect::isRegeneration)", medical)
+        settings = source("ScgunsSettings")
+        self.assertIn("filter(Effect::isRegeneration).mapToInt(Effect::durationTicks)", settings)
+        config = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
+        rows = config["scguns"]["medical_supplies"]
+        expected = {"basic_poultice": (8, 65, []), "honey_sulfur_poultice": (16, 70, [200]),
+                    "enchanted_bandage": (24, 80, [200, 800]), "dragon_salve": (32, 90, [400, 1400])}
+        for name, (healing, quality, durations) in expected.items():
+            row = rows["scguns:" + name]
+            self.assertEqual(row["healing"], healing)
+            self.assertEqual(row["quality"], quality)
+            self.assertEqual(row["shared_cooldown_ticks"], 100)
+            self.assertEqual([e["duration_ticks"] for e in row["effects"]], durations)
+
     def test_raid_is_player_owned_and_consumption_follows_acceptance(self):
         item = source("ScgunsSignalItem")
         self.assertLess(item.index("ScgunsCompat.launchFlare(serverPlayer)"), item.index("stack.shrink(1)"))
