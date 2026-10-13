@@ -9,6 +9,7 @@ public record ScgunsSettings(boolean enabled, double accuracyModifier, double da
         boolean throwablesEnabled, int throwCooldownTicks, double throwMinRange, double throwMaxRange,
         double friendlySafetyRadius, int fuseTicks, double throwSpeed, double clusterRadius, int clusterMinimumTargets,
         int clusterCooldownTicks, double throwableQuality, java.util.Set<String> allowedThrowables,
+        Map<String, Double> throwableDamageMultipliers,
         boolean flareEnabled, String raidId, int flareCooldownTicks, Map<String, Medicine> medicines, Map<String, Integer> magazineCosts) {
     public record Medicine(float healing, int useTicks, int cooldownTicks, double quality, List<Effect> effects) {}
     public record Effect(ResourceLocation id, int durationTicks, int amplifier) {
@@ -22,6 +23,17 @@ public record ScgunsSettings(boolean enabled, double accuracyModifier, double da
     static ScgunsSettings parse(JsonObject data) {
         JsonObject throwing = UnifiedConfig.object(data, "throwables");
         JsonObject flare = UnifiedConfig.object(data, "signal_flare");
+        Map<String, Double> throwableDamage = new LinkedHashMap<>();
+        JsonObject damage = UnifiedConfig.object(throwing, "damage_multipliers");
+        for (String id : List.of("scguns:grenade", "scguns:nail_bomb", "scguns:molotov_cocktail",
+                "scguns:hellfire_bomb", "scguns:shotball")) {
+            double fallback = switch (id) {
+                case "scguns:grenade" -> 32.0 / 19.0;
+                case "scguns:nail_bomb" -> 24.0 / 14.0;
+                default -> 1.0;
+            };
+            throwableDamage.put(id, UnifiedConfig.number(damage, id, fallback, 0, 100));
+        }
         Map<String, Medicine> medicines = new LinkedHashMap<>();
         for (var entry : UnifiedConfig.object(data, "medical_supplies").entrySet()) {
             if (!entry.getValue().isJsonObject() || entry.getKey().startsWith("_")) continue;
@@ -70,6 +82,7 @@ public record ScgunsSettings(boolean enabled, double accuracyModifier, double da
                 (int) UnifiedConfig.number(throwing, "cluster_minimum_targets", 3, 2, 16),
                 (int) UnifiedConfig.number(throwing, "cluster_cooldown_ticks", 80, 1, 72000),
                 UnifiedConfig.number(throwing, "quality", 170, 0, 1000), Set.copyOf(allowed),
+                Map.copyOf(throwableDamage),
                 UnifiedConfig.bool(flare, "enabled", true), raid,
                 (int) UnifiedConfig.number(flare, "cooldown_ticks", 1200, 20, 72000), Map.copyOf(medicines), Map.copyOf(costs));
     }

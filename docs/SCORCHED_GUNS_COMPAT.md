@@ -254,3 +254,19 @@ ScgunsThrowables.flightProfile集中维护已支持工厂的物理/效果时间�
 主控/root在main主工作树顺序修改ScgunsSettings、默认JSON、既有Python配置/拾取接线契约，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d及全部既有未提交修改。198项Python静态/API检查通过，6份默认附录已导出核对。未运行Java编译/构建、未同步实例或推送，原有实例的quality=50/cooldown_ticks=200等明确值不会自动被新默认覆盖，需以后指定配置更新时处理。源码待构建与游戏验收。
 
 待验收：有其他低价值物品时优先保留/拾取炸弹，饱和背包仍保护食物药品；单体与密集敌群投掷间隔，真实库存消耗和友军安全；不把出生抽取权重误当背包品质。
+
+## 2026-10-12 焦燃投掷物伤害配置（源码待构建）
+
+全局 `global.json` → `scguns.throwables.damage_multipliers` 按物品ID控制本模组人类投出的直接伤害，范围0～100，1为原生，0为零直接伤害但保留效果。
+
+| 物品ID | 默认倍率 | 默认直接伤害 |
+|---|---:|---|
+| scguns:grenade | 32/19 ≈ 1.6842105263 | 32点，保留距离衰减 |
+| scguns:nail_bomb | 24/14 ≈ 1.7142857143 | 每条命中弹片24点，数量/撕裂不变 |
+| scguns:molotov_cocktail | 1 | 保持原生直接爆炸，后续燃烧不变 |
+| scguns:hellfire_bomb | 1 | 保持原生直接爆炸，后续灵魂火不变 |
+| scguns:shotball | 1 | 初始9点，保留反弹衰减 |
+
+服务器在Forge LivingHurtEvent中根据直接伤害实体的真实投掷者与物品ID调整一次，不改伤害类型或直接扣血，护甲/抗性照常处理。独立于枪械70%与成长倍率；玩家与其他生物投掷不变。毒气/虫群不开放；窒息原生伤害不保留投掷者归属，无法通过此入口可靠区分，因此不开放。地面后续火焰也不追踪改伤。
+
+已有全局配置在下次正常加载时补齐缺失倍率，保留显式自定义值（包括0）；不改战术池/权重/投掷速度/冷却。当前测试实例配置与JAR未修改。来源：ScgunsSettings.java、ScgunsThrowableDamage.java、ScgunsIntegration.java、TacticalSupplyDefaults.java，以及ScorchedGuns 0.5.5实际JAR伤害调用。出生默认值索引见知识库附录。

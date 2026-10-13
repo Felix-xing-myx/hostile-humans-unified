@@ -110,7 +110,8 @@ public final class RangedFiringPosition {
                 return null;
             }
             Path path = human.getNavigation().createPath(candidateBlock, 0);
-            if (path == null || !path.canReach() || path.getNodeCount() < 2 || !HumanTerrainSafety.safePath(human, path)) {
+            if (path == null || !path.canReach() || path.getNodeCount() < 2 || !HumanTerrainSafety.safePath(human, path)
+                    || !SoldierOrder.allowsCombatPath(human, path)) {
                 return null;
             }
             return path;
@@ -144,7 +145,7 @@ public final class RangedFiringPosition {
         });
         if (session.search().hasRemaining()) return null;
         cancelVisibleSearch(human);
-        return bestPath;
+        return SoldierOrder.allowsCombatPath(human, bestPath) ? bestPath : null;
     }
 
     /**
@@ -222,7 +223,8 @@ public final class RangedFiringPosition {
                 continue;
             }
             Path path = human.getNavigation().createPath(candidateBlock, 0);
-            if (path == null || !path.canReach() || path.getNodeCount() < 2 || !HumanTerrainSafety.safePath(human, path)) {
+            if (path == null || !path.canReach() || path.getNodeCount() < 2 || !HumanTerrainSafety.safePath(human, path)
+                    || !SoldierOrder.allowsCombatPath(human, path)) {
                 continue;
             }
 

@@ -17,6 +17,23 @@ final class GunRangePolicy {
         return band.fireRange() > 64.0D ? Math.max(band.fireRange(), followRange) : band.fireRange();
     }
 
+    /** Some native flame/sonic projectiles expire before the generic weapon-type range. */
+    static Band forWeapon(net.minecraft.world.item.ItemStack weapon) {
+        var support = GunSupport.get();
+        Band base = forType(support.gunType(weapon));
+        return limited(base, support.maximumProjectileReach(weapon));
+    }
+    static Band limited(Band base, double nativeReach) {
+        if (!Double.isFinite(nativeReach) || nativeReach <= 0) return base;
+        double preferredMax = Math.min(base.maximum(), nativeReach * .85);
+        double preferredMin = preferredMax >= base.maximum() ? base.minimum()
+                : Math.min(base.minimum(), preferredMax * .5);
+        return new Band(preferredMin, preferredMax,
+                Math.min(base.retreatResume(), preferredMax), Math.min(base.fireRange(), nativeReach));
+    }
+    static double firingReach(net.minecraft.world.item.ItemStack weapon, double followRange) {
+        return Math.min(firingReach(forWeapon(weapon), followRange), GunSupport.get().maximumProjectileReach(weapon));
+    }
     static Band forType(String rawType) {
         String type = rawType == null ? "" : rawType.toLowerCase(Locale.ROOT);
         return switch (type) {

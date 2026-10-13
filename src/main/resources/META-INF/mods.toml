@@ -27,7 +27,7 @@ side="BOTH"
 [[dependencies.hostile_humans_unified]]
 modId="tacz"
 mandatory=false
-versionRange="[1.1.8,)"
+versionRange="[1.1.5,)"
 ordering="AFTER"
 side="BOTH"
 
@@ -56,5 +56,12 @@ side="BOTH"
 modId="scguns"
 mandatory=false
 versionRange="[0.5.5,0.6)"
+ordering="AFTER"
+side="BOTH"
+
+[[dependencies.hostile_humans_unified]]
+modId="jeg"
+mandatory=false
+versionRange="[0.14.5,)"
 ordering="AFTER"
 side="BOTH"

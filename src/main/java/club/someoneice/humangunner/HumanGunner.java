@@ -160,6 +160,7 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onServerTick);
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onPlayerLogout);
         MinecraftForge.EVENT_BUS.addListener(OwnerOfflinePolicy::onPlayerLogout);
+        MinecraftForge.EVENT_BUS.addListener(OwnerOfflinePolicy::onPlayerLogin);
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onServerStopped);
         MinecraftForge.EVENT_BUS.addListener(PeacefulHumanPolicy::onServerTick);
         MinecraftForge.EVENT_BUS.addListener(SoldierRosterAudit::onServerTick);
@@ -262,6 +263,7 @@ public final class HumanGunner {
             SoldierDialogue.tick(human);
             GunCustody.tick(human);
             RangedWeaponCustody.tick(human);
+            CombatResupply.tick(human);
             if ((human.tickCount + (human.getId() & 7)) % 8 == 0) {
                 RecoverySupplies.auditOwnedShields(human);
                 GunCustody.auditOwnedGuns(human);
@@ -271,7 +273,7 @@ public final class HumanGunner {
                 HumanLootManager.optimizeOwnedEquipment(human);
             }
             GunSupport.get().tickIdleReload(human);
-            ScgunsCompat.tick(human);
+            TacticalThrowables.tick(human);
             if (human.getTarget() instanceof Player player
                     && HumanRelations.effectiveOwner(human) == null
                     && IdentityBadgeAccess.blocksInitiatedHostility(human, player)
@@ -378,6 +380,7 @@ public final class HumanGunner {
         configureTierRivalry(human);
         configureCombatAi(human);
         configureSoldierOrders(human);
+        if (human.hasOwner()) SoldierOrder.initialize(human);
         SoldierCombatMode.initialize(human);
         ((StaticCombatGoalHost) human).humanGunner$installStaticCombatGoals();
         INITIALIZED_HUMANS.add(human);

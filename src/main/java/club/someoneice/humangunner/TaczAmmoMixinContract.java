@@ -21,6 +21,9 @@ public final class TaczAmmoMixinContract {
             + "Lnet/minecraft/world/item/ItemStack;Lcom/tacz/guns/resource/index/CommonGunIndex;)V";
     public static final String SHOOT = "shoot(Ljava/util/function/Supplier;Ljava/util/function/Supplier;JFZ)"
             + "Lcom/tacz/guns/api/entity/ShootResult;";
+    // TaCZ 1.1.5 through 1.1.7 use the same ammo boundary with a shorter entry signature.
+    public static final String SHOOT_LEGACY = "shoot(Ljava/util/function/Supplier;Ljava/util/function/Supplier;J)"
+            + "Lcom/tacz/guns/api/entity/ShootResult;";
     public static final String SCRIPT_INVENTORY_AMMO = "useInventoryAmmo()Z";
     public static final String SCRIPT_SHOOT_ONCE = "shootOnce(Z)V";
 

@@ -31,7 +31,7 @@ class GunPoolConfig(unittest.TestCase):
             pool = ROOT["tiers"][rank]["scguns"]["gun_whitelist"]
             self.assertTrue(pool)
             for gun, weight in pool.items():
-                self.assertRegex(gun, r"^scguns:[a-z0-9_/.]+$")
+                self.assertRegex(gun, r"^(scguns|jeg):[a-z0-9_/.]+$")
                 self.assertIs(type(weight), int)
                 self.assertGreater(weight, 0)
             pools.append(pool)
@@ -43,6 +43,7 @@ class GunPoolConfig(unittest.TestCase):
             for rank in RANKS:
                 for gun in ROOT["tiers"][rank]["scguns"]["gun_whitelist"]:
                     namespace, path = gun.split(":", 1)
+                    if namespace != "scguns": continue
                     data = json.loads(jar.read(f"data/{namespace}/guns/{path}.json"))
                     self.assertIn("general", data)
 

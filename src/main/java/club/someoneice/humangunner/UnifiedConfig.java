@@ -17,6 +17,8 @@ public final class UnifiedConfig {
     private final EquipmentGrowthPolicy equipmentGrowth;
     private final GrowthConfig growth;
     private final JumpAttackConfig jumpAttack;
+    private final ArmorSwapConfig armorSwap;
+    private final CombatResupplyConfig combatResupply;
     private final FirstAidSettings firstAid;
     private final ScgunsSettings scguns;
     private final ShieldPressureConfig shieldPressure;
@@ -70,6 +72,8 @@ public final class UnifiedConfig {
         JsonObject defaults = defaults();
         root = merge(defaults, configured);
         jumpAttack = JumpAttackConfig.parse(object(root, "jump_attack"));
+        armorSwap = ArmorSwapConfig.parse(object(root, "armor_swap"));
+        combatResupply = CombatResupplyConfig.parse(object(root, "combat_resupply"));
         firstAid = FirstAidSettings.parse(object(root, "first_aid"));
         gunSpawnPools = GunSpawnPools.parse(root);
         scguns = ScgunsSettings.parse(object(root, "scguns"));
@@ -234,8 +238,12 @@ public final class UnifiedConfig {
     public Spawn spawn() { return spawn; }
     public GrowthConfig growth() { return growth; }
     public JumpAttackConfig jumpAttack() { return jumpAttack; }
+    public ArmorSwapConfig armorSwap() { return armorSwap; }
+    public CombatResupplyConfig combatResupply() { return combatResupply; }
     public FirstAidSettings firstAid() { return firstAid; }
     public ScgunsSettings scguns() { return scguns; }
+    public int jegInventoryFedCapacity() { return (int) number(object(root, "scguns"), "jeg_inventory_fed_capacity", 100, 1, 4096); }
+    public Map<String, String> jegGunTypes() { return JegGunTypes.parse(object(object(root, "scguns"), "jeg_gun_types")); }
     public ShieldPressureConfig shieldPressure() { return shieldPressure; }
     public HostileTargetingConfig hostileTargeting() { return hostileTargeting; }
     EquipmentGrowthPolicy equipmentGrowth() { return equipmentGrowth; }
@@ -266,6 +274,7 @@ public final class UnifiedConfig {
     public SoldierMessages soldierMessages() { return soldierMessages; }
     public boolean betterCombatSoldierMeleeEnabled() { return betterCombatSoldierMeleeEnabled; }
     public boolean taczEnabled() { return bool(object(root, "tacz"), "enabled", true); }
+    public int taczInventoryFedCapacity() { return (int) number(object(root, "tacz"), "inventory_fed_capacity", 150, 1, 4096); }
     GunSpawnPools gunSpawnPools() { return gunSpawnPools; }
     public double damage(String key, double fallback) { return number(object(root, "damage"), key, fallback, 0, 10); }
     public double gunSetting(String key, double fallback) { return number(object(root, "tacz"), key, fallback, 0, 10); }

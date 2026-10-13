@@ -255,6 +255,9 @@ extends Goal {
     }
 
     protected void checkAndPerformAttack(LivingEntity livingEntity) {
+        // Check before stopUsingItem(): an emergency weapon handoff must not
+        // let the old melee goal lower the shield and create a swing packet.
+        if (this.mob instanceof Human human && !human.humanGunner$canMeleeAttack()) return;
         if (this.mob instanceof Human human && (human.humanGunner$hasPendingMeleeAttack()
                 || club.someoneice.humangunner.PursuitJumpAttack.awaitingTakeoff(human))) return;
         if (canStrike(livingEntity) && this.ticksUntilNextAttack <= 0) {
@@ -273,6 +276,7 @@ extends Goal {
 
     /** Opens one guaranteed attack window after an adaptive shield block. */
     public boolean humanGunner$tryImmediateCounterattack(LivingEntity target) {
+        if (this.mob instanceof Human human && human.humanGunner$shieldDefense().shouldSuppressRecovery()) return false;
         if (this.mob instanceof Human human && human.humanGunner$hasPendingMeleeAttack()) return false;
         if (club.someoneice.humangunner.GunSupport.isGunItem(this.mob.getMainHandItem())) return false;
         if (target == null || !target.isAlive() || !this.mob.canAttack(target)) {

@@ -6,6 +6,12 @@ public final class ReloadPaymentLedgerTest {
     public static void main(String[] args) {
         var ledger = new ReloadPaymentLedger<Object, Object>();
         Object holder = new Object(), gun = new Object();
+        check(GunReloadPolicy.shouldIdleTopOff(37, 150, false, false, false, false)
+                && !GunReloadPolicy.shouldIdleTopOff(38, 150, false, false, false, false),
+                "150-round virtual magazine uses the existing strict idle threshold");
+        check(!GunReloadPolicy.reloadThresholdSatisfied(1, 150, true)
+                && GunReloadPolicy.reloadThresholdSatisfied(0, 150, true),
+                "virtual magazine must empty before a combat reload");
         check(GunReloadPolicy.shouldIdleTopOff(7, 30, false, false, false, false)
                 && !GunReloadPolicy.shouldIdleTopOff(8, 30, false, false, false, false),
                 "30-round idle gun reloads below25 percent only");

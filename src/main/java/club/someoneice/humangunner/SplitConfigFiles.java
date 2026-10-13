@@ -97,7 +97,7 @@ final class SplitConfigFiles {
                         ? data.getAsJsonObject("scguns") : null;
                 if (scguns != null && !scguns.has("human_gun_damage_multiplier"))
                     scguns.add("human_gun_damage_multiplier", defaults.getAsJsonObject("scguns").get("human_gun_damage_multiplier").deepCopy());
-                for (String key : List.of("jump_attack", "first_aid", "scguns", "shield_pressure")) {
+                for (String key : List.of("jump_attack", "first_aid", "scguns", "shield_pressure", "armor_swap", "combat_resupply")) {
                     if (!data.has(key) && defaults.has(key)) {
                         JsonObject section = defaults.getAsJsonObject(key).deepCopy();
                         if (key.equals("jump_attack") && TierConfigProjection.at(data, "damage.jump_attack_damage_multiplier") != null)
@@ -117,14 +117,16 @@ final class SplitConfigFiles {
                 if (!loadout.has("automatic_scguns_armor")) loadout.addProperty("automatic_scguns_armor", true);
             }
             // Add only the new pool controls; never merge a player's explicit pool.
-            for (String backend : GunSpawnPools.BACKENDS) {
+            for (String backend : GunSpawnPools.CONFIG_SECTIONS) {
                 JsonObject section = data.has(backend) && data.get(backend).isJsonObject()
                         ? data.getAsJsonObject(backend) : new JsonObject();
                 if (!data.has(backend)) data.add(backend, section);
                 JsonObject template = defaults.getAsJsonObject(backend);
+                if (!rank && backend.equals("tacz") && !section.has("inventory_fed_capacity"))
+                    section.add("inventory_fed_capacity", template.get("inventory_fed_capacity").deepCopy());
                 for (String key : rank ? List.of("gun_whitelist") : List.of("spawn_pool_source", "gun_blacklist",
                         "gun_whitelist", "auto_add_new_guns", "auto_added_gun_weight", "excluded_auto_gun_types",
-                        "excluded_gun_namespaces")) {
+                        "excluded_gun_namespaces", "jeg_gun_types", "jeg_inventory_fed_capacity")) {
                     if (!section.has(key) && template.has(key)) section.add(key, template.get(key).deepCopy());
                 }
             }

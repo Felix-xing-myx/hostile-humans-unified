@@ -78,7 +78,14 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
             sessionTarget = target.getUUID();
             sessionWeapon = human.getMainHandItem();
         }
+        // Share the gunner's timed close-range trial and pressure fallback, but
+        // restore a real bow/crossbow through its own two-location custody.
+        if (human.distanceToSqr(target) < 36 && CloseRangedTactics.tryBow(human, target)) {
+            releaseSeparation();
+            return;
+        }
         boolean maySeparate = !SoldierOrder.isHoldingPosition(human)
+                && !CloseRangedTactics.keepDefense(human)
                 && !human.isInWater() && !human.isInLava() && !human.isSeekingShore()
                 && !human.isShoreTransitionPending() && !human.onClimbable()
                 && (cycle.separating() || (!human.humanGunner$hasPendingMeleeAttack() && !human.swinging))
@@ -144,10 +151,9 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
     }
 
     private boolean allowedSeparation(LivingEntity target, Path path) {
+        if (!CloseRangedTactics.allowsLocalPath(human, path)) return false;
         if (!RetreatPathSafety.isSafe(human, target, path, true)) return false;
-        for (int index = path.getNextNodeIndex(); index < path.getNodeCount(); index++) {
-            if (!SoldierOrder.allowsCombatPosition(human, Vec3.atBottomCenterOf(path.getNodePos(index)))) return false;
-        }
+        if (!SoldierOrder.allowsCombatPath(human, path)) return false;
         var node = path.getEndNode();
         BlockPos end = new BlockPos(node.x, node.y, node.z);
         Vec3 feet = Vec3.atBottomCenterOf(end);

@@ -104,7 +104,7 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertIn("nativePoses.last().pose().set(poses.last().pose())", facade)
         self.assertIn("DualWieldShotTracker.get().clearShotCount(human.getId())", pose)
         self.assertIn("LAST_FLASH.get(human) != token", pose)
-        self.assertLess(layer.index("renderBackShield(human"), layer.index("translateToHand(arm"))
+        self.assertLess(layer.index("renderBackShield(human"), layer.index("translateToHand(visualArm"))
         self.assertIn("getParentModel().body.translateAndRotate(poses)", layer)
         self.assertIn("? 25 : -25", layer)
         placement = (ROOT / "src/main/java/com/craftix/hostile_humans/client/renderer/BackShieldPose.java").read_text(encoding="utf-8")
@@ -135,23 +135,24 @@ class ScgunsBoundary(unittest.TestCase):
     def test_throwables_share_tactical_counts_and_all_native_hand_items_are_allowed(self):
         config = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
         allowed = config["scguns"]["throwables"]["allowed_items"]
-        self.assertEqual(len(allowed), 9)
+        self.assertEqual(len(allowed), 14)
         self.assertIn("scguns:shotball", allowed)
         for rank, counts in zip(("roamer", "tier1", "tier2", "tier3"), ((1,2), (2,4), (4,7), (6,8))):
             tactical = config["tiers"][rank]["potions"]["tactical"]
             self.assertEqual((tactical["count_min"], tactical["count_max"]), counts)
             tools = {row["item"]: row["weight"] for row in tactical["pool"] if "potion" not in row}
-            self.assertEqual(tools, {"scguns:grenade":3, "scguns:nail_bomb":3, "scguns:gas_grenade":3, "scguns:choke_bomb":3, "scguns:swarm_bomb":3})
+            self.assertEqual(tools, {"scguns:grenade":3, "scguns:nail_bomb":3, "scguns:gas_grenade":3, "scguns:choke_bomb":3, "scguns:swarm_bomb":3, "jeg:grenade":3, "jeg:water_bomb":3})
             self.assertTrue(set(tools).issubset(allowed))
             self.assertEqual(sum("potion" in row for row in tactical["pool"]), 6)
-        native = source("ScgunsThrowables")
+        native = source("ScgunsThrowableAdapter")
+        planner = source("ScgunsThrowables")
         self.assertIn("new top.ribs.scguns.entity.throwable.ThrowableShotballEntity(human.level(), human)", native)
         self.assertIn("new FlightProfile((double) .04F, false, fuse)", native)
         self.assertIn("new FlightProfile((double) .025F, true, fuse)", native)
         self.assertNotIn("scguns:stun_grenade", allowed)
         self.assertEqual(config["scguns"]["throwables"]["initial_speed"], 2.0)
-        self.assertIn("!safeArea(human, plan.impact(), safety)", native)
-        self.assertLess(native.index("human.level().addFreshEntity(projectile)"), native.index("remainder.shrink(1)"))
+        self.assertIn("!safeArea(human, plan.impact(), safety)", planner)
+        self.assertLess(planner.index("human.level().addFreshEntity(projectile)"), planner.index("remainder.shrink(1)"))
         if os.environ.get("SCGUNS_API_JAR"):
             with zipfile.ZipFile(os.environ["SCGUNS_API_JAR"]) as jar:
                 registrations = jar.read("top/ribs/scguns/init/ModItems.class")
@@ -185,7 +186,7 @@ class ScgunsBoundary(unittest.TestCase):
         scguns = source("ScgunsIntegration")
         self.assertIn("tierScgunsDamage(TierAttributes.key(attacker))", scguns)
         self.assertNotIn("tierGunDamage(", scguns)
-        self.assertIn("HumanGrowth.gunDamageMultiplier(attacker)", scguns)
+        self.assertEqual(scguns.count("HumanGrowth.scaleGunDamage(attacker,"), 1)
         self.assertIn("HumanGrowth.gunSpreadMultiplier(human)", scguns)
         self.assertIn("tierGunDamage(TierAttributes.key(attacker))", source("TaczIntegration"))
 

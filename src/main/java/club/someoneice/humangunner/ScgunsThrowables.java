@@ -7,36 +7,13 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import top.ribs.scguns.entity.throwable.ThrowableItemEntity;
-import top.ribs.scguns.item.*;
+import net.minecraft.world.entity.projectile.ThrowableProjectile;
 
-/** Inventory-backed tactical ability, no MOVE/LOOK goal and no separate target selector. */
+/** Shared inventory-backed tactical planner (legacy class name); no MOVE/LOOK goal or extra AI. */
 final class ScgunsThrowables {
     private static final String READY = HumanGunner.MOD_ID + ":scguns_throw_ready";
     private ScgunsThrowables() {}
-    static boolean supported(ItemStack stack) {
-        var item = stack.getItem();
-        if (item instanceof StunGrenadeItem) return false;
-        return item instanceof GrenadeItem || item instanceof GasGrenadeItem || item instanceof ChokeBombItem
-                || item instanceof MolotovCocktailItem || item instanceof NailBombItem || item instanceof HellfireBombItem
-                || item instanceof SwarmBombItem || item instanceof BeaconGrenadeItem
-                || item instanceof ThrowableShotballItem;
-    }
-    /** Public factory dispatch preserves native entity ownership, detonation and effects. */
-    private static ThrowableItemEntity create(Human human, ItemStack stack, int fuse) {
-        var item = stack.getItem();
-        if (item instanceof GrenadeItem grenade) return grenade.create(human.level(), human, fuse);
-        if (item instanceof GasGrenadeItem grenade) return grenade.create(human.level(), human, fuse, 10);
-        if (item instanceof ChokeBombItem grenade) return grenade.create(human.level(), human, fuse, 10);
-        if (item instanceof MolotovCocktailItem grenade) return grenade.create(human.level(), human, fuse);
-        if (item instanceof NailBombItem grenade) return grenade.create(human.level(), human, fuse);
-        if (item instanceof HellfireBombItem grenade) return grenade.create(human.level(), human, fuse);
-        if (item instanceof SwarmBombItem grenade) return grenade.create(human.level(), human, fuse);
-        if (item instanceof BeaconGrenadeItem grenade) return grenade.create(human.level(), human, fuse);
-        if (item instanceof ThrowableShotballItem)
-            return new top.ribs.scguns.entity.throwable.ThrowableShotballEntity(human.level(), human);
-        return null;
-    }
+    static boolean supported(ItemStack stack) { return TacticalThrowables.supported(stack); }
     static void tick(Human human) {
         var settings = UnifiedConfig.get().scguns();
         if (human.level().isClientSide || !settings.throwablesEnabled() || human.isFleeing || human.isUsingItem()
@@ -67,8 +44,7 @@ final class ScgunsThrowables {
             ItemStack stack = human.getData().getInventoryItem(slot);
             if (!supported(stack) || !settings.allowedThrowables().contains(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString())) continue;
             // Gas/lingering hazards need a larger exclusion zone than a simple blast.
-            double safety = stack.getItem() instanceof GasGrenadeItem || stack.getItem() instanceof ChokeBombItem
-                    ? Math.max(16, settings.friendlySafetyRadius()) : settings.friendlySafetyRadius();
+            double safety = TacticalThrowables.safetyRadius(stack, settings.friendlySafetyRadius());
             // Leave the owner's body before launch, but never move the origin through a wall.
             Vec3 forward = target.position().subtract(human.position()).multiply(1, 0, 1).normalize();
             Vec3 eye = human.getEyePosition().add(0, -.1, 0);
@@ -79,9 +55,8 @@ final class ScgunsThrowables {
             ThrowPlan plan = plan(human, target, origin, physics.gravity(), physics.bouncing(),
                     physics.horizon(), settings.throwSpeed());
             if (plan == null || !safeArea(human, plan.impact(), safety)) continue;
-            ThrowableItemEntity projectile = create(human, stack, settings.fuseTicks());
+            ThrowableProjectile projectile = TacticalThrowables.create(human, stack, settings.fuseTicks());
             if (projectile == null) continue;
-            projectile.setItem(stack.copyWithCount(1));
             projectile.setPos(origin);
             Vec3 velocity = plan.velocity();
             // Native Projectile.shoot initializes both movement and rotation; no random spread.
@@ -104,13 +79,7 @@ final class ScgunsThrowables {
      * Beacon bounces too; Shotball effects already trigger on first impact, so aim there. */
     record FlightProfile(double gravity, boolean bouncing, int horizon) { }
     static FlightProfile flightProfile(ItemStack stack, int fuse) {
-        var item = stack.getItem();
-        if (item instanceof GasGrenadeItem) return new FlightProfile((double) .05F, true, 21);
-        if (item instanceof ChokeBombItem) return new FlightProfile((double) .05F, true, 41);
-        if (item instanceof GrenadeItem) return new FlightProfile((double) .05F, true, fuse);
-        if (item instanceof BeaconGrenadeItem) return new FlightProfile((double) .025F, true, fuse);
-        if (item instanceof ThrowableShotballItem) return new FlightProfile((double) .04F, false, fuse);
-        return new FlightProfile((double) .05F, false, fuse);
+        return TacticalThrowables.flightProfile(stack, fuse);
     }
 
     private record ClusterAim(LivingEntity target, int count) { }

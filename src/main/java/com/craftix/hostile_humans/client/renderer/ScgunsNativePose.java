@@ -32,7 +32,7 @@ final class ScgunsNativePose {
         ItemStack stack = human.getMainHandItem();
         GunItem item = (GunItem) stack.getItem();
         GripType grip = item.getModifiedGun(stack).getGeneral().getGripType(stack);
-        boolean right = human.getMainArm() == HumanoidArm.RIGHT;
+        boolean right = HumanGunPresentation.mainArm(human) == HumanoidArm.RIGHT;
         ModelPart main = right ? model.rightArm : model.leftArm;
         ModelPart support = right ? model.leftArm : model.rightArm;
         float side = right ? 1 : -1;

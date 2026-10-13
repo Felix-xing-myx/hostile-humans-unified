@@ -95,7 +95,7 @@ final class GunCustody {
         data.setInventoryItem(meleeSlot, gun);
         human.setItemSlot(EquipmentSlot.MAINHAND, melee);
         CloseDefenseHold.begin(human);
-        CloseGunTactics.beginMelee(human);
+        CloseRangedTactics.beginMelee(human);
         human.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
         HumanGunner.LOGGER.debug("Gun custody begin npc={} slot={} gun={} melee={}",
                 human.getUUID(), meleeSlot, itemId(gun), itemId(melee));
@@ -111,6 +111,7 @@ final class GunCustody {
         int meleeSlot = -1;
         double meleeScore = Double.NEGATIVE_INFINITY;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            if (HumanInventoryCustody.isReservedForRecovery(data, i)) continue;
             ItemStack candidate = data.getInventoryItem(i);
             if (!HumanLootManager.isDedicatedMeleeWeapon(candidate)) {
                 continue;
@@ -125,13 +126,13 @@ final class GunCustody {
     }
 
     static boolean restorePrimaryGun(Human human, String reason) {
-        if (isActive(human) && CloseGunTactics.keepDefense(human)) return false;
+        if (isActive(human) && CloseRangedTactics.keepDefense(human)) return false;
         if (isActive(human) && human.humanGunner$shieldDefense().shouldSuppressRecovery()) return false;
         if (isActive(human) && CloseDefenseHold.shouldHold(human)) return false;
         ItemStack held = human.getMainHandItem();
         if (AmmoWeaponSelection.usableGun(human, held)) {
             registerPrimaryGun(human, held);
-            if (isActive(human)) CloseGunTactics.returnedToGun(human);
+            if (isActive(human)) CloseRangedTactics.returnedToGun(human);
             clearLease(human);
             human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
             return true;
@@ -158,7 +159,7 @@ final class GunCustody {
             // the high-value gun.
             human.setItemSlot(EquipmentSlot.MAINHAND, gun);
             data.setInventoryItem(gunSlot, displaced);
-            if (isActive(human)) CloseGunTactics.returnedToGun(human);
+            if (isActive(human)) CloseRangedTactics.returnedToGun(human);
             human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
             HumanGunner.LOGGER.debug(
                     "Gun custody restore npc={} reason={} slot={} gun={} displaced={}",
@@ -220,6 +221,7 @@ final class GunCustody {
     }
 
     static void prepareForManualInventory(Human human) {
+        CloseRangedTactics.clear(human);
         CloseDefenseHold.clear(human);
         if (!isActive(human)) return;
         if (human.isUsingItem()) human.stopUsingItem();
@@ -227,6 +229,7 @@ final class GunCustody {
     }
 
     static void adoptManualLoadout(Human human) {
+        CloseRangedTactics.clear(human);
         CloseDefenseHold.clear(human);
         clearLease(human);
         HumanData data = human.getData();
@@ -295,6 +298,7 @@ final class GunCustody {
         if (!GunSupport.get().enabled()) return -1;
         String owner = human.getUUID().toString();
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            if (HumanInventoryCustody.isReservedForRecovery(data, i)) continue;
             ItemStack stack = data.getInventoryItem(i);
             if (club.someoneice.humangunner.GunSupport.get().isGun(stack)
                     && stack.hasTag()
@@ -308,6 +312,7 @@ final class GunCustody {
     private static int findAnyGunSlot(HumanData data) {
         if (!GunSupport.get().enabled()) return -1;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            if (HumanInventoryCustody.isReservedForRecovery(data, i)) continue;
             if (club.someoneice.humangunner.GunSupport.get().isGun(data.getInventoryItem(i))) {
                 return i;
             }
@@ -317,6 +322,7 @@ final class GunCustody {
 
     private static int findUsableGunSlot(Human human, HumanData data) {
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            if (HumanInventoryCustody.isReservedForRecovery(data, i)) continue;
             if (AmmoWeaponSelection.usableGun(human, data.getInventoryItem(i))) return i;
         }
         return -1;

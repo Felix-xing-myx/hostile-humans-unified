@@ -59,7 +59,7 @@ public final class BodyguardProtection {
     static double rangedReach(Human human) {
         var item = human.getMainHandItem();
         if (GunSupport.get().isGun(item)) return GunRangePolicy.firingReach(
-                GunRangePolicy.forType(GunSupport.get().gunType(item)), human.getAttributeValue(Attributes.FOLLOW_RANGE));
+                item, human.getAttributeValue(Attributes.FOLLOW_RANGE));
         if (item.getItem() instanceof CrossbowItem) return 48.0D;
         if (item.getItem() instanceof ProjectileWeaponItem || item.getItem() instanceof TridentItem) return 36.0D;
         return 0.0D;

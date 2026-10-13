@@ -19,7 +19,7 @@ public final class UnifiedCreativeTab {
     public static final RegistryObject<CreativeModeTab> UNIFIED = TABS.register("unified", () ->
             CreativeModeTab.builder()
                     .title(Component.translatable("itemGroup.hostile_humans_unified"))
-                    .icon(() -> new ItemStack(HumanGunnerRegistries.TIER_ONE_IDENTITY_BADGE.get()))
+                    .icon(() -> new ItemStack(HumanGunnerRegistries.SOLDIER_ROSTER.get()))
                     .displayItems((parameters, output) -> {
                         var items = new LinkedHashSet<RegistryObject<Item>>();
                         // Keep related items together, in tier order from roamer to tier III.

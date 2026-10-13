@@ -13,6 +13,9 @@ import net.minecraftforge.common.ForgeHooks;
 
 /** Lets Hostile Humans reserve and consume totems without occupying either hand. */
 public final class InventoryTotemProtection {
+    private static final float RECOVERY_HEALTH_RATIO = 0.30F;
+    private static final int RESISTANCE_TICKS = 60 * 20;
+
     private InventoryTotemProtection() {
     }
 
@@ -54,14 +57,18 @@ public final class InventoryTotemProtection {
             ItemStack remaining = stack.copy();
             remaining.shrink(1);
             data.setInventoryItem(i, remaining);
-            human.setHealth(1.0F);
-            human.removeAllEffects();
-            human.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 900, 1));
-            human.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 100, 1));
-            human.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 800, 0));
+            applyRecovery(human);
             human.level().broadcastEntityEvent(human, (byte) 35);
             return true;
         }
         return false;
+    }
+
+    /** Shared post-activation effect for real hand and inventory totems. */
+    public static void applyRecovery(Human human) {
+        if (human.level().isClientSide) return;
+        human.removeAllEffects();
+        human.setHealth(human.getMaxHealth() * RECOVERY_HEALTH_RATIO);
+        human.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, RESISTANCE_TICKS, 0));
     }
 }

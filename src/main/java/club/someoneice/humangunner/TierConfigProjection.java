@@ -85,8 +85,13 @@ final class TierConfigProjection {
                     "ammunition", "food", "potions", "combat", "ai", "movement",
                     "weapon_spread_degrees", "tacz", "scguns", "growth_profile", "equipment_loadout")
                 : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "growth", "ammunition",
-                    "equipment_integration", "ai", "hostile_mob_targeting", "shield_pressure", "recruitment", "spawning", "damage", "jump_attack",
+                    "equipment_integration", "armor_swap", "combat_resupply", "ai", "hostile_mob_targeting", "shield_pressure", "recruitment", "spawning", "damage", "jump_attack",
                     "better_combat", "first_aid", "scguns", "tacz", "native_gameplay");
+        orderGroup(result, "armor_swap", List.of("upgrade_min_gain_percent", "upgrade_min_durability_percent",
+                "replace_below_durability_percent", "replacement_durability_advantage_percent",
+                "emergency_below_durability_percent", "emergency_min_quality_percent", "cooldown_ticks"));
+        sectionHeader(result, "armor_swap", "护甲自动换装 / Automatic armor replacement");
+        sectionHeader(result, "combat_resupply", "战斗中顺路补给 / Opportunistic combat resupply");
         orderGroup(result, "equipment_loadout", List.of("ranged_chance", "ranged_in_backpack", "allow_tacz_firearms",
                 "automatic_spartan_weapons", "automatic_spartan_shields", "automatic_immersive_armors", "automatic_scguns_armor",
                 "weapon_count", "guaranteed_shields_min", "guaranteed_shields_max", "automatic_shield_enchantments",
@@ -117,7 +122,7 @@ final class TierConfigProjection {
                 "attempt_interval_min_ticks", "attempt_interval_max_ticks", "max_approach_distance_extra",
                 "max_target_height_difference"));
         orderGroup(result, "scguns", rank ? List.of("gun_whitelist", "damage_multiplier")
-                : List.of("enabled", "spawn_pool_source", "gun_blacklist", "gun_whitelist", "auto_add_new_guns", "auto_added_gun_weight"));
+                : List.of("enabled", "spawn_pool_source", "gun_blacklist", "gun_whitelist", "auto_add_new_guns", "auto_added_gun_weight", "jeg_gun_types", "jeg_inventory_fed_capacity"));
         orderGroup(result, "first_aid", List.of("enabled", "plaster_healing", "bandage_healing",
                 "morphine_duration_seconds", "morphine_resistance_level", "quality"));
         orderGroup(result, "growth", List.of("enabled", "stage_percent", "damage_stage_percent", "stage_cost", "experience", "firearms", "combat"));
@@ -160,7 +165,7 @@ final class TierConfigProjection {
     private static void enforceOwnership(JsonObject data, boolean rank) {
         JsonObject defaults = UnifiedConfig.defaults();
         if (rank) {
-            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "native_gameplay", "growth", "jump_attack", "first_aid", "shield_pressure")) data.remove(key);
+            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "armor_swap", "combat_resupply", "native_gameplay", "growth", "jump_attack", "first_aid", "shield_pressure")) data.remove(key);
             for (String key : object(defaults, "scguns").keySet())
                 if (!key.startsWith("_") && !key.equals("gun_whitelist")) removeOptions(object(data, "scguns"), List.of(key));
             removeOptions(object(data, "ai"), List.of("enabled"));

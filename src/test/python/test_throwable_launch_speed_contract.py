@@ -33,7 +33,7 @@ class ThrowableLaunchSpeedContract(unittest.TestCase):
         self.assertIn("x += vx * fraction; y += vy * fraction", source)
 
     def test_constructor_gravity_and_effect_profiles(self):
-        source = (JAVA / "ScgunsThrowables.java").read_text(encoding="utf-8")
+        source = (JAVA / "ScgunsThrowableAdapter.java").read_text(encoding="utf-8")
         self.assertIn('GasGrenadeItem) return new FlightProfile((double) .05F, true, 21)', source)
         self.assertIn('ChokeBombItem) return new FlightProfile((double) .05F, true, 41)', source)
         self.assertIn('GrenadeItem) return new FlightProfile((double) .05F, true, fuse)', source)
@@ -64,7 +64,7 @@ class ThrowableLaunchSpeedContract(unittest.TestCase):
                         cluster_minimum_targets=3, cluster_cooldown_ticks=80, cooldown_ticks=160, quality=170)
         parser = (JAVA / 'ScgunsSettings.java').read_text(encoding='utf-8')
         loot = (JAVA / 'HumanLootManager.java').read_text(encoding='utf-8')
-        self.assertIn('if (ScgunsCompat.throwItem(stack)) return UnifiedConfig.get().scguns().throwableQuality();', loot)
+        self.assertIn('if (TacticalThrowables.supported(stack)) return UnifiedConfig.get().scguns().throwableQuality();', loot)
         for name, value in expected.items():
             self.assertEqual(config[name], value)
             self.assertIn('"' + name + '"', parser)

@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public abstract class TaczHumanShootMixin {
     @Shadow @Final private LivingEntity shooter;
 
-    @Redirect(method = TaczAmmoMixinContract.SHOOT,
+    @Redirect(method = {TaczAmmoMixinContract.SHOOT, TaczAmmoMixinContract.SHOOT_LEGACY},
             at = @At(value = "INVOKE", target = TaczAmmoMixinContract.SHOOT_INVENTORY_AMMO), require = 1, allow = 1)
     private boolean humanGunner$useNpcMagazine(IGun gun, ItemStack weapon) {
         return !(shooter instanceof Human) && gun.useInventoryAmmo(weapon);

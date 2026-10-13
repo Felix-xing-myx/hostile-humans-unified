@@ -7,7 +7,6 @@ import com.tacz.guns.api.item.gun.AbstractGunItem;
 import com.tacz.guns.entity.shooter.ShooterDataHolder;
 import com.tacz.guns.resource.pojo.data.gun.FeedType;
 import com.tacz.guns.resource.pojo.data.gun.Bolt;
-import com.tacz.guns.util.AttachmentDataUtils;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
@@ -24,13 +23,14 @@ public final class TaczHumanReloadTransactions {
         if (!(shooter instanceof Human human)) return gun.startReload(data, weapon, shooter);
         if (human.level().isClientSide || human.getServer() == null || !human.getServer().isSameThread()
                 || weapon != human.getMainHandItem()) return false;
-        int loaded = gun.getCurrentAmmoCount(weapon);
-        boolean chambered = gun.hasBulletInBarrel(weapon);
         var index = TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
         if (index == null || index.getGunData().getReloadData() == null) return false;
-        int capacity = Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(weapon, index.getGunData()));
+        TaczNpcMagazine.normalize(weapon, index);
+        int loaded = gun.getCurrentAmmoCount(weapon);
+        boolean chambered = gun.hasBulletInBarrel(weapon);
+        int capacity = TaczNpcMagazine.capacity(weapon, index);
         var reload = index.getGunData().getReloadData();
-        boolean inventoryFeed = reload.getType() == FeedType.INVENTORY;
+        boolean inventoryFeed = TaczNpcMagazine.inventoryFed(weapon, index);
         int occupied = GunReloadPolicy.capacityCheckedRounds(loaded, chambered, inventoryFeed,
                 index.getGunData().getBolt() == Bolt.OPEN_BOLT);
         if (occupied >= capacity) return false;
@@ -55,7 +55,7 @@ public final class TaczHumanReloadTransactions {
                 () -> HumanAmmo.consumeMagazines(human, weapon));
         if (started && inventoryFeed) {
             // Inventory-feed guns have no native reload script. NPCs instead
-            // carry the pack's magazine capacity and use an authorized timed refill.
+            // carry the configured virtual capacity and use an authorized timed refill.
             // Consumption-disabled cycles still bind this real weapon and deadline.
             INVENTORY_FEED_END.put(data, human.level().getGameTime() + feedDelay);
         }
@@ -108,14 +108,7 @@ public final class TaczHumanReloadTransactions {
             }
             var index = TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
             if (index != null) {
-                int capacity = Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(weapon, index.getGunData()));
-                if (index.getGunData().getBolt() != Bolt.OPEN_BOLT) {
-                    gun.setCurrentAmmoCount(weapon, capacity - 1);
-                    gun.setBulletInBarrel(weapon, true);
-                } else {
-                    gun.setCurrentAmmoCount(weapon, capacity);
-                    gun.setBulletInBarrel(weapon, false);
-                }
+                TaczNpcMagazine.fill(weapon, index);
             }
             finish(human, data);
             return state;

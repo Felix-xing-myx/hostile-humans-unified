@@ -10,7 +10,7 @@ WATER = (PKG / 'WaterCombatNavigation.java').read_text(encoding='utf-8')
 class WaterCliffNavigationContract(unittest.TestCase):
     def test_stall_detour_reuses_budgeted_shore_planner_and_keeps_target(self):
         for call in ('OptionalPathBudget.claimFull', 'findNearestShorePath(state.avoid)',
-                     'HumanTerrainSafety.safePath', 'SoldierOrder.allowsCombatPosition',
+                     'HumanTerrainSafety.safePath', 'SoldierOrder.allowsCombatPath',
                      'human.startCombatShoreDetour', 'state.progress.isStalled'):
             self.assertIn(call, WATER)
         for forbidden in ('setTarget(', 'teleportTo(', 'new PathFinder', 'getEntitiesOfClass'):

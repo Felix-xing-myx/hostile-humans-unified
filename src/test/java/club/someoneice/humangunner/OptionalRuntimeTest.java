@@ -21,11 +21,15 @@ public final class OptionalRuntimeTest {
             for (Path file : paths.filter(p -> p.toString().endsWith(".class")).sorted().toList()) {
                 String name = root.relativize(file).toString().replace('\\', '.').replace('/', '.').replaceAll("\\.class$", "");
                 // These adapters are deliberately loadable only with their dependency installed.
-                if (name.matches(".*\\.(FirstAidApiBridge|TaczNpcEffects|TaczGunMechanics|ScgunsIntegration|ScgunsSounds|ScgunsReloadTiming|ScgunsNativePose|ScgunsMedicalBridge|ScgunsGunIdentity|ScgunsRaidBridge|ScgunsThrowables|TaczIntegration|TaczGunItemIdentity|TaczHumanReloadTransactions|TaczHumanReloadMixin|TaczHumanShootMixin|TaczReloadSoundClient|TaczMaidIntegration|TouhouMaidCompat|MaidTargetRules|TravelersBackpack|HumanBackpackLayer|CuriosBadgeAccess)(\\$.*)?")) continue;
-                Class<?> type = Class.forName(name, false, loader);
-                type.getDeclaredFields();
-                type.getDeclaredMethods();
-                type.getDeclaredConstructors();
+                if (name.matches(".*\\.(JegIntegration|JegReloadPlan|JegSounds|JegNativePose|JegGunIdentity|JegNpcMuzzleFlashMixin|FirstAidApiBridge|TaczNpcEffects|TaczGunMechanics|TaczNpcMagazine|ScgunsIntegration|ScgunsSounds|ScgunsReloadTiming|ScgunsNativePose|ScgunsMedicalBridge|ScgunsGunIdentity|ScgunsRaidBridge|ScgunsThrowableAdapter|ScgunsThrowableDamage|JegThrowables|TaczIntegration|TaczGunItemIdentity|TaczHumanReloadTransactions|TaczHumanReloadMixin|TaczHumanShootMixin|TaczReloadSoundClient|TaczMaidIntegration|TouhouMaidCompat|MaidTargetRules|TravelersBackpack|HumanBackpackLayer|CuriosBadgeAccess)(\\$.*)?")) continue;
+                try {
+                    Class<?> type = Class.forName(name, false, loader);
+                    type.getDeclaredFields();
+                    type.getDeclaredMethods();
+                    type.getDeclaredConstructors();
+                } catch (LinkageError error) {
+                    throw new AssertionError("Core optional-linkage failure in " + name, error);
+                }
                 loaded++;
             }
         }
@@ -37,6 +41,6 @@ public final class OptionalRuntimeTest {
         vanilla.control(null).clearSprintLock();
         vanilla.control(null).shoot(null, null, 0, 0);
         vanilla.registerEvents();
-        System.out.println("OptionalRuntimeTest: linked " + loaded + " core classes without TaCZ, Curios, Maid First Aid or Scorched Guns; vanilla adapter passed");
+        System.out.println("OptionalRuntimeTest: linked " + loaded + " core classes without TaCZ, Curios, Maid First Aid Scorched Guns or JEG; vanilla adapter passed");
     }
 }

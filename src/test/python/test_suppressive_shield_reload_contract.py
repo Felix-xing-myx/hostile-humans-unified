@@ -10,6 +10,56 @@ def source(name):
     return (PKG / name).read_text(encoding='utf-8')
 
 class SuppressiveShieldReloadContract(unittest.TestCase):
+    def test_ranged_goals_respect_shield_lease_before_touching_use_state(self):
+        goals = ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal'
+        for name in ('CrossbowGoal', 'BowAttack'):
+            shot = (goals / (name + '.java')).read_text(encoding='utf-8').split('private void tickShot(', 1)[1]
+            self.assertLess(shot.index('reservesRangedUse()'), shot.index('startUsingItem('))
+        crossbow = (goals / 'CrossbowGoal.java').read_text(encoding='utf-8').split('private void tickShot(', 1)[1]
+        self.assertLess(crossbow.index('!(mob.getUseItem().getItem() instanceof CrossbowItem)'), crossbow.index('crossbowState = CrossbowState.CHARGED'))
+        self.assertIn('CrossbowItem.isCharged(heldCrossbow)', crossbow)
+        self.assertLess(crossbow.index('this.mob.getUseItem() != heldCrossbow'), crossbow.index('this.crossbowState = CrossbowState.CHARGING'))
+        shoot = source('HumanArrowCombat.java').split('public static boolean canShoot(', 1)[1].split('/** Read the projectile', 1)[0]
+        self.assertIn('!human.humanGunner$shieldDefense().reservesRangedUse()', shoot)
+        self.assertIn('SpartanEquipmentCompat.isShield(human.getUseItem())', shoot)
+
+    def test_short_projectile_guard_survives_block_activation_delay(self):
+        shield = source('ShieldDefenseController.java')
+        begin = shield.split('int beginCombat(', 1)[1].split('void endCombat()', 1)[0]
+        self.assertIn('CombatPressurePolicy.MINIMUM_EFFECTIVE_BLOCK_TICKS + 1', begin)
+        self.assertIn('human.setChargingCrossbow(false)', begin)
+        tick = shield.split('CombatUpdate tickCombat(', 1)[1].split('private void updateDefensePressure()', 1)[0]
+        self.assertIn('shouldDeferRangedProjectileGuard() && hasHeldMinimumCombatGuard()', tick)
+
+    def test_pressure_handoff_cancels_damage_and_animation_before_weapon_swap(self):
+        shield = source('ShieldDefenseController.java')
+        prepare = shield.split('void prepareHighPressureDefense()', 1)[1].split('private boolean wantsCombatNow', 1)[0]
+        self.assertLess(prepare.index('humanGunner$cancelMeleeAttackForDefense()'), prepare.index('GunCustody.beginCloseMeleeCounter'))
+        human = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+        cancel = human.split('public void humanGunner$cancelMeleeAttackForDefense()', 1)[1].split('private void wearEquippedItem', 1)[0]
+        for expected in ('pendingBetterCombatTarget = null', 'pendingBetterCombatUpswingTicks = 0',
+                         'setNpcBetterCombatAttackAnimation("")', 'swinging = false'):
+            self.assertIn(expected, cancel)
+        self.assertIn('!humanGunner$shieldDefense().blocksMeleeAttack()', human)
+
+    def test_old_melee_goal_cannot_lower_emergency_shield_to_attack(self):
+        goal = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal/MeleeAttackGoal.java').read_text(encoding='utf-8')
+        attack = goal.split('protected void checkAndPerformAttack(', 1)[1].split('public boolean humanGunner$tryImmediateCounterattack', 1)[0]
+        self.assertLess(attack.index('!human.humanGunner$canMeleeAttack()'), attack.index('this.mob.stopUsingItem()'))
+        counter = goal.split('public boolean humanGunner$tryImmediateCounterattack', 1)[1]
+        self.assertLess(counter.index('shouldSuppressRecovery()'), counter.index('this.mob.stopUsingItem()'))
+
+    def test_client_consumes_old_attack_sequence_while_blocking(self):
+        renderer = ROOT / 'src/main/java/com/craftix/hostile_humans/client/renderer'
+        animation = (renderer / 'BetterCombatNpcAnimator.java').read_text(encoding='utf-8')
+        guard = animation.split('// Shield-use updates', 1)[1].split('if (playback.sequence == Integer.MIN_VALUE)', 1)[0]
+        self.assertIn('UseAnim.BLOCK', guard)
+        self.assertIn('playback.sequence = sequence', guard)
+        self.assertIn('playback.attackStack = null', guard)
+        self.assertIn('return false', guard)
+        model = (renderer / 'HumanPlayerModel.java').read_text(encoding='utf-8')
+        self.assertIn('human.getUseItem().getUseAnimation() == net.minecraft.world.item.UseAnim.BLOCK', model)
+
     def test_high_pressure_interrupts_recovery_before_food_advances(self):
         recovery = source('RecoverySupplies.java')
         tick = recovery.split('public static void tickHandCustody(Human human)', 1)[1]

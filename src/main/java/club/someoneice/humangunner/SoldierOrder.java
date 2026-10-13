@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.pathfinder.Path;
 
 /** Persistent owner-issued movement policy for hired humans. */
 public enum SoldierOrder {
@@ -42,6 +43,9 @@ public enum SoldierOrder {
     }
 
     static void set(Human human, SoldierOrder order, boolean preserveNavigation) {
+        OwnerOfflinePolicy.clearForDismiss(human);
+        human.setOrderedToSit(false);
+        human.setInSittingPose(false);
         PursuitNavigation.clear(human);
         BodyguardProtection.clear(human);
         SoldierFollowNavigation.clear(human);
@@ -57,12 +61,24 @@ public enum SoldierOrder {
     }
 
     static void initialize(Human human) {
+        human.setOrderedToSit(false);
+        human.setInSittingPose(false);
         if (!human.getPersistentData().contains(ORDER)) {
             set(human, FOLLOW);
         }
     }
 
+    /** Shared order boundary for planned combat routes; terrain safety remains the caller's policy. */
+    public static boolean allowsCombatPath(Human human, Path path) {
+        if (path == null || path.isDone()) return false;
+        for (int i = path.getNextNodeIndex(); i < path.getNodeCount(); i++) {
+            if (!allowsCombatPosition(human, Vec3.atBottomCenterOf(path.getNodePos(i)))) return false;
+        }
+        return true;
+    }
+
     static void clear(Human human) {
+        OwnerOfflinePolicy.clearForDismiss(human);
         PursuitNavigation.clear(human);
         BodyguardProtection.clear(human);
         SoldierFollowNavigation.clear(human);

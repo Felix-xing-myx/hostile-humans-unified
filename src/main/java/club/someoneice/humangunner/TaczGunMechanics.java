@@ -9,7 +9,6 @@ import com.tacz.guns.resource.index.CommonGunIndex;
 import com.tacz.guns.resource.pojo.data.gun.FeedType;
 import com.tacz.guns.resource.pojo.data.gun.GunReloadData;
 import com.tacz.guns.resource.pojo.data.gun.GunReloadTime;
-import com.tacz.guns.util.AttachmentDataUtils;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.item.ItemStack;
@@ -234,8 +233,7 @@ final class TaczGunMechanics {
         GunReloadTime cooldown = reload.getCooldown();
         double feedSeconds = feed == null ? 0.0D : feed.getEmptyTime();
         double cooldownSeconds = cooldown == null ? 0.0D : cooldown.getEmptyTime();
-        int capacity = Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(
-                weapon, index.getGunData()));
+        int capacity = TaczNpcMagazine.capacity(weapon, index);
         int missing = Math.max(1, capacity - gun.getCurrentAmmoCount(weapon));
         return GunReloadPolicy.recoveryDelayTicks(reload.getType() == FeedType.MANUAL,
                 missing, feedSeconds, cooldownSeconds);

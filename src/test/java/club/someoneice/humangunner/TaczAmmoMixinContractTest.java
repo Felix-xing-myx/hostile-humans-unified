@@ -46,8 +46,12 @@ public final class TaczAmmoMixinContractTest {
             check(count(reload, List.of(TaczAmmoMixinContract.RELOAD, TaczAmmoMixinContract.RELOAD_BODY),
                     TaczAmmoMixinContract.START_RELOAD) == 2, "duplicate reload payment invocation detected");
 
+            for (String shootAlternativeContract : List.of(TaczAmmoMixinContract.SHOOT, TaczAmmoMixinContract.SHOOT_LEGACY)) {
+                check(MemberInfo.parse(shootAlternativeContract, null).validate().getMinMatchCount() == 0,
+                        "alternative shoot selector must allow an absent version-specific overload");
+            }
             ClassNode shoot = read(jar, "com/tacz/guns/entity/shooter/LivingEntityShoot");
-            check(count(shoot, List.of(TaczAmmoMixinContract.SHOOT), TaczAmmoMixinContract.SHOOT_INVENTORY_AMMO) == 1,
+            check(count(shoot, List.of(TaczAmmoMixinContract.SHOOT, TaczAmmoMixinContract.SHOOT_LEGACY), TaczAmmoMixinContract.SHOOT_INVENTORY_AMMO) == 1,
                     "installed shoot inventory boundary must be unique");
             ClassNode script = read(jar, "com/tacz/guns/item/ModernKineticGunScriptAPI");
             check(methods(script, TaczAmmoMixinContract.SCRIPT_INVENTORY_AMMO) == 1,

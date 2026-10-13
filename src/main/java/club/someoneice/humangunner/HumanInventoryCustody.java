@@ -13,6 +13,16 @@ public final class HumanInventoryCustody {
     private HumanInventoryCustody() {
     }
 
+    /** Shared guard for automatic selectors and storage; owner editing settles recovery first. */
+    public static boolean isReservedForRecovery(HumanData data, int slot) {
+        return data.getHHFollowerEntity() instanceof Human human
+                && RecoverySupplies.reservesInventorySlot(human, slot);
+    }
+
+    static boolean isReservedForRecovery(Human human, int slot) {
+        return RecoverySupplies.reservesInventorySlot(human, slot);
+    }
+
     /** Store the complete supplied stack, or materialise its remainder in-world. */
     public static boolean stowOrDrop(Human human, ItemStack source) {
         if (source.isEmpty()) return true;
@@ -55,6 +65,7 @@ public final class HumanInventoryCustody {
         // can never be selected again.
         int candidateCount = data.getInventoryItemsSize();
         for (int index = 0; index < candidateCount; index++) {
+            if (isReservedForRecovery(data, index)) continue;
             ItemStack candidate = data.getInventoryItem(index);
             if (candidate.isEmpty() || !predicate.test(candidate)) {
                 continue;
@@ -80,6 +91,7 @@ public final class HumanInventoryCustody {
         int start = 0;
         long capacity = 0;
         for (int index = start; index < end; index++) {
+            if (isReservedForRecovery(data, index)) continue;
             ItemStack stored = data.getInventoryItem(index);
             if (stored.isEmpty()) {
                 capacity += incoming.getMaxStackSize();
@@ -101,6 +113,7 @@ public final class HumanInventoryCustody {
 
     private static void mergeAndFill(HumanData data, ItemStack source, int start, int end) {
         for (int index = start; index < end && !source.isEmpty(); index++) {
+            if (isReservedForRecovery(data, index)) continue;
             ItemStack stored = data.getInventoryItem(index);
             if (stored.isEmpty()
                     || !ItemStack.isSameItemSameTags(stored, source)
@@ -114,6 +127,7 @@ public final class HumanInventoryCustody {
             data.setInventoryItem(index, merged);
         }
         for (int index = start; index < end && !source.isEmpty(); index++) {
+            if (isReservedForRecovery(data, index)) continue;
             if (!data.getInventoryItem(index).isEmpty()) {
                 continue;
             }

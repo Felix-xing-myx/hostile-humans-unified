@@ -42,6 +42,13 @@ final class BetterCombatNpcAnimator {
 
     private BetterCombatNpcAnimator() {}
 
+    /** Resource reload invalidates players and optional API/resource lookups together. */
+    static void resetPlayback() {
+        PLAYBACKS.clear();
+        api = null;
+        apiLookupAttempted = false;
+    }
+
     /**
      * Starts a newly synchronized attack before vanilla model setup.
      */
@@ -56,33 +63,48 @@ final class BetterCombatNpcAnimator {
 
         Playback playback = PLAYBACKS.computeIfAbsent(human, ignored -> new Playback());
         int sequence = human.getNpcBetterCombatAttackAnimationSequence();
-        if (playback.sequence == Integer.MIN_VALUE) {
-            playback.sequence = sequence;
-            // Sequence zero is the synchronized idle state, not an attack.
-            // If tracking begins after an attack sequence was already sent,
-            // start it rather than silently dropping that first animation.
-            if (sequence != 0) {
+        // Shield-use updates may arrive before attack-cancellation metadata.
+        // Consume the old sequence while blocking so lowering the shield cannot
+        // replay a stale attack after a gun-to-melee handoff.
+        if (human.isUsingItem() && human.getUseItem().getUseAnimation() == net.minecraft.world.item.UseAnim.BLOCK) {
+            if (playback.sequence != sequence || playback.player != null) {
+                playback.sequence = sequence;
                 playback.lastTick = human.tickCount;
-                start(playback, resolved, human);
-            } else {
+                playback.player = null;
+                playback.attackStack = null;
+                playback.layer = null;
                 startIdle(playback, resolved, human);
             }
-        } else if (sequence != playback.sequence) {
+            return false;
+        }
+        var visual = human.getNpcBetterCombatAttackVisual();
+        long now = human.level().getGameTime();
+        if (!visual.active(now)) {
+            if (playback.sequence != sequence || playback.player != null || playback.stack == null) {
+                playback.sequence = sequence;
+                clearAttack(playback);
+                startIdle(playback, resolved, human);
+            }
+            return false;
+        }
+        if (sequence != playback.sequence) {
             playback.sequence = sequence;
             playback.lastTick = human.tickCount;
-            start(playback, resolved, human);
+            int elapsed = visual.elapsed(now);
+            // Never replay an expired attack from frame zero on late tracking.
+            // Bound catch-up work for extreme custom attack durations.
+            if (elapsed <= 200) start(playback, resolved, human, elapsed);
+            else {
+                clearAttack(playback);
+                startIdle(playback, resolved, human);
+            }
         }
         return isActive(playback, resolved);
     }
 
-    /**
-     * Better Combat's swing event and the NPC's synchronized animation
-     * sequence can reach the client on adjacent ticks. Suppress the vanilla
-     * arm swing throughout that short handoff so it cannot flash underneath
-     * the player's Better Combat keyframe animation.
-     */
+    /** Only an accepted, playable custom attack may suppress the vanilla fallback. */
     static boolean shouldSuppressVanillaSwing(Human human) {
-        return isApplicable(human) && human.swinging;
+        return human.swinging && hasActiveCustomAnimation(human);
     }
 
     /** True while this Human's Better Combat attack layer is actively playing. */
@@ -244,16 +266,25 @@ final class BetterCombatNpcAnimator {
             int elapsedTicks = human.tickCount - playback.lastTick;
             if (elapsedTicks <= 0) continue;
             try {
-                for (int i = 0; i < Math.min(elapsedTicks, 20); i++) {
-                    updateWeaponPoses(playback, human);
-                    playback.api.stackTick.invoke(playback.stack);
-                }
+                advancePlayback(playback, human, Math.min(elapsedTicks, 20));
                 playback.lastTick = human.tickCount;
             } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
                 warnOnce("Could not advance Better Combat's NPC animation on the client tick", exception);
                 iterator.remove();
             }
         }
+    }
+
+    /** Tick-driven transmission gears must advance even while the NPC is off screen. */
+    private static void advancePlayback(Playback playback, Human human, int ticks)
+            throws ReflectiveOperationException {
+        Api resolved = playback.api;
+        for (int i = 0; i < ticks; i++) {
+            updateWeaponPoses(playback, human);
+            resolved.setTickDelta.invoke(playback.applier, 0.0F);
+            resolved.stackTick.invoke(playback.stack);
+        }
+        resolved.setTickDelta.invoke(playback.applier, 0.0F);
     }
 
     /** The reference player/mob integration keeps weapon poses beneath the attack layer. */
@@ -298,6 +329,12 @@ final class BetterCombatNpcAnimator {
         return playback != null && playback.stack != null && playback.applier != null;
     }
 
+    private static void clearAttack(Playback playback) {
+        playback.player = null;
+        playback.attackStack = null;
+        playback.layer = null;
+    }
+
     private static void startIdle(Playback playback, Api resolved, Human human) {
         try {
             createPoseStack(playback, resolved, human);
@@ -325,7 +362,7 @@ final class BetterCombatNpcAnimator {
         updateWeaponPoses(playback, human);
     }
 
-    private static void start(Playback playback, Api resolved, Human human) {
+    private static void start(Playback playback, Api resolved, Human human, int elapsedTicks) {
         playback.player = null;
         playback.stack = null;
         playback.attackStack = null;
@@ -399,6 +436,7 @@ final class BetterCombatNpcAnimator {
             // at priority 2000. Use that same stack contract for NPC playback.
             resolved.stackAddLayer.invoke(playback.stack, 2000, playback.layer);
             playback.applier = resolved.applierConstructor.newInstance(playback.stack);
+            advancePlayback(playback, human, elapsedTicks);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             warnOnce("Could not start Better Combat's configured NPC attack animation", exception);
             playback.player = null;

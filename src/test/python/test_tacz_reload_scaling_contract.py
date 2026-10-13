@@ -58,7 +58,7 @@ class TaczReloadScalingContract(unittest.TestCase):
         self.assertIn("EntityDataSerializers.COMPOUND_TAG", source)
         self.assertIn("if (!level().isClientSide) this.entityData.set(DATA_TACZ_RELOAD_VISUAL", source)
         self.assertEqual(source.count("entityData.define(DATA_TACZ_RELOAD_VISUAL"), 1)
-        self.assertIn('PROTOCOL_VERSION = "5"', (ROOT / "src/main/java/com/craftix/hostile_humans/network/NetworkHandler.java").read_text(encoding="utf-8"))
+        self.assertIn('PROTOCOL_VERSION = "6"', (ROOT / "src/main/java/com/craftix/hostile_humans/network/NetworkHandler.java").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

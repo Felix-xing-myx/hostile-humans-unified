@@ -5,7 +5,6 @@ import com.craftix.hostile_humans.client.renderer.ClientAnimationCompatibility;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.event.common.GunReloadEvent;
 import com.tacz.guns.api.item.IGun;
-import com.tacz.guns.client.sound.SoundPlayManager;
 import com.tacz.guns.config.common.GunConfig;
 import com.tacz.guns.resource.pojo.data.gun.Bolt;
 import com.tacz.guns.sound.SoundManager;
@@ -56,7 +55,7 @@ final class TaczReloadSoundClient {
             ResourceLocation configuredSound = display.getSounds(sound);
             if (hasSoundResource(configuredSound)) {
                 // Preserve the pack's authored one-shot when it exists.
-                SoundPlayManager.playAnimationSound(human, configuredSound,
+                ClientAnimationCompatibility.playTaczReloadSound(human, configuredSound,
                         1.0F, 1.0F, GunConfig.DEFAULT_GUN_OTHER_SOUND_DISTANCE.get());
                 return;
             }
@@ -99,7 +98,7 @@ final class TaczReloadSoundClient {
             while (pending.nextCue < pending.cues.size()
                     && pending.cues.get(pending.nextCue).timeSeconds <= elapsedSeconds + 0.05D) {
                 ReloadCue cue = pending.cues.get(pending.nextCue++);
-                SoundPlayManager.playAnimationSound(human, cue.sound,
+                ClientAnimationCompatibility.playTaczReloadSound(human, cue.sound,
                         1.0F, 1.0F, GunConfig.DEFAULT_GUN_OTHER_SOUND_DISTANCE.get());
             }
             if (pending.nextCue >= pending.cues.size()) iterator.remove();

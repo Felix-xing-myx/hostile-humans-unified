@@ -87,7 +87,9 @@ public final class HumanLootManager {
         ItemStack current = human.getItemBySlot(slot);
         double bestScore = equipmentScore(current, slot);
         int bestSlot = -1;
+        boolean armor = ArmorSwapPolicy.isArmor(slot);
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            if (HumanInventoryCustody.isReservedForRecovery(data, i)) continue;
             ItemStack candidate = data.getInventoryItem(i);
             if (candidate.isEmpty() || storedSlots[i] != slot) {
                 continue;
@@ -96,7 +98,15 @@ public final class HumanLootManager {
                 continue;
             }
             double score = equipmentScore(candidate, slot);
-            if (score > bestScore + 0.25D) {
+            if (armor) {
+                if (!ArmorSwapPolicy.allows(human, slot, candidate)) continue;
+                double full = fullEquipmentScore(candidate, slot);
+                ItemStack best = bestSlot < 0 ? ItemStack.EMPTY : data.getInventoryItem(bestSlot);
+                if (bestSlot >= 0 && (full < fullEquipmentScore(best, slot)
+                        || full == fullEquipmentScore(best, slot)
+                        && EquipmentCondition.remainingFraction(candidate) <= EquipmentCondition.remainingFraction(best))) continue;
+                bestSlot = i;
+            } else if (score > bestScore + 0.25D) {
                 bestScore = score;
                 bestSlot = i;
             }
@@ -108,6 +118,7 @@ public final class HumanLootManager {
         data.setInventoryItem(bestSlot, current.copy());
         storedSlots[bestSlot] = current.isEmpty() ? null : preferredEquipmentSlot(current);
         human.setItemSlot(slot, replacement);
+        ArmorSwapPolicy.equipped(human, slot);
         human.setDropChance(slot, 1.0F);
     }
 
@@ -256,6 +267,27 @@ public final class HumanLootManager {
         return false;
     }
 
+    /** Supply-only transaction: no direct equip, hand exchange, navigation or item-use changes. */
+    static boolean collectCombatSupply(Human human, ItemEntity entity, int requested) {
+        var config = UnifiedConfig.get().combatResupply();
+        ItemStack ground = entity.getItem();
+        if (requested <= 0 || !config.enabled() || !SoldierPickupPolicy.canCombatResupplyNow(human)
+                || !CombatResupply.reachable(human, entity, config.radius())
+                || !SoldierPickupPolicy.canCollectItem(human, ground)
+                || !(HumanAmmo.isAmmo(ground) || RecoverySupplies.isHealingSupplyForResupply(human, ground))) return false;
+        int taking = Math.min(requested, ground.getCount());
+        ItemStack moving = ground.copyWithCount(taking);
+        if (!storeWithEviction(human, moving)) return false;
+        int moved = taking - moving.getCount();
+        if (moved <= 0) return false;
+        ItemStack remainder = ground.copy();
+        remainder.shrink(moved);
+        human.take(entity, moved);
+        if (remainder.isEmpty()) entity.discard();
+        else entity.setItem(remainder);
+        return true;
+    }
+
     static boolean collect(Human human, ItemEntity entity) {
         if (!SoldierPickupPolicy.canCollectNow(human) || !entity.isAlive() || entity.hasPickUpDelay()
                 || !SoldierOrder.allowsLootPosition(human, entity.getX(), entity.getZ())) return false;
@@ -278,6 +310,7 @@ public final class HumanLootManager {
                 return false;
             }
             human.setItemSlot(slot, replacement);
+            ArmorSwapPolicy.equipped(human, slot);
             human.setDropChance(slot, HumanSpawnEquipment.isBoundGear(replacement) ? 0.0F : 0.2F);
             if (slot == EquipmentSlot.MAINHAND
                     && RangedWeaponCustody.isBowOrCrossbow(replacement)) {
@@ -341,6 +374,7 @@ public final class HumanLootManager {
         if (slot == EquipmentSlot.MAINHAND && AmmoWeaponSelection.isExhausted(human, incoming)) {
             return false;
         }
+        if (ArmorSwapPolicy.isArmor(slot)) return ArmorSwapPolicy.allows(human, slot, incoming);
         ItemStack current = human.getItemBySlot(slot);
         if (slot == EquipmentSlot.MAINHAND
                 && RangedWeaponCustody.isBowOrCrossbow(incoming)
@@ -387,6 +421,10 @@ public final class HumanLootManager {
     }
 
     private static double equipmentScore(ItemStack stack, EquipmentSlot slot) {
+        return EquipmentCondition.value(stack, fullEquipmentScore(stack, slot));
+    }
+
+    static double fullEquipmentScore(ItemStack stack, EquipmentSlot slot) {
         if (stack.isEmpty()) {
             return 0.0D;
         }
@@ -410,8 +448,9 @@ public final class HumanLootManager {
         }
         int enchantmentLevels = 0;
         for (int level : EnchantmentHelper.getEnchantments(stack).values()) enchantmentLevels += level;
-        score += enchantmentLevels * 2.5D;
-        return EquipmentCondition.value(stack, score);
+        // Shields already include their own deliberately lower enchantment weight.
+        if (!SpartanEquipmentCompat.isShield(stack)) score += enchantmentLevels * 2.5D;
+        return Math.max(0.0D, score);
     }
 
     private static double attribute(java.util.Collection<AttributeModifier> modifiers) {
@@ -424,7 +463,7 @@ public final class HumanLootManager {
 
     static double inventoryValue(Human human, ItemStack stack) {
         if (MedicalSupplies.isSupply(stack)) return MedicalSupplies.inventoryValue(stack);
-        if (ScgunsCompat.throwItem(stack)) return UnifiedConfig.get().scguns().throwableQuality();
+        if (TacticalThrowables.supported(stack)) return UnifiedConfig.get().scguns().throwableQuality();
         if (HumanAmmo.isAmmo(stack)) {
             HumanData data = human.getData();
             boolean gunner = GunCustody.hasOwnedGun(human);
@@ -516,7 +555,12 @@ public final class HumanLootManager {
 
     private static SupplyInventoryPolicy supplyReservation(Human human, HumanData data) {
         List<SupplyInventoryPolicy.Slot> slots = new ArrayList<>(data.getInventoryItemsSize());
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) slots.add(supplySlot(human, data.getInventoryItem(i)));
+        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            var slot = supplySlot(human, data.getInventoryItem(i));
+            if (HumanInventoryCustody.isReservedForRecovery(human, i))
+                slot = new SupplyInventoryPolicy.Slot(slot.kind(), slot.value(), slot.count(), true);
+            slots.add(slot);
+        }
         return new SupplyInventoryPolicy(slots);
     }
 
@@ -605,6 +649,7 @@ public final class HumanLootManager {
         }
         int originalCount = incoming.getCount();
         for (int i = 0; i < data.getInventoryItemsSize() && !incoming.isEmpty(); i++) {
+            if (HumanInventoryCustody.isReservedForRecovery(human, i)) continue;
             ItemStack stored = data.getInventoryItem(i);
             if (ItemStack.isSameItemSameTags(stored, incoming)
                     && stored.getCount() < stored.getMaxStackSize()) {
@@ -616,6 +661,7 @@ public final class HumanLootManager {
         }
         int allowedEmptySlots = supplyReservation(human, data).availableEmptySlots(supplySlot(human, incoming));
         for (int i = 0; i < data.getInventoryItemsSize() && !incoming.isEmpty() && allowedEmptySlots > 0; i++) {
+            if (HumanInventoryCustody.isReservedForRecovery(human, i)) continue;
             if (!data.getInventoryItem(i).isEmpty()) {
                 continue;
             }
@@ -630,8 +676,7 @@ public final class HumanLootManager {
             int lowestSlot = -1;
             double lowestValue = Double.POSITIVE_INFINITY;
             for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-                ItemStack stored = data.getInventoryItem(i);
-                double value = inventoryValue(human, stored);
+                double value = reservation.replacementCost(i, candidate);
                 if (reservation.canReplace(i, candidate) && value < lowestValue) {
                     lowestSlot = i;
                     lowestValue = value;
@@ -665,7 +710,8 @@ public final class HumanLootManager {
         double lowestValue = Double.POSITIVE_INFINITY;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
             ItemStack stored = data.getInventoryItem(i);
-            if (stored.isEmpty() || protectedFromEviction(stored) || reservation.isReserved(i)) {
+            if (stored.isEmpty() || protectedFromEviction(stored) || reservation.isReserved(i)
+                    || HumanInventoryCustody.isReservedForRecovery(human, i)) {
                 continue;
             }
             // Retaining a large stack is worth somewhat more than retaining a

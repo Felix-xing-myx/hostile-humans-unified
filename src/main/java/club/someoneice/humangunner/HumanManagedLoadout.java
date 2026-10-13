@@ -60,6 +60,7 @@ final class HumanManagedLoadout {
         int bestSlot = -1;
         double bestScore = Double.NEGATIVE_INFINITY;
         for (int slot = 0; slot < data.getInventoryItemsSize(); slot++) {
+            if (HumanInventoryCustody.isReservedForRecovery(data, slot)) continue;
             ItemStack candidate = data.getInventoryItem(slot);
             if (!HumanLootManager.isDedicatedMeleeWeapon(candidate)) continue;
             double score = HumanLootManager.mainHandWeaponScore(candidate);

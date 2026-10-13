@@ -8,6 +8,25 @@ import net.minecraft.util.RandomSource;
 public final class SpawnPotionConfigTest {
     public static void main(String[] args) {
         UnifiedConfig config = new UnifiedConfig(new JsonObject());
+        check(config.taczInventoryFedCapacity() == 150, "TaCZ virtual magazine default");
+        check(new UnifiedConfig(json("{\"tacz\":{\"inventory_fed_capacity\":240}}")).taczInventoryFedCapacity() == 240,
+                "TaCZ virtual capacity is configurable");
+        var throwableDamage = config.scguns().throwableDamageMultipliers();
+        check(Math.abs(19 * throwableDamage.get("scguns:grenade") - 32) < .00001, "grenade defaults to 32 damage");
+        check(Math.abs(14 * throwableDamage.get("scguns:nail_bomb") - 24) < .00001, "nail fragment defaults to 24 damage");
+        check(!throwableDamage.containsKey("scguns:gas_grenade") && !throwableDamage.containsKey("scguns:swarm_bomb")
+                && !throwableDamage.containsKey("scguns:choke_bomb"), "indirect effects excluded");
+        JsonObject throwableGlobal = json("""
+                {"scguns":{"throwables":{"damage_multipliers":{"scguns:grenade":0,"scguns:nail_bomb":2.5}}}}
+                """);
+        TacticalSupplyDefaults.refresh(throwableGlobal, TierConfigProjection.global(UnifiedConfig.defaults()), false);
+        var damageSection = throwableGlobal.getAsJsonObject("scguns").getAsJsonObject("throwables").getAsJsonObject("damage_multipliers");
+        check(damageSection.get("scguns:grenade").getAsDouble() == 0 && damageSection.get("scguns:nail_bomb").getAsDouble() == 2.5,
+                "refresh preserves custom and zero damage multipliers");
+        check(damageSection.has("scguns:shotball"), "refresh exposes missing damage settings");
+        var parsedDamage = ScgunsSettings.parse(throwableGlobal.getAsJsonObject("scguns")).throwableDamageMultipliers();
+        check(parsedDamage.get("scguns:grenade") == 0 && parsedDamage.get("scguns:nail_bomb") == 2.5,
+                "custom damage factors parsed");
         int[] recoveryMin = {1, 2, 4, 6}, recoveryMax = {2, 4, 7, 8};
         int[] tacticalMin = {1, 2, 4, 6}, tacticalMax = {2, 4, 7, 8};
         String[] ranks = {"roamer", "tier1", "tier2", "tier3"};
@@ -18,7 +37,9 @@ public final class SpawnPotionConfigTest {
             checkPool(value.recovery, new String[]{"strong_healing", "long_regeneration", "strong_regeneration"}, new int[]{2, 1, 1});
             checkPool(value.tactical, new String[]{"long_slowness", "long_weakness", "long_strength", "strong_poison", "strong_strength", "long_swiftness"}, new int[]{5, 1, 10, 2, 5, 8});
             var tools = value.tactical.entries().stream().filter(entry -> entry.potion() == null).toList();
-            check(tools.size() == 5, "five default tactical throwables");
+            check(tools.size() == 7, "seven default tactical throwables across two optional mods");
+            check(tools.stream().filter(tool -> tool.item().toString().startsWith("jeg:")).map(tool -> tool.item().toString()).toList()
+                    .equals(java.util.List.of("jeg:grenade", "jeg:water_bomb")), "only two JEG default supplies");
             check(tools.get(0).item().toString().equals("scguns:grenade") && tools.get(0).weight() == 3, "grenade weight");
             check(tools.stream().allMatch(tool -> tool.weight() == 3), "equal throwable weights");
             check(tools.stream().noneMatch(tool -> tool.item().toString().equals("scguns:stun_grenade")), "stun excluded");
@@ -78,6 +99,9 @@ public final class SpawnPotionConfigTest {
         TacticalSupplyDefaults.refresh(original, defaults, true);
         check(original.equals(defaults), "previous shipped pool upgraded and stun removed");
         var molotovPool = defaults.getAsJsonObject("potions").getAsJsonObject("tactical").getAsJsonArray("pool").deepCopy();
+        // This shipped pool predates JEG; do not manufacture a custom mixed pool from new defaults.
+        for (int i = molotovPool.size() - 1; i >= 0; i--)
+            if (molotovPool.get(i).getAsJsonObject().get("item").getAsString().startsWith("jeg:")) molotovPool.remove(i);
         for (var entry : molotovPool) {
             var row = entry.getAsJsonObject();
             if (row.has("item") && row.get("item").getAsString().equals("scguns:gas_grenade"))
@@ -95,7 +119,7 @@ public final class SpawnPotionConfigTest {
         JsonObject globalDefaults = TierConfigProjection.global(UnifiedConfig.defaults());
         JsonObject global = json("{\"scguns\":{\"throwables\":{\"allowed_items\":[\"scguns:grenade\",\"scguns:stun_grenade\",\"scguns:nail_bomb\"]}}}");
         TacticalSupplyDefaults.refresh(global, globalDefaults, false);
-        check(global.getAsJsonObject("scguns").getAsJsonObject("throwables").getAsJsonArray("allowed_items").size() == 9, "shipped throwable use list expanded");
+        check(global.getAsJsonObject("scguns").getAsJsonObject("throwables").getAsJsonArray("allowed_items").size() == 14, "shipped throwable use list expanded across two mods");
         global.getAsJsonObject("scguns").getAsJsonObject("throwables").add("allowed_items", new com.google.gson.JsonArray());
         TacticalSupplyDefaults.refresh(global, globalDefaults, false);
         check(global.getAsJsonObject("scguns").getAsJsonObject("throwables").getAsJsonArray("allowed_items").isEmpty(), "explicit disabled throwable list preserved");

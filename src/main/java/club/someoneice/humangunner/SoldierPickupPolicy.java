@@ -39,6 +39,18 @@ public final class SoldierPickupPolicy {
                 && SoldierOrder.allowsLootPosition(human, human.getX(), human.getZ());
     }
 
+    /** Separate from idle search permission: nearby emergency supplies never own a path. */
+    static boolean canCombatResupplyNow(Human human) {
+        if (human.level().isClientSide || !human.hasOwner() || !isEnabled(human) || !human.isAlive()
+                || human.isDeadOrDying() || human.isNoAi() || human.isSleeping() || human.isInLava()
+                || HumanInventorySession.isEditing(human) || HumanGunner.isManualInventoryOpen(human)
+                || human.isActivelyCollectingLoot() || canCollectNow(human)
+                || !SoldierOrder.allowsLootPosition(human, human.getX(), human.getZ())) return false;
+        long sinceCombat = human.tickCount - human.lastCombatTime;
+        return human.getTarget() != null || human.isFleeing
+                || human.lastCombatTime > 0 && sinceCombat >= 0 && sinceCombat <= 60;
+    }
+
     /** Resupply follows owned weapons, not current ammo or the temporary held weapon. */
     static boolean canCollectItem(Human human, net.minecraft.world.item.ItemStack stack) {
         if (!HumanAmmo.isAmmo(stack)) return true;

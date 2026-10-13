@@ -123,6 +123,15 @@ public final class RecoverySupplies {
         return hasSupply(human, true);
     }
 
+    /** Physical recovery reserves, independent of temporary cooldowns and active buffs. */
+    static boolean isHealingSupplyForResupply(Human human, ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        if (isRecoveryFood(human, stack) || isHealingPotion(stack) || FirstAidCompat.isMedicine(stack)) return true;
+        var medical = ScgunsMedical.profile(stack);
+        return medical != null && (medical.healing() > 0
+                || medical.effects().stream().anyMatch(ScgunsSettings.Effect::isRegeneration));
+    }
+
     public static boolean hasActiveUse(Human human) {
         return ACTIVE_USES.containsKey(human);
     }
@@ -151,6 +160,16 @@ public final class RecoverySupplies {
     /** Includes the deferred swap-back after the use animation finishes. */
     static boolean hasHandCustody(Human human) {
         return ACTIVE_USES.containsKey(human) || PENDING_FINISHES.containsKey(human);
+    }
+
+    /** Reservation lasts through delayed completion, even for parallel food use. */
+    static boolean reservesInventorySlot(Human human, int slot) {
+        UseSession session = ACTIVE_USES.get(human);
+        if (session == null) {
+            PendingFinish pending = PENDING_FINISHES.get(human);
+            session = pending == null ? null : pending.session();
+        }
+        return session != null && slot == session.exchangeSlot();
     }
 
     /** Combat retreat recovery excludes ordinary food, which has its own bounded goal. */
@@ -780,13 +799,13 @@ public final class RecoverySupplies {
 
         // A third-party or legacy writer touched the reserved slot. Preserve
         // the current use remainder first, then recover the exact displaced
-        // stack from anywhere in the backpack. If it is truly absent, restore
-        // the session snapshot instead of silently losing equipment.
+        // stack from anywhere in the backpack. Snapshots are diagnostics,
+        // never authority to manufacture an item that may have moved elsewhere.
         HumanGunner.LOGGER.error(
                 "Recovery custody reservation changed npc={} slot={} expected={}",
                 human.getUUID(), slot, itemId(session.displacedHandItem())
         );
-        stowCurrentHand(human, session.hand());
+        if (!stowCurrentHand(human, session.hand())) return;
         if (session.displacedHandItem().isEmpty()) {
             restoreShieldAfterRecovery(human);
             return;
@@ -795,11 +814,12 @@ public final class RecoverySupplies {
                 human, session.displacedHandItem(), session.hand()
         );
         if (recovered.isEmpty()) {
-            recovered = session.displacedHandItem().copy();
             HumanGunner.LOGGER.error(
-                    "Reconstructed missing displaced hand item npc={} item={}",
-                    human.getUUID(), itemId(recovered)
+                    "Displaced recovery item not found; preserving live inventory npc={} item={}",
+                    human.getUUID(), itemId(session.displacedHandItem())
             );
+            restoreShieldAfterRecovery(human);
+            return;
         }
         human.setItemSlot(handSlot, recovered);
     }
@@ -811,17 +831,19 @@ public final class RecoverySupplies {
         human.setItemSlot(EquipmentSlot.OFFHAND, displaced);
     }
 
-    private static void stowCurrentHand(Human human, InteractionHand hand) {
+    private static boolean stowCurrentHand(Human human, InteractionHand hand) {
         EquipmentSlot slot = hand == InteractionHand.MAIN_HAND
                 ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
         ItemStack current = human.getItemInHand(hand).copy();
         if (current.isEmpty()) {
-            return;
+            return true;
         }
         human.setItemSlot(slot, ItemStack.EMPTY);
         if (!stowWithEviction(human, current)) {
             human.setItemSlot(slot, current);
+            return false;
         }
+        return true;
     }
 
     private static ItemStack takeMatchingOwnedStack(

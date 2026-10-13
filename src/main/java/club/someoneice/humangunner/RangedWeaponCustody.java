@@ -118,7 +118,8 @@ public final class RangedWeaponCustody {
 
         LivingTarget state = targetState(human);
         if (isBowOrCrossbow(human.getMainHandItem())) {
-            if (state.valid() && state.distanceSqr() <= MELEE_ENTER_DISTANCE_SQR) {
+            if (state.valid() && (CloseRangedTactics.keepDefense(human)
+                    || state.distanceSqr() <= MELEE_ENTER_DISTANCE_SQR && CloseRangedTactics.allowsMeleeEntry(human))) {
                 beginCloseMelee(human);
             }
             return;
@@ -137,6 +138,7 @@ public final class RangedWeaponCustody {
     }
 
     static void prepareForManualInventory(Human human) {
+        CloseRangedTactics.clear(human);
         RangedTerrainCombat.clear(human);
         CloseDefenseHold.clear(human);
         if (!isActive(human)) return;
@@ -145,6 +147,7 @@ public final class RangedWeaponCustody {
     }
 
     static void adoptManualLoadout(Human human) {
+        CloseRangedTactics.clear(human);
         RangedTerrainCombat.clear(human);
         CloseDefenseHold.clear(human);
         clearLease(human);
@@ -171,7 +174,6 @@ public final class RangedWeaponCustody {
             if (!isBowOrCrossbow(human.getUseItem())) {
                 return false;
             }
-            human.stopUsingItem();
         }
         HumanData data = human.getData();
         if (data == null) {
@@ -181,6 +183,10 @@ public final class RangedWeaponCustody {
         if (meleeSlot < 0) {
             return false;
         }
+
+        // No melee fallback means keep drawing/firing; failed preflight must
+        // not cancel the bow on every close-range server tick.
+        if (human.isUsingItem()) human.stopUsingItem();
 
         int ownedBefore = countOwnedRanged(human);
         registerPreferred(human, held);
@@ -196,6 +202,7 @@ public final class RangedWeaponCustody {
         data.setInventoryItem(meleeSlot, ranged);
         human.setItemSlot(EquipmentSlot.MAINHAND, melee);
         CloseDefenseHold.begin(human);
+        CloseRangedTactics.beginMelee(human);
         human.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
         HumanGunner.LOGGER.debug(
                 "Ranged custody begin npc={} slot={} ranged={} melee={}",
@@ -206,12 +213,15 @@ public final class RangedWeaponCustody {
     }
 
     static boolean restorePreferred(Human human, String reason) {
+        if (isActive(human) && (CloseRangedTactics.keepDefense(human)
+                || human.humanGunner$shieldDefense().shouldSuppressRecovery())) return false;
         if (isActive(human) && CloseDefenseHold.shouldHold(human)) return false;
         if (hasGunPriority(human) || !HumanAmmo.hasArrows(human) || human.isUsingItem()) {
             return false;
         }
         if (isBowOrCrossbow(human.getMainHandItem())) {
             registerPreferred(human, human.getMainHandItem());
+            if (isActive(human)) CloseRangedTactics.returnedToBow(human);
             clearLease(human);
             human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
             return true;
@@ -231,6 +241,7 @@ public final class RangedWeaponCustody {
             // backpack slot. An intervening callback can at worst see a duplicate.
             human.setItemSlot(EquipmentSlot.MAINHAND, ranged);
             data.setInventoryItem(rangedSlot, displaced);
+            if (isActive(human)) CloseRangedTactics.returnedToBow(human);
             human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
             HumanGunner.LOGGER.debug(
                     "Ranged custody restore npc={} reason={} slot={} ranged={} displaced={}",
@@ -263,6 +274,7 @@ public final class RangedWeaponCustody {
         ownerData.putInt(RESERVED_SLOT, rangedSlot);
         ownerData.put(SNAPSHOT, ranged.copy().save(new CompoundTag()));
         CloseDefenseHold.begin(human);
+        CloseRangedTactics.beginMelee(human);
         human.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
         HumanGunner.LOGGER.debug(
                 "Ranged custody adopted close melee npc={} slot={} ranged={} melee={}",
@@ -273,6 +285,7 @@ public final class RangedWeaponCustody {
     private static boolean shouldReturnToRanged(Human human) {
         LivingTarget state = targetState(human);
         if (RangedTerrainCombat.holdsMelee(human)) return false;
+        if (state.valid() && CloseRangedTactics.keepDefense(human)) return false;
         return !state.valid() || state.distanceSqr() >= RANGED_RETURN_DISTANCE_SQR;
     }
 
@@ -293,6 +306,7 @@ public final class RangedWeaponCustody {
         int bestSlot = -1;
         double bestScore = Double.NEGATIVE_INFINITY;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            if (HumanInventoryCustody.isReservedForRecovery(data, i)) continue;
             ItemStack stack = data.getInventoryItem(i);
             if (!HumanLootManager.isDedicatedMeleeWeapon(stack)) {
                 continue;
@@ -325,6 +339,7 @@ public final class RangedWeaponCustody {
         int[] alternatives = new int[data.getInventoryItemsSize()];
         int alternativeCount = 0;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+            if (HumanInventoryCustody.isReservedForRecovery(data, i)) continue;
             ItemStack stack = data.getInventoryItem(i);
             if (!isBowOrCrossbow(stack)) {
                 continue;

@@ -46,6 +46,14 @@ final class HumanPlayerModel extends PlayerModel<Human> {
             return 0.0F;
         }
 
+        float jegBodyOffset = JegNpcAnimator.bodyOffset(human);
+        if (jegBodyOffset != 0) {
+            stances.remove(human);
+            // Render-only native machine-gun shoulder stance. Head and item share this frame.
+            renderStanceYawDegrees = Mth.wrapDegrees(Mth.rotLerp(partialTick,
+                    human.yHeadRotO, human.yHeadRot) - bodyYaw) + jegBodyOffset;
+            return renderStanceYawDegrees;
+        }
         if (GunSupport.isScgunsGunItem(human.getMainHandItem()) && !human.isUsingItem()) {
             // Native dual guns form one rigid item model. Turn the rendered body toward
             // the aim instead of twisting that pair ninety degrees around one wrist.
@@ -112,7 +120,9 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         boolean customMeleeAnimation = BetterCombatNpcAnimator.prepare(human)
                 || BetterCombatNpcAnimator.shouldSuppressVanillaSwing(human);
         float vanillaAttackTime = this.attackTime;
-        if (customMeleeAnimation) this.attackTime = 0.0F;
+        if (customMeleeAnimation || human.isUsingItem()
+                && human.getUseItem().getUseAnimation() == net.minecraft.world.item.UseAnim.BLOCK)
+            this.attackTime = 0.0F;
         try {
             super.setupAnim(human, limbSwing, limbSwingAmount, ageInTicks, aimYaw, headPitch);
         } finally {
@@ -122,6 +132,7 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         // procedural actions remain available without Player Animator.
         TaczNpcAnimator.apply(human, this, ageInTicks);
         ScgunsNpcAnimator.apply(human, this, limbSwing, limbSwingAmount);
+        JegNpcAnimator.apply(human, this);
         BetterCombatNpcAnimator.apply(human, this, ageInTicks);
         // Cosmetic only. Two-handed weapons and attack animations always retain their arms.
         if (human.isNpcOffhandEating() && !human.isUsingItem() && !human.swinging

@@ -26,12 +26,17 @@ public interface GunSupport {
     static boolean isScgunsGunItem(ItemStack stack) {
         return stack != null && !stack.isEmpty() && GunIdentityHolder.SCGUNS.test(stack);
     }
+    static boolean isJegGunItem(ItemStack stack) {
+        return stack != null && !stack.isEmpty() && GunIdentityHolder.JEG.test(stack);
+    }
     final class GunIdentityHolder {
         private static final java.util.function.Predicate<ItemStack> TACZ = ModList.get().isLoaded("tacz")
                 ? new TaczGunItemIdentity() : stack -> false;
         private static final java.util.function.Predicate<ItemStack> SCGUNS = ModList.get().isLoaded("scguns")
                 ? new ScgunsGunIdentity() : stack -> false;
-        private static final java.util.function.Predicate<ItemStack> IDENTITY = stack -> TACZ.test(stack) || SCGUNS.test(stack);
+        private static final java.util.function.Predicate<ItemStack> JEG = ModList.get().isLoaded("jeg")
+                ? new JegGunIdentity() : stack -> false;
+        private static final java.util.function.Predicate<ItemStack> IDENTITY = stack -> TACZ.test(stack) || SCGUNS.test(stack) || JEG.test(stack);
         private GunIdentityHolder() { }
     }
 
@@ -62,6 +67,11 @@ public interface GunSupport {
     default boolean isReloading(Human human, ItemStack weapon) {
         return weapon == human.getMainHandItem() && isReloading(human);
     }
+    /** Offset of the native projectile origin from interpolated eye position. */
+    default net.minecraft.world.phys.Vec3 shotOriginOffset(ItemStack weapon, LivingEntity shooter) {
+        return net.minecraft.world.phys.Vec3.ZERO;
+    }
+    default double maximumProjectileReach(ItemStack weapon) { return Double.POSITIVE_INFINITY; }
     default double projectileSpeed(ItemStack weapon) { return 0; }
     default double projectileGravity(ItemStack weapon) { return 0; }
     /** Physics for obstruction prediction; independent of who owns aiming/leading. */

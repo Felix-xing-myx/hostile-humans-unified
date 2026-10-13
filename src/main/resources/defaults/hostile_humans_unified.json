@@ -324,16 +324,16 @@
           ]
         },
         "tactical": {
-          "_说明_中文": "战术道具总库存：药水与焦燃投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装焦燃或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
-          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
+          "_说明_中文": "战术道具总库存：药水与焦燃/JEG投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装对应模组或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
+          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns/JEG throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
           "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
           "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
           "count_min": 1,
           "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
           "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
           "count_max": 2,
-          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃投掷物；空池不发放。",
-          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns throwables. Empty pool grants none.",
+          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃/JEG投掷物；空池不发放。",
+          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns/JEG throwables. Empty pool grants none.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -383,6 +383,14 @@
             },
             {
               "item": "scguns:swarm_bomb",
+              "weight": 3
+            },
+            {
+              "item": "jeg:grenade",
+              "weight": 3
+            },
+            {
+              "item": "jeg:water_bomb",
               "weight": 3
             }
           ]
@@ -452,7 +460,7 @@
         }
       },
       "scguns": {
-        "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
+        "_说明_中文": "焦燃与JEG共用分阶枪械池及伤害倍率；白名单中使用scguns:或jeg:完整ID。仅已安装后端读取其合格枪械；雇佣后不受出生白名单限制，但全局黑名单仍有效。",
         "_description_en": "Independent Scorched Guns output factor for this rank.",
         "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。全局联动倍率和战斗经验枪伤加成仍叠乘；原生NPC与玩家目标难度伤害缩放由全局人类枪伤规则替代。",
         "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Global integration and combat experience factors still multiply; human-only global rules replace native NPC/player-target difficulty damage scaling.",
@@ -462,7 +470,9 @@
           "scguns:pax": 4,
           "scguns:flintlock_pistol": 3,
           "scguns:repeating_musket": 4,
-          "scguns:doublet": 1
+          "scguns:doublet": 1,
+          "jeg:semi_auto_pistol": 5,
+          "jeg:waterpipe_shotgun": 5
         },
         "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局scguns.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
         "_description_gun_whitelist_en": "Rank birth gun pool, used only with global scguns.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
@@ -771,16 +781,16 @@
           ]
         },
         "tactical": {
-          "_说明_中文": "战术道具总库存：药水与焦燃投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装焦燃或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
-          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
+          "_说明_中文": "战术道具总库存：药水与焦燃/JEG投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装对应模组或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
+          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns/JEG throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
           "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
           "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
           "count_min": 2,
           "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
           "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
           "count_max": 4,
-          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃投掷物；空池不发放。",
-          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns throwables. Empty pool grants none.",
+          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃/JEG投掷物；空池不发放。",
+          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns/JEG throwables. Empty pool grants none.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -830,6 +840,14 @@
             },
             {
               "item": "scguns:swarm_bomb",
+              "weight": 3
+            },
+            {
+              "item": "jeg:grenade",
+              "weight": 3
+            },
+            {
+              "item": "jeg:water_bomb",
               "weight": 3
             }
           ]
@@ -899,7 +917,7 @@
         }
       },
       "scguns": {
-        "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
+        "_说明_中文": "焦燃与JEG共用分阶枪械池及伤害倍率；白名单中使用scguns:或jeg:完整ID。仅已安装后端读取其合格枪械；雇佣后不受出生白名单限制，但全局黑名单仍有效。",
         "_description_en": "Independent Scorched Guns output factor for this rank.",
         "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。全局联动倍率和战斗经验枪伤加成仍叠乘；原生NPC与玩家目标难度伤害缩放由全局人类枪伤规则替代。",
         "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Global integration and combat experience factors still multiply; human-only global rules replace native NPC/player-target difficulty damage scaling.",
@@ -911,7 +929,10 @@
           "scguns:mak_mkii": 2,
           "scguns:handcannon": 2,
           "scguns:doublet": 1,
-          "scguns:turnpike": 1
+          "scguns:turnpike": 1,
+          "jeg:combat_pistol": 5,
+          "jeg:custom_smg": 5,
+          "jeg:infantry_rifle": 5
         },
         "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局scguns.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
         "_description_gun_whitelist_en": "Rank birth gun pool, used only with global scguns.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
@@ -1220,16 +1241,16 @@
           ]
         },
         "tactical": {
-          "_说明_中文": "战术道具总库存：药水与焦燃投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装焦燃或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
-          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
+          "_说明_中文": "战术道具总库存：药水与焦燃/JEG投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装对应模组或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
+          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns/JEG throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
           "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
           "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
           "count_min": 4,
           "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
           "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
           "count_max": 7,
-          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃投掷物；空池不发放。",
-          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns throwables. Empty pool grants none.",
+          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃/JEG投掷物；空池不发放。",
+          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns/JEG throwables. Empty pool grants none.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -1279,6 +1300,14 @@
             },
             {
               "item": "scguns:swarm_bomb",
+              "weight": 3
+            },
+            {
+              "item": "jeg:grenade",
+              "weight": 3
+            },
+            {
+              "item": "jeg:water_bomb",
               "weight": 3
             }
           ]
@@ -1348,7 +1377,7 @@
         }
       },
       "scguns": {
-        "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
+        "_说明_中文": "焦燃与JEG共用分阶枪械池及伤害倍率；白名单中使用scguns:或jeg:完整ID。仅已安装后端读取其合格枪械；雇佣后不受出生白名单限制，但全局黑名单仍有效。",
         "_description_en": "Independent Scorched Guns output factor for this rank.",
         "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。全局联动倍率和战斗经验枪伤加成仍叠乘；原生NPC与玩家目标难度伤害缩放由全局人类枪伤规则替代。",
         "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Global integration and combat experience factors still multiply; human-only global rules replace native NPC/player-target difficulty damage scaling.",
@@ -1361,7 +1390,11 @@
           "scguns:grandle": 1,
           "scguns:birdfeeder": 2,
           "scguns:combat_shotgun": 2,
-          "scguns:turnpike": 2
+          "scguns:turnpike": 2,
+          "jeg:burst_rifle": 5,
+          "jeg:assault_rifle": 5,
+          "jeg:pump_shotgun": 5,
+          "jeg:bolt_action_rifle": 5
         },
         "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局scguns.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
         "_description_gun_whitelist_en": "Rank birth gun pool, used only with global scguns.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
@@ -1670,16 +1703,16 @@
           ]
         },
         "tactical": {
-          "_说明_中文": "战术道具总库存：药水与焦燃投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装焦燃或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
-          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
+          "_说明_中文": "战术道具总库存：药水与焦燃/JEG投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装对应模组或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
+          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns/JEG throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
           "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
           "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
           "count_min": 6,
           "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
           "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
           "count_max": 8,
-          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃投掷物；空池不发放。",
-          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns throwables. Empty pool grants none.",
+          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃/JEG投掷物；空池不发放。",
+          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns/JEG throwables. Empty pool grants none.",
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -1729,6 +1762,14 @@
             },
             {
               "item": "scguns:swarm_bomb",
+              "weight": 3
+            },
+            {
+              "item": "jeg:grenade",
+              "weight": 3
+            },
+            {
+              "item": "jeg:water_bomb",
               "weight": 3
             }
           ]
@@ -1798,7 +1839,7 @@
         }
       },
       "scguns": {
-        "_说明_中文": "焦燃枪械分阶伤害 / Scorched Guns rank damage",
+        "_说明_中文": "焦燃与JEG共用分阶枪械池及伤害倍率；白名单中使用scguns:或jeg:完整ID。仅已安装后端读取其合格枪械；雇佣后不受出生白名单限制，但全局黑名单仍有效。",
         "_description_en": "Independent Scorched Guns output factor for this rank.",
         "_说明_damage_multiplier_中文": "仅控制本阶人类使用Scorched Guns的枪伤，0–100，默认1.0；与TaCZ独立。全局联动倍率和战斗经验枪伤加成仍叠乘；原生NPC与玩家目标难度伤害缩放由全局人类枪伤规则替代。",
         "_description_damage_multiplier_en": "Scorched Guns damage only, 0–100, default 1.0; independent of TaCZ. Global integration and combat experience factors still multiply; human-only global rules replace native NPC/player-target difficulty damage scaling.",
@@ -1812,7 +1853,11 @@
           "scguns:spirulida": 1,
           "scguns:combat_shotgun": 3,
           "scguns:mas_55": 2,
-          "scguns:iron_spear": 2
+          "scguns:iron_spear": 2,
+          "jeg:combat_rifle": 5,
+          "jeg:service_rifle": 5,
+          "jeg:repeating_shotgun": 5,
+          "jeg:light_machine_gun": 5
         },
         "_说明_gun_whitelist_中文": "本阶出生枪械池，仅在全局scguns.spawn_pool_source为tier时读取；空池按该后端自动收录开关处理，不回退全局。非空仅使用正权重条目。全局黑名单优先；雇佣后不受出生白名单限制。",
         "_description_gun_whitelist_en": "Rank birth gun pool, used only with global scguns.spawn_pool_source=tier. Empty follows backend discovery, never falls back to global; nonempty is strict. Global bans always win. Hired acceptance is independent."
@@ -1835,6 +1880,55 @@
     "_说明_auto_import_enabled_中文": "默认true。开启时按阶追加首次导入的斯巴达武器/盾牌及沉浸式盔甲套装，保留自定义条目及其权重、空池和已有导入记录；关闭后不追加或改写装备池，也不删除已有条目。分阶automatic_spartan_weapons/shields及automatic_immersive_armors仍分别控制导入。",
     "_description_auto_import_enabled_en": "Default true. Add first-time Spartan weapon/shield and Immersive Armors imports by rank while preserving custom rows/weights, empty pools and receipts. False prevents pool imports/writes without removing existing rows. Per-rank Spartan and Immersive Armors switches still apply.",
     "auto_import_enabled": true
+  },
+  "combat_resupply": {
+    "_说明_中文": "正式雇佣且已开启士兵拾取时，战斗或撤退中只顺路收集短缺的弹药与恢复用品。无搜刮寻路、不转头、不清仇恨、不换手、不打断装填或举盾。只收附近无遮挡、高差不超过1格且无需下潜的补给；服从命令范围、背包保留和使用托管槽位。",
+    "_description_en": "Hired soldiers with pickup enabled collect only needed nearby supplies during combat/retreat. No looting path, look/target/hand changes or interrupted defense/reload. Requires unobstructed reach, at most one block of vertical difference and no diving; order limits and reserved inventory slots apply.",
+    "_说明_enabled_中文": "战斗补给总开关；还必须开启该士兵自己的物品拾取。",
+    "_description_enabled_en": "Combat resupply switch; the soldier's own pickup permission is also required.",
+    "enabled": true,
+    "_说明_arrow_low_中文": "拥有弓弩且通用箭矢剩余不超过此数时开始顺路补给；临时切近战也检查背包武器。关闭弹药消耗时不补弹药。",
+    "_description_arrow_low_en": "Begin arrow resupply at or below this reserve, including bows stored during temporary melee. Ammunition-free mode disables ammo resupply.",
+    "arrow_low": 8,
+    "_说明_arrow_target_中文": "一次短缺补给持续到此箭矢余量，默认32，至少比触发值多1；只取缺少数量，余下留在地面。",
+    "_description_arrow_target_en": "Stop an arrow resupply cycle at this reserve; at least one above arrow_low. Collect only the missing amount.",
+    "arrow_target": 32,
+    "_说明_magazine_target_reloads_中文": "通用弹匣少于所拥有可用枪械的最高单次费用时触发，补到该费用乘此次数，默认2轮；不因暂时持近战而忘记枪械。",
+    "_description_magazine_target_reloads_en": "Trigger below the highest reload cost among owned accepted guns; refill reserves to that cost times this number of cycles. Temporary melee does not remove gun ownership.",
+    "magazine_target_reloads": 2,
+    "_说明_recovery_items_per_pickup_中文": "没有食物、治疗/再生饮用药水或已接入恢复药品，且无正在使用或生效的恢复时，一次最多收此数量的恢复用品。暂时药品冷却不算库存耗尽；不收纯战术增益药品。",
+    "_description_recovery_items_per_pickup_en": "Maximum recovery items per pickup when no physical healing reserves or active recovery remain. Temporary cooldowns are not exhaustion; purely tactical buffs do not qualify.",
+    "recovery_items_per_pickup": 2,
+    "_说明_radius_中文": "顺路拾取半径，默认2格，范围0.5–2.5；不会为了半径内物品启动导航。",
+    "_description_radius_en": "Nearby reach in blocks, default 2, range 0.5-2.5. Never starts navigation.",
+    "radius": 2,
+    "_说明_interval_ticks_中文": "短缺检查间隔，默认20tick即1秒，范围10–200。按实体错峰；最多检查16个附近候选，每轮最多成功收取一处，失败候选暂缓40tick。",
+    "_description_interval_ticks_en": "Staggered check interval, default 20 ticks (one second), range 10-200. At most 16 nearby candidates and one successful pickup per pass; rejected candidates wait 40 ticks.",
+    "interval_ticks": 20
+  },
+  "armor_swap": {
+    "_说明_中文": "护甲自动换装：背包优化与地面直接装备共用规则；完整品质不含磨损，拾取价值仍按耐久折价。玩家手动锁定优先。仅自动换装计冷却，每个槽独立；空槽和应急更换不受冷却限制。完整重启生效。",
+    "_说明_upgrade_min_gain_percent_中文": "普通升级需要完整品质至少提高此百分比；品质相同不算升级。范围0–100。",
+    "upgrade_min_gain_percent": 10,
+    "_说明_upgrade_min_durability_percent_中文": "普通品质升级的候选护甲最低剩余耐久百分比。范围0–100。",
+    "upgrade_min_durability_percent": 50,
+    "_说明_replace_below_durability_percent_中文": "当前护甲剩余耐久不高于此百分比时，允许换同等或更高完整品质且更耐用的护甲。范围0–100。",
+    "replace_below_durability_percent": 25,
+    "_说明_replacement_durability_advantage_percent_中文": "耐久补换候选至少多出的剩余耐久百分点，不是相对百分比；候选必须严格更耐用。范围0–100。",
+    "replacement_durability_advantage_percent": 25,
+    "_说明_emergency_below_durability_percent_中文": "当前剩余耐久不高于此百分比时，应急更换可绕过冷却；自动限制为不高于普通耐久补换阈值。范围0–100。",
+    "emergency_below_durability_percent": 10,
+    "_说明_emergency_min_quality_percent_中文": "应急候选完整品质至少为当前护甲的此百分比，默认最多牺牲20%品质；仍须满足耐久优势。范围0–100。",
+    "emergency_min_quality_percent": 80,
+    "_说明_cooldown_ticks_中文": "每个护甲槽自动换装冷却，20tick=1秒；仅成功换装后开始，空槽/应急/手动操作不受限制。0–12000，非整数向下取整。",
+    "cooldown_ticks": 200,
+    "_description_upgrade_min_gain_percent_en": "Minimum full-quality gain percent for ordinary armor upgrades.",
+    "_description_upgrade_min_durability_percent_en": "Minimum remaining durability percent for an ordinary armor upgrade.",
+    "_description_replace_below_durability_percent_en": "Allow replacement when equipped armor falls below this remaining durability percent.",
+    "_description_replacement_durability_advantage_percent_en": "Required remaining-durability advantage in percentage points for a replacement.",
+    "_description_emergency_below_durability_percent_en": "Emergency replacement threshold in remaining durability percent.",
+    "_description_emergency_min_quality_percent_en": "Minimum full-quality percent of current armor accepted in an emergency.",
+    "_description_cooldown_ticks_en": "Independent automatic armor replacement cooldown per slot, in ticks."
   },
   "equipment_loadouts": {
     "_说明_中文": "本阶出生装备配置。",
@@ -2517,14 +2611,14 @@
     "_说明_enabled_中文": "增强战斗AI总开关；各阶具体AI参数独立设置，关闭不取消实体和雇佣关系。",
     "_description_enabled_en": "Enhanced combat AI master switch; detailed AI settings belong to rank files. Disabling does not remove entities or hires.",
     "enabled": true,
-    "_说明_retreat_health_ratio_中文": "撤退生命比例，0.1–0.9；0.3表示剩余30%生命。",
-    "_description_retreat_health_ratio_en": "Retreat health ratio, 0.1–0.9; 0.3 means 30% health remains.",
+    "_说明_retreat_health_ratio_中文": "撤退生命比例，0.1–0.9；0.3表示剩余30%生命。强制举盾时，实际生命不高于此比例也会优先后退/侧移找掩体，而非推进。",
+    "_description_retreat_health_ratio_en": "Retreat health ratio, 0.1–0.9; 0.3 means 30% health remains. Forced shield defense at or below this actual-health ratio prioritizes withdrawal/lateral cover instead of advancing.",
     "retreat_health_ratio": 0.3,
     "_说明_critical_health_ratio_中文": "恢复动作使用的危急生命比例，0.05–0.75；实际不高于撤退阈值。战斗硬撤退底线由 low_health_combat 两个条件优先决定。",
     "_description_critical_health_ratio_en": "Critical recovery-action ratio, 0.05–0.75; capped at the retreat threshold. The two low_health_combat conditions take priority for forced combat retreat.",
     "critical_health_ratio": 0.12,
-    "_说明_resume_health_ratio_中文": "恢复作战生命比例，0.2–1；至少比撤退阈值高0.05。",
-    "_description_resume_health_ratio_en": "Resume-combat health ratio, 0.2–1; at least 0.05 above retreat.",
+    "_说明_resume_health_ratio_中文": "恢复作战生命比例，0.2–1；至少比撤退阈值高0.05。低血强制防御的避险移动持续到实际生命达到此值或强制防御结束，避免临界血量反复换向。",
+    "_description_resume_health_ratio_en": "Resume-combat health ratio, 0.2–1; at least 0.05 above retreat. Low-health forced-guard repositioning persists until actual health reaches this ratio or forced defense ends, preventing direction oscillation.",
     "resume_health_ratio": 0.65,
     "_说明_low_health_combat_中文": "低血量搏斗策略，四阶文件分别设置。硬撤退须自身生命严格低于 critical_health_ratio × 最大生命且严格低于 critical_absolute_health 点；默认同时低于15%和25点。唯一有效对手同时低于其30%最大生命和30点时按 finish_chance 搏斗。试探按窗口内实际回血和实际受伤判断，不用尚未到账的预计恢复；食物仍走原进食动作，不免费回血。",
     "_description_low_health_combat_en": "Per-rank low-health combat. Forced retreat requires own health strictly below both critical_health_ratio times maximum health and critical_absolute_health points (default 15% and 25 points). A sole valid opponent below both 30% of its maximum health and 30 points enables finish_chance. Trials compare actual healing and damage within the observation window, not projected recovery. Food retains its normal use action and grants no free healing.",
@@ -2566,7 +2660,7 @@
     "_说明_recovery_commit_ticks_中文": "恢复动作承诺时间，0–40 tick；20 tick=1秒。",
     "_description_recovery_commit_ticks_en": "Recovery commitment time, 0–40 ticks; 20 ticks = 1 second.",
     "recovery_commit_ticks": 14,
-    "_说明_gradual_heal_interval_ticks_中文": "食物及再生额外回血间隔，2–40 tick；食物每次最多1点生命，再生I额外1点、再生II额外2点，可叠加。",
+    "_说明_gradual_heal_interval_ticks_中文": "食物及再生额外回血间隔，2–40 tick；食物每次最多1点生命，再生I额外0.5点、再生II额外1点，可叠加。",
     "_description_gradual_heal_interval_ticks_en": "Food and bonus regeneration interval, 2–40 ticks. Food heals up to 1 HP per pulse; Regeneration I adds 1 HP and II adds 2 HP independently.",
     "gradual_heal_interval_ticks": 10,
     "_说明_food_recovery_min_health_中文": "食物恢复生命量下限，0–20点；不是生命比例。",
@@ -2740,6 +2834,9 @@
     "_说明_enabled_中文": "TaCZ联动总开关，需安装TaCZ。",
     "_description_enabled_en": "TaCZ integration master switch; requires TaCZ.",
     "enabled": true,
+    "_说明_inventory_fed_capacity_中文": "TaCZ背包直接供弹武器的人类专用虚拟弹匣容量，默认150发，范围1–4096，包含闭膛枪膛内的一发。打空后按武器类别消耗通用弹匣并计时装填；闲置仅低于25%补弹。普通弹匣枪和玩家用枪不受影响。旧超额余弹截到上限，空枪和半满枪不免费补满。",
+    "_description_inventory_fed_capacity_en": "Human-only virtual capacity for TaCZ inventory-fed guns: 150 rounds by default, range 1-4096, including a closed-bolt chamber. Empty combat reloads require category-priced magazines and a timed refill; idle top-offs require less than 25%. Ordinary magazine guns and players are unchanged. Oversized old reserves are capped without filling empty/partial guns.",
+    "inventory_fed_capacity": 150,
     "tier1_gun_chance": 0.1,
     "tier2_gun_chance": 0.4,
     "tier3_gun_chance": 0.7,
@@ -3029,13 +3126,13 @@
     }
   },
   "scguns": {
-    "_说明_中文": "Scorched Guns可选联动；仅调用原生枪械/投掷物/袭击API，移动与战术由本模组管理。修改后重启生效。",
+    "_说明_中文": "焦燃枪械与Just Enough Guns（JEG）共用枪械设置；分别识别后端和物品ID，不要求同时安装。医疗和信号弹设置仅适用于焦燃，手持投掷物共用投掷设置。JEG支持实弹、幽灵/烈焰弹、声波/共振、火焰、枪射榴弹/火箭及水系武器；弓、工具和治疗/信号功能物品不作为士兵枪械。",
     "enabled": true,
-    "_说明_ai_accuracy_modifier_中文": "AI瞄准精度系数越大越准：原生AI误差锥角=min(25度,5×难度系数÷此值)。武器及配件本身的散布另由原模组数据控制；经验收缩只作用于AI误差，不重复叠加各阶TaCZ角度散布。",
-    "_description_ai_accuracy_modifier_en": "Higher means more accurate: native NPC error is min(25 degrees, 5 * difficulty factor / accuracy). Native weapon/attachment spread remains separate. Experience affects AI error only.",
+    "_说明_ai_accuracy_modifier_中文": "焦燃与JEG共用AI精度参数，数值越大越准；战斗经验散布缩放同时生效，保留各后端原生武器散布。焦燃按原生NPC精度误差规则；JEG将原生散布乘以经验散布系数并除以本值，不再叠加TaCZ散布。",
+    "_description_ai_accuracy_modifier_en": "Shared accuracy control; higher is more accurate. Scorched Guns uses native NPC aiming error; JEG multiplies native spread by training spread factor divided by this value. TaCZ spread settings do not apply.",
     "ai_accuracy_modifier": 2.0,
-    "_说明_human_gun_damage_multiplier_中文": "本模组人类使用焦燃枪械的全局伤害倍率，默认0.7表示同等枪械条件下保留玩家基准的70%伤害。替代焦燃NPC难度系数和mobGunDamageMultiplier，并取消该类子弹命中玩家时的原版难度缩放；继续叠乘各阶scguns.damage_multiplier及战斗经验枪伤加成。保留焦燃对所有枪械生效的globalDamageMultiplier、武器/附魔、护甲和抗性。0为无枪伤，1为不减伤；不修改玩家和焦燃原生生物。",
-    "_description_human_gun_damage_multiplier_en": "Human-only Scorched Guns damage factor: 0.7 retains 70% of the equivalent player weapon baseline, 1 applies no reduction. Replaces native NPC difficulty/mob damage scaling and vanilla player-target difficulty scaling. Rank damage and training remain multiplicative; universal gun config, armor and effects remain intact. Player shooters and native mobs are unchanged.",
+    "_说明_human_gun_damage_multiplier_中文": "人类使用焦燃与JEG枪械的共用伤害倍率，默认0.7为同款玩家枪械基准的70%。替代原生NPC难度减伤，再乘各阶scguns.damage_multiplier和战斗经验枪伤加成；成长阶段不减枪伤。保留原生武器/配件/附魔和目标护甲效果；不修改玩家和原生怪物。",
+    "_description_human_gun_damage_multiplier_en": "Shared Human-only Scorched Guns/JEG output factor. Default 0.7 retains 70% of player weapon baseline. Native NPC difficulty reductions are replaced, rank/training factors still apply. Native mobs and players are unchanged.",
     "human_gun_damage_multiplier": 0.7,
     "_说明_magazines_per_reload_by_type_中文": "每次装满或补满能量按原生武器类型一次计费；普通枪与能量枪相同，战斗中不足一次射击才装填；全局关闭弹药消耗时不扣弹匣。 能量枪通过Forge能量能力读取、扣除和充满能量；不足一次射击时按原生换弹时长补能，同样消耗通用弹匣。不给没有充放电能力的枪写假能量。",
     "_description_magazines_per_reload_by_type_en": "One payment per native weapon-type reload, including energy recharge through Forge energy capabilities. Native reload duration applies; ammunition master switch can waive magazine consumption.",
@@ -3121,9 +3218,28 @@
       }
     },
     "throwables": {
-      "_说明_中文": "消耗背包真实投掷物；除震撼弹外9种焦燃徒手道具可使用。出生池为手榴弹、钉子炸弹、毒气手雷、窒息弹、虫群炸弹，各权重3，与战术药水共用总数。预测使用原生工厂对应的重力和引爆/反弹方式；出手点在身体前方且不能穿墙。攻击许可、视线、弹道和友军安全检查通过才投掷；毒气/窒息弹至少16格友军安全半径。没有自动制导，投出后友军仍可能进入危险区。",
-      "_description_en": "Consumes inventory; nine supported native hand-thrown items excluding Stun Grenade. Spawn pool: Grenade, Nail Bomb, Gas Grenade, Choke Bomb, Swarm Bomb, weight 3 each, sharing tactical counts. Predict native constructor gravity, bounce and effect timing. Launch outside the owner without crossing walls. Preserve attack permission, line of sight, trajectory and friendly safety (gas/choke at least 16 blocks). No homing or guarantee against allies moving into hazards.",
+      "_说明_中文": "焦燃与JEG共用战术投掷：统一库存扣除、轨迹、友军安全预检、群体目标选择与冷却。JEG默认自然携带仅手榴弹和水炸弹，燃烧瓶/烟雾弹/震撼弹可由玩家交付；爆炸装药暂不主动使用。焦燃震撼弹仍停用。",
+      "_description_en": "Shared inventory-backed Scorched Guns/JEG tactical throwing. One planner/cooldown and real item consumption. Only JEG grenade/water bomb spawn by default; other supported JEG throwables are manual supplies. Explosive charges are not supported.",
       "enabled": true,
+      "damage_multipliers": {
+        "_说明_中文": "仅本模组人类投出的道具：原生直接伤害乘以下倍率，范围0～100，1保持原生，0取消直接伤害但不取消道具效果。普通手榴弹19×32/19=32点；钉子炸弹每条命中弹片14×24/14=24点。保留距离衰减、原生伤害类型、护甲与抗性，不叠加枪伤或成长倍率。燃烧瓶和地狱火仅调整直接爆炸，后续燃烧不变；弹丸保留反弹衰减。毒气、虫群、窒息与信标效果不在此组中。玩家投掷不受影响。",
+        "_description_en": "Human-owned direct throwable damage only, range 0–100. 1 keeps native damage; 0 removes direct damage but not effects. Grenade: native 19 times 32/19 = 32; Nail Bomb: native 14 times 24/14 = 24 per hitting fragment. Preserve native falloff, damage type, armor and resistance; no gun/stage factors. Molotov/Hellfire affect the immediate blast only, not later burning. Shotball keeps bounce decay. Gas, swarm, choke and beacon effects are excluded. Player throws are unchanged.",
+        "_说明_scguns:grenade_中文": "普通手榴弹直接爆炸伤害倍率，默认32/19（约1.68421）；不是爆炸半径。",
+        "_description_scguns:grenade_en": "Direct blast damage multiplier. Default 32/19; does not change blast radius.",
+        "scguns:grenade": 1.6842105263157894,
+        "_说明_scguns:nail_bomb_中文": "钉子炸弹每条弹片伤害倍率，默认24/14（约1.71429）；不改变弹片数量与撕裂效果。",
+        "_description_scguns:nail_bomb_en": "Per-fragment damage multiplier. Default 24/14; fragment count and laceration stay native.",
+        "scguns:nail_bomb": 1.7142857142857142,
+        "_说明_scguns:molotov_cocktail_中文": "燃烧瓶直接爆炸伤害倍率，默认1；后续燃烧不变。",
+        "_description_scguns:molotov_cocktail_en": "Immediate blast multiplier; default 1. Later burning stays native.",
+        "scguns:molotov_cocktail": 1.0,
+        "_说明_scguns:hellfire_bomb_中文": "地狱火炸弹直接爆炸伤害倍率，默认1；后续灵魂火不变。",
+        "_description_scguns:hellfire_bomb_en": "Immediate blast multiplier; default 1. Later soul fire stays native.",
+        "scguns:hellfire_bomb": 1.0,
+        "_说明_scguns:shotball_中文": "弹丸碰撞伤害倍率，默认1；原生初始9点，保留每次反弹后的衰减。",
+        "_description_scguns:shotball_en": "Collision damage multiplier; default 1. Native bounce decay is preserved.",
+        "scguns:shotball": 1.0
+      },
       "allowed_items": [
         "scguns:grenade",
         "scguns:nail_bomb",
@@ -3133,7 +3249,12 @@
         "scguns:hellfire_bomb",
         "scguns:swarm_bomb",
         "scguns:beacon_grenade",
-        "scguns:shotball"
+        "scguns:shotball",
+        "jeg:grenade",
+        "jeg:water_bomb",
+        "jeg:molotov_cocktail",
+        "jeg:smoke_grenade",
+        "jeg:stun_grenade"
       ],
       "minimum_range": 6.0,
       "_说明_maximum_range_中文": "最大主动投掷距离，单位格；默认32，范围1～64且不小于minimum_range。距离许可不代表一定能越过障碍或抵达安全落点。",
@@ -3188,7 +3309,45 @@
     "_说明_excluded_auto_gun_types_中文": "仅从空名单自动收录中排除这些标准类型；显式白名单可包含它们。标准类型含pistol、smg、rifle、shotgun、sniper、mg、rpg。",
     "_description_excluded_auto_gun_types_en": "Types excluded only from automatic discovery; explicit lists may include them. Standard types include pistol, smg, rifle, shotgun, sniper, mg, rpg.",
     "_说明_excluded_gun_namespaces_中文": "出生池排除这些枪械ID命名空间；只限制生成。若需同时禁止雇佣装备，请使用gun_blacklist。",
-    "_description_excluded_gun_namespaces_en": "Exclude these gun ID namespaces from birth pools only. Use gun_blacklist to also ban hired equipment."
+    "_description_excluded_gun_namespaces_en": "Exclude these gun ID namespaces from birth pools only. Use gun_blacklist to also ban hired equipment.",
+    "_说明_jeg_gun_types_中文": "JEG没有公开武器类别字段，此表按注册ID指定弹匣计费类别；未知的合格战斗枪按rifle处理。pistol/smg=1、rifle/shotgun=2、sniper=3、lmg=4，实际消耗由magazines_per_reload_by_type控制。此表不会开放治疗、玩具或信号功能物品。",
+    "jeg_gun_types": {
+      "jeg:combat_pistol": "pistol",
+      "jeg:semi_auto_pistol": "pistol",
+      "jeg:revolver": "pistol",
+      "jeg:custom_smg": "smg",
+      "jeg:dummy_tommy": "smg",
+      "jeg:double_barrel_shotgun": "shotgun",
+      "jeg:pump_shotgun": "shotgun",
+      "jeg:repeating_shotgun": "shotgun",
+      "jeg:waterpipe_shotgun": "shotgun",
+      "jeg:bolt_action_rifle": "sniper",
+      "jeg:light_machine_gun": "lmg",
+      "jeg:minigun": "lmg",
+      "jeg:assault_rifle": "rifle",
+      "jeg:burst_rifle": "rifle",
+      "jeg:combat_rifle": "rifle",
+      "jeg:infantry_rifle": "rifle",
+      "jeg:rusty_striker": "rifle",
+      "jeg:semi_auto_rifle": "rifle",
+      "jeg:service_rifle": "rifle",
+      "jeg:blossom_rifle": "rifle",
+      "jeg:hollenfire_mk2": "rifle",
+      "jeg:soulhunter_mk2": "rifle",
+      "jeg:holy_shotgun": "shotgun",
+      "jeg:subsonic_rifle": "rifle",
+      "jeg:supersonic_shotgun": "shotgun",
+      "jeg:hypersonic_cannon": "heavy",
+      "jeg:flamethrower": "flamethrower",
+      "jeg:grenade_launcher": "heavy",
+      "jeg:rocket_launcher": "heavy",
+      "jeg:atlantean_spear": "rifle",
+      "jeg:typhoonee": "special"
+    },
+    "_说明_jeg_inventory_fed_capacity_中文": "JEG库存直接供弹型实弹枪的士兵专用虚拟弹仓容量，默认100发，范围1–4096；打空后按武器类别扣一次通用弹匣并按原生间隔装满。普通弹匣枪不受影响，不改变玩家枪械容量。",
+    "jeg_inventory_fed_capacity": 100,
+    "_description_jeg_gun_types_en": "JEG registry ID to universal-magazine category. Unknown supported combat guns default to rifle; this does not enable healing, toy or signal-only items.",
+    "_description_jeg_inventory_fed_capacity_en": "NPC-only virtual capacity for JEG inventory-fed ballistic guns: default 100, range 1-4096. One category-priced payment per empty reload; player capacity is unchanged."
   },
   "shield_pressure": {
     "_说明_中文": "高压防御优先于进食、喝药和普通反击。仅统计敌方可用盾抵挡的攻击造成的实际生命损失；达到高额或高频门槛后，中断恢复、归还盾牌，枪手先换备用近战武器。随后实际受伤或成功格挡会延长高压，安静期结束恢复普通战术；持续举盾达到max_guard_ticks则主动尝试破局，试探中新扣血仍达高压门槛时重新防御。不直接触发高伤撤退，不统计环境/友军伤害；没有可用盾、破盾冷却、没有备用近战武器的持枪单位及躲避爆炸时不强制压制恢复。",

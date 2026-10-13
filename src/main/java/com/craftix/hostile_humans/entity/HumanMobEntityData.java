@@ -46,10 +46,8 @@ implements HumansDataSync {
     private static final EntityDataAccessor<String> DATA_VARIANT = SynchedEntityData.defineId(HumanMobEntityData.class, (EntityDataSerializer)EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> DATA_TIER = SynchedEntityData.defineId(HumanMobEntityData.class, (EntityDataSerializer)EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_BETTER_COMBAT_MELEE_ENABLED = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<String> DATA_BETTER_COMBAT_ATTACK_ANIMATION = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.STRING);
-    private static final EntityDataAccessor<Integer> DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DATA_BETTER_COMBAT_ATTACK_ANIMATION_DURATION = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Float> DATA_BETTER_COMBAT_ATTACK_ANIMATION_UPSWING = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<CompoundTag> DATA_BETTER_COMBAT_ATTACK_VISUAL =
+            SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.COMPOUND_TAG);
     private static final EntityDataAccessor<Boolean> DATA_OFFHAND_EATING = SynchedEntityData.defineId(HumanMobEntityData.class, EntityDataSerializers.BOOLEAN);
     private static final int DATA_SYNC_TICK = 10;
     public String team = "";
@@ -110,21 +108,30 @@ implements HumansDataSync {
         }
     }
 
-    public String getNpcBetterCombatAttackAnimation() {
-        return this.entityData.get(DATA_BETTER_COMBAT_ATTACK_ANIMATION);
+    /** One atomic server-authored snapshot prevents sequence/timing fields arriving separately. */
+    public record MeleeAttackVisual(int sequence, long startedAt, String animation, int duration, float upswing) {
+        public int elapsed(long now) {
+            return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, now - startedAt));
+        }
+        public boolean active(long now) {
+            // Native recovery can outlive the nominal cooldown. After that
+            // cooldown its speed returns to full speed, so two cycles plus
+            // the existing sync margin bound the remaining visual lifetime.
+            return !animation.isBlank() && elapsed(now) < playbackWindowTicks(duration);
+        }
+        public static long playbackWindowTicks(int duration) { return Math.max(1L, duration) * 2L + 2L; }
     }
 
-    public int getNpcBetterCombatAttackAnimationSequence() {
-        return this.entityData.get(DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE);
+    public MeleeAttackVisual getNpcBetterCombatAttackVisual() {
+        CompoundTag data = this.entityData.get(DATA_BETTER_COMBAT_ATTACK_VISUAL);
+        return new MeleeAttackVisual(data.getInt("sequence"), data.getLong("started_at"),
+                data.getString("animation"), Math.max(1, data.getInt("duration")), data.getFloat("upswing"));
     }
 
-    public int getNpcBetterCombatAttackAnimationDuration() {
-        return this.entityData.get(DATA_BETTER_COMBAT_ATTACK_ANIMATION_DURATION);
-    }
-
-    public float getNpcBetterCombatAttackAnimationUpswing() {
-        return this.entityData.get(DATA_BETTER_COMBAT_ATTACK_ANIMATION_UPSWING);
-    }
+    public String getNpcBetterCombatAttackAnimation() { return getNpcBetterCombatAttackVisual().animation(); }
+    public int getNpcBetterCombatAttackAnimationSequence() { return getNpcBetterCombatAttackVisual().sequence(); }
+    public int getNpcBetterCombatAttackAnimationDuration() { return getNpcBetterCombatAttackVisual().duration(); }
+    public float getNpcBetterCombatAttackAnimationUpswing() { return getNpcBetterCombatAttackVisual().upswing(); }
 
     public void setNpcBetterCombatAttackAnimation(String animation) {
         this.setNpcBetterCombatAttackAnimation(animation, 1, 0.5F);
@@ -132,14 +139,14 @@ implements HumansDataSync {
 
     public void setNpcBetterCombatAttackAnimation(String animation, int durationTicks, float upswing) {
         if (this.level().isClientSide) return;
-        this.entityData.set(DATA_BETTER_COMBAT_ATTACK_ANIMATION,
-                animation == null ? "" : animation);
-        this.entityData.set(DATA_BETTER_COMBAT_ATTACK_ANIMATION_DURATION, Math.max(1, durationTicks));
+        CompoundTag snapshot = new CompoundTag();
+        snapshot.putInt("sequence", getNpcBetterCombatAttackAnimationSequence() + 1);
+        snapshot.putLong("started_at", this.level().getGameTime());
+        snapshot.putString("animation", animation == null ? "" : animation);
+        snapshot.putInt("duration", Math.max(1, durationTicks));
         float safeUpswing = Float.isFinite(upswing) ? upswing : 0.5F;
-        this.entityData.set(DATA_BETTER_COMBAT_ATTACK_ANIMATION_UPSWING,
-                Math.max(0.05F, Math.min(0.95F, safeUpswing)));
-        this.entityData.set(DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE,
-                this.entityData.get(DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE) + 1);
+        snapshot.putFloat("upswing", Math.max(0.05F, Math.min(0.95F, safeUpswing)));
+        this.entityData.set(DATA_BETTER_COMBAT_ATTACK_VISUAL, snapshot);
     }
 
     public boolean isSleepingThisNight() {
@@ -288,10 +295,7 @@ implements HumansDataSync {
         this.entityData.define(DATA_VARIANT, "skin1");
         this.entityData.define(DATA_TIER, 1);
         this.entityData.define(DATA_BETTER_COMBAT_MELEE_ENABLED, false);
-        this.entityData.define(DATA_BETTER_COMBAT_ATTACK_ANIMATION, "");
-        this.entityData.define(DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE, 0);
-        this.entityData.define(DATA_BETTER_COMBAT_ATTACK_ANIMATION_DURATION, 1);
-        this.entityData.define(DATA_BETTER_COMBAT_ATTACK_ANIMATION_UPSWING, 0.5F);
+        this.entityData.define(DATA_BETTER_COMBAT_ATTACK_VISUAL, new CompoundTag());
         this.entityData.define(DATA_SIT_POS, new BlockPos(0, 0, 0));
         this.entityData.define(DATA_HOME_POS, new BlockPos(0, 0, 0));
     }

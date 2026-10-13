@@ -43,23 +43,28 @@ final class HumanAnimatedItemInHandLayer extends ItemInHandLayer<Human, PlayerMo
                     return;
                 }
             }
-            getParentModel().translateToHand(arm, poseStack);
-            BetterCombatNpcAnimator.applyHeldItemBend(human, arm, poseStack);
+            HumanoidArm visualArm = HumanGunPresentation.itemArm(human, arm);
+            ItemDisplayContext visualContext = HumanGunPresentation.context(visualArm);
+            getParentModel().translateToHand(visualArm, poseStack);
+            BetterCombatNpcAnimator.applyHeldItemBend(human, visualArm, poseStack);
             poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
             poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
-            poseStack.translate((arm == HumanoidArm.LEFT ? -1.0F : 1.0F) / 16.0F,
+            poseStack.translate((visualArm == HumanoidArm.LEFT ? -1.0F : 1.0F) / 16.0F,
                     0.125F, -0.625F);
-            BetterCombatNpcAnimator.applyHeldItemTransform(human, arm, poseStack);
-            if (!ScgunsNpcAnimator.render(human, item, displayContext, poseStack, buffer, packedLight)) {
+            BetterCombatNpcAnimator.applyHeldItemTransform(human, visualArm, poseStack);
+            if (!ScgunsNpcAnimator.render(human, item, visualContext, poseStack, buffer, packedLight)
+                    && !JegNpcAnimator.render(human, item, visualContext, poseStack, buffer, packedLight)) {
                 if (GunSupport.isTaczGunItem(item) && arm == human.getMainArm()) {
                     var previous = TaczNpcEffects.begin(human, item, buffer);
                     try {
-                        itemRenderer.renderItem(human, item, displayContext,
-                                arm == HumanoidArm.LEFT, poseStack, buffer, packedLight);
+                        // Arm animation, hand attachment and TaCZ draw context all use
+                        // the authored right-hand convention, including left-handed NPCs.
+                        itemRenderer.renderItem(human, item, visualContext,
+                                visualArm == HumanoidArm.LEFT, poseStack, buffer, packedLight);
                     } finally { TaczNpcEffects.end(previous); }
                 } else {
-                    itemRenderer.renderItem(human, item, displayContext,
-                            arm == HumanoidArm.LEFT, poseStack, buffer, packedLight);
+                    itemRenderer.renderItem(human, item, visualContext,
+                            visualArm == HumanoidArm.LEFT, poseStack, buffer, packedLight);
                 }
             }
         } finally {

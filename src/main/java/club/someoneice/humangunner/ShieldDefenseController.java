@@ -80,6 +80,11 @@ public final class ShieldDefenseController {
 
     public void restoreRangedUseAfterGuard() { guardedCharge.restore(human); }
 
+    /** Weapon goals must not compete with a shield lease for vanilla's sole use slot. */
+    public boolean reservesRangedUse() {
+        return owner == Owner.COMBAT || ownsCurrentShield();
+    }
+
     public boolean hasRangedCounterWindow() {
         return isPressureBreakAttempt() || RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem())
                 && human.tickCount < nextCounterGuardTick;
@@ -89,7 +94,7 @@ public final class ShieldDefenseController {
     public void recordPressureDamage(DamageSource source, float damage) {
         if (human.level().isClientSide
                 || !(source.getEntity() instanceof LivingEntity attacker) || !isValidThreat(attacker)) return;
-        CloseGunTactics.damage(human, damage);
+        CloseRangedTactics.damage(human, damage);
         if (source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_SHIELD)) return;
         ShieldPressureConfig rules = UnifiedConfig.get().shieldPressure();
         updatePressureCycle();
@@ -127,18 +132,28 @@ public final class ShieldDefenseController {
     boolean wantsHighPressureGuard() { return shouldSuppressRecovery() && canBlockWithShield(); }
 
     void prepareHighPressureDefense() {
-        if (!shouldSuppressRecovery() || RecoverySupplies.hasActiveUse(human)) return;
+        if (!shouldSuppressRecovery()) return;
+        // Defense is a weapon handoff, never an implicit counterattack. Cancel
+        // the previous windup before publishing a melee stack to other goals.
+        human.humanGunner$cancelMeleeAttackForDefense();
+        if (RecoverySupplies.hasActiveUse(human)) return;
         if (isHoldingTaczGun()) {
             if (human.isUsingItem()) human.stopUsingItem();
             GunCustody.beginCloseMeleeCounter(human);
         }
     }
 
+    /** Shared by every server melee entry, including native/fallback attacks. */
+    public boolean blocksMeleeAttack() {
+        return shouldSuppressRecovery() || human.isUsingItem()
+                && human.getUseItem().getUseAnimation() == UseAnim.BLOCK;
+    }
+
     private boolean wantsCombatNow(LivingEntity threat, IncomingArrow incomingArrow) {
         if (isPressureBreakAttempt()) return false;
         if (wantsHighPressureGuard()) return true;
         if (human.isFleeing || !canBlockWithShield()) return false;
-        if (CloseGunTactics.keepDefense(human) && human.tickCount >= nextDefenseTick) return true;
+        if (CloseRangedTactics.keepDefense(human) && human.tickCount >= nextDefenseTick) return true;
         if (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem())
                 && !RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) return false;
         // Bow/crossbow counter windows must survive repeated hits long enough to fire.
@@ -185,6 +200,7 @@ public final class ShieldDefenseController {
         guardedCharge.capture(human);
         preparingCombatGuard = false;
         if (human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
+        human.setChargingCrossbow(false); // Background charge must not advertise a competing active hand pose.
         defendingProjectile = human.tickCount < projectileDefenseUntil || rangedWarning;
         int projectileWindow = projectileDefenseUntil - human.tickCount;
         int duration = defendingProjectile && isDedicatedRangedCombatant()
@@ -193,6 +209,9 @@ public final class ShieldDefenseController {
         if (rangedWarning || predictsIncomingMelee(threat))
             // Goal ticks also run on the start tick (held=0). Keep the lease through held=20.
             duration = Math.max(duration, CombatPressurePolicy.MAX_GUARD_WAIT_TICKS + 1);
+        // The goal ticks on its start tick. A short predicted impact window must
+        // still survive vanilla's block activation delay before ordinary release.
+        duration = Math.max(duration, CombatPressurePolicy.MINIMUM_EFFECTIVE_BLOCK_TICKS + 1);
         defenseStartTick = human.tickCount;
         defensePressureTick = human.tickCount;
         defenseObservedHurtTimestamp = human.getLastHurtByMobTimestamp();
@@ -258,7 +277,8 @@ public final class ShieldDefenseController {
             return new CombatUpdate(0, false);
         }
 
-        if (!wantsHighPressureGuard() && !underGunfirePressure() && awaitingProjectile() && shouldDeferRangedProjectileGuard()) {
+        if (!wantsHighPressureGuard() && !underGunfirePressure() && awaitingProjectile()
+                && shouldDeferRangedProjectileGuard() && hasHeldMinimumCombatGuard()) {
             projectileDefenseUntil = 0;
             if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
                 release(Owner.COMBAT);
@@ -512,8 +532,7 @@ public final class ShieldDefenseController {
         LivingEntity target = human.getTarget();
         double dangerRange = isCrossbowCombatant() ? 16.0D : 12.0D;
         if (GunSupport.get().isGun(human.getMainHandItem())) {
-            dangerRange = Math.min(12.0D, GunRangePolicy.forType(
-                    GunSupport.get().gunType(human.getMainHandItem())).minimum());
+            dangerRange = Math.min(12.0D, GunRangePolicy.forWeapon(human.getMainHandItem()).minimum());
         }
         double dangerRangeSqr = dangerRange * dangerRange;
         return isValidThreat(target) && human.distanceToSqr(target) <= dangerRangeSqr;

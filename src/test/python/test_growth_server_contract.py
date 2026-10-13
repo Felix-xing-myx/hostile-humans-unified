@@ -53,7 +53,8 @@ class GrowthServerContractTest(unittest.TestCase):
         self.assertNotIn('damageStagePercent', health)
         for backend in ('TaczIntegration.java', 'ScgunsIntegration.java'):
             text = read(backend)
-            self.assertIn('HumanGrowth.gunDamageMultiplier(attacker)', text)
+            self.assertEqual(text.count('HumanGrowth.scaleGunDamage(attacker,'), 1)
+            self.assertNotIn('HumanGrowth.gunDamageMultiplier(attacker)', text)
             self.assertNotIn('HumanGrowth.multiplier(', text)
             self.assertNotIn('damageStagePercent', text)
         gun_curve = read('GrowthConfig.java').split('public double gunDamageMultiplier(int percent)', 1)[1].split('public double damageUnit()', 1)[0]
@@ -152,7 +153,7 @@ class GrowthServerContractTest(unittest.TestCase):
 
     def test_firearm_growth_uses_existing_damage_and_both_accuracy_paths(self):
         tacz = read("TaczIntegration.java")
-        self.assertEqual(tacz.count("HumanGrowth.gunDamageMultiplier(attacker)"), 1)
+        self.assertEqual(tacz.count("HumanGrowth.scaleGunDamage(attacker,"), 1)
         self.assertNotIn("HumanGrowth.multiplier", tacz)
         self.assertNotIn("gunDamageMultiplier", read("HumanGunner.java"))
         self.assertIn("HumanGrowth.gunSpreadMultiplier(human)", read("RangedAccuracy.java"))

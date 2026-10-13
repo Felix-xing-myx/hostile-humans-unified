@@ -305,6 +305,7 @@ extends Goal {
 
     private void tickShot(LivingEntity target, boolean visible) {
         if (mob instanceof Human human && RangedWeaponCustody.isActive(human)) return;
+        if (mob instanceof Human human && human.humanGunner$shieldDefense().reservesRangedUse()) return;
         if (this.mob instanceof Human human && !HumanAmmo.hasArrows(human)) {
             if (this.mob.isUsingItem() && this.mob.getUseItem().getItem() instanceof BowItem)
                 this.mob.stopUsingItem();

@@ -121,7 +121,8 @@ public final class MaintenanceRefactorTest {
                         && calls("club/someoneice/humangunner/MeleeSpacing", "tryStep", "strafeMelee"),
                 "spacing requires a hittable target and an explicit melee movement request");
         check(calls("com/craftix/hostile_humans/entity/ai/goal/MeleeAttackGoal", "canStrike", "canStrike")
-                        && calls("club/someoneice/humangunner/MeleeCombatRange", "canStrike", "canStrike"),
+                        && calls("club/someoneice/humangunner/MeleeCombatRange", "canStrike", "canReachTarget")
+                        && calls("club/someoneice/humangunner/MeleeCombatRange", "canReachTarget", "canStrike"),
                 "pursuit/spacing and Better Combat share actual attack geometry");
         check(calls("club/someoneice/humangunner/HumanInventoryCustody", "stowOrDrop",
                 "storePickupTransactionally"), "stowing cannot partly commit before a canceled world drop");

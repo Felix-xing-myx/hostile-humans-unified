@@ -21,7 +21,7 @@ final class SpawnPotionConfig {
                 if (registeredItem.isEmpty()) return ItemStack.EMPTY; // Optional mod absent.
                 ItemStack stack = new ItemStack(registeredItem.get());
                 var settings = UnifiedConfig.get().scguns();
-                return ScgunsCompat.throwItem(stack) && settings.throwablesEnabled()
+                return TacticalThrowables.supported(stack) && settings.throwablesEnabled()
                         && settings.allowedThrowables().contains(item.toString()) ? stack : ItemStack.EMPTY;
             }
             var registeredPotion = BuiltInRegistries.POTION.getOptional(potion);

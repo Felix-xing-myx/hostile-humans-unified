@@ -65,6 +65,8 @@ public final class HumanArrowCombat {
 
     public static boolean canShoot(Human human, LivingEntity target) {
         return !human.level().isClientSide && human.isAlive()
+                && !human.humanGunner$shieldDefense().reservesRangedUse()
+                && !(human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem()))
                 && human.level().getDifficulty() != Difficulty.PEACEFUL
                 && target != null && target.isAlive() && !target.isRemoved()
                 && target.level() == human.level() && HumanAmmo.hasArrows(human) && cadenceAllowsShot(human)

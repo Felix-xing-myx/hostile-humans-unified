@@ -29,7 +29,10 @@ public class ClientRenderer {
     @SubscribeEvent
     public static void registerAnimationReloadListener(RegisterClientReloadListenersEvent event) {
         event.registerReloadListener(BackShieldPose.INSTANCE);
-        event.registerReloadListener((ResourceManagerReloadListener) manager -> TaczNpcAnimator.resetPlayback());
+        event.registerReloadListener((ResourceManagerReloadListener) manager -> {
+            TaczNpcAnimator.resetPlayback();
+            BetterCombatNpcAnimator.resetPlayback();
+        });
     }
 
     @SubscribeEvent

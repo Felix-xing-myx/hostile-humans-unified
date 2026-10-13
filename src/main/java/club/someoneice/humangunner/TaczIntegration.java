@@ -9,7 +9,6 @@ import com.tacz.guns.api.event.common.GunShootEvent;
 import net.minecraft.world.entity.LivingEntity;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.api.item.builder.GunItemBuilder;
-import com.tacz.guns.util.AttachmentDataUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.damagesource.DamageSource;
@@ -67,9 +66,8 @@ final class TaczIntegration implements GunSupport {
         ItemStack stack = GunItemBuilder.create().setId(id).build();
         IGun gun = IGun.getIGunOrNull(stack);
         if (gun == null) return ItemStack.EMPTY;
-        gun.setCurrentAmmoCount(stack, Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(stack, index.getGunData())));
+        TaczNpcMagazine.fill(stack, index);
         gun.setFireMode(stack, index.getGunData().getFireModeSet().get(0));
-        gun.setBulletInBarrel(stack, index.getGunData().getBolt() != com.tacz.guns.resource.pojo.data.gun.Bolt.OPEN_BOLT);
         return stack;
     }
     public double projectileSpeed(ItemStack stack) {
@@ -105,11 +103,12 @@ final class TaczIntegration implements GunSupport {
         if (gunId == null) return;
         var index = TimelessAPI.getCommonGunIndex(gunId).orElse(null);
         if (index == null || index.getGunData().getReloadData() == null) return;
-        int capacity = Math.max(1, AttachmentDataUtils.getAmmoCountWithAttachment(weapon, index.getGunData()));
+        TaczNpcMagazine.normalize(weapon, index);
+        int capacity = TaczNpcMagazine.capacity(weapon, index);
         IGunOperator operator = IGunOperator.fromLivingEntity(human);
         boolean reloading = isReloading(human);
         int occupied = GunReloadPolicy.capacityCheckedRounds(gun.getCurrentAmmoCount(weapon),
-                gun.hasBulletInBarrel(weapon), gun.useInventoryAmmo(weapon),
+                gun.hasBulletInBarrel(weapon), TaczNpcMagazine.inventoryFed(weapon, index),
                 index.getGunData().getBolt() == com.tacz.guns.resource.pojo.data.gun.Bolt.OPEN_BOLT);
         if (!GunReloadPolicy.shouldIdleTopOff(occupied, capacity,
                 human.getTarget() != null, human.isFleeing, human.isUsingItem(), reloading)) return;
@@ -130,6 +129,10 @@ final class TaczIntegration implements GunSupport {
             public void prepareUrgentShot() { TaczGunMechanics.prepareUrgentCloseShot(human, operator); }
             public void shoot(ItemStack weapon, LivingEntity target, float pitch, float yaw) {
                 if (!GunFireAuthorization.allows(human, weapon, target)) return;
+                IGun gun = IGun.getIGunOrNull(weapon);
+                if (gun == null) return;
+                TimelessAPI.getCommonGunIndex(gun.getGunId(weapon))
+                        .ifPresent(index -> TaczNpcMagazine.normalize(weapon, index));
                 if (TaczGunMechanics.ensureGunDrawn(human, operator)) return;
                 TaczGunMechanics.handleShootResult(human, operator, weapon, operator.shoot(() -> pitch, () -> yaw));
             }
@@ -176,9 +179,8 @@ final class TaczIntegration implements GunSupport {
                 event.setBaseAmount(0.0F);
                 return;
             }
-            event.setBaseAmount(event.getBaseAmount()
-                    * (float) UnifiedConfig.get().tierGunDamage(TierAttributes.key(attacker))
-                    * (float) HumanGrowth.gunDamageMultiplier(attacker));
+            event.setBaseAmount(HumanGrowth.scaleGunDamage(attacker, event.getBaseAmount(),
+                    UnifiedConfig.get().tierGunDamage(TierAttributes.key(attacker))));
         } else if (event.getAttacker() instanceof Pillager) {
             event.setBaseAmount(event.getBaseAmount()
                     * (float) HumanGunnerConfig.get().pillagerGunDamageMultiplier());

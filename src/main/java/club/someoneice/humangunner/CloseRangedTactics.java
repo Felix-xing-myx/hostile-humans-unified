@@ -8,34 +8,41 @@ import net.minecraft.world.phys.Vec3;
 import java.util.ArrayDeque;
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.UUID;
 
-/** Local gun/melee cycle; custody owns stacks, shields own blocking, this owns tactical timing. */
-final class CloseGunTactics {
+/** Shared local ranged/melee cycle; weapon-specific custody owns all stack exchanges. */
+final class CloseRangedTactics {
     static final double RADIUS = 8.0D;
     static final int MELEE_TICKS = 60;
-    static final int GUN_TRIAL_TICKS = 100;
+    static final int RANGED_TRIAL_TICKS = 100;
     static final int FAILED_TRIAL_HOLD_TICKS = 100;
     private record Hit(int tick, float damage) {}
     private static final class State {
+        UUID target;
         Vec3 anchor;
         int lastTick;
         int meleeSince;
         int retryAfter;
-        int gunUntil;
+        int rangedUntil;
         int defendUntil;
         int side = 1;
         final ArrayDeque<Hit> hits = new ArrayDeque<>();
         State(Human human) {
+            target = human.getTarget() == null ? null : human.getTarget().getUUID();
             anchor = human.position();
             lastTick = meleeSince = human.tickCount;
         }
     }
     private static final Map<Human, State> STATES = new WeakHashMap<>();
-    private CloseGunTactics() {}
+    private CloseRangedTactics() {}
+
+    static void clear(Human human) { STATES.remove(human); }
 
     private static State state(Human human) {
         State state = STATES.get(human);
-        if (state == null || human.tickCount - state.lastTick > 120) {
+        UUID target = human.getTarget() == null ? null : human.getTarget().getUUID();
+        if (state == null || !java.util.Objects.equals(state.target, target)
+                || human.tickCount - state.lastTick > 120) {
             state = new State(human);
             STATES.put(human, state);
         }
@@ -46,35 +53,70 @@ final class CloseGunTactics {
     static void beginMelee(Human human) {
         State state = state(human);
         state.meleeSince = human.tickCount;
-        state.gunUntil = 0;
+        state.rangedUntil = 0;
         state.hits.clear();
     }
 
     static boolean keepDefense(Human human) {
         State state = STATES.get(human);
         return state != null && !human.isFleeing && human.getTarget() != null && human.getTarget().isAlive()
+                && human.getTarget().getUUID().equals(state.target)
                 && human.tickCount < state.defendUntil;
     }
 
     static boolean allowsMeleeEntry(Human human) {
         State state = STATES.get(human);
-        return state == null || human.tickCount >= state.gunUntil;
+        return state == null || human.getTarget() == null || !human.getTarget().getUUID().equals(state.target)
+                || human.tickCount >= state.rangedUntil;
     }
 
     static void returnedToGun(Human human) {
         if (human.getTarget() == null || human.distanceToSqr(human.getTarget()) > 36) return;
         State state = state(human);
-        state.gunUntil = human.tickCount + GUN_TRIAL_TICKS;
+        state.rangedUntil = human.tickCount + RANGED_TRIAL_TICKS;
         state.hits.clear();
     }
 
-    static boolean tryGun(Human human, LivingEntity target) {
+    static void returnedToBow(Human human) {
+        returnedToGun(human);
+        State state = STATES.get(human);
+        if (state == null || human.getTarget() == null || human.distanceToSqr(human.getTarget()) > 36) return;
+        var weapon = human.getMainHandItem();
+        if (weapon.getItem() instanceof net.minecraft.world.item.CrossbowItem) {
+            boolean heavy = SpartanRangedCompat.isHeavyCrossbow(weapon);
+            int rate = heavy ? 2 : 4;
+            int loading = net.minecraft.world.item.CrossbowItem.isCharged(weapon) ? 0
+                    : (net.minecraft.world.item.CrossbowItem.getChargeDuration(weapon) + rate - 1) / rate;
+            int wait = ArrowAttackCadence.crossbowWaitTicks(human.tickCount + loading,
+                    ArrowAttackCadence.CROSSBOW_DELAY_MIN + ArrowAttackCadence.CROSSBOW_DELAY_VARIANCE - 1, heavy);
+            state.rangedUntil = human.tickCount + Math.max(RANGED_TRIAL_TICKS, loading + wait + 20);
+        }
+    }
+
+    static boolean tryBow(Human human, LivingEntity target) {
+        if (!mayTryRanged(human, target) || human.isInWater() || human.isInLava()
+                || human.isSeekingShore() || human.isShoreTransitionPending() || human.onClimbable()
+                || RangedTerrainCombat.holdsMelee(human) || !RangedShotClearance.canShoot(human, target)) return false;
+        human.humanGunner$shieldDefense().releaseCombat();
+        return RangedWeaponCustody.restorePreferred(human, "close_bow_trial");
+    }
+
+    static boolean allowsLocalPath(Human human, Path path) {
+        return bounded(human, state(human), path);
+    }
+
+    private static boolean mayTryRanged(Human human, LivingEntity target) {
         State state = state(human);
-        if (human.tickCount - state.meleeSince < MELEE_TICKS
-                || human.tickCount < state.retryAfter || keepDefense(human)
-                || CloseDefenseHold.shouldHold(human) || human.humanGunner$pendingMeleeTicks(target) >= 0
-                || human.humanGunner$shieldDefense().shouldSuppressRecovery()
-                || !human.getSensing().hasLineOfSight(target)) return false;
+        return target != null && target.isAlive() && human.canAttack(target) && !human.isFleeing
+                && human.tickCount - state.meleeSince >= MELEE_TICKS
+                && human.tickCount >= state.retryAfter && !keepDefense(human)
+                && !CloseDefenseHold.shouldHold(human) && human.humanGunner$pendingMeleeTicks(target) < 0
+                && !human.humanGunner$shieldDefense().shouldSuppressRecovery()
+                && human.getSensing().hasLineOfSight(target);
+    }
+
+    static boolean tryGun(Human human, LivingEntity target) {
+        if (!mayTryRanged(human, target)) return false;
         // Release only this controller's shield use, never food/medicine or another owner.
         human.humanGunner$shieldDefense().releaseCombat();
         if (!GunCustody.restorePrimaryGun(human, "close_gun_trial")) return false;
@@ -84,9 +126,11 @@ final class CloseGunTactics {
     /** Called with final health loss, after the shared hostile-source validation. */
     static void damage(Human human, float damage) {
         State state = STATES.get(human);
-        if (state == null || human.tickCount >= state.gunUntil
-                || !GunSupport.isGunItem(human.getMainHandItem())
-                || human.getTarget() == null || human.distanceToSqr(human.getTarget()) > 36
+        if (state == null || human.tickCount >= state.rangedUntil
+                || !(GunSupport.isGunItem(human.getMainHandItem())
+                || RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem()))
+                || human.getTarget() == null || !human.getTarget().getUUID().equals(state.target)
+                || human.distanceToSqr(human.getTarget()) > 36
                 || !(damage > 0) || !Float.isFinite(damage)) return;
         while (!state.hits.isEmpty() && human.tickCount - state.hits.peekFirst().tick() > 20)
             state.hits.removeFirst();
@@ -96,7 +140,7 @@ final class CloseGunTactics {
         for (Hit hit : state.hits) total += hit.damage();
         if (state.hits.size() >= 2 && total >= human.getMaxHealth() * 0.20D
                 || state.hits.size() >= 3 && total >= human.getMaxHealth() * 0.10D) {
-            state.gunUntil = 0;
+            state.rangedUntil = 0;
             state.defendUntil = human.tickCount + FAILED_TRIAL_HOLD_TICKS;
             state.retryAfter = state.defendUntil;
             state.hits.clear();
@@ -136,10 +180,10 @@ final class CloseGunTactics {
     }
 
     private static boolean bounded(Human human, State state, Path path) {
-        if (path == null || !path.canReach() || path.isDone()) return false;
+        if (path == null || !path.canReach() || !SoldierOrder.allowsCombatPath(human, path)) return false;
         for (int i = path.getNextNodeIndex(); i < path.getNodeCount(); i++) {
             Vec3 point = Vec3.atBottomCenterOf(path.getNodePos(i));
-            if (!inside(state, point) || !SoldierOrder.allowsCombatPosition(human, point)) return false;
+            if (!inside(state, point)) return false;
         }
         return true;
     }

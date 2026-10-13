@@ -219,8 +219,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 && SoldierOrder.isHoldingPosition(human);
         if (mob instanceof Human human) {
             if (closeDefense) {
-                if ((distance < CLOSE_MELEE_EXIT_RANGE || CloseGunTactics.keepDefense(human))
-                        && !CloseGunTactics.tryGun(human, target)) {
+                if ((distance < CLOSE_MELEE_EXIT_RANGE || CloseRangedTactics.keepDefense(human))
+                        && !CloseRangedTactics.tryGun(human, target)) {
                     tickCloseMeleeDefense(human, target, distance);
                     return;
                 }
@@ -239,8 +239,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 updateRetreatPressure(distance, range);
             }
             if (!closeDefense
-                    && (CloseGunTactics.keepDefense(human)
-                    || CloseGunTactics.allowsMeleeEntry(human)
+                    && (CloseRangedTactics.keepDefense(human)
+                    || CloseRangedTactics.allowsMeleeEntry(human)
                     && distance <= closeMeleeRange(human, target) && retreatFailureTicks >= 12)
                     && GunCustody.beginCloseMeleeCounter(human)) {
                 tickCloseMeleeDefense(human, target, distance);
@@ -417,7 +417,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     private AimRotation calculateAim(LivingEntity target, ItemStack weapon) {
-        Vec3 origin = RangedShotClearance.gunOrigin(mob);
+        Vec3 origin = RangedShotClearance.gunOrigin(mob).add(GunSupport.get().shotOriginOffset(weapon, mob));
         Vec3 aimPoint = RangedShotClearance.gunAim(origin, weapon, target);
 
         Vec3 delta = aimPoint.subtract(origin);
@@ -458,7 +458,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         if (mob instanceof Human human) {
             MovementSpeedController.combat(human, false);
             retreatSearchQueued = false;
-            CloseGunTactics.maneuver(human, target);
+            CloseRangedTactics.maneuver(human, target);
         } else {
             Vec3 away = DefaultRandomPos.getPosAway(mob, 16, 7, target.position());
             Path path = away == null ? null : mob.getNavigation().createPath(
@@ -816,7 +816,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     private GunRangePolicy.Band preferredRange(ItemStack weapon) {
-        return GunRangePolicy.forType(GunSupport.get().gunType(weapon));
+        return GunRangePolicy.forWeapon(weapon);
     }
 
     private double firingRangeSqr(GunRangePolicy.Band range) {

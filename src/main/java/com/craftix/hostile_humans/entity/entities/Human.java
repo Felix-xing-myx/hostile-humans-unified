@@ -1338,7 +1338,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 setNpcBetterCombatAttackAnimation(plan.profile().animationName(),
                         plan.profile().cooldownTicks(), plan.profile().animationUpswing());
                 // NPC recovery can extend past the hit/cooldown boundary. Allow two cycles plus a sync margin.
-                club.someoneice.humangunner.CloseDefenseHold.attack(this, plan.profile().cooldownTicks() * 2 + 2);
+                club.someoneice.humangunner.CloseDefenseHold.attack(this, (int) Math.min(Integer.MAX_VALUE,
+                        MeleeAttackVisual.playbackWindowTicks(plan.profile().cooldownTicks())));
                 swing(InteractionHand.MAIN_HAND);
                 pendingBetterCombatTarget = requestedTarget;
                 pendingBetterCombatWeapon = getMainHandItem().copy();
@@ -1430,7 +1431,21 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public boolean humanGunner$canMeleeAttack() {
-        return !club.someoneice.humangunner.GunSupport.isGunItem(getMainHandItem());
+        return !club.someoneice.humangunner.GunSupport.isGunItem(getMainHandItem())
+                && !humanGunner$shieldDefense().blocksMeleeAttack();
+    }
+
+    /** Explicit defense transition: cancel damage and its synchronized visual intent together. */
+    public void humanGunner$cancelMeleeAttackForDefense() {
+        if (level().isClientSide) return;
+        pendingBetterCombatTarget = null;
+        pendingBetterCombatWeapon = ItemStack.EMPTY;
+        pendingBetterCombatUpswingTicks = 0;
+        if (!getNpcBetterCombatAttackAnimation().isEmpty()) setNpcBetterCombatAttackAnimation("");
+        swinging = false;
+        swingTime = 0;
+        attackAnim = 0;
+        oAttackAnim = 0;
     }
 
     private void wearEquippedItem(ItemStack stack, EquipmentSlot slot) {

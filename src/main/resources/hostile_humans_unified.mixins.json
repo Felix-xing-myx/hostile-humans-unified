@@ -6,6 +6,7 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "LivingEntityGrowthDamageMixin",
+    "HumanTotemRecoveryMixin",
     "ScgunsSulfurheadDamageMixin",
     "ScgunsHumanDifficultyMixin",
     "LivingEntityProjectileCooldownMixin",
@@ -18,9 +19,20 @@
     "TaczHumanReloadMixin",
     "TaczHumanShootMixin",
     "TaczHumanGunScriptMixin",
-    "ThrownTridentLifecycleMixin"
+    "ThrownTridentLifecycleMixin",
+    "JegProjectileCollisionMixin",
+    "JegHumanDamageMixin",
+    "JegWaterAreaCollisionMixin",
+    "JegSplashDamageAttributionMixin",
+    "JegHumanAiOwnershipMixin",
+    "JegNativeGunGoalMixin",
+    "JegWaterBombOwnerMixin"
   ],
-  "client": ["ScgunsNpcMuzzleFlashMixin", "TaczNpcMuzzleFlashMixin"],
+  "client": [
+    "ScgunsNpcMuzzleFlashMixin",
+    "TaczNpcMuzzleFlashMixin",
+    "JegNpcMuzzleFlashMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   }

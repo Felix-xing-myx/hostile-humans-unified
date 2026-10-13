@@ -19,9 +19,11 @@ public final class HumanProjectileRelations {
     /** Explosion hit lists are independent of projectile collision candidates. */
     static void onProjectileExplosion(ExplosionEvent.Detonate event) {
         Entity direct = event.getExplosion().getDirectSourceEntity();
-        Entity attacker = event.getExplosion().getIndirectSourceEntity();
-        if (!(attacker instanceof Player) && !(direct instanceof Projectile)) return;
+        Entity nativeOwner = JegCompat.projectileOwner(direct);
+        Entity attacker = nativeOwner != null ? nativeOwner : event.getExplosion().getIndirectSourceEntity();
+        if (!(attacker instanceof Player) && !(direct instanceof Projectile) && nativeOwner == null) return;
         event.getAffectedEntities().removeIf(candidate -> HumanOwnerProtection.protects(candidate, attacker)
+                || (nativeOwner != null && passesThroughFromOwner(nativeOwner, candidate))
                 || (direct instanceof Projectile projectile && passesThrough(projectile, candidate)));
     }
 
@@ -37,8 +39,13 @@ public final class HumanProjectileRelations {
     }
 
     public static boolean passesThrough(Projectile projectile, Entity candidate) {
-        if (HumanOwnerProtection.protects(candidate, projectile.getOwner())) return true;
-        if (!(projectile.getOwner() instanceof Human shooter)) return false;
+        return passesThroughFromOwner(projectile.getOwner(), candidate);
+    }
+
+    /** Some native projectile APIs expose a shooter without setting vanilla owner. */
+    public static boolean passesThroughFromOwner(Entity owner, Entity candidate) {
+        if (HumanOwnerProtection.protects(candidate, owner)) return true;
+        if (!(owner instanceof Human shooter)) return false;
         if (candidate instanceof Player player) {
             return protectsPlayer(shooter, player);
         }

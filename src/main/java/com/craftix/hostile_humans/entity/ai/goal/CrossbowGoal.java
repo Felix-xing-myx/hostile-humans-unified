@@ -373,6 +373,21 @@ extends Goal {
 
     private void tickShot(LivingEntity livingentity, boolean visible, boolean canEngage) {
         if (mob instanceof Human human && RangedWeaponCustody.isActive(human)) return;
+        // A shield (or recovery item) owns active use. Background loading belongs
+        // to the shield controller; never publish a failed CHARGING transition.
+        if (mob instanceof Human human && human.humanGunner$shieldDefense().reservesRangedUse()) return;
+        if (mob.isUsingItem() && !(mob.getUseItem().getItem() instanceof CrossbowItem)) return;
+        ItemStack heldCrossbow = mob.getItemInHand(ProjectileUtil.getWeaponHoldingHand(
+                mob, item -> item instanceof CrossbowItem));
+        if (CrossbowItem.isCharged(heldCrossbow)
+                && (crossbowState == CrossbowState.UNCHARGED || crossbowState == CrossbowState.CHARGING)) {
+            // Background loading may have completed without this goal stopping.
+            // Adopt the loaded state without resampling its existing shot deadline.
+            crossbowState = CrossbowState.CHARGED;
+            ((CrossbowAttackMob)mob).setChargingCrossbow(false);
+            if (mob instanceof Human human)
+                club.someoneice.humangunner.HumanArrowCombat.crossbowLoaded(human, heldCrossbow);
+        }
             if (this.mob instanceof Human human && !HumanAmmo.hasArrows(human)) {
                 if (this.mob.isUsingItem() && this.mob.getUseItem().getItem() instanceof CrossbowItem)
                     this.mob.stopUsingItem();
@@ -391,6 +406,7 @@ extends Goal {
                         club.someoneice.humangunner.HumanArrowCombat.beginCrossbowLoad(human,
                                 mob.getItemInHand(ProjectileUtil.getWeaponHoldingHand(mob, item -> item instanceof CrossbowItem)));
                     this.mob.startUsingItem(ProjectileUtil.getWeaponHoldingHand(this.mob, item -> item instanceof CrossbowItem));
+                    if (!this.mob.isUsingItem() || this.mob.getUseItem() != heldCrossbow) return;
                     if (this.mob instanceof Human human) human.humanGunner$shieldDefense().restoreRangedUseAfterGuard();
                     this.crossbowState = CrossbowState.CHARGING;
                     ((CrossbowAttackMob)this.mob).setChargingCrossbow(true);

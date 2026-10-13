@@ -7,7 +7,6 @@ and Java constants must be maintained separately.
 """
 import argparse
 import copy
-import hashlib
 import json
 from pathlib import Path
 
@@ -78,26 +77,46 @@ def cell(text):
     return str(text).replace("|", "&#124;").replace("\n", "<br>").replace("`", "&#96;")
 
 
-def render(name, data, source_hash):
+GROUP_NAMES = {
+    "vanilla_mode": "原版模式", "hostile_mob_targeting": "其他怪物选敌",
+    "damage": "共享伤害规则", "equipment_integration": "装备自动联动", "armor_swap": "护甲自动换装", "combat_resupply": "战斗顺路补给",
+    "spawning": "生成与解锁", "ai": "战斗与生存行为", "recruitment": "雇佣与名册",
+    "better_combat": "Better Combat近战", "ammunition": "弹药与出生补给",
+    "native_gameplay": "基础玩法与建筑", "tacz": "TaCZ枪械", "growth": "统一成长",
+    "jump_attack": "追击跳砍", "first_aid": "First Aid医疗", "scguns": "焦燃枪械联动",
+    "shield_pressure": "高压盾牌防御", "attributes": "基础属性", "movement": "移动速度",
+    "damage_multipliers": "分类型伤害倍率", "weapon_spread_degrees": "武器散布",
+    "combat": "基础攻击节奏", "food": "出生食物", "potions": "出生药水与战术道具",
+    "growth_profile": "本阶成长曲线与装备品质", "equipment_loadout": "出生装备池",
+}
+GLOBAL_ORDER = ("vanilla_mode", "growth", "recruitment", "ammunition", "ai", "damage",
+                "jump_attack", "shield_pressure", "spawning", "equipment_integration", "armor_swap", "combat_resupply",
+                "tacz", "scguns", "first_aid", "better_combat", "hostile_mob_targeting", "native_gameplay")
+TIER_ORDER = ("attributes", "damage_multipliers", "spawning", "ammunition", "food", "potions",
+              "movement", "combat", "ai", "weapon_spread_degrees", "tacz", "scguns",
+              "growth_profile", "equipment_loadout")
+
+
+def render(name, data):
     title = "默认值-" + name
     output = [f"# {title}", "", "返回 [[配置索引]] · [[00-总览与导航]]", "",
               f"配置文件：`config/hostile_humans_unified/{name}.json`。以下为源码打包默认值；不是任何已运行实例的实测值。", "",
-              f"默认资源 SHA-256：`{source_hash}`。由 `tools/export_knowledge_defaults.py` 生成。", "",
               "路径中的 `[0]` 表示列表第一项。权重是相对抽签份额；只有说明明确写概率时才按概率理解。20 tick=1秒，2点生命=1颗心。", "",
-              "字段解释沿用资源中文帮助；实际行为还要结合玩法章节和Java读取限制。盾耐久损耗冷却当前为2 tick，见 [[盾牌防御]]；本次已同步更正源码旧帮助。", ""]
-    count = 0
-    for group, value in data.items():
-        if group.startswith("_"):
-            continue
-        output += [f"## {group}", ""]
+              "表格给出完整内置设置，机制、计算顺序和限制见 [[配置索引]] 中的对应主题。已有服务器的显式自定义值可以不同。", "",
+              "## 分组导航", ""]
+    order = GLOBAL_ORDER if name == "global" else TIER_ORDER
+    groups = [group for group in order if group in data]
+    groups += [group for group in data if not group.startswith("_") and group != "schema_version" and group not in groups]
+    output += [" · ".join(f"[[#{GROUP_NAMES.get(group, group)}（{group}）|{GROUP_NAMES.get(group, group)}]]" for group in groups), ""]
+    for group in groups:
+        value = data[group]
+        output += [f"## {GROUP_NAMES.get(group, group)}（{group}）", ""]
         if isinstance(value, dict) and value.get("_说明_中文"):
             output += [value["_说明_中文"], ""]
         output += ["| 字段路径 | 默认值 | 作用与单位 |", "|---|---|---|"]
         for path, val, help_text in rows(value, group, data.get("_说明_" + group + "_中文", "")):
             output.append(f"| `{path}` | `{cell(val)}` | {cell(help_text or '此项是列表/映射内的具体值，含义见所属分组及玩法章节。')} |")
-            count += 1
         output.append("")
-    output += ["## 来源", "", "- `src/main/resources/defaults/hostile_humans_unified.json`", "- `src/main/java/club/someoneice/humangunner/TierConfigProjection.java`：实际五文件归属。", "- `SplitConfigFiles.java`、`UnifiedConfig.java`：加载、缺项与有效值规则。", "", f"本页记录 {count} 个默认叶子值（列表逐项展开，含空列表/对象）。", ""]
     return "\n".join(output)
 
 
@@ -107,16 +126,22 @@ def main():
     parser.add_argument("--check", action="store_true", help="Check generated Markdown without writing")
     args = parser.parse_args()
     root = json.loads(DEFAULTS.read_text(encoding="utf-8"))
-    source_hash = hashlib.sha256(DEFAULTS.read_bytes()).hexdigest().upper()
     output = args.vault / "04-配置与数值" / "默认值附录"
-    pages = {output / f"默认值-{name}.md": render(name, data, source_hash)
+    pages = {output / f"默认值-{name}.md": render(name, data)
              for name, data in project_defaults(root).items()}
     integrations = json.loads(INTEGRATIONS.read_text(encoding="utf-8"))
-    pages[output / "装备联动导入候选.md"] = "\n".join([
+    integration_page = [
         "# 装备联动导入候选", "", "返回 [[配置索引]] · [[联动模组总表]]", "",
         "以下完整抄录当前装备联动导入表。它是安装相应模组后首次追加的候选，不是每次生成必定穿戴的装备。空池、导入开关和导入记录仍控制是否追加。斯巴达装备来自注册表动态枚举，不能从这张固定表穷举所有安装组合。", "",
-        "来源：`src/main/resources/defaults/equipment_integrations.json`。SHA-256：`" + hashlib.sha256(INTEGRATIONS.read_bytes()).hexdigest().upper() + "`。", "",
-        "```json", json.dumps(integrations, ensure_ascii=False, indent=2), "```", ""])
+        "套装权重是本阶有效组合中的相对份额；完整基础护甲值见 [[盔甲池与阶级护甲值]]。", ""]
+    for provider, ranks in integrations.items():
+        if provider.startswith("_"):
+            continue
+        integration_page += [f"## {provider}", "", "| 候选路径 | 默认内容 | 说明 |", "|---|---|---|"]
+        for path, value, note in rows(ranks, provider):
+            integration_page.append(f"| `{path}` | `{cell(value)}` | {cell(note)} |")
+        integration_page.append("")
+    pages[output / "装备联动导入候选.md"] = "\n".join(integration_page)
     stale = []
     for path, content in pages.items():
         if args.check:

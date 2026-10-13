@@ -92,6 +92,7 @@ public final class AdaptiveCombatGoal extends Goal {
     private int nextRecoveryUseTick;
     private RecoverySupplies.UseSession recoverySession;
     private LivingEntity defenseMovementTarget;
+    private final ShieldDefenseMovement shieldMovement = new ShieldDefenseMovement();
     private int nextTacticalTick;
     private int nextCrowdScanTick;
     private int crowdPressureUntil;
@@ -323,6 +324,7 @@ public final class AdaptiveCombatGoal extends Goal {
 
     @Override
     public void stop() {
+        shieldMovement.clear(human);
         boolean shoreTransitionPending = human.isShoreTransitionPending();
         boolean endedRetreat = phase == Phase.RETREAT || phase == Phase.RECOVER;
         if (phase == Phase.DEFEND) shields.endCombat();
@@ -405,11 +407,16 @@ public final class AdaptiveCombatGoal extends Goal {
                 canCounterFromCurrentRange());
         phaseTicks = update.remainingTicks();
         if (phaseTicks <= 0) {
+            shieldMovement.clear(human);
             if (update.counterattack()) {
                 boolean attacked = performShieldCounterattack();
                 human.getPersistentData().putString("hostile_humans_unified:ai_phase",
                         attacked ? "shield_counterattack" : "shield_counter_window");
             }
+            return;
+        }
+        if (shieldMovement.tick(human, threat, config, shields.wantsHighPressureGuard())) {
+            if (!human.isUsingItem()) shields.maintainCombat(threat);
             return;
         }
         boolean advancingMelee = shouldAdvanceToMeleeThreat();
@@ -465,7 +472,7 @@ public final class AdaptiveCombatGoal extends Goal {
         double minimum;
         double maximum;
         if (isUsingTaczGun()) {
-            var range = GunRangePolicy.forType(GunSupport.get().gunType(human.getMainHandItem()));
+            var range = GunRangePolicy.forWeapon(human.getMainHandItem());
             minimum = range.minimum();
             maximum = range.maximum();
         } else if (RangedWeaponCustody.isCrossbowWeapon(human.getMainHandItem())) {
@@ -1129,7 +1136,7 @@ public final class AdaptiveCombatGoal extends Goal {
         double reach;
         if (GunSupport.isGunItem(held)) {
             if (!HumanAmmo.canUseGun(human, held)) return false;
-            reach = GunRangePolicy.firingReach(GunRangePolicy.forType(GunSupport.get().gunType(held)),
+            reach = GunRangePolicy.firingReach(held,
                     human.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE));
         } else if (HumanUtil.isTrident(held)) {
             reach = 36;
@@ -1149,7 +1156,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 || HumanUtil.isTrident(human.getMainHandItem())) {
             return human.distanceToSqr(threat) <= 784.0D;
         }
-        return MeleeCombatRange.canStrike(human, threat);
+        return MeleeCombatRange.canReachTarget(human, threat);
     }
 
     private boolean shouldAdvanceToMeleeThreat() {
@@ -1159,7 +1166,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 && !HumanUtil.isRangedWeapon(human.getMainHandItem())
                 && !HumanUtil.isTrident(human.getMainHandItem())
                 && !SoldierOrder.isHoldingPosition(human)
-                && !MeleeCombatRange.canStrike(human, threat);
+                && !MeleeCombatRange.canReachTarget(human, threat);
     }
 
     private boolean performShieldCounterattack() {

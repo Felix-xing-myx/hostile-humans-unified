@@ -18,6 +18,7 @@ final class CompositeGunSupport implements GunSupport {
         List<GunSupport> providers = new ArrayList<>();
         if (ModList.get().isLoaded("tacz") && UnifiedConfig.get().taczEnabled()) providers.add(new TaczIntegration());
         if (ModList.get().isLoaded("scguns") && UnifiedConfig.get().scguns().enabled()) providers.add(new ScgunsIntegration());
+        if (ModList.get().isLoaded("jeg") && UnifiedConfig.get().scguns().enabled()) providers.add(new JegIntegration());
         return new CompositeGunSupport(providers);
     }
     private GunSupport forWeapon(ItemStack stack) {
@@ -30,6 +31,10 @@ final class CompositeGunSupport implements GunSupport {
     public ResourceLocation gunId(ItemStack stack) { return forWeapon(stack).gunId(stack); }
     public boolean hasLoadedAmmo(ItemStack stack) { return forWeapon(stack).hasLoadedAmmo(stack); }
     public boolean isBullet(DamageSource source) { return providers.stream().anyMatch(p -> p.isBullet(source)); }
+    public net.minecraft.world.phys.Vec3 shotOriginOffset(ItemStack stack, LivingEntity shooter) {
+        return forWeapon(stack).shotOriginOffset(stack, shooter);
+    }
+    public double maximumProjectileReach(ItemStack stack) { return forWeapon(stack).maximumProjectileReach(stack); }
     public double projectileSpeed(ItemStack stack) { return forWeapon(stack).projectileSpeed(stack); }
     public double projectileGravity(ItemStack stack) { return forWeapon(stack).projectileGravity(stack); }
     public double clearanceProjectileSpeed(ItemStack stack) { return forWeapon(stack).clearanceProjectileSpeed(stack); }

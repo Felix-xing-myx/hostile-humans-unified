@@ -252,12 +252,13 @@ final class ScgunsIntegration implements GunSupport {
         }
     }
     private static void onDamage(LivingHurtEvent event) {
+        ScgunsThrowableDamage.onDamage(event);
         if (!(event.getSource().getDirectEntity() instanceof ProjectileEntity)) return;
         if (event.getSource().getEntity() instanceof Human attacker) {
             if (HumanRelations.allied(attacker, event.getEntity())) { event.setCanceled(true); return; }
-            event.setAmount(event.getAmount() * (float) UnifiedConfig.get().scguns().damageMultiplier()
-                    * (float) UnifiedConfig.get().tierScgunsDamage(TierAttributes.key(attacker))
-                    * (float) HumanGrowth.gunDamageMultiplier(attacker));
+            event.setAmount(HumanGrowth.scaleGunDamage(attacker, event.getAmount(),
+                    UnifiedConfig.get().scguns().damageMultiplier()
+                            * UnifiedConfig.get().tierScgunsDamage(TierAttributes.key(attacker))));
         }
         if (event.getEntity() instanceof Human human) human.getPersistentData().putInt(
                 HumanGunner.MOD_ID + ":incoming_gunfire_until", human.tickCount + 40);

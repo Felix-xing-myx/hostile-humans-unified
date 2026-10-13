@@ -14,6 +14,44 @@ public final class SupplyAndCloseDefenseTest {
         return new SupplyInventoryPolicy.Slot(kind, value, count, false);
     }
     public static void main(String[] args) throws Exception {
+        var resupply = CombatResupplyConfig.parse(new com.google.gson.JsonObject());
+        check(resupply.enabled() && resupply.arrowLow() == 8 && resupply.arrowTarget() == 32
+                && resupply.reloads() == 2 && resupply.radius() == 2 && resupply.intervalTicks() == 20,
+                "default emergency supply bounds");
+        check(CombatResupplyConfig.ammunitionNeeded(false, true, true, 8, 8, 32), "arrow shortage starts at eight");
+        check(!CombatResupplyConfig.ammunitionNeeded(false, true, true, 9, 8, 32), "nine arrows does not start a cycle");
+        check(CombatResupplyConfig.ammunitionNeeded(true, true, true, 31, 8, 32)
+                && !CombatResupplyConfig.ammunitionNeeded(true, true, true, 32, 8, 32), "resupply has a distinct stop threshold");
+        check(!CombatResupplyConfig.ammunitionNeeded(true, false, true, 0, 8, 32)
+                && !CombatResupplyConfig.ammunitionNeeded(true, true, false, 0, 8, 32),
+                "losing weapon or disabling consumption cancels ammo collection");
+        check(!CombatResupplyConfig.ammunitionNeeded(false, true, true, 4, 3, 8)
+                && CombatResupplyConfig.ammunitionNeeded(false, true, true, 3, 3, 8),
+                "four-cost gun starts below four magazines");
+        var reversed = com.google.gson.JsonParser.parseString("{\"arrow_low\":40,\"arrow_target\":10}").getAsJsonObject();
+        check(CombatResupplyConfig.parse(reversed).arrowTarget() == 41, "reversed refill target is normalized");
+        var fixedEmpty = new SupplyInventoryPolicy.Slot(SupplyInventoryPolicy.Kind.EMPTY, 0, 0, true);
+        var unavailable = new SupplyInventoryPolicy(List.of(fixedEmpty));
+        check(unavailable.availableEmptySlots(slot(SupplyInventoryPolicy.Kind.FOOD, 50, 1)) == 0,
+                "hand-custody empty slot is not available storage");
+        var armor = ArmorSwapConfig.parse(new com.google.gson.JsonObject());
+        check(armor.cooldownTicks() == 200, "armor slot cooldown is ten seconds");
+        check(!armor.shouldReplace(false, 80, .90, 80, 1, false), "slight wear never rotates identical armor");
+        check(!armor.shouldReplace(false, 80, .50, 80, 1, false), "half durability is not a replacement trigger");
+        check(armor.shouldReplace(false, 80, .25, 80, .50, false), "low armor accepts a 25-point condition improvement");
+        check(!armor.shouldReplace(false, 80, .25, 80, .49, false), "tiny durability improvements are ignored");
+        check(!armor.shouldReplace(false, 80, .25, 79, 1, false), "non-emergency wear does not downgrade protection");
+        check(armor.shouldReplace(false, 80, 1, 88, .50, false), "ten-percent full-quality upgrade at fifty-percent durability");
+        check(!armor.shouldReplace(false, 80, 1, 87, 1, false), "small full-quality upgrades do not rotate equipment");
+        check(!armor.shouldReplace(false, 80, 1, 160, .49, false), "powerful but worn candidate waits");
+        check(!armor.shouldReplace(false, 80, 1, 160, 1, true), "ordinary upgrade respects cooldown");
+        check(armor.shouldReplace(false, 80, .10, 64, .50, true), "emergency permits bounded downgrade during cooldown");
+        check(!armor.shouldReplace(false, 80, .10, 63, 1, false), "emergency rejects a large protection downgrade");
+        check(!armor.shouldReplace(false, 80, .10, 80, .10, true), "emergency never swaps equally worn armor");
+        check(armor.shouldReplace(true, 0, 0, 80, .50, true), "empty slots bypass cooldown");
+        check(!armor.shouldReplace(false, 80, 1, Double.NaN, 1, false), "invalid armor value is rejected");
+        var limits = com.google.gson.JsonParser.parseString("{\"replace_below_durability_percent\":5,\"emergency_below_durability_percent\":50}").getAsJsonObject();
+        check(ArmorSwapConfig.parse(limits).emergencyCondition() == .05, "emergency threshold cannot exceed low-durability threshold");
         var food = slot(SupplyInventoryPolicy.Kind.FOOD, 55, 64);
         var empty = slot(SupplyInventoryPolicy.Kind.EMPTY, 0, 0);
         List<SupplyInventoryPolicy.Slot> inventory = new ArrayList<>(List.of(food, food, food,
@@ -37,6 +75,24 @@ public final class SupplyAndCloseDefenseTest {
         var policy = new SupplyInventoryPolicy(inventory);
         check(!policy.canReplace(0, slot(SupplyInventoryPolicy.Kind.FOOD, 90, 1)), "one fine meal cannot discard a large reserve");
         check(policy.canReplace(0, slot(SupplyInventoryPolicy.Kind.FOOD, 90, 64)), "large better food reserve can upgrade");
+        var extraFood = new SupplyInventoryPolicy(List.of(food, food, food,
+                slot(SupplyInventoryPolicy.Kind.FOOD, 90, 1)));
+        check(extraFood.canReplace(3, food), "unreserved food also compares full stack value");
+        check(!new SupplyInventoryPolicy(List.of(food, food, food, food))
+                .canReplace(3, slot(SupplyInventoryPolicy.Kind.FOOD, 90, 1)),
+                "one premium meal cannot evict an extra full stack either");
+        check(extraFood.replacementCost(3, food) == 90
+                && extraFood.replacementCost(0, food) == 55 * 64,
+                "food eviction chooses the least valuable whole food stack");
+        check(ShieldQualityPolicy.fullValue(2000, 0, false)
+                > ShieldQualityPolicy.fullValue(336, 10, false),
+                "maximum shield durability outweighs modest enchantment advantages");
+        check(ShieldQualityPolicy.fullValue(4000, 0, false)
+                > ShieldQualityPolicy.fullValue(2000, 0, false),
+                "high durability shields retain distinct values without the old cap");
+        check(ShieldQualityPolicy.fullValue(336, 1, false)
+                - ShieldQualityPolicy.fullValue(336, 0, false) == 3,
+                "shield enchantment weight is counted once and reduced to three");
         check(new SupplyInventoryPolicy(List.of(slot(SupplyInventoryPolicy.Kind.FOOD, 150, 1)))
                 .canReplace(0, food), "large ordinary stack can upgrade a tiny high-value food reserve");
         check(policy.canReplace(4, slot(SupplyInventoryPolicy.Kind.MEDICINE, 108, 1)), "last medicine can upgrade to medicine");

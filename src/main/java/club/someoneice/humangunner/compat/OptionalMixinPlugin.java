@@ -36,6 +36,8 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
         else if (mixinClassName.endsWith(".ScgunsNpcMuzzleFlashMixin")) contract = SCGUNS_NPC_FLASH;
         else if (mixinClassName.endsWith(".TaczNpcMuzzleFlashMixin")) contract = TACZ_NPC_FLASH;
         else if (mixinClassName.endsWith(".ScgunsSulfurheadDamageMixin")) contract = SCGUNS_SULFURHEAD_DAMAGE;
+        else if (mixinClassName.endsWith(".JegNpcMuzzleFlashMixin")) contract =
+                "renderWeapon(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IF)Z";
         else return true;
         try {
             ClassNode target = readTarget(MixinService.getService().getBytecodeProvider(), targetClassName);

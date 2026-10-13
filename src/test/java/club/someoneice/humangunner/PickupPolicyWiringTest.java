@@ -15,6 +15,18 @@ public final class PickupPolicyWiringTest {
     private static final String HUMAN = "com/craftix/hostile_humans/entity/entities/Human";
 
     public static void main(String[] args) throws Exception {
+        String resupply = "club/someoneice/humangunner/CombatResupply";
+        for (var instruction : method(resupply, "tick").instructions) {
+            if (instruction instanceof MethodInsnNode call)
+                check(!List.of("getNavigation", "getMoveControl", "getLookControl", "setTarget", "stopUsingItem",
+                        "startUsingItem", "setItemSlot").contains(call.name), "resupply cannot own combat controls: " + call.name);
+        }
+        check(calls("club/someoneice/humangunner/HumanGunner", "onLivingTick", resupply, "tick"),
+                "one server tick entry runs emergency resupply");
+        check(calls(LOOT, "collectCombatSupply", POLICY, "canCombatResupplyNow")
+                && calls(LOOT, "collectCombatSupply", LOOT, "storeWithEviction")
+                && !callsName(LOOT, "collectCombatSupply", "setItemSlot"),
+                "supply commit rechecks permission and uses protected storage, never equipment exchange");
         for (SoldierOrder order : SoldierOrder.values()) {
             for (SoldierCombatMode mode : SoldierCombatMode.values()) {
                 check(!SoldierPickupPolicy.enabled(true, false), order + "/" + mode + " disabled means forbidden");

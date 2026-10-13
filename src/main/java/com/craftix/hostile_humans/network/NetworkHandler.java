@@ -13,16 +13,12 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 
 /** Explicit direction and bounded decoders. No global per-player packet suppression. */
 public final class NetworkHandler {
-    private static final String PROTOCOL_VERSION = "5";
+    private static final String PROTOCOL_VERSION = "6";
     public static final SimpleChannel INSTANCE = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("hostile_humans_unified", "network"), () -> PROTOCOL_VERSION,
             PROTOCOL_VERSION::equals, PROTOCOL_VERSION::equals);
     public static void registerNetworkHandler(FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            INSTANCE.registerMessage(0, MessageCommandHuman.class, (m, b) -> {
-                b.writeUtf(m.getHHFollowerUUID(), 36); b.writeUtf(m.getCommand(), 32);
-            }, b -> new MessageCommandHuman(b.readUtf(36), b.readUtf(32)), MessageCommandHuman::handle,
-                    Optional.of(NetworkDirection.PLAY_TO_SERVER));
             INSTANCE.registerMessage(1, MessageHumansData.class, (m, b) -> b.writeNbt(m.data()),
                     b -> new MessageHumansData(b.readNbt()), MessageHumansData::handle,
                     Optional.of(NetworkDirection.PLAY_TO_CLIENT));

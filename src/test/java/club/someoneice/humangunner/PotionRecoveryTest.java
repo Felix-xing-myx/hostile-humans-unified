@@ -17,8 +17,8 @@ public final class PotionRecoveryTest {
         check(PotionRecoveryPolicy.regenerationActive(1), "last live buff tick still blocks redrinking");
         check(PotionRecoveryPolicy.regenerationActive(-1), "infinite buff still blocks redrinking");
         check(!PotionRecoveryPolicy.regenerationActive(0), "expired buff permits another potion");
-        check(PotionRecoveryPolicy.regenerationStep(0) == 1.0F, "level one matches food pulse");
-        check(PotionRecoveryPolicy.regenerationStep(1) == 2.0F, "level two doubles food pulse");
+        check(PotionRecoveryPolicy.regenerationStep(0) == 0.5F, "level one provides half a food pulse");
+        check(PotionRecoveryPolicy.regenerationStep(1) == 1.0F, "level two matches a food pulse");
         check(PotionRecoveryPolicy.urgentInstantHealing(0.299999), "strictly below thirty percent needs instant healing");
         check(!PotionRecoveryPolicy.urgentInstantHealing(0.30), "exactly thirty percent does not override food");
         check(!PotionRecoveryPolicy.urgentInstantHealing(0.31), "ordinary recovery above threshold is preserved");

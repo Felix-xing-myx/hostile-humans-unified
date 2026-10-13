@@ -64,7 +64,8 @@ public final class RangedShotClearance {
         if (GunSupport.get().isGun(weapon)) {
             // Both native backends interpolate the owner's previous/current feet
             // and add eye height. Cosmetic third-person muzzle offsets are not physics.
-            Vec3 origin = current ? gunOrigin(human) : feet.add(0, human.getEyeHeight(), 0);
+            Vec3 origin = (current ? gunOrigin(human) : feet.add(0, human.getEyeHeight(), 0))
+                    .add(GunSupport.get().shotOriginOffset(weapon, human));
             Vec3 aim = GunSupport.get().shotTargetPoint(weapon, target);
             double speed = GunSupport.get().clearanceProjectileSpeed(weapon);
             if (speed <= 0) return clearSegment(human, origin, aim);

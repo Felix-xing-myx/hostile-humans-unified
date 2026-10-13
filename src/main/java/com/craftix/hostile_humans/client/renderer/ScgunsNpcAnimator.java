@@ -48,7 +48,7 @@ public final class ScgunsNpcAnimator {
         } catch (RuntimeException | LinkageError error) {
             warn(error);
             net.minecraft.client.model.AnimationUtils.animateCrossbowHold(model.rightArm, model.leftArm,
-                    model.head, human.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT);
+                    model.head, HumanGunPresentation.mainArm(human) == net.minecraft.world.entity.HumanoidArm.RIGHT);
         }
         model.rightSleeve.copyFrom(model.rightArm);
         model.leftSleeve.copyFrom(model.leftArm);

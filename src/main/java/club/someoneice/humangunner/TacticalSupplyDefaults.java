@@ -15,7 +15,8 @@ final class TacticalSupplyDefaults {
             if (!template.has("pool") || !template.get("pool").isJsonArray()) return;
             JsonArray old = new JsonArray();
             JsonArray previous = new JsonArray();
-            JsonArray previousMolotov = template.getAsJsonArray("pool").deepCopy();
+            JsonArray previousWithoutJeg = withoutJeg(template.getAsJsonArray("pool"), true);
+            JsonArray previousMolotov = previousWithoutJeg.deepCopy();
             for (var entry : previousMolotov) {
                 if (!entry.isJsonObject()) continue;
                 JsonObject row = entry.getAsJsonObject();
@@ -33,20 +34,38 @@ final class TacticalSupplyDefaults {
             }
             removeStun(current, "pool", true);
             if (current.has("pool") && (current.get("pool").equals(old) || current.get("pool").equals(previous)
-                    || current.get("pool").equals(previousMolotov)))
+                    || current.get("pool").equals(previousMolotov) || current.get("pool").equals(previousWithoutJeg)))
                 current.add("pool", template.get("pool").deepCopy());
         } else {
             JsonObject current = UnifiedConfig.object(UnifiedConfig.object(data, "scguns"), "throwables");
             JsonObject template = UnifiedConfig.object(UnifiedConfig.object(defaults, "scguns"), "throwables");
             JsonArray old = new JsonArray();
             for (String id : List.of("scguns:grenade", "scguns:stun_grenade", "scguns:nail_bomb")) old.add(id);
-            if (current.has("allowed_items") && current.get("allowed_items").equals(old)
-                    && template.has("allowed_items"))
+            if (current.has("allowed_items") && template.has("allowed_items")
+                    && (current.get("allowed_items").equals(old)
+                    || current.get("allowed_items").equals(withoutJeg(template.getAsJsonArray("allowed_items"), false))))
                 current.add("allowed_items", template.get("allowed_items").deepCopy());
             removeStun(current, "allowed_items", false);
             if (!current.has("initial_speed") && template.has("initial_speed"))
                 current.add("initial_speed", template.get("initial_speed").deepCopy());
+            // Expose new controls in existing global files without replacing explicit values.
+            if (!current.has("damage_multipliers") && template.has("damage_multipliers"))
+                current.add("damage_multipliers", template.get("damage_multipliers").deepCopy());
+            else if (current.has("damage_multipliers") && current.get("damage_multipliers").isJsonObject()
+                    && template.has("damage_multipliers")) {
+                JsonObject damage = current.getAsJsonObject("damage_multipliers");
+                for (var entry : template.getAsJsonObject("damage_multipliers").entrySet())
+                    if (!damage.has(entry.getKey())) damage.add(entry.getKey(), entry.getValue().deepCopy());
+            }
         }
+    }
+    private static JsonArray withoutJeg(JsonArray values, boolean pool) {
+        JsonArray result = new JsonArray();
+        for (var value : values) {
+            var id = pool && value.isJsonObject() ? value.getAsJsonObject().get("item") : value;
+            if (id == null || !id.isJsonPrimitive() || !id.getAsString().startsWith("jeg:")) result.add(value.deepCopy());
+        }
+        return result;
     }
     /** Explicit feature removal; preserve every other custom entry and weight. */
     private static void removeStun(JsonObject object, String key, boolean pool) {

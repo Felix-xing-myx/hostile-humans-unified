@@ -24,7 +24,7 @@ final class SupplyInventoryPolicy {
         int emptyCount = 0;
         for (int i = 0; i < slots.size(); i++) {
             if (slots.get(i).kind() == Kind.FOOD) food.add(i);
-            if (slots.get(i).kind() == Kind.EMPTY) emptyCount++;
+            if (slots.get(i).kind() == Kind.EMPTY && !slots.get(i).fixed()) emptyCount++;
         }
         foods = food.size();
         empty = emptyCount;
@@ -50,11 +50,19 @@ final class SupplyInventoryPolicy {
         if (stored.fixed() || stored.kind() == Kind.EMPTY) return false;
         if (reserved[index]) {
             if (incoming.kind() != stored.kind()) return false;
-            if (stored.kind() == Kind.FOOD) return incoming.supplyValue() > stored.supplyValue() + 1.0D;
         }
+        // Food quantity matters in every slot, including extra unreserved meals.
+        if (incoming.kind() == Kind.FOOD && stored.kind() == Kind.FOOD)
+            return incoming.supplyValue() > stored.supplyValue() + 1.0D;
         // An old ammo-filled inventory must be able to recover its missing food slots.
         if (incoming.kind() == Kind.FOOD && foods < FOOD_SLOTS && !reserved[index]) return true;
         return incoming.value() > stored.value() + 1.0D;
+    }
+
+    double replacementCost(int index, Slot incoming) {
+        Slot stored = slots.get(index);
+        return incoming.kind() == Kind.FOOD && stored.kind() == Kind.FOOD
+                ? stored.supplyValue() : stored.value();
     }
 
     static double ammoValue(boolean magazine, boolean ownsGun, boolean ownsBow) {

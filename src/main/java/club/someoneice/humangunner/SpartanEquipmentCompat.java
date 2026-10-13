@@ -59,17 +59,9 @@ public final class SpartanEquipmentCompat {
 
     public static double shieldValue(ItemStack shield) {
         if (!isShield(shield)) return 0;
-        double durabilityRatio = shield.isDamageableItem()
-                ? Math.max(0, 1.0D - (double) shield.getDamageValue() / shield.getMaxDamage()) : 1;
         int levels = EnchantmentHelper.getEnchantments(shield).values().stream().mapToInt(Integer::intValue).sum();
-        if (shieldEquipRank(shield) == Long.MAX_VALUE) return 10_000 + Math.min(200, levels * 12);
-        double score = 220 + durabilityRatio * 55 + Math.min(40, shield.getMaxDamage() * .025) + levels * 12;
-        ResourceLocation id = BuiltInRegistries.ITEM.getKey(shield.getItem());
-        if (id.getNamespace().equals("spartanshields")) {
-            score += 70;
-            if (id.getPath().contains("tower_shield")) score += 25;
-        }
-        return score;
+        return ShieldQualityPolicy.fullValue(shield.getMaxDamage(), levels,
+                shieldEquipRank(shield) == Long.MAX_VALUE);
     }
 
     static void equipOrStoreShield(Human human, ItemStack shield) {

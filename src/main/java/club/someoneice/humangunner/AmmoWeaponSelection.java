@@ -71,6 +71,7 @@ final class AmmoWeaponSelection {
                 useOffhand = true;
             }
             for (int slot = 0; slot < data.getInventoryItemsSize(); slot++) {
+                if (HumanInventoryCustody.isReservedForRecovery(data, slot)) continue;
                 ItemStack candidate = data.getInventoryItem(slot);
                 int candidateRank = rank(human, candidate, arrows);
                 if (candidateRank == 0 || candidateRank < bestRank) continue;
@@ -104,6 +105,7 @@ final class AmmoWeaponSelection {
     private static void stowExhausted(Human human, HumanData data, EquipmentSlot hand) {
         ItemStack stack = human.getItemBySlot(hand).copy();
         for (int slot = 0; slot < data.getInventoryItemsSize(); slot++) {
+            if (HumanInventoryCustody.isReservedForRecovery(data, slot)) continue;
             if (!data.getInventoryItem(slot).isEmpty()) continue;
             data.setInventoryItem(slot, stack);
             human.setItemSlot(hand, ItemStack.EMPTY);

@@ -24,6 +24,14 @@ public final class WaterCombatNavigation {
     }
     private WaterCombatNavigation() { }
 
+    /** Survival movement can release this pursuit's shore lease without touching other shore owners. */
+    public static void clear(Human human) {
+        State state = STATES.get(human);
+        if (state == null) return;
+        release(human, state);
+        STATES.remove(human);
+    }
+
     /** Surface-only combat must not select a navigator whose nodes require diving. */
     public static boolean surfaceCombat(Human human) {
         LivingEntity target = human.getTarget();
@@ -33,7 +41,7 @@ public final class WaterCombatNavigation {
 
     public static boolean isMeleePursuit(Human human, LivingEntity target) {
         return human.isInWater() && target != null && target == human.getTarget() && target.isAlive() && human.canAttack(target)
-                && !human.isFleeing && human.humanGunner$canMeleeAttack()
+                && !human.isFleeing && !GunSupport.isGunItem(human.getMainHandItem())
                 && !CombatWeaponPolicy.isRangedWeapon(human.getMainHandItem())
                 && !(human.getMainHandItem().getItem() instanceof net.minecraft.world.item.ProjectileWeaponItem)
                 && !(human.getMainHandItem().getItem() instanceof net.minecraft.world.item.TridentItem);
@@ -105,11 +113,7 @@ public final class WaterCombatNavigation {
     }
 
     private static boolean allowed(Human human, Path path) {
-        for (int i = path.getNextNodeIndex(); i < path.getNodeCount(); i++) {
-            var node = path.getNode(i);
-            if (!SoldierOrder.allowsCombatPosition(human, new Vec3(node.x + .5, node.y, node.z + .5))) return false;
-        }
-        return true;
+        return SoldierOrder.allowsCombatPath(human, path);
     }
 
     /** Validate even when a weapon goal yields movement or the target is no longer valid. */

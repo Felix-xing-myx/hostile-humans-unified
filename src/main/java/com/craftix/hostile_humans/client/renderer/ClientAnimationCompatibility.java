@@ -24,10 +24,34 @@ import org.slf4j.Logger;
 public final class ClientAnimationCompatibility {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Set<String> WARNED = ConcurrentHashMap.newKeySet();
+    private static volatile Method reloadPlayback;
     private static volatile ReloadSoundAccess reloadSoundAccess;
     private static volatile boolean reloadSoundLookupAttempted;
 
     private ClientAnimationCompatibility() {}
+
+    /** Use the native animation sound entry when present, otherwise its older public sound API. */
+    public static void playTaczReloadSound(net.minecraft.world.entity.Entity entity,
+            ResourceLocation sound, float volume, float pitch, int distance) {
+        try {
+            Method playback = reloadPlayback;
+            if (playback == null) {
+                Class<?> manager = Class.forName("com.tacz.guns.client.sound.SoundPlayManager", false,
+                        ClientAnimationCompatibility.class.getClassLoader());
+                Class<?>[] parameters = {net.minecraft.world.entity.Entity.class, ResourceLocation.class,
+                        float.class, float.class, int.class};
+                try {
+                    playback = manager.getMethod("playAnimationSound", parameters);
+                } catch (NoSuchMethodException olderApi) {
+                    playback = manager.getMethod("playClientSound", parameters);
+                }
+                reloadPlayback = playback;
+            }
+            playback.invoke(null, entity, sound, volume, pitch, distance);
+        } catch (ReflectiveOperationException | LinkageError exception) {
+            warnOnce("TaCZ reload sounds", "Cannot play native NPC reload sound", exception);
+        }
+    }
 
     public static void warnOnce(String feature, String operation, Throwable exception) {
         if (!WARNED.add(feature + ":" + operation)) return;

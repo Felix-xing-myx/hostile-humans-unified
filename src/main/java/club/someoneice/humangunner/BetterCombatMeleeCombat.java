@@ -78,7 +78,7 @@ public final class BetterCombatMeleeCombat {
 
     /** Gets the effective Better Combat reach, or zero when its optional path is inactive. */
     public static double attackRange(Human human) {
-        if (!isEnabled(human)) return 0.0D;
+        if (!canReadWeaponProfile(human)) return 0.0D;
         Object attributes = weaponAttributes(human);
         if (attributes == null || human.getMainHandItem().isEmpty()) return 0.0D;
         double range = number(call(attributes, "attackRange"), 3.0D);
@@ -91,8 +91,14 @@ public final class BetterCombatMeleeCombat {
     }
 
     public static boolean hasWeaponProfile(Human human) {
-        return isEnabled(human) && !human.getMainHandItem().isEmpty()
+        return canReadWeaponProfile(human) && !human.getMainHandItem().isEmpty()
                 && weaponAttributes(human) != null;
+    }
+
+    /** Defensive spacing still needs the weapon's reach while attacks are temporarily blocked. */
+    private static boolean canReadWeaponProfile(Human human) {
+        return human != null && !human.level().isClientSide
+                && !GunSupport.isGunItem(human.getMainHandItem()) && isConfiguredEnabled();
     }
 
     /** Single-target geometry check; never performs the sweep's entity query. */
@@ -108,7 +114,7 @@ public final class BetterCombatMeleeCombat {
 
     /** Resolve the active combo step and collect the hostile entities in its oriented hitbox. */
     public static AttackPlan createAttackPlan(Human human, LivingEntity requestedTarget) {
-        if (!hasWeaponProfile(human) || requestedTarget == null) return null;
+        if (!isEnabled(human) || !hasWeaponProfile(human) || requestedTarget == null) return null;
         Profile profile = profile(human);
         List<LivingEntity> targets = collectTargets(human, profile);
         if (!targets.contains(requestedTarget) && canBeHit(human, requestedTarget, profile)) {

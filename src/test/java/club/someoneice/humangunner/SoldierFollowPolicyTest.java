@@ -93,12 +93,54 @@ public final class SoldierFollowPolicyTest {
         check(custom.followSpeed("tier2", false) == 3, "upper bound");
         check(custom.followSpeed("tier2", true) == 3, "bounded catch-up floor");
         for (SoldierOrder order : SoldierOrder.values()) {
-            check(OwnerOfflinePolicy.shouldGuard(true, true, order) == (order == SoldierOrder.FOLLOW),
-                    "only followers convert " + order);
+            check(OwnerOfflinePolicy.shouldGuard(true, true, order)
+                            == (order == SoldierOrder.FOLLOW || order == SoldierOrder.BODYGUARD),
+                    "only owner-following orders convert " + order);
             check(!OwnerOfflinePolicy.shouldGuard(false, true, order), "wild orders untouched " + order);
             check(!OwnerOfflinePolicy.shouldGuard(true, false, order), "dead orders untouched " + order);
         }
+        for (SoldierOrder order : java.util.List.of(SoldierOrder.FOLLOW, SoldierOrder.BODYGUARD)) {
+            var data = new net.minecraft.nbt.CompoundTag();
+            OwnerOfflinePolicy.remember(data, first, order);
+            // Round-trip the actual persisted record, not an in-memory entity map.
+            var restored = net.minecraft.nbt.NbtIo.readCompressed(new java.io.ByteArrayInputStream(saveTag(data)));
+            check(OwnerOfflinePolicy.resumeOrder(restored, first, SoldierOrder.GUARD) == order,
+                    "saved original order survives NBT round trip " + order);
+            check(OwnerOfflinePolicy.resumeOrder(restored, second, SoldierOrder.GUARD) == null,
+                    "new owner cannot inherit previous owner's resume order");
+            check(OwnerOfflinePolicy.resumeOrder(restored, null, SoldierOrder.GUARD) == null,
+                    "dismissed soldier cannot resume");
+            for (SoldierOrder current : SoldierOrder.values()) {
+                if (current != SoldierOrder.GUARD)
+                    check(OwnerOfflinePolicy.resumeOrder(restored, first, current) == null,
+                            "superseded order cannot resume " + current);
+            }
+        }
+        var invalid = new net.minecraft.nbt.CompoundTag();
+        check(OwnerOfflinePolicy.resumeOrder(invalid, first, SoldierOrder.GUARD) == null,
+                "ordinary guards never become followers without a saved resume record");
+        for (SoldierOrder order : java.util.List.of(SoldierOrder.GUARD, SoldierOrder.PATROL, SoldierOrder.HOLD_POSITION)) {
+            OwnerOfflinePolicy.remember(invalid, first, order);
+            check(OwnerOfflinePolicy.resumeOrder(invalid, first, SoldierOrder.GUARD) == null,
+                    "non-following orders never produce resume records");
+        }
+        var malformed = new net.minecraft.nbt.CompoundTag();
+        var record = new net.minecraft.nbt.CompoundTag();
+        record.putUUID("Owner", first);
+        record.putString("Order", "NOT_AN_ORDER");
+        malformed.put("hostile_humans_unified:owner_offline_resume", record);
+        check(OwnerOfflinePolicy.resumeOrder(malformed, first, SoldierOrder.GUARD) == null,
+                "corrupt command name never defaults to follow");
+        record.putString("Order", "FOLLOW");
+        record.remove("Owner");
+        check(OwnerOfflinePolicy.resumeOrder(malformed, first, SoldierOrder.GUARD) == null,
+                "resume record requires a saved owner identity");
         System.out.println("SoldierFollowPolicyTest: " + checks + " checks passed");
+    }
+    private static byte[] saveTag(net.minecraft.nbt.CompoundTag data) throws java.io.IOException {
+        var output = new java.io.ByteArrayOutputStream();
+        net.minecraft.nbt.NbtIo.writeCompressed(data, output);
+        return output.toByteArray();
     }
     private static boolean updateSwimmingUsesSurfacePolicy() throws Exception {
         var node = new org.objectweb.asm.tree.ClassNode();

@@ -84,6 +84,11 @@ public final class HumanGrowth {
         return config.enabled() ? config.gunDamageMultiplier(state(human).getInt("experience_percent")) : 1;
     }
 
+    /** Both firearm backends apply experience once, independently of attribute growth stages. */
+    static float scaleGunDamage(Human human, float nativeDamage, double configuredMultiplier) {
+        return nativeDamage * (float) configuredMultiplier * (float) gunDamageMultiplier(human);
+    }
+
     static double fullHealth(Human human) {
         double staged = TierAttributes.of(human).maxHealth();
         GrowthConfig config = UnifiedConfig.get().growth();

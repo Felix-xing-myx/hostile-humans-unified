@@ -25,7 +25,7 @@ public final class CloseDefenseHold {
     static void clear(Human human) { HOLDS.remove(human); }
     static boolean shouldHold(Human human) {
         State state = HOLDS.get(human);
-        return state != null && !human.getMainHandItem().isEmpty() && human.humanGunner$canMeleeAttack()
+        return state != null && !human.getMainHandItem().isEmpty() && !GunSupport.isGunItem(human.getMainHandItem())
                 && state.holds(human.getMainHandItem(), human.tickCount, human.swinging);
     }
     public static void attack(Human human, int animationTicks) {

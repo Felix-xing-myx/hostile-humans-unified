@@ -33,7 +33,9 @@ public final class HumanProjectileRelationsTest {
         ClassNode relation = read(root + "HumanProjectileRelations");
         check(calls(read("com/craftix/hostile_humans/entity/entities/Human"), "hurt",
                 root + "HumanOwnerProtection", "blocksDamage") == 1, "native Human damage boundary protects against owner attacks");
-        check(calls(relation, "passesThrough", root + "HumanOwnerProtection", "protects") == 1,
+        check(calls(relation, "passesThrough", root + "HumanProjectileRelations", "passesThroughFromOwner") == 1,
+                "vanilla projectile collision delegates to explicit-shooter protection");
+        check(calls(relation, "passesThroughFromOwner", root + "HumanOwnerProtection", "protects") == 1,
                 "owner projectiles are filtered before fire and collision effects");
         check(calls(relation, "onProtectedPlayerAttack", root + "HumanOwnerProtection", "blocksDamage") == 1,
                 "Forge attack boundary shares the same owner damage protection");
@@ -41,13 +43,13 @@ public final class HumanProjectileRelationsTest {
                 "TaCZ uses shared owner protection before gun mitigation");
         check(calls(relation, "protectsPlayer", root + "HumanRelationshipPolicy", "ownedHumanAlliedToPlayer") == 1,
                 "player immunity is applied before collision using owner/PvP rule");
-        check(calls(relation, "passesThrough", root + "HumanProjectileRelations", "protectsPlayer") == 1,
+        check(calls(relation, "passesThroughFromOwner", root + "HumanProjectileRelations", "protectsPlayer") == 1,
                 "collision uses the shared owner/PvP player protection");
         check(calls(relation, "onProtectedPlayerAttack", root + "HumanProjectileRelations", "protectsPlayer") == 1,
                 "early damage protection uses the same rule");
         check(calls(relation, "onProjectileExplosion", "java/util/List", "removeIf") == 1,
                 "explosion removes protected entities before damage and knockback");
-        check(calls(relation, "passesThrough", root + "HumanGunner", "areCombatAllies") == 2,
+        check(calls(relation, "passesThroughFromOwner", root + "HumanGunner", "areCombatAllies") == 2,
                 "collision gate checks both directions, preserving hired/wild combat");
         check(calls(read(root + "mixin/HumanProjectileCollisionMixin"), "humanGunner$skipMutualAllies",
                 root + "HumanProjectileRelations", "passesThrough") == 1, "vanilla predicate filters before hit side effects");

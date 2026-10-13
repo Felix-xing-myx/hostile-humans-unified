@@ -263,8 +263,7 @@ public final class HumanRelations {
             // never stack another pursuit bonus on top of it.
             double gunBonus = 0.0D;
             if (!beaconHostile && GunSupport.get().isGun(human.getMainHandItem())) {
-                double fireRange = GunRangePolicy.forType(
-                        GunSupport.get().gunType(human.getMainHandItem())).fireRange();
+                double fireRange = GunRangePolicy.forWeapon(human.getMainHandItem()).fireRange();
                 gunBonus = Math.max(0.0D, fireRange - followRange.getBaseValue());
             }
             AttributeModifier currentGunBonus = followRange.getModifier(GUN_FOLLOW_RANGE_ID);

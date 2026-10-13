@@ -2,7 +2,6 @@ package com.craftix.hostile_humans.entity;
 
 import com.craftix.hostile_humans.HumanUtil;
 import com.craftix.hostile_humans.entity.AggressionMode;
-import com.craftix.hostile_humans.entity.HumanCommand;
 import com.craftix.hostile_humans.entity.HumanMobEntityData;
 import com.craftix.hostile_humans.entity.data.HumanData;
 import com.craftix.hostile_humans.entity.data.HumanServerData;
@@ -76,17 +75,6 @@ extends HumanMobEntityData {
         return Ingredient.of(all.stream());
     }
 
-    protected void pet() {
-        if (this.getHealth() < this.getMaxHealth()) {
-            this.setHealth((float)((double)this.getHealth() + 0.1));
-        }
-    }
-
-    public void follow() {
-        this.setOrderedToSit(false);
-        this.navigation.recomputePath();
-    }
-
     public boolean eat(ItemStack itemStack, Player player) {
         if (!this.canEat(itemStack)) {
             return false;
@@ -115,13 +103,6 @@ extends HumanMobEntityData {
         return this.isFood(itemStack) && this.getHealth() < this.getMaxHealth() && ((Human)this).needsFood();
     }
 
-    protected void sit() {
-        this.setOrderedToSit(true);
-        this.navigation.stop();
-        this.entityData.set(DATA_SIT_POS, this.blockPosition());
-        super.setTarget(null);
-    }
-
     @Override
     public void tick() {
         // Humans are autonomous foot units. Seats/cushions from other mods
@@ -138,34 +119,6 @@ extends HumanMobEntityData {
         }
         super.tick();
         this.pick.tick();
-    }
-
-    public void handleCommand(HumanCommand command) {
-        switch (command) {
-            case SIT: {
-                this.sit();
-                break;
-            }
-            case FOLLOW: {
-                this.follow();
-                break;
-            }
-            case SIT_FOLLOW_TOGGLE: {
-                if (this.isOrderedToSit()) {
-                    this.follow();
-                    break;
-                }
-                this.sit();
-                break;
-            }
-            case AGGRESSION_LEVEL_TOGGLE: {
-                this.toggleAggressionLevel();
-                break;
-            }
-            case PET: {
-                this.pet();
-            }
-        }
     }
 
     public void finalizeSpawn() {

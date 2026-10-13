@@ -37,7 +37,7 @@
 
 - 当前基线为 Minecraft 1.20.1、Forge 47.4.16、Java 17；每次以 `gradle.properties`、`build.gradle` 和实际环境重新核对。Java 路径为 `D:\Java\17`，使用仓库的 `gradlew.bat`。
 - 没有用户的“构建”要求，不运行 Gradle 构建或会触发编译的验证任务。已有授权后按修改选择验证；自动检查不能替代游戏内验收。
-- `build.gradle` 的六个 compileOnly API 默认路径依赖工作树位置。独立工作树显式传入完整参数；公共 API JAR 只读，不复制整套实例，不提交 API JAR、构建缓存、日志、存档或凭据。
+- `build.gradle` 的八个 compileOnly API 默认路径依赖工作树位置。独立工作树显式传入完整参数；公共 API JAR 只读，不复制整套实例，不提交 API JAR、构建缓存、日志、存档或凭据。
 - PowerShell 构建参考（仅在用户要求构建后执行；额外测试按任务选择）：
 
 ```powershell
@@ -48,20 +48,24 @@ $env:JAVA_HOME = 'D:\Java\17'
   '-PmaidApiJar=E:\MC\Create-Delight\最初二创内容\mods\[车万女仆]touhoulittlemaid-1.5.3-modified-all.jar' `
   '-PfirstAidApiJar=E:\MC\firstaid-1.20.1-1.1.jar' `
   '-PscgunsApiJar=E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\ScorchedGuns-0.5.5-1.20.1.jar' `
+  '-PjegApiJar=E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\JustEnoughGuns-0.14.5-1.20.1.jar' `
+  '-PgeckoApiJar=E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\geckolib-forge-1.20.1-4.8.4.jar' `
   '-PframeworkApiJar=E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\framework-forge-1.20.1-0.8.0.jar'
 ```
 
 ## Obsidian 机制与数值知识库（持续维护）
 
 - 用户指定知识库：`E:\个人知识库\Hostile Humans Unified`，仅放 Markdown 文件和分层子目录；可在现有个人知识库内阅读，也可单独作为 Obsidian 库打开。
-- 每次修改机制、配置默认值、硬编码数值、联动范围、物品/配方、待办或验收状态，必须在同一任务中同步对应知识库页面；不能仅修改 README/CHANGELOG 后宣称文档完成。
+- 每次修改机制、配置默认值、硬编码数值、联动范围或物品/配方，必须在同一任务中同步对应知识库页面；直接改对应正文、公式、表格及链接，不能仅修改 README/CHANGELOG 后宣称文档完成。
 - 默认数值索引由 `tools/export_knowledge_defaults.py` 从当前默认资源生成；运行此脚本后还必须人工同步玩法说明、公式、触发条件、联动及计划页面。脚本不解析全部 Java 行为，不能代替人工核对。
-- 文档用易懂中文说明用途、基本原理、触发条件、数值和限制，并保留源码追溯。明确区分模组默认值、指定实例自定义值、已实现、未实现、待构建、待游戏验收；历史版本的记录不能覆盖当前源码。
-- 收尾更新知识库 `06-维护与来源/更新记录.md` 与 `来源与覆盖清单.md` 的日期/源码 SHA，检查 Wiki 链接、数值表及受影响页。生成工具只更新数值附录，禁止覆盖用户笔记或整库重建。
+- 知识库是面向玩家和开发者的当前机制手册，按用途、触发条件、行为、数值、配置入口及限制组织；重要内容在前，比较数值用表格，相关主题用 Wiki 链接。明确模组默认值与实例自定义值；开发追溯集中在机制入口页。
+- 后续更新必须融入原主题并删除被替代的旧规则，不追加带日期的更新小节，不保留过时配置项解释。知识库不写构建状态、Python/API/Java检查结果、SHA、部署记录或验收日志；这些记录放在仓库 CHANGELOG、docs/WORKSTREAMS.md 和维护目录，不新增知识库更新记录或覆盖清单。
+- 收尾检查 Wiki 链接、数值表及所有受影响页，避免跨页重复公式与冲突。生成工具只更新数值附录；批量整理须先备份、审阅并保留用户笔记，不能以生成附录代替正文整理。
 - 若知识库路径不可访问，明确记录未同步页面和原因，不把任务标为文档同步完成。此要求是开发时同步约定，并非后台文件监听服务；不得声称已建立实时自动监听。
 
 ## 同步、发布与验收
 
+- 每一次发行版都必须在维护目录的 `dist`（`E:\MC\Create-Delight\HostileHumansUnified-维护\dist`，非源码仓库内）留存一份正式 JAR，按版本命名并核对 SHA-256 与实际发布/部署产物一致；保留历史发行版。同版本重新发布前先备份已有不同内容的产物，不静默覆盖。发行归档属于发布收尾必做项，不将 JAR 提交到源码 Git 仓库。
 - “构建”授权主控构建；同步仅针对用户已约定的目标。“构建并同步”由主控直接完成已指定目标的构建和同步；缺少目标时先建立明确发布清单，不猜测“三处”或同步所有历史实例。
 - 只有用户明确要求推送时才执行 GitHub push。不自行启动游戏，游戏内验收由用户反馈。
 - 正式发布顺序：核对版本/日志 → 构建及适当验证 → 检查目标实例是否运行 → 备份旧文件 → 替换本模组 JAR → 核对源/目标 SHA-256 → 登记并报告结果。目标运行时停止替换，需用户关闭或明确授权停止相关进程。

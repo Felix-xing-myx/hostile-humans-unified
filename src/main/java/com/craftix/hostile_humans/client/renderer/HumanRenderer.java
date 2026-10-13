@@ -127,7 +127,7 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
             offPose = human.getOffhandItem().isEmpty()
                     ? HumanoidModel.ArmPose.EMPTY : HumanoidModel.ArmPose.ITEM;
         }
-        if (human.getMainArm() == HumanoidArm.RIGHT) {
+        if (HumanGunPresentation.mainArm(human) == HumanoidArm.RIGHT) {
             playerModel.rightArmPose = mainPose;
             playerModel.leftArmPose = offPose;
         } else {

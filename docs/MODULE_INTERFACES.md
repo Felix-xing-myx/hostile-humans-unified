@@ -4,6 +4,7 @@
 
 | 职责 | 维护入口 | 调用约束 |
 | --- | --- | --- |
+| 战斗顺路补给 | `CombatResupply` / `CombatResupplyConfig` | `SoldierPickupPolicy.canCombatResupplyNow` 独立许可，`HumanLootManager.collectCombatSupply` 仅保护性存储，不持有MOVE/LOOK/装备控制 |
 | 恢复用品选择、使用与背包托管 | `RecoverySupplies` | 各恢复Goal申请同一UseSession，不自行扣物品或换回副手 |
 | 恢复效果推进 | `RecoverySupplies.tickEffects` | 每个服务器LivingTick一次，在菜单编辑锁之前；内部依次推进再生、MedicalSupplies、食物，不改装备 |
 | 使用完成补充结算 | `RecoverySupplies.onUseCompleted` | Human先执行原生completeUsingItem，再在成功结束使用后调用；原生效果、药水消费和瞬间治疗II补充值不散落在实体里 |
@@ -148,7 +149,7 @@ WaterCombatNavigation.controlMelee协调普通/临时近战和举盾推进；Pur
 
 ## 枪手局部交战（2026-10-11）
 
-CloseGunTactics统一GunnerGoal的局部迂回、GunCustody恢复枪械后的试射观察与ShieldDefenseController接收到的真实敌对生命损失。只返回战术决策，不自行交换物品、发射子弹或重写装填；完整路径受8格交战边界、命令区域、地形与共享搜索预算限制。盾牌和近战动画保持原单一入口。详见CLOSE_GUN_TACTICS.md；源码已改，未构建，待游戏验收。
+CloseRangedTactics统一GunnerGoal的局部迂回、GunCustody恢复枪械后的试射观察与ShieldDefenseController接收到的真实敌对生命损失。只返回战术决策，不自行交换物品、发射子弹或重写装填；完整路径受8格交战边界、命令区域、地形与共享搜索预算限制。盾牌和近战动画保持原单一入口。详见CLOSE_GUN_TACTICS.md；源码已改，未构建，待游戏验收。
 
 ## 2026-10-11 高压换盾的无效挥刀修复
 
@@ -255,3 +256,6 @@ TaCZ近距离紧急开火准备曾把meleePrepTickCount清为0，但原生Living
 主控/root顺序修改main主工作树，基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d，保留全部既有未提交修改。涉及RangedShotClearance、GunSupport/CompositeGunSupport/ScgunsIntegration、GunFireAuthorization/HumanArrowCombat、GunnerGoal/AdaptiveCombatGoal、BowAttack/CrossbowGoal、RangedFiringPosition和共用箭矢求解器可见性。201项Python静态/API契约检查通过，核对了本机原生箭矢出手偏移及焦燃瞄准/起点字节码；未运行Java编译/构建、未更新实例、未启动游戏、未提交推送。
 
 待游戏验收：台阶/半砖/栅栏/窗沿和高低差处能看见头部但躯干或出手位置被挡；正常换位后恢复开火；弓弩可越过矮障碍且射速/装填保持；TaCZ/焦燃普通及撤退射击、重弩/三叉戟；驻守不越界、上岸与撤退不抢移动、多名士兵对遮挡目标的性能。
+
+
+枪手和弓弩手共用近身试射、真实掉血回退与完整路径8格边界。弓弩恢复调用RangedWeaponCustody，枪械恢复调用GunCustody；慢速弩试射时长覆盖装填及既有待射时间。水中/上岸/攀爬/地形近战不强行试弓；无备用近战时不取消拉弦。目标切换与手动装备清理旧状态，不重写射击冷却或另造攻击入口。

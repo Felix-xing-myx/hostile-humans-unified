@@ -92,7 +92,7 @@ final class RecruitmentConfigNetwork {
         // integrated server's settings. This also upgrades missing schema keys.
         serverTerms = snapshot(UnifiedConfig.reloadForServer());
         com.mojang.logging.LogUtils.getLogger().info("Loaded authoritative recruitment terms from {}",
-                FMLPaths.CONFIGDIR.get().resolve(SplitConfigFiles.DIRECTORY).resolve("recruitment.json"));
+                FMLPaths.CONFIGDIR.get().resolve(SplitConfigFiles.DIRECTORY).resolve("global.json"));
         for (int tier = 0; tier < 4; tier++) {
             Price price = serverTerms.tier(tier);
             com.mojang.logging.LogUtils.getLogger().info("Recruitment tier {}: payment={}, limit={}",

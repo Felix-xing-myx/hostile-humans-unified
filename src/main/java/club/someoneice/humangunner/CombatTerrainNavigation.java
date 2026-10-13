@@ -362,11 +362,7 @@ public final class CombatTerrainNavigation {
         return SoldierOrder.allowsCombatPosition(human, point);
     }
     private static boolean allowedPath(Human human, Path path) {
-        for (int index = path.getNextNodeIndex(); index < path.getNodeCount(); index++) {
-            var node = path.getNode(index);
-            if (!allowedPosition(human, new Vec3(node.x + .5, node.y, node.z + .5))) return false;
-        }
-        return true;
+        return SoldierOrder.allowsCombatPath(human, path);
     }
 
     static boolean canApproachForMelee(Human human, LivingEntity target) {

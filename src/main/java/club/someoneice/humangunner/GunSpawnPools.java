@@ -7,7 +7,8 @@ import java.util.*;
 
 /** Immutable birth pool selection and high-priority equipment bans, separated by provider identity. */
 final class GunSpawnPools {
-    static final List<String> BACKENDS = List.of("tacz", "scguns");
+    static final List<String> CONFIG_SECTIONS = List.of("tacz", "scguns");
+    static final List<String> BACKENDS = List.of("tacz", "scguns", "jeg");
     private final Map<String, Backend> backends;
 
     private record Pool(boolean empty, Map<ResourceLocation, Integer> weights) {
@@ -24,7 +25,7 @@ final class GunSpawnPools {
     static GunSpawnPools parse(JsonObject root) {
         Map<String, Backend> result = new LinkedHashMap<>();
         for (String backend : BACKENDS) {
-            JsonObject settings = UnifiedConfig.object(root, backend);
+            JsonObject settings = UnifiedConfig.object(root, backend.equals("jeg") ? "scguns" : backend);
             String source = UnifiedConfig.string(settings, "spawn_pool_source", backend.equals("tacz") ? "global" : "tier");
             boolean valid = source.equals("global") || source.equals("tier");
             if (!valid) HumanGunner.LOGGER.warn("Invalid {}.spawn_pool_source {}; disabling its spawn pool", backend, source);

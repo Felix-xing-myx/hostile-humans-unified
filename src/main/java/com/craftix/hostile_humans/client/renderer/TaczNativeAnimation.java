@@ -32,7 +32,7 @@ final class TaczNativeAnimation {
         var display = TimelessAPI.getGunDisplay(human.getMainHandItem()).orElse(null);
         IThirdPersonAnimation animation = ThirdPersonManager.getAnimation(
                 display == null ? "default" : display.getThirdPersonAnimation());
-        boolean leftHanded = human.getMainArm() == HumanoidArm.LEFT;
+        boolean leftHanded = HumanGunPresentation.mainArm(human) == HumanoidArm.LEFT;
         var main = leftHanded ? model.leftArm : model.rightArm;
         var support = leftHanded ? model.rightArm : model.leftArm;
         if (sample.aim > 0.0F) {
