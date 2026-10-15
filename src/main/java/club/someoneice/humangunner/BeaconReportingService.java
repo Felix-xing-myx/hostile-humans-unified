@@ -2,6 +2,9 @@ package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
@@ -18,6 +21,66 @@ public final class BeaconReportingService {
     static final String MEMBER_DIMENSION = "hostile_humans_unified:beacon_dimension";
     private static final Map<Human, Long> RECEIVED = new WeakHashMap<>();
     private BeaconReportingService() {}
+
+    /** Diagnostic read only: no channel creation, expiry cleanup, sampling or delivery. */
+    public static List<PerceptionDebugSnapshot.Row> debugRows(Human human) {
+        List<PerceptionDebugSnapshot.Row> rows = new ArrayList<>();
+        if (!(human.level() instanceof ServerLevel level)) {
+            row(rows, "接收状态", "仅服务端可用");
+            return List.copyOf(rows);
+        }
+        CompoundTag member = human.getPersistentData();
+        boolean controlled = human.hasOwner() || member.contains(HumanRelations.HIRED_TIER)
+                || HumanRelations.effectiveOwner(human) != null;
+        if (!member.hasUUID(HumanRelations.FORCED_HOSTILE_TARGET)) {
+            row(rows, "接收状态", controlled ? "受控：不接收追捕报告" : "无有效信标追捕身份");
+            return List.copyOf(rows);
+        }
+        String memberDimension = member.contains(MEMBER_DIMENSION)
+                ? member.getString(MEMBER_DIMENSION) : dimension(level);
+        // Unlike computeIfAbsent, get never creates or dirties a missing SavedData.
+        Store store = level.getServer().overworld().getDataStorage().get(Store::load,
+                "hostile_humans_unified_beacon_reports");
+        UUID target = member.getUUID(HumanRelations.FORCED_HOSTILE_TARGET);
+        Channel channel = store == null ? null : store.channels.get(new Key(target, memberDimension));
+        long now = clock(level);
+        if (channel != null) {
+            row(rows, "共享发报剩余", time(Math.max(0, channel.until - now)));
+            row(rows, "最后成功使用距今", time(Math.max(0, now - channel.lastUse)));
+            row(rows, "下次发报", now >= channel.until ? "发报期已结束"
+                    : now >= channel.next ? "已到期，等待有效成员取样" : time(channel.next - now));
+            row(rows, "最后报告年龄", channel.sequence == 0 ? "尚无报告"
+                    : time(Math.max(0, now - channel.reportAt)));
+            row(rows, "最后报告剩余", channel.sequence == 0 ? "尚无报告"
+                    : time(BeaconReportPolicy.remaining(now, channel.reportUntil)));
+        }
+        ServerPlayer player = level.getServer().getPlayerList().getPlayer(target);
+        String reason;
+        double range = config().number("beacon.receiver_range");
+        if (controlled) reason = "受控：追捕资格已退出";
+        else if (!human.isAlive()) reason = "人类已失效";
+        else if (!dimension(level).equals(memberDimension)) reason = "成员已离开信标使用维度";
+        else if (channel == null) reason = "无共享通道：等待成功使用信标";
+        else if (player == null) reason = "被追捕玩家离线";
+        else if (player.serverLevel() != level) reason = "被追捕玩家在其他维度";
+        else if (!valid(level, player)) reason = "玩家死亡、创造或旁观模式";
+        else if (!human.canAttack(player)) reason = "当前关系或规则不允许攻击";
+        else if (human.distanceToSqr(player) > range * range)
+            reason = "超出同维度接收范围（" + config().integer("beacon.receiver_range") + "格）";
+        else if (BeaconReportPolicy.remaining(now, channel.reportUntil) == 0)
+            reason = now >= channel.until ? "发报期与最后报告均已结束" : "无有效报告，等待周期取样";
+        else if (channel.sequence <= RECEIVED.getOrDefault(human, 0L)) reason = "本份报告已接收，等待下一序列";
+        else reason = "已有有效报告，等待正常接收";
+        row(rows, "接收状态", reason);
+        return List.copyOf(rows);
+    }
+
+    private static void row(List<PerceptionDebugSnapshot.Row> rows, String label, String value) {
+        rows.add(new PerceptionDebugSnapshot.Row("beacon", label, value));
+    }
+    private static String time(long ticks) {
+        return String.format(Locale.ROOT, "%.1f秒（%dtick）", ticks / 20.0, ticks);
+    }
 
     /** Only called after at least one hostile wave member was successfully spawned. */
     public static void used(ServerLevel level, ServerPlayer player) {
