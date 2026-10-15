@@ -8,6 +8,7 @@ import org.objectweb.asm.tree.MethodInsnNode;
 public final class CombatTerrainPolicyTest {
     private static int checks;
     public static void main(String[] args) throws Exception {
+        NavigationHandoffPolicyTest.run();
         check(ShoreSeekingPolicy.canExitToDryHeight(64, 64), "level dry bank remains reachable");
         check(ShoreSeekingPolicy.canExitToDryHeight(64, 65), "one-block bank remains reachable");
         check(!ShoreSeekingPolicy.canExitToDryHeight(64, 66), "two-block cliff is not a bank");

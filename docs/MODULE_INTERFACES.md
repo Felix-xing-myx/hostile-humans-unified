@@ -271,3 +271,10 @@ ScgunsMachineGunPose通过五个原生MiniGun姿势类的protected扩展工厂�
 - `NavigationDebugService.controls` 仅表示固定点测试的临时移动租约；Human阻止新增攻击目标，LivingTick保留成长/既有恢复效果与临时单位寿命，但暂停命令、传送脱困及战斗写入。TestGoal复用原导航/安全/配额，不修改原命令或归属，结束释放而不恢复过时仇恨。
 - `watching`、`searched`、`candidate`、`budget`、`blocked` 为只观察入口，未佩戴头盔时不采集候选；候选通过评分不等于路线安装。`HumanNavigation`提供地面请求/安装，四类选点器提供评估，原有配额数值不变。
 - `NavigationDebugSnapshot`只含几何与服务器权威数值；`NavigationDebugFrame`含最多8实体及焦点，协议2仅S2C、每观察者5tick、每实体路径256/最新候选16（服务器缓存48）。`NavigationObserverSelection`维持稳定槽位与焦点；测试租约校验观察成员身份，切换焦点不会取消其他任务。客户端复用唯一原生BufferBuilder，每实体及时提交，先以double减相机坐标再绘制。客户端限定头盔、维度、实体UUID及数据新鲜度，不反算伤害或寻路。使用边界见[NAVIGATION_DEBUG](NAVIGATION_DEBUG.md)。
+
+
+## 拾取战斗交接与已越过路点
+
+Human.setTarget在super完成后读取实际getTarget结果，只有实际对象变化才更新实体自有PickupCombatWindow（20tick、不存档）。获得新目标通过SoldierPickupPolicy中断ValuableItemPickupGoal并停止对应WrappedGoal；只清拾取自有Path或其连续性修复、局部输入，已替换路线不取消。普通拾取各入口共用canCollectNow，start再次复核；战斗顺路补给独立。
+
+HumanNavigation.tick在原地形复核前尝试advancePassedCombatWaypoint：连续tick/同Path/同索引、跳跃或刚落地、存活战斗目标、平直相邻同高WALKABLE，PassedWaypointPolicy确认前向窄走廊跨越，地面扫掠noCollision、safeStep、safeTransition及命令许可后仅advance一次。水域、撤退、受击、门梯/活板门、转角、高低差排除。不换Path、不重算、不改坐标/速度或伤害。纯策略回归由CombatTerrainPolicyTest调用NavigationHandoffPolicyTest；真实交接和物理移动仍需游戏验收。

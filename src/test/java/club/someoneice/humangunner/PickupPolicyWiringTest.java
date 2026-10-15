@@ -59,6 +59,10 @@ public final class PickupPolicyWiringTest {
             check(calls(GOAL, method, POLICY, "canCollectNow"), "active search respects policy: " + method);
         check(calls(GOAL, "tick", GOAL, "canContinueToUse"), "mid-tick permission changes rechecked before movement");
         check(calls(GOAL, "stop", GOAL, "ownsPath"), "interruption releases only the collector's path");
+        check(calls(POLICY, "canCollectNow", HUMAN, "humanGunner$pickupCombatSettled"), "retarget gap gates idle collection");
+        check(calls(HUMAN, "setTarget", POLICY, "interruptForCombat"), "target acquisition releases pickup immediately");
+        check(calls(POLICY, "interruptForCombat", GOAL, "interruptForCombat"), "active and pending loot work discarded");
+        check(calls(GOAL, "start", GOAL, "canContinueToUse"), "selection-start gap rechecks combat permission");
         check(!calls(POLICY, "set", "net/minecraft/world/entity/ai/navigation/PathNavigation", "stop"),
                 "switching pickup off never blindly cancels a combat route");
         for (String method : List.of("canCollectNow", "isEnabled")) {

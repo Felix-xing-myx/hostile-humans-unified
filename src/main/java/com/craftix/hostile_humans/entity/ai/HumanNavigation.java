@@ -19,6 +19,10 @@ import java.util.Deque;
 public final class HumanNavigation extends GroundPathNavigation {
     private record BlockedEdge(BlockPos from, BlockPos to, long until) {}
     private final Deque<BlockedEdge> blockedEdges = new ArrayDeque<>();
+    private Path sampledPath;
+    private net.minecraft.world.phys.Vec3 sampledPosition;
+    private int sampledNode, sampledTick;
+    private boolean sampledAirborne;
 
     public HumanNavigation(Mob mob, Level level) { super(mob, level); }
 
@@ -97,6 +101,7 @@ public final class HumanNavigation extends GroundPathNavigation {
     }
 
     @Override public void tick() {
+        if (mob instanceof Human human) advancePassedCombatWaypoint(human);
         if (mob instanceof Human human && path != null && !path.isDone()) {
             var from = human.blockPosition();
             var to = path.getNextNodePos();
@@ -107,6 +112,56 @@ public final class HumanNavigation extends GroundPathNavigation {
             }
         }
         super.tick();
+        sampledPath = path;
+        sampledNode = path == null ? -1 : path.getNextNodeIndex();
+        sampledPosition = mob.position();
+        sampledTick = mob.tickCount;
+        sampledAirborne = !mob.onGround();
+    }
+
+    /** An airborne body can cross a flat node while missing vanilla's vertical arrival tolerance. */
+    private void advancePassedCombatWaypoint(Human human) {
+        if (human.level().isClientSide || path == null || path.isDone() || path != sampledPath
+                || sampledPosition == null || sampledTick != human.tickCount - 1
+                || sampledNode != path.getNextNodeIndex() || human.onGround() && !sampledAirborne
+                || human.getTarget() == null || !human.getTarget().isAlive() || human.isFleeing
+                || human.isInWater() || human.isInLava() || human.onClimbable() || human.isPassenger()
+                || human.isNoAi() || human.isSleeping() || human.hurtTime > 0) return;
+        int index = path.getNextNodeIndex();
+        if (index + 1 >= path.getNodeCount()) return;
+        Node node = path.getNode(index), next = path.getNode(index + 1);
+        if (node.type != BlockPathTypes.WALKABLE || next.type != BlockPathTypes.WALKABLE
+                || node.y != next.y || human.getY() < node.y - .1 || human.getY() > node.y + 1.75) return;
+        var point = path.getEntityPosAtNode(human, index);
+        var destination = path.getEntityPosAtNode(human, index + 1);
+        var direction = destination.subtract(point).multiply(1, 0, 1);
+        if (index > 0) {
+            Node previous = path.getNode(index - 1);
+            var incoming = point.subtract(path.getEntityPosAtNode(human, index - 1)).multiply(1, 0, 1);
+            if (previous.y != node.y || incoming.lengthSqr() < .01
+                    || incoming.normalize().dot(direction.normalize()) < .99) return;
+        }
+        double corridor = Math.min(.6, Math.max(.25, human.getBbWidth() * .75));
+        if (!dev.felix.hostilehumans.core.PassedWaypointPolicy.crossed(sampledPosition.x, sampledPosition.z,
+                human.getX(), human.getZ(), point.x, point.z, destination.x, destination.z, corridor)) return;
+        // Ground-level clearance is deliberately conservative: no cutting a door, ladder or wall corner.
+        var offset = destination.subtract(human.position()).multiply(1, 0, 1);
+        var swept = human.getBoundingBox().move(0, node.y - human.getY(), 0)
+                .expandTowards(offset).deflate(1.0E-4);
+        BlockPos low = BlockPos.containing(swept.minX, swept.minY, swept.minZ);
+        BlockPos high = BlockPos.containing(swept.maxX, swept.maxY, swept.maxZ);
+        if (!level.hasChunksAt(low, high) || !level.getWorldBorder().isWithinBounds(low)
+                || !level.getWorldBorder().isWithinBounds(high)) return;
+        for (BlockPos occupied : BlockPos.betweenClosed(low, high)) {
+            var state = level.getBlockState(occupied);
+            if (!level.getFluidState(occupied).isEmpty() || state.is(net.minecraft.tags.BlockTags.CLIMBABLE)
+                    || state.getBlock() instanceof DoorBlock || state.getBlock() instanceof FenceGateBlock
+                    || state.getBlock() instanceof net.minecraft.world.level.block.TrapDoorBlock) return;
+        }
+        if (!level.noCollision(human, swept) || !HumanTerrainSafety.safeStep(human, offset)
+                || !HumanTerrainSafety.safeTransition(human, human.blockPosition(), path.getNodePos(index + 1))
+                || !club.someoneice.humangunner.SoldierOrder.allowsCombatPosition(human, destination)) return;
+        path.advance(); // At most one adjacent node; keep the route and its owner unchanged.
     }
 
     @Override protected PathFinder createPathFinder(int budget) {

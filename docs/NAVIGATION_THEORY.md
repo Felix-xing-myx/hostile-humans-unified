@@ -7,6 +7,8 @@
 | 理论结论 | 当前源码依据 |
 |---|---|
 | 复用原版PathFinder，扩展地面节点与安装/执行否决 | `HumanNavigation.createPathFinder/HumanNodeEvaluator/moveTo/tick` |
+| 战斗切换拾取20tick等待与即时自有路线释放 | `Human.setTarget`、`PickupCombatWindow`、`SoldierPickupPolicy.interruptForCombat`、`ValuableItemPickupGoal` |
+| 跳跃越过平直相邻路点的安全推进 | `HumanNavigation.advancePassedCombatWaypoint`、`PassedWaypointPolicy` |
 | 地面倍率2，水域导航另一个对象，按水状态切换 | `Human`构造、`updateSwimming/selectShoreNavigation/startCombatShoreDetour`；`ShoreSeekingPolicy.shouldUseWaterNavigator` |
 | 路线刷新最少4tick，移动1.5格，失败20tick重试 | `PursuitRefreshPolicy.due`、`PursuitNavigation.update` |
 | 地形半径8/16/24，两层水平距离、8方向、多站立层、每批2并尽早采用 | `CombatTerrainPolicy`、`CombatTerrainNavigation.candidates/standingPositions/update` |
@@ -42,4 +44,4 @@ Java源码根：`src/main/java/`。公共辅助默认位于`club/someoneice/huma
 
 ## 文档边界
 
-本次仅补理论与修正旧说明：水面导航不是所有水状态的唯一导航器；局部脚部评估不等于完整身体碰撞；每tick池不等于全模组总A*次数硬上限。没有修改源码、默认值、配置或现有导航行为。未来分层路径、机关规划和新增观测字段仅列设计方向，未作为当前能力。
+本次仅补理论与修正旧说明：水面导航不是所有水状态的唯一导航器；局部脚部评估不等于完整身体碰撞；每tick池不等于全模组总A*次数硬上限。理论体系整理本身没有改变导航行为；随后局部交接/路点优化以表中对应入口为准，不改变默认配置与其他导航政策。未来分层路径、机关规划和新增观测字段仅列设计方向，未作为当前能力。

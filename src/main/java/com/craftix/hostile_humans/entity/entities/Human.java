@@ -1695,13 +1695,25 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             humanGunner$fastGunRetargetUntilTick = tickCount + 6;
         }
         super.setTarget(livingEntity);
-        if (livingEntity != null && (this.pursuingWaterLoot || this.activelyCollectingLoot)) {
+        LivingEntity assigned = getTarget(); // Forge may cancel or replace the requested target.
+        if (previous != assigned && humanGunner$pickupCombatWindow != null) {
+            humanGunner$pickupCombatWindow.targetChanged(tickCount, previous != null, assigned != null);
+            if (assigned != null) club.someoneice.humangunner.SoldierPickupPolicy.interruptForCombat(this);
+        }
+        if (assigned != null && (this.pursuingWaterLoot || this.activelyCollectingLoot)) {
             this.pursuingWaterLoot = false;
             this.activelyCollectingLoot = false;
             this.directWaterLootSteeringTick = Integer.MIN_VALUE;
             // The pickup goal will release its own path; discard only its leftover local request now.
             this.getMoveControl().setWantedPosition(this.getX(), this.getY(), this.getZ(), 0);
         }
+    }
+
+    private final dev.felix.hostilehumans.core.PickupCombatWindow humanGunner$pickupCombatWindow =
+            new dev.felix.hostilehumans.core.PickupCombatWindow();
+
+    public boolean humanGunner$pickupCombatSettled() {
+        return humanGunner$pickupCombatWindow == null || humanGunner$pickupCombatWindow.mayCollect(tickCount);
     }
 
     public boolean humanGunner$shouldFastGunRetarget() {

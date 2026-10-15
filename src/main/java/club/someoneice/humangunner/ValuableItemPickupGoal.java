@@ -84,6 +84,7 @@ final class ValuableItemPickupGoal extends Goal {
 
     @Override
     public void start() {
+        if (!canContinueToUse()) { SoldierPickupPolicy.interruptForCombat(human); return; }
         human.setActivelyCollectingLoot(true);
         beginTarget();
     }
@@ -142,6 +143,9 @@ final class ValuableItemPickupGoal extends Goal {
 
     @Override
     public void stop() {
+        boolean ownedMovement = ownsPath(human.getNavigation().getPath(), ownedPath)
+                || MovementContinuity.ownsRoute(human, ownedPath)
+                || human.isPursuingWaterLoot() && human.getNavigation().isDone();
         targetItem = null;
         // A normal target completion can leave an unfinished decision. It
         // owns no navigation or water movement; combat interrupts discard it.
@@ -150,7 +154,20 @@ final class ValuableItemPickupGoal extends Goal {
         human.setPursuingWaterLoot(false);
         if (ownsPath(human.getNavigation().getPath(), ownedPath)
                 || MovementContinuity.ownsRoute(human, ownedPath)) human.getNavigation().stop();
+        if (ownedMovement) {
+            MovementContinuity.cancelStep(human);
+            human.getMoveControl().setWantedPosition(human.getX(), human.getY(), human.getZ(), 0);
+            human.setXxa(0); human.setZza(0);
+        }
         ownedPath = null;
+    }
+
+    void interruptForCombat() {
+        pendingSearch = null;
+        selectionDeferred = false;
+        pileCenter = null;
+        nextSearchTick = Math.max(nextSearchTick, human.tickCount + 20);
+        stop();
     }
 
     private ItemEntity chooseTarget() {

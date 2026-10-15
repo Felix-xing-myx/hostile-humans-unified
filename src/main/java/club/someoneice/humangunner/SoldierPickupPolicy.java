@@ -28,7 +28,8 @@ public final class SoldierPickupPolicy {
 
     public static boolean canCollectNow(Human human) {
         if (!isEnabled(human) || !human.isAlive() || human.isDeadOrDying() || human.isNoAi()
-                || human.getTarget() != null || human.isFleeing || human.isUsingItem() || human.isSleeping()
+                || human.getTarget() != null || !human.humanGunner$pickupCombatSettled()
+                || human.isFleeing || human.isUsingItem() || human.isSleeping()
                 || human.isInLava() || human.isOnFire() || SoldierOrder.isReturningFromRetreat(human)
                 || HumanGunner.isManualInventoryOpen(human)
                 || RecoverySupplies.hasHandCustody(human)) return false;
@@ -37,6 +38,17 @@ public final class SoldierPickupPolicy {
         if (human.isInWater() && human.lastCombatTime > 0 && sinceCombat >= 0 && sinceCombat <= 60) return false;
         return (human.getLastHurtByMob() == null || sinceHit < 0 || sinceHit > 40)
                 && SoldierOrder.allowsLootPosition(human, human.getX(), human.getZ());
+    }
+
+    /** Release the idle MOVE goal now, before navigation can consume its obsolete route. */
+    public static void interruptForCombat(Human human) {
+        if (human.level().isClientSide) return;
+        for (var wrapped : human.goalSelector.getAvailableGoals()) {
+            if (wrapped.getGoal() instanceof ValuableItemPickupGoal pickup) {
+                pickup.interruptForCombat();
+                wrapped.stop();
+            }
+        }
     }
 
     /** Separate from idle search permission: nearby emergency supplies never own a path. */
