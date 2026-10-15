@@ -3,6 +3,15 @@
 
 
 
+
+## 平静脚步监听与独立听觉转头（2026-10-15，源码完成）
+
+- 用户反馈附近走动不会吸引或转头；已明确选择“平静状态也听脚步，先警觉并转头，看到敌人才锁定”。主控独占，基线69e041d5adad05a04848b2caf79670a51f583183，工作树worktrees/hearing-attention，分支fix/hearing-attention。范围HumanAwareness/HumanPerception/PerceptionConfig及默认说明/相关机制文档，不改射击、阵营、导航或听觉半径数值。
+- 证据：sampleMovement与flush各有isAlert前置门槛，按旧方案平静人类完全不采样/接收脚步；线索LOOK只由调查MOVE任务调用，驻守/移动任务占用时无法回看。另采样半径只取run_radius，较大的自定义walk/swim半径会被截掉。
+- 接入：移除两处警觉前置条件，仍忽略自己/友军、潜行/无声/创造观战和受击位移；采样邻域取三种脚步半径最大值。服务端感知tick独立提交有限线索转头，新线索/位置移动超过2格才触发，默认至少20tick再换，方向观察40tick；首次识别/战斗目标/撤退/睡眠/NoAI/固定点接管优先，驻守仍不离岗。
+- 保留声音快照不直锁、不读来源实时坐标；运动阈值、去重、投递及查询/声源配额保持，枪声后端继续暂缓。本轮无构建授权，不运行Gradle/Java编译，不部署/push/启动游戏。
+- 实际验证：254项Python静态契约（12跳过，其余通过），83项默认声明/资源逐项一致，6份默认附录、56页Wiki链接与git diff --check通过。知识库5篇相关正文/方案/配置和附录同步，先备份至文档备份/平静脚步与独立转头-20261015-232154。未执行Java编译或行为测试；仍需游戏验收平静听脚步、背后来声回看、驻守只看不移动、脚步边界/潜行/友军、首次识别保护和混合声音负载。
+
 ## 身体局部暴露视觉识别（2026-10-15，源码完成）
 
 - 用户要求敌对实体任何身体部位暴露便开始识别。主控独占，基线cc0d34d52f969b7fba823ea8957e7d9e2adabc3a，工作树worktrees/body-visibility，分支fix/body-visibility；范围HumanPerception/PerceptionBudget/PerceptionConfig、纯BodyVisibilitySamples/测试、默认资源与相关机制文档。不改攻击准入、阵营、射击命中或导航。

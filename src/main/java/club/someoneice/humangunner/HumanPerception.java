@@ -53,6 +53,7 @@ public final class HumanPerception {
         String decision="闲置观察",reason="等待视觉或声音证据",lookOwner="自然观察";
         String scanStatus="尚未执行视觉检测";long scanAt=-1;
         UUID owner; String order=""; boolean initialized;
+        Clue glancedClue; Vec3 glancedPosition; long nextClueGlance;
         Map<UUID,Long> glanceAt=new HashMap<>();
     }
     private HumanPerception() {}
@@ -202,6 +203,7 @@ public final class HumanPerception {
         UUID owner=HumanRelations.effectiveOwner(h);String order=SoldierOrder.get(h).name();
         if(s.initialized&&(!Objects.equals(s.owner,owner)||!s.order.equals(order))){
             s.tracks.clear();s.clues.clear();s.pending.clear();s.bodyCursors.clear();s.pendingBodies.clear();release(s,"控制关系或命令改变");h.setTarget(null);
+            s.glancedClue=null;s.glancedPosition=null;s.nextClueGlance=now;
         }s.owner=owner;s.order=order;s.initialized=true;
         HumanAwareness.flush(h);
         s.clues.removeIf(clue->now>=clue.until);
@@ -250,10 +252,13 @@ public final class HumanPerception {
         for(Track t:s.tracks.values())if(t.evidence.interrupted(now,c().integer("recognition.break_ticks"))
                 ||t.evidence.timedOut(now,c().integer("observation.focus_ticks")))t.evidence.reset();
         startNext(h,s,now);
-        if(s.focus==null&&s.look!=null&&now-s.directionStarted>=c().integer("observation.direction_ticks"))s.look=null;
+        if(s.focus==null&&s.look!=null&&now-s.directionStarted>=c().integer("observation.direction_ticks")){
+            s.look=null;s.lookOwner="自然观察";
+        }
+        reactToClue(h,s,now);
         int interval=c().integer(h.isAlert||s.focus!=null||recognizing(s)>0||h.getTarget()!=null?"budgets.active_interval_ticks":"budgets.idle_interval_ticks");
         if(now>=s.nextCandidates && PerceptionBudget.claim(h,"queries",1)){
-            double r=range(h);List<LivingEntity> nearby=new ArrayList<>();
+            double r=Math.max(range(h),HumanAwareness.movementRadius());List<LivingEntity> nearby=new ArrayList<>();
             level.getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(LivingEntity.class),
                     h.getBoundingBox().inflate(r),e->e!=h&&e.isAlive(),nearby,c().integer("budgets.candidates")*4);
             HumanAwareness.sampleMovement(h,nearby);
@@ -437,6 +442,22 @@ public final class HumanPerception {
         State s=state(h);if(s.focus!=null||h.getTarget()!=null||NavigationDebugService.controls(h))return;
         Vec3 point=clue.position.add(0,h.getEyeHeight(),0);
         if(point.distanceToSqr(h.getEyePosition())>1){s.look=point;s.directionStarted=now(h);s.lookOwner="线索调查";}
+    }
+    private static void reactToClue(Human h,State s,long now){
+        if(s.focus!=null)return;
+        if(h.getTarget()!=null||h.isFleeing){
+            if(s.lookOwner.startsWith("线索")){s.look=null;s.lookOwner="自然观察";}
+            return;
+        }
+        Clue clue=bestClue(h);if(clue==null||now<s.nextClueGlance)return;
+        boolean moved=s.glancedPosition==null||s.glancedPosition.distanceToSqr(clue.position)>
+                Math.pow(c().number("investigation.repath_distance"),2);
+        if(clue==s.glancedClue&&!moved)return;
+        // Attention is independent of MOVE: holding-position orders may turn without investigating on foot.
+        lookAtClue(h,clue);
+        s.glancedClue=clue;s.glancedPosition=clue.position;
+        s.nextClueGlance=now+Math.max(c().integer("observation.look_cooldown_ticks"),c().integer("investigation.hold_ticks"));
+        s.reason="转向线索："+clue.kind;s.lookOwner="线索观察："+clue.kind;
     }
     private static boolean finite(Vec3 v){return Double.isFinite(v.x)&&Double.isFinite(v.y)&&Double.isFinite(v.z);}
 

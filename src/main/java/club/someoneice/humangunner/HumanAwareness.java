@@ -74,7 +74,7 @@ public final class HumanAwareness {
                 Entity found=level.getEntity(n.receivers.get(n.index));if(!(found instanceof Human h)){n.index++;continue;}
                 Entity actor=n.source==null?null:level.getEntity(n.source);
                 boolean step=n.kind.equals("walk")||n.kind.equals("run")||n.kind.equals("swim");
-                if(h==actor||step&&(!h.isAlert||actor instanceof LivingEntity e&&HumanRelations.allied(h,e))
+                if(h==actor||step&&(actor instanceof LivingEntity e&&HumanRelations.allied(h,e))
                         ||n.kind.equals("aid")&&(!(actor instanceof Human ally)||!HumanRelations.allied(h,ally))){n.index++;continue;}
                 if(!PerceptionBudget.claim(h,"notices",1))return;
                 HumanPerception.notice(h,n.kind,n.position,n.source,(int)(n.until-now));n.index++;
@@ -83,7 +83,7 @@ public final class HumanAwareness {
         }
     }
     public static void sampleMovement(Human listener,List<LivingEntity> nearby){
-        if(!listener.isAlert)return;long now=HumanPerception.now(listener);double max=c().number("hearing.run_radius");
+        long now=HumanPerception.now(listener);double max=movementRadius();
         for(LivingEntity actor:nearby){
             if(actor==listener||actor.distanceToSqr(listener)>max*max)continue;
             if(actor.isSilent()||actor.isShiftKeyDown()||actor instanceof Player p&&(p.isCreative()||p.isSpectator())){
@@ -101,5 +101,8 @@ public final class HumanAwareness {
             else if(ground&&!old.ground){emit(actor,"run",point);total=0;}
             MOVEMENT.put(actor,new Movement(now,point,total,ground));
         }
+    }
+    public static double movementRadius(){
+        return Math.max(c().number("hearing.walk_radius"),Math.max(c().number("hearing.run_radius"),c().number("hearing.swim_radius")));
     }
 }

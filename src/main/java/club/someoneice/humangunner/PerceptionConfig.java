@@ -44,9 +44,9 @@ public final class PerceptionConfig {
         add(m,"hearing.aid_radius",24,0,96,"真实友军求援半径 / Allied aid radius");
         add(m,"hearing.door_radius",10,0,64,"通道操作声半径 / Passage interaction radius");
         add(m,"hearing.explosion_radius",32,0,128,"爆炸声半径 / Explosion radius");
-        add(m,"hearing.walk_radius",8,0,32,"警觉时普通脚步半径 / Alert walking radius");
-        add(m,"hearing.run_radius",12,0,48,"警觉时奔跑落地半径 / Alert running and landing radius");
-        add(m,"hearing.swim_radius",6,0,32,"警觉时水声半径 / Alert swimming radius");
+        add(m,"hearing.walk_radius",8,0,32,"平静或警觉时普通脚步半径 / Walking radius in calm or alert state");
+        add(m,"hearing.run_radius",12,0,48,"平静或警觉时奔跑落地半径 / Running and landing radius in calm or alert state");
+        add(m,"hearing.swim_radius",6,0,32,"平静或警觉时水声半径 / Swimming radius in calm or alert state");
         add(m,"hearing.walk_distance",.8,.1,8,"行走每次发声移动距离 / Walking movement per sound");
         add(m,"hearing.run_distance",.6,.1,8,"奔跑每次发声移动距离 / Running movement per sound");
         add(m,"hearing.swim_distance",1,.1,8,"游泳每次发声移动距离 / Swimming movement per sound");
