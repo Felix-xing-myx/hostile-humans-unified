@@ -1,6 +1,6 @@
 # 开发任务与整合记录
 
-## 感知系统与综合侦察实施（源码完成，发布收尾）
+## 感知系统与综合侦察实施（2026-10-15，已构建同步）
 
 - 用户授权按最新方案实现并构建同步既定Forge47.4.21实例；方案含全局8秒、受击来源观察排队、信标最后成功使用5分钟共享续时、综合侦察头盔。基线79bc7afeedcf344a6160b9bd10f70353a45eca9f；主控工作树worktrees/awareness-implementation，分支feature/awareness-implementation。
 - 依AGENTS并行协作：主控负责Human、AdaptiveCombatGoal、HumanRelations、UnifiedConfig/配置持久化、感知/声音/调查/权限/接入地图/测试与最终版本部署；信标开发者使用worktrees/awareness-beacon、feature/awareness-beacon，仅新BeaconReportingService/政策测试与HumanSignalItem；诊断开发者使用worktrees/awareness-diagnostics、feature/awareness-diagnostics，仅NavigationDebug系列、综合详情界面/渲染/网络及独立测试。三者编辑目录隔离，HumanRelations/共享配置只有主控接入。
@@ -15,6 +15,10 @@
 - 包审核：3.9.0，4,317,809字节，641个Java17类，单一命名空间、JSON有效、新感知/诊断及既有机枪类存在，无内嵌可选依赖。构建记录/3.9.0-awareness-final-build.log及3.9.0-awareness-package.json；SHA-256为281F998D80E123F33FE6B2BF328946EEAC7929C581688E79E36D8F0C22B06828。
 - 知识库：18篇机制/方案/索引页及默认附录同步；备份文档备份/感知机制实施-20261015-223205、感知默认附录-20261015。56页444个Wiki链接可解析，用户原始想法未修改。方案标已完成实施，游戏场景验收单独保留。
 - 游戏内未验收：近远视觉识别与遮挡中断，多方向偷袭保护/排队及8秒刷新到期，声音求援不直锁、旧敌识别，雇佣命令移动边界，5分钟信标旧波次/复用/跨维度/卸载，8实体F8分页/视野/射线/记忆与远处长时渲染；构建不替代这些结果。
+
+
+- 最终本地整合：主控实现提交b4de651b60b79def80f88046cfbbda4ebb610b98，main从79bc7af快进整合；发布记录另行提交，不更改已构建源码。无push。
+- 同步完成：替换前未发现Java/游戏进程；旧3.8.1实例JAR及自定义配置完整备份到部署备份/3.9.0-awareness-20261015-224238，旧dist3.8.1保留。构建产物、dist/hostile-humans-unified-1.20.1-3.9.0.jar、Forge47.4.21实例同名JAR三处哈希均为281F998D80E123F33FE6B2BF328946EEAC7929C581688E79E36D8F0C22B06828；实例只保留这一份本模组JAR。逐文件核对配置哈希未变，未修改存档，未启动游戏。完整部署记录见该备份目录deployment.json。
 
 ## 八秒记忆、信标统一续时与综合侦察方案（2026-10-15，仅方案修订）
 
