@@ -19,7 +19,7 @@ final class GuardCombatTargetGoal extends Goal {
         if (!human.hasOwner() || SoldierOrder.get(human) != SoldierOrder.GUARD
                 || human.guardCombatState.returning()) return false;
         LivingEntity current = human.getTarget();
-        if (current != null && current.isAlive() && human.canAttack(current)) {
+        if (current != null && current.isAlive() && human.canAttack(current) && HumanPerception.canTarget(human,current)) {
             startingTarget = current;
             human.guardCombatState.retainTarget(current.getUUID());
             return true;
@@ -27,16 +27,16 @@ final class GuardCombatTargetGoal extends Goal {
         var id = human.guardCombatState.attacker(human.level().getGameTime());
         return id != null && human.level() instanceof ServerLevel level
                 && level.getEntity(id) instanceof LivingEntity attacker && attacker.isAlive()
-                && !attacker.isRemoved() && human.canAttack(attacker);
+                && !attacker.isRemoved() && human.canAttack(attacker) && HumanPerception.canTarget(human,attacker);
     }
     @Override public boolean canContinueToUse() { return canUse(); }
     @Override public void tick() {
         LivingEntity current = human.getTarget();
-        if (current != null && current.isAlive() && human.canAttack(current)) return;
+        if (current != null && current.isAlive() && human.canAttack(current) && HumanPerception.canTarget(human,current)) return;
         var id = human.guardCombatState.attacker(human.level().getGameTime());
         if (id != null && human.level() instanceof ServerLevel level
                 && level.getEntity(id) instanceof LivingEntity attacker && attacker.isAlive()
-                && !attacker.isRemoved() && human.canAttack(attacker)) {
+                && !attacker.isRemoved() && human.canAttack(attacker) && HumanPerception.canTarget(human,attacker)) {
             human.setTarget(attacker);
         }
     }

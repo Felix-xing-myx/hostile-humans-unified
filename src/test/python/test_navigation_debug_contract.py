@@ -40,7 +40,8 @@ class NavigationDebugContract(unittest.TestCase):
         service = source("NavigationDebugService")
         sampling = service.split("public static void playerTick", 1)[1].split("private static String boundedName", 1)[0]
         self.assertIn("NAVIGATION_OBSERVER_HELMET", sampling)
-        self.assertIn("player.tickCount % 5", sampling)
+        self.assertIn('player.tickCount % PerceptionConfig.get().integer("debug.interval_ticks")', sampling)
+        self.assertIn('add(m,"debug.interval_ticks",5,1,40', source("PerceptionConfig"))
         self.assertIn("128 * 128", service)
         self.assertNotIn("createPath(", sampling)
         self.assertIn("if (!watching(human)) return", service)
@@ -49,7 +50,9 @@ class NavigationDebugContract(unittest.TestCase):
 
     def test_client_is_display_only_and_clears_stale_sessions(self):
         client = source("NavigationDebugClient")
-        for check in ["LoggingOut", "entity.getUUID().equals(snapshot.entityUuid())", "2_000_000_000L", "dimension().location()"]:
+        # The maximum configured interval is two seconds; one further second
+        # tolerates packet scheduling without keeping a stale session forever.
+        for check in ["LoggingOut", "entity.getUUID().equals(snapshot.entityUuid())", "3_000_000_000L", "dimension().location()"]:
             self.assertIn(check, client)
         self.assertNotIn("createPath(", client)
         self.assertNotIn("HumanFallPolicy", client)

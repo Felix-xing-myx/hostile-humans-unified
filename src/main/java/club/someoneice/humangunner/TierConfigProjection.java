@@ -85,7 +85,7 @@ final class TierConfigProjection {
                     "ammunition", "food", "potions", "combat", "ai", "movement",
                     "weapon_spread_degrees", "tacz", "scguns", "growth_profile", "equipment_loadout")
                 : List.of("schema_version", "_说明_中文", "_description_en", "vanilla_mode", "growth", "ammunition",
-                    "equipment_integration", "armor_swap", "combat_resupply", "ai", "hostile_mob_targeting", "shield_pressure", "recruitment", "spawning", "damage", "jump_attack",
+                    "equipment_integration", "armor_swap", "combat_resupply", "perception", "ai", "hostile_mob_targeting", "shield_pressure", "recruitment", "spawning", "damage", "jump_attack",
                     "better_combat", "first_aid", "scguns", "tacz", "native_gameplay");
         orderGroup(result, "armor_swap", List.of("upgrade_min_gain_percent", "upgrade_min_durability_percent",
                 "replace_below_durability_percent", "replacement_durability_advantage_percent",
@@ -165,7 +165,7 @@ final class TierConfigProjection {
     private static void enforceOwnership(JsonObject data, boolean rank) {
         JsonObject defaults = UnifiedConfig.defaults();
         if (rank) {
-            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "armor_swap", "combat_resupply", "native_gameplay", "growth", "jump_attack", "first_aid", "shield_pressure")) data.remove(key);
+            for (String key : List.of("recruitment", "damage", "vanilla_mode", "better_combat", "equipment_integration", "armor_swap", "combat_resupply", "perception", "native_gameplay", "growth", "jump_attack", "first_aid", "shield_pressure")) data.remove(key);
             for (String key : object(defaults, "scguns").keySet())
                 if (!key.startsWith("_") && !key.equals("gun_whitelist")) removeOptions(object(data, "scguns"), List.of(key));
             removeOptions(object(data, "ai"), List.of("enabled"));

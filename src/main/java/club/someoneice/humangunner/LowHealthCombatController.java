@@ -47,7 +47,8 @@ public final class LowHealthCombatController {
         }
         LivingEntity threat = requestedThreat != null ? requestedThreat
                 : human.getTarget() != null ? human.getTarget() : human.toAvoid;
-        if (threat == null || !threat.isAlive() || threat.level() != human.level() || !human.canAttack(threat))
+        if (threat == null || !threat.isAlive() || threat.level() != human.level() || !human.canAttack(threat)
+                || !HumanPerception.canTarget(human,threat))
             return false;
         // No scans or trial decisions are needed outside the ordinary low-health band.
         if (ratio >= Math.max(ai.retreatHealthRatio(), ai.legacyFleeHealthRatio())) return false;
@@ -57,7 +58,7 @@ public final class LowHealthCombatController {
             state.alone = human.level().getEntitiesOfClass(LivingEntity.class,
                     human.getBoundingBox().inflate(16.0D, 8.0D, 16.0D), candidate ->
                             candidate != human && candidate != threat && candidate.isAlive()
-                            && human.canAttack(candidate) && human.getSensing().hasLineOfSight(candidate)
+                            && human.canAttack(candidate) && HumanPerception.canTarget(human,candidate) && human.getSensing().hasLineOfSight(candidate)
                             && (candidate instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() == human
                             || candidate == human.getLastHurtByMob()
                             || candidate instanceof net.minecraft.world.entity.monster.Monster

@@ -245,7 +245,7 @@ public final class HumanRelations {
     private static void assignGuardTarget(Human human, LivingEntity target, long now) {
         human.getPersistentData().putUUID(GUARD_TARGET, target.getUUID());
         human.getPersistentData().putLong(GUARD_UNTIL, now + 200L);
-        human.setTarget(target);
+        HumanPerception.ownerClue(human,target);
     }
 
     static void tick(Human human) {
@@ -277,25 +277,7 @@ public final class HumanRelations {
                         AttributeModifier.Operation.ADDITION));
             }
         }
-        if (beaconHostile
-                && human.level() instanceof ServerLevel level) {
-            Player player = level.getPlayerByUUID(human.getPersistentData().getUUID(FORCED_HOSTILE_TARGET));
-            LivingEntity attacker = human.getLastHurtByMob();
-            boolean activeRetaliation = isRecentBeaconAttacker(human, attacker) && attacker.isAlive()
-                    && attacker.level() == human.level()
-                    && human.distanceToSqr(attacker) <= BEACON_RETALIATION_RANGE_SQR
-                    && human.canAttack(attacker)
-                    && !allied(human, attacker);
-            boolean returnToPlayer = HumanRelationshipPolicy.shouldReturnToBeaconPlayer(
-                    activeRetaliation, player != null && player.isAlive(),
-                    player == null ? Double.POSITIVE_INFINITY : human.distanceToSqr(player));
-            if (activeRetaliation) {
-                if (human.getTarget() != attacker) human.setTarget(attacker);
-            } else if (returnToPlayer && human.getTarget() != player
-                    && !hasImmediateTacticalThreat(human)) {
-                human.setTarget(player);
-            }
-        }
+        BeaconReportingService.tick(human);
         if (!human.getPersistentData().hasUUID(GUARD_TARGET)
                 || human.level().getGameTime() <= human.getPersistentData().getLong(GUARD_UNTIL)) return;
         if (human.getTarget() != null && human.getTarget().getUUID().equals(

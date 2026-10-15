@@ -63,6 +63,7 @@ public enum SoldierCombatMode {
 
     /** Keep an already permitted fight alive; never grant a new target by NPC damage. */
     static void refreshAuthorizedFight(Human human, LivingEntity target) {
+        if (!HumanPerception.canTarget(human,target)) return;
         if (get(human) != AUTHORIZED || !isExplicitlyAuthorizedAgainst(human, target)) return;
         long now = human.level().getGameTime();
         for (int slot = 0; slot < MAX_AUTHORIZED_TARGETS; slot++) {

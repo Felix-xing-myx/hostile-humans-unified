@@ -461,6 +461,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     public void setInvestigateSound(BlockPos investigateSound) {
         this.investigateSound = investigateSound;
+        if (!level().isClientSide && !BlockPos.ZERO.equals(investigateSound))
+            club.someoneice.humangunner.HumanPerception.notice(this,"block",Vec3.atCenterOf(investigateSound),null,
+                    club.someoneice.humangunner.PerceptionConfig.get().integer("hearing.notice_ticks"));
     }
 
     public void addExhaustion(float p_38704_) {
@@ -1226,10 +1229,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             club.someoneice.humangunner.SoldierOrder.onSelfAttacked(this, attacker);
             // Remember retaliation without handing movement back to offense
             // while an escape/recovery controller still owns the route.
-            if (!this.isFleeing && this.canAttack(attacker)) this.setTarget(attacker);
+            // Permission is not visual knowledge; perception schedules the observation below.
         }
         // Self-defense permission must be established before validating the attacker.
         humanGunner$shieldDefense().recordPressureDamage(damageSource,
+                Math.max(0.0F, previousHealth - this.getHealth()));
+        if (damaged) club.someoneice.humangunner.HumanPerception.hurt(this, damageSource,
                 Math.max(0.0F, previousHealth - this.getHealth()));
         return damaged;
     }
@@ -1304,12 +1309,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
         this.goalSelector.addGoal(10, (Goal)new RandomLookAroundGoal((Mob)this));
         this.goalSelector.addGoal(11, new HumanLookAtPlayerGoal(this));
-        this.targetSelector.addGoal(0, (Goal)new HurtByTargetGoal((PathfinderMob)this, new Class[0]).setAlertOthers(new Class[0]));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoalCustom<LivingEntity>((Mob)this, LivingEntity.class, 13, true, false, this::isAngryAt));
-        this.targetSelector.addGoal(1, new NearestAttackableTargetGoalWithHumanLimiter<Player>(this, Player.class, true));
-        this.targetSelector.addGoal(4, new NearestAttackableTargetGoalCustom<Mob>(this, Mob.class, 5,
-                false, false, target -> club.someoneice.humangunner.HumanTargeting
-                .isAutonomousPlayerEnemy(this, target)));
+        this.goalSelector.addGoal(-20, new club.someoneice.humangunner.PerceptionLookGoal(this));
+        this.targetSelector.addGoal(1, new club.someoneice.humangunner.PerceptionTargetGoal(this));
     }
 
     public boolean humanGunner$tryImmediateMeleeCounterattack(LivingEntity target) {
@@ -1321,6 +1322,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public boolean doHurtTarget(Entity entityIn) {
+        if (entityIn instanceof LivingEntity target && !club.someoneice.humangunner.HumanPerception.canTarget(this,target)) return false;
         if (!humanGunner$canMeleeAttack()) return false;
         if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return false;
         if (entityIn instanceof LivingEntity target
@@ -1375,6 +1377,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     /** The delayed strike, not the next path node, owns yaw until its impact tick. */
     private void facePendingBetterCombatAttack() {
+        if (club.someoneice.humangunner.HumanPerception.protectedLook(this)) return;
         if (hasPendingBetterCombatFacing()) {
             club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, pendingBetterCombatTarget);
         }
@@ -1676,6 +1679,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 || !club.someoneice.humangunner.HumanTargeting.allowsWildHumanTarget(this, livingEntity)
                 || !HumanGunner.canControlledHumanAttack(this, livingEntity)))
             livingEntity = null;
+        if (livingEntity != null && !club.someoneice.humangunner.HumanPerception.canTarget(this,livingEntity))
+            livingEntity = null;
         LivingEntity previous = getTarget();
         if (previous != livingEntity) {
             this.directWaterCombatSteeringTick = Integer.MIN_VALUE;
@@ -1720,6 +1725,23 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         return tickCount <= humanGunner$fastGunRetargetUntilTick
                 && club.someoneice.humangunner.GunSupport.isGunItem(getMainHandItem())
                 && (getTarget() == null || !getTarget().isAlive());
+    }
+
+    /** Read-only running goal ownership, not an inferred movement state. */
+    public java.util.List<club.someoneice.humangunner.PerceptionDebugSnapshot.Row> humanGunner$actionSnapshot() {
+        var rows = new java.util.ArrayList<club.someoneice.humangunner.PerceptionDebugSnapshot.Row>();
+        for (var wrapped : goalSelector.getAvailableGoals()) {
+            if (!wrapped.isRunning()) continue;
+            String name = club.someoneice.humangunner.HumanPerception.actionName(wrapped.getGoal());
+            rows.add(new club.someoneice.humangunner.PerceptionDebugSnapshot.Row("actions", name,
+                    "优先级 " + wrapped.getPriority() + " · " + wrapped.getGoal().getFlags()));
+            if (wrapped.getGoal() instanceof club.someoneice.humangunner.AdaptiveCombatGoal adaptive)
+                rows.addAll(adaptive.perceptionDebugRows());
+        }
+        rows.add(new club.someoneice.humangunner.PerceptionDebugSnapshot.Row("actions", "手部状态",
+                isUsingItem() ? getUseItem().getHoverName().getString().substring(0,
+                        Math.min(64, getUseItem().getHoverName().getString().length())) : "未使用物品"));
+        return java.util.List.copyOf(rows);
     }
 
     @Override
@@ -1774,7 +1796,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
 
         super.tick();
-        if (!level().isClientSide && rangedFacingTick == tickCount
+        if (!level().isClientSide && !club.someoneice.humangunner.HumanPerception.protectedLook(this) && rangedFacingTick == tickCount
                 && rangedFacingTarget != null
                 && rangedFacingTarget == getTarget() && rangedFacingTarget.isAlive()) {
             if (Float.isFinite(meleeFacingPitch)) setXRot(meleeFacingPitch);
@@ -1792,13 +1814,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         rangedFacingTarget = null;
         rangedFacingYaw = Float.NaN;
         meleeFacingPitch = Float.NaN;
-        if (!level().isClientSide && hasShieldFacing()) applyShieldFacing();
+        if (!level().isClientSide && !club.someoneice.humangunner.HumanPerception.protectedLook(this) && hasShieldFacing()) applyShieldFacing();
         shieldFacingTarget = null;
         if (!level().isClientSide) {
             // Goals, navigation and defensive look control may all write yaw.
             // Restore the attack's facing after those writers, before damage.
-            facePendingBetterCombatAttack();
+            if (!club.someoneice.humangunner.HumanPerception.protectedLook(this)) facePendingBetterCombatAttack();
             finishBetterCombatUpswing();
+            club.someoneice.humangunner.HumanPerception.applyLook(this);
         }
         if (!level().isClientSide && !isNoAi()) {
             recoverStalledNavigation();
@@ -2122,6 +2145,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public void performRangedAttackTrident(LivingEntity target, float distanceFactor) {
+        if (!club.someoneice.humangunner.HumanPerception.canTarget(this,target)
+                || !club.someoneice.humangunner.HumanPerception.allowCombatLook(this,target)) return;
         if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return;
 
         Human human = this;

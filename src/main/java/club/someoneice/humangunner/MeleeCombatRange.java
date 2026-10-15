@@ -51,6 +51,7 @@ public final class MeleeCombatRange {
 
     /** Aim the active melee hitbox before testing it, including opponents above/below us. */
     public static void faceTarget(Human human, LivingEntity target) {
+        if (!HumanPerception.allowCombatLook(human,target)) return;
         Vec3 point = aimPoint(attackOrigin(human), target.getBoundingBox());
         var delta = point.subtract(attackOrigin(human));
         double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);

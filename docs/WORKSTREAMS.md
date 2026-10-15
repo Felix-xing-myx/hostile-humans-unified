@@ -1,11 +1,20 @@
 # 开发任务与整合记录
 
-## 感知系统与综合侦察实施（进行中）
+## 感知系统与综合侦察实施（源码完成，发布收尾）
 
 - 用户授权按最新方案实现并构建同步既定Forge47.4.21实例；方案含全局8秒、受击来源观察排队、信标最后成功使用5分钟共享续时、综合侦察头盔。基线79bc7afeedcf344a6160b9bd10f70353a45eca9f；主控工作树worktrees/awareness-implementation，分支feature/awareness-implementation。
 - 依AGENTS并行协作：主控负责Human、AdaptiveCombatGoal、HumanRelations、UnifiedConfig/配置持久化、感知/声音/调查/权限/接入地图/测试与最终版本部署；信标开发者使用worktrees/awareness-beacon、feature/awareness-beacon，仅新BeaconReportingService/政策测试与HumanSignalItem；诊断开发者使用worktrees/awareness-diagnostics、feature/awareness-diagnostics，仅NavigationDebug系列、综合详情界面/渲染/网络及独立测试。三者编辑目录隔离，HumanRelations/共享配置只有主控接入。
 - 契约：PerceptionConfig.get().integer/number("section.key")权威设置；信标通过HumanPerception.notice(human,"beacon",position,sourceUUID,ttl)提交有限线索，不setTarget。诊断只调用HumanPerception.snapshot(human)与knownPosition(human,target)，PerceptionDebugSnapshot为有界只读数据结构；均不触发额外扫描。
 - 子任务交付本地提交/文件/接口/验证/问题，不合main、不部署/push；主控审核后整合，公共文件顺序修改。过程和验证结果后续融入本节，不将方案状态误报为已实现。
+- 文档同步另由知识库开发者单独负责，工作树worktrees/awareness-knowledge、docs/awareness-implementation，从ed0ee6e对应提交建立；只编辑仓库README/CONFIGURATION/CHANGELOG及ENEMY_AWARENESS/MODULE_INTERFACES/NAVIGATION_DEBUG和知识库相关机制/方案/配置页。以主控awareness-implementation当前源码只读为依据，不改功能或本协作记录。主控在其交付前不编辑这些正文。
+
+
+- 实现：HumanPerception统一服务端知识与逐目标记录；PerceptionTarget/Look/InvestigationGoal接入基础及增强AI；伤害方向、保护识别与回看队列、8秒动态位置/最后位置/旧敌熟悉度各自过期。事件只给调查线索，主人授权不直接锁敌；枪声多后端留待后续。新增ScopedWorkBudget在维度与全局间原子申请，未服务者优先轮转，声音邻域查询最多占新增查询池四分之一，避免视觉饥饿；旧导航配额保持原职责。
+- 已整合交付：信标a8dc139/3010748/14a8b3c，诊断bb8c5dc/38021a2/ed0ee6e，文档e965712；接口与默认注册4626cc5。主控审核修正命令准入、过期目标导航释放、已知与未知伤害回看、候选/LOS公平申请及过期位置发包边界；76项perception默认字段及双语解释进入global.json配置分区。
+- 实际验证：Java17最终build lootScreeningTest --offline成功，55任务（51执行、4最新）；感知政策857、导航诊断1129、591个核心类在可选依赖缺席下链接、命名资源884、战利品13391检查通过。254项Python检查（12跳过，其余通过），6份默认附录与git diff --check通过。ScopedWorkBudget多维度长期轮转、整批申请、取消/陈旧/时间回退测试通过。首次构建暴露公平轮转缺陷并已修复，日志保留。
+- 包审核：3.9.0，4,317,809字节，641个Java17类，单一命名空间、JSON有效、新感知/诊断及既有机枪类存在，无内嵌可选依赖。构建记录/3.9.0-awareness-final-build.log及3.9.0-awareness-package.json；SHA-256为281F998D80E123F33FE6B2BF328946EEAC7929C581688E79E36D8F0C22B06828。
+- 知识库：18篇机制/方案/索引页及默认附录同步；备份文档备份/感知机制实施-20261015-223205、感知默认附录-20261015。56页444个Wiki链接可解析，用户原始想法未修改。方案标已完成实施，游戏场景验收单独保留。
+- 游戏内未验收：近远视觉识别与遮挡中断，多方向偷袭保护/排队及8秒刷新到期，声音求援不直锁、旧敌识别，雇佣命令移动边界，5分钟信标旧波次/复用/跨维度/卸载，8实体F8分页/视野/射线/记忆与远处长时渲染；构建不替代这些结果。
 
 ## 八秒记忆、信标统一续时与综合侦察方案（2026-10-15，仅方案修订）
 

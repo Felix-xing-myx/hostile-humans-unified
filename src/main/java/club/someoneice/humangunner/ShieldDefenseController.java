@@ -300,6 +300,7 @@ public final class ShieldDefenseController {
             // Face the incoming shot's source, not a changing combat/path
             // target. Do not change the attack focus merely to orient a shield.
             facingThreat = incomingArrow.shooter() != null && incomingArrow.shooter().isAlive()
+                    && HumanPerception.canTarget(human,incomingArrow.shooter())
                     && inFront(incomingArrow.shooter().position())
                     ? incomingArrow.shooter() : incomingArrow.projectile();
         } else if (rangedWarning && preparingKnownShot() != null) {
@@ -311,8 +312,11 @@ public final class ShieldDefenseController {
                 && human.distanceToSqr(threat) > 36.0D))) {
             facingThreat = human.getLastHurtByMob();
         }
-        human.getLookControl().setLookAt(facingThreat, 90.0F, 90.0F);
-        human.markShieldFacing(facingThreat);
+        if (!HumanPerception.protectedLook(human) && !NavigationDebugService.controls(human)
+                && (!(facingThreat instanceof LivingEntity living) || HumanPerception.canTarget(human,living))) {
+            human.getLookControl().setLookAt(facingThreat, 90.0F, 90.0F);
+            human.markShieldFacing(facingThreat);
+        }
         if (rangedWarning && (preparingKnownShot() == null || human.tickCount >= rangedWarningUntil))
             rangedWarning = false;
         boolean awaitingProjectile = awaitingProjectile();
@@ -616,7 +620,8 @@ public final class ShieldDefenseController {
             return false;
         }
         // Defense must respect the same faction/attack authorization as target selection.
-        return human.canAttack(entity) && SoldierOrder.allowsTarget(human, entity);
+        return human.canAttack(entity) && SoldierOrder.allowsTarget(human, entity)
+                && HumanPerception.canTarget(human,entity);
     }
 
     private boolean isRangedCombat() {

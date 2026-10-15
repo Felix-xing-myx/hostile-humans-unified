@@ -26,25 +26,23 @@ import net.minecraftforge.fml.ModList;
 
 public class EventHandler {
     static boolean addedFarmerItems;
+    @SubscribeEvent(priority=EventPriority.LOWEST)
+    public void digging(net.minecraftforge.event.entity.player.PlayerInteractEvent.LeftClickBlock event) {
+        if (!event.getLevel().isClientSide && !event.getAction().name().equals("ABORT"))
+            HumanAwareness.dig(event.getEntity(),event.getPos());
+    }
     private static final String randomTag = "hostile_humans_unified:structure_gear_initialized";
 
     @SubscribeEvent
     public void explode(ExplosionEvent.Detonate event) {
-        if (!event.getLevel().isClientSide()) {
-            BlockPos soundPos = BlockPos.containing((Position)event.getExplosion().getPosition());
-            AABB soundRange = new AABB(soundPos).inflate(16.0D);
-            for (Human human : event.getLevel().getEntitiesOfClass(Human.class, soundRange)) {
-                human.setInvestigateSound(soundPos);
-            }
-        }
+        if (event.getLevel() instanceof net.minecraft.server.level.ServerLevel level)
+            HumanAwareness.explosion(level,event.getExplosion().getPosition());
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority=EventPriority.LOWEST)
     public void damage(LivingDamageEvent event) {
-        if (!event.getEntity().level().isClientSide) {
-            LivingEntity source = event.getEntity();
-            HumanAwareness.investigate(source, source.blockPosition());
-        }
+        if (!event.getEntity().level().isClientSide && event.getAmount()>0)
+            HumanAwareness.damage(event.getEntity());
     }
 
     @SubscribeEvent
@@ -55,11 +53,11 @@ public class EventHandler {
         }
     }
 
-    @SubscribeEvent(priority=EventPriority.HIGHEST)
+    @SubscribeEvent(priority=EventPriority.LOWEST)
     public void onPlace(BlockEvent.EntityPlaceEvent event) {
         Entity placer = event.getEntity();
         if (placer != null && !placer.level().isClientSide) {
-            HumanAwareness.alert(placer, true);
+            HumanAwareness.investigate(placer,event.getPos());
         }
     }
 
@@ -67,7 +65,7 @@ public class EventHandler {
     public void onPlayerDamage(LivingDamageEvent event) {
         LivingEntity damaged = event.getEntity();
         if (damaged instanceof Player && !damaged.level().isClientSide) {
-            HumanAwareness.alert(damaged, false);
+            // Shared damage handler coalesces this event; no independent alert/target shortcut.
         }
     }
 

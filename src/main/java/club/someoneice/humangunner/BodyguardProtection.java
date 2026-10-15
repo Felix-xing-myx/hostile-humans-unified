@@ -105,6 +105,7 @@ public final class BodyguardProtection {
         for (UUID id : nearby(owner, searchRadius)) {
             var entity = ((ServerLevel) human.level()).getEntity(id);
             if (!(entity instanceof LivingEntity candidate)) continue;
+            if (!HumanPerception.canTarget(human,candidate)) continue;
             if (candidate == owner || candidate == human || !candidate.isAlive() || candidate.isRemoved()
                     || HumanRelations.allied(human, candidate)) continue;
             boolean aimed = directed(human, owner, candidate);

@@ -245,7 +245,7 @@ public final class AdaptiveCombatGoal extends Goal {
         if (phase == Phase.DEFEND && shouldEnterRetreat(threat) && !shields.wantsHighPressureGuard()) return false;
         if ((phase == Phase.FLANK || phase == Phase.PRESSURE || phase == Phase.UNSTUCK)
                 && CombatTerrainNavigation.hasWork(human, threat)) return false;
-        if ((human.distanceToSqr(threat) > 4096.0D
+        if ((!HumanPerception.canTarget(human,threat)
                 && !(phase == Phase.DEFEND && (shields.awaitingProjectile() || shields.wantsHighPressureGuard())))
                 || phaseTicks <= 0) {
             return false;
@@ -324,6 +324,8 @@ public final class AdaptiveCombatGoal extends Goal {
 
     @Override
     public void stop() {
+        if (!HumanPerception.canTarget(human,threat) && activePath != null
+                && human.getNavigation().getPath() == activePath) human.getNavigation().stop();
         shieldMovement.clear(human);
         boolean shoreTransitionPending = human.isShoreTransitionPending();
         boolean endedRetreat = phase == Phase.RETREAT || phase == Phase.RECOVER;
@@ -390,7 +392,7 @@ public final class AdaptiveCombatGoal extends Goal {
         lastThreatTick = human.tickCount;
         if (phase != Phase.RETREAT && phase != Phase.RECOVER) phaseTicks--;
         repathTicks--;
-        human.getLookControl().setLookAt(threat, 45.0F, 35.0F);
+        if (HumanPerception.allowCombatLook(human,threat)) human.getLookControl().setLookAt(threat, 45.0F, 35.0F);
 
         switch (phase) {
             case DEFEND -> tickDefend();
@@ -689,6 +691,7 @@ public final class AdaptiveCombatGoal extends Goal {
         double limit = spread * 2.5D;
         float pitch = exactPitch + (float) Mth.clamp(human.getRandom().nextGaussian() * spread, -limit, limit);
         float yaw = exactYaw + (float) Mth.clamp(human.getRandom().nextGaussian() * spread, -limit, limit);
+        if (!HumanPerception.allowCombatLook(human,threat)) return false;
         human.setXRot(exactPitch);
         human.setYRot(exactYaw);
         human.setYBodyRot(exactYaw);
@@ -1087,7 +1090,7 @@ public final class AdaptiveCombatGoal extends Goal {
         if (human.tickCount >= focusLockUntil
                 || !isValidThreat(focusedThreat)
                 || focusedThreat.level() != human.level()
-                || human.distanceToSqr(focusedThreat) > MAX_REMEMBERED_THREAT_DISTANCE_SQR) {
+                || !HumanPerception.canTarget(human,focusedThreat)) {
             clearFocusLock();
             return null;
         }
@@ -1202,7 +1205,7 @@ public final class AdaptiveCombatGoal extends Goal {
             LivingEntity candidate = entry.entity();
             if (isValidThreat(candidate)
                     && candidate.level() == human.level()
-                    && human.distanceToSqr(candidate) <= MAX_REMEMBERED_THREAT_DISTANCE_SQR) {
+                    && HumanPerception.canTarget(human,candidate)) {
                 return candidate;
             }
             iterator.remove();
@@ -1226,7 +1229,16 @@ public final class AdaptiveCombatGoal extends Goal {
         // This is also used by crowd scans and remembered threats, not only by
         // Mob#getTarget. Keep every tactical branch behind the same hired-mode
         // authorization gate as the ordinary target selectors.
-        return human.canAttack(entity);
+        return human.canAttack(entity) && HumanPerception.canTarget(human,entity);
+    }
+
+    /** Existing tactical pressure and focus, read without new spatial queries. */
+    public java.util.List<PerceptionDebugSnapshot.Row> perceptionDebugRows() {
+        var rows = new java.util.ArrayList<PerceptionDebugSnapshot.Row>();
+        rows.add(new PerceptionDebugSnapshot.Row("targets", "战术阶段", phase == null ? "无" : phase.name()));
+        rows.add(new PerceptionDebugSnapshot.Row("targets", "短时受击压力", incomingHits.size() + "次 · 记忆威胁" + threatMemory.size()));
+        rows.add(new PerceptionDebugSnapshot.Row("targets", "集中处理剩余", Math.max(0, focusLockUntil - human.tickCount) + "tick"));
+        return java.util.List.copyOf(rows);
     }
 
     private void updateCombatSession(LivingEntity currentThreat) {

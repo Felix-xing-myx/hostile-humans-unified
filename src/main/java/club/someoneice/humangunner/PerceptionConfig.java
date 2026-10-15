@@ -74,6 +74,7 @@ public final class PerceptionConfig {
         add(m,"budgets.active_interval_ticks",4,1,40,"识别警觉战斗检测间隔 / Active perception scan interval");
         add(m,"budgets.queries_per_level",64,1,4096,"每维度每tick邻域查询上限 / Neighborhood query limit per dimension per tick");
         add(m,"budgets.queries_per_server",128,1,8192,"每服务器每tick邻域查询上限 / Neighborhood query limit per server per tick");
+        add(m,"budgets.event_query_fraction",.25,.05,.5,"声音事件最多占查询配额份额 / Maximum query fraction used by sound events");
         add(m,"budgets.rays_per_level",128,1,8192,"每维度每tick感知射线上限 / Perception ray limit per dimension per tick");
         add(m,"budgets.rays_per_server",256,1,16384,"每服务器每tick感知射线上限 / Perception ray limit per server per tick");
         add(m,"budgets.rays_per_human",2,1,16,"每人每轮射线上限 / Per-human rays per update");

@@ -97,7 +97,7 @@ final class SplitConfigFiles {
                         ? data.getAsJsonObject("scguns") : null;
                 if (scguns != null && !scguns.has("human_gun_damage_multiplier"))
                     scguns.add("human_gun_damage_multiplier", defaults.getAsJsonObject("scguns").get("human_gun_damage_multiplier").deepCopy());
-                for (String key : List.of("jump_attack", "first_aid", "scguns", "shield_pressure", "armor_swap", "combat_resupply")) {
+                for (String key : List.of("jump_attack", "first_aid", "scguns", "shield_pressure", "armor_swap", "combat_resupply", "perception")) {
                     if (!data.has(key) && defaults.has(key)) {
                         JsonObject section = defaults.getAsJsonObject(key).deepCopy();
                         if (key.equals("jump_attack") && TierConfigProjection.at(data, "damage.jump_attack_damage_multiplier") != null)

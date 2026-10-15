@@ -21,7 +21,7 @@ public abstract class DoorMixin {
     @Inject(method={"use"}, at={@At(value="RETURN")})
     public void useInject(BlockState p_57540_, Level pLevel, BlockPos p_57542_, Player pPlayer, InteractionHand p_57544_, BlockHitResult p_57545_, CallbackInfoReturnable<InteractionResult> cir) {
         if (cir.getReturnValue() == InteractionResult.CONSUME && !pLevel.isClientSide && !pPlayer.isCreative()) {
-            HumanAwareness.investigate(pPlayer, p_57545_.getBlockPos());
+            HumanAwareness.door(pPlayer, p_57545_.getBlockPos());
         }
     }
 }

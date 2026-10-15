@@ -210,6 +210,7 @@ public final class HumanGunner {
                 OwnerOfflinePolicy.tick(human);
                 HumanRelations.tick(human);
             }
+            HumanPerception.tick(human);
             HumanGrowth.tick(human);
             HiredHumanHealthWarning.tick(human);
             if (human.getPersistentData().hasUUID(HumanRelations.TEMP_OWNER)) {
@@ -510,7 +511,7 @@ public final class HumanGunner {
                 human.setOwnerUUID(null);
                 human.setTame(false);
                 IdentityBadgeAccess.rememberPlayerAttack(human, player);
-                human.setTarget(player);
+                HumanPerception.ownerClue(human,player);
                 player.displayClientMessage(Component.translatable("message.hostile_humans_unified.dismissed"), true);
             }
         }

@@ -321,7 +321,7 @@ public final class UnifiedConfig {
         try (Reader reader = new InputStreamReader(Objects.requireNonNull(
                 UnifiedConfig.class.getResourceAsStream("/defaults/hostile_humans_unified.json")), StandardCharsets.UTF_8)) {
             JsonObject defaults = JsonParser.parseReader(reader).getAsJsonObject();
-            defaults.add("perception", PerceptionConfig.defaults());
+            if (!defaults.has("perception")) defaults.add("perception", PerceptionConfig.defaults());
             return defaults;
         } catch (IOException e) { throw new IllegalStateException("Missing packaged config defaults", e); }
     }
