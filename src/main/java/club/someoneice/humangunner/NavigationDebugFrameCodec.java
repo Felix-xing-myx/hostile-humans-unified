@@ -44,6 +44,7 @@ final class NavigationDebugFrameCodec {
             vector(out, sample.position()); out.writeUtf(sample.source(), 64);
             out.writeUtf(sample.result(), 64); out.writeDouble(sample.score());
         }
+        PerceptionDebugCodec.write(s.perception(), out);
     }
     static NavigationDebugFrame read(FriendlyByteBuf in) {
         int size = count(in, NavigationDebugFrame.MAX_ENTITIES);
@@ -77,6 +78,6 @@ final class NavigationDebugFrameCodec {
         for (int i = 0; i < samples; i++) points.add(new NavigationDebugSnapshot.Sample(vector(in), in.readUtf(64), in.readUtf(64), in.readDouble()));
         return new NavigationDebugSnapshot(dimension, id, uuid, name, mode, state, navigator, budget,
                 obstruction, health, fall, drop, range, position, requested, enemy, endpoint, List.copyOf(path), first, total,
-                complete, truncated, millis, List.copyOf(points));
+                complete, truncated, millis, List.copyOf(points), PerceptionDebugCodec.read(in));
     }
 }

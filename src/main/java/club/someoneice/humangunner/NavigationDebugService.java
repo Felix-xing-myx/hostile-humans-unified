@@ -171,7 +171,7 @@ public final class NavigationDebugService {
         if (event.getEntity() instanceof ServerPlayer player) clear(player);
     }
     @SubscribeEvent public static void playerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player) || player.tickCount % 5 != 0) return;
+        if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player) || player.tickCount % PerceptionConfig.get().integer("debug.interval_ticks") != 0) return;
         Session session = SELECTIONS.get(player);
         if (session == null) return;
         if (!allowed(player) || session.dimension != player.level().dimension()) { clear(player); return; }
@@ -195,7 +195,7 @@ public final class NavigationDebugService {
         for (var member : session.selection.entries()) {
             Human human = resolve(player, member.key());
             if (human == null) continue;
-            WATCHED.put(human, human.level().getGameTime() + 10);
+            WATCHED.put(human, human.level().getGameTime() + PerceptionConfig.get().integer("debug.interval_ticks") + 5);
             entries.add(new NavigationDebugFrame.Entry(member.slot(), snapshot(human)));
         }
         NavigationDebugNetwork.send(player, new NavigationDebugFrame(List.copyOf(entries), session.selection.focused()));
@@ -216,10 +216,10 @@ public final class NavigationDebugService {
                 run == null ? trace.state : run.state, human.getNavigation().getClass().getSimpleName(), trace.budget, trace.obstruction,
                 human.getHealth(), HumanFallPolicy.damageBudget(human.getHealth()), human.getMaxFallDistance(),
                 human.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE), human.position(),
-                run == null ? trace.requested : run.destination, human.getTarget() == null ? null : human.getTarget().position(),
+                run == null ? trace.requested : run.destination, human.getTarget() == null ? null : HumanPerception.knownPosition(human, human.getTarget()),
                 total == 0 ? null : path.getEntityPosAtNode(human, total - 1),
                 List.copyOf(nodes), first, total, path != null && path.canReach(), total - first > nodes.size(),
-                trace.searchMillis, List.copyOf(samples));
+                trace.searchMillis, List.copyOf(samples), HumanPerception.snapshot(human));
     }
     private static String boundedName(Human human) {
         String name = human.getName().getString();

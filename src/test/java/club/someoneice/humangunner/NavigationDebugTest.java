@@ -41,6 +41,7 @@ public final class NavigationDebugTest {
             check(frame.equals(NavigationDebugFrameCodec.read(buffer)), "eight full paths, slot colors, focus and NaN score round trip");
             check(buffer.readableBytes()==0, "decoder consumes exactly one frame");
         } finally { buffer.release(); }
+        perceptionCodec();
         invalidCount(9); invalidCount(-1);
         rejects(new NavigationDebugFrame(List.of(list.get(0), list.get(0)), null), "duplicate slot");
         rejects(new NavigationDebugFrame(List.of(list.get(0), new NavigationDebugFrame.Entry(1, list.get(0).snapshot())), null), "duplicate UUID");
@@ -48,6 +49,48 @@ public final class NavigationDebugTest {
         rejects(new NavigationDebugFrame(List.of(new NavigationDebugFrame.Entry(0, sample(0,257,1,false))), null), "oversized path");
         rejects(new NavigationDebugFrame(List.of(new NavigationDebugFrame.Entry(0, sample(0,1,49,false))), null), "oversized candidates");
         System.out.println("NavigationDebugTest: " + checks + " checks passed; long-running native/render gameplay still requires acceptance");
+    }
+    private static void perceptionCodec() {
+        var rows = new ArrayList<PerceptionDebugSnapshot.Row>();
+        for (int i=0;i<PerceptionDebugSnapshot.MAX_ROWS;i++) rows.add(new PerceptionDebugSnapshot.Row("memory","target "+i,"last position; 8 ticks"));
+        var markers = new ArrayList<PerceptionDebugSnapshot.Marker>();
+        for (int i=0;i<PerceptionDebugSnapshot.MAX_MARKERS;i++) markers.add(new PerceptionDebugSnapshot.Marker(
+                i%2==0 ? "vision_new_ring" : "last", "sample "+i, new Vec3(i,64,-i), i%2==0 ? new Vec3(0,0,1) : null, i));
+        var sample = new PerceptionDebugSnapshot(123, new Vec3(0,65,0),new Vec3(0,0,1),64,.3,.8,
+                "alert","investigate","sound; movement restricted",List.copyOf(rows),List.copyOf(markers));
+        var buffer = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            PerceptionDebugCodec.write(sample,buffer);
+            check(sample.equals(PerceptionDebugCodec.read(buffer)),"all perception fields, bounded rows, nullable endpoints and rings round trip");
+            check(buffer.readableBytes()==0,"perception consumes exactly its payload");
+        } finally {buffer.release();}
+        for (int invalidCount : new int[]{-1,129}) {
+            var malformed = new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                malformed.writeLong(0);
+                for(int i=0;i<9;i++) malformed.writeDouble(0);
+                malformed.writeUtf(""); malformed.writeUtf(""); malformed.writeUtf(""); malformed.writeVarInt(invalidCount);
+                try { PerceptionDebugCodec.read(malformed); throw new AssertionError("malformed row count accepted"); }
+                catch(IllegalArgumentException expected) { checks++; }
+            } finally {malformed.release();}
+        }
+        rows.add(rows.get(0));
+        perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,1,0,0,"","","",rows,List.of()),"row limit");
+        markers.add(markers.get(0));
+        perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,1,0,0,"","","",List.of(),markers),"marker limit");
+        for(double invalid:new double[]{Double.NaN,Double.POSITIVE_INFINITY,-1,4097})
+            perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,invalid,0,0,"","","",List.of(),List.of()),"invalid radius");
+        perceptionRejects(new PerceptionDebugSnapshot(0,new Vec3(Double.NaN,0,0),Vec3.ZERO,1,0,0,"","","",List.of(),List.of()),"nonfinite perception point");
+        perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,1,0,0,"","","",List.of(),List.of(
+                new PerceptionDebugSnapshot.Marker("los","",Vec3.ZERO,new Vec3(0,Double.NaN,0),0))),"nonfinite endpoint");
+        perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,1,0,0,"","","x".repeat(257),List.of(),List.of()),"bounded reason");
+    }
+    private static void perceptionRejects(PerceptionDebugSnapshot snapshot,String reason) {
+        var buffer=new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            try {PerceptionDebugCodec.write(snapshot,buffer); PerceptionDebugCodec.read(buffer); throw new AssertionError(reason);}
+            catch(IllegalArgumentException | io.netty.handler.codec.EncoderException expected) {checks++;}
+        } finally {buffer.release();}
     }
     private static void invalidCount(int count) {
         var buffer = new FriendlyByteBuf(Unpooled.buffer());

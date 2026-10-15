@@ -28,6 +28,16 @@ public final class NavigationDebugClient {
     private static NavigationDebugFrame frame = NavigationDebugFrame.EMPTY;
     private static long receivedAt;
     private static final int[] COLORS = {0x37D5FF, 0xFFA842, 0xC18CFF, 0x66E699, 0xFF7FB5, 0xE4DF55, 0x729EFF, 0xEE8266};
+    // 0 hidden, 1 diagnostic focus, 2 all observed members. Local UI only.
+    static final int[] LAYERS = {2, 1, 1, 1};
+    static java.util.UUID detailFocus;
+    static boolean diagnosticFocus(NavigationDebugFrame.Entry e) {
+        boolean retained = detailFocus != null && frame.entries().stream().anyMatch(member -> member.snapshot().entityUuid().equals(detailFocus));
+        return Objects.equals(retained ? detailFocus : frame.focused(), e.snapshot().entityUuid());
+    }
+    private static boolean layer(int layer, NavigationDebugFrame.Entry e) {
+        return LAYERS[layer] == 2 || LAYERS[layer] == 1 && diagnosticFocus(e);
+    }
     private NavigationDebugClient() {}
     static int slotColor(int slot) { return COLORS[slot]; }
     @Mod.EventBusSubscriber(modid = HumanGunner.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
@@ -46,9 +56,9 @@ public final class NavigationDebugClient {
     }
     public static void accept(NavigationDebugFrame value) { frame = value; receivedAt = System.nanoTime(); }
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut event) { frame = NavigationDebugFrame.EMPTY; }
-    private static List<NavigationDebugFrame.Entry> visibleEntries() {
+    static List<NavigationDebugFrame.Entry> visibleEntries() {
         var mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || System.nanoTime() - receivedAt > 2_000_000_000L
+        if (mc.player == null || mc.level == null || System.nanoTime() - receivedAt > 3_000_000_000L
                 || !mc.player.getItemBySlot(EquipmentSlot.HEAD).is(HumanGunnerRegistries.NAVIGATION_OBSERVER_HELMET.get())) return List.of();
         return frame.entries().stream().filter(entry -> valid(entry.snapshot())).toList();
     }
@@ -62,7 +72,7 @@ public final class NavigationDebugClient {
     private static Component text(String key, Object... args) { return Component.translatable("navigation_debug." + key, args); }
     private static String number(double value) { return Double.isFinite(value) ? String.format(Locale.ROOT, "%.2f", value) : "—"; }
     private static int color(NavigationDebugFrame.Entry entry) { return COLORS[entry.slot()]; }
-    private static boolean focused(NavigationDebugFrame.Entry entry) { return Objects.equals(frame.focused(), entry.snapshot().entityUuid()); }
+    static boolean focused(NavigationDebugFrame.Entry entry) { return Objects.equals(frame.focused(), entry.snapshot().entityUuid()); }
     private static String point(Vec3 position) { return position == null ? "—" : net.minecraft.core.BlockPos.containing(position).toShortString(); }
     private static void draw(GuiGraphics g, Component text, int x, int y, int width, int color) {
         var font = Minecraft.getInstance().font;
@@ -73,8 +83,8 @@ public final class NavigationDebugClient {
         List<NavigationDebugFrame.Entry> entries = visibleEntries();
         if (entries.isEmpty() || Minecraft.getInstance().options.hideGui) return;
         var g = event.getGuiGraphics();
-        int columns = Math.min(entries.size(), Math.max(1, g.guiWidth() / 155));
-        int width = Math.min(155, (g.guiWidth() - 16) / columns), cardHeight = 33;
+        int columns = 1;
+        int width = Math.min(170, g.guiWidth() - 16), cardHeight = 33;
         for (int i = 0; i < entries.size(); i++) {
             var entry = entries.get(i); var s = entry.snapshot();
             int x = 6 + (i % columns) * width, y = 6 + (i / columns) * cardHeight;
@@ -84,11 +94,13 @@ public final class NavigationDebugClient {
             draw(g, text("card_route", text("result." + s.state()), s.firstNode(), s.totalNodes()), x+5, y+12, width-12, 0xFFFFFF);
             draw(g, text("card_goal", s.requested() == null ? "—" : s.requested().toShortString()), x+5, y+22, width-12, 0xDDDDDD);
         }
-        var focus = entries.stream().filter(NavigationDebugClient::focused).findFirst().orElse(entries.get(0));
+        var focus = entries.stream().filter(NavigationDebugClient::diagnosticFocus).findFirst().orElse(entries.get(0));
         var s = focus.snapshot();
         int y = 10 + ((entries.size() + columns - 1) / columns) * cardHeight;
         Component[] details = {
-            text("focus_title", focus.slot() + 1, s.name()),
+            text("detail.focus", focus.slot() + 1, s.name()),
+            text("detail.state", s.perception().awareness(), s.perception().decision()),
+            text("detail.reason", s.perception().reason()),
             text("hud_route", text("result." + s.state()), s.firstNode(), s.totalNodes(),
                     text(s.totalNodes() == 0 ? "result.none" : s.complete() ? "result.complete" : "result.partial"), s.truncated() ? "…" : ""),
             text("hud_goal", s.requested() == null ? "—" : s.requested().toShortString(), s.navigator()),
@@ -143,6 +155,7 @@ public final class NavigationDebugClient {
                 float r = ((rgb >> 16) & 255) / 255F, g = ((rgb >> 8) & 255) / 255F, b = (rgb & 255) / 255F;
                 VertexConsumer lines = buffers.getBuffer(DebugLines.TYPE);
                 box(poses, lines, s.position().subtract(camera), .3, r,g,b);
+                if (layer(0, entry)) {
                 if (s.requested() != null) box(poses, lines, Vec3.atBottomCenterOf(s.requested()).subtract(camera), .35, r,g,b);
                 if (s.endpoint() != null) box(poses, lines, s.endpoint().subtract(camera), .25, r,g,b);
                 Vec3 previous = s.position().add(0,.08,0).subtract(camera);
@@ -152,7 +165,6 @@ public final class NavigationDebugClient {
                     box(poses, lines, next, i == 0 ? .14 : .06, i == 0 ? 1 : r, i == 0 ? 1 : g, i == 0 ? 1 : b);
                     previous = next;
                 }
-                if (focused(entry)) {
                     if (s.enemy() != null) box(poses, lines, s.enemy().subtract(camera), .35, 1,.1F,.1F);
                     for (var sample : s.samples()) {
                         boolean good = sample.result().equals("accepted") || sample.result().equals("complete") || sample.result().equals("scored");
@@ -160,6 +172,7 @@ public final class NavigationDebugClient {
                         box(poses, lines, sample.position().add(0,.15,0).subtract(camera), .12, good ? .2F : 1, good ? 1 : .25F, pending ? 1 : .2F);
                     }
                 }
+                perception(poses, lines, s.perception(), camera, entry, r, g, b);
                 // Flush each bounded entity before reusing the same native storage for the next one.
                 buffers.endBatch(DebugLines.TYPE);
                 label(event, buffers, entry, camera);
@@ -168,6 +181,40 @@ public final class NavigationDebugClient {
         } finally {
             buffers.endBatch();
             poses.popPose();
+        }
+    }
+    private static void perception(PoseStack poses, VertexConsumer out, PerceptionDebugSnapshot s, Vec3 camera,
+            NavigationDebugFrame.Entry entry, float r, float g, float b) {
+        for (var m : s.markers()) {
+            boolean ring = m.kind().startsWith("vision_");
+            int layer = ring || m.kind().equals("los") || m.kind().equals("blocked") ? 1
+                    : m.kind().equals("sound") || m.kind().equals("beacon") || m.kind().equals("direction") ? 3 : 2;
+            if (!layer(layer, entry)) continue;
+            Vec3 p = m.position().subtract(camera);
+            float red = r, green = g, blue = b;
+            switch (m.kind()) {
+                case "vision_known_ring" -> { red = .5F; green = .8F; blue = 1; }
+                case "blocked" -> { red = 1; green = .15F; blue = .15F; }
+                case "visible", "los" -> { red = .2F; green = 1; blue = .3F; }
+                case "last" -> { red = 1; green = .65F; blue = .15F; }
+                case "dynamic" -> { red = 1; green = .25F; blue = .7F; }
+                case "sound", "direction" -> { red = .2F; green = .8F; blue = 1; }
+                case "beacon" -> { red = .8F; green = .3F; blue = 1; }
+            }
+            if (ring || m.radius() > 0) {
+                Vec3 axis = ring && m.end() != null ? m.end() : new Vec3(0, 1, 0);
+                if (axis.lengthSqr() < 1E-8) continue;
+                axis = axis.normalize();
+                Vec3 u = axis.cross(Math.abs(axis.y) < .9 ? new Vec3(0,1,0) : new Vec3(1,0,0)).normalize();
+                Vec3 v = axis.cross(u).normalize(), previous = p.add(u.scale(m.radius()));
+                for (int i = 1; i <= 32; i++) {
+                    double angle = i * Math.PI / 16;
+                    Vec3 next = p.add(u.scale(Math.cos(angle)*m.radius())).add(v.scale(Math.sin(angle)*m.radius()));
+                    line(poses,out,previous,next,red,green,blue); previous=next;
+                    if (ring && i % 8 == 0) line(poses,out,s.eye().subtract(camera),next,red,green,blue);
+                }
+            } else box(poses,out,p,.15,red,green,blue);
+            if (!ring && m.end() != null) line(poses,out,p,m.end().subtract(camera),red,green,blue);
         }
     }
     private static void label(RenderLevelStageEvent event, MultiBufferSource buffers, NavigationDebugFrame.Entry entry, Vec3 camera) {
