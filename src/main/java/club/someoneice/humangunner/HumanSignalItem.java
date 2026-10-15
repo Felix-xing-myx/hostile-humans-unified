@@ -54,6 +54,7 @@ public final class HumanSignalItem extends Item {
                     .withStyle(ChatFormatting.RED), true);
             return InteractionResultHolder.fail(stack);
         }
+        if (hostile) BeaconReportingService.used(server, serverPlayer);
         player.getPersistentData().putLong(key, now + SignalPolicy.cooldownTicks(hostile));
         if (!player.getAbilities().instabuild) stack.shrink(1);
         player.displayClientMessage(Component.translatable(hostile
@@ -89,7 +90,8 @@ public final class HumanSignalItem extends Item {
             } else {
                 human.getPersistentData().putBoolean(HumanRelations.HOSTILE_BEACON_ORIGIN, true);
                 human.getPersistentData().putUUID(HumanRelations.FORCED_HOSTILE_TARGET, player.getUUID());
-                human.setTarget(player);
+                human.getPersistentData().putString(BeaconReportingService.MEMBER_DIMENSION,
+                        level.dimension().location().toString());
             }
             if (level.addFreshEntity(human)) count++;
         }
