@@ -1821,7 +1821,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // Restore the attack's facing after those writers, before damage.
             if (!club.someoneice.humangunner.HumanPerception.protectedLook(this)) facePendingBetterCombatAttack();
             finishBetterCombatUpswing();
-            club.someoneice.humangunner.HumanPerception.applyLook(this);
+            club.someoneice.humangunner.HumanPerception.finishLook(this);
         }
         if (!level().isClientSide && !isNoAi()) {
             recoverStalledNavigation();

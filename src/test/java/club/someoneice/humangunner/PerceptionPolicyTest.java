@@ -4,6 +4,7 @@ import dev.felix.hostilehumans.core.PerceptionPolicy;
 import dev.felix.hostilehumans.core.RecognitionEvidence;
 import dev.felix.hostilehumans.core.BodyVisibilitySamples;
 import dev.felix.hostilehumans.core.ScopedWorkBudget;
+import dev.felix.hostilehumans.core.AttentionFacingPolicy;
 import com.google.gson.JsonObject;
 
 /** Behavioral policies, configuration provenance and perception/beacon temporal boundary cases. */
@@ -57,6 +58,18 @@ public final class PerceptionPolicyTest {
         firstEvidence.finish();check(!firstEvidence.active()&&secondEvidence.active(),"one completion does not release another target's slot");
         firstEvidence.begin(200);check(firstEvidence.progress()==0,"a new recognition cannot reuse completed evidence");
         check(RecognitionEvidence.MAX_CONCURRENT==2,"two visual recognition slots, independent of head focus");
+        var facing=new AttentionFacingPolicy.Facing(0,0,0);
+        for(int tick=1;tick<=6;tick++){
+            float oldBody=facing.body();
+            facing=AttentionFacingPolicy.step(facing.body(),facing.head(),facing.pitch(),180,0,75,true);
+            check(Math.abs(Math.IEEEremainder(facing.body()-oldBody,360))<=30.001,"body turns smoothly without snapping");
+            check(Math.abs(Math.IEEEremainder(facing.head()-facing.body(),360))<=75.001,"head remains inside anatomical body limit");
+        }
+        check(Math.abs(facing.body())==180&&Math.abs(facing.head())==180,"stationary rear attacker produces a complete turn in six steps");
+        var crossing=AttentionFacingPolicy.step(170,170,0,-170,60,75,true);
+        check(crossing.body()==-170&&crossing.head()==-170&&crossing.pitch()==35,"wrap boundary uses shortest turn and bounded pitch");
+        var retreatFacing=AttentionFacingPolicy.step(0,0,0,180,0,75,false);
+        check(retreatFacing.body()==0,"retreat retains movement-facing body yaw");
         var body=BodyVisibilitySamples.of(-.3,0,-.3,.3,1.8,.3);
         check(body.size()==BodyVisibilitySamples.MAX_POINTS,"normal body has 27 unique surface/interior samples");
         check(body.get(0).equals(new BodyVisibilitySamples.Point(0,.9,0)),"torso is first fallback after eye/previous visible point");

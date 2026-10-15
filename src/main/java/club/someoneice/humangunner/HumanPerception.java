@@ -5,6 +5,7 @@ import com.craftix.hostile_humans.Config;
 import dev.felix.hostilehumans.core.PerceptionPolicy;
 import dev.felix.hostilehumans.core.RecognitionEvidence;
 import dev.felix.hostilehumans.core.BodyVisibilitySamples;
+import dev.felix.hostilehumans.core.AttentionFacingPolicy;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -54,6 +55,8 @@ public final class HumanPerception {
         String scanStatus="尚未执行视觉检测";long scanAt=-1;
         UUID owner; String order=""; boolean initialized;
         Clue glancedClue; Vec3 glancedPosition; long nextClueGlance;
+        long directionProtectedUntil=-1;int lastFacingTick=Integer.MIN_VALUE;
+        float facingBody,facingHead;
         Map<UUID,Long> glanceAt=new HashMap<>();
     }
     private HumanPerception() {}
@@ -102,16 +105,35 @@ public final class HumanPerception {
         return PerceptionPolicy.live(now(h),t.liveUntil)?e.position():
                 now(h)<t.positionAt+c().integer("memory.last_position_ticks")?t.position:null;
     }
-    public static boolean protectedLook(Human h){State s=STATES.get(h);return s!=null&&s.protectedFocus&&s.focus!=null;}
+    public static boolean protectedLook(Human h){State s=STATES.get(h);return s!=null&&(
+            s.protectedFocus&&s.focus!=null||now(h)<s.directionProtectedUntil);}
     public static boolean allowCombatLook(Human h,LivingEntity target){
         if(NavigationDebugService.controls(h))return false;
         State s=STATES.get(h);
-        return (s==null||!s.protectedFocus||Objects.equals(s.focus,target==null?null:target.getUUID()))&&canTarget(h,target);
+        return (s==null||!protectedLook(h)||Objects.equals(s.focus,target==null?null:target.getUUID()))&&canTarget(h,target);
     }
     public static boolean observing(Human h){State s=STATES.get(h);return s!=null&&s.look!=null&&!h.isSleeping()&&!h.isNoAi()&&!NavigationDebugService.controls(h);}
     public static void applyLook(Human h){
         State s=STATES.get(h);if(s==null||!observing(h))return;
         h.getLookControl().setLookAt(s.look.x,s.look.y,s.look.z,45,35);
+    }
+    public static void finishLook(Human h){
+        State s=STATES.get(h);if(s==null||!observing(h))return;
+        applyLook(h);
+        if(s.lastFacingTick==h.tickCount)return;
+        Vec3 delta=s.look.subtract(h.getEyePosition());if(!finite(delta))return;
+        double horizontal=delta.horizontalDistance();
+        if(delta.lengthSqr()<1.e-8)return;
+        boolean turnBody=!h.isFleeing&&(s.focus!=null||h.getTarget()==null);
+        boolean continuous=s.lastFacingTick==h.tickCount-1;
+        float body=turnBody&&continuous?s.facingBody:h.yBodyRot;
+        float head=continuous?s.facingHead:h.getYHeadRot();
+        float yaw=horizontal>1.e-4?(float)Math.toDegrees(Math.atan2(delta.z,delta.x))-90:head;
+        float pitch=(float)-Math.toDegrees(Math.atan2(delta.y,horizontal));
+        var facing=AttentionFacingPolicy.step(body,head,h.getXRot(),yaw,pitch,h.getMaxHeadYRot(),turnBody);
+        if(turnBody){h.setYRot(facing.body());h.yBodyRot=facing.body();}
+        h.setYHeadRot(facing.head());h.setXRot(facing.pitch());
+        s.facingBody=facing.body();s.facingHead=facing.head();s.lastFacingTick=h.tickCount;
     }
     private static void alert(Human h,State s,String reason){
         s.alertUntil=now(h)+c().integer("observation.alert_ticks");h.isAlert=true;
@@ -157,8 +179,13 @@ public final class HumanPerception {
             direction=living.getEyePosition().subtract(h.getEyePosition()).normalize();
         else if(!projectileImpact&&!periodic&&source.getSourcePosition()!=null)
             direction=source.getSourcePosition().subtract(h.getEyePosition()).normalize();
+        if(actual>0&&!periodic)HumanAwareness.aid(h);
         if(!(owner instanceof LivingEntity attacker)||!valid(h,attacker)){
-            if(direction!=null&&!protectedLook(h)){s.look=h.getEyePosition().add(direction.scale(8));s.directionStarted=now;s.lookOwner="受击方向";}
+            if(direction!=null&&direction.lengthSqr()>1.e-8&&!periodic&&!protectedLook(h)){
+                s.look=h.getEyePosition().add(direction.scale(8));s.directionStarted=now;
+                s.directionProtectedUntil=now+c().integer("observation.direction_ticks");
+                s.lookOwner="受击方向";s.reason="真实来袭方向观察，不授予攻击许可";
+            }
             return;
         }
         Track t=s.tracks.get(attacker.getUUID()); boolean marked=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
@@ -174,13 +201,12 @@ public final class HumanPerception {
                     now+(marked?c().integer("memory.dynamic_ticks"):c().integer("observation.unknown_notice_ticks")),true,marked));
             trimQueue(s);if(!protectedLook(h))startNext(h,s,now);
         }
-        if(actual>0)HumanAwareness.aid(h);
     }
     private static void trimQueue(State s){while(s.pending.size()>c().integer("observation.queue_size")){
         UUID last=null;for(UUID id:s.pending.keySet())last=id;s.pending.remove(last);
     }}
     private static void startNext(Human h,State s,long now){
-        if(s.focus!=null)return;
+        if(s.focus!=null||now<s.directionProtectedUntil)return;
         var it=s.pending.values().iterator();while(it.hasNext()){
             Observe o=it.next();it.remove();if(now>=o.until)continue;
             s.focus=o.source;s.look=o.point;s.focusHurt=o.hurt;s.protectedFocus=!o.familiar;
@@ -196,7 +222,8 @@ public final class HumanPerception {
         }
         Track t=new Track(id);s.tracks.put(id,t);return t;
     }
-    private static void release(State s,String reason){s.focus=null;s.look=null;s.protectedFocus=false;s.focusHurt=false;s.reason=reason;s.lookOwner="自然观察";}
+    private static void release(State s,String reason){s.focus=null;s.look=null;s.protectedFocus=false;s.focusHurt=false;
+        s.directionProtectedUntil=-1;s.lastFacingTick=Integer.MIN_VALUE;s.reason=reason;s.lookOwner="自然观察";}
     public static void tick(Human h){
         if(h.level().isClientSide||!(h.level() instanceof ServerLevel level))return;
         State s=state(h);long now=now(h);if(s.tick==now)return;s.tick=now;
@@ -410,7 +437,8 @@ public final class HumanPerception {
         }
     }
     private static void describe(Human h,State s){
-        if(s.focus!=null){s.decision=s.protectedFocus?"识别陌生目标":"回看已标记目标";}
+        if(now(h)<s.directionProtectedUntil){s.decision="回看来袭方向";}
+        else if(s.focus!=null){s.decision=s.protectedFocus?"识别陌生目标":"回看已标记目标";}
         else if(h.isFleeing){s.decision="撤退与恢复";}
         else if(h.getTarget()!=null){s.decision="处理已确认威胁";if(!s.scanStatus.contains("配额"))s.reason="现有战斗调度";}
         else if(bestClue(h)!=null){s.decision="调查线索";}
@@ -444,7 +472,7 @@ public final class HumanPerception {
         if(point.distanceToSqr(h.getEyePosition())>1){s.look=point;s.directionStarted=now(h);s.lookOwner="线索调查";}
     }
     private static void reactToClue(Human h,State s,long now){
-        if(s.focus!=null)return;
+        if(s.focus!=null||now<s.directionProtectedUntil)return;
         if(h.getTarget()!=null||h.isFleeing){
             if(s.lookOwner.startsWith("线索")){s.look=null;s.lookOwner="自然观察";}
             return;
@@ -482,6 +510,7 @@ public final class HumanPerception {
         List<PerceptionDebugSnapshot.Row> rows=new ArrayList<>();List<PerceptionDebugSnapshot.Marker> markers=new ArrayList<>();
         row(rows,"overview","当前决策",s.decision);row(rows,"overview","原因",s.reason);
         row(rows,"overview","警觉剩余",remaining(s.alertUntil,now));row(rows,"actions","LOOK占用",s.lookOwner);
+        row(rows,"actions","匿名来向保护",remaining(s.directionProtectedUntil,now));
         row(rows,"actions","MOVE状态",NavigationDebugService.controls(h)?"固定点测试":h.isFleeing?"撤退":h.getTarget()!=null?"战斗":h.getNavigation().isDone()?"无活动路径":"命令/调查路径");
         row(rows,"actions","行动指令",SoldierOrder.get(h).name());row(rows,"actions","攻击模式",SoldierCombatMode.get(h).name());
         for(var action:h.humanGunner$actionSnapshot())row(rows,action.group(),action.label(),action.value());
