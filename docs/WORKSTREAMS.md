@@ -2013,3 +2013,12 @@ Java17、六个显式只读API依赖、gradlew.bat build lootScreeningTest --off
 - 路点推进：同Path/同索引/连续tick，空中或刚落地、前向跨越平直相邻同高普通节点，排除门/栅栏门/活板门、梯子、液体、台阶/转角、受击/撤退等；身体扫掠、脚部/落差及命令检查通过后advance一次，不增加A*、不改坐标/速度。
 - 验证：254项Python静态契约（12跳过，其余通过）；6默认附录、7页知识库链接/围栏及git diff --check通过；只读核对本机GoalSelector/WrappedGoal公开接口。新增Java场景覆盖目标间隙/重复空赋值/时间重置、平直跨越/反向/侧向/远位移/非相邻/非有限坐标，接入CombatTerrainPolicyTest；PickupPolicyWiringTest扩展实际目标及即时释放入口审查。未执行Java编译、Java测试或Gradle，不能据静态检查声称可编译或游戏问题已验收。
 - 文档：知识库7页对应机制与理论正文同步，先备份至文档备份/导航交接与跳跃-20261015-161145；同步CHANGELOG、MODULE_INTERFACES和NAVIGATION_THEORY。版本不变，未构建、同步、启动游戏或push。游戏待验收有地面/水中掉落物的连续换敌、释放后闲置拾取恢复、新战斗/命令路线不被旧stop清除、平地/斜向追击跳跃与门梯/转角/台阶/危险落脚回归。
+
+
+## 敌人发现、警觉与锁定原理（2026-10-15，文档已整合）
+
+- 用户要求全面说明敌对人类发现/锁敌、声音/视线/隔墙机制并写入知识库；仅研究与文档。主控单会话，基线9ec2fc9b82fe4baa578f216af02c249229405e2c；工作树worktrees/enemy-awareness，分支docs/enemy-awareness；范围为知识库正文/索引与仓库源码地图、协作记录。保留此前尚未构建的导航交接源码提交，不修改功能、不构建/同步。
+- 依据：Human目标注册/canAttack/isAngryAt/setTarget/hurt，两个最近目标Goal，EventHandler/BlockMixin/DoorMixin/HumanAwareness，AdaptiveCombatGoal、HumanRelations、士兵/护卫记忆与授权，默认和实例配置；本机原版TargetingConditions/TargetGoal/NearestAttackableTargetGoal/HurtByTargetGoal/Goal/Sensing字节码只读，资料在验证日志/target-awareness。
+- 交付：新增知识库02-战斗与生存/敌人发现、警觉与锁定.md、05-开发参考/敌人感知原理与修改入口.md，合计10712字符；更新总览、控制权、阵营、开发入口、导航理论入口和生物行为方案参考共6页，未展开或实施新方案。既有页先备份至文档备份/敌人发现与锁定-20261015-162326。仓库新增docs/ENEMY_AWARENESS.md源码地图。
+- 核心结论：初次玩家候选需LOS，未警觉再验距离收窄的方向公式；isAlert传播不等于共享目标。玩家自定义保留省略LOS/未见计数，会追踪已锁实体实时位置。事件声音仅调查BlockPos，覆盖破坏/放置/部分门操作/伤害/爆炸，不是任意音效听觉；通知无声传播遮挡。反击/同类求援、战术记忆/近敌重排、主人指派/信标有不同无LOS入口。max_targeting默认3为玩家Goal周围15盒的局部限制，不是统一setTarget全局硬限。
+- 验证：只读默认与实例global及四阶配置，核对3和40/40/40/48；本机原版候选默认LOS、HurtBy忽略LOS/隐身、未见参数、随机间隔reducedTickDelay、Sensing及源码入口逐项核对。8页Wiki链接/表格/围栏/Unicode和4档视锥半角公式核算通过，6默认附录与git diff --check通过。无源码/配置改动，未运行Gradle、Java编译、自动行为测试或游戏，未构建同步/push。具体隔墙/警觉/调查实验写作可操作方法，不声称已游戏验收。
