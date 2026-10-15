@@ -64,8 +64,8 @@ public final class NavigationLegendScreen extends Screen {
             }
             if (maxScroll > 0) {
                 int track = bottom - top, thumb = Math.max(12, track * track / contentHeight);
-                int y = top + (track - thumb) * scroll / maxScroll;
-                g.fill(left + panelWidth() - 4, y, left + panelWidth() - 2, y + thumb, 0xFF729EFF);
+                int thumbY = top + (track - thumb) * scroll / maxScroll;
+                g.fill(left + panelWidth() - 4, thumbY, left + panelWidth() - 2, thumbY + thumb, 0xFF729EFF);
             }
         } finally { g.disableScissor(); }
         super.render(g, mouseX, mouseY, partialTick);
