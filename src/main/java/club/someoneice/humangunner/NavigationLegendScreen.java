@@ -51,10 +51,12 @@ public final class NavigationLegendScreen extends Screen {
         var s=focus.snapshot(); var p=s.perception();
         rows.add(new Row(NavigationDebugClient.slotColor(focus.slot()),label("focus",focus.slot()+1,s.name())));
         rows.add(new Row(-1,label("readonly")));
-        if(page==0) {
+        if(page!=6) {
             rows.add(new Row(-1,label("state",p.awareness(),p.decision())));
             rows.add(new Row(-1,label("reason",p.reason())));
             rows.add(new Row(-1,label("sample",p.tick())));
+        }
+        if(page==0) {
             for(var e:entries) rows.add(new Row(NavigationDebugClient.slotColor(e.slot()),label("state", "#"+(e.slot()+1)+" "+e.snapshot().name(),e.snapshot().perception().decision())));
         }
         if(page==2) rows.add(new Row(-1,label("geometry")));
@@ -76,12 +78,12 @@ public final class NavigationLegendScreen extends Screen {
     }
     private boolean matches(String group) {
         return switch(page) {
-            case 0 -> !List.of("memory","target","recognition","queue","vision","los","sound","beacon","clues","action","navigation","command","budget").contains(group);
-            case 1 -> group.equals("memory") || group.equals("target") || group.equals("recognition") || group.equals("queue");
+            case 0 -> !List.of("memory","target","targets","recognition","queue","vision","los","sound","beacon","clues","action","actions","navigation","command","budget","budgets").contains(group);
+            case 1 -> group.equals("memory") || group.equals("target") || group.equals("targets") || group.equals("recognition") || group.equals("queue");
             case 2 -> group.equals("vision") || group.equals("los");
             case 3 -> group.equals("sound") || group.equals("beacon") || group.equals("clues");
-            case 4 -> group.equals("action") || group.equals("navigation") || group.equals("command");
-            case 5 -> group.equals("budget");
+            case 4 -> group.equals("action") || group.equals("actions") || group.equals("navigation") || group.equals("command");
+            case 5 -> group.equals("budget") || group.equals("budgets");
             default -> false;
         };
     }

@@ -201,7 +201,7 @@ public final class NavigationDebugClient {
                 case "sound", "direction" -> { red = .2F; green = .8F; blue = 1; }
                 case "beacon" -> { red = .8F; green = .3F; blue = 1; }
             }
-            if (ring || m.radius() > 0) {
+            if (ring || m.kind().equals("sound") || m.kind().equals("beacon")) {
                 Vec3 axis = ring && m.end() != null ? m.end() : new Vec3(0, 1, 0);
                 if (axis.lengthSqr() < 1E-8) continue;
                 axis = axis.normalize();
