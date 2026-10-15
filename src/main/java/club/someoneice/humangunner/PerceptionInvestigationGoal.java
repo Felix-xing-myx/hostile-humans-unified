@@ -13,22 +13,23 @@ import net.minecraft.world.phys.Vec3;
 public class PerceptionInvestigationGoal extends Goal {
     private final Human h;private final double speed;
     private HumanPerception.Clue clue;private Path ownPath;private Vec3 origin,destination,plannedCenter;
-    private long started,nextAttempt,arrivedAt=-1;private int points;
+    private long started,nextAttempt,arrivedAt=-1,lastTick,worked;private boolean beganWork;private int points;
     public PerceptionInvestigationGoal(Mob mob,double speed){h=mob instanceof Human human?human:null;this.speed=speed;setFlags(EnumSet.of(Flag.MOVE));}
     private PerceptionConfig c(){return PerceptionConfig.get();}
     @Override public boolean canUse(){return h!=null&&!h.isNoAi()&&!h.isSleeping()&&!h.isFleeing&&h.getTarget()==null
             &&!NavigationDebugService.controls(h)&&!HumanPerception.protectedLook(h)
             &&!SoldierOrder.isHoldingPosition(h)&&HumanPerception.bestClue(h)!=null;}
     @Override public boolean requiresUpdateEveryTick(){return true;}
-    @Override public void start(){clue=HumanPerception.bestClue(h);origin=h.position();started=HumanPerception.now(h);nextAttempt=started;points=0;arrivedAt=-1;ownPath=null;}
+    @Override public void start(){clue=HumanPerception.bestClue(h);origin=h.position();started=HumanPerception.now(h);nextAttempt=started;points=clue==null?0:clue.searchedPoints;arrivedAt=-1;ownPath=null;worked=clue==null?0:clue.searchedTicks;beganWork=false;lastTick=started;}
     @Override public boolean canContinueToUse(){
         if(!canUse()||clue==null||clue.completed>=0)return false;long now=HumanPerception.now(h);
-        if(now>=clue.until||now-started>=c().integer("investigation.duration_ticks")||clue.attempts>=c().integer("investigation.maximum_retries"))return false;
+        if(now>=clue.until||worked>=c().integer("investigation.duration_ticks")||clue.attempts>=c().integer("investigation.maximum_retries"))return false;
         var best=HumanPerception.bestClue(h);
         return best==clue||now-started<c().integer("investigation.hold_ticks")||best!=null&&best.priority<clue.priority;
     }
     @Override public void tick(){
         if(clue==null)return;long now=HumanPerception.now(h);
+        if(beganWork)worked+=Math.max(0,now-lastTick);lastTick=now;
         HumanPerception.decision(h,"调查 "+clue.kind,"位置线索，不读取来源实体");
         HumanPerception.lookAtClue(h,clue);
         if(plannedCenter!=null&&plannedCenter.distanceToSqr(clue.position)>Math.pow(c().number("investigation.repath_distance"),2)
@@ -41,7 +42,9 @@ public class PerceptionInvestigationGoal extends Goal {
         if(arrivedAt>=0&&now-arrivedAt<20)return;
         if(points>=c().integer("investigation.maximum_points")){HumanPerception.finishClue(h,clue,"搜索结束，未目视发现敌人");return;}
         if(now<nextAttempt)return;
-        if(!BasicNavigationBudget.tryAcquire(h,1)){HumanPerception.decision(h,"等待调查路径","导航配额不足，不算不可达");nextAttempt=now+1;return;}
+        if(!BasicNavigationBudget.tryAcquire(h,1)){HumanPerception.decision(h,"等待调查路径","导航配额不足，不算不可达");beganWork=false;nextAttempt=now+1;return;}
+        BasicNavigationBudget.cancel(h); // One search consumes one grant; no speculative next-tick reservation.
+        beganWork=true;
         double radius=c().number(clue.kind.equals("beacon")?"beacon.search_radius":"investigation.radius");Vec3 aim=clue.position;
         if(points>0){double angle=(h.getUUID().hashCode()%360)*Math.PI/180+points*Math.PI;aim=aim.add(Math.cos(angle)*radius,0,Math.sin(angle)*radius);}
         destination=safeFloor(aim);points++;plannedCenter=clue.position;
@@ -66,7 +69,10 @@ public class PerceptionInvestigationGoal extends Goal {
     }
     @Override public void stop(){
         if(h==null)return;if(ownPath!=null&&h.getNavigation().getPath()==ownPath&&h.getTarget()==null)h.getNavigation().stop();
-        if(clue!=null)HumanPerception.finishClue(h,clue,"调查释放或结束");clue=null;ownPath=null;destination=null;plannedCenter=null;
+        if(clue!=null){clue.searchedTicks=worked;clue.searchedPoints=Math.max(0,points-(ownPath!=null&&!ownPath.isDone()?1:0));}
+        if(clue!=null&&(HumanPerception.now(h)>=clue.until||worked>=c().integer("investigation.duration_ticks")
+                ||clue.attempts>=c().integer("investigation.maximum_retries")||points>=c().integer("investigation.maximum_points")&&ownPath!=null&&ownPath.isDone()))
+            HumanPerception.finishClue(h,clue,"调查达到终止条件");clue=null;ownPath=null;destination=null;plannedCenter=null;
     }
     public boolean isRunning(){return clue!=null;}
 }

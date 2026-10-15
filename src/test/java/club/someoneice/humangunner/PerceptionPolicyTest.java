@@ -14,6 +14,27 @@ public final class PerceptionPolicyTest {
     private static void check(boolean ok,String message){checks++;if(!ok)throw new AssertionError(message);}
     private static int recognition(double d,boolean alert,boolean known){return PerceptionPolicy.recognition(d,alert,known,10,1.25,90,4,.5,.5,.4);}
     public static void main(String[] args){
+        // Sparse grants must eventually identify a visible target beyond the LOOK lease.
+        RecognitionEvidence sparse=new RecognitionEvidence();sparse.begin(0);
+        boolean identified=false;
+        for(int t=0;t<800;t+=8)if(sparse.visible(t,4,90,10)){identified=true;break;}
+        check(identified,"ninety actual sparse observations survive a 120-tick look lease");
+        var sweep=new dev.felix.hostilehumans.core.NegativeObservationSweep();
+        for(int i=0;i<26;i++)check(!sweep.negative(27,i,1),"partial negative body scan is not yet complete");
+        check(sweep.negative(27,26,1),"one-ray grants eventually complete a negative body sweep");
+        check(!sweep.negative(27,0,1),"completed sweep starts a new cycle");
+        sweep.reset();check(!sweep.negative(27,26,1),"a positive observation clears old negative coverage");
+        sweep.reset();check(!sweep.negative(2,0,1,3),"partial coverage in first view subset");
+        check(!sweep.negative(2,1,1,6),"equal-size changed view subset cannot reuse prior coverage");
+        check(sweep.negative(2,0,1,6),"stable subset eventually completes");
+        var nearest=new dev.felix.hostilehumans.core.BoundedSelection<Integer>(8,java.util.Comparator.naturalOrder());
+        for(int i=100;i>=0;i--)nearest.offer(i);
+        check(nearest.values().equals(java.util.List.of(0,1,2,3,4,5,6,7)),"late spatial results replace farther candidates");
+        ScopedWorkBudget<String,String> lanes=new ScopedWorkBudget<>(2,2,1,40);
+        check(lanes.claimFull(0,"npc:events","world",1)==1,"event query granted");lanes.cancel("npc:events");
+        check(lanes.claimFull(0,"npc:candidates","world",1)==1,"candidate query uses independent work key");lanes.cancel("npc:candidates");
+        check(lanes.claimFull(0,"npc:target-cap","world",1)==0,"lanes still share the hard global cap");lanes.cancel("npc:target-cap");
+        check(lanes.claimFull(1,"other:candidates","world",1)==1,"served one-shot queries leave no ghost reservation");
         check(PerceptionPolicy.live(259,260)&&!PerceptionPolicy.live(260,260),"expiry tick is already expired");
         check(PerceptionPolicy.hitDeadline(true,259,260,160)==419,"live hit resets to eight seconds");
         check(PerceptionPolicy.hitDeadline(true,260,260,160)==260,"expired hit cannot resurrect location");

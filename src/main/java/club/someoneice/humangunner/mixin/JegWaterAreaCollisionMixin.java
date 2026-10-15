@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Pseudo
 @Mixin(targets = {"ttv.migami.jeg.entity.Splash", "ttv.migami.jeg.entity.Bubble"}, remap = false)
 public abstract class JegWaterAreaCollisionMixin {
-    @Shadow public abstract LivingEntity getOwner();
+    @Shadow(remap = false) public abstract LivingEntity getOwner();
     @Redirect(method = "m_8119_()V", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/Level;m_45933_(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/AABB;)Ljava/util/List;"),
             require = 1, allow = 1)

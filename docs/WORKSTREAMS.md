@@ -7,6 +7,22 @@
 
 
 
+
+## 感知系统日志与全面审查发行（2026-10-16，3.9.1已构建同步）
+
+- 用户要求读取当前游戏日志，区分已修复/未修复漏洞，彻底审查并修复、重新构建同步Forge47.4.21实例。基线57ec56abc01661cf9c3815bb072d83a62192e51b；主控独占编辑worktrees/awareness-audit-release、fix/awareness-audit-release，共享Human/HumanPerception/配置/构建/客户端由主控接入。
+- 只读审查分工：perception_review审查HumanPerception/目标/受击/关系/LOOK及最近补丁的逻辑，budget_review审查HumanAwareness/PerceptionBudget/ScopedWorkBudget/调查/信标的调度与生命周期；二者只读project基线，无编辑工作树、无提交/构建/部署权限。主控审查日志、部署身份、客户端/网络、整合和发行。以当前文件为准，不因旧包没有补丁而跳过本轮源码审查。
+- 所有发现必须给出具体调用链/触发条件/实际后果，区别日志直接证据、源码确认、待游戏验证。常规其他模组警告不归因HHU。修复必须保留可选依赖缺席、服务端权威、未知坐标边界和既有机枪兼容。
+- 允许构建同步、不启动游戏/结束进程、不push。最终正式JAR留dist，旧包/必要配置精确备份，三处SHA一致；知识库同步机制，审查/测试/部署记录留仓库或维护目录。
+
+- 日志身份核对：实例仍运行最初3.9.0（SHA281F998D80E123F33FE6B2BF328946EEAC7929C581688E79E36D8F0C22B06828、诊断协议3），后续7个源码提交尚未部署；最近一轮正常关闭，无新HHU AI崩溃记录，不能据此推断行为正常。详细分类与证据见docs/AWARENESS_AUDIT.md和验证日志/awareness-audit-20261015。
+- 本次修复：查询工作key拆分但共池、一次性授权去空预留、敌对候选先过滤并有界最近/轮换、独立近场声源；LOOK租期与有效证据分离；分批身体负检测按部位集合身份累计；调查暂停保留进度、预算等待不扣实际时长；同源位置往返清掉过时pending；紧急求援/爆炸优先和独立TTL；JEG getOwner影子remap=false。主控独占编辑，两个只读审查结论已复核；复核另发现同数量异部位扫描覆盖混用，已修正并加入用例。
+- 公共接口：PerceptionBudget四参数claim显式工作后缀，三参数兼容；新增纯BoundedSelection与NegativeObservationSweep；诊断最终协议5，网络布局未在本次另改。配置仍85项，无新默认数值，本次澄清focus_ticks是LOOK租期、duration_ticks是线索累计实际调查时间。
+- 验证：Java17完整build lootScreeningTest --offline成功，55任务全部执行；PerceptionPolicyTest1008、NavigationDebugTest1163、可选依赖缺席601核心类链接、13391战利品检查及其他现有回归通过。Python254（12跳过，其余通过），6默认附录、受影响Wiki链接/围栏、git diff --check通过。成品651个Java17类、295个JSON/metadata、523个源资源一致，9191自有符号解析（1731外部继承不在离线解析范围），单命名空间/版本、必要类、无捆绑可选依赖通过；构建记录/3.9.1-awareness-audit-release.log及-package.json。
+- 部署：替换前无Java游戏进程；旧3.9.0 JAR和global.json先备份并校验至部署备份/3.9.1-awareness-audit-20261016-000535。正式3.9.1 JAR4341326字节；build、dist及Forge47.4.21 mods三处SHA256均702CD60570F7BF3C53E46B4FC9CCA7AE5C9F22AC71ADB8544204675B567AD101。仅精确补9项感知设置及说明、把旧默认旧敌系数2→1.2/半角上限60→90、更新两项旧默认说明，其余自定义配置值完整保留；差异与哈希详见同前缀-deployment.json。历史dist3.9.0保留。
+- 知识库机制正文2页和默认附录同步；事先备份文档备份/感知审查-20261016-000032。仓库地图与审查报告同步。交付为本节所在本地提交并main快速前进，提交SHA另登记维护目录发行记录。
+- 未完成/边界：旧TaCZ1.1.7私有换弹时间线音效契约缺失与第三方资源/配方错误另列未修复；枪声后端仍按原决定暂缓；包围盒有限采样不保证任意模型像素、查询次数预算不等于CPU硬上限。未启动游戏、结束进程或push。游戏待验收远近/脚下/身体露出、双目标、密集群体/连续声音、背后受击与8秒、调查抢占恢复、声音往返、信标/多人/多维度及头盔焦点长时间渲染。
+
 ## 身体近场圆柱扇区视觉（2026-10-15，源码完成）
 
 - 用户要求近处不用视锥，明确选择“8格内前向圆柱扇区、160°水平角、垂直覆盖脚下至头顶且不随仰俯角收窄”。主控独占；基线5a41e9469fd6c9e70ab28b802d2cbfe88853dcd6，工作树worktrees/near-vision-volume，分支fix/near-vision-volume。

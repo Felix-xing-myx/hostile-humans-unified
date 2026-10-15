@@ -20,6 +20,7 @@ public final class HumanAwareness {
     private static final class Notice {
         final String kind;final UUID source;final Vec3 position;final double radius;final long until,queued;
         List<UUID> receivers;int index;
+        boolean urgent(){return kind.equals("aid")||kind.equals("explosion");}
         Notice(String kind,UUID source,Vec3 position,double radius,long now,int ttl){this.kind=kind;this.source=source;
             this.position=position;this.radius=radius;this.until=now+ttl;this.queued=now;}
     }
@@ -49,21 +50,28 @@ public final class HumanAwareness {
     private static void enqueue(ServerLevel level,String kind,UUID source,Vec3 point,double radius,int ttl){
         if(radius<=0)return;ArrayDeque<Notice> q=QUEUES.computeIfAbsent(level,k->new ArrayDeque<>());
         long now=level.getServer().overworld().getGameTime();
-        if(q.size()>=512){if(kind.equals("aid"))q.removeFirst();else return;}
-        q.addLast(new Notice(kind,source,point,radius,now,ttl));
+        boolean urgent=kind.equals("aid")||kind.equals("explosion");
+        if(q.size()>=512){if(urgent)q.removeLast();else return;}
+        Notice notice=new Notice(kind,source,point,radius,now,ttl);
+        if(urgent){
+            // Keep urgent FIFO order and preserve the receiver cursor of interrupted deliveries.
+            ArrayDeque<Notice> tail=new ArrayDeque<>();
+            while(!q.isEmpty()&&!q.peekLast().urgent())tail.addFirst(q.removeLast());
+            q.addLast(notice);q.addAll(tail);
+        }else q.addLast(notice);
     }
     public static void flush(Human worker){
         if(!(worker.level() instanceof ServerLevel level))return;ArrayDeque<Notice> q=QUEUES.get(level);if(q==null)return;
         long now=HumanPerception.now(worker);int processed=0;
         while(!q.isEmpty()&&processed++<4){Notice n=q.peekFirst();
-            if(now>=n.until||now-n.queued>c().integer("budgets.notice_queue_ticks")){q.removeFirst();continue;}
+            if(now>=n.until||!n.urgent()&&now-n.queued>c().integer("budgets.notice_queue_ticks")){q.removeFirst();continue;}
             if(n.receivers==null){
                 Counter local=DELIVERY_QUERIES.computeIfAbsent(level,k->new Counter());local.at(now);
                 Counter global=SERVER_DELIVERY_QUERIES.computeIfAbsent(level.getServer(),k->new Counter());global.at(now);
                 double fraction=c().number("budgets.event_query_fraction");
                 if(local.count>=Math.max(1,(int)(c().integer("budgets.queries_per_level")*fraction))
                         ||global.count>=Math.max(1,(int)(c().integer("budgets.queries_per_server")*fraction)))return;
-                if(!PerceptionBudget.claim(worker,"queries",1))return;
+                if(!PerceptionBudget.claim(worker,"queries",1,":events"))return;
                 local.count++;global.count++;
                 List<Human> list=new ArrayList<>();
                 level.getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(Human.class),new AABB(n.position,n.position).inflate(n.radius),

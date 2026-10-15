@@ -32,7 +32,7 @@ public final class PerceptionBudget {
         String lane="rays:"+actor.level().dimension().location()+":body:"+target;
         state.queues.get("rays").cancel(new Key(actor.getUUID(),lane));
     }
-    private static boolean claim(Entity actor,String kind,int amount,String work) {
+    public static boolean claim(Entity actor,String kind,int amount,String work) {
         MinecraftServer server=actor.level().getServer(); if(server==null || amount<1)return false;
         State s=SERVERS.computeIfAbsent(server,k->new State()); long tick=server.getTickCount();
         if(s.tick!=tick){s.tick=tick;s.used.clear();}
@@ -43,6 +43,7 @@ public final class PerceptionBudget {
         ScopedWorkBudget<Key,String> q=s.queues.computeIfAbsent(kind,k->new ScopedWorkBudget<>(total,local,Math.min(batchLimit,Math.min(total,local)),40));
         if(amount>local || amount>total)return false;
         if(q.claimFull(tick,key,dim,amount)!=amount)return false;
+        q.cancel(key); // Demand driven: consumed work must not reserve unused capacity next tick.
         s.used.merge(lane,amount,Integer::sum);s.used.merge(kind,amount,Integer::sum); return true;
     }
     public static String usage(Entity actor,String kind) {

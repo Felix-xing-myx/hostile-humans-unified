@@ -36,7 +36,7 @@ public final class PerceptionConfig {
         add(m,"memory.maximum_targets",16,4,64,"逐目标记忆容量 / Per-human perception record capacity");
         add(m,"observation.alert_ticks",600,20,12000,"有效刺激后的警觉时间 / Alert lifetime after valid stimulus");
         add(m,"observation.direction_ticks",40,4,400,"无可见来源时方向观察上限 / Unseen direction observation limit");
-        add(m,"observation.focus_ticks",120,10,1200,"首次识别任务占用上限 / Protected initial-recognition task limit");
+        add(m,"observation.focus_ticks",120,10,1200,"单次主观察LOOK占用上限，不清除有效识别证据 / Primary look lease, not evidence lifetime");
         add(m,"observation.queue_size",4,1,16,"待观察来源容量 / Pending observation source capacity");
         add(m,"observation.look_cooldown_ticks",10,1,100,"同源回看请求最短间隔 / Same-source glance request cooldown");
         add(m,"observation.unknown_notice_ticks",200,20,1200,"陌生来袭方向期限 / Unknown incoming direction lifetime");
@@ -62,7 +62,7 @@ public final class PerceptionConfig {
         add(m,"hearing.step_notice_ticks",100,10,1200,"脚步水声期限 / Footstep and swim clue lifetime");
         add(m,"hearing.maximum_clues",4,1,16,"每人线索上限 / Per-human clue capacity");
         add(m,"investigation.radius",6,1,24,"普通搜索半径 / Ordinary search radius");
-        add(m,"investigation.duration_ticks",200,20,2400,"单次调查搜索时间 / Investigation duration");
+        add(m,"investigation.duration_ticks",200,20,2400,"每条线索累计实际调查时长，纯预算等待不计 / Active investigation time per clue");
         add(m,"investigation.maximum_points",3,1,12,"单次最多搜索点 / Maximum search points");
         add(m,"investigation.retry_ticks",40,5,400,"同线索失败重试间隔 / Failed clue retry interval");
         add(m,"investigation.maximum_retries",3,1,12,"同线索重试上限 / Maximum clue route attempts");
