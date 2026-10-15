@@ -63,4 +63,4 @@ Optional support targets the public NPC APIs in Scorched Guns 0.5.5: native proj
 
 ## Navigation diagnostics
 
-Creative players/operators can select a Human with the Navigation Test Pointer and request a temporary destination by clicking a block. Wear the Navigation Observer Helmet for dynamic server paths and candidate evaluations. For passive observation, select the entity without clicking a destination. See [navigation diagnostics](docs/NAVIGATION_DEBUG.md).
+Creative players/operators can observe up to8 Humans with distinct numbered paths/cards. Click Humans to add/focus, use air to cycle focus, and click ground to assign only the focus destination while other tasks continue. Sneak-click a Human to remove it; sneak-use air/block to clear all. Wear the helmet and avoid destination clicks for passive observation. See [navigation diagnostics](docs/NAVIGATION_DEBUG.md).

@@ -17,7 +17,7 @@ public final class NavigationTestItem extends Item {
     @Override public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if (player instanceof ServerPlayer server) {
             if (player.isShiftKeyDown()) NavigationDebugService.clear(server);
-            else player.displayClientMessage(Component.translatable("navigation_debug.help"), true);
+            else NavigationDebugService.cycle(server);
         }
         return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
     }

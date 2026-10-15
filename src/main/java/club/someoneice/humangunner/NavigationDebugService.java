@@ -2,6 +2,7 @@ package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.ai.HumanNavigation;
 import com.craftix.hostile_humans.entity.entities.Human;
+import dev.felix.hostilehumans.core.NavigationObserverSelection;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -23,7 +24,11 @@ import net.minecraftforge.fml.common.Mod;
 /** Opt-in server instrumentation. Never loads chunks, grants extra searches or persists a test order. */
 @Mod.EventBusSubscriber(modid = HumanGunner.MOD_ID)
 public final class NavigationDebugService {
-    private record Selection(UUID human, ResourceKey<Level> dimension) {}
+    private static final class Session {
+        final ResourceKey<Level> dimension;
+        final NavigationObserverSelection<UUID> selection = new NavigationObserverSelection<>(NavigationDebugFrame.MAX_ENTITIES);
+        Session(ResourceKey<Level> dimension) { this.dimension = dimension; }
+    }
     private static final class Run {
         final UUID owner;
         final BlockPos destination;
@@ -42,7 +47,7 @@ public final class NavigationDebugService {
         double searchMillis;
         final Deque<TimedSample> samples = new ArrayDeque<>();
     }
-    private static final Map<ServerPlayer, Selection> SELECTIONS = new WeakHashMap<>();
+    private static final Map<ServerPlayer, Session> SELECTIONS = new WeakHashMap<>();
     private static final Map<Human, Run> RUNS = new WeakHashMap<>();
     private static final Map<Human, Trace> TRACES = new WeakHashMap<>();
     private static final Map<Human, Long> WATCHED = new WeakHashMap<>();
@@ -53,22 +58,45 @@ public final class NavigationDebugService {
     public static boolean watching(Human human) {
         return !human.level().isClientSide && WATCHED.getOrDefault(human, Long.MIN_VALUE) >= human.level().getGameTime();
     }
-    private static Human selected(ServerPlayer player) {
-        Selection selection = SELECTIONS.get(player);
-        if (selection == null || selection.dimension() != player.level().dimension()) return null;
-        var entity = player.serverLevel().getEntity(selection.human());
+    private static Human resolve(ServerPlayer player, UUID id) {
+        if (id == null) return null;
+        var entity = player.serverLevel().getEntity(id);
         return entity instanceof Human human && human.isAlive() && player.distanceToSqr(human) <= 128 * 128 ? human : null;
+    }
+    private static Human selected(ServerPlayer player) {
+        Session session = SELECTIONS.get(player);
+        return session == null || session.dimension != player.level().dimension() ? null
+                : resolve(player, session.selection.focused());
+    }
+    private static boolean observed(ServerPlayer player, Human human) {
+        Session session = SELECTIONS.get(player);
+        return session != null && session.dimension == human.level().dimension()
+                && session.dimension == player.level().dimension() && session.selection.contains(human.getUUID())
+                && resolve(player, human.getUUID()) == human;
     }
     private static void message(ServerPlayer player, String key, Object... args) {
         player.displayClientMessage(Component.translatable("navigation_debug." + key, args), true);
     }
+    public static void cycle(ServerPlayer player) {
+        if (!allowed(player)) { message(player, "permission"); return; }
+        Session session = SELECTIONS.get(player);
+        if (session == null || session.dimension != player.level().dimension()) { message(player, "help"); return; }
+        session.selection.cycle();
+        Human human = selected(player);
+        if (human != null) message(player, "focused", slot(session, human.getUUID()) + 1, human.getDisplayName());
+        sendFrame(player, session);
+    }
+    private static int slot(Session session, UUID id) {
+        return session.selection.entries().stream().filter(entry -> entry.key().equals(id)).findFirst().orElseThrow().slot();
+    }
     public static void clear(ServerPlayer player) {
-        Selection selection = SELECTIONS.remove(player);
-        if (selection != null) {
-            var level = player.server.getLevel(selection.dimension());
-            if (level != null && level.getEntity(selection.human()) instanceof Human human) stopOwned(player, human);
+        Session session = SELECTIONS.remove(player);
+        if (session != null) {
+            var level = player.server.getLevel(session.dimension);
+            if (level != null) for (var entry : session.selection.entries())
+                if (level.getEntity(entry.key()) instanceof Human human) stopOwned(player, human);
         }
-        NavigationDebugNetwork.send(player, null);
+        NavigationDebugNetwork.send(player, NavigationDebugFrame.EMPTY);
         message(player, "cleared");
     }
     private static void stopOwned(ServerPlayer player, Human human) {
@@ -94,11 +122,15 @@ public final class NavigationDebugService {
         if (!(event.getTarget() instanceof Human human) || !human.isAlive() || player.distanceToSqr(human) > 64) {
             message(player, "human_only"); return;
         }
-        // Clear through the stored dimension even if the old selection is now out of observer range.
-        Selection previous = SELECTIONS.get(player);
-        if (previous != null && !previous.human().equals(human.getUUID())) clear(player);
-        SELECTIONS.put(player, new Selection(human.getUUID(), human.level().dimension()));
-        message(player, "selected", human.getDisplayName());
+        Session session = SELECTIONS.get(player);
+        if (session != null && session.dimension != player.level().dimension()) { clear(player); session = null; }
+        if (session == null) { session = new Session(player.level().dimension()); SELECTIONS.put(player, session); }
+        if (player.isShiftKeyDown()) {
+            if (session.selection.remove(human.getUUID())) { stopOwned(player, human); message(player, "removed", human.getDisplayName()); }
+        } else if (!session.selection.add(human.getUUID())) {
+            message(player, "limit", NavigationDebugFrame.MAX_ENTITIES); return;
+        } else message(player, "selected_multi", slot(session, human.getUUID()) + 1, human.getDisplayName());
+        sendFrame(player, session);
     }
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void blockClick(PlayerInteractEvent.RightClickBlock event) {
@@ -133,22 +165,42 @@ public final class NavigationDebugService {
         if (INSTALLED.add(human)) human.addCombatGoal(-100, new TestGoal(human));
         Trace trace = TRACES.computeIfAbsent(human, ignored -> new Trace());
         trace.requested = destination; trace.state = "queued"; trace.obstruction = "SAFE"; trace.samples.clear();
-        message(player, "destination", destination.getX(), destination.getY(), destination.getZ());
+        message(player, "destination", slot(SELECTIONS.get(player), human.getUUID()) + 1, human.getDisplayName(), destination.getX(), destination.getY(), destination.getZ());
     }
     @SubscribeEvent public static void logout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) clear(player);
     }
     @SubscribeEvent public static void playerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player) || player.tickCount % 5 != 0) return;
-        if (!SELECTIONS.containsKey(player)) return;
-        Human human = selected(player);
-        if (!allowed(player) || human == null) { clear(player); return; }
-        if (controls(human) && (human.isNoAi() || human.isSleeping() || human.isPassenger()
-                || human.isFleeing || human.isInLava() || HumanGunner.isManualInventoryOpen(human))) stopOwned(player, human);
-        if (!player.getItemBySlot(EquipmentSlot.HEAD).is(HumanGunnerRegistries.NAVIGATION_OBSERVER_HELMET.get())) {
-            NavigationDebugNetwork.send(player, null); return;
+        Session session = SELECTIONS.get(player);
+        if (session == null) return;
+        if (!allowed(player) || session.dimension != player.level().dimension()) { clear(player); return; }
+        for (var entry : session.selection.entries()) {
+            Human human = resolve(player, entry.key());
+            if (human == null) {
+                // Out-of-range members must release only this player's task, not another observer's task.
+                if (player.serverLevel().getEntity(entry.key()) instanceof Human old) stopOwned(player, old);
+                session.selection.remove(entry.key());
+            } else if (controls(human) && (human.isNoAi() || human.isSleeping() || human.isPassenger()
+                    || human.isFleeing || human.isInLava() || HumanGunner.isManualInventoryOpen(human))) stopOwned(player, human);
         }
-        WATCHED.put(human, human.level().getGameTime() + 10);
+        if (session.selection.isEmpty()) SELECTIONS.remove(player);
+        sendFrame(player, session);
+    }
+    private static void sendFrame(ServerPlayer player, Session session) {
+        if (!player.getItemBySlot(EquipmentSlot.HEAD).is(HumanGunnerRegistries.NAVIGATION_OBSERVER_HELMET.get())) {
+            NavigationDebugNetwork.send(player, NavigationDebugFrame.EMPTY); return;
+        }
+        List<NavigationDebugFrame.Entry> entries = new ArrayList<>();
+        for (var member : session.selection.entries()) {
+            Human human = resolve(player, member.key());
+            if (human == null) continue;
+            WATCHED.put(human, human.level().getGameTime() + 10);
+            entries.add(new NavigationDebugFrame.Entry(member.slot(), snapshot(human)));
+        }
+        NavigationDebugNetwork.send(player, new NavigationDebugFrame(List.copyOf(entries), session.selection.focused()));
+    }
+    private static NavigationDebugSnapshot snapshot(Human human) {
         Trace trace = TRACES.computeIfAbsent(human, ignored -> new Trace());
         trace.samples.removeIf(sample -> sample.until() < human.level().getGameTime());
         Path path = human.getNavigation().getPath();
@@ -157,15 +209,17 @@ public final class NavigationDebugService {
         for (int i = first; i < Math.min(total, first + NavigationDebugSnapshot.MAX_PATH); i++)
             nodes.add(path.getEntityPosAtNode(human, i));
         Run run = RUNS.get(human);
-        NavigationDebugNetwork.send(player, new NavigationDebugSnapshot(human.level().dimension().location(),
+        List<NavigationDebugSnapshot.Sample> samples = trace.samples.stream().map(TimedSample::sample).toList();
+        samples = samples.subList(Math.max(0, samples.size() - NavigationDebugFrame.SENT_SAMPLES), samples.size());
+        return new NavigationDebugSnapshot(human.level().dimension().location(),
                 human.getId(), human.getUUID(), boundedName(human), run == null ? "observe" : "test",
                 run == null ? trace.state : run.state, human.getNavigation().getClass().getSimpleName(), trace.budget, trace.obstruction,
                 human.getHealth(), HumanFallPolicy.damageBudget(human.getHealth()), human.getMaxFallDistance(),
-                human.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE),
+                human.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE), human.position(),
                 run == null ? trace.requested : run.destination, human.getTarget() == null ? null : human.getTarget().position(),
                 total == 0 ? null : path.getEntityPosAtNode(human, total - 1),
                 List.copyOf(nodes), first, total, path != null && path.canReach(), total - first > nodes.size(),
-                trace.searchMillis, trace.samples.stream().map(TimedSample::sample).toList()));
+                trace.searchMillis, List.copyOf(samples));
     }
     private static String boundedName(Human human) {
         String name = human.getName().getString();
@@ -203,13 +257,13 @@ public final class NavigationDebugService {
             Run run = RUNS.get(human);
             if (run == null) return;
             ServerPlayer player = human.level().getServer().getPlayerList().getPlayer(run.owner);
-            if (player == null || selected(player) != human || !allowed(player) || !human.isAlive()
+            if (player == null || !observed(player, human) || !allowed(player) || !human.isAlive()
                     || human.isNoAi() || human.isSleeping() || human.isPassenger() || HumanGunner.isManualInventoryOpen(human)) {
                 finish(human, "cancelled"); return;
             }
-            if (human.level().getGameTime() >= run.deadline) { finish(human, "timeout"); message(player, "timeout"); return; }
+            if (human.level().getGameTime() >= run.deadline) { finish(human, "timeout"); message(player, "timeout", slot(SELECTIONS.get(player), human.getUUID()) + 1, human.getDisplayName()); return; }
             if (human.position().distanceToSqr(Vec3.atBottomCenterOf(run.destination)) <= 1) {
-                finish(human, "arrived"); message(player, "arrived"); return;
+                finish(human, "arrived"); message(player, "arrived", slot(SELECTIONS.get(player), human.getUUID()) + 1, human.getDisplayName()); return;
             }
             MovementSpeedController.normal(human);
             human.getNavigation().setSpeedModifier(1);

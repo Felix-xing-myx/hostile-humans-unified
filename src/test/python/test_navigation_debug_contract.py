@@ -63,6 +63,30 @@ class NavigationDebugContract(unittest.TestCase):
             self.assertIn(budget, optional)
         self.assertIn("cause unknown", (ROOT / "main/resources/assets/hostile_humans_unified/lang/en_us.json").read_text(encoding="utf-8"))
 
+    def test_render_loop_never_allocates_native_buffers(self):
+        client = source("NavigationDebugClient")
+        world = client.split("public static void world", 1)[1].split("private static void label", 1)[0]
+        self.assertNotIn("new BufferBuilder", world)
+        self.assertNotIn("MultiBufferSource.immediate", world)
+        self.assertEqual(client.count("new BufferBuilder("), 1)
+        self.assertIn("NativeBuffers.BUFFERS", world)
+        self.assertIn("buffers.endBatch(DebugLines.TYPE)", world)
+        self.assertIn("finally", world)
+        self.assertIn(".subtract(camera)", world)
+        self.assertNotIn("poses.translate(-camera", world)
+
+    def test_multi_focus_does_not_cancel_other_tests(self):
+        service = source("NavigationDebugService")
+        goal = service.split("private static final class TestGoal", 1)[1]
+        self.assertIn("!observed(player, human)", goal)
+        self.assertNotIn("selected(player) != human", goal)
+        self.assertIn("session.selection.add(human.getUUID())", service)
+        self.assertIn("session.selection.remove(human.getUUID())", service)
+        self.assertIn("MAX_ENTITIES = 8", source("NavigationDebugFrame"))
+        self.assertIn("SENT_SAMPLES = 16", source("NavigationDebugFrame"))
+        self.assertIn("count(in, NavigationDebugFrame.MAX_ENTITIES)", source("NavigationDebugFrameCodec"))
+        self.assertIn("Non-finite navigation geometry", source("NavigationDebugFrameCodec"))
+
     def test_debug_tools_have_models_and_matching_translations(self):
         assets = ROOT / "main/resources/assets/hostile_humans_unified"
         zh = json.loads((assets / "lang/zh_cn.json").read_text(encoding="utf-8"))

@@ -1,40 +1,35 @@
-# 导航测试与动态观察 / Navigation diagnostics
+# 导航测试与多实体动态观察 / Navigation diagnostics
 
-工具只支持本模组存活的Human。操作需要创造模式或管理员权限；没有生存配方，物品可从模组创造标签页获取。两个物品分别为：
-
-- `hostile_humans_unified:navigation_test_pointer`：导航测试指针。
-- `hostile_humans_unified:navigation_observer_helmet`：导航观察头盔，装备在头部。
+需要创造模式或管理员权限，仅本模组Human，最多8只。物品：`hostile_humans_unified:navigation_test_pointer`与`hostile_humans_unified:navigation_observer_helmet`；创造标签页获取，没有生存配方。
 
 ## 操作
 
-1. 右键人类选中；只观察自主AI时，到这里停止操作，戴上头盔即可。
-2. 指定点测试时，右键方块，将点击面相邻的方块空间作为脚部目标。通常点击地板顶面；侧面点击可能指定不可站立的位置，导航可以拒绝。
-3. 潜行右键空气或方块，释放本人的测试与选择。到达、120秒超时、退出、跨维度、实体离开128格观察范围等也释放测试。摘头盔只停止观察，不取消尚在进行的固定点任务。
+- 右键实体：加入观察并聚焦；已有成员只聚焦，不取消其他任务。
+- 右键空气：轮换焦点。
+- 右键地板：点击面相邻空间为当前焦点的脚部目的地；其他实体继续独立任务。
+- 潜行右键实体：移除这一只，并仅释放本人的对应测试。
+- 潜行右键空气/方块：清空本人的全部观察与测试。
 
-固定点测试临时拥有MOVE/LOOK，阻止战斗选敌、士兵命令及传送脱困干扰。原命令、归属、装备和生命不改写；结束后重新交还自主AI，不恢复过时的攻击目标。正在使用物品、恢复占手、撤退、岩浆、睡眠、骑乘或菜单编辑等状态不允许开始；任务中进入不适合状态也取消。
+先选择A并指定左侧目的地，再选择B指定右侧，二者同时执行。戴头盔只选实体、不点目的地，即纯观察。摘头盔隐藏画面，不取消测试。编号/颜色为观察者内稳定槽位，头顶标号、路径、请求点/终点及独立卡片一致；焦点额外显示详细面板和候选点。
 
-测试复用现有HumanNavigation、普通预算、路径安全、开门/栅栏门/木活板门、梯子及MovementContinuity。地面防摔检查仍根据当前生命；测试没有扩大搜索范围、节点预算、强制危险路线或提供传送。水面测试使用可浮水地面导航和既有上岸移动辅助。铁门仅有既有附近可见按钮/拉杆交互，不增加先走到开关再开门的任务规划。
+## 控制与同步边界
 
-## 观察内容
+复用现有强化地面导航、普通配额、生命/落差/危险地形、开门/栅栏门/木活板门、梯子、连续性修复及水面上岸辅助。固定点任务独占MOVE/LOOK，暂停战斗选敌、命令/传送救援干扰，不改原命令/归属。铁门不增加开关解谜规划，不扩大路径范围或节点预算。
 
-服务器每5tick只向佩戴头盔的选中者发快照。显示选择实体、最近请求点/固定目的地、敌人、当前实际路径及终点、下一节点、完整/部分路径、生命、摔落伤害预算、最大允许落差、有效搜索范围、最近额度申请和最近地形阻断。
+任务独立最长120秒；到达/取消/状态失效/128格范围外/退出/跨维度时释放对应成员，其他任务继续。服务器以成员身份验证控制，不以当前焦点验证，因此切换焦点不会取消路径。多人可共同观察，一只实体的测试租约仍独占，移除观察不会取消他人测试。
 
-路径最多包含256个剩余节点，超出明确标记省略，实际终点仍单独显示。候选最多48条，保留5秒；HUD显示最近5条的来源、坐标、结果和可用评分。线条可透墙，颜色：请求点黄、敌人红、路径/实际终点青、下一节点白、尝试/部分紫、评分通过/采用绿、拒绝红点。评分通过不等于最终采用，实际活动路线才是移动事实。
+每5tick发送最多8成员的全量帧；每实体256剩余节点、最近16候选，服务器候选保留48条/5秒；网络协议为2。客户端使用服务器位置，即使实体暂时未被客户端追踪也可显示；维度/UUID及2秒新鲜度检查保留。帧取代旧集合，避免移除后的残留路径。
 
-地面路径请求/安装入口覆盖各行为的请求结果；战斗地形、可见射击位、增强撤退和战术点另记录候选评估，找岸记录选出结果。预算使用原池原数值；观察不请求额外路径。没有佩戴头盔时不采集候选，不建立全服持续轨迹。
+## 渲染与诊断
 
-“最近请求点”可能是试算候选，不保证是最终决策；“实际终点”来自当前路径节点，部分路径可能离请求点很远。`no_path`只表示空结果，不证明是节点耗尽或距离超限。耗时来自最近地面导航调用，包括路径复用和同步检查，不是全服寻路总耗时或严格A*耗时。记录的是候选点，不是A*探索过的全部内部节点；未接入评分的行为只能看到请求和实际路线。
+一个静态BufferBuilder复用原生存储，每实体结束提交，禁止每帧新建；相机相对坐标在转float之前完成。每实体概览显示编号、模式、状态、节点和请求点；焦点详情含实际终点、生命/摔落预算、有效范围、配额/地形阻断及地面调用耗时。小窗口可调低GUI缩放。
 
-客户端只展示服务器快照；两秒无更新、跨维度、UUID不匹配、摘头盔或退出时隐藏。选择/任务不写入存档。
-
-## 建议验收
-
-在同一超平坦场景比较“固定点测试”与“只观察自主AI”：直线路面、近/远入口长墙、U形墙、梯子、一格台阶、当前血量不同的落差、木门/栅栏门/铁门开关、水边。另检查潜行取消、到达/超时恢复、两玩家抢占、不同观察者、摘头盔、退出和重载，以及无可选模组的服务端启动。
+路径/请求点/实际终点用实体色，下一节点白；焦点敌人红、候选紫/绿/红。评分通过不保证采用；请求点可能是试算，活动路线和实际终点才代表当前执行事实。空路径原因未知；调用耗时包含复用，不是全服A*时间；不显示全部内部扩展节点。
 
 ## English
 
-Creative/operator-only Human diagnostics: select a Human with the pointer; click a block to request the adjacent foot-space as a temporary destination. Sneak-use cancels. Wear the helmet for passive live observation; selection alone does not change AI. Removing the helmet hides observation but does not cancel an active test.
+Creative/operator-only Human diagnostics, up to8 members. Click Humans to add/focus, use air to cycle focus, click ground to assign only that member's destination. Other tests continue. Sneak-click a Human removes it; sneak-use air/block clears all your members/tests. Wear the helmet for independently colored paths, numbered nameplates/cards and focus details. Removing the helmet hides observation without cancelling tasks.
 
-Fixed tests temporarily own movement and suppress combat/order interference and teleport rescue, while retaining real navigation, shared quotas, fall safety, passage/ladder interactions and continuity repair. No new iron-door puzzle solver, larger range or search allowance is provided. Orders and ownership are retained. Tests end on arrival, cancellation, invalid lifecycle/range, or after120seconds.
+One reusable native buffer replaces per-frame allocations. Camera-relative coordinates avoid distant float precision loss. Bounded replace-all frames (protocol2) carry eight members, 256 path nodes/member and16 recent samples/member every5ticks. Orders, ownership, safety, normal quotas and exclusive per-Human controller leases remain intact; switching focus never releases another member's task.
 
-Bounded server snapshots distinguish requested candidates from the live route and its actual endpoint. Candidate scores are not final decisions. Empty paths have an unknown cause; displayed ground-navigation call time includes cache reuse. Internal A* expansion nodes and uninstrumented candidate scores are not shown. Multiplayer and rendering require in-game acceptance.
+Validate long-running distant viewing,8 simultaneous distinct destinations, stable slot colors/removal, focus cycling, lifecycle cancellation, tracking loss, multiplayer and passage/height/water behavior in game. Automated checks do not prove live rendering acceptance.
