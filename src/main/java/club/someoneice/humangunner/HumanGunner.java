@@ -98,6 +98,7 @@ public final class HumanGunner {
         HumanCommandNetwork.register();
         SoldierRosterNetwork.register();
         RecruitmentConfigNetwork.register();
+        NavigationDebugNetwork.register();
         MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onServerStarting);
         MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onServerStopped);
         MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onPlayerLogin);
@@ -205,8 +206,10 @@ public final class HumanGunner {
             if (!initializeHumanIfReady(human)) {
                 return;
             }
-            OwnerOfflinePolicy.tick(human);
-            HumanRelations.tick(human);
+            if (!NavigationDebugService.controls(human)) {
+                OwnerOfflinePolicy.tick(human);
+                HumanRelations.tick(human);
+            }
             HumanGrowth.tick(human);
             HiredHumanHealthWarning.tick(human);
             if (human.getPersistentData().hasUUID(HumanRelations.TEMP_OWNER)) {
@@ -227,6 +230,8 @@ public final class HumanGunner {
                 }
             }
             RecoverySupplies.tickEffects(human);
+            // Keep effects/lifetimes ticking; exclude order, rescue and combat writers only during a test.
+            if (NavigationDebugService.controls(human)) return;
             // The menu is backed directly by HumanData/equipment. While it is
             // open, no AI inventory writer may race the player's slot actions.
             if (HumanInventorySession.isEditing(human)) {

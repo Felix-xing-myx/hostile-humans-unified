@@ -102,16 +102,21 @@ public final class RangedFiringPosition {
         Map<BlockPos, Boolean> clearShots = new HashMap<>();
         Path bestPath = session.search().advance(budget, candidateBlock -> {
             Vec3 candidateFeet = Vec3.atBottomCenterOf(candidateBlock);
+            NavigationDebugService.candidate(human, candidateFeet, "firing", "candidate", Double.NaN);
             double candidateRangeSqr = target.distanceToSqr(candidateFeet);
-            if (candidateRangeSqr < minimumRangeSqr || candidateRangeSqr > maximumRangeSqr
-                    || candidateFeet.distanceToSqr(human.position()) < 4.0D
-                    || !human.level().hasChunkAt(candidateBlock)
-                    || !clearShots.computeIfAbsent(candidateBlock, pos -> RangedShotClearance.fromPosition(human, Vec3.atBottomCenterOf(pos), target))) {
+            String filter = candidateRangeSqr < minimumRangeSqr || candidateRangeSqr > maximumRangeSqr ? "range"
+                    : candidateFeet.distanceToSqr(human.position()) < 4.0D ? "near"
+                    : !human.level().hasChunkAt(candidateBlock) ? "unloaded"
+                    : !clearShots.computeIfAbsent(candidateBlock, pos -> RangedShotClearance.fromPosition(human, Vec3.atBottomCenterOf(pos), target)) ? "sight" : null;
+            if (filter != null) {
+                NavigationDebugService.candidate(human, candidateFeet, "firing", filter, Double.NaN);
                 return null;
             }
             Path path = human.getNavigation().createPath(candidateBlock, 0);
-            if (path == null || !path.canReach() || path.getNodeCount() < 2 || !HumanTerrainSafety.safePath(human, path)
-                    || !SoldierOrder.allowsCombatPath(human, path)) {
+            String rejection = path == null ? "no_path" : !path.canReach() ? "partial" : path.getNodeCount() < 2 ? "near"
+                    : !HumanTerrainSafety.safePath(human, path) ? "unsafe" : !SoldierOrder.allowsCombatPath(human, path) ? "command" : null;
+            if (rejection != null) {
+                NavigationDebugService.candidate(human, candidateFeet, "firing", rejection, Double.NaN);
                 return null;
             }
             return path;
@@ -141,6 +146,7 @@ public final class RangedFiringPosition {
                 // an archer can still shoot while crossing a river.
                 score -= 12.0D;
             }
+            NavigationDebugService.candidate(human, destination, "firing", "scored", -score);
             return -score;
         });
         if (session.search().hasRemaining()) return null;

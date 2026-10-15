@@ -49,6 +49,7 @@ public final class CombatTerrainNavigation {
 
     public static void blocked(Human human, HumanTerrainSafety.Assessment assessment) {
         if (human.level().isClientSide || assessment.safe()) return;
+        NavigationDebugService.blocked(human, assessment.reason().name());
         MovementContinuity.cancelStep(human);
         human.clearRangedStrafeMotion();
         if (human.getNavigation() instanceof HumanNavigation ground)
@@ -244,16 +245,25 @@ public final class CombatTerrainNavigation {
         Path best = null; double bestScore = Double.NEGATIVE_INFINITY;
         for (int work = 0; work < budget && state.cursor < state.candidates.size(); work++) {
             Vec3 point = state.candidates.get(state.cursor++);
-            if (visited(state, BlockPos.containing(point)) || !allowedPosition(human, point)
-                    || state.cover && !covered(human, target, point)) continue;
+            NavigationDebugService.candidate(human, point, "terrain", "candidate", Double.NaN);
+            String filter = visited(state, BlockPos.containing(point)) ? "visited"
+                    : !allowedPosition(human, point) ? "command" : state.cover && !covered(human, target, point) ? "cover" : null;
+            if (filter != null) {
+                NavigationDebugService.candidate(human, point, "terrain", filter, Double.NaN); continue;
+            }
             Path path = human.getNavigation() instanceof HumanNavigation ground
                     ? ground.createFreshPath(BlockPos.containing(point)) : human.getNavigation().createPath(BlockPos.containing(point), 0);
-            if (path == null || !path.canReach() || path.isDone() || path.getEndNode() == null
-                    || !HumanTerrainSafety.safePath(human, path) || !allowedPath(human, path)) continue;
+            String rejection = path == null ? "no_path" : !path.canReach() ? "partial"
+                    : path.isDone() || path.getEndNode() == null ? "ended"
+                    : !HumanTerrainSafety.safePath(human, path) ? "unsafe" : !allowedPath(human, path) ? "command" : null;
+            if (rejection != null) {
+                NavigationDebugService.candidate(human, point, "terrain", rejection, Double.NaN); continue;
+            }
             var end = path.getEndNode();
             Vec3 actual = new Vec3(end.x + .5, end.y, end.z + .5);
             if (actual.distanceToSqr(human.position()) < 4 || state.cover && !covered(human, target, actual)) continue;
             double score = -path.getNodeCount() * .5 - Math.sqrt(target.distanceToSqr(actual)) * .2;
+            NavigationDebugService.candidate(human, actual, "terrain", "scored", score);
             if (score > bestScore) { best = path; bestScore = score; }
         }
         if (best != null && human.getNavigation().moveTo(best, speed)) {

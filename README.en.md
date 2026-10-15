@@ -59,3 +59,8 @@ NPC First Aid healing, morphine effects and pickup values are configurable in gl
 ## Scorched Guns integration framework
 
 Optional support targets the public NPC APIs in Scorched Guns 0.5.5: native projectiles with HHU tactics, magazine-paid ammunition/energy reloads, additive armor pools, configurable medical supplies, native throwable factories, and a player-owned native raid flare. Settings live in the global `scguns` section. See [integration scope and verification](docs/SCORCHED_GUNS_COMPAT.md); this framework has passed compilation and automated checks; in-game acceptance remains required.
+
+
+## Navigation diagnostics
+
+Creative players/operators can select a Human with the Navigation Test Pointer and request a temporary destination by clicking a block. Wear the Navigation Observer Helmet for dynamic server paths and candidate evaluations. For passive observation, select the entity without clicking a destination. See [navigation diagnostics](docs/NAVIGATION_DEBUG.md).

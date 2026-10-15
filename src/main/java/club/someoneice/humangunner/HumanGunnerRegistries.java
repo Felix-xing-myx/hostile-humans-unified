@@ -16,6 +16,10 @@ public final class HumanGunnerRegistries {
 
     public static final RegistryObject<Item> HUMAN_ARROW = ITEMS.register("human_arrow",
             () -> new HumanAmmoItem(false, new Item.Properties().stacksTo(64)));
+    public static final RegistryObject<Item> NAVIGATION_TEST_POINTER = ITEMS.register("navigation_test_pointer",
+            () -> new NavigationTestItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> NAVIGATION_OBSERVER_HELMET = ITEMS.register("navigation_observer_helmet",
+            () -> new NavigationObserverHelmet(new Item.Properties().rarity(Rarity.EPIC)));
     // Keep the registry ID stable even when TaCZ is absent, so saved inventories remain readable.
     public static final RegistryObject<Item> HUMAN_MAGAZINE = ITEMS.register("human_magazine",
             () -> new HumanAmmoItem(true, new Item.Properties().stacksTo(24)));

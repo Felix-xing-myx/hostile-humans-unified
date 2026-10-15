@@ -600,6 +600,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         try {
             Path result = this.searchNearestShorePath(avoidDestination, retreatThreat);
             if (result != null) this.shoreCandidateNavigators.put(result, this.shorePathUsesWaterNavigation);
+            if (result != null) club.someoneice.humangunner.NavigationDebugService.candidate(this,
+                    Vec3.atBottomCenterOf(result.getTarget()), "shore", result.canReach() ? "complete" : "partial", Double.NaN);
             return result;
         } finally {
             if (this.seekingShore) {
@@ -1665,6 +1667,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     @Override
     public void setTarget(@Nullable LivingEntity livingEntity) {
+        if (livingEntity != null && club.someoneice.humangunner.NavigationDebugService.controls(this)) return;
         if (livingEntity != null) livingEntity = club.someoneice.humangunner.BodyguardProtection
                 .preferredAttack(this, livingEntity);
         if (livingEntity != null && this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL)
@@ -2451,6 +2454,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             boolean useWater = ShoreSeekingPolicy.shouldUseWaterNavigator(
                     this.isEffectiveAi(), this.shouldUseWaterMovement(),
                     club.someoneice.humangunner.SoldierOrder.shouldFollowThroughWater(this)
+                            || club.someoneice.humangunner.NavigationDebugService.controls(this)
                             || club.someoneice.humangunner.WaterCombatNavigation.surfaceCombat(this),
                     this.seekingShore, this.shorePathUsesWaterNavigation);
             var desired = useWater ? this.waterNavigation : this.groundNavigation;

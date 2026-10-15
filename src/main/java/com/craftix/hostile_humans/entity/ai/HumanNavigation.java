@@ -22,6 +22,16 @@ public final class HumanNavigation extends GroundPathNavigation {
 
     public HumanNavigation(Mob mob, Level level) { super(mob, level); }
 
+    @Override protected Path createPath(java.util.Set<BlockPos> goals, int padding, boolean offset,
+            int accuracy, float distance) {
+        boolean observed = mob instanceof Human human && club.someoneice.humangunner.NavigationDebugService.watching(human);
+        long started = observed ? System.nanoTime() : 0;
+        Path result = super.createPath(goals, padding, offset, accuracy, distance);
+        if (observed && !goals.isEmpty()) club.someoneice.humangunner.NavigationDebugService.searched(
+                (Human)mob, goals.iterator().next(), result, System.nanoTime() - started);
+        return result;
+    }
+
     /** Bypass same-target path reuse without abandoning the current route on failure. */
     public Path createFreshPath(BlockPos goal) {
         Path previous = this.path;
@@ -79,7 +89,11 @@ public final class HumanNavigation extends GroundPathNavigation {
             var assessment = HumanTerrainSafety.assessPath(human, path);
             if (!assessment.safe()) { CombatTerrainNavigation.blocked(human, assessment); return false; }
         }
-        return super.moveTo(path, speed);
+        boolean accepted = super.moveTo(path, speed);
+        if (mob instanceof Human human && path != null)
+            club.someoneice.humangunner.NavigationDebugService.candidate(human, net.minecraft.world.phys.Vec3.atBottomCenterOf(path.getTarget()),
+                    "installed", accepted ? "accepted" : "rejected", Double.NaN);
+        return accepted;
     }
 
     @Override public void tick() {

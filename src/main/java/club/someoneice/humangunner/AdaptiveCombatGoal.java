@@ -1346,9 +1346,11 @@ public final class AdaptiveCombatGoal extends Goal {
         int budget = OptionalPathBudget.claim(human, OptionalPathBudget.Kind.RETREAT, 4);
         if (budget == 0) return null;
         PlannedPath best = retreatSearch.advance(budget, candidate -> {
+            NavigationDebugService.candidate(human, Vec3.atBottomCenterOf(candidate), "retreat", "candidate", Double.NaN);
             Path path = human.getNavigation().createPath(candidate, 0);
             if (path == null || !path.canReach()
                     || !RetreatPathSafety.isSafe(human, threat, path, true)) {
+                NavigationDebugService.candidate(human, Vec3.atBottomCenterOf(candidate), "retreat", "rejected", Double.NaN);
                 return null;
             }
             Vec3 reachableEnd = Vec3.atCenterOf(path.getTarget());
@@ -1375,6 +1377,7 @@ public final class AdaptiveCombatGoal extends Goal {
                     && !human.level().getFluidState(path.getTarget()).is(FluidTags.WATER)) {
                 score += 24.0D;
             }
+            NavigationDebugService.candidate(human, reachableEnd, "retreat", "scored", score);
             return score;
         });
         if (!retreatSearch.hasRemaining()) {
@@ -1519,15 +1522,22 @@ public final class AdaptiveCombatGoal extends Goal {
             return score;
         });
         PlannedPath best = tacticalSearch.advance(budget, candidate -> {
+            NavigationDebugService.candidate(human, candidate, "tactical", "candidate", Double.NaN);
             BlockPos destination = BlockPos.containing(candidate);
-            if (!human.level().hasChunkAt(destination)) return null;
+            if (!human.level().hasChunkAt(destination)) {
+                NavigationDebugService.candidate(human, candidate, "tactical", "unloaded", Double.NaN); return null;
+            }
             double cheapUpperBound = threat.distanceToSqr(candidate) * 0.015D
                     - Math.abs(candidate.y - human.getY()) * 2.0D + 45.0D + maximumDryBonus;
             if (cheapUpperBound <= bestScore[0]
-                    || prePathScore.applyAsDouble(candidate) + maximumDryBonus <= bestScore[0]) return null;
+                    || prePathScore.applyAsDouble(candidate) + maximumDryBonus <= bestScore[0]) {
+                NavigationDebugService.candidate(human, candidate, "tactical", "pruned", Double.NaN); return null;
+            }
             Path path = navigation.createPath(destination, 0);
-            return path == null || !path.canReach() || path.isDone()
-                    ? null : new PlannedPath(path, candidate, 0.0D);
+            if (path == null || !path.canReach() || path.isDone()) {
+                NavigationDebugService.candidate(human, candidate, "tactical", "rejected", Double.NaN); return null;
+            }
+            return new PlannedPath(path, candidate, 0.0D);
         }, plan -> {
             if (!human.level().hasChunkAt(plan.path().getTarget())) return Double.NEGATIVE_INFINITY;
             double score = prePathScore.applyAsDouble(plan.position());
@@ -1539,6 +1549,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 score += 24.0D;
             }
             bestScore[0] = Math.max(bestScore[0], score);
+            NavigationDebugService.candidate(human, plan.position(), "tactical", "scored", score);
             return score;
         });
         if (!tacticalSearch.hasRemaining()) tacticalSearch = null;
