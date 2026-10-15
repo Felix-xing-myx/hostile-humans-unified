@@ -36,7 +36,7 @@ public final class NavigationDebugClient {
         return Objects.equals(retained ? detailFocus : frame.focused(), e.snapshot().entityUuid());
     }
     private static boolean layer(int layer, NavigationDebugFrame.Entry e) {
-        return LAYERS[layer] == 2 || LAYERS[layer] == 1 && diagnosticFocus(e);
+        return NavigationDebugViewPolicy.layerVisible(LAYERS[layer], diagnosticFocus(e));
     }
     private NavigationDebugClient() {}
     static int slotColor(int slot) { return COLORS[slot]; }

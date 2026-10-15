@@ -77,15 +77,7 @@ public final class NavigationLegendScreen extends Screen {
         return rows;
     }
     private boolean matches(String group) {
-        return switch(page) {
-            case 0 -> !List.of("memory","target","targets","recognition","queue","vision","los","sound","beacon","clues","action","actions","navigation","command","budget","budgets").contains(group);
-            case 1 -> group.equals("memory") || group.equals("target") || group.equals("targets") || group.equals("recognition") || group.equals("queue");
-            case 2 -> group.equals("vision") || group.equals("los");
-            case 3 -> group.equals("sound") || group.equals("beacon") || group.equals("clues");
-            case 4 -> group.equals("action") || group.equals("actions") || group.equals("navigation") || group.equals("command");
-            case 5 -> group.equals("budget") || group.equals("budgets");
-            default -> false;
-        };
+        return NavigationDebugViewPolicy.pageContains(page, group);
     }
     @Override public void render(GuiGraphics g,int mouseX,int mouseY,float partialTick) {
         renderBackground(g);

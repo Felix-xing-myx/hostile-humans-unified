@@ -42,6 +42,8 @@ public final class NavigationDebugTest {
             check(buffer.readableBytes()==0, "decoder consumes exactly one frame");
         } finally { buffer.release(); }
         perceptionCodec();
+        maximumPerceptionFrame();
+        displayPolicy();
         invalidCount(9); invalidCount(-1);
         rejects(new NavigationDebugFrame(List.of(list.get(0), list.get(0)), null), "duplicate slot");
         rejects(new NavigationDebugFrame(List.of(list.get(0), new NavigationDebugFrame.Entry(1, list.get(0).snapshot())), null), "duplicate UUID");
@@ -74,6 +76,23 @@ public final class NavigationDebugTest {
                 catch(IllegalArgumentException expected) { checks++; }
             } finally {malformed.release();}
         }
+        for(int invalidCount:new int[]{-1,65}) {
+            var malformed=new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                malformed.writeLong(0);for(int i=0;i<9;i++)malformed.writeDouble(0);
+                malformed.writeUtf("");malformed.writeUtf("");malformed.writeUtf("");malformed.writeVarInt(0);malformed.writeVarInt(invalidCount);
+                try {PerceptionDebugCodec.read(malformed);throw new AssertionError("malformed marker count accepted");}
+                catch(IllegalArgumentException expected) {checks++;}
+            } finally {malformed.release();}
+        }
+        for(double invalid:new double[]{Double.NaN,Double.POSITIVE_INFINITY,Double.NEGATIVE_INFINITY}) {
+            var malformed=new FriendlyByteBuf(Unpooled.buffer());
+            try {
+                malformed.writeLong(0);malformed.writeDouble(invalid);malformed.writeDouble(0);malformed.writeDouble(0);
+                try {PerceptionDebugCodec.read(malformed);throw new AssertionError("nonfinite incoming geometry accepted");}
+                catch(IllegalArgumentException expected) {checks++;}
+            } finally {malformed.release();}
+        }
         rows.add(rows.get(0));
         perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,1,0,0,"","","",rows,List.of()),"row limit");
         markers.add(markers.get(0));
@@ -84,6 +103,60 @@ public final class NavigationDebugTest {
         perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,1,0,0,"","","",List.of(),List.of(
                 new PerceptionDebugSnapshot.Marker("los","",Vec3.ZERO,new Vec3(0,Double.NaN,0),0))),"nonfinite endpoint");
         perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,1,0,0,"","","x".repeat(257),List.of(),List.of()),"bounded reason");
+    }
+    private static NavigationDebugSnapshot withPerception(NavigationDebugSnapshot s, PerceptionDebugSnapshot p) {
+        return new NavigationDebugSnapshot(s.dimension(),s.entityId(),s.entityUuid(),s.name(),s.mode(),s.state(),s.navigator(),
+                s.budget(),s.obstruction(),s.health(),s.fallBudget(),s.maxDrop(),s.followRange(),s.position(),s.requested(),
+                s.enemy(),s.endpoint(),s.path(),s.firstNode(),s.totalNodes(),s.complete(),s.truncated(),s.searchMillis(),s.samples(),p);
+    }
+    private static void maximumPerceptionFrame() {
+        var rows=new ArrayList<PerceptionDebugSnapshot.Row>();
+        var markers=new ArrayList<PerceptionDebugSnapshot.Marker>();
+        for(int i=0;i<128;i++) rows.add(new PerceptionDebugSnapshot.Row("组".repeat(32),"标".repeat(96),"值".repeat(256)));
+        for(int i=0;i<64;i++) markers.add(new PerceptionDebugSnapshot.Marker("类".repeat(32),"点".repeat(96),
+                new Vec3(29_000_000+i,64,-29_000_000),i%2==0?null:new Vec3(0,1,0),4096));
+        var p=new PerceptionDebugSnapshot(Long.MAX_VALUE,Vec3.ZERO,new Vec3(0,0,1),4096,Math.PI,Math.PI,
+                "警".repeat(64),"策".repeat(128),"因".repeat(256),List.copyOf(rows),List.copyOf(markers));
+        var entries=new ArrayList<NavigationDebugFrame.Entry>();
+        for(int i=0;i<8;i++) entries.add(new NavigationDebugFrame.Entry(i,withPerception(sample(i,256,48,false),p)));
+        var frame=new NavigationDebugFrame(List.copyOf(entries),entries.get(7).snapshot().entityUuid());
+        var buffer=new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            NavigationDebugFrameCodec.write(frame,buffer);
+            check(buffer.readableBytes()<2*1024*1024,"maximum UTF-8 frame stays below the 2 MiB transport safety bound");
+            check(frame.equals(NavigationDebugFrameCodec.read(buffer)),"8 entities x 128 rows/64 markers, maximal UTF strings and nullable END round trip");
+            check(buffer.readableBytes()==0,"maximum frame consumes exactly one payload");
+        } finally {buffer.release();}
+        for(int field=0;field<3;field++) {
+            String a="警".repeat(field==0?65:64),d="策".repeat(field==1?129:128),r="因".repeat(field==2?257:256);
+            perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,0,0,0,a,d,r,List.of(),List.of()),"UTF header field "+field);
+        }
+        for(int field=0;field<3;field++) perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,0,0,0,"","","",
+                List.of(new PerceptionDebugSnapshot.Row("组".repeat(field==0?33:32),"标".repeat(field==1?97:96),"值".repeat(field==2?257:256))),List.of()),"UTF row field "+field);
+        for(int field=0;field<2;field++) perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,0,0,0,"","","",List.of(),
+                List.of(new PerceptionDebugSnapshot.Marker("类".repeat(field==0?33:32),"点".repeat(field==1?97:96),Vec3.ZERO,null,0))),"UTF marker field "+field);
+        for(double invalid:new double[]{Double.NaN,Double.NEGATIVE_INFINITY,Double.POSITIVE_INFINITY,-.001,4096.1})
+            perceptionRejects(new PerceptionDebugSnapshot(0,Vec3.ZERO,Vec3.ZERO,1,0,0,"","","",List.of(),
+                    List.of(new PerceptionDebugSnapshot.Marker("sound","",Vec3.ZERO,null,invalid))),"invalid marker radius");
+        var malformed=new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            malformed.writeLong(0);for(int i=0;i<9;i++)malformed.writeDouble(0);
+            malformed.writeUtf("警".repeat(65)); malformed.writeUtf("");malformed.writeUtf("");
+            try {PerceptionDebugCodec.read(malformed);throw new AssertionError("oversized incoming UTF accepted");}
+            catch(io.netty.handler.codec.DecoderException expected) {checks++;}
+        } finally {malformed.release();}
+    }
+    private static void displayPolicy() {
+        String[] serverGroups={"overview","targets","vision","clues","actions","budgets","history","beacon"};
+        int[] pages={0,1,2,3,4,5,0,3};
+        for(int i=0;i<serverGroups.length;i++) for(int page=0;page<7;page++)
+            check(NavigationDebugViewPolicy.pageContains(page,serverGroups[i])==(page==pages[i]),"server group appears exactly on its page");
+        check(NavigationDebugViewPolicy.pageContains(0,"future-field"),"unknown server groups stay visible in overview");
+        for(boolean focus:new boolean[]{false,true}) {
+            check(!NavigationDebugViewPolicy.layerVisible(0,focus),"off layer hides all members");
+            check(NavigationDebugViewPolicy.layerVisible(1,focus)==focus,"focus layer keeps only diagnostic focus");
+            check(NavigationDebugViewPolicy.layerVisible(2,focus),"all layer preserves every observer");
+        }
     }
     private static void perceptionRejects(PerceptionDebugSnapshot snapshot,String reason) {
         var buffer=new FriendlyByteBuf(Unpooled.buffer());
