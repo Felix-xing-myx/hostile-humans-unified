@@ -165,13 +165,14 @@ public final class NavigationDebugClient {
                     box(poses, lines, next, i == 0 ? .14 : .06, i == 0 ? 1 : r, i == 0 ? 1 : g, i == 0 ? 1 : b);
                     previous = next;
                 }
-                    if (s.enemy() != null) box(poses, lines, s.enemy().subtract(camera), .35, 1,.1F,.1F);
                     for (var sample : s.samples()) {
                         boolean good = sample.result().equals("accepted") || sample.result().equals("complete") || sample.result().equals("scored");
                         boolean pending = sample.result().equals("candidate") || sample.result().equals("partial");
                         box(poses, lines, sample.position().add(0,.15,0).subtract(camera), .12, good ? .2F : 1, good ? 1 : .25F, pending ? 1 : .2F);
                     }
                 }
+                if (layer(2, entry) && s.enemy() != null)
+                    box(poses, lines, s.enemy().subtract(camera), .35, 1,.1F,.1F);
                 perception(poses, lines, s.perception(), camera, entry, r, g, b);
                 // Flush each bounded entity before reusing the same native storage for the next one.
                 buffers.endBatch(DebugLines.TYPE);
