@@ -281,6 +281,6 @@ HumanNavigation.tick在原地形复核前尝试advancePassedCombatWaypoint：连
 
 ## 共同感知与目标位置准入
 
-`HumanPerception`拥有服务端逐目标知识状态；`canTarget`为确认且动态有效的攻击准入，`knownPosition`只返回合法动态/最后位置。所有目标赋值、威胁恢复、护卫、射击与战术导航必须消费这条边界，不能从线索UUID恢复隐藏实体坐标。`HumanAwareness`只投递有界位置线索；`PerceptionLookGoal`保护首次识别，盾防/战斗LOOK请求不能抢断；`PerceptionInvestigationGoal`只占自己的MOVE路径并沿用安全/命令/预算。
+`HumanPerception`拥有服务端逐目标知识状态；每份Track的`RecognitionEvidence`管理实际目视证据/负检测起点，最多两份识别并行，LOOK主焦点独立且唯一。未采样不启动遮挡计时；视觉判定与头盔视野共用配置插值角度。`canTarget`为确认且动态有效的攻击准入，`knownPosition`只返回合法动态/最后位置。所有目标赋值、威胁恢复、护卫、射击与战术导航必须消费这条边界，不能从线索UUID恢复隐藏实体坐标。`HumanAwareness`只投递有界位置线索；`PerceptionLookGoal`保护首次识别，盾防/战斗LOOK请求不能抢断；`PerceptionInvestigationGoal`只占自己的MOVE路径并沿用安全/命令/预算。
 
 `BeaconReportingService`与`BeaconReportPolicy`独立负责同玩家/维度报告SavedData，不授予目视知识；`HumanSignalItem`仅成功召唤后续共享截止。`PerceptionConfig`集中配置，`PerceptionPolicy`集中时序/识别/几何规则。`PerceptionDebugSnapshot/Codec`随观察帧发送，`NavigationDebugViewPolicy`只筛选展示。详见[感知源码地图](ENEMY_AWARENESS.md)。

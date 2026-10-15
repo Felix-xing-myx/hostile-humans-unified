@@ -3,6 +3,7 @@ package club.someoneice.humangunner;
 import com.craftix.hostile_humans.entity.entities.Human;
 import com.craftix.hostile_humans.Config;
 import dev.felix.hostilehumans.core.PerceptionPolicy;
+import dev.felix.hostilehumans.core.RecognitionEvidence;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -21,7 +22,8 @@ public final class HumanPerception {
     private static final class Track {
         final UUID id; String name="目标";
         boolean marked; long visual=-1, liveUntil=-1, familiarUntil=-1, positionAt=-1, checked=-1;
-        double progress; Vec3 position, eye; boolean visible;
+        final RecognitionEvidence evidence=new RecognitionEvidence();
+        Vec3 position, eye; boolean visible;
         String refresh="", denied="";
         Track(UUID id){this.id=id;}
     }
@@ -64,6 +66,12 @@ public final class HumanPerception {
         if(h.getPersistentData().hasUUID(HumanRelations.FORCED_HOSTILE_TARGET))original=Math.max(0,original-88);
         if(GunSupport.get().isGun(h.getMainHandItem()))original=Math.max(original,GunRangePolicy.forWeapon(h.getMainHandItem()).fireRange());
         return Math.max(c().number("vision.minimum_range"),original);
+    }
+    private static double halfAngle(double distance,boolean familiar){
+        return PerceptionPolicy.halfAngle(distance,familiar,
+                c().number("vision.familiar_angle_multiplier"),c().number("vision.maximum_half_angle"),
+                c().number("vision.near_distance"),c().number("vision.middle_distance"),c().number("vision.far_distance"),
+                c().number("vision.near_full_angle"),c().number("vision.middle_full_angle"),c().number("vision.far_full_angle"));
     }
     private static boolean valid(Human h,LivingEntity e){
         return e!=null && e!=h && e.isAlive()&&!e.isRemoved()&&e.level()==h.level()
@@ -178,7 +186,7 @@ public final class HumanPerception {
     private static Track track(State s,UUID id){
         Track existing=s.tracks.get(id);if(existing!=null)return existing;
         if(s.tracks.size()>=c().integer("memory.maximum_targets")){
-            UUID drop=null;for(Track t:s.tracks.values())if(!Objects.equals(t.id,s.focus)&&(!t.marked||t.liveUntil<=s.tick)){drop=t.id;break;}
+            UUID drop=null;for(Track t:s.tracks.values())if(!Objects.equals(t.id,s.focus)&&!t.evidence.active()&&(!t.marked||t.liveUntil<=s.tick)){drop=t.id;break;}
             if(drop==null)return null;s.tracks.remove(drop);
         }
         Track t=new Track(id);s.tracks.put(id,t);return t;
@@ -225,19 +233,21 @@ public final class HumanPerception {
         }
         if(s.focus!=null){
             Entity e=level.getEntity(s.focus);Track t=s.tracks.get(s.focus);
-            boolean lost=s.focusLastVisible>=0&&now-s.focusLastVisible>=c().integer("recognition.break_ticks");
+            boolean lost=t!=null&&t.evidence.interrupted(now,c().integer("recognition.break_ticks"));
             boolean timeout=now-s.focusStarted>=(s.focusLastVisible<0?c().integer("observation.direction_ticks"):c().integer("observation.focus_ticks"));
             if(!(e instanceof LivingEntity living)||!valid(h,living)||lost||timeout){
                 if(s.focusHurt&&s.look!=null){
                     Vec3 direction=s.look.subtract(h.getEyePosition()).multiply(1,0,1).normalize();
                     if(direction.lengthSqr()>1.e-8)notice(h,"hurt",h.position().add(direction.scale(c().number("investigation.radius"))),s.focus,c().integer("hearing.notice_ticks"));
                 }
-                if(t!=null)t.progress=0;release(s,lost?"遮挡中断识别":"观察失效或超时");
+                if(t!=null)t.evidence.reset();release(s,lost?"遮挡中断识别":"观察失效或超时");
             }
         }
+        for(Track t:s.tracks.values())if(t.evidence.interrupted(now,c().integer("recognition.break_ticks"))
+                ||t.evidence.timedOut(now,c().integer("observation.focus_ticks")))t.evidence.reset();
         startNext(h,s,now);
         if(s.focus==null&&s.look!=null&&now-s.directionStarted>=c().integer("observation.direction_ticks"))s.look=null;
-        int interval=c().integer(h.isAlert||s.focus!=null||h.getTarget()!=null?"budgets.active_interval_ticks":"budgets.idle_interval_ticks");
+        int interval=c().integer(h.isAlert||s.focus!=null||recognizing(s)>0||h.getTarget()!=null?"budgets.active_interval_ticks":"budgets.idle_interval_ticks");
         if(now>=s.nextCandidates && PerceptionBudget.claim(h,"queries",1)){
             double r=range(h);List<LivingEntity> nearby=new ArrayList<>();
             level.getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(LivingEntity.class),
@@ -253,50 +263,68 @@ public final class HumanPerception {
         s.nextScan=now+interval;
         List<LivingEntity> checks=new ArrayList<>();
         if(s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity focus)checks.add(focus);
-        if(current!=null&&current!=checks.stream().findFirst().orElse(null))checks.add(current);
+        for(Track t:s.tracks.values())if(t.evidence.active()&&level.getEntity(t.id) instanceof LivingEntity e
+                &&!checks.contains(e)&&checks.size()<rays)checks.add(e);
+        // Reserve discovery capacity while fewer than two targets are being recognized.
+        if(current!=null&&!checks.contains(current)&&checks.size()<rays
+                &&(recognizing(s)>=RecognitionEvidence.MAX_CONCURRENT||checks.isEmpty()&&rays>1))checks.add(current);
         int inspected=0;
         while(checks.size()<rays&&inspected++<s.candidates.size()){
             if(s.candidates.isEmpty())break;UUID id=s.candidates.get(Math.floorMod(s.candidateCursor++,s.candidates.size()));
             if(level.getEntity(id) instanceof LivingEntity e&&!checks.contains(e))checks.add(e);
         }
+        s.scanStatus=checks.isEmpty()?"本轮无符合敌对许可的视觉候选":"已执行服务器视觉采样："+Math.min(rays,checks.size())+"个候选";
         for(LivingEntity e:checks.subList(0,Math.min(rays,checks.size())))check(h,s,e,now,interval);
         if(s.focus==null)startNext(h,s,now);
         describe(h,s);
     }
+    private static long recognizing(State s){return s.tracks.values().stream().filter(t->t.evidence.active()).count();}
     private static void check(Human h,State s,LivingEntity e,long now,int interval){
         if(!enemy(h,e))return;Track t=s.tracks.get(e.getUUID());boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
         Vec3 delta=e.getEyePosition().subtract(h.getEyePosition());double distance=delta.length();
         double visibility=e.getVisibilityPercent(h);
         boolean fov=distance<=Math.max(2,range(h)*visibility)&&delta.lengthSqr()>1.e-8
-                &&h.getViewVector(1).normalize().dot(delta.normalize())>Math.cos(PerceptionPolicy.halfAngle(distance,familiar,
-                    c().number("vision.familiar_angle_multiplier"),c().number("vision.maximum_half_angle")));
+                &&h.getViewVector(1).normalize().dot(delta.normalize())>Math.cos(halfAngle(distance,familiar));
         boolean clear=false;
         if(fov){BlockHitResult hit=h.level().clip(new ClipContext(h.getEyePosition(),e.getEyePosition(),ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,h));
             clear=hit.getType()==HitResult.Type.MISS;
             s.rays.addLast(new Ray(h.getEyePosition(),clear?e.getEyePosition():hit.getLocation(),clear,now));
             while(s.rays.size()>8)s.rays.removeFirst();
         }
-        if(!clear){if(t!=null){t.visible=false;if(t.checked>=0&&now-t.checked>=c().integer("recognition.break_ticks"))t.progress=0;}return;}
+        if(!clear){if(t!=null){
+            t.visible=false;t.evidence.miss(now);
+            t.denied=!fov?(distance>Math.max(2,range(h)*visibility)?"超出有效视觉距离":"当前视场外"):"方块遮挡";
+        }return;}
         if(t==null)t=track(s,e.getUUID());if(t==null){s.reason="目标记忆容量已满";return;}
-        t.visible=true;t.name=bounded(e.getName().getString(),64);t.position=e.position();t.eye=e.getEyePosition();t.positionAt=now;
-        long previous=t.checked;t.checked=now;
+        t.visible=true;t.denied="无遮挡可见";t.name=bounded(e.getName().getString(),64);t.position=e.position();t.eye=e.getEyePosition();t.positionAt=now;
+        t.checked=now;
         boolean live=t.marked&&PerceptionPolicy.live(now,t.liveUntil);
         if(live){t.visual=now;t.liveUntil=now+c().integer("memory.dynamic_ticks");t.familiarUntil=now+c().integer("memory.familiar_ticks");t.refresh="目视";
             s.alertUntil=now+c().integer("observation.alert_ticks");}
-        if(s.focus==null&&!live){s.focus=e.getUUID();s.protectedFocus=!familiar;s.focusHurt=false;s.focusStarted=now;s.focusLastVisible=now;s.lookOwner="视觉识别";}
+        if(!live&&!t.evidence.active()&&recognizing(s)<RecognitionEvidence.MAX_CONCURRENT)t.evidence.begin(now);
+        if(s.focus==null&&!live&&t.evidence.active()){
+            s.focus=e.getUUID();s.protectedFocus=!familiar;s.focusHurt=false;s.focusStarted=now;s.focusLastVisible=now;s.lookOwner="视觉识别主观察";
+        }
         if(Objects.equals(s.focus,e.getUUID())){
             s.focusLastVisible=now;s.look=e.getEyePosition();
-            if(!live){
-                int required=s.focusHurt?Math.max(c().integer("recognition.minimum_ticks"),c().integer("recognition.hurt_ticks")):
+        }
+        if(!live&&t.evidence.active()){
+            int required=s.focusHurt&&Objects.equals(s.focus,e.getUUID())?Math.max(c().integer("recognition.minimum_ticks"),c().integer("recognition.hurt_ticks")):
                     PerceptionPolicy.recognition(distance,h.isAlert,familiar,c().number("recognition.base_ticks"),c().number("recognition.ticks_per_block"),
                         c().integer("recognition.maximum_ticks"),c().integer("recognition.minimum_ticks"),c().number("recognition.alert_factor"),
                         c().number("recognition.familiar_factor"),c().number("recognition.combined_factor"));
-                long credit=previous>=0&&now-previous<=interval?Math.max(1,now-previous):1;
-                t.progress=Math.min(1,t.progress+credit/(double)required);
-                if(t.progress>=1){t.marked=true;t.visual=now;t.liveUntil=now+c().integer("memory.dynamic_ticks");
-                    t.familiarUntil=now+c().integer("memory.familiar_ticks");t.refresh="首次目视确认";
-                    alert(h,s,"目视确认："+t.name);release(s,"识别完成");}
-            }else release(s,"已标记来源已回看");
+            if(t.evidence.visible(now,interval,required,c().integer("recognition.break_ticks"))){
+                t.evidence.finish();t.marked=true;t.visual=now;t.liveUntil=now+c().integer("memory.dynamic_ticks");
+                t.familiarUntil=now+c().integer("memory.familiar_ticks");t.refresh="首次目视确认";
+                alert(h,s,"目视确认："+t.name);if(Objects.equals(s.focus,e.getUUID()))release(s,"识别完成");
+            }
+            s.nextScan=Math.min(s.nextScan,now+c().integer("budgets.active_interval_ticks"));
+        }else if(live&&Objects.equals(s.focus,e.getUUID()))release(s,"已标记来源已回看");
+        if(s.focus==null){
+            for(Track other:s.tracks.values())if(other.evidence.active()&&other.visible){
+                s.focus=other.id;s.look=other.eye;s.protectedFocus=!(other.marked&&now<other.familiarUntil);s.focusHurt=false;
+                s.focusStarted=now;s.focusLastVisible=now;s.lookOwner="视觉识别主观察";break;
+            }
         }
     }
     private static void describe(Human h,State s){
@@ -360,22 +388,27 @@ public final class HumanPerception {
         row(rows,"actions","行动指令",SoldierOrder.get(h).name());row(rows,"actions","攻击模式",SoldierCombatMode.get(h).name());
         for(var action:h.humanGunner$actionSnapshot())row(rows,action.group(),action.label(),action.value());
         row(rows,"vision","基础视觉距离",String.format(java.util.Locale.ROOT,"%.1f 格",r));
+        row(rows,"vision","完整视场角",String.format(java.util.Locale.ROOT,"近 %.0f° / 中 %.0f° / 远 %.0f°",
+                c().number("vision.near_full_angle"),c().number("vision.middle_full_angle"),c().number("vision.far_full_angle")));
         row(rows,"vision","本轮检测",s.scanStatus);row(rows,"vision","最近采样年龄",s.scanAt<0?"暂无":(now-s.scanAt)+"tick");
         row(rows,"targets","待观察来源",s.pending.size()+"/"+c().integer("observation.queue_size"));
+        row(rows,"targets","并行视觉识别",recognizing(s)+"/"+RecognitionEvidence.MAX_CONCURRENT);
         int pendingIndex=0;
         for(Observe o:s.pending.values())row(rows,"targets","排队来源 "+(++pendingIndex),
                 (o.familiar?"已标记回看":"未标记来袭方向")+" · "+remaining(o.until,now));
         for(Track t:s.tracks.values()){
-            if(!t.marked&&!Objects.equals(t.id,s.focus))continue;
-            boolean live=t.marked&&now<t.liveUntil;String stage=!t.marked?"识别中":live?"动态位置有效":"最后位置/旧敌标签";
+            if(!t.marked&&!t.evidence.active())continue;
+            boolean live=t.marked&&now<t.liveUntil;String stage=t.evidence.active()?"识别中":live?"动态位置有效":"最后位置/旧敌标签";
             row(rows,"targets",t.name,stage+(Objects.equals(t.id,h.getTarget()==null?null:h.getTarget().getUUID())?" · 当前目标":""));
-            row(rows,"targets","识别进度",String.format(java.util.Locale.ROOT,"%.0f%%",t.progress*100));
+            row(rows,"targets","识别进度",String.format(java.util.Locale.ROOT,"%.0f%% · %s",t.evidence.progress()*100,
+                    Objects.equals(t.id,s.focus)?"主观察/控制转头":t.evidence.active()?"视野内并行识别":"已确认记录"));
+            row(rows,"targets","最近视觉结果",t.denied+" · 最近可见"+(t.checked<0?"暂无":(now-t.checked)+"tick前"));
             row(rows,"targets","动态剩余/刷新",remaining(t.liveUntil,now)+" / "+t.refresh);
             row(rows,"targets","最后位置/旧敌",remaining(t.positionAt+c().integer("memory.last_position_ticks"),now)+" / "+remaining(t.familiarUntil,now));
             if(h.level() instanceof ServerLevel level && level.getEntity(t.id) instanceof LivingEntity entity)
                 row(rows,"targets","攻击许可",valid(h,entity)?"允许；动作仍需有效位置与射界":"不允许");
             if(t.position!=null&&now<t.positionAt+c().integer("memory.last_position_ticks"))
-                marker(markers,!t.marked?"recognition":live?t.visible&&now-t.checked<=c().integer("budgets.active_interval_ticks")?"visible":"dynamic":"last",t.name+" · "+stage,t.position,null,.4);
+                marker(markers,t.evidence.active()?"recognition":live?t.visible&&now-t.checked<=c().integer("budgets.active_interval_ticks")?"visible":"dynamic":"last",t.name+" · "+stage,t.position,null,.4);
         }
         for(Clue clue:s.clues){row(rows,"clues",clue.kind,"优先级"+clue.priority+" · "+remaining(clue.until,now)+(clue.completed>=0?" · 已调查":""));
             marker(markers,clue.kind.equals("beacon")?"beacon":"sound",clue.kind,clue.position,null,clue.kind.equals("beacon")?c().number("beacon.grid_size")*.5:.4);}
@@ -383,9 +416,9 @@ public final class HumanPerception {
         if(s.look!=null)marker(markers,"direction",s.lookOwner,h.getEyePosition(),s.look,0);
         for(Ray ray:s.rays)if(now-ray.tick<=20)marker(markers,ray.clear?"los":"blocked",(ray.clear?"可见采样":"遮挡采样")+" · "+(now-ray.tick)+"tick前",ray.from,ray.to,0);
         Vec3 view=h.getViewVector(1).normalize();
-        for(double d:new double[]{4,16,32,64,r})if(d<=r){
-            double a=PerceptionPolicy.halfAngle(d,false,c().number("vision.familiar_angle_multiplier"),c().number("vision.maximum_half_angle"));
-            double b=PerceptionPolicy.halfAngle(d,true,c().number("vision.familiar_angle_multiplier"),c().number("vision.maximum_half_angle"));
+        for(double d:new double[]{4,c().number("vision.near_distance"),c().number("vision.middle_distance"),c().number("vision.far_distance"),r})if(d<=r){
+            double a=halfAngle(d,false);
+            double b=halfAngle(d,true);
             marker(markers,"vision_new_ring","陌生目标几何视野",h.getEyePosition().add(view.scale(d*Math.cos(a))),view,d*Math.sin(a));
             marker(markers,"vision_known_ring","旧敌几何视野",h.getEyePosition().add(view.scale(d*Math.cos(b))),view,d*Math.sin(b));
         }
@@ -393,8 +426,8 @@ public final class HumanPerception {
         for(var row:BeaconReportingService.debugRows(h))if(rows.size()<PerceptionDebugSnapshot.MAX_ROWS)rows.add(row);
         for(Transition t:s.transitions)if(now-t.tick<=c().integer("debug.transition_ticks"))row(rows,"history",(now-t.tick)+"tick前",t.text);
         return new PerceptionDebugSnapshot(now,h.getEyePosition(),view,r,
-            PerceptionPolicy.halfAngle(r,false,c().number("vision.familiar_angle_multiplier"),c().number("vision.maximum_half_angle")),
-            PerceptionPolicy.halfAngle(r,true,c().number("vision.familiar_angle_multiplier"),c().number("vision.maximum_half_angle")),
+            halfAngle(r,false),
+            halfAngle(r,true),
             h.isAlert?"警觉":"平静",s.decision,s.reason,List.copyOf(rows),List.copyOf(markers));
     }
     private static String remaining(long until,long now){return Math.max(0,until-now)+"tick";}

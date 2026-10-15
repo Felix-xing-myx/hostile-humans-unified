@@ -560,7 +560,7 @@ TaCZ背包直接供弹枪（例如默认转管机枪）在人类手中使用虚�
 
 | 区域 | 默认核心参数 | 作用 |
 |---|---|---|
-| `vision` | `minimum_range=64`、`familiar_angle_multiplier=2`、`maximum_half_angle=60` | 最低基础感知距离、旧敌半角倍率/上限；原版可见度仍适用，不改射程/导航预算 |
+| `vision` | `minimum_range=64`；`near/middle/far_distance=8/32/64`、`near/middle/far_full_angle=160/120/90`；`familiar_angle_multiplier=1.2`、`maximum_half_angle=90` | 完整视角在距离锚点间插值；旧敌半角放宽但不低于陌生视角。原版可见度仍适用，不改射程/导航预算 |
 | `recognition` | `base_ticks=10`、`ticks_per_block=1.25`、`maximum_ticks=90`、`minimum_ticks=4`、`break_ticks=10`、`hurt_ticks=4` | 基础距离计时、最低目视、遮挡清零、受击快速目视 |
 | `recognition`系数 | `alert_factor=0.5`、`familiar_factor=0.5`、`combined_factor=0.4` | 单项/组合独立处理，不连乘；组合有效值收敛在较快单项的75%至100% |
 | `memory` | `dynamic_ticks=160`、`last_position_ticks=600`、`familiar_ticks=2400`、`maximum_targets=16` | 动态位置、最后位置、旧敌标签分别计时 |
@@ -572,3 +572,5 @@ TaCZ背包直接供弹枪（例如默认转管机枪）在人类手中使用虚�
 | `debug` | `interval_ticks=5`、`transition_limit=32`、`transition_ticks=400` | 有观察者时的诊断快照与有限转换记录 |
 
 每个目标独立续时，仅仍有效的已确认来源直接实际伤害能够续自己的动态期限；截止tick起不能凭伤害恢复。主人通常10秒许可与动态知识分开，观察不续权。详见[感知源码地图](docs/ENEMY_AWARENESS.md)。
+
+视觉识别最多同时推进两个独立目标；主观察对象独占转头，另一目标仍需实际FOV/LOS。`recognition.break_ticks`从实际负检测开始计时，配额等待不伪装遮挡。已有配置保留自定义值，只补缺失新字段；旧敌角度上限不再缩小基础视角。

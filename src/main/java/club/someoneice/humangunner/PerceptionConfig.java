@@ -11,8 +11,14 @@ public final class PerceptionConfig {
     static {
         Map<String, Setting> m = new LinkedHashMap<>();
         add(m,"vision.minimum_range",64,8,256,"最低基础视觉距离（格），之后应用原版可见度修正 / Minimum base visual range before vanilla visibility scaling");
-        add(m,"vision.familiar_angle_multiplier",2,1,4,"旧敌视锥半角倍率 / Familiar-target half-angle multiplier");
-        add(m,"vision.maximum_half_angle",60,5,89,"旧敌最大视锥半角（度） / Maximum familiar half-angle in degrees");
+        add(m,"vision.near_distance",8,1,64,"近距离视角锚点（格） / Near field-of-view distance anchor");
+        add(m,"vision.middle_distance",32,2,128,"中距离视角锚点（格），小于前段时自动顺延 / Middle field-of-view distance anchor, ordered after near");
+        add(m,"vision.far_distance",64,3,256,"远距离视角锚点（格），更远保持远段角度 / Far field-of-view distance anchor, retained beyond it");
+        add(m,"vision.near_full_angle",160,10,180,"近距离完整视场角（度），锚点间线性过渡 / Near full field of view, interpolated between anchors");
+        add(m,"vision.middle_full_angle",120,10,180,"中距离完整视场角（度） / Middle full field of view in degrees");
+        add(m,"vision.far_full_angle",90,10,180,"远距离完整视场角（度） / Far full field of view in degrees");
+        add(m,"vision.familiar_angle_multiplier",1.2,1,4,"旧敌视锥半角倍率 / Familiar-target half-angle multiplier");
+        add(m,"vision.maximum_half_angle",90,5,90,"旧敌半角上限（度），不缩小陌生目标视野 / Familiar half-angle cap, never narrowing the base field");
         add(m,"recognition.base_ticks",10,1,200,"基础识别时长 / Recognition base ticks");
         add(m,"recognition.ticks_per_block",1.25,0,20,"每格识别时长增量 / Recognition ticks per block");
         add(m,"recognition.maximum_ticks",90,4,1200,"基础识别时长上限 / Maximum base recognition ticks");
