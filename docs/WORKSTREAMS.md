@@ -1,5 +1,12 @@
 # 开发任务与整合记录
 
+## 感知系统与综合侦察实施（进行中）
+
+- 用户授权按最新方案实现并构建同步既定Forge47.4.21实例；方案含全局8秒、受击来源观察排队、信标最后成功使用5分钟共享续时、综合侦察头盔。基线79bc7afeedcf344a6160b9bd10f70353a45eca9f；主控工作树worktrees/awareness-implementation，分支feature/awareness-implementation。
+- 依AGENTS并行协作：主控负责Human、AdaptiveCombatGoal、HumanRelations、UnifiedConfig/配置持久化、感知/声音/调查/权限/接入地图/测试与最终版本部署；信标开发者使用worktrees/awareness-beacon、feature/awareness-beacon，仅新BeaconReportingService/政策测试与HumanSignalItem；诊断开发者使用worktrees/awareness-diagnostics、feature/awareness-diagnostics，仅NavigationDebug系列、综合详情界面/渲染/网络及独立测试。三者编辑目录隔离，HumanRelations/共享配置只有主控接入。
+- 契约：PerceptionConfig.get().integer/number("section.key")权威设置；信标通过HumanPerception.notice(human,"beacon",position,sourceUUID,ttl)提交有限线索，不setTarget。诊断只调用HumanPerception.snapshot(human)与knownPosition(human,target)，PerceptionDebugSnapshot为有界只读数据结构；均不触发额外扫描。
+- 子任务交付本地提交/文件/接口/验证/问题，不合main、不部署/push；主控审核后整合，公共文件顺序修改。过程和验证结果后续融入本节，不将方案状态误报为已实现。
+
 ## 八秒记忆、信标统一续时与综合侦察方案（2026-10-15，仅方案修订）
 
 - 用户继续修订方案：弹道来向转头，首次识别不被其他来源伤害抢断，全局8秒动态许可及有效期内已标记来源实际伤害刷新/回看，温和组合识别加速，清晰规范接入，接受声音/命令方案；信标最后一次使用后5分钟，对历史召唤者共同生效。追加要求现有侦察头盔展示决策、锁敌、视野等综合信息。仍仅纳入方案，未授权功能开发。

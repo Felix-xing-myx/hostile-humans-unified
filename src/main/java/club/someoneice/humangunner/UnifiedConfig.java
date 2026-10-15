@@ -22,6 +22,7 @@ public final class UnifiedConfig {
     private final FirstAidSettings firstAid;
     private final ScgunsSettings scguns;
     private final ShieldPressureConfig shieldPressure;
+    private final PerceptionConfig perception;
     private final HostileTargetingConfig hostileTargeting;
     private final Map<String, ConfiguredEquipmentLoadout> equipmentLoadouts;
     private final Recruitment recruitment;
@@ -78,6 +79,7 @@ public final class UnifiedConfig {
         gunSpawnPools = GunSpawnPools.parse(root);
         scguns = ScgunsSettings.parse(object(root, "scguns"));
         shieldPressure = ShieldPressureConfig.parse(object(root, "shield_pressure"));
+        perception = new PerceptionConfig(object(root, "perception"));
         hostileTargeting = HostileTargetingConfig.parse(object(root, "hostile_mob_targeting"));
         vanillaMode = bool(root, "vanilla_mode", false);
         Map<String, ConfiguredEquipmentLoadout> loadouts = new LinkedHashMap<>();
@@ -271,6 +273,7 @@ public final class UnifiedConfig {
         return new RecruitmentCost(id, count);
     }
     public boolean allowHiredPvpDamage() { return recruitment.allowHiredPvpDamage(); }
+    public PerceptionConfig perception() { return perception; }
     public SoldierMessages soldierMessages() { return soldierMessages; }
     public boolean betterCombatSoldierMeleeEnabled() { return betterCombatSoldierMeleeEnabled; }
     public boolean taczEnabled() { return bool(object(root, "tacz"), "enabled", true); }
@@ -317,7 +320,9 @@ public final class UnifiedConfig {
     static JsonObject defaults() {
         try (Reader reader = new InputStreamReader(Objects.requireNonNull(
                 UnifiedConfig.class.getResourceAsStream("/defaults/hostile_humans_unified.json")), StandardCharsets.UTF_8)) {
-            return JsonParser.parseReader(reader).getAsJsonObject();
+            JsonObject defaults = JsonParser.parseReader(reader).getAsJsonObject();
+            defaults.add("perception", PerceptionConfig.defaults());
+            return defaults;
         } catch (IOException e) { throw new IllegalStateException("Missing packaged config defaults", e); }
     }
     private static JsonObject merge(JsonObject defaults, JsonObject data) {
