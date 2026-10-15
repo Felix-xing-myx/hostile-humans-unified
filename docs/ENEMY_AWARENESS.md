@@ -1,33 +1,47 @@
-# 敌人发现、警觉与锁定源码地图
+# 敌人感知源码地图
 
-知识库正文：`E:\个人知识库\Hostile Humans Unified\02-战斗与生存\敌人发现、警觉与锁定.md`；开发参考：`05-开发参考/敌人感知原理与修改入口.md`。本轮只研究文档，保留未构建的导航交接实现，不改源码/配置。
+玩法手册：`E:\个人知识库\Hostile Humans Unified\02-战斗与生存\敌人发现、警觉与锁定.md`；开发手册：`05-开发参考/敌人感知原理与修改入口.md`。导航诊断见 [NAVIGATION_DEBUG.md](NAVIGATION_DEBUG.md)。
 
-## 主要入口
+## 入口 → 条件 → 状态 → 消费
 
-- Human.registerGoals：0原版HurtByTarget＋alertOthers，1玩家Limiter，2愤怒LivingEntity（13,true,false），4自主Mob（5,false,false）。HumanGunner.configureSoldierOrders另加-11贴身保护与-10驻守目标Goal。
-- NearestAttackableTargetGoalWithHumanLimiter：首次候选继承原版TargetingConditions；canSelectPlayer检查HumanUtil.isLookingAtTarget或isAlert，附近15格已有目标数量对比Config.maxTargeting。初次朝向成功先警觉并通知25格同team，之后才限数量。canContinueToUse覆写省略LOS/unseen计数，保留存活/同维度/攻击许可/队伍/实时范围条件。
-- HumanUtil.isLookingAtTarget：视线方向dot到目标眼睛方向 > 1-0.4/d，同时hasLineOfSight，远处锥角收窄。已警觉不再要求这个额外朝向，但新候选LOS仍保留。
-- NearestAttackableTargetGoalCustom：forCombat().range(...).selector(...)没有ignoreLineOfSight；mustSee=false仅不能据此推出首次透视。非玩家候选盒水平R/垂直4；玩家getNearestPlayer单独查询。
-- Human.canAttack/isAngryAt/setTarget/hurt：统一许可、模式/命令/阵营、真实受击授权、实际目标赋值与切换。身份牌主动敌意清理在HumanGunner维护入口，友军战术过滤在HumanRelations等；不是每种关系都只靠原版Team。
-- HumanAwareness/BlockMixin/DoorMixin/EventHandler：非创造玩家破坏/放置/部分通道操作、伤害事件调查；以actor包围盒扩展16查人，记录事件BlockPos，不校验声传播或LOS。爆炸单独以事件方块盒扩展16。放置警觉及玩家受伤警觉调用alert，actor盒扩展10，无同队/LOS过滤，只置isAlert。
-- InvestigateSoundGoal：已有攻击目标或睡眠等不启用；调查距离平方<1000，移动到事件点，结束清空并冷却；未直接setTarget。单一调查位置覆盖，不是通用听觉队列或振动模型。
-- AdaptiveCombatGoal：resolveThreat保留当前/受击/逃生记忆；最多4威胁、600tick记忆、回忆64格；60tick内至少3受击且多来源触发80tick集中锁定；约6tick近敌重排，已有战斗才触发，部分分支无LOS。非任意未知玩家雷达。
-- HumanRelations/HumanSignalItem：敌对信标指定召唤者、范围+88、128格重锁与200tick/64格反击；defend/followOwnerAssault给主人附近48盒内适用人类授权/指派，不走普通初次目视。BodyguardProtection：5tick主人中心扫描，普通未知主动敌人需LOS，已指向/已授权等例外。
-- SoldierCombatMemory/SoldierOrder：600tick无输出放弃、60tick忽略与威胁解除；与增强30秒记忆、身份牌600tick报复记忆不是同一状态。
-- ShieldDefenseController与枪械后端：来袭箭轨迹预判/射手信息、伤害事件40tick枪火压力，不是监听每次GunShoot来广播枪声目标。RangedShotClearance/GunFireAuthorization负责真正开火射界。
-- HostileHumanTargeting是其他怪物发现Human的反向机制，不混作Human自身扫描32格限制。
+`Human`服务端tick推进`HumanPerception.tick`；声音适配、真实受击与主人事件请求观察或线索，只有共同边界能够把目视证据转为已确认目标。目标Selector、增强战术、护卫与武器执行不能仅因持有LivingEntity就取得合法实时位置。
 
-## 本机原版核查
+| 责任 | 入口 | 必须保持的约束 |
+|---|---|---|
+| 参数 | `PerceptionConfig`、`UnifiedConfig.perception()` | 全局不可变配置快照，默认值、范围、说明集中；完整重启生效 |
+| 时序与几何 | `PerceptionPolicy` | `now < until`才动态有效；伤害只续有效期；组合系数独立收敛；角度随距离收窄 |
+| 视觉/识别与知识 | `HumanPerception.tick/check` | 敌我、同维度、范围、朝向、原版可见度、方块COLLIDER射线；预算不足不视为成功 |
+| 攻击准入 | `HumanPerception.canTarget`、`Human.setTarget` | 已标记且动态有效，再复核存活、同盟、模式与命令；确认不代替许可 |
+| 合法位置 | `HumanPerception.knownPosition` | 动态期内真实位置，到期只最后位置，不可把线索UUID解析为实时导航目标 |
+| 受击与回看 | `HumanPerception.hurt`、`PerceptionLookGoal` | 弹丸方向快照、无可靠方向安全降级；首次识别受保护；其他来源排队 |
+| 声音/求援 | `HumanAwareness`、方块/通道Mixin、事件入口 | 点时线索、同源去重、有界排队；脚步仅警觉邻域；友军求援不转交攻击者 |
+| 调查移动 | `PerceptionInvestigationGoal`（旧调查Goal入口委托） | 只消费位置；复用BasicNavigationBudget、HumanTerrainSafety与RetreatPathSafety；仅停止自己拥有的路径 |
+| 信标报告 | `BeaconReportingService`、`BeaconReportPolicy`、`HumanSignalItem` | 仅成功生成后used；同玩家/维度通道；周期/报告TTL/发报总期限分开 |
+| 战术与动作 | `AdaptiveCombatGoal`、盾防/武器/护卫入口 | 继续现有威胁排序，所有目标/位置须共同准入；LOOK让位于首次识别，MOVE保留安全与命令 |
+| 诊断 | `PerceptionDebugSnapshot/Codec`、`NavigationDebugService/Client`、`NavigationDebugViewPolicy` | 服务端只读快照，客户端只显示；分页/焦点切换不下达行为命令 |
 
-只读官方映射Forge1.20.1-47.4.16 JAR，资料在维护目录验证日志/target-awareness：
+识别证据按每次真实检测推进，不从预算等待时间补足。每人默认一轮最多2条感知射线，平静10tick、活跃4tick；邻域查询、射线、线索投递和移动声源分别受每维度及全服务器配额限制。默认每维度/服务器每tick为查询64/128、射线128/256、线索256/512、声源128/256；事件查询最多占25%。这些仅约束新增感知工作量，不涵盖原有战斗、寻路等所有查询；不是公平延迟或毫秒性能保证。
 
-- TargetingConditions默认checkLineOfSight/testInvisible=true；有效范围max(2,R*visibility)，Sensing.hasLineOfSight；不是所有实体进AABB就锁定。
-- TargetGoal.mustSee控制继续阶段unseen计数，默认unseenMemoryTicks60，经过reducedTickDelay。玩家Limiter覆写不使用它。
-- HurtByTargetGoal候选ignoreLineOfSight/ignoreInvisibilityTesting；start设置unseenMemoryTicks300。同运行类求援对无目标/非攻击者盟友及适用主人等检查，alertOther最终调用setTarget，未作LOS。
-- Goal.reducedTickDelay为向上除2。普通玩家随机间隔10→5，自定义13→7、5→3；含义为适用canUse的随机跳过，不能当严格世界tick扫描周期。
+## 状态归属与保存
 
-## 配置核查与文档校正
+`HumanPerception`逐实体弱引用状态包含独立目标Track（确认、动态/最后/旧敌期限、归一化进度）、线索、待观察来源、LOOK归属和有限转换记录。目标死亡、无效、关系变化与过期在服务器维护；主人/行动命令变更清掉旧知识、观察与攻击目标。普通感知不写NBT，卸载不恢复未完成识别。
 
-默认及既定Forge47.4.21实例读取的基础FOLLOW_RANGE为40/40/40/48，native_gameplay.max_targeting为3。文档明确其为普通玩家选择入口的15格局部计数，不是setTarget全局硬限；0不关闭反击/信标。实例配置只读，没有覆盖。
+`BeaconReportingService.Store`通过主世界SavedData保存通道，键为玩家UUID与使用维度；保存最后成功使用、总截止、下次发报、报告序列、采样时刻、报告截止和网格坐标。成员NBT存追捕玩家与使用维度，旧实体有追捕UUID时以当前维度补兼容身份；接收去重是临时状态。使用全服主世界游戏时钟，重载只恢复剩余期限，不重新起算。招募或有效主人出现时删除实际追捕目标，出生来源标记的掉落语义另留原处。
 
-文档将初次视线、警觉、保留、事件调查、受击/通知与特殊指派分开；没有将无LOS分支伪装成完善声传播，也没有把朝向公式当固定视锥或把unseen参数当统一丢锁秒数。当前头盔没有目标来源/警觉来源字段，后续观测扩展仅列设计方向。
+## 同步与诊断
+
+只有有效观察者才生成并发送有界快照，默认5tick间隔，最多8个人类。协议3导航帧携带同实体的感知快照，客户端3秒没有新帧时隐藏旧数据；目标身份/位置按知识阶段裁剪，未知方向不发送隐藏射手身份坐标。每页只筛选已收到字段，不为了展开详情重扫实体、补射线或重算路径。最近状态转换最多32条/20秒；感知射线只显示近期已有样本，几何视锥与真实无遮挡证据分别渲染。调试快照与观察选择不作为持久AI状态。
+
+F8六页为概览、目标/记忆、视野、声音/信标、动作/导航、预算，可选择世界标记层与焦点。动作页读GoalSelector实际运行集合、priority、控制标志及手部占用，并显示战术压力/记忆数量与锁定剩余，决策意图不能代替当前MOVE/LOOK任务；固定点测试暂停自主观察并明确显示接管。
+
+## 失败路径与修改约束
+
+- 敌我或主人许可过期：清目标/拒绝攻击，知识不自动续权；位置调查仍单独受命令约束。
+- 未知弹丸无有效速度、无可靠来源或周期伤害：保留警觉，不补出隐藏射手位置。
+- 识别遮挡10tick、方向2秒、识别任务6秒：释放占用，后续排队来源才有机会处理；不借重复伤害无限延长本次占用。
+- 动态截止tick起：伤害不能复活实时位置；回看方向后依实际目视恢复。其他目标不联动续期。
+- 查询/射线/导航配额不足：等待，不记为检测成功、识别完成或路线不可达。
+- 无安全落点、区块未加载、命令不允许或路线不可达：有限重试并结束；不强加载、不传送、不拆墙，也不停止另一控制器的路线。
+- 信标无有效通道/玩家离线或跨维度/成员受控/超范围：不接收报告；观察详情只读，不创建通道、发报或清理存档。
+
+扩展新事件应先回答它提供的是许可、方向、静态位置还是合法动态知识，再接共同入口。不得新增绕过`canTarget/knownPosition`的直锁/实时坐标旁路，也不得让展示点击改变AI。枪声后端留待独立接入；可选枪械缺席时核心感知仍可运行。

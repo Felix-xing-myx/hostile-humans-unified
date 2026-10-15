@@ -18,26 +18,26 @@
 
 任务独立最长120秒；到达/取消/状态失效/128格范围外/退出/跨维度时释放对应成员，其他任务继续。服务器以成员身份验证控制，不以当前焦点验证，因此切换焦点不会取消路径。多人可共同观察，一只实体的测试租约仍独占，移除观察不会取消他人测试。
 
-每5tick发送最多8成员的全量帧；每实体256剩余节点、最近16候选，服务器候选保留48条/5秒；网络协议为2。客户端使用服务器位置，即使实体暂时未被客户端追踪也可显示；维度/UUID及2秒新鲜度检查保留。帧取代旧集合，避免移除后的残留路径。
+默认每5tick发送最多8成员的全量帧；每实体256剩余节点、最近16候选，服务器候选保留48条/5秒；协议3的帧包含有界感知快照。客户端使用服务器位置，即使实体暂时未被客户端追踪也可显示；维度/UUID及3秒新鲜度检查保留。帧取代旧集合，避免移除后的残留路径。
 
 ## 渲染与诊断
 
 一个静态BufferBuilder复用原生存储，每实体结束提交，禁止每帧新建；相机相对坐标在转float之前完成。每实体概览显示编号、模式、状态、节点和请求点；焦点详情含实际终点、生命/摔落预算、有效范围、配额/地形阻断及地面调用耗时。焦点详情位于左侧，字号80%，宽度上限为GUI宽度42%与240像素中的较小值（小窗口最小目标80像素，仍限制在屏内）；长文字换行，每行背景贴合文字。概览卡片最多155 GUI像素宽。小窗口可调低GUI缩放。
 
-路径/请求点/实际终点用实体色，下一节点白；焦点敌人红、候选紫/绿/红。评分通过不保证采用；请求点可能是试算，活动路线和实际终点才代表当前执行事实。空路径原因未知；调用耗时包含复用，不是全服A*时间；不显示全部内部扩展节点。
+路径/请求点/实际终点用实体色，下一节点白；依法取得位置的焦点敌人红、候选紫/绿/红。评分通过不保证采用；请求点可能是试算，活动路线和实际终点才代表当前执行事实。空路径原因未知；调用耗时包含复用，不是全服A*时间；不显示全部内部扩展节点。
 
 ## English
 
 Creative/operator-only Human diagnostics, up to8 members. Click Humans to add/focus, use air to cycle focus, click ground to assign only that member's destination. Other tests continue. Sneak-click a Human removes it; sneak-use air/block clears all your members/tests. Wear the helmet for independently colored paths, numbered nameplates/cards and focus details. Removing the helmet hides observation without cancelling tasks.
 
-One reusable native buffer replaces per-frame allocations. Camera-relative coordinates avoid distant float precision loss. Bounded replace-all frames (protocol2) carry eight members, 256 path nodes/member and16 recent samples/member every5ticks. Orders, ownership, safety, normal quotas and exclusive per-Human controller leases remain intact; switching focus never releases another member's task.
+One reusable native buffer replaces per-frame allocations. Camera-relative coordinates avoid distant float precision loss. Bounded replace-all frames with perception snapshots carry eight members, 256 path nodes/member and16 recent samples/member every5ticks. Orders, ownership, safety, normal quotas and exclusive per-Human controller leases remain intact; switching focus never releases another member's task.
 
 Validate long-running distant viewing,8 simultaneous distinct destinations, stable slot colors/removal, focus cycling, lifecycle cancellation, tracking loss, multiplayer and passage/height/water behavior in game. Automated checks do not prove live rendering acceptance.
 
-## 颜色图例界面 / Color legend
+## F8综合详情 / Comprehensive details
 
-游戏中默认按F8打开可滚动图例，Esc或完成关闭；可在控制设置的Hostile Humans Unified分类重绑。HUD提示显示当前绑定。无需先选实体或佩戴头盔即可查阅。界面不暂停游戏，也不修改现有观察或导航任务。
+默认F8打开不暂停游戏的详情，可重绑。概览、目标/记忆、视野、声音/信标、动作/导航、预算六页支持滚动与图层/焦点显示。图例保留八槽颜色、路径、请求/终点和候选解释；详情列识别进度、动态/最后/旧敌剩余、回看队列、警觉原因、当前决策及真实Goal动作/控制标志。信标页显示共享发报剩余、最后使用、下一报告、报告年龄/TTL和拒收原因。
 
-图例列出1～8槽位颜色、同色实体/请求点/实际终点/路线的区别、白色下一节点、焦点敌人红色大框及候选紫/绿/红色小框；评分或完整路径结果不等于最终采用。图例只作颜色参考，实体实际信息仍在观察面板。
+世界标记区分方向、识别、目视、动态位置、最后位置与信标网格。几何视野不保证无遮挡；LOS只显示已有采样及年龄。未知方向不显示隐藏射手身份，动态期结束不继续绘制隐藏目标实时框。面板明确未检测/配额等待、命令阻止和固定点接管。快照默认5tick、有观察者才生成，不因翻页重扫实体或改变AI。详情焦点和图层只调整显示，导航指针点击目的地仍是独立控制操作。
 
-Press F8 in game for the scrollable color legend; rebind under Controls > Hostile Humans Unified. Esc or Done closes it. It explains the eight slot colors, route/position/request/endpoint markers, white next nodes, focused enemies and candidate evaluation colors. The game and navigation tests continue while it is open.
+F8 opens six read-only pages: overview, targets/memory, vision, clues/beacons, actions/navigation and budgets. Existing colors and navigation controls remain available. Marker positions respect the Human's knowledge stage; geometric cones are distinct from sampled LOS. Display controls never issue AI commands.

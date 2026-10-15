@@ -553,3 +553,22 @@ TaCZ背包直接供弹枪（例如默认转管机枪）在人类手中使用虚�
 物品只进背包，不立即装备。沿用堆叠、空位和品质替换规则，保护三个食物槽、最后一份恢复药品、必要备用装备及使用托管槽位；空间不够时可以只取能存下的部分，无法存入就跳过。只有实际存入的数量才从地面扣除，多名士兵不会重复获得同一份物品。
 
 默认每20tick错峰检查，最多处理16个附近候选、成功收取一处；失败候选暂缓40tick。补足后立即结束本轮短缺状态，避免下一轮少量消耗就继续搜集。所有设置集中在全局 `combat_resupply`；完整参数见 知识库配置索引 和默认值附录。
+
+## 共同感知：global.json → perception
+
+`perception`只在全局文件配置，不按阶复制；完整重启生效。`PerceptionConfig.SETTINGS`集中定义默认值、上下限与双语说明。缺失字段使用默认值，实际自定义数值以实例文件为准。
+
+| 区域 | 默认核心参数 | 作用 |
+|---|---|---|
+| `vision` | `minimum_range=64`、`familiar_angle_multiplier=2`、`maximum_half_angle=60` | 最低基础感知距离、旧敌半角倍率/上限；原版可见度仍适用，不改射程/导航预算 |
+| `recognition` | `base_ticks=10`、`ticks_per_block=1.25`、`maximum_ticks=90`、`minimum_ticks=4`、`break_ticks=10`、`hurt_ticks=4` | 基础距离计时、最低目视、遮挡清零、受击快速目视 |
+| `recognition`系数 | `alert_factor=0.5`、`familiar_factor=0.5`、`combined_factor=0.4` | 单项/组合独立处理，不连乘；组合有效值收敛在较快单项的75%至100% |
+| `memory` | `dynamic_ticks=160`、`last_position_ticks=600`、`familiar_ticks=2400`、`maximum_targets=16` | 动态位置、最后位置、旧敌标签分别计时 |
+| `observation` | `alert_ticks=600`、`direction_ticks=40`、`focus_ticks=120`、`queue_size=4` | 警觉、方向回看、首次识别占用与来源队列 |
+| `hearing` | 声音半径、位移阈值、同源冷却、分类TTL、`maximum_clues=4` | 事件位置与警觉脚步；不接任意音频/枪声 |
+| `investigation` | `radius=6`、`duration_ticks=200`、`maximum_points=3`、`retry_ticks=40`、`maximum_retries=3`、`command_deviation=8` | 有限搜索、重试、命令偏离；不绕过地形安全 |
+| `beacon` | `duration_ticks=6000`、`interval_ticks=160`、`grid_size=8`、`receiver_range=128`、`report_ticks=400`、`search_radius=8`、`vertical_search=8` | 成功使用续5分钟共享发报期，8秒周期、三维网格报告；不直接锁敌 |
+| `budgets` | 平静10/活跃4tick、每人2射线/轮；查询64/128、射线128/256、投递256/512、声源128/256 | 后四组为每维度/全服务器每tick上限；事件查询份额默认25%，不足延迟 |
+| `debug` | `interval_ticks=5`、`transition_limit=32`、`transition_ticks=400` | 有观察者时的诊断快照与有限转换记录 |
+
+每个目标独立续时，仅仍有效的已确认来源直接实际伤害能够续自己的动态期限；截止tick起不能凭伤害恢复。主人通常10秒许可与动态知识分开，观察不续权。详见[感知源码地图](docs/ENEMY_AWARENESS.md)。

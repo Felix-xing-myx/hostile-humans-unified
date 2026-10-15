@@ -64,3 +64,7 @@ Optional support targets the public NPC APIs in Scorched Guns 0.5.5: native proj
 ## Navigation diagnostics
 
 Creative players/operators can observe up to8 Humans with distinct numbered paths/cards. Click Humans to add/focus, use air to cycle focus, and click ground to assign only the focus destination while other tasks continue. Sneak-click a Human to remove it; sneak-use air/block to clear all. Wear the helmet and avoid destination clicks for passive observation. See [navigation diagnostics](docs/NAVIGATION_DEBUG.md).
+
+## Perception and diagnostics
+
+Sound, allied aid, owner instructions and beacon reports provide clues or permission. Humans must visually recognize a target before combat. Confirmed live-position knowledge lasts eight seconds; a direct hit from that source can renew its own still-valid lease. Expired knowledge becomes a last-position search. Initial recognition protects LOOK while other incoming sources queue. Global `perception` settings cover vision, recognition, hearing, memory, investigation, beacon reports and budgets. F8 helmet details show overview, targets/memory, vision, clues/beacons, actions/navigation and budgets. See [the source map](docs/ENEMY_AWARENESS.md).
