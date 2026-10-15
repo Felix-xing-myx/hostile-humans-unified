@@ -194,6 +194,13 @@ public final class NavigationDebugClient {
                     : m.kind().equals("sound") || m.kind().equals("beacon") || m.kind().equals("direction") ? 3 : 2;
             if (!layer(layer, entry)) continue;
             if (layer == 1 && !NavigationDebugViewPolicy.detailedVision(LAYERS[1])) continue;
+            if(m.kind().equals("vision_near_top")||m.kind().equals("vision_known_near_top"))continue;
+            if(m.kind().equals("vision_near_base")||m.kind().equals("vision_known_near_base")){
+                boolean known=m.kind().equals("vision_known_near_base");
+                var top=nearTop(s,known);
+                if(top!=null)nearVolume(poses,out,m,top,camera,known?.5F:r,known?.8F:g,known?1:b);
+                continue;
+            }
             Vec3 p = m.position().subtract(camera);
             float red = r, green = g, blue = b;
             switch (m.kind()) {
@@ -221,10 +228,16 @@ public final class NavigationDebugClient {
             if (!ring && m.end() != null) line(poses,out,p,m.end().subtract(camera),red,green,blue);
         }
     }
-    /** Focus mode shows one short field-of-view fan; all mode retains sampled rays and full rings. */
+    /** Focus shows one body-relative near volume; all retains familiar/distant fields and sampled rays. */
     private static void compactVision(PoseStack poses, VertexConsumer out, PerceptionDebugSnapshot s, Vec3 camera,
             float r,float g,float b) {
         if(s.range()<=0||s.view().lengthSqr()<1.e-8)return;
+        for(var marker:s.markers())if(marker.kind().equals("vision_near_base")){
+            var top=nearTop(s,false);
+            if(top!=null)nearVolume(poses,out,marker,top,camera,r,g,b);
+            line(poses,out,s.eye().subtract(camera),s.eye().add(s.view().normalize().scale(Math.min(8,s.range()))).subtract(camera),r,g,b);
+            return;
+        }
         PerceptionDebugSnapshot.Marker nearest=null;double best=Double.MAX_VALUE;
         for(var marker:s.markers())if(marker.kind().equals("vision_new_ring")){
             double distance=Math.hypot(marker.position().distanceTo(s.eye()),marker.radius());
@@ -245,6 +258,28 @@ public final class NavigationDebugClient {
             if(previous!=null)line(poses,out,previous,next,r,g,b);
             if(i==0||i==16)line(poses,out,origin,next,r,g,b);
             previous=next;
+        }
+    }
+    private static PerceptionDebugSnapshot.Marker nearTop(PerceptionDebugSnapshot snapshot,boolean known){
+        String kind=known?"vision_known_near_top":"vision_near_top";
+        return snapshot.markers().stream().filter(m->m.kind().equals(kind)).findFirst().orElse(null);
+    }
+    private static void nearVolume(PoseStack poses,VertexConsumer out,PerceptionDebugSnapshot.Marker base,
+            PerceptionDebugSnapshot.Marker top,Vec3 camera,float r,float g,float b){
+        if(base.end()==null)return;
+        Vec3 axis=new Vec3(base.end().x,0,base.end().z);
+        if(axis.lengthSqr()<1.e-8)return;
+        axis=axis.normalize();Vec3 side=new Vec3(axis.z,0,-axis.x);
+        Vec3 bottom=base.position().subtract(camera),upper=top.position().subtract(camera);
+        Vec3 previousBottom=null,previousTop=null;double half=base.end().y;
+        for(int i=0;i<=16;i++){
+            double angle=-half+2*half*i/16;
+            Vec3 offset=axis.scale(base.radius()*Math.cos(angle)).add(side.scale(base.radius()*Math.sin(angle)));
+            Vec3 low=bottom.add(offset),high=upper.add(offset);
+            if(previousBottom!=null){line(poses,out,previousBottom,low,r,g,b);line(poses,out,previousTop,high,r,g,b);}
+            if(i==0||i==16){line(poses,out,bottom,low,r,g,b);line(poses,out,upper,high,r,g,b);}
+            if(i==0||i==8||i==16)line(poses,out,low,high,r,g,b);
+            previousBottom=low;previousTop=high;
         }
     }
     private static void label(RenderLevelStageEvent event, MultiBufferSource buffers, NavigationDebugFrame.Entry entry, Vec3 camera) {

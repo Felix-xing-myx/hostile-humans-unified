@@ -73,7 +73,7 @@ public final class NavigationLegendScreen extends Screen {
         if(page==6) {
             for(int i=0;i<8;i++) rows.add(new Row(NavigationDebugClient.slotColor(i),Component.translatable("navigation_debug.help.entity",i+1)));
             for(String key:List.of("next","pending","accepted","rejected","controls")) rows.add(new Row(-1,Component.translatable("navigation_debug.help."+key)));
-            for(String kind:List.of("visible","dynamic","last","recognition","sound","direction","beacon","los","blocked","vision_new_ring","vision_known_ring")) rows.add(new Row(-1,label("marker."+kind)));
+            for(String kind:List.of("visible","dynamic","last","recognition","sound","direction","beacon","los","blocked","vision_near_base","vision_known_near_base","vision_new_ring","vision_known_ring")) rows.add(new Row(-1,label("marker."+kind)));
         } else {
             for(var row:p.rows()) if(matches(row.group())) rows.add(new Row(-1,Component.literal(row.label()+": "+row.value())));
             for(var marker:p.markers()) if(page==2 && (marker.kind().equals("los") || marker.kind().equals("blocked"))) rows.add(new Row(-1,Component.literal(marker.kind()+": "+marker.label())));

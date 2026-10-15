@@ -270,7 +270,7 @@ ScgunsMachineGunPose通过五个原生MiniGun姿势类的protected扩展工厂�
 
 - `NavigationDebugService.controls` 仅表示固定点测试的临时移动租约；Human阻止新增攻击目标，LivingTick保留成长/既有恢复效果与临时单位寿命，但暂停命令、传送脱困及战斗写入。TestGoal复用原导航/安全/配额，不修改原命令或归属，结束释放而不恢复过时仇恨。
 - `watching`、`searched`、`candidate`、`budget`、`blocked` 为只观察入口，未佩戴头盔时不采集候选；候选通过评分不等于路线安装。`HumanNavigation`提供地面请求/安装，四类选点器提供评估，原有配额数值不变。
-- `NavigationDebugSnapshot`只含几何与服务器权威数值；`NavigationDebugFrame`含最多8实体及焦点，感知扩展帧仅S2C、每观察者5tick、每实体路径256/最新候选16（服务器缓存48）。`NavigationObserverSelection`维持稳定槽位与唯一服务端焦点；指针与F8都调用同一个cycle，客户端无本地焦点覆盖。导航通道4新增空负载C2S轮换请求，经头盔/权限/会话校验，只变更观察选择，既有S2C帧布局不变；测试租约校验观察成员身份，切换焦点不会取消其他任务。客户端复用唯一原生BufferBuilder，每实体及时提交，先以double减相机坐标再绘制。客户端限定头盔、维度、实体UUID及数据新鲜度，不反算伤害或寻路。使用边界见[NAVIGATION_DEBUG](NAVIGATION_DEBUG.md)。
+- `NavigationDebugSnapshot`只含几何与服务器权威数值；`NavigationDebugFrame`含最多8实体及焦点，感知扩展帧仅S2C、每观察者5tick、每实体路径256/最新候选16（服务器缓存48）。`NavigationObserverSelection`维持稳定槽位与唯一服务端焦点；指针与F8都调用同一个cycle，客户端无本地焦点覆盖。导航通道5保留空负载C2S轮换请求，经头盔/权限/会话校验，只变更观察选择，既有S2C帧布局不变；测试租约校验观察成员身份，切换焦点不会取消其他任务。客户端复用唯一原生BufferBuilder，每实体及时提交，先以double减相机坐标再绘制。客户端限定头盔、维度、实体UUID及数据新鲜度，不反算伤害或寻路。使用边界见[NAVIGATION_DEBUG](NAVIGATION_DEBUG.md)。
 
 
 ## 拾取战斗交接与已越过路点
@@ -281,6 +281,6 @@ HumanNavigation.tick在原地形复核前尝试advancePassedCombatWaypoint：连
 
 ## 共同感知与目标位置准入
 
-`HumanPerception`拥有服务端逐目标知识状态；每份Track的`RecognitionEvidence`管理实际目视证据/负检测起点，`BodyVisibilitySamples`提供27个AABB样本；先查缓存身体比例点/眼部，再申请独立目标补查批次（默认27），所有射线共同计入原维度/服务器池，成功后取消下轮预留。可见点更新LOOK与缓存，未查完不得产生负证据。最多两份识别并行，LOOK主焦点独立且唯一。未采样不启动遮挡计时；视觉判定与头盔视野共用配置插值角度。`canTarget`为确认且动态有效的攻击准入，`knownPosition`只返回合法动态/最后位置。所有目标赋值、威胁恢复、护卫、射击与战术导航必须消费这条边界，不能从线索UUID恢复隐藏实体坐标。`HumanAwareness`在平静/警觉均采样和投递脚步位置线索；运动采样半径取walk/run/swim三者最大值，再按事件各自半径投递。`HumanPerception.reactToClue`独立提交有限LOOK，不依赖调查MOVE启动，驻守不离岗；新线索/位置改动与回看冷却控制重复请求，仍不能抢视觉首次识别/战斗/撤退。`PerceptionLookGoal`申请LOOK，Human.tick末尾`HumanPerception.finishLook`依AttentionFacingPolicy每tick最多一次落实头/身体/俯仰，保存连续转向进度避免移动yaw重置。不可攻击来源的可靠受击方向仍可获得短暂匿名观察，不授予攻击许可；盾防/战斗LOOK请求不能抢断；`PerceptionInvestigationGoal`只占自己的MOVE路径并沿用安全/命令/预算。
+`HumanPerception`拥有服务端逐目标知识状态；每份Track的`RecognitionEvidence`管理实际目视证据/负检测起点，`BodyVisibilitySamples`提供27个AABB样本；先查缓存身体比例点/眼部，再申请独立目标补查批次（默认27），所有射线共同计入原维度/服务器池，成功后取消下轮预留。可见点更新LOOK与缓存，未查完不得产生负证据。最多两份识别并行，LOOK主焦点独立且唯一。未采样不启动遮挡计时；近场由NearVisionPolicy按身体柱体/水平角判断，柱体外保留配置插值视锥；头盔使用服务器base/top几何对，end=(headingX,halfAngle,headingZ)，不客户端重算配置。`canTarget`为确认且动态有效的攻击准入，`knownPosition`只返回合法动态/最后位置。所有目标赋值、威胁恢复、护卫、射击与战术导航必须消费这条边界，不能从线索UUID恢复隐藏实体坐标。`HumanAwareness`在平静/警觉均采样和投递脚步位置线索；运动采样半径取walk/run/swim三者最大值，再按事件各自半径投递。`HumanPerception.reactToClue`独立提交有限LOOK，不依赖调查MOVE启动，驻守不离岗；新线索/位置改动与回看冷却控制重复请求，仍不能抢视觉首次识别/战斗/撤退。`PerceptionLookGoal`申请LOOK，Human.tick末尾`HumanPerception.finishLook`依AttentionFacingPolicy每tick最多一次落实头/身体/俯仰，保存连续转向进度避免移动yaw重置。不可攻击来源的可靠受击方向仍可获得短暂匿名观察，不授予攻击许可；盾防/战斗LOOK请求不能抢断；`PerceptionInvestigationGoal`只占自己的MOVE路径并沿用安全/命令/预算。
 
 `BeaconReportingService`与`BeaconReportPolicy`独立负责同玩家/维度报告SavedData，不授予目视知识；`HumanSignalItem`仅成功召唤后续共享截止。`PerceptionConfig`集中配置，`PerceptionPolicy`集中时序/识别/几何规则。`PerceptionDebugSnapshot/Codec`随观察帧发送，`NavigationDebugViewPolicy`只筛选展示。详见[感知源码地图](ENEMY_AWARENESS.md)。

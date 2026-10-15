@@ -5,6 +5,7 @@ import dev.felix.hostilehumans.core.RecognitionEvidence;
 import dev.felix.hostilehumans.core.BodyVisibilitySamples;
 import dev.felix.hostilehumans.core.ScopedWorkBudget;
 import dev.felix.hostilehumans.core.AttentionFacingPolicy;
+import dev.felix.hostilehumans.core.NearVisionPolicy;
 import com.google.gson.JsonObject;
 
 /** Behavioral policies, configuration provenance and perception/beacon temporal boundary cases. */
@@ -23,6 +24,21 @@ public final class PerceptionPolicyTest {
         check(recognition(4,true,true)==6&&recognition(16,true,true)==12&&recognition(64,true,true)==36,"moderate combined recognition");
         check(recognition(16,true,false)==15&&recognition(16,false,true)==15,"either single acceleration");
         check(recognition(128,true,false)==45,"far range capped before factor");
+        double nearHalf=Math.toRadians(80);
+        check(NearVisionPolicy.owns(0,-.8,0,8,-1,2.8)
+                &&NearVisionPolicy.inSector(0,0,0,1,nearHalf),"directly below feet has no pitch-cone blind spot");
+        check(NearVisionPolicy.owns(.2,0,.2,8,-1,2.8)
+                &&NearVisionPolicy.inSector(.2,.2,0,1,nearHalf),"small creature near feet is inside near volume");
+        check(NearVisionPolicy.owns(0,2.8,1,8,-1,2.8)
+                &&NearVisionPolicy.inSector(0,1,0,1,nearHalf),"top extension is inclusive and independent of eye pitch");
+        check(!NearVisionPolicy.inSector(0,-1,0,1,nearHalf),"near field does not become rear omniscience");
+        check(!NearVisionPolicy.inSector(1,0,0,1,nearHalf),"ninety-degree side lies outside stranger 160-degree field");
+        check(NearVisionPolicy.inSector(1,0,0,1,Math.PI/2),"familiar 180-degree field includes side boundary");
+        check(NearVisionPolicy.owns(0,0,8,8,-1,2.8)&&!NearVisionPolicy.owns(0,0,8.001,8,-1,2.8),"horizontal cylinder radius uses xz rather than eye distance");
+        check(!NearVisionPolicy.owns(0,-1.001,0,8,-1,2.8)
+                &&!NearVisionPolicy.owns(0,2.801,0,8,-1,2.8),"points outside the height slab retain ordinary vision handling");
+        check(NearVisionPolicy.inSector(1,0,1,0,nearHalf)
+                &&!NearVisionPolicy.inSector(-1,0,1,0,nearHalf),"head yaw rotates near sector without changing its height");
         check(PerceptionPolicy.recognition(16,true,true,10,1.25,90,4,.5,.5,.01)>=11,"configuration cannot multiply into extreme speed");
         double previous=Double.MAX_VALUE;
         for(int d=1;d<=256;d++){

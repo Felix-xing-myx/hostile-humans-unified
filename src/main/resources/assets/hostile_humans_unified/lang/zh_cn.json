@@ -291,7 +291,7 @@
   "navigation_debug.detail.sample": "服务器采样 tick %s",
   "navigation_debug.detail.stale": "快照失效：请佩戴头盔并选择范围内人类。",
   "navigation_debug.detail.readonly": "滚轮浏览。详情焦点和图层仅影响显示，不改变仇恨、导航或指令。",
-  "navigation_debug.detail.geometry": "视野环仅表示服务器视角几何，不表示无遮挡；LOS线只对应已实际检测的样本。",
+  "navigation_debug.detail.geometry": "近场是前向圆柱扇区，垂直覆盖脚下与头顶，不随俯仰收窄；柱体外保留视锥。几何轮廓不保证无遮挡，LOS只显示真实检测样本。",
   "navigation_debug.detail.layer": "%s：%s",
   "navigation_debug.detail.scope.0": "关闭",
   "navigation_debug.detail.scope.1": "焦点",
@@ -319,5 +319,7 @@
   "navigation_debug.detail.marker.vision_new_ring": "实体色视野环：陌生目标分距离视角；轮廓不代表无遮挡。",
   "navigation_debug.detail.marker.vision_known_ring": "浅蓝视野环：已知目标分距离视角；由服务器提供。",
   "navigation_debug.detail.scope.vision_focus": "焦点·简略",
-  "navigation_debug.detail.vision_modes": "焦点仅显示选中人类的8格内朝向与简略视野扇形；所有模式显示完整视野环和历史LOS。指针切换焦点后显示随之切换。"
+  "navigation_debug.detail.vision_modes": "焦点仅显示选中人类的近场柱体简略轮廓与朝向线；所有模式显示近场、旧敌扩展、中远视野和实际LOS。",
+  "navigation_debug.detail.marker.vision_near_base": "实体色柱体：陌生目标近场水平视野，包含脚下与头顶。",
+  "navigation_debug.detail.marker.vision_known_near_base": "淡蓝柱体：旧敌扩展近场水平视野，同样需要遮挡检查。"
 }

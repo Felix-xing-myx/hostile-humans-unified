@@ -291,7 +291,7 @@
   "navigation_debug.detail.sample": "Server sample tick %s",
   "navigation_debug.detail.stale": "Snapshot expired: wear the helmet and select an in-range Human.",
   "navigation_debug.detail.readonly": "Scroll to browse. Diagnostic focus and layers affect display only; they issue no target, movement or command changes.",
-  "navigation_debug.detail.geometry": "View rings show server-authored geometry, not unobstructed visibility. LOS lines represent checks that actually occurred.",
+  "navigation_debug.detail.geometry": "Near vision is a body-relative cylinder sector, covering below feet and above the body regardless of pitch. Outside it, normal cones remain. Geometry does not guarantee clear LOS.",
   "navigation_debug.detail.layer": "%s: %s",
   "navigation_debug.detail.scope.0": "Off",
   "navigation_debug.detail.scope.1": "Focus",
@@ -319,5 +319,7 @@
   "navigation_debug.detail.marker.vision_new_ring": "Entity-color view rings: distance-dependent unfamiliar-target view; geometry does not imply clear LOS.",
   "navigation_debug.detail.marker.vision_known_ring": "Light-blue view rings: server-authored distance-dependent familiar-target view.",
   "navigation_debug.detail.scope.vision_focus": "Focus · compact",
-  "navigation_debug.detail.vision_modes": "Focus shows only the selected Human: a heading and compact field-of-view fan within 8 blocks. All shows full rings and sampled LOS. Pointer focus changes also change the display focus."
+  "navigation_debug.detail.vision_modes": "Focus shows one compact near-volume outline and heading. All shows near/familiar volumes, distant field rings and actual LOS samples.",
+  "navigation_debug.detail.marker.vision_near_base": "Entity-colored cylinder: near horizontal field including below feet and above the body.",
+  "navigation_debug.detail.marker.vision_known_near_base": "Pale blue cylinder: familiar near field; still requires clear LOS."
 }

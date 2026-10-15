@@ -6,6 +6,7 @@ import dev.felix.hostilehumans.core.PerceptionPolicy;
 import dev.felix.hostilehumans.core.RecognitionEvidence;
 import dev.felix.hostilehumans.core.BodyVisibilitySamples;
 import dev.felix.hostilehumans.core.AttentionFacingPolicy;
+import dev.felix.hostilehumans.core.NearVisionPolicy;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -331,8 +332,15 @@ public final class HumanPerception {
     private record VisualProbe(Vec3 visiblePoint,boolean complete,String reason) {}
     private static boolean withinVision(Human h,Vec3 point,boolean familiar,double visibility){
         Vec3 delta=point.subtract(h.getEyePosition());double distance=delta.length();
-        return distance<=Math.max(2,range(h)*visibility)&&(distance<1.e-4
-                ||h.getViewVector(1).normalize().dot(delta.scale(1/distance))>Math.cos(halfAngle(distance,familiar)));
+        if(distance>Math.max(2,range(h)*visibility))return false;
+        AABB body=h.getBoundingBox();double dx=point.x-h.getX(),dz=point.z-h.getZ();
+        double near=c().number("vision.near_distance");
+        if(NearVisionPolicy.owns(dx,point.y-body.minY,dz,near,-c().number("vision.near_below_feet"),
+                body.getYsize()+c().number("vision.near_above_head"))){
+            Vec3 forward=Vec3.directionFromRotation(0,h.getYHeadRot());
+            return NearVisionPolicy.inSector(dx,dz,forward.x,forward.z,halfAngle(near,familiar));
+        }
+        return distance<1.e-4||h.getViewVector(1).normalize().dot(delta.scale(1/distance))>Math.cos(halfAngle(distance,familiar));
     }
     private static boolean clearVisualRay(Human h,State s,Vec3 point,long now){
         Vec3 eye=h.getEyePosition(),towardEye=eye.subtract(point);
@@ -515,6 +523,8 @@ public final class HumanPerception {
         row(rows,"actions","行动指令",SoldierOrder.get(h).name());row(rows,"actions","攻击模式",SoldierCombatMode.get(h).name());
         for(var action:h.humanGunner$actionSnapshot())row(rows,action.group(),action.label(),action.value());
         row(rows,"vision","基础视觉距离",String.format(java.util.Locale.ROOT,"%.1f 格",r));
+        row(rows,"vision","近场柱体",String.format(java.util.Locale.ROOT,"半径 %.1f 格 · 脚下 %.1f / 顶部 %.1f · 不随俯仰",c().number("vision.near_distance"),
+                c().number("vision.near_below_feet"),c().number("vision.near_above_head")));
         row(rows,"vision","完整视场角",String.format(java.util.Locale.ROOT,"近 %.0f° / 中 %.0f° / 远 %.0f°",
                 c().number("vision.near_full_angle"),c().number("vision.middle_full_angle"),c().number("vision.far_full_angle")));
         row(rows,"vision","本轮检测",s.scanStatus);row(rows,"vision","最近采样年龄",s.scanAt<0?"暂无":(now-s.scanAt)+"tick");
@@ -543,7 +553,17 @@ public final class HumanPerception {
         if(s.look!=null)marker(markers,"direction",s.lookOwner,h.getEyePosition(),s.look,0);
         for(Ray ray:s.rays)if(now-ray.tick<=20)marker(markers,ray.clear?"los":"blocked",(ray.clear?"可见采样":"遮挡采样")+" · "+(now-ray.tick)+"tick前",ray.from,ray.to,0);
         Vec3 view=h.getViewVector(1).normalize();
-        for(double d:new double[]{4,c().number("vision.near_distance"),c().number("vision.middle_distance"),c().number("vision.far_distance"),r})if(d<=r){
+        Vec3 nearHeading=Vec3.directionFromRotation(0,h.getYHeadRot());double near=c().number("vision.near_distance");
+        Vec3 base=new Vec3(h.getX(),h.getBoundingBox().minY-c().number("vision.near_below_feet"),h.getZ());
+        Vec3 top=new Vec3(h.getX(),h.getBoundingBox().maxY+c().number("vision.near_above_head"),h.getZ());
+        for(boolean familiar:new boolean[]{false,true}){
+            String kind=familiar?"vision_known_near_":"vision_near_";
+            // For near markers only: end=(horizontal heading X, half-angle radians, horizontal heading Z).
+            Vec3 shape=new Vec3(nearHeading.x,halfAngle(near,familiar),nearHeading.z);
+            marker(markers,kind+"base",familiar?"旧敌近场柱体":"陌生目标近场柱体",base,shape,near);
+            marker(markers,kind+"top","近场柱体顶部",top,shape,near);
+        }
+        for(double d:new LinkedHashSet<>(List.of(c().number("vision.middle_distance"),c().number("vision.far_distance"),r)))if(d>near&&d<=r){
             double a=halfAngle(d,false);
             double b=halfAngle(d,true);
             marker(markers,"vision_new_ring","陌生目标几何视野",h.getEyePosition().add(view.scale(d*Math.cos(a))),view,d*Math.sin(a));

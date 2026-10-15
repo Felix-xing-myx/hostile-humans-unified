@@ -12,6 +12,6 @@ public record PerceptionDebugSnapshot(long tick, Vec3 eye, Vec3 view, double ran
     public static final PerceptionDebugSnapshot EMPTY = new PerceptionDebugSnapshot(0,
             Vec3.ZERO, new Vec3(0, 0, 1), 0, 0, 0, "", "", "", List.of(), List.of());
     public record Row(String group, String label, String value) {}
-    /** kind: visible,dynamic,last,recognition,sound,direction,beacon,los,blocked,vision_new_ring,vision_known_ring. */
+    /** Near base/top kinds encode end=(headingX,halfAngle,headingZ); other kinds retain their point/axis semantics. */
     public record Marker(String kind, String label, Vec3 position, Vec3 end, double radius) {}
 }
