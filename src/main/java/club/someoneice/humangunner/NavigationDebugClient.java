@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.OptionalDouble;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.*;
@@ -17,6 +18,9 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.*;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.client.settings.KeyConflictContext;
+import net.minecraftforge.event.TickEvent;
+import org.lwjgl.glfw.GLFW;
 
 /** Bounded server geometry; reusable native storage and stable per-observer entity colors. */
 @Mod.EventBusSubscriber(modid = HumanGunner.MOD_ID, value = Dist.CLIENT)
@@ -25,6 +29,21 @@ public final class NavigationDebugClient {
     private static long receivedAt;
     private static final int[] COLORS = {0x37D5FF, 0xFFA842, 0xC18CFF, 0x66E699, 0xFF7FB5, 0xE4DF55, 0x729EFF, 0xEE8266};
     private NavigationDebugClient() {}
+    static int slotColor(int slot) { return COLORS[slot]; }
+    @Mod.EventBusSubscriber(modid = HumanGunner.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+    public static final class Keys {
+        static final KeyMapping LEGEND = new KeyMapping("key.hostile_humans_unified.navigation_legend",
+                KeyConflictContext.IN_GAME, com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_F8, "key.categories.hostile_humans_unified");
+        @SubscribeEvent public static void register(RegisterKeyMappingsEvent event) { event.register(LEGEND); }
+    }
+    @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        var mc = Minecraft.getInstance();
+        while (Keys.LEGEND.consumeClick()) {
+            if (mc.player != null && mc.screen == null) mc.setScreen(new NavigationLegendScreen());
+        }
+    }
     public static void accept(NavigationDebugFrame value) { frame = value; receivedAt = System.nanoTime(); }
     @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut event) { frame = NavigationDebugFrame.EMPTY; }
     private static List<NavigationDebugFrame.Entry> visibleEntries() {
@@ -55,7 +74,7 @@ public final class NavigationDebugClient {
         if (entries.isEmpty() || Minecraft.getInstance().options.hideGui) return;
         var g = event.getGuiGraphics();
         int columns = Math.min(entries.size(), Math.max(1, g.guiWidth() / 155));
-        int width = (g.guiWidth() - 16) / columns, cardHeight = 33;
+        int width = Math.min(155, (g.guiWidth() - 16) / columns), cardHeight = 33;
         for (int i = 0; i < entries.size(); i++) {
             var entry = entries.get(i); var s = entry.snapshot();
             int x = 6 + (i % columns) * width, y = 6 + (i / columns) * cardHeight;
@@ -76,20 +95,40 @@ public final class NavigationDebugClient {
             text("hud_endpoint", point(s.endpoint())),
             text("hud_health", number(s.health()), number(s.fallBudget()), s.maxDrop(), number(s.followRange())),
             text("hud_work", s.budget(), number(s.searchMillis()), text("reason." + s.obstruction())),
-            text("multi_help")
+            text("multi_help"),
+            text("help.open", Keys.LEGEND.getTranslatedKeyMessage())
         };
         for (Component detail : details) {
-            if (y + 12 > g.guiHeight()) break;
-            g.fill(6, y-1, g.guiWidth()-6, y+10, 0xB0000000);
-            draw(g, detail, 10, y, g.guiWidth()-22, 0xFFFFFF); y += 12;
+            if (y + 8 > g.guiHeight()) break;
+            y = compactDetail(g, detail, y, 0xFFFFFF);
         }
-        for (int i = Math.max(0, s.samples().size()-5); i < s.samples().size() && y+12 < g.guiHeight(); i++) {
+        for (int i = Math.max(0, s.samples().size()-5); i < s.samples().size() && y+8 <= g.guiHeight(); i++) {
             var sample = s.samples().get(i);
             Component detail = text("hud_sample", text("source." + sample.source()), point(sample.position()),
                     text("result." + sample.result()), number(sample.score()));
-            g.fill(6, y-1, g.guiWidth()-6, y+10, 0xB0000000);
-            draw(g, detail, 10, y, g.guiWidth()-22, 0xDDDDDD); y += 12;
+            y = compactDetail(g, detail, y, 0xDDDDDD);
         }
+    }
+    private static int compactDetail(GuiGraphics g, Component detail, int y, int color) {
+        var font = Minecraft.getInstance().font;
+        float scale = .8F;
+        int screenWidth = Math.min(g.guiWidth() - 12, Math.min(240, Math.max(80, (int)(g.guiWidth() * .42F))));
+        int textWidth = Math.max(8, (int)((screenWidth - 8) / scale));
+        var poses = g.pose();
+        poses.pushPose();
+        try {
+            poses.translate(6, y, 0);
+            poses.scale(scale, scale, 1);
+            int row = 0;
+            for (var line : font.split(detail, textWidth)) {
+                if (y + (row + 10) * scale > g.guiHeight()) break;
+                // Keep each background strip close to the text, including short wrapped lines.
+                g.fill(0, row, font.width(line) + 8, row + 10, 0x90000000);
+                g.drawString(font, line, 4, row + 1, color, false);
+                row += 10;
+            }
+            return y + (int)Math.ceil(row * scale);
+        } finally { poses.popPose(); }
     }
     @SubscribeEvent public static void world(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;

@@ -268,5 +268,19 @@
   "navigation_debug.card_route": "%s | Node %s/%s",
   "navigation_debug.card_goal": "Request: %s",
   "navigation_debug.focus_title": "Focus #%s %s — destination clicks affect only this member",
-  "navigation_debug.multi_help": "Match colored paths/nameplates to cards; use air to cycle focus. Candidates shown for focus only."
+  "navigation_debug.multi_help": "Match colored paths/nameplates to cards; use air to cycle focus. Candidates shown for focus only.",
+  "key.hostile_humans_unified.navigation_legend": "Open navigation observation legend",
+  "key.categories.hostile_humans_unified": "Hostile Humans Unified",
+  "navigation_debug.help.title": "Navigation observation: colors and markers",
+  "navigation_debug.help.scroll": "Scroll to browse; Esc or Done returns (tests keep running)",
+  "navigation_debug.help.entities": "Each stable slot has its own color. Removing another member preserves existing slots. Same-color boxes mark the entity, requested point or actual endpoint; use position and the focused panel to distinguish them.",
+  "navigation_debug.help.entity": "#%s: this entity's route, position box, requested point, actual endpoint, overhead number and overview card.",
+  "navigation_debug.help.next": "Small white box: the next node of each route. Later nodes use the entity color.",
+  "navigation_debug.help.enemy": "Large red box: the focused entity's enemy position. Only shown for the focus.",
+  "navigation_debug.help.pending": "Small purple box: a focused candidate being tried, or a partial path result.",
+  "navigation_debug.help.accepted": "Small green box: a focused candidate scored, returned a complete path or was accepted. Scored does not guarantee final selection.",
+  "navigation_debug.help.rejected": "Small red box: a focused candidate was filtered, rejected or pruned. Check recent focused records for its reason.",
+  "navigation_debug.help.limits": "These debug wireframes do not change blocks. A recent request may only be a trial; the active route and endpoint show execution. Only focused candidates are displayed; switch focus to inspect another entity.",
+  "navigation_debug.help.controls": "Pointer: right-click a Human to add/focus, air to cycle, a block to set only the focused destination. Sneak-click a Human to remove it; sneak-click air/block to clear all. Rebind the legend key in Options > Controls > Key Binds.",
+  "navigation_debug.help.open": "%s: open color legend"
 }

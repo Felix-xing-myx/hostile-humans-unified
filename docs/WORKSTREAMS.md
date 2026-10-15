@@ -1977,3 +1977,11 @@ Java17、六个显式只读API依赖、gradlew.bat build lootScreeningTest --off
 - 最终验证：main Java17完整build lootScreeningTest --offline成功，54任务（52执行、2最新）；导航1031检查、558核心类可选依赖缺席链接、884命名/资源与13391战利品检查通过。Python250项（12跳过，其余通过）、6份默认附录、焦燃5姿势/9API、受影响Wiki链接及差异检查通过。包内608个Java17类、双语资源、导航与机枪类、单一客户端原生缓冲字节码检查通过。日志及包审查：构建记录/3.8.1-20261015-navigation-multi.log、同前缀-package.json。
 - 同步：替换前无游戏Java进程，旧实例/旧dist先备份核对至部署备份/3.8.1-before-navigation-multi-20261015-130120。新包4223044字节，构建产物/dist/Forge47.4.21实例SHA-256均为85F29865E6E0E18AA164973F23D22853CC143D7D3547ABBE9CE3FCA0EC86E158；只替换本模组JAR，未修改配置/存档，未启动游戏或push。
 - 收尾：依用户本轮明确授权，将此前焦燃机枪源码、审查工具和相关维护记录一并本地提交，避免继续以未提交快照维护。导航与机枪均已编译构建，游戏内视觉、长时间原生内存与并行导航仍未验收。
+
+
+## 导航焦点面板紧凑布局（2026-10-15，已整合）
+
+- 主控单会话；基线69fec6f652f8e84d56a91678ffe6cd5d7996bc57；工作树worktrees/navigation-hud-compact，分支fix/navigation-hud-compact。范围为NavigationDebugClient HUD、NavigationLegendScreen、双语键位/图例资源、说明与知识库，公共客户端文件由主控独占。
+- 需求：焦点详情靠左、缩窄并稍微缩小文字，背景随内容收紧；不改导航或网络。验证静态检查与差异核对；本轮未要求构建同步，不运行Gradle或替换实例。
+- 实现：详情80%字号、左对齐、42%屏宽/240 GUI像素上限与自动换行；每行背景按文字长度绘制，概览卡片上限155 GUI像素。知识库正文已备份并同步。静态回归与差异检查通过；未编译/构建/同步/push或启动游戏，需在游戏中确认实际字号与遮挡感受。
+- 同轮追加需求：可用热键打开颜色含义详情。新增纯客户端F8可重绑键位（MOD总线登记、客户端tick消费），可滚动图例、颜色方框、Esc/完成关闭；isPauseScreen=false，不接入服务端写入。核对本机KeyMapping/GuiGraphics/Screen公开API，未执行编译。

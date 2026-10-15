@@ -268,5 +268,19 @@
   "navigation_debug.card_route": "%s | 节点%s/%s",
   "navigation_debug.card_goal": "请求点：%s",
   "navigation_debug.focus_title": "焦点 #%s %s — 目的地操作只影响它",
-  "navigation_debug.multi_help": "各色路径/头顶编号对应卡片；右键空气切换焦点。仅焦点显示候选点。"
+  "navigation_debug.multi_help": "各色路径/头顶编号对应卡片；右键空气切换焦点。仅焦点显示候选点。",
+  "key.hostile_humans_unified.navigation_legend": "打开导航观察图例",
+  "key.categories.hostile_humans_unified": "Hostile Humans Unified",
+  "navigation_debug.help.title": "导航观察 · 颜色与标记说明",
+  "navigation_debug.help.scroll": "滚轮浏览 · Esc或完成返回（测试继续运行）",
+  "navigation_debug.help.entities": "实体颜色：编号和颜色一一对应，移除其他成员不改变已有编号。同色框可能表示实体、请求点或实际终点，请结合位置与焦点面板判断。",
+  "navigation_debug.help.entity": "#%s：该实体的路径线、实体位置框、请求点框、实际终点框、头顶编号和概览卡片。",
+  "navigation_debug.help.next": "白色小框：每条路径的下一节点；后续节点沿用实体颜色。",
+  "navigation_debug.help.enemy": "红色大框：当前焦点实体的敌人位置；只有焦点显示。",
+  "navigation_debug.help.pending": "紫色小框：焦点候选点正在尝试，或只得到部分路径。",
+  "navigation_debug.help.accepted": "绿色小框：焦点候选通过评分、找到完整路径或已采用；通过评分不保证最后被采用。",
+  "navigation_debug.help.rejected": "红色小框：焦点候选被过滤、拒绝或剪枝，具体原因查看焦点面板最近记录。",
+  "navigation_debug.help.limits": "这些是调试线框，不改变方块。最近请求点可能只是试算；实际路径和终点才代表当前执行。其他实体的候选点不显示，切换焦点即可查看。",
+  "navigation_debug.help.controls": "指针右键人类加入并聚焦，右键空气切换焦点，右键方块只设置焦点目的地。潜行右键人类移除该成员；潜行右键空气或方块清空全部。图例热键可在选项→控制→按键绑定中修改。",
+  "navigation_debug.help.open": "%s：打开颜色图例"
 }

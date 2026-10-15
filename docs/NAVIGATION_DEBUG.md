@@ -22,7 +22,7 @@
 
 ## 渲染与诊断
 
-一个静态BufferBuilder复用原生存储，每实体结束提交，禁止每帧新建；相机相对坐标在转float之前完成。每实体概览显示编号、模式、状态、节点和请求点；焦点详情含实际终点、生命/摔落预算、有效范围、配额/地形阻断及地面调用耗时。小窗口可调低GUI缩放。
+一个静态BufferBuilder复用原生存储，每实体结束提交，禁止每帧新建；相机相对坐标在转float之前完成。每实体概览显示编号、模式、状态、节点和请求点；焦点详情含实际终点、生命/摔落预算、有效范围、配额/地形阻断及地面调用耗时。焦点详情位于左侧，字号80%，宽度上限为GUI宽度42%与240像素中的较小值（小窗口最小目标80像素，仍限制在屏内）；长文字换行，每行背景贴合文字。概览卡片最多155 GUI像素宽。小窗口可调低GUI缩放。
 
 路径/请求点/实际终点用实体色，下一节点白；焦点敌人红、候选紫/绿/红。评分通过不保证采用；请求点可能是试算，活动路线和实际终点才代表当前执行事实。空路径原因未知；调用耗时包含复用，不是全服A*时间；不显示全部内部扩展节点。
 
@@ -33,3 +33,11 @@ Creative/operator-only Human diagnostics, up to8 members. Click Humans to add/fo
 One reusable native buffer replaces per-frame allocations. Camera-relative coordinates avoid distant float precision loss. Bounded replace-all frames (protocol2) carry eight members, 256 path nodes/member and16 recent samples/member every5ticks. Orders, ownership, safety, normal quotas and exclusive per-Human controller leases remain intact; switching focus never releases another member's task.
 
 Validate long-running distant viewing,8 simultaneous distinct destinations, stable slot colors/removal, focus cycling, lifecycle cancellation, tracking loss, multiplayer and passage/height/water behavior in game. Automated checks do not prove live rendering acceptance.
+
+## 颜色图例界面 / Color legend
+
+游戏中默认按F8打开可滚动图例，Esc或完成关闭；可在控制设置的Hostile Humans Unified分类重绑。HUD提示显示当前绑定。无需先选实体或佩戴头盔即可查阅。界面不暂停游戏，也不修改现有观察或导航任务。
+
+图例列出1～8槽位颜色、同色实体/请求点/实际终点/路线的区别、白色下一节点、焦点敌人红色大框及候选紫/绿/红色小框；评分或完整路径结果不等于最终采用。图例只作颜色参考，实体实际信息仍在观察面板。
+
+Press F8 in game for the scrollable color legend; rebind under Controls > Hostile Humans Unified. Esc or Done closes it. It explains the eight slot colors, route/position/request/endpoint markers, white next nodes, focused enemies and candidate evaluation colors. The game and navigation tests continue while it is open.
