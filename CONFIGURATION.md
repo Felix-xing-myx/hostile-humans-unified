@@ -568,9 +568,11 @@ TaCZ背包直接供弹枪（例如默认转管机枪）在人类手中使用虚�
 | `hearing` | 声音半径、位移阈值、同源冷却、分类TTL、`maximum_clues=4` | 事件位置与警觉脚步；不接任意音频/枪声 |
 | `investigation` | `radius=6`、`duration_ticks=200`、`maximum_points=3`、`retry_ticks=40`、`maximum_retries=3`、`command_deviation=8` | 有限搜索、重试、命令偏离；不绕过地形安全 |
 | `beacon` | `duration_ticks=6000`、`interval_ticks=160`、`grid_size=8`、`receiver_range=128`、`report_ticks=400`、`search_radius=8`、`vertical_search=8` | 成功使用续5分钟共享发报期，8秒周期、三维网格报告；不直接锁敌 |
-| `budgets` | 平静10/活跃4tick、每人2射线/轮；查询64/128、射线128/256、投递256/512、声源128/256 | 后四组为每维度/全服务器每tick上限；事件查询份额默认25%，不足延迟 |
+| `budgets` | 平静10/活跃4tick、每人2个快速候选/轮、`body_rays_per_target=27`身体补查射线/目标；查询64/128、射线128/256、投递256/512、声源128/256 | 后四组为每维度/全服务器每tick上限；事件查询份额默认25%，不足延迟 |
 | `debug` | `interval_ticks=5`、`transition_limit=32`、`transition_ticks=400` | 有观察者时的诊断快照与有限转换记录 |
 
 每个目标独立续时，仅仍有效的已确认来源直接实际伤害能够续自己的动态期限；截止tick起不能凭伤害恢复。主人通常10秒许可与动态知识分开，观察不续权。详见[感知源码地图](docs/ENEMY_AWARENESS.md)。
+
+每人每轮默认最多检测2个快速候选。快速部位不通时，`perception.budgets.body_rays_per_target`默认允许该目标补查最多27条射线（范围1～27）；发现可见点立即停止。快速与补查共同受每维度128/全服务器256条每tick的原射线池约束，配额按保守申请量扣占，不是无上限追加。补查用完便取消下轮预留；未拿到配额不记为遮挡，低配额只完成部分点时轮转补点，不把尚未检查的身体判为全遮挡。
 
 视觉识别最多同时推进两个独立目标；主观察对象独占转头，另一目标仍需实际FOV/LOS。`recognition.break_ticks`从实际负检测开始计时，配额等待不伪装遮挡。已有配置保留自定义值，只补缺失新字段；旧敌角度上限不再缩小基础视角。

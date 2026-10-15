@@ -83,7 +83,8 @@ public final class PerceptionConfig {
         add(m,"budgets.event_query_fraction",.25,.05,.5,"声音事件最多占查询配额份额 / Maximum query fraction used by sound events");
         add(m,"budgets.rays_per_level",128,1,8192,"每维度每tick感知射线上限 / Perception ray limit per dimension per tick");
         add(m,"budgets.rays_per_server",256,1,16384,"每服务器每tick感知射线上限 / Perception ray limit per server per tick");
-        add(m,"budgets.rays_per_human",2,1,16,"每人每轮射线上限 / Per-human rays per update");
+        add(m,"budgets.rays_per_human",2,1,16,"每人每轮快速候选检测上限，身体补查另计入总射线池 / Fast target probes per update; body fallback also consumes the shared ray pool");
+        add(m,"budgets.body_rays_per_target",27,1,27,"每目标每轮身体补查射线上限，遇到可见点提前结束 / Body fallback rays per target per update, stopping on visibility");
         add(m,"budgets.notices_per_level",256,1,16384,"每维度每tick线索接收上限 / Clue deliveries per dimension per tick");
         add(m,"budgets.notices_per_server",512,1,32768,"每服务器每tick线索接收上限 / Clue deliveries per server per tick");
         add(m,"budgets.sources_per_level",128,1,8192,"每维度每tick脚步采样源上限 / Movement samples per dimension per tick");

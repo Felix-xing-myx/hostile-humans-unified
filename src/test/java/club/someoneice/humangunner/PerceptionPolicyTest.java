@@ -2,6 +2,8 @@ package club.someoneice.humangunner;
 
 import dev.felix.hostilehumans.core.PerceptionPolicy;
 import dev.felix.hostilehumans.core.RecognitionEvidence;
+import dev.felix.hostilehumans.core.BodyVisibilitySamples;
+import dev.felix.hostilehumans.core.ScopedWorkBudget;
 import com.google.gson.JsonObject;
 
 /** Behavioral policies, configuration provenance and perception/beacon temporal boundary cases. */
@@ -55,6 +57,36 @@ public final class PerceptionPolicyTest {
         firstEvidence.finish();check(!firstEvidence.active()&&secondEvidence.active(),"one completion does not release another target's slot");
         firstEvidence.begin(200);check(firstEvidence.progress()==0,"a new recognition cannot reuse completed evidence");
         check(RecognitionEvidence.MAX_CONCURRENT==2,"two visual recognition slots, independent of head focus");
+        var body=BodyVisibilitySamples.of(-.3,0,-.3,.3,1.8,.3);
+        check(body.size()==BodyVisibilitySamples.MAX_POINTS,"normal body has 27 unique surface/interior samples");
+        check(body.get(0).equals(new BodyVisibilitySamples.Point(0,.9,0)),"torso is first fallback after eye/previous visible point");
+        for(var p:body)check(p.x()>=-.3&&p.x()<=.3&&p.y()>=0&&p.y()<=1.8&&p.z()>=-.3&&p.z()<=.3,"body points remain within logical bounds");
+        check(body.contains(new BodyVisibilitySamples.Point(0,1.8,0)),"head exposure sampled");
+        check(body.contains(new BodyVisibilitySamples.Point(0,0,0)),"feet exposure sampled");
+        check(body.contains(new BodyVisibilitySamples.Point(.3,.9,0)),"lateral body exposure sampled");
+        check(body.contains(new BodyVisibilitySamples.Point(.3,1.8,.3)),"upper body corner exposure sampled");
+        check(body.contains(new BodyVisibilitySamples.Point(-.3,0,-.3)),"lower body corner exposure sampled");
+        check(body.stream().anyMatch(p->p.y()==0),"low opening can expose body with eye blocked");
+        check(body.stream().anyMatch(p->p.x()==.3),"edge of view can admit a lateral sample when center is outside");
+        check(BodyVisibilitySamples.of(1,1,1,1,1,1).size()==1,"degenerate box has no duplicate rays");
+        check(BodyVisibilitySamples.of(1,0,0,-1,1,1).isEmpty(),"invalid bounds rejected");
+        check(BodyVisibilitySamples.of(Double.NaN,0,0,1,1,1).isEmpty(),"nonfinite bounds rejected");
+        var bodyBudget=new ScopedWorkBudget<String,String>(128,128,32,40);
+        check(bodyBudget.claimFull(0,"fast","level",2)==2,"two ordinary fast probes still fit");
+        check(bodyBudget.claimFull(0,"body-A","level",27)==27&&bodyBudget.claimFull(0,"body-B","level",27)==27,
+                "two body batches fit the unchanged shared pool");
+        bodyBudget.cancel("body-A");bodyBudget.cancel("body-B");
+        check(bodyBudget.claimFull(0,"body-A","level",27)==0,"body cancellation never refunds same-tick capacity");
+        bodyBudget.cancel("body-A");
+        check(bodyBudget.claimFull(1,"other-A","level",32)==32
+                &&bodyBudget.claimFull(1,"other-B","level",32)==32
+                &&bodyBudget.claimFull(1,"other-C","level",32)==32,
+                "completed fallback batches do not pre-reserve unused rays next tick");
+        var tinyBodyBudget=new ScopedWorkBudget<String,String>(1,1,1,40);
+        check(tinyBodyBudget.claimFull(0,"fast","level",1)==1
+                &&tinyBodyBudget.claimFull(0,"body","level",1)==0,"tiny pool defers body after fast ray");
+        check(tinyBodyBudget.claimFull(1,"fast","level",1)==0
+                &&tinyBodyBudget.claimFull(1,"body","level",1)==1,"body can resume independently when it owns tiny pool grant");
         JsonObject configured=new JsonObject(),memory=new JsonObject();memory.addProperty("dynamic_ticks",321);configured.add("memory",memory);
         PerceptionConfig c=new PerceptionConfig(configured);
         check(c.integer("memory.dynamic_ticks")==321,"custom setting preserved");

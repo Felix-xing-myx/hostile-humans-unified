@@ -4,6 +4,7 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import com.craftix.hostile_humans.Config;
 import dev.felix.hostilehumans.core.PerceptionPolicy;
 import dev.felix.hostilehumans.core.RecognitionEvidence;
+import dev.felix.hostilehumans.core.BodyVisibilitySamples;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -23,6 +24,7 @@ public final class HumanPerception {
         final UUID id; String name="目标";
         boolean marked; long visual=-1, liveUntil=-1, familiarUntil=-1, positionAt=-1, checked=-1;
         final RecognitionEvidence evidence=new RecognitionEvidence();
+        BodyVisibilitySamples.Point bodySample;
         Vec3 position, eye; boolean visible;
         String refresh="", denied="";
         Track(UUID id){this.id=id;}
@@ -43,6 +45,8 @@ public final class HumanPerception {
         final LinkedHashMap<UUID,Observe> pending=new LinkedHashMap<>();
         final ArrayDeque<Transition> transitions=new ArrayDeque<>();
         final ArrayDeque<Ray> rays=new ArrayDeque<>();
+        final LinkedHashMap<UUID,Integer> bodyCursors=new LinkedHashMap<>();
+        final LinkedHashSet<UUID> pendingBodies=new LinkedHashSet<>();
         long alertUntil=-1, tick=-1, nextScan, focusStarted, focusLastVisible=-1, directionStarted;
         UUID focus; Vec3 look; boolean focusHurt, protectedFocus;
         int candidateCursor; List<UUID> candidates=List.of(); long nextCandidates;
@@ -197,7 +201,7 @@ public final class HumanPerception {
         State s=state(h);long now=now(h);if(s.tick==now)return;s.tick=now;
         UUID owner=HumanRelations.effectiveOwner(h);String order=SoldierOrder.get(h).name();
         if(s.initialized&&(!Objects.equals(s.owner,owner)||!s.order.equals(order))){
-            s.tracks.clear();s.clues.clear();s.pending.clear();release(s,"控制关系或命令改变");h.setTarget(null);
+            s.tracks.clear();s.clues.clear();s.pending.clear();s.bodyCursors.clear();s.pendingBodies.clear();release(s,"控制关系或命令改变");h.setTarget(null);
         }s.owner=owner;s.order=order;s.initialized=true;
         HumanAwareness.flush(h);
         s.clues.removeIf(clue->now>=clue.until);
@@ -258,7 +262,20 @@ public final class HumanPerception {
         }
         if(now<s.nextScan){describe(h,s);return;}
         int rays=Math.min(c().integer("budgets.rays_per_human"),Math.min(c().integer("budgets.rays_per_level"),c().integer("budgets.rays_per_server")));
-        if(!PerceptionBudget.claim(h,"rays",rays)){s.scanStatus="等待视觉检测配额";s.reason=s.scanStatus;describe(h,s);return;}
+        if(!PerceptionBudget.claim(h,"rays",rays)){
+            s.scanStatus="等待视觉检测配额";s.reason=s.scanStatus;
+            // A deferred body batch may own this tick's grant. Consume it without
+            // demanding a second fast-ray reservation, especially with tiny custom pools.
+            int resumed=0;
+            for(UUID id:List.copyOf(s.pendingBodies)){
+                if(resumed>=rays)break;
+                if(level.getEntity(id) instanceof LivingEntity e&&enemy(h,e)){
+                    check(h,s,e,now,interval,false);resumed++;
+                }else{s.pendingBodies.remove(id);PerceptionBudget.cancelBodyRays(h,id);}
+            }
+            if(resumed>0)s.nextScan=now+interval;
+            describe(h,s);return;
+        }
         s.scanStatus="已执行服务器视觉采样";s.scanAt=now;
         s.nextScan=now+interval;
         List<LivingEntity> checks=new ArrayList<>();
@@ -274,29 +291,89 @@ public final class HumanPerception {
             if(level.getEntity(id) instanceof LivingEntity e&&!checks.contains(e))checks.add(e);
         }
         s.scanStatus=checks.isEmpty()?"本轮无符合敌对许可的视觉候选":"已执行服务器视觉采样："+Math.min(rays,checks.size())+"个候选";
-        for(LivingEntity e:checks.subList(0,Math.min(rays,checks.size())))check(h,s,e,now,interval);
+        for(LivingEntity e:checks.subList(0,Math.min(rays,checks.size())))check(h,s,e,now,interval,true);
         if(s.focus==null)startNext(h,s,now);
         describe(h,s);
     }
     private static long recognizing(State s){return s.tracks.values().stream().filter(t->t.evidence.active()).count();}
-    private static void check(Human h,State s,LivingEntity e,long now,int interval){
-        if(!enemy(h,e))return;Track t=s.tracks.get(e.getUUID());boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
-        Vec3 delta=e.getEyePosition().subtract(h.getEyePosition());double distance=delta.length();
-        double visibility=e.getVisibilityPercent(h);
-        boolean fov=distance<=Math.max(2,range(h)*visibility)&&delta.lengthSqr()>1.e-8
-                &&h.getViewVector(1).normalize().dot(delta.normalize())>Math.cos(halfAngle(distance,familiar));
-        boolean clear=false;
-        if(fov){BlockHitResult hit=h.level().clip(new ClipContext(h.getEyePosition(),e.getEyePosition(),ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,h));
-            clear=hit.getType()==HitResult.Type.MISS;
-            s.rays.addLast(new Ray(h.getEyePosition(),clear?e.getEyePosition():hit.getLocation(),clear,now));
-            while(s.rays.size()>8)s.rays.removeFirst();
+    private record VisualProbe(Vec3 visiblePoint,boolean complete,String reason) {}
+    private static boolean withinVision(Human h,Vec3 point,boolean familiar,double visibility){
+        Vec3 delta=point.subtract(h.getEyePosition());double distance=delta.length();
+        return distance<=Math.max(2,range(h)*visibility)&&(distance<1.e-4
+                ||h.getViewVector(1).normalize().dot(delta.scale(1/distance))>Math.cos(halfAngle(distance,familiar)));
+    }
+    private static boolean clearVisualRay(Human h,State s,Vec3 point,long now){
+        Vec3 eye=h.getEyePosition(),towardEye=eye.subtract(point);
+        // Surface samples can lie exactly on the floor/adjacent wall. Test the approach side of the surface.
+        Vec3 end=towardEye.lengthSqr()>1.e-8?point.add(towardEye.normalize().scale(1.e-4)):point;
+        BlockHitResult hit=h.level().clip(new ClipContext(eye,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,h));
+        boolean clear=hit.getType()==HitResult.Type.MISS;
+        s.rays.addLast(new Ray(h.getEyePosition(),clear?point:hit.getLocation(),clear,now));
+        while(s.rays.size()>8)s.rays.removeFirst();
+        return clear;
+    }
+    private static VisualProbe bodyVisibility(Human h,State s,LivingEntity e,Track track,boolean familiar,long now,boolean fast){
+        AABB box=e.getBoundingBox();double visibility=e.getVisibilityPercent(h);
+        Vec3 primary=e.getEyePosition();
+        if(track!=null&&track.bodySample!=null){
+            var f=track.bodySample;
+            primary=new Vec3(box.minX+box.getXsize()*f.x(),box.minY+box.getYsize()*f.y(),box.minZ+box.getZsize()*f.z());
         }
-        if(!clear){if(t!=null){
-            t.visible=false;t.evidence.miss(now);
-            t.denied=!fov?(distance>Math.max(2,range(h)*visibility)?"超出有效视觉距离":"当前视场外"):"方块遮挡";
-        }return;}
+        // The ordinary candidate reservation already pays for this one fast ray.
+        if(fast&&withinVision(h,primary,familiar,visibility)&&clearVisualRay(h,s,primary,now)){
+            s.pendingBodies.remove(e.getUUID());
+            PerceptionBudget.cancelBodyRays(h,e.getUUID());
+            return new VisualProbe(primary,true,"身体部位无遮挡");
+        }
+        List<Vec3> samples=new ArrayList<>();
+        for(var point:BodyVisibilitySamples.of(box.minX,box.minY,box.minZ,box.maxX,box.maxY,box.maxZ)){
+            Vec3 candidate=new Vec3(point.x(),point.y(),point.z());
+            if((!fast||candidate.distanceToSqr(primary)>1.e-8)&&withinVision(h,candidate,familiar,visibility))samples.add(candidate);
+        }
+        if(samples.isEmpty()){
+            s.pendingBodies.remove(e.getUUID());
+            PerceptionBudget.cancelBodyRays(h,e.getUUID());
+            return new VisualProbe(null,true,"身体未进入有效视野或已采样部位被遮挡");
+        }
+        int count=Math.min(samples.size(),Math.min(c().integer("budgets.body_rays_per_target"),
+                Math.min(c().integer("budgets.rays_per_level"),c().integer("budgets.rays_per_server"))));
+        if(!PerceptionBudget.claimBodyRays(h,e.getUUID(),count)){
+            s.pendingBodies.add(e.getUUID());
+            while(s.pendingBodies.size()>c().integer("budgets.candidates")+c().integer("memory.maximum_targets")){
+                UUID drop=s.pendingBodies.iterator().next();s.pendingBodies.remove(drop);PerceptionBudget.cancelBodyRays(h,drop);
+            }
+            return new VisualProbe(null,false,"等待身体遮挡检测配额");
+        }
+        s.pendingBodies.remove(e.getUUID());
+        s.scanAt=now;
+        int start=s.bodyCursors.getOrDefault(e.getUUID(),0);
+        s.bodyCursors.put(e.getUUID(),(start+count)%samples.size());
+        while(s.bodyCursors.size()>c().integer("budgets.candidates")+c().integer("memory.maximum_targets"))
+            s.bodyCursors.remove(s.bodyCursors.keySet().iterator().next());
+        for(int i=0;i<count;i++){
+            Vec3 point=samples.get(Math.floorMod(start+i,samples.size()));
+            if(clearVisualRay(h,s,point,now))return new VisualProbe(point,true,"身体部位无遮挡");
+        }
+        return new VisualProbe(null,count==samples.size(),count==samples.size()?"身体视野采样均被方块遮挡":"身体采样尚未完成");
+    }
+    private static BodyVisibilitySamples.Point fraction(AABB box,Vec3 point){
+        return new BodyVisibilitySamples.Point(
+                Math.max(0,Math.min(1,(point.x-box.minX)/Math.max(1.e-8,box.getXsize()))),
+                Math.max(0,Math.min(1,(point.y-box.minY)/Math.max(1.e-8,box.getYsize()))),
+                Math.max(0,Math.min(1,(point.z-box.minZ)/Math.max(1.e-8,box.getZsize()))));
+    }
+    private static void check(Human h,State s,LivingEntity e,long now,int interval,boolean fast){
+        if(!enemy(h,e))return;Track t=s.tracks.get(e.getUUID());boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
+        VisualProbe probe=bodyVisibility(h,s,e,t,familiar,now,fast);
+        if(probe.visiblePoint==null){
+            if(t!=null){t.denied=probe.reason;if(probe.complete){t.visible=false;t.evidence.miss(now);}}
+            if(!probe.complete){s.scanStatus=probe.reason;s.reason=probe.reason;}
+            return;
+        }
+        double distance=probe.visiblePoint.distanceTo(h.getEyePosition());
         if(t==null)t=track(s,e.getUUID());if(t==null){s.reason="目标记忆容量已满";return;}
-        t.visible=true;t.denied="无遮挡可见";t.name=bounded(e.getName().getString(),64);t.position=e.position();t.eye=e.getEyePosition();t.positionAt=now;
+        t.visible=true;t.denied=probe.reason;t.name=bounded(e.getName().getString(),64);t.position=e.position();t.eye=probe.visiblePoint;t.positionAt=now;
+        t.bodySample=fraction(e.getBoundingBox(),probe.visiblePoint);
         t.checked=now;
         boolean live=t.marked&&PerceptionPolicy.live(now,t.liveUntil);
         if(live){t.visual=now;t.liveUntil=now+c().integer("memory.dynamic_ticks");t.familiarUntil=now+c().integer("memory.familiar_ticks");t.refresh="目视";
@@ -306,7 +383,7 @@ public final class HumanPerception {
             s.focus=e.getUUID();s.protectedFocus=!familiar;s.focusHurt=false;s.focusStarted=now;s.focusLastVisible=now;s.lookOwner="视觉识别主观察";
         }
         if(Objects.equals(s.focus,e.getUUID())){
-            s.focusLastVisible=now;s.look=e.getEyePosition();
+            s.focusLastVisible=now;s.look=probe.visiblePoint;
         }
         if(!live&&t.evidence.active()){
             int required=s.focusHurt&&Objects.equals(s.focus,e.getUUID())?Math.max(c().integer("recognition.minimum_ticks"),c().integer("recognition.hurt_ticks")):

@@ -45,3 +45,5 @@ Validate long-running distant viewing,8 simultaneous distinct destinations, stab
 F8 opens six read-only pages: overview, targets/memory, vision, clues/beacons, actions/navigation and budgets. Existing colors and navigation controls remain available. Marker positions respect the Human's knowledge stage; geometric cones are distinct from sampled LOS. Display controls never issue AI commands.
 
 目标详情显示并行视觉识别数量（最多2）及各目标独立进度，注明“主观察/控制转头”或“视野内并行识别”。视野页显示配置的近/中/远完整夹角；世界视野标记使用同一服务器角度规则，仍只表达潜在几何范围。
+
+身体可见性射线连接实际暴露的身体采样点。最近视觉结果显示身体遮挡检测配额等待/尚未完成；只呈现服务器已做的检测，不为诊断追加身体射线。

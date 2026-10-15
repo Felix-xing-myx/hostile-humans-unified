@@ -16,13 +16,31 @@ public final class PerceptionBudget {
     }
     private PerceptionBudget() {}
     public static boolean claim(Entity actor,String kind,int amount) {
+        return claim(actor,kind,amount,"");
+    }
+    /** A separately accounted, bounded fallback batch for one target's logical body. */
+    public static boolean claimBodyRays(Entity actor,UUID target,int amount) {
+        String work=":body:"+target;
+        boolean granted=claim(actor,"rays",amount,work);
+        if(granted)cancelBodyRays(actor,target);
+        return granted;
+    }
+    public static void cancelBodyRays(Entity actor,UUID target) {
+        // Fallback is demand driven: do not pre-reserve another body batch next tick.
+        State state=SERVERS.get(actor.level().getServer());
+        if(state==null||!state.queues.containsKey("rays"))return;
+        String lane="rays:"+actor.level().dimension().location()+":body:"+target;
+        state.queues.get("rays").cancel(new Key(actor.getUUID(),lane));
+    }
+    private static boolean claim(Entity actor,String kind,int amount,String work) {
         MinecraftServer server=actor.level().getServer(); if(server==null || amount<1)return false;
         State s=SERVERS.computeIfAbsent(server,k->new State()); long tick=server.getTickCount();
         if(s.tick!=tick){s.tick=tick;s.used.clear();}
         PerceptionConfig c=PerceptionConfig.get(); String dim=actor.level().dimension().location().toString();
         int total=c.integer("budgets."+kind+"_per_server"), local=c.integer("budgets."+kind+"_per_level");
-        String lane=kind+":"+dim; Key key=new Key(actor.getUUID(),lane);
-        ScopedWorkBudget<Key,String> q=s.queues.computeIfAbsent(kind,k->new ScopedWorkBudget<>(total,local,Math.min(16,Math.min(total,local)),40));
+        String lane=kind+":"+dim; Key key=new Key(actor.getUUID(),lane+work);
+        int batchLimit=kind.equals("rays")?32:16;
+        ScopedWorkBudget<Key,String> q=s.queues.computeIfAbsent(kind,k->new ScopedWorkBudget<>(total,local,Math.min(batchLimit,Math.min(total,local)),40));
         if(amount>local || amount>total)return false;
         if(q.claimFull(tick,key,dim,amount)!=amount)return false;
         s.used.merge(lane,amount,Integer::sum);s.used.merge(kind,amount,Integer::sum); return true;
