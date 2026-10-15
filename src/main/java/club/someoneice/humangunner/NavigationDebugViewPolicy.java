@@ -1,6 +1,8 @@
 package club.someoneice.humangunner;
 
 import java.util.Set;
+import java.util.List;
+import java.util.UUID;
 
 /** Pure display policy, independent of Minecraft client classes and all server commands. */
 final class NavigationDebugViewPolicy {
@@ -25,4 +27,14 @@ final class NavigationDebugViewPolicy {
     static boolean layerVisible(int scope, boolean diagnosticFocus) {
         return scope == 2 || scope == 1 && diagnosticFocus;
     }
+    static UUID resolveFocus(UUID serverFocus, UUID localFocus, List<UUID> visible) {
+        if (localFocus != null && visible.contains(localFocus)) return localFocus;
+        if (serverFocus != null && visible.contains(serverFocus)) return serverFocus;
+        return visible.isEmpty() ? null : visible.get(0);
+    }
+    static UUID retainLocalFocus(UUID previousServer, UUID nextServer, UUID localFocus) {
+        return java.util.Objects.equals(previousServer,nextServer) ? localFocus : null;
+    }
+    static boolean compactVision(int scope, boolean focus) { return scope == 1 && focus; }
+    static boolean detailedVision(int scope) { return scope == 2; }
 }

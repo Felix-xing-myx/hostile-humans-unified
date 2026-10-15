@@ -317,5 +317,7 @@
   "navigation_debug.detail.marker.los": "Green line: an actual LOS sample; see details for sample age.",
   "navigation_debug.detail.marker.blocked": "Red line/point: actually detected obstruction sample.",
   "navigation_debug.detail.marker.vision_new_ring": "Entity-color view rings: distance-dependent unfamiliar-target view; geometry does not imply clear LOS.",
-  "navigation_debug.detail.marker.vision_known_ring": "Light-blue view rings: server-authored distance-dependent familiar-target view."
+  "navigation_debug.detail.marker.vision_known_ring": "Light-blue view rings: server-authored distance-dependent familiar-target view.",
+  "navigation_debug.detail.scope.vision_focus": "Focus · compact",
+  "navigation_debug.detail.vision_modes": "Focus shows only the selected Human: a heading and compact field-of-view fan within 8 blocks. All shows full rings and sampled LOS. Pointer focus changes also change the display focus."
 }

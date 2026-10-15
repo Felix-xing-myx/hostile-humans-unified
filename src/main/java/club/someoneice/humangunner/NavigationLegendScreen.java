@@ -40,7 +40,10 @@ public final class NavigationLegendScreen extends Screen {
             }).bounds(width/2-200+i*100,height-28,100,20).build());
         }
     }
-    private Component layerLabel(int i) { return label("layer",label("layer."+i),label("scope."+NavigationDebugClient.LAYERS[i])); }
+    private Component layerLabel(int i) {
+        String scope=i==1&&NavigationDebugClient.LAYERS[i]==1?"scope.vision_focus":"scope."+NavigationDebugClient.LAYERS[i];
+        return label("layer",label("layer."+i),label(scope));
+    }
     @Override public boolean isPauseScreen() { return false; }
     @Override public boolean mouseScrolled(double mouseX,double mouseY,double delta) { scroll=Mth.clamp(scroll-(int)(delta*22),0,maxScroll); return true; }
     private List<Row> rows() {
@@ -59,7 +62,10 @@ public final class NavigationLegendScreen extends Screen {
         if(page==0) {
             for(var e:entries) rows.add(new Row(NavigationDebugClient.slotColor(e.slot()),label("state", "#"+(e.slot()+1)+" "+e.snapshot().name(),e.snapshot().perception().decision())));
         }
-        if(page==2) rows.add(new Row(-1,label("geometry")));
+        if(page==2) {
+            rows.add(new Row(-1,label("geometry")));
+            rows.add(new Row(-1,label("vision_modes")));
+        }
         if(page==4 || page==5) {
             rows.add(new Row(-1,Component.translatable("navigation_debug.card_title",focus.slot()+1,s.name(),Component.translatable("navigation_debug.mode."+s.mode()),"")));
             rows.add(new Row(-1,Component.translatable("navigation_debug.hud_route",Component.translatable("navigation_debug.result."+s.state()),s.firstNode(),s.totalNodes(),s.complete(),s.truncated())));

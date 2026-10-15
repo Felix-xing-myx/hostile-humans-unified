@@ -317,5 +317,7 @@
   "navigation_debug.detail.marker.los": "绿色线：实际检测射线；样本年龄见详情。",
   "navigation_debug.detail.marker.blocked": "红色线/点：实际检测的遮挡样本。",
   "navigation_debug.detail.marker.vision_new_ring": "实体色视野环：陌生目标分距离视角；轮廓不代表无遮挡。",
-  "navigation_debug.detail.marker.vision_known_ring": "浅蓝视野环：已知目标分距离视角；由服务器提供。"
+  "navigation_debug.detail.marker.vision_known_ring": "浅蓝视野环：已知目标分距离视角；由服务器提供。",
+  "navigation_debug.detail.scope.vision_focus": "焦点·简略",
+  "navigation_debug.detail.vision_modes": "焦点仅显示选中人类的8格内朝向与简略视野扇形；所有模式显示完整视野环和历史LOS。指针切换焦点后显示随之切换。"
 }

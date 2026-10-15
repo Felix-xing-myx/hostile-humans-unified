@@ -156,7 +156,20 @@ public final class NavigationDebugTest {
             check(!NavigationDebugViewPolicy.layerVisible(0,focus),"off layer hides all members");
             check(NavigationDebugViewPolicy.layerVisible(1,focus)==focus,"focus layer keeps only diagnostic focus");
             check(NavigationDebugViewPolicy.layerVisible(2,focus),"all layer preserves every observer");
+            check(!NavigationDebugViewPolicy.compactVision(0,focus),"off scope draws no fan");
+            check(NavigationDebugViewPolicy.compactVision(1,focus)==focus,"one compact fan belongs only to focus");
+            check(!NavigationDebugViewPolicy.compactVision(2,focus),"all scope never adds compact fan");
         }
+        check(!NavigationDebugViewPolicy.detailedVision(0)&&!NavigationDebugViewPolicy.detailedVision(1)
+                &&NavigationDebugViewPolicy.detailedVision(2),"full rings and historical LOS belong only to all scope");
+        UUID first=UUID.randomUUID(),second=UUID.randomUUID(),missing=UUID.randomUUID();
+        check(first.equals(NavigationDebugViewPolicy.resolveFocus(first,null,List.of(first,second))),"default follows pointer focus");
+        check(second.equals(NavigationDebugViewPolicy.resolveFocus(first,second,List.of(first,second))),"F8 local choice overrides pointer for display only");
+        check(first.equals(NavigationDebugViewPolicy.resolveFocus(first,missing,List.of(first,second))),"missing local focus falls back to pointer");
+        check(second.equals(NavigationDebugViewPolicy.resolveFocus(missing,missing,List.of(second))),"invalid pointer falls back to a visible member");
+        check(NavigationDebugViewPolicy.resolveFocus(first,second,List.of())==null,"no visible member means no display focus");
+        check(second.equals(NavigationDebugViewPolicy.retainLocalFocus(first,first,second)),"ordinary refresh retains F8 display choice");
+        check(NavigationDebugViewPolicy.retainLocalFocus(first,second,first)==null,"new pointer focus supersedes stale F8 override");
     }
     private static void perceptionRejects(PerceptionDebugSnapshot snapshot,String reason) {
         var buffer=new FriendlyByteBuf(Unpooled.buffer());

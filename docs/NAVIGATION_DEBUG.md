@@ -40,6 +40,8 @@ Validate long-running distant viewing,8 simultaneous distinct destinations, stab
 
 世界标记区分方向、识别、目视、动态位置、最后位置与信标网格。几何视野不保证无遮挡；LOS只显示已有采样及年龄。未知方向不显示隐藏射手身份，动态期结束不继续绘制隐藏目标实时框。面板明确未检测/配额等待、命令阻止和固定点接管。快照默认5tick、有观察者才生成，不因翻页重扫实体或改变AI。详情焦点和图层只调整显示，导航指针点击目的地仍是独立控制操作。
 
+视野图层的“焦点·简略”只显示当前诊断焦点的一条短朝向线和一个8格以内的扇形轮廓，不显示多距离视野环、旧敌扩展环或历史LOS；它帮助看清朝向和近处角度，不代表实际视觉距离只有8格，也不展示完整三维视锥。“所有”模式显示各观察对象的完整视野环和实际LOS采样。其他导航、记忆、线索图层仍独立控制。F8切换实体仅改变诊断显示；随后用指针切换焦点，会解除旧F8覆盖并显示新焦点。焦点失效时自动回到有效成员，普通数据刷新不改变已选F8焦点。
+
 F8 opens six read-only pages: overview, targets/memory, vision, clues/beacons, actions/navigation and budgets. Existing colors and navigation controls remain available. Marker positions respect the Human's knowledge stage; geometric cones are distinct from sampled LOS. Display controls never issue AI commands.
 
 目标详情显示并行视觉识别数量（最多2）及各目标独立进度，注明“主观察/控制转头”或“视野内并行识别”。视野页显示配置的近/中/远完整夹角；世界视野标记使用同一服务器角度规则，仍只表达潜在几何范围。

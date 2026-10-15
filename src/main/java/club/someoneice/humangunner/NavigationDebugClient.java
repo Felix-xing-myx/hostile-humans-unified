@@ -32,8 +32,8 @@ public final class NavigationDebugClient {
     static final int[] LAYERS = {2, 1, 1, 1};
     static java.util.UUID detailFocus;
     static boolean diagnosticFocus(NavigationDebugFrame.Entry e) {
-        boolean retained = detailFocus != null && frame.entries().stream().anyMatch(member -> member.snapshot().entityUuid().equals(detailFocus));
-        return Objects.equals(retained ? detailFocus : frame.focused(), e.snapshot().entityUuid());
+        var ids=visibleEntries().stream().map(member -> member.snapshot().entityUuid()).toList();
+        return Objects.equals(NavigationDebugViewPolicy.resolveFocus(frame.focused(),detailFocus,ids), e.snapshot().entityUuid());
     }
     private static boolean layer(int layer, NavigationDebugFrame.Entry e) {
         return NavigationDebugViewPolicy.layerVisible(LAYERS[layer], diagnosticFocus(e));
@@ -54,8 +54,11 @@ public final class NavigationDebugClient {
             if (mc.player != null && mc.screen == null) mc.setScreen(new NavigationLegendScreen());
         }
     }
-    public static void accept(NavigationDebugFrame value) { frame = value; receivedAt = System.nanoTime(); }
-    @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut event) { frame = NavigationDebugFrame.EMPTY; }
+    public static void accept(NavigationDebugFrame value) {
+        detailFocus=NavigationDebugViewPolicy.retainLocalFocus(frame.focused(),value.focused(),detailFocus);
+        frame = value; receivedAt = System.nanoTime();
+    }
+    @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut event) { frame = NavigationDebugFrame.EMPTY; detailFocus=null; }
     static List<NavigationDebugFrame.Entry> visibleEntries() {
         var mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null || System.nanoTime() - receivedAt > 3_000_000_000L
@@ -186,11 +189,13 @@ public final class NavigationDebugClient {
     }
     private static void perception(PoseStack poses, VertexConsumer out, PerceptionDebugSnapshot s, Vec3 camera,
             NavigationDebugFrame.Entry entry, float r, float g, float b) {
+        if(NavigationDebugViewPolicy.compactVision(LAYERS[1],diagnosticFocus(entry)))compactVision(poses,out,s,camera,r,g,b);
         for (var m : s.markers()) {
             boolean ring = m.kind().startsWith("vision_");
             int layer = ring || m.kind().equals("los") || m.kind().equals("blocked") ? 1
                     : m.kind().equals("sound") || m.kind().equals("beacon") || m.kind().equals("direction") ? 3 : 2;
             if (!layer(layer, entry)) continue;
+            if (layer == 1 && !NavigationDebugViewPolicy.detailedVision(LAYERS[1])) continue;
             Vec3 p = m.position().subtract(camera);
             float red = r, green = g, blue = b;
             switch (m.kind()) {
@@ -216,6 +221,32 @@ public final class NavigationDebugClient {
                 }
             } else box(poses,out,p,.15,red,green,blue);
             if (!ring && m.end() != null) line(poses,out,p,m.end().subtract(camera),red,green,blue);
+        }
+    }
+    /** Focus mode shows one short field-of-view fan; all mode retains sampled rays and full rings. */
+    private static void compactVision(PoseStack poses, VertexConsumer out, PerceptionDebugSnapshot s, Vec3 camera,
+            float r,float g,float b) {
+        if(s.range()<=0||s.view().lengthSqr()<1.e-8)return;
+        PerceptionDebugSnapshot.Marker nearest=null;double best=Double.MAX_VALUE;
+        for(var marker:s.markers())if(marker.kind().equals("vision_new_ring")){
+            double distance=Math.hypot(marker.position().distanceTo(s.eye()),marker.radius());
+            double score=Math.abs(distance-8);
+            if(score<best){best=score;nearest=marker;}
+        }
+        Vec3 origin=s.eye().subtract(camera),axis=s.view().normalize();
+        line(poses,out,origin,origin.add(axis.scale(Math.min(8,s.range()))),r,g,b);
+        if(nearest==null)return;
+        double axial=nearest.position().distanceTo(s.eye());
+        double radius=Math.min(8,Math.hypot(axial,nearest.radius()));
+        double halfAngle=Math.atan2(nearest.radius(),axial);
+        Vec3 side=axis.cross(Math.abs(axis.y)<.9?new Vec3(0,1,0):new Vec3(1,0,0)).normalize();
+        Vec3 previous=null;
+        for(int i=0;i<=16;i++){
+            double angle=-halfAngle+2*halfAngle*i/16;
+            Vec3 next=origin.add(axis.scale(radius*Math.cos(angle))).add(side.scale(radius*Math.sin(angle)));
+            if(previous!=null)line(poses,out,previous,next,r,g,b);
+            if(i==0||i==16)line(poses,out,origin,next,r,g,b);
+            previous=next;
         }
     }
     private static void label(RenderLevelStageEvent event, MultiBufferSource buffers, NavigationDebugFrame.Entry entry, Vec3 camera) {
