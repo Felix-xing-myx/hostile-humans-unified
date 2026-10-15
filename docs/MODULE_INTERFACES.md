@@ -259,3 +259,15 @@ TaCZ近距离紧急开火准备曾把meleePrepTickCount清为0，但原生Living
 
 
 枪手和弓弩手共用近身试射、真实掉血回退与完整路径8格边界。弓弩恢复调用RangedWeaponCustody，枪械恢复调用GunCustody；慢速弩试射时长覆盖装填及既有待射时间。水中/上岸/攀爬/地形近战不强行试弓；无备用近战时不取消拉弦。目标切换与手动装备清理旧状态，不重写射击冷却或另造攻击入口。
+
+
+## 焦燃机枪姿势数据边界
+
+ScgunsMachineGunPose通过五个原生MiniGun姿势类的protected扩展工厂读取AimPose/LimbPose公开数据，缓存后按俯仰插值；不反射私有字段，不调用Player回调或本地近战/装填状态。ScgunsNpcAnimator仅暴露float bodyOffset给HumanPlayerModel，核心接口不出现焦燃类型；原生枪械绘制前在同一矩阵应用物品变换，火光与附件沿原绘制入口。缺失依赖/原生渲染失败沿既有回退。tools/audit_scguns_pose_compatibility.py只读检查扩展类、protected工厂和公开数据方法；不能代替Java编译或游戏视觉验收。
+
+
+## 导航诊断接口
+
+- `NavigationDebugService.controls` 仅表示固定点测试的临时移动租约；Human阻止新增攻击目标，LivingTick保留成长/既有恢复效果与临时单位寿命，但暂停命令、传送脱困及战斗写入。TestGoal复用原导航/安全/配额，不修改原命令或归属，结束释放而不恢复过时仇恨。
+- `watching`、`searched`、`candidate`、`budget`、`blocked` 为只观察入口，未佩戴头盔时不采集候选；候选通过评分不等于路线安装。`HumanNavigation`提供地面请求/安装，四类选点器提供评估，原有配额数值不变。
+- `NavigationDebugSnapshot`只含几何与服务器权威数值；`NavigationDebugFrame`含最多8实体及焦点，协议2仅S2C、每观察者5tick、每实体路径256/最新候选16（服务器缓存48）。`NavigationObserverSelection`维持稳定槽位与焦点；测试租约校验观察成员身份，切换焦点不会取消其他任务。客户端复用唯一原生BufferBuilder，每实体及时提交，先以double减相机坐标再绘制。客户端限定头盔、维度、实体UUID及数据新鲜度，不反算伤害或寻路。使用边界见[NAVIGATION_DEBUG](NAVIGATION_DEBUG.md)。

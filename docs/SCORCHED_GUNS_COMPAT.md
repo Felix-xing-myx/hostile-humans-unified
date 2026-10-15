@@ -81,7 +81,8 @@ Scorched Guns不使用四阶 `weapon_spread_degrees.firearms`（TaCZ专用），
 
 ### NPC持握、背负盾牌和枪口火光
 
-- 客户端入口ScgunsNpcAnimator，依赖隔离在ScgunsNativePose。读取原生GunItem.getModifiedGun(stack).getGeneral().getGripType(stack)，不写死物品ID、不伪造Player、不读取本地玩家输入。双枪、单手、机枪及火箭筒做NPC姿势适配；其他双手和未知类型回退普通双手持枪。双枪原生模型已含两把枪，仅渲染一次，不复制实体或装备。手臂/袖子随士兵自身朝向，特殊姿势不是完整复制玩家换弹/近战动画。
+- 客户端入口ScgunsNpcAnimator，依赖隔离在ScgunsNativePose及ScgunsMachineGunPose。读取原生GunItem.getModifiedGun(stack).getGeneral().getGripType(stack)，不写死物品ID、不伪造Player、不读取本地玩家输入。双枪、单手、机枪及火箭筒做NPC姿势适配；其他双手和未知类型回退普通双手持枪。双枪原生模型已含两把枪，仅渲染一次，不复制实体或装备。手臂/袖子随士兵自身朝向，特殊姿势不是完整复制玩家换弹/近战动画。
+- 焦燃机枪按原生 `mini_gun`、`mini_gun_2`、`mini_gun_3`、`mini_gun_4`、`mini_gun_5` 五种握持类型分别读取姿势，采用原生现代三人称姿势数据。双臂角度、手臂枢轴、身体肩位与枪体偏移随俯仰共同变化，不再把所有机枪套成同一个估算动作。前四类原生肩位为45°，第五类为35°；枪械、附件和枪口火光使用同一变换。按握持类型匹配，不写死具体枪名；声明相同原生握持类型的附属枪也会使用对应姿势。保持统一右手视觉、袖层和背盾跟随躯干，实际持手与服务器弹药/伤害不变；使用物品、睡眠、游泳或滑翔时让出这套姿势。这里只适配持握，不读取本地玩家输入或复制玩家近战/换弹状态。
 - 所有本模组枪手（TaCZ及焦燃）主手持枪、副手为已识别盾牌时，显示于躯干背部，左右惯用手镜像；蹲伏随躯干，原版鞘翅额外外移。当前源码最新修正提高背盾位置、倾角12度改为25度并绕X转180度校正方向，原版盾单独补偿原生渲染中心，旗帜/附魔仍由原生渲染器显示；这组修正尚未构建。使用ItemDisplayContext.NONE避开手持/物品框额外变换；自定义大型盾牌和其他背部附件仍需游戏内检查。切回非枪械自然恢复手持，不改副手库存、防护、耐久或服务器判定。
 - 原生GunItemStackRenderer会传Minecraft.player；改为调用接受LivingEntity的GunRenderingHandler.renderWeapon(human, ...)，枪体、配件、原生枪口坐标/固有模型变换、火光共用同一矩阵。焦燃EntityMuzzleFlashHandler还在RenderLivingEvent.Post估算一次NPC世界坐标火光，新增仅客户端、仅Human、仅本次附着渲染成功时取消的窄Mixin，避免重复/错位；OptionalMixinPlugin读取目标方法完整签名，不存在或变化时跳过并警告，保留上游回退。不取消Forge事件，不影响玩家/原生枪手。
 - 原生NPC射击提供火光包，但不提供玩家双枪射击计数；利用每次接收的原生火光令牌更新DualWieldShotTracker，使原生备用枪口偏移可用于人类。同一包多次渲染不重复计数；客户端实体卸载清理，未新增战斗网络包或逐tick扫描。

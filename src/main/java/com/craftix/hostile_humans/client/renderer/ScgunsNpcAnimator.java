@@ -24,6 +24,12 @@ public final class ScgunsNpcAnimator {
 
     public static void beginRender(Human human) { ATTACHED.remove(human); }
 
+    static float bodyOffset(Human human, float partialTick) {
+        if (!GunSupport.isScgunsGunItem(human.getMainHandItem()) || human.isUsingItem()) return 0;
+        try { return ScgunsMachineGunPose.bodyOffset(human, partialTick); }
+        catch (RuntimeException | LinkageError error) { warn(error); return 0; }
+    }
+
     /** Only suppress the estimated post-render flash after the attached native draw succeeded. */
     public static boolean consumeAttachedRender(Human human) {
         return Boolean.TRUE.equals(ATTACHED.remove(human));

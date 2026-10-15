@@ -2,6 +2,14 @@
 
 ## 未发布 / Unreleased
 
+- 修复导航观察每帧创建原生缓冲导致的内存泄漏和崩溃；复用缓冲并使用相机相对坐标。最多同时观察8名人类，编号/颜色稳定，各自路径与面板分开；指针空中右键切换焦点，点方块仅修改当前实体目的地，其他测试继续。
+- 以上导航更新与焦燃机枪持握兼容已完成Java17构建和自动化检查，并同步既定Forge47.4.21测试实例及dist；版本仍为3.8.1。远处/长时间渲染、多实体操作及姿势效果仍待游戏内验收。
+
+- 新增导航测试指针与观察头盔：仅创造/管理员可选Human执行临时固定点导航，保留原落差安全/通道/梯子和搜索预算；动态显示请求点、实际路径/终点、候选评估及服务器生命/预算状态，取消或结束恢复自主AI。
+- Add creative/operator Human navigation diagnostics: a temporary fixed-destination pointer and a live observer helmet, preserving safety/passage/ladder rules and shared quotas while distinguishing candidate requests from the actual route.
+
+- 焦燃机枪补齐五类原生特殊持握：按原生姿势分别适配双臂、枢轴、侧身肩位与枪体俯仰，枪械/配件/火光共用同一变换；保留统一右手视觉和背盾，不修改服务端射击、伤害或弹药。
+
 ## 3.8.1 — 2026-10-13（测试构建 / Test Build）
 
 ### 枪械与联动

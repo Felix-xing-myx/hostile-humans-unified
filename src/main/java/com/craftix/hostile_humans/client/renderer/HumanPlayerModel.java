@@ -61,7 +61,9 @@ final class HumanPlayerModel extends PlayerModel<Human> {
             stances.remove(human);
             float relativeAim = Mth.wrapDegrees(Mth.rotLerp(partialTick,
                     human.yHeadRotO, human.yHeadRot) - bodyYaw);
-            renderStanceYawDegrees = relativeAim - Mth.clamp(relativeAim, -25.0F, 25.0F);
+            float nativeShoulder = ScgunsNpcAnimator.bodyOffset(human, partialTick);
+            renderStanceYawDegrees = nativeShoulder != 0 ? relativeAim + nativeShoulder
+                    : relativeAim - Mth.clamp(relativeAim, -25.0F, 25.0F);
             return renderStanceYawDegrees;
         }
 

@@ -54,13 +54,8 @@ final class ScgunsNativePose {
             aim(main, model.head, -.15F * side);
             aim(support, model.head, .45F * side);
             main.y = support.y = 1.0F;
-        } else if (grip.equals(GripType.MINI_GUN) || grip.equals(GripType.MINI_GUN_2)
-                || grip.equals(GripType.MINI_GUN_3) || grip.equals(GripType.MINI_GUN_4)
-                || grip.equals(GripType.MINI_GUN_5)) {
-            aim(main, model.head, -.15F * side);
-            aim(support, model.head, .55F * side);
-            main.xRot += .45F;
-            support.xRot += .35F;
+        } else if (ScgunsMachineGunPose.apply(human, model)) {
+            // Dedicated native machine-gun hands, pivots and shoulder frame already applied.
         } else {
             // Two-handed rifle/shotgun/SMG and future unknown grips retain a safe hold.
             AnimationUtils.animateCrossbowHold(model.rightArm, model.leftArm, model.head, right);
@@ -96,6 +91,7 @@ final class ScgunsNativePose {
             tracker.incrementShotCount(id);
             // Native drawMuzzleFlash reads this tracker for the alternate barrel offset.
         }
+        ScgunsMachineGunPose.applyItem(human, stack, poses);
         renderer.applyWeaponScale(stack, poses);
         // The native item-stack renderer substitutes Minecraft.player. Pass the actual NPC
         // to the public LivingEntity renderer so models/attachments use the right entity.
