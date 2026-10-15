@@ -81,10 +81,18 @@ public final class NavigationDebugService {
         if (!allowed(player)) { message(player, "permission"); return; }
         Session session = SELECTIONS.get(player);
         if (session == null || session.dimension != player.level().dimension()) { message(player, "help"); return; }
+        for(var entry:session.selection.entries())if(resolve(player,entry.key())==null){
+            if(player.serverLevel().getEntity(entry.key()) instanceof Human old)stopOwned(player,old);
+            session.selection.remove(entry.key());
+        }
         session.selection.cycle();
         Human human = selected(player);
         if (human != null) message(player, "focused", slot(session, human.getUUID()) + 1, human.getDisplayName());
         sendFrame(player, session);
+    }
+    static void cycleFromDetails(ServerPlayer player) {
+        if(!player.getItemBySlot(EquipmentSlot.HEAD).is(HumanGunnerRegistries.NAVIGATION_OBSERVER_HELMET.get()))return;
+        cycle(player);
     }
     private static int slot(Session session, UUID id) {
         return session.selection.entries().stream().filter(entry -> entry.key().equals(id)).findFirst().orElseThrow().slot();

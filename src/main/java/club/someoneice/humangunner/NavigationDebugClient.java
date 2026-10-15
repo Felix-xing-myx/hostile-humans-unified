@@ -30,10 +30,9 @@ public final class NavigationDebugClient {
     private static final int[] COLORS = {0x37D5FF, 0xFFA842, 0xC18CFF, 0x66E699, 0xFF7FB5, 0xE4DF55, 0x729EFF, 0xEE8266};
     // 0 hidden, 1 diagnostic focus, 2 all observed members. Local UI only.
     static final int[] LAYERS = {2, 1, 1, 1};
-    static java.util.UUID detailFocus;
     static boolean diagnosticFocus(NavigationDebugFrame.Entry e) {
         var ids=visibleEntries().stream().map(member -> member.snapshot().entityUuid()).toList();
-        return Objects.equals(NavigationDebugViewPolicy.resolveFocus(frame.focused(),detailFocus,ids), e.snapshot().entityUuid());
+        return Objects.equals(NavigationDebugViewPolicy.resolveFocus(frame.focused(),ids), e.snapshot().entityUuid());
     }
     private static boolean layer(int layer, NavigationDebugFrame.Entry e) {
         return NavigationDebugViewPolicy.layerVisible(LAYERS[layer], diagnosticFocus(e));
@@ -55,10 +54,9 @@ public final class NavigationDebugClient {
         }
     }
     public static void accept(NavigationDebugFrame value) {
-        detailFocus=NavigationDebugViewPolicy.retainLocalFocus(frame.focused(),value.focused(),detailFocus);
         frame = value; receivedAt = System.nanoTime();
     }
-    @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut event) { frame = NavigationDebugFrame.EMPTY; detailFocus=null; }
+    @SubscribeEvent public static void logout(ClientPlayerNetworkEvent.LoggingOut event) { frame = NavigationDebugFrame.EMPTY; }
     static List<NavigationDebugFrame.Entry> visibleEntries() {
         var mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null || System.nanoTime() - receivedAt > 3_000_000_000L

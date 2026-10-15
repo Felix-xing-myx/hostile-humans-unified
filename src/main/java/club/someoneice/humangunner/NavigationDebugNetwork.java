@@ -11,17 +11,32 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.*;
 import net.minecraftforge.network.simple.SimpleChannel;
 
-/** Server-to-observer only. Selection and destinations use validated vanilla interaction events. */
+/** Server snapshots plus a payload-free request to cycle the sender's own observer focus. */
 public final class NavigationDebugNetwork {
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(HumanGunner.MOD_ID, "navigation_debug"), () -> "3", "3"::equals, "3"::equals);
+            new ResourceLocation(HumanGunner.MOD_ID, "navigation_debug"), () -> "4", "4"::equals, "4"::equals);
     private NavigationDebugNetwork() {}
     static void register() {
         CHANNEL.registerMessage(0, Packet.class, Packet::encode, Packet::decode, Packet::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(1, CycleFocus.class, CycleFocus::encode, CycleFocus::decode, CycleFocus::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
     static void send(ServerPlayer player, NavigationDebugFrame frame) {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new Packet(frame));
+    }
+    static void cycleFocus(){CHANNEL.sendToServer(new CycleFocus());}
+    private record CycleFocus() {
+        static void encode(CycleFocus packet,FriendlyByteBuf out) {}
+        static CycleFocus decode(FriendlyByteBuf in) {
+            if(in.isReadable())throw new IllegalArgumentException("Focus request must have no payload");
+            return new CycleFocus();
+        }
+        static void handle(CycleFocus packet,Supplier<NetworkEvent.Context> supplier){
+            var context=supplier.get();ServerPlayer sender=context.getSender();
+            context.enqueueWork(()->{if(sender!=null)NavigationDebugService.cycleFromDetails(sender);});
+            context.setPacketHandled(true);
+        }
     }
     private record Packet(NavigationDebugFrame frame) {
         static void encode(Packet packet, FriendlyByteBuf out) { NavigationDebugFrameCodec.write(packet.frame, out); }

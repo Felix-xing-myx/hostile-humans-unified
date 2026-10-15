@@ -162,14 +162,22 @@ public final class NavigationDebugTest {
         }
         check(!NavigationDebugViewPolicy.detailedVision(0)&&!NavigationDebugViewPolicy.detailedVision(1)
                 &&NavigationDebugViewPolicy.detailedVision(2),"full rings and historical LOS belong only to all scope");
-        UUID first=UUID.randomUUID(),second=UUID.randomUUID(),missing=UUID.randomUUID();
-        check(first.equals(NavigationDebugViewPolicy.resolveFocus(first,null,List.of(first,second))),"default follows pointer focus");
-        check(second.equals(NavigationDebugViewPolicy.resolveFocus(first,second,List.of(first,second))),"F8 local choice overrides pointer for display only");
-        check(first.equals(NavigationDebugViewPolicy.resolveFocus(first,missing,List.of(first,second))),"missing local focus falls back to pointer");
-        check(second.equals(NavigationDebugViewPolicy.resolveFocus(missing,missing,List.of(second))),"invalid pointer falls back to a visible member");
-        check(NavigationDebugViewPolicy.resolveFocus(first,second,List.of())==null,"no visible member means no display focus");
-        check(second.equals(NavigationDebugViewPolicy.retainLocalFocus(first,first,second)),"ordinary refresh retains F8 display choice");
-        check(NavigationDebugViewPolicy.retainLocalFocus(first,second,first)==null,"new pointer focus supersedes stale F8 override");
+        UUID first=UUID.randomUUID(),second=UUID.randomUUID(),third=UUID.randomUUID(),missing=UUID.randomUUID();
+        check(first.equals(NavigationDebugViewPolicy.resolveFocus(first,List.of(first,second))),"all diagnostic layers follow the pointer focus");
+        check(second.equals(NavigationDebugViewPolicy.resolveFocus(missing,List.of(second))),"missing focus falls back to visible member");
+        check(NavigationDebugViewPolicy.resolveFocus(first,List.of())==null,"no visible member means no display focus");
+        var shared=new NavigationObserverSelection<UUID>(8);
+        shared.add(first);shared.add(second);shared.add(third);shared.add(first);
+        UUID[] expected={second,third,first,second,third,first};
+        for(UUID next:expected){
+            // Both the air-click and F8 entry point call the same server selection cycle.
+            shared.cycle();
+            UUID resolved=NavigationDebugViewPolicy.resolveFocus(shared.focused(),List.of(first,second,third));
+            check(next.equals(resolved),"alternating pointer/F8 cycles share one cursor");
+            for(UUID member:List.of(first,second,third))
+                check(NavigationDebugViewPolicy.layerVisible(1,member.equals(resolved))==member.equals(next),
+                        "navigation, vision, memory and sound use the same selected member");
+        }
     }
     private static void perceptionRejects(PerceptionDebugSnapshot snapshot,String reason) {
         var buffer=new FriendlyByteBuf(Unpooled.buffer());

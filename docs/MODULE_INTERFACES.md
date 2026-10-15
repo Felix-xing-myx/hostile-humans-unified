@@ -270,7 +270,7 @@ ScgunsMachineGunPose通过五个原生MiniGun姿势类的protected扩展工厂�
 
 - `NavigationDebugService.controls` 仅表示固定点测试的临时移动租约；Human阻止新增攻击目标，LivingTick保留成长/既有恢复效果与临时单位寿命，但暂停命令、传送脱困及战斗写入。TestGoal复用原导航/安全/配额，不修改原命令或归属，结束释放而不恢复过时仇恨。
 - `watching`、`searched`、`candidate`、`budget`、`blocked` 为只观察入口，未佩戴头盔时不采集候选；候选通过评分不等于路线安装。`HumanNavigation`提供地面请求/安装，四类选点器提供评估，原有配额数值不变。
-- `NavigationDebugSnapshot`只含几何与服务器权威数值；`NavigationDebugFrame`含最多8实体及焦点，感知扩展帧仅S2C、每观察者5tick、每实体路径256/最新候选16（服务器缓存48）。`NavigationObserverSelection`维持稳定槽位与焦点；测试租约校验观察成员身份，切换焦点不会取消其他任务。客户端复用唯一原生BufferBuilder，每实体及时提交，先以double减相机坐标再绘制。客户端限定头盔、维度、实体UUID及数据新鲜度，不反算伤害或寻路。使用边界见[NAVIGATION_DEBUG](NAVIGATION_DEBUG.md)。
+- `NavigationDebugSnapshot`只含几何与服务器权威数值；`NavigationDebugFrame`含最多8实体及焦点，感知扩展帧仅S2C、每观察者5tick、每实体路径256/最新候选16（服务器缓存48）。`NavigationObserverSelection`维持稳定槽位与唯一服务端焦点；指针与F8都调用同一个cycle，客户端无本地焦点覆盖。导航通道4新增空负载C2S轮换请求，经头盔/权限/会话校验，只变更观察选择，既有S2C帧布局不变；测试租约校验观察成员身份，切换焦点不会取消其他任务。客户端复用唯一原生BufferBuilder，每实体及时提交，先以double减相机坐标再绘制。客户端限定头盔、维度、实体UUID及数据新鲜度，不反算伤害或寻路。使用边界见[NAVIGATION_DEBUG](NAVIGATION_DEBUG.md)。
 
 
 ## 拾取战斗交接与已越过路点

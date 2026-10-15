@@ -57,7 +57,21 @@ class NavigationDebugContract(unittest.TestCase):
         self.assertNotIn("createPath(", client)
         self.assertNotIn("HumanFallPolicy", client)
         self.assertIn("PLAY_TO_CLIENT", source("NavigationDebugNetwork"))
-        self.assertNotIn("PLAY_TO_SERVER", source("NavigationDebugNetwork"))
+        # Only a payload-free observer selection request is permitted C2S; snapshots stay S2C.
+        network = source("NavigationDebugNetwork")
+        self.assertIn("PLAY_TO_SERVER", network)
+        request = network.split("private record CycleFocus()", 1)[1].split("private record Packet", 1)[0]
+        self.assertIn("context.getSender()", request)
+        self.assertIn("in.isReadable()", request)
+        self.assertIn("NavigationDebugService.cycleFromDetails(sender)", request)
+        for forbidden in ["readUUID", "readBlockPos", "setTarget", "createPath", "setNoAi"]:
+            self.assertNotIn(forbidden, request)
+        service = source("NavigationDebugService")
+        details = service.split("static void cycleFromDetails", 1)[1].split("private static int slot", 1)[0]
+        self.assertIn("NAVIGATION_OBSERVER_HELMET", details)
+        self.assertIn("cycle(player)", details)
+        self.assertNotIn("detailFocus", client)
+        self.assertIn("NavigationDebugNetwork.cycleFocus()", source("NavigationLegendScreen"))
 
     def test_geometry_traces_do_not_change_search_quotas(self):
         self.assertIn("FairWorkBudget<>(32, 4, 40)", source("BasicNavigationBudget"))

@@ -8,7 +8,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
-/** Local diagnostic focus/layers only. No packet, entity scan, LOS or command is issued here. */
+/** Layers are local; the sole selection request changes observer focus, never an AI movement command. */
 public final class NavigationLegendScreen extends Screen {
     private record Row(int color, Component text) {}
     private static final String[] PAGES = {"overview", "memory", "vision", "clues", "action", "budget", "legend"};
@@ -26,9 +26,7 @@ public final class NavigationLegendScreen extends Screen {
         addRenderableWidget(Button.builder(label("entity"), b -> {
             var entries=NavigationDebugClient.visibleEntries();
             if (entries.isEmpty()) return;
-            int selected=0;
-            for(int i=0;i<entries.size();i++) if(NavigationDebugClient.diagnosticFocus(entries.get(i))) selected=i;
-            NavigationDebugClient.detailFocus=entries.get((selected+1)%entries.size()).snapshot().entityUuid(); scroll=0;
+            NavigationDebugNetwork.cycleFocus();scroll=0;
         }).bounds(width/2-150,height-52,100,20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
                 .bounds(width/2+50,height-52,100,20).build());
