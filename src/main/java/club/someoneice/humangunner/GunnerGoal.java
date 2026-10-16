@@ -28,10 +28,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private int unseenTargetTicks;
     private int nextCloseMeleeAttackTick;
     private int nextCloseRetreatPathTick;
-    private int nextRangeRetreatPathTick;
     private int nextFiringPositionTick;
     private int nextApproachPathTick;
-    private int nextStrafeRepositionTick;
     private int manualStrafeUntilTick;
     private int strafeLegStartTick;
     private double strafeLegStartX;
@@ -45,7 +43,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private int retreatFailureTicks;
     private boolean retreatSearchQueued;
     private double lastThreatDistance = Double.POSITIVE_INFINITY;
-    private boolean retreatingForSpace;
     private boolean approachingTarget;
     private boolean strafing;
     private boolean seekingFiringPosition;
@@ -103,14 +100,12 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         retreatFailureTicks = 0;
         retreatSearchQueued = false;
         lastThreatDistance = Double.POSITIVE_INFINITY;
-        retreatingForSpace = false;
         approachingTarget = false;
         strafing = false;
         manualStrafeUntilTick = 0;
         strafeAnchorSet = false;
         seekingFiringPosition = false;
         strafeDirection = mob.getRandom().nextBoolean() ? 1.0F : -1.0F;
-        nextStrafeRepositionTick = mob.tickCount;
         strafeLegStartTick = mob.tickCount;
         strafeLegStartX = mob.getX();
         strafeLegStartZ = mob.getZ();
@@ -140,7 +135,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         }
         aimTicks = 0;
         unseenTargetTicks = 0;
-        retreatingForSpace = false;
         approachingTarget = false;
         seekingFiringPosition = false;
         manualStrafeUntilTick = 0;
@@ -202,7 +196,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             movementTarget = target;
             approachingTarget = false;
             seekingFiringPosition = false;
-            retreatingForSpace = false;
             strafeAnchorSet = false;
             aimTicks = 0;
             unseenTargetTicks = 0;
@@ -472,8 +465,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         if (mob instanceof Human human) {
             if (CombatTerrainNavigation.hasWork(human, target)) stopLateralMovement();
             var terrain = CombatTerrainNavigation.update(human, target, 1.0D,
-                    !obscured && distance * distance <= firingRangeSqr(range)
-                            && GunRangePolicy.withinPreferredRange(distance, range)
+                    GunRangePolicy.directFiringMovement(obscured,distance*distance,firingRangeSqr(range))
                             && HumanAmmo.canUseGun(human, mob.getMainHandItem()));
             if (terrain.ownsMovement()) {
                 clearLateralInputPreservingNavigation();
@@ -566,21 +558,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         }
         seekingFiringPosition = false;
 
-        if (distance < range.minimum()) {
-            retreatingForSpace = true;
-        } else if (distance >= range.retreatResume()) {
-            retreatingForSpace = false;
-        }
-        if (retreatingForSpace) {
-            stopLateralMovement();
-            approachingTarget = false;
-            if (mob.tickCount >= nextRangeRetreatPathTick) {
-                retreatFrom(target);
-                nextRangeRetreatPathTick = mob.tickCount + (retreatSearchQueued ? 1 : 8);
-            }
-            return;
-        }
-        if (distance > range.maximum()) {
+        if (!GunRangePolicy.directFiringMovement(false,distance*distance,firingRangeSqr(range))) {
             stopLateralMovement();
             approachTarget(target, range);
             return;
@@ -674,21 +652,25 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             strafeAnchorTargetX = target.getX();
             strafeAnchorTargetZ = target.getZ();
             strafeAnchorSet = true;
-            nextStrafeRepositionTick = mob.tickCount;
         }
 
-        // Only the open firing-band branch reaches here. A lateral A-star route
+        // Only a clear shot within effective firing reach reaches here. A lateral A-star route
         // would make travel yaw own the body and reject a roughly 90-degree shot.
-        // Pursuit, terrain, shore and retreat routes return before this branch.
+        // Out-of-range pursuit, terrain, shore and survival movement return before this branch.
         mob.getNavigation().stop();
+        clearDirectStrafe(); // Also replace a stale MoveControl MOVE_TO, even if no safe step exists.
+        if (mob instanceof Human human) {
+            LongRangeNavigation.cancel(human,LongRangeNavigation.Purpose.COMBAT);
+            RangedFiringPosition.cancelVisibleSearch(human);
+            RetreatRouteContinuity.cancelSearch(human);
+            retreatSearchQueued=false;
+            MovementContinuity.cancelStep(human);
+            HumanAttention.movement(human,human.getX(),human.getZ(),true);
+        }
         if (manualStrafeUntilTick > 0 && mob.tickCount >= manualStrafeUntilTick) {
             manualStrafeUntilTick = 0;
             strafeDirection = -strafeDirection;
-            nextStrafeRepositionTick = mob.tickCount + 12;
-            clearDirectStrafe();
-            return;
         }
-        if (mob.tickCount < nextStrafeRepositionTick) return;
         if (manualStrafeUntilTick == 0) {
             strafeLegStartTick = mob.tickCount;
             strafeLegStartX = mob.getX();
@@ -715,7 +697,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     private void clearDirectStrafe() {
         if (mob instanceof Human human) human.clearRangedStrafeMotion();
-        else mob.getMoveControl().strafe(0.0F, 0.0F);
+        mob.getMoveControl().strafe(0.0F, 0.0F);
         mob.setZza(0.0F);
         mob.setXxa(0.0F);
         strafing = false;

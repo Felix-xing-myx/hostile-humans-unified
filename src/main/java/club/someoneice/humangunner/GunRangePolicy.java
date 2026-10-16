@@ -8,9 +8,15 @@ final class GunRangePolicy {
 
     private GunRangePolicy() {}
 
-    /** A clear shot at long range is not a reason to abandon a safe approach. */
+    /** Preferred spacing describes the station to approach with safe local movement. */
     static boolean withinPreferredRange(double distance, Band band) {
         return Double.isFinite(distance) && distance >= band.minimum() && distance <= band.maximum();
+    }
+
+    /** Preferred spacing chooses local inputs, not whether a clear in-range shot must navigate. */
+    static boolean directFiringMovement(boolean obscured,double distanceSquared,double reachSquared) {
+        return !obscured&&Double.isFinite(distanceSquared)&&distanceSquared>=0
+                &&Double.isFinite(reachSquared)&&reachSquared>0&&distanceSquared<=reachSquared;
     }
 
     static double firingReach(Band band, double followRange) {

@@ -18,13 +18,13 @@ class GunnerApproachContract(unittest.TestCase):
         self.assertLess(gate, tick.index("operator.shoot("))
         self.assertIn("enablePursuitSprint(human, target)", tick[gate:])
 
-    def test_terrain_cannot_hold_fire_outside_preferred_band(self):
+    def test_clear_in_range_spacing_does_not_require_preferred_band_navigation(self):
         code = (PKG / "GunnerGoal.java").read_text(encoding="utf-8")
         movement = code.split("private void moveForFiringPosition", 1)[1].split("private void approachTarget", 1)[0]
         gate = movement.split("CombatTerrainNavigation.update(", 1)[1].split("if (terrain.ownsMovement())", 1)[0]
-        self.assertIn("GunRangePolicy.withinPreferredRange(distance, range)", gate)
+        self.assertIn("GunRangePolicy.directFiringMovement(obscured,distance*distance,firingRangeSqr(range))", gate)
         self.assertIn("HumanAmmo.canUseGun", gate)
-        self.assertIn("if (distance > range.maximum())", movement)
+        self.assertIn("if (!GunRangePolicy.directFiringMovement(false,distance*distance,firingRangeSqr(range)))", movement)
         self.assertIn("PursuitNavigation.update(pursuingHuman, target, 1.0D)", code)
 
     def test_existing_order_and_environment_leases_remain(self):
