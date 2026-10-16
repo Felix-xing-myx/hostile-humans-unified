@@ -19,7 +19,7 @@ public final class GunFireAuthorization {
                 || !target.isAlive() || target.isRemoved() || target.isSpectator()
                 || target.level() != level || level.getEntity(target.getUUID()) != target
                 || !human.canAttack(target) || HumanRelations.allied(human, target)
-                || !HumanPerception.canTarget(human,target) || !HumanPerception.allowCombatLook(human,target)) return false;
+                || !HumanPerception.canTarget(human,target) || !HumanPerception.allowCombatLook(human,target) || !HumanAttention.canAim(human,target)) return false;
         if (BodyguardProtection.isBodyguard(human)) {
             BodyguardProtection.update(human);
             if (BodyguardProtection.attack(human) != target) return false;

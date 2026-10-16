@@ -312,7 +312,7 @@ public final class ShieldDefenseController {
                 && human.distanceToSqr(threat) > 36.0D))) {
             facingThreat = human.getLastHurtByMob();
         }
-        if (!HumanPerception.protectedLook(human) && !NavigationDebugService.controls(human)
+        if (!NavigationDebugService.controls(human)
                 && (!(facingThreat instanceof LivingEntity living) || HumanPerception.canTarget(human,living))) {
             human.getLookControl().setLookAt(facingThreat, 90.0F, 90.0F);
             human.markShieldFacing(facingThreat);

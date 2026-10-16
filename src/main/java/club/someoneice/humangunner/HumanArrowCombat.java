@@ -69,7 +69,7 @@ public final class HumanArrowCombat {
                 && !(human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem()))
                 && human.level().getDifficulty() != Difficulty.PEACEFUL
                 && target != null && target.isAlive() && !target.isRemoved()
-                && HumanPerception.canTarget(human,target) && HumanPerception.allowCombatLook(human,target)
+                && HumanPerception.canTarget(human,target) && HumanPerception.allowCombatLook(human,target) && HumanAttention.canAim(human,target)
                 && target.level() == human.level() && HumanAmmo.hasArrows(human) && cadenceAllowsShot(human)
                 && RangedShotClearance.canShoot(human, target);
     }

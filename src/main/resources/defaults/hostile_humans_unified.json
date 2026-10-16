@@ -3435,7 +3435,7 @@
       "combined_factor": 0.4,
       "_说明_combined_factor_中文": "警觉且旧敌的独立组合系数，不连乘；范围.1–1。",
       "_description_combined_factor_en": "Combined duration factor, not multiplied; range .1–1.",
-      "break_ticks": 10,
+      "break_ticks": 40,
       "_说明_break_ticks_中文": "连续失去视觉后清零；范围1–200。",
       "_description_break_ticks_en": "Consecutive lost-vision ticks before reset; range 1–200.",
       "hurt_ticks": 4,
@@ -3443,7 +3443,7 @@
       "_description_hurt_ticks_en": "Direct-hit source visible recognition ticks; range 1–200."
     },
     "memory": {
-      "dynamic_ticks": 160,
+      "dynamic_ticks": 600,
       "_说明_dynamic_ticks_中文": "已确认目标动态位置许可时长；范围1–2400。",
       "_description_dynamic_ticks_en": "Confirmed live-position lease ticks; range 1–2400.",
       "last_position_ticks": 600,
@@ -3455,6 +3455,19 @@
       "maximum_targets": 16,
       "_说明_maximum_targets_中文": "逐目标记忆容量；范围4–64。",
       "_description_maximum_targets_en": "Per-human perception record capacity; range 4–64."
+    },
+    "attention": {
+      "moving_head_angle": 60,
+      "_说明_moving_head_angle_中文": "导航移动时头部相对身体的单侧水平上限（度）；范围10–90。",
+      "_description_moving_head_angle_en": "Moving head angle relative to navigation body; range 10–90.",
+      "hit_response_ticks": 20,
+      "_说明_hit_response_ticks_中文": "真实受击自卫转向最长暂停，转到来向后提前恢复；范围2–80。",
+      "_description_hit_response_ticks_en": "Maximum real-hit reorientation pause, ends on alignment; range 2–80."
+    },
+    "selection": {
+      "minimum_hold_ticks": 20,
+      "_说明_minimum_hold_ticks_中文": "普通主目标最短保持，近处紧急威胁可打断；范围0–200。",
+      "_description_minimum_hold_ticks_en": "Minimum ordinary target hold, close urgency may interrupt; range 0–200."
     },
     "observation": {
       "alert_ticks": 600,

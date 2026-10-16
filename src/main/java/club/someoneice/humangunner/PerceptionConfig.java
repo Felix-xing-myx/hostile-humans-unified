@@ -28,12 +28,15 @@ public final class PerceptionConfig {
         add(m,"recognition.alert_factor",.5,.1,1,"单独警觉时长系数 / Alert-only duration factor");
         add(m,"recognition.familiar_factor",.5,.1,1,"单独旧敌时长系数 / Familiar-only duration factor");
         add(m,"recognition.combined_factor",.4,.1,1,"警觉且旧敌的独立组合系数，不连乘 / Combined duration factor, not multiplied");
-        add(m,"recognition.break_ticks",10,1,200,"连续失去视觉后清零 / Consecutive lost-vision ticks before reset");
+        add(m,"recognition.break_ticks",40,1,200,"连续失去视觉后清零 / Consecutive lost-vision ticks before reset");
         add(m,"recognition.hurt_ticks",4,1,200,"真实直接伤害来源的快速识别时长 / Direct-hit source visible recognition ticks");
-        add(m,"memory.dynamic_ticks",160,1,2400,"已确认目标动态位置许可时长 / Confirmed live-position lease ticks");
+        add(m,"memory.dynamic_ticks",600,1,2400,"已确认目标动态位置许可时长 / Confirmed live-position lease ticks");
         add(m,"memory.last_position_ticks",600,20,12000,"最后合法位置线索期限 / Last-known position lifetime ticks");
         add(m,"memory.familiar_ticks",2400,20,72000,"旧敌重认标签期限 / Familiar identity lifetime ticks");
         add(m,"memory.maximum_targets",16,4,64,"逐目标记忆容量 / Per-human perception record capacity");
+        add(m,"attention.moving_head_angle",60,10,90,"导航移动时头部相对身体的单侧水平上限（度） / Moving head angle relative to navigation body");
+        add(m,"attention.hit_response_ticks",20,2,80,"真实受击自卫转向最长暂停，转到来向后提前恢复 / Maximum real-hit reorientation pause, ends on alignment");
+        add(m,"selection.minimum_hold_ticks",20,0,200,"普通主目标最短保持，近处紧急威胁可打断 / Minimum ordinary target hold, close urgency may interrupt");
         add(m,"observation.alert_ticks",600,20,12000,"有效刺激后的警觉时间 / Alert lifetime after valid stimulus");
         add(m,"observation.direction_ticks",40,4,400,"无可见来源时方向观察上限 / Unseen direction observation limit");
         add(m,"observation.focus_ticks",120,10,1200,"单次主观察LOOK占用上限，不清除有效识别证据 / Primary look lease, not evidence lifetime");

@@ -786,20 +786,7 @@ public final class HumanGunner {
             return;
         }
 
-        if (!RIVALRY_CONFIGURED.add(human)) {
-            return;
-        }
-        human.addTargetGoal(
-                1,
-                new NearestAttackableTargetGoal<>(
-                        human,
-                        Human.class,
-                        10,
-                        true,
-                        false,
-                        candidate -> candidate instanceof Human other && areTierRivals(human, other)
-                )
-        );
+        // Rival identity is input to perception; a second vanilla TARGET goal must not compete.
     }
 
     private static void configureCombatAi(Human human) {
@@ -842,8 +829,8 @@ public final class HumanGunner {
         if (!SOLDIER_ORDERS_CONFIGURED.add(human)) return;
         human.addCombatGoal(-6, new SoldierOrderGoal(human));
         human.addCombatGoal(-6, new TemporarySupportFollowGoal(human));
-        human.addTargetGoal(-10, new GuardCombatTargetGoal(human));
-        human.addTargetGoal(-11, new BodyguardTargetGoal(human));
+        // Guard retention and bodyguard priority are consumed by the shared target coordinator.
+
         human.addCombatGoal(-5, new BodyguardMovementGoal(human));
     }
 

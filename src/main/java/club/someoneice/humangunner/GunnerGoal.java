@@ -334,6 +334,9 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             if (mob instanceof Human human) enablePursuitSprint(human, target);
             return;
         }
+        if(mob instanceof Human human&&!HumanAttention.canAim(human,target)){
+            aimTicks=0;setAiming(false);return;
+        }
         setAiming(true);
         if (mob instanceof Human human) {
             GunAttackMovementState.markAttackActive(human);

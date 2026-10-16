@@ -53,6 +53,13 @@ public final class RangedShotClearance {
         return clear;
     }
 
+    /** Diagnostics only read the last existing sample; opening a page never casts a ray. */
+    public static String debugState(Human human,LivingEntity target){
+        Sample sample=SAMPLES.get(human);
+        if(sample==null||sample.target()!=target)return "尚无当前目标的射界采样";
+        return (sample.clear()?"最近采样通畅":"最近采样受阻")+" · "+Math.max(0,human.tickCount-sample.tick())+"tick前";
+    }
+
     /** Bounded firing-position search already budgets the number of candidates. */
     static boolean fromPosition(Human human, Vec3 feet, LivingEntity target) {
         return clearSegment(human, feet.add(0, human.getEyeHeight(), 0), target.getEyePosition())

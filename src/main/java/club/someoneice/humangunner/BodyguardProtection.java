@@ -19,8 +19,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 /** Threat selection only; actual damage and weapon control remain in existing goals. */
 public final class BodyguardProtection {
     private static final Map<Human, State> STATES = new WeakHashMap<>();
-    private static final Map<ServerPlayer, Nearby> NEARBY = new WeakHashMap<>();
-    private record Nearby(long tick, net.minecraft.world.phys.Vec3 center, String dimension, double radius, List<UUID> ids) { }
     private static final class State {
         UUID threat, attack;
         int nextScan;
@@ -36,7 +34,7 @@ public final class BodyguardProtection {
     static boolean isBodyguard(Human human) {
         return human.hasOwner() && SoldierOrder.get(human) == SoldierOrder.BODYGUARD;
     }
-    /** All target writers must respect the owner-centered selector. */
+    /** Legacy read-only role recommendation; actual target assignment uses HumanTargetCoordinator. */
     public static LivingEntity preferredAttack(Human human, LivingEntity requested) {
         if (!isBodyguard(human) || owner(human) == null || human.isFleeing) return requested;
         update(human);
@@ -95,16 +93,14 @@ public final class BodyguardProtection {
             return;
         }
         State state = STATES.computeIfAbsent(human, ignored -> new State());
-        if (human.tickCount < state.nextScan) return;
+        // At most the bounded known-target table: invalidation/death can re-rank immediately.
         state.nextScan = human.tickCount + 5;
         LivingEntity bestThreat = null, bestAttack = null;
         double threatScore = Double.MAX_VALUE, attackScore = Double.MAX_VALUE;
         boolean active = SoldierCombatMode.get(human) == SoldierCombatMode.ACTIVE;
         double reach = rangedReach(human);
         double searchRadius = active && reach > 0.0D ? Math.max(48.0D, reach + 12.0D) : 48.0D;
-        for (UUID id : nearby(owner, searchRadius)) {
-            var entity = ((ServerLevel) human.level()).getEntity(id);
-            if (!(entity instanceof LivingEntity candidate)) continue;
+        for (LivingEntity candidate : HumanPerception.knownDynamicTargets(human)) {
             if (!HumanPerception.canTarget(human,candidate)) continue;
             if (candidate == owner || candidate == human || !candidate.isAlive() || candidate.isRemoved()
                     || HumanRelations.allied(human, candidate)) continue;
@@ -131,21 +127,6 @@ public final class BodyguardProtection {
         if (bestThreat != bestAttack && threatScore < attackScore) bestAttack = null;
         state.threat = bestThreat == null ? null : bestThreat.getUUID();
         state.attack = bestAttack == null ? null : bestAttack.getUUID();
-    }
-
-    private static List<UUID> nearby(ServerPlayer owner, double radius) {
-        long now = owner.level().getGameTime();
-        String dimension = owner.level().dimension().location().toString();
-        Nearby cached = NEARBY.get(owner);
-        if (cached != null && now >= cached.tick() && now - cached.tick() < 5
-                && cached.radius() >= radius && cached.dimension().equals(dimension)
-                && cached.center().distanceToSqr(owner.position()) < 4.0D)
-            return cached.ids();
-        List<UUID> ids = owner.level().getEntitiesOfClass(LivingEntity.class,
-                owner.getBoundingBox().inflate(radius), entity -> entity != owner && entity.isAlive())
-                .stream().map(LivingEntity::getUUID).toList();
-        NEARBY.put(owner, new Nearby(now, owner.position(), dimension, radius, ids));
-        return ids;
     }
 
     private static boolean hostileToOwner(Human human, ServerPlayer owner, LivingEntity candidate) {

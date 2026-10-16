@@ -183,6 +183,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.rangedFacingTick = this.tickCount;
         this.rangedFacingTarget = target;
         this.rangedFacingYaw = Float.NaN;
+        club.someoneice.humangunner.HumanAttention.combat(this,target,Float.NaN,Float.NaN,20,"远程攻击朝向");
     }
 
     /** Keep the body aligned with the actual ballistic firing direction. */
@@ -191,17 +192,20 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.rangedFacingTick = this.tickCount;
         this.rangedFacingTarget = target;
         this.rangedFacingYaw = yaw;
+        club.someoneice.humangunner.HumanAttention.combat(this,target,yaw,getXRot(),20,"远程攻击朝向");
     }
 
     public void markMeleeFacing(LivingEntity target, float yaw, float pitch) {
         markRangedFacing(target, yaw);
         this.meleeFacingPitch = pitch;
+        club.someoneice.humangunner.HumanAttention.combat(this,target,yaw,pitch,30,"近战出手朝向");
     }
 
     /** Defensive orientation has a one-tick lease and never changes aggro. */
     public void markShieldFacing(Entity attacker) {
         shieldFacingTick = tickCount;
         shieldFacingTarget = attacker;
+        club.someoneice.humangunner.HumanAttention.combat(this,attacker,Float.NaN,Float.NaN,40,"盾牌防御朝向");
     }
 
     private boolean hasShieldFacing() {
@@ -1309,7 +1313,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
         this.goalSelector.addGoal(10, (Goal)new RandomLookAroundGoal((Mob)this));
         this.goalSelector.addGoal(11, new HumanLookAtPlayerGoal(this));
-        this.goalSelector.addGoal(-20, new club.someoneice.humangunner.PerceptionLookGoal(this));
+        this.goalSelector.addGoal(-9, new club.someoneice.humangunner.IncomingHitResponseGoal(this));
+        // Perception observes in the server tick; it never reserves combat LOOK/MOVE.
         this.targetSelector.addGoal(1, new club.someoneice.humangunner.PerceptionTargetGoal(this));
     }
 
@@ -1377,7 +1382,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     /** The delayed strike, not the next path node, owns yaw until its impact tick. */
     private void facePendingBetterCombatAttack() {
-        if (club.someoneice.humangunner.HumanPerception.protectedLook(this)) return;
         if (hasPendingBetterCombatFacing()) {
             club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, pendingBetterCombatTarget);
         }
@@ -1671,8 +1675,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     public void setTarget(@Nullable LivingEntity livingEntity) {
         if (livingEntity != null && club.someoneice.humangunner.NavigationDebugService.controls(this)) return;
-        if (livingEntity != null) livingEntity = club.someoneice.humangunner.BodyguardProtection
-                .preferredAttack(this, livingEntity);
+        // Role priority is resolved by HumanTargetCoordinator before this final permission boundary.
         if (livingEntity != null && this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL)
             livingEntity = null;
         if (livingEntity != null && (!club.someoneice.humangunner.SoldierOrder.allowsTarget(this, livingEntity)
@@ -1796,7 +1799,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
 
         super.tick();
-        if (!level().isClientSide && !club.someoneice.humangunner.HumanPerception.protectedLook(this) && rangedFacingTick == tickCount
+        if (!level().isClientSide && rangedFacingTick == tickCount
                 && rangedFacingTarget != null
                 && rangedFacingTarget == getTarget() && rangedFacingTarget.isAlive()) {
             if (Float.isFinite(meleeFacingPitch)) setXRot(meleeFacingPitch);
@@ -1814,12 +1817,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         rangedFacingTarget = null;
         rangedFacingYaw = Float.NaN;
         meleeFacingPitch = Float.NaN;
-        if (!level().isClientSide && !club.someoneice.humangunner.HumanPerception.protectedLook(this) && hasShieldFacing()) applyShieldFacing();
+        if (!level().isClientSide && hasShieldFacing()) applyShieldFacing();
         shieldFacingTarget = null;
         if (!level().isClientSide) {
             // Goals, navigation and defensive look control may all write yaw.
             // Restore the attack's facing after those writers, before damage.
-            if (!club.someoneice.humangunner.HumanPerception.protectedLook(this)) facePendingBetterCombatAttack();
+            facePendingBetterCombatAttack();
             finishBetterCombatUpswing();
             club.someoneice.humangunner.HumanPerception.finishLook(this);
         }
@@ -2146,7 +2149,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     public void performRangedAttackTrident(LivingEntity target, float distanceFactor) {
         if (!club.someoneice.humangunner.HumanPerception.canTarget(this,target)
-                || !club.someoneice.humangunner.HumanPerception.allowCombatLook(this,target)) return;
+                || !club.someoneice.humangunner.HumanPerception.allowCombatLook(this,target)
+                || !club.someoneice.humangunner.HumanAttention.canAim(this,target)) return;
         if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return;
 
         Human human = this;
@@ -2572,6 +2576,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             if (this.human.waterCombatHoldingTick == this.human.tickCount
                     && this.human.hasWaterCombatMovementInput()) {
                 clearCombatStrafe();
+                club.someoneice.humangunner.HumanAttention.movement(this.human,this.human.getX(),this.human.getZ(),true);
                 this.operation = MoveControl.Operation.WAIT;
                 this.human.setSpeed(0);
                 this.human.setZza(0);
@@ -2592,6 +2597,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             if (this.combatStrafeTick == this.human.tickCount
                     && (this.combatStrafeForward != 0.0F || this.combatStrafeRight != 0.0F)
                     && !this.human.isFleeing && !this.human.seekingShore) {
+                club.someoneice.humangunner.HumanAttention.movement(this.human,this.human.getX(),this.human.getZ(),true);
                 if (this.human.shouldUseWaterMovement()) {
                     this.strafeForwards = this.combatStrafeForward;
                     this.strafeRight = this.combatStrafeRight;
@@ -2671,6 +2677,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                     return;
                 }
                 double horizontalDistance = Math.sqrt(d0 * d0 + d2 * d2);
+                club.someoneice.humangunner.HumanAttention.movement(this.human,this.wantedX,this.wantedZ,this.human.hasShieldFacing()||this.human.hasPendingBetterCombatFacing());
                 if (this.human.hasShieldFacing()) this.human.applyShieldFacing();
                 if (horizontalDistance > 1.0E-4D && !this.human.hasPendingBetterCombatFacing()
                         && !this.human.hasShieldFacing()) {
@@ -2693,6 +2700,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 // MOVE_TO and WAIT do not clear the side input that the last
                 // ranged STRAFE wrote. Clear it before normal path movement.
                 this.human.setXxa(0.0F);
+                if(this.operation==MoveControl.Operation.MOVE_TO)club.someoneice.humangunner.HumanAttention.movement(this.human,this.wantedX,this.wantedZ,this.human.hasShieldFacing()||this.human.hasPendingBetterCombatFacing());
                 if ((this.human.hasPendingBetterCombatFacing() || this.human.hasShieldFacing())
                         && this.operation == MoveControl.Operation.MOVE_TO) {
                     this.moveWhileShieldFacing();

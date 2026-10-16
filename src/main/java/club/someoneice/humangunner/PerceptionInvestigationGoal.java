@@ -17,7 +17,7 @@ public class PerceptionInvestigationGoal extends Goal {
     public PerceptionInvestigationGoal(Mob mob,double speed){h=mob instanceof Human human?human:null;this.speed=speed;setFlags(EnumSet.of(Flag.MOVE));}
     private PerceptionConfig c(){return PerceptionConfig.get();}
     @Override public boolean canUse(){return h!=null&&!h.isNoAi()&&!h.isSleeping()&&!h.isFleeing&&h.getTarget()==null
-            &&!NavigationDebugService.controls(h)&&!HumanPerception.protectedLook(h)
+            &&!NavigationDebugService.controls(h)
             &&!SoldierOrder.isHoldingPosition(h)&&HumanPerception.bestClue(h)!=null;}
     @Override public boolean requiresUpdateEveryTick(){return true;}
     @Override public void start(){clue=HumanPerception.bestClue(h);origin=h.position();started=HumanPerception.now(h);nextAttempt=started;points=clue==null?0:clue.searchedPoints;arrivedAt=-1;ownPath=null;worked=clue==null?0:clue.searchedTicks;beganWork=false;lastTick=started;}

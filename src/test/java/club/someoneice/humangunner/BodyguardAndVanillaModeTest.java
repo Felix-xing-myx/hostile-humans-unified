@@ -81,8 +81,12 @@ public final class BodyguardAndVanillaModeTest {
         String prefix = "club/someoneice/humangunner/";
         String humanClass = "com/craftix/hostile_humans/entity/entities/Human";
         String meleeGoal = "com/craftix/hostile_humans/entity/ai/goal/MeleeAttackGoal";
-        check(calls(humanClass, "setTarget", prefix + "BodyguardProtection", "preferredAttack"), "all direct target writers share protector selection");
-        check(calls(prefix + "AdaptiveCombatGoal", "resolveThreat", prefix + "BodyguardProtection", "attack"), "adaptive retaliation cannot steal protector focus");
+        check(!calls(humanClass, "setTarget", prefix + "BodyguardProtection", "preferredAttack"), "setter does not silently redirect the shared selector");
+        check(calls(prefix + "HumanTargetCoordinator", "select", prefix + "BodyguardProtection", "attack"), "shared selector consumes protector priority");
+        check(calls(prefix + "AdaptiveCombatGoal", "resolveThreat", prefix + "HumanTargetCoordinator", "select"), "adaptive recommendations pass through shared selection");
+        check(calls(prefix + "HumanTargetCoordinator", "select", prefix + "GuardCombatState", "retainTarget"), "guard target retention migrated into shared selection");
+        check(!calls(prefix + "AdaptiveCombatGoal", "proposeThreat", humanClass, "setTarget"), "pressure calculation does not independently write targets");
+        check(calls(prefix + "PerceptionTargetGoal", "tick", prefix + "HumanTargetCoordinator", "select"), "ordinary selection uses common boundary");
         check(calls(humanClass, "startUsingItem", humanClass, "humanGunner$hasPendingMeleeAttack"), "shield cannot interrupt pending melee");
         check(calls(meleeGoal, "checkAndPerformAttack", humanClass, "humanGunner$hasPendingMeleeAttack"), "ordinary melee cannot spend cooldown during pending attack");
         check(calls(meleeGoal, "humanGunner$tryImmediateCounterattack", humanClass, "humanGunner$hasPendingMeleeAttack"), "counter cannot fake another swing during pending attack");
@@ -90,11 +94,11 @@ public final class BodyguardAndVanillaModeTest {
         check(calls(prefix + "SoldierCombatMode", "allowsTarget", prefix + "BodyguardProtection", "protectingFromExplosion"), "all modes share narrow rescue exception");
         check(calls(prefix + "SoldierOrder", "allowsTarget", prefix + "BodyguardProtection", "protectingFromExplosion"), "rescue bypasses ignored-target memory and return flag only while fuse is live");
         check(calls("com/craftix/hostile_humans/entity/ai/goal/AvoidCreeperGoal", "canContinueToUse", null, "shouldEscape"), "escape rechecks fuse and owner rescue");
-        check(calls(prefix + "HumanGunner", "configureSoldierOrders", prefix + "BodyguardTargetGoal", "<init>"), "single target controller installed");
+        check(!calls(prefix + "HumanGunner", "configureSoldierOrders", prefix + "BodyguardTargetGoal", "<init>"), "no competing bodyguard target goal installed");
         check(calls(prefix + "HumanGunner", "configureSoldierOrders", prefix + "BodyguardMovementGoal", "<init>"), "protection MOVE goal installed");
         check(calls(prefix + "BodyguardProtection", "update", prefix + "BodyguardPolicy", "priority"), "runtime uses owner-centered priority");
         check(calls(prefix + "SoldierOrder", "allowsTarget", prefix + "BodyguardProtection", "allowsTarget"), "all attack goals share leash gate");
-        check(!calls(prefix + "BodyguardTargetGoal", "tick", null, "forgetSoldierTarget"), "switching priority does not erase supplies/self-attacker or blacklist target");
+        check(!calls(prefix + "HumanTargetCoordinator", "select", null, "forgetSoldierTarget"), "switching priority does not erase supplies/self-attacker or blacklist target");
         check(calls(prefix + "HumanGunner", "onLivingHurt", prefix + "HumanDamageScaling", "outgoing")
                 && calls(prefix + "HumanDamageScaling", "outgoing", prefix + "UnifiedConfig", "vanillaMode"), "native melee multiplier bypass installed");
         check(calls(prefix + "TierAttributes", "apply", prefix + "TierAttributes", "applyCombatBase"), "initial attributes install weapon-only base");

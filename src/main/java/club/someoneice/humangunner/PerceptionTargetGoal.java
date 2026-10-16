@@ -11,8 +11,7 @@ public final class PerceptionTargetGoal extends Goal {
     @Override public boolean canUse(){return !human.isNoAi()&&!human.isSleeping()&&!NavigationDebugService.controls(human);}
     @Override public boolean requiresUpdateEveryTick(){return true;}
     @Override public void tick(){
-        var desired=HumanPerception.candidate(human);
-        if(human.getTarget()!=desired)human.setTarget(desired);
+        HumanTargetCoordinator.select(human,null,"共同目标选择");
     }
     @Override public void start(){tick();}
 }

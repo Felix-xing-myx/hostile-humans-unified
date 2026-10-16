@@ -105,13 +105,9 @@ public final class GunCombatPolicyTest {
         check(calls(limitedGoal, "isPlayerTargetLimitReached", "getEntities")
                 && calls(limitedGoal, "canSelectPlayer", "setTarget"),
                 "bounded population query still rejects excess attackers");
-        for (String entry : new String[]{"canUse", "tick"}) {
-            int aliveChecks = 0;
-            for (var instruction : method(MOD + "GuardCombatTargetGoal", entry).instructions)
-                if (instruction instanceof MethodInsnNode call && call.name.equals("isAlive")) aliveChecks++;
-            check(aliveChecks >= 2, "guard rejects dead remembered attacker " + entry);
-        }
-        check(calls(MOD + "GuardCombatTargetGoal", "stop", "setTarget"), "dead guard target cleared for reacquisition");
+        check(calls(MOD + "PerceptionTargetGoal", "tick", "select"), "ordinary target goal delegates common selection");
+        check(calls(MOD + "HumanPerception", "canTarget", "valid"), "reacquisition revalidates current permission");
+        check(calls(MOD + "HumanPerception", "valid", "observable"), "invalid/dead records cannot be selected");
         check(calls(HUMAN, "setTarget", "canControlledHumanAttack"), "target assignment rejects controlled allies");
         check(calls(MOD + "HumanGunner", "onLivingTick", "canControlledHumanAttack"),
                 "ownership changes invalidate already assigned friendly targets");

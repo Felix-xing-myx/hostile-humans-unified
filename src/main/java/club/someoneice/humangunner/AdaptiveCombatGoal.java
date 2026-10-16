@@ -128,6 +128,7 @@ public final class AdaptiveCombatGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if(IncomingHitResponseGoal.wantsResponse(human))return false;
         if (!config.enabled() || human.level().isClientSide || !human.isAlive()
                 || human.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) {
             return false;
@@ -231,6 +232,7 @@ public final class AdaptiveCombatGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        if(IncomingHitResponseGoal.wantsResponse(human)&&phase!=Phase.RETREAT&&phase!=Phase.RECOVER)return false;
         if (phase == Phase.DEFEND && shields.isPressureBreakAttempt()) return false;
         if (phase != Phase.DEFEND && shields.wantsHighPressureGuard()) return false;
         if (BodyguardProtection.isBodyguard(human)) {
@@ -639,6 +641,8 @@ public final class AdaptiveCombatGoal extends Goal {
             float distanceFactor = Mth.clamp(
                     (float) (Math.sqrt(distanceSqr) / 36.0D), 0.1F, 1.0F
             );
+            HumanAttention.retreatAim(human);
+            human.markRangedFacing(threat);
             human.performRangedAttackTrident(threat, distanceFactor);
             nextRetreatTridentTick = human.tickCount + 14;
             return true;
@@ -660,6 +664,8 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private boolean tickRetreatGunfire(ItemStack weapon) {
+        if(HumanTargetCoordinator.counterfire(human,threat)!=threat)return false;
+        HumanAttention.retreatAim(human);
         GunAttackMovementState.markAttackActive(human);
         boolean safeBackpedal = hasSafeBackpedalStep();
         if (safeBackpedal) {
@@ -845,7 +851,16 @@ public final class AdaptiveCombatGoal extends Goal {
         }
     }
 
+    private boolean urgentTargetSuggestion;
     private LivingEntity resolveThreat() {
+        urgentTargetSuggestion=false;
+        LivingEntity suggested=proposeThreat();
+        LivingEntity assigned=HumanTargetCoordinator.select(human,suggested,"现有战术压力建议",urgentTargetSuggestion);
+        // Survival direction is local knowledge, not permission to reacquire during escape.
+        return assigned!=null?assigned:human.isFleeing&&isValidThreat(suggested)?suggested:null;
+    }
+
+    private LivingEntity proposeThreat() {
         if (BodyguardProtection.isBodyguard(human) && BodyguardProtection.owner(human) != null) {
             clearFocusLock();
             BodyguardProtection.update(human);
@@ -887,7 +902,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 }
             }
             if (current != attacker) {
-                human.setTarget(attacker);
+                rememberThreat(attacker);
             }
             return applySurroundingThreatPriority(attacker);
         }
@@ -909,13 +924,13 @@ public final class AdaptiveCombatGoal extends Goal {
         // Recover that threat so this goal can take over the retreat and use
         // supplies only after reaching its shared safe-distance gate.
         if (isValidThreat(human.toAvoid)) {
-            human.setTarget(human.toAvoid);
+            rememberThreat(human.toAvoid);
             return applySurroundingThreatPriority(human.toAvoid);
         }
 
         LivingEntity remembered = recallThreat();
         if (remembered != null) {
-            human.setTarget(remembered);
+            rememberThreat(remembered);
         }
         return applySurroundingThreatPriority(remembered);
     }
@@ -968,6 +983,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 human.distanceToSqr(current), nearestDistanceSqr,
                 currentDamage, human.getMaxHealth()))) {
             if (locked != null) clearFocusLock();
+            urgentTargetSuggestion=true;
             keepTarget(nearest);
             return nearest;
         }
@@ -1078,6 +1094,7 @@ public final class AdaptiveCombatGoal extends Goal {
     private void beginFocusLock(LivingEntity target) {
         focusedThreat = target;
         focusLockUntil = human.tickCount + FOCUS_LOCK_TICKS;
+        HumanTargetCoordinator.lock(human,target,HumanPerception.now(human)+FOCUS_LOCK_TICKS);
         keepTarget(target);
         human.getPersistentData().putInt("hostile_humans_unified:focus_target_until", focusLockUntil);
         human.getPersistentData().putUUID("hostile_humans_unified:focus_target", target.getUUID());
@@ -1102,11 +1119,12 @@ public final class AdaptiveCombatGoal extends Goal {
             if (isValidThreat(human.getTarget())) {
                 rememberThreat(human.getTarget());
             }
-            human.setTarget(target);
+            rememberThreat(target);
         }
     }
 
     private void clearFocusLock() {
+        HumanTargetCoordinator.unlock(human);
         focusedThreat = null;
         focusLockUntil = 0;
         human.getPersistentData().remove("hostile_humans_unified:focus_target_until");

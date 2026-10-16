@@ -55,11 +55,13 @@ public final class TargetPreservingConditionalGoal extends Goal {
     public void stop() {
         LivingEntity remembered = owner.getTarget();
         delegate.stop();
-        if (preserveTargetOnStop.getAsBoolean()
+        if (owner.getTarget()==null
+                && preserveTargetOnStop.getAsBoolean()
                 && remembered != null
                 && remembered.isAlive()
                 && owner.canAttack(remembered)) {
-            owner.setTarget(remembered);
+            if(owner instanceof Human human&&!HumanTargetCoordinator.suspended(human)&&!human.isFleeing)
+                HumanTargetCoordinator.select(human,remembered,"动作交接保留");
         }
     }
 

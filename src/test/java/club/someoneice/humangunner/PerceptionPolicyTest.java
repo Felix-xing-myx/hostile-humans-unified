@@ -14,6 +14,26 @@ public final class PerceptionPolicyTest {
     private static void check(boolean ok,String message){checks++;if(!ok)throw new AssertionError(message);}
     private static int recognition(double d,boolean alert,boolean known){return PerceptionPolicy.recognition(d,alert,known,10,1.25,90,4,.5,.5,.4);}
     public static void main(String[] args){
+        check(new PerceptionConfig(new JsonObject()).integer("memory.dynamic_ticks")==600,"default identified position lease is thirty seconds");
+        check(new PerceptionConfig(new JsonObject()).integer("recognition.break_ticks")==40,"brief lost view allows two seconds before resetting evidence");
+        check(!dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.switchAllowed(19,0,20,false,false),"ordinary proposal cannot steal minimum hold");
+        check(dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.switchAllowed(20,0,20,false,false),"hold releases exactly at deadline");
+        check(dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.switchAllowed(1,0,20,false,true),"validated crowd/pressure proposal can interrupt hold");
+        check(dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.switchAllowed(1,0,20,true,false),"close emergency can interrupt distant target");
+        check(!dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.switchAllowed(0,100,20,false,false),"clock rollback cannot falsely satisfy a hold");
+        int[] turns=new int[2];
+        for(int round=0;round<100;round++)turns[dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.nextIndex(round,2)]++;
+        check(turns[0]==50&&turns[1]==50,"independent recognition cursor serves both targets with one slot");
+        check(dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.evidenceInterval(4,2,1,true)==16,"one-ray main refresh plus two recognizers has a bounded four-round cadence");
+        check(dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.evidenceInterval(4,2,2,true)==8,"two rays maintain known target and both recognizers");
+        check(dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.evidenceInterval(4,2,2,false)==4,"two rays recognize both targets in one round when no main refresh is needed");
+        RecognitionEvidence paused=new RecognitionEvidence();paused.visible(0,4,20,40);double preserved=paused.progress();paused.pause();
+        check(!paused.active()&&paused.hasEvidence(),"hit response can free one slot without deleting old evidence");
+        paused.resume(200);check(paused.active()&&paused.progress()==preserved,"resuming an unsampled target does not invent negative observations");
+        paused.visible(200,4,20,40);check(Math.abs(paused.progress()-preserved-.05)<1.e-8,"pause does not grant long unseen evidence");
+        paused.miss(201);paused.pause();check(paused.interrupted(241,40),"real sustained negative remains effective while a slot is paused");
+        var travelFacing=AttentionFacingPolicy.step(0,0,0,180,0,60,false);
+        check(travelFacing.body()==0&&Math.abs(travelFacing.head())<=60,"ordinary moving observation cannot rotate the body or exceed sixty-degree head limit");
         // Sparse grants must eventually identify a visible target beyond the LOOK lease.
         RecognitionEvidence sparse=new RecognitionEvidence();sparse.begin(0);
         boolean identified=false;
