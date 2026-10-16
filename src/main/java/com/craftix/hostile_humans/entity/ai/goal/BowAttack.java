@@ -209,7 +209,7 @@ extends Goal {
                 if (this.mob.getNavigation().isDone() || this.mob.getNavigation().isStuck()) {
                     if (this.mob.tickCount >= this.nextFiringPositionTick) {
                         Path firingPath = this.mob instanceof Human human
-                                ? RangedFiringPosition.findVisiblePath(
+                                ? RangedFiringPosition.findAttackWindowPath(
                                         human, livingentity, club.someoneice.humangunner.RangedTerrainCombat.minimumFiringRange(human, 14.0D),
                                         Math.sqrt(this.attackRadiusSqr), 10, 12)
                                 : null;

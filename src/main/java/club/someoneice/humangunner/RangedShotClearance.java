@@ -37,7 +37,7 @@ public final class RangedShotClearance {
 
     public static boolean canShoot(Human human, LivingEntity target) {
         if (human.level().isClientSide || target == null || !target.isAlive()
-                || target.level() != human.level()) return false;
+                || target.level() != human.level() || !HumanPerception.canTarget(human,target)) return false;
         ItemStack weapon = RangedWeaponCustody.preferredForClearance(human);
         Vec3 feet = human.position();
         Vec3 oldFeet = new Vec3(human.xo, human.yo, human.zo);
@@ -46,8 +46,7 @@ public final class RangedShotClearance {
                 && sample.weapon() == weapon && sample.feet().equals(feet)
                 && sample.oldFeet().equals(oldFeet) && sample.targetFeet().equals(target.position())
                 && sample.motion().equals(target.getDeltaMovement())) return sample.clear();
-        boolean clear = human.getSensing().hasLineOfSight(target)
-                && lane(human, target, feet, true);
+        boolean clear = lane(human, target, feet, true);
         SAMPLES.put(human, new Sample(human.tickCount, target, weapon, feet, oldFeet,
                 target.position(), target.getDeltaMovement(), clear));
         return clear;
@@ -62,8 +61,7 @@ public final class RangedShotClearance {
 
     /** Bounded firing-position search already budgets the number of candidates. */
     static boolean fromPosition(Human human, Vec3 feet, LivingEntity target) {
-        return clearSegment(human, feet.add(0, human.getEyeHeight(), 0), target.getEyePosition())
-                && lane(human, target, feet, false);
+        return HumanPerception.canTarget(human,target) && lane(human, target, feet, false);
     }
 
     private static boolean lane(Human human, LivingEntity target, Vec3 feet, boolean current) {

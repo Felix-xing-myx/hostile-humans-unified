@@ -4,12 +4,9 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 import dev.felix.hostilehumans.core.IncrementalBestSearch;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +21,7 @@ public final class RangedFiringPosition {
     // Values contain only geometry, identifiers and paths, never their Human
     // key or the world. Interrupted searches cannot keep unloaded entities alive.
     private static final Map<Human, VisibleSearch> VISIBLE_SEARCHES = new WeakHashMap<>();
+    private static final java.util.Set<Human> VISIBLE_WAITING=java.util.Collections.newSetFromMap(new WeakHashMap<>());
     private static final class SearchVisit {
         int tick;
         SearchVisit(int tick) { this.tick = tick; }
@@ -32,9 +30,9 @@ public final class RangedFiringPosition {
                                  double minimum, double maximum, int radius, int attempts,
                                  SearchVisit visit, IncrementalBestSearch<BlockPos, Path> search) {}
 
-    public static boolean hasPendingVisibleSearch(Human human) { return VISIBLE_SEARCHES.containsKey(human); }
+    public static boolean hasPendingVisibleSearch(Human human) { return VISIBLE_SEARCHES.containsKey(human)||VISIBLE_WAITING.contains(human); }
     public static void cancelVisibleSearch(Human human) {
-        VISIBLE_SEARCHES.remove(human);
+        VISIBLE_SEARCHES.remove(human);VISIBLE_WAITING.remove(human);
         human.cancelCombatShoreSearch();
         OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.FIRING_LANE);
     }
@@ -47,6 +45,13 @@ public final class RangedFiringPosition {
     private RangedFiringPosition() {
     }
 
+    /** Offensive window search: preferred spacing is soft, close-defense floor remains two blocks. */
+    public static Path findAttackWindowPath(Human h,LivingEntity target,double minimum,double maximum,int radius,int attempts){
+        if(!HumanPerception.canTarget(h,target)) {cancelVisibleSearch(h);return null;}
+        double localMinimum=Math.min(minimum,Math.max(2,h.distanceTo(target)-2));
+        return findVisiblePath(h,target,localMinimum,maximum,radius,attempts);
+    }
+
     public static Path findVisiblePath(
             Human human,
             LivingEntity target,
@@ -57,7 +62,7 @@ public final class RangedFiringPosition {
     ) {
         if (human.isFleeing || SoldierOrder.isHoldingPosition(human)
                 || human.level().isClientSide || target == null || !target.isAlive()
-                || target.level() != human.level()) {
+                || target.level() != human.level() || !HumanPerception.canTarget(human,target)) {
             cancelVisibleSearch(human);
             return null;
         }
@@ -76,18 +81,15 @@ public final class RangedFiringPosition {
                 || Math.abs(session.maximum() - maximumRange) > 0.5D
                 || session.radius() != searchRadius || session.attempts() != attempts
                 || human.tickCount < session.visit().tick || human.tickCount - session.visit().tick > 20) {
-            List<BlockPos> candidates = new ArrayList<>();
-            HashSet<BlockPos> unique = new HashSet<>();
-            for (int attempt = 0; attempt < attempts; attempt++) {
-                Vec3 candidate = DefaultRandomPos.getPos(human, searchRadius, 4);
-                if (candidate == null) continue;
-                double sampledRange = Math.sqrt(target.distanceToSqr(candidate));
-                if (sampledRange < Math.max(0.0D, minimumRange - 2.0D)
-                        || sampledRange > maximumRange + 2.0D
-                        || candidate.distanceToSqr(human.position()) < 1.0D) continue;
-                BlockPos candidateBlock = BlockPos.containing(candidate);
-                if (unique.add(candidateBlock)) candidates.add(candidateBlock);
-            }
+            VISIBLE_SEARCHES.remove(human);session=null;
+        }
+        if(session!=null)session.visit().tick=human.tickCount;
+        VISIBLE_WAITING.add(human);
+        int budget = OptionalPathBudget.claim(human, OptionalPathBudget.Kind.FIRING_LANE, 4);
+        if (budget == 0) return null;
+        VISIBLE_WAITING.remove(human);
+        if(session==null){
+            List<BlockPos> candidates = RangedWindowCandidates.collect(human,target,searchRadius,attempts);
             session = new VisibleSearch(target.getUUID(), human.level().dimension(), human.getMainHandItem().getItem(),
                     human.position(), target.position(),
                     minimumRange, maximumRange, searchRadius, attempts, new SearchVisit(human.tickCount),
@@ -97,15 +99,13 @@ public final class RangedFiringPosition {
         // Budget waiting is live work, not an abandoned search. Refresh only
         // its visit time; movement/target/weapon validation still runs above.
         session.visit().tick = human.tickCount;
-        int budget = OptionalPathBudget.claim(human, OptionalPathBudget.Kind.FIRING_LANE, 4);
-        if (budget == 0) return null;
         Map<BlockPos, Boolean> clearShots = new HashMap<>();
         Path bestPath = session.search().advance(budget, candidateBlock -> {
             Vec3 candidateFeet = Vec3.atBottomCenterOf(candidateBlock);
             NavigationDebugService.candidate(human, candidateFeet, "firing", "candidate", Double.NaN);
             double candidateRangeSqr = target.distanceToSqr(candidateFeet);
             String filter = candidateRangeSqr < minimumRangeSqr || candidateRangeSqr > maximumRangeSqr ? "range"
-                    : candidateFeet.distanceToSqr(human.position()) < 4.0D ? "near"
+                    : candidateFeet.distanceToSqr(human.position()) < 0.25D ? "near"
                     : !human.level().hasChunkAt(candidateBlock) ? "unloaded"
                     : !clearShots.computeIfAbsent(candidateBlock, pos -> RangedShotClearance.fromPosition(human, Vec3.atBottomCenterOf(pos), target)) ? "sight" : null;
             if (filter != null) {
@@ -121,14 +121,14 @@ public final class RangedFiringPosition {
             }
             return path;
         }, path -> {
-            Vec3 destination = Vec3.atBottomCenterOf(path.getTarget());
+            Vec3 destination = new Vec3(path.getEndNode().x+.5,path.getEndNode().y,path.getEndNode().z+.5);
             double targetDistanceSqr = target.distanceToSqr(destination);
             if (targetDistanceSqr < minimumRangeSqr || targetDistanceSqr > maximumRangeSqr
-                    || destination.distanceToSqr(human.position()) < 4.0D) {
+                    || destination.distanceToSqr(human.position()) < 0.25D) {
                 return Double.NEGATIVE_INFINITY;
             }
 
-            if (!clearShots.computeIfAbsent(path.getTarget(), pos ->
+            if (!clearShots.computeIfAbsent(BlockPos.containing(destination), pos ->
                     RangedShotClearance.fromPosition(human, destination, target))) {
                 return Double.NEGATIVE_INFINITY;
             }
@@ -149,7 +149,8 @@ public final class RangedFiringPosition {
             NavigationDebugService.candidate(human, destination, "firing", "scored", -score);
             return -score;
         });
-        if (session.search().hasRemaining()) return null;
+        if (bestPath == null && session.search().hasRemaining()) return null;
+        // A verified reachable window is usable now; do not wait for every worse candidate.
         cancelVisibleSearch(human);
         return SoldierOrder.allowsCombatPath(human, bestPath) ? bestPath : null;
     }

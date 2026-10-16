@@ -21,6 +21,14 @@ public final class PerceptionPolicyTest {
                 recognitionDefaults.number("recognition.combined_factor"));
     }
     public static void main(String[] args){
+        for(int batch:new int[]{9,5,3}){
+            var reduced=new dev.felix.hostilehumans.core.NegativeObservationSweep();
+            for(int offset=0;offset<27;offset+=batch){
+                boolean complete=reduced.negative(27,offset,Math.min(batch,27-offset),(1L<<27)-1);
+                check(complete==(offset+batch>=27),"reduced batch "+batch+" must cover every valid point before declaring occlusion");
+            }
+        }
+
         check(!PerceptionPolicy.defensiveCreature(0,-1,true,600,2400),"ordinary marked animal cannot invent defense provenance");
         check(PerceptionPolicy.defensiveCreature(2399,2400,false,-1,-1),"unconfirmed actual attacker remains eligible within bounded defense history");
         check(!PerceptionPolicy.defensiveCreature(2400,2400,false,-1,-1),"unconfirmed animal defense expires exactly at deadline");

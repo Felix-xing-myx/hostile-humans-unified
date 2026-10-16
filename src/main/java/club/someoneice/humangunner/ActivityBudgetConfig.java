@@ -15,7 +15,7 @@ public record ActivityBudgetConfig(boolean enabled,int sampleTicks,int staleTick
                 Math.max(sample*2,i(data,"stale_ticks",60,2,600)),i(data,"downgrade_ticks",100,20,1200),
                 sparse,crowded,Math.max(crowded+1,i(data,"battle_humans",128,3,1024)),
                 n(data,"sparse_interval_factor",.5,.25,1),n(data,"crowded_interval_factor",2,1,4),n(data,"battle_interval_factor",3,1,8),
-                i(data,"sparse_probe_multiplier",2,1,4),i(data,"crowded_body_rays",9,1,27),i(data,"battle_body_rays",5,1,27),
+                i(data,"sparse_probe_multiplier",2,1,4),i(data,"crowded_body_rays",5,1,27),i(data,"battle_body_rays",3,1,27),
                 i(data,"normal_source_samples",16,1,64),i(data,"crowded_source_samples",8,1,64),i(data,"battle_source_samples",4,1,64),
                 n(data,"crowded_navigation_factor",.5,.1,1),n(data,"battle_navigation_factor",.25,.1,1));
     }

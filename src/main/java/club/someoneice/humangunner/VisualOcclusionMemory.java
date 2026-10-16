@@ -29,13 +29,18 @@ final class VisualOcclusionMemory {
             double movement=PerceptionConfig.get().number("vision.occlusion_move_reset");
             reset=entry.eye.distanceToSqr(h.getEyePosition())>movement*movement
                     ||entry.center.distanceToSqr(e.getBoundingBox().getCenter())>movement*movement
-                    ||entry.width!=e.getBbWidth()||entry.height!=e.getBbHeight()
-                    ||Math.abs(Mth.wrapDegrees(entry.yaw-h.getYHeadRot()))>8
+                    ||entry.width!=e.getBbWidth()||entry.height!=e.getBbHeight();
+            boolean turned=Math.abs(Mth.wrapDegrees(entry.yaw-h.getYHeadRot()))>8
                     ||Math.abs(Mth.wrapDegrees(entry.pitch-h.getXRot()))>8;
             if(!reset)for(var blocker:entry.blockers.entrySet()){
                 if(!h.level().hasChunkAt(blocker.getKey())||!h.level().getBlockState(blocker.getKey()).equals(blocker.getValue())){reset=true;break;}
             }
             if(reset){entry.anchor(h,e);entry.failures=0;entry.retry=0;entry.blockers.clear();}
+            else if(turned){
+                // Turning invalidates a completed FOV-specific backoff, not unchanged ray geometry.
+                // NegativeObservationSweep's sample mask handles partial FOV membership changes.
+                entry.yaw=h.getYHeadRot();entry.pitch=h.getXRot();entry.failures=0;entry.retry=0;
+            }
         }
         int cap=PerceptionConfig.get().integer("budgets.candidates")+PerceptionConfig.get().integer("memory.maximum_targets");
         while(entries.size()>cap)entries.remove(entries.keySet().iterator().next());

@@ -8,6 +8,15 @@ import org.objectweb.asm.tree.MethodInsnNode;
 public final class RangedTerrainSafetyTest {
     private static int checks;
     public static void main(String[] args) throws Exception {
+        var aim=new net.minecraft.world.phys.Vec3(10,1.5,.5);
+        var window=new net.minecraft.world.phys.Vec3(5.5,1.5,3.5);
+        var normal=new net.minecraft.world.phys.Vec3(-1,0,0);
+        var eye=RangedWindowCandidates.project(aim,window,normal,2);
+        check(eye!=null&&eye.x<window.x,"projected firing candidate stays on shooter's side of wall");
+        double crossing=(window.x-aim.x)/(eye.x-aim.x);
+        check(aim.lerp(eye,crossing).distanceToSqr(window)<1.e-12,"window projection aligns with opening before voxel normalization");
+        check(RangedWindowCandidates.project(aim,window,normal.scale(-1),2)==null,"wrong wall face cannot propose an enemy-side stance");
+
         RangedMeleeCycle cycle = new RangedMeleeCycle();
         for (int tick = 0; tick < 79; tick++) cycle.tick(true, true);
         check(!cycle.searching(), "fight before voluntarily separating");

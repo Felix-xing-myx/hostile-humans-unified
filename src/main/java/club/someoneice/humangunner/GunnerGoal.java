@@ -511,7 +511,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             if ((mob.getNavigation().isDone() || mob.getNavigation().isStuck())
                     && mob.tickCount >= nextFiringPositionTick
                     && mob instanceof Human human) {
-                Path firingPath = RangedFiringPosition.findVisiblePath(
+                Path firingPath = RangedFiringPosition.findAttackWindowPath(
                         human,
                         target,
                         seekCloserAngle

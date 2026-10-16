@@ -307,7 +307,7 @@ HumanNavigation.tick在原地形复核前尝试advancePassedCombatWaypoint：连
 
 ## 共同感知与目标位置准入
 
-`HumanPerception`拥有服务端逐目标知识状态；每份Track的`RecognitionEvidence`管理实际目视证据/负检测起点，`BodyVisibilitySamples`提供27个AABB样本；先查缓存身体比例点/眼部，再申请独立目标补查批次（默认27），所有射线共同计入原维度/服务器池，成功后取消下轮预留。可见点更新LOOK与缓存，未查完不得产生负证据。最多两份识别并行，LOOK主焦点独立且唯一。未采样不启动遮挡计时；近场由NearVisionPolicy按身体柱体/水平角判断，柱体外保留配置插值视锥；头盔使用服务器base/top几何对，end=(headingX,halfAngle,headingZ)，不客户端重算配置。`canTarget`为确认且动态有效的攻击准入，`knownPosition`只返回合法动态/最后位置。所有目标赋值、威胁恢复、护卫、射击与战术导航必须消费这条边界，不能从线索UUID恢复隐藏实体坐标。`HumanAwareness`在平静/警觉均采样和投递脚步位置线索；运动采样半径取walk/run/swim三者最大值，再按事件各自半径投递。`HumanPerception.reactToClue`独立提交有限LOOK，不依赖调查MOVE启动，驻守不离岗；新线索/位置改动与回看冷却控制重复请求，仍不能抢视觉首次识别/战斗/撤退。`HumanAttention`在tick末仲裁朝向：普通导航身体由MoveControl意图确定，头部单侧默认60°；普通观察不申请Goal LOOK，不能阻止战斗/移动。真实受击由IncomingHitResponseGoal短暂自卫回看，移交后恢复原动作。不可攻击来源的可靠受击方向仍可获得短暂匿名观察，不授予攻击许可；盾防、近战出手及射击请求优先于普通观察；`PerceptionInvestigationGoal`只占自己的MOVE路径并沿用安全/命令/预算。
+`HumanPerception`拥有服务端逐目标知识状态；每份Track的`RecognitionEvidence`管理实际目视证据/负检测起点，`BodyVisibilitySamples`提供27个AABB样本；先查缓存身体比例点/眼部，再申请独立目标补查批次（默认9），所有射线共同计入原维度/服务器池，成功后取消下轮预留。可见点更新LOOK与缓存，未查完不得产生负证据。最多两份识别并行，LOOK主焦点独立且唯一。未采样不启动遮挡计时；近场由NearVisionPolicy按身体柱体/水平角判断，柱体外保留配置插值视锥；头盔使用服务器base/top几何对，end=(headingX,halfAngle,headingZ)，不客户端重算配置。`canTarget`为确认且动态有效的攻击准入，`knownPosition`只返回合法动态/最后位置。所有目标赋值、威胁恢复、护卫、射击与战术导航必须消费这条边界，不能从线索UUID恢复隐藏实体坐标。`HumanAwareness`在平静/警觉均采样和投递脚步位置线索；运动采样半径取walk/run/swim三者最大值，再按事件各自半径投递。`HumanPerception.reactToClue`独立提交有限LOOK，不依赖调查MOVE启动，驻守不离岗；新线索/位置改动与回看冷却控制重复请求，仍不能抢视觉首次识别/战斗/撤退。`HumanAttention`在tick末仲裁朝向：普通导航身体由MoveControl意图确定，头部单侧默认60°；普通观察不申请Goal LOOK，不能阻止战斗/移动。真实受击由IncomingHitResponseGoal短暂自卫回看，移交后恢复原动作。不可攻击来源的可靠受击方向仍可获得短暂匿名观察，不授予攻击许可；盾防、近战出手及射击请求优先于普通观察；`PerceptionInvestigationGoal`只占自己的MOVE路径并沿用安全/命令/预算。
 
 `BeaconReportingService`与`BeaconReportPolicy`独立负责同玩家/维度报告SavedData，不授予目视知识；`HumanSignalItem`仅成功召唤后续共享截止。`PerceptionConfig`集中配置，`PerceptionPolicy`集中时序/识别/几何规则。`PerceptionDebugSnapshot/Codec`随观察帧发送，`NavigationDebugViewPolicy`只筛选展示。详见[感知源码地图](ENEMY_AWARENESS.md)。
 
@@ -340,3 +340,9 @@ HumanNavigation.tick在原地形复核前尝试advancePassedCombatWaypoint：连
 ## 友善生物背景过滤与防御例外
 
 HumanAwareness.passiveCreature统一分类：排除玩家、人类、Enemy/MONSTER后，其余LivingEntity作为背景；采样、emit、flush和HumanPerception声音候选前过滤。HumanPerception.allowsCreatureResponse控制视觉候选、攻击准入、动态/最后位置读取与观察继续；allowsCreatureClue在alert之前拒绝普通动物线索，失效线索标记完成让活动调查释放。Track.defenseUntil仅由本人真实非周期伤害或既有保护主人事件记录，不授予marked/liveUntil；尚未确认的记录按familiar_ticks到期，合法确认后沿原动态/旧敌期限。HumanRelations.followOwnerAssault提前忽略背景生物；assignGuardTarget显式区分defendingOwner，三参数ownerClue仅由已通过原保护/模式许可的服务端事件调用，二参数接口保留且不授予防御例外。普通动物脚步始终不刷新防御记录，完整生物类型不建立永久仇恨。
+
+### 主动进攻射击窗口
+
+弓/弩/枪统一调用RangedFiringPosition.findAttackWindowPath；防守分离保留findVisiblePath硬距约束。RangedWindowCandidates生成墙面开口投影、近场格点及轮转远场候选，loaded-only、支撑/身体碰撞/命令预筛；最多96保留、192次站位检查（开口面最多75块）。生成前取得Optional FIRING_LANE额度，VISIBLE_WAITING与会话同为pending；最大4候选/批，完整安全路径+实际终点名义弹道通过即交付当前批次最佳项。
+
+RangedShotClearance以canTarget为已确认动态权限边界，canShoot/fromPosition共同检查原武器名义弹道，不附加眼部LOS否决；不改变瞄准点、实际散布、发射、弹药或原生物理。VisualOcclusionMemory转头仅解除完成的退避，不清空未变化射线几何的部分覆盖，sampleMask负责FOV集合变化；身体单批默认9、拥挤5、团战3，完整逻辑样本仍为27。
