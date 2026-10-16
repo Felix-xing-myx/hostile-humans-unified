@@ -79,3 +79,19 @@ class LongRangeNavigationContract(unittest.TestCase):
         reuse=planner.split("if (s.route != null && current",1)[1].split("// A completed",1)[0]
         self.assertIn("if (tick >= s.nextTick) s.nextTick",reuse)
         self.assertNotIn("Math.max(s.nextTick,tick",reuse)
+
+    def test_route_reuse_keeps_watchdog_and_new_acceptance_resets_node_timeout(self):
+        nav=(ROOT/"src/main/java/com/craftix/hostile_humans/entity/ai/HumanNavigation.java").read_text(encoding="utf-8")
+        move=nav.split("boolean moveTo(Path",1)[1].split("@Override public boolean isStuck",1)[0]
+        reuse=move.split("if (sameRoute)",1)[1].split("else accepted",1)[0]
+        self.assertIn("setSpeedModifier(speed)",reuse)
+        self.assertNotIn("super.moveTo",reuse)
+        self.assertIn("if (this.path != previous)",move)
+        self.assertIn("timeoutCachedNode = net.minecraft.core.Vec3i.ZERO",move)
+        self.assertIn("timeoutTimer = 0;timeoutLimit = 0;lastTimeoutCheck",move)
+        self.assertIn("trialBoundedPath = null;trialBoundedGoal = null",move)
+        trial=nav.split("public Path createBoundedPath",1)[1].split("@Override public BlockPos",1)[0]
+        self.assertNotIn("timeoutTimer =",trial)
+        stuck=nav.split("boolean isStuck()",1)[1].split("@Override public void tick",1)[0]
+        self.assertIn("path == activeBoundedPath && !path.isDone()",stuck)
+        self.assertIn("super.isStuck()",stuck)

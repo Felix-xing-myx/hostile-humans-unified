@@ -159,11 +159,24 @@ public final class HumanNavigation extends GroundPathNavigation {
             var assessment = HumanTerrainSafety.assessPath(human, path);
             if (!assessment.safe()) { CombatTerrainNavigation.blocked(human, assessment); return false; }
         }
-        boolean accepted = super.moveTo(path, speed);
+        Path previous = this.path;
+        boolean sameRoute = previous != null && !previous.isDone() && path != null && !path.isDone() && path.sameAs(previous);
+        boolean accepted;
+        if (sameRoute) {
+            // Reusing a live route must not restart the native 100-tick physical-stall watchdog.
+            setSpeedModifier(speed);accepted = true;
+        } else accepted = super.moveTo(path, speed);
         if (accepted && path != null) {
             if (path == trialBoundedPath) {
                 activeBoundedPath = this.path; activeBoundedGoal = trialBoundedGoal; boundedRefresh = false;
                 hasDelayedRecomputation = false;timeLastRecompute = level.getGameTime();
+                if (this.path != previous) {
+                    // Query isolation preserves the OLD route timer; acceptance starts the NEW route timer.
+                    timeoutCachedNode = net.minecraft.core.Vec3i.ZERO;
+                    timeoutTimer = 0;timeoutLimit = 0;lastTimeoutCheck = level.getGameTime();
+                }
+                // First acceptance consumes this query. Cache re-submission must preserve pending block refreshes.
+                trialBoundedPath = null;trialBoundedGoal = null;
             } else if (this.path != activeBoundedPath) {
                 activeBoundedPath = null; activeBoundedGoal = null; boundedRefresh = false;
             }
@@ -172,6 +185,12 @@ public final class HumanNavigation extends GroundPathNavigation {
             club.someoneice.humangunner.NavigationDebugService.candidate(human, net.minecraft.world.phys.Vec3.atBottomCenterOf(path.getTarget()),
                     "installed", accepted ? "accepted" : "rejected", Double.NaN);
         return accepted;
+    }
+
+    @Override public boolean isStuck() {
+        // Vanilla's true physical-stall result always calls stop(), which clears activeBoundedPath.
+        // A live newly accepted bounded route must not inherit the previous route's private isStuck flag.
+        return path != null && path == activeBoundedPath && !path.isDone() ? false : super.isStuck();
     }
 
     @Override public void tick() {

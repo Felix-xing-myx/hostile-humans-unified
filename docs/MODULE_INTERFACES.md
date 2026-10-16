@@ -28,6 +28,7 @@
 - `HumanNavigation.createBoundedPath`用独立PathFinder/HumanNodeEvaluator与加载区块快照查询，复制门/浮水/跨栅栏旗标，保留梯子、失败边和safeTransition；已加载目标列规范化后搜索。查询不改原版私有targetPos/reachRange/卡住计时。
 - 接纳bounded路线时记录实际路径及目的地；`getTargetPos`展示对应目标；`recomputePath`按原20tick节制设置刷新、清已接管延期标记。追击/拾取/跟随/调查/测试均识别needsBoundedRefresh并回原预算；stop清标志，不向原版旧target自动重算。
 - 安全/命令只会否决，不能因扩大档位强行放行。已完成但被安全或命令拒绝的查询不升级。失去旧路的调查续同一destination，不重复计点；纯排队不增加失败或触发跟随救援。
+- 路线接纳计时与查询隔离分开：moveTo对等价活动路只更新速度，不重置原100tick物理停滞监测；真正换入新bounded Path才清timeoutCachedNode/timeoutTimer/timeoutLimit并更新lastTimeoutCheck。首次接纳消耗trial标记，缓存重交不清延期环境刷新。活动bounded路不继承原版上一条路的private isStuck；原版真实停滞仍通过stop释放活动引用、保留原检测结果。
 - 诊断使用既有96字符预算字段附带有界统计，协议不变。展开数为getNeighbors真实调用次数，不能冒充全部访问数或精确失败原因。局部路径的原范围与倍率保持。
 
 ## 视觉拾取与绕行连续性
