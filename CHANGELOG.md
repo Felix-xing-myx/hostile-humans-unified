@@ -1,6 +1,6 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
-## 未发布 / Unreleased
+## 3.10.0 — 2026-10-16（感知优先级与远程导航 / Perception Priority and Navigation）
 
 - 声音按来源重要性分级，普通未交战怪物脚步仅近场无遮挡时升级；距离/高差/遮挡衰减，候选截断前过滤背景，同级最旧声源优先，低等级声音不续命危险线索。
 - 新增activity_budget心跳人数动态档位，少人增强、拥挤/团战简化感知与普通/可选导航吞吐；保留硬上限、FIFO、紧急/连续性池和已安装路线。

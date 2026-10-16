@@ -111,7 +111,9 @@ public final class BodyguardAndVanillaModeTest {
         check(calls(prefix + "GrowthHealth", "change", null, "getMaxHealth"), "growth transition clamps to actual max without free healing");
         check(calls(prefix + "HumanGunner", "onLivingDamage", prefix + "HumanRelations", "defendAfterDamage"), "passive protection waits for actual owner damage");
         check(calls(prefix + "SoldierCombatMode", "refreshAuthorizedFight", prefix + "SoldierCombatMode", "isExplicitlyAuthorizedAgainst"), "NPC damage cannot create permission for an unrelated target");
-        check(calls(prefix + "HumanAwareness", "sampleMovement", prefix + "HumanAwareness", "passiveCreature"), "animals do not consume movement-source sampling work");
+        check(calls(prefix + "HumanAwareness", "sampleMovement", prefix + "HumanAwareness", "movementCandidate")
+                && calls(prefix + "HumanAwareness", "movementCandidate", prefix + "HumanAwareness", "passiveCreature"),
+                "animals are filtered by shared candidate admission before movement-source sampling work");
         check(calls(prefix + "HumanAwareness", "emit", prefix + "HumanAwareness", "passiveCreature"), "ordinary animal events never enter the hearing queue");
         check(calls(prefix + "HumanPerception", "notice", prefix + "HumanPerception", "allowsCreatureClue"), "animal clues are rejected before becoming alert inputs");
         check(calls(prefix + "HumanPerception", "hurt", prefix + "HumanPerception", "recordCreatureDefense"), "real self damage opens bounded animal self-defense recognition");
