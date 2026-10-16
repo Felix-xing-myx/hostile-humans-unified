@@ -87,6 +87,10 @@ public final class BodyguardAndVanillaModeTest {
         check(calls(prefix + "HumanTargetCoordinator", "select", prefix + "GuardCombatState", "retainTarget"), "guard target retention migrated into shared selection");
         check(!calls(prefix + "AdaptiveCombatGoal", "proposeThreat", humanClass, "setTarget"), "pressure calculation does not independently write targets");
         check(calls(prefix + "PerceptionTargetGoal", "tick", prefix + "HumanTargetCoordinator", "select"), "ordinary selection uses common boundary");
+        check(calls(prefix + "IncomingHitResponseGoal", "wantsResponse", prefix + "IncomingHitResponseGoal", "responseAllowed"), "hit response start checks shared survival eligibility");
+        check(calls(prefix + "IncomingHitResponseGoal", "canContinueToUse", prefix + "IncomingHitResponseGoal", "responseAllowed"), "running hit response immediately rechecks survival eligibility");
+        check(calls(prefix + "IncomingHitResponseGoal", "responseAllowed", prefix + "RetreatRecoveryPolicy", "shouldForceRetreat"), "low health retreat releases the hit response MOVE owner");
+        check(calls(prefix + "AdaptiveCombatGoal", "tickRetreatGunfire", prefix + "HumanTargetCoordinator", "counterfire"), "retreat shooting requires explicit shared admission");
         check(calls(humanClass, "startUsingItem", humanClass, "humanGunner$hasPendingMeleeAttack"), "shield cannot interrupt pending melee");
         check(calls(meleeGoal, "checkAndPerformAttack", humanClass, "humanGunner$hasPendingMeleeAttack"), "ordinary melee cannot spend cooldown during pending attack");
         check(calls(meleeGoal, "humanGunner$tryImmediateCounterattack", humanClass, "humanGunner$hasPendingMeleeAttack"), "counter cannot fake another swing during pending attack");

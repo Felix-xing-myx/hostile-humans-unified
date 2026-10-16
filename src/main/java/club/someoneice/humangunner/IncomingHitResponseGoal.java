@@ -11,11 +11,14 @@ public final class IncomingHitResponseGoal extends Goal {
     private long handled=Long.MIN_VALUE,started;
     private Vec3 direction;
     public IncomingHitResponseGoal(Human human){this.human=human;setFlags(EnumSet.of(Flag.MOVE));}
-    public static boolean wantsResponse(Human human){
+    private static boolean responseAllowed(Human human){
         if(HumanTargetCoordinator.suspended(human)||human.isFleeing||human.isInLava()||human.explosionThreat!=null
                 ||RetreatRecoveryPolicy.shouldForceRetreat(human))return false;
         var current=human.getTarget();
-        return !(HumanPerception.canTarget(human,current)&&human.distanceToSqr(current)<=36)&&HumanPerception.incomingReactionPending(human);
+        return !(HumanPerception.canTarget(human,current)&&human.distanceToSqr(current)<=36);
+    }
+    public static boolean wantsResponse(Human human){
+        return responseAllowed(human)&&HumanPerception.incomingReactionPending(human);
     }
     @Override public boolean canUse(){
         if(!wantsResponse(human))return false;
@@ -30,9 +33,8 @@ public final class IncomingHitResponseGoal extends Goal {
     }
     @Override public boolean requiresUpdateEveryTick(){return true;}
     @Override public boolean canContinueToUse(){
-        if(HumanTargetCoordinator.suspended(human)||human.isFleeing||HumanPerception.incomingReactionPoint(human)==null)return false;
-        var current=human.getTarget();
-        if(HumanPerception.canTarget(human,current)&&human.distanceToSqr(current)<=36)return false;
+        // Survival can become necessary after start; equal-priority retreat goals cannot preempt MOVE.
+        if(!responseAllowed(human)||direction==null||HumanPerception.incomingReactionPoint(human)==null)return false;
         long elapsed=HumanPerception.now(human)-started;
         if(elapsed>=PerceptionConfig.get().integer("attention.hit_response_ticks"))return false;
         Vec3 delta=direction.subtract(human.getEyePosition());

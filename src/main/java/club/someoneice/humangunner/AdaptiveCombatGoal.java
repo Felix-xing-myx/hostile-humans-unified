@@ -664,7 +664,12 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private boolean tickRetreatGunfire(ItemStack weapon) {
-        if(HumanTargetCoordinator.counterfire(human,threat)!=threat)return false;
+        if(threat==null||HumanTargetCoordinator.counterfire(human,threat)!=threat){
+            setRetreatBackpedaling(false);
+            gunOperator.aim(false);
+            retreatAimTicks=0;
+            return false;
+        }
         HumanAttention.retreatAim(human);
         GunAttackMovementState.markAttackActive(human);
         boolean safeBackpedal = hasSafeBackpedalStep();

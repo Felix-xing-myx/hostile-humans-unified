@@ -23,8 +23,9 @@ public final class HumanTargetCoordinator {
     }
     /** Explicit survival counterfire may restore its own known opponent, never generic acquisition. */
     public static LivingEntity counterfire(Human h,LivingEntity target){
-        if(suspended(h)||!h.isFleeing||h.explosionThreat!=null||!HumanPerception.canTarget(h,target))return h.getTarget();
-        if(h.getTarget()!=null)return h.getTarget();
+        // Null is rejection, even when the old Mob target happens to equal this request.
+        if(suspended(h)||!h.isFleeing||h.explosionThreat!=null||!HumanPerception.canTarget(h,target))return null;
+        if(h.getTarget()!=null)return h.getTarget()==target?target:null;
         if(BodyguardProtection.isBodyguard(h)&&BodyguardProtection.owner(h)!=null){
             BodyguardProtection.update(h);if(BodyguardProtection.attack(h)!=target)return null;
         }
