@@ -74,6 +74,16 @@ class ShieldControllerContract(unittest.TestCase):
         human = (ROOT / "src/main/java/com/craftix/hostile_humans/entity/entities/Human.java").read_text(encoding="utf-8")
         self.assertEqual(human.count("new club.someoneice.humangunner.ShieldDefenseController(this)"), 1)
 
+    def test_pressure_direction_survives_final_navigation_facing(self):
+        attention = (PKG / "HumanAttention.java").read_text(encoding="utf-8")
+        finish = attention.split("boolean action=", 1)[1]
+        self.assertLess(finish.index("if(action&&request.pressure)route=null"),
+                        finish.index("float body=route==null"))
+        self.assertIn('40, "高压平滑盾面", true', attention)
+        controller = (PKG / "ShieldDefenseController.java").read_text(encoding="utf-8")
+        block = controller.split("public void observeAttack(", 1)[1].split("public void observeBlockedHit", 1)[0]
+        self.assertLess(block.index("recordPressureDirection(source)"), block.index("rememberedShooter ="))
+
 
 if __name__ == "__main__":
     unittest.main()

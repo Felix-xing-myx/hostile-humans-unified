@@ -1,5 +1,12 @@
 # 开发任务与整合记录
 
+## 高压盾面响应修正（2026-10-16，源码完成）
+
+- 基线fb029d8dc23ca5ddee3f672cc6dbbcbb01f2dc96；主控/root独占worktrees/pressure-facing-response、fix/pressure-facing-response。范围PressureGuardFacing、ShieldDefenseController来向输入、HumanAttention最终朝向、相关回归与机制文档；共享文件由主控顺序接入。用户反馈单来源也不转身、多来源像失去AI；修正为朝向实际来向并平滑限频，保留已知战斗移动与未知来向不猜坐标。本轮未要求构建同步，不运行Gradle。
+- 原因：±60°内完全保持旧身体朝向，成功格挡未补方向输入，最终HumanAttention导航yaw还会覆盖方向租约。现在首条可靠来向立即响应并正面转盾，每tick≤12°，30°内变化连续跟随，跨方向至少12tick切换；无输入不创建空保持期。真实扣血和有效ShieldBlock共用方向输入，不读取隐藏远程owner坐标、不新增仇恨；TaCZ原仅通知格挡的入口没有伪造方向，仍依靠可用真实伤害来向。
+- 最终朝向请求新增内部pressure标志，只对当tick高压请求保留实际盾面、不以route yaw重写；HumanMoveControl继续原盾面相对位移。无合法敌人仍短暂停步自保但可以转身，已有目标继续原防御移动/避险。阈值、7秒/3秒周期和命令边界不变。
+- 静态验证：Python292（280通过、12跳过）、487份Java语法、默认JSON、diff、六默认附录及两页Wiki目标通过。新增Java单源正面/小角跟随/空来向后首击/角度跨界/多源限速及格挡生产接线用例，未编译执行。知识库两页正文与六默认附录先备份再同步，见验证日志/pressure-facing-response-knowledge.json。独立本地提交并整合main；未构建、部署、push或游戏验收，实例仍3.10.3。需实测单来源绕侧、前后交替、多源侧面、持盾推进与导航以及压力解除后动作恢复。
+
 ## 3.10.3构建同步（2026-10-16，已完成）
 
 - 用户明确要求构建同步；基线6bda25df40af464558a1225d356acf4c7c567e1c，包含6679a2c箭矢独立防御、1af37e7本能高压保护与6bda25d遮挡缓存。主控独占occlusion-backoff工作树，版本3.10.3；Java17构建、完整回归、仅同步既定Forge47.4.21实例，备份/正式dist/三方哈希。保留实例自定义配置，不改启动器、不启动游戏、不push。

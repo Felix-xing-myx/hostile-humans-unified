@@ -113,6 +113,9 @@ public final class DefensiveBehaviorTest {
                 "instinctive guard neither requires shooter knowledge nor grants aggro");
         check(calls(HUMAN,"markShieldFacingDirection","pressureFacing"),
                 "direction-only shield lease reaches the final attention boundary");
+        check(calls(SHIELDS,"recordPressureDamage","recordPressureDirection")
+                && calls(SHIELDS,"observeAttack","recordPressureDirection"),
+                "damage and successful blocks both update physical pressure arrival direction");
         check(calls(SHIELDS, "release", "ownsCurrentShield"),
                 "ending one defense owner cannot cancel another owner's item use");
         check(!calls(ADAPTIVE, "tickDefend", "jump"), "defense phase never requests random combat jumps");

@@ -21,7 +21,9 @@ public final class HumanAttention {
         Float yaw=combatStance?null:dx*dx+dz*dz<1.e-8?h.getYRot():(float)Math.toDegrees(Math.atan2(dz,dx))-90;
         MOVEMENT.put(h,new Movement(h.tickCount,yaw));
     }
-    private record Request(int tick,Vec3 point,int priority,String owner){}
+    private record Request(int tick,Vec3 point,int priority,String owner,boolean pressure) {
+        Request(int tick,Vec3 point,int priority,String owner) { this(tick,point,priority,owner,false); }
+    }
     private HumanAttention() {}
     public static String owner(Human h){return OWNERS.getOrDefault(h,"自然朝向");}
     /** A known loot location may orient an idle body, never replace combat or real-hit attention. */
@@ -44,7 +46,7 @@ public final class HumanAttention {
         Vec3 point = h.getEyePosition().add(Vec3.directionFromRotation(0, yaw).scale(8));
         Request old = REQUESTS.get(h);
         if (old == null || old.tick != h.tickCount || old.priority <= 40)
-            REQUESTS.put(h, new Request(h.tickCount, point, 40, "高压稳定盾面"));
+            REQUESTS.put(h, new Request(h.tickCount, point, 40, "高压平滑盾面", true));
     }
 
     /** Planned movement, rather than knockback velocity, owns ordinary travel yaw. */
@@ -81,6 +83,9 @@ public final class HumanAttention {
         if(request!=null&&request.tick==human.tickCount&&(request.priority>=0||!combat&&!urgent&&observation==null)){point=request.point;owner=request.owner;}
         else REQUESTS.remove(human);
         boolean action=request!=null&&request.tick==human.tickCount&&request.priority>=0;
+        // Shield MoveControl already converts route motion into facing-relative inputs.
+        // Do not rotate its physical shield back onto the route at the final attention boundary.
+        if(action&&request.pressure)route=null;
         if(NavigationDebugService.controls(human)){point=null;combat=false;}
         if(human.isFleeing&&(request==null||request.tick!=human.tickCount))point=null;
         OWNERS.put(human,route==null?owner:"导航身体 / "+owner);

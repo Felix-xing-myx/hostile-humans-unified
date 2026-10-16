@@ -106,7 +106,14 @@ public final class ShieldDefenseController {
         if (!recoveryPressure.active(human.tickCount, rules) && !pressureCycle.attempting()) pressureFacing.clear();
         recoveryPressure.record(human.tickCount, damage, human.getMaxHealth(), rules);
         pressureCycle.damage(human.tickCount, damage, human.getMaxHealth(), rules);
+        recordPressureDirection(source);
+    }
+
+    /** Direction-only input shared by actual damage and successful shield blocks. */
+    private void recordPressureDirection(DamageSource source) {
         // A moving projectile provides arrival direction, never its owner's remote coordinates.
+        var direct = source.getDirectEntity();
+        var attacker = source.getEntity();
         Vec3 direction = null;
         if (direct != null && direct != attacker && direct.getDeltaMovement().lengthSqr() > 1.0E-8)
             direction = direct.getDeltaMovement().scale(-1);
@@ -585,7 +592,10 @@ public final class ShieldDefenseController {
     /** Only an observed attacker is remembered; no omniscient scan of every archer. */
     public void observeAttack(DamageSource source, boolean blocked) {
         if (human.level().isClientSide) return;
-        if (blocked) observeBlockedHit();
+        if (blocked) {
+            observeBlockedHit();
+            recordPressureDirection(source);
+        }
         if (source.getEntity() instanceof LivingEntity attacker
                 && !HumanRelations.allied(human, attacker)
                 && (source.getDirectEntity() instanceof Projectile || isRangedThreat(attacker))) {

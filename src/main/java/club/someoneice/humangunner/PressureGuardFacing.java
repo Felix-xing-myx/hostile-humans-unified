@@ -2,18 +2,21 @@ package club.someoneice.humangunner;
 
 /** Stable yaw lease from impact direction only; no entity identity or position. */
 final class PressureGuardFacing {
-    static final float SAFE_OFFSET = 60, TURN_STEP = 30;
-    static final int HOLD_TICKS = 20;
+    static final float FOLLOW_ANGLE = 30, TURN_STEP = 12;
+    static final int HOLD_TICKS = 12;
     private Float incomingYaw, heldYaw;
     private int reconsiderAt;
     void record(float yaw) { if (Float.isFinite(yaw)) incomingYaw = wrap(yaw); }
     float step(int now, float bodyYaw) {
         if (!Float.isFinite(bodyYaw)) return 0;
+        // No artificial hold without an actual arrival direction. A first hit responds immediately.
+        if (incomingYaw == null) return bodyYaw;
         if (heldYaw == null || now >= reconsiderAt) {
-            float delta = incomingYaw == null ? 0 : wrap(incomingYaw - bodyYaw);
-            // Keep already-protected sources inside the front hemisphere without tracking them exactly.
-            heldYaw = wrap(bodyYaw + Math.copySign(Math.max(0, Math.abs(delta) - SAFE_OFFSET), delta));
+            heldYaw = incomingYaw;
             reconsiderAt = now + HOLD_TICKS;
+        } else if (Math.abs(wrap(incomingYaw - heldYaw)) <= FOLLOW_ANGLE) {
+            // Follow a slowly changing single direction; distant sides wait for the switch interval.
+            heldYaw = incomingYaw;
         }
         return wrap(bodyYaw + Math.max(-TURN_STEP, Math.min(TURN_STEP, wrap(heldYaw - bodyYaw))));
     }

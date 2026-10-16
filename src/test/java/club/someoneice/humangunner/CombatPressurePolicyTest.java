@@ -26,21 +26,34 @@ public final class CombatPressurePolicyTest {
 
         PressureGuardFacing facing = new PressureGuardFacing();
         facing.record(40);
-        check(facing.step(0, 0) == 0, "already-protected front source does not turn the body");
+        check(facing.step(0, 0) == 12, "front-side pressure turns toward the source immediately");
+        float yaw = 12;
+        for (int tick = 1; tick <= 3; tick++) yaw = facing.step(tick, yaw);
+        check(yaw == 40, "a single source is faced fully rather than stopping at a sixty-degree offset");
+        facing.record(55);
+        check(facing.step(4, yaw) == 52, "nearby changes follow a moving single pressure direction");
+        yaw = facing.step(5, 52);
         facing.record(-160);
-        check(facing.step(1, 0) == 0 && facing.step(19, 0) == 0, "multiple sources cannot overwrite held guard yaw");
-        check(facing.step(20, 0) == -30, "rear pressure starts minimum bounded correction after the hold");
-        float yaw = -30;
-        for (int tick = 21; tick < 24; tick++) yaw = facing.step(tick, yaw);
-        check(yaw == -100, "correction stops sixty degrees away rather than tracking the source exactly");
-        facing.record(140);
-        check(facing.step(25, yaw) == yaw, "a new side cannot trigger an immediate reverse swing");
+        check(facing.step(6, yaw) == yaw && facing.step(11, yaw) == yaw,
+                "a different side cannot immediately reverse the current shield direction");
+        check(facing.step(12, yaw) == 67, "new pressure side turns smoothly once switch interval expires");
         facing.clear();
         check(facing.step(100, 65) == 65, "unknown direction retains existing facing");
+        facing.record(105);
+        check(facing.step(101, 65) == 77, "first real direction does not wait behind an empty hold");
         facing.clear(); facing.record(-170);
-        check(facing.step(0, 170) == 170, "wraparound forward source is already covered");
+        check(facing.step(0, 170) == -178, "wraparound uses the shortest bounded turn");
+        check(facing.step(1, -178) == -170, "wraparound finishes facing the source");
         facing.clear(); facing.record(Float.NaN);
         check(facing.step(0, 15) == 15, "invalid input cannot invent a source direction");
+        facing.clear(); yaw = 0;
+        for (int tick = 0; tick < 120; tick++) {
+            facing.record(tick % 2 == 0 ? 90 : -90);
+            float next = facing.step(tick, yaw);
+            float delta = ((next - yaw + 540) % 360) - 180;
+            check(Math.abs(delta) <= PressureGuardFacing.TURN_STEP, "alternating sides never snap shield yaw");
+            yaw = next;
+        }
         ShieldPressureConfig pressure = new ShieldPressureConfig(true, 20, .15, 4, .05, 20, 140, 60);
         PressureDefenseCycle cycle = new PressureDefenseCycle();
         cycle.guarded(0);
