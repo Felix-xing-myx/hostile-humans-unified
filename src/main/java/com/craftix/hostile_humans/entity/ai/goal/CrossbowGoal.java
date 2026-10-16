@@ -191,12 +191,12 @@ extends Goal {
             if(mob instanceof Human human) {
                 club.someoneice.humangunner.RangedFiringMemory.observe(human,livingentity,
                         flag && d0<=attackRadiusSqr,attackRadiusSqr);
-                if(!flag && club.someoneice.humangunner.RangedFiringMemory.recover(human,livingentity,speedModifier)) {
+                if(club.someoneice.humangunner.RangedFiringMemory.recover(human,livingentity,speedModifier)) {
                     setOrbitSpeed(false);
                     human.clearRangedStrafeMotion();mob.setXxa(0);mob.setZza(0);this.strafingTime=0;
                     this.pursuingTarget=false;
                     mob.getLookControl().setLookAt(livingentity,45.0F,35.0F);
-                    tickShot(livingentity,false,false);
+                    tickShot(livingentity,flag,d0<=attackRadiusSqr && seeTime>=5);
                     return;
                 }
             }
@@ -248,8 +248,10 @@ extends Goal {
                     if (firingPath != null) {
                         boolean moved = this.mob.getNavigation().moveTo(firingPath,
                                 this.canRun() ? this.speedModifier : this.speedModifier * 0.65D);
-                        if (moved && this.mob instanceof Human human)
+                        if (moved && this.mob instanceof Human human) {
+                            club.someoneice.humangunner.RangedFiringMemory.selected(human,livingentity,firingPath,attackRadiusSqr);
                             club.someoneice.humangunner.SoldierDialogue.event(human, "reposition");
+                        }
                         if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.searchCompleted(human, livingentity, moved);
                     } else if (!(this.mob instanceof Human human && RangedFiringPosition.hasPendingVisibleSearch(human))) {
                         if (this.mob instanceof Human human && human.isInWater()) {

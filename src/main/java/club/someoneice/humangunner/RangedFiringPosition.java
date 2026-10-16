@@ -90,6 +90,13 @@ public final class RangedFiringPosition {
         VISIBLE_WAITING.remove(human);
         if(session==null){
             List<BlockPos> candidates = RangedWindowCandidates.collect(human,target,searchRadius,attempts);
+            BlockPos remembered=RangedFiringMemory.preferredCandidate(human,target,searchRadius);
+            if(remembered!=null){
+                var ordered=new java.util.ArrayList<BlockPos>(candidates);
+                ordered.remove(remembered);ordered.add(0,remembered);
+                if(ordered.size()>RangedWindowCandidates.MAX_CANDIDATES)ordered.remove(ordered.size()-1);
+                candidates=List.copyOf(ordered);
+            }
             session = new VisibleSearch(target.getUUID(), human.level().dimension(), human.getMainHandItem().getItem(),
                     human.position(), target.position(),
                     minimumRange, maximumRange, searchRadius, attempts, new SearchVisit(human.tickCount),
@@ -101,13 +108,14 @@ public final class RangedFiringPosition {
         session.visit().tick = human.tickCount;
         Map<BlockPos, Boolean> clearShots = new HashMap<>();
         Path bestPath = session.search().advance(budget, candidateBlock -> {
-            Vec3 candidateFeet = Vec3.atBottomCenterOf(candidateBlock);
+            Vec3 candidateFeet = HumanTerrainSafety.firingFeet(human,candidateBlock);
+            if(candidateFeet==null)return null;
             NavigationDebugService.candidate(human, candidateFeet, "firing", "candidate", Double.NaN);
             double candidateRangeSqr = target.distanceToSqr(candidateFeet);
             String filter = candidateRangeSqr < minimumRangeSqr || candidateRangeSqr > maximumRangeSqr ? "range"
                     : candidateFeet.distanceToSqr(human.position()) < 0.25D ? "near"
                     : !human.level().hasChunkAt(candidateBlock) ? "unloaded"
-                    : !clearShots.computeIfAbsent(candidateBlock, pos -> RangedShotClearance.fromPosition(human, Vec3.atBottomCenterOf(pos), target)) ? "sight" : null;
+                    : !clearShots.computeIfAbsent(candidateBlock, pos -> RangedShotClearance.fromPosition(human, candidateFeet, target)) ? "sight" : null;
             if (filter != null) {
                 NavigationDebugService.candidate(human, candidateFeet, "firing", filter, Double.NaN);
                 return null;
@@ -121,7 +129,9 @@ public final class RangedFiringPosition {
             }
             return path;
         }, path -> {
-            Vec3 destination = new Vec3(path.getEndNode().x+.5,path.getEndNode().y,path.getEndNode().z+.5);
+            var end=path.getEndNode();
+            Vec3 destination = HumanTerrainSafety.firingFeet(human,new BlockPos(end.x,end.y,end.z));
+            if(destination==null)return Double.NEGATIVE_INFINITY;
             double targetDistanceSqr = target.distanceToSqr(destination);
             if (targetDistanceSqr < minimumRangeSqr || targetDistanceSqr > maximumRangeSqr
                     || destination.distanceToSqr(human.position()) < 0.25D) {

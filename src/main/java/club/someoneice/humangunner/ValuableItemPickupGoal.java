@@ -63,7 +63,7 @@ final class ValuableItemPickupGoal extends Goal {
         if (human.tickCount < nextSearchTick) {
             return false;
         }
-        nextSearchTick = human.tickCount + 20 + human.getRandom().nextInt(20);
+        nextSearchTick = human.tickCount + 10 + human.getRandom().nextInt(10);
         targetItem = chooseTarget();
         knownItemPosition = targetItem == null ? null : HumanLootVision.lastSeen(human, targetItem);
         return targetItem != null && knownItemPosition != null;

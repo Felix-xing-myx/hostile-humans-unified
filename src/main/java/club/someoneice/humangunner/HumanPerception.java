@@ -695,6 +695,7 @@ public final class HumanPerception {
         row(rows,"targets","主目标威胁分（最近评估）",HumanThreatAssessment.describe(h,h.getTarget()));
         row(rows,"actions","攻击朝向",h.getTarget()==null?"无主目标":HumanAttention.canAim(h,h.getTarget())?"允许，仍需武器/许可/射界":"移动偏角超过头部限制，暂缓远程出手");
         row(rows,"actions","已有射界采样",RangedShotClearance.debugState(h,h.getTarget()));
+        row(rows,"actions","射位路线/记忆",RangedFiringMemory.debugState(h));
         row(rows,"actions","身体/头部角度",String.format(java.util.Locale.ROOT,"%.0f° / %.0f° · 移动单侧限%.0f°",h.yBodyRot,h.getYHeadRot(),HumanAttention.movingHeadLimit(h)));
         row(rows,"actions","匿名来向保护",remaining(s.directionProtectedUntil,now));
         row(rows,"actions","MOVE状态",NavigationDebugService.controls(h)?"固定点测试":h.isFleeing?"撤退":h.getTarget()!=null?"战斗":h.getNavigation().isDone()?"无活动路径":"命令/调查路径");

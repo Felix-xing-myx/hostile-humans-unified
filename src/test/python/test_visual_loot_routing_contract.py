@@ -4,6 +4,16 @@ import unittest
 PKG=Path(__file__).resolve().parents[3]/"src/main/java/club/someoneice/humangunner"
 
 class VisualLootRoutingContract(unittest.TestCase):
+    def test_near_awareness_keeps_los_and_near_selection_finishes_before_broad_search(self):
+        vision=(PKG/"HumanLootVision.java").read_text(encoding="utf-8")
+        self.assertIn('SoldierPickupPolicy.canCollectNow(h)&&nearbyGround(h.position(),point)',vision)
+        self.assertLess(vision.index('boolean nearby='),vision.index('PerceptionBudget.claim(h,"rays"'))
+        self.assertIn('if(clear)',vision)
+        manager=(PKG/"HumanLootManager.java").read_text(encoding="utf-8")
+        self.assertIn('new AABB(origin,origin).inflate(3.0D,1.5D,3.0D)',manager)
+        self.assertIn('selectionRadiusSqr=preferredPile==null?9.0D:16.0D',manager)
+        self.assertIn('item.position().distanceToSqr(selectionCenter) <= selectionRadiusSqr',manager)
+
     def test_visual_evidence_precedes_selection_and_all_collection(self):
         manager=(PKG/"HumanLootManager.java").read_text(encoding="utf-8")
         nearby=manager.split("ItemEntity advance(int budget",1)[1].split("private Iterator",1)[0]

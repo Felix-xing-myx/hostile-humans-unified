@@ -140,6 +140,17 @@ public final class HumanTerrainSafety {
     static boolean firingFloorHeight(double feet,double landing) {
         return Double.isFinite(feet)&&Double.isFinite(landing)&&feet-landing<=.6;
     }
+    /** Resolve a candidate/node to its real collision surface, including half-slabs. */
+    static Vec3 firingFeet(Human h,BlockPos node) {
+        if(!h.level().hasChunkAt(node))return null;
+        double x=node.getX()+.5,z=node.getZ()+.5;
+        double y=landingHeight(h,x,node.getY(),z,1);
+        return Double.isFinite(y)&&Math.abs(y-node.getY())<=1.01?new Vec3(x,y,z):null;
+    }
+    static BlockPos firingNode(Vec3 feet) {
+        // Vanilla ground nodes stand in the air cell above a fractional collision surface.
+        return BlockPos.containing(feet.x,Math.ceil(feet.y-1.e-6),feet.z);
+    }
 
     private static Reason footprintReason(Human human, Vec3 point) {
         double half = Math.max(0.05D, human.getBbWidth() * 0.5D - 0.02D);

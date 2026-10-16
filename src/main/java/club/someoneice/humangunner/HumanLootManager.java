@@ -178,6 +178,8 @@ public final class HumanLootManager {
         private final int inventoryRevision;
         private PileFirstSelection<ItemEntity, UUID> selection;
         private final AABB pileArea;
+        private final Vec3 selectionCenter;
+        private final double selectionRadiusSqr;
 
         NearbySearch(Human human, double radius, Vec3 preferredPile) {
             this.human = human;
@@ -187,7 +189,10 @@ public final class HumanLootManager {
             this.searchArea = human.getBoundingBox().inflate(radius, 4.0D, radius);
             this.inventory = human.getData();
             this.inventoryRevision = inventory == null ? 0 : inventory.getInventoryRevision();
-            AABB localPile = preferredPile == null ? null : new AABB(preferredPile, preferredPile).inflate(4.0D);
+            selectionCenter=preferredPile==null?origin:preferredPile;
+            selectionRadiusSqr=preferredPile==null?9.0D:16.0D;
+            AABB localPile = preferredPile == null ? new AABB(origin,origin).inflate(3.0D,1.5D,3.0D)
+                    : new AABB(preferredPile, preferredPile).inflate(4.0D);
             this.pileArea = localPile != null && searchArea.intersects(localPile) ? searchArea.intersect(localPile) : null;
         }
 
@@ -204,7 +209,7 @@ public final class HumanLootManager {
                 Iterator<ItemEntity> initial = query(pileArea == null ? searchArea : pileArea);
                 if (initial == null) return null;
                 selection = new PileFirstSelection<>(initial, pileArea != null, () -> query(searchArea), ItemEntity::getUUID,
-                        item -> item.position().distanceToSqr(preferredPile) <= 16.0D);
+                        item -> item.position().distanceToSqr(selectionCenter) <= selectionRadiusSqr);
             }
             // The backpack can change between batches; values never cross a tick.
             HumanData current = human.getData();
@@ -234,7 +239,7 @@ public final class HumanLootManager {
                     || !item.isAlive() || item.getItem().isEmpty()
                     || item.level() != human.level() || !item.getBoundingBox().intersects(searchArea)
                     || human.distanceToSqr(item) > (radius + 4.0D) * (radius + 4.0D)
-                    || (selection.isPileOnly() && item.position().distanceToSqr(preferredPile) > 16.0D)
+                    || (selection.isPileOnly() && item.position().distanceToSqr(selectionCenter) > selectionRadiusSqr)
                     || !isReachableWithoutDiving(item)) return Double.NEGATIVE_INFINITY;
             double value = benefit(human, item.getItem(), capacity);
             return value <= 0.0D ? Double.NEGATIVE_INFINITY

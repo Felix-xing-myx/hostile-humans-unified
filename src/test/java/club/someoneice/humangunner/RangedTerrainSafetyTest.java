@@ -8,6 +8,26 @@ import org.objectweb.asm.tree.MethodInsnNode;
 public final class RangedTerrainSafetyTest {
     private static int checks;
     public static void main(String[] args) throws Exception {
+        var destination=new net.minecraft.world.phys.Vec3(.5,3,.5);
+        check(HumanTerrainSafety.firingNode(new net.minecraft.world.phys.Vec3(.5,2.5,.5)).getY()==3,
+                "half-slab return goal uses the air navigation cell, not the solid slab cell below it");
+        check(HumanTerrainSafety.firingNode(new net.minecraft.world.phys.Vec3(.5,3,.5)).getY()==3,
+                "integer standing floors retain their original navigation target height");
+        check(!RangedFiringMemory.arrivedAtWindow(new net.minecraft.world.phys.Vec3(.5,0,.5),destination,true),
+                "a clear shot directly below the platform is not arrival at the selected firing floor");
+        check(!RangedFiringMemory.arrivedAtWindow(destination,destination,false),
+                "airborne momentary exposure cannot release a selected firing route");
+        check(RangedFiringMemory.arrivedAtWindow(destination.add(.4,0,.2),destination,true),
+                "grounded arrival allows ordinary aim and movement to resume");
+        var requested=new net.minecraft.world.level.pathfinder.Path(java.util.List.of(
+                new net.minecraft.world.level.pathfinder.Node(0,0,0),new net.minecraft.world.level.pathfinder.Node(2,3,0)),
+                new net.minecraft.core.BlockPos(2,3,0),true);
+        var retained=new net.minecraft.world.level.pathfinder.Path(java.util.List.of(
+                new net.minecraft.world.level.pathfinder.Node(1,1,0),new net.minecraft.world.level.pathfinder.Node(2,3,0)),
+                new net.minecraft.core.BlockPos(2,3,0),true);
+        check(requested!=retained&&RangedFiringMemory.sameDestination(retained,requested),
+                "navigation may retain another path object with the same firing destination");
+        check(!RangedFiringMemory.sameDestination(null,requested),"missing installed route cannot be leased");
         var aim=new net.minecraft.world.phys.Vec3(10,1.5,.5);
         var window=new net.minecraft.world.phys.Vec3(5.5,1.5,3.5);
         var normal=new net.minecraft.world.phys.Vec3(-1,0,0);
@@ -84,6 +104,8 @@ public final class RangedTerrainSafetyTest {
             String method=goal.endsWith("GunnerGoal")?"moveForFiringPosition":"tick";
             check(calls(goal,method,root+"RangedFiringMemory","observe")
                     &&calls(goal,method,root+"RangedFiringMemory","recover"), "all three ranged modes share firing memory and recovery");
+            check(calls(goal,method,root+"RangedFiringMemory","selected"),
+                    "a successful selected-window route is committed in every ranged mode");
         }
         check(calls(root+"RangedTerrainCombat","tryStrafe",root+"RangedFiringMemory","keepsFiringFloor"),
                 "shooting steps use tactical floor retention before submitting motion");

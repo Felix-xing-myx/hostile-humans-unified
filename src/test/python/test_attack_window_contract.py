@@ -23,7 +23,8 @@ class AttackWindowContract(unittest.TestCase):
         self.assertIn("VISIBLE_WAITING.contains(human)",code)
         self.assertIn("bestPath == null && session.search().hasRemaining()",code)
         self.assertIn("candidateFeet.distanceToSqr(human.position()) < 0.25D",code)
-        for guard in ("path.canReach()","HumanTerrainSafety.safePath","SoldierOrder.allowsCombatPath","path.getEndNode().x"):
+        for guard in ("path.canReach()","HumanTerrainSafety.safePath","SoldierOrder.allowsCombatPath","var end=path.getEndNode()",
+                      "HumanTerrainSafety.firingFeet(human,new BlockPos(end.x,end.y,end.z))"):
             self.assertIn(guard,code)
     def test_shot_uses_authorized_ballistics_without_eye_gate(self):
         code=source("RangedShotClearance")

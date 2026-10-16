@@ -376,4 +376,13 @@ RangedFiringMemory是弓/弩/枪原Goal调用的短期几何状态，不是新Go
 
 RangedTerrainCombat.tryStrafe在普通可射击输入上通过keepsFiringFloor调用HumanTerrainSafety.maintainsFiringFloor：最多5输入×中终点×中心四角，支撑下降超过0.6拒绝；每点仅复用原形状查询的当前附近3～4层，不使用全跌落深度。半砖仍允许；策略拒绝不报告地形失败，通用HumanFallPolicy、追击与必要退开不变。
 
-recover只在失去射界时、原普通地形规划之前尝试，已有地形绕路和窗口搜索仍优先。返回≤16格旧点、40tick失败重试、最多2次、路线100tick/无进展40tick，合法完整安全路径及真实终点碰撞/射程/命令/名义弹道均需复核。每次探测与10tick复查共用FIRING_LANE 1份，额度等待不杀掉已建立路线，原最终旅行安全继续有效。只停止MovementContinuity确认属于自己的Path，外部接管不停止新路线。恢复射界即释放旧返回；近身≤4格、命令/测试/高压/避险/上岸等让位。不发布仇恨、不读隐藏射手、不瞬移。
+recover在原普通地形规划之前推进已绑定射位路线；没有射位路线时才在失去射界后尝试旧点返回，已有地形绕路和窗口搜索仍优先。返回≤16格旧点、40tick失败重试、最多2次、路线100tick/无进展40tick，合法完整安全路径及真实终点碰撞/射程/命令/名义弹道均需复核。每次探测与10tick复查共用FIRING_LANE 1份，额度等待不杀掉已建立路线，原最终旅行安全继续有效。只停止MovementContinuity确认属于自己的Path，外部接管不停止新路线。所有弓弩枪选中窗口成功安装后调用selected，验证实际导航终点与提案一致后绑定实际Path，不假设导航必定采用请求对象。途中射界通畅仍保持路径，不覆盖目标；可射击且站稳、水平≤0.75/高差≤0.6才完成。新窗口路径200tick、旧点返回100tick，保留40tick无进展上限。debugState只读取坐标/期限/失败次数，HumanPerception详情显示射位路线/记忆；近身≤4格、命令/测试/高压/避险/上岸等让位。不发布仇恨、不读隐藏射手、不瞬移。
+
+
+## 闲置近物发现与近区优先
+
+HumanLootVision.nearbyGround仅放宽安全闲置且许可拾取时的头部朝向：水平3格、脚位上下1.5格，仍经原4点采样、每人4ray及共享rays池、碰撞LOS，只有通过才写Seen。敌人视觉和战斗补给的原许可不变。ValuableItemPickupGoal搜索节流为10～19tick；NearbySearch在没有已提交物品堆时以近区盒/脚位3格球为第一阶段，复用PileFirstSelection，近区有有效目标便交付，否则用原12×4查询扩展。selectionCenter/selectionRadiusSqr避免无preferredPile时访问null，也保留原物品堆4格优先与分批DEFERRED继续。每轮最多2次预算内query，不扩大射线池；价值、空间、失败冷却和战斗交接不变。
+
+HumanTerrainSafety.firingFeet以原有落地形状查询的近层重载解析真实脚位；RangedWindowCandidates、进攻findVisiblePath候选/实际终点与RangedFiringMemory选中/复查统一调用，避免半砖节点整数y误差。近层有界、loaded-only，不改通用跌落容忍。旧源码契约改为验证实际end坐标送入firingFeet，而非依赖path.getEndNode().x的字符串写法。
+
+firingNode把物理脚位以ceil(y-1e-6)转换到原版可站立空气节点；窗口种子去重、旧点候选和旧点createPath共用，不能用floor(2.5)=2把导航目标放进半砖实体。实体真实脚位/弹道仍用firingFeet解析，原版路径节点仍为整数。

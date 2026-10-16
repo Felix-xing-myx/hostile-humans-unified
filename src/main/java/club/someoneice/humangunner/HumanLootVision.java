@@ -36,6 +36,12 @@ final class HumanLootVision {
     }
     private record Seen(Vec3 position,int tick) {}
     private HumanLootVision() {}
+    /** Local ground awareness ignores head yaw only; walls and the shared ray budget still apply. */
+    static boolean nearbyGround(Vec3 feet,Vec3 point) {
+        Vec3 delta=point.subtract(feet);
+        return Double.isFinite(delta.x)&&Double.isFinite(delta.y)&&Double.isFinite(delta.z)
+                &&Math.abs(delta.y)<=1.5&&delta.horizontalDistanceSqr()<=9;
+    }
     static Vec3 lastSeen(Human h,ItemEntity item){
         State s=STATES.get(h);Seen seen=s==null?null:s.seen.get(item.getUUID());
         return seen!=null&&h.tickCount-seen.tick<=600?seen.position:null;
@@ -53,7 +59,8 @@ final class HumanLootVision {
                 new Vec3(b.minX+.01,center.y,b.minZ+.01),new Vec3(b.maxX-.01,center.y,b.maxZ-.01)};
         while(p.cursor<points.length){
             Vec3 point=points[p.cursor];
-            if(!HumanPerception.withinLootVision(h,point)){p.cursor++;continue;}
+            boolean nearby=SoldierPickupPolicy.canCollectNow(h)&&nearbyGround(h.position(),point);
+            if(!nearby&&!HumanPerception.withinLootVision(h,point)){p.cursor++;continue;}
             if(s.rays>=RAYS_PER_HUMAN_TICK||!PerceptionBudget.claim(h,"rays",1,":loot:"+item.getUUID()+":"+p.cursor))return Sight.DEFERRED;
             s.rays++;p.cursor++;
             Vec3 toEye=h.getEyePosition().subtract(point);

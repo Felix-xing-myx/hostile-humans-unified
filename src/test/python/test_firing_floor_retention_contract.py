@@ -41,6 +41,18 @@ class FiringFloorRetentionContract(unittest.TestCase):
         self.assertIn('s.nextCheck=h.tickCount+1;return true', check)
         self.assertNotIn('failed(h,s)', check)
 
+    def test_selected_routes_bind_actual_navigation_and_need_grounded_arrival(self):
+        source = (PKG / 'RangedFiringMemory.java').read_text(encoding='utf-8')
+        selected = source.split('public static void selected(', 1)[1].split('private static void bind', 1)[0]
+        self.assertIn('Path installed=h.getNavigation().getPath()', selected)
+        self.assertIn('bind(h,s,installed,SELECTED_ROUTE_TICKS)', selected)
+        observe = source.split('public static void observe(', 1)[1].split('static boolean arrivedAtWindow', 1)[0]
+        self.assertIn('boolean travelling=', observe)
+        self.assertIn('if(!travelling)', observe)
+        self.assertIn('arrivedAtWindow(h.position(),s.feet,h.onGround())', observe)
+        for file in ('GunnerGoal.java',):
+            self.assertIn('RangedFiringMemory.selected(', (PKG / file).read_text(encoding='utf-8'))
+
 
 if __name__ == '__main__':
     unittest.main()

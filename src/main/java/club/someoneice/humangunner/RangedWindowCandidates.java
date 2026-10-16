@@ -70,13 +70,13 @@ final class RangedWindowCandidates {
         if(!seeds.available(cap))return;
         seeds.inspected++;
         if(!h.level().hasChunkAt(position))return;
-        Vec3 feet=Vec3.atBottomCenterOf(position);
+        Vec3 feet=HumanTerrainSafety.firingFeet(h,position);
+        if(feet==null)return;
         double distance=feet.distanceToSqr(h.position());
         if(distance<.25||distance>radius*radius)return;
-        if(h.level().getBlockState(position.below()).getCollisionShape(h.level(),position.below()).isEmpty()
-                &&h.level().getFluidState(position).isEmpty())return;
+        // firingFeet already proved a real supporting shape/fluid, possibly in this slab cell.
         if(!h.level().noCollision(h,h.getBoundingBox().move(feet.subtract(h.position())))
                 ||!SoldierOrder.allowsCombatPosition(h,feet))return;
-        seeds.points.add(position.immutable());
+        seeds.points.add(HumanTerrainSafety.firingNode(feet));
     }
 }

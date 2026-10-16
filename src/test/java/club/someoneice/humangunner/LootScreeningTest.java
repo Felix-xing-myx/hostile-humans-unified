@@ -19,6 +19,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** Item-level regression only; this does not launch a Minecraft client/server. */
 public final class LootScreeningTest {
     public static void main(String[] args) throws Exception {
+        var feet=new net.minecraft.world.phys.Vec3(0,0,0);
+        check(HumanLootVision.nearbyGround(feet,new net.minecraft.world.phys.Vec3(0,.1,-2)),
+                "nearby ground items behind the head can request an actual visibility ray");
+        check(!HumanLootVision.nearbyGround(feet,new net.minecraft.world.phys.Vec3(0,0,3.01)),
+                "far loot still requires ordinary visual geometry");
+        check(!HumanLootVision.nearbyGround(feet,new net.minecraft.world.phys.Vec3(0,2,0)),
+                "near awareness does not discover an entire floor above");
+        check(!HumanLootVision.nearbyGround(feet,new net.minecraft.world.phys.Vec3(Double.NaN,0,0)),
+                "invalid geometry cannot grant nearby awareness");
         SharedConstants.tryDetectVersion();
         // Standalone JavaExec has no Forge event-bus bytecode transformation.
         // Initialize only item registries, not Bootstrap's network hook.

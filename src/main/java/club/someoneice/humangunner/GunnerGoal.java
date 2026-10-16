@@ -465,7 +465,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         if (mob instanceof Human human) {
             RangedFiringMemory.observe(human,target,!obscured && distance*distance<=firingRangeSqr(range)
                     && HumanAmmo.canUseGun(human,mob.getMainHandItem()),firingRangeSqr(range));
-            if(obscured && RangedFiringMemory.recover(human,target,1.0D)) {
+            if(RangedFiringMemory.recover(human,target,1.0D)) {
                 clearLateralInputPreservingNavigation();
                 approachingTarget=false;seekingFiringPosition=true;
                 return;
@@ -534,6 +534,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 // Keeping one bounded search avoids doubling path probes.
                 if (firingPath != null) {
                     if (RetreatPathSafety.tryMove(human, firingPath, 1.0D)) {
+                        RangedFiringMemory.selected(human,target,firingPath,firingRangeSqr(range));
                         SoldierDialogue.event(human, "reposition");
                         approachingTarget = true;
                         seekingFiringPosition = true;
