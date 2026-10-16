@@ -1,5 +1,15 @@
 # 开发任务与整合记录
 
+## 声音排除区动态退避／3.10.6（2026-10-16，已完成）
+
+- 基线55b61a12ec6b03787403b94e9b5d869108f85b10，主控/root独占worktrees/sound-exclusion-backoff、feature/sound-exclusion-backoff；范围纯区域记忆、配置/适配、回归和知识库，顺序维护公共文件。用户要求12/24/48/60秒重叠递增及构建同步既定实例；忽略通知不续期，保留有界历史以支持到期后再失败递增，不改声音识别和战斗准入。
+- 机制：初始240tick、重叠再失败按最长历史duration翻倍封顶1200tick，即12/24/48/60秒；圆柱水平半径和/垂直范围相交判重叠，不按同轮记录数量连乘。有效区仍过滤中心内声音且不续期；until到期不再过滤，rememberUntil额外1200tick保留历史；过期重叠历史被新区替换，活动邻区保留覆盖。活动/历史共用8条容量，位移/范围身份重置保持。观察仅显示有效区域。
+- 验证：Python308（296通过、12跳过），493份Java语法、十页Wiki、六默认附录与diff通过；新增Java递增/封顶/历史到期/范围相交但中心不在旧区/无重叠/垂直分离/过滤不续期用例。初轮测试变量expected与既有变量重名导致compileTestJava失败，重命名后Java17最终build+lootScreeningTest通过55任务（51执行、4最新），RuntimePolicies18140检查通过。知识库四正文和六附录备份后同步，见验证日志/sound-exclusion-backoff-knowledge.json。
+- 发布：先前以实例路径匹配进程误报构建Java为游戏，用户指出未运行后改用真实Minecraft主类/forgeclient启动目标核验，无游戏进程。备份旧3.10.5到备份/release-3.10.6-deployment；构建/dist/既定Forge47.4.21部署均4477033字节、SHA-256 4B05145DAD8B41D131AF424EABFD755011001E25E1DB015FEED57D0C6E5400CB，五JSON哈希不变，实例三动态字段缺省使用新默认。记录验证日志/sound-exclusion-3.10.6-deployment.json及同前缀final-build.log。
+- 本地提交整合main，无push/启动游戏；尚需实测墙后持续声音12/24/48/60退避、偏移声源的新区交叠、跨楼层不交叠、60秒历史释放、位移/命令重置与视觉/受击仍响应。原LongRange失败缓存也会约束实际重算频率；无游戏或CPU/FPS验收。
+
+
+
 ## 声音不可达区域退避与三枪械监听／3.10.5（2026-10-16，已完成）
 
 - 基线f3dd0dd56b1b0647b073f9df2cd39f8023de04ed；主控/root独占worktrees/sound-investigation、feature/sound-investigation。顺序修改声音/调查/三个联动/配置及回归、知识库，保留前轮未构建射位、BC和增强跟随。本轮明确授权构建并同步既定Forge47.4.21实例，不启动游戏或push。预算等待、外部抢占、命令限制不得误当真实不可达。

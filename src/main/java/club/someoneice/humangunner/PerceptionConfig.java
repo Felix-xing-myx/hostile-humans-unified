@@ -81,7 +81,9 @@ public final class PerceptionConfig {
         add(m,"hearing.maximum_clues",4,1,16,"每人线索上限 / Per-human clue capacity");
         add(m,"investigation.exclusion_radius",6,1,24,"不可达声音区域水平半径 / Unreachable acoustic region horizontal radius");
         add(m,"investigation.exclusion_vertical",4,1,16,"不可达声音区域单侧垂直范围 / Acoustic exclusion vertical half-range");
-        add(m,"investigation.exclusion_ticks",400,20,2400,"不可达声音区域冷却，不被忽略事件续期 / Acoustic exclusion lifetime, ignored events never refresh");
+        add(m,"investigation.exclusion_ticks",240,20,2400,"不可达声音区域初始冷却，重叠再失败翻倍 / Initial acoustic exclusion, overlapping failures double");
+        add(m,"investigation.exclusion_max_ticks",1200,20,12000,"不可达声音区域动态冷却上限 / Maximum dynamic acoustic exclusion ticks");
+        add(m,"investigation.exclusion_history_ticks",1200,0,12000,"区域到期后保留失败历史的时间，不继续屏蔽声音 / Expired region history lifetime, does not block sound");
         add(m,"investigation.exclusion_reset_distance",8,1,64,"听者离开失败位置多远后重试 / Listener displacement releasing acoustic failures");
         add(m,"investigation.exclusion_maximum",8,1,32,"每人不可达声音区域容量 / Per-human acoustic exclusion region capacity");
         add(m,"investigation.stall_ticks",80,20,400,"调查自有活动路线无位移进展上限 / Owned investigation route no-progress timeout");

@@ -3717,9 +3717,9 @@
       "exclusion_vertical": 4,
       "_说明_exclusion_vertical_中文": "不可达声音区域单侧垂直范围；范围1–16。",
       "_description_exclusion_vertical_en": "Acoustic exclusion vertical half-range; range 1–16.",
-      "exclusion_ticks": 400,
-      "_说明_exclusion_ticks_中文": "不可达声音区域冷却，不被忽略事件续期；范围20–2400。",
-      "_description_exclusion_ticks_en": "Acoustic exclusion lifetime, ignored events never refresh; range 20–2400.",
+      "exclusion_ticks": 240,
+      "_说明_exclusion_ticks_中文": "不可达声音区域初始冷却，重叠再失败翻倍。",
+      "_description_exclusion_ticks_en": "Initial acoustic exclusion, overlapping failures double.",
       "exclusion_reset_distance": 8,
       "_说明_exclusion_reset_distance_中文": "听者离开失败位置多远后重试；范围1–64。",
       "_description_exclusion_reset_distance_en": "Listener displacement releasing acoustic failures; range 1–64.",
@@ -3728,7 +3728,13 @@
       "_description_exclusion_maximum_en": "Per-human acoustic exclusion region capacity; range 1–32.",
       "stall_ticks": 80,
       "_说明_stall_ticks_中文": "调查自有活动路线无位移进展上限；范围20–400。",
-      "_description_stall_ticks_en": "Owned investigation route no-progress timeout; range 20–400."
+      "_description_stall_ticks_en": "Owned investigation route no-progress timeout; range 20–400.",
+      "exclusion_max_ticks": 1200,
+      "_说明_exclusion_max_ticks_中文": "不可达声音区域动态冷却上限。",
+      "_description_exclusion_max_ticks_en": "Maximum dynamic acoustic exclusion ticks.",
+      "exclusion_history_ticks": 1200,
+      "_说明_exclusion_history_ticks_中文": "区域到期后保留失败历史的时间，不继续屏蔽声音。",
+      "_description_exclusion_history_ticks_en": "Expired region history lifetime, does not block sound."
     },
     "beacon": {
       "duration_ticks": 6000,

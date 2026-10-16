@@ -26,6 +26,27 @@ public final class RuntimePoliciesTest {
         check(sounds.regions().size()==2);
         check(SoundExclusionMemory.sound("gunshot")&&SoundExclusionMemory.sound("aid"));
         check(!SoundExclusionMemory.sound("hurt")&&!SoundExclusionMemory.sound("beacon")&&!SoundExclusionMemory.sound("last"));
+        SoundExclusionMemory dynamicSounds=new SoundExclusionMemory();
+        long at=0;int[] cooldownStages={240,480,960,1200,1200};
+        for(int duration:cooldownStages){
+            dynamicSounds.fail("a",at,0,0,0,10,0,0,240,1200,1200,6,4,8,8);
+            var region=dynamicSounds.regions().get(0);check(region.duration()==duration);
+            check(dynamicSounds.blocked("a",at+duration-1,0,0,0,10,0,0));
+            check(!dynamicSounds.blocked("a",at+duration,0,0,0,10,0,0));
+            at+=duration;
+        }
+        dynamicSounds.fail("a",at+1200,0,0,0,10,0,0,240,1200,1200,6,4,8,8);
+        check(dynamicSounds.regions().get(0).duration()==240); // history expires
+        SoundExclusionMemory overlap=new SoundExclusionMemory();
+        overlap.fail("a",0,0,0,0,0,0,0,240,1200,1200,6,4,8,8);
+        overlap.fail("a",1,0,0,0,10,0,0,240,1200,1200,6,4,8,8);
+        check(overlap.regions().get(1).duration()==480); // center outside old zone, volumes overlap
+        overlap.fail("a",2,0,0,0,30,0,0,240,1200,1200,6,4,8,8);
+        check(overlap.regions().get(2).duration()==240); // distinct region
+        overlap.fail("a",3,0,0,0,0,9,0,240,1200,1200,6,4,8,8);
+        check(overlap.regions().get(3).duration()==240); // vertical volumes don't overlap
+        overlap.fail("a",4,0,0,0,10,0,0,240,1200,1200,6,4,8,8);
+        check(overlap.regions().size()==4&&overlap.regions().get(1).until()==481); // filtered notification
         int[] samples={0};
         check(LocalPathFollowPolicy.corridor(0,0,2,2,(x,z,dx,dz)->{samples[0]++;return true;}));
         check(samples[0]<=13&&samples[0]>2);

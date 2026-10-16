@@ -406,6 +406,12 @@ OptionalPathBudget.PATH_FOLLOW池16/key2/stale8，navigationCapacity折减拥挤
 
 SoundExclusionMemory纯位置/时间策略；SoundInvestigationMemory以弱人类键隔离维度/命令/雇主范围，最多8区域，不读隐藏实体或额外世界状态。flush在HearingRelevance射线前、notice在alert前、bestClue在调查前共用过滤；范围内忽略事件不续期。只处理sound(kind)，直接hurt/owner/last/beacon不屏蔽。
 
-调查仅完成分档不可达、已加载无安全落点、自有活动路线80tick无0.5格位移或完成却离落点>2格时登记；不把PENDING、外部抢占/安装失败或RESTRICTED当不可达。LongRangeNavigation.Status.RESTRICTED标识完整路径被命令/安全拒绝，失败缓存保留分类；原调用者仍把无path作为未安装。默认区域R6/垂直±4/400tick、位移>8释放。
+调查仅完成分档不可达、已加载无安全落点、自有活动路线80tick无0.5格位移或完成却离落点>2格时登记；不把PENDING、外部抢占/安装失败或RESTRICTED当不可达。LongRangeNavigation.Status.RESTRICTED标识完整路径被命令/安全拒绝，失败缓存保留分类；原调用者仍把无path作为未安装。默认区域R6/垂直±4，初始240tick、重叠再失败翻倍至1200tick，位移>8释放。
 
 三个可选Integration注册各自原生事件到HumanAwareness.gunshot；TaCZ未取消SERVER事件，SC/JEG玩家Post与原NPC射击调用，10tick同源合并。核心无可选事件引用，服务器声音不是仇恨/动态记忆授权。默认资源和PerceptionConfig同值，观察复用已有快照行，无网络/NBT变更。
+
+### 区域动态退避
+
+SoundExclusionMemory.Region分别保存duration、until和rememberUntil，blocked仅检查now<until，prune以rememberUntil/范围身份/位移释放。新fail若声源中心仍被有效区过滤直接返回，不续期；否则比较所有保留区域的圆柱范围重叠，取最长历史duration×2和初始值的较大者并按exclusion_max_ticks封顶。只替换过期重叠历史，保持邻近有效区域原覆盖；容量仍含活动及历史合计8条。
+
+默认初始exclusion_ticks=240，上限exclusion_max_ticks=1200，history=1200（到期后额外保留），得到12/24/48/60秒。历史不屏蔽也不显示为活动区；过期/淘汰/范围重置恢复初始。原单时长纯策略重载保留，显式history=0不保留历史，生产适配使用新参数。
