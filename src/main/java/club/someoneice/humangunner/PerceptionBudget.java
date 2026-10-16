@@ -46,6 +46,11 @@ public final class PerceptionBudget {
         q.cancel(key); // Demand driven: consumed work must not reserve unused capacity next tick.
         s.used.merge(lane,amount,Integer::sum);s.used.merge(kind,amount,Integer::sum); return true;
     }
+    public static void cancel(Entity actor,String kind,String work){
+        State state=SERVERS.get(actor.level().getServer());if(state==null)return;
+        var queue=state.queues.get(kind);if(queue==null)return;
+        queue.cancel(new Key(actor.getUUID(),kind+":"+actor.level().dimension().location()+work));
+    }
     public static String usage(Entity actor,String kind) {
         State s=SERVERS.get(actor.level().getServer());
         String lane=kind+":"+actor.level().dimension().location(); PerceptionConfig c=PerceptionConfig.get();

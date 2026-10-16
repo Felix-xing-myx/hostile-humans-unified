@@ -22,6 +22,7 @@ public final class OptionalPathBudget {
         Pools pools = SERVERS.computeIfAbsent(server, ignored -> new Pools(
                 new FairWorkBudget<>(64, 4, 2), new FairWorkBudget<>(32, 4, 2),
                 new FairWorkBudget<>(8, 1, 3)));
+        pools.combat().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,64,4));
         int granted = pool(pools, kind).claim(server.getTickCount(), new Key(human.getUUID(), kind), maximum);
         NavigationDebugService.budget(human, kind.name(), maximum, granted);
         return granted;
@@ -33,6 +34,7 @@ public final class OptionalPathBudget {
         Pools pools = SERVERS.computeIfAbsent(server, ignored -> new Pools(
                 new FairWorkBudget<>(64, 4, 2), new FairWorkBudget<>(32, 4, 2),
                 new FairWorkBudget<>(8, 1, 3)));
+        pools.combat().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,64,4));
         int granted = pool(pools, kind).claimFull(server.getTickCount(), new Key(human.getUUID(), kind), maximum);
         NavigationDebugService.budget(human, kind.name(), maximum, granted);
         return granted;

@@ -12,6 +12,8 @@ public final class HumanAttention {
     private static final java.util.Map<Human,String> OWNERS=new java.util.WeakHashMap<>();
     private static final java.util.Map<Human,Integer> RETREAT_AIM=new java.util.WeakHashMap<>();
     public static void retreatAim(Human h){RETREAT_AIM.put(h,h.tickCount);}
+    private record Pose(int tick,float body,float head,float pitch){}
+    private static final java.util.Map<Human,Pose> POSES=new java.util.WeakHashMap<>();
     private record Movement(int tick,Float yaw){}
     private static final java.util.Map<Human,Movement> MOVEMENT=new java.util.WeakHashMap<>();
     public static void movement(Human h,double x,double z,boolean combatStance){
@@ -58,32 +60,47 @@ public final class HumanAttention {
         float yaw=(float)Math.toDegrees(Math.atan2(delta.z,delta.x))-90;
         return Math.abs(Mth.wrapDegrees(yaw-route))<=movingHeadLimit(human);
     }
-    public static void finish(Human human,Vec3 observation,boolean urgent) {
+    public static void finish(Human human,Vec3 observation,boolean urgent) {finish(human,observation,urgent,false);}
+    public static void finish(Human human,Vec3 observation,boolean urgent,boolean soundGlance) {
         if(human.level().isClientSide||human.isNoAi()||human.isSleeping())return;
         Float route=navigationYaw(human);
         LivingEntity target=human.getTarget();
         boolean combat=HumanPerception.canTarget(human,target);
-        Vec3 point=combat&&!urgent?target.getEyePosition():observation;
-        String owner=combat&&!urgent?"主目标观察":"辅助观察请求";
+        Vec3 point=combat&&!urgent&&!soundGlance?target.getEyePosition():observation;
+        String owner=soundGlance?"重要声音有限回看":combat&&!urgent?"主目标观察":"辅助观察请求";
         Request request=REQUESTS.get(human);
-        if(request!=null&&request.tick==human.tickCount&&(request.priority>=0||!combat&&!urgent)){point=request.point;owner=request.owner;}
+        if(request!=null&&request.tick==human.tickCount&&(request.priority>=0||!combat&&!urgent&&observation==null)){point=request.point;owner=request.owner;}
         else REQUESTS.remove(human);
+        boolean action=request!=null&&request.tick==human.tickCount&&request.priority>=0;
         if(NavigationDebugService.controls(human)){point=null;combat=false;}
         if(human.isFleeing&&(request==null||request.tick!=human.tickCount))point=null;
         OWNERS.put(human,route==null?owner:"导航身体 / "+owner);
+        Pose previous=POSES.get(human);
+        boolean stable=previous!=null&&previous.tick==human.tickCount-1;
         float body=route==null?human.yBodyRot:route;
+        if(route==null&&!combat&&!urgent&&!action&&stable)body=previous.body;
         float limit=route==null?human.getMaxHeadYRot():movingHeadLimit(human);
         if(route!=null){human.setYRot(body);human.setYBodyRot(body);}
         if(point==null){
-            human.setYHeadRot(body+Mth.clamp(Mth.wrapDegrees(human.getYHeadRot()-body),-limit,limit));
-            return;
+            float head=body+Mth.clamp(Mth.wrapDegrees(human.getYHeadRot()-body),-limit,limit);
+            if(route==null&&!combat&&!urgent&&!action&&stable){
+                var facing=AttentionFacingPolicy.idleStep(previous.body,previous.head,previous.pitch,
+                        human.yBodyRot,head,human.getXRot(),AttentionFacingPolicy.surveyStep(
+                                (float)PerceptionConfig.get().number("attention.idle_head_step"),
+                                (float)PerceptionConfig.get().number("vision.far_full_angle"),
+                                AdaptiveActivityBudget.interval(human,PerceptionConfig.get().integer("budgets.idle_interval_ticks"),false)),limit);
+                human.setYRot(facing.body());human.setYBodyRot(facing.body());human.setYHeadRot(facing.head());human.setXRot(facing.pitch());
+            }else human.setYHeadRot(head);
+            remember(human);return;
         }
         Vec3 delta=point.subtract(human.getEyePosition());
         if(delta.lengthSqr()<1.e-8)return;
         float yaw=(float)Math.toDegrees(Math.atan2(delta.z,delta.x))-90;
         float pitch=(float)-Math.toDegrees(Math.atan2(delta.y,delta.horizontalDistance()));
-        var facing=AttentionFacingPolicy.step(body,human.getYHeadRot(),human.getXRot(),yaw,pitch,limit,route==null);
+        boolean priorPose=stable&&!action&&!urgent&&(!combat||soundGlance);
+        var facing=AttentionFacingPolicy.step(body,priorPose?previous.head:human.getYHeadRot(),priorPose?previous.pitch:human.getXRot(),yaw,pitch,limit,route==null);
         if(route==null){human.setYRot(facing.body());human.setYBodyRot(facing.body());}
-        human.setYHeadRot(facing.head());human.setXRot(facing.pitch());
+        human.setYHeadRot(facing.head());human.setXRot(facing.pitch());remember(human);
     }
+    private static void remember(Human h){POSES.put(h,new Pose(h.tickCount,h.yBodyRot,h.getYHeadRot(),h.getXRot()));}
 }

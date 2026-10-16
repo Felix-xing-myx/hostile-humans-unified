@@ -953,12 +953,11 @@ public final class AdaptiveCombatGoal extends Goal {
             if (locked != null) keepTarget(locked);
             return current;
         }
-        nextCrowdScanTick = human.tickCount + 6;
-        List<LivingEntity> closeEnemies = human.level().getEntitiesOfClass(
-                LivingEntity.class,
-                human.getBoundingBox().inflate(6.0D, 4.0D, 6.0D),
-                this::isCrowdEnemy
-        );
+        nextCrowdScanTick = human.tickCount + AdaptiveActivityBudget.interval(human,6,human.hurtTime>0);
+        // Crowd pressure already requires confirmed knowledge; do not query the world again.
+        var crowdBox=human.getBoundingBox().inflate(6.0D,4.0D,6.0D);
+        List<LivingEntity> closeEnemies=HumanPerception.knownDynamicTargets(human).stream()
+                .filter(entity->crowdBox.intersects(entity.getBoundingBox())&&isCrowdEnemy(entity)).toList();
         LivingEntity nearest = null;
         double nearestDistanceSqr = Double.MAX_VALUE;
         int immediateThreats = 0;
@@ -1109,7 +1108,8 @@ public final class AdaptiveCombatGoal extends Goal {
         if (focusedThreat == null) {
             return null;
         }
-        if (human.tickCount >= focusLockUntil
+        if (!HumanTargetCoordinator.lockActive(human,focusedThreat)
+                || human.tickCount >= focusLockUntil
                 || !isValidThreat(focusedThreat)
                 || focusedThreat.level() != human.level()
                 || !HumanPerception.canTarget(human,focusedThreat)) {

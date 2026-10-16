@@ -197,6 +197,7 @@ public final class HumanGunner {
 
     private static void onLivingTick(LivingEvent.LivingTickEvent event) {
         if (event.getEntity() instanceof Human human && !human.level().isClientSide) {
+            AdaptiveActivityBudget.touch(human);
             if (human.getTarget() != null && !HumanTargeting.allowsWildHumanTarget(human, human.getTarget())) {
                 // Also retire stale targets assigned before this rule or by outside AI.
                 human.setTarget(null);

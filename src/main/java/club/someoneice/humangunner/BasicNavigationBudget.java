@@ -15,8 +15,9 @@ public final class BasicNavigationBudget {
         if (searches < 1 || searches > 4) throw new IllegalArgumentException("search batch must be 1..4");
         MinecraftServer server = human.level().getServer();
         if (server == null || human.level().isClientSide) return false;
-        int granted = SERVERS.computeIfAbsent(server, ignored -> new FairWorkBudget<>(32, 4, 40))
-                .claimFull(server.getTickCount(), human.getUUID(), searches);
+        FairWorkBudget<UUID> budget=SERVERS.computeIfAbsent(server, ignored -> new FairWorkBudget<>(32, 4, 40));
+        budget.setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,32,4));
+        int granted=budget.claimFull(server.getTickCount(),human.getUUID(),searches);
         NavigationDebugService.budget(human, "basic", searches, granted);
         return granted == searches;
     }

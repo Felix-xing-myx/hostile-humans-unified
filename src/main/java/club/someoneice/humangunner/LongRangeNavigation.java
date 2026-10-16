@@ -89,8 +89,9 @@ public final class LongRangeNavigation {
             MinecraftServer server = human.level().getServer();if(server==null)return FAILED;
             Pool pool = POOLS.get(server);
             if (pool == null || pool.units != c.remoteUnits()) {
-                pool = new Pool(c.remoteUnits(),new FairWorkBudget<>(c.remoteUnits(),c.remoteUnits(),40));POOLS.put(server,pool);
+                pool = new Pool(c.remoteUnits(),new FairWorkBudget<>(c.remoteUnits(),RouteSearchPolicy.remoteCost(c.longNodes()),40));POOLS.put(server,pool);
             }
+            pool.queue.setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,c.remoteUnits(),RouteSearchPolicy.remoteCost(c.longNodes())));
             int cost = RouteSearchPolicy.remoteCost(nodes);
             if (pool.queue.claimFull(server.getTickCount(),human.getUUID(),cost) != cost) return pending(s,tick,"远程配额等待");
             pool.queue.cancel(human.getUUID()); // No speculative reservation after consumed work.

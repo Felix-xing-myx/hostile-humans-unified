@@ -15,12 +15,20 @@ public final class FairWorkBudget<K> {
     private final Map<K, Integer> grants = new HashMap<>();
     private long tick = Long.MIN_VALUE;
     private int remaining;
+    private int nextTickCapacity;
 
     public FairWorkBudget(int perTick, int perRequest, int staleTicks) {
         if (perTick <= 0 || perRequest <= 0 || staleTicks < 1) throw new IllegalArgumentException("invalid budget");
         this.perTick = perTick;
+        this.nextTickCapacity = perTick;
         this.perRequest = perRequest;
         this.staleTicks = staleTicks;
+    }
+
+    /** Sets NEXT tick's throughput only; preserves FIFO, reservations and already consumed work. */
+    public void setTickCapacity(int capacity) {
+        if (capacity < 1 || capacity > perTick) throw new IllegalArgumentException("capacity exceeds hard limit");
+        nextTickCapacity = capacity;
     }
 
     public int claim(long currentTick, K key, int maximum) {
@@ -69,7 +77,7 @@ public final class FairWorkBudget<K> {
         if (tick == currentTick) return;
         if (currentTick < tick) waiting.clear();
         tick = currentTick;
-        remaining = perTick;
+        remaining = nextTickCapacity;
         grants.clear();
         waiting.entrySet().removeIf(entry -> currentTick - entry.getValue().tick() > staleTicks);
         Iterator<Map.Entry<K, Request>> iterator = waiting.entrySet().iterator();

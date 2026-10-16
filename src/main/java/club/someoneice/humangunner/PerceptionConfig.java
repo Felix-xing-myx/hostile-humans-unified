@@ -21,6 +21,11 @@ public final class PerceptionConfig {
         add(m,"vision.far_full_angle",90,10,180,"远距离完整视场角（度） / Far full field of view in degrees");
         add(m,"vision.familiar_angle_multiplier",1.2,1,4,"旧敌视锥半角倍率 / Familiar-target half-angle multiplier");
         add(m,"vision.maximum_half_angle",90,5,90,"旧敌半角上限（度），不缩小陌生目标视野 / Familiar half-angle cap, never narrowing the base field");
+        add(m,"vision.occlusion_retry_ticks",10,1,100,"完整遮挡后的初次退避 / Initial complete-occlusion retry delay");
+        add(m,"vision.occlusion_max_retry_ticks",40,1,200,"静止遮挡候选最长退避 / Maximum stationary occlusion retry delay");
+        add(m,"vision.occlusion_move_reset",.5,.1,4,"主体或目标位移解除遮挡缓存 / Movement invalidating occlusion cache");
+        add(m,"attention.idle_head_step",4,1,15,"闲置自然环顾每tick最大角速度 / Idle natural look angular speed per tick");
+        add(m,"attention.sound_glance_ticks",20,2,60,"战斗中重要声音辅助回看时长 / Important combat sound glance duration");
         add(m,"recognition.base_ticks",5,1,200,"基础识别时长 / Recognition base ticks");
         add(m,"recognition.ticks_per_block",.625,0,20,"每格识别时长增量 / Recognition ticks per block");
         add(m,"recognition.maximum_ticks",45,4,1200,"基础识别时长上限 / Maximum base recognition ticks");
@@ -37,6 +42,11 @@ public final class PerceptionConfig {
         add(m,"attention.moving_head_angle",60,10,90,"导航移动时头部相对身体的单侧水平上限（度） / Moving head angle relative to navigation body");
         add(m,"attention.hit_response_ticks",20,2,80,"真实受击自卫转向最长暂停，转到来向后提前恢复 / Maximum real-hit reorientation pause, ends on alignment");
         add(m,"selection.minimum_hold_ticks",20,0,200,"普通主目标最短保持，近处紧急威胁可打断 / Minimum ordinary target hold, close urgency may interrupt");
+        add(m,"selection.attribute_interval_ticks",20,1,200,"已确认目标属性刷新间隔 / Confirmed target attribute refresh interval");
+        add(m,"selection.near_radius",6,1,16,"近处威胁优先半径 / Nearby threat radius");
+        add(m,"selection.low_far_score",22,0,100,"远处低威胁分界 / Low distant threat threshold");
+        add(m,"selection.switch_ratio",.25,0,2,"普通换目标所需相对优势 / Relative target switch margin");
+        add(m,"selection.switch_points",5,0,100,"普通换目标所需绝对优势 / Absolute target switch margin");
         add(m,"observation.alert_ticks",600,20,12000,"有效刺激后的警觉时间 / Alert lifetime after valid stimulus");
         add(m,"observation.direction_ticks",40,4,400,"无可见来源时方向观察上限 / Unseen direction observation limit");
         add(m,"observation.focus_ticks",120,10,1200,"单次主观察LOOK占用上限，不清除有效识别证据 / Primary look lease, not evidence lifetime");
@@ -49,6 +59,9 @@ public final class PerceptionConfig {
         add(m,"hearing.aid_radius",24,0,96,"真实友军求援半径 / Allied aid radius");
         add(m,"hearing.door_radius",10,0,64,"通道操作声半径 / Passage interaction radius");
         add(m,"hearing.explosion_radius",32,0,128,"爆炸声半径 / Explosion radius");
+        add(m,"hearing.background_step_radius",3,0,8,"普通未交战怪物脚步只在近场无遮蔽时升级 / Nearby unobstructed background footsteps only");
+        add(m,"hearing.background_vertical",3,0,8,"背景脚步最大高差 / Background footstep height difference");
+        add(m,"hearing.wall_radius_factor",.4,.05,1,"普通重要声音穿墙后的半径倍率 / Important sound radius through obstructions");
         add(m,"hearing.walk_radius",8,0,32,"平静或警觉时普通脚步半径 / Walking radius in calm or alert state");
         add(m,"hearing.run_radius",12,0,48,"平静或警觉时奔跑落地半径 / Running and landing radius in calm or alert state");
         add(m,"hearing.swim_radius",6,0,32,"平静或警觉时水声半径 / Swimming radius in calm or alert state");

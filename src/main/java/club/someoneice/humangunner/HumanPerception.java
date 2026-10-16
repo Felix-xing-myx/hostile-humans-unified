@@ -44,8 +44,10 @@ public final class HumanPerception {
     private record Observe(UUID source,Vec3 point,long until,boolean hurt,boolean familiar) {}
     private record Transition(long tick,String text) {}
     private record Ray(Vec3 from,Vec3 to,boolean clear,long tick) {}
+    private record TargetCap(long tick,boolean limited) {}
     private static final class State {
         final LinkedHashMap<UUID,Track> tracks=new LinkedHashMap<>();
+        final Map<UUID,TargetCap> targetCaps=new HashMap<>();
         final ArrayList<Clue> clues=new ArrayList<>();
         final LinkedHashMap<UUID,Observe> pending=new LinkedHashMap<>();
         final ArrayDeque<Transition> transitions=new ArrayDeque<>();
@@ -59,8 +61,9 @@ public final class HumanPerception {
         int candidateCursor,recognitionCursor,bodyResumeCursor; List<UUID> candidates=List.of(); long nextCandidates;
         String decision="闲置观察",reason="等待视觉或声音证据",lookOwner="自然观察";
         String scanStatus="尚未执行视觉检测";long scanAt=-1;
+        String soundPolicy="暂无声音输入";int geometrySkipped,occlusionSkipped;long soundGlanceUntil;
         UUID owner; String order=""; boolean initialized;
-        Clue glancedClue; Vec3 glancedPosition; long nextClueGlance;
+        Clue glancedClue; Vec3 glancedPosition,soundGlancePoint; long nextClueGlance;
         long directionProtectedUntil=-1;
         Map<UUID,Long> glanceAt=new HashMap<>();
     }
@@ -68,7 +71,7 @@ public final class HumanPerception {
     private static PerceptionConfig c(){return PerceptionConfig.get();}
     static long now(Human h){return h.getServer()==null?h.level().getGameTime():h.getServer().overworld().getGameTime();}
     private static State state(Human h){return STATES.computeIfAbsent(h,k->new State());}
-    public static void clear(Human h){STATES.remove(h);HumanTargetCoordinator.clear(h);}
+    public static void clear(Human h){STATES.remove(h);VisualOcclusionMemory.clear(h);HumanTargetCoordinator.clear(h);}
     private static void transition(State s,long now,String text){
         Transition last=s.transitions.peekLast(); if(last==null || !last.text.equals(text))s.transitions.addLast(new Transition(now,text));
         while(s.transitions.size()>c().integer("debug.transition_limit"))s.transitions.removeFirst();
@@ -154,29 +157,40 @@ public final class HumanPerception {
     public static long incomingReactionSequence(Human h){State s=STATES.get(h);return s==null?-1:s.focus==null?s.directionStarted:s.focusStarted;}
     public static void finishLook(Human h){
         State s=STATES.get(h);
-        HumanAttention.finish(h,s==null?null:s.look,s!=null&&(s.focusHurt||now(h)<s.directionProtectedUntil)&&(!canTarget(h,h.getTarget())||h.distanceToSqr(h.getTarget())>36));
+        boolean urgent=s!=null&&(s.focusHurt||now(h)<s.directionProtectedUntil)&&(!canTarget(h,h.getTarget())||h.distanceToSqr(h.getTarget())>36);
+        boolean sound=s!=null&&!urgent&&now(h)<s.soundGlanceUntil&&s.soundGlancePoint!=null&&HumanThreatAssessment.lowFar(h,h.getTarget());
+        HumanAttention.finish(h,sound?s.soundGlancePoint:s==null?null:s.look,urgent,sound);
     }
     private static void alert(Human h,State s,String reason){
         s.alertUntil=now(h)+c().integer("observation.alert_ticks");h.isAlert=true;
         transition(s,now(h),reason);
     }
+    static void soundPolicy(Human h,String kind,int importance,String reason) {
+        state(h).soundPolicy=kind+" · 重要性"+importance+" · "+reason;
+    }
     public static void notice(Human h,String kind,Vec3 position,UUID source,int ttl){
-        if(h.level().isClientSide||!h.isAlive()||position==null||!finite(position)||ttl<=0
+        int priority=switch(kind){case "aid","owner","hurt"->4;case "last","beacon"->3;default->2;};
+        notice(h,kind,position,source,ttl,priority);
+    }
+    static void notice(Human h,String kind,Vec3 position,UUID source,int ttl,int priority){
+        if(h.level().isClientSide||!h.isAlive()||position==null||!finite(position)||ttl<=0||priority<2
                 ||!allowsCreatureClue(h,kind,source))return;
-        State s=state(h);long now=now(h);alert(h,s,"线索："+kind);
-        int priority=switch(kind){case "aid","owner","hurt"->4;case "last","beacon"->3;case "explosion"->2;default->1;};
+        State s=state(h);long now=now(h);
         Clue match=null;
         for(Clue old:s.clues)if(old.kind.equals(kind)&&Objects.equals(old.source,source)
                 &&(source!=null||old.position.distanceToSqr(position)<4)){match=old;break;}
         if(match!=null){
             if(match.completed>=0&&now-match.completed<c().integer("investigation.retry_ticks")&&priority<=match.priority)return;
-            if(match.completed<0){
-                match.until=now+ttl;
+            // A background step must not perpetuate a former active attack's priority.
+            if(match.completed<0&&priority<match.priority&&now<match.until)return;
+            if(match.completed<0&&priority==match.priority){
+                alert(h,s,"有效线索："+kind);match.until=now+ttl;
                 match.pendingPosition=match.position.distanceToSqr(position)>Math.pow(c().number("investigation.repath_distance"),2)?position:null;
                 return;
             }
-            s.clues.remove(match);
+            match.completed=now;s.clues.remove(match);
         }
+        alert(h,s,"有效线索："+kind);
         s.clues.add(new Clue(kind,source,now,now+ttl,position,priority));
         s.clues.sort(Comparator.comparingInt((Clue a)->a.priority).reversed().thenComparing(Comparator.comparingLong((Clue a)->a.created).reversed()));
         while(s.clues.size()>c().integer("hearing.maximum_clues"))s.clues.remove(s.clues.size()-1);
@@ -265,7 +279,7 @@ public final class HumanPerception {
         State s=state(h);long now=now(h);if(s.tick==now)return;s.tick=now;
         UUID owner=HumanRelations.effectiveOwner(h);String order=SoldierOrder.get(h).name();
         if(s.initialized&&(!Objects.equals(s.owner,owner)||!s.order.equals(order))){
-            if(!Objects.equals(s.owner,owner)){s.tracks.clear();s.bodyCursors.clear();s.bodySweeps.clear();s.pendingBodies.clear();}
+            if(!Objects.equals(s.owner,owner)){s.tracks.clear();s.bodyCursors.clear();s.bodySweeps.clear();s.pendingBodies.clear();VisualOcclusionMemory.clear(h);}
             s.clues.clear();s.pending.clear();release(s,"控制关系或命令改变，取消旧动作");h.setTarget(null);HumanTargetCoordinator.clear(h);
             s.glancedClue=null;s.glancedPosition=null;s.nextClueGlance=now;
         }s.owner=owner;s.order=order;s.initialized=true;
@@ -326,21 +340,22 @@ public final class HumanPerception {
             s.look=null;s.lookOwner="自然观察";
         }
         reactToClue(h,s,now);
-        int interval=c().integer(h.isAlert||s.focus!=null||recognizing(s)>0||h.getTarget()!=null?"budgets.active_interval_ticks":"budgets.idle_interval_ticks");
+        int baseInterval=c().integer(h.isAlert||s.focus!=null||recognizing(s)>0||h.getTarget()!=null?"budgets.active_interval_ticks":"budgets.idle_interval_ticks");
+        int interval=AdaptiveActivityBudget.interval(h,baseInterval,s.focusHurt||now<s.directionProtectedUntil);
         if(now>=s.nextCandidates && PerceptionBudget.claim(h,"queries",1,":candidates")){
             double movementRadius=HumanAwareness.movementRadius();double r=Math.max(range(h),movementRadius);
-            int cap=c().integer("budgets.candidates");long epoch=now/Math.max(1,interval);
+            int cap=AdaptiveActivityBudget.candidates(h,c().integer("budgets.candidates"));long epoch=now/Math.max(1,interval);
             Comparator<LivingEntity> nearest=Comparator.comparingDouble(h::distanceToSqr);
             Comparator<LivingEntity> rotating=Comparator.comparingLong(e->candidateRank(e.getUUID(),epoch));
             BoundedSelection<LivingEntity> close=new BoundedSelection<>((cap+1)/2,nearest);
             BoundedSelection<LivingEntity> discovery=new BoundedSelection<>(cap,rotating);
-            BoundedSelection<LivingEntity> sounds=new BoundedSelection<>(cap*4,rotating);
+            BoundedSelection<LivingEntity> sounds=new BoundedSelection<>(cap*4,HumanAwareness.movementOrder(h));
             // Stream the loaded spatial section: unrelated entities cannot hide later enemies.
             level.getEntities().get(net.minecraft.world.level.entity.EntityTypeTest.forClass(LivingEntity.class),
                     h.getBoundingBox().inflate(r), e->{
                         if(e!=h&&e.isAlive()){
                             if(enemy(h,e)){close.offer(e);discovery.offer(e);}
-                            if(!HumanAwareness.passiveCreature(e)&&h.distanceToSqr(e)<=movementRadius*movementRadius&&!HumanRelations.allied(h,e))sounds.offer(e);
+                            if(HumanAwareness.movementCandidate(h,e))sounds.offer(e);
                         }
                         return net.minecraft.util.AbortableIterationConsumer.Continuation.CONTINUE;
                     });
@@ -351,45 +366,76 @@ public final class HumanPerception {
             s.candidates=List.copyOf(chosen);s.nextCandidates=now+interval;
         }
         if(now<s.nextScan){describe(h,s);return;}
-        int rays=Math.min(c().integer("budgets.rays_per_human"),Math.min(c().integer("budgets.rays_per_level"),c().integer("budgets.rays_per_server")));
+        boolean urgentScan=s.focusHurt||now<s.directionProtectedUntil;
+        int probeLimit=urgentScan?c().integer("budgets.rays_per_human"):AdaptiveActivityBudget.probes(h,c().integer("budgets.rays_per_human"));
+        int rays=Math.min(probeLimit,Math.min(c().integer("budgets.rays_per_level"),c().integer("budgets.rays_per_server")));
+        s.geometrySkipped=0;s.occlusionSkipped=0;
+        int resumed=resumeBodies(h,s,level,now,interval,rays);
+        List<LivingEntity> checks=new ArrayList<>();
+        LivingEntity main=h.getTarget();
+        // Reserve a periodic refresh, not every slot: two recognitions still run in alternating rounds.
+        if(s.focusHurt&&s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity hitFocus&&eligibleVisual(h,s,hitFocus,now))checks.add(hitFocus);
+        if(checks.size()<rays&&!checks.contains(main)&&canTarget(h,main)&&eligibleVisual(h,s,main,now)&&(Math.floorDiv(now,Math.max(1,interval))%2==0||rays>2))checks.add(main);
+        List<Track> identifying=s.tracks.values().stream().filter(t->t.evidence.active()).toList();
+        for(int i=0;i<identifying.size()&&checks.size()<rays;i++){
+            Track t=identifying.get(dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.nextIndex(s.recognitionCursor++,identifying.size()));
+            if(level.getEntity(t.id) instanceof LivingEntity e&&!checks.contains(e)&&eligibleVisual(h,s,e,now))checks.add(e);
+        }
+        if(s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity focus&&!checks.contains(focus)&&checks.size()<rays&&eligibleVisual(h,s,focus,now))checks.add(focus);
+        int inspected=0;
+        while(checks.size()<rays&&inspected++<s.candidates.size()){
+            if(s.candidates.isEmpty())break;UUID id=s.candidates.get(Math.floorMod(s.candidateCursor++,s.candidates.size()));
+            if(level.getEntity(id) instanceof LivingEntity e&&!checks.contains(e)&&eligibleVisual(h,s,e,now))checks.add(e);
+        }
+        if(checks.isEmpty()){
+            PerceptionBudget.cancel(h,"rays","");
+            s.nextScan=now+interval;s.scanStatus="本轮无可见几何候选或处于遮挡退避";describe(h,s);return;
+        }
+        rays=checks.size(); // Reserve only actual eligible work, never an empty/default batch.
         if(!PerceptionBudget.claim(h,"rays",rays)){
             s.scanStatus="等待视觉检测配额";s.reason=s.scanStatus;
-            // A deferred body batch may own this tick's grant. Consume it without
-            // demanding a second fast-ray reservation, especially with tiny custom pools.
-            int resumed=0;
-            List<UUID> bodies=List.copyOf(s.pendingBodies);
-            for(int i=0;i<bodies.size()&&resumed<rays;i++){
-                UUID id=bodies.get(Math.floorMod(s.bodyResumeCursor++,bodies.size()));
-                if(level.getEntity(id) instanceof LivingEntity e&&enemy(h,e)){
-                    check(h,s,e,now,interval,false);resumed++;
-                }else{s.pendingBodies.remove(id);PerceptionBudget.cancelBodyRays(h,id);}
-            }
+            // Deferred body work was independently serviced before fast candidate reservation.
             if(resumed>0)s.nextScan=now+interval;
             describe(h,s);return;
         }
         s.scanStatus="已执行服务器视觉采样";s.scanAt=now;
         s.nextScan=now+interval;
-        List<LivingEntity> checks=new ArrayList<>();
-        LivingEntity main=h.getTarget();
-        // Reserve a periodic refresh, not every slot: two recognitions still run in alternating rounds.
-        if(s.focusHurt&&s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity hitFocus)checks.add(hitFocus);
-        if(checks.size()<rays&&!checks.contains(main)&&canTarget(h,main)&&(Math.floorDiv(now,Math.max(1,interval))%2==0||rays>2))checks.add(main);
-        List<Track> identifying=s.tracks.values().stream().filter(t->t.evidence.active()).toList();
-        for(int i=0;i<identifying.size()&&checks.size()<rays;i++){
-            Track t=identifying.get(dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.nextIndex(s.recognitionCursor++,identifying.size()));
-            if(level.getEntity(t.id) instanceof LivingEntity e&&!checks.contains(e))checks.add(e);
-        }
-        if(s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity focus&&!checks.contains(focus)&&checks.size()<rays)checks.add(focus);
-        int inspected=0;
-        while(checks.size()<rays&&inspected++<s.candidates.size()){
-            if(s.candidates.isEmpty())break;UUID id=s.candidates.get(Math.floorMod(s.candidateCursor++,s.candidates.size()));
-            if(level.getEntity(id) instanceof LivingEntity e&&!checks.contains(e))checks.add(e);
-        }
         s.scanStatus=checks.isEmpty()?"本轮无符合敌对许可的视觉候选":"已执行服务器视觉采样："+Math.min(rays,checks.size())+"个候选";
         int evidenceInterval=dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.evidenceInterval(interval,(int)recognizing(s),rays,canTarget(h,main));
         for(LivingEntity e:checks.subList(0,Math.min(rays,checks.size())))check(h,s,e,now,evidenceInterval,true);
         if(s.focus==null)startNext(h,s,now);
         describe(h,s);
+    }
+    private static int resumeBodies(Human h,State s,ServerLevel level,long now,int interval,int limit){
+        int resumed=0;List<UUID> bodies=List.copyOf(s.pendingBodies);
+        for(int i=0;i<bodies.size()&&resumed<Math.max(1,limit);i++){
+            UUID id=bodies.get(Math.floorMod(s.bodyResumeCursor++,bodies.size()));
+            if(level.getEntity(id) instanceof LivingEntity e&&eligibleVisual(h,s,e,now)){
+                check(h,s,e,now,interval,false);resumed++;
+            }else{s.pendingBodies.remove(id);PerceptionBudget.cancelBodyRays(h,id);}
+        }
+        return resumed;
+    }
+    private static boolean eligibleVisual(Human h,State s,LivingEntity e,long now){
+        if(!enemy(h,e))return false;
+        Track t=s.tracks.get(e.getUUID());if(t!=null&&t.checked==now)return false;
+        boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
+        var box=e.getBoundingBox();boolean geometry=false;double visibility=e.getVisibilityPercent(h);
+        for(var sample:BodyVisibilitySamples.of(box.minX,box.minY,box.minZ,box.maxX,box.maxY,box.maxZ)){
+            if(withinVision(h,new Vec3(sample.x(),sample.y(),sample.z()),familiar,visibility)){geometry=true;break;}
+        }
+        if(!geometry){
+            s.geometrySkipped++;if(t!=null){t.visible=false;t.evidence.miss(now);t.denied="身体未进入有效视野";}
+            s.pendingBodies.remove(e.getUUID());PerceptionBudget.cancelBodyRays(h,e.getUUID());return false;
+        }
+        var retry=VisualOcclusionMemory.prepare(h,e,now,s.focusHurt&&Objects.equals(s.focus,e.getUUID()));
+        if(retry.reset()){
+            NegativeObservationSweep sweep=s.bodySweeps.get(e.getUUID());if(sweep!=null)sweep.reset();
+        }
+        if(!retry.allowed()){
+            s.occlusionSkipped++;s.pendingBodies.remove(e.getUUID());PerceptionBudget.cancelBodyRays(h,e.getUUID());return false;
+        }
+        return true;
     }
     private static long candidateRank(UUID id,long epoch){
         long v=id.getMostSignificantBits()^id.getLeastSignificantBits()^(epoch*0x9e3779b97f4a7c15L);
@@ -412,12 +458,13 @@ public final class HumanPerception {
         }
         return distance<1.e-4||Vec3.directionFromRotation(h.getXRot(),h.getYHeadRot()).normalize().dot(delta.scale(1/distance))>Math.cos(halfAngle(distance,familiar));
     }
-    private static boolean clearVisualRay(Human h,State s,Vec3 point,long now){
+    private static boolean clearVisualRay(Human h,State s,LivingEntity target,Vec3 point,long now){
         Vec3 eye=h.getEyePosition(),towardEye=eye.subtract(point);
         // Surface samples can lie exactly on the floor/adjacent wall. Test the approach side of the surface.
         Vec3 end=towardEye.lengthSqr()>1.e-8?point.add(towardEye.normalize().scale(1.e-4)):point;
         BlockHitResult hit=h.level().clip(new ClipContext(eye,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,h));
         boolean clear=hit.getType()==HitResult.Type.MISS;
+        if(!clear)VisualOcclusionMemory.blockedRay(h,target,hit);
         s.rays.addLast(new Ray(h.getEyePosition(),clear?point:hit.getLocation(),clear,now));
         while(s.rays.size()>8)s.rays.removeFirst();
         return clear;
@@ -432,7 +479,7 @@ public final class HumanPerception {
             primary=new Vec3(box.minX+box.getXsize()*f.x(),box.minY+box.getYsize()*f.y(),box.minZ+box.getZsize()*f.z());
         }
         // The ordinary candidate reservation already pays for this one fast ray.
-        if(fast&&withinVision(h,primary,familiar,visibility)&&clearVisualRay(h,s,primary,now)){
+        if(fast&&withinVision(h,primary,familiar,visibility)&&clearVisualRay(h,s,e,primary,now)){
             s.pendingBodies.remove(e.getUUID());
             PerceptionBudget.cancelBodyRays(h,e.getUUID());
             sweep.reset();return new VisualProbe(primary,true,"身体部位无遮挡");
@@ -449,7 +496,9 @@ public final class HumanPerception {
             PerceptionBudget.cancelBodyRays(h,e.getUUID());
             return new VisualProbe(null,true,"身体未进入有效视野或已采样部位被遮挡");
         }
-        int count=Math.min(samples.size(),Math.min(c().integer("budgets.body_rays_per_target"),
+        boolean hitProbe=s.focusHurt&&e.getUUID().equals(s.focus)||now<s.directionProtectedUntil;
+        int bodyLimit=hitProbe?c().integer("budgets.body_rays_per_target"):AdaptiveActivityBudget.bodyRays(h,c().integer("budgets.body_rays_per_target"));
+        int count=Math.min(samples.size(),Math.min(bodyLimit,
                 Math.min(c().integer("budgets.rays_per_level"),c().integer("budgets.rays_per_server"))));
         if(!PerceptionBudget.claimBodyRays(h,e.getUUID(),count)){
             s.pendingBodies.add(e.getUUID());
@@ -466,9 +515,10 @@ public final class HumanPerception {
             s.bodyCursors.remove(s.bodyCursors.keySet().iterator().next());
         for(int i=0;i<count;i++){
             Vec3 point=samples.get(Math.floorMod(start+i,samples.size()));
-            if(clearVisualRay(h,s,point,now)){sweep.reset();return new VisualProbe(point,true,"身体部位无遮挡");}
+            if(clearVisualRay(h,s,e,point,now)){sweep.reset();return new VisualProbe(point,true,"身体部位无遮挡");}
         }
         boolean complete=sweep.negative(samples.size(),start,count,sampleMask);
+        if(complete)VisualOcclusionMemory.negative(h,e,now);
         return new VisualProbe(null,complete,complete?"身体视野采样均被方块遮挡":"身体采样尚未完成");
     }
     private static BodyVisibilitySamples.Point fraction(AABB box,Vec3 point){
@@ -485,6 +535,7 @@ public final class HumanPerception {
             if(!probe.complete){s.scanStatus=probe.reason;s.reason=probe.reason;}
             return;
         }
+        VisualOcclusionMemory.visible(h,e);
         double distance=probe.visiblePoint.distanceTo(h.getEyePosition());
         if(t==null)t=track(s,e.getUUID());if(t==null){s.reason="目标记忆容量已满";return;}
         t.visible=true;t.denied=probe.reason;t.name=bounded(e.getName().getString(),64);t.position=e.position();t.eye=probe.visiblePoint;t.positionAt=now;
@@ -510,7 +561,7 @@ public final class HumanPerception {
                 t.familiarUntil=now+c().integer("memory.familiar_ticks");t.refresh="首次目视确认";
                 alert(h,s,"目视确认："+t.name);if(Objects.equals(s.focus,e.getUUID()))release(s,"识别完成");
             }
-            s.nextScan=Math.min(s.nextScan,now+c().integer("budgets.active_interval_ticks"));
+            s.nextScan=Math.min(s.nextScan,now+AdaptiveActivityBudget.interval(h,c().integer("budgets.active_interval_ticks"),s.focusHurt||now<s.directionProtectedUntil));
         }else if(live&&Objects.equals(s.focus,e.getUUID()))release(s,"已标记来源已回看");
         if(s.focus==null){
             for(Track other:s.tracks.values())if(other.evidence.active()&&other.visible&&now>=other.lookAfter){
@@ -532,19 +583,31 @@ public final class HumanPerception {
         LivingEntity current=h.getTarget();
         List<LivingEntity> known=new ArrayList<>();
         for(Track t:s.tracks.values())if(t.marked&&now(h)<t.liveUntil&&level.getEntity(t.id) instanceof LivingEntity e&&valid(h,e))known.add(e);
-        known.sort(Comparator.<LivingEntity>comparingDouble(h::distanceToSqr).thenComparing(Entity::getUUID));
+        known.sort(Comparator.<LivingEntity>comparingDouble(e->HumanThreatAssessment.score(h,e)).reversed()
+                .thenComparingDouble(h::distanceToSqr).thenComparing(Entity::getUUID));
         for(LivingEntity e:known){
-            if(e!=current&&e instanceof Player player&&!SoldierCombatMode.hasCombatController(h)&&!HumanRelations.isForcedHostileTo(h,player)
-                    &&!isSelfAttacker(h,e)&&playerLimit(h,player))continue;
+            if(!selectionAllowed(h,e))continue;
             return e;
         }return null;
+    }
+    /** All normal proposals share player crowd admission; identity remains a separate permission. */
+    static boolean selectionAllowed(Human h,LivingEntity e){
+        if(!canTarget(h,e))return false;
+        return e==h.getTarget()||!(e instanceof Player player)||SoldierCombatMode.hasCombatController(h)
+                ||HumanRelations.isForcedHostileTo(h,player)||isSelfAttacker(h,e)||!playerLimit(h,player);
     }
     private static boolean isSelfAttacker(Human h,LivingEntity e){return h.getLastHurtByMob()==e&&h.tickCount-h.getLastHurtByMobTimestamp()<200;}
     private static boolean playerLimit(Human h,Player p){
         int limit=Config.maxTargeting();if(limit<=0)return true;
-        if(!PerceptionBudget.claim(h,"queries",1,":target-cap:"+p.getUUID()))return true;
+        State state=state(h);long tick=now(h);
+        state.targetCaps.entrySet().removeIf(entry->entry.getValue().tick!=tick);
+        TargetCap cached=state.targetCaps.get(p.getUUID());if(cached!=null)return cached.limited;
+        if(!PerceptionBudget.claim(h,"queries",1,":target-cap:"+p.getUUID())){
+            state.targetCaps.put(p.getUUID(),new TargetCap(tick,true));return true;
+        }
         List<Human> others=new ArrayList<>();p.level().getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(Human.class),p.getBoundingBox().inflate(15),
-                e->e!=h&&e.getTarget()==p,others,limit);return others.size()>=limit;
+                e->e!=h&&e.getTarget()==p,others,limit);
+        boolean limited=others.size()>=limit;state.targetCaps.put(p.getUUID(),new TargetCap(tick,limited));return limited;
     }
     static Clue bestClue(Human h){State s=STATES.get(h);if(s==null)return null;long now=now(h);
         return s.clues.stream().filter(a->now<a.until&&a.completed<0&&allowsCreatureClue(h,a.kind,a.source)).findFirst().orElse(null);
@@ -557,20 +620,26 @@ public final class HumanPerception {
         if(point.distanceToSqr(h.getEyePosition())>1){s.look=point;s.directionStarted=now(h);s.lookOwner="线索调查";}
     }
     private static void reactToClue(Human h,State s,long now){
-        if(s.focus!=null||now<s.directionProtectedUntil)return;
-        if(h.getTarget()!=null||h.isFleeing){
-            if(s.lookOwner.startsWith("线索")){s.look=null;s.lookOwner="自然观察";}
-            return;
-        }
+        if(s.focusHurt||now<s.directionProtectedUntil||h.isFleeing)return;
+        boolean combat=canTarget(h,h.getTarget());
         Clue clue=bestClue(h);if(clue==null||now<s.nextClueGlance)return;
+        if(combat){
+            if(clue.priority<3||!HumanThreatAssessment.lowFar(h,h.getTarget())
+                    ||clue.position.distanceToSqr(h.position())>Math.pow(HumanAwareness.movementRadius(),2))return;
+        }else if(s.focus!=null)return;
         boolean moved=s.glancedPosition==null||s.glancedPosition.distanceToSqr(clue.position)>
                 Math.pow(c().number("investigation.repath_distance"),2);
         if(clue==s.glancedClue&&!moved)return;
-        // Attention is independent of MOVE: holding-position orders may turn without investigating on foot.
-        lookAtClue(h,clue);
+        if(combat){
+            s.soundGlancePoint=clue.position.add(0,h.getEyeHeight(),0);
+            s.soundGlanceUntil=now+c().integer("attention.sound_glance_ticks");
+            s.reason="远敌威胁较低，辅助回看重要声音："+clue.kind;
+        }else {
+            // Attention is independent of MOVE: holding-position orders may turn without investigating on foot.
+            lookAtClue(h,clue);s.reason="转向线索："+clue.kind;s.lookOwner="线索观察："+clue.kind;
+        }
         s.glancedClue=clue;s.glancedPosition=clue.position;
         s.nextClueGlance=now+Math.max(c().integer("observation.look_cooldown_ticks"),c().integer("investigation.hold_ticks"));
-        s.reason="转向线索："+clue.kind;s.lookOwner="线索观察："+clue.kind;
     }
     private static boolean finite(Vec3 v){return Double.isFinite(v.x)&&Double.isFinite(v.y)&&Double.isFinite(v.z);}
 
@@ -594,10 +663,14 @@ public final class HumanPerception {
         State s=STATES.get(h);if(s==null)return PerceptionDebugSnapshot.EMPTY;long now=now(h);double r=range(h);
         List<PerceptionDebugSnapshot.Row> rows=new ArrayList<>();List<PerceptionDebugSnapshot.Marker> markers=new ArrayList<>();
         row(rows,"overview","当前决策",s.decision);row(rows,"overview","原因",s.reason);
+        row(rows,"clues","最近听觉分级",s.soundPolicy);
+        row(rows,"budget","动态活动档位",AdaptiveActivityBudget.describe(h));
         row(rows,"overview","警觉剩余",remaining(s.alertUntil,now));row(rows,"actions","观察请求",s.lookOwner);
         row(rows,"actions","实际朝向归属",HumanAttention.owner(h));
         row(rows,"targets","主攻击目标",h.getTarget()==null?"无":bounded(h.getTarget().getName().getString(),64));
         row(rows,"targets","主目标选择原因",HumanTargetCoordinator.reason(h));
+        row(rows,"budgets","候选预筛（最近一轮）","视野外"+s.geometrySkipped+" · 遮挡退避"+s.occlusionSkipped);
+        row(rows,"targets","主目标威胁分（最近评估）",HumanThreatAssessment.describe(h,h.getTarget()));
         row(rows,"actions","攻击朝向",h.getTarget()==null?"无主目标":HumanAttention.canAim(h,h.getTarget())?"允许，仍需武器/许可/射界":"移动偏角超过头部限制，暂缓远程出手");
         row(rows,"actions","已有射界采样",RangedShotClearance.debugState(h,h.getTarget()));
         row(rows,"actions","身体/头部角度",String.format(java.util.Locale.ROOT,"%.0f° / %.0f° · 移动单侧限%.0f°",h.yBodyRot,h.getYHeadRot(),HumanAttention.movingHeadLimit(h)));
@@ -624,8 +697,10 @@ public final class HumanPerception {
                     Objects.equals(t.id,s.focus)?"主识别/辅助朝向请求":t.evidence.active()?"视野内并行识别":t.evidence.hasEvidence()?"让位受击或其他识别":"已确认记录"));
             row(rows,"targets","最近视觉结果",t.denied+" · 最近可见"+(t.checked<0?"暂无":(now-t.checked)+"tick前"));
             row(rows,"targets","动态/最后/旧敌",remaining(t.liveUntil,now)+" / "+remaining(t.positionAt+c().integer("memory.last_position_ticks"),now)+" / "+remaining(t.familiarUntil,now)+" · "+t.refresh);
-            if(h.level() instanceof ServerLevel level && level.getEntity(t.id) instanceof LivingEntity entity)
+            if(h.level() instanceof ServerLevel level && level.getEntity(t.id) instanceof LivingEntity entity){
                 row(rows,"targets","攻击许可",valid(h,entity)?"允许；动作仍需有效位置与射界":"不允许");
+                if(live)row(rows,"targets","威胁分（最近评估）",HumanThreatAssessment.describe(h,entity));
+            }
             if(t.position!=null&&now<t.positionAt+c().integer("memory.last_position_ticks"))
                 marker(markers,t.evidence.active()?"recognition":live?t.visible&&now-t.checked<=c().integer("budgets.active_interval_ticks")?"visible":"dynamic":"last",t.name+" · "+stage,t.position,null,.4);
         }
@@ -633,6 +708,7 @@ public final class HumanPerception {
             marker(markers,clue.kind.equals("beacon")?"beacon":"sound",clue.kind,clue.position,null,clue.kind.equals("beacon")?c().number("beacon.grid_size")*.5:.4);}
         for(Observe o:s.pending.values())marker(markers,"direction","待观察来向",h.getEyePosition(),o.point,0);
         if(s.look!=null)marker(markers,"direction",s.lookOwner,h.getEyePosition(),s.look,0);
+        if(now<s.soundGlanceUntil&&s.soundGlancePoint!=null)marker(markers,"direction","重要声音有限回看请求",h.getEyePosition(),s.soundGlancePoint,0);
         for(Ray ray:s.rays)if(now-ray.tick<=20)marker(markers,ray.clear?"los":"blocked",(ray.clear?"可见采样":"遮挡采样")+" · "+(now-ray.tick)+"tick前",ray.from,ray.to,0);
         Vec3 view=Vec3.directionFromRotation(h.getXRot(),h.getYHeadRot()).normalize();
         Vec3 nearHeading=Vec3.directionFromRotation(0,h.getYHeadRot());double near=c().number("vision.near_distance");

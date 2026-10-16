@@ -19,6 +19,21 @@ public final class PerformancePoliciesTest {
     }
 
     public static void main(String[] args) {
+        var idleFacing=AttentionFacingPolicy.idleStep(0,0,0,90,120,60,4,60);
+        check(idleFacing.body()==4&&idleFacing.head()==4&&idleFacing.pitch()==4,"natural look changes are limited from previous final pose");
+        var seamFacing=AttentionFacingPolicy.idleStep(179,179,0,-179,-179,0,4,60);
+        check(seamFacing.head()==-179,"idle rotation takes shortest route across yaw seam");
+        check(AttentionFacingPolicy.surveyStep(4,90,30)<=1,"crowded slow scanning cannot sweep entire far field between samples");
+        double basicThreat=ThreatScorePolicy.intrinsic(20,0,3,false);
+        double farThreat=ThreatScorePolicy.score(basicThreat,30,0,20,false,6);
+        double nearThreat=ThreatScorePolicy.score(basicThreat,3,0,20,false,6);
+        check(ThreatScorePolicy.stronger(farThreat,nearThreat,.25,5), "confirmed nearby threat beats unpressuring distant enemy");
+        double shooter=ThreatScorePolicy.score(basicThreat+8,30,10,20,true,6);
+        check(shooter>nearThreat, "recent damaging far shooter remains a serious threat");
+        check(!ThreatScorePolicy.stronger(40,44,.25,5), "similar scores cannot oscillate primary target");
+        check(Double.isFinite(ThreatScorePolicy.intrinsic(Double.NaN,Double.POSITIVE_INFINITY,Double.NaN,true)),
+                "invalid optional attributes cannot poison scoring");
+        check(ThreatScorePolicy.intrinsic(100000,100000,100000,true)<=80, "extreme attributes have bounded influence");
         MovementContinuityProgress continuity = new MovementContinuityProgress();
         check(!continuity.stalled(0, 0, 0, 0.1D, true), "continuity window starts without replanning");
         for (int tick = 1; tick < 5; tick++)
@@ -154,6 +169,23 @@ public final class PerformancePoliciesTest {
         try { paused.firstMatching(-1, value -> true); throw new AssertionError("negative budget accepted"); }
         catch (IllegalArgumentException expected) { checks++; }
 
+        check(ActivityLoadPolicy.desired(16,16,64,128)==ActivityLoadPolicy.Mode.SPARSE
+                &&ActivityLoadPolicy.desired(64,16,64,128)==ActivityLoadPolicy.Mode.CROWDED
+                &&ActivityLoadPolicy.desired(128,16,64,128)==ActivityLoadPolicy.Mode.BATTLE,"population profile boundaries");
+        check(ActivityLoadPolicy.interval(10,.5,false)==5&&ActivityLoadPolicy.interval(4,3,true)==4,
+                "sparse attention improves while urgent cadence stays intact");
+        check(ActivityLoadPolicy.capacity(8,4,.25)==4&&ActivityLoadPolicy.capacity(32,4,.5)==16,
+                "adaptive throughput always admits its largest job");
+        FairWorkBudget<Integer> adaptive=new FairWorkBudget<>(8,4,40);
+        check(adaptive.claimFull(0,1,4)==4,"first active job consumes capacity");adaptive.cancel(1);
+        adaptive.setTickCapacity(4);
+        check(adaptive.claimFull(0,2,4)==4,"mid-tick downgrade does not rewrite an already begun tick");adaptive.cancel(2);
+        check(adaptive.claimFull(0,3,4)==0,"spent tick cannot gain capacity by profile changes");
+        check(adaptive.claimFull(1,3,4)==4,"older queued work survives next-tick downgrade");adaptive.cancel(3);
+        check(adaptive.claimFull(1,4,4)==0,"new tick respects reduced capacity");
+        adaptive.setTickCapacity(8);
+        check(adaptive.claimFull(1,5,4)==0,"mid-tick upgrade cannot refill consumed grants");
+        check(adaptive.claimFull(2,4,4)==4&&adaptive.claimFull(2,5,4)==4,"next-tick upgrade preserves waiting FIFO jobs");
         check(RouteSearchPolicy.startStage(48,48,80)==0&&RouteSearchPolicy.startStage(49,48,80)==1
                 &&RouteSearchPolicy.startStage(81,48,80)==2,"skip only geometrically undersized stages");
         check(RouteSearchPolicy.remoteCost(2048)==2&&RouteSearchPolicy.remoteCost(4096)==4

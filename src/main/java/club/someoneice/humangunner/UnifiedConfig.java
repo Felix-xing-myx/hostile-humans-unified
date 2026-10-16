@@ -24,6 +24,7 @@ public final class UnifiedConfig {
     private final ShieldPressureConfig shieldPressure;
     private final PerceptionConfig perception;
     private final NavigationSearchConfig navigationSearch;
+    private final ActivityBudgetConfig activityBudget;
     private final HostileTargetingConfig hostileTargeting;
     private final Map<String, ConfiguredEquipmentLoadout> equipmentLoadouts;
     private final Recruitment recruitment;
@@ -82,6 +83,7 @@ public final class UnifiedConfig {
         shieldPressure = ShieldPressureConfig.parse(object(root, "shield_pressure"));
         perception = new PerceptionConfig(object(root, "perception"));
         navigationSearch = NavigationSearchConfig.parse(object(root, "navigation_search"));
+        activityBudget = ActivityBudgetConfig.parse(object(root,"activity_budget"));
         hostileTargeting = HostileTargetingConfig.parse(object(root, "hostile_mob_targeting"));
         vanillaMode = bool(root, "vanilla_mode", false);
         Map<String, ConfiguredEquipmentLoadout> loadouts = new LinkedHashMap<>();
@@ -277,6 +279,7 @@ public final class UnifiedConfig {
     public boolean allowHiredPvpDamage() { return recruitment.allowHiredPvpDamage(); }
     public PerceptionConfig perception() { return perception; }
     public NavigationSearchConfig navigationSearch() { return navigationSearch; }
+    public ActivityBudgetConfig activityBudget() { return activityBudget; }
     public SoldierMessages soldierMessages() { return soldierMessages; }
     public boolean betterCombatSoldierMeleeEnabled() { return betterCombatSoldierMeleeEnabled; }
     public boolean taczEnabled() { return bool(object(root, "tacz"), "enabled", true); }

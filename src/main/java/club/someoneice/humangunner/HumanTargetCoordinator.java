@@ -14,6 +14,9 @@ public final class HumanTargetCoordinator {
     private HumanTargetCoordinator() {}
     public static void lock(Human h,LivingEntity target,long until){State s=STATES.computeIfAbsent(h,k->new State());s.locked=target.getUUID();s.lockUntil=until;}
     public static void unlock(Human h){State s=STATES.get(h);if(s!=null){s.locked=null;s.lockUntil=-1;}}
+    static boolean lockActive(Human h,LivingEntity target){
+        State s=STATES.get(h);return s!=null&&target!=null&&target.getUUID().equals(s.locked)&&HumanPerception.now(h)<s.lockUntil;
+    }
     public static void clear(Human human){STATES.remove(human);}
     public static String reason(Human human){State state=STATES.get(human);return state==null?"尚未选敌":state.reason;}
     public static boolean suspended(Human h){
@@ -44,32 +47,34 @@ public final class HumanTargetCoordinator {
         boolean role=BodyguardProtection.isBodyguard(h)&&BodyguardProtection.owner(h)!=null&&!h.isFleeing;
         if(role){BodyguardProtection.update(h);desired=BodyguardProtection.attack(h);why="贴身保护优先级";}
         else if(!h.isFleeing){
+            if(!HumanPerception.selectionAllowed(h,proposal))proposal=null;
+            LivingEntity best=proposal;
+            if(desired==null||now>=state.nextReview){
+                state.nextReview=now+AdaptiveActivityBudget.interval(h,PerceptionConfig.get().integer("budgets.active_interval_ticks"),urgent);
+                LivingEntity known=HumanPerception.candidate(h);
+                if(best==null||known!=null&&HumanThreatAssessment.score(h,known)>HumanThreatAssessment.score(h,best))best=known;
+            }
             LivingEntity locked=null;
             if(state.locked!=null&&now<state.lockUntil&&h.level() instanceof net.minecraft.server.level.ServerLevel level
-                    &&level.getEntity(state.locked) instanceof LivingEntity found&&HumanPerception.canTarget(h,found))locked=found;
-            if(locked!=null){desired=locked;proposal=locked;why="多来源压力集中处理";}
-            else {state.locked=null;state.lockUntil=-1;}
-
-            if(!HumanPerception.canTarget(h,proposal))proposal=null;
-            if(desired==null){desired=proposal!=null?proposal:HumanPerception.candidate(h);why="已确认记忆接替";}
-            else if(proposal!=null&&proposal!=desired){
-                boolean close=h.distanceToSqr(proposal)<=36&&h.distanceToSqr(desired)>36;
-                if(dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.switchAllowed(now,state.changed,
-                        PerceptionConfig.get().integer("selection.minimum_hold_ticks"),close,urgent))desired=proposal;
+                    &&level.getEntity(state.locked) instanceof LivingEntity found&&HumanPerception.selectionAllowed(h,found))locked=found;
+            if(locked!=null&&best!=null&&best!=locked&&(HumanThreatAssessment.nearOverride(h,locked,best)
+                    ||urgent&&HumanThreatAssessment.shouldSwitch(h,locked,best))){
+                unlock(h);locked=null;why="威胁评分打破远敌或压力偏好";
             }
-        }
-        if(!role&&!h.isFleeing&&state.locked==null&&desired==current&&desired!=null&&proposal==null&&now>=state.nextReview){
-            state.nextReview=now+PerceptionConfig.get().integer("budgets.active_interval_ticks");
-            LivingEntity nearby=HumanPerception.candidate(h);
-            if(nearby!=null&&nearby!=current&&CombatPressurePolicy.shouldPrioritizeCloserThreat(
-                    h.distanceToSqr(current),h.distanceToSqr(nearby),
-                    RecentDamageTracker.recentDamageFrom(h,current,CombatPressurePolicy.NEARBY_THREAT_DAMAGE_WINDOW_TICKS),h.getMaxHealth())){
-                desired=nearby;why="已确认的近处威胁";
+            if(locked!=null){desired=locked;best=locked;why="多来源压力集中处理";}
+            else {state.locked=null;state.lockUntil=-1;}
+            if(desired==null){desired=best;why="已确认记忆按威胁分接替";}
+            else if(best!=null&&best!=desired&&HumanThreatAssessment.shouldSwitch(h,desired,best)){
+                boolean close=HumanThreatAssessment.nearOverride(h,desired,best);
+                if(dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.switchAllowed(now,state.changed,
+                        PerceptionConfig.get().integer("selection.minimum_hold_ticks"),close,urgent)){
+                    desired=best;why=close?"已确认的近处威胁评分优先":"动态威胁评分超过切换余量";
+                }
             }
         }
         // Retreat owns its private survival threat; ordinary acquisition must not undo escape cancellation.
         if(h.isFleeing&&current==null)return null;
-        if(desired!=null&&!HumanPerception.canTarget(h,desired))desired=null;
+        if(desired!=null&&(!HumanPerception.canTarget(h,desired)||!role&&!HumanPerception.selectionAllowed(h,desired)))desired=null;
         if(current!=desired){h.setTarget(desired);state.selected=h.getTarget()==null?null:h.getTarget().getUUID();state.changed=now;state.reason=h.getTarget()==desired?why:"最终许可或事件拒绝目标请求";}
         if(SoldierOrder.get(h)==SoldierOrder.GUARD&&h.getTarget()!=null)h.guardCombatState.retainTarget(h.getTarget().getUUID());
         return h.getTarget();

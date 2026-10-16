@@ -13,6 +13,15 @@ public final class AttentionFacingPolicy {
         nextHead=nextBody+Math.max(-limit,Math.min(limit,relative));
         return new Facing(wrap(nextBody),wrap(nextHead),approach(pitch,wantedPitch,PITCH_STEP));
     }
+    public static float surveyStep(float configured,float farAngle,int interval){
+        return Math.min(configured,farAngle/(3*Math.max(1,interval)));
+    }
+    /** Calm native look changes are rate limited against the previous final pose. */
+    public static Facing idleStep(float body,float head,float pitch,float wantedBody,float wantedHead,float wantedPitch,float step,float limit){
+        float nextBody=approach(body,wantedBody,step),nextHead=approach(head,wantedHead,step);
+        nextHead=nextBody+Math.max(-limit,Math.min(limit,wrap(nextHead-nextBody)));
+        return new Facing(wrap(nextBody),wrap(nextHead),approach(pitch,wantedPitch,step));
+    }
     private static float approach(float from,float to,float amount){
         float delta=wrap(to-from);return from+Math.max(-amount,Math.min(amount,delta));
     }
