@@ -94,6 +94,32 @@ public final class NavigationDebugService {
         if(!player.getItemBySlot(EquipmentSlot.HEAD).is(HumanGunnerRegistries.NAVIGATION_OBSERVER_HELMET.get()))return;
         cycle(player);
     }
+    /** Developer-only control operation; observer selection and gameplay soldier orders are unchanged. */
+    static void stopFocusedTest(ServerPlayer player) {
+        if (!allowed(player)) { message(player, "permission"); return; }
+        if (!player.getItemBySlot(EquipmentSlot.HEAD).is(HumanGunnerRegistries.NAVIGATION_OBSERVER_HELMET.get())) return;
+        Human human = selected(player);
+        if (human == null) { message(player, "select_first"); return; }
+        Run run = RUNS.get(human);
+        if (run == null) { message(player, "not_testing"); return; }
+        if (!run.owner.equals(player.getUUID())) { message(player, "busy"); return; }
+        finish(human, "cancelled");
+        message(player, "stopped_observing", human.getDisplayName());
+        sendFrame(player, SELECTIONS.get(player));
+    }
+    public static String controlDescription(Human human) {
+        Run run = RUNS.get(human);
+        if (run == null) return "自主AI运行";
+        long seconds = Math.max(0, (run.deadline - human.level().getGameTime() + 19) / 20);
+        String route = switch (run.state) {
+            case "queued" -> "等待预算";
+            case "no_path" -> "未找到路径，仍在重试";
+            case "partial" -> "部分路径";
+            case "rejected" -> "路线未接纳，仍在重试";
+            default -> "完整路径";
+        };
+        return "自主战斗暂停；剩余" + seconds + "游戏秒；" + route;
+    }
     private static int slot(Session session, UUID id) {
         return session.selection.entries().stream().filter(entry -> entry.key().equals(id)).findFirst().orElseThrow().slot();
     }

@@ -8,7 +8,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
-/** Layers are local; the sole selection request changes observer focus, never an AI movement command. */
+/** Display layers are local; developer control requests are separately authorized by the server. */
 public final class NavigationLegendScreen extends Screen {
     private record Row(int color, Component text) {}
     private static final String[] PAGES = {"overview", "memory", "vision", "clues", "action", "budget", "legend"};
@@ -28,6 +28,8 @@ public final class NavigationLegendScreen extends Screen {
             if (entries.isEmpty()) return;
             NavigationDebugNetwork.cycleFocus();scroll=0;
         }).bounds(width/2-150,height-52,100,20).build());
+        addRenderableWidget(Button.builder(label("stop_test"), b -> NavigationDebugNetwork.stopFocusedTest())
+                .bounds(width/2-50,height-52,100,20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
                 .bounds(width/2+50,height-52,100,20).build());
         for(int i=0;i<4;i++) {

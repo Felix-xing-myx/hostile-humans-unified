@@ -318,7 +318,7 @@ public final class HumanPerception {
         }
         h.isAlert=now<s.alertUntil||h.getTarget()!=null;
         if(h.isNoAi()||h.isSleeping()||NavigationDebugService.controls(h)){
-            s.decision=NavigationDebugService.controls(h)?"固定点测试接管":"自主AI暂停";s.reason="自主观察和动作暂停";return;
+            s.decision=NavigationDebugService.controls(h)?"固定点测试接管":"自主AI暂停";s.reason=NavigationDebugService.controls(h)?NavigationDebugService.controlDescription(h):"自主观察和动作暂停";return;
         }
         if(s.focus!=null){
             Entity e=level.getEntity(s.focus);Track t=s.tracks.get(s.focus);

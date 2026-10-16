@@ -281,7 +281,7 @@
   "navigation_debug.help.accepted": "绿色小框：焦点候选通过评分、找到完整路径或已采用；通过评分不保证最后被采用。",
   "navigation_debug.help.rejected": "红色小框：焦点候选被过滤、拒绝或剪枝，具体原因查看焦点面板最近记录。",
   "navigation_debug.help.limits": "这些是调试线框，不改变方块。最近请求点可能只是试算；实际路径和终点才代表当前执行。其他实体的候选点不显示，切换焦点即可查看。",
-  "navigation_debug.help.controls": "指针右键人类加入并聚焦，右键空气切换焦点，右键方块只设置焦点目的地。潜行右键人类移除该成员；潜行右键空气或方块清空全部。图例热键可在选项→控制→按键绑定中修改。",
+  "navigation_debug.help.controls": "指针右键人类加入并聚焦，右键空气切换焦点，右键方块只设置焦点目的地。潜行右键人类移除该成员；潜行右键空气或方块清空全部。图例热键可在选项→控制→按键绑定中修改。 默认F9或详情“结束焦点测试”仅解除当前焦点接管并保留观察。",
   "navigation_debug.help.open": "%s：打开综合侦察详情",
   "navigation_debug.detail.title": "综合侦察详情",
   "navigation_debug.detail.entity": "切换诊断焦点",
@@ -290,7 +290,7 @@
   "navigation_debug.detail.reason": "原因：%s",
   "navigation_debug.detail.sample": "服务器采样 tick %s",
   "navigation_debug.detail.stale": "快照失效：请佩戴头盔并选择范围内人类。",
-  "navigation_debug.detail.readonly": "滚轮浏览。详情焦点和图层仅影响显示，不改变仇恨、导航或指令。",
+  "navigation_debug.detail.readonly": "分页与图层只改变显示；“结束焦点测试”恢复该实体自主AI，其他任务继续。",
   "navigation_debug.detail.geometry": "近场是前向圆柱扇区，垂直覆盖脚下与头顶，不随俯仰收窄；柱体外保留视锥。几何轮廓不保证无遮挡，LOS只显示真实检测样本。",
   "navigation_debug.detail.layer": "%s：%s",
   "navigation_debug.detail.scope.0": "关闭",
@@ -321,5 +321,11 @@
   "navigation_debug.detail.scope.vision_focus": "焦点·简略",
   "navigation_debug.detail.vision_modes": "焦点仅显示选中人类的近场柱体简略轮廓与朝向线；所有模式显示近场、旧敌扩展、中远视野和实际LOS。",
   "navigation_debug.detail.marker.vision_near_base": "实体色柱体：陌生目标近场水平视野，包含脚下与头顶。",
-  "navigation_debug.detail.marker.vision_known_near_base": "淡蓝柱体：旧敌扩展近场水平视野，同样需要遮挡检查。"
+  "navigation_debug.detail.marker.vision_known_near_base": "淡蓝柱体：旧敌扩展近场水平视野，同样需要遮挡检查。",
+  "navigation_debug.test_warning": "测试接管：自主战斗暂停",
+  "navigation_debug.stop_help": "%s：结束焦点测试，保留观察",
+  "navigation_debug.not_testing": "焦点正在自主行动，无固定点测试需要结束。",
+  "navigation_debug.stopped_observing": "已结束%s的测试，恢复自主AI并保留观察。",
+  "navigation_debug.detail.stop_test": "结束焦点测试",
+  "key.hostile_humans_unified.navigation_stop_test": "结束焦点导航测试（保留观察）"
 }

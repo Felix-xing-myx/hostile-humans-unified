@@ -44,11 +44,17 @@ public final class NavigationDebugClient {
         static final KeyMapping LEGEND = new KeyMapping("key.hostile_humans_unified.navigation_legend",
                 KeyConflictContext.IN_GAME, com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_F8, "key.categories.hostile_humans_unified");
-        @SubscribeEvent public static void register(RegisterKeyMappingsEvent event) { event.register(LEGEND); }
+        static final KeyMapping STOP_TEST = new KeyMapping("key.hostile_humans_unified.navigation_stop_test",
+                KeyConflictContext.IN_GAME, com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
+                GLFW.GLFW_KEY_F9, "key.categories.hostile_humans_unified");
+        @SubscribeEvent public static void register(RegisterKeyMappingsEvent event) { event.register(LEGEND); event.register(STOP_TEST); }
     }
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         var mc = Minecraft.getInstance();
+        while (Keys.STOP_TEST.consumeClick()) {
+            if (mc.player != null && mc.screen == null && !visibleEntries().isEmpty()) NavigationDebugNetwork.stopFocusedTest();
+        }
         while (Keys.LEGEND.consumeClick()) {
             if (mc.player != null && mc.screen == null) mc.setScreen(new NavigationLegendScreen());
         }
@@ -93,7 +99,7 @@ public final class NavigationDebugClient {
             g.fill(x, y, x + 2, y + cardHeight - 2, 0xFF000000 | color(entry));
             draw(g, text("card_title", entry.slot() + 1, s.name(), text("mode." + s.mode()), focused(entry) ? "◀" : ""), x+5, y+2, width-12, color(entry));
             draw(g, text("card_route", text("result." + s.state()), s.firstNode(), s.totalNodes()), x+5, y+12, width-12, 0xFFFFFF);
-            draw(g, text("card_goal", s.requested() == null ? "—" : s.requested().toShortString()), x+5, y+22, width-12, 0xDDDDDD);
+            draw(g, s.mode().equals("test") ? text("test_warning") : text("card_goal", s.requested() == null ? "—" : s.requested().toShortString()), x+5, y+22, width-12, s.mode().equals("test") ? 0xFFAA44 : 0xDDDDDD);
         }
         var focus = entries.stream().filter(NavigationDebugClient::diagnosticFocus).findFirst().orElse(entries.get(0));
         var s = focus.snapshot();
@@ -109,7 +115,8 @@ public final class NavigationDebugClient {
             text("hud_health", number(s.health()), number(s.fallBudget()), s.maxDrop(), number(s.followRange())),
             text("hud_work", s.budget(), number(s.searchMillis()), text("reason." + s.obstruction())),
             text("multi_help"),
-            text("help.open", Keys.LEGEND.getTranslatedKeyMessage())
+            text("help.open", Keys.LEGEND.getTranslatedKeyMessage()),
+            text("stop_help", Keys.STOP_TEST.getTranslatedKeyMessage())
         };
         for (Component detail : details) {
             if (y + 8 > g.guiHeight()) break;

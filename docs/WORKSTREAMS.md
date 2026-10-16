@@ -1,5 +1,13 @@
 # 开发任务与整合记录
 
+## 开发者观察工具控制边界（2026-10-16，源码交付）
+
+- 基线8f97ce36327058b9bc9762e66259da38dfac4fe8；主控/root唯一编辑worktrees/observer-controls、feature/observer-controls，保留未构建枪手及射窗修改。范围NavigationDebugService/Network/Client、NavigationLegendScreen、HumanPerception接管说明、双语资源和知识库。
+- 仅开发者功能：新增结束焦点测试而保留观察的服务端操作、F9和详情按钮、明确自主战斗暂停及剩余游戏时间。沿用原测试120秒与寻路预算，不自动遇敌解控，不接入正式士兵命令或持久化；客户端不得指定实体或修改AI状态。未授权本轮构建/同步/push。
+- 交付：stopFocusedTest为独立服务端开发操作，校验权限/头盔/同维度有效焦点/任务归属，复用finish完整清理，保留selection；协议6新增无载荷服务端请求，F9可改键，F8中间按钮结束测试。焦点HUD/详情原因显示服务器剩余游戏秒和排队/无路径重试/部分路径，卡片替换第三行为醒目暂停警告，请求点仍可在详情查看。
+- 验证：Python291项（279通过、12跳过），483份Java语法解析、双语JSON/键集合及diff检查通过；知识库导航测试与动态观察正文备份并更新、Wiki目标核对通过，备份记录见维护目录验证日志/observer-controls-knowledge.json。未Java编译、构建、同步、push或游戏验收；仍需验证多实体只释放焦点、其他玩家不能释放、无路径恢复自主战斗、改键与详情界面布局。
+- 独立分支本地提交，保留前两项未部署源码，未合并main。未来正式玩法应经雇主/命令权限与已有战斗控制系统接入，不复用开发接管规则。
+
 ## 身体检测预算与主动射击窗口（2026-10-16，源码交付）
 
 - 基线17065093c188617f37c624870349cccb410715a3，保留未构建枪手连续侧移修复；主控/root独占worktrees/attack-windows、feature/attack-windows。范围PerceptionConfig/ActivityBudgetConfig及默认资源、RangedFiringPosition/RangedShotClearance与新候选模块、弓弩枪接入、回归和知识库。共享文件由主控接入，不运行编译/构建或部署（本轮未授权构建）。
