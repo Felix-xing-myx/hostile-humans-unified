@@ -126,7 +126,8 @@ public final class PlayerLikeMovementGoal extends Goal {
                 || (!RecoverySupplies.isEatingFood(human) && isDistantPursuit(target));
         if (movementHop && human.isSprinting()
                 && !human.humanGunner$hasPendingMeleeAttack()
-                && human.getRandom().nextDouble() < config.combatJumpChance()) {
+                && human.getRandom().nextDouble() < config.combatJumpChance()
+                && NavigationSupport.hasHopRunway(human)) {
             human.getJumpControl().jump();
             scheduleCombatJump();
         } else {
@@ -182,7 +183,7 @@ public final class PlayerLikeMovementGoal extends Goal {
                 || GunSupport.get().isGun(human.getMainHandItem())
                 || HumanUtil.isRangedWeapon(human.getMainHandItem())
                 || HumanUtil.isTrident(human.getMainHandItem())
-                || MeleeCombatRange.canStrike(human, target)) {
+                || MeleeCombatRange.canStrike(human, target)&&!MeleeSpacing.needsChaseBuffer(human,target)) {
             return false;
         }
         return pathHeadsToward(target);

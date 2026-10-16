@@ -10,4 +10,11 @@ public final class MeleeSpacingPolicy {
         return Math.max(Math.min(0.15D, preferred(reach) * 0.5D),
                 Math.min(preferred(reach) - 0.25D, reach * 0.5D));
     }
+    /** Movement reserve for a receding opponent, never an extension to the real attack shape. */
+    public static double chasePreferred(double reach,double outwardSpeed,int upswing) {
+        double normal=preferred(reach);
+        if(!Double.isFinite(outwardSpeed)||outwardSpeed<.04)return normal;
+        double reserve=Math.min(1.5,Math.max(0,outwardSpeed)*(Math.min(12,Math.max(1,upswing))+2));
+        return Math.min(normal,Math.max(tooClose(reach)+.15,normal-reserve));
+    }
 }

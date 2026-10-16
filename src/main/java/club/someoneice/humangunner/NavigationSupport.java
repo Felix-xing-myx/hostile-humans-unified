@@ -19,6 +19,24 @@ final class NavigationSupport {
     private NavigationSupport() {
     }
 
+    static boolean hasHopRunway(Human human) {
+        Path path=human.getNavigation().getPath();
+        if(path==null||path.isDone())return false;
+        int start=path.getNextNodeIndex(),count=Math.min(8,path.getNodeCount()-start);
+        double[][] nodes=new double[count][3];
+        for(int i=0;i<count;i++){
+            var node=path.getNode(start+i);
+            if(node.type!=net.minecraft.world.level.pathfinder.BlockPathTypes.WALKABLE)return false;
+            Vec3 point=path.getEntityPosAtNode(human,start+i);
+            nodes[i]=new double[]{point.x,point.y,point.z};
+        }
+        Vec3 motion=human.getDeltaMovement();
+        var boost=human.getEffect(net.minecraft.world.effect.MobEffects.JUMP);
+        double flight=12+(boost==null?0:3.0*(boost.getAmplifier()+1));
+        return dev.felix.hostilehumans.core.SprintHopPolicy.clearRunway(human.getX(),human.getY(),human.getZ(),
+                motion.x,motion.z,nodes,flight);
+    }
+
     static boolean openBlockingPassage(Human human) {
         // At most seven positions: a small array avoids a hash table and one
         // node allocation per position on every collision tick.

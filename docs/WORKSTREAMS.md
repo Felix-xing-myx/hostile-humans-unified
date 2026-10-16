@@ -1,5 +1,14 @@
 # 开发任务与整合记录
 
+## BC动态追击缓冲与转折跑跳（2026-10-16，源码完成）
+
+- 基线579381c7bc1c6a7205340e866748f2782e16c6b6，包含尚未构建射位/近物修改；主控/root独占worktrees/melee-pursuit-corner-hop、fix/melee-pursuit-corner-hop。范围MeleeSpacing及纯策略、PursuitNavigation、近战Goal起步与PlayerLikeMovementGoal冲刺/普通跳、短路径几何策略/回归/知识库。只改移动停步缓冲，不扩大BC命中或取消出伤延迟；普通跑跳增加拐弯限制，台阶跳/紧急避险保留。深度导航只研究分阶段方案，不替换现有搜索/节点推进。本轮不构建部署。
+- 依据：近战间距停止、PursuitNavigation在canStrike早退、shouldSprintToMeleeTarget在canStrike关闭冲刺共同导致外逃目标刚进范围便收速，而Human待结算前摇仍正常运行。现在BC档案且径向外逃≥0.04格/tick时，按目标运动/位置差与剩余或武器前摇向内收移动偏好，最多12tick+2、额外≤1.5格、贴近下限tooClose+0.15，三处及Goal起步共用。真实范围/形状、攻击准入、前摇、冷却和最终命中未改；驻守/水域/撤退/防御边界保持。不是承诺高速目标必定命中。
+- 普通movementHop接入hasHopRunway/SprintHopPolicy：最多8现有WALKABLE节点，方向点积≥0.94，当前位置/相邻高度差≤0.6，足够覆盖max(2,水平速度×估计滞空+0.75)；普通估计12tick、每级Jump提升加3，覆盖超过6格或未查到足够长度时不额外跳。只做数学，无新方块扫描/A*或预算池。台阶跳、脱困、紧急避险和专用PursuitJumpAttack未加此限制；HumanSafeJumpControl原落地安全仍运行。没有改拐角跳节点或替换导航。
+- 研究结论：离散相邻/对角节点不等于身体只能45/90度；当前直线跨点补偿刻意拒绝转角。优先阶段1起跳约束，再讨论阶段2原Path执行层2～4节点的安全平滑，需整身体扫掠/支撑/门梯/危险/命令和归属验证；全导航替代牵涉全部特殊地形、预算与行为接口，难度很高且不能单独保证解决空中推进。知识库独立方案转弯跑跳与局部路径平滑明确阶段2/替代尚未实施。
+- 验证：Python300（288通过、12跳过）、489份Java语法、diff、六默认附录与六Wiki页通过；新增Java静止/外逃/超长前摇/无效输入、平直/45/90转弯/高度/短终点/反向路径几何及生产接线用例，未编译执行。机制、预算、导航理论及方案索引五旧页备份后同步，新增一研究方案，记录见验证日志/melee-pursuit-corner-hop-knowledge.json。本地提交整合main，无Gradle/构建/部署/push，实例仍3.10.4，前项射位/近物同样未部署。
+- 待游戏验收：不同BC武器前摇、快追慢与横向/静止/突然转向目标、弓枪临时换刀、盾/撤退/命令；平直/45/90/U形/窄门/台阶/悬崖、高速与Jump提升、受击落点、多人拥挤。无CPU/FPS/多人实测；已在空中的外力偏航、非普通跑跳及深层执行平滑不算本轮全部解决。
+
 ## 射位路线兑现与闲置近物发现（2026-10-16，源码完成）
 
 - 基线1ecfca0beb568068ccf7a37139e70491200afb60；主控/root独占worktrees/firing-route-idle-loot、fix/firing-route-idle-loot，顺序修改RangedFiringMemory及弓弩枪路径接入，再改HumanLootVision/HumanLootManager/ValuableItemPickupGoal。共享文件由主控接入；范围射位实际路线绑定/可靠落脚、近处无遮挡发现与近处优先选择、相关回归/诊断/知识库。不改通用锁敌或取消不可达冷却；本轮无构建同步授权。

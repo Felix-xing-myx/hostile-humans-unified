@@ -10,6 +10,18 @@ public final class RuntimePoliciesTest {
         if (!condition) throw new AssertionError("check " + checks);
     }
     public static void main(String[] args) {
+        check(MeleeSpacingPolicy.chasePreferred(3.3,0,6)==MeleeSpacingPolicy.preferred(3.3));
+        check(MeleeSpacingPolicy.chasePreferred(3.3,.28,6)<MeleeSpacingPolicy.preferred(3.3));
+        check(MeleeSpacingPolicy.chasePreferred(3.3,.28,6)>MeleeSpacingPolicy.tooClose(3.3));
+        check(MeleeSpacingPolicy.chasePreferred(3.3,.28,30)==MeleeSpacingPolicy.chasePreferred(3.3,.28,12));
+        check(MeleeSpacingPolicy.chasePreferred(3.3,Double.NaN,6)==MeleeSpacingPolicy.preferred(3.3));
+        check(SprintHopPolicy.clearRunway(0,0,0,.3,0,new double[][]{{1,0,0},{2,0,0},{3,0,0},{5,0,0}}));
+        check(!SprintHopPolicy.clearRunway(0,0,0,.3,0,new double[][]{{1,0,0},{1,0,1},{1,0,5}}));
+        check(!SprintHopPolicy.clearRunway(0,0,0,.3,0,new double[][]{{1,0,0},{2,0,1},{5,0,4}}));
+        check(!SprintHopPolicy.clearRunway(0,0,0,.3,0,new double[][]{{1,0,0},{2,1,0},{5,1,0}}));
+        check(!SprintHopPolicy.clearRunway(0,0,0,.3,0,new double[][]{{1,0,0}}));
+        check(!SprintHopPolicy.clearRunway(0,0,0,.3,0,new double[][]{{-1,0,0},{-5,0,0}}));
+        check(!SprintHopPolicy.clearRunway(0,0,0,Double.NaN,0,new double[][]{{1,0,0}}));
         for (int i = 1; i < 100; i++) {
             double reach = i / 100.0D;
             check(MeleeSpacingPolicy.preferred(reach) > 0 && MeleeSpacingPolicy.preferred(reach) < reach);

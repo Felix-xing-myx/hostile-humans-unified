@@ -386,3 +386,10 @@ HumanLootVision.nearbyGround仅放宽安全闲置且许可拾取时的头部朝�
 HumanTerrainSafety.firingFeet以原有落地形状查询的近层重载解析真实脚位；RangedWindowCandidates、进攻findVisiblePath候选/实际终点与RangedFiringMemory选中/复查统一调用，避免半砖节点整数y误差。近层有界、loaded-only，不改通用跌落容忍。旧源码契约改为验证实际end坐标送入firingFeet，而非依赖path.getEndNode().x的字符串写法。
 
 firingNode把物理脚位以ceil(y-1e-6)转换到原版可站立空气节点；窗口种子去重、旧点候选和旧点createPath共用，不能用floor(2.5)=2把导航目标放进半砖实体。实体真实脚位/弹道仍用firingFeet解析，原版路径节点仍为整数。
+
+
+## BC追击缓冲与普通跑跳前瞻
+
+MeleeSpacing.preferredDistance(Human,target)只对有BC档案且目标径向外逃≥0.04格/tick生效；由待结算剩余前摇或当前武器前摇、实际运动/本tick位置差构造额外间距，预测最多12tick+2、余量≤1.5格、下限tooClose+0.15且不超过普通preferred。control、近战Goal.start、PursuitNavigation.canStrike早退与PlayerLikeMovementGoal.shouldSprint共用判定；真实canStrike、canStartAttack与Human延迟命中没有改。近距已经可击中的追缓冲不启动原地形故障替代，但仍走原有预算/安全路径。
+
+NavigationSupport.hasHopRunway最多取现有8个WALKABLE节点，SprintHopPolicy只作几何：速度≥0.04、方向点积≥0.94、高度差≤0.6，需覆盖max(2,速度×(12+每级Jump提升3tick)+0.75)格，超过6格或不足便不安排额外跑跳。仅PlayerLikeMovementGoal普通movementHop接入；没有改HumanSafeJumpControl全局门槛、台阶跳、脱困/紧急避险或PursuitJumpAttack，也没有跳过节点/替换A*。深层平滑与替代导航仍在知识库方案研究。

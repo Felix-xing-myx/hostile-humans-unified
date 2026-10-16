@@ -131,7 +131,7 @@ extends Goal {
             if (target != null) {
                 canPursue = canPursue && (!MeleeCombatRange.canStrike(human, target)
                         || this.mob.distanceTo(target)
-                        > MeleeSpacing.preferredDistance(MeleeCombatRange.reach(human, target)));
+                        > MeleeSpacing.preferredDistance(human,target));
             }
         }
         if (canPursue && !(this.mob instanceof Human human

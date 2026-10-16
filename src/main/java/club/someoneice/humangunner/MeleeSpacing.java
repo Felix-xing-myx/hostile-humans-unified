@@ -19,7 +19,7 @@ public final class MeleeSpacing {
 
         double reach = MeleeCombatRange.reach(human, target);
         double distance = human.distanceTo(target);
-        double preferred = preferredDistance(reach);
+        double preferred = preferredDistance(human,target);
         double tooClose = dev.felix.hostilehumans.core.MeleeSpacingPolicy.tooClose(reach);
         if (distance > preferred) return false;
         // A visible target on another step may be outside the actual oriented
@@ -66,6 +66,26 @@ public final class MeleeSpacing {
 
     public static double preferredDistance(double reach) {
         return dev.felix.hostilehumans.core.MeleeSpacingPolicy.preferred(reach);
+    }
+    public static double preferredDistance(Human human,LivingEntity target) {
+        if(target==null)return 0;
+        double reach=MeleeCombatRange.reach(human,target);
+        if(!BetterCombatMeleeCombat.hasWeaponProfile(human))return preferredDistance(reach);
+        Vec3 away=target.position().subtract(human.position()).multiply(1,0,1);
+        if(away.lengthSqr()<1.e-6)return preferredDistance(reach);
+        away=away.normalize();
+        double outward=Math.max(target.getDeltaMovement().dot(away),
+                target.position().subtract(new Vec3(target.xo,target.yo,target.zo)).dot(away));
+        int pending=human.humanGunner$pendingMeleeTicks(target);
+        int upswing=pending>=0?pending:BetterCombatMeleeCombat.upswingTicks(human);
+        return dev.felix.hostilehumans.core.MeleeSpacingPolicy.chasePreferred(reach,outward,upswing);
+    }
+    /** Shared by spacing, pursuit refresh and sprint; a hit at this instant is not enough reserve. */
+    public static boolean needsChaseBuffer(Human human,LivingEntity target) {
+        if(target==null||!BetterCombatMeleeCombat.hasWeaponProfile(human))return false;
+        double normal=preferredDistance(MeleeCombatRange.reach(human,target));
+        double preferred=preferredDistance(human,target);
+        return preferred<normal-1.e-6&&human.distanceTo(target)>preferred;
     }
 
     private static boolean tryStep(Human human, Vec3 step) {

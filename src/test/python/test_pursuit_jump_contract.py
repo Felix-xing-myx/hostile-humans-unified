@@ -9,6 +9,25 @@ GOAL = (JAVA / "com/craftix/hostile_humans/entity/ai/goal/MeleeAttackGoal.java")
 HUMAN = (JAVA / "com/craftix/hostile_humans/entity/entities/Human.java").read_text(encoding="utf-8")
 
 class PursuitJumpContract(unittest.TestCase):
+    def test_optional_hops_use_short_runway_without_blocking_step_jumps(self):
+        movement=(PKG/"PlayerLikeMovementGoal.java").read_text(encoding="utf-8")
+        self.assertIn('NavigationSupport.hasHopRunway(human)',movement)
+        self.assertLess(movement.index('if (pathSuggestsStepUp())'),movement.index('NavigationSupport.hasHopRunway(human)'))
+        support=(PKG/"NavigationSupport.java").read_text(encoding="utf-8")
+        runway=support.split('static boolean hasHopRunway',1)[1].split('static boolean openBlockingPassage',1)[0]
+        self.assertIn('Math.min(8,',runway)
+        self.assertNotIn('createPath',runway)
+        self.assertNotIn('getBlockState',runway)
+
+    def test_bc_pursuit_stop_and_sprint_share_movement_buffer(self):
+        movement=(PKG/"PlayerLikeMovementGoal.java").read_text(encoding="utf-8")
+        pursuit=(PKG/"PursuitNavigation.java").read_text(encoding="utf-8")
+        spacing=(PKG/"MeleeSpacing.java").read_text(encoding="utf-8")
+        self.assertIn('MeleeSpacing.needsChaseBuffer(human,target)',movement)
+        self.assertIn('MeleeSpacing.needsChaseBuffer(human,target)',pursuit)
+        self.assertIn('human.humanGunner$pendingMeleeTicks(target)',spacing)
+        self.assertIn('BetterCombatMeleeCombat.upswingTicks(human)',spacing)
+        self.assertIn('MeleeSpacing.preferredDistance(human,target)',GOAL)
     def test_distance_and_time_share_weapon_budget(self):
         for condition in ("attackCooldown > 2", "12 - upswing", "closing * approachTicks",
                           "reach - 0.5D", "closing < 0.04D", "Math.abs(target.getY() - human.getY()) > jump.maxHeightDifference()"):

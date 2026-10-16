@@ -40,11 +40,12 @@ public final class PursuitNavigation {
             state.sampled = target.position();
             STATES.put(human, state);
         }
-        if (MeleeCombatRange.canStrike(human, target)) {
+        boolean canStrike=MeleeCombatRange.canStrike(human, target);
+        if (canStrike) {
             CombatTerrainNavigation.clear(human);
-            return false;
+            if(!MeleeSpacing.needsChaseBuffer(human,target))return false;
         }
-        if (!LongRangeNavigation.inProgress(human,LongRangeNavigation.Purpose.COMBAT)) {
+        if (!canStrike && !LongRangeNavigation.inProgress(human,LongRangeNavigation.Purpose.COMBAT)) {
             var terrain = CombatTerrainNavigation.update(human, target, speed, false);
             if (terrain.ownsMovement()) return terrain == CombatTerrainNavigation.Decision.ROUTE;
         }
