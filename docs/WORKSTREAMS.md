@@ -1,5 +1,13 @@
 # 开发任务与整合记录
 
+## 枪手直接侧移与射击朝向（2026-10-16，进行中）
+
+- 用户反馈枪手侧移路径使导航朝向压制射击，弓弩直接侧移正常；授权修复源码，未要求构建。基线efc06c2a59c9f593ee0e934ec5be949b5f41107b；主控/root独占worktrees/gunner-direct-strafe、fix/gunner-direct-strafe，不派发编辑Agent。
+- 文件范围：GunnerGoal、RangedTerrainCombat、必要的既有回归/静态契约、CHANGELOG及知识库；Human/共享朝向入口先只读，若确需修改仍由主控唯一负责。接口：射界清晰且已在合适距离时直接安全侧移，明确朝向目标；追击、遮挡绕行、地形脱困、退避和岸边交接继续既有导航，不能全局取消移动瞄准准入。
+- 当前检查：main/暂存干净，独立工作树从基线创建；已追踪GunnerGoal.strafeAround→findLateralPath→普通导航yaw→canAim拒射，与弓弩RangedTerrainCombat.strafe直接输入差异吻合。共享安全入口复用落差/碰撞检查，并补枪手命令范围检查。交付与验证本节补记；不编译、不部署、不push。
+- 源码实现：移除GunnerGoal的strafePathActive及合适射距内findLateralPath/3份普通预算请求，改为32tick直接侧移段+12tick暂停；RangedTerrainCombat新增strafeFacingTarget并复用弓弩tryStrafe安全检查，枪手额外复核命令范围、声明当前战术朝向。保留原有8tick换向判定、锚点、距离调节与导航分支。Java接入断言已编写但未编译；Python255项（12跳过，其余通过）。知识库4页正文先备份后同步，记录在验证日志/gunner-direct-strafe-knowledge.json；未构建、部署或push。
+
+
 
 
 

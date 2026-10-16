@@ -84,18 +84,40 @@ public final class RangedTerrainCombat {
     }
 
     public static void strafe(Human human, float forward, float right) {
-        if (forward == 0 && right == 0) { human.getMoveControl().strafe(0, 0); return; }
-        double yaw = Math.toRadians(human.getYRot());
+        tryStrafe(human, forward, right, human.getYRot(), false);
+    }
+
+    /** Open-band gun movement shares bow/crossbow step safety, without a navigation route. */
+    public static boolean strafeFacingTarget(Human human, LivingEntity target, float forward, float right) {
+        if (target == null || !HumanPerception.canTarget(human, target)
+                || HumanTargetCoordinator.suspended(human) || human.isFleeing
+                || human.isInLava() || human.explosionThreat != null
+                || SoldierOrder.isHoldingPosition(human) || human.isSeekingShore()
+                || human.isShoreTransitionPending() || !human.getNavigation().isDone()) return false;
+        Vec3 toward = target.position().subtract(human.position());
+        float yaw = (float) Math.toDegrees(Math.atan2(toward.z, toward.x)) - 90.0F;
+        return tryStrafe(human, forward, right, yaw, true);
+    }
+
+    private static boolean tryStrafe(Human human, float forward, float right, float facingYaw, boolean gunMovement) {
+        if (forward == 0 && right == 0) { human.getMoveControl().strafe(0, 0); return false; }
+        double yaw = Math.toRadians(facingYaw);
         float[][] choices = {{forward, right}, {forward, -right}, {forward, 0}, {0, right}, {0, -right}};
         for (float[] choice : choices) {
             if (choice[0] == 0 && choice[1] == 0) continue;
             Vec3 direction = new Vec3(choice[1] * Math.cos(yaw) - choice[0] * Math.sin(yaw), 0,
                     choice[0] * Math.cos(yaw) + choice[1] * Math.sin(yaw)).normalize().scale(1.25D);
-            if (HumanTerrainSafety.safeStep(human, direction)
+            if ((!gunMovement || SoldierOrder.allowsCombatPosition(human, human.position().add(direction)))
+                    && HumanTerrainSafety.safeStep(human, direction)
                     && human.level().noCollision(human, human.getBoundingBox().expandTowards(direction))) {
+                if (gunMovement) {
+                    human.setYRot(facingYaw);
+                    human.setYBodyRot(facingYaw);
+                    HumanAttention.movement(human, human.getX(), human.getZ(), true);
+                }
                 human.getMoveControl().strafe(choice[0], choice[1]);
                 State state = STATES.get(human); if (state != null) state.blockedSteps = 0;
-                return;
+                return true;
             }
         }
         human.clearRangedStrafeMotion();
@@ -106,5 +128,6 @@ public final class RangedTerrainCombat {
             if (RangedTerrainPolicy.shouldReportBlockedSteps(++state.blockedSteps))
                 CombatTerrainNavigation.failed(human, target);
         }
+        return false;
     }
 }

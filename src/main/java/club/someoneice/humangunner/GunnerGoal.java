@@ -48,7 +48,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private boolean retreatingForSpace;
     private boolean approachingTarget;
     private boolean strafing;
-    private boolean strafePathActive;
     private boolean seekingFiringPosition;
     private LivingEntity movementTarget;
 
@@ -107,7 +106,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         retreatingForSpace = false;
         approachingTarget = false;
         strafing = false;
-        strafePathActive = false;
         manualStrafeUntilTick = 0;
         strafeAnchorSet = false;
         seekingFiringPosition = false;
@@ -145,7 +143,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         retreatingForSpace = false;
         approachingTarget = false;
         seekingFiringPosition = false;
-        strafePathActive = false;
         manualStrafeUntilTick = 0;
         strafeAnchorSet = false;
         movementTarget = null;
@@ -665,15 +662,12 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     private void strafeAround(LivingEntity target, GunRangePolicy.Band range) {
-        mob.lookAt(target, 30.0F, 30.0F);
         double anchorRadius = Math.max(6.0D,
                 Math.min(9.0D, (range.maximum() - range.minimum()) * 0.9D));
         if (!strafeAnchorSet
                 || target.position().distanceToSqr(strafeAnchorTargetX, target.getY(),
                         strafeAnchorTargetZ) > 36.0D
                 || strafeAnchorDistanceSqr() > anchorRadius * anchorRadius * 4.0D) {
-            if (strafePathActive) mob.getNavigation().stop();
-            strafePathActive = false;
             manualStrafeUntilTick = 0;
             strafeAnchorX = mob.getX();
             strafeAnchorZ = mob.getZ();
@@ -683,81 +677,48 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             nextStrafeRepositionTick = mob.tickCount;
         }
 
-        if (strafePathActive) {
-            if (!mob.getNavigation().isDone() && !mob.getNavigation().isStuck()) {
-                return;
-            }
-            strafePathActive = false;
-            strafing = false;
-            // A completed flank should lead to a return leg, not another
-            // path farther around the same side of the target.
-            strafeDirection = -strafeDirection;
-            nextStrafeRepositionTick = mob.tickCount + 16;
-            mob.getMoveControl().strafe(0.0F, 0.0F);
-            mob.setZza(0.0F);
-            mob.setXxa(0.0F);
-            return;
-        }
-
-        if (manualStrafeUntilTick > 0) {
-            if (mob.tickCount < manualStrafeUntilTick) {
-                if (mob.tickCount - strafeLegStartTick >= 8
-                        && (strafeAnchorDistanceSqr() >= anchorRadius * anchorRadius
-                        || mob.horizontalCollision
-                        || strafeLegDisplacementSqr() < 0.16D)) {
-                    strafeDirection = -strafeDirection;
-                    strafeLegStartTick = mob.tickCount;
-                    strafeLegStartX = mob.getX();
-                    strafeLegStartZ = mob.getZ();
-                }
-                mob.getMoveControl().strafe(radialStrafeInput(target, range), strafeDirection);
-                strafing = true;
-                return;
-            }
+        // Only the open firing-band branch reaches here. A lateral A-star route
+        // would make travel yaw own the body and reject a roughly 90-degree shot.
+        // Pursuit, terrain, shore and retreat routes return before this branch.
+        mob.getNavigation().stop();
+        if (manualStrafeUntilTick > 0 && mob.tickCount >= manualStrafeUntilTick) {
             manualStrafeUntilTick = 0;
-            strafing = false;
             strafeDirection = -strafeDirection;
             nextStrafeRepositionTick = mob.tickCount + 12;
-            mob.getMoveControl().strafe(0.0F, 0.0F);
-            mob.setZza(0.0F);
-            mob.setXxa(0.0F);
+            clearDirectStrafe();
             return;
         }
-
-        if (mob.tickCount < nextStrafeRepositionTick) {
-            return;
+        if (mob.tickCount < nextStrafeRepositionTick) return;
+        if (manualStrafeUntilTick == 0) {
+            strafeLegStartTick = mob.tickCount;
+            strafeLegStartX = mob.getX();
+            strafeLegStartZ = mob.getZ();
+            manualStrafeUntilTick = mob.tickCount + 32;
         }
-
-        if (mob instanceof Human human && !human.shouldUseWaterMovement()
-                && !BasicNavigationBudget.tryAcquire(human, 3)) {
-            nextStrafeRepositionTick = mob.tickCount + 1;
-            return;
+        if (mob.tickCount - strafeLegStartTick >= 8
+                && (strafeAnchorDistanceSqr() >= anchorRadius * anchorRadius
+                || mob.horizontalCollision || strafeLegDisplacementSqr() < 0.16D)) {
+            strafeDirection = -strafeDirection;
+            strafeLegStartTick = mob.tickCount;
+            strafeLegStartX = mob.getX();
+            strafeLegStartZ = mob.getZ();
         }
-
-        strafeLegStartTick = mob.tickCount;
-        strafeLegStartX = mob.getX();
-        strafeLegStartZ = mob.getZ();
-        // Water paths are for crossing/closing distance; use a committed
-        // manual lateral leg while afloat so aiming does not stall the flank.
-        Path lateralPath = mob instanceof Human human && !human.shouldUseWaterMovement()
-                ? RangedFiringPosition.findLateralPath(
-                        human, target, range.minimum(), range.maximum(), (int) strafeDirection,
-                        strafeAnchorX, strafeAnchorZ, anchorRadius)
-                : null;
-        if (lateralPath != null && (mob instanceof Human human
-                ? RetreatPathSafety.tryMove(human, lateralPath, 1.15D)
-                : mob.getNavigation().moveTo(lateralPath, 1.15D))) {
-            strafePathActive = true;
+        if (mob instanceof Human human) {
+            strafing = RangedTerrainCombat.strafeFacingTarget(
+                    human, target, radialStrafeInput(target, range), strafeDirection);
+        } else {
+            mob.lookAt(target, 30.0F, 30.0F);
+            mob.getMoveControl().strafe(radialStrafeInput(target, range), strafeDirection);
             strafing = true;
-            return;
         }
+    }
 
-        // Commit to a visible flank rather than a twelve-tick left/right wobble.
-        mob.getNavigation().stop();
-        mob.getMoveControl().strafe(radialStrafeInput(target, range), strafeDirection);
-        strafing = true;
-        manualStrafeUntilTick = mob.tickCount + 32;
-        nextStrafeRepositionTick = manualStrafeUntilTick;
+    private void clearDirectStrafe() {
+        if (mob instanceof Human human) human.clearRangedStrafeMotion();
+        else mob.getMoveControl().strafe(0.0F, 0.0F);
+        mob.setZza(0.0F);
+        mob.setXxa(0.0F);
+        strafing = false;
     }
 
     private double strafeLegDisplacementSqr() {
@@ -782,19 +743,15 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
 
     private void stopLateralMovement() {
         strafeAnchorSet = false;
-        if (!strafing && !strafePathActive && manualStrafeUntilTick == 0) {
+        if (!strafing && manualStrafeUntilTick == 0) {
             return;
         }
         boolean terrainRoute = mob instanceof Human human && CombatTerrainNavigation.ownsRoute(human);
-        if (strafePathActive && !terrainRoute) {
-            mob.getNavigation().stop();
-        }
         if (!terrainRoute) mob.getMoveControl().strafe(0.0F, 0.0F);
         else if (mob instanceof Human human) human.clearRangedStrafeMotion();
         mob.setZza(0.0F);
         mob.setXxa(0.0F);
         strafing = false;
-        strafePathActive = false;
         manualStrafeUntilTick = 0;
     }
 
@@ -804,7 +761,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         // consume the same tick the shore navigator needs to advance its path.
         strafeAnchorSet = false;
         strafing = false;
-        strafePathActive = false;
         manualStrafeUntilTick = 0;
     }
 

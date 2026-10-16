@@ -306,3 +306,7 @@ HumanNavigation.tick在原地形复核前尝试advancePassedCombatWaypoint：连
 配置入口：`global.json → perception`；`memory.dynamic_ticks=600`、`recognition.break_ticks=40`、`attention.moving_head_angle=60`、`attention.hit_response_ticks=20`、`selection.minimum_hold_ticks=20`。时间均为服务器tick（20tick约1秒），这是模组默认值；已有实例自定义值继续按其配置执行。
 
 头盔分别显示主攻击目标、选择原因、两个识别对象及暂停进度、观察请求与实际朝向负责人、身体/头部角度、各目标动态剩余与攻击许可。几何视野按实际头部yaw与俯仰展示，不能把请求看向某处等同于已经实际朝向它。导航、身体与当前观察请求分别判断，实际射击仍须弹药、许可、朝向及射界通过。
+
+## 枪手直接侧移与朝向边界
+
+`GunnerGoal.strafeAround`仅在已有射界、合适射距且导航/生存分支不接管时执行直接侧移，不调用findLateralPath或申请BasicNavigationBudget。`RangedTerrainCombat.strafeFacingTarget`要求目标合法、无暂停/逃生/站定/岸边接管和活动导航；按目标水平朝向复用tryStrafe的5组有界方向、1.25格安全前瞻及碰撞检查，并加SoldierOrder.allowsCombatPosition。安全输入提交前标明本tick战术朝向，防止普通导航canAim误拒枪射击；HumanMoveControl与原生枪械发射边界继续沿用。弓弩的strafe签名与行为保持不变，同用tryStrafe而不采用枪手额外转向或命令策略。停止局部侧移不取消CombatTerrainNavigation自有路线；追击、遮挡射位、过近退避与岸边状态仍通过原导航。

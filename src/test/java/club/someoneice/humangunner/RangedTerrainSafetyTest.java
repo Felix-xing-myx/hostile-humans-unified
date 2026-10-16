@@ -75,6 +75,14 @@ public final class RangedTerrainSafetyTest {
             check(calls(type, "tick", root + "RangedTerrainCombat", "searchCompleted"), goal + " distinguishes failed lane from budget waiting");
             check(calls(type, "tickShot", root + "RangedWeaponCustody", "isActive"), goal + " never shoots after melee hand switch");
         }
+        check(calls(root + "GunnerGoal", "strafeAround", root + "RangedTerrainCombat", "strafeFacingTarget"), "gun strafe uses the shared direct movement boundary");
+        check(!calls(root + "GunnerGoal", "strafeAround", root + "BasicNavigationBudget", "tryAcquire")
+                && !calls(root + "GunnerGoal", "strafeAround", root + "RangedFiringPosition", "findLateralPath"), "local firing strafe cannot become a navigation route");
+        check(calls(root + "RangedTerrainCombat", "strafe", root + "RangedTerrainCombat", "tryStrafe")
+                && calls(root + "RangedTerrainCombat", "strafeFacingTarget", root + "RangedTerrainCombat", "tryStrafe"), "bows and guns share terrain safety implementation");
+        check(calls(root + "RangedTerrainCombat", "tryStrafe", root + "HumanTerrainSafety", "safeStep")
+                && calls(root + "RangedTerrainCombat", "tryStrafe", root + "SoldierOrder", "allowsCombatPosition"), "gun movement retains swept-foot safety and command bounds");
+        check(calls(root + "RangedTerrainCombat", "tryStrafe", root + "HumanAttention", "movement"), "explicit gun strafe declares its tactical facing before shooting admission");
         check(calls(root + "RangedWeaponCustody", "shouldReturnToRanged", root + "RangedTerrainCombat", "holdsMelee"), "terrain melee is a real sustained custody lease");
         check(calls(human, "humanGunner$isMeleeMode", root + "RangedTerrainCombat", "isTerrainMelee"), "terrain melee enables native obstacle pursuit");
         check(calls(root + "RangedHybridMeleeGoal", "canUse", root + "RangedTerrainCombat", "isTerrainMelee"), "terrain leases retain the native melee goal");

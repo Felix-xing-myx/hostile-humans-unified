@@ -79,10 +79,30 @@ class CombatTerrainContract(unittest.TestCase):
         self.assertIn("CombatTerrainNavigation.hasWork", start)
         gun = read(COMBAT / "GunnerGoal.java")
         cleanup = gun.split("private void stopLateralMovement()", 1)[1].split("private void clearLateralInput", 1)[0]
-        self.assertIn("strafePathActive && !terrainRoute", cleanup)
+        self.assertNotIn("getNavigation().stop()", cleanup)
         self.assertIn("if (!terrainRoute) mob.getMoveControl().strafe", cleanup)
         trident_stop = read(COMBAT / "TridentHybridGoal.java").split("public void stop()", 1)[1].split("public boolean requiresUpdateEveryTick", 1)[0]
         self.assertIn("if (!CombatTerrainNavigation.ownsRoute(human))", trident_stop)
+
+    def test_gunner_local_strafe_is_direct_and_keeps_facing(self):
+        gun = read(COMBAT / "GunnerGoal.java")
+        local = gun.split("private void strafeAround(", 1)[1].split("private void clearDirectStrafe", 1)[0]
+        self.assertIn("RangedTerrainCombat.strafeFacingTarget", local)
+        self.assertNotIn("BasicNavigationBudget", local)
+        self.assertNotIn("findLateralPath", local)
+        self.assertNotIn("moveTo(", local)
+        self.assertIn("mob.tickCount + 32", local)
+        self.assertIn("mob.tickCount + 12", local)
+        source = read(COMBAT / "RangedTerrainCombat.java")
+        guard = source.split("public static boolean strafeFacingTarget", 1)[1].split("private static boolean tryStrafe", 1)[0]
+        for requirement in ("HumanPerception.canTarget", "HumanTargetCoordinator.suspended", "isFleeing",
+                            "SoldierOrder.isHoldingPosition", "isSeekingShore", "isShoreTransitionPending", "getNavigation().isDone"):
+            self.assertIn(requirement, guard)
+        step = source.split("private static boolean tryStrafe", 1)[1]
+        for requirement in ("SoldierOrder.allowsCombatPosition", "HumanTerrainSafety.safeStep", "noCollision",
+                            "human.setYBodyRot(facingYaw)", "HumanAttention.movement", "clearRangedStrafeMotion"):
+            self.assertIn(requirement, step)
+        self.assertNotIn("HumanAttention.retreatAim", source)
 
     def test_equivalent_path_install_tracks_actual_navigation_object(self):
         self.assertIn("state.route = nav.getPath()", read(COMBAT / "PursuitNavigation.java"))
