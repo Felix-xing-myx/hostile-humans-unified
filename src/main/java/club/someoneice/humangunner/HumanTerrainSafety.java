@@ -151,6 +151,17 @@ public final class HumanTerrainSafety {
         // Vanilla ground nodes stand in the air cell above a fractional collision surface.
         return BlockPos.containing(feet.x,Math.ceil(feet.y-1.e-6),feet.z);
     }
+    /** Strict continuous support for a shortcut; survivable drops are deliberately insufficient. */
+    public static boolean flatSupport(Human h,Vec3 point,double expectedFloor) {
+        double half=Math.max(.05,h.getBbWidth()*.5-.02);
+        for(int sample=0;sample<5;sample++){
+            double x=point.x+(sample==0?0:sample<=2?-half:half);
+            double z=point.z+(sample==0?0:(sample&1)==0?-half:half);
+            double landing=landingHeight(h,x,expectedFloor,z,1);
+            if(!Double.isFinite(landing)||Math.abs(landing-expectedFloor)>.1)return false;
+        }
+        return true;
+    }
 
     private static Reason footprintReason(Human human, Vec3 point) {
         double half = Math.max(0.05D, human.getBbWidth() * 0.5D - 0.02D);

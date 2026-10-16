@@ -1,5 +1,14 @@
 # 开发任务与整合记录
 
+## 原搜索增强路径跟随（2026-10-16，源码完成）
+
+- 用户明确选择保留原搜索并优化跟随；基线c2b271c9debe6703a8bddc122cda2ef86cb3953e，包含前两轮未构建修改。主控/root独占worktrees/enhanced-path-follow、feature/enhanced-path-follow；范围HumanNavigation跟随钩子、独立有界走廊验证、地面支撑接口、OptionalPathBudget独立跟随池、观察诊断/回归/知识库。共享文件主控顺序接入；不替换PathFinder/NodeEvaluator、不改目标/攻击/路径终点，不新建MOVE Goal。优先同高普通平地，敏感地形及预算不足回原跟随。本轮未要求构建同步。
+- 实现：保留搜索/节点评估/原Path及终点，super.followThePath到达/卡住检查之后，以独立HumanPathFollower验证≤3节点/3格普通同高WALKABLE段；≤13采样×5点落脚、全身体小段扫掠、命令、loaded-only/世界边界/门梯流体危险排除。失败/额度等待不改索引或停止原路线；保留射位Path身份归属，不新增Goal、速度/位置/目标写入。
+- 性能：独立PATH_FOLLOW池16/key2/stale8，拥挤8/大战4，每4tick最多2候选；≤128块通道证明，每4tick复核状态，碰撞变化只在同Path且索引仍是采纳点时恢复原索引。相同碰撞的外观/红石变化不回退。缓存复核另有≤128状态访问/人/4tick成本，无CPU/FPS实测；真实变化可短暂回走，无状态动态模组碰撞和移动实体仍由物理/原安全处理。
+- 静态验证：Python304（292通过、12跳过），491份Java语法、diff、六默认附录和八页Wiki链接通过；本地mapped API只读核对followThePath与Path接口。新增纯Java走廊/缺地/墙角/命令/过长和无效输入用例尚未编译执行。知识库七旧页先备份并融入机制、预算和方案，新增09-强化路径跟随与安全平滑，记录验证日志/enhanced-path-follow-knowledge.json。
+- 本地提交并整合main；未编译、Gradle、构建、部署、push或启动游戏。实例仍3.10.4，前两轮射位/拾取与BC/跑跳同样尚未部署。待游戏验收：平直/折线/U形墙、窄门/梯/水/高差回原跟随、等高半砖/地面缺口、途中放拆方块、拥挤与低额度、射位返回/拾取/驻守/跟随/测试接管及受击/前摇交接。跨高度与空中外力偏航不算本轮全部解决。
+
+
 ## BC动态追击缓冲与转折跑跳（2026-10-16，源码完成）
 
 - 基线579381c7bc1c6a7205340e866748f2782e16c6b6，包含尚未构建射位/近物修改；主控/root独占worktrees/melee-pursuit-corner-hop、fix/melee-pursuit-corner-hop。范围MeleeSpacing及纯策略、PursuitNavigation、近战Goal起步与PlayerLikeMovementGoal冲刺/普通跳、短路径几何策略/回归/知识库。只改移动停步缓冲，不扩大BC命中或取消出伤延迟；普通跑跳增加拐弯限制，台阶跳/紧急避险保留。深度导航只研究分阶段方案，不替换现有搜索/节点推进。本轮不构建部署。

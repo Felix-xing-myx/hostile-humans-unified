@@ -10,10 +10,10 @@ import java.util.WeakHashMap;
 
 /** Shared server-main-thread budget for multi-candidate searches, not basic navigation. */
 public final class OptionalPathBudget {
-    public enum Kind { FIRING_LANE, SHORE_FIRING, WATER_PURSUIT, RETREAT, LAVA, EXPLOSION, CONTINUITY, COMBAT_TERRAIN }
+    public enum Kind { FIRING_LANE, SHORE_FIRING, WATER_PURSUIT, RETREAT, LAVA, EXPLOSION, CONTINUITY, COMBAT_TERRAIN, PATH_FOLLOW }
     private record Key(UUID human, Kind kind) {}
     private record Pools(FairWorkBudget<Key> combat, FairWorkBudget<Key> emergency,
-                         FairWorkBudget<Key> continuity) {}
+                         FairWorkBudget<Key> continuity,FairWorkBudget<Key> follow) {}
     private static final Map<MinecraftServer, Pools> SERVERS = new WeakHashMap<>();
 
     public static int claim(Human human, Kind kind, int maximum) {
@@ -21,8 +21,9 @@ public final class OptionalPathBudget {
         if (server == null || human.level().isClientSide) return 0;
         Pools pools = SERVERS.computeIfAbsent(server, ignored -> new Pools(
                 new FairWorkBudget<>(64, 4, 2), new FairWorkBudget<>(32, 4, 2),
-                new FairWorkBudget<>(8, 1, 3)));
+                new FairWorkBudget<>(8, 1, 3),new FairWorkBudget<>(16,2,8)));
         pools.combat().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,64,4));
+        pools.follow().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,16,2));
         int granted = pool(pools, kind).claim(server.getTickCount(), new Key(human.getUUID(), kind), maximum);
         NavigationDebugService.budget(human, kind.name(), maximum, granted);
         return granted;
@@ -33,8 +34,9 @@ public final class OptionalPathBudget {
         if (server == null || human.level().isClientSide) return 0;
         Pools pools = SERVERS.computeIfAbsent(server, ignored -> new Pools(
                 new FairWorkBudget<>(64, 4, 2), new FairWorkBudget<>(32, 4, 2),
-                new FairWorkBudget<>(8, 1, 3)));
+                new FairWorkBudget<>(8, 1, 3),new FairWorkBudget<>(16,2,8)));
         pools.combat().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,64,4));
+        pools.follow().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,16,2));
         int granted = pool(pools, kind).claimFull(server.getTickCount(), new Key(human.getUUID(), kind), maximum);
         NavigationDebugService.budget(human, kind.name(), maximum, granted);
         return granted;
@@ -46,6 +48,7 @@ public final class OptionalPathBudget {
     }
 
     private static FairWorkBudget<Key> pool(Pools pools, Kind kind) {
+        if(kind==Kind.PATH_FOLLOW)return pools.follow();
         if (kind == Kind.CONTINUITY) return pools.continuity();
         return kind == Kind.RETREAT || kind == Kind.LAVA || kind == Kind.EXPLOSION ? pools.emergency() : pools.combat();
     }

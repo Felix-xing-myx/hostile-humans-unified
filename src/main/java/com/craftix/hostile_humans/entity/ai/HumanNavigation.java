@@ -194,6 +194,7 @@ public final class HumanNavigation extends GroundPathNavigation {
     }
 
     @Override public void tick() {
+        if(mob instanceof Human human)club.someoneice.humangunner.HumanPathFollower.beforeTick(human,path);
         if (mob instanceof Human human) advancePassedCombatWaypoint(human);
         if (mob instanceof Human human && path != null && !path.isDone()) {
             var from = human.blockPosition();
@@ -210,6 +211,11 @@ public final class HumanNavigation extends GroundPathNavigation {
         sampledPosition = mob.position();
         sampledTick = mob.tickCount;
         sampledAirborne = !mob.onGround();
+    }
+
+    @Override protected void followThePath(){
+        super.followThePath();
+        if(mob instanceof Human human)club.someoneice.humangunner.HumanPathFollower.follow(human,path);
     }
 
     /** An airborne body can cross a flat node while missing vanilla's vertical arrival tolerance. */

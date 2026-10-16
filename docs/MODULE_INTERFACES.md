@@ -392,4 +392,12 @@ firingNode把物理脚位以ceil(y-1e-6)转换到原版可站立空气节点；�
 
 MeleeSpacing.preferredDistance(Human,target)只对有BC档案且目标径向外逃≥0.04格/tick生效；由待结算剩余前摇或当前武器前摇、实际运动/本tick位置差构造额外间距，预测最多12tick+2、余量≤1.5格、下限tooClose+0.15且不超过普通preferred。control、近战Goal.start、PursuitNavigation.canStrike早退与PlayerLikeMovementGoal.shouldSprint共用判定；真实canStrike、canStartAttack与Human延迟命中没有改。近距已经可击中的追缓冲不启动原地形故障替代，但仍走原有预算/安全路径。
 
-NavigationSupport.hasHopRunway最多取现有8个WALKABLE节点，SprintHopPolicy只作几何：速度≥0.04、方向点积≥0.94、高度差≤0.6，需覆盖max(2,速度×(12+每级Jump提升3tick)+0.75)格，超过6格或不足便不安排额外跑跳。仅PlayerLikeMovementGoal普通movementHop接入；没有改HumanSafeJumpControl全局门槛、台阶跳、脱困/紧急避险或PursuitJumpAttack，也没有跳过节点/替换A*。深层平滑与替代导航仍在知识库方案研究。
+NavigationSupport.hasHopRunway最多取现有8个WALKABLE节点，SprintHopPolicy只作几何：速度≥0.04、方向点积≥0.94、高度差≤0.6，需覆盖max(2,速度×(12+每级Jump提升3tick)+0.75)格，超过6格或不足便不安排额外跑跳。仅PlayerLikeMovementGoal普通movementHop接入；没有改HumanSafeJumpControl全局门槛、台阶跳、脱困/紧急避险或PursuitJumpAttack，也没有跳过节点/替换A*。短平地执行平滑见下节，跨高度与替代仍为研究。
+
+## 原搜索增强路径跟随
+
+HumanNavigation.tick在跨点补偿前调用HumanPathFollower.beforeTick；followThePath先super再HumanPathFollower.follow，随后原tick发布MoveControl目的地。保留搜索、Path对象、节点列表和终点，只推进合法短平地索引；不写目标/速度/位置，不新增Goal。
+
+HumanPathFollower最多3节点/3格，每4tick≤2候选；LocalPathFollowPolicy纯几何产生≤13采样，每点经flatSupport五点支撑/0.1同高、身体扫掠及SoldierOrder。128块loaded-only缓存排除门梯/液体/危险，碰撞变化时仅同Path且仍在采纳索引才恢复原索引；原版推进或换路清证明。动态无状态碰撞仍属边界。
+
+OptionalPathBudget.PATH_FOLLOW池16/key2/stale8，navigationCapacity折减拥挤8/大战4；等待不改索引、原路线继续。HumanPerception只读describe，无新网络/NBT；射位Path身份绑定和原导航归属保持。缓存≤128状态/人/4tick复核另有成本。

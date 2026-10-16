@@ -10,6 +10,15 @@ public final class RuntimePoliciesTest {
         if (!condition) throw new AssertionError("check " + checks);
     }
     public static void main(String[] args) {
+        int[] samples={0};
+        check(LocalPathFollowPolicy.corridor(0,0,2,2,(x,z,dx,dz)->{samples[0]++;return true;}));
+        check(samples[0]<=13&&samples[0]>2);
+        check(!LocalPathFollowPolicy.corridor(0,0,2,0,(x,z,dx,dz)->x<.9||x>1.1)); // floor gap mid-route
+        check(!LocalPathFollowPolicy.corridor(0,0,2,2,(x,z,dx,dz)->!(x>.7&&x<1.3&&z>.7&&z<1.3))); // wall corner
+        check(!LocalPathFollowPolicy.corridor(0,0,2,0,(x,z,dx,dz)->x<=1)); // command leash between endpoints
+        check(!LocalPathFollowPolicy.corridor(0,0,4,0,(x,z,dx,dz)->true));
+        check(!LocalPathFollowPolicy.corridor(0,0,Double.NaN,0,(x,z,dx,dz)->true));
+        check(!LocalPathFollowPolicy.corridor(0,0,2,0,(x,z,dx,dz)->dx<=.25&&x<.5));
         check(MeleeSpacingPolicy.chasePreferred(3.3,0,6)==MeleeSpacingPolicy.preferred(3.3));
         check(MeleeSpacingPolicy.chasePreferred(3.3,.28,6)<MeleeSpacingPolicy.preferred(3.3));
         check(MeleeSpacingPolicy.chasePreferred(3.3,.28,6)>MeleeSpacingPolicy.tooClose(3.3));
