@@ -1,5 +1,12 @@
 # 开发任务与整合记录
 
+## 3.10.3构建同步（2026-10-16，已完成）
+
+- 用户明确要求构建同步；基线6bda25df40af464558a1225d356acf4c7c567e1c，包含6679a2c箭矢独立防御、1af37e7本能高压保护与6bda25d遮挡缓存。主控独占occlusion-backoff工作树，版本3.10.3；Java17构建、完整回归、仅同步既定Forge47.4.21实例，备份/正式dist/三方哈希。保留实例自定义配置，不改启动器、不启动游戏、不push。
+- 实际验证：初次离线构建被Forge联网证书预检阻断；仅本次命令追加-Dnet.minecraftforge.gradle.check.certs=false后使用本地缓存完成Java17编译、build与lootScreeningTest，55任务全部执行成功。高压429、防御1447、感知1077、导航调试1163、拾取13391检查通过；Python291（279通过、12跳过）、六份默认附录与git diff --check通过。没有游戏内验收或CPU/FPS实测。
+- 同步前确认Minecraft未运行。旧3.10.2备份于维护目录备份/release-3.10.3-deployment；实例仅保留3.10.3。构建产物、dist正式归档和部署文件均4446330字节，SHA-256为BC37AE03188839E01D97838B0FA7DDD2823B2809BF30E98BC12BB7F1E37BE163；Manifest版本及四个新增策略/Goal类存在。五份实例JSON前后哈希一致，新遮挡预算缺省值由解析器使用。完整记录在验证日志/occlusion-backoff-3.10.3-deployment.json与同前缀build.log。
+- 三项源码交付连同本次版本/记录提交本地整合main；以下源码交付段落的“未构建/未部署/未整合”保留为当时阶段记录，本节是最新发布结果。待游戏测试：前/斜/后方未知射手来箭、未知来源多向高压与实际盾面、枪械备用近战/恢复占手、墙角微露出/拆墙开门/细缝与多人遮挡负载。此前Java21 C2原生崩溃根因未解决，本次构建不代表运行环境问题已修复；未push或启动游戏。
+
 ## 墙后视觉遮挡退避优化（2026-10-16，源码交付）
 
 - 基线1af37e7304a5aca7169186147998c8ae82098309，保留未构建箭矢/本能高压修改；主控/root独占worktrees/occlusion-backoff、fix/occlusion-backoff。范围VisualOcclusionMemory、HumanPerception视觉预筛与负缓存、纯几何证明模块、相关回归/配置说明/知识库。没有本轮编译/构建/同步/push授权。
