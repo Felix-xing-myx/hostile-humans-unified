@@ -21,9 +21,9 @@ public final class PerceptionConfig {
         add(m,"vision.far_full_angle",90,10,180,"远距离完整视场角（度） / Far full field of view in degrees");
         add(m,"vision.familiar_angle_multiplier",1.2,1,4,"旧敌视锥半角倍率 / Familiar-target half-angle multiplier");
         add(m,"vision.maximum_half_angle",90,5,90,"旧敌半角上限（度），不缩小陌生目标视野 / Familiar half-angle cap, never narrowing the base field");
-        add(m,"vision.occlusion_retry_ticks",10,1,100,"完整遮挡后的初次退避 / Initial complete-occlusion retry delay");
-        add(m,"vision.occlusion_max_retry_ticks",40,1,200,"静止遮挡候选最长退避 / Maximum stationary occlusion retry delay");
-        add(m,"vision.occlusion_move_reset",.5,.1,4,"主体或目标位移解除遮挡缓存 / Movement invalidating occlusion cache");
+        add(m,"vision.occlusion_retry_ticks",10,1,100,"完整遮挡初次退避及不规则碰撞复查间隔 / Initial occlusion and non-cube retry interval");
+        add(m,"vision.occlusion_max_retry_ticks",40,1,200,"实心遮挡几何证明的退避上限 / Maximum proven full-cube backoff");
+        add(m,"vision.occlusion_move_reset",.5,.1,4,"未完成身体补查的位移重置阈值；完整缓存任意有效位移先复核 / Partial sweep movement reset; complete cache revalidates any movement");
         add(m,"attention.idle_head_step",4,1,15,"闲置自然环顾每tick最大角速度 / Idle natural look angular speed per tick");
         add(m,"attention.sound_glance_ticks",20,2,60,"战斗中重要声音辅助回看时长 / Important combat sound glance duration");
         add(m,"recognition.base_ticks",5,1,200,"基础识别时长 / Recognition base ticks");
@@ -102,6 +102,9 @@ public final class PerceptionConfig {
         add(m,"budgets.rays_per_level",128,1,8192,"每维度每tick感知射线上限 / Perception ray limit per dimension per tick");
         add(m,"budgets.rays_per_server",256,1,16384,"每服务器每tick感知射线上限 / Perception ray limit per server per tick");
         add(m,"budgets.rays_per_human",2,1,16,"每人每轮快速候选检测上限，身体补查另计入总射线池 / Fast target probes per update; body fallback also consumes the shared ray pool");
+        add(m,"budgets.occlusion_per_level",32,1,4096,"每维度每tick遮挡几何证明上限 / Occlusion proof jobs per dimension per tick");
+        add(m,"budgets.occlusion_per_server",64,1,8192,"每服务器每tick遮挡几何证明上限 / Occlusion proof jobs per server per tick");
+        add(m,"budgets.occlusion_per_human",4,1,16,"每人每tick遮挡几何证明上限；不足退回原LOS / Occlusion proofs per human per tick; shortage falls back to normal LOS");
         add(m,"budgets.body_rays_per_target",9,1,27,"每目标每轮身体补查射线上限，遇到可见点提前结束 / Body fallback rays per target per update, stopping on visibility");
         add(m,"budgets.notices_per_level",256,1,16384,"每维度每tick线索接收上限 / Clue deliveries per dimension per tick");
         add(m,"budgets.notices_per_server",512,1,32768,"每服务器每tick线索接收上限 / Clue deliveries per server per tick");

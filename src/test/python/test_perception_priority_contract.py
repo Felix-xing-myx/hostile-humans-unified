@@ -17,14 +17,15 @@ class PerceptionPriorityContract(unittest.TestCase):
         body=code.split("private static VisualProbe bodyVisibility",1)[1].split("private static BodyVisibilitySamples.Point",1)[0]
         self.assertEqual(body.count("VisualOcclusionMemory.negative"),1)
         self.assertLess(body.index("samples.isEmpty()"),body.index("sweep.negative"))
-        self.assertIn("if(complete)VisualOcclusionMemory.negative",body)
+        self.assertIn("if(complete){",body)
+        self.assertIn("VisualOcclusionMemory.negative(h,e,now,cacheMask,cacheSamples)",body)
         self.assertIn("VisualOcclusionMemory.visible(h,e)",code)
     def test_urgent_bypasses_wait_without_resetting_unfinished_sweep(self):
         cache=source("VisualOcclusionMemory")
-        reset=cache.split("reset=",2)[2].split("if(!reset)",1)[0]
-        self.assertNotIn("urgent",reset)
+        geometry=cache.split("private static boolean geometryChanged",1)[1].split("private static void trim",1)[0]
+        self.assertNotIn("urgent",geometry)
         self.assertIn("urgent||now>=entry.retry",cache)
-        for condition in ("hasChunkAt", "getBlockState", "occlusion_move_reset", "wrapDegrees", "entries.size()>cap"):
+        for condition in ("hasChunkAt", "getBlockState", "occlusion_move_reset", "CachedOcclusionProof.covers", "entries.size()>cap"):
             self.assertIn(condition,cache)
     def test_natural_rotation_cannot_override_actual_action_or_stable_observation(self):
         attention=source("HumanAttention")

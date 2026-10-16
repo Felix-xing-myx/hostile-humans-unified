@@ -6,6 +6,10 @@ import dev.felix.hostilehumans.core.BodyVisibilitySamples;
 import dev.felix.hostilehumans.core.ScopedWorkBudget;
 import dev.felix.hostilehumans.core.AttentionFacingPolicy;
 import dev.felix.hostilehumans.core.NearVisionPolicy;
+import dev.felix.hostilehumans.core.CachedOcclusionProof;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import java.util.List;
 import com.google.gson.JsonObject;
 
 /** Behavioral policies, configuration provenance and perception/beacon temporal boundary cases. */
@@ -20,7 +24,30 @@ public final class PerceptionPolicyTest {
                 recognitionDefaults.number("recognition.alert_factor"),recognitionDefaults.number("recognition.familiar_factor"),
                 recognitionDefaults.number("recognition.combined_factor"));
     }
+    private static void occlusionProofCases(){
+        Vec3 eye=new Vec3(0,1.6,.5);
+        var body=BodyVisibilitySamples.of(9.7,0,.2,10.3,1.8,.8).stream().map(p->new Vec3(p.x(),p.y(),p.z())).toList();
+        var wall=List.of(new AABB(4,0,0,5,1,1),new AABB(4,1,0,5,2,1));
+        check(CachedOcclusionProof.covered(eye,body,wall),"real full wall proves every current body sample blocked");
+        var withFastPoint=new java.util.ArrayList<>(body);withFastPoint.add(new Vec3(10,1.6,3));
+        check(!CachedOcclusionProof.covered(eye,withFastPoint,wall),"extra fast observation point must be proven, not just the 27 body points");
+        var exposed=body.stream().map(p->p.add(0,0,2)).toList();
+        check(!CachedOcclusionProof.covered(eye,exposed,wall),"walking beyond wall invalidates proof immediately");
+        check(!CachedOcclusionProof.covered(eye,body,List.of(wall.get(0))),"missing upper blocker exposes body samples");
+        check(!CachedOcclusionProof.covered(eye,body,List.of(new AABB(11,0,0,12,2,1))),"block behind target cannot prove invisibility");
+        Vec3 lowEye=new Vec3(0,.5,.5);
+        var cube=List.of(new AABB(4,0,0,5,1,1));
+        check(CachedOcclusionProof.covered(lowEye,List.of(new Vec3(10,.5,1.749)),cube),"just inside a wall corner remains occluded");
+        check(!CachedOcclusionProof.covered(lowEye,List.of(new Vec3(10,.5,1.751)),cube),"two-thousandths exposure invalidates proof without movement threshold");
+        check(!CachedOcclusionProof.covered(lowEye,List.of(new Vec3(2,0,.5)),List.of(new AABB(1,-1,0,2,0,1))),
+                "touching floor endpoint does not falsely hide a visible foot");
+        check(!CachedOcclusionProof.covered(lowEye,List.of(),cube)
+                &&!CachedOcclusionProof.covered(lowEye,List.of(new Vec3(Double.NaN,0,0)),cube),"empty or invalid samples fail open to real LOS");
+        check(CachedOcclusionProof.covers(7,3)&&!CachedOcclusionProof.covers(3,7)
+                &&!CachedOcclusionProof.covers(7,0),"turning within old coverage retains cache; newly exposed FOV bits do not");
+    }
     public static void main(String[] args){
+        occlusionProofCases();
         for(int batch:new int[]{9,5,3}){
             var reduced=new dev.felix.hostilehumans.core.NegativeObservationSweep();
             for(int offset=0;offset<27;offset+=batch){

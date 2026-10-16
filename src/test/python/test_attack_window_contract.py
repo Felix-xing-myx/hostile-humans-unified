@@ -38,4 +38,4 @@ class AttackWindowContract(unittest.TestCase):
         self.assertEqual(root["activity_budget"]["crowded_body_rays"],5)
         self.assertEqual(root["activity_budget"]["battle_body_rays"],3)
         self.assertIn("sweep.negative(samples.size(),start,count,sampleMask)",source("HumanPerception"))
-        self.assertIn("else if(turned)",source("VisualOcclusionMemory"))
+        self.assertIn("CachedOcclusionProof.covers(entry.coveredMask,mask)",source("VisualOcclusionMemory"))

@@ -420,19 +420,32 @@ public final class HumanPerception {
         if(!enemy(h,e))return false;
         Track t=s.tracks.get(e.getUUID());if(t!=null&&t.checked==now)return false;
         boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
-        var box=e.getBoundingBox();boolean geometry=false;double visibility=e.getVisibilityPercent(h);
+        var box=e.getBoundingBox();double visibility=e.getVisibilityPercent(h);long mask=0;int index=0;
+        List<Vec3> eligibleSamples=new ArrayList<>();
         for(var sample:BodyVisibilitySamples.of(box.minX,box.minY,box.minZ,box.maxX,box.maxY,box.maxZ)){
-            if(withinVision(h,new Vec3(sample.x(),sample.y(),sample.z()),familiar,visibility)){geometry=true;break;}
+            Vec3 point=new Vec3(sample.x(),sample.y(),sample.z());
+            if(withinVision(h,point,familiar,visibility)){eligibleSamples.add(point);mask|=1L<<index;}
+            index++;
         }
-        if(!geometry){
+        Vec3 primary=e.getEyePosition();
+        if(t!=null&&t.bodySample!=null){var f=t.bodySample;
+            primary=new Vec3(box.minX+box.getXsize()*f.x(),box.minY+box.getYsize()*f.y(),box.minZ+box.getZsize()*f.z());}
+        if(withinVision(h,primary,familiar,visibility)){
+            if(!eligibleSamples.contains(primary))eligibleSamples.add(primary);
+            mask|=1L<<BodyVisibilitySamples.MAX_POINTS;
+        }
+        if(eligibleSamples.isEmpty()){
             s.geometrySkipped++;if(t!=null){t.visible=false;t.evidence.miss(now);t.denied="身体未进入有效视野";}
             s.pendingBodies.remove(e.getUUID());PerceptionBudget.cancelBodyRays(h,e.getUUID());return false;
         }
-        var retry=VisualOcclusionMemory.prepare(h,e,now,s.focusHurt&&Objects.equals(s.focus,e.getUUID()));
+        boolean freshHurt=s.focusHurt&&Objects.equals(s.focus,e.getUUID())
+                &&(h.hurtTime>0||now-s.focusStarted<4);
+        var retry=VisualOcclusionMemory.prepare(h,e,now,freshHurt,eligibleSamples,mask);
         if(retry.reset()){
             NegativeObservationSweep sweep=s.bodySweeps.get(e.getUUID());if(sweep!=null)sweep.reset();
         }
         if(!retry.allowed()){
+            if(t!=null){t.visible=false;t.evidence.miss(now);t.denied="完整遮挡缓存：等待复查或已验证实心遮挡";}
             s.occlusionSkipped++;s.pendingBodies.remove(e.getUUID());PerceptionBudget.cancelBodyRays(h,e.getUUID());return false;
         }
         return true;
@@ -464,7 +477,7 @@ public final class HumanPerception {
         Vec3 end=towardEye.lengthSqr()>1.e-8?point.add(towardEye.normalize().scale(1.e-4)):point;
         BlockHitResult hit=h.level().clip(new ClipContext(eye,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,h));
         boolean clear=hit.getType()==HitResult.Type.MISS;
-        if(!clear)VisualOcclusionMemory.blockedRay(h,target,hit);
+        if(!clear)VisualOcclusionMemory.blockedRay(h,target,hit,point);
         s.rays.addLast(new Ray(h.getEyePosition(),clear?point:hit.getLocation(),clear,now));
         while(s.rays.size()>8)s.rays.removeFirst();
         return clear;
@@ -518,7 +531,14 @@ public final class HumanPerception {
             if(clearVisualRay(h,s,e,point,now)){sweep.reset();return new VisualProbe(point,true,"身体部位无遮挡");}
         }
         boolean complete=sweep.negative(samples.size(),start,count,sampleMask);
-        if(complete)VisualOcclusionMemory.negative(h,e,now);
+        if(complete){
+            List<Vec3> cacheSamples=new ArrayList<>(samples);long cacheMask=sampleMask;
+            if(withinVision(h,primary,familiar,visibility)){
+                if(!cacheSamples.contains(primary))cacheSamples.add(primary);
+                cacheMask|=1L<<BodyVisibilitySamples.MAX_POINTS;
+            }
+            VisualOcclusionMemory.negative(h,e,now,cacheMask,cacheSamples);
+        }
         return new VisualProbe(null,complete,complete?"身体视野采样均被方块遮挡":"身体采样尚未完成");
     }
     private static BodyVisibilitySamples.Point fraction(AABB box,Vec3 point){
@@ -691,7 +711,7 @@ public final class HumanPerception {
         int pendingIndex=0;
         for(Observe o:s.pending.values())row(rows,"targets","排队来源 "+(++pendingIndex),
                 (o.familiar?"已标记回看":"未标记来袭方向")+" · "+remaining(o.until,now));
-        for(String kind:List.of("queries","rays","notices","sources"))row(rows,"budgets",kind,PerceptionBudget.usage(h,kind));
+        for(String kind:List.of("queries","rays","occlusion","notices","sources"))row(rows,"budgets",kind.equals("occlusion")?"遮挡几何复核":kind,PerceptionBudget.usage(h,kind));
         for(Track t:s.tracks.values()){
             if(!t.marked&&!t.evidence.hasEvidence())continue;
             boolean live=t.marked&&now<t.liveUntil;String stage=t.evidence.active()?"识别中":t.evidence.hasEvidence()?"识别暂停，保留证据":live?"动态位置有效":"最后位置/旧敌标签";
