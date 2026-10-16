@@ -1,5 +1,14 @@
 # 开发任务与整合记录
 
+## 可见来袭箭矢独立防御（2026-10-16，源码交付）
+
+- 基线816c234de2e9227a6874c01ef157f6e568f3801e；主控/root独占worktrees/visible-arrow-reflex、fix/visible-arrow-reflex。范围ShieldDefenseController/ProjectileShieldPolicy、新ProjectileReactionGoal、HumanGunner注册、HumanPerception动作名、对应回归和知识库；共享入口由主控接入。
+- 用户要求视角内看见来袭箭即可防御，不要求定位射手。保留前向水平180°、已有箭矢扫描/轨迹/冷却/武器和避险约束；补当前箭体无遮挡，独立短防御只借用既有盾牌控制器，不锁敌/授予射手位置/更改正式命令。无本轮编译、构建、部署或push授权。
+- 实现：findIncomingArrow在未来命中/路径无墙之后追加当前箭体LOS；inFront按头部水平yaw判断，避免俯仰收窄。原tickCombat也只朝箭体，移除通过已知射手坐标决定盾牌朝向的分支。无有效主目标时ProjectileReactionGoal（-9，与战术同级）调用同一控制器PROJECTILE独立租约，短暂停移/转向，不调用setTarget/射手位置；已有有效目标保持原战术防御。
+- 独立反应期限首次固定为max(6,ceil(预计命中)+2)，普通最多14、远程最多12tick，不被连射无限续期；结束仅释放PROJECTILE并继承原盾冷却/反击窗口。无盾、破盾冷却、主手枪、恢复占手、撤退/危险与测试暂停时不触发。32支/3tick扫描、12tick轨迹及远程10tick撞击门槛保留，未新增搜索预算或射手知识。
+- 验证：Python291（279通过、12跳过）、484份Java语法解析、diff和3页知识库Wiki检查通过。DefensiveBehaviorTest新增前/斜/后角度、侧边界、无效几何及匿名准入/朝箭体生产接线检查，但未编译执行；本轮无Gradle/部署/push/游戏验证。知识库三页备份后同步，记录见维护目录验证日志/visible-arrow-reflex-knowledge.json。
+- 独立分支本地提交，未整合main；待游戏验收：无目标正/斜/背后来箭、隔墙箭、掠过但不命中、未知射手不获得仇恨、原已知战斗与弓弩蓄力、驻守/测试接管、破盾/恢复/避险与箭雨限时释放。原生盾生效延迟及转向仍存在，不能保证极近高速箭全部挡住。
+
 ## 移除结束测试热键与崩溃核对（2026-10-16，完成构建同步）
 
 - 基线0e217930fd9d0721a892fe2b2a610cc1c6a0423a；主控/root独占worktrees/observer-no-hotkey、fix/observer-no-hotkey。范围NavigationDebugClient、双语热键资源、版本/日志/知识库；用户要求移除独立F9并重构建。保留F8详情按钮及服务端权限/归属/释放流程。

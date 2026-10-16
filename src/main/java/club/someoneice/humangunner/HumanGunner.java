@@ -812,6 +812,7 @@ public final class HumanGunner {
         // (priority -6), even when that order briefly clears the attack target.
         human.addCombatGoal(ShoreSeekingPolicy.COMBAT_GOAL_PRIORITY,
                 new AdaptiveCombatGoal(human));
+        human.addCombatGoal(ShoreSeekingPolicy.COMBAT_GOAL_PRIORITY, new ProjectileReactionGoal(human));
         human.addCombatGoal(-3, new PlayerLikeMovementGoal(human));
         human.addCombatGoal(-3, new CombatConsumableGoal(human));
         human.addCombatGoal(-2, new CombatFoodRecoveryGoal(human));

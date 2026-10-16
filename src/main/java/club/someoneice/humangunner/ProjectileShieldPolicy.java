@@ -12,6 +12,13 @@ final class ProjectileShieldPolicy {
     private ProjectileShieldPolicy() {
     }
 
+    /** Horizontal front half-space; pitch does not turn an overhead shot into rear vision. */
+    static boolean insideReactionView(Vec3 look, Vec3 offset) {
+        double facingLength = look.x * look.x + look.z * look.z;
+        double distance = offset.x * offset.x + offset.z * offset.z;
+        return Double.isFinite(facingLength) && Double.isFinite(distance)
+                && facingLength > 1.0E-8 && (distance < 1.0E-8 || look.x * offset.x + look.z * offset.z >= 0);
+    }
     static boolean shouldGuardRangedUser(double ticksToImpact) {
         return Double.isFinite(ticksToImpact)
                 && ticksToImpact >= 0.0D

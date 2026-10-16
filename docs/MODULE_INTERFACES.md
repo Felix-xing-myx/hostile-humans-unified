@@ -346,3 +346,9 @@ HumanAwareness.passiveCreature统一分类：排除玩家、人类、Enemy/MONST
 弓/弩/枪统一调用RangedFiringPosition.findAttackWindowPath；防守分离保留findVisiblePath硬距约束。RangedWindowCandidates生成墙面开口投影、近场格点及轮转远场候选，loaded-only、支撑/身体碰撞/命令预筛；最多96保留、192次站位检查（开口面最多75块）。生成前取得Optional FIRING_LANE额度，VISIBLE_WAITING与会话同为pending；最大4候选/批，完整安全路径+实际终点名义弹道通过即交付当前批次最佳项。
 
 RangedShotClearance以canTarget为已确认动态权限边界，canShoot/fromPosition共同检查原武器名义弹道，不附加眼部LOS否决；不改变瞄准点、实际散布、发射、弹药或原生物理。VisualOcclusionMemory转头仅解除完成的退避，不清空未变化射线几何的部分覆盖，sampleMask负责FOV集合变化；身体单批默认9、拥挤5、团战3，完整逻辑样本仍为27。
+
+## 可见箭矢匿名防御
+
+ProjectileReactionGoal与AdaptiveCombatGoal同优先级-9；已有合法主目标由战术Goal处理，无主目标时独立反应只占短MOVE/LOOK。ShieldDefenseController.findIncomingArrow仍负责32候选/3tick扫描、12tick轨迹预测和射程/友军/反击过滤，新增visibleArrow检查当前箭体遮挡；insideReactionView采用头部yaw的前向水平180°，不因俯仰收窄。
+
+匿名入口allows/begin/continues/tick/endProjectileReaction仅租用同一控制器的PROJECTILE盾牌所有权；不使用射手进行canTarget/导航/攻击。期限由首次预计撞击确定，不被连射无限延长，结束释放仅自己的租约并设置原有反击窗口。原战斗tickCombat也只朝可见箭体，而非读取owner位置。未知来袭不会调用notice/标记/选敌，实际命中仍经HumanPerception.hurt取得警觉及来向。

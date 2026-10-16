@@ -25,7 +25,7 @@ import net.minecraft.world.item.UseAnim;
  * Reactive and anticipatory requests share ownership, bounded observation and counter windows.
  */
 public final class ShieldDefenseController {
-    private enum Owner { COMBAT, BODYGUARD }
+    private enum Owner { COMBAT, BODYGUARD, PROJECTILE }
     public record IncomingArrow(AbstractArrow projectile, LivingEntity shooter, double ticksToImpact) { }
     record CombatUpdate(int remainingTicks, boolean counterattack) { }
     private final Human human;
@@ -51,6 +51,7 @@ public final class ShieldDefenseController {
     private static final int PROJECTILE_SCAN_INTERVAL = 3;
     private static final int MAX_TRACKED_ARROWS = 32;
     private static final int SHOOTER_MEMORY_TICKS = 100;
+    private int reactiveGuardUntil;
     private int nextProjectileScan;
     private int lastProjectileProbeTick = Integer.MIN_VALUE;
     private IncomingArrow lastProjectileProbe;
@@ -297,12 +298,9 @@ public final class ShieldDefenseController {
             projectileDefenseUntil = human.tickCount
                     + ProjectileShieldPolicy.guardWindowTicks(
                     isDedicatedRangedCombatant(), incomingArrow.ticksToImpact());
-            // Face the incoming shot's source, not a changing combat/path
-            // target. Do not change the attack focus merely to orient a shield.
-            facingThreat = incomingArrow.shooter() != null && incomingArrow.shooter().isAlive()
-                    && HumanPerception.canTarget(human,incomingArrow.shooter())
-                    && inFront(incomingArrow.shooter().position())
-                    ? incomingArrow.shooter() : incomingArrow.projectile();
+            // Face the visible projectile itself, never infer a hidden shooter's position.
+            // Do not change the attack focus merely to orient a shield.
+            facingThreat = incomingArrow.projectile();
         } else if (rangedWarning && preparingKnownShot() != null) {
             facingThreat = rememberedShooter;
         } else if (CombatPressurePolicy.isRecentHit(human.tickCount, human.getLastHurtByMobTimestamp())
@@ -432,7 +430,7 @@ public final class ShieldDefenseController {
                     arrow.isNoGravity() ? 0.0D : 0.05D);
             if (!Double.isFinite(impact) || impact >= earliest
                     || (ranged && !ProjectileShieldPolicy.shouldGuardRangedUser(impact))) continue;
-            if (!trajectoryClear(arrow, impact)) continue;
+            if (!trajectoryClear(arrow, impact) || !visibleArrow(arrow)) continue;
             lastProjectileProbe = new IncomingArrow(arrow,
                     arrow.getOwner() instanceof LivingEntity shooter ? shooter : null, impact);
             earliest = impact;
@@ -441,9 +439,66 @@ public final class ShieldDefenseController {
     }
 
     private boolean inFront(Vec3 point) {
-        Vec3 offset = point.subtract(human.position()).multiply(1.0D, 0.0D, 1.0D);
-        Vec3 facing = human.getLookAngle().multiply(1.0D, 0.0D, 1.0D);
-        return facing.dot(offset) >= 0.0D;
+        return ProjectileShieldPolicy.insideReactionView(Vec3.directionFromRotation(0, human.getYHeadRot()), point.subtract(human.position()));
+    }
+
+    private boolean visibleArrow(AbstractArrow arrow) {
+        return inFront(arrow.position()) && human.level().clip(new ClipContext(human.getEyePosition(),
+                arrow.getBoundingBox().getCenter(), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
+                human)).getType() == HitResult.Type.MISS;
+    }
+
+    /** A short physical reaction to a seen projectile, not permission to target its owner. */
+    boolean allowsProjectileReaction() {
+        return config.enabled() && human.isAlive() && !HumanTargetCoordinator.suspended(human)
+                && !human.isFleeing && !human.isInLava() && human.explosionThreat == null
+                && !human.isPassenger() && !RecoverySupplies.hasHandCustody(human)
+                && !RetreatRecoveryPolicy.shouldForceRetreat(human)
+                && !human.humanGunner$hasPendingMeleeAttack() && !isPressureBreakAttempt()
+                && (!human.isUsingItem() || SpartanEquipmentCompat.isShield(human.getUseItem())
+                    || RangedWeaponCustody.isBowOrCrossbow(human.getUseItem()))
+                && canPreemptivelyBlockProjectile();
+    }
+    boolean beginProjectileReaction(IncomingArrow arrow) {
+        if (!allowsProjectileReaction() || arrow == null || !visibleArrow(arrow.projectile())) return false;
+        release(Owner.BODYGUARD);
+        guardedCharge.capture(human);
+        if (human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
+        human.setChargingCrossbow(false);
+        reactiveGuardUntil = human.tickCount + ProjectileShieldPolicy.guardWindowTicks(
+                isDedicatedRangedCombatant(), arrow.ticksToImpact());
+        InteractionHand hand = SpartanEquipmentCompat.isShield(human.getOffhandItem())
+                ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+        raise(Owner.PROJECTILE, hand, true);
+        if (owner != Owner.PROJECTILE || !ownsCurrentShield()) return false;
+        human.markShieldFacing(arrow.projectile());
+        return true;
+    }
+    boolean continuesProjectileReaction() {
+        return owner == Owner.PROJECTILE && ownsCurrentShield() && allowsProjectileReaction()
+                && human.tickCount < reactiveGuardUntil;
+    }
+    void tickProjectileReaction() {
+        if (owner != Owner.PROJECTILE || !ownsCurrentShield()) return;
+        IncomingArrow incoming = findIncomingArrow();
+        if (incoming != null) {
+            // Keep the original bounded deadline; a stream of arrows cannot hold this lease forever.
+            human.getLookControl().setLookAt(incoming.projectile(), 90, 90);
+            human.markShieldFacing(incoming.projectile());
+        }
+        guardedCharge.tick(human);
+        MovementSpeedController.combat(human, false);
+    }
+    void endProjectileReaction() {
+        if (owner != Owner.PROJECTILE) return;
+        release(Owner.PROJECTILE);
+        reactiveGuardUntil = 0;
+        int delay = Math.max(config.shieldBlockCooldownTicks(), CombatPressurePolicy.COUNTER_WINDOW_TICKS);
+        if (RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem()))
+            delay = Math.max(delay, guardedCharge.counterWindowTicks(human));
+        nextDefenseTick = Math.max(nextDefenseTick, human.tickCount + delay);
+        nextCounterGuardTick = Math.max(nextCounterGuardTick, human.tickCount + delay);
+        if (isDedicatedRangedCombatant()) nextProjectileGuardTick = human.tickCount + (isCrossbowCombatant() ? 32 : 24);
     }
 
     private boolean trajectoryClear(AbstractArrow arrow, double impactTicks) {

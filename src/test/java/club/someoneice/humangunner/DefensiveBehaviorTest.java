@@ -28,6 +28,23 @@ public final class DefensiveBehaviorTest {
                 "adaptive retreat anticipates endpoint and moving threat");
         check(calls("com/craftix/hostile_humans/entity/ai/goal/RunFromTarget", "tick",
                 "needsExtension"), "native retreat also anticipates");
+        Vec3 forward = new Vec3(0, 0, 1);
+        for (int degrees = -180; degrees <= 180; degrees++) {
+            if (Math.abs(degrees) == 90) continue; // Exact edge fixtures below avoid floating-point cosine error.
+            double radians = Math.toRadians(degrees);
+            check(ProjectileShieldPolicy.insideReactionView(forward, new Vec3(Math.sin(radians), 4, Math.cos(radians)))
+                    == (Math.abs(degrees) < 90), "front/diagonal/rear angular boundary: " + degrees);
+        }
+        check(ProjectileShieldPolicy.insideReactionView(forward,new Vec3(1, 2, 0))
+                && ProjectileShieldPolicy.insideReactionView(forward,new Vec3(-1, -2, 0)), "exact side boundary is included");
+        check(!ProjectileShieldPolicy.insideReactionView(forward,new Vec3(0, 0, Double.NaN))
+                && !ProjectileShieldPolicy.insideReactionView(Vec3.ZERO,new Vec3(1,0,1)), "invalid geometry fails closed");
+        String reaction = "club/someoneice/humangunner/ProjectileReactionGoal";
+        check(calls(reaction,"canUse","findIncomingArrow") && calls(reaction,"start","beginProjectileReaction"),
+                "anonymous reaction enters shared controller through predicted projectile");
+        check(!calls(reaction,"start","setTarget") && !calls(SHIELDS,"beginProjectileReaction","canTarget")
+                && !calls(SHIELDS,"beginProjectileReaction","getOwner"), "anonymous shield reaction cannot require or acquire shooter");
+        check(calls(SHIELDS,"findIncomingArrow","visibleArrow"), "predicted hit also needs current projectile visibility");
         AABB body = new AABB(-0.3D, 0.0D, -0.3D, 0.3D, 1.8D, 0.3D);
         Vec3 incoming = new Vec3(-10.0D, 1.0D, 0.0D);
         Vec3 velocity = new Vec3(2.0D, 0.1D, 0.0D);
