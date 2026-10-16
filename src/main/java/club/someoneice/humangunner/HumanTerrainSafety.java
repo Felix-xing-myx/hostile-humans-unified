@@ -122,6 +122,25 @@ public final class HumanTerrainSafety {
         return safeStep(human, direction.normalize().scale(1.5D).add(0, apex, 0));
     }
 
+    /** Tactical floor retention, separate from the universal survivable-drop policy. */
+    static boolean maintainsFiringFloor(Human human, Vec3 step) {
+        double half=Math.max(.05,human.getBbWidth()*.5-.02);
+        for(double fraction:new double[]{.5,1}) {
+            Vec3 point=human.position().add(step.scale(fraction));
+            for(int sample=0;sample<5;sample++) {
+                double x=point.x+(sample==0?0:sample<=2?-half:half);
+                double z=point.z+(sample==0?0:(sample&1)==0?-half:half);
+                double landing=landingHeight(human,x,human.getY(),z,1);
+                if(!firingFloorHeight(human.getY(),landing))return false;
+            }
+        }
+        return true;
+    }
+
+    static boolean firingFloorHeight(double feet,double landing) {
+        return Double.isFinite(feet)&&Double.isFinite(landing)&&feet-landing<=.6;
+    }
+
     private static Reason footprintReason(Human human, Vec3 point) {
         double half = Math.max(0.05D, human.getBbWidth() * 0.5D - 0.02D);
         int supported = 0;
@@ -140,8 +159,12 @@ public final class HumanTerrainSafety {
     }
 
     private static double landingHeight(Human human, double x, double feetY, double z) {
+        return landingHeight(human,x,feetY,z,HumanFallPolicy.MAX_PLANNED_DROP+1);
+    }
+
+    private static double landingHeight(Human human, double x, double feetY, double z,int maximumDrop) {
         int top = Mth.floor(feetY + 1.1D);
-        for (int y = top; y >= Mth.floor(feetY) - HumanFallPolicy.MAX_PLANNED_DROP - 1; y--) {
+        for (int y = top; y >= Mth.floor(feetY) - maximumDrop; y--) {
             BlockPos pos = BlockPos.containing(x, y, z);
             if (!human.level().hasChunkAt(pos) || !human.level().getWorldBorder().isWithinBounds(pos)) return Double.NaN;
             if (RetreatPathSafety.isHazard(human, pos)

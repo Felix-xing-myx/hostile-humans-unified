@@ -58,6 +58,13 @@ public final class RangedTerrainSafetyTest {
         check(!HumanFallPolicy.accepts(1000, 13, 0), "absolute geometric cap survives fall immunity");
         check(!HumanFallPolicy.accepts(20, Double.NaN, 0), "invalid drop rejected");
         check(!HumanFallPolicy.accepts(20, 3, Double.POSITIVE_INFINITY), "invalid damage rejected");
+        check(HumanFallPolicy.accepts(20,3,0) && !HumanTerrainSafety.firingFloorHeight(3,0),
+                "a survivable descent is still an unwanted departure from an active shooting floor");
+        check(HumanTerrainSafety.firingFloorHeight(3,3) && HumanTerrainSafety.firingFloorHeight(3,2.5),
+                "level ground and half-slabs retain ordinary local shooting movement");
+        check(!HumanTerrainSafety.firingFloorHeight(3,2), "whole-block ledge is excluded from optional shooting steps");
+        check(!HumanTerrainSafety.firingFloorHeight(3,Double.POSITIVE_INFINITY)
+                && !HumanTerrainSafety.firingFloorHeight(3,Double.NaN), "missing support cannot preserve a firing floor");
         for (int health = 1; health <= 200; health++) {
             check(HumanFallPolicy.accepts(health, 3, 0), "ordinary safe step never needs remaining health");
             check(!HumanFallPolicy.accepts(health, 12, health), "lethal planned fall never allowed");
@@ -72,6 +79,17 @@ public final class RangedTerrainSafetyTest {
         check(!RangedTerrainPolicy.keepMelee(400, 0), "unreachable chase periodically retries ranged");
         String root = "club/someoneice/humangunner/";
         String human = "com/craftix/hostile_humans/entity/entities/Human";
+        for(String goal:new String[]{root+"GunnerGoal","com/craftix/hostile_humans/entity/ai/goal/BowAttack",
+                "com/craftix/hostile_humans/entity/ai/goal/CrossbowGoal"}) {
+            String method=goal.endsWith("GunnerGoal")?"moveForFiringPosition":"tick";
+            check(calls(goal,method,root+"RangedFiringMemory","observe")
+                    &&calls(goal,method,root+"RangedFiringMemory","recover"), "all three ranged modes share firing memory and recovery");
+        }
+        check(calls(root+"RangedTerrainCombat","tryStrafe",root+"RangedFiringMemory","keepsFiringFloor"),
+                "shooting steps use tactical floor retention before submitting motion");
+        check(calls(root+"RangedFiringMemory","recover",root+"OptionalPathBudget","claim")
+                && calls(root+"RangedFiringMemory","validPath",root+"RangedShotClearance","fromPosition"),
+                "remembered floor still requires budget and current real endpoint ballistics");
         check(calls(human, "travel", root + "HumanTerrainSafety", "guardTravel"), "all locomotion inputs use final safety guard");
         check(calls(human, "getMaxFallDistance", root + "HumanFallPolicy", "accepts"), "A-star descent uses live health budget");
         check(calls(human, "expectedRawFallDamage", null, "calculateFallDamage"), "fall assessment never causes real damage");

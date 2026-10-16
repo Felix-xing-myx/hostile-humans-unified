@@ -368,3 +368,12 @@ VisualOcclusionMemory.prepare接收当前FOV身体点及快速眼部/上次可�
 CachedOcclusionProof只接受已实际命中且以CollisionContext.of(h)确认完整碰撞的方块：最多8立方体×28当前点；缩进内部并匹配真实LOS端点微偏移，不能用形状bounds代替完整实体形状。支持证明所有当前点遮挡后10/20/40tick退避，不规则碰撞真实复查不超过首次间隔（默认10）。证明至少4tick复核一次，动点提前；可见、开窗、proof失败按原LOS预算恢复，判定不足不记为遮挡。
 
 PerceptionBudget复用独立occlusion池，默认每人4/维度32/全服64份每tick，额度不足取消可选证明请求并退回真实LOS，不保留过期遮挡、不给额外射线。证明不写Ray或刷新目标位置；拒绝已确认负缓存时仅miss证据/取消补查，调试budget新增遮挡几何复核。新受击回看前4tick或实际hurtTime保留紧急复查，长focusHurt不永久绕过冷却。
+
+
+## 射位保持与失位返回
+
+RangedFiringMemory是弓/弩/枪原Goal调用的短期几何状态，不是新Goal或锁敌器。observe接收已计算名义射界与武器有效射程；WeakHashMap值仅含目标UUID、维度键、武器Item、脚位/进展、计时和Path。当前可用射界且站稳时记住一处射位200tick；切目标/维度/武器类型或权限失效清除，不保存隐藏实体坐标。
+
+RangedTerrainCombat.tryStrafe在普通可射击输入上通过keepsFiringFloor调用HumanTerrainSafety.maintainsFiringFloor：最多5输入×中终点×中心四角，支撑下降超过0.6拒绝；每点仅复用原形状查询的当前附近3～4层，不使用全跌落深度。半砖仍允许；策略拒绝不报告地形失败，通用HumanFallPolicy、追击与必要退开不变。
+
+recover只在失去射界时、原普通地形规划之前尝试，已有地形绕路和窗口搜索仍优先。返回≤16格旧点、40tick失败重试、最多2次、路线100tick/无进展40tick，合法完整安全路径及真实终点碰撞/射程/命令/名义弹道均需复核。每次探测与10tick复查共用FIRING_LANE 1份，额度等待不杀掉已建立路线，原最终旅行安全继续有效。只停止MovementContinuity确认属于自己的Path，外部接管不停止新路线。恢复射界即释放旧返回；近身≤4格、命令/测试/高压/避险/上岸等让位。不发布仇恨、不读隐藏射手、不瞬移。

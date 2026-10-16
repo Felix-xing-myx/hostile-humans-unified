@@ -103,10 +103,12 @@ public final class RangedTerrainCombat {
         if (forward == 0 && right == 0) { human.getMoveControl().strafe(0, 0); return false; }
         double yaw = Math.toRadians(facingYaw);
         float[][] choices = {{forward, right}, {forward, -right}, {forward, 0}, {0, right}, {0, -right}};
+        boolean retainedFloor=false;
         for (float[] choice : choices) {
             if (choice[0] == 0 && choice[1] == 0) continue;
             Vec3 direction = new Vec3(choice[1] * Math.cos(yaw) - choice[0] * Math.sin(yaw), 0,
                     choice[0] * Math.cos(yaw) + choice[1] * Math.sin(yaw)).normalize().scale(1.25D);
+            if(!RangedFiringMemory.keepsFiringFloor(human,direction)){retainedFloor=true;continue;}
             if ((!gunMovement || SoldierOrder.allowsCombatPosition(human, human.position().add(direction)))
                     && HumanTerrainSafety.safeStep(human, direction)
                     && human.level().noCollision(human, human.getBoundingBox().expandTowards(direction))) {
@@ -123,7 +125,7 @@ public final class RangedTerrainCombat {
         human.clearRangedStrafeMotion();
         human.setZza(0);
         LivingEntity target = human.getTarget();
-        if (target != null) {
+        if (target != null && !retainedFloor) {
             State state = state(human, target);
             if (RangedTerrainPolicy.shouldReportBlockedSteps(++state.blockedSteps))
                 CombatTerrainNavigation.failed(human, target);

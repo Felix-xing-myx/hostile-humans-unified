@@ -158,6 +158,17 @@ extends Goal {
             if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.observe(human, livingentity, flag);
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
+            if(mob instanceof Human human) {
+                club.someoneice.humangunner.RangedFiringMemory.observe(human,livingentity,
+                        flag && d0<=attackRadiusSqr,attackRadiusSqr);
+                if(!flag && club.someoneice.humangunner.RangedFiringMemory.recover(human,livingentity,speedModifier)) {
+                    setOrbitSpeed(false);
+                    clearStrafeInput();this.strafingTime=-1;
+                    mob.getLookControl().setLookAt(livingentity,45.0F,35.0F);
+                    tickShot(livingentity,false);
+                    return;
+                }
+            }
             if (mob instanceof Human human && club.someoneice.humangunner.CombatTerrainNavigation
                     .update(human, livingentity, speedModifier, flag && d0 <= attackRadiusSqr).ownsMovement()) {
                 setOrbitSpeed(false);

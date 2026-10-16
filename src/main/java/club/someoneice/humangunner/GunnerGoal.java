@@ -463,6 +463,13 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private void moveForFiringPosition(LivingEntity target, double distance,
                                        GunRangePolicy.Band range, boolean obscured) {
         if (mob instanceof Human human) {
+            RangedFiringMemory.observe(human,target,!obscured && distance*distance<=firingRangeSqr(range)
+                    && HumanAmmo.canUseGun(human,mob.getMainHandItem()),firingRangeSqr(range));
+            if(obscured && RangedFiringMemory.recover(human,target,1.0D)) {
+                clearLateralInputPreservingNavigation();
+                approachingTarget=false;seekingFiringPosition=true;
+                return;
+            }
             if (CombatTerrainNavigation.hasWork(human, target)) stopLateralMovement();
             var terrain = CombatTerrainNavigation.update(human, target, 1.0D,
                     GunRangePolicy.directFiringMovement(obscured,distance*distance,firingRangeSqr(range))
