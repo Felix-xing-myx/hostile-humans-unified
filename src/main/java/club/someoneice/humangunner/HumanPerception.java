@@ -26,7 +26,7 @@ public final class HumanPerception {
     private static final Map<Human,State> STATES=new WeakHashMap<>();
     private static final class Track {
         final UUID id; String name="目标";
-        boolean marked; long visual=-1, liveUntil=-1, familiarUntil=-1, positionAt=-1, checked=-1;
+        boolean marked; long visual=-1, liveUntil=-1, familiarUntil=-1, positionAt=-1, checked=-1, defenseUntil=-1;
         final RecognitionEvidence evidence=new RecognitionEvidence();
         BodyVisibilitySamples.Point bodySample;
         long lookAfter;
@@ -91,12 +91,28 @@ public final class HumanPerception {
                 && !(e instanceof Player p &&(p.isCreative()||p.isSpectator()))
                 && !HumanRelations.allied(h,e);
     }
+    private static boolean allowsCreatureResponse(Human h,LivingEntity e){
+        if(!HumanAwareness.passiveCreature(e))return true;
+        State s=STATES.get(h);Track t=s==null?null:s.tracks.get(e.getUUID());long now=now(h);
+        return t!=null&&PerceptionPolicy.defensiveCreature(now,t.defenseUntil,t.marked,t.liveUntil,t.familiarUntil);
+    }
+    private static void recordCreatureDefense(Human h,LivingEntity source){
+        if(!HumanAwareness.passiveCreature(source)||!observable(h,source))return;
+        Track t=track(state(h),source.getUUID());
+        if(t!=null)t.defenseUntil=now(h)+c().integer("memory.familiar_ticks");
+    }
+    private static boolean allowsCreatureClue(Human h,String kind,UUID source){
+        if(source==null||!(h.level() instanceof ServerLevel level)
+                ||!(level.getEntity(source) instanceof LivingEntity e)||!HumanAwareness.passiveCreature(e))return true;
+        return (kind.equals("hurt")||kind.equals("last")||kind.equals("owner"))&&allowsCreatureResponse(h,e);
+    }
     private static boolean valid(Human h,LivingEntity e){
-        return observable(h,e)&&h.canAttack(e)
+        return observable(h,e)&&allowsCreatureResponse(h,e)&&h.canAttack(e)
                 &&!(e instanceof Player p&&p.getItemInHand(p.getUsedItemHand()).is(h.getTameItem()));
     }
     private static boolean enemy(Human h,LivingEntity e){
-        if(!observable(h,e))return false;
+        if(!observable(h,e)||!allowsCreatureResponse(h,e))return false;
+        if(HumanAwareness.passiveCreature(e))return true; // Only a recorded real defense source reaches here.
         if(e instanceof Player)return !SoldierCombatMode.hasCombatController(h)
                 || SoldierCombatMode.isExplicitlyAuthorizedAgainst(h,e);
         return h.isAngryAt(e)||HumanTargeting.isAutonomousPlayerEnemy(h,e)
@@ -111,12 +127,12 @@ public final class HumanPerception {
     public static List<LivingEntity> knownDynamicTargets(Human h){
         if(!(h.level() instanceof ServerLevel level))return List.of();State s=STATES.get(h);if(s==null)return List.of();
         List<LivingEntity> result=new ArrayList<>();
-        for(Track t:s.tracks.values())if(t.marked&&now(h)<t.liveUntil&&level.getEntity(t.id) instanceof LivingEntity e&&observable(h,e))result.add(e);
+        for(Track t:s.tracks.values())if(t.marked&&now(h)<t.liveUntil&&level.getEntity(t.id) instanceof LivingEntity e&&observable(h,e)&&allowsCreatureResponse(h,e))result.add(e);
         return List.copyOf(result);
     }
     public static Vec3 knownPosition(Human h,LivingEntity e){
         if(e==null)return null;State s=STATES.get(h);Track t=s==null?null:s.tracks.get(e.getUUID());
-        if(t==null||!t.marked||!observable(h,e))return null;
+        if(t==null||!t.marked||!observable(h,e)||!allowsCreatureResponse(h,e))return null;
         return PerceptionPolicy.live(now(h),t.liveUntil)?e.position():
                 now(h)<t.positionAt+c().integer("memory.last_position_ticks")?t.position:null;
     }
@@ -145,7 +161,8 @@ public final class HumanPerception {
         transition(s,now(h),reason);
     }
     public static void notice(Human h,String kind,Vec3 position,UUID source,int ttl){
-        if(h.level().isClientSide||!h.isAlive()||position==null||!finite(position)||ttl<=0)return;
+        if(h.level().isClientSide||!h.isAlive()||position==null||!finite(position)||ttl<=0
+                ||!allowsCreatureClue(h,kind,source))return;
         State s=state(h);long now=now(h);alert(h,s,"线索："+kind);
         int priority=switch(kind){case "aid","owner","hurt"->4;case "last","beacon"->3;case "explosion"->2;default->1;};
         Clue match=null;
@@ -164,8 +181,11 @@ public final class HumanPerception {
         s.clues.sort(Comparator.comparingInt((Clue a)->a.priority).reversed().thenComparing(Comparator.comparingLong((Clue a)->a.created).reversed()));
         while(s.clues.size()>c().integer("hearing.maximum_clues"))s.clues.remove(s.clues.size()-1);
     }
-    public static void ownerClue(Human h,LivingEntity target){
-        if(target!=null&&target.level()==h.level())notice(h,"owner",target.position(),target.getUUID(),c().integer("hearing.notice_ticks"));
+    public static void ownerClue(Human h,LivingEntity target){ownerClue(h,target,false);}
+    public static void ownerClue(Human h,LivingEntity target,boolean defendingOwner){
+        if(h.level().isClientSide||target==null||target.level()!=h.level())return;
+        if(defendingOwner)recordCreatureDefense(h,target);
+        notice(h,"owner",target.position(),target.getUUID(),c().integer("hearing.notice_ticks"));
     }
     public static void hurt(Human h,DamageSource source,float actual){
         if(h.level().isClientSide||actual<=0||!h.isAlive())return;
@@ -185,6 +205,7 @@ public final class HumanPerception {
         else if(!projectileImpact&&!periodic&&source.getSourcePosition()!=null)
             direction=source.getSourcePosition().subtract(h.getEyePosition()).normalize();
         if(actual>0&&!periodic)HumanAwareness.aid(h);
+        if(!periodic&&owner instanceof LivingEntity defenderSource)recordCreatureDefense(h,defenderSource);
         if(!(owner instanceof LivingEntity attacker)||!valid(h,attacker)){
             if(direction!=null&&direction.lengthSqr()>1.e-8&&!periodic&&!s.focusHurt&&now>=s.directionProtectedUntil){
                 if(s.focus!=null)release(s,"真实受击优先于普通观察");
@@ -216,7 +237,7 @@ public final class HumanPerception {
     private static void startNext(Human h,State s,long now){
         if(s.focus!=null||now<s.directionProtectedUntil)return;
         var it=s.pending.values().iterator();while(it.hasNext()){
-            Observe o=it.next();it.remove();if(now>=o.until)continue;
+            Observe o=it.next();it.remove();if(now>=o.until||!allowsCreatureClue(h,"hurt",o.source))continue;
             s.focus=o.source;s.look=o.point;s.focusHurt=o.hurt;s.unfamiliarFocus=!o.familiar;
             s.focusStarted=now;s.focusLastVisible=-1;s.directionStarted=now;
             Track requested=s.tracks.get(o.source);
@@ -249,14 +270,18 @@ public final class HumanPerception {
             s.glancedClue=null;s.glancedPosition=null;s.nextClueGlance=now;
         }s.owner=owner;s.order=order;s.initialized=true;
         HumanAwareness.flush(h);
-        s.clues.removeIf(clue->now>=clue.until);
+        s.clues.removeIf(clue->{
+            boolean invalid=now>=clue.until||!allowsCreatureClue(h,clue.kind,clue.source);
+            if(invalid)clue.completed=now; // A running investigation must release this clue too.
+            return invalid;
+        });
         for(Clue clue:s.clues)if(clue.pendingPosition!=null&&now-clue.created>=c().integer("investigation.repath_ticks")){
             clue.position=clue.pendingPosition;clue.pendingPosition=null;clue.created=now;
         }
         s.pending.values().removeIf(o->now>=o.until);s.glanceAt.entrySet().removeIf(e->now-e.getValue()>200);
         for(var it=s.tracks.values().iterator();it.hasNext();){Track t=it.next();
             Entity found=level.getEntity(t.id);
-            if(!(found instanceof LivingEntity e)||!observable(h,e)){it.remove();continue;}
+            if(!(found instanceof LivingEntity e)||!observable(h,e)||!allowsCreatureResponse(h,e)){it.remove();continue;}
             if(t.marked&&PerceptionPolicy.live(now,t.liveUntil)){
                 t.position=e.position();t.eye=e.getEyePosition();t.positionAt=now;
                 if(Objects.equals(s.focus,t.id))s.look=t.eye;
@@ -285,7 +310,7 @@ public final class HumanPerception {
             Entity e=level.getEntity(s.focus);Track t=s.tracks.get(s.focus);
             boolean lost=t!=null&&t.evidence.interrupted(now,c().integer("recognition.break_ticks"));
             boolean timeout=now-s.focusStarted>=(s.focusLastVisible<0?c().integer("observation.direction_ticks"):c().integer("observation.focus_ticks"));
-            if(!(e instanceof LivingEntity living)||!observable(h,living)||lost||timeout){
+            if(!(e instanceof LivingEntity living)||!observable(h,living)||!allowsCreatureResponse(h,living)||lost||timeout){
                 if(s.focusHurt&&s.look!=null){
                     Vec3 direction=s.look.subtract(h.getEyePosition()).multiply(1,0,1).normalize();
                     if(direction.lengthSqr()>1.e-8)notice(h,"hurt",h.position().add(direction.scale(c().number("investigation.radius"))),s.focus,c().integer("hearing.notice_ticks"));
@@ -315,7 +340,7 @@ public final class HumanPerception {
                     h.getBoundingBox().inflate(r), e->{
                         if(e!=h&&e.isAlive()){
                             if(enemy(h,e)){close.offer(e);discovery.offer(e);}
-                            if(h.distanceToSqr(e)<=movementRadius*movementRadius&&!HumanRelations.allied(h,e))sounds.offer(e);
+                            if(!HumanAwareness.passiveCreature(e)&&h.distanceToSqr(e)<=movementRadius*movementRadius&&!HumanRelations.allied(h,e))sounds.offer(e);
                         }
                         return net.minecraft.util.AbortableIterationConsumer.Continuation.CONTINUE;
                     });
@@ -520,7 +545,7 @@ public final class HumanPerception {
                 e->e!=h&&e.getTarget()==p,others,limit);return others.size()>=limit;
     }
     static Clue bestClue(Human h){State s=STATES.get(h);if(s==null)return null;long now=now(h);
-        return s.clues.stream().filter(a->now<a.until&&a.completed<0).findFirst().orElse(null);
+        return s.clues.stream().filter(a->now<a.until&&a.completed<0&&allowsCreatureClue(h,a.kind,a.source)).findFirst().orElse(null);
     }
     static void finishClue(Human h,Clue clue,String reason){if(clue!=null)clue.completed=now(h);State s=state(h);s.reason=reason;transition(s,now(h),reason);}
     static void decision(Human h,String decision,String reason){State s=state(h);s.decision=decision;s.reason=reason;}

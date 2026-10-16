@@ -21,6 +21,12 @@ public final class PerceptionPolicyTest {
                 recognitionDefaults.number("recognition.combined_factor"));
     }
     public static void main(String[] args){
+        check(!PerceptionPolicy.defensiveCreature(0,-1,true,600,2400),"ordinary marked animal cannot invent defense provenance");
+        check(PerceptionPolicy.defensiveCreature(2399,2400,false,-1,-1),"unconfirmed actual attacker remains eligible within bounded defense history");
+        check(!PerceptionPolicy.defensiveCreature(2400,2400,false,-1,-1),"unconfirmed animal defense expires exactly at deadline");
+        check(PerceptionPolicy.defensiveCreature(2400,2400,true,2500,3000),"confirmed attacker keeps its existing lawful memory after initial defense lease");
+        check(!PerceptionPolicy.defensiveCreature(3000,2400,true,2500,3000),"all animal defense and familiar memory expires without a permanent blacklist");
+        check(PerceptionPolicy.defensiveCreature(3000,5400,false,-1,-1),"new actual defense event can reopen recognition without marking target");
         check(new PerceptionConfig(new JsonObject()).integer("memory.dynamic_ticks")==600,"default identified position lease is thirty seconds");
         check(new PerceptionConfig(new JsonObject()).integer("recognition.break_ticks")==40,"brief lost view allows two seconds before resetting evidence");
         check(!dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.switchAllowed(19,0,20,false,false),"ordinary proposal cannot steal minimum hold");

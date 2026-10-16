@@ -198,12 +198,13 @@ public final class HumanRelations {
             } else if (allied(human, attacker)) {
                 continue;
             }
-            assignGuardTarget(human, attacker, level.getGameTime());
+            assignGuardTarget(human, attacker, level.getGameTime(), true);
         }
     }
 
     static void followOwnerAssault(Player player, LivingEntity target) {
-        if (!(player.level() instanceof ServerLevel level) || target == player) return;
+        if (HumanAwareness.passiveCreature(target)
+                || !(player.level() instanceof ServerLevel level) || target == player) return;
         if (suppressesBadgeBearerAssault(player, target)) return;
         AABB bounds = player.getBoundingBox().inflate(48.0D);
         for (WeakReference<Human> reference : nearbyHumans(player, level)) {
@@ -211,7 +212,7 @@ public final class HumanRelations {
             if (!isNearbyLiveHuman(human, bounds, level) || !isControlledBy(human, player)) continue;
             if (!SoldierCombatMode.authorizeOwnerAssault(human, target)
                     || allied(human, target)) continue;
-            assignGuardTarget(human, target, level.getGameTime());
+            assignGuardTarget(human, target, level.getGameTime(), false);
         }
     }
 
@@ -242,10 +243,10 @@ public final class HumanRelations {
                 isForcedHostileTo(wild, player));
     }
 
-    private static void assignGuardTarget(Human human, LivingEntity target, long now) {
+    private static void assignGuardTarget(Human human, LivingEntity target, long now, boolean defendingOwner) {
         human.getPersistentData().putUUID(GUARD_TARGET, target.getUUID());
         human.getPersistentData().putLong(GUARD_UNTIL, now + 200L);
-        HumanPerception.ownerClue(human,target);
+        HumanPerception.ownerClue(human,target,defendingOwner);
     }
 
     static void tick(Human human) {

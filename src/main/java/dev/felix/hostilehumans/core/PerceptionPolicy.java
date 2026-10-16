@@ -4,6 +4,10 @@ package dev.felix.hostilehumans.core;
 public final class PerceptionPolicy {
     private PerceptionPolicy() {}
     public static boolean live(long now,long until) { return now < until; }
+    /** Passive creatures need a real defense provenance; ordinary marking alone cannot grant it. */
+    public static boolean defensiveCreature(long now,long defenseUntil,boolean marked,long liveUntil,long familiarUntil) {
+        return defenseUntil>=0&&(now<defenseUntil||marked&&(live(now,liveUntil)||live(now,familiarUntil)));
+    }
     public static long hitDeadline(boolean marked,long now,long until,int duration) {
         return marked && live(now,until) ? now + duration : until;
     }

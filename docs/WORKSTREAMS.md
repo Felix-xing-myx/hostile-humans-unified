@@ -1,5 +1,13 @@
 # 开发任务与整合记录
 
+## 友善生物不触发普通感知（2026-10-16，进行中）
+
+- 用户要求动物等友善生物不干扰警觉、观察和调查，除非人类本人受到攻击；已明确保留动物攻击雇主时的保护，玩家主动攻击动物时士兵不参与。主控/root独占worktrees/passive-animal-awareness、fix/passive-animal-awareness；基线db204c988aa6a175dc0b6a81f335b40c108bd7f8，叠加尚未构建的枪手直接侧移提交，不能漏掉前项。
+- 范围HumanAwareness、HumanPerception、HumanRelations、纯PerceptionPolicy防御期限及相关既有测试/文档，三份共享入口均由主控负责；无编辑Agent。分类采用原生Enemy接口/MONSTER类别，并排除玩家与本模组人类；其他友善/中立生物不发普通声音刺激、不挤声音候选、不自主视觉锁定或跟随主人主动攻击。真实受击/主人防御记录走独立有期限的感知例外，仍需目视确认与攻击许可。
+- 未要求构建，不运行Gradle/Java编译、部署或push；先追踪脚步采样→事件排队→接收→notice→调查/视觉及本人/主人防御路径，交付与核查结果本节补记。
+- 源码交付：增加背景分类早过滤与有期限逐目标防御来源；本人实际非周期伤害/既有保护主人事件可打开视觉例外，主人主动攻击背景生物不入授权，marked/liveUntil仍只有目视确认。清理失效线索时标记完成，活动调查随之释放；动态知识出口同步准入。Python258项（12跳过，其余通过），新增Java防御期限/无来源不能授权及接入断言尚未编译；知识库5页正文与预算先备份后同步，记录在验证日志/passive-animal-awareness-knowledge.json。
+
+
 ## 枪手直接侧移与射击朝向（2026-10-16，进行中）
 
 - 用户反馈枪手侧移路径使导航朝向压制射击，弓弩直接侧移正常；授权修复源码，未要求构建。基线efc06c2a59c9f593ee0e934ec5be949b5f41107b；主控/root独占worktrees/gunner-direct-strafe、fix/gunner-direct-strafe，不派发编辑Agent。

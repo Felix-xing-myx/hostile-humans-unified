@@ -26,6 +26,12 @@ public final class HumanAwareness {
     }
     private HumanAwareness(){}
     private static PerceptionConfig c(){return PerceptionConfig.get();}
+    /** Native hostile contracts take precedence; ordinary animals/neutral NPCs are background. */
+    public static boolean passiveCreature(Entity actor){
+        return actor instanceof LivingEntity && !(actor instanceof Player) && !(actor instanceof Human)
+                && !(actor instanceof net.minecraft.world.entity.monster.Enemy)
+                && actor.getType().getCategory()!=MobCategory.MONSTER;
+    }
     public static void investigate(Entity actor,BlockPos position){emit(actor,"block",Vec3.atCenterOf(position));}
     public static void alert(Entity actor,boolean excludeActor){emit(actor,actor instanceof Player?"damage":"block",actor.position());}
     public static void door(Entity actor,BlockPos position){emit(actor,"door",Vec3.atCenterOf(position));}
@@ -36,7 +42,7 @@ public final class HumanAwareness {
     public static void aid(Human victim){emit(victim,"aid",victim.position());}
     public static void explosion(ServerLevel level,Vec3 point){enqueue(level,"explosion",null,point,c().number("hearing.explosion_radius"),c().integer("hearing.urgent_notice_ticks"));}
     private static void emit(Entity actor,String kind,Vec3 point){
-        if(!(actor.level() instanceof ServerLevel level)||actor instanceof Player p&&(p.isCreative()||p.isSpectator()))return;
+        if(passiveCreature(actor)||!(actor.level() instanceof ServerLevel level)||actor instanceof Player p&&(p.isCreative()||p.isSpectator()))return;
         long now=level.getServer().overworld().getGameTime();
         int cooldown=c().integer(kind.equals("aid")?"hearing.aid_cooldown_ticks":kind.equals("dig")?"hearing.dig_cooldown_ticks":
                 kind.equals("swim")?"hearing.swim_cooldown_ticks":kind.equals("walk")||kind.equals("run")?"hearing.step_cooldown_ticks":"hearing.environment_cooldown_ticks");
@@ -82,7 +88,7 @@ public final class HumanAwareness {
                 Entity found=level.getEntity(n.receivers.get(n.index));if(!(found instanceof Human h)){n.index++;continue;}
                 Entity actor=n.source==null?null:level.getEntity(n.source);
                 boolean step=n.kind.equals("walk")||n.kind.equals("run")||n.kind.equals("swim");
-                if(h==actor||step&&(actor instanceof LivingEntity e&&HumanRelations.allied(h,e))
+                if(passiveCreature(actor)||h==actor||step&&(actor instanceof LivingEntity e&&HumanRelations.allied(h,e))
                         ||n.kind.equals("aid")&&(!(actor instanceof Human ally)||!HumanRelations.allied(h,ally))){n.index++;continue;}
                 if(!PerceptionBudget.claim(h,"notices",1))return;
                 HumanPerception.notice(h,n.kind,n.position,n.source,(int)(n.until-now));n.index++;
@@ -93,7 +99,7 @@ public final class HumanAwareness {
     public static void sampleMovement(Human listener,List<LivingEntity> nearby){
         long now=HumanPerception.now(listener);double max=movementRadius();
         for(LivingEntity actor:nearby){
-            if(actor==listener||actor.distanceToSqr(listener)>max*max)continue;
+            if(passiveCreature(actor)||actor==listener||actor.distanceToSqr(listener)>max*max)continue;
             if(actor.isSilent()||actor.isShiftKeyDown()||actor instanceof Player p&&(p.isCreative()||p.isSpectator())){
                 MOVEMENT.put(actor,new Movement(now,actor.position(),0,actor.onGround()));continue;
             }
