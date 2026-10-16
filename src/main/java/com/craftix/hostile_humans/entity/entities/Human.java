@@ -166,6 +166,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private float meleeFacingPitch = Float.NaN;
     private int shieldFacingTick = Integer.MIN_VALUE;
     private Entity shieldFacingTarget;
+    private float shieldFacingYaw = Float.NaN;
     private final dev.felix.hostilehumans.core.EquipmentWearCooldown hiredArmorWear =
             new dev.felix.hostilehumans.core.EquipmentWearCooldown(4, 60);
     private static final EquipmentSlot[] HIRED_ARMOR_SLOTS = {
@@ -205,17 +206,31 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public void markShieldFacing(Entity attacker) {
         shieldFacingTick = tickCount;
         shieldFacingTarget = attacker;
+        shieldFacingYaw = Float.NaN;
         club.someoneice.humangunner.HumanAttention.combat(this,attacker,Float.NaN,Float.NaN,40,"盾牌防御朝向");
     }
 
+    /** One-tick defensive direction; never reads or assigns an attacker. */
+    public void markShieldFacingDirection(float yaw) {
+        if (!Float.isFinite(yaw)) return;
+        shieldFacingTick = tickCount;
+        shieldFacingTarget = null;
+        shieldFacingYaw = yaw;
+        club.someoneice.humangunner.HumanAttention.pressureFacing(this, yaw);
+    }
+
     private boolean hasShieldFacing() {
-        return shieldFacingTick == tickCount && shieldFacingTarget != null
-                && shieldFacingTarget.isAlive() && shieldFacingTarget.level() == level()
+        return shieldFacingTick == tickCount && (Float.isFinite(shieldFacingYaw) || shieldFacingTarget != null
+                && shieldFacingTarget.isAlive() && shieldFacingTarget.level() == level())
                 && !isFleeing && isUsingItem()
                 && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(getUseItem());
     }
 
     private void applyShieldFacing() {
+        if (Float.isFinite(shieldFacingYaw)) {
+            setRangedFacingYaw(Mth.approachDegrees(getYRot(), shieldFacingYaw, 30.0F));
+            return;
+        }
         double dx = shieldFacingTarget.getX() - getX();
         double dz = shieldFacingTarget.getZ() - getZ();
         if (dx * dx + dz * dz < 1.0E-6D) return;
@@ -1819,6 +1834,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         meleeFacingPitch = Float.NaN;
         if (!level().isClientSide && hasShieldFacing()) applyShieldFacing();
         shieldFacingTarget = null;
+        shieldFacingYaw = Float.NaN;
         if (!level().isClientSide) {
             // Goals, navigation and defensive look control may all write yaw.
             // Restore the attack's facing after those writers, before damage.

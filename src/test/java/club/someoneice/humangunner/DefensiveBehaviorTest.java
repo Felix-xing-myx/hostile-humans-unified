@@ -106,6 +106,13 @@ public final class DefensiveBehaviorTest {
         check(calls(ADAPTIVE, "tickDefend", "tickCombat")
                         && calls("club/someoneice/humangunner/BodyguardMovementGoal", "tick", "tickBodyguard"),
                 "combat and interception both delegate shield strategy to one controller");
+        check(calls(SHIELDS,"tickCombat","facePressure") && calls(SHIELDS,"tickPressureReaction","facePressure"),
+                "known and anonymous pressure use the same stable impact-direction facing");
+        check(!calls(SHIELDS,"beginPressureReaction","getOwner") && !calls(SHIELDS,"beginPressureReaction","canTarget")
+                && !calls("club/someoneice/humangunner/PressureReactionGoal","start","setTarget"),
+                "instinctive guard neither requires shooter knowledge nor grants aggro");
+        check(calls(HUMAN,"markShieldFacingDirection","pressureFacing"),
+                "direction-only shield lease reaches the final attention boundary");
         check(calls(SHIELDS, "release", "ownsCurrentShield"),
                 "ending one defense owner cannot cancel another owner's item use");
         check(!calls(ADAPTIVE, "tickDefend", "jump"), "defense phase never requests random combat jumps");

@@ -25,7 +25,7 @@ import net.minecraft.world.item.UseAnim;
  * Reactive and anticipatory requests share ownership, bounded observation and counter windows.
  */
 public final class ShieldDefenseController {
-    private enum Owner { COMBAT, BODYGUARD, PROJECTILE }
+    private enum Owner { COMBAT, BODYGUARD, PROJECTILE, PRESSURE }
     public record IncomingArrow(AbstractArrow projectile, LivingEntity shooter, double ticksToImpact) { }
     record CombatUpdate(int remainingTicks, boolean counterattack) { }
     private final Human human;
@@ -36,6 +36,7 @@ public final class ShieldDefenseController {
     private boolean preparingCombatGuard;
     private final RecoveryPressureWindow recoveryPressure = new RecoveryPressureWindow();
     private final PressureDefenseCycle pressureCycle = new PressureDefenseCycle();
+    private final PressureGuardFacing pressureFacing = new PressureGuardFacing();
     private ItemStack ownedShield;
     private int guardBlockUntil, nextGuardBlock;
     private int nextDefenseTick;
@@ -91,16 +92,29 @@ public final class ShieldDefenseController {
                 && human.tickCount < nextCounterGuardTick;
     }
 
-    /** Actual health loss only; environmental or allied damage cannot demand a shield. */
+    /** Actual shieldable combat health loss; defense does not require offensive identity/permission. */
     public void recordPressureDamage(DamageSource source, float damage) {
-        if (human.level().isClientSide
-                || !(source.getEntity() instanceof LivingEntity attacker) || !isValidThreat(attacker)) return;
-        CloseRangedTactics.damage(human, damage);
-        if (source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_SHIELD)) return;
+        if (human.level().isClientSide || !Float.isFinite(damage) || damage <= 0) return;
+        var direct = source.getDirectEntity();
+        var attacker = source.getEntity();
+        // Feeling damage is not offensive knowledge. Ownerless arrows may create pressure too.
+        if (attacker instanceof LivingEntity living && isValidThreat(living)) CloseRangedTactics.damage(human, damage);
+        if (source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_SHIELD)
+                || !(attacker instanceof LivingEntity) && !(direct instanceof Projectile)) return;
         ShieldPressureConfig rules = UnifiedConfig.get().shieldPressure();
         updatePressureCycle();
+        if (!recoveryPressure.active(human.tickCount, rules) && !pressureCycle.attempting()) pressureFacing.clear();
         recoveryPressure.record(human.tickCount, damage, human.getMaxHealth(), rules);
         pressureCycle.damage(human.tickCount, damage, human.getMaxHealth(), rules);
+        // A moving projectile provides arrival direction, never its owner's remote coordinates.
+        Vec3 direction = null;
+        if (direct != null && direct != attacker && direct.getDeltaMovement().lengthSqr() > 1.0E-8)
+            direction = direct.getDeltaMovement().scale(-1);
+        else if (!source.is(net.minecraft.tags.DamageTypeTags.IS_PROJECTILE) && direct != null && direct == attacker)
+            direction = direct.position().subtract(human.position());
+        if (direction != null && Double.isFinite(direction.x) && Double.isFinite(direction.z)
+                && direction.horizontalDistanceSqr() > 1.0E-8)
+            pressureFacing.record((float)Math.toDegrees(Math.atan2(direction.z, direction.x)) - 90);
     }
 
     public boolean shouldSuppressRecovery() {
@@ -118,8 +132,10 @@ public final class ShieldDefenseController {
         if (human.level().isClientSide) return;
         if (!pressureDefenseAvailable()) { pressureCycle.clear(); return; }
         ShieldPressureConfig rules = UnifiedConfig.get().shieldPressure();
-        if (pressureCycle.update(human.tickCount, recoveryPressure.active(human.tickCount, rules), rules))
+        if (pressureCycle.update(human.tickCount, recoveryPressure.active(human.tickCount, rules), rules)) {
             recoveryPressure.clear();
+            pressureFacing.clear();
+        }
     }
 
     private boolean pressureDefenseAvailable() {
@@ -138,10 +154,12 @@ public final class ShieldDefenseController {
         // the previous windup before publishing a melee stack to other goals.
         human.humanGunner$cancelMeleeAttackForDefense();
         if (RecoverySupplies.hasActiveUse(human)) return;
-        if (isHoldingTaczGun()) {
-            if (human.isUsingItem()) human.stopUsingItem();
-            GunCustody.beginCloseMeleeCounter(human);
+        if (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem())) {
+            guardedCharge.capture(human);
+            human.stopUsingItem();
+            human.setChargingCrossbow(false);
         }
+        if (isHoldingTaczGun()) GunCustody.beginCloseMeleeCounter(human);
     }
 
     /** Shared by every server melee entry, including native/fallback attacks. */
@@ -291,6 +309,13 @@ public final class ShieldDefenseController {
         updateDefensePressure();
         maintainCombat(threat);
         guardedCharge.tick(human);
+        // Instinctive pressure fixes a limited shield direction before ordinary target/arrow tracking.
+        if (wantsHighPressureGuard()) {
+            facePressure();
+            maintainCombat(threat);
+            if (ownsCurrentShield()) pressureCycle.guarded(human.tickCount);
+            return new CombatUpdate(Math.max(phaseTicks, 2), false);
+        }
         IncomingArrow incomingArrow = findIncomingArrow();
         net.minecraft.world.entity.Entity facingThreat = threat;
         if (incomingArrow != null) {
@@ -321,12 +346,6 @@ public final class ShieldDefenseController {
         if (awaitingProjectile) {
             phaseTicks = Math.max(phaseTicks, projectileDefenseUntil - human.tickCount);
             if (incomingArrow != null) defensePressureTick = human.tickCount;
-        }
-        // Survival pressure wins over treatment and ordinary ranged counter windows.
-        if (wantsHighPressureGuard()) {
-            maintainCombat(threat);
-            if (ownsCurrentShield()) pressureCycle.guarded(human.tickCount);
-            return new CombatUpdate(Math.max(phaseTicks, 2), false);
         }
         if (underGunfirePressure()) {
             defendingGunfire = true;
@@ -442,6 +461,49 @@ public final class ShieldDefenseController {
         return ProjectileShieldPolicy.insideReactionView(Vec3.directionFromRotation(0, human.getYHeadRot()), point.subtract(human.position()));
     }
 
+    boolean allowsPressureReaction() {
+        return !human.isNoAi() && !human.isSleeping() && !NavigationDebugService.controls(human)
+                && !HumanGunner.isManualInventoryOpen(human)
+                && human.level().getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
+                && !human.isFleeing && !human.isInLava() && !human.isPassenger() && human.explosionThreat == null
+                && !RecoverySupplies.hasActiveUse(human)
+                && (!human.isUsingItem() || SpartanEquipmentCompat.isShield(human.getUseItem())
+                    || RangedWeaponCustody.isBowOrCrossbow(human.getUseItem()))
+                && wantsHighPressureGuard();
+    }
+    boolean beginPressureReaction() {
+        if (!allowsPressureReaction()) return false;
+        release(Owner.BODYGUARD);
+        guardedCharge.capture(human);
+        if (human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
+        human.setChargingCrossbow(false);
+        InteractionHand hand = SpartanEquipmentCompat.isShield(human.getOffhandItem())
+                ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+        raise(Owner.PRESSURE, hand, false);
+        if (owner != Owner.PRESSURE || !ownsCurrentShield()) return false;
+        facePressure();
+        return true;
+    }
+    boolean continuesPressureReaction() {
+        return owner == Owner.PRESSURE && ownsCurrentShield() && allowsPressureReaction();
+    }
+    void tickPressureReaction() {
+        if (owner != Owner.PRESSURE || !ownsCurrentShield()) return;
+        guardedCharge.tick(human);
+        MovementSpeedController.combat(human, false);
+        pressureCycle.guarded(human.tickCount);
+        facePressure();
+    }
+    void endPressureReaction() {
+        if (owner != Owner.PRESSURE) return;
+        release(Owner.PRESSURE);
+        endCombat(); // Preserve the original recovery/counter windows; never acquire a target.
+        if (!recoveryPressure.active(human.tickCount, UnifiedConfig.get().shieldPressure())) pressureFacing.clear();
+    }
+    private void facePressure() {
+        if (ownsCurrentShield()) human.markShieldFacingDirection(pressureFacing.step(human.tickCount, human.getYRot()));
+    }
+
     private boolean visibleArrow(AbstractArrow arrow) {
         return inFront(arrow.position()) && human.level().clip(new ClipContext(human.getEyePosition(),
                 arrow.getBoundingBox().getCenter(), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
@@ -454,7 +516,7 @@ public final class ShieldDefenseController {
                 && !human.isFleeing && !human.isInLava() && human.explosionThreat == null
                 && !human.isPassenger() && !RecoverySupplies.hasHandCustody(human)
                 && !RetreatRecoveryPolicy.shouldForceRetreat(human)
-                && !human.humanGunner$hasPendingMeleeAttack() && !isPressureBreakAttempt()
+                && !human.humanGunner$hasPendingMeleeAttack() && !isPressureBreakAttempt() && !shouldSuppressRecovery()
                 && (!human.isUsingItem() || SpartanEquipmentCompat.isShield(human.getUseItem())
                     || RangedWeaponCustody.isBowOrCrossbow(human.getUseItem()))
                 && canPreemptivelyBlockProjectile();

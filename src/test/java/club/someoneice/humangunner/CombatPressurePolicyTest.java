@@ -24,6 +24,23 @@ public final class CombatPressurePolicyTest {
         shots.crossbowLoaded(crossbow, 23, 72, false);
         check(!shots.canFireCrossbow(crossbow, 23), "previous charged state cannot grant a second instant shot");
 
+        PressureGuardFacing facing = new PressureGuardFacing();
+        facing.record(40);
+        check(facing.step(0, 0) == 0, "already-protected front source does not turn the body");
+        facing.record(-160);
+        check(facing.step(1, 0) == 0 && facing.step(19, 0) == 0, "multiple sources cannot overwrite held guard yaw");
+        check(facing.step(20, 0) == -30, "rear pressure starts minimum bounded correction after the hold");
+        float yaw = -30;
+        for (int tick = 21; tick < 24; tick++) yaw = facing.step(tick, yaw);
+        check(yaw == -100, "correction stops sixty degrees away rather than tracking the source exactly");
+        facing.record(140);
+        check(facing.step(25, yaw) == yaw, "a new side cannot trigger an immediate reverse swing");
+        facing.clear();
+        check(facing.step(100, 65) == 65, "unknown direction retains existing facing");
+        facing.clear(); facing.record(-170);
+        check(facing.step(0, 170) == 170, "wraparound forward source is already covered");
+        facing.clear(); facing.record(Float.NaN);
+        check(facing.step(0, 15) == 15, "invalid input cannot invent a source direction");
         ShieldPressureConfig pressure = new ShieldPressureConfig(true, 20, .15, 4, .05, 20, 140, 60);
         PressureDefenseCycle cycle = new PressureDefenseCycle();
         cycle.guarded(0);

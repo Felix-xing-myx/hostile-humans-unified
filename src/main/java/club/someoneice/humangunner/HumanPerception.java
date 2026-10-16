@@ -649,6 +649,7 @@ public final class HumanPerception {
             case "InvestigateSoundGoal", "PerceptionInvestigationGoal" -> "线索调查与搜索";
             case "AdaptiveCombatGoal" -> "战术/防御/撤退";
             case "ProjectileReactionGoal" -> "可见来袭箭矢防御（未锁定射手）";
+            case "PressureReactionGoal" -> "本能高压防御（不依赖锁敌）";
             case "SoldierOrderGoal", "TemporarySupportFollowGoal", "BodyguardMovementGoal" -> "行动指令";
             case "LavaEscapeGoal", "AvoidTNTGoal", "AvoidCreeperGoal", "RunFromTarget" -> "紧急避险";
             case "CombatFoodRecoveryGoal", "CombatConsumableGoal", "IdleRecoveryGoal" -> "恢复用品";

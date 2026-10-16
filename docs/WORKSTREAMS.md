@@ -1,5 +1,16 @@
 # 开发任务与整合记录
 
+## 本能高压防御与稳定盾面（2026-10-16，源码交付）
+
+- 基线6679a2c54e3007a05ffb9980004dc3012e52cce1，包含未构建可见箭矢反应；主控/root唯一编辑worktrees/instinctive-pressure-guard、fix/instinctive-pressure-guard。范围ShieldDefenseController、纯朝向策略/高压Goal、Human方向接口/HumanAttention、注册与受击回看仲裁、回归/配置说明/知识库；共享入口主控接入。
+- 用户要求高压为不依赖敌人知识的本能，朝向只需有限修正、避免多方伤害摆动。保留真实盾可防伤害阈值/环境排除，取消的友军攻击无实际扣血，实际误伤只防御不仇恨、恢复/枪械交接及7秒/3秒周期；只记录真实来向，不通过弹丸owner获得隐藏射手位置。当前任务不构建/部署/push。
+- 核实并修复两项耦合：伤害采样曾以isValidThreat过滤；原战术DEFEND也必须resolveThreat非空。现在近枪战反击仍要求已知合法敌人，高压窗口独立接收实际盾可防生物/弹丸扣血，无主弹丸及实际误伤可自保，不授予仇恨。环境、绕盾、取消和零扣血不计。
+- 无有效目标由PressureReactionGoal以PRESSURE租约复用原盾控制器，短暂停移，不读取隐藏敌人或规划未知位置路线；识别出合法目标时交还原战术防御/掩体。受击回看、匿名箭短反应让位于高压；正式返回命令本身不禁止本能保护，测试/菜单/无AI/睡眠/和平/避险仍排除。原恢复交接与备用近战托管保留；prepare阶段保存弓弩进度后中断非盾用手，避免三叉戟等占手导致盾牌始终无法取得使用权。
+- 实际弹丸负速度或接触来向进入PressureGuardFacing；角度来源只保持在盾面±60°内，最小修正、每tick最多30°、保持20tick才重考虑新方向。不读取射手位置；无可靠方向保持身体，旧压力结束后不复用陈旧方向。Human方向租约与最终HumanAttention落实身体盾面，原目标/箭体精确朝向不能覆盖高压分支；原生盾生效延迟和多方向未覆盖角度仍存在。
+- 数值未改：20tick窗口，至少2击/15%最大HP或4击/5%，20tick安静期、140tick实际举盾后60tick破局。源码默认JSON仅更新双语机制说明，实例配置未改；三页正文和六份默认附录先备份后同步，见维护目录验证日志/instinctive-pressure-guard-knowledge.json。
+- 验证：Python291（279通过、12跳过）、486份Java语法、JSON、diff、六默认附录及三页Wiki目标检查通过。更新旧近枪战来源契约，确保反击仍需合法敌人而高压累计独立；新增Java稳定朝向/跨角边界与未知目标生产接线用例，未编译执行。无构建、部署、push、游戏验收；独立分支本地提交，未整合main，连同前项箭矢防御仍未部署。
+- 待验收：未知近战/远程连续受击、无主箭、误伤仅防御、前后多向切换、实际盾面格挡、无来向不猜射手、恢复占手/弓弩蓄力/枪手备用近战、7秒/3秒周期及已知战斗导航、测试接管。
+
 ## 可见来袭箭矢独立防御（2026-10-16，源码交付）
 
 - 基线816c234de2e9227a6874c01ef157f6e568f3801e；主控/root独占worktrees/visible-arrow-reflex、fix/visible-arrow-reflex。范围ShieldDefenseController/ProjectileShieldPolicy、新ProjectileReactionGoal、HumanGunner注册、HumanPerception动作名、对应回归和知识库；共享入口由主控接入。

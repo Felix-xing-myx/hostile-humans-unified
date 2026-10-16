@@ -12,7 +12,7 @@ public final class IncomingHitResponseGoal extends Goal {
     private Vec3 direction;
     public IncomingHitResponseGoal(Human human){this.human=human;setFlags(EnumSet.of(Flag.MOVE));}
     private static boolean responseAllowed(Human human){
-        if(HumanTargetCoordinator.suspended(human)||human.isFleeing||human.isInLava()||human.explosionThreat!=null
+        if(human.humanGunner$shieldDefense().shouldSuppressRecovery()||HumanTargetCoordinator.suspended(human)||human.isFleeing||human.isInLava()||human.explosionThreat!=null
                 ||RetreatRecoveryPolicy.shouldForceRetreat(human))return false;
         var current=human.getTarget();
         return !(HumanPerception.canTarget(human,current)&&human.distanceToSqr(current)<=36);

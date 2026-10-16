@@ -38,6 +38,15 @@ public final class HumanAttention {
         if(old==null||old.tick!=h.tickCount||priority>=old.priority)REQUESTS.put(h,new Request(h.tickCount,point,priority,owner));
     }
 
+    /** Defensive yaw is derived from an impact, without a target entity or hidden coordinates. */
+    public static void pressureFacing(Human h, float yaw) {
+        if (h.level().isClientSide || !Float.isFinite(yaw)) return;
+        Vec3 point = h.getEyePosition().add(Vec3.directionFromRotation(0, yaw).scale(8));
+        Request old = REQUESTS.get(h);
+        if (old == null || old.tick != h.tickCount || old.priority <= 40)
+            REQUESTS.put(h, new Request(h.tickCount, point, 40, "高压稳定盾面"));
+    }
+
     /** Planned movement, rather than knockback velocity, owns ordinary travel yaw. */
     public static Float navigationYaw(Human human) {
         if(RETREAT_AIM.getOrDefault(human,Integer.MIN_VALUE)==human.tickCount)return null;
