@@ -1,5 +1,13 @@
 # 开发任务与整合记录
 
+## 3.10.1构建同步（2026-10-16，完成）
+
+- 用户明确要求构建并同步；基线f259f04，包含1706509枪手连续侧移、8f97ce3射击窗口与低身体预算、f259f04观察工具优化。主控独占observer-controls工作树，版本3.10.1；目标仅既定Forge47.4.21实例，检查进程、备份、dist留存与三方哈希，保留其他配置。无push/启动游戏授权。
+- Java17、Forge47.4.16编译基线执行build lootScreeningTest --offline成功，55任务全部执行；GunCombatPolicy103、NavigationDebug1163、PerceptionPolicy1064、RangedTerrainSafety456检查通过，完整回归通过；Python291（12跳过）、6知识库默认附录及diff检查通过。
+- 实例停止后同步3.10.1，旧3.10.0及global.json备份至维护目录备份/release-3.10.1-deployment；构建、dist、部署三份SHA256均EB5288B7A46141322D7FDDC338322E8E4FF9DAC4C5858BBDD37E241DB09BFCEE，4434092字节、692类、最大Java class major61。部署目录仅一个本模组JAR。
+- 精确将实例perception.budgets.body_rays_per_target由27降至9；原实例未配置activity_budget，拥挤/团战采用新版默认5/3。global只变该数值，其余四份配置哈希未变。详细记录见验证日志/observer-controls-3.10.1-deployment.json，构建日志observer-controls-3.10.1-build.log。
+- 本地提交后将整条功能链快进整合main；不push、不启动游戏。仍需游戏验收：多实体F9/详情只释放焦点并恢复战斗、连续侧移开火、同高一格射窗与不可达/危险射位、低配额身体检测跨轮覆盖。
+
 ## 开发者观察工具控制边界（2026-10-16，源码交付）
 
 - 基线8f97ce36327058b9bc9762e66259da38dfac4fe8；主控/root唯一编辑worktrees/observer-controls、feature/observer-controls，保留未构建枪手及射窗修改。范围NavigationDebugService/Network/Client、NavigationLegendScreen、HumanPerception接管说明、双语资源和知识库。
