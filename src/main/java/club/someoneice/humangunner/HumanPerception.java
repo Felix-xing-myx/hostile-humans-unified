@@ -174,7 +174,7 @@ public final class HumanPerception {
     }
     static void notice(Human h,String kind,Vec3 position,UUID source,int ttl,int priority){
         if(h.level().isClientSide||!h.isAlive()||position==null||!finite(position)||ttl<=0||priority<2
-                ||!allowsCreatureClue(h,kind,source))return;
+                ||!allowsCreatureClue(h,kind,source)||SoundInvestigationMemory.blocked(h,kind,position))return;
         State s=state(h);long now=now(h);
         Clue match=null;
         for(Clue old:s.clues)if(old.kind.equals(kind)&&Objects.equals(old.source,source)
@@ -630,7 +630,7 @@ public final class HumanPerception {
         boolean limited=others.size()>=limit;state.targetCaps.put(p.getUUID(),new TargetCap(tick,limited));return limited;
     }
     static Clue bestClue(Human h){State s=STATES.get(h);if(s==null)return null;long now=now(h);
-        return s.clues.stream().filter(a->now<a.until&&a.completed<0&&allowsCreatureClue(h,a.kind,a.source)).findFirst().orElse(null);
+        return s.clues.stream().filter(a->now<a.until&&a.completed<0&&!SoundInvestigationMemory.blocked(h,a.kind,a.position)&&allowsCreatureClue(h,a.kind,a.source)).findFirst().orElse(null);
     }
     static void finishClue(Human h,Clue clue,String reason){if(clue!=null)clue.completed=now(h);State s=state(h);s.reason=reason;transition(s,now(h),reason);}
     static void decision(Human h,String decision,String reason){State s=state(h);s.decision=decision;s.reason=reason;}
@@ -728,6 +728,7 @@ public final class HumanPerception {
             if(t.position!=null&&now<t.positionAt+c().integer("memory.last_position_ticks"))
                 marker(markers,t.evidence.active()?"recognition":live?t.visible&&now-t.checked<=c().integer("budgets.active_interval_ticks")?"visible":"dynamic":"last",t.name+" · "+stage,t.position,null,.4);
         }
+        row(rows,"clues","声音排除区",SoundInvestigationMemory.describe(h));
         for(Clue clue:s.clues){row(rows,"clues",clue.kind,"优先级"+clue.priority+" · "+remaining(clue.until,now)+(clue.completed>=0?" · 已调查":""));
             marker(markers,clue.kind.equals("beacon")?"beacon":"sound",clue.kind,clue.position,null,clue.kind.equals("beacon")?c().number("beacon.grid_size")*.5:.4);}
         for(Observe o:s.pending.values())marker(markers,"direction","待观察来向",h.getEyePosition(),o.point,0);

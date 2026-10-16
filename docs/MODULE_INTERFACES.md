@@ -401,3 +401,11 @@ HumanNavigation.tick在跨点补偿前调用HumanPathFollower.beforeTick；follo
 HumanPathFollower最多3节点/3格，每4tick≤2候选；LocalPathFollowPolicy纯几何产生≤13采样，每点经flatSupport五点支撑/0.1同高、身体扫掠及SoldierOrder。128块loaded-only缓存排除门梯/液体/危险，碰撞变化时仅同Path且仍在采纳索引才恢复原索引；原版推进或换路清证明。动态无状态碰撞仍属边界。
 
 OptionalPathBudget.PATH_FOLLOW池16/key2/stale8，navigationCapacity折减拥挤8/大战4；等待不改索引、原路线继续。HumanPerception只读describe，无新网络/NBT；射位Path身份绑定和原导航归属保持。缓存≤128状态/人/4tick复核另有成本。
+
+## 声音不可达区域与枪声入口
+
+SoundExclusionMemory纯位置/时间策略；SoundInvestigationMemory以弱人类键隔离维度/命令/雇主范围，最多8区域，不读隐藏实体或额外世界状态。flush在HearingRelevance射线前、notice在alert前、bestClue在调查前共用过滤；范围内忽略事件不续期。只处理sound(kind)，直接hurt/owner/last/beacon不屏蔽。
+
+调查仅完成分档不可达、已加载无安全落点、自有活动路线80tick无0.5格位移或完成却离落点>2格时登记；不把PENDING、外部抢占/安装失败或RESTRICTED当不可达。LongRangeNavigation.Status.RESTRICTED标识完整路径被命令/安全拒绝，失败缓存保留分类；原调用者仍把无path作为未安装。默认区域R6/垂直±4/400tick、位移>8释放。
+
+三个可选Integration注册各自原生事件到HumanAwareness.gunshot；TaCZ未取消SERVER事件，SC/JEG玩家Post与原NPC射击调用，10tick同源合并。核心无可选事件引用，服务器声音不是仇恨/动态记忆授权。默认资源和PerceptionConfig同值，观察复用已有快照行，无网络/NBT变更。

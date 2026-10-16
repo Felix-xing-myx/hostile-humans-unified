@@ -13,7 +13,7 @@ import net.minecraft.world.phys.Vec3;
 /** One explicit-route seam. Queries never install paths or acquire MOVE/LOOK ownership. */
 public final class LongRangeNavigation {
     public enum Purpose { COMBAT, LOOT, FOLLOW, INVESTIGATION, TEST }
-    public enum Status { READY, PENDING, FAILED, UNSUPPORTED }
+    public enum Status { READY, PENDING, FAILED, RESTRICTED, UNSUPPORTED }
     public record Result(Status status, Path path) {
         public boolean pending() { return status == Status.PENDING; }
     }
@@ -30,7 +30,7 @@ public final class LongRangeNavigation {
         String result = "new";
         final LinkedHashMap<BlockPos,Failure> failures = new LinkedHashMap<>();
     }
-    private record Failure(Vec3 origin, BlockPos probe, int tick, int attempts, int scene, int signature) {}
+    private record Failure(Vec3 origin, BlockPos probe, int tick, int attempts, int scene, int signature, boolean restricted) {}
     private record Pool(int units, FairWorkBudget<UUID> queue) {}
     private static final Map<Human,Actor> ACTORS = new WeakHashMap<>();
     private static final Map<MinecraftServer,Pool> POOLS = new WeakHashMap<>();
@@ -73,7 +73,7 @@ public final class LongRangeNavigation {
             int delay = RouteSearchPolicy.failureDelay(failure.attempts,c.failureTicks(),c.maximumFailureTicks());
             boolean changed = elapsed >= delay && scene(human,goal,failure.origin,failure.probe) != failure.scene;
             if (!RouteSearchPolicy.retry(elapsed,delay,c.maximumFailureTicks(),moved,changed)) {
-                cancelQueue(human);s.queuedAt=-1;s.result = "失败缓存";return FAILED;
+                cancelQueue(human);s.queuedAt=-1;s.result = "失败缓存";return failure.restricted?new Result(Status.RESTRICTED,null):FAILED;
             }
         }
         if (tick < s.nextTick || s.queriedTick == tick) return pending(s,tick,"分档等待");
@@ -114,9 +114,9 @@ public final class LongRangeNavigation {
         s.failures.entrySet().removeIf(e -> e.getKey().distSqr(goal) <= 4);
         while(s.failures.size()>=c.cacheEntries())s.failures.remove(s.failures.keySet().iterator().next());
         s.failures.put(goal.immutable(),new Failure(human.position(),probe.immutable(),tick,attempts,
-                scene(human,goal,human.position(),probe),signature));
+                scene(human,goal,human.position(),probe),signature,path!=null&&path.canReach()));
         s.nextTick=tick+1;s.result=path!=null&&path.canReach()?"安全或命令拒绝":"未找到完整路";
-        cancelQueue(human);return FAILED;
+        cancelQueue(human);return path!=null&&path.canReach()?new Result(Status.RESTRICTED,null):FAILED;
     }
     private static Result pending(State s,int tick,String reason) {
         if(s.queuedAt<0)s.queuedAt=tick;s.result=reason;return PENDING;

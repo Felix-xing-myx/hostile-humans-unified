@@ -140,6 +140,7 @@ final class TaczIntegration implements GunSupport {
     }
     public void registerEvents() {
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, TaczIntegration::onGunShoot);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, TaczIntegration::onGunSound);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, TaczIntegration::onGunDamagePre);
         MinecraftForge.EVENT_BUS.addListener(TaczIntegration::onGunDamagePost);
         if (FMLEnvironment.dist == Dist.CLIENT) {
@@ -152,6 +153,10 @@ final class TaczIntegration implements GunSupport {
                 && event.getShooter() instanceof Human human
                 && !GunFireAuthorization.allows(human, event.getGunItemStack(), human.getTarget()))
             event.setCanceled(true);
+    }
+    private static void onGunSound(GunShootEvent event){
+        if(!event.isCanceled()&&event.getLogicalSide()==net.minecraftforge.fml.LogicalSide.SERVER)
+            HumanAwareness.gunshot(event.getShooter());
     }
     private static boolean isActivelyBlockingWithShield(Human human) {
         return !GunSupport.isGunItem(human.getMainHandItem())

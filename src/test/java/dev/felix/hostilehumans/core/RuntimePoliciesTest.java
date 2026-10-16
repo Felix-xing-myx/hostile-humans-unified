@@ -10,6 +10,22 @@ public final class RuntimePoliciesTest {
         if (!condition) throw new AssertionError("check " + checks);
     }
     public static void main(String[] args) {
+        SoundExclusionMemory sounds=new SoundExclusionMemory();
+        sounds.fail("a",0,0,0,0,10,0,0,400,6,4,8,8);
+        check(sounds.blocked("a",1,0,0,0,15,4,0));
+        check(!sounds.blocked("a",1,0,0,0,17,0,0));
+        check(!sounds.blocked("a",1,0,0,0,10,5,0));
+        sounds.fail("a",300,0,0,0,11,0,0,400,6,4,8,8);
+        check(sounds.regions().size()==1&&sounds.regions().get(0).until()==400);
+        check(!sounds.blocked("a",400,0,0,0,10,0,0));
+        sounds.fail("a",500,0,0,0,10,0,0,400,6,4,8,2);
+        check(!sounds.blocked("a",501,9,0,0,10,0,0));
+        sounds.fail("a",600,0,0,0,10,0,0,400,6,4,8,2);
+        check(!sounds.blocked("b",601,0,0,0,10,0,0));
+        for(int i=0;i<5;i++)sounds.fail("a",700,0,0,0,i*20,0,0,400,6,4,8,2);
+        check(sounds.regions().size()==2);
+        check(SoundExclusionMemory.sound("gunshot")&&SoundExclusionMemory.sound("aid"));
+        check(!SoundExclusionMemory.sound("hurt")&&!SoundExclusionMemory.sound("beacon")&&!SoundExclusionMemory.sound("last"));
         int[] samples={0};
         check(LocalPathFollowPolicy.corridor(0,0,2,2,(x,z,dx,dz)->{samples[0]++;return true;}));
         check(samples[0]<=13&&samples[0]>2);

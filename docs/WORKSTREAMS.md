@@ -1,5 +1,17 @@
 # 开发任务与整合记录
 
+## 声音不可达区域退避与三枪械监听／3.10.5（2026-10-16，已完成）
+
+- 基线f3dd0dd56b1b0647b073f9df2cd39f8023de04ed；主控/root独占worktrees/sound-investigation、feature/sound-investigation。顺序修改声音/调查/三个联动/配置及回归、知识库，保留前轮未构建射位、BC和增强跟随。本轮明确授权构建并同步既定Forge47.4.21实例，不启动游戏或push。预算等待、外部抢占、命令限制不得误当真实不可达。
+- 声音过滤：每人弱键缓存最多8区域，R6、垂直±4、400tick，不因忽略事件续期；位移>8/维度/命令/雇主变化释放。flush先过滤再听觉LOS、notice先过滤再alert、bestClue过滤旧排队声音；覆盖脚步/奔跑/水声/挖放破坏/门/受伤动静/求援/爆炸/枪声，不影响直接hurt、owner、last、beacon及视觉/战斗。记录无NBT，缓存不扫地形；到期后仍受原LongRange失败缓存约束。
+- 调查：完成分档仍不可达、已加载无安全落点、自有路线80tick未移动0.5格或结束但离落点>2格才登记；命令/未加载/预算/安装失败与外部抢占不直接登记。LongRangeNavigation新增RESTRICTED及缓存分类，完整路径安全/命令拒绝不登记声音区；原调用者仍接受无可用path结果。区域变化/临时实体堵塞有冷却误拒边界，未实现实时拆墙解除。
+- 枪声：三可选Integration隔离原生事件；TaCZ服务端未取消GunShootEvent，SC/JEG服务端玩家GunFireEvent.Post与本模组NPC原生performGunAttack后的入口。默认40格、同射手10tick合并，复用普通200tick线索及原墙体/高差/重要性/查询/射线/投递池；不是射手实时坐标或直接仇恨。创造/旁观沿用原排除，未实现统一消音器模型。
+- 验证：Python308（296通过、12跳过）、493份Java语法、六默认附录、十页Wiki链接、JSON与diff检查通过。Java17离线build+lootScreeningTest最终55任务（51执行、4最新）成功，含纯Java区域过期/不续期/高差/位移/跨维度/容量/声源类型，以及前轮跟随/BC回归。原生API只读核实；日志中损坏配置错误是预期回归输入，任务通过。知识库四正文及六附录备份后同步，见验证日志/sound-investigation-knowledge.json。
+- 发布：确认Minecraft未运行，备份旧3.10.4到备份/release-3.10.5-deployment，仅替换既定Forge47.4.21实例；3.10.5构建/dist/部署均4475822字节，SHA-256 8C6059F9BD2AB82265DEC2B3B526C0CD908CC789C93D439EBA529FEDA22EC519；五份实例JSON哈希不变，新增字段用缺省值。包含579381c、c2b271c、f3dd0dd前轮未发布射位/拾取、BC/跑跳与增强跟随。记录验证日志/sound-investigation-3.10.5-deployment.json及同前缀final-build.log。
+- 本地提交整合main；无push/启动游戏。尚需游戏验收：封闭墙后持续脚步/枪声/求援去重、不同声源同区域/不同楼层、20秒后或绕到另一侧重试、预算/命令与外部接管、三种枪玩家生存及人类NPC开枪、区域内真实受击和视觉锁定仍响应、多人声音负载；编译不证明这些游戏行为或CPU/FPS。
+
+
+
 ## 原搜索增强路径跟随（2026-10-16，源码完成）
 
 - 用户明确选择保留原搜索并优化跟随；基线c2b271c9debe6703a8bddc122cda2ef86cb3953e，包含前两轮未构建修改。主控/root独占worktrees/enhanced-path-follow、feature/enhanced-path-follow；范围HumanNavigation跟随钩子、独立有界走廊验证、地面支撑接口、OptionalPathBudget独立跟随池、观察诊断/回归/知识库。共享文件主控顺序接入；不替换PathFinder/NodeEvaluator、不改目标/攻击/路径终点，不新建MOVE Goal。优先同高普通平地，敏感地形及预算不足回原跟随。本轮未要求构建同步。

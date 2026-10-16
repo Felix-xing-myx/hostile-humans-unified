@@ -53,6 +53,8 @@ public final class PerceptionConfig {
         add(m,"observation.queue_size",4,1,16,"待观察来源容量 / Pending observation source capacity");
         add(m,"observation.look_cooldown_ticks",10,1,100,"同源回看请求最短间隔 / Same-source glance request cooldown");
         add(m,"observation.unknown_notice_ticks",200,20,1200,"陌生来袭方向期限 / Unknown incoming direction lifetime");
+        add(m,"hearing.gunshot_radius",40,0,128,"枪声监听半径 / Gunshot hearing radius");
+        add(m,"hearing.gunshot_cooldown_ticks",10,1,200,"同射手枪声合并间隔 / Per-shooter gunshot coalescing interval");
         add(m,"hearing.dig_radius",12,0,64,"挖掘声半径（格） / Digging sound radius");
         add(m,"hearing.block_radius",16,0,64,"破坏放置声半径 / Block change radius");
         add(m,"hearing.damage_radius",16,0,64,"玩家和怪物受伤半径 / Player and monster damage radius");
@@ -77,6 +79,12 @@ public final class PerceptionConfig {
         add(m,"hearing.urgent_notice_ticks",300,10,2400,"求援爆炸期限 / Aid and explosion clue lifetime");
         add(m,"hearing.step_notice_ticks",100,10,1200,"脚步水声期限 / Footstep and swim clue lifetime");
         add(m,"hearing.maximum_clues",4,1,16,"每人线索上限 / Per-human clue capacity");
+        add(m,"investigation.exclusion_radius",6,1,24,"不可达声音区域水平半径 / Unreachable acoustic region horizontal radius");
+        add(m,"investigation.exclusion_vertical",4,1,16,"不可达声音区域单侧垂直范围 / Acoustic exclusion vertical half-range");
+        add(m,"investigation.exclusion_ticks",400,20,2400,"不可达声音区域冷却，不被忽略事件续期 / Acoustic exclusion lifetime, ignored events never refresh");
+        add(m,"investigation.exclusion_reset_distance",8,1,64,"听者离开失败位置多远后重试 / Listener displacement releasing acoustic failures");
+        add(m,"investigation.exclusion_maximum",8,1,32,"每人不可达声音区域容量 / Per-human acoustic exclusion region capacity");
+        add(m,"investigation.stall_ticks",80,20,400,"调查自有活动路线无位移进展上限 / Owned investigation route no-progress timeout");
         add(m,"investigation.radius",6,1,24,"普通搜索半径 / Ordinary search radius");
         add(m,"investigation.duration_ticks",200,20,2400,"每条线索累计实际调查时长，纯预算等待不计 / Active investigation time per clue");
         add(m,"investigation.maximum_points",3,1,12,"单次最多搜索点 / Maximum search points");

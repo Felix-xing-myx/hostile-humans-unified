@@ -40,13 +40,14 @@ public final class HumanAwareness {
     public static void damage(LivingEntity victim){
         if(victim instanceof Player||victim instanceof Human||victim.getType().getCategory()==MobCategory.MONSTER)emit(victim,"damage",victim.position());
     }
+    public static void gunshot(LivingEntity shooter){if(shooter!=null)emit(shooter,"gunshot",shooter.position());}
     public static void aid(Human victim){emit(victim,"aid",victim.position());}
     public static void explosion(ServerLevel level,Vec3 point){enqueue(level,"explosion",null,point,c().number("hearing.explosion_radius"),c().integer("hearing.urgent_notice_ticks"),4);}
     private static void emit(Entity actor,String kind,Vec3 point){
         if(passiveCreature(actor)||!(actor.level() instanceof ServerLevel level)||actor instanceof Player p&&(p.isCreative()||p.isSpectator()))return;
         long now=level.getServer().overworld().getGameTime();
         int cooldown=c().integer(kind.equals("aid")?"hearing.aid_cooldown_ticks":kind.equals("dig")?"hearing.dig_cooldown_ticks":
-                kind.equals("swim")?"hearing.swim_cooldown_ticks":kind.equals("walk")||kind.equals("run")?"hearing.step_cooldown_ticks":"hearing.environment_cooldown_ticks");
+                kind.equals("gunshot")?"hearing.gunshot_cooldown_ticks":kind.equals("swim")?"hearing.swim_cooldown_ticks":kind.equals("walk")||kind.equals("run")?"hearing.step_cooldown_ticks":"hearing.environment_cooldown_ticks");
         Map<String,Long> recent=RECENT.computeIfAbsent(actor,k->new HashMap<>());
         if(now-recent.getOrDefault(kind,Long.MIN_VALUE/2)<cooldown)return;recent.put(kind,now);
         double radius=c().number("hearing."+kind+"_radius");
@@ -88,6 +89,7 @@ public final class HumanAwareness {
                 boolean step=n.kind.equals("walk")||n.kind.equals("run")||n.kind.equals("swim");
                 if(passiveCreature(actor)||h==actor||step&&(actor instanceof LivingEntity e&&HumanRelations.allied(h,e))
                         ||n.kind.equals("aid")&&(!(actor instanceof Human ally)||!HumanRelations.allied(h,ally))){n.index++;continue;}
+                if(SoundInvestigationMemory.blocked(h,n.kind,n.position)){n.index++;continue;}
                 var relevance=n.evaluatedIndex==n.index?n.evaluated:HearingRelevance.evaluate(h,actor,n.kind,n.position,n.radius,n.importance);
                 if(relevance.deferred())return;
                 n.evaluatedIndex=n.index;n.evaluated=relevance;

@@ -198,6 +198,7 @@ final class ScgunsIntegration implements GunSupport {
                 float accuracy = (float) (UnifiedConfig.get().scguns().accuracyModifier()
                         / Math.max(.01, HumanGrowth.gunSpreadMultiplier(human)));
                 AIGunEvent.performGunAttack(human, target, weapon, gun, accuracy);
+                HumanAwareness.gunshot(human);
                 if (!infinite(weapon)) {
                     if (energyWeapon(weapon)) energy(weapon).extractEnergy(energyCost(weapon), false);
                     else writeRounds(weapon, Gun.getAmmoCount(weapon) - 1);
@@ -223,6 +224,7 @@ final class ScgunsIntegration implements GunSupport {
     }
     public boolean isBullet(DamageSource source) { return source.getDirectEntity() instanceof ProjectileEntity; }
     public void registerEvents() {
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, ScgunsIntegration::onGunSound);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, ScgunsIntegration::onProjectileJoin);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, ScgunsIntegration::onProjectileHit);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGH, ScgunsIntegration::onDamage);
@@ -231,6 +233,9 @@ final class ScgunsIntegration implements GunSupport {
      * AIDamageScale is the sole upstream NPC schema field without a public setter.
      * Removing it also makes rejoining a saved projectile idempotent.
      */
+    private static void onGunSound(top.ribs.scguns.event.GunFireEvent.Post event){
+        if(!event.isClient())HumanAwareness.gunshot(event.getShooter());
+    }
     private static void onProjectileJoin(EntityJoinLevelEvent event) {
         if (event.getLevel().isClientSide || !(event.getEntity() instanceof ProjectileEntity projectile)
                 || !(projectile.getShooter() instanceof Human)

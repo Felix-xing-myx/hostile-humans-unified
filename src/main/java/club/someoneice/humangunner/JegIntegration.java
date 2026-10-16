@@ -212,6 +212,7 @@ final class JegIntegration implements GunSupport {
                 float spread = (float) (HumanGrowth.gunSpreadMultiplier(human)
                         / Math.max(.05, UnifiedConfig.get().scguns().accuracyModifier()));
                 AIGunEvent.performGunAttack(human, target, stack, gun, spread, false);
+                HumanAwareness.gunshot(human);
                 rounds(stack, rounds(stack) - 1);
                 int delay = Math.max(1, GunEnchantmentHelper.getRate(stack, gun));
                 if (gun.getGeneral().getFireMode() == ttv.migami.jeg.common.FireMode.BURST) {
@@ -239,7 +240,11 @@ final class JegIntegration implements GunSupport {
         return null;
     }
     public boolean isBullet(DamageSource source) { return isNativeBullet(source); }
-    public void registerEvents() { MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGH, JegIntegration::onDamage); }
+    public void registerEvents() { MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGH, JegIntegration::onDamage);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, JegIntegration::onGunSound); }
+    private static void onGunSound(ttv.migami.jeg.event.GunFireEvent.Post event){
+        if(!event.isClient())HumanAwareness.gunshot(event.getEntity());
+    }
     private static void onDamage(LivingHurtEvent event) {
         if (!isNativeBullet(event.getSource())) return;
         if (event.getSource().getEntity() instanceof Human attacker) {
