@@ -59,9 +59,9 @@ public final class HumanAttention {
         boolean combat=HumanPerception.canTarget(human,target);
         Vec3 point=combat&&!urgent?target.getEyePosition():observation;
         String owner=combat&&!urgent?"主目标观察":"辅助观察请求";
-        Request request=REQUESTS.get(h);
-        if(request!=null&&request.tick==h.tickCount){point=request.point;owner=request.owner;}
-        else REQUESTS.remove(h);
+        Request request=REQUESTS.get(human);
+        if(request!=null&&request.tick==human.tickCount){point=request.point;owner=request.owner;}
+        else REQUESTS.remove(human);
         if(NavigationDebugService.controls(human)){point=null;combat=false;}
         if(human.isFleeing&&(request==null||request.tick!=human.tickCount))point=null;
         OWNERS.put(human,route==null?owner:"导航身体 / "+owner);
