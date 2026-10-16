@@ -12,7 +12,14 @@ import com.google.gson.JsonObject;
 public final class PerceptionPolicyTest {
     private static int checks;
     private static void check(boolean ok,String message){checks++;if(!ok)throw new AssertionError(message);}
-    private static int recognition(double d,boolean alert,boolean known){return PerceptionPolicy.recognition(d,alert,known,10,1.25,90,4,.5,.5,.4);}
+    private static final PerceptionConfig recognitionDefaults=new PerceptionConfig(new JsonObject());
+    private static int recognition(double d,boolean alert,boolean known){
+        return PerceptionPolicy.recognition(d,alert,known,
+                recognitionDefaults.number("recognition.base_ticks"),recognitionDefaults.number("recognition.ticks_per_block"),
+                recognitionDefaults.integer("recognition.maximum_ticks"),recognitionDefaults.integer("recognition.minimum_ticks"),
+                recognitionDefaults.number("recognition.alert_factor"),recognitionDefaults.number("recognition.familiar_factor"),
+                recognitionDefaults.number("recognition.combined_factor"));
+    }
     public static void main(String[] args){
         check(new PerceptionConfig(new JsonObject()).integer("memory.dynamic_ticks")==600,"default identified position lease is thirty seconds");
         check(new PerceptionConfig(new JsonObject()).integer("recognition.break_ticks")==40,"brief lost view allows two seconds before resetting evidence");
@@ -61,10 +68,10 @@ public final class PerceptionPolicyTest {
         check(PerceptionPolicy.hitDeadline(false,200,260,160)==260,"unmarked identity never grants a lease");
         long first=PerceptionPolicy.hitDeadline(true,200,260,160);
         check(PerceptionPolicy.hitDeadline(true,201,first,160)==361,"repeated hits reset rather than add duration");
-        check(recognition(4,false,false)==15&&recognition(16,false,false)==30&&recognition(64,false,false)==90,"distance baseline");
-        check(recognition(4,true,true)==6&&recognition(16,true,true)==12&&recognition(64,true,true)==36,"moderate combined recognition");
-        check(recognition(16,true,false)==15&&recognition(16,false,true)==15,"either single acceleration");
-        check(recognition(128,true,false)==45,"far range capped before factor");
+        check(recognition(4,false,false)==8&&recognition(16,false,false)==15&&recognition(64,false,false)==45,"distance baseline");
+        check(recognition(4,true,true)==3&&recognition(16,true,true)==6&&recognition(64,true,true)==18,"moderate combined recognition");
+        check(recognition(16,true,false)==8&&recognition(16,false,true)==8,"either single acceleration");
+        check(recognition(128,true,false)==23,"far range capped before factor");
         double nearHalf=Math.toRadians(80);
         check(NearVisionPolicy.owns(0,-.8,0,8,-1,2.8)
                 &&NearVisionPolicy.inSector(0,0,0,1,nearHalf),"directly below feet has no pitch-cone blind spot");

@@ -9,6 +9,10 @@
 
 
 
+## 视觉识别时间减半（2026-10-16）
+
+- 用户明确要求各距离识别缩短50%。基线b1854f6b9e9b1397e08aa7cc5c9af79cda1c956a；主控独占现有perception-coordination工作树与分支，范围PerceptionConfig、默认资源、既有识别回归及机制文档。基础/距离增量/上限减半为5/0.625/45，最短及受击来源快速识别4→2tick；状态倍率和扫描/遮挡/记忆预算不变。知识库先备份至文档备份/识别时间减半-20261016，再同步公式、表格与默认附录。未要求构建，不运行编译、不改实例配置、不部署/push。
+
 ## 视觉、移动与战斗协调整改（2026-10-16，进行中）
 
 - 用户授权按八项整改方案全面实现并审查机制衔接，不能确定的关键玩法取舍才询问。基线861080c314e2dc34db9a0cc1ccbeec3f93b0d9ea；主控独占编辑worktrees/perception-coordination、fix/perception-coordination。Human.java、HumanPerception、AdaptiveCombatGoal、公共配置及观察快照/知识库由主控顺序接入，不运行Gradle或其他编译验证、不构建部署/启动游戏/push。
