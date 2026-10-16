@@ -281,7 +281,7 @@
   "navigation_debug.help.accepted": "Small green box: a focused candidate scored, returned a complete path or was accepted. Scored does not guarantee final selection.",
   "navigation_debug.help.rejected": "Small red box: a focused candidate was filtered, rejected or pruned. Check recent focused records for its reason.",
   "navigation_debug.help.limits": "These debug wireframes do not change blocks. A recent request may only be a trial; the active route and endpoint show execution. Only focused candidates are displayed; switch focus to inspect another entity.",
-  "navigation_debug.help.controls": "Pointer: right-click a Human to add/focus, air to cycle, a block to set only the focused destination. Sneak-click a Human to remove it; sneak-click air/block to clear all. Rebind the legend key in Options > Controls > Key Binds. Default F9 or End focused test releases only the focus and keeps observation.",
+  "navigation_debug.help.controls": "Pointer: right-click a Human to add/focus, air to cycle, a block to set only the focused destination. Sneak-click a Human to remove it; sneak-click air/block to clear all. Rebind the legend key in Options > Controls > Key Binds. End focused test in details releases only the focus and keeps observation.",
   "navigation_debug.help.open": "%s: open reconnaissance diagnostics",
   "navigation_debug.detail.title": "Reconnaissance diagnostics",
   "navigation_debug.detail.entity": "Next diagnostic focus",
@@ -323,9 +323,7 @@
   "navigation_debug.detail.marker.vision_near_base": "Entity-colored cylinder: near horizontal field including below feet and above the body.",
   "navigation_debug.detail.marker.vision_known_near_base": "Pale blue cylinder: familiar near field; still requires clear LOS.",
   "navigation_debug.test_warning": "TEST: autonomous combat paused",
-  "navigation_debug.stop_help": "%s: end focused test, keep observing",
   "navigation_debug.not_testing": "Focus is autonomous; no fixed-point test to end.",
   "navigation_debug.stopped_observing": "Ended test for %s; autonomous AI restored, observation retained.",
-  "navigation_debug.detail.stop_test": "End focused test",
-  "key.hostile_humans_unified.navigation_stop_test": "End focused navigation test (keep observing)"
+  "navigation_debug.detail.stop_test": "End focused test"
 }

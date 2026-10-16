@@ -1,5 +1,13 @@
 # 开发任务与整合记录
 
+## 移除结束测试热键与崩溃核对（2026-10-16，完成构建同步）
+
+- 基线0e217930fd9d0721a892fe2b2a610cc1c6a0423a；主控/root独占worktrees/observer-no-hotkey、fix/observer-no-hotkey。范围NavigationDebugClient、双语热键资源、版本/日志/知识库；用户要求移除独立F9并重构建。保留F8详情按钮及服务端权限/归属/释放流程。
+- 最新两份hs_err_pid34604.log（15:35:32）与hs_err_pid6832.log（15:36:59）均Java21.0.3 C2 CompilerThread0原生EXCEPTION_ACCESS_VIOLATION/DEP，当前编译任务分别JNA回调、Minecraft ChatFormatting；对应latest及归档日志未见NavigationDebug/StopFocusedTest异常。不能证明由F9操作导致，也不能把热键移除称为JVM根因修复。不擅自修改启动器Java或JVM参数。
+- 已移除独立F9注册、tick处理和提示/双语键；仅F8详情按钮提交既有无载荷请求，释放流程静态核对未发现确定缺陷。知识库正文备份后同步。Java17完整build lootScreeningTest --offline通过，55任务全部执行；Python291（12跳过），diff检查通过，打包字节码确认STOP_TEST及navigation_stop_test均不存在。
+- 沿用本次测试版本更新流程同步3.10.2，旧3.10.1备份至备份/release-3.10.2-deployment；构建/dist/实例SHA256均4299EB1218A9A14C35003DDAAFB36C62B9B458344CA1BF6390614FF5117520C3，4433871字节，五份配置哈希不变。日志见验证日志/observer-no-hotkey-3.10.2-build.log及-deployment.json；脱敏崩溃摘要见observer-no-hotkey-crash-review.json。
+- 本地整合main，不push/启动游戏。未游戏验收；JVM原生崩溃根因仍未确认，需以Java17测试与进一步运行环境排查区分，不能宣称已修复。
+
 ## 3.10.1构建同步（2026-10-16，完成）
 
 - 用户明确要求构建并同步；基线f259f04，包含1706509枪手连续侧移、8f97ce3射击窗口与低身体预算、f259f04观察工具优化。主控独占observer-controls工作树，版本3.10.1；目标仅既定Forge47.4.21实例，检查进程、备份、dist留存与三方哈希，保留其他配置。无push/启动游戏授权。

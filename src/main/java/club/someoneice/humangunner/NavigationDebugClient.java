@@ -44,17 +44,11 @@ public final class NavigationDebugClient {
         static final KeyMapping LEGEND = new KeyMapping("key.hostile_humans_unified.navigation_legend",
                 KeyConflictContext.IN_GAME, com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_F8, "key.categories.hostile_humans_unified");
-        static final KeyMapping STOP_TEST = new KeyMapping("key.hostile_humans_unified.navigation_stop_test",
-                KeyConflictContext.IN_GAME, com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM,
-                GLFW.GLFW_KEY_F9, "key.categories.hostile_humans_unified");
-        @SubscribeEvent public static void register(RegisterKeyMappingsEvent event) { event.register(LEGEND); event.register(STOP_TEST); }
+        @SubscribeEvent public static void register(RegisterKeyMappingsEvent event) { event.register(LEGEND); }
     }
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         var mc = Minecraft.getInstance();
-        while (Keys.STOP_TEST.consumeClick()) {
-            if (mc.player != null && mc.screen == null && !visibleEntries().isEmpty()) NavigationDebugNetwork.stopFocusedTest();
-        }
         while (Keys.LEGEND.consumeClick()) {
             if (mc.player != null && mc.screen == null) mc.setScreen(new NavigationLegendScreen());
         }
@@ -115,8 +109,7 @@ public final class NavigationDebugClient {
             text("hud_health", number(s.health()), number(s.fallBudget()), s.maxDrop(), number(s.followRange())),
             text("hud_work", s.budget(), number(s.searchMillis()), text("reason." + s.obstruction())),
             text("multi_help"),
-            text("help.open", Keys.LEGEND.getTranslatedKeyMessage()),
-            text("stop_help", Keys.STOP_TEST.getTranslatedKeyMessage())
+            text("help.open", Keys.LEGEND.getTranslatedKeyMessage())
         };
         for (Component detail : details) {
             if (y + 8 > g.guiHeight()) break;
