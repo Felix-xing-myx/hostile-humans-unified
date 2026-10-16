@@ -19,6 +19,20 @@
 | 出生装备 | `HumanSpawnEquipment.completeIfReady` | 等待HumanData与注册表，按既定阶段完成一次；不在多个生成回调各自发装备 |
 | 导航与地形 | `NavigationSupport`、`CombatTerrainNavigation`、两类寻路预算 | 基础追击与可选绕路预算保留各自职责，防摔/命令/水面调度继续优先，不增加竞争Goal |
 
+## 视觉拾取与绕行连续性
+
+| 职责 | 接口 | 约束 |
+|---|---|---|
+| 物品视觉证据 | `HumanLootVision.inspect / lastSeen` | `VISIBLE / HIDDEN / DEFERRED`；复用HumanPerception真实头部视野，COLLIDER射线；4射线/人/tick并共享PerceptionBudget rays；64条探测/64条已见，位置缓存600tick，不保存Entity/Level引用 |
+| 普通候选查询 | `HumanLootManager.NearbySearch` | 查询延期返回null并保持阶段；评分Double.NaN仅表示延期，保留当前候选；视觉先于价值评分，不把HIDDEN加入无价值缓存 |
+| 有界选择 | `PileFirstSelection.advance` | 分数NaN保留候选，下轮续查；broad供应器null保留pile阶段；旧调用普通分数行为不变 |
+| 战斗补给 | `CombatResupply.State` | UUID候选列表/游标跨tick，pending不受启动间隔限制，快照最长80tick；不接管MOVE/LOOK；每轮一次成功交易 |
+| 拾取路线 | `ValuableItemPickupGoal / PickupRouteProgress` | 使用knownItemPosition，不使用隐藏实时坐标；新旧路均完整、安全、剩余节点符合命令；配额等待不计停滞，失败只释放自有路线 |
+| 路径失败记忆 | `LootRetryPolicy / FailedItem` | 与装备价值筛除分离；200/400/800/1200tick最低等待，静态场景1200tick兜底；32项，位置变化或局部已加载方块变化允许重评估 |
+| 拾取辅助观察 | `HumanAttention.observeLoot` | 负优先级请求，仅辅助闲置朝向；不抢战斗或真实受击观察 |
+
+无全局A*范围或节点阈值扩容。完整路线尚未算出不能以部分路成功替代；视觉延期也不能作为路线失败写入长期记忆。知识库职责入口为“士兵装备、拾取与掉落”“活动预算与调度”及导航理论02/04。
+
 ## 本轮修正
 
 - 将回血推进移出菜单写锁：编辑装备暂停AI写物品，不暂停已经支付的疗程或冷却。食物回血改为持久化剩余加载tick，避免实体重载后tickCount重置导致旧截止日期长时间不可达；旧已支付食物疗程不丢失，缺少新计时字段时在一个正常间隔后恢复。

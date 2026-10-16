@@ -154,6 +154,36 @@ public final class PerformancePoliciesTest {
         try { paused.firstMatching(-1, value -> true); throw new AssertionError("negative budget accepted"); }
         catch (IllegalArgumentException expected) { checks++; }
 
+        Object lootRoute = new Object();
+        PickupRouteProgress detour = new PickupRouteProgress();detour.reset(0,0,0,0);
+        for(int tick=1;tick<=180;tick++)
+            check(!detour.stalled(tick,lootRoute,0,10-tick*.02,tick*.02,0,0,false),
+                    "detour away from item remains valid while approaching its next waypoint");
+        PickupRouteProgress budgetWait = new PickupRouteProgress();budgetWait.reset(0,0,0,0);
+        for(int tick=1;tick<=100;tick++)check(!budgetWait.stalled(tick,null,-1,10,0,0,0,true),"path-budget waiting never becomes stalled movement");
+        check(!budgetWait.stalled(159,lootRoute,0,10,0,0,0,false),"waiting time is excluded from the sixty-tick stall window");
+        check(budgetWait.stalled(160,lootRoute,0,10,0,0,0,false),"actual stillness eventually releases the target");
+        PickupRouteProgress synthetic = new PickupRouteProgress();synthetic.reset(0,0,0,0);
+        for(int tick=1;tick<60;tick++)synthetic.stalled(tick,lootRoute,tick,10,0,0,0,false);
+        check(synthetic.stalled(60,lootRoute,60,10,0,0,0,false),"synthetic node advances cannot hide zero physical movement");
+        PickupRouteProgress circles = new PickupRouteProgress();circles.reset(0,0,0,0);
+        for(int tick=1;tick<60;tick++)circles.stalled(tick,lootRoute,0,10,(tick%2)*.3,0,0,false);
+        check(circles.stalled(60,lootRoute,0,10,0,0,0,false),"moving in circles without route progress is still stalled");
+        check(LootRetryPolicy.blocked(199,1,true)&&!LootRetryPolicy.blocked(200,1,true),"local topology change retries only after the initial cooldown");
+        check(LootRetryPolicy.blocked(200,1,false)&&LootRetryPolicy.blocked(1199,1,false)
+                &&!LootRetryPolicy.blocked(1200,1,false),"unchanged unreachable loot is not blindly retried every ten seconds");
+        check(LootRetryPolicy.cooldown(1)==200&&LootRetryPolicy.cooldown(2)==400
+                &&LootRetryPolicy.cooldown(3)==800&&LootRetryPolicy.cooldown(4)==1200,"failure cooldown is bounded exponential backoff");
+        check(!LootRetryPolicy.blocked(-1,4,false),"tick rollback does not create permanent failure memory");
+        PileFirstSelection<Integer,Integer> deferredLoot = new PileFirstSelection<>(List.of(1,2).iterator(),false,
+                ()->List.<Integer>of().iterator(),v->v,v->true);
+        check(deferredLoot.advance(4,v->Double.NaN)==null&&!deferredLoot.isDone(),"unknown sight retains its exact candidate");
+        check(deferredLoot.advance(4,Integer::doubleValue)==2,"deferred item is retried rather than consumed or marked seen");
+        AtomicInteger deferredQueries = new AtomicInteger();
+        PileFirstSelection<Integer,Integer> deferredBroad = new PileFirstSelection<>(List.<Integer>of().iterator(),true,
+                ()->deferredQueries.getAndIncrement()==0?null:List.of(3).iterator(),v->v,v->true);
+        check(deferredBroad.advance(4,Integer::doubleValue)==null&&!deferredBroad.isDone()&&deferredBroad.isPileOnly(),"query budget wait does not falsely finish a pile search");
+        check(deferredBroad.advance(4,Integer::doubleValue)==3,"deferred broad query resumes successfully");
         Random random = new Random(42);
         AtomicInteger broadQueries = new AtomicInteger();
         PileFirstSelection<Integer, Integer> committed = new PileFirstSelection<>(List.of(1, 2).iterator(), true,

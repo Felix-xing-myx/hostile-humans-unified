@@ -22,6 +22,12 @@ public final class HumanAttention {
     private record Request(int tick,Vec3 point,int priority,String owner){}
     private HumanAttention() {}
     public static String owner(Human h){return OWNERS.getOrDefault(h,"自然朝向");}
+    /** A known loot location may orient an idle body, never replace combat or real-hit attention. */
+    public static void observeLoot(Human h,Vec3 point){
+        if(point==null||h.level().isClientSide||!Double.isFinite(point.x)||!Double.isFinite(point.y)||!Double.isFinite(point.z))return;
+        Request old=REQUESTS.get(h);
+        if(old==null||old.tick!=h.tickCount||old.priority<0)REQUESTS.put(h,new Request(h.tickCount,point,-10,"已观察物品"));
+    }
     public static void combat(Human h,net.minecraft.world.entity.Entity target,float yaw,float pitch,int priority,String owner){
         if(target==null)return;
         Vec3 point=Float.isFinite(yaw)&&Float.isFinite(pitch)
@@ -60,7 +66,7 @@ public final class HumanAttention {
         Vec3 point=combat&&!urgent?target.getEyePosition():observation;
         String owner=combat&&!urgent?"主目标观察":"辅助观察请求";
         Request request=REQUESTS.get(human);
-        if(request!=null&&request.tick==human.tickCount){point=request.point;owner=request.owner;}
+        if(request!=null&&request.tick==human.tickCount&&(request.priority>=0||!combat&&!urgent)){point=request.point;owner=request.owner;}
         else REQUESTS.remove(human);
         if(NavigationDebugService.controls(human)){point=null;combat=false;}
         if(human.isFleeing&&(request==null||request.tick!=human.tickCount))point=null;

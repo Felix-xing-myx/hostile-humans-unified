@@ -176,7 +176,8 @@ public final class HumanLootManager {
         private final AABB searchArea;
         private final HumanData inventory;
         private final int inventoryRevision;
-        private final PileFirstSelection<ItemEntity, UUID> selection;
+        private PileFirstSelection<ItemEntity, UUID> selection;
+        private final AABB pileArea;
 
         NearbySearch(Human human, double radius, Vec3 preferredPile) {
             this.human = human;
@@ -186,11 +187,8 @@ public final class HumanLootManager {
             this.searchArea = human.getBoundingBox().inflate(radius, 4.0D, radius);
             this.inventory = human.getData();
             this.inventoryRevision = inventory == null ? 0 : inventory.getInventoryRevision();
-            AABB pileArea = preferredPile == null ? null : new AABB(preferredPile, preferredPile).inflate(4.0D);
-            boolean pileOnly = pileArea != null && searchArea.intersects(pileArea);
-            selection = new PileFirstSelection<>(query(pileOnly ? searchArea.intersect(pileArea) : searchArea),
-                    pileOnly, () -> query(searchArea), ItemEntity::getUUID,
-                    item -> item.position().distanceToSqr(preferredPile) <= 16.0D);
+            AABB localPile = preferredPile == null ? null : new AABB(preferredPile, preferredPile).inflate(4.0D);
+            this.pileArea = localPile != null && searchArea.intersects(localPile) ? searchArea.intersect(localPile) : null;
         }
 
         boolean isCurrent(Human human) {
@@ -199,15 +197,24 @@ public final class HumanLootManager {
                     && current == inventory && (current == null || current.getInventoryRevision() == inventoryRevision);
         }
 
-        boolean isDone() { return selection.isDone(); }
+        boolean isDone() { return selection != null && selection.isDone(); }
 
         ItemEntity advance(int budget, Predicate<ItemEntity> skip, Consumer<ItemEntity> reject) {
+            if (selection == null) {
+                Iterator<ItemEntity> initial = query(pileArea == null ? searchArea : pileArea);
+                if (initial == null) return null;
+                selection = new PileFirstSelection<>(initial, pileArea != null, () -> query(searchArea), ItemEntity::getUUID,
+                        item -> item.position().distanceToSqr(preferredPile) <= 16.0D);
+            }
             // The backpack can change between batches; values never cross a tick.
             HumanData current = human.getData();
             StorageSummary capacity = current == null ? null : new StorageSummary(human, current);
             return selection.advance(budget, item -> {
                 if (!item.isAlive() || item.getItem().isEmpty() || item.level() != human.level()
                         || !item.getBoundingBox().intersects(searchArea) || skip.test(item)) return Double.NEGATIVE_INFINITY;
+                HumanLootVision.Sight sight = HumanLootVision.inspect(human, item);
+                if (sight == HumanLootVision.Sight.DEFERRED) return Double.NaN;
+                if (sight != HumanLootVision.Sight.VISIBLE) return Double.NEGATIVE_INFINITY;
                 double candidateScore = score(item, capacity);
                 if (candidateScore == Double.NEGATIVE_INFINITY) {
                     if (item.isAlive() && !item.getItem().isEmpty()) reject.accept(item);
@@ -217,6 +224,7 @@ public final class HumanLootManager {
         }
 
         private Iterator<ItemEntity> query(AABB area) {
+            if (!PerceptionBudget.claim(human, "queries", 1, ":loot-query")) return null;
             return human.level().getEntitiesOfClass(ItemEntity.class, area,
                     item -> item.isAlive() && !item.getItem().isEmpty()).iterator();
         }
@@ -291,6 +299,7 @@ public final class HumanLootManager {
     static boolean collect(Human human, ItemEntity entity) {
         if (!SoldierPickupPolicy.canCollectNow(human) || !entity.isAlive() || entity.hasPickUpDelay()
                 || !SoldierOrder.allowsLootPosition(human, entity.getX(), entity.getZ())) return false;
+        if (HumanLootVision.inspect(human, entity) != HumanLootVision.Sight.VISIBLE) return false;
         ItemStack ground = entity.getItem();
         if (ground.isEmpty() || !SoldierPickupPolicy.canCollectItem(human, ground)
                 || !HumanGunAcceptance.accepts(ground)

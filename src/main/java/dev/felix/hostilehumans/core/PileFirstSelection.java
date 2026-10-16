@@ -17,6 +17,7 @@ public final class PileFirstSelection<T, K> {
     private boolean pileOnly;
     private boolean done;
     private T best;
+    private T deferred;
 
     public PileFirstSelection(Iterator<T> initial, boolean pileOnly, Supplier<Iterator<T>> broad,
                               Function<T, K> key, Predicate<T> inPile) {
@@ -35,25 +36,31 @@ public final class PileFirstSelection<T, K> {
         if (done) return best;
         if (budget == 0) return null;
         double bestScore = best == null ? Double.NEGATIVE_INFINITY : score.applyAsDouble(best);
+        if (Double.isNaN(bestScore)) return null; // Unknown/deferred work must retain its candidate.
         if (bestScore == Double.NEGATIVE_INFINITY) best = null;
         int examined = 0;
         while (examined < budget) {
-            if (!remaining.hasNext()) {
+            if (deferred == null && !remaining.hasNext()) {
                 if (pileOnly && best == null) {
+                    Iterator<T> expanded = broad.get();
+                    if (expanded == null) return null; // Deferred broad-phase query.
                     pileOnly = false;
-                    remaining = broad.get();
+                    remaining = expanded;
                     continue;
                 }
                 done = true;
                 break;
             }
-            T item = remaining.next();
+            T item = deferred == null ? remaining.next() : deferred;
+            deferred = null;
             examined++;
             // A box's corners outside the pile sphere must remain available
             // to the broad stage; do not put those keys into the seen set yet.
             if (pileOnly && !inPile.test(item)) continue;
-            if (!seen.add(key.apply(item))) continue;
+            if (seen.contains(key.apply(item))) continue;
             double candidateScore = score.applyAsDouble(item);
+            if (Double.isNaN(candidateScore)) { deferred = item; return null; }
+            seen.add(key.apply(item));
             if (candidateScore > bestScore) {
                 best = item;
                 bestScore = candidateScore;

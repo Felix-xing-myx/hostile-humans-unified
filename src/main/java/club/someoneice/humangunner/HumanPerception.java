@@ -398,6 +398,8 @@ public final class HumanPerception {
     }
     private static long recognizing(State s){return s.tracks.values().stream().filter(t->t.evidence.active()).count();}
     private record VisualProbe(Vec3 visiblePoint,boolean complete,String reason) {}
+    /** Item discovery shares actual head orientation and the near cylinder, without enemy bonuses. */
+    static boolean withinLootVision(Human h,Vec3 point){return withinVision(h,point,false,1.0D);}
     private static boolean withinVision(Human h,Vec3 point,boolean familiar,double visibility){
         Vec3 delta=point.subtract(h.getEyePosition());double distance=delta.length();
         if(distance>Math.max(2,range(h)*visibility))return false;

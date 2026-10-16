@@ -18,10 +18,14 @@ import java.util.UUID;
 final class ValuableItemPickupGoal extends Goal {
     private static final int MAX_SCREENED_ITEMS = 32;
     private static final int SCREENED_COOLDOWN_TICKS = 120;
-    private static final int FAILED_TARGET_COOLDOWN_TICKS = 200;
-    private static final int STALLED_TARGET_TICKS = 60;
     private final Human human;
     private final Map<UUID, ScreenedItem> screenedItems = new LinkedHashMap<>();
+    private final Map<UUID, FailedItem> failedItems = new LinkedHashMap<>();
+    private final Map<FailedItem, Boolean> failureContextChecks = new java.util.HashMap<>();
+    private final dev.felix.hostilehumans.core.PickupRouteProgress progress = new dev.felix.hostilehumans.core.PickupRouteProgress();
+    private Vec3 knownItemPosition;
+    private boolean waitingForPath, directWaterFallback;
+    private int arrivedAt = -1;
     private static final EquipmentSlot[] EQUIPMENT_SLOTS = EquipmentSlot.values();
     private final ItemStack[] screenedEquipment = new ItemStack[EQUIPMENT_SLOTS.length];
     private HumanData screenedInventory;
@@ -35,8 +39,6 @@ final class ValuableItemPickupGoal extends Goal {
     private int nextSearchTick;
     private int nextRepathTick;
     private int nextValidationTick;
-    private int lastProgressTick;
-    private double bestTargetDistance;
 
     ValuableItemPickupGoal(Human human) {
         this.human = human;
@@ -63,7 +65,8 @@ final class ValuableItemPickupGoal extends Goal {
         }
         nextSearchTick = human.tickCount + 20 + human.getRandom().nextInt(20);
         targetItem = chooseTarget();
-        return targetItem != null;
+        knownItemPosition = targetItem == null ? null : HumanLootVision.lastSeen(human, targetItem);
+        return targetItem != null && knownItemPosition != null;
     }
 
     @Override
@@ -78,8 +81,8 @@ final class ValuableItemPickupGoal extends Goal {
                 && !human.isUsingItem()
                 && SoldierPickupPolicy.isEnabled(human)
                 && !SoldierOrder.isHoldingPosition(human)
-                && SoldierOrder.allowsLootPosition(human, targetItem.getX(), targetItem.getZ())
-                && human.distanceToSqr(targetItem) <= 256.0D;
+                && knownItemPosition != null
+                && SoldierOrder.allowsLootPosition(human, knownItemPosition.x, knownItemPosition.z);
     }
 
     @Override
@@ -95,8 +98,14 @@ final class ValuableItemPickupGoal extends Goal {
             stop();
             return;
         }
-        human.setPursuingWaterLoot(human.isInWater() || targetItem.isInWater());
-        if (human.tickCount >= nextValidationTick) {
+        HumanLootVision.Sight sight = HumanLootVision.inspect(human, targetItem);
+        if (sight == HumanLootVision.Sight.VISIBLE) {
+            Vec3 observed = HumanLootVision.lastSeen(human, targetItem);
+            if (observed != null) knownItemPosition = observed;
+        }
+        human.setPursuingWaterLoot(human.isInWater()
+                || human.level().getFluidState(net.minecraft.core.BlockPos.containing(knownItemPosition)).is(net.minecraft.tags.FluidTags.WATER));
+        if (sight == HumanLootVision.Sight.VISIBLE && human.tickCount >= nextValidationTick) {
             nextValidationTick = human.tickCount + 20;
             if (!HumanLootManager.isWorthCollecting(human, targetItem)) {
                 rememberScreened(targetItem, SCREENED_COOLDOWN_TICKS);
@@ -104,38 +113,41 @@ final class ValuableItemPickupGoal extends Goal {
                 return;
             }
         }
-        human.getLookControl().setLookAt(targetItem, 25.0F, 25.0F);
-        double distance = human.distanceTo(targetItem);
-        if (distance <= 1.5D) {
+        human.getLookControl().setLookAt(knownItemPosition.x, knownItemPosition.y + .15D, knownItemPosition.z, 25.0F, 25.0F);
+        HumanAttention.observeLoot(human, knownItemPosition.add(0,.15D,0));
+        if (sight == HumanLootVision.Sight.VISIBLE && human.distanceToSqr(targetItem) <= 2.25D) {
             if (!HumanLootManager.collect(human, targetItem)) {
-                rememberScreened(targetItem, FAILED_TARGET_COOLDOWN_TICKS);
+                rememberScreened(targetItem, SCREENED_COOLDOWN_TICKS);
             }
+            failedItems.remove(targetItem.getUUID());
             advanceTarget();
             return;
         }
-        if (distance < bestTargetDistance - 0.35D) {
-            bestTargetDistance = distance;
-            lastProgressTick = human.tickCount;
-        } else if (human.tickCount - lastProgressTick >= STALLED_TARGET_TICKS) {
-            rememberScreened(targetItem, FAILED_TARGET_COOLDOWN_TICKS);
-            advanceTarget();
+        if (human.getNavigation().isDone() && human.position().distanceToSqr(knownItemPosition) <= 2.25D) {
+            if (arrivedAt < 0) arrivedAt = human.tickCount;
+            if (sight == HumanLootVision.Sight.DEFERRED || human.tickCount - arrivedAt < 10) return;
+            failTarget("到达最后目视位置，仍不能确认并拾取物品", null);
             return;
         }
-        if (targetItem.isInWater() && human.shouldUseWaterMovement()
-                && human.tickCount - lastProgressTick >= 20
-                && !human.getNavigation().isDone()) {
-            // A live but stalled water path can point at a stale water node.
-            // Briefly let the existing direct-water pickup steering take over.
-            human.getNavigation().stop();
-            nextRepathTick = human.tickCount + 20;
+        arrivedAt = -1;
+        var route = human.getNavigation().getPath();
+        boolean owned = ownsPath(route, ownedPath) || MovementContinuity.ownsRoute(human, ownedPath);
+        boolean activeRoute = owned && route != null && !route.isDone();
+        Vec3 next = activeRoute ? route.getNextEntityPos(human) : knownItemPosition;
+        boolean waiting = waitingForPath && !activeRoute || directWaterFallback && sight == HumanLootVision.Sight.DEFERRED;
+        if (progress.stalled(human.tickCount, activeRoute ? route : null, activeRoute ? route.getNextNodeIndex() : -1,
+                human.position().distanceTo(next), human.getX(), human.getY(), human.getZ(), waiting)) {
+            failTarget("拾取路线无进展", route);
+            return;
         }
         if (human.tickCount >= nextRepathTick
                 && (human.getNavigation().isDone() || human.getNavigation().isStuck()
-                || lastPathItemPosition == null
-                || lastPathItemPosition.distanceToSqr(targetItem.position()) > 4.0D)) {
+                || lastPathItemPosition == null || lastPathItemPosition.distanceToSqr(knownItemPosition) > 4.0D)) {
             moveToItem();
         }
-        human.approachWaterLoot(targetItem, 0.9D);
+        if (targetItem == null) return;
+        // An unseen moving item must not steer the human using its hidden current coordinates.
+        if (sight == HumanLootVision.Sight.VISIBLE) human.approachWaterLoot(targetItem, 0.9D);
         if (human.horizontalCollision) {
             NavigationSupport.openBlockingPassage(human);
         }
@@ -160,6 +172,9 @@ final class ValuableItemPickupGoal extends Goal {
             human.setXxa(0); human.setZza(0);
         }
         ownedPath = null;
+        knownItemPosition = null;
+        waitingForPath = directWaterFallback = false;
+        BasicNavigationBudget.cancel(human);
     }
 
     void interruptForCombat() {
@@ -179,12 +194,13 @@ final class ValuableItemPickupGoal extends Goal {
         lastSelectionTick = human.tickCount;
         selectionDeferred = false;
         refreshScreeningEquipment();
+        failureContextChecks.clear();
         screenedItems.entrySet().removeIf(entry -> entry.getValue().expiresAt <= human.tickCount);
         if (pendingSearch == null || !pendingSearch.isCurrent(human)) {
             pendingSearch = new HumanLootManager.NearbySearch(human, 12.0D, pileCenter);
         }
         ItemEntity chosen = pendingSearch.advance(64,
-                item -> isScreened(item) || !SoldierOrder.allowsLootPosition(human, item.getX(), item.getZ()),
+                item -> isScreened(item) || isFailed(item) || !SoldierOrder.allowsLootPosition(human, item.getX(), item.getZ()),
                 item -> rememberScreened(item, SCREENED_COOLDOWN_TICKS));
         if (!pendingSearch.isDone()) {
             nextSearchTick = human.tickCount + 1;
@@ -195,7 +211,7 @@ final class ValuableItemPickupGoal extends Goal {
             pileCenter = null;
         } else if (pileCenter == null || chosen.position().distanceToSqr(pileCenter) > 16.0D) {
             // Commit to one local pile until it has no useful reachable item.
-            pileCenter = chosen.position();
+            pileCenter = HumanLootVision.lastSeen(human, chosen);
         }
         return chosen;
     }
@@ -206,48 +222,144 @@ final class ValuableItemPickupGoal extends Goal {
 
     private void beginTarget() {
         if (targetItem == null) return;
-        bestTargetDistance = human.distanceTo(targetItem);
-        lastProgressTick = human.tickCount;
+        knownItemPosition = HumanLootVision.lastSeen(human, targetItem);
+        if (knownItemPosition == null) { targetItem = null; return; }
+        progress.reset(human.tickCount, human.getX(), human.getY(), human.getZ());
+        arrivedAt = -1;
+        waitingForPath = directWaterFallback = false;
         nextValidationTick = human.tickCount + 20;
         nextRepathTick = 0;
         lastPathItemPosition = null;
-        human.setPursuingWaterLoot(human.isInWater() || targetItem.isInWater());
+        human.setPursuingWaterLoot(human.isInWater());
+        if (human.position().distanceToSqr(knownItemPosition) <= 2.25D) { nextRepathTick = human.tickCount + 10; return; }
         moveToItem();
     }
 
-    private void advanceTarget() {
-        targetItem = chooseTarget();
-        if (targetItem != null) {
-            beginTarget();
-        } else {
-            human.setPursuingWaterLoot(false);
-            human.getNavigation().stop();
+    private void releasePickupRoute() {
+        boolean ownRoute = ownsPath(human.getNavigation().getPath(), ownedPath) || MovementContinuity.ownsRoute(human, ownedPath);
+        boolean ownDirectInput = directWaterFallback && human.getNavigation().isDone();
+        if (ownRoute || ownDirectInput) {
+            if (ownRoute) human.getNavigation().stop();
+            MovementContinuity.cancelStep(human);
+            human.getMoveControl().setWantedPosition(human.getX(), human.getY(), human.getZ(), 0);
+            human.setXxa(0);human.setZza(0);
         }
+        ownedPath = null;
+        directWaterFallback = false;
+    }
+
+    private void advanceTarget() {
+        releasePickupRoute();
+        human.setPursuingWaterLoot(false);
+        waitingForPath = false;
+        targetItem = chooseTarget();
+        if (targetItem != null) beginTarget();
     }
 
     private void moveToItem() {
-        if (targetItem != null) {
-            if (!BasicNavigationBudget.tryAcquire(human, 1)) {
-                nextRepathTick = human.tickCount + 1;
+        if (targetItem == null || knownItemPosition == null) return;
+        var nav = human.getNavigation();
+        var previous = nav.getPath();
+        boolean hadOwnedRoute = previous != null && !previous.isDone()
+                && (ownsPath(previous, ownedPath) || MovementContinuity.ownsRoute(human, ownedPath));
+        if (!BasicNavigationBudget.tryAcquire(human, 1)) {
+            waitingForPath = true;
+            nextRepathTick = human.tickCount + 1;
+            HumanPerception.decision(human,"等待拾取路径","配额等待不算不可达或卡住");
+            return;
+        }
+        BasicNavigationBudget.cancel(human);
+        waitingForPath = false;
+        var goal = net.minecraft.core.BlockPos.containing(knownItemPosition);
+        net.minecraft.world.level.pathfinder.Path path = nav instanceof com.craftix.hostile_humans.entity.ai.HumanNavigation ground
+                ? ground.createFreshPath(goal) : nav.createPath(goal, 0);
+        boolean safe = usableLootPath(path);
+        if (safe && nav.moveTo(path, .9D)) {
+            ownedPath = nav.getPath();
+            lastPathItemPosition = knownItemPosition;
+            nextRepathTick = human.tickCount + 20;
+            directWaterFallback = false;
+            HumanPerception.decision(human,"拾取已观察物品","沿完整安全路径前往最后目视位置");
+            return;
+        }
+        // A failed replacement cannot erase an already usable owned route.
+        if (hadOwnedRoute && nav.getPath() != previous && usableLootPath(previous)
+                && nav.moveTo(previous, .9D)) ownedPath = nav.getPath();
+        var current = nav.getPath();
+        if (usableLootPath(current) && (ownsPath(current, ownedPath) || MovementContinuity.ownsRoute(human, ownedPath))) {
+            nextRepathTick = human.tickCount + 20;
+            return;
+        }
+        if (hadOwnedRoute) releasePickupRoute();
+        if (targetItem.isInWater() && (human.shouldUseWaterMovement() || Math.abs(human.getY() - targetItem.getY()) <= 2)
+                && HumanLootManager.isReachableWithoutDiving(targetItem)) {
+            HumanLootVision.Sight sight = HumanLootVision.inspect(human, targetItem);
+            if (sight == HumanLootVision.Sight.DEFERRED) {
+                waitingForPath = true;nextRepathTick = human.tickCount + 1;
                 return;
             }
-            net.minecraft.world.level.pathfinder.Path path = human.getNavigation().createPath(targetItem, 0);
-            if (path != null) {
-                for (int i = 0; i < path.getNodeCount(); i++) {
-                    var node = path.getNode(i);
-                    if (!SoldierOrder.allowsLootPosition(human, node.x + 0.5D, node.z + 0.5D)) {
-                        rememberScreened(targetItem, FAILED_TARGET_COOLDOWN_TICKS);
-                        targetItem = null;
-                        human.getNavigation().stop();
-                        return;
-                    }
-                }
+            if (sight == HumanLootVision.Sight.VISIBLE) {
+                directWaterFallback = true;nextRepathTick = human.tickCount + 20;
+                return;
             }
-            if (human.getNavigation().moveTo(path, 0.9D)) ownedPath = human.getNavigation().getPath();
-            lastPathItemPosition = targetItem.position();
-            nextRepathTick = human.tickCount + 20;
         }
+        failTarget("没有完整、安全且命令允许的拾取路线", path);
     }
+
+    private boolean usableLootPath(net.minecraft.world.level.pathfinder.Path path) {
+        if (path == null || !path.canReach() || path.isDone() || !HumanTerrainSafety.safePath(human, path)) return false;
+        for (int i = path.getNextNodeIndex(); i < path.getNodeCount(); i++) {
+            var node = path.getNode(i);
+            if (!SoldierOrder.allowsLootPosition(human, node.x + .5D, node.z + .5D)) return false;
+        }
+        return true;
+    }
+
+    private void failTarget(String reason, net.minecraft.world.level.pathfinder.Path path) {
+        if (targetItem == null || knownItemPosition == null) return;
+        FailedItem old = failedItems.get(targetItem.getUUID());
+        int attempts = old == null || old.position.distanceToSqr(knownItemPosition) > 4
+                || old.origin.distanceToSqr(human.position()) > 16 ? 1 : Math.min(4, old.attempts + 1);
+        Vec3 probe = path != null && path.getEndNode() != null
+                ? new Vec3(path.getEndNode().x + .5, path.getEndNode().y, path.getEndNode().z + .5) : knownItemPosition;
+        FailedItem failed = new FailedItem(knownItemPosition, human.position(), probe, human.tickCount, attempts,
+                sceneHash(knownItemPosition, human.position(), probe));
+        failedItems.remove(targetItem.getUUID());
+        while (failedItems.size() >= MAX_SCREENED_ITEMS) failedItems.remove(failedItems.keySet().iterator().next());
+        failedItems.put(targetItem.getUUID(), failed);
+        HumanPerception.decision(human,"暂缓不可达物品",reason+"；保留位置失败记录，不反复顶墙");
+        NavigationDebugService.candidate(human, knownItemPosition,"loot", "unreachable",Double.NaN);
+        advanceTarget();
+    }
+
+    private boolean isFailed(ItemEntity item) {
+        FailedItem failed = failedItems.get(item.getUUID());
+        if (failed == null) for (FailedItem other : failedItems.values()) {
+            if (other.position.distanceToSqr(item.position()) < 1) { failed = other; break; }
+        }
+        if (failed == null) return false;
+        if (failed.position.distanceToSqr(item.position()) > 4 || failed.origin.distanceToSqr(human.position()) > 16) return false;
+        int elapsed = human.tickCount - failed.tick;
+        int cooldown = dev.felix.hostilehumans.core.LootRetryPolicy.cooldown(failed.attempts);
+        if (!dev.felix.hostilehumans.core.LootRetryPolicy.blocked(elapsed, failed.attempts, false)) return false;
+        if (elapsed < cooldown) return true;
+        final FailedItem snapshot = failed;
+        return !failureContextChecks.computeIfAbsent(failed,
+                key -> sceneHash(snapshot.position, snapshot.origin, snapshot.probe) != snapshot.scene);
+    }
+
+    private int sceneHash(Vec3 position, Vec3 origin, Vec3 probe) {
+        int hash = 1;
+        for (Vec3 point : new Vec3[]{position, origin, probe}) {
+            var center = net.minecraft.core.BlockPos.containing(point);
+            for (var cell : new net.minecraft.core.BlockPos[]{center,center.above(),center.below(),center.north(),center.south(),center.east(),center.west()}) {
+                hash = 31 * hash + (human.level().hasChunkAt(cell) ? human.level().getBlockState(cell).hashCode() : 0);
+            }
+        }
+        return hash;
+    }
+
+    private record FailedItem(Vec3 position, Vec3 origin, Vec3 probe, int tick, int attempts, int scene) {}
 
     private boolean isScreened(ItemEntity item) {
         ScreenedItem cached = screenedItems.get(item.getUUID());

@@ -1,5 +1,17 @@
 # 开发任务与整合记录
 
+## 视觉拾取、绕行连续性与不可达记忆（2026-10-16，源码已交付，待构建验收）
+
+- 用户反馈墙后拾取难建立完整绕行、执行中无压力却消失，并要求拾取以视觉为原始输入、不可达不要反复卡墙。基线e31b9f8695ea038bcd9ff00b2776e0df5d739ff4；主控/root独占worktrees/visual-loot-routing、fix/visual-loot-routing，叠加未构建的枪手直接侧移与忽略友善动物提交。
+- 已证实：ValuableItemPickupGoal用直线物距改善判断60tick卡住，并有16格直线继续范围；moveToItem允许部分路径、把null交moveTo且失败未立即记忆。扫描NearbySearch是邻域雷达；失败记录和价值筛除混在同缓存，物品数量变化可清不可达记录。核对本机原版PathFinder字节码，跟踪距离既限制相对起点范围，也限制累计walkedDistance，另有访问节点上限。
+- 范围：ValuableItemPickupGoal、HumanLootManager/NearbySearch、CombatResupply、HumanPerception共享视野入口、HumanAttention低优先级拾取观察、新有界HumanLootVision、纯PileFirstSelection延期语义/拾取进展策略及相关测试/文档。所有共享文件由主控顺序接入，不派编辑Agent。保留原版有限A*、命令/生命/地形安全、战斗抢占及不强加载；不全局抬高寻路额度。
+- 只读复核：budget_review检查视觉拾取、延期候选、路线进展与失败记忆的交接；只读本工作树，不编辑、编译、构建或部署。主控仍是唯一编辑者。
+- 接口：视觉通过同一头部几何和COLLIDER检查后才产生物品位置知识，预算等待保留候选；隐藏后只能跟随最后观察位置。只安装完整安全路，进展看路线节点与实际位移；不可达立即停止本目标并独立退避，堆叠数量/背包变化不清失败。未要求构建，不运行编译、部署或push，交付与验证另记。
+
+- 只读复核确认并修复3项边界：补给遮挡首项耗尽视觉配额使后续饥饿（跨tick UUID游标）；水域备用移动把DEFERRED误记路径失败（保留等待）；原路未替换分支漏安全/命令重核（统一usableLootPath并释放非法旧路）。复核修订后未发现新的明确阻塞级源码问题，仍不代表Java或游戏通过。
+- 验证：Python262项静态契约（12跳过，其余通过），新增Java拾取进展/重试策略/选择延期用例已编写但未编译执行；git diff --check、6份默认附录、5页Wiki目标/围栏/编码检查通过；日志保存在维护目录。知识库5页先备份后融入对应正文，清单在验证日志/visual-loot-routing-knowledge.json。
+- 未运行Java编译、Gradle、构建、部署或push，未启动/结束游戏；保留独立分支，不合并main。运行实例仍为3.9.2，不包含此前枪手侧移/友善动物及本项叠加源码。游戏待验收：先目视再绕长墙、完全隐藏物品、未变化不可达物品/合堆、预算拥挤时后续补给、门/命令/危险地形变化与浅水拾取。
+
 ## 友善生物不触发普通感知（2026-10-16，进行中）
 
 - 用户要求动物等友善生物不干扰警觉、观察和调查，除非人类本人受到攻击；已明确保留动物攻击雇主时的保护，玩家主动攻击动物时士兵不参与。主控/root独占worktrees/passive-animal-awareness、fix/passive-animal-awareness；基线db204c988aa6a175dc0b6a81f335b40c108bd7f8，叠加尚未构建的枪手直接侧移提交，不能漏掉前项。

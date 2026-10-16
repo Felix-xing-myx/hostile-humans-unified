@@ -3,9 +3,7 @@ package club.someoneice.humangunner;
 import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.entity.EntityTypeTest;
-import net.minecraft.world.phys.HitResult;
 import java.util.*;
 
 /** Opportunistic inventory collection. Does not touch navigation, targets, hands or item use. */
@@ -13,7 +11,11 @@ final class CombatResupply {
     private static final int MAX_CANDIDATES = 16;
     private static final Map<Human, State> STATES = new WeakHashMap<>();
     private static final class State {
-        boolean arrows, magazines;
+        boolean arrows, magazines, pending;
+        List<UUID> candidates = List.of();
+        int cursor;
+        long started;
+        void clearScan() { pending = false; candidates = List.of(); cursor = 0; }
         final Map<UUID, Long> failed = new LinkedHashMap<>();
     }
     record Need(int arrows, int magazines, int recovery) {
@@ -32,34 +34,52 @@ final class CombatResupply {
             STATES.remove(human);
             return;
         }
-        if (Math.floorMod(human.tickCount + human.getId(), config.intervalTicks()) != 0) return;
+        if (!(human.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
         var state = STATES.computeIfAbsent(human, ignored -> new State());
+        if (!state.pending && Math.floorMod(human.tickCount + human.getId(), config.intervalTicks()) != 0) return;
         long now = human.level().getGameTime();
         state.failed.values().removeIf(until -> until <= now);
         Need need = needs(human, state, config);
-        if (need.empty()) return;
-        List<ItemEntity> items = new ArrayList<>();
-        human.level().getEntities(EntityTypeTest.forClass(ItemEntity.class),
-                human.getBoundingBox().inflate(config.radius(), 1, config.radius()),
-                item -> item.isAlive() && !item.hasPickUpDelay() && !item.getItem().isEmpty()
-                        && !state.failed.containsKey(item.getUUID()) && need.amount(human, item.getItem()) > 0,
-                items, MAX_CANDIDATES);
-        final boolean urgentHealing = human.getHealth() < human.getMaxHealth() * .3F && need.recovery() > 0;
-        items.sort(Comparator.comparingInt((ItemEntity item) -> urgentHealing
-                && RecoverySupplies.isHealingSupplyForResupply(human, item.getItem()) ? 0 : 1)
-                .thenComparingDouble(item -> human.distanceToSqr(item)));
-        // At most one successful transaction per interval. Recompute after unrelated inventory changes.
-        for (ItemEntity item : items) {
+        if (need.empty()) { state.clearScan(); return; }
+        if (!state.pending) { state.pending = true; state.started = now; }
+        // Expire a deferred snapshot without retaining entities or world references.
+        if (now < state.started || now - state.started > 80) { state.clearScan(); return; }
+        if (state.candidates.isEmpty()) {
+            if (!PerceptionBudget.claim(human, "queries", 1, ":resupply-query")) return;
+            List<ItemEntity> items = new ArrayList<>();
+            level.getEntities(EntityTypeTest.forClass(ItemEntity.class),
+                    human.getBoundingBox().inflate(config.radius(), 1, config.radius()),
+                    item -> item.isAlive() && !item.hasPickUpDelay() && !item.getItem().isEmpty()
+                            && !state.failed.containsKey(item.getUUID()) && need.amount(human, item.getItem()) > 0,
+                    items, MAX_CANDIDATES);
+            final boolean urgentHealing = human.getHealth() < human.getMaxHealth() * .3F && need.recovery() > 0;
+            items.sort(Comparator.comparingInt((ItemEntity item) -> urgentHealing
+                    && RecoverySupplies.isHealingSupplyForResupply(human, item.getItem()) ? 0 : 1)
+                    .thenComparingDouble(item -> human.distanceToSqr(item)));
+            state.candidates = items.stream().map(ItemEntity::getUUID).toList();
+        }
+        // Resume the same candidate next tick on budget deferral; never restart at a blocked first item.
+        while (state.cursor < state.candidates.size()) {
+            var entity = level.getEntity(state.candidates.get(state.cursor));
+            if (!(entity instanceof ItemEntity item) || !item.isAlive() || item.hasPickUpDelay()
+                    || state.failed.containsKey(item.getUUID()) || need.amount(human, item.getItem()) <= 0
+                    || human.distanceToSqr(item) > config.radius() * config.radius()
+                    || Math.abs(human.getY() - item.getY()) > 1) { state.cursor++; continue; }
+            HumanLootVision.Sight sight = HumanLootVision.inspect(human, item);
+            if (sight == HumanLootVision.Sight.DEFERRED) return; // Waiting is not a failed pickup.
+            state.cursor++;
+            if (sight != HumanLootVision.Sight.VISIBLE) continue;
             int amount = need.amount(human, item.getItem());
             if (amount > 0 && reachable(human, item, config.radius())
                     && HumanLootManager.collectCombatSupply(human, item, amount)) {
-                // End the cycle immediately at its target, before the next second of shooting consumes it.
                 needs(human, state, config);
+                state.clearScan();
                 return;
             }
             if (state.failed.size() >= 32) state.failed.remove(state.failed.keySet().iterator().next());
             state.failed.put(item.getUUID(), now + 40);
         }
+        state.clearScan();
     }
 
     private static Need needs(Human human, State state, CombatResupplyConfig config) {
@@ -98,7 +118,6 @@ final class CombatResupply {
                 || human.distanceToSqr(item) > radius * radius || Math.abs(human.getY() - item.getY()) > 1
                 || !SoldierOrder.allowsLootPosition(human, item.getX(), item.getZ())
                 || !HumanLootManager.isReachableWithoutDiving(item)) return false;
-        return human.level().clip(new ClipContext(human.getEyePosition(), item.getBoundingBox().getCenter(),
-                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, human)).getType() == HitResult.Type.MISS;
+        return HumanLootVision.inspect(human, item) == HumanLootVision.Sight.VISIBLE;
     }
 }
