@@ -19,6 +19,17 @@
 | 出生装备 | `HumanSpawnEquipment.completeIfReady` | 等待HumanData与注册表，按既定阶段完成一次；不在多个生成回调各自发装备 |
 | 导航与地形 | `NavigationSupport`、`CombatTerrainNavigation`、两类寻路预算 | 基础追击与可选绕路预算保留各自职责，防摔/命令/水面调度继续优先，不增加竞争Goal |
 
+## 明确目的地的分档导航接口
+
+- `NavigationSearchConfig`是UnifiedConfig持有的重启期不可变全局配置，对应`navigation_search`，不修改FOLLOW_RANGE。距离和节点上限独立并按档位单调归一；远程池至少容纳最大作业。
+- `LongRangeNavigation.search(Human, BlockPos, Purpose, accuracy)`返回READY（完整安全Path）、PENDING（保留目的地/阶段/排队）、FAILED（已拒绝或失败缓存）、UNSUPPORTED（水域等非HumanNavigation由原调用者回退）。不安装路径、不争MOVE/LOOK、不解析目标UUID；调用者持有合法位置及实际动作控制权。
+- `accepted`登记导航实际保留的Path，避免moveTo等价路线复用造成引用失配；`cancel`取消用途，`cancelAll`用于命令边界。失败缓存为每人每用途16条纯几何/场景记录；WeakHashMap值不持Entity/Level引用。等待中的坐标更新保留FIFO和已尝试档位。
+- 普通档领取1份Basic额度；扩展/远程独立FairWorkBudget按ceil(nodes/1024)完整领取，默认全服8份/tick。每用途每实体每tick最多一次实际查询，升级跨tick，不将局部随机候选升级为远程任务。
+- `HumanNavigation.createBoundedPath`用独立PathFinder/HumanNodeEvaluator与加载区块快照查询，复制门/浮水/跨栅栏旗标，保留梯子、失败边和safeTransition；已加载目标列规范化后搜索。查询不改原版私有targetPos/reachRange/卡住计时。
+- 接纳bounded路线时记录实际路径及目的地；`getTargetPos`展示对应目标；`recomputePath`按原20tick节制设置刷新、清已接管延期标记。追击/拾取/跟随/调查/测试均识别needsBoundedRefresh并回原预算；stop清标志，不向原版旧target自动重算。
+- 安全/命令只会否决，不能因扩大档位强行放行。已完成但被安全或命令拒绝的查询不升级。失去旧路的调查续同一destination，不重复计点；纯排队不增加失败或触发跟随救援。
+- 诊断使用既有96字符预算字段附带有界统计，协议不变。展开数为getNeighbors真实调用次数，不能冒充全部访问数或精确失败原因。局部路径的原范围与倍率保持。
+
 ## 视觉拾取与绕行连续性
 
 | 职责 | 接口 | 约束 |

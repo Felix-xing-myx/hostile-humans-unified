@@ -29,8 +29,9 @@ final class SoldierFollowNavigation {
     static boolean meaningfulApproach(double distance, double bestDistance, double acceptableDistance) {
         return distance < bestDistance - 0.5 || distance <= acceptableDistance;
     }
-    static void clear(Human human) { STATES.remove(human); }
+    static void clear(Human human) { STATES.remove(human);LongRangeNavigation.cancel(human,LongRangeNavigation.Purpose.FOLLOW); }
     static void stopOwned(Human human) {
+        LongRangeNavigation.cancel(human,LongRangeNavigation.Purpose.FOLLOW);
         State state = STATES.remove(human);
         if (state != null && MovementContinuity.ownsRoute(human, state.route)) human.getNavigation().stop();
         BasicNavigationBudget.cancel(human);
@@ -48,6 +49,9 @@ final class SoldierFollowNavigation {
             state.approachTick = human.tickCount;
             state.bestDistance = distance;
         }
+        if (LongRangeNavigation.inProgress(human,LongRangeNavigation.Purpose.FOLLOW)) {
+            state.approachTick=human.tickCount;return false; // Scheduling wait cannot trigger teleport rescue.
+        }
         Path current = human.getNavigation().getPath();
         boolean nodeProgress = current != null && current == state.observed
                 && current.getNextNodeIndex() > state.node;
@@ -58,10 +62,13 @@ final class SoldierFollowNavigation {
             state.approachTick = human.tickCount;
             state.progressTick = human.tickCount;
             state.failures = 0;
-        } else if (nodeProgress) state.progressTick = human.tickCount;
+        } else if (nodeProgress) {
+            state.progressTick = human.tickCount;
+            if(current.canReach()&&HumanTerrainSafety.safePath(human,current))state.approachTick=human.tickCount;
+        }
         state.observed = current;
         state.node = current == null ? 0 : current.getNextNodeIndex();
-        return distance > acceptableDistance && (human.distanceToSqr(owner) > 48 * 48 || rescueDue(human.tickCount - state.approachTick,
+        return distance > acceptableDistance && (human.distanceToSqr(owner) > 48 * 48 && state.failures > 0 || rescueDue(human.tickCount - state.approachTick,
                 human.distanceToSqr(owner))) && SoldierOrder.teleportBesideOwner(human, owner);
     }
     static void tick(Human human, ServerPlayer owner) {
@@ -83,32 +90,38 @@ final class SoldierFollowNavigation {
         Path old = human.getNavigation().getPath();
         boolean ended = old == null || old.isDone();
         boolean moved = state.goal == null || state.goal.distSqr(goal) >= 4;
-        boolean stalled = human.tickCount - state.progressTick >= 40;
+        boolean stalled = human.tickCount - state.progressTick >= 40
+                || human.getNavigation() instanceof com.craftix.hostile_humans.entity.ai.HumanNavigation ground && ground.needsBoundedRefresh();
         if (!ended && !moved && !stalled) return;
-        if (!BasicNavigationBudget.tryAcquire(human, 3)) return;
-        Path replacement = human.getNavigation().createPath(owner, 0);
-        boolean accepted = usable(human, owner, replacement)
-                && human.getNavigation().moveTo(replacement, speed);
-        for (int attempt = 0; !accepted && attempt < 2; attempt++) {
-            int side = attempt == 0 ? 1 : -1;
-            Vec3 pos = SafePositions.nearOwner(human, owner, owner.getBlockX() + side * 2,
-                    owner.getBlockZ() + (Math.floorMod(human.getId(), 3) - 1));
-            if (pos == null) continue;
-            replacement = human.getNavigation().createPath(BlockPos.containing(pos), 0);
-            accepted = usable(human, owner, replacement) && human.getNavigation().moveTo(replacement, speed);
+        var query=LongRangeNavigation.search(human,goal,LongRangeNavigation.Purpose.FOLLOW,0);
+        if(query.pending()){state.nextSearch=human.tickCount+1;return;}
+        Path replacement=query.path();
+        boolean accepted=usable(human,owner,replacement)&&human.getNavigation().moveTo(replacement,speed);
+        if(!accepted&&BasicNavigationBudget.tryAcquire(human,2)) {
+            for(int attempt=0;!accepted&&attempt<2;attempt++) {
+                int side=attempt==0?1:-1;
+                Vec3 pos=SafePositions.nearOwner(human,owner,owner.getBlockX()+side*2,
+                        owner.getBlockZ()+(Math.floorMod(human.getId(),3)-1));
+                if(pos==null)continue;
+                replacement=human.getNavigation().createPath(BlockPos.containing(pos),0);
+                accepted=usable(human,owner,replacement)&&human.getNavigation().moveTo(replacement,speed);
+            }
+            BasicNavigationBudget.cancel(human);
         }
         if (accepted) {
+            if(replacement.canReach())state.failures=0;
             state.goal = goal.immutable();
-            state.route = replacement;
+            state.route = human.getNavigation().getPath();
+            LongRangeNavigation.accepted(human,LongRangeNavigation.Purpose.FOLLOW);
             state.nextSearch = human.tickCount + 10;
         } else {
-            if (old != null && !old.isDone()) human.getNavigation().moveTo(old, speed);
+            if (old != null && !old.isDone() && HumanTerrainSafety.safePath(human,old)) human.getNavigation().moveTo(old, speed);
             state.nextSearch = human.tickCount + retryDelay(++state.failures);
         }
         BasicNavigationBudget.cancel(human);
     }
     private static boolean usable(Human human, ServerPlayer owner, Path path) {
-        if (path == null || path.isDone() || path.getEndNode() == null) return false;
+        if (path == null || path.isDone() || path.getEndNode() == null || !HumanTerrainSafety.safePath(human,path)) return false;
         var end = path.getEndNode();
         return path.canReach() || owner.distanceToSqr(end.x + 0.5, end.y, end.z + 0.5)
                 + 1 < human.distanceToSqr(owner);

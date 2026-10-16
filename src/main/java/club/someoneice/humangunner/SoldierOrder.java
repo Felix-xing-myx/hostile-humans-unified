@@ -46,6 +46,7 @@ public enum SoldierOrder {
         OwnerOfflinePolicy.clearForDismiss(human);
         human.setOrderedToSit(false);
         human.setInSittingPose(false);
+        LongRangeNavigation.cancelAll(human);
         PursuitNavigation.clear(human);
         BodyguardProtection.clear(human);
         SoldierFollowNavigation.clear(human);
@@ -79,6 +80,7 @@ public enum SoldierOrder {
 
     static void clear(Human human) {
         OwnerOfflinePolicy.clearForDismiss(human);
+        LongRangeNavigation.cancelAll(human);
         PursuitNavigation.clear(human);
         BodyguardProtection.clear(human);
         SoldierFollowNavigation.clear(human);

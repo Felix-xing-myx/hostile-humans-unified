@@ -154,6 +154,29 @@ public final class PerformancePoliciesTest {
         try { paused.firstMatching(-1, value -> true); throw new AssertionError("negative budget accepted"); }
         catch (IllegalArgumentException expected) { checks++; }
 
+        check(RouteSearchPolicy.startStage(48,48,80)==0&&RouteSearchPolicy.startStage(49,48,80)==1
+                &&RouteSearchPolicy.startStage(81,48,80)==2,"skip only geometrically undersized stages");
+        check(RouteSearchPolicy.remoteCost(2048)==2&&RouteSearchPolicy.remoteCost(4096)==4
+                &&RouteSearchPolicy.remoteCost(4097)==5,"remote work reserves rounded-up potential visits");
+        check(!RouteSearchPolicy.retry(199,200,1200,false,true)
+                &&RouteSearchPolicy.retry(200,200,1200,false,true)
+                &&!RouteSearchPolicy.retry(1199,200,1200,false,false)
+                &&RouteSearchPolicy.retry(1200,200,1200,false,false),"failure cache rechecks changed scenes without blind repeated A-star");
+        check(RouteSearchPolicy.retry(1,200,1200,true,false)&&RouteSearchPolicy.retry(-1,200,1200,false,false),"movement and clock rollback release stale failure restrictions");
+        check(RouteSearchPolicy.failureDelay(4,200,1200)==1200,"failed route backoff stays bounded");
+        FairWorkBudget<Integer> remote = new FairWorkBudget<>(8,8,40);
+        Set<Integer> served = new HashSet<>();
+        for(int tick=0;tick<100;tick++) {
+            int units=0;
+            for(int actor=0;actor<100;actor++) {
+                if(served.contains(actor))continue;
+                int cost=actor%2==0?2:4;
+                int grant=remote.claimFull(tick,actor,cost);
+                if(grant==cost){units+=grant;served.add(actor);remote.cancel(actor);}
+            }
+            check(units<=8,"remote heterogeneous jobs cannot exceed server node-equivalent budget");
+        }
+        check(served.size()==100,"remote FIFO eventually serves both medium and long jobs");
         Object lootRoute = new Object();
         PickupRouteProgress detour = new PickupRouteProgress();detour.reset(0,0,0,0);
         for(int tick=1;tick<=180;tick++)

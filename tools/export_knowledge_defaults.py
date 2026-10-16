@@ -79,7 +79,7 @@ def cell(text):
 
 GROUP_NAMES = {
     "vanilla_mode": "原版模式", "hostile_mob_targeting": "其他怪物选敌",
-    "perception": "发现、警觉、记忆与感知配额",
+    "perception": "发现、警觉、记忆与感知配额", "navigation_search": "分档导航与远程搜索",
     "damage": "共享伤害规则", "equipment_integration": "装备自动联动", "armor_swap": "护甲自动换装", "combat_resupply": "战斗顺路补给",
     "spawning": "生成与解锁", "ai": "战斗与生存行为", "recruitment": "雇佣与名册",
     "better_combat": "Better Combat近战", "ammunition": "弹药与出生补给",
@@ -90,7 +90,7 @@ GROUP_NAMES = {
     "combat": "基础攻击节奏", "food": "出生食物", "potions": "出生药水与战术道具",
     "growth_profile": "本阶成长曲线与装备品质", "equipment_loadout": "出生装备池",
 }
-GLOBAL_ORDER = ("vanilla_mode", "growth", "recruitment", "ammunition", "perception", "ai", "damage",
+GLOBAL_ORDER = ("vanilla_mode", "growth", "recruitment", "ammunition", "perception", "navigation_search", "ai", "damage",
                 "jump_attack", "shield_pressure", "spawning", "equipment_integration", "armor_swap", "combat_resupply",
                 "tacz", "scguns", "first_aid", "better_combat", "hostile_mob_targeting", "native_gameplay")
 TIER_ORDER = ("attributes", "damage_multipliers", "spawning", "ammunition", "food", "potions",

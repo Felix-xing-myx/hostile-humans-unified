@@ -21,8 +21,9 @@ class NavigationDebugContract(unittest.TestCase):
 
     def test_test_uses_real_navigation_and_shared_budget(self):
         service = source("NavigationDebugService")
-        self.assertIn("BasicNavigationBudget.tryAcquire(human, 1)", service)
-        self.assertIn("navigation.createFreshPath(run.destination)", service)
+        self.assertIn("LongRangeNavigation.Purpose.TEST", service)
+        self.assertIn("BasicNavigationBudget.tryAcquire(human,1)",source("LongRangeNavigation"))
+        self.assertIn("LongRangeNavigation.search(human,run.destination", service)
         self.assertIn("human.getNavigation().moveTo(path, 1)", service)
         for forbidden in ["teleportTo(", "setNoAi(", "setHealth(", "setMaxVisitedNodesMultiplier(", "setBlock("]:
             self.assertNotIn(forbidden, service)

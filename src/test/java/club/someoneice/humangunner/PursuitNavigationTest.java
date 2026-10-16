@@ -42,9 +42,10 @@ public final class PursuitNavigationTest {
             check(calls(root + "TridentHybridGoal", branch, root + "PursuitNavigation", "update"),
                     "trident pursuit uses same gate: " + branch);
         }
-        check(calls(root + "PursuitNavigation", "update", root + "BasicNavigationBudget", "tryAcquire"), "all refresh work shares FIFO budget");
+        check(calls(root + "PursuitNavigation", "update", root + "LongRangeNavigation", "search"), "all explicit pursuit refresh shares the staged seam");
+        check(calls(root + "LongRangeNavigation", "search", root + "BasicNavigationBudget", "tryAcquire"), "ordinary staged work retains the FIFO budget");
         check(calls(root + "PursuitNavigation", "update", root + "HumanTerrainSafety", "safePath"), "replacement retains terrain safety");
-        check(calls(root + "PursuitNavigation", "update", "com/craftix/hostile_humans/entity/ai/HumanNavigation", "createFreshPath"), "moving target refresh bypasses obsolete cached route");
+        check(calls(root + "LongRangeNavigation", "search", "com/craftix/hostile_humans/entity/ai/HumanNavigation", "createBoundedPath"), "bounded refresh isolates speculative target and stuck state");
         System.out.println("PursuitNavigationTest: " + checks + " checks passed; pursuit gameplay remains to be tested");
     }
     private static boolean calls(String owner, String method, String target, String name) throws Exception {

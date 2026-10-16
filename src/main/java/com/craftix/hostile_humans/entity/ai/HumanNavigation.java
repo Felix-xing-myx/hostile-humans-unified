@@ -23,6 +23,72 @@ public final class HumanNavigation extends GroundPathNavigation {
     private net.minecraft.world.phys.Vec3 sampledPosition;
     private int sampledNode, sampledTick;
     private boolean sampledAirborne;
+    private int expandedNodes;
+    private HumanNodeEvaluator boundedEvaluator;
+    private PathFinder boundedFinder;
+    private Path trialBoundedPath, activeBoundedPath;
+    private BlockPos trialBoundedGoal, activeBoundedGoal;
+    private boolean boundedRefresh;
+    public boolean canRunBoundedSearch() { return canUpdatePath(); }
+    public int expandedNodes() { return expandedNodes; }
+    public boolean needsBoundedRefresh() { return boundedRefresh && path == activeBoundedPath; }
+
+    /** Isolated query: leaves the installed route, vanilla target and stuck timers untouched. */
+    public Path createBoundedPath(BlockPos goal, int accuracy, float range, int nodes) {
+        if (nodes < 1 || nodes > 16384 || !Float.isFinite(range) || range < 1 || range > 256)
+            throw new IllegalArgumentException("invalid path limits");
+        expandedNodes = 0;
+        if (!canUpdatePath() || !level.hasChunkAt(goal) || !level.getWorldBorder().isWithinBounds(goal)
+                || level.isOutsideBuildHeight(goal)) return null;
+        // GroundPathNavigation's vertical normalization, within an already loaded column only.
+        BlockPos normalized = goal;
+        if (level.getBlockState(normalized).isAir()) {
+            BlockPos below = normalized.below();
+            while (below.getY() > level.getMinBuildHeight() && level.getBlockState(below).isAir()) below = below.below();
+            if (below.getY() > level.getMinBuildHeight()) normalized = below.above();
+            else {
+                BlockPos above = normalized.above();
+                while (above.getY() < level.getMaxBuildHeight() && level.getBlockState(above).isAir()) above = above.above();
+                normalized = above;
+            }
+        }
+        while (normalized.getY() < level.getMaxBuildHeight() && level.getBlockState(normalized).isSolid()) normalized = normalized.above();
+        if (level.isOutsideBuildHeight(normalized)) return null;
+        if (boundedFinder == null) {
+            boundedEvaluator = new HumanNodeEvaluator();
+            boundedFinder = new PathFinder(boundedEvaluator, 16384);
+        }
+        boundedEvaluator.setCanPassDoors(nodeEvaluator.canPassDoors());
+        boundedEvaluator.setCanOpenDoors(nodeEvaluator.canOpenDoors());
+        boundedEvaluator.setCanFloat(nodeEvaluator.canFloat());
+        boundedEvaluator.setCanWalkOverFences(nodeEvaluator.canWalkOverFences());
+        BlockPos start = mob.blockPosition();
+        int radius = (int) Math.ceil(range) + 8;
+        var region = new net.minecraft.world.level.PathNavigationRegion(level, start.offset(-radius,-radius,-radius), start.offset(radius,radius,radius));
+        long started = System.nanoTime();
+        Path result = boundedFinder.findPath(region, mob, java.util.Set.of(normalized), range, accuracy, nodes / 16384.0F);
+        trialBoundedPath = result;
+        trialBoundedGoal = normalized.immutable();
+        if (mob instanceof Human human) club.someoneice.humangunner.NavigationDebugService.searched(human,goal,result,System.nanoTime()-started);
+        return result;
+    }
+
+    @Override public BlockPos getTargetPos() {
+        return path != null && path == activeBoundedPath ? activeBoundedGoal : super.getTargetPos();
+    }
+    @Override public void recomputePath() {
+        // The owning controller schedules a fresh bounded query. Do not recompute toward vanilla's old private target.
+        if (path != null && path == activeBoundedPath) {
+            if (level.getGameTime()-timeLastRecompute > 20) {
+                boundedRefresh = true;hasDelayedRecomputation = false;timeLastRecompute = level.getGameTime();
+            } else hasDelayedRecomputation = true;
+            return;
+        }
+        super.recomputePath();
+    }
+    @Override public void stop() {
+        super.stop();activeBoundedPath = null;activeBoundedGoal = null;boundedRefresh = false;hasDelayedRecomputation = false;
+    }
 
     public HumanNavigation(Mob mob, Level level) { super(mob, level); }
 
@@ -94,6 +160,14 @@ public final class HumanNavigation extends GroundPathNavigation {
             if (!assessment.safe()) { CombatTerrainNavigation.blocked(human, assessment); return false; }
         }
         boolean accepted = super.moveTo(path, speed);
+        if (accepted && path != null) {
+            if (path == trialBoundedPath) {
+                activeBoundedPath = this.path; activeBoundedGoal = trialBoundedGoal; boundedRefresh = false;
+                hasDelayedRecomputation = false;timeLastRecompute = level.getGameTime();
+            } else if (this.path != activeBoundedPath) {
+                activeBoundedPath = null; activeBoundedGoal = null; boundedRefresh = false;
+            }
+        }
         if (mob instanceof Human human && path != null)
             club.someoneice.humangunner.NavigationDebugService.candidate(human, net.minecraft.world.phys.Vec3.atBottomCenterOf(path.getTarget()),
                     "installed", accepted ? "accepted" : "rejected", Double.NaN);
@@ -169,6 +243,7 @@ public final class HumanNavigation extends GroundPathNavigation {
         nodeEvaluator.setCanPassDoors(true);
         return new PathFinder(nodeEvaluator, budget);
     }
+
     private final class HumanNodeEvaluator extends WalkNodeEvaluator {
         @Override public BlockPathTypes getBlockPathType(BlockGetter getter, int x, int y, int z) {
             BlockPos pos = new BlockPos(x, y, z);
@@ -180,6 +255,7 @@ public final class HumanNavigation extends GroundPathNavigation {
             return super.getBlockPathType(getter, x, y, z);
         }
         @Override public int getNeighbors(Node[] neighbors, Node node) {
+            expandedNodes++;
             int count = super.getNeighbors(neighbors, node);
             if (count < neighbors.length)
                 count = HumanUtil.createLadderNodeFor(count, neighbors, node, this::getNode, level, mob);

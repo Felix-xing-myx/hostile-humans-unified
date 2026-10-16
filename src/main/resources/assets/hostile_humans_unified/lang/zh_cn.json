@@ -216,7 +216,7 @@
   "navigation_debug.hud_title": "导航观察：%s [%s]",
   "navigation_debug.hud_route": "结果：%s | 节点 %s/%s | 当前路线：%s %s",
   "navigation_debug.hud_goal": "最近请求/指定点：%s | %s",
-  "navigation_debug.hud_health": "生命 %s | 摔落伤害预算 %s | 落差上限 %s | 有效范围 %s",
+  "navigation_debug.hud_health": "生命 %s | 摔落伤害预算 %s | 落差上限 %s | 跟踪距离属性 %s",
   "navigation_debug.hud_work": "最近配额：%s | 地面导航调用 %s ms（含复用）| 最近阻断：%s",
   "navigation_debug.hud_sample": "%s @ %s：%s | 分数 %s",
   "navigation_debug.legend": "各实体路径=自身颜色；焦点候选：紫=尝试/部分，绿=评分/采用，红=拒绝。",

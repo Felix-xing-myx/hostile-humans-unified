@@ -216,7 +216,7 @@
   "navigation_debug.hud_title": "Navigation: %s [%s]",
   "navigation_debug.hud_route": "Result: %s | Node %s/%s | Current route: %s %s",
   "navigation_debug.hud_goal": "Last requested/fixed point: %s | %s",
-  "navigation_debug.hud_health": "Health %s | Fall damage budget %s | Drop limit %s | Effective range %s",
+  "navigation_debug.hud_health": "Health %s | Fall damage budget %s | Drop limit %s | Follow-range attribute %s",
   "navigation_debug.hud_work": "Last grant: %s | Ground navigation call %s ms (includes reuse) | Last veto: %s",
   "navigation_debug.hud_sample": "%s @ %s: %s | Score %s",
   "navigation_debug.legend": "Per-entity path colors; focus candidates: purple=trial/partial, green=scored/installed, red=rejected.",

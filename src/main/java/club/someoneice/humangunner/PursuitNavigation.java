@@ -44,25 +44,32 @@ public final class PursuitNavigation {
             CombatTerrainNavigation.clear(human);
             return false;
         }
-        var terrain = CombatTerrainNavigation.update(human, target, speed, false);
-        if (terrain.ownsMovement()) return terrain == CombatTerrainNavigation.Decision.ROUTE;
+        if (!LongRangeNavigation.inProgress(human,LongRangeNavigation.Purpose.COMBAT)) {
+            var terrain = CombatTerrainNavigation.update(human, target, speed, false);
+            if (terrain.ownsMovement()) return terrain == CombatTerrainNavigation.Decision.ROUTE;
+        }
         Path previous = nav.getPath();
         boolean hasRoute = state.route != null && MovementContinuity.ownsRoute(human, state.route)
                 && previous != null && !previous.isDone();
         boolean nearEnd = hasRoute && previous.getNodeCount() - previous.getNextNodeIndex() <= 2;
-        if (!PursuitRefreshPolicy.due(human.tickCount - state.attempt, hasRoute, nearEnd,
+        if (!(nav instanceof HumanNavigation ground && ground.needsBoundedRefresh()) && !PursuitRefreshPolicy.due(human.tickCount - state.attempt, hasRoute, nearEnd,
                 target.position().distanceToSqr(state.sampled), state.failed)) return hasRoute;
-        // Deferred budget is live work; retain the route and rejoin the FIFO next tick.
-        if (!BasicNavigationBudget.tryAcquire(human, 1)) return hasRoute;
+        var query = LongRangeNavigation.search(human,target.blockPosition(),LongRangeNavigation.Purpose.COMBAT,0);
+        if (query.pending()) return hasRoute;
         state.attempt = human.tickCount;
         state.sampled = target.position();
-        Path replacement = nav instanceof HumanNavigation ground
-                ? ground.createFreshPath(target, 0) : nav.createPath(target, 0);
+        Path replacement = query.path();
+        if (query.status() == LongRangeNavigation.Status.UNSUPPORTED) {
+            if (!BasicNavigationBudget.tryAcquire(human,1)) return hasRoute;
+            BasicNavigationBudget.cancel(human);
+            replacement = nav.createPath(target,0);
+        }
         boolean useful = replacement != null && !replacement.isDone()
                 && HumanTerrainSafety.safePath(human, replacement)
                 && CombatTerrainNavigation.usefulPath(human, target, replacement);
         if (useful && nav.moveTo(replacement, speed)) {
             state.route = nav.getPath(); state.failed = false;
+            LongRangeNavigation.accepted(human,LongRangeNavigation.Purpose.COMBAT);
             CombatTerrainNavigation.accepted(human, target);
             return true;
         }
@@ -79,6 +86,7 @@ public final class PursuitNavigation {
     }
 
     private static void clearOrdinaryRoute(Human human) {
+        LongRangeNavigation.cancel(human,LongRangeNavigation.Purpose.COMBAT);
         State state = STATES.remove(human);
         if (state != null && state.route != null && MovementContinuity.ownsRoute(human, state.route))
             human.getNavigation().stop();

@@ -7,6 +7,16 @@ import com.google.gson.JsonParser;
 public final class SoldierFollowPolicyTest {
     private static int checks;
     public static void main(String[] args) throws Exception {
+        NavigationSearchConfig routeDefaults=NavigationSearchConfig.parse(new JsonObject());
+        check(routeDefaults.normalRange()==48&&routeDefaults.extendedRange()==80&&routeDefaults.longRange()==128,
+                "explicit route distance defaults are independent of rank attributes");
+        check(routeDefaults.normalNodes()==1536&&routeDefaults.extendedNodes()==2048&&routeDefaults.longNodes()==4096
+                &&routeDefaults.remoteUnits()==8,"bounded node thresholds and server cost defaults");
+        JsonObject constrained=JsonParser.parseString("{\"normal_range\":128,\"extended_range\":8,\"long_range\":8,\"long_nodes\":16384,\"remote_units_per_tick\":1,\"failure_ticks\":2400,\"maximum_failure_ticks\":20}").getAsJsonObject();
+        NavigationSearchConfig normalized=NavigationSearchConfig.parse(constrained);
+        check(normalized.extendedRange()==128&&normalized.longRange()==128,"staged ranges cannot shrink");
+        check(normalized.remoteUnits()>=16,"largest remote job always fits configured pool");
+        check(normalized.maximumFailureTicks()>=normalized.failureTicks(),"failure fallback cannot precede its minimum delay");
         check(WaterCombatPolicy.closingProgress(8, 7.5), "half block water approach counts");
         check(!WaterCombatPolicy.closingProgress(8, 8), "circling without approach is not progress");
         check(!WaterCombatPolicy.closingProgress(8, 7.8), "water jitter does not reset watchdog");

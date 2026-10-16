@@ -142,6 +142,7 @@ final class ValuableItemPickupGoal extends Goal {
         }
         if (human.tickCount >= nextRepathTick
                 && (human.getNavigation().isDone() || human.getNavigation().isStuck()
+                || human.getNavigation() instanceof com.craftix.hostile_humans.entity.ai.HumanNavigation ground && ground.needsBoundedRefresh()
                 || lastPathItemPosition == null || lastPathItemPosition.distanceToSqr(knownItemPosition) > 4.0D)) {
             moveToItem();
         }
@@ -175,6 +176,7 @@ final class ValuableItemPickupGoal extends Goal {
         knownItemPosition = null;
         waitingForPath = directWaterFallback = false;
         BasicNavigationBudget.cancel(human);
+        LongRangeNavigation.cancel(human,LongRangeNavigation.Purpose.LOOT);
     }
 
     void interruptForCombat() {
@@ -262,20 +264,25 @@ final class ValuableItemPickupGoal extends Goal {
         var previous = nav.getPath();
         boolean hadOwnedRoute = previous != null && !previous.isDone()
                 && (ownsPath(previous, ownedPath) || MovementContinuity.ownsRoute(human, ownedPath));
-        if (!BasicNavigationBudget.tryAcquire(human, 1)) {
+        var goal = net.minecraft.core.BlockPos.containing(knownItemPosition);
+        var query = LongRangeNavigation.search(human,goal,LongRangeNavigation.Purpose.LOOT,0);
+        if (query.pending()) {
             waitingForPath = true;
             nextRepathTick = human.tickCount + 1;
-            HumanPerception.decision(human,"等待拾取路径","配额等待不算不可达或卡住");
+            HumanPerception.decision(human,"等待拾取路径","分档或配额等待，不算不可达");
             return;
         }
-        BasicNavigationBudget.cancel(human);
         waitingForPath = false;
-        var goal = net.minecraft.core.BlockPos.containing(knownItemPosition);
-        net.minecraft.world.level.pathfinder.Path path = nav instanceof com.craftix.hostile_humans.entity.ai.HumanNavigation ground
-                ? ground.createFreshPath(goal) : nav.createPath(goal, 0);
+        net.minecraft.world.level.pathfinder.Path path = query.path();
+        if (query.status() == LongRangeNavigation.Status.UNSUPPORTED) {
+            if (!BasicNavigationBudget.tryAcquire(human,1)) { waitingForPath=true;nextRepathTick=human.tickCount+1;return; }
+            BasicNavigationBudget.cancel(human);
+            path=nav.createPath(goal,0);
+        }
         boolean safe = usableLootPath(path);
         if (safe && nav.moveTo(path, .9D)) {
             ownedPath = nav.getPath();
+            LongRangeNavigation.accepted(human,LongRangeNavigation.Purpose.LOOT);
             lastPathItemPosition = knownItemPosition;
             nextRepathTick = human.tickCount + 20;
             directWaterFallback = false;

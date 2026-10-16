@@ -27,7 +27,8 @@ class VisualLootRoutingContract(unittest.TestCase):
         path=goal.split("private void moveToItem()",1)[1].split("private void failTarget",1)[0]
         self.assertIn("path.canReach()",goal)
         self.assertIn("HumanTerrainSafety.safePath",goal)
-        self.assertIn("createFreshPath(goal)",path)
+        self.assertIn("LongRangeNavigation.search(human,goal,LongRangeNavigation.Purpose.LOOT",path)
+        self.assertIn("if (query.pending())",path)
         self.assertNotIn("createPath(targetItem",path)
         self.assertIn("waitingForPath = true",path)
         self.assertIn("nav.moveTo(previous",path)

@@ -23,6 +23,7 @@ public final class UnifiedConfig {
     private final ScgunsSettings scguns;
     private final ShieldPressureConfig shieldPressure;
     private final PerceptionConfig perception;
+    private final NavigationSearchConfig navigationSearch;
     private final HostileTargetingConfig hostileTargeting;
     private final Map<String, ConfiguredEquipmentLoadout> equipmentLoadouts;
     private final Recruitment recruitment;
@@ -80,6 +81,7 @@ public final class UnifiedConfig {
         scguns = ScgunsSettings.parse(object(root, "scguns"));
         shieldPressure = ShieldPressureConfig.parse(object(root, "shield_pressure"));
         perception = new PerceptionConfig(object(root, "perception"));
+        navigationSearch = NavigationSearchConfig.parse(object(root, "navigation_search"));
         hostileTargeting = HostileTargetingConfig.parse(object(root, "hostile_mob_targeting"));
         vanillaMode = bool(root, "vanilla_mode", false);
         Map<String, ConfiguredEquipmentLoadout> loadouts = new LinkedHashMap<>();
@@ -274,6 +276,7 @@ public final class UnifiedConfig {
     }
     public boolean allowHiredPvpDamage() { return recruitment.allowHiredPvpDamage(); }
     public PerceptionConfig perception() { return perception; }
+    public NavigationSearchConfig navigationSearch() { return navigationSearch; }
     public SoldierMessages soldierMessages() { return soldierMessages; }
     public boolean betterCombatSoldierMeleeEnabled() { return betterCombatSoldierMeleeEnabled; }
     public boolean taczEnabled() { return bool(object(root, "tacz"), "enabled", true); }

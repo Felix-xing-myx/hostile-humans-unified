@@ -112,6 +112,7 @@ public final class NavigationDebugService {
         if (run != null && run.owner.equals(player.getUUID())) finish(human, "cancelled");
     }
     private static void finish(Human human, String result) {
+        LongRangeNavigation.cancel(human,LongRangeNavigation.Purpose.TEST);
         RUNS.remove(human);
         human.getNavigation().stop();
         MovementContinuity.cancelStep(human);
@@ -221,13 +222,18 @@ public final class NavigationDebugService {
         samples = samples.subList(Math.max(0, samples.size() - NavigationDebugFrame.SENT_SAMPLES), samples.size());
         return new NavigationDebugSnapshot(human.level().dimension().location(),
                 human.getId(), human.getUUID(), boundedName(human), run == null ? "observe" : "test",
-                run == null ? trace.state : run.state, human.getNavigation().getClass().getSimpleName(), trace.budget, trace.obstruction,
+                run == null ? trace.state : run.state, human.getNavigation().getClass().getSimpleName(), routeBudget(human,trace.budget), trace.obstruction,
                 human.getHealth(), HumanFallPolicy.damageBudget(human.getHealth()), human.getMaxFallDistance(),
                 human.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE), human.position(),
                 run == null ? trace.requested : run.destination, human.getTarget() == null ? null : HumanPerception.knownPosition(human, human.getTarget()),
                 total == 0 ? null : path.getEntityPosAtNode(human, total - 1),
                 List.copyOf(nodes), first, total, path != null && path.canReach(), total - first > nodes.size(),
                 trace.searchMillis, List.copyOf(samples), HumanPerception.snapshot(human));
+    }
+    private static String routeBudget(Human human,String original) {
+        String detail=LongRangeNavigation.describe(human);
+        String value=detail.isEmpty()?original:original+"; "+detail;
+        return value.substring(0,Math.min(96,value.length()));
     }
     private static String boundedName(Human human) {
         String name = human.getName().getString();
@@ -276,13 +282,20 @@ public final class NavigationDebugService {
             MovementSpeedController.normal(human);
             human.getNavigation().setSpeedModifier(1);
             if (human.tickCount < run.nextSearch) return;
-            if (!human.getNavigation().isDone() && !human.getNavigation().isStuck()) return;
-            if (!BasicNavigationBudget.tryAcquire(human, 1)) { run.state = "queued"; return; }
-            Path path = human.getNavigation() instanceof HumanNavigation navigation
-                    ? navigation.createFreshPath(run.destination) : human.getNavigation().createPath(run.destination, 0);
+            if (!human.getNavigation().isDone() && !human.getNavigation().isStuck()
+                    && !(human.getNavigation() instanceof HumanNavigation ground && ground.needsBoundedRefresh())) return;
+            var query = LongRangeNavigation.search(human,run.destination,LongRangeNavigation.Purpose.TEST,0);
+            if(query.pending()){run.state="queued";return;}
+            Path path = query.path();
+            if(query.status()==LongRangeNavigation.Status.UNSUPPORTED){
+                if(!BasicNavigationBudget.tryAcquire(human,1)){run.state="queued";return;}
+                BasicNavigationBudget.cancel(human);
+                path=human.getNavigation().createPath(run.destination,0);
+            }
             run.nextSearch = human.tickCount + 20;
             run.state = path == null ? "no_path" : path.canReach() ? "complete" : "partial";
             if (path != null && !path.isDone() && !human.getNavigation().moveTo(path, 1)) run.state = "rejected";
+            if(path!=null&&human.getNavigation().getPath()!=null)LongRangeNavigation.accepted(human,LongRangeNavigation.Purpose.TEST);
             BasicNavigationBudget.cancel(human);
         }
     }

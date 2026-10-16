@@ -33,5 +33,7 @@ class GunnerApproachContract(unittest.TestCase):
         self.assertIn("if (terrain.ownsMovement())", code)
         self.assertIn("if (isShoreSeeking())", code)
         pursuit = (PKG / "PursuitNavigation.java").read_text(encoding="utf-8")
-        self.assertIn("BasicNavigationBudget.tryAcquire(human, 1)", pursuit)
+        self.assertIn("LongRangeNavigation.Purpose.COMBAT", pursuit)
+        planner=(PKG/"LongRangeNavigation.java").read_text(encoding="utf-8")
+        self.assertIn("BasicNavigationBudget.tryAcquire(human,1)",planner)
         self.assertIn("HumanTerrainSafety.safePath(human, replacement)", pursuit)
