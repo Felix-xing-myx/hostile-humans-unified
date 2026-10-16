@@ -1,5 +1,13 @@
 # 开发任务与整合记录
 
+## 3.10.4构建同步（2026-10-16，已完成）
+
+- 用户明确构建同步；基线119bc82fdf12a08cd1b1c60af1c9fce6cfceb877，包含bcf6a94高压盾面响应与119bc82射位保持/失位返回。主控独占ranged-platform-retention工作树、fix/ranged-platform-retention；更新版本/日志，Java17完整构建回归，仅同步Forge47.4.21实例，备份旧JAR、dist留存、三方哈希与配置前后校验，不启动游戏或push。
+- 实际验证：Java17离线build+lootScreeningTest成功（本次使用-Dnet.minecraftforge.gradle.check.certs=false避开已知联网证书预检），55任务全部执行；高压551、防御1448、远程地形465、拾取13391检查通过。Python296（284通过、12跳过）、六默认附录、diff通过；正式JAR Manifest为3.10.4，699份class最高major61，新增射位模块在包内。编译及回归没有新增失败。
+- 首次检测游戏仍运行，用户正常退出后再次确认无Minecraft进程才替换。旧3.10.3备份在维护目录备份/release-3.10.4-deployment；实例只保留3.10.4，五份配置前后哈希一致。构建/dist/部署三处4452552字节、SHA-256 C66753DB17F5BC2FFCFD2061F2BBC012F9742C2B2D429D33FEF46D05DEA3BF38一致。日志与部署记录位于验证日志/ranged-platform-3.10.4-build.log、ranged-platform-3.10.4-deployment.json；包审查另有同前缀package.json。
+- 本次版本/记录本地提交并整合main；下文“未构建/未部署”为源码交付阶段快照，以本节为最新发布结果。未push或启动游戏，没有游戏内/多人/CPU验收；待测试单源/多源高压平滑转盾、三武器平台射击/击退后可达返回、不可达平台有限放弃、半砖窄窗、目标与命令切换、近身避险及低预算返回连续性。
+
+
 ## 远程射位保持与失位返回（2026-10-16，源码完成）
 
 - 基线bcf6a94bb6b1061760c50bfa534f04603ab163b0，保留未构建高压朝向修复；主控/root独占worktrees/ranged-platform-retention、fix/ranged-platform-retention。范围远程局部走位、脚下支撑查询、短期已用射位记忆、弓弩枪顺序接入、回归/知识库；不改通用跌落容忍、锁敌、近战与避险控制器。用户报告封闭建筑平台掉落失去射界，要求保持优势并有限返回，谨慎保留原战斗边界。本轮不构建部署。
