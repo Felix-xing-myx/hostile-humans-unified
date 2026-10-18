@@ -28,6 +28,9 @@ public final class FactionEquipmentPolicyTest {
                 int level=FactionEquipmentPolicy.enchantmentLevel(rank,maximum,budget,cost,.9,.999999);
                 check(level>=0&&level<=maximum&&level*cost<=budget,"level affordability invariant");
             }
+        check(FactionEquipmentPolicy.allowedReplacement("allowed_spartan_shield","denied_vanilla_shield",id->!id.startsWith("denied")).equals("allowed_spartan_shield"),
+                "growth fallback cannot bypass final deny");
+        check(FactionEquipmentPolicy.allowedReplacement("original","allowed_early",id->true).equals("allowed_early"),"legal growth replacement remains enabled");
         double[] weights={5,15,45,35,0};
         int[] counts=new int[5]; Random random=new Random(11019);
         for(int i=0;i<100000;i++) counts[FactionEquipmentPolicy.choose(weights,random.nextDouble())]++;

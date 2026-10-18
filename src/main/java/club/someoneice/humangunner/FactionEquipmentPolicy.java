@@ -42,4 +42,9 @@ final class FactionEquipmentPolicy {
         int minimum = rank == 3 ? Math.max(1, Math.min(affordable, maximum - 1)) : 1;
         return minimum + (int) (Math.max(0, Math.min(Math.nextDown(1.0), levelRoll)) * (affordable - minimum + 1));
     }
+    /** Growth may reduce quality, but its replacements and vanilla fallbacks obey the same final candidate gate. */
+    static <T> T allowedReplacement(T original,T replacement,java.util.function.Predicate<T> allowed) {
+        return replacement==original || allowed.test(replacement) ? replacement : original;
+    }
+
 }

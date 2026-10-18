@@ -2,6 +2,7 @@ package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
 import com.google.gson.*;
+import net.minecraft.resources.ResourceLocation;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
@@ -35,12 +36,28 @@ public final class FactionEquipmentConfig {
         Map<String,JsonObject> copy=new LinkedHashMap<>();
         if(factionDefaults!=null) factionDefaults.forEach((id,data)-> {
             if(id==null||data==null) throw new IllegalArgumentException("Null faction equipment definition");
+            if(!FACTIONS.contains(id)) throw new IllegalArgumentException("Unsupported faction equipment ID: "+id);
             copy.put(id,data.deepCopy());
         });
-        return new Prepared(global,Map.copyOf(copy),REVISIONS.incrementAndGet());
+        validateContribution(global,"equipment_loadouts");
+        Prepared candidate=new Prepared(global,Map.copyOf(copy),0);
+        for(String rank:RANKS) {
+            requireObjectIfPresent(global,rank,"equipment_loadouts");
+            JsonObject source=object(global,rank);
+            validateContribution(source,"equipment_loadouts."+rank);
+            for(var entry:copy.entrySet()) {
+                requireObjectIfPresent(entry.getValue(),rank,"definitions."+entry.getKey());
+                validateContribution(object(entry.getValue(),rank),"definitions."+entry.getKey()+"."+rank);
+            }
+            for(String faction:FACTIONS) resolve(source,rank,faction,candidate);
+        }
+        return candidate;
     }
     /** Coordinator publishes only after all definition modules have successfully prepared. */
-    public static void publish(Prepared prepared) { active=Objects.requireNonNull(prepared); }
+    public static synchronized void publish(Prepared prepared) {
+        Objects.requireNonNull(prepared);
+        active=new Prepared(prepared.global,prepared.definitions,REVISIONS.incrementAndGet());
+    }
     /** Startup convenience; runtime coordinated reloads should use prepare then publish. */
     public static void configure(JsonObject equipmentLoadouts,Map<String,JsonObject> factionDefaults) {
         publish(prepare(equipmentLoadouts,factionDefaults));
@@ -57,29 +74,33 @@ public final class FactionEquipmentConfig {
     synchronized Profile profile(String faction) {
         Prepared snapshot=active;
         if(seenRevision!=snapshot.revision) { profiles.clear(); seenRevision=snapshot.revision; }
-        return profiles.computeIfAbsent(faction, id -> {
-            JsonObject ranks = object(DEFAULTS, rank);
-            JsonObject data = object(ranks, ranks.has(id) ? id : "neutral").deepCopy();
-            merge(data, object(snapshot.definitions.getOrDefault(id, new JsonObject()), rank));
-            // Global defaults are a single authority; rank values override them.
-            for (String key : List.of("bands", "item_pool", "gun_category_map")) {
-                JsonObject combined = object(data,key).deepCopy();
-                merge(combined,object(snapshot.global,key));
-                merge(combined, object(source, key));
-                data.add(key, combined);
-            }
-            for (var entry : source.entrySet()) if (!entry.getKey().equals("faction_overrides")
-                    && !List.of("bands", "item_pool", "gun_category_map").contains(entry.getKey()))
-                mergeEntry(data, entry.getKey(), entry.getValue());
-            merge(data, object(object(source, "faction_overrides"), id));
-            return new Profile(data, rank, id);
-        });
+        return profiles.computeIfAbsent(faction,id->resolve(source,rank,id,snapshot));
+    }
+
+    private static Profile resolve(JsonObject source,String rank,String id,Prepared snapshot) {
+        JsonObject ranks=object(DEFAULTS,rank);
+        JsonObject data=object(ranks,ranks.has(id)?id:"neutral").deepCopy();
+        merge(data,object(snapshot.definitions.getOrDefault(id,new JsonObject()),rank));
+        for(String key:List.of("bands","item_pool","gun_category_map")) {
+            JsonObject combined=object(data,key).deepCopy();
+            merge(combined,object(snapshot.global,key));
+            merge(combined,object(source,key));
+            data.add(key,combined);
+        }
+        for(var entry:source.entrySet()) if(!entry.getKey().equals("faction_overrides")
+                && !List.of("bands","item_pool","gun_category_map").contains(entry.getKey()))
+            mergeEntry(data,entry.getKey(),entry.getValue());
+        merge(data,object(object(source,"faction_overrides"),id));
+        return new Profile(data,rank,id);
     }
 
     static final class Profile {
         final JsonObject data;
         final String rank, faction;
-        Profile(JsonObject data, String rank, String faction) { this.data = data; this.rank = rank; this.faction = faction; }
+        Profile(JsonObject data, String rank, String faction) {
+            validateContribution(data,rank+"/"+faction);
+            this.data = data; this.rank = rank; this.faction = faction;
+        }
         boolean factionBands() { return !faction.equals("neutral"); }
         double number(String key, double fallback, double min, double max) { return FactionEquipmentConfig.number(data, key, fallback, min, max); }
         double[] weights(String key, int count) { return array(data, key, count, null); }
@@ -88,12 +109,182 @@ public final class FactionEquipmentConfig {
             JsonObject counts = object(data, "shield_count");
             return new double[]{FactionEquipmentConfig.number(counts,"0",0,0,1e6), FactionEquipmentConfig.number(counts,"1",1,0,1e6), FactionEquipmentConfig.number(counts,"2",0,0,1e6)};
         }
+        boolean allowedItem(ResourceLocation id,boolean explicitExtra) {
+            if(id==null || id.toString().equals("minecraft:air")) return false;
+            JsonObject pool=object(data,"item_pool");
+            boolean extra=explicitExtra;
+            for(JsonElement entry:arrayOrEmpty(pool,"extra")) if(entry.getAsString().equals(id.toString())) extra=true;
+            if(!extra&&pool.has("integrations")&&!pool.get("integrations").getAsBoolean()&&!id.getNamespace().equals("minecraft")) return false;
+            for(JsonElement entry:arrayOrEmpty(pool,"deny")) {
+                String denied=entry.getAsString();
+                if(denied.equals(id.toString())||denied.equals(id.getNamespace())||denied.equals(id.getNamespace()+":*")) return false;
+            }
+            return true;
+        }
         int pick(String key, int count, Human human) {
             int chosen = FactionEquipmentPolicy.choose(weights(key, count), human.getRandom().nextDouble());
             if (chosen < 0) warn(rank + "/" + faction + "/" + key, "All weights are zero; selection skipped");
             return chosen;
         }
     }
+
+    private static final List<String> RANKS=List.of("roamer","tier1","tier2","tier3");
+    private static final List<String> FACTIONS=List.of("crimson","azure","verdant","ashen","roamer","neutral");
+    private static final Set<String> GUN_CATEGORIES=Set.of("pistol","smg","shotgun","rifle","mg","sniper","launcher","other");
+
+    /** Pure schema validation. Unknown fields survive; explicitly invalid known fields reject the entire candidate. */
+    private static void validateContribution(JsonObject root,String path) {
+        for(String key:List.of("gun_chance","gun_core_chance","vanishing_chance","binding_chance","ranged_chance",
+                "second_weapon_chance","third_weapon_chance")) strictNumber(root,key,path,0,1,false);
+        strictNumber(root,"ammo_multiplier",path,0,100,false);
+        for(String key:List.of("gun_fallback_uniform","allow_tacz_firearms","ranged_in_backpack","automatic_shield_enchantments")) strictBoolean(root,key,path);
+        if(root.has("gun_fallback_mode")) {
+            String mode=strictString(root.get("gun_fallback_mode"),path+".gun_fallback_mode");
+            if(!Set.of("category_uniform","global_weight").contains(mode)) invalid(path+".gun_fallback_mode","unknown mode");
+        }
+        for(var entry:Map.of("melee_band_weights",5,"armor_band_weights",5,"toughness_band_weights",4,"shield_band_weights",4,
+                "ranged_band_weights",4,"food_category_weights",4,"recovery_category_weights",3,"tactical_category_weights",7).entrySet())
+            strictArray(root,entry.getKey(),entry.getValue(),path,false);
+        for(String key:List.of("bands","item_pool","gun_core","gun_category_map","enchant","durability","shield_count","faction_overrides"))
+            requireObjectIfPresent(root,key,path);
+        JsonObject bands=object(root,"bands");
+        for(var entry:Map.of("melee_damage",4,"armor_points",4,"toughness",3,"shield_durability",3,"ranged_damage",3,"ranged_durability",3).entrySet())
+            strictArray(bands,entry.getKey(),entry.getValue(),path+".bands",true);
+        JsonObject pool=object(root,"item_pool");
+        strictBoolean(pool,"integrations",path+".item_pool");
+        validateIds(pool,"extra",path+".item_pool",false,false);
+        validateIds(pool,"deny",path+".item_pool",false,true);
+        JsonObject core=object(root,"gun_core");
+        for(String key:core.keySet()) {
+            if(key.startsWith("_")) continue;
+            if(!GUN_CATEGORIES.contains(key)) invalid(path+".gun_core."+key,"unknown gun category");
+            strictNumber(core,key,path+".gun_core",0,1e6,false);
+        }
+        JsonObject mapping=object(root,"gun_category_map");
+        for(var entry:mapping.entrySet()) {
+            if(entry.getKey().startsWith("_")) continue;
+            validateId(entry.getKey(),path+".gun_category_map",true,false);
+            if(!GUN_CATEGORIES.contains(strictString(entry.getValue(),path+".gun_category_map."+entry.getKey())))
+                invalid(path+".gun_category_map."+entry.getKey(),"unknown gun category");
+        }
+        JsonObject enchant=object(root,"enchant");
+        for(String key:List.of("weapon_chance","armor_chance")) strictNumber(enchant,key,path+".enchant",0,1,false);
+        strictNumber(enchant,"budget",path+".enchant",0,10000,true);
+        strictNumber(enchant,"max_enchants",path+".enchant",0,32,true);
+        for(String key:List.of("include_modded","allow_treasure","allow_curses")) strictBoolean(enchant,key,path+".enchant");
+        validateIds(enchant,"blacklist",path+".enchant",true,false);
+        for(String key:List.of("bias","cost_overrides")) {
+            requireObjectIfPresent(enchant,key,path+".enchant");
+            JsonObject values=object(enchant,key);
+            for(String id:values.keySet()) {
+                if(id.startsWith("_")) continue;
+                validateId(id,path+".enchant."+key,true,false);
+                strictNumber(values,id,path+".enchant."+key,key.equals("cost_overrides")?1:0,key.equals("cost_overrides")?10000:1e6,key.equals("cost_overrides"));
+            }
+        }
+        JsonObject durability=object(root,"durability");
+        strictNumber(durability,"min",path+".durability",0,1,false);
+        strictNumber(durability,"max",path+".durability",0,1,false);
+        if(durability.has("min")&&durability.has("max")&&durability.get("min").getAsDouble()>durability.get("max").getAsDouble())
+            invalid(path+".durability","min exceeds max");
+        JsonObject shields=object(root,"shield_count");
+        for(String key:shields.keySet()) {
+            if(key.startsWith("_")) continue;
+            if(!Set.of("0","1","2").contains(key)) invalid(path+".shield_count."+key,"expected 0, 1 or 2");
+            strictNumber(shields,key,path+".shield_count",0,1e6,false);
+        }
+        JsonObject overrides=object(root,"faction_overrides");
+        for(String id:overrides.keySet()) {
+            if(id.startsWith("_")) continue;
+            if(!FACTIONS.contains(id)) invalid(path+".faction_overrides."+id,"unknown faction");
+            requireObjectIfPresent(overrides,id,path+".faction_overrides");
+            validateContribution(object(overrides,id),path+".faction_overrides."+id);
+        }
+        // Existing explicit candidate lists retain their semantics, but malformed IDs must fail before publication.
+        for(String key:List.of("mainhand","inventory","ranged_mainhand","shield_pool")) validateItems(root,key,path);
+        for(String key:List.of("offhand","bonus_mainhand")) {
+            requireObjectIfPresent(root,key,path);
+            JsonObject nested=object(root,key);
+            strictNumber(nested,"chance",path+"."+key,0,1,false);
+            validateItems(nested,"entries",path+"."+key);
+        }
+        if(root.has("armor_sets")) {
+            JsonArray entries=strictJsonArray(root.get("armor_sets"),path+".armor_sets");
+            for(JsonElement entry:entries) {
+                if(!entry.isJsonObject()) invalid(path+".armor_sets","entry must be an object");
+                JsonObject set=entry.getAsJsonObject();
+                for(String slot:List.of("head","chest","legs","feet")) if(set.has(slot)&&!set.get(slot).isJsonNull())
+                    validateId(strictString(set.get(slot),path+".armor_sets."+slot),path+".armor_sets."+slot,false,false);
+                strictNumber(set,"weight",path+".armor_sets",0,1e6,true);
+            }
+        }
+    }
+    private static JsonArray arrayOrEmpty(JsonObject root,String key) {
+        return root.has(key)?root.getAsJsonArray(key):new JsonArray();
+    }
+    private static void validateItems(JsonObject root,String key,String path) {
+        if(!root.has(key)) return;
+        for(JsonElement entry:strictJsonArray(root.get(key),path+"."+key)) {
+            if(!entry.isJsonObject()) invalid(path+"."+key,"entry must be an object");
+            JsonObject item=entry.getAsJsonObject();
+            if(!item.has("item")) invalid(path+"."+key,"missing item ID");
+            validateId(strictString(item.get("item"),path+"."+key+".item"),path+"."+key+".item",false,false);
+            strictNumber(item,"weight",path+"."+key,0,1e6,true);
+            strictNumber(item,"count",path+"."+key,1,64,true);
+        }
+    }
+    private static void validateIds(JsonObject root,String key,String path,boolean tags,boolean namespaces) {
+        if(!root.has(key)) return;
+        for(JsonElement id:strictJsonArray(root.get(key),path+"."+key)) validateId(strictString(id,path+"."+key),path+"."+key,tags,namespaces);
+    }
+    private static void validateId(String text,String path,boolean tags,boolean namespaces) {
+        String value=text;
+        if(tags&&value.startsWith("#")) value=value.substring(1);
+        else if(namespaces&&!value.contains(":")) {
+            if(value.matches("[a-z0-9_.-]+")) return;
+            invalid(path,"invalid namespace: "+text);
+        } else if(namespaces&&value.endsWith(":*")) {
+            if(value.substring(0,value.length()-2).matches("[a-z0-9_.-]+")) return;
+            invalid(path,"invalid namespace wildcard: "+text);
+        }
+        if(!value.contains(":")||ResourceLocation.tryParse(value)==null) invalid(path,"invalid ID: "+text);
+    }
+    private static void strictNumber(JsonObject root,String key,String path,double min,double max,boolean integer) {
+        if(!root.has(key)) return;
+        JsonElement value=root.get(key);
+        if(!value.isJsonPrimitive()||!value.getAsJsonPrimitive().isNumber()) invalid(path+"."+key,"expected numeric value");
+        double number=value.getAsDouble();
+        if(!Double.isFinite(number)||number<min||number>max||(integer&&number!=Math.rint(number)))
+            invalid(path+"."+key,"out of range or non-finite numeric value");
+    }
+    private static void strictBoolean(JsonObject root,String key,String path) {
+        if(root.has(key)&&(!root.get(key).isJsonPrimitive()||!root.get(key).getAsJsonPrimitive().isBoolean())) invalid(path+"."+key,"expected boolean");
+    }
+    private static void strictArray(JsonObject root,String key,int length,String path,boolean increasing) {
+        if(!root.has(key)) return;
+        JsonArray values=strictJsonArray(root.get(key),path+"."+key);
+        if(values.size()!=length) invalid(path+"."+key,"wrong array dimension");
+        double previous=-1;
+        for(int index=0;index<values.size();index++) {
+            JsonObject number=new JsonObject(); number.add("value",values.get(index));
+            strictNumber(number,"value",path+"."+key+"["+index+"]",0,1e6,false);
+            double current=values.get(index).getAsDouble();
+            if(increasing&&index>0&&current<=previous) invalid(path+"."+key,"thresholds must be strictly increasing");
+            previous=current;
+        }
+    }
+    private static String strictString(JsonElement value,String path) {
+        if(value==null||!value.isJsonPrimitive()||!value.getAsJsonPrimitive().isString()) invalid(path,"expected string");
+        return value.getAsString();
+    }
+    private static JsonArray strictJsonArray(JsonElement value,String path) {
+        if(!value.isJsonArray()) invalid(path,"expected array");
+        return value.getAsJsonArray();
+    }
+    private static void requireObjectIfPresent(JsonObject root,String key,String path) {
+        if(root.has(key)&&!root.get(key).isJsonObject()) invalid(path+"."+key,"expected object");
+    }
+    private static void invalid(String path,String detail) { throw new IllegalArgumentException("Invalid faction equipment config "+path+": "+detail); }
 
     static double number(JsonObject root, String key, double fallback, double min, double max) {
         try {

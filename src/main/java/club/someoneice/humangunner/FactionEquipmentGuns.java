@@ -19,7 +19,7 @@ final class FactionEquipmentGuns {
         var catalogs=GunSupport.get().catalogsByBackend();
         for(var entry:available.entrySet()) {
             var choice=entry.getKey();
-            if(entry.getValue()<=0 || !allowed(profile,choice.id())) continue;
+            if(entry.getValue()<=0 || !profile.allowedItem(choice.id(),false)) continue;
             String nativeType=catalogs.getOrDefault(choice.backend(),Map.of()).getOrDefault(choice.id(),"other");
             String category=category(choice,nativeType,profile);
             categories.computeIfAbsent(category,ignored->new LinkedHashMap<>()).put(choice,entry.getValue());
@@ -52,18 +52,6 @@ final class FactionEquipmentGuns {
         for(int i=0;i<choices.size();i++) gunWeights[i]=uniform?1:guns.get(choices.get(i));
         int gun=FactionEquipmentPolicy.choose(gunWeights,human.getRandom().nextDouble());
         return gun<0?ItemStack.EMPTY:GunSupport.get().createLoadedGun(choices.get(gun));
-    }
-
-    private static boolean allowed(FactionEquipmentConfig.Profile profile,ResourceLocation id) {
-        JsonObject pool=FactionEquipmentConfig.object(profile.data,"item_pool");
-        boolean explicit=false;
-        for(var entry:FactionEquipmentPools.list(pool,"extra")) if(entry.isJsonPrimitive()&&entry.getAsString().equals(id.toString())) explicit=true;
-        if(!UnifiedConfig.bool(pool,"integrations",true)&&!id.getNamespace().equals("minecraft")&&!explicit) return false;
-        for(var entry:FactionEquipmentPools.list(pool,"deny")) if(entry.isJsonPrimitive()) {
-            String text=entry.getAsString();
-            if(text.equals(id.toString())||text.equals(id.getNamespace())||text.equals(id.getNamespace()+":*")) return false;
-        }
-        return true;
     }
 
     private static String category(GunSupport.GunChoice choice,String nativeType,FactionEquipmentConfig.Profile profile) {

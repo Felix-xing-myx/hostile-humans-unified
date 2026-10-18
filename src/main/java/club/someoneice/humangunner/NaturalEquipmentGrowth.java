@@ -134,6 +134,11 @@ public final class NaturalEquipmentGrowth {
                 item = configuredMelee(profile.earlyMelee().get(original.getItem() instanceof AxeItem ? "axe" : "sword"), item);
             }
         }
+        // All early candidates, including resolve()'s vanilla fallbacks, pass the same final pool gate.
+        // If an early candidate is denied/unavailable, preserve the legal item that entered growth.
+        var equipment=FactionEquipmentConfig.of(human);
+        item=FactionEquipmentPolicy.allowedReplacement(original.getItem(),item,
+                candidate->equipment.allowedItem(BuiltInRegistries.ITEM.getKey(candidate),false));
         // Early substitutions must not upgrade an already weaker stock item.
         if (armor && item instanceof ArmorItem next && original.getItem() instanceof ArmorItem old
                 && (next.getDefense() > old.getDefense() || next.getToughness() > old.getToughness())) {

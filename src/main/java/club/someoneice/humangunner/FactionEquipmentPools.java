@@ -62,16 +62,7 @@ final class FactionEquipmentPools {
                 armor.stream().map(c->"A"+(c.band+1)+"/T"+c.toughness).toList());
     }
 
-    boolean allowed(ResourceLocation id, boolean extra) {
-        if (id==null || id.equals(new ResourceLocation("minecraft:air"))) return false;
-        JsonObject pool=FactionEquipmentConfig.object(profile.data,"item_pool");
-        if (!extra && !UnifiedConfig.bool(pool,"integrations",true) && !id.getNamespace().equals("minecraft")) return false;
-        for (var deny : list(pool,"deny")) try {
-            String text=deny.getAsString();
-            if (text.equals(id.toString()) || text.equals(id.getNamespace()) || text.equals(id.getNamespace()+":*")) return false;
-        } catch (RuntimeException invalid) { FactionEquipmentConfig.warn(deny.toString(),"Invalid equipment deny entry"); }
-        return true;
-    }
+    boolean allowed(ResourceLocation id, boolean extra) { return profile.allowedItem(id,extra); }
 
     private void addArmor(ConfiguredEquipmentLoadout.ArmorSetEntry set, Set<String> known, boolean extra) {
         if (set.weight()<=0 || set.head()==null || set.chest()==null || set.legs()==null || set.feet()==null || !set.available()) return;
