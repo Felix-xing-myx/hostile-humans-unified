@@ -21,6 +21,13 @@ public final class SpecialtyAllocation {
     public static Result allocate(double budget, double[] preference, double[] costs, double[] caps,
                                   double[] tilts, double alpha, double absoluteMin, double absoluteMax,
                                   boolean boss) {
+        return allocate(budget, preference, costs, caps, tilts, alpha, absoluteMin, absoluteMax, boss, 1.8);
+    }
+    public static Result allocate(double budget, double[] preference, double[] costs, double[] caps,
+                                  double[] tilts, double alpha, double absoluteMin, double absoluteMax,
+                                  boolean boss, double amplification) {
+        if (!Double.isFinite(amplification) || amplification < 1 || amplification > 3)
+            throw new IllegalArgumentException("boss amplification");
         positive(budget);
         if (!Double.isFinite(alpha) || alpha < 0 || alpha > 1)
             throw new IllegalArgumentException("alpha must be finite in [0,1]");
@@ -33,7 +40,7 @@ public final class SpecialtyAllocation {
         // Bosses have no random tilt. Amplify the complete normalized center, then conserve it.
         if (boss) {
             for (int i = 0; i < n; i++) {
-                center[i] = Math.max(1e-6, 1 + (center[i] - 1) * 1.8);
+                center[i] = Math.max(1e-6, 1 + (center[i] - 1) * amplification);
             }
             center = center(center, costs);
         }

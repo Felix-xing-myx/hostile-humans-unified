@@ -11,6 +11,7 @@ import java.util.*;
 public final class UnifiedConfig {
     private static volatile UnifiedConfig instance;
     private final JsonObject root;
+    private final FactionRules factionRules;
     private final Map<String, Tier> tiers;
     private final GunSpawnPools gunSpawnPools;
     private final Spawn spawn;
@@ -74,6 +75,8 @@ public final class UnifiedConfig {
     UnifiedConfig(JsonObject configured) {
         JsonObject defaults = defaults();
         root = merge(defaults, configured);
+        SpecialtyConfig.configure(object(root, "specialty"));
+        factionRules = FactionRules.parse(root);
         jumpAttack = JumpAttackConfig.parse(object(root, "jump_attack"));
         armorSwap = ArmorSwapConfig.parse(object(root, "armor_swap"));
         combatResupply = CombatResupplyConfig.parse(object(root, "combat_resupply"));
@@ -277,6 +280,7 @@ public final class UnifiedConfig {
         return new RecruitmentCost(id, count);
     }
     /** Feature switches are resolved centrally; callers must retain independent owner/safety rules. */
+    FactionRules factionRules() { return factionRules; }
     public boolean featureEnabled(String feature, boolean fallback) {
         return bool(object(root, feature), "enabled", fallback);
     }

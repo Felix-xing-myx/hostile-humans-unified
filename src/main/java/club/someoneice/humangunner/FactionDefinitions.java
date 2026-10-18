@@ -4,14 +4,14 @@ import com.google.gson.*;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /** One immutable definition revision; malformed reloads never publish a partial relationship table. */
-final class FactionDefinitions extends SimpleJsonResourceReloadListener {
+final class FactionDefinitions extends SimplePreparableReloadListener<FactionDefinitions.Prepared> {
     static final List<String> BUILTINS = List.of("crimson", "azure", "verdant", "ashen");
     static final List<String> DIMENSIONS = List.of("health", "armor", "toughness", "knockback_resistance",
             "speed", "detection", "melee", "gun", "projectile", "accuracy", "regeneration");
@@ -20,11 +20,32 @@ final class FactionDefinitions extends SimpleJsonResourceReloadListener {
                       Set<ResourceLocation> enemies, Set<ResourceLocation> allies, List<Double> preference,
                       List<Double> bossPreference, String bandStyle, String aggression,
                       ResourceLocation hireItem, List<Integer> hireCosts, double friendlyDiscount, double allyDiscount) {}
-    record Revision(long number, Map<ResourceLocation, Definition> definitions) {}
-    private static volatile Revision current = new Revision(0, builtins());
+    record Revision(long number, Map<ResourceLocation, Definition> definitions, SpecialtyData.Definitions specialty) {}
+    record Prepared(Map<ResourceLocation, JsonElement> factions, Map<ResourceLocation, JsonElement> specialty) {}
+    private static volatile Revision current = new Revision(0, builtins(), SpecialtyData.get());
 
-    private FactionDefinitions() { super(new Gson(), "factions"); }
+    private FactionDefinitions() {}
+    @Override protected Prepared prepare(ResourceManager manager, ProfilerFiller profiler) {
+        return new Prepared(read(manager, "factions"), read(manager, "specialty"));
+    }
+    private static Map<ResourceLocation, JsonElement> read(ResourceManager manager, String directory) {
+        Map<ResourceLocation, JsonElement> values = new HashMap<>();
+        manager.listResources(directory, location -> location.getPath().endsWith(".json")).forEach((path, resource) -> {
+            String local = path.getPath().substring(directory.length() + 1, path.getPath().length() - 5);
+            ResourceLocation key = new ResourceLocation(path.getNamespace(), local);
+            try (var reader = resource.openAsReader()) { values.put(key, JsonParser.parseReader(reader)); }
+            catch (Exception invalid) {
+                // Carry a parse failure through apply so it rejects the complete candidate revision.
+                values.put(key, JsonNull.INSTANCE);
+            }
+        });
+        return Map.copyOf(values);
+    }
     static Revision current() { return current; }
+    static void publishSpecialty(SpecialtyData.Definitions specialty) {
+        Revision previous = current;
+        if (previous != null) current = new Revision(previous.number() + 1, previous.definitions(), specialty);
+    }
     static ResourceLocation id(String raw) {
         if (raw == null || raw.isBlank()) return null;
         return ResourceLocation.tryParse(raw.contains(":") ? raw : HumanGunner.MOD_ID + ":" + raw);
@@ -40,19 +61,22 @@ final class FactionDefinitions extends SimpleJsonResourceReloadListener {
         return a != null && b != null && (a.id().equals(b.id())
                 || (!enemies(first, second) && (a.allies().contains(b.id()) || b.allies().contains(a.id()))));
     }
-    @Override protected void apply(Map<ResourceLocation, JsonElement> resources, ResourceManager manager,
+    @Override protected void apply(Prepared prepared, ResourceManager manager,
                                    ProfilerFiller profiler) {
         try {
             Map<ResourceLocation, Definition> next = new TreeMap<>();
-            for (var entry : resources.entrySet()) next.put(entry.getKey(), parse(entry.getKey(), entry.getValue().getAsJsonObject()));
+            for (var entry : prepared.factions().entrySet()) next.put(entry.getKey(), parse(entry.getKey(), entry.getValue().getAsJsonObject()));
             if (next.isEmpty()) throw new IllegalArgumentException("No faction definitions");
+            if (next.size() > 256) throw new IllegalArgumentException("Too many faction definitions");
             for (Definition d : next.values()) {
                 for (ResourceLocation related : d.enemies()) if (!next.containsKey(related))
                     throw new IllegalArgumentException("Unknown enemy " + related + " in " + d.id());
                 for (ResourceLocation related : d.allies()) if (!next.containsKey(related) || d.enemies().contains(related))
                     throw new IllegalArgumentException("Invalid ally " + related + " in " + d.id());
             }
-            current = new Revision(current.number() + 1, Map.copyOf(next));
+            SpecialtyData.Definitions specialty = SpecialtyData.parse(prepared.specialty());
+            // Readers of both identities and allocation data observe this single publication.
+            current = new Revision(current.number() + 1, Map.copyOf(next), specialty);
         } catch (RuntimeException invalid) {
             LogUtils.getLogger().error("Keeping previous faction revision: {}", invalid.getMessage());
         }
@@ -70,6 +94,8 @@ final class FactionDefinitions extends SimpleJsonResourceReloadListener {
         return Map.copyOf(result);
     }
     private static Definition parse(ResourceLocation key, JsonObject root) {
+        if (key.toString().length() > 256 || UnifiedConfig.string(root, "name", "").length() > 128)
+            throw new IllegalArgumentException("Faction display identity exceeds protocol limits");
         String color = root.get("color").getAsString();
         if (!color.matches("#[0-9a-fA-F]{6}")) throw new IllegalArgumentException("Invalid color " + key);
         JsonObject hire = UnifiedConfig.object(root, "hire");

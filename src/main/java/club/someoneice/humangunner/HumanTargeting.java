@@ -38,10 +38,8 @@ public final class HumanTargeting {
                 || SoldierCombatMode.get(observer) != SoldierCombatMode.ACTIVE) return false;
         Player owner = observer.level().getPlayerByUUID(observer.getOwnerUUID());
         if (owner == null || !owner.isAlive()) return false;
-        return HumanRelationshipPolicy.activeRecruitMayAttackWild(
-                observer.hasOwner(), SoldierCombatMode.get(observer) == SoldierCombatMode.ACTIVE,
-                HumanRelations.effectiveOwner(wild) == null,
-                IdentityBadgeAccess.highestClearance(owner) >= 0,
-                HumanRelations.isForcedHostileTo(wild, owner));
+        return HumanRelations.effectiveOwner(wild) == null
+                && (HumanRelations.isForcedHostileTo(wild, owner)
+                || !StandingEffects.blocksInitiatedHostility(wild, owner));
     }
 }

@@ -37,14 +37,14 @@ public final class SpecialtyAttributes {
         RandomSource random = RandomSource.create(seed);
         SpecialtyConfig config = SpecialtyConfig.get();
         boolean boss = HumanFactions.isBoss(human);
-        double budget = boss ? 1 : sampleBudget(random, config);
+        double budget = boss ? HumanFactions.bossBudget() : sampleBudget(random, config);
         SpecialtyData.Definitions data = SpecialtyData.get();
         double[] tilts = ones();
         if (!boss) for (int i = 0; i < DIMENSIONS; i++) tilts[i] = Math.exp(random.nextGaussian() * config.deviationSigma());
         try {
             SpecialtyAllocation.Result result = SpecialtyAllocation.allocate(budget,
                     HumanFactions.preference(human, boss), data.costs(), data.caps(config.deviationCap()), tilts,
-                    config.capBudgetExponent(), config.multiplierMin(), config.multiplierMax(), boss);
+                    config.capBudgetExponent(), config.multiplierMin(), config.multiplierMax(), boss, HumanFactions.bossAmplification());
             if (!result.feasible()) warn("budget", "Specialty total is outside merged boundaries; keeping boundaries, budget and explicit residual");
             store(state, budget, result.multipliers(), seed);
             // Float persistence is intentionally checked separately from the double solver.

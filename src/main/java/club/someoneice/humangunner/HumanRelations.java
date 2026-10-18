@@ -54,8 +54,7 @@ public final class HumanRelations {
     }
 
     static boolean isTemporaryFor(Human human, Player player) {
-        return human.getPersistentData().hasUUID(TEMP_OWNER)
-                && human.getPersistentData().getUUID(TEMP_OWNER).equals(player.getUUID());
+        return temporaryOwner(human) != null && temporaryOwner(human).equals(player.getUUID());
     }
 
     static boolean isControlledBy(Human human, Player player) {
@@ -63,52 +62,79 @@ public final class HumanRelations {
     }
 
     static boolean protects(Human human, Player player) {
+        if (isOwnedBy(human, player) || isTemporaryFor(human, player)) return true;
         if (isForcedHostileTo(human, player)) return false;
-        return isOwnedBy(human, player) || isTemporaryFor(human, player)
-                || (effectiveOwner(human) == null
-                && IdentityBadgeAccess.isFriendlyTo(human, player)
-                && !IdentityBadgeAccess.mayRetaliateAgainst(human, player)
+        return (effectiveOwner(human) == null
+                && StandingEffects.isFriendlyTo(human, player)
+                && !StandingEffects.mayRetaliateAgainst(human, player)
                 && human.distanceToSqr(player) <= BADGE_GUARD_RADIUS_SQR);
     }
 
-    static boolean allied(Human human, Entity entity) {
+    enum RelationReason { SAME_OWNER, PVP_PROTECTION, OWNER_POLITICS, SELF_DEFENSE, EXPLICIT_PERMISSION,
+        ROAMER, SAME_FACTION, FACTION_ENEMY, PLAYER_STANDING, SHORT_TERM_ANGER, BEACON, UNKNOWN }
+    record Relation(boolean friendly, boolean hostile, RelationReason reason) {}
+
+    /** One relationship resolver for targeting, damage and interception. It never confers perception. */
+    static Relation relation(Human human, Entity entity) {
+        UUID owner = effectiveOwner(human);
         if (entity instanceof Player player) {
-            UUID owner = effectiveOwner(human);
-            if (owner != null && owner.equals(player.getUUID())) return true;
-            if (isForcedHostileTo(human, player)) return false;
-            if (owner != null) return HumanRelationshipPolicy.ownedHumanAlliedToPlayer(
-                    owner, player.getUUID(), UnifiedConfig.get().allowHiredPvpDamage());
-            return protects(human, player) || IdentityBadgeAccess.blocksInitiatedHostility(human, player);
+            if (owner != null && owner.equals(player.getUUID())) return new Relation(true, false, RelationReason.SAME_OWNER);
+            if (owner != null) return new Relation(!UnifiedConfig.get().allowHiredPvpDamage(),
+                    UnifiedConfig.get().allowHiredPvpDamage(), RelationReason.PVP_PROTECTION);
+            if (isForcedHostileTo(human, player)) return new Relation(false, true, RelationReason.BEACON);
+            if (human.getTier() == com.craftix.hostile_humans.entity.entities.HumanTier.ROAMER)
+                return new Relation(false, true, RelationReason.ROAMER);
+            if (StandingEffects.mayRetaliateAgainst(human, player)) return new Relation(false, true, RelationReason.SHORT_TERM_ANGER);
+            boolean peaceful = StandingEffects.isNeutralTo(human, player);
+            return new Relation(peaceful, !peaceful, RelationReason.PLAYER_STANDING);
         }
-        if (!(entity instanceof Human other)) return false;
-        UUID first = effectiveOwner(human), second = effectiveOwner(other);
-        if (first != null && second != null) return HumanRelationshipPolicy.ownedHumansAllied(
-                first, second, UnifiedConfig.get().allowHiredPvpDamage());
-        // A hired human and a wild human normally keep their original faction
-        // relation. An explicit owner/self-defense authorization temporarily
-        // overrides it so same-tier wild humans cannot attack the owner with
-        // impunity after the owner removes their badge.
-        if (first != null && second == null
-                && (SoldierCombatMode.isExplicitlyAuthorizedAgainst(human, other)
-                || HumanTargeting.isAutonomousWildEnemy(human, other)
-                || beaconThreatensOwner(other, first)
-                || isRecentHumanAttacker(other, human))) return false;
-        if (second != null && first == null
-                && (SoldierCombatMode.isExplicitlyAuthorizedAgainst(other, human)
-                || HumanTargeting.isAutonomousWildEnemy(other, human)
-                || beaconThreatensOwner(human, second)
-                || isRecentHumanAttacker(human, other))) return false;
-        if (HumanGunner.areSameFaction(human, other)) return true;
-        for (Player player : human.level().players()) {
-            if (protects(human, player) && protects(other, player)) return true;
+        if (entity instanceof Human other) {
+            UUID second = effectiveOwner(other);
+            if (owner != null && second != null) {
+                boolean friendly = HumanRelationshipPolicy.ownedHumansAllied(owner, second, UnifiedConfig.get().allowHiredPvpDamage());
+                return new Relation(friendly, !friendly, owner.equals(second) ? RelationReason.SAME_OWNER : RelationReason.PVP_PROTECTION);
+            }
+            if (owner != null || second != null) {
+                Human controlled = owner != null ? human : other;
+                Human wild = owner != null ? other : human;
+                UUID controlling = owner != null ? owner : second;
+                if (SoldierCombatMode.isExplicitlyAuthorizedAgainst(controlled, wild))
+                    return new Relation(false, true, RelationReason.EXPLICIT_PERMISSION);
+                if (isRecentHumanAttacker(wild, controlled) || beaconThreatensOwner(wild, controlling))
+                    return new Relation(false, true, RelationReason.SELF_DEFENSE);
+                Player player = human.level().getPlayerByUUID(controlling);
+                if (player != null) {
+                    Relation political = relation(wild, player);
+                    return new Relation(political.friendly(), political.hostile(), RelationReason.OWNER_POLITICS);
+                }
+                return new Relation(false, false, RelationReason.UNKNOWN);
+            }
+            if (HumanFactions.same(human, other)) return new Relation(true, false, RelationReason.SAME_FACTION);
+            if (isRecentHumanAttacker(human, other)) return new Relation(false, true, RelationReason.SELF_DEFENSE);
+            if (HumanFactions.enemies(human, other)) return new Relation(false, true,
+                    human.getTier() == com.craftix.hostile_humans.entity.entities.HumanTier.ROAMER
+                    || other.getTier() == com.craftix.hostile_humans.entity.entities.HumanTier.ROAMER
+                    ? RelationReason.ROAMER : RelationReason.FACTION_ENEMY);
+            return new Relation(false, false, RelationReason.UNKNOWN);
         }
-        return false;
+        if (entity instanceof net.minecraft.world.entity.OwnableEntity owned && owned.getOwnerUUID() != null) {
+            Player player = human.level().getPlayerByUUID(owned.getOwnerUUID());
+            if (player != null) return relation(human, player);
+            if (owner != null && owner.equals(owned.getOwnerUUID())) return new Relation(true, false, RelationReason.SAME_OWNER);
+        }
+        return new Relation(false, false, RelationReason.UNKNOWN);
+    }
+
+    static boolean allied(Human human, Entity entity) { return relation(human, entity).friendly(); }
+    static boolean humanHostile(Human human, Human target) { return relation(human, target).hostile(); }
+    private static UUID temporaryOwner(Human human) {
+        var data = human.getPersistentData();
+        return data.hasUUID(TEMP_OWNER) && data.getLong(TEMP_UNTIL) > human.level().getGameTime()
+                ? data.getUUID(TEMP_OWNER) : null;
     }
 
     static UUID effectiveOwner(Human human) {
-        if (human.hasOwner()) return human.getOwnerUUID();
-        return human.getPersistentData().hasUUID(TEMP_OWNER)
-                ? human.getPersistentData().getUUID(TEMP_OWNER) : null;
+        return human.hasOwner() ? human.getOwnerUUID() : temporaryOwner(human);
     }
 
     static void dismiss(ServerPlayer owner, Human human) {
@@ -236,11 +262,9 @@ public final class HumanRelations {
     }
 
     private static boolean suppressesBadgeBearerAssault(Player player, LivingEntity target) {
-        if (!(target instanceof Human wild)) return false;
-        return HumanRelationshipPolicy.suppressBadgeBearerAssault(
-                effectiveOwner(wild) == null,
-                IdentityBadgeAccess.highestClearance(player) >= 0,
-                isForcedHostileTo(wild, player));
+        return target instanceof Human wild && HumanRelations.effectiveOwner(wild) == null
+                && !HumanRelations.isForcedHostileTo(wild, player)
+                && StandingEffects.blocksInitiatedHostility(wild, player);
     }
 
     private static void assignGuardTarget(Human human, LivingEntity target, long now, boolean defendingOwner) {
@@ -249,7 +273,14 @@ public final class HumanRelations {
         HumanPerception.ownerClue(human,target,defendingOwner);
     }
 
+    static void reconcileTarget(Human human) {
+        LivingEntity target = human.getTarget();
+        if (target != null && (allied(human, target) || target instanceof Human other && !humanHostile(human, other)))
+            human.setTarget(null);
+    }
+
     static void tick(Human human) {
+        reconcileTarget(human);
         persistHostileBeaconOrigin(human);
         boolean beaconHostile = human.getPersistentData().hasUUID(FORCED_HOSTILE_TARGET);
         AttributeInstance followRange = human.getAttribute(Attributes.FOLLOW_RANGE);

@@ -66,9 +66,9 @@ public final class HumanGunner {
     public static final Logger LOGGER = LogUtils.getLogger();
     private static final String INCOMING_GUNFIRE_UNTIL = MOD_ID + ":incoming_gunfire_until";
     private static final AtomicBoolean LOGGED_FIRST_ADAPTIVE_ARROW = new AtomicBoolean();
-    private static final Set<Human> RIVALRY_CONFIGURED = Collections.newSetFromMap(new WeakHashMap<>());
     private static final Set<Human> COMBAT_AI_CONFIGURED = Collections.newSetFromMap(new WeakHashMap<>());
     private static final Set<Human> SOLDIER_ORDERS_CONFIGURED = Collections.newSetFromMap(new WeakHashMap<>());
+    private static final Map<Human, Boolean> FRESH_HUMANS = new WeakHashMap<>();
     private static final Set<Human> INITIALIZED_HUMANS = Collections.newSetFromMap(new WeakHashMap<>());
     private static final double ARROW_AIR_DRAG = 0.99D;
     // Use 0.06 gravity compensation when aiming; the projectiles' physical gravity remains 0.05.
@@ -93,6 +93,7 @@ public final class HumanGunner {
 
     public HumanGunner() {
         IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
+        FactionContent.register(modBus);
         HumanGunnerRegistries.ITEMS.register(modBus);
         HumanGunnerRegistries.MENUS.register(modBus);
         HumanCommandNetwork.register();
@@ -155,6 +156,8 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(SoldierMessageDispatcher::onLogout);
         MinecraftForge.EVENT_BUS.addListener(SoldierMessageDispatcher::onStopped);
         MinecraftForge.EVENT_BUS.addListener(ProgressionCommands::register);
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.RegisterCommandsEvent event) ->
+                FactionAuthoringCommands.register(event.getDispatcher()));
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.AddReloadListenerEvent event) ->
                 event.addListener(FactionDefinitions.INSTANCE));
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onEntityLeave);
@@ -285,7 +288,7 @@ public final class HumanGunner {
             TacticalThrowables.tick(human);
             if (human.getTarget() instanceof Player player
                     && HumanRelations.effectiveOwner(human) == null
-                    && IdentityBadgeAccess.blocksInitiatedHostility(human, player)
+                    && StandingEffects.blocksInitiatedHostility(human, player)
                     && !HumanRelations.isForcedHostileTo(human, player)) {
                 human.setTarget(null);
                 human.setLastHurtByMob(null);
@@ -333,6 +336,12 @@ public final class HumanGunner {
         if (!(event.getEntity() instanceof Human human)) {
             return;
         }
+        if (!event.loadedFromDisk() && (human instanceof FactionBossHuman || HumanFactions.isBoss(human))
+                && !UnifiedConfig.get().featureEnabled("boss", true)) {
+            event.setCanceled(true);
+            return;
+        }
+        FRESH_HUMANS.put(human, !event.loadedFromDisk());
         HumanFactions.initialize(human, event.loadedFromDisk());
         HumanGrowth.onJoin(human, event.loadedFromDisk());
         if (PeacefulHumanPolicy.onJoin(event, human)
@@ -346,6 +355,7 @@ public final class HumanGunner {
         }
         Entity.RemovalReason reason = human.getRemovalReason();
         SoldierFollowNavigation.clear(human);
+        StandingEffects.clear(human);
         OfflineSoldierDeathReports.onEntityLeave(human);
         if (reason != Entity.RemovalReason.KILLED && reason != Entity.RemovalReason.DISCARDED) {
             // Chunk unload and dimension transfer must retain external inventory.
@@ -384,17 +394,19 @@ public final class HumanGunner {
         }
         HumanFactions.initialize(human, false);
         HumanGrowth.state(human);
+        SpecialtyAttributes.initialize(human, FRESH_HUMANS.getOrDefault(human, false));
         GrowthHealth.apply(human);
         if (!HumanSpawnEquipment.completeIfReady(human)) return false;
         TierAttributes.apply(human);
         MovementSpeedController.normal(human);
-        configureTierRivalry(human);
+        configureFactionIdentity(human);
         configureCombatAi(human);
         configureSoldierOrders(human);
         if (human.hasOwner()) SoldierOrder.initialize(human);
         SoldierCombatMode.initialize(human);
         ((StaticCombatGoalHost) human).humanGunner$installStaticCombatGoals();
         INITIALIZED_HUMANS.add(human);
+        FRESH_HUMANS.remove(human);
         return true;
     }
 
@@ -470,10 +482,6 @@ public final class HumanGunner {
         if (event.getEntity() instanceof Human damagedHuman) {
             event.setAmount(HumanDamageScaling.incoming(damagedHuman, event.getAmount()));
         }
-        if (event.getEntity() instanceof Human defender && attacker instanceof Player player
-                && !HumanRelations.isControlledBy(defender, player)) {
-            IdentityBadgeAccess.rememberPlayerAttack(defender, player);
-        }
         if (attacker instanceof Human humanAttacker) {
             if (event.getEntity() instanceof Player player
                     && HumanRelations.allied(humanAttacker, player)) {
@@ -509,13 +517,14 @@ public final class HumanGunner {
             // amount. Counting it avoids treating blocked or mitigated attack
             // input as health actually lost.
             RecentDamageTracker.record(human, event.getAmount(), event.getSource().getEntity());
+            StandingEffects.damage(human, event.getSource(), event.getAmount());
             if (event.getSource().getEntity() instanceof Player player
                     && HumanRelations.isOwnedBy(human, player)
                     && RecruitmentPolicy.betrayed(human.getHealth() - event.getAmount(), human.getMaxHealth())) {
                 RecruitmentLedger.get(player.getServer()).dismiss(human.getUUID());
                 human.setOwnerUUID(null);
                 human.setTame(false);
-                IdentityBadgeAccess.rememberPlayerAttack(human, player);
+
                 HumanPerception.ownerClue(human,player);
                 player.displayClientMessage(Component.translatable("message.hostile_humans_unified.dismissed"), true);
             }
@@ -537,6 +546,7 @@ public final class HumanGunner {
             event.setCanceled(true);
             return;
         }
+        StandingEffects.death(human, event.getSource());
         MinecraftServer server = human.getServer();
         if (server != null) RecruitmentLedger.get(server).dismiss(human.getUUID());
         if (noDrops) {
@@ -773,7 +783,7 @@ public final class HumanGunner {
                 || SpartanEquipmentCompat.isSpartanRangedWeapon(stack));
     }
 
-    private static void configureTierRivalry(Human human) {
+    private static void configureFactionIdentity(Human human) {
         HumanFactions.refreshTeam(human);
     }
 
@@ -824,13 +834,9 @@ public final class HumanGunner {
         human.addCombatGoal(-5, new BodyguardMovementGoal(human));
     }
 
-    private static boolean areTierRivals(Human first, Human second) {
-        if (HumanRelations.effectiveOwner(first) != null || HumanRelations.effectiveOwner(second) != null) {
-            return false;
-        }
-        int firstTier = factionTier(first);
-        int secondTier = factionTier(second);
-        return firstTier > 0 && secondTier > 0 && firstTier != secondTier;
+
+    public static boolean canHumanAttackHuman(Human attacker, Human target) {
+        return attacker != target && target.isAlive() && HumanRelations.humanHostile(attacker, target);
     }
 
     public static boolean areSameFaction(Human first, Human second) {
@@ -857,28 +863,9 @@ public final class HumanGunner {
     }
 
     static boolean shouldBlockHumanDamage(Human attacker, Human defender) {
-        // A wild same-tier human must be able to land the initiating hit on a
-        // hired/temporary human. The defender can then create a real self-
-        // defense authorization. The reverse direction remains blocked until
-        // the owned human has such an authorization.
-        return HumanRelationshipPolicy.blockHumanDamage(
-                HumanRelations.effectiveOwner(attacker) != null,
-                HumanRelations.effectiveOwner(defender) != null,
-                HumanRelations.allied(attacker, defender));
+        return HumanRelations.allied(attacker, defender);
     }
 
-    private static int factionTier(Human human) {
-        if (TierThreeHuman.isTierThree(human)) {
-            return 3;
-        }
-        if (human.getTier() == HumanTier.LEVEL1) {
-            return 1;
-        }
-        if (human.getTier() == HumanTier.LEVEL2) {
-            return 2;
-        }
-        return 0;
-    }
 
     private static boolean isDroppedGun(ItemStack stack) {
         if (stack.isEmpty()) {

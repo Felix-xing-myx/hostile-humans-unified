@@ -122,6 +122,14 @@ public final class HumanPerception {
                 || SoldierCombatMode.isExplicitlyAuthorizedAgainst(h,e)
                 || h.getLastHurtByMob()==e;
     }
+    /** Read-only evidence for a death witnessed at the most recent scheduled visual sample; no extra rays. */
+    static boolean recentlySaw(Human observer, java.util.UUID entity) {
+        State state = STATES.get(observer);
+        Track track = state == null ? null : state.tracks.get(entity);
+        long now = now(observer);
+        return track != null && track.visible && track.positionAt >= 0
+                && now >= track.positionAt && now - track.positionAt <= 20;
+    }
     public static boolean canTarget(Human h,LivingEntity e){
         if(h.level().isClientSide || !valid(h,e))return false;
         State s=STATES.get(h); Track t=s==null?null:s.tracks.get(e.getUUID());

@@ -128,7 +128,7 @@ public final class PeacefulHumanPolicy {
         UUID owner = human.getOwnerUUID();
         int tier = human.getPersistentData().contains(HumanRelations.HIRED_TIER)
                 ? human.getPersistentData().getInt(HumanRelations.HIRED_TIER)
-                : IdentityBadgeAccess.humanRank(human);
+                : StandingEffects.humanRank(human);
         if (!ledger.isOwnedRecord(human.getUUID(), owner)
                 || ledger.tier(human.getUUID()) != tier) {
             ledger.hire(human.getUUID(), owner, tier);

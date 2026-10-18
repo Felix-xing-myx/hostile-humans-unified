@@ -15,15 +15,15 @@ public final class MovementSpeedController {
     }
 
     public static void normal(Human human) {
-        apply(human, TierAttributes.of(human).baseMovementSpeed(), false);
+        apply(human, EffectiveAttributes.speedBase(human), false);
     }
 
     public static void combat(Human human, boolean sprinting) {
-        apply(human, TierAttributes.of(human).baseMovementSpeed(), sprinting);
+        apply(human, EffectiveAttributes.speedBase(human), sprinting);
     }
 
     public static void retreat(Human human, boolean sprinting) {
-        apply(human, TierAttributes.of(human).baseMovementSpeed(), sprinting);
+        apply(human, EffectiveAttributes.speedBase(human), sprinting);
     }
 
     private static void apply(Human human, double absoluteSpeed, boolean sprinting) {

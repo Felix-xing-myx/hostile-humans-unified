@@ -698,7 +698,7 @@ public final class AdaptiveCombatGoal extends Goal {
         double horizontal = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
         float exactYaw = (float) (Mth.atan2(delta.z, delta.x) * Mth.RAD_TO_DEG) - 90.0F;
         float exactPitch = (float) -(Mth.atan2(delta.y, horizontal) * Mth.RAD_TO_DEG);
-        double spread = RangedAccuracy.gunSpreadDegrees(human, weapon);
+        double spread = GunSupport.get().ownsShotSpread(weapon) ? 0 : RangedAccuracy.gunSpreadDegrees(human, weapon);
         double limit = spread * 2.5D;
         float pitch = exactPitch + (float) Mth.clamp(human.getRandom().nextGaussian() * spread, -limit, limit);
         float yaw = exactYaw + (float) Mth.clamp(human.getRandom().nextGaussian() * spread, -limit, limit);

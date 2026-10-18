@@ -133,6 +133,25 @@ extends HumanEntity
 implements RangedAttackMob,
 CrossbowAttackMob,
 PotionRangedAttackMob, StaticCombatGoalHost {
+    private static final net.minecraft.network.syncher.EntityDataAccessor<String> FACTION_ID =
+            net.minecraft.network.syncher.SynchedEntityData.defineId(Human.class, net.minecraft.network.syncher.EntityDataSerializers.STRING);
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Boolean> FACTION_BOSS =
+            net.minecraft.network.syncher.SynchedEntityData.defineId(Human.class, net.minecraft.network.syncher.EntityDataSerializers.BOOLEAN);
+
+    @Override protected void defineSynchedData() {
+        super.defineSynchedData();
+        entityData.define(FACTION_ID, "");
+        entityData.define(FACTION_BOSS, false);
+    }
+    public String humanGunner$getFaction() { return entityData.get(FACTION_ID); }
+    public boolean humanGunner$isBoss() { return entityData.get(FACTION_BOSS); }
+    public void humanGunner$syncIdentity(String faction, boolean boss) {
+        if (!level().isClientSide) {
+            entityData.set(FACTION_ID, faction);
+            entityData.set(FACTION_BOSS, boss);
+        }
+    }
+
     public Entity explosionThreat;
     private boolean combatShoreSearchPending;
     private final java.util.Map<Path, Boolean> shoreCandidateNavigators = new java.util.WeakHashMap<>();
@@ -1633,17 +1652,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (!club.someoneice.humangunner.HumanGunner.canControlledHumanAttack(this, entity)) return false;
         Human otherHuman;
         if (entity instanceof Human && (otherHuman = (Human)entity).isAlive()) {
-            return !this.team.equals(otherHuman.team)
-                    || (club.someoneice.humangunner.SoldierCombatMode.hasCombatController(this)
-                    && club.someoneice.humangunner.SoldierCombatMode.hasCombatController(otherHuman))
-                    || (club.someoneice.humangunner.SoldierCombatMode.hasCombatController(this)
-                    && !club.someoneice.humangunner.SoldierCombatMode.hasCombatController(otherHuman)
-                    && (club.someoneice.humangunner.SoldierCombatMode
-                    .isExplicitlyAuthorizedAgainst(this, otherHuman)
-                    || club.someoneice.humangunner.HumanTargeting
-                    .isAutonomousWildEnemy(this, otherHuman)))
-                    || club.someoneice.humangunner.HumanGunner
-                    .canWildHumanRetaliateAgainst(this, otherHuman);
+            return club.someoneice.humangunner.HumanGunner.canHumanAttackHuman(this, otherHuman);
         }
         return super.canAttack(entity);
     }
@@ -1672,7 +1681,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                         || club.someoneice.humangunner.HumanTargeting
                         .isAutonomousWildEnemy(this, otherHuman);
             }
-            return !this.team.equals(otherHuman.team);
+            return club.someoneice.humangunner.HumanGunner.canHumanAttackHuman(this, otherHuman);
         }
         if (!this.canAttack(entity)) {
             return false;
@@ -1986,7 +1995,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     public void heal(float amount) {
         float before = this.getHealth();
-        super.heal(amount);
+        super.heal(this.level().isClientSide ? amount : club.someoneice.humangunner.EffectiveAttributes.healing(this, amount));
         club.someoneice.humangunner.LowHealthCombatController.recordHealing(this,
                 Math.max(0.0F, this.getHealth() - before));
     }

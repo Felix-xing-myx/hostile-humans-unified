@@ -54,9 +54,9 @@ public final class TouhouMaidCompat {
     private static boolean relationAllowsAttack(EntityMaid maid, Human human) {
         Player owner = maid.getOwner() instanceof Player player ? player : null;
         boolean defending = owner != null && (recentAttackOn(human, maid) || recentAttackOn(human, owner));
-        return MaidHumanRelationPolicy.allowsAttack(owner != null, HumanRelations.effectiveOwner(human) != null,
-                owner == null ? -1 : IdentityBadgeAccess.highestClearance(owner), IdentityBadgeAccess.humanRank(human),
-                owner != null && HumanRelations.isForcedHostileTo(human, owner), defending);
+        return owner != null && HumanRelations.effectiveOwner(human) == null
+                && (HumanRelations.isForcedHostileTo(human, owner) || defending
+                || !StandingEffects.blocksInitiatedHostility(human, owner));
     }
 
     private static boolean recentAttackOn(Human human, LivingEntity victim) {

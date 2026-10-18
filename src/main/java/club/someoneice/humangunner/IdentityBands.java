@@ -14,7 +14,7 @@ final class IdentityBands {
     private static final Map<Player, Cached> CACHE = new WeakHashMap<>();
     private IdentityBands() {}
     static Selection selected(Player player) {
-        if (!UnifiedConfig.get().featureEnabled("identity_band", true)) return Selection.NONE;
+        if (player.level().isClientSide || !UnifiedConfig.get().featureEnabled("identity_band", true)) return Selection.NONE;
         int tick = player.tickCount, revision = player.getInventory().getTimesChanged();
         Cached cached = CACHE.get(player);
         if (cached != null && cached.tick() == tick && cached.revision() == revision) return cached.selection();

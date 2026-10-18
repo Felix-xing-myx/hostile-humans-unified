@@ -29,7 +29,8 @@ final class FactionStandingData extends SavedData {
         Entry previous = entry(player, faction);
         long day = Math.max(previous.rewardDay(), Math.max(0, gameTime) / 24000);
         int earned = day > previous.rewardDay() ? 0 : previous.rewardEarned();
-        int applied = amount > 0 ? Math.min(amount, Math.max(0, 30 - earned)) : amount;
+        int cap = UnifiedConfig.get().factionRules().dailyGainCap();
+        int applied = amount > 0 ? Math.min(amount, Math.max(0, cap - earned)) : amount;
         int next = (int) Math.max(-500L, Math.min(500L, (long) previous.value() + applied));
         if (applied > 0) earned += applied;
         players.get(player).put(faction, new Entry(next, day, earned));
@@ -47,7 +48,7 @@ final class FactionStandingData extends SavedData {
                 var id = FactionDefinitions.id(faction.getString("id"));
                 if (id == null) continue;
                 factions.put(id.toString(), new Entry(Math.max(-500, Math.min(500, faction.getInt("standing"))),
-                        Math.max(-1, faction.getLong("reward_day")), Math.max(0, Math.min(30, faction.getInt("earned")))));
+                        Math.max(-1, faction.getLong("reward_day")), Math.max(0, Math.min(100, faction.getInt("earned")))));
             }
             result.players.put(player.getUUID("uuid"), factions);
         }

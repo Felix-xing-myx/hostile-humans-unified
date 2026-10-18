@@ -7,7 +7,19 @@ public final class StandingIncidents {
     public enum Reason { NONE, SELF_DEFENSE, REPEATED_HITS, DAMAGE_THRESHOLD, HIGHER_RANK, GROUP_ALERT }
     public record Outcome(int standingPenalty, boolean notifyGroup, Reason reason) {}
     private static final int MAX_PLAYERS = 16;
-    private static final long HIT_WINDOW = 300, DAMAGE_WINDOW = 800, HIGHER_WINDOW = 100, ANGER = 600;
+    public record Settings(int hitWindow, int hitLimit, int damageWindow, double damageFraction,
+                           int angerTicks, int groupTicks, int crossTierWindow, int crossTierHits) {
+        public Settings {
+            if (hitWindow <= 0 || hitLimit <= 0 || damageWindow <= 0 || !Double.isFinite(damageFraction)
+                    || damageFraction <= 0 || damageFraction > 1 || angerTicks <= 0 || groupTicks <= 0
+                    || crossTierWindow <= 0 || crossTierHits <= 0) throw new IllegalArgumentException("Invalid incident settings");
+        }
+        public static Settings defaults() { return new Settings(300, 5, 800, .30, 600, 600, 100, 2); }
+    }
+    private Settings settings;
+    public StandingIncidents() { this(Settings.defaults()); }
+    public StandingIncidents(Settings settings) { this.settings = Objects.requireNonNull(settings); }
+    public void configure(Settings settings) { this.settings = Objects.requireNonNull(settings); }
     private final Map<UUID, Memory> players = new LinkedHashMap<>();
     private static final class Damage {
         final long tick;
@@ -26,14 +38,14 @@ public final class StandingIncidents {
         Reason reason = Reason.NONE;
         final Deque<Action> actions = new ArrayDeque<>();
         final Deque<Damage> damage = new ArrayDeque<>();
-        void prune(long now) {
-            actions.removeIf(a -> a.tick > now || now - a.tick >= DAMAGE_WINDOW);
-            damage.removeIf(d -> d.tick > now || now - d.tick >= DAMAGE_WINDOW);
+        void prune(long now, Settings settings) {
+            actions.removeIf(a -> a.tick > now || now - a.tick >= Math.max(settings.hitWindow(), Math.max(settings.damageWindow(), settings.crossTierWindow())));
+            damage.removeIf(d -> d.tick > now || now - d.tick >= settings.damageWindow());
             if (angerUntil <= now || lastActivity > now) { angerUntil = 0; reason = Reason.NONE; }
         }
     }
     private Memory memory(UUID player, long now) {
-        players.values().forEach(m -> m.prune(now));
+        players.values().forEach(m -> m.prune(now, settings));
         players.entrySet().removeIf(e -> e.getValue().angerUntil <= now && e.getValue().actions.isEmpty() && e.getValue().damage.isEmpty());
         Memory found = players.get(player);
         if (found != null) return found;
@@ -72,15 +84,15 @@ public final class StandingIncidents {
         Reason reason = m.angerUntil > now ? m.reason : Reason.NONE;
         if (!tolerant) reason = Reason.SELF_DEFENSE;
         else if (victimGrade > bandGrade) {
-            long count = m.actions.stream().filter(a -> now - a.tick < HIGHER_WINDOW).count();
-            if (count >= (effectiveStanding >= 50 ? 2 : 1)) { reason = Reason.HIGHER_RANK; group = penalty > 0; }
+            long count = m.actions.stream().filter(a -> now - a.tick < settings.crossTierWindow()).count();
+            if (count >= (effectiveStanding >= 50 ? settings.crossTierHits() : 1)) { reason = Reason.HIGHER_RANK; group = penalty > 0; }
         } else {
-            long count = m.actions.stream().filter(a -> now - a.tick < HIT_WINDOW).count();
+            long count = m.actions.stream().filter(a -> now - a.tick < settings.hitWindow()).count();
             double harm = m.damage.stream().mapToDouble(d -> d.amount).sum();
-            if (count >= 5) reason = Reason.REPEATED_HITS;
-            else if (harm >= m.maximumHealth * .3) reason = Reason.DAMAGE_THRESHOLD;
+            if (count >= settings.hitLimit()) reason = Reason.REPEATED_HITS;
+            else if (harm >= m.maximumHealth * settings.damageFraction()) reason = Reason.DAMAGE_THRESHOLD;
         }
-        if (reason != Reason.NONE) { m.reason = reason; m.angerUntil = now + ANGER; }
+        if (reason != Reason.NONE) { m.reason = reason; m.angerUntil = Math.max(m.angerUntil, now + settings.angerTicks()); }
         return new Outcome(penalty, group, reason);
     }
     /** Completes the lethal action to -18 total; calling it twice has no additional effect. */
@@ -93,12 +105,12 @@ public final class StandingIncidents {
     }
     public void groupAlert(UUID player, long now) {
         Memory memory = memory(player, now);
-        memory.reason = Reason.GROUP_ALERT; memory.angerUntil = now + ANGER; memory.lastActivity = now;
+        memory.reason = Reason.GROUP_ALERT; memory.angerUntil = now + settings.groupTicks(); memory.lastActivity = now;
     }
     public Reason reason(UUID player, long now) {
         Memory memory = players.get(player);
         if (memory == null) return Reason.NONE;
-        memory.prune(now);
+        memory.prune(now, settings);
         return memory.angerUntil > now ? memory.reason : Reason.NONE;
     }
     public int size() { return players.size(); }

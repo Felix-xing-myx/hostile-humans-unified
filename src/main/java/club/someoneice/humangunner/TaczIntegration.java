@@ -168,11 +168,6 @@ final class TaczIntegration implements GunSupport {
             event.setCanceled(true);
             return;
         }
-        if (event.getHurtEntity() instanceof Human defender
-                && event.getAttacker() instanceof Player player
-                && !HumanRelations.isControlledBy(defender, player)) {
-            IdentityBadgeAccess.rememberPlayerAttack(defender, player);
-        }
         if (event.getAttacker() instanceof Human attacker) {
             if (event.getHurtEntity() instanceof Player player
                     && HumanRelations.allied(attacker, player)) {

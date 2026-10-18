@@ -27,9 +27,15 @@ public final class SpecialtyData {
     private static final ResourceLocation LABELS = new ResourceLocation(HumanGunner.MOD_ID, "labels");
     private static volatile Definitions current = defaults();
     private SpecialtyData() { }
-    public static Definitions get() { return current; }
+    public static Definitions get() {
+        FactionDefinitions.Revision revision = FactionDefinitions.current();
+        return revision == null ? current : revision.specialty();
+    }
     /** Publish only after factions, dimensions, labels and equipment candidates all validate. */
-    public static void publish(Definitions definitions) { current = Objects.requireNonNull(definitions); }
+    public static void publish(Definitions definitions) {
+        current = Objects.requireNonNull(definitions);
+        FactionDefinitions.publishSpecialty(current);
+    }
 
     /** Keys are relative to the specialty directory: namespace:dimensions and namespace:labels.
      * Parsing never publishes; any invalid supplied document aborts the caller's whole revision. */

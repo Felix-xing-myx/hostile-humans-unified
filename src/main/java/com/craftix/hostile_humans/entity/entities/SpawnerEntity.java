@@ -58,6 +58,10 @@ extends Mob {
             }
             boolean currentTeam = false;
             boolean isPillagers = Config.eventType() == SpawnType.HumanVsPillager || this.random.nextFloat() < 0.6f && Config.eventType() != SpawnType.HumanVsHuman;
+            String[] factions = isPillagers
+                    ? new String[]{club.someoneice.humangunner.HumanFactions.chooseFaction(this.random)}
+                    : club.someoneice.humangunner.HumanFactions.enemyPair(this.random);
+            if (factions.length == 0) return false;
             int totalAmount = this.random.nextInt(3, 18);
             boolean bannerLeft = false;
             boolean bannerRight = false;
@@ -73,7 +77,11 @@ extends Mob {
                 } else {
                     EntityType<Human> humanType = tier2Allowed && (!tier1Allowed || this.random.nextFloat() < 0.05F)
                             ? ModEntityType.HUMAN2.get() : ModEntityType.HUMAN1.get();
-                    Human newHuman = humanType.spawn(level, (CompoundTag)null, null, pos, MobSpawnType.EVENT, false, false);
+                    CompoundTag resident = new CompoundTag(), forge = new CompoundTag();
+                    forge.putString(club.someoneice.humangunner.HumanFactions.FACTION,
+                            factions[isPillagers ? 0 : currentTeam ? 0 : 1]);
+                    resident.put("ForgeData", forge);
+                    Human newHuman = humanType.spawn(level, resident, null, pos, MobSpawnType.EVENT, false, false);
                     addMember(spawnedEntities, newHuman);
                     if (newHuman != null) {
                         if (totalAmount > 5) {
@@ -86,7 +94,7 @@ extends Mob {
                                 newHuman.setBanner(HumanUtil.createSwordBanner());
                             }
                         }
-                        newHuman.team = currentTeam ? "team1" : "team2";
+                        club.someoneice.humangunner.HumanFactions.refreshTeam(newHuman);
                     }
                 }
                 currentTeam = !currentTeam;
