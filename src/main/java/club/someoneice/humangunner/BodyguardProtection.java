@@ -133,10 +133,7 @@ public final class BodyguardProtection {
 
     private static boolean hostileToOwner(Human human, ServerPlayer owner, LivingEntity candidate) {
         if (candidate instanceof Human wild) {
-            return HumanRelationshipPolicy.activeRecruitMayAttackWild(true, true,
-                    HumanRelations.effectiveOwner(wild) == null,
-                    IdentityBadgeAccess.highestClearance(owner) >= 0,
-                    HumanRelations.isForcedHostileTo(wild, owner));
+            return HumanRelations.hostileToOwner(wild, owner);
         }
         return candidate instanceof Mob mob && (mob instanceof Enemy || mob.getType().getCategory() == MobCategory.MONSTER);
     }

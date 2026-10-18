@@ -51,17 +51,28 @@ public final class SquadCommands {
     public static Result apply(ServerPlayer player,UUID token,int number,Update update) {
         if(update==null||!valid(player,token,number)||update.followDistance()!=null&&(update.followDistance()<8||update.followDistance()>96))
             return new Result(false,0,0,0,0,List.of());
+        return applyLoaded(player, token, number, human -> {
+            SoldierOrder.apply(human,update.order(),update.garrison(),update.followDistance());
+            if(update.combat()!=null)SoldierCombatMode.set(human,update.combat());
+            if(update.pickup()!=null)SoldierPickupPolicy.set(human,update.pickup());
+        });
+    }
+    public static Result reanchor(ServerPlayer player, UUID token, int number) {
+        return applyLoaded(player, token, number, human -> SoldierOrder.set(human, SoldierOrder.GARRISON));
+    }
+    /** Fixed member snapshot and permission checks shared by all loaded-only batch operations. */
+    private static Result applyLoaded(ServerPlayer player, UUID token, int number, java.util.function.Consumer<Human> operation) {
+        if(!valid(player,token,number)) return new Result(false,0,0,0,0,List.of());
         SquadData data=SquadData.get(player.server);
-        List<UUID> ids=data.squad(player.getUUID(),number).members(),failed=new ArrayList<>();int applied=0,unloaded=0,unauthorized=0,invalid=0;
+        List<UUID> ids=List.copyOf(data.squad(player.getUUID(),number).members()),failed=new ArrayList<>();
+        int applied=0,unloaded=0,unauthorized=0,invalid=0;
         for(UUID id:ids) {
             if(!RecruitmentLedger.get(player.server).isOwnedRecord(id,player.getUUID())){unauthorized++;failed.add(id);continue;}
             Human human=findLoaded(player.server,id);if(human==null){unloaded++;continue;}
-            // Recheck immediately before each mutation, even after initial validation/snapshot.
             if(!human.isAlive()){invalid++;failed.add(id);continue;}
             if(!human.hasOwner()||!player.getUUID().equals(human.getOwnerUUID())){unauthorized++;failed.add(id);continue;}
-            SoldierOrder.apply(human,update.order()==null?SoldierOrder.get(human):update.order(),update.garrison(),update.followDistance());
-            if(update.combat()!=null)SoldierCombatMode.set(human,update.combat());
-            if(update.pickup()!=null)SoldierPickupPolicy.set(human,update.pickup());applied++;
+            operation.accept(human);
+            applied++;
         }
         data.validate(player.server,player.getUUID());
         return new Result(true,applied,unloaded,unauthorized,invalid,List.copyOf(failed));

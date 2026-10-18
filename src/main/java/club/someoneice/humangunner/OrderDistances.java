@@ -64,7 +64,10 @@ public final class OrderDistances {
         boolean exists = human.getPersistentData().contains(SoldierOrder.ANCHOR, Tag.TAG_LONG);
         Vec3 anchor = exists ? Vec3.atBottomCenterOf(net.minecraft.core.BlockPos.of(
                 human.getPersistentData().getLong(SoldierOrder.ANCHOR))) : human.position();
-        return new Context(true, false, exists, anchor, settings, exists ? "ready" : "missing_player_anchor");
+        String dimension = human.getPersistentData().getString(SoldierOrder.ANCHOR_DIMENSION);
+        String reason = !exists ? "missing_player_anchor" : dimension.isEmpty() ? "missing_player_anchor_dimension"
+                : !dimension.equals(human.level().dimension().location().toString()) ? "player_anchor_other_dimension" : "ready";
+        return new Context(true, false, reason.equals("ready"), anchor, settings, reason);
     }
     public static void setFollow(Human human, int radius) {
         CompoundTag tag = human.getPersistentData().getCompound(RADII).copy();

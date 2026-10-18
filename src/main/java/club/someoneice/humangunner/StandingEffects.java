@@ -48,7 +48,10 @@ final class StandingEffects {
     }
     static int bandGrade(Human human) { return HumanFactions.isBoss(human) ? 4 : humanRank(human); }
     static boolean canHire(Human human, Player player) {
-        return StandingPolicy.mayHire(trueStanding(human, player), humanRank(human))
+        int tier = humanRank(human);
+        var definition = FactionDefinitions.find(HumanFactions.id(human));
+        return definition != null && tier >= 1 && tier <= 3
+                && trueStanding(human, player) >= definition.hireStanding().get(tier - 1)
                 && !mayRetaliateAgainst(human, player) && human.getTarget() != player;
     }
     /** Attribution uses native source ownership or the public tameable owner; unknown mod owners are not guessed. */

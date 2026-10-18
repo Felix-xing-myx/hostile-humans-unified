@@ -19,7 +19,7 @@ final class FactionDefinitions extends SimplePreparableReloadListener<FactionDef
     record Definition(ResourceLocation id, int color, String name, int startingStanding, int weight,
                       Set<ResourceLocation> enemies, Set<ResourceLocation> allies, List<Double> preference,
                       List<Double> bossPreference, String bandStyle, String aggression,
-                      ResourceLocation hireItem, List<Integer> hireCosts, double friendlyDiscount, double allyDiscount) {}
+                      ResourceLocation hireItem, List<Integer> hireCosts, List<Integer> hireStanding, double friendlyDiscount, double allyDiscount) {}
     record Revision(long number, Map<ResourceLocation, Definition> definitions, SpecialtyData.Definitions specialty) {}
     record Prepared(Map<ResourceLocation, JsonElement> factions, Map<ResourceLocation, JsonElement> specialty) {}
     private static volatile Revision current = new Revision(0, builtins(), SpecialtyData.get());
@@ -102,20 +102,46 @@ final class FactionDefinitions extends SimplePreparableReloadListener<FactionDef
         ResourceLocation item = id(UnifiedConfig.string(hire, "item", "minecraft:iron_ingot"));
         if (item == null) throw new IllegalArgumentException("Invalid hiring item " + key);
         List<Integer> costs = new ArrayList<>();
-        JsonArray configured = hire.has("costs") ? hire.getAsJsonArray("costs") : new JsonArray();
+        JsonArray configured = hire.has("costs") ? hire.getAsJsonArray("costs") : JsonParser.parseString("[8,16,32]").getAsJsonArray();
         if (configured.size() != 3) throw new IllegalArgumentException("Three hiring costs required " + key);
         for (JsonElement value : configured) {
             int cost = value.getAsBigDecimal().intValueExact();
             if (cost < 0 || cost > 4096) throw new IllegalArgumentException("Invalid hiring cost " + key);
             costs.add(cost);
         }
+        String style = UnifiedConfig.string(root, "band_style", "base"), aggression = UnifiedConfig.string(root, "aggression", "aggressive");
+        if (!Set.of("base", "none").contains(style) || !Set.of("aggressive", "defensive", "passive").contains(aggression))
+            throw new IllegalArgumentException("Unknown faction style/aggression " + key);
+        List<Integer> hireStanding = new ArrayList<>();
+        JsonElement minimum = root.get("hire_standing");
+        for (int tier = 1; tier <= 3; tier++) {
+            JsonElement value = minimum != null && minimum.isJsonObject() ? minimum.getAsJsonObject().get("tier" + tier) : minimum;
+            hireStanding.add(value == null ? (tier == 3 ? 150 : 50) : standing(value.getAsString()));
+        }
+        int starting = root.has("starting_standing") ? integer(root, "starting_standing", -200, -500, 500)
+                : initialStanding(UnifiedConfig.string(root, "player_relation", "hostile"));
+        JsonObject discounts = UnifiedConfig.object(hire, "discount");
         List<Double> preference = vector(root.get("allocation_preference"), Collections.nCopies(11, 1.0));
         return new Definition(key, Integer.parseInt(color.substring(1), 16), UnifiedConfig.string(root, "name", ""),
-                integer(root, "starting_standing", -200, -500, 500), integer(root, "spawn_weight", 0, 0, 1000000),
+                starting, integer(root, "spawn_weight", 0, 0, 1000000),
                 ids(root, "enemies"), ids(root, "allies"), preference, vector(root.get("boss_preference"), preference),
-                UnifiedConfig.string(root, "band_style", "base"), UnifiedConfig.string(root, "aggression", "aggressive"),
-                item, List.copyOf(costs), UnifiedConfig.number(hire, "friendly_discount", .9, 0, 1),
-                UnifiedConfig.number(hire, "ally_discount", .8, 0, 1));
+                style, aggression, item, List.copyOf(costs), List.copyOf(hireStanding),
+                UnifiedConfig.number(discounts, "friendly", UnifiedConfig.number(hire, "friendly_discount", .9, 0, 1), 0, 1),
+                UnifiedConfig.number(discounts, "allied", UnifiedConfig.number(hire, "ally_discount", .8, 0, 1), 0, 1));
+    }
+    private static int standing(String name) {
+        return switch (name) {
+            case "nemesis" -> -500; case "hostile" -> -299; case "wary" -> -99;
+            case "neutral" -> 50; case "favorable" -> 150; case "friendly" -> 250; case "allied" -> 400;
+            default -> throw new IllegalArgumentException("Unknown standing tier " + name);
+        };
+    }
+    private static int initialStanding(String name) {
+        return switch (name) {
+            case "nemesis" -> -400; case "hostile" -> -200; case "wary" -> 0; case "neutral" -> 100;
+            case "favorable" -> 200; case "friendly" -> 300; case "allied" -> 450;
+            default -> throw new IllegalArgumentException("Unknown initial relationship " + name);
+        };
     }
     private static int integer(JsonObject object, String key, int fallback, int min, int max) {
         if (!object.has(key)) return fallback;

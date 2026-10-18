@@ -10,20 +10,14 @@ import net.minecraft.world.level.Level;
 import java.util.List;
 
 public final class IdentityBadgeItem extends Item {
-    private final int clearance;
 
-    IdentityBadgeItem(int clearance, Properties properties) {
+    IdentityBadgeItem(int legacyVariant, Properties properties) {
         super(properties);
-        this.clearance = clearance;
-    }
-
-    public int clearance() {
-        return clearance;
     }
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("item.hostile_humans_unified.identity_badge.tooltip." + clearance)
+        tooltip.add(Component.translatable("item.hostile_humans_unified.identity_badge.retired")
                 .withStyle(ChatFormatting.GRAY));
     }
 }

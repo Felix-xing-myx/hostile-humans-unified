@@ -60,6 +60,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import java.util.Map;
 
 public final class HumanGunner {
     public static final String MOD_ID = com.craftix.hostile_humans.HostileHumans.MOD_ID;
@@ -100,6 +101,8 @@ public final class HumanGunner {
         SoldierRosterNetwork.register();
         RecruitmentConfigNetwork.register();
         NavigationDebugNetwork.register();
+        FactionVisualNetwork.register();
+        AttributeDetailNetwork.register();
         MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onServerStarting);
         MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onServerStopped);
         MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onPlayerLogin);
@@ -158,6 +161,8 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(ProgressionCommands::register);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.RegisterCommandsEvent event) ->
                 FactionAuthoringCommands.register(event.getDispatcher()));
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.RegisterCommandsEvent event) ->
+                NaturalStateCommand.register(event.getDispatcher()));
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.AddReloadListenerEvent event) ->
                 event.addListener(FactionDefinitions.INSTANCE));
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onEntityLeave);
@@ -343,6 +348,7 @@ public final class HumanGunner {
         }
         FRESH_HUMANS.put(human, !event.loadedFromDisk());
         HumanFactions.initialize(human, event.loadedFromDisk());
+        NaturalState.onJoin(human, event.loadedFromDisk());
         HumanGrowth.onJoin(human, event.loadedFromDisk());
         if (PeacefulHumanPolicy.onJoin(event, human)
                 && event.getLevel() instanceof ServerLevel level
@@ -371,6 +377,7 @@ public final class HumanGunner {
             RecruitmentLedger ledger = RecruitmentLedger.get(server);
             ledger.dismiss(id);
             ledger.finishDismissal(id);
+            SquadData.get(server).removeMember(id);
             HiredHumanRecall.cancelPending(server, id);
             com.craftix.hostile_humans.entity.data.HumanServerData serverData =
                     com.craftix.hostile_humans.entity.data.HumanServerData.get();
@@ -548,7 +555,10 @@ public final class HumanGunner {
         }
         StandingEffects.death(human, event.getSource());
         MinecraftServer server = human.getServer();
-        if (server != null) RecruitmentLedger.get(server).dismiss(human.getUUID());
+        if (server != null) {
+            RecruitmentLedger.get(server).dismiss(human.getUUID());
+            SquadData.get(server).removeMember(human.getUUID());
+        }
         if (noDrops) {
             return;
         }

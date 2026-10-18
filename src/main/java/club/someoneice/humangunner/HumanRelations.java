@@ -125,6 +125,9 @@ public final class HumanRelations {
         return new Relation(false, false, RelationReason.UNKNOWN);
     }
 
+    static boolean hostileToOwner(Human wild, Player owner) {
+        return effectiveOwner(wild) == null && relation(wild, owner).hostile();
+    }
     static boolean allied(Human human, Entity entity) { return relation(human, entity).friendly(); }
     static boolean humanHostile(Human human, Human target) { return relation(human, target).hostile(); }
     private static UUID temporaryOwner(Human human) {

@@ -18,6 +18,7 @@ public enum SoldierOrder {
     private static final Map<Human, Vec3> RETURN_POINTS = new WeakHashMap<>();
     static final String ORDER = "hostile_humans_unified:soldier_order";
     public static final String ANCHOR = "hostile_humans_unified:order_anchor";
+    public static final String ANCHOR_DIMENSION = "hostile_humans_unified:order_anchor_dimension";
     private static final String PATROL_DESTINATION = "hostile_humans_unified:patrol_destination";
     private static final String NEXT_PATROL = "hostile_humans_unified:next_patrol_move";
     private static final String RETURNING_FROM_RETREAT = "hostile_humans_unified:returning_from_retreat";
@@ -33,6 +34,7 @@ public enum SoldierOrder {
     public static boolean isGarrison(Human h) { return OrderDistances.context(h).constrained(); }
     public static void set(Human h, SoldierOrder order) { set(h,order,false); }
     static void set(Human h, SoldierOrder requested, boolean preserveNavigation) {
+        java.util.Objects.requireNonNull(requested, "order");
         GarrisonSettings settings = GarrisonSettings.player(h);
         if(requested==HOLD_POSITION) settings=new GarrisonSettings(true,false,settings.radius());
         else if(requested==GUARD) settings=new GarrisonSettings(false,true,settings.radius());
@@ -43,6 +45,7 @@ public enum SoldierOrder {
         if(order==GARRISON) {
             GarrisonSettings.set(h,settings);
             h.getPersistentData().putLong(ANCHOR,h.blockPosition().asLong());
+            h.getPersistentData().putString(ANCHOR_DIMENSION,h.level().dimension().location().toString());
         }
         h.getPersistentData().putString(ORDER,order.name());
         h.getPersistentData().remove(RETURNING_FROM_RETREAT);
@@ -51,6 +54,7 @@ public enum SoldierOrder {
     }
     /** Same write path for single and squad UI. Preserves last garrison settings across mode switches. */
     public static void apply(Human h,SoldierOrder order,GarrisonSettings settings,Integer followDistance) {
+        order = order == null ? get(h) : logical(order);
         if(settings!=null)GarrisonSettings.set(h,settings);
         if(followDistance!=null)OrderDistances.setFollow(h,followDistance);
         if(get(h)!=logical(order))set(h,logical(order));
@@ -72,7 +76,7 @@ public enum SoldierOrder {
     }
     static void clear(Human h) {
         OwnerOfflinePolicy.clearForDismiss(h);resetMovementState(h);h.guardCombatState.reset();
-        h.getPersistentData().remove(ORDER);h.getPersistentData().remove(ANCHOR);
+        h.getPersistentData().remove(ORDER);h.getPersistentData().remove(ANCHOR);h.getPersistentData().remove(ANCHOR_DIMENSION);
         h.getPersistentData().remove(RETURNING_FROM_RETREAT);NaturalRoute.clearPlayerRuntime(h);h.getNavigation().stop();
         // Natural author settings/origin survive hiring and dismissal.
     }
