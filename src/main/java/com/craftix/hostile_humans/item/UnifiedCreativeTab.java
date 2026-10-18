@@ -24,9 +24,8 @@ public final class UnifiedCreativeTab {
                         var items = new LinkedHashSet<RegistryObject<Item>>();
                         // Keep related items together, in tier order from roamer to tier III.
                         items.add(ModItems.ROAMER_SPAWN_EGG);
-                        items.add(ModItems.HUMAN1_SPAWN_EGG);
-                        items.add(ModItems.HUMAN2_SPAWN_EGG);
-                        items.add(ModItems.HUMAN3_SPAWN_EGG);
+                        items.addAll(HumanGunnerRegistries.FACTION_SPAWN_EGGS);
+                        items.addAll(HumanGunnerRegistries.BOSS_SPAWN_EGGS);
 
                         items.add(HumanGunnerRegistries.ROAMER_IDENTITY_BADGE);
                         items.add(HumanGunnerRegistries.TIER_ONE_IDENTITY_BADGE);
@@ -54,6 +53,8 @@ public final class UnifiedCreativeTab {
                         items.addAll(ModItems.ITEMS.getEntries());
                         items.addAll(HumanGunnerRegistries.ITEMS.getEntries());
                         for (RegistryObject<Item> item : items) {
+                            // Old IDs remain usable in saves and commands; this tab presents the faction variants.
+                            if(item==ModItems.HUMAN1_SPAWN_EGG||item==ModItems.HUMAN2_SPAWN_EGG||item==ModItems.HUMAN3_SPAWN_EGG)continue;
                             if (item == HumanGunnerRegistries.HUMAN_MAGAZINE
                                     && !net.minecraftforge.fml.ModList.get().isLoaded("tacz")
                                     && !net.minecraftforge.fml.ModList.get().isLoaded("scguns")) continue;

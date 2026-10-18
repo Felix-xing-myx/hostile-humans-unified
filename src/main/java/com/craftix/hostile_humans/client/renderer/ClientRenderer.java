@@ -25,6 +25,11 @@ public class ClientRenderer {
 
     protected ClientRenderer() {
     }
+    @SubscribeEvent
+    public static void contentSetup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(() -> net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(
+                club.someoneice.humangunner.FactionContent.TRIBUTE_CHEST.get(),net.minecraft.client.renderer.RenderType.cutout()));
+    }
 
     @SubscribeEvent
     public static void registerAnimationReloadListener(RegisterClientReloadListenersEvent event) {
@@ -42,7 +47,19 @@ public class ClientRenderer {
         event.registerEntityRenderer((EntityType)ModEntityType.HUMAN2.get(), HumanRenderer::new);
         event.registerEntityRenderer((EntityType)ModEntityType.HUMAN3.get(), HumanRenderer::new);
         event.registerEntityRenderer((EntityType)ModEntityType.ROAMER.get(), HumanRenderer::new);
+        for (var boss : club.someoneice.humangunner.FactionContent.BOSSES)
+            event.registerEntityRenderer((EntityType)boss.type().get(), HumanRenderer::new);
         event.registerEntityRenderer((EntityType)ModEntityType.SPAWNER_ENTITY.get(), SpawnerEntityRenderer::new);
+    }
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.LOWEST)
+    public static void registerFactionEggColors(net.minecraftforge.client.event.RegisterColorHandlersEvent.Item event) {
+        java.util.List<net.minecraftforge.registries.RegistryObject<net.minecraft.world.item.Item>> eggs=new java.util.ArrayList<>(
+                club.someoneice.humangunner.HumanGunnerRegistries.FACTION_SPAWN_EGGS);
+        eggs.addAll(club.someoneice.humangunner.HumanGunnerRegistries.BOSS_SPAWN_EGGS);
+        for(var egg:eggs)event.register((stack,index)-> {
+            var item=(club.someoneice.humangunner.FactionSpawnEggItem)stack.getItem();
+            return index==2 ? 0xFF000000 | club.someoneice.humangunner.FactionVisualClient.color(item.faction()) : index>2 ? 0xFFFFFFFF : item.getColor(index);
+        },egg.get());
     }
 
     @SubscribeEvent

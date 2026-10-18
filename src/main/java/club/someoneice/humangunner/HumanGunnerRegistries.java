@@ -13,6 +13,16 @@ public final class HumanGunnerRegistries {
             DeferredRegister.create(ForgeRegistries.ITEMS, HumanGunner.MOD_ID);
     public static final DeferredRegister<MenuType<?>> MENUS =
             DeferredRegister.create(ForgeRegistries.MENU_TYPES, HumanGunner.MOD_ID);
+    public static final java.util.List<RegistryObject<Item>> FACTION_SPAWN_EGGS = FactionContent.registerOrdinaryEggs(ITEMS);
+    public static final java.util.List<RegistryObject<Item>> BOSS_SPAWN_EGGS = FactionContent.registerBossEggs(ITEMS);
+    public static final RegistryObject<Item> TRIBUTE_CHEST = ITEMS.register("tribute_chest",
+            () -> new net.minecraft.world.item.BlockItem(FactionContent.TRIBUTE_CHEST.get(),new Item.Properties()) {
+                @Override public void appendHoverText(net.minecraft.world.item.ItemStack stack,net.minecraft.world.level.Level level,
+                        java.util.List<net.minecraft.network.chat.Component> lines,net.minecraft.world.item.TooltipFlag flags) {
+                    super.appendHoverText(stack,level,lines,flags);
+                    lines.add(net.minecraft.network.chat.Component.translatable("block.hostile_humans_unified.tribute_chest.tooltip"));
+                }
+            });
 
     public static final RegistryObject<Item> HUMAN_ARROW = ITEMS.register("human_arrow",
             () -> new HumanAmmoItem(false, new Item.Properties().stacksTo(64)));

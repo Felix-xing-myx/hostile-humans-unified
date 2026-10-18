@@ -16,6 +16,9 @@ public final class FactionBossHuman extends Human {
         this.faction = faction;
         this.birthTier = tier;
         restoreIdentity();
+        // Entity's constructor starts with the unscaled type dimensions; all synchronized
+        // data has been defined by this point, so install the pose-dependent bounds once.
+        refreshDimensions();
     }
     void restoreIdentity() {
         int tier = birthTier;
@@ -25,6 +28,9 @@ public final class FactionBossHuman extends Human {
         getPersistentData().putString(HumanFactions.FACTION, FactionDefinitions.id(faction).toString());
     }
     String fixedFaction() { return faction; }
+    @Override protected net.minecraft.resources.ResourceLocation getDefaultLootTable() {
+        return FactionContent.ordinaryType(birthTier).getDefaultLootTable();
+    }
     @Override public EntityDimensions getDimensions(Pose pose) {
         return super.getDimensions(pose).scale(HumanFactions.BOSS_BODY_SCALE);
     }

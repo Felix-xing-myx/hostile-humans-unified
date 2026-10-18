@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/template_spawn_egg",
+  "textures": {
+    "layer2": "hostile_humans_unified:item/faction_egg_corner",
+    "layer3": "hostile_humans_unified:item/faction_boss_egg_mark"
+  }
+}

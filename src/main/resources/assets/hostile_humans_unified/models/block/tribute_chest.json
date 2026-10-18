@@ -1,0 +1,98 @@
+{
+  "ambientocclusion": true,
+  "textures": {
+    "particle": "minecraft:block/oak_planks",
+    "wood": "minecraft:block/oak_planks",
+    "mark": "hostile_humans_unified:block/tribute_chest_mark"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#wood",
+          "cullface": "north"
+        },
+        "south": {
+          "texture": "#wood",
+          "cullface": "south"
+        },
+        "east": {
+          "texture": "#wood",
+          "cullface": "east"
+        },
+        "west": {
+          "texture": "#wood",
+          "cullface": "west"
+        },
+        "up": {
+          "texture": "#wood",
+          "cullface": "up"
+        },
+        "down": {
+          "texture": "#wood",
+          "cullface": "down"
+        }
+      }
+    },
+    {
+      "from": [
+        -0.02,
+        0,
+        -0.02
+      ],
+      "to": [
+        16.02,
+        16,
+        16.02
+      ],
+      "faces": {
+        "north": {
+          "texture": "#mark",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "south": {
+          "texture": "#mark",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "east": {
+          "texture": "#mark",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#mark",
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ]
+        }
+      }
+    }
+  ]
+}
