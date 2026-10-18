@@ -17,8 +17,8 @@ public final class PotionRecoveryTest {
         check(PotionRecoveryPolicy.regenerationActive(1), "last live buff tick still blocks redrinking");
         check(PotionRecoveryPolicy.regenerationActive(-1), "infinite buff still blocks redrinking");
         check(!PotionRecoveryPolicy.regenerationActive(0), "expired buff permits another potion");
-        check(PotionRecoveryPolicy.regenerationStep(0) == 0.5F, "level one provides half a food pulse");
-        check(PotionRecoveryPolicy.regenerationStep(1) == 1.0F, "level two matches a food pulse");
+        check(PotionRecoveryPolicy.regenerationStep(0) == 0.5F, "level one total half-HP per independent ten-tick pulse");
+        check(PotionRecoveryPolicy.regenerationStep(1) == 1.0F, "level two total one HP per independent ten-tick pulse");
         check(PotionRecoveryPolicy.urgentInstantHealing(0.299999), "strictly below thirty percent needs instant healing");
         check(!PotionRecoveryPolicy.urgentInstantHealing(0.30), "exactly thirty percent does not override food");
         check(!PotionRecoveryPolicy.urgentInstantHealing(0.31), "ordinary recovery above threshold is preserved");
@@ -27,12 +27,25 @@ public final class PotionRecoveryTest {
         check(PotionRecoveryPolicy.instantHealingUseDuration(8) == 8, "already faster custom potion is not slowed");
         check(PotionRecoveryPolicy.instantHealingUseDuration(0) == 1, "malformed zero duration remains safe");
         var clock = new PotionRecoveryPolicy.Clock(100, 10);
-        check(!clock.pulse(109, 10) && clock.pulse(110, 10), "first regeneration waits a food interval");
+        check(!clock.pulse(109, 10) && clock.pulse(110, 10), "first regeneration waits its independent interval");
         check(!clock.pulse(110, 10), "duplicate tick cannot heal twice");
         check(!clock.pulse(119, 10) && clock.pulse(120, 10), "independent regular cadence");
         check(clock.pulse(1000, 10) && !clock.pulse(1000, 10), "unloaded time never catches up with a burst");
         var restarted = new PotionRecoveryPolicy.Clock(1001, 10);
         check(!restarted.pulse(1010, 10) && restarted.pulse(1011, 10), "new buff gets a fresh clock");
+        check(PotionRecoveryPolicy.REGENERATION_INTERVAL_TICKS == 10, "regeneration is independent of food interval");
+        check(PotionRecoveryPolicy.instantHealingAmount(1) == 8, "full instant healing totals eight");
+        check(PotionRecoveryPolicy.instantHealingAmount(.5) == 4, "splash preserves exposure falloff");
+        check(PotionRecoveryPolicy.instantHealingAmount(2) == 8, "exposure cannot exceed full healing");
+        check(PotionRecoveryPolicy.instantHealingAmount(-1) == 0
+                && PotionRecoveryPolicy.instantHealingAmount(Double.NaN) == 0, "invalid exposures cannot heal");
+        for(int amplifier=0;amplifier<=1;amplifier++){
+            var cadence = new PotionRecoveryPolicy.Clock(0, PotionRecoveryPolicy.REGENERATION_INTERVAL_TICKS);
+            float total=0;
+            for(int tick=1;tick<=200;tick++)if(cadence.pulse(tick,PotionRecoveryPolicy.REGENERATION_INTERVAL_TICKS))
+                total+=PotionRecoveryPolicy.regenerationStep(amplifier);
+            check(total==(amplifier==0?10:20), "ten loaded seconds have exact total regeneration budget");
+        }
         String recovery = "club/someoneice/humangunner/RecoverySupplies";
         check(callIndex(recovery, "hasUrgentInstantHealing", recovery, "healthRatio") >= 0
                 && callIndex(recovery, "hasUrgentInstantHealing", recovery, "projectedHealth") < 0,

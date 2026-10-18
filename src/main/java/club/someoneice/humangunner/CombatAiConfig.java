@@ -109,7 +109,7 @@ public record CombatAiConfig(
                 10,
                 1.0D / 6.0D,
                 14,
-                10,
+                15,
                 2.0F,
                 12.0F,
                 6,

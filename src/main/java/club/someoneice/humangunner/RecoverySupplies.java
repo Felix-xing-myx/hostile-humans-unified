@@ -1030,7 +1030,7 @@ public final class RecoverySupplies {
         return true;
     }
 
-    /** Extra regeneration never spends or resets the separately queued food healing. */
+    /** Total Human regeneration; vanilla pulses are suppressed by HumanRecoveryEffects. */
     private static void tickRegenerationHealing(Human human) {
         MobEffectInstance regeneration = human.getEffect(MobEffects.REGENERATION);
         if (human.level().isClientSide || !human.isAlive() || regeneration == null
@@ -1038,7 +1038,7 @@ public final class RecoverySupplies {
             REGENERATION_CLOCKS.remove(human);
             return;
         }
-        int interval = CombatAiConfig.forHuman(human).gradualHealIntervalTicks();
+        int interval = PotionRecoveryPolicy.REGENERATION_INTERVAL_TICKS;
         PotionRecoveryPolicy.Clock clock = REGENERATION_CLOCKS.computeIfAbsent(human,
                 ignored -> new PotionRecoveryPolicy.Clock(human.tickCount, interval));
         if (clock.pulse(human.tickCount, interval) && human.getHealth() < human.getMaxHealth()) {
@@ -1058,7 +1058,6 @@ public final class RecoverySupplies {
     public static void onUseCompleted(Human human, InteractionHand hand, ItemStack before) {
         if (human.level().isClientSide || !human.isAlive()) return;
         consumeCompletedPotion(human, hand, before);
-        if (isStrongInstantHealingPotion(before)) human.heal(12.0F);
     }
 
     /** Advance effects even while inventory editing pauses AI equipment writers. */

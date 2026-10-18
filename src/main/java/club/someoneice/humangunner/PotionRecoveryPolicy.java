@@ -1,6 +1,6 @@
 package club.someoneice.humangunner;
 
-/** Non-player potion charge and independent regeneration cadence. */
+/** Non-player potion charge and total regeneration cadence. */
 final class PotionRecoveryPolicy {
     private PotionRecoveryPolicy() {}
 
@@ -11,6 +11,10 @@ final class PotionRecoveryPolicy {
     static boolean regenerationActive(int duration) { return duration > 0 || duration == -1; }
     static boolean urgentInstantHealing(double actualHealthRatio) { return actualHealthRatio < 0.30D; }
     static int instantHealingUseDuration(int originalTicks) { return Math.min(20, Math.max(1, originalTicks)); }
+    static final int REGENERATION_INTERVAL_TICKS = 10;
+    static int instantHealingAmount(double exposure) {
+        return Double.isFinite(exposure) ? (int) Math.floor(8.0D * Math.max(0.0D, Math.min(1.0D, exposure)) + 0.5D) : 0;
+    }
     static float regenerationStep(int amplifier) { return amplifier >= 1 ? 1.0F : 0.5F; }
 
     static final class Clock {

@@ -7,7 +7,7 @@
 | 战斗顺路补给 | `CombatResupply` / `CombatResupplyConfig` | `SoldierPickupPolicy.canCombatResupplyNow` 独立许可，`HumanLootManager.collectCombatSupply` 仅保护性存储，不持有MOVE/LOOK/装备控制 |
 | 恢复用品选择、使用与背包托管 | `RecoverySupplies` | 各恢复Goal申请同一UseSession，不自行扣物品或换回副手 |
 | 恢复效果推进 | `RecoverySupplies.tickEffects` | 每个服务器LivingTick一次，在菜单编辑锁之前；内部依次推进再生、MedicalSupplies、食物，不改装备 |
-| 使用完成补充结算 | `RecoverySupplies.onUseCompleted` | Human先执行原生completeUsingItem，再在成功结束使用后调用；原生效果、药水消费和瞬间治疗II补充值不散落在实体里 |
+| 使用完成补充结算 | `RecoverySupplies.onUseCompleted` | Human先执行原生completeUsingItem，再在成功结束使用后调用；药水消费不散落在实体里；瞬间治疗总量由HumanRecoveryEffects替换，无完成后额外补血 |
 | First Aid可选适配 | `FirstAidCompat` / 内部`FirstAidApiBridge` | 仅Human且必须拥有实际UseSession；Forge完成事件处理原生结果，公开API桥在安装后才解析；不改玩家 |
 | 弓弩分类、远程威胁及战术走位资格 | `CombatWeaponPolicy` | 普通弓弩子类及斯巴达共用判断；威胁判断不授权攻击、不更换武器 |
 | 枪械身份与能力 | `GunSupport` | 物理持枪禁盾使用isGunItem；有弹/可装填的作战资格使用usableGun，不混合两个含义 |
@@ -421,3 +421,9 @@ SoundExclusionMemory.Region分别保存duration、until和rememberUntil，blocke
 ShieldDurability.wearCost(damage,maximumDurability)对有效伤害和正最大耐久返回1+floor(damage*(1+0.001*maximumDurability))，非法输入0、超大正值饱和Integer.MAX_VALUE。applyWear读取原记账盾ItemStack.getMaxDamage（非剩余耐久），之后沿用原native hurtAndBreak、Unbreaking及整数溢出保护。2tick合并及换装/保存前flush保持；玩家盾牌流程不接入。
 
 伤害入口维持：Human.hurtCurrentlyUsedShield传原生盾耐久伤害；TaCZ在枪械盾减伤及AP拆分前记录BaseAmount；持枪副手被动防护记录LivingDamage阶段、自身减伤前incoming。不将最终生命扣血0替代格挡伤害，不在此任务调整减伤比例/去重/防御。系数为ShieldDurability源码常量，未新增JSON字段。
+
+## 人类原版恢复效果替换
+
+HumanRecoveryEffectMixin只转发MobEffect的SRG m_6742_(LivingEntity,int)与m_19461_(Entity,Entity,LivingEntity,int,double)（require=1/remap=false，签名已与本地1.20.1映射只读核对）。HumanRecoveryEffects只接服务端存活Human：REGENERATION原生tick取消，由RecoverySupplies独立10tick时钟总治0.5/1；HEAL非反转路径完整作用8点，instant按原生exposure裁剪0～1后round(8*exposure)，tick直接8。其他实体/玩家/效果/治疗反转原路径不动。医疗直接heal不拦截，同种再生来源统一替换。
+
+onUseCompleted只核实药水消费，不再额外治疗12。再生时钟不读gradualHealIntervalTicks，后者仅食品（默认15，旧实例显式10保持到同步时按范围更新）。效果持续时间和覆盖/过期沿原生；不新增保存字段或网络，玩家没有统一治疗8或再生加速。Mixin运行时变换尚需后续构建及游戏启动验收。
