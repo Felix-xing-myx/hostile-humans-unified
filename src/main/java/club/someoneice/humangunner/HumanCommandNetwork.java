@@ -1,324 +1,97 @@
 package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
+import java.util.Map;
+import java.util.UUID;
+import java.util.WeakHashMap;
+import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.NetworkRegistry;
-import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.*;
 import net.minecraftforge.network.simple.SimpleChannel;
 
-import java.util.function.Supplier;
-
-/** Small validated channel for the hired-soldier command screen. */
+/** Owner/session/identity validated commands; all panel state is acknowledged by the server. */
 public final class HumanCommandNetwork {
-    private static final String PROTOCOL = "7";
-    private record Session(java.util.UUID token, java.util.UUID human, int entityId,
-                           ResourceKey<Level> dimension, long expiresAt, GrowthSnapshot growth) {}
-    private static final java.util.Map<ServerPlayer, Session> SESSIONS = new java.util.WeakHashMap<>();
-    private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(HumanGunner.MOD_ID, "soldier_commands"),
-            () -> PROTOCOL, PROTOCOL::equals, PROTOCOL::equals);
-
+    private static final String PROTOCOL="8";
+    private record Session(UUID token,UUID human,int entityId,ResourceKey<Level> dimension,long expiresAt) {}
+    private static final Map<ServerPlayer,Session> SESSIONS=new WeakHashMap<>();
+    private static final SimpleChannel CHANNEL=NetworkRegistry.newSimpleChannel(new ResourceLocation(HumanGunner.MOD_ID,"soldier_commands"),
+            ()->PROTOCOL,PROTOCOL::equals,PROTOCOL::equals);
     private HumanCommandNetwork() {}
-
-    static void register() {
-        CHANNEL.registerMessage(0, OpenScreenPacket.class, OpenScreenPacket::encode,
-                OpenScreenPacket::decode, OpenScreenPacket::handle,
-                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
-        CHANNEL.registerMessage(1, SetOrderPacket.class, SetOrderPacket::encode,
-                SetOrderPacket::decode, SetOrderPacket::handle,
-                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
-        CHANNEL.registerMessage(2, SetCombatModePacket.class, SetCombatModePacket::encode,
-                SetCombatModePacket::decode, SetCombatModePacket::handle,
-                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
-        CHANNEL.registerMessage(3, DismissPacket.class, DismissPacket::encode,
-                DismissPacket::decode, DismissPacket::handle,
-                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
-        CHANNEL.registerMessage(4, SetPickupPolicyPacket.class, SetPickupPolicyPacket::encode,
-                SetPickupPolicyPacket::decode, SetPickupPolicyPacket::handle,
-                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
-        CHANNEL.registerMessage(5, GrowthUpdatePacket.class, GrowthUpdatePacket::encode,
-                GrowthUpdatePacket::decode, GrowthUpdatePacket::handle,
-                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
-        CHANNEL.registerMessage(6, CloseScreenPacket.class, CloseScreenPacket::encode,
-                CloseScreenPacket::decode, CloseScreenPacket::handle,
-                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_SERVER));
-        CHANNEL.registerMessage(7, InvalidateScreenPacket.class, InvalidateScreenPacket::encode,
-                InvalidateScreenPacket::decode, InvalidateScreenPacket::handle,
-                java.util.Optional.of(net.minecraftforge.network.NetworkDirection.PLAY_TO_CLIENT));
+    public static void register() {
+        CHANNEL.registerMessage(0,Snapshot.class,Snapshot::encode,Snapshot::decode,Snapshot::handle,java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(1,Request.class,Request::encode,Request::decode,Request::handle,java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(2,Close.class,Close::encode,Close::decode,Close::handle,java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(3,Invalid.class,Invalid::encode,Invalid::decode,Invalid::handle,java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
-
-    static void openFor(ServerPlayer player, Human human) {
-        if (!human.isAlive() || human.level() != player.level()
-                || !HumanRelations.isOwnedBy(human, player) || player.distanceToSqr(human) > 64.0D * 64.0D) {
-            player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                    "message.hostile_humans_unified.command.failed"), false);
-            return;
+    static void openFor(ServerPlayer player,Human human) {
+        if(!owned(player,human)||player.level()!=human.level()||player.distanceToSqr(human)>4096){
+            player.displayClientMessage(Component.translatable("message.hostile_humans_unified.command.failed"),false);return;
         }
-        java.util.UUID token = java.util.UUID.randomUUID();
-        GrowthSnapshot growth = HumanGrowth.snapshot(human);
-        SESSIONS.put(player, new Session(token, human.getUUID(), human.getId(), player.level().dimension(),
-                player.serverLevel().getGameTime() + 1200L, growth));
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new OpenScreenPacket(human.getId(), human.getUUID(), human.getDisplayName(), SoldierOrder.get(human),
-                        SoldierCombatMode.get(human), SoldierPickupPolicy.isEnabled(human), token, growth));
+        Session session=new Session(UUID.randomUUID(),human.getUUID(),human.getId(),player.level().dimension(),now(player)+1200);
+        SESSIONS.put(player,session);send(player,session,human,true);
     }
-
-    /** Called on the server thread. Only active, validated panels receive changed snapshots. */
+    private static boolean owned(ServerPlayer player,Human human){return human.isAlive()&&human.hasOwner()&&player.getUUID().equals(human.getOwnerUUID());}
+    private static long now(ServerPlayer p){return p.serverLevel().getGameTime();}
+    private static Human humanForSession(ServerPlayer p,Session s) {
+        if(!p.isAlive()||!p.level().dimension().equals(s.dimension())||now(p)>s.expiresAt())return null;
+        return p.level().getEntity(s.entityId()) instanceof Human h&&s.human().equals(h.getUUID())&&owned(p,h)&&p.distanceToSqr(h)<=4096?h:null;
+    }
+    private static void send(ServerPlayer p,Session s,Human h,boolean opening){
+        CHANNEL.send(PacketDistributor.PLAYER.with(()->p),new Snapshot(s.token(),h.getUUID(),h.getId(),opening,h.getDisplayName(),
+                CommandView.of(h),HumanGrowth.snapshot(h),String.valueOf(HumanFactions.id(h))));
+    }
     public static void tickServer(MinecraftServer server) {
-        if (server.getTickCount() % 10 != 0) return;
-        var iterator = SESSIONS.entrySet().iterator();
-        while (iterator.hasNext()) {
-            var entry = iterator.next();
-            ServerPlayer player = entry.getKey();
-            Session session = entry.getValue();
-            if (player.server != server) continue;
-            if (server.getPlayerList().getPlayer(player.getUUID()) != player) {
-                iterator.remove();
-                continue;
+        SquadCommandNetwork.tickServer(server);
+        if(server.getTickCount()%20!=0)return;
+        var iterator=SESSIONS.entrySet().iterator();while(iterator.hasNext()){
+            var entry=iterator.next();ServerPlayer p=entry.getKey();Session s=entry.getValue();if(p.server!=server)continue;
+            if(server.getPlayerList().getPlayer(p.getUUID())!=p){iterator.remove();continue;}
+            Human h=humanForSession(p,s);if(h==null){iterator.remove();invalidate(p,s.token());continue;}
+            Session fresh=new Session(s.token(),s.human(),s.entityId(),s.dimension(),now(p)+1200);entry.setValue(fresh);send(p,fresh,h,false);
+        }
+    }
+    static void submit(UUID token,UUID human,int entityId,SquadCommands.Update update){CHANNEL.sendToServer(new Request(token,human,entityId,0,update));}
+    static void sendDismiss(int entityId,UUID human,UUID token){CHANNEL.sendToServer(new Request(token,human,entityId,1,null));}
+    static void reanchor(UUID token,UUID human,int entityId){CHANNEL.sendToServer(new Request(token,human,entityId,2,null));}
+    static void closeScreen(UUID token){CHANNEL.sendToServer(new Close(token));}
+    private static void invalidate(ServerPlayer p,UUID token){CHANNEL.send(PacketDistributor.PLAYER.with(()->p),new Invalid(token));}
+    public static void closePlayer(ServerPlayer player){SESSIONS.remove(player);SquadCommandNetwork.closePlayer(player);}
+    public static void clearSessions(){SESSIONS.clear();SquadCommandNetwork.clearSessions();}
+    private record Snapshot(UUID token,UUID human,int entityId,boolean opening,Component name,CommandView view,GrowthSnapshot growth,String faction){
+        static void encode(Snapshot p,FriendlyByteBuf b){b.writeUUID(p.token);b.writeUUID(p.human);b.writeVarInt(p.entityId);b.writeBoolean(p.opening);b.writeComponent(p.name);p.view.encode(b);p.growth.encode(b);b.writeUtf(p.faction,256);}
+        static Snapshot decode(FriendlyByteBuf b){return new Snapshot(b.readUUID(),b.readUUID(),b.readVarInt(),b.readBoolean(),b.readComponent(),CommandView.decode(b),GrowthSnapshot.decode(b),b.readUtf(256));}
+        static void handle(Snapshot p,Supplier<NetworkEvent.Context> supplier){var c=supplier.get();c.enqueueWork(()->DistExecutor.unsafeRunWhenOn(Dist.CLIENT,()->()->SoldierCommandScreen.show(p.token,p.human,p.entityId,p.opening,p.name,p.view,p.growth,p.faction)));c.setPacketHandled(true);}
+    }
+    private record Request(UUID token,UUID human,int entityId,int action,SquadCommands.Update update){
+        static void encode(Request p,FriendlyByteBuf b){b.writeUUID(p.token);b.writeUUID(p.human);b.writeVarInt(p.entityId);b.writeVarInt(p.action);if(p.action==0)CommandView.writeUpdate(b,p.update);}
+        static Request decode(FriendlyByteBuf b){UUID token=b.readUUID(),human=b.readUUID();int id=b.readVarInt();int action=b.readVarInt();if(action<0||action>2)throw new IllegalArgumentException("invalid command action");return new Request(token,human,id,action,action==0?CommandView.readUpdate(b):null);}
+        static void handle(Request p,Supplier<NetworkEvent.Context> supplier){var c=supplier.get();c.enqueueWork(()->{
+            ServerPlayer player=c.getSender();if(player==null)return;Session s=SESSIONS.get(player);
+            Human h=s==null?null:humanForSession(player,s);
+            if(s==null||h==null||!s.token().equals(p.token)||s.entityId()!=p.entityId||!s.human().equals(p.human)){
+                if(s!=null&&s.token().equals(p.token))SESSIONS.remove(player);invalidate(player,p.token);return;
             }
-            Human human = humanForSession(player, session);
-            if (human == null) {
-                iterator.remove();
-                CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new InvalidateScreenPacket(session.token()));
-                continue;
-            }
-            GrowthSnapshot growth = HumanGrowth.snapshot(human);
-            if (!growth.equals(session.growth())) {
-                CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                        new GrowthUpdatePacket(session.token(), session.human(), session.entityId(), growth));
-            }
-            entry.setValue(new Session(session.token(), session.human(), session.entityId(), session.dimension(),
-                    player.serverLevel().getGameTime() + 1200L, growth));
-        }
+            if(!CommandRateLimit.allow(player)){send(player,s,h,false);return;}
+            if(p.action==1){HumanRelations.dismiss(player,h);SquadData.get(player.server).removeMember(h.getUUID());SESSIONS.remove(player);invalidate(player,p.token);return;}
+            if(p.action==2){SoldierOrder.set(h,SoldierOrder.GARRISON);CommandView.persist(h);send(player,s,h,false);SoldierRosterNetwork.refreshIfOpen(player);return;}
+            if(!CommandView.valid(p.update)){invalidate(player,p.token);SESSIONS.remove(player);return;}
+            CommandView.apply(h,p.update);send(player,s,h,false);SoldierRosterNetwork.refreshIfOpen(player);
+        });c.setPacketHandled(true);}
     }
-
-    private static Human humanForSession(ServerPlayer player, Session session) {
-        if (!player.isAlive() || !player.level().dimension().equals(session.dimension())
-                || player.serverLevel().getGameTime() > session.expiresAt()) return null;
-        if (player.level().getEntity(session.entityId()) instanceof Human human
-                && human.level() == player.level() && human.isAlive()
-                && session.human().equals(human.getUUID()) && HumanRelations.isOwnedBy(human, player)
-                && player.distanceToSqr(human) <= 64.0D * 64.0D) return human;
-        return null;
+    private record Close(UUID token){
+        static void encode(Close p,FriendlyByteBuf b){b.writeUUID(p.token);}static Close decode(FriendlyByteBuf b){return new Close(b.readUUID());}
+        static void handle(Close p,Supplier<NetworkEvent.Context> supplier){var c=supplier.get();c.enqueueWork(()->{ServerPlayer player=c.getSender();Session s=SESSIONS.get(player);if(s!=null&&s.token().equals(p.token))SESSIONS.remove(player);});c.setPacketHandled(true);}
     }
-
-    static void closeScreen(java.util.UUID token) {
-        CHANNEL.sendToServer(new CloseScreenPacket(token));
-    }
-
-    static void sendOrder(int entityId, SoldierOrder order) {
-        CHANNEL.sendToServer(new SetOrderPacket(entityId, order));
-    }
-
-    static void sendCombatMode(int entityId, SoldierCombatMode mode) {
-        CHANNEL.sendToServer(new SetCombatModePacket(entityId, mode));
-    }
-
-    static void sendDismiss(int entityId, java.util.UUID token) {
-        CHANNEL.sendToServer(new DismissPacket(entityId, token));
-    }
-
-    static void sendPickupPolicy(int entityId, boolean enabled) {
-        CHANNEL.sendToServer(new SetPickupPolicyPacket(entityId, enabled));
-    }
-
-    private static Human ownedHumanForCommand(ServerPlayer player, int entityId) {
-        if (player.level().getEntity(entityId) instanceof Human human
-                && human.isAlive()
-                && HumanRelations.isOwnedBy(human, player)
-                && player.distanceToSqr(human) <= 64.0D * 64.0D) return human;
-        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                "message.hostile_humans_unified.command.failed"), false);
-        return null;
-    }
-
-    private record OpenScreenPacket(int entityId, java.util.UUID human, net.minecraft.network.chat.Component name,
-                                    SoldierOrder order, SoldierCombatMode combatMode,
-                                    boolean pickupEnabled, java.util.UUID token, GrowthSnapshot growth) {
-        static void encode(OpenScreenPacket packet, FriendlyByteBuf buffer) {
-            buffer.writeVarInt(packet.entityId);
-            buffer.writeUUID(packet.human);
-            buffer.writeComponent(packet.name);
-            buffer.writeEnum(packet.order);
-            buffer.writeEnum(packet.combatMode);
-            buffer.writeBoolean(packet.pickupEnabled);
-            buffer.writeUUID(packet.token);
-            packet.growth.encode(buffer);
-        }
-
-        static OpenScreenPacket decode(FriendlyByteBuf buffer) {
-            return new OpenScreenPacket(buffer.readVarInt(), buffer.readUUID(), buffer.readComponent(),
-                    buffer.readEnum(SoldierOrder.class), buffer.readEnum(SoldierCombatMode.class),
-                    buffer.readBoolean(), buffer.readUUID(), GrowthSnapshot.decode(buffer));
-        }
-
-        static void handle(OpenScreenPacket packet, Supplier<NetworkEvent.Context> supplier) {
-            NetworkEvent.Context context = supplier.get();
-            context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                    () -> () -> SoldierCommandScreen.open(
-                            packet.entityId, packet.human, packet.name, packet.order, packet.combatMode,
-                            packet.pickupEnabled, packet.token, packet.growth)));
-            context.setPacketHandled(true);
-        }
-    }
-
-    private record SetOrderPacket(int entityId, SoldierOrder order) {
-        static void encode(SetOrderPacket packet, FriendlyByteBuf buffer) {
-            buffer.writeVarInt(packet.entityId);
-            buffer.writeEnum(packet.order);
-        }
-
-        static SetOrderPacket decode(FriendlyByteBuf buffer) {
-            return new SetOrderPacket(buffer.readVarInt(), buffer.readEnum(SoldierOrder.class));
-        }
-
-        static void handle(SetOrderPacket packet, Supplier<NetworkEvent.Context> supplier) {
-            NetworkEvent.Context context = supplier.get();
-            context.enqueueWork(() -> {
-                ServerPlayer player = context.getSender();
-                if (player == null) return;
-                Human human = ownedHumanForCommand(player, packet.entityId);
-                if (human == null) return;
-                // Ownership, range and entity identity are authoritative.
-                // The short-lived screen session is not: expiry or another
-                // menu opening must not silently discard an owner command.
-                SoldierOrder.set(human, packet.order);
-                SoldierCommandFeedback.order(player, human, packet.order);
-            });
-            context.setPacketHandled(true);
-        }
-    }
-
-    private record SetCombatModePacket(int entityId, SoldierCombatMode mode) {
-        static void encode(SetCombatModePacket packet, FriendlyByteBuf buffer) {
-            buffer.writeVarInt(packet.entityId);
-            buffer.writeEnum(packet.mode);
-        }
-
-        static SetCombatModePacket decode(FriendlyByteBuf buffer) {
-            return new SetCombatModePacket(buffer.readVarInt(), buffer.readEnum(SoldierCombatMode.class));
-        }
-
-        static void handle(SetCombatModePacket packet, Supplier<NetworkEvent.Context> supplier) {
-            NetworkEvent.Context context = supplier.get();
-            context.enqueueWork(() -> {
-                ServerPlayer player = context.getSender();
-                if (player == null) return;
-                Human human = ownedHumanForCommand(player, packet.entityId);
-                if (human == null) return;
-                SoldierCombatMode.set(human, packet.mode);
-                SoldierCommandFeedback.combat(player, human, packet.mode);
-            });
-            context.setPacketHandled(true);
-        }
-    }
-
-    private record SetPickupPolicyPacket(int entityId, boolean enabled) {
-        static void encode(SetPickupPolicyPacket packet, FriendlyByteBuf buffer) {
-            buffer.writeVarInt(packet.entityId);
-            buffer.writeBoolean(packet.enabled);
-        }
-
-        static SetPickupPolicyPacket decode(FriendlyByteBuf buffer) {
-            return new SetPickupPolicyPacket(buffer.readVarInt(), buffer.readBoolean());
-        }
-
-        static void handle(SetPickupPolicyPacket packet, Supplier<NetworkEvent.Context> supplier) {
-            NetworkEvent.Context context = supplier.get();
-            context.enqueueWork(() -> {
-                ServerPlayer player = context.getSender();
-                if (player == null) return;
-                Human human = ownedHumanForCommand(player, packet.entityId);
-                if (human == null) return;
-                SoldierPickupPolicy.set(human, packet.enabled);
-                SoldierCommandFeedback.pickup(player, human, packet.enabled);
-            });
-            context.setPacketHandled(true);
-        }
-    }
-
-    private record DismissPacket(int entityId, java.util.UUID token) {
-        static void encode(DismissPacket packet, FriendlyByteBuf buffer) {
-            buffer.writeVarInt(packet.entityId);
-            buffer.writeUUID(packet.token);
-        }
-
-        static DismissPacket decode(FriendlyByteBuf buffer) {
-            return new DismissPacket(buffer.readVarInt(), buffer.readUUID());
-        }
-
-        static void handle(DismissPacket packet, Supplier<NetworkEvent.Context> supplier) {
-            NetworkEvent.Context context = supplier.get();
-            context.enqueueWork(() -> {
-                ServerPlayer player = context.getSender();
-                if (player == null || !(player.level().getEntity(packet.entityId) instanceof Human human)
-                        || !HumanRelations.isOwnedBy(human, player)
-                        || player.distanceToSqr(human) > 64.0D * 64.0D) return;
-                Session session = SESSIONS.get(player);
-                if (session == null || !session.token().equals(packet.token) || session.entityId() != packet.entityId
-                        || !session.human().equals(human.getUUID())
-                        || humanForSession(player, session) != human
-                        || !human.isAlive() || !CommandRateLimit.allow(player)) return;
-                HumanRelations.dismiss(player, human);
-                SESSIONS.remove(player);
-                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                        "message.hostile_humans_unified.dismissed.manual"), true);
-            });
-            context.setPacketHandled(true);
-        }
-    }
-
-    private record GrowthUpdatePacket(java.util.UUID token, java.util.UUID human, int entityId,
-                                      GrowthSnapshot growth) {
-        static void encode(GrowthUpdatePacket packet, FriendlyByteBuf buffer) {
-            buffer.writeUUID(packet.token);
-            buffer.writeUUID(packet.human);
-            buffer.writeVarInt(packet.entityId);
-            packet.growth.encode(buffer);
-        }
-        static GrowthUpdatePacket decode(FriendlyByteBuf buffer) {
-            return new GrowthUpdatePacket(buffer.readUUID(), buffer.readUUID(), buffer.readVarInt(),
-                    GrowthSnapshot.decode(buffer));
-        }
-        static void handle(GrowthUpdatePacket packet, Supplier<NetworkEvent.Context> supplier) {
-            NetworkEvent.Context context = supplier.get();
-            context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                    () -> () -> SoldierCommandScreen.updateGrowth(packet.token, packet.human, packet.entityId, packet.growth)));
-            context.setPacketHandled(true);
-        }
-    }
-
-    private record CloseScreenPacket(java.util.UUID token) {
-        static void encode(CloseScreenPacket packet, FriendlyByteBuf buffer) { buffer.writeUUID(packet.token); }
-        static CloseScreenPacket decode(FriendlyByteBuf buffer) { return new CloseScreenPacket(buffer.readUUID()); }
-        static void handle(CloseScreenPacket packet, Supplier<NetworkEvent.Context> supplier) {
-            NetworkEvent.Context context = supplier.get();
-            context.enqueueWork(() -> {
-                ServerPlayer player = context.getSender();
-                if (player == null) return;
-                Session session = SESSIONS.get(player);
-                if (session != null && session.token().equals(packet.token)) SESSIONS.remove(player);
-            });
-            context.setPacketHandled(true);
-        }
-    }
-
-    private record InvalidateScreenPacket(java.util.UUID token) {
-        static void encode(InvalidateScreenPacket packet, FriendlyByteBuf buffer) { buffer.writeUUID(packet.token); }
-        static InvalidateScreenPacket decode(FriendlyByteBuf buffer) { return new InvalidateScreenPacket(buffer.readUUID()); }
-        static void handle(InvalidateScreenPacket packet, Supplier<NetworkEvent.Context> supplier) {
-            NetworkEvent.Context context = supplier.get();
-            context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                    () -> () -> SoldierCommandScreen.invalidate(packet.token)));
-            context.setPacketHandled(true);
-        }
+    private record Invalid(UUID token){
+        static void encode(Invalid p,FriendlyByteBuf b){b.writeUUID(p.token);}static Invalid decode(FriendlyByteBuf b){return new Invalid(b.readUUID());}
+        static void handle(Invalid p,Supplier<NetworkEvent.Context> supplier){var c=supplier.get();c.enqueueWork(()->DistExecutor.unsafeRunWhenOn(Dist.CLIENT,()->()->SoldierCommandScreen.invalidate(p.token)));c.setPacketHandled(true);}
     }
 }

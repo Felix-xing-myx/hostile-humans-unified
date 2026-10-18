@@ -33,6 +33,19 @@ public final class SoldierRosterScreen extends Screen {
     private int scrollRetryCount;
     private long dismissConfirmUntil;
     private int statusRefreshTicks;
+    private int squadFilter=-1,squadPage,editingSquad;
+    private List<SoldierRosterNetwork.SquadEntry> squads=List.of();
+    private String squadResult="";
+    private boolean squadPanel;
+    private final java.util.Set<UUID> marked=new java.util.LinkedHashSet<>();
+    private net.minecraft.client.gui.components.EditBox squadName;
+    @Override protected void init(){
+        String previous=squadName==null?"":squadName.getValue();
+        squadName=new net.minecraft.client.gui.components.EditBox(font,left()+10,top()+207,177,18,Component.translatable("screen.hostile_humans_unified.command.squad_name"));
+        squadName.setMaxLength(64);squadName.setValue(previous);squadName.setVisible(squadPanel&&editingSquad>0);addWidget(squadName);
+        if(squadName.isVisible()){setFocused(squadName);squadName.setFocused(true);}
+    }
+
 
     private SoldierRosterScreen(UUID token, int tier, int page, int total,
                                 List<SoldierRosterNetwork.Entry> entries,
@@ -48,10 +61,11 @@ public final class SoldierRosterScreen extends Screen {
     }
 
     static void show(UUID token, boolean opening, int tier, int page, int total,
-                     List<SoldierRosterNetwork.Entry> entries, int[] counts, int[] limits) {
+                     List<SoldierRosterNetwork.Entry> entries, int[] counts, int[] limits, int squadFilter,
+                     List<SoldierRosterNetwork.SquadEntry> squads,String result) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.screen instanceof SoldierRosterScreen screen && screen.token.equals(token)) {
-            boolean filterChanged = screen.tier != tier;
+            boolean filterChanged = screen.tier != tier || screen.squadFilter!=squadFilter;
             screen.entries = entries;
             screen.tier = tier;
             screen.page = page;
@@ -64,6 +78,7 @@ public final class SoldierRosterScreen extends Screen {
                         Math.max(0, (total - 1) / SoldierRosterNetwork.PAGE_SIZE));
                 if (page == screen.requestedPage) screen.requestedPage = -1;
             }
+            screen.squadFilter=squadFilter;screen.squads=squads;if(!result.isEmpty())screen.squadResult=result;
             screen.counts = counts;
             screen.limits = limits;
             if (screen.selected != null && entries.stream().noneMatch(e -> e.id().equals(screen.selected))) {
@@ -75,11 +90,13 @@ public final class SoldierRosterScreen extends Screen {
             }
         } else if (opening && (minecraft.screen == null
                 || minecraft.screen instanceof SoldierRosterScreen)) {
-            minecraft.setScreen(new SoldierRosterScreen(token, tier, page, total, entries, counts, limits));
+            SoldierRosterScreen screen=new SoldierRosterScreen(token,tier,page,total,entries,counts,limits);
+            screen.squadFilter=squadFilter;screen.squads=squads;screen.squadResult=result;minecraft.setScreen(screen);
         }
     }
 
     private int left() { return width / 2 - WIDTH / 2; }
+    static void invalidate(UUID token){if(Minecraft.getInstance().screen instanceof SoldierRosterScreen s&&s.token.equals(token))s.onClose();}
     private int growthHeight() {
         SoldierRosterNetwork.Entry entry = selectedEntry();
         return detail && entry != null && entry.growth() != null && entry.growth().enabled() ? 56 : 0;
@@ -203,8 +220,12 @@ public final class SoldierRosterScreen extends Screen {
         graphics.fill(x + WIDTH - 2, y, x + WIDTH, y + panelHeight(), EDGE);
         graphics.drawString(font, title, x + 10, y + 10, TEXT, false);
         graphics.fill(x + 9, y + 24, x + WIDTH - 9, y + 25, EDGE);
+        if(squadPanel){renderSquads(graphics,mx,my);return;}
         if (detail) renderDetail(graphics, mx, my);
         else renderList(graphics, mx, my);
+        button(graphics,Component.translatable("screen.hostile_humans_unified.command.squad_manage",marked.size()),detail?x+300:x+8,detail?y+7:y+226,detail?98:150,16,
+                hit(mx,my,detail?x+300:x+8,detail?y+7:y+226,detail?98:150,16),true,false,false);
+        if(!detail)graphics.drawString(font,Component.translatable("screen.hostile_humans_unified.command.squad_filter",squadFilter<0?"*":squadFilter),x+165,y+230,MUTED,false);
     }
 
     private void renderList(GuiGraphics graphics, int mx, int my) {
@@ -220,7 +241,8 @@ public final class SoldierRosterScreen extends Screen {
             int bx = x + 8, by = y + 54 + i * 29;
             boolean hovered = hit(mx, my, bx, by, 242, 26);
             frame(graphics, bx, by, 242, 26, hovered ? HOVER : SURFACE);
-            graphics.fill(bx + 3, by + 3, bx + 5, by + 23, statusColor(entry.status()));
+            graphics.fill(bx+3,by+3,bx+8,by+12,marked.contains(entry.id())?GOLD:EDGE);
+            graphics.fill(bx+3,by+14,bx+5,by+23,statusColor(entry.status()));
             tierBadge(graphics, entry.tier(), bx + 9, by + 4);
             String name = entry.name().isBlank()
                     ? tr("screen.hostile_humans_unified.roster.unnamed").getString() : entry.name();
@@ -236,7 +258,7 @@ public final class SoldierRosterScreen extends Screen {
                         14, 18, hit(mx, my, bx + 226, by + 4, 14, 18),
                         entry.canMoveLater(), false, false);
             } else {
-                graphics.drawString(font, font.plainSubstrByWidth(statusName(entry.status()).getString(), 98),
+                graphics.drawString(font, font.plainSubstrByWidth("["+entry.squad()+"] "+statusName(entry.status()).getString(), 98),
                         bx + 137, by + 4, statusColor(entry.status()), false);
                 GrowthSnapshot growth = entry.growth();
                 String summary = growth != null && growth.enabled()
@@ -299,7 +321,7 @@ public final class SoldierRosterScreen extends Screen {
         String name = entry.name().isBlank()
                 ? tr("screen.hostile_humans_unified.roster.unnamed").getString() : entry.name();
         graphics.drawString(font, font.plainSubstrByWidth(name, 126), x, y + 16, TEXT, false);
-        graphics.drawString(font, tierName(entry.tier()), x, y + 30, tierColor(entry.tier()), false);
+        graphics.drawString(font, font.plainSubstrByWidth(tierName(entry.tier()).getString()+" · "+entry.faction(),126), x, y + 30, tierColor(entry.tier()), false);
         graphics.drawString(font, statusName(entry.status()), x, y + 44,
                 statusColor(entry.status()), false);
         if (entry.health() >= 0) {
@@ -365,7 +387,7 @@ public final class SoldierRosterScreen extends Screen {
         graphics.drawString(font, tr("screen.hostile_humans_unified.soldier.movement"), lx + 3, y + 73, GOLD, false);
         graphics.drawString(font, tr("screen.hostile_humans_unified.soldier.combat"), rx + 3, y + 73, GOLD, false);
         boolean loaded = "online".equals(entry.status());
-        SoldierOrder[] orders = SoldierOrder.values();
+        SoldierOrder[] orders = CommandView.ORDERS.toArray(SoldierOrder[]::new);
         for (int i = 0; i < orders.length; i++) {
             SoldierOrder order = orders[i];
             int by = y + 86 + i * 22;
@@ -386,6 +408,8 @@ public final class SoldierRosterScreen extends Screen {
         button(graphics, tr(entry.pickup() ? "screen.hostile_humans_unified.soldier.pickup.enabled"
                         : "screen.hostile_humans_unified.soldier.pickup.disabled"),
                 rx, y + 174, 190, 19, hit(mx, my, rx, y + 174, 190, 19), loaded, false, false);
+        button(graphics,Component.translatable("screen.hostile_humans_unified.command.full_panel"),lx,y+158,190,18,hit(mx,my,lx,y+158,190,18),loaded,false,false);
+        button(graphics,Component.translatable("screen.hostile_humans_unified.command.attributes"),lx,y+180,190,18,hit(mx,my,lx,y+180,190,18),loaded,false,false);
         renderGrowth(graphics, entry, lx, y + 201);
         button(graphics, tr("screen.hostile_humans_unified.roster.recall_one"), lx, y + 201 + growthHeight(), 190, 18,
                 hit(mx, my, lx, y + 201 + growthHeight(), 190, 18), true, false, false);
@@ -402,6 +426,10 @@ public final class SoldierRosterScreen extends Screen {
     public boolean mouseClicked(double mx, double my, int mouseButton) {
         if (mouseButton != GLFW.GLFW_MOUSE_BUTTON_LEFT) return super.mouseClicked(mx, my, mouseButton);
         int x = left(), y = top();
+        if(squadPanel)return clickSquads(mx,my,x,y);
+        if(hit(mx,my,detail?x+300:x+8,detail?y+7:y+226,detail?98:150,16)){
+            if(detail&&selected!=null)marked.add(selected);squadPanel=true;editingSquad=0;detail=false;return true;
+        }
         if (detail) return clickDetail(mx, my, x, y);
         for (int i = 0; i < 5; i++) {
             if (hit(mx, my, x + 9 + i * 78, y + 31, 76, 18)) {
@@ -413,6 +441,9 @@ public final class SoldierRosterScreen extends Screen {
             SoldierRosterNetwork.Entry entry = entries.get(i);
             int bx = x + 8, by = y + 54 + i * 29;
             if (!hit(mx, my, bx, by, 242, 26)) continue;
+            if(hit(mx,my,bx+2,by+2,12,14)||hasShiftDown()){
+                if(!marked.remove(entry.id())&&marked.size()<64)marked.add(entry.id());return true;
+            }
             if (hit(mx, my, bx + 177, by + 4, 31, 18)) {
                 SoldierRosterNetwork.request(token, 3, entry.id());
             } else if (hit(mx, my, bx + 210, by + 4, 14, 18)) {
@@ -483,6 +514,7 @@ public final class SoldierRosterScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mx, double my, double delta) {
+        if(squadPanel)return true;
         if (!detail && maxPage() > 0 && delta != 0
                 && hit(mx, my, left() + 8, top() + 54, 250, 142)) {
             int current = requestedPage >= 0 ? requestedPage : page;
@@ -497,10 +529,14 @@ public final class SoldierRosterScreen extends Screen {
         if (entry == null) return true;
         int lx = x + 9, rx = x + 209;
         if ("online".equals(entry.status())) {
-            SoldierOrder[] orders = SoldierOrder.values();
+            if(hit(mx,my,lx,y+158,190,18)){SoldierRosterNetwork.request(token,13,entry.id());return true;}
+            if(hit(mx,my,lx,y+180,190,18)){
+                if(entry.entityId()>=0)AttributeDetailNetwork.requestOwned(entry.entityId(),entry.id());return true;
+            }
+            SoldierOrder[] orders = CommandView.ORDERS.toArray(SoldierOrder[]::new);
             for (int i = 0; i < orders.length; i++) {
                 if (hit(mx, my, lx, y + 86 + i * 22, 190, 19)) {
-                    SoldierRosterNetwork.request(token, 4, entry.id(), orders[i].ordinal());
+                    SoldierRosterNetwork.request(token, 4, entry.id(), i);
                     return true;
                 }
             }
@@ -542,10 +578,55 @@ public final class SoldierRosterScreen extends Screen {
         return false;
     }
 
+    private void renderSquads(GuiGraphics g,int mx,int my){
+        int x=left(),y=top();
+        g.drawString(font,Component.translatable("screen.hostile_humans_unified.command.squad_select",marked.size()),x+10,y+30,GOLD,false);
+        int pages=Math.max(1,(squads.size()+6)/7);squadPage=Math.min(squadPage,pages-1);
+        for(int i=0;i<7&&squadPage*7+i<squads.size();i++){
+            var squad=squads.get(squadPage*7+i);int by=y+46+i*21;
+            button(g,Component.literal(squad.number()+" · "+squad.name()+" ("+squad.members()+")"),x+10,by,197,18,hit(mx,my,x+10,by,197,18),true,editingSquad==squad.number(),false);
+            button(g,Component.translatable("screen.hostile_humans_unified.command.assign"),x+211,by,57,18,hit(mx,my,x+211,by,57,18),!marked.isEmpty(),false,false);
+            button(g,Component.translatable("screen.hostile_humans_unified.command.filter"),x+272,by,57,18,hit(mx,my,x+272,by,57,18),true,squadFilter==squad.number(),false);
+            button(g,Component.translatable("screen.hostile_humans_unified.command.bind"),x+333,by,65,18,hit(mx,my,x+333,by,65,18),true,false,false);
+        }
+        if(editingSquad>0){squadName.render(g,mx,my,0);button(g,Component.translatable("screen.hostile_humans_unified.command.rename"),x+191,y+207,71,18,hit(mx,my,x+191,y+207,71,18),true,false,false);}
+        else g.drawString(font,font.plainSubstrByWidth(squadResult.isEmpty()?Component.translatable("screen.hostile_humans_unified.command.rename_hint").getString():squadResult,252),x+10,y+211,MUTED,false);
+        button(g,Component.literal("◀"),x+270,y+207,23,18,hit(mx,my,x+270,y+207,23,18),squadPage>0,false,false);
+        button(g,Component.literal("▶"),x+298,y+207,23,18,hit(mx,my,x+298,y+207,23,18),squadPage<pages-1,false,false);
+        button(g,Component.translatable("screen.hostile_humans_unified.command.back"),x+326,y+207,72,18,hit(mx,my,x+326,y+207,72,18),true,false,false);
+        button(g,Component.translatable("screen.hostile_humans_unified.command.remove_squad"),x+10,y+229,120,15,hit(mx,my,x+10,y+229,120,15),!marked.isEmpty(),false,false);
+        button(g,Component.translatable("screen.hostile_humans_unified.command.all_squads"),x+136,y+229,120,15,hit(mx,my,x+136,y+229,120,15),true,false,false);
+        button(g,Component.translatable("screen.hostile_humans_unified.command.no_squad"),x+262,y+229,136,15,hit(mx,my,x+262,y+229,136,15),true,false,false);
+    }
+    private void saveSquadName(){if(editingSquad>0)SoldierRosterNetwork.rename(token,editingSquad,squadName.getValue());editingSquad=0;squadName.setVisible(false);setFocused(null);}
+    private void closeSquadPanel(){squadPanel=false;editingSquad=0;squadName.setVisible(false);squadName.setFocused(false);setFocused(null);}
+    private boolean clickSquads(double mx,double my,int x,int y){
+        for(int i=0;i<7&&squadPage*7+i<squads.size();i++){
+            var squad=squads.get(squadPage*7+i);int by=y+46+i*21;
+            if(hit(mx,my,x+10,by,197,18)){editingSquad=squad.number();squadName.setX(x+10);squadName.setY(y+207);squadName.setValue(squad.name());squadName.setVisible(true);setFocused(squadName);squadName.setFocused(true);return true;}
+            if(hit(mx,my,x+211,by,57,18)&&!marked.isEmpty()){SoldierRosterNetwork.assign(token,squad.number(),List.copyOf(marked));return true;}
+            if(hit(mx,my,x+272,by,57,18)){SoldierRosterNetwork.request(token,14,NONE,squad.number());closeSquadPanel();return true;}
+            if(hit(mx,my,x+333,by,65,18)){SoldierRosterNetwork.bind(token,squad.number());return true;}
+        }
+        if(editingSquad>0&&hit(mx,my,x+191,y+207,71,18)){saveSquadName();return true;}
+        if(hit(mx,my,x+270,y+207,23,18)&&squadPage>0)squadPage--;
+        else if(hit(mx,my,x+298,y+207,23,18)&&squadPage<(squads.size()+6)/7-1)squadPage++;
+        else if(hit(mx,my,x+326,y+207,72,18))closeSquadPanel();
+        else if(hit(mx,my,x+10,y+229,120,15)&&!marked.isEmpty())SoldierRosterNetwork.assign(token,0,List.copyOf(marked));
+        else if(hit(mx,my,x+136,y+229,120,15)){SoldierRosterNetwork.request(token,14,NONE,-1);closeSquadPanel();}
+        else if(hit(mx,my,x+262,y+229,136,15)){SoldierRosterNetwork.request(token,14,NONE,0);closeSquadPanel();}
+        else if(editingSquad>0)return squadName.mouseClicked(mx,my,0);
+        return true;
+    }
+
     @Override public boolean isPauseScreen() { return false; }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if(squadPanel){
+            if(keyCode==GLFW.GLFW_KEY_ESCAPE){closeSquadPanel();return true;}
+            if(editingSquad>0&&keyCode==GLFW.GLFW_KEY_ENTER){saveSquadName();return true;}
+        }
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             if (detail) {
                 detail = false;
@@ -563,6 +644,7 @@ public final class SoldierRosterScreen extends Screen {
     @Override
     public void tick() {
         super.tick();
+        if(squadName!=null&&squadName.isVisible())squadName.tick();
         if (requestedPage >= 0 && page != requestedPage && scrollRetryCount < 3
                 && ++scrollRetryTicks >= 4) {
             scrollRetryTicks = 0;
@@ -577,8 +659,8 @@ public final class SoldierRosterScreen extends Screen {
     }
 
     @Override
-    public void onClose() {
-        SoldierRosterNetwork.request(token, 9, NONE);
-        super.onClose();
+    public void removed() {
+        if(Minecraft.getInstance().getConnection()!=null)SoldierRosterNetwork.request(token,9,NONE);
+        super.removed();
     }
 }

@@ -29,7 +29,7 @@ import net.minecraftforge.event.server.ServerStoppedEvent;
 
 /** Owner-only roster snapshots and dismissal commands. Never trusts client roster contents. */
 final class SoldierRosterNetwork {
-    private static final String PROTOCOL = "6";
+    private static final String PROTOCOL = "7";
     static final int PAGE_SIZE = 5;
     private static final Map<ServerPlayer, Session> SESSIONS = new WeakHashMap<>();
     private static final Map<ServerPlayer, Long> LAST_REORDER_TICK = new WeakHashMap<>();
@@ -42,10 +42,11 @@ final class SoldierRosterNetwork {
     record Entry(UUID id, int tier, String name, String status, String dimension,
                  int x, int y, int z, int health, int maxHealth,
                  String order, String combat, boolean pickup,
-                 boolean canMoveEarlier, boolean canMoveLater, GrowthSnapshot growth) {}
-    private record Session(UUID token, int filter, int page) {}
+                 boolean canMoveEarlier, boolean canMoveLater, GrowthSnapshot growth, int squad, String faction, int entityId) {}
+    private record Session(UUID token, int filter, int page, int squadFilter) {}
+    record SquadEntry(int number,String name,int members) {}
     private record Snapshot(UUID token, boolean opening, int filter, int page, int total,
-                            List<Entry> entries, int[] counts, int[] limits) {}
+                            List<Entry> entries, int[] counts, int[] limits, int squadFilter, List<SquadEntry> squads, Component result) {}
     private record Request(UUID token, int action, UUID human, int value) {}
     private SoldierRosterNetwork() {}
 
@@ -56,11 +57,13 @@ final class SoldierRosterNetwork {
         CHANNEL.registerMessage(1, Request.class, SoldierRosterNetwork::writeRequest,
                 SoldierRosterNetwork::readRequest, SoldierRosterNetwork::receiveRequest,
                 java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(2,SquadRequest.class,SquadRequest::encode,SquadRequest::decode,SquadRequest::handle,java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        CHANNEL.registerMessage(3,InvalidRoster.class,InvalidRoster::encode,InvalidRoster::decode,InvalidRoster::handle,java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     static void open(ServerPlayer player) {
         UUID token = UUID.randomUUID();
-        Session session = new Session(token, -1, 0);
+        Session session = new Session(token, -1, 0, -1);
         SESSIONS.put(player, session);
         sendSnapshot(player, session, true);
     }
@@ -68,6 +71,7 @@ final class SoldierRosterNetwork {
     static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             SESSIONS.remove(player);
+            HumanCommandNetwork.closePlayer(player);
             LAST_REORDER_TICK.remove(player);
             LAST_SCROLL_TICK.remove(player);
             LAST_STATUS_REFRESH_TICK.remove(player);
@@ -76,6 +80,7 @@ final class SoldierRosterNetwork {
 
     static void onServerStopped(ServerStoppedEvent event) {
         SESSIONS.clear();
+        HumanCommandNetwork.clearSessions();
         LAST_REORDER_TICK.clear();
         LAST_SCROLL_TICK.clear();
         LAST_STATUS_REFRESH_TICK.clear();
@@ -96,21 +101,29 @@ final class SoldierRosterNetwork {
         }
     }
 
+    private static List<RecruitmentLedger.Soldier> filtered(RecruitmentLedger.RosterView view,Session session,SquadData squads,UUID owner) {
+        return view.filtered(session.filter).stream().filter(s->session.squadFilter<0||squads.membership(owner,s.id())==session.squadFilter).toList();
+    }
     private static void sendSnapshot(ServerPlayer player, Session session, boolean opening) {
+        sendSnapshot(player,session,opening,Component.empty());
+    }
+    private static void sendSnapshot(ServerPlayer player, Session session, boolean opening,Component result) {
         MinecraftServer server = player.server;
         RecruitmentLedger ledger = RecruitmentLedger.get(server);
         ledger.refreshLoadedIndex(server, player.getUUID());
+        SquadData squads=SquadData.get(server);squads.validate(server,player.getUUID());
         RecruitmentLedger.RosterView view = ledger.roster(player.getUUID());
-        List<RecruitmentLedger.Soldier> all = view.filtered(session.filter);
+        List<RecruitmentLedger.Soldier> all = filtered(view,session,squads,player.getUUID());
         int page = Math.min(session.page, Math.max(0, (all.size() - 1) / PAGE_SIZE));
         List<RecruitmentLedger.Soldier> displayed = all.subList(page * PAGE_SIZE,
                 Math.min(all.size(), (page + 1) * PAGE_SIZE));
         SoldierRosterAudit.refresh(player, displayed.stream().map(RecruitmentLedger.Soldier::id).toList());
         // Auditing can remove stale entries; rebuild the page once against the authoritative ledger.
         RecruitmentLedger.RosterView audited = ledger.roster(player.getUUID());
+        squads.validate(server,player.getUUID());
         if (audited != view) {
             view = audited;
-            all = view.filtered(session.filter);
+            all = filtered(view,session,squads,player.getUUID());
         }
         page = Math.min(page, Math.max(0, (all.size() - 1) / PAGE_SIZE));
         displayed = all.subList(page * PAGE_SIZE, Math.min(all.size(), (page + 1) * PAGE_SIZE));
@@ -119,8 +132,8 @@ final class SoldierRosterNetwork {
         for (int i = 0; i < displayed.size(); i++) {
             RecruitmentLedger.Soldier soldier = displayed.get(i);
             int position = page * PAGE_SIZE + i;
-            boolean canMoveEarlier = position > 0;
-            boolean canMoveLater = position + 1 < all.size();
+            boolean canMoveEarlier = session.squadFilter<0 && position > 0;
+            boolean canMoveLater = session.squadFilter<0 && position + 1 < all.size();
             Human live = findLoaded(server, soldier.id());
             if (live != null && (!live.isAlive() || !HumanRelations.isOwnedBy(live, player))) {
                 live = null;
@@ -158,7 +171,8 @@ final class SoldierRosterNetwork {
                     live == null ? -1 : Math.round(live.getHealth()),
                     live == null ? -1 : Math.round(live.getMaxHealth()),
                     order, combat, pickup, canMoveEarlier, canMoveLater,
-                    live != null ? HumanGrowth.snapshot(live) : HumanGrowth.savedSnapshot(lastData)));
+                    live != null ? HumanGrowth.snapshot(live) : HumanGrowth.savedSnapshot(lastData),
+                    squads.membership(player.getUUID(),soldier.id()),live!=null?String.valueOf(HumanFactions.id(live)):lastData.getString("hostile_humans_unified:faction"),live==null?-1:live.getId()));
         }
         int[] counts = new int[4], limits = new int[4];
         for (int tier = 0; tier < 4; tier++) {
@@ -166,11 +180,12 @@ final class SoldierRosterNetwork {
             limits[tier] = RecruitmentPolicy.limit(tier);
         }
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new Snapshot(session.token, opening, session.filter, page, all.size(), entries, counts, limits));
+                new Snapshot(session.token, opening, session.filter, page, all.size(), entries, counts, limits, session.squadFilter,
+                        squads.squads(player.getUUID()).stream().map(s->new SquadEntry(s.number(),s.name(),s.members().size())).toList(),result));
     }
 
     private static String validOrder(String value) {
-        try { return SoldierOrder.valueOf(value).name(); }
+        try { return SoldierOrder.logical(SoldierOrder.valueOf(value)).name(); }
         catch (IllegalArgumentException ignored) { return SoldierOrder.FOLLOW.name(); }
     }
 
@@ -212,11 +227,15 @@ final class SoldierRosterNetwork {
             buffer.writeBoolean(entry.canMoveLater);
             buffer.writeBoolean(entry.growth != null);
             if (entry.growth != null) entry.growth.encode(buffer);
+            buffer.writeVarInt(entry.squad);buffer.writeUtf(entry.faction,256);buffer.writeVarInt(entry.entityId);
         }
         for (int i = 0; i < 4; i++) {
             buffer.writeVarInt(packet.counts[i]);
             buffer.writeVarInt(packet.limits[i]);
         }
+        buffer.writeVarInt(packet.squadFilter);buffer.writeVarInt(packet.squads.size());
+        for(var squad:packet.squads){buffer.writeVarInt(squad.number);buffer.writeUtf(squad.name,64);buffer.writeVarInt(squad.members);}
+        buffer.writeComponent(packet.result);
     }
 
     private static Snapshot readSnapshot(FriendlyByteBuf buffer) {
@@ -234,21 +253,24 @@ final class SoldierRosterNetwork {
                     buffer.readUtf(32), buffer.readUtf(256), buffer.readInt(), buffer.readInt(),
                     buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readUtf(32), buffer.readUtf(32),
                     buffer.readBoolean(), buffer.readBoolean(), buffer.readBoolean(),
-                    buffer.readBoolean() ? GrowthSnapshot.decode(buffer) : null));
+                    buffer.readBoolean() ? GrowthSnapshot.decode(buffer) : null,buffer.readVarInt(),buffer.readUtf(256),buffer.readVarInt()));
         }
         int[] counts = new int[4], limits = new int[4];
         for (int i = 0; i < 4; i++) {
             counts[i] = buffer.readVarInt();
             limits[i] = buffer.readVarInt();
         }
-        return new Snapshot(token, opening, filter, page, total, entries, counts, limits);
+        int squadFilter=buffer.readVarInt(),squadSize=buffer.readVarInt();
+        if(squadFilter< -1||squadFilter>16||squadSize<0||squadSize>16)throw new IllegalArgumentException("invalid squads");
+        List<SquadEntry> squads=new ArrayList<>();for(int i=0;i<squadSize;i++)squads.add(new SquadEntry(buffer.readVarInt(),buffer.readUtf(64),buffer.readVarInt()));
+        return new Snapshot(token, opening, filter, page, total, entries, counts, limits,squadFilter,List.copyOf(squads),buffer.readComponent());
     }
 
     private static void receiveSnapshot(Snapshot packet, Supplier<NetworkEvent.Context> supplier) {
         NetworkEvent.Context context = supplier.get();
         context.enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
                 () -> () -> SoldierRosterScreen.show(packet.token, packet.opening, packet.filter,
-                        packet.page, packet.total, packet.entries, packet.counts, packet.limits)));
+                        packet.page, packet.total, packet.entries, packet.counts, packet.limits,packet.squadFilter,packet.squads,packet.result.getString())));
         context.setPacketHandled(true);
     }
 
@@ -268,8 +290,9 @@ final class SoldierRosterNetwork {
         context.enqueueWork(() -> {
             ServerPlayer player = context.getSender();
             if (player == null) return;
+            if (!player.isAlive()){invalidate(player,packet.token);return;}
             Session session = SESSIONS.get(player);
-            if (session == null || !session.token.equals(packet.token)) return;
+            if (session == null || !session.token.equals(packet.token)){invalidate(player,packet.token);return;}
             if (packet.action == 9) {
                 SESSIONS.remove(player);
                 LAST_REORDER_TICK.remove(player);
@@ -280,7 +303,7 @@ final class SoldierRosterNetwork {
             if (packet.action == 7 && packet.value == -1 && session.filter != -1) {
                 // ESC and the All tab must reliably return from a tier filter,
                 // even immediately after the preceding navigation click.
-                session = new Session(session.token, -1, 0);
+                session = new Session(session.token, -1, 0, session.squadFilter);
                 SESSIONS.put(player, session);
                 sendSnapshot(player, session, false);
                 return;
@@ -295,6 +318,7 @@ final class SoldierRosterNetwork {
                 return;
             }
             if (packet.action == 11 || packet.action == 12) {
+                if(session.squadFilter>=0)return;
                 long tick = player.serverLevel().getGameTime();
                 Long previous = LAST_REORDER_TICK.get(player);
                 if (previous != null && tick >= previous && tick == previous) return;
@@ -310,7 +334,7 @@ final class SoldierRosterNetwork {
                 Long previous = LAST_SCROLL_TICK.get(player);
                 if (previous != null && tick >= previous && tick == previous) return;
                 LAST_SCROLL_TICK.put(player, tick);
-                session = new Session(session.token, session.filter, packet.value);
+                session = new Session(session.token, session.filter, packet.value, session.squadFilter);
                 SESSIONS.put(player, session);
                 sendSnapshot(player, session, false);
                 return;
@@ -318,11 +342,12 @@ final class SoldierRosterNetwork {
             if (!CommandRateLimit.allow(player)) return;
             if (packet.action == 7) {
                 if (packet.value < -1 || packet.value > 3) return;
-                session = new Session(session.token, packet.value, 0);
+                session = new Session(session.token, packet.value, 0, session.squadFilter);
                 SESSIONS.put(player, session);
             } else if (packet.action == 1) {
                 RecruitmentLedger ledger = RecruitmentLedger.get(player.server);
                 if (!ledger.requestDismissal(packet.human, player.getUUID())) return;
+                SquadData.get(player.server).removeMember(packet.human);
                 HiredHumanRecall.cancelPending(player.server, packet.human);
                 Human live = findLoaded(player.server, packet.human);
                 boolean ownedLive = live != null && player.getUUID().equals(live.getOwnerUUID());
@@ -353,9 +378,9 @@ final class SoldierRosterNetwork {
                 if (live == null || !live.isAlive()
                         || !HumanRelations.isOwnedBy(live, player)) return;
                 if (packet.action == 4) {
-                    SoldierOrder[] values = SoldierOrder.values();
+                    SoldierOrder[] values = CommandView.ORDERS.toArray(SoldierOrder[]::new);
                     if (packet.value < 0 || packet.value >= values.length) return;
-                    SoldierOrder.set(live, values[packet.value]);
+                    CommandView.apply(live,CommandView.order(values[packet.value]));
                     SoldierCommandFeedback.order(player, live, values[packet.value]);
                 } else if (packet.action == 5) {
                     SoldierCombatMode[] values = SoldierCombatMode.values();
@@ -369,6 +394,14 @@ final class SoldierRosterNetwork {
                 }
                 HumanServerData data = HumanServerData.get();
                 if (data != null) data.updateOrRegisterHumanMob(live);
+            } else if (packet.action == 13) {
+                if(!RecruitmentLedger.get(player.server).isOwnedRecord(packet.human,player.getUUID()))return;
+                Human human=findLoaded(player.server,packet.human);if(human!=null)HumanCommandNetwork.openFor(player,human);
+                return;
+            } else if (packet.action == 14) {
+                if(packet.value< -1||packet.value>16)return;
+                if(packet.value>0&&!SquadData.get(player.server).existingOrAllowed(player.getUUID(),packet.value))return;
+                session=new Session(session.token,session.filter,0,packet.value);SESSIONS.put(player,session);
             } else if (packet.action == 0) {
                 SoldierRosterAudit.requestFullRefresh(player);
             } else {
@@ -378,4 +411,32 @@ final class SoldierRosterNetwork {
         });
         context.setPacketHandled(true);
     }
+    static void assign(UUID token,int number,List<UUID> members){CHANNEL.sendToServer(new SquadRequest(token,0,number,members,""));}
+    static void rename(UUID token,int number,String name){CHANNEL.sendToServer(new SquadRequest(token,1,number,List.of(),name));}
+    static void bind(UUID token,int number){CHANNEL.sendToServer(new SquadRequest(token,2,number,List.of(),""));}
+    private record SquadRequest(UUID token,int action,int number,List<UUID> members,String name){
+        static void encode(SquadRequest p,FriendlyByteBuf b){b.writeUUID(p.token);b.writeVarInt(p.action);b.writeVarInt(p.number);b.writeVarInt(p.members.size());for(UUID id:p.members)b.writeUUID(id);b.writeUtf(p.name,64);}
+        static SquadRequest decode(FriendlyByteBuf b){UUID token=b.readUUID();int action=b.readVarInt(),number=b.readVarInt(),size=b.readVarInt();if(size<0||size>64)throw new IllegalArgumentException("invalid assignment size");List<UUID> ids=new ArrayList<>();for(int i=0;i<size;i++)ids.add(b.readUUID());return new SquadRequest(token,action,number,List.copyOf(ids),b.readUtf(64));}
+        static void handle(SquadRequest p,Supplier<NetworkEvent.Context> supplier){var c=supplier.get();c.enqueueWork(()->{
+            ServerPlayer player=c.getSender();if(player==null)return;Session session=SESSIONS.get(player);
+            if(!player.isAlive()||session==null||!session.token.equals(p.token)){invalidate(player,p.token);return;}
+            if(!CommandRateLimit.allow(player)){sendSnapshot(player,session,false,Component.translatable("message.hostile_humans_unified.squad.rate_limited"));return;}
+            SquadData data=SquadData.get(player.server);int success=0,failed=0;
+            if(p.action==0){
+                if(p.number!=0&&!data.validNumber(p.number))return;
+                for(UUID id:new java.util.LinkedHashSet<>(p.members)){if(data.assign(player.server,player.getUUID(),p.number,id))success++;else failed++;}
+            }else if(p.action==1){if(data.rename(player.getUUID(),p.number,p.name))success++;else failed++;}
+            else if(p.action==2){
+                net.minecraft.world.item.ItemStack held=player.getMainHandItem();if(!(held.getItem() instanceof SquadCommandTokenItem))held=player.getOffhandItem();
+                if(held.getItem() instanceof SquadCommandTokenItem&&SquadCommands.bind(player,held,p.number))success++;else failed++;
+            }else return;
+            sendSnapshot(player,session,false,Component.translatable("message.hostile_humans_unified.squad.roster_result",success,failed));
+        });c.setPacketHandled(true);}
+    }
+    private static void invalidate(ServerPlayer player,UUID token){CHANNEL.send(PacketDistributor.PLAYER.with(()->player),new InvalidRoster(token));}
+    private record InvalidRoster(UUID token){
+        static void encode(InvalidRoster p,FriendlyByteBuf b){b.writeUUID(p.token);}static InvalidRoster decode(FriendlyByteBuf b){return new InvalidRoster(b.readUUID());}
+        static void handle(InvalidRoster p,Supplier<NetworkEvent.Context> supplier){var c=supplier.get();c.enqueueWork(()->DistExecutor.unsafeRunWhenOn(Dist.CLIENT,()->()->SoldierRosterScreen.invalidate(p.token)));c.setPacketHandled(true);}
+    }
+
 }

@@ -11,8 +11,8 @@ GROWTH = (JAVA / "HumanGrowth.java").read_text(encoding="utf-8")
 
 class RosterGrowthContract(unittest.TestCase):
     def test_nullable_wire_snapshot_and_protocol(self):
-        self.assertIn('PROTOCOL = "6"', NET)
-        self.assertIn("GrowthSnapshot growth) {}", NET)
+        self.assertIn('PROTOCOL = "7"', NET)
+        self.assertIn("GrowthSnapshot growth, int squad, String faction, int entityId) {}", NET)
         self.assertIn("buffer.writeBoolean(entry.growth != null)", NET)
         self.assertIn("if (entry.growth != null) entry.growth.encode(buffer)", NET)
         self.assertIn("buffer.readBoolean() ? GrowthSnapshot.decode(buffer) : null", NET)

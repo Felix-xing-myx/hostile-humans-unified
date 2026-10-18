@@ -80,8 +80,17 @@ public class HumanData {
 
     /** Last saved command state, without copying the entire entity inventory NBT. */
     public CompoundTag getPersistedCommandData() {
-        return this.entityData == null ? new CompoundTag()
-                : this.entityData.getCompound("ForgeData").copy();
+        CompoundTag result = new CompoundTag();
+        if (this.entityData == null) return result;
+        CompoundTag saved = this.entityData.getCompound("ForgeData");
+        for (String suffix : java.util.List.of("soldier_order", "soldier_combat_mode", "soldier_pickup_enabled",
+                "order_radii", "order_garrison", "order_anchor", "order_anchor_dimension", "growth", "faction", "boss",
+                "natural_state", "natural_origin")) {
+            String key = "hostile_humans_unified:" + suffix;
+            Tag value = saved.get(key);
+            if (value != null) result.put(key, value.copy());
+        }
+        return result;
     }
 
     public UUID getOwnerUUID() {
