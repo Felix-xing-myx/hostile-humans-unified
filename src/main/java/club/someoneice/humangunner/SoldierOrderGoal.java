@@ -16,12 +16,12 @@ final class SoldierOrderGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return human.hasOwner() && (SoldierOrder.get(human) != SoldierOrder.BODYGUARD
+        return (human.hasOwner() || SoldierOrder.isGarrison(human)) && (SoldierOrder.get(human) != SoldierOrder.BODYGUARD
                 || BodyguardProtection.owner(human) == null || SoldierOrder.isReturningFromRetreat(human))
-                && !human.isFleeing && human.getTarget() == null
+                && !human.isFleeing && (human.getTarget() == null || human.guardCombatState.returning())
                 && !human.isInLava() && !human.isSeekingShore() && !human.isNoAi()
                 && !human.isSleeping() && !human.isPassenger()
-                && !HumanGunner.isManualInventoryOpen(human);
+                && !HumanGunner.isManualInventoryOpen(human) && !NavigationDebugService.controls(human);
     }
 
     @Override
@@ -34,7 +34,7 @@ final class SoldierOrderGoal extends Goal {
         return true;
     }
 
-    @Override public void stop() { SoldierOrder.stopMovement(human); }
+    @Override public void stop() { SoldierOrder.stopMovement(human); NaturalRoute.stopOwned(human); }
 
     @Override
     public void tick() {

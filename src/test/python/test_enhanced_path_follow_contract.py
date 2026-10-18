@@ -34,7 +34,11 @@ class EnhancedPathFollowContract(unittest.TestCase):
         self.assertLess(code.index('Map<BlockPos,BlockState> proof=prove'),code.index('path.setNextNodeIndex(to)'))
         self.assertIn('path.setNextNodeIndex(s.original)',code)
         self.assertIn('sensitive(h,pos,current)',code)
-        self.assertIn('SoldierOrder.allowsLootPosition',code)
+        self.assertIn('SoldierOrder.allowsNavigationPosition',code)
+        orders=(PKG/'SoldierOrder.java').read_text(encoding='utf-8')
+        dispatch=orders.split('public static boolean allowsNavigationPosition',1)[1].split('private static boolean allowsPath',1)[0]
+        for boundary in ('allowsLootPosition','allowsDailyPosition','allowsCombatPosition'):
+            self.assertIn(boundary,dispatch)
 
     def test_budget_waits_preserve_native_nodes_and_use_independent_pool(self):
         code=(PKG/'HumanPathFollower.java').read_text(encoding='utf-8')

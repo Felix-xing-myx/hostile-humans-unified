@@ -61,7 +61,7 @@ class LongRangeNavigationContract(unittest.TestCase):
         self.assertIn("LongRangeNavigation.Purpose.TEST",service)
         self.assertIn("Math.min(96,value.length())",service)
         self.assertIn("LongRangeNavigation.describe(human)",service)
-        self.assertIn("LongRangeNavigation.cancelAll(human)",source("SoldierOrder"))
+        self.assertRegex(source("SoldierOrder"),r"LongRangeNavigation\.cancelAll\(\w+\)")
         for name in ("PursuitNavigation","ValuableItemPickupGoal","SoldierFollowNavigation","PerceptionInvestigationGoal"):
             self.assertIn("LongRangeNavigation.cancel",source(name))
 

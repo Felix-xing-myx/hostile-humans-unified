@@ -107,10 +107,10 @@ public final class MovementContinuity {
                 instanceof com.craftix.hostile_humans.entity.ai.HumanNavigation ground
                 ? ground.createFreshPath(goal) : human.getNavigation().createPath(goal, 0);
         boolean success = replacement != null && replacement != path && replacement.canReach()
-                && pickupRouteAllowed(human, replacement)
+                && movementRouteAllowed(human, replacement)
                 && (!human.isFleeing || RetreatPathSafety.isSafe(human, escapeThreat(human), replacement, false))
                 && human.getNavigation().moveTo(replacement, routeSpeed(human));
-        if (!success && !path.isDone() && human.getNavigation().getPath() != path)
+        if (!success && !path.isDone() && human.getNavigation().getPath() != path && movementRouteAllowed(human,path))
             human.getNavigation().moveTo(path, routeSpeed(human));
         state.nextFullSearch = human.tickCount + (success ? 20 : Math.min(80, 20 + state.failures * 5));
         state.pendingFullSearch = false;
@@ -154,6 +154,7 @@ public final class MovementContinuity {
         Vec3 candidate = human.position().add(offset);
         BlockPos feet = BlockPos.containing(candidate);
         if (!human.level().hasChunkAt(feet)
+                || !SoldierOrder.allowsNavigationPosition(human, candidate)
                 || (human.isActivelyCollectingLoot() && !human.isFleeing
                 && !SoldierOrder.allowsLootPosition(human, candidate.x, candidate.z))
                 || !human.level().getFluidState(feet).isEmpty()
@@ -179,11 +180,10 @@ public final class MovementContinuity {
         return true;
     }
 
-    private static boolean pickupRouteAllowed(Human human, Path path) {
-        if (!human.isActivelyCollectingLoot() || human.isFleeing) return true;
-        for (int i = 0; i < path.getNodeCount(); i++) {
+    private static boolean movementRouteAllowed(Human human, Path path) {
+        for (int i = path.getNextNodeIndex(); i < path.getNodeCount(); i++) {
             var node = path.getNode(i);
-            if (!SoldierOrder.allowsLootPosition(human, node.x + 0.5D, node.z + 0.5D)) return false;
+            if (!SoldierOrder.allowsNavigationPosition(human, new Vec3(node.x + 0.5D, node.y, node.z + 0.5D))) return false;
         }
         return true;
     }

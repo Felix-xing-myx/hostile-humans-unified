@@ -76,7 +76,8 @@ public final class BodyguardProtection {
         return owner != null && BodyguardPolicy.attackInRange(human.distanceToSqr(owner),
                 target.distanceToSqr(owner), ranged(human), directed(human, owner, target)
                 || SoldierCombatMode.isExplicitlyAuthorizedAgainst(human, target),
-                SoldierCombatMode.get(human) == SoldierCombatMode.ACTIVE, human.distanceToSqr(target), reach * reach);
+                SoldierCombatMode.get(human) == SoldierCombatMode.ACTIVE, human.distanceToSqr(target), reach * reach,
+                OrderDistances.followSquared(human));
     }
     static LivingEntity threat(Human human) { return resolve(human, STATES.get(human), false); }
     static LivingEntity attack(Human human) { return resolve(human, STATES.get(human), true); }
@@ -99,7 +100,8 @@ public final class BodyguardProtection {
         double threatScore = Double.MAX_VALUE, attackScore = Double.MAX_VALUE;
         boolean active = SoldierCombatMode.get(human) == SoldierCombatMode.ACTIVE;
         double reach = rangedReach(human);
-        double searchRadius = active && reach > 0.0D ? Math.max(48.0D, reach + 12.0D) : 48.0D;
+        double searchRadius = active && reach > 0.0D ? Math.max(OrderDistances.follow(human), reach + 12.0D)
+                : OrderDistances.follow(human);
         for (LivingEntity candidate : HumanPerception.knownDynamicTargets(human)) {
             if (!HumanPerception.canTarget(human,candidate)) continue;
             if (candidate == owner || candidate == human || !candidate.isAlive() || candidate.isRemoved()

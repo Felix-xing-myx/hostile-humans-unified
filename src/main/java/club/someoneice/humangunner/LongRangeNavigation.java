@@ -128,12 +128,13 @@ public final class LongRangeNavigation {
     }
     private static int signature(Human h) {
         // Real command changes cancel all lanes through SoldierOrder; health changes invalidate reuse immediately.
-        return Objects.hash(SoldierOrder.get(h),h.getOwnerUUID(),h.getMaxFallDistance(),h.isFleeing,
+        return Objects.hash(OrderDistances.signature(h),h.getOwnerUUID(),h.getMaxFallDistance(),h.isFleeing,
                 h.getNavigation().canFloat());
     }
     private static boolean valid(Human h,Path path,Purpose purpose) {
         if(path==null||!path.canReach()||path.isDone()||!HumanTerrainSafety.safePath(h,path))return false;
         if(purpose==Purpose.TEST||purpose==Purpose.FOLLOW)return true;
+        if(purpose==Purpose.INVESTIGATION)return SoldierOrder.allowsDailyPath(h,path);
         for(int i=path.getNextNodeIndex();i<path.getNodeCount();i++) {
             var node=path.getNode(i);
             if(purpose==Purpose.LOOT?!SoldierOrder.allowsLootPosition(h,node.x+.5,node.z+.5)

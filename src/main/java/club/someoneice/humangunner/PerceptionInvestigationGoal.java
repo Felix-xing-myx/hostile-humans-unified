@@ -42,6 +42,11 @@ public class PerceptionInvestigationGoal extends Goal {
         }
         Path current=h.getNavigation().getPath();
         boolean owned=ownPath!=null&&current!=null&&(current==ownPath||MovementContinuity.ownsRoute(h,ownPath));
+        if(owned&&!SoldierOrder.allowsDailyPath(h,current)){
+            h.getNavigation().stop();ownPath=null;planning=false;beganWork=false;
+            LongRangeNavigation.cancel(h,LongRangeNavigation.Purpose.INVESTIGATION);
+            nextAttempt=now+c().integer("investigation.retry_ticks");return;
+        }
         if(owned)ownPath=current;
         boolean lostRoute=ownPath!=null&&!ownPath.isDone()&&!owned;
         boolean refreshing=lostRoute||owned&&!ownPath.isDone()
@@ -76,6 +81,10 @@ public class PerceptionInvestigationGoal extends Goal {
             BasicNavigationBudget.cancel(h);candidate=h.getNavigation().createPath(BlockPos.containing(destination),1);
         }
         planning=false;if(!refreshing)points++;beganWork=true;nextAttempt=now+c().integer("investigation.repath_ticks");
+        if(candidate!=null&&!SoldierOrder.allowsDailyPath(h,candidate)){
+            clue.attempts++;nextAttempt=now+c().integer("investigation.retry_ticks");
+            HumanPerception.decision(h,"调查受限","行动命令拒绝实际路线，不计声音不可达");return;
+        }
         if(candidate==null||!candidate.canReach()||!HumanTerrainSafety.safePath(h,candidate)){
             if(query.status()!=LongRangeNavigation.Status.RESTRICTED&&h.level().hasChunkAt(BlockPos.containing(destination)))
                 SoundInvestigationMemory.failed(h,clue);
@@ -94,9 +103,9 @@ public class PerceptionInvestigationGoal extends Goal {
             BlockPos feet=seed.offset(0,distance*sign,0);
             if(!level.hasChunkAt(feet)||!level.getWorldBorder().isWithinBounds(feet)){floorRestricted=true;continue;}
             if(!SafePositions.isSafe(level,feet))continue;
-            Vec3 candidate=Vec3.atBottomCenterOf(feet);if(!SoldierOrder.allowsCombatPosition(h,candidate)){floorRestricted=true;continue;}
+            Vec3 candidate=Vec3.atBottomCenterOf(feet);if(!SoldierOrder.allowsDailyPosition(h,candidate)){floorRestricted=true;continue;}
             SoldierOrder order=SoldierOrder.get(h);
-            if(h.hasOwner()&&(order==SoldierOrder.FOLLOW||order==SoldierOrder.PATROL)&&candidate.distanceToSqr(origin)>Math.pow(c().number("investigation.command_deviation"),2)){floorRestricted=true;continue;}
+            if(h.hasOwner()&&order==SoldierOrder.FOLLOW&&candidate.distanceToSqr(origin)>Math.pow(c().number("investigation.command_deviation"),2)){floorRestricted=true;continue;}
             if(!RetreatPathSafety.isHazard(h,feet)&&!RetreatPathSafety.isHazard(h,feet.below())&&level.noCollision(h,h.getBoundingBox().move(candidate.subtract(h.position()))))return candidate;
         }return null;
     }

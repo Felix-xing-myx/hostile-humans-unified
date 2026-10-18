@@ -8,9 +8,13 @@ final class BodyguardPolicy {
 
     static boolean attackInRange(double soldierOwner, double targetOwner, boolean ranged, boolean directed,
                                  boolean active, double targetSoldier, double weaponRangeSquared) {
-        return soldierOwner <= CHASE_SQUARED && (targetOwner <= CHASE_SQUARED
+        return attackInRange(soldierOwner,targetOwner,ranged,directed,active,targetSoldier,weaponRangeSquared,RANGED_SQUARED);
+    }
+    static boolean attackInRange(double soldierOwner, double targetOwner, boolean ranged, boolean directed,
+                                 boolean active, double targetSoldier, double weaponRangeSquared, double commandRangeSquared) {
+        return soldierOwner <= commandRangeSquared && soldierOwner <= CHASE_SQUARED && (targetOwner <= CHASE_SQUARED
                 || (ranged && (active || directed) && targetSoldier <= weaponRangeSquared
-                && (active || targetOwner <= RANGED_SQUARED)));
+                && (active || targetOwner <= commandRangeSquared)));
     }
     static double priority(double targetOwner, boolean directed, boolean current) {
         // A threat near the owner beats a distant attacker even before a hit.

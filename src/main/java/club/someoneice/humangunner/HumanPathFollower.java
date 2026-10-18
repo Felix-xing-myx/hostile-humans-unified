@@ -28,8 +28,7 @@ public final class HumanPathFollower {
                 &&Double.isFinite(h.getX())&&Double.isFinite(h.getY())&&Double.isFinite(h.getZ());
     }
     private static boolean allowed(Human h,Vec3 p){
-        return h.isActivelyCollectingLoot()?SoldierOrder.allowsLootPosition(h,p.x,p.z)
-                :SoldierOrder.allowsCombatPosition(h,p);
+        return SoldierOrder.allowsNavigationPosition(h,p);
     }
     private static void dropProof(State s){s.proof=null;s.original=s.selected=-1;}
     /** Cheap changed-block guard runs before native navigation, including airborne ticks. */

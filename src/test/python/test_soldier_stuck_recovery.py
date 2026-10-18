@@ -46,7 +46,12 @@ class SoldierStuckRecoveryTest(unittest.TestCase):
         self.assertIn('MovementContinuity.cancelStep(human)', source)
         self.assertIn('state.peaceUntil = human.tickCount + 40', source)
         self.assertIn('state.cooldownUntil = human.tickCount + 200', source)
-        self.assertIn('SoldierStuckRecovery.recovering(human)', read('SoldierOrder.java'))
+        self.assertIn('SoldierStuckRecovery.recovering(h)', read('SoldierOrder.java'))
+        eligibility = source[source.index('static boolean eligibleOrder'):source.index('static void tick')]
+        self.assertIn('SoldierOrder.FOLLOW', eligibility)
+        self.assertIn('SoldierOrder.BODYGUARD', eligibility)
+        self.assertNotIn('SoldierOrder.GARRISON', eligibility)
+        self.assertNotIn('SoldierOrder.GUARD', eligibility)
         safe = read('SafePositions.java')
         self.assertIn('return checkedPlacement(human, floor == null ? null', safe)
         for gate in ('level.hasChunk', 'level.noCollision(human, box)', 'RetreatPathSafety.isHazard', 'border.getMinX()'):
@@ -54,9 +59,10 @@ class SoldierStuckRecoveryTest(unittest.TestCase):
 
     def test_patrol_destination_is_saved_only_after_an_accepted_order_route(self):
         source = read('SoldierOrder.java')
-        self.assertIn('if (get(human) == PATROL) human.getPersistentData().putLong(PATROL_DESTINATION, anchor.asLong())', source)
-        self.assertIn('static BlockPos recoveryPost(Human human)', source)
-        self.assertEqual(source.count('human.getPersistentData().remove(PATROL_DESTINATION)'), 2)
+        self.assertLess(source.index('if(!RetreatPathSafety.tryMove(h,path,speed))return false;'),
+                        source.index('h.getPersistentData().putLong(PATROL_DESTINATION,pos.asLong())'))
+        self.assertIn('static BlockPos recoveryPost(Human h)', source)
+        self.assertIn('h.getPersistentData().remove(PATROL_DESTINATION)', source)
         self.assertNotIn('PATROL_DESTINATION', read('PursuitNavigation.java'))
 
 

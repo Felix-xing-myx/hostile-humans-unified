@@ -76,7 +76,7 @@ public final class HumanTargetCoordinator {
         if(h.isFleeing&&current==null)return null;
         if(desired!=null&&(!HumanPerception.canTarget(h,desired)||!role&&!HumanPerception.selectionAllowed(h,desired)))desired=null;
         if(current!=desired){h.setTarget(desired);state.selected=h.getTarget()==null?null:h.getTarget().getUUID();state.changed=now;state.reason=h.getTarget()==desired?why:"最终许可或事件拒绝目标请求";}
-        if(SoldierOrder.get(h)==SoldierOrder.GUARD&&h.getTarget()!=null)h.guardCombatState.retainTarget(h.getTarget().getUUID());
+        if(SoldierOrder.isGarrison(h)&&h.getTarget()!=null)h.guardCombatState.retainTarget(h.getTarget().getUUID());
         return h.getTarget();
     }
 }

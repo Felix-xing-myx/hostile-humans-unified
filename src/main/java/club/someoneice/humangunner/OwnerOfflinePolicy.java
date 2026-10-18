@@ -68,10 +68,15 @@ final class OwnerOfflinePolicy {
         UUID owner = human.getOwnerUUID();
         if (owner == null) return;
         boolean escaping = human.isInLava() || human.isFleeing || human.isSeekingShore();
+        boolean hadGarrison = human.getPersistentData().contains(GarrisonSettings.PLAYER);
+        CompoundTag garrison = human.getPersistentData().getCompound(GarrisonSettings.PLAYER).copy();
         SoldierOrder.set(human, SoldierOrder.GUARD, escaping);
         // set() cancels older resume records. Save only after the temporary
         // transition; repeated offline ticks must not replace the original order.
         remember(human.getPersistentData(), owner, original);
+        CompoundTag resume = human.getPersistentData().getCompound(RESUME);
+        resume.putBoolean("HadGarrison", hadGarrison);
+        resume.put("Garrison", garrison);
         human.setOrderedToSit(false);
         if (!escaping) {
             MovementSpeedController.normal(human);
@@ -91,6 +96,11 @@ final class OwnerOfflinePolicy {
         }
         SoldierOrder original = resumeOrder(human.getPersistentData(), human.getOwnerUUID(), SoldierOrder.get(human));
         if (original == null) return;
+        CompoundTag resume = human.getPersistentData().getCompound(RESUME);
+        if (resume.contains("HadGarrison")) {
+            if (resume.getBoolean("HadGarrison")) human.getPersistentData().put(GarrisonSettings.PLAYER, resume.getCompound("Garrison").copy());
+            else human.getPersistentData().remove(GarrisonSettings.PLAYER);
+        }
         boolean escaping = human.isInLava() || human.isFleeing || human.isSeekingShore();
         SoldierOrder.set(human, original, escaping); // Consumes the record once.
     }
@@ -105,7 +115,7 @@ final class OwnerOfflinePolicy {
 
     /** Reject missing, malformed, transferred or superseded commands. */
     static SoldierOrder resumeOrder(CompoundTag data, UUID owner, SoldierOrder current) {
-        if (owner == null || current != SoldierOrder.GUARD) return null;
+        if (owner == null || SoldierOrder.logical(current) != SoldierOrder.GARRISON) return null;
         CompoundTag record = data.getCompound(RESUME);
         if (!record.hasUUID("Owner") || !owner.equals(record.getUUID("Owner"))) return null;
         String value = record.getString("Order");

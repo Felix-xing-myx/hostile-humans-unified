@@ -56,6 +56,10 @@ final class BodyguardMovementGoal extends Goal {
     @Override public void tick() {
         ServerPlayer owner = BodyguardProtection.owner(human);
         if (owner == null) return;
+        if (ownedPath != null && MovementContinuity.ownsRoute(human,ownedPath)
+                && !SoldierOrder.allowsCombatPath(human,ownedPath)) {
+            human.getNavigation().stop();ownedPath=null;nextPlan=human.tickCount;
+        }
         if (SoldierFollowNavigation.rescueIfStuck(human, owner, 4.0)) return;
         Vec3 goal = destination(owner);
         boolean returning = human.distanceToSqr(owner) > 36.0D;
@@ -76,13 +80,14 @@ final class BodyguardMovementGoal extends Goal {
                                 Mth.floor(goal.x) + (attempt == 1 ? 1 : attempt == 2 ? -1 : 0), Mth.floor(goal.z));
                         if (point == null) continue;
                         var path = human.getNavigation().createPath(BlockPos.containing(point), 0);
-                        if (path != null && path.canReach() && human.getNavigation().moveTo(path, speed)) {
+                        if (path != null && path.canReach() && SoldierOrder.allowsCombatPath(human,path)
+                                && human.getNavigation().moveTo(path, speed)) {
                             ownedPath = path;
                             accepted = true;
                         }
                     }
                     if (!accepted) {
-                        if (old != null && !old.isDone()) human.getNavigation().moveTo(old, speed);
+                        if (old != null && !old.isDone() && SoldierOrder.allowsCombatPath(human,old)) human.getNavigation().moveTo(old, speed);
                         followFallback = true;
                         nextPlan = human.tickCount + 1;
                     }

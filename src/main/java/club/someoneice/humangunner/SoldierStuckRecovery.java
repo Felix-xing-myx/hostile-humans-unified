@@ -25,8 +25,8 @@ final class SoldierStuckRecovery {
         return stationaryTicks >= 200 && destinationDistanceSquared > (follow ? 6.25 : 2.25);
     }
     static boolean eligibleOrder(SoldierOrder order) {
-        return order == SoldierOrder.FOLLOW || order == SoldierOrder.BODYGUARD
-                || order == SoldierOrder.GUARD || order == SoldierOrder.PATROL;
+        // Anchored orders retry safe paths; finite return must not teleport or renew its clock.
+        return order == SoldierOrder.FOLLOW || order == SoldierOrder.BODYGUARD;
     }
     static void tick(Human human) {
         if (!(human.level() instanceof ServerLevel) || !human.hasOwner() || !human.isAlive()
