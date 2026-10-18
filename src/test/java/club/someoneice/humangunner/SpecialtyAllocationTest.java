@@ -36,6 +36,13 @@ public final class SpecialtyAllocationTest {
         rejects(() -> SpecialtyAllocation.solve(new double[]{1}, new double[]{0}, new double[]{1}, new double[]{2}, 1));
         rejects(() -> SpecialtyAllocation.solve(new double[]{Double.NaN}, new double[]{1}, new double[]{1}, new double[]{2}, 1));
         rejects(() -> SpecialtyAllocation.solve(new double[]{1}, new double[]{1}, new double[]{3}, new double[]{2}, 1));
+        for (double invalidAlpha : new double[]{Double.NaN, Double.POSITIVE_INFINITY, -.01, 1.01})
+            rejects(() -> SpecialtyAllocation.allocate(1, PREFERENCES[0], COSTS, CAPS, ones(), invalidAlpha, .5, 1.8, false));
+        for (double invalidBound : new double[]{Double.NaN, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY, 0, -1}) {
+            rejects(() -> SpecialtyAllocation.allocate(1, PREFERENCES[0], COSTS, CAPS, ones(), .25, invalidBound, 1.8, false));
+            rejects(() -> SpecialtyAllocation.allocate(1, PREFERENCES[0], COSTS, CAPS, ones(), .25, .5, invalidBound, false));
+        }
+        rejects(() -> SpecialtyAllocation.allocate(1, PREFERENCES[0], COSTS, CAPS, ones(), .25, 1.8, .5, false));
         for (double[] preference : PREFERENCES) {
             var boss = allocate(1, preference, ones(), true);
             verify(boss, 1);
@@ -47,6 +54,13 @@ public final class SpecialtyAllocationTest {
         var redBoss = allocate(1, PREFERENCES[1], ones(), true);
         close(redBoss.multipliers()[0], .8114, .0001, "red boss health");
         close(redBoss.multipliers()[6], 1.6261, .0001, "red boss melee");
+        // Legal narrow health center: amplification crosses zero before the required epsilon floor.
+        double[] lowCenter = ones(); lowCenter[0] = .4;
+        require(SpecialtyAllocation.center(lowCenter, COSTS)[0] < 1 - 1/1.8, "extreme preference exercises epsilon floor");
+        var extremeBoss = allocate(1, lowCenter, ones(), true);
+        verify(extremeBoss, 1);
+        close(extremeBoss.multipliers()[0], .5, 1e-8, "extreme boss keeps legal lower boundary");
+        require(extremeBoss.multipliers()[1] != 1, "extreme boss conserves allocation instead of baseline fallback");
         Random random = new Random(0x51ec1a17L);
         for (double[] preference : PREFERENCES) for (int n = 0; n < 20000; n++) {
             double budget = n % 2 == 0 ? .75 : 1.25;

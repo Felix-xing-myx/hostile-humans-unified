@@ -22,6 +22,10 @@ public final class SpecialtyAllocation {
                                   double[] tilts, double alpha, double absoluteMin, double absoluteMax,
                                   boolean boss) {
         positive(budget);
+        if (!Double.isFinite(alpha) || alpha < 0 || alpha > 1)
+            throw new IllegalArgumentException("alpha must be finite in [0,1]");
+        positive(absoluteMin); positive(absoluteMax);
+        if (absoluteMin > absoluteMax) throw new IllegalArgumentException("inverted absolute bounds");
         int n = costs.length;
         if (n != caps.length || n != tilts.length) throw new IllegalArgumentException("dimensions");
         double[] center = center(preference, costs);
@@ -29,8 +33,7 @@ public final class SpecialtyAllocation {
         // Bosses have no random tilt. Amplify the complete normalized center, then conserve it.
         if (boss) {
             for (int i = 0; i < n; i++) {
-                center[i] = 1 + (center[i] - 1) * 1.8;
-                positive(center[i]);
+                center[i] = Math.max(1e-6, 1 + (center[i] - 1) * 1.8);
             }
             center = center(center, costs);
         }
