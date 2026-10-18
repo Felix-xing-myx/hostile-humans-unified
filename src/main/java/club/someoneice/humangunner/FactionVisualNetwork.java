@@ -2,7 +2,6 @@ package club.someoneice.humangunner;
 
 import java.util.*;
 import java.util.function.Supplier;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.api.distmarker.Dist;
@@ -32,9 +31,9 @@ public final class FactionVisualNetwork {
     public static synchronized void register() {
         if (registered) return;
         registered = true;
-        CHANNEL.registerMessage(0, Definitions.class, FactionVisualNetwork::writeDefinitions, FactionVisualNetwork::readDefinitions,
+        CHANNEL.registerMessage(0, Definitions.class, FactionVisualCodec::writeDefinitions, FactionVisualCodec::readDefinitions,
                 FactionVisualNetwork::handleDefinitions, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
-        CHANNEL.registerMessage(1, PlayerBand.class, FactionVisualNetwork::writeBand, FactionVisualNetwork::readBand,
+        CHANNEL.registerMessage(1, PlayerBand.class, FactionVisualCodec::writeBand, FactionVisualCodec::readBand,
                 FactionVisualNetwork::handleBand, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         MinecraftForge.EVENT_BUS.register(FactionVisualNetwork.class);
     }
@@ -91,42 +90,6 @@ public final class FactionVisualNetwork {
         if (sent == null || sent.revision() != FactionDefinitions.current().number()) refreshViewer(viewer);
         if (event.getTarget() instanceof ServerPlayer target)
             send(viewer, band(target, IdentityBands.selected(target), FactionDefinitions.current().number()));
-    }
-    static void writeDefinitions(Definitions packet, FriendlyByteBuf out) {
-        if (packet.entries().size() > 256) throw new IllegalArgumentException("Faction visual count");
-        out.writeLong(packet.revision()); out.writeBoolean(packet.humansVisible()); out.writeBoolean(packet.playersVisible());
-        out.writeVarInt(packet.entries().size());
-        for (Definition entry : packet.entries()) {
-            if (ResourceLocation.tryParse(entry.id()) == null || (entry.color() & 0xFF000000) != 0
-                    || (!entry.style().equals("base") && !entry.style().equals("none")))
-                throw new IllegalArgumentException("Faction visual definition");
-            out.writeUtf(entry.id(), 256); out.writeInt(entry.color()); out.writeUtf(entry.name(), 128); out.writeUtf(entry.style(), 8);
-        }
-    }
-    static Definitions readDefinitions(FriendlyByteBuf in) {
-        long revision = in.readLong(); boolean humans = in.readBoolean(), players = in.readBoolean();
-        int count = in.readVarInt();
-        if (count < 0 || count > 256) throw new IllegalArgumentException("Faction visual count");
-        List<Definition> entries = new ArrayList<>(count); Set<String> unique = new HashSet<>();
-        for (int i = 0; i < count; i++) {
-            String id = in.readUtf(256); int color = in.readInt(); String name = in.readUtf(128), style = in.readUtf(8);
-            if (ResourceLocation.tryParse(id) == null || !unique.add(id) || (color & 0xFF000000) != 0
-                    || (!style.equals("base") && !style.equals("none"))) throw new IllegalArgumentException("Faction visual definition");
-            entries.add(new Definition(id, color, name, style));
-        }
-        if (in.isReadable()) throw new IllegalArgumentException("Trailing faction visual data");
-        return new Definitions(revision, humans, players, entries);
-    }
-    static void writeBand(PlayerBand packet, FriendlyByteBuf out) {
-        if (packet.grade() < 0 || packet.grade() > 4 || (packet.grade() > 0 && ResourceLocation.tryParse(packet.faction()) == null))
-            throw new IllegalArgumentException("Player band state");
-        out.writeUUID(packet.player()); out.writeUtf(packet.faction(), 256); out.writeVarInt(packet.grade()); out.writeLong(packet.revision());
-    }
-    static PlayerBand readBand(FriendlyByteBuf in) {
-        PlayerBand packet = new PlayerBand(in.readUUID(), in.readUtf(256), in.readVarInt(), in.readLong());
-        if (packet.grade() < 0 || packet.grade() > 4 || (packet.grade() > 0 && ResourceLocation.tryParse(packet.faction()) == null)
-                || in.isReadable()) throw new IllegalArgumentException("Player band state");
-        return packet;
     }
     private static void handleDefinitions(Definitions packet, Supplier<NetworkEvent.Context> supplier) {
         var context = supplier.get();
