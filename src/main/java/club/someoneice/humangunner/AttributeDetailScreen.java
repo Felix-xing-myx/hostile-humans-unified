@@ -28,7 +28,8 @@ public final class AttributeDetailScreen extends Screen {
     void update(AttributeDetailSnapshot next) {
         if(next.target().equals(snapshot.target())&&next.entityId()==snapshot.entityId()&&next.tick()>=snapshot.tick())snapshot=next;
     }
-    void serverClosed(){suppressClose=true;minecraft.setScreen(parent);}
+    private boolean managedParent(){return parent instanceof SoldierCommandScreen||parent instanceof SoldierRosterScreen;}
+    void serverClosed(){suppressClose=true;minecraft.setScreen(managedParent()?null:parent);}
     void disconnect(){suppressClose=true;}
     private static Component text(String key,Object...args){return Component.translatable("attribute_detail."+key,args);}
     private static Component dimension(String key){return text("dimension."+key);}
@@ -36,7 +37,15 @@ public final class AttributeDetailScreen extends Screen {
     @Override public boolean isPauseScreen(){return false;}
     @Override public void tick(){if(++ticks%20==0)AttributeDetailNetwork.keepAlive(token);}
     @Override public void removed(){if(!suppressClose)AttributeDetailNetwork.close(token);}
-    @Override public void onClose(){minecraft.setScreen(parent);}
+    @Override public void onClose(){
+        if(managedParent()) {
+            // The old screen's removed() closed its capability when details opened.
+            // Send before setScreen/removed closes this detail capability as well.
+            if(!suppressClose&&minecraft.getConnection()!=null)
+                AttributeDetailNetwork.returnToParent(token,parent instanceof SoldierRosterScreen);
+            minecraft.setScreen(null); // only a fresh server opening may restore command controls
+        } else minecraft.setScreen(parent);
+    }
     private int left(){return Math.max(4,(width-Math.min(580,width-12))/2);}
     private int right(){return width-left();}
     private int viewTop(){return contentTop;}

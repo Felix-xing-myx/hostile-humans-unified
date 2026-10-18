@@ -46,7 +46,7 @@ public final class HumanCommandNetwork {
     }
     private static void send(ServerPlayer p,Session s,Human h,boolean opening){
         CHANNEL.send(PacketDistributor.PLAYER.with(()->p),new Snapshot(s.token(),h.getUUID(),h.getId(),opening,h.getDisplayName(),
-                CommandView.of(h),HumanGrowth.snapshot(h),String.valueOf(HumanFactions.id(h))));
+                CommandView.of(h),HumanGrowth.snapshot(h),HumanFactions.wireId(HumanFactions.id(h))));
     }
     public static void tickServer(MinecraftServer server) {
         SquadCommandNetwork.tickServer(server);
@@ -66,7 +66,7 @@ public final class HumanCommandNetwork {
     public static void closePlayer(ServerPlayer player){SESSIONS.remove(player);SquadCommandNetwork.closePlayer(player);}
     public static void clearSessions(){SESSIONS.clear();SquadCommandNetwork.clearSessions();}
     private record Snapshot(UUID token,UUID human,int entityId,boolean opening,Component name,CommandView view,GrowthSnapshot growth,String faction){
-        static void encode(Snapshot p,FriendlyByteBuf b){b.writeUUID(p.token);b.writeUUID(p.human);b.writeVarInt(p.entityId);b.writeBoolean(p.opening);b.writeComponent(p.name);p.view.encode(b);p.growth.encode(b);b.writeUtf(p.faction,256);}
+        static void encode(Snapshot p,FriendlyByteBuf b){b.writeUUID(p.token);b.writeUUID(p.human);b.writeVarInt(p.entityId);b.writeBoolean(p.opening);b.writeComponent(p.name);p.view.encode(b);p.growth.encode(b);b.writeUtf(HumanFactions.wireId(p.faction),256);}
         static Snapshot decode(FriendlyByteBuf b){return new Snapshot(b.readUUID(),b.readUUID(),b.readVarInt(),b.readBoolean(),b.readComponent(),CommandView.decode(b),GrowthSnapshot.decode(b),b.readUtf(256));}
         static void handle(Snapshot p,Supplier<NetworkEvent.Context> supplier){var c=supplier.get();c.enqueueWork(()->DistExecutor.unsafeRunWhenOn(Dist.CLIENT,()->()->SoldierCommandScreen.show(p.token,p.human,p.entityId,p.opening,p.name,p.view,p.growth,p.faction)));c.setPacketHandled(true);}
     }

@@ -32,6 +32,7 @@ public final class AttributeDetailNetwork {
     private record Open(int entityId, UUID target, boolean wildTool, long sequence) { }
     private record Heartbeat(UUID token) { }
     private record Close(UUID token) { }
+    private record Return(UUID token, boolean roster) { }
     private record View(UUID token, boolean opening, AttributeDetailSnapshot snapshot) { }
     private record Closed(UUID token) { }
     private static final Map<ServerPlayer, Session> SESSIONS = new WeakHashMap<>();
@@ -39,7 +40,7 @@ public final class AttributeDetailNetwork {
     private static long clientSequence;
     private static boolean registered;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation(HumanGunner.MOD_ID,"attribute_detail"),
-            () -> "1", "1"::equals,"1"::equals);
+            () -> "2", "2"::equals,"2"::equals);
     private AttributeDetailNetwork() { }
     public static synchronized void register() {
         if(registered)return; registered=true;
@@ -50,6 +51,9 @@ public final class AttributeDetailNetwork {
             View view=new View(b.readUUID(),b.readBoolean(),AttributeDetailSnapshot.read(b)); end(b);return view;
         },AttributeDetailNetwork::receive,Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         CHANNEL.registerMessage(4,Closed.class,(p,b)->b.writeUUID(p.token()),b->new Closed(readToken(b)),AttributeDetailNetwork::closed,Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        CHANNEL.registerMessage(5,Return.class,(p,b)->{b.writeUUID(p.token());b.writeBoolean(p.roster());},b->{
+            Return packet=new Return(b.readUUID(),b.readBoolean());end(b);return packet;
+        },AttributeDetailNetwork::returnRequest,Optional.of(NetworkDirection.PLAY_TO_SERVER));
         MinecraftForge.EVENT_BUS.register(AttributeDetailNetwork.class);
         DistExecutor.unsafeRunWhenOn(Dist.CLIENT,()->AttributeDetailClient::register);
     }
@@ -60,6 +64,7 @@ public final class AttributeDetailNetwork {
     public static void requestOwned(int entityId, UUID humanId) { request(entityId,humanId,false); }
     static void keepAlive(UUID token) { CHANNEL.sendToServer(new Heartbeat(token)); }
     static void close(UUID token) { CHANNEL.sendToServer(new Close(token)); }
+    static void returnToParent(UUID token, boolean roster) { CHANNEL.sendToServer(new Return(token,roster)); }
     private static long now(ServerPlayer viewer) { return viewer.serverLevel().getGameTime(); }
     private static boolean rateOpen(ServerPlayer viewer) {
         long now=now(viewer), previous=LAST_OPEN.getOrDefault(viewer,Long.MIN_VALUE/2);
@@ -129,6 +134,24 @@ public final class AttributeDetailNetwork {
     private static void closeRequest(Close packet,Supplier<NetworkEvent.Context> supplier) {
         var context=supplier.get();ServerPlayer viewer=context.getSender();context.enqueueWork(()->{
             Session session=SESSIONS.get(viewer);if(session!=null&&session.token().equals(packet.token()))SESSIONS.remove(viewer);
+        });context.setPacketHandled(true);
+    }
+    /** Consumes the detail capability; a fresh parent session always passes its original authority boundary. */
+    private static void returnRequest(Return packet,Supplier<NetworkEvent.Context> supplier) {
+        var context=supplier.get();ServerPlayer viewer=context.getSender();context.enqueueWork(()->{
+            Session session=SESSIONS.get(viewer);
+            if(viewer==null||session==null||!session.token().equals(packet.token()))return;
+            Human human=target(viewer,session);
+            SESSIONS.remove(viewer); // replay cannot reopen another parent or leave a hidden detail session
+            if(human==null||AttributeDetailPolicy.expired(now(viewer),session.heartbeat())) {
+                send(viewer,new Closed(session.token()));return;
+            }
+            if(packet.roster()) {
+                boolean holdsRoster=viewer.getMainHandItem().getItem() instanceof SoldierRosterItem
+                        ||viewer.getOffhandItem().getItem() instanceof SoldierRosterItem;
+                if(holdsRoster)SoldierRosterNetwork.open(viewer);
+                else send(viewer,new Closed(session.token()));
+            } else HumanCommandNetwork.openFor(viewer,human);
         });context.setPacketHandled(true);
     }
     private static void receive(View packet,Supplier<NetworkEvent.Context> supplier) {

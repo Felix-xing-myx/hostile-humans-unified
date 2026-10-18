@@ -172,7 +172,7 @@ final class SoldierRosterNetwork {
                     live == null ? -1 : Math.round(live.getMaxHealth()),
                     order, combat, pickup, canMoveEarlier, canMoveLater,
                     live != null ? HumanGrowth.snapshot(live) : HumanGrowth.savedSnapshot(lastData),
-                    squads.membership(player.getUUID(),soldier.id()),live!=null?String.valueOf(HumanFactions.id(live)):lastData.getString("hostile_humans_unified:faction"),live==null?-1:live.getId()));
+                    squads.membership(player.getUUID(),soldier.id()),HumanFactions.wireId(live!=null?HumanFactions.id(live):lastData.getString("hostile_humans_unified:faction")),live==null?-1:live.getId()));
         }
         int[] counts = new int[4], limits = new int[4];
         for (int tier = 0; tier < 4; tier++) {
@@ -227,7 +227,7 @@ final class SoldierRosterNetwork {
             buffer.writeBoolean(entry.canMoveLater);
             buffer.writeBoolean(entry.growth != null);
             if (entry.growth != null) entry.growth.encode(buffer);
-            buffer.writeVarInt(entry.squad);buffer.writeUtf(entry.faction,256);buffer.writeVarInt(entry.entityId);
+            buffer.writeVarInt(entry.squad);buffer.writeUtf(HumanFactions.wireId(entry.faction),256);buffer.writeVarInt(entry.entityId);
         }
         for (int i = 0; i < 4; i++) {
             buffer.writeVarInt(packet.counts[i]);
