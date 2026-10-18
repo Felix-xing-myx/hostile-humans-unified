@@ -160,22 +160,37 @@ public final class RecruitmentCombatTest {
         guard.retainTarget(first);
         check(guard.retainsTarget(first), "accepted chase survives vanilla target-goal handoff");
         for (int tick = 101; tick < 500; tick++) {
+            if (tick == 300) {
+                guard.attacked(second, tick, true);
+                guard.retainTarget(second);
+                check(guard.outsideSince() == 100, "new hit and target cannot renew the outer-ring clock");
+            }
             guard.tick(tick, true, true);
             check(!guard.returning(), "guard may fight outside for full twenty seconds");
         }
         guard.tick(500, true, true);
         check(guard.returning(), "guard returns at exact 400-tick boundary");
-        check(!guard.retainsTarget(first), "excursion expiry releases retained chase");
+        check(!guard.retainsTarget(first) && !guard.retainsTarget(second), "excursion expiry releases both old and latest retained chase");
         guard.tick(501, false, false);
         check(guard.returning(), "entering area edge does not cancel return to post");
         guard.attacked(first, 502, true);
-        check(!guard.returning(), "fresh hit interrupts return");
+        check(guard.returning() && guard.outsideSince() == 100,
+                "fresh hit preserves return and original excursion start");
+        check(guard.retaliating(first, 502), "returning guard may remember its actual self attacker");
+        check(!guard.canExcursion(502), "retaliation permission never grants another return-time excursion");
+        guard.retainTarget(first);
+        check(!guard.retainsTarget(first), "return-time hit cannot restore retained offensive chase");
         guard.tick(901, true, true);
-        check(!guard.returning(), "fresh hit resets full excursion duration");
+        check(guard.returning(), "continuing damage cannot cancel the return deadline");
         guard.tick(902, true, true);
-        check(guard.returning(), "renewed combat still has a finite excursion limit");
-        guard.returnedToPost();
+        check(guard.returning(), "expired retaliation never changes return state");
+        guard.returnedToPost(920, 80);
         check(!guard.returning(), "reaching post ends return state");
+        guard.attacked(first, 950, false);
+        check(guard.retaliating(first, 950) && !guard.canExcursion(999),
+                "actual self defense remains recorded without bypassing the arrival cooldown");
+        check(guard.cooldownUntil() == 1000 && guard.canExcursion(1000),
+                "fresh hits do not extend or shorten the exact 80-tick cooldown");
         guard.tick(1000, true, true);
         guard.tick(1399, true, true);
         check(!guard.returning(), "later excursion gets its own clock");

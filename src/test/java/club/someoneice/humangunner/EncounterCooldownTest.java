@@ -117,8 +117,18 @@ public final class EncounterCooldownTest {
                 "support spawns beside owner");
         check(SignalPolicy.minimumDistance(true) == 48 && SignalPolicy.maximumDistance(true) == 60,
                 "hostile signal distance");
-        check(SoldierOrder.values().length == 5 && SoldierOrder.BODYGUARD.ordinal() == 4,
-                "five soldier orders, old ordinals preserved");
+        SoldierOrder[] persistedOrders = {SoldierOrder.HOLD_POSITION, SoldierOrder.GUARD,
+                SoldierOrder.FOLLOW, SoldierOrder.PATROL, SoldierOrder.BODYGUARD};
+        check(SoldierOrder.values().length == 6 && SoldierOrder.GARRISON.ordinal() == 5,
+                "garrison appends to the persisted order enum");
+        for (int ordinal = 0; ordinal < persistedOrders.length; ordinal++) {
+            check(SoldierOrder.values()[ordinal] == persistedOrders[ordinal],
+                    "legacy saved order ordinal preserved: " + ordinal);
+            SoldierOrder logical = ordinal == 0 || ordinal == 1 || ordinal == 3
+                    ? SoldierOrder.GARRISON : persistedOrders[ordinal];
+            check(SoldierOrder.logical(persistedOrders[ordinal]) == logical,
+                    "legacy names resolve through three logical modes: " + persistedOrders[ordinal]);
+        }
         System.out.println("PASS: per-tier signal cooldowns, support lifetime/distances and soldier orders");
         check(!SpawnSafety.farEnough(96, 0), "96 block boundary excluded");
         check(!SpawnSafety.farEnough(-96, 0), "negative boundary excluded");

@@ -46,9 +46,14 @@ public final class SoldierFollowPolicyTest {
         check(SoldierFollowNavigation.retryDelay(1) == 10, "failed follow searches back off");
         check(SoldierFollowNavigation.retryDelay(100) == 40, "retry delay stays bounded");
         for (SoldierOrder order : SoldierOrder.values()) {
-            check(SoldierStuckRecovery.eligibleOrder(order) == (order != SoldierOrder.HOLD_POSITION),
-                    "rescue applies only to requested mobile orders: " + order);
+            check(SoldierStuckRecovery.eligibleOrder(order)
+                            == (order == SoldierOrder.FOLLOW || order == SoldierOrder.BODYGUARD),
+                    "only owner-following modes permit teleport rescue: " + order);
+            check(SoldierStuckRecovery.eligibleOrder(order)
+                            == SoldierStuckRecovery.eligibleOrder(SoldierOrder.logical(order)),
+                    "legacy anchored aliases cannot bypass garrison safe-path recovery: " + order);
         }
+        checkGarrisonCombinations();
         check(!SoldierStuckRecovery.due(199, 100, true), "combat rescue waits ten seconds");
         check(SoldierStuckRecovery.due(200, 100, true), "target presence cannot disable combat rescue deadline");
         check(!SoldierStuckRecovery.due(200, 6.25, true), "follow spacing excluded");
@@ -121,15 +126,15 @@ public final class SoldierFollowPolicyTest {
             check(OwnerOfflinePolicy.resumeOrder(restored, null, SoldierOrder.GUARD) == null,
                     "dismissed soldier cannot resume");
             for (SoldierOrder current : SoldierOrder.values()) {
-                if (current != SoldierOrder.GUARD)
-                    check(OwnerOfflinePolicy.resumeOrder(restored, first, current) == null,
-                            "superseded order cannot resume " + current);
+                check(OwnerOfflinePolicy.resumeOrder(restored, first, current)
+                                == (SoldierOrder.logical(current) == SoldierOrder.GARRISON ? order : null),
+                        "offline recovery recognizes garrison aliases but not superseding owner-following orders " + current);
             }
         }
         var invalid = new net.minecraft.nbt.CompoundTag();
         check(OwnerOfflinePolicy.resumeOrder(invalid, first, SoldierOrder.GUARD) == null,
                 "ordinary guards never become followers without a saved resume record");
-        for (SoldierOrder order : java.util.List.of(SoldierOrder.GUARD, SoldierOrder.PATROL, SoldierOrder.HOLD_POSITION)) {
+        for (SoldierOrder order : java.util.List.of(SoldierOrder.GUARD, SoldierOrder.PATROL, SoldierOrder.HOLD_POSITION, SoldierOrder.GARRISON)) {
             OwnerOfflinePolicy.remember(invalid, first, order);
             check(OwnerOfflinePolicy.resumeOrder(invalid, first, SoldierOrder.GUARD) == null,
                     "non-following orders never produce resume records");
@@ -146,6 +151,27 @@ public final class SoldierFollowPolicyTest {
         check(OwnerOfflinePolicy.resumeOrder(malformed, first, SoldierOrder.GUARD) == null,
                 "resume record requires a saved owner identity");
         System.out.println("SoldierFollowPolicyTest: " + checks + " checks passed");
+    }
+    private static void checkGarrisonCombinations() {
+        for (boolean stay : new boolean[]{false, true}) for (boolean chase : new boolean[]{false, true}) {
+            var settings = new GarrisonSettings(stay, chase, 32);
+            var saved = settings.writeInto(new net.minecraft.nbt.CompoundTag());
+            check(GarrisonSettings.read(saved, new GarrisonSettings(!stay, !chase, 8)).equals(settings),
+                    "stay/chase remain independent after persistence: " + stay + "/" + chase);
+            var context = new OrderDistances.Context(true, false, true, net.minecraft.world.phys.Vec3.ZERO, settings, "ready");
+            check(context.insideDaily(new net.minecraft.world.phys.Vec3(32, 0, 0))
+                            && !context.insideDaily(new net.minecraft.world.phys.Vec3(32.01, 0, 0)),
+                    "all four combinations retain the same daily geometry, independently of stay");
+            check(context.combatRadius() == (chase ? 48 : 32),
+                    "only chase expands the permitted combat ring; stay does not silently disable it");
+            check(context.insideCombat(new net.minecraft.world.phys.Vec3(40, 0, 0)) == chase,
+                    "outer-ring target geometry follows chase for both stay values");
+            check(!SoldierStuckRecovery.eligibleOrder(SoldierOrder.GARRISON),
+                    "every anchored combination retries safe paths without teleport rescue");
+        }
+        var maximum = new OrderDistances.Context(true, false, true, net.minecraft.world.phys.Vec3.ZERO,
+                new GarrisonSettings(false, true, 96), "ready");
+        check(maximum.combatRadius() == 96, "maximum daily radius does not gain an unbounded outer ring");
     }
     private static byte[] saveTag(net.minecraft.nbt.CompoundTag data) throws java.io.IOException {
         var output = new java.io.ByteArrayOutputStream();
