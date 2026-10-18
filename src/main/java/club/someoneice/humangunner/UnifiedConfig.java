@@ -276,6 +276,12 @@ public final class UnifiedConfig {
         } catch (RuntimeException invalid) { return null; }
         return new RecruitmentCost(id, count);
     }
+    /** Feature switches are resolved centrally; callers must retain independent owner/safety rules. */
+    public boolean featureEnabled(String feature, boolean fallback) {
+        return bool(object(root, feature), "enabled", fallback);
+    }
+    public boolean factionBandRender() { return bool(object(root, "factions"), "band_render", true); }
+
     public boolean allowHiredPvpDamage() { return recruitment.allowHiredPvpDamage(); }
     public PerceptionConfig perception() { return perception; }
     public NavigationSearchConfig navigationSearch() { return navigationSearch; }

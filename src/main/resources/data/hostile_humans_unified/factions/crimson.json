@@ -1,0 +1,37 @@
+{
+  "color": "#A52A36",
+  "name": "赤獠",
+  "starting_standing": -200,
+  "spawn_weight": 25,
+  "aggression": "aggressive",
+  "enemies": [
+    "hostile_humans_unified:azure",
+    "hostile_humans_unified:verdant",
+    "hostile_humans_unified:ashen"
+  ],
+  "allies": [],
+  "allocation_preference": [
+    0.89,
+    0.89,
+    0.94,
+    0.94,
+    1.04,
+    0.94,
+    1.34,
+    0.94,
+    0.94,
+    1.0101010101010102,
+    0.94
+  ],
+  "band_style": "base",
+  "hire": {
+    "item": "minecraft:iron_ingot",
+    "costs": [
+      8,
+      16,
+      32
+    ],
+    "friendly_discount": 0.9,
+    "ally_discount": 0.8
+  }
+}

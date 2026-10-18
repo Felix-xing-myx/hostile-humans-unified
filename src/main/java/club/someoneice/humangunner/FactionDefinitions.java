@@ -1,0 +1,121 @@
+package club.someoneice.humangunner;
+
+import com.google.gson.*;
+import com.mojang.logging.LogUtils;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.util.profiling.ProfilerFiller;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+
+/** One immutable definition revision; malformed reloads never publish a partial relationship table. */
+final class FactionDefinitions extends SimpleJsonResourceReloadListener {
+    static final List<String> BUILTINS = List.of("crimson", "azure", "verdant", "ashen");
+    static final List<String> DIMENSIONS = List.of("health", "armor", "toughness", "knockback_resistance",
+            "speed", "detection", "melee", "gun", "projectile", "accuracy", "regeneration");
+    static final FactionDefinitions INSTANCE = new FactionDefinitions();
+    record Definition(ResourceLocation id, int color, String name, int startingStanding, int weight,
+                      Set<ResourceLocation> enemies, Set<ResourceLocation> allies, List<Double> preference,
+                      List<Double> bossPreference, String bandStyle, String aggression,
+                      ResourceLocation hireItem, List<Integer> hireCosts, double friendlyDiscount, double allyDiscount) {}
+    record Revision(long number, Map<ResourceLocation, Definition> definitions) {}
+    private static volatile Revision current = new Revision(0, builtins());
+
+    private FactionDefinitions() { super(new Gson(), "factions"); }
+    static Revision current() { return current; }
+    static ResourceLocation id(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        return ResourceLocation.tryParse(raw.contains(":") ? raw : HumanGunner.MOD_ID + ":" + raw);
+    }
+    static Definition find(String raw) { ResourceLocation key = id(raw); return key == null ? null : current.definitions().get(key); }
+    static boolean enemies(String first, String second) {
+        Definition a = find(first), b = find(second);
+        return a != null && b != null && !a.id().equals(b.id())
+                && (a.enemies().contains(b.id()) || b.enemies().contains(a.id()));
+    }
+    static boolean allies(String first, String second) {
+        Definition a = find(first), b = find(second);
+        return a != null && b != null && (a.id().equals(b.id())
+                || (!enemies(first, second) && (a.allies().contains(b.id()) || b.allies().contains(a.id()))));
+    }
+    @Override protected void apply(Map<ResourceLocation, JsonElement> resources, ResourceManager manager,
+                                   ProfilerFiller profiler) {
+        try {
+            Map<ResourceLocation, Definition> next = new TreeMap<>();
+            for (var entry : resources.entrySet()) next.put(entry.getKey(), parse(entry.getKey(), entry.getValue().getAsJsonObject()));
+            if (next.isEmpty()) throw new IllegalArgumentException("No faction definitions");
+            for (Definition d : next.values()) {
+                for (ResourceLocation related : d.enemies()) if (!next.containsKey(related))
+                    throw new IllegalArgumentException("Unknown enemy " + related + " in " + d.id());
+                for (ResourceLocation related : d.allies()) if (!next.containsKey(related) || d.enemies().contains(related))
+                    throw new IllegalArgumentException("Invalid ally " + related + " in " + d.id());
+            }
+            current = new Revision(current.number() + 1, Map.copyOf(next));
+        } catch (RuntimeException invalid) {
+            LogUtils.getLogger().error("Keeping previous faction revision: {}", invalid.getMessage());
+        }
+    }
+    private static Map<ResourceLocation, Definition> builtins() {
+        Map<ResourceLocation, Definition> result = new LinkedHashMap<>();
+        for (String name : BUILTINS) {
+            try (var stream = Objects.requireNonNull(FactionDefinitions.class.getResourceAsStream(
+                    "/data/hostile_humans_unified/factions/" + name + ".json"));
+                 var reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                ResourceLocation key = id(name);
+                result.put(key, parse(key, JsonParser.parseReader(reader).getAsJsonObject()));
+            } catch (Exception invalid) { throw new IllegalStateException("Invalid built-in faction " + name, invalid); }
+        }
+        return Map.copyOf(result);
+    }
+    private static Definition parse(ResourceLocation key, JsonObject root) {
+        String color = root.get("color").getAsString();
+        if (!color.matches("#[0-9a-fA-F]{6}")) throw new IllegalArgumentException("Invalid color " + key);
+        JsonObject hire = UnifiedConfig.object(root, "hire");
+        ResourceLocation item = id(UnifiedConfig.string(hire, "item", "minecraft:iron_ingot"));
+        if (item == null) throw new IllegalArgumentException("Invalid hiring item " + key);
+        List<Integer> costs = new ArrayList<>();
+        JsonArray configured = hire.has("costs") ? hire.getAsJsonArray("costs") : new JsonArray();
+        if (configured.size() != 3) throw new IllegalArgumentException("Three hiring costs required " + key);
+        for (JsonElement value : configured) {
+            int cost = value.getAsBigDecimal().intValueExact();
+            if (cost < 0 || cost > 4096) throw new IllegalArgumentException("Invalid hiring cost " + key);
+            costs.add(cost);
+        }
+        List<Double> preference = vector(root.get("allocation_preference"), Collections.nCopies(11, 1.0));
+        return new Definition(key, Integer.parseInt(color.substring(1), 16), UnifiedConfig.string(root, "name", ""),
+                integer(root, "starting_standing", -200, -500, 500), integer(root, "spawn_weight", 0, 0, 1000000),
+                ids(root, "enemies"), ids(root, "allies"), preference, vector(root.get("boss_preference"), preference),
+                UnifiedConfig.string(root, "band_style", "base"), UnifiedConfig.string(root, "aggression", "aggressive"),
+                item, List.copyOf(costs), UnifiedConfig.number(hire, "friendly_discount", .9, 0, 1),
+                UnifiedConfig.number(hire, "ally_discount", .8, 0, 1));
+    }
+    private static int integer(JsonObject object, String key, int fallback, int min, int max) {
+        if (!object.has(key)) return fallback;
+        int value = object.get(key).getAsBigDecimal().intValueExact();
+        if (value < min || value > max) throw new IllegalArgumentException("Invalid " + key);
+        return value;
+    }
+    private static Set<ResourceLocation> ids(JsonObject root, String field) {
+        Set<ResourceLocation> result = new HashSet<>();
+        if (root.has(field)) for (JsonElement value : root.getAsJsonArray(field)) {
+            ResourceLocation id = id(value.getAsString());
+            if (id == null) throw new IllegalArgumentException("Invalid " + field);
+            result.add(id);
+        }
+        return Set.copyOf(result);
+    }
+    private static List<Double> vector(JsonElement raw, List<Double> fallback) {
+        if (raw == null) return fallback;
+        List<Double> values = new ArrayList<>();
+        for (int i = 0; i < 11; i++) {
+            double value = raw.isJsonArray() ? raw.getAsJsonArray().get(i).getAsDouble()
+                    : raw.getAsJsonObject().has(DIMENSIONS.get(i)) ? raw.getAsJsonObject().get(DIMENSIONS.get(i)).getAsDouble() : 1;
+            if (!Double.isFinite(value) || value <= 0 || value > 100) throw new IllegalArgumentException("Invalid allocation preference");
+            values.add(value);
+        }
+        if (raw.isJsonArray() && raw.getAsJsonArray().size() != 11) throw new IllegalArgumentException("Eleven dimensions required");
+        return List.copyOf(values);
+    }
+}

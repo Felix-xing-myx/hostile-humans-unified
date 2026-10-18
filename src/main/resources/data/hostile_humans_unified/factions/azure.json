@@ -1,0 +1,37 @@
+{
+  "color": "#354D89",
+  "name": "靛磐",
+  "starting_standing": 0,
+  "spawn_weight": 15,
+  "aggression": "aggressive",
+  "enemies": [
+    "hostile_humans_unified:crimson",
+    "hostile_humans_unified:verdant",
+    "hostile_humans_unified:ashen"
+  ],
+  "allies": [],
+  "allocation_preference": [
+    1.24,
+    1.29,
+    1.05,
+    1.05,
+    0.81,
+    0.91,
+    0.86,
+    0.91,
+    0.91,
+    1,
+    1.32
+  ],
+  "band_style": "base",
+  "hire": {
+    "item": "minecraft:gold_ingot",
+    "costs": [
+      6,
+      12,
+      24
+    ],
+    "friendly_discount": 0.9,
+    "ally_discount": 0.8
+  }
+}

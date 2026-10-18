@@ -155,6 +155,8 @@ public final class HumanGunner {
         MinecraftForge.EVENT_BUS.addListener(SoldierMessageDispatcher::onLogout);
         MinecraftForge.EVENT_BUS.addListener(SoldierMessageDispatcher::onStopped);
         MinecraftForge.EVENT_BUS.addListener(ProgressionCommands::register);
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.AddReloadListenerEvent event) ->
+                event.addListener(FactionDefinitions.INSTANCE));
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onEntityLeave);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onLivingDrops);
         MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onPlayerTick);
@@ -331,6 +333,7 @@ public final class HumanGunner {
         if (!(event.getEntity() instanceof Human human)) {
             return;
         }
+        HumanFactions.initialize(human, event.loadedFromDisk());
         HumanGrowth.onJoin(human, event.loadedFromDisk());
         if (PeacefulHumanPolicy.onJoin(event, human)
                 && event.getLevel() instanceof ServerLevel level
@@ -379,6 +382,7 @@ public final class HumanGunner {
         if (human.getData() == null) {
             return false;
         }
+        HumanFactions.initialize(human, false);
         HumanGrowth.state(human);
         GrowthHealth.apply(human);
         if (!HumanSpawnEquipment.completeIfReady(human)) return false;
@@ -770,24 +774,7 @@ public final class HumanGunner {
     }
 
     private static void configureTierRivalry(Human human) {
-        HumanTier tier = human.getTier();
-        if (TierThreeHuman.isTierThree(human)) {
-            human.team = "human_level3";
-        } else if (tier == HumanTier.LEVEL1) {
-            human.team = "human_level1";
-        } else if (tier == HumanTier.LEVEL2) {
-            human.team = "human_level2";
-        } else if (tier == HumanTier.ROAMER) {
-            // Hostile Humans uses this field for its own attack eligibility.
-            // A UUID-backed faction also repairs old entities whose saved team
-            // accidentally matches another roamer.
-            human.team = "human_roamer_" + human.getUUID();
-            return;
-        } else {
-            return;
-        }
-
-        // Rival identity is input to perception; a second vanilla TARGET goal must not compete.
+        HumanFactions.refreshTeam(human);
     }
 
     private static void configureCombatAi(Human human) {
@@ -847,13 +834,7 @@ public final class HumanGunner {
     }
 
     public static boolean areSameFaction(Human first, Human second) {
-        // Roamers intentionally use hostile, individual factions. Some legacy
-        // saves or spawn paths can temporarily give two roamers the same team
-        // string, but that must never grant friendly-fire immunity.
-        if (first.getTier() == HumanTier.ROAMER || second.getTier() == HumanTier.ROAMER) {
-            return false;
-        }
-        return !first.team.isEmpty() && first.team.equals(second.team);
+        return HumanFactions.same(first, second);
     }
 
     public static boolean areCombatAllies(Human first, Human second) {

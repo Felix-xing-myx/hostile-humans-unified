@@ -1,0 +1,37 @@
+{
+  "color": "#53856B",
+  "name": "苍隼",
+  "starting_standing": 0,
+  "spawn_weight": 10,
+  "aggression": "aggressive",
+  "enemies": [
+    "hostile_humans_unified:crimson",
+    "hostile_humans_unified:azure",
+    "hostile_humans_unified:ashen"
+  ],
+  "allies": [],
+  "allocation_preference": [
+    0.91,
+    0.86,
+    0.91,
+    0.86,
+    1.2,
+    1.21,
+    0.96,
+    1.01,
+    1.06,
+    1.0416666666666667,
+    1.02
+  ],
+  "band_style": "base",
+  "hire": {
+    "item": "minecraft:emerald",
+    "costs": [
+      4,
+      8,
+      16
+    ],
+    "friendly_discount": 0.9,
+    "ally_discount": 0.8
+  }
+}

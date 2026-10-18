@@ -1510,13 +1510,16 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     @Nullable
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficulty, MobSpawnType mobSpawnType, @Nullable SpawnGroupData spawnGroupData, @Nullable CompoundTag compoundTag) {
+        spawnGroupData = club.someoneice.humangunner.HumanFactions.onSpawn(this, mobSpawnType, spawnGroupData, compoundTag);
         club.someoneice.humangunner.HumanGrowth.markBirth(this, serverLevelAccessor);
         if (mobSpawnType == MobSpawnType.NATURAL || mobSpawnType == MobSpawnType.CHUNK_GENERATION
                 || (mobSpawnType == MobSpawnType.EVENT
                     && club.someoneice.humangunner.NaturalHumanSpawnRules.isAutomaticBattleMember(serverLevelAccessor.getLevel()))) {
             club.someoneice.humangunner.NaturalEquipmentGrowth.markSpawn(this, serverLevelAccessor);
         }
-        spawnGroupData = super.finalizeSpawn(serverLevelAccessor, difficulty, mobSpawnType, spawnGroupData, compoundTag);
+        SpawnGroupData vanillaGroup = super.finalizeSpawn(serverLevelAccessor, difficulty, mobSpawnType,
+                club.someoneice.humangunner.HumanFactions.vanillaSpawnData(spawnGroupData), compoundTag);
+        spawnGroupData = club.someoneice.humangunner.HumanFactions.completeSpawnData(spawnGroupData, vanillaGroup);
         ArrayList<String> variants = new ArrayList<String>(TEXTURE_BY_VARIANT.keySet());
         this.setRandomVariant(variants);
         this.setCanPickUpLoot(true);
@@ -1615,6 +1618,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     public void readAdditionalSaveData(CompoundTag compound) {
         super.readAdditionalSaveData(compound);
+        club.someoneice.humangunner.HumanFactions.initialize(this, true);
         club.someoneice.humangunner.HumanGrowth.onLoad(this);
         // tickCount is not persisted. A saved gunfire-until tick must not look
         // like a fresh hit when this entity is loaded with tickCount zero.
