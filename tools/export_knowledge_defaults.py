@@ -143,6 +143,17 @@ def main():
             integration_page.append(f"| `{path}` | `{cell(value)}` | {cell(note)} |")
         integration_page.append("")
     pages[output / "装备联动导入候选.md"] = "\n".join(integration_page)
+    faction_defaults = json.loads((PROJECT / "src/main/resources/defaults/faction_equipment.json").read_text(encoding="utf-8"))
+    faction_page = ["# 默认值-阵营装备内置表", "", "返回 [[配置索引]] · [[士兵装备、拾取与掉落]]", "",
+                    "这是随模组打包的阵营装备缺省表，不是第六份运行时配置文件。修改入口仍在各阶级文件的 equipment_loadout 与 faction_overrides；数据包 equipment 可提供阵营缺省，用户显式覆盖优先。权重是相对份额，不是逐项必定概率。", ""]
+    for rank, profiles in faction_defaults.items():
+        if rank.startswith("_"):
+            continue
+        faction_page += [f"## {rank}", "", "| 内置字段路径 | 默认值 | 说明 |", "|---|---|---|"]
+        for path, value, note in rows(profiles, rank):
+            faction_page.append(f"| `{path}` | `{cell(value)}` | {cell(note or '具体规则见装备机制正文；数组索引按档位或类别顺序。')} |")
+        faction_page.append("")
+    pages[output / "默认值-阵营装备内置表.md"] = "\n".join(faction_page)
     stale = []
     for path, content in pages.items():
         if args.check:

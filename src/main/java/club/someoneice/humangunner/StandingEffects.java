@@ -14,6 +14,9 @@ import java.util.*;
 /** Political standing and short-term hostility. Never assigns a combat target or grants visual confirmation. */
 final class StandingEffects {
     private static final Map<Human, StandingIncidents> INCIDENTS = new WeakHashMap<>();
+    private record Reward(String faction, int amount) {}
+    private record PendingDeath(long tick, Attribution actor, String faction, List<Reward> rewards) {}
+    private static final Map<Human, PendingDeath> DEATHS = new WeakHashMap<>();
     private StandingEffects() {}
     static int trueStanding(Human human, Player player) {
         if (human.getTier() == HumanTier.ROAMER) return -500;
@@ -54,61 +57,78 @@ final class StandingEffects {
                 && trueStanding(human, player) >= definition.hireStanding().get(tier - 1)
                 && !mayRetaliateAgainst(human, player) && human.getTarget() != player;
     }
-    /** Attribution uses native source ownership or the public tameable owner; unknown mod owners are not guessed. */
-    static ServerPlayer responsiblePlayer(Entity source) {
-        if (source instanceof ServerPlayer player) return player;
-        if (source instanceof TamableAnimal pet && pet.getOwnerUUID() != null && pet.getServer() != null)
-            return pet.getServer().getPlayerList().getPlayer(pet.getOwnerUUID());
-        return null;
-    }
-    private static String weapon(ServerPlayer player) {
-        var stack = player.getMainHandItem();
-        return net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem()).toString();
+    private record Attribution(UUID id, ServerPlayer live, String weapon) {}
+    /** Offline tameable/formal soldier owners remain attributable; unknown third-party ownership is not guessed. */
+    private static Attribution attribution(Entity source) {
+        if (source == null || source.getServer() == null) return null;
+        UUID id = source instanceof Player player ? player.getUUID()
+                : source instanceof Human human ? HumanRelations.effectiveOwner(human)
+                : source instanceof TamableAnimal animal ? animal.getOwnerUUID() : null;
+        if (id == null) return null;
+        ServerPlayer live = source.getServer().getPlayerList().getPlayer(id);
+        net.minecraft.world.item.ItemStack weapon = source instanceof net.minecraft.world.entity.LivingEntity entity
+                ? entity.getMainHandItem() : net.minecraft.world.item.ItemStack.EMPTY;
+        String key = net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(weapon.getItem()).toString();
+        if (!(source instanceof Player)) key = source.getUUID() + "/" + key;
+        return new Attribution(id, live, key);
     }
     static void damage(Human human, DamageSource source, float amount) {
-        ServerPlayer player = responsiblePlayer(source.getEntity());
-        if (player == null || human.level().isClientSide || amount <= 0 || !Float.isFinite(amount)
+        Attribution actor = attribution(source.getEntity());
+        ServerPlayer player = actor == null ? null : actor.live();
+        if (actor == null || human.level().isClientSide || amount <= 0 || !Float.isFinite(amount)
                 || human.getTier() == HumanTier.ROAMER) return;
         long now = human.level().getGameTime();
         StandingIncidents memory = memory(human);
         // No backend currently guarantees a common native shot identifier here; use the documented 2-tick fallback.
-        var outcome = memory.damage(player.getUUID(), now, weapon(player), null,
-                Math.min(amount, human.getHealth()), human.getMaxHealth(), effectiveStanding(human, player),
-                IdentityBands.selected(player).grade(), bandGrade(human));
-        change(player, HumanFactions.id(human), -outcome.standingPenalty());
+        var outcome = memory.damage(actor.id(), now, actor.weapon(), null,
+                amount, human.getMaxHealth(), player == null ? FactionStandingData.get(human.getServer()).standing(actor.id(), HumanFactions.id(human)) : effectiveStanding(human, player),
+                player == null ? 0 : IdentityBands.selected(player).grade(), bandGrade(human));
+        change(human.getServer(), actor.id(), HumanFactions.id(human), -outcome.standingPenalty());
         if (outcome.notifyGroup() && HumanRelations.effectiveOwner(human) == null) {
             for (Human nearby : human.level().getEntitiesOfClass(Human.class, human.getBoundingBox().inflate(UnifiedConfig.get().factionRules().groupRadius()),
                     e -> e.isAlive() && HumanRelations.effectiveOwner(e) == null && HumanFactions.same(human, e))) {
-                memory(nearby).groupAlert(player.getUUID(), now);
-                HumanPerception.notice(nearby, "aid", human.position(), player.getUUID(), UnifiedConfig.get().factionRules().incidents().groupTicks());
+                memory(nearby).groupAlert(actor.id(), now);
+                HumanPerception.notice(nearby, "aid", human.position(), actor.id(), UnifiedConfig.get().factionRules().incidents().groupTicks());
             }
         }
     }
+    /** Candidate only: lower-priority Forge listeners may still cancel this death. */
     static void death(Human human, DamageSource source) {
-        ServerPlayer player = responsiblePlayer(source.getEntity());
-        if (player == null || human.getTier() == HumanTier.ROAMER) return;
-        long now = human.level().getGameTime();
-        int penalty = memory(human).death(player.getUUID(), now, weapon(player), null);
-        change(player, HumanFactions.id(human), -penalty);
-        if (player.isCreative() || player.isSpectator()) return;
-        // One reward per beneficiary faction. The witness bonus shares the same daily allowance.
-        List<Human> witnesses = human.level().getEntitiesOfClass(Human.class, human.getBoundingBox().inflate(48),
-                e -> e != human && e.isAlive() && HumanRelations.effectiveOwner(e) == null);
-        for (var faction : FactionDefinitions.current().definitions().values()) {
-            if (!FactionDefinitions.enemies(HumanFactions.id(human), faction.id().toString())) continue;
-            boolean seen = witnesses.stream().anyMatch(w -> HumanFactions.id(w).equals(faction.id().toString())
-                    && HumanPerception.recentlySaw(w, human.getUUID()));
-            change(player, faction.id().toString(), seen ? 5 : 3);
+        DEATHS.remove(human);
+        Attribution actor = attribution(source.getEntity());
+        if (actor == null || human.getTier() == HumanTier.ROAMER) return;
+        ServerPlayer player = actor.live();
+        List<Reward> rewards = new ArrayList<>();
+        if (player != null && !player.isCreative() && !player.isSpectator()) {
+            List<Human> witnesses = human.level().getEntitiesOfClass(Human.class, human.getBoundingBox().inflate(48),
+                    e -> e != human && e.isAlive() && HumanRelations.effectiveOwner(e) == null);
+            for (var faction : FactionDefinitions.current().definitions().values()) {
+                if (!FactionDefinitions.enemies(HumanFactions.id(human), faction.id().toString())) continue;
+                boolean seen = witnesses.stream().anyMatch(w -> HumanFactions.id(w).equals(faction.id().toString())
+                        && HumanPerception.recentlySaw(w, human.getUUID()));
+                rewards.add(new Reward(faction.id().toString(), seen ? 5 : 3));
+            }
         }
+        DEATHS.put(human, new PendingDeath(human.level().getGameTime(), actor, HumanFactions.id(human), List.copyOf(rewards)));
     }
-    private static void change(ServerPlayer player, String faction, int amount) {
+    /** Only a real KILLED removal completes the political transaction; retain the original action timestamp. */
+    static void confirmDeath(Human human) {
+        PendingDeath pending = DEATHS.remove(human);
+        long now = human.level().getGameTime();
+        if (pending == null || human.getHealth() > 0 || now < pending.tick() || now - pending.tick() > 200) return;
+        Attribution actor = pending.actor();
+        int penalty = memory(human).death(actor.id(), pending.tick(), actor.weapon(), null);
+        change(human.getServer(), actor.id(), pending.faction(), -penalty);
+        for (Reward reward : pending.rewards()) change(human.getServer(), actor.id(), reward.faction(), reward.amount());
+    }
+    private static void change(net.minecraft.server.MinecraftServer server, UUID player, String faction, int amount) {
         if (!UnifiedConfig.get().featureEnabled("standing", true) || amount == 0 || FactionDefinitions.find(faction) == null) return;
-        FactionStandingData.get(player.server).change(player.getUUID(), faction, amount, player.server.overworld().getGameTime());
+        if (server != null) FactionStandingData.get(server).change(player, faction, amount, server.overworld().getGameTime());
     }
     private static StandingIncidents memory(Human human) {
         StandingIncidents result = INCIDENTS.computeIfAbsent(human, ignored -> new StandingIncidents());
         result.configure(UnifiedConfig.get().factionRules().incidents());
         return result;
     }
-    static void clear(Human human) { INCIDENTS.remove(human); }
+    static void clear(Human human) { INCIDENTS.remove(human); DEATHS.remove(human); }
 }

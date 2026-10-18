@@ -74,7 +74,7 @@ public final class SupplyConfigurationTest {
                 check(first.food().minimum()==quantities[i][0] && first.food().maximum()==quantities[i][1]
                         && first.goldenApples().minimum()==quantities[i][2]
                         && first.goldenApples().maximum()==quantities[i][3], "legacy first quantity preset retained " + rank);
-                check(f.entries.size()==19, "original food candidates retained " + rank); i++;
+                check(f.entries.size()==25, "legacy candidates plus six ordinary foods retained " + rank); i++;
             }
             check(calls("club/someoneice/humangunner/RecoverySupplies", "provisionInitialKit",
                     "club/someoneice/humangunner/UnifiedConfig", "spawnFood"),

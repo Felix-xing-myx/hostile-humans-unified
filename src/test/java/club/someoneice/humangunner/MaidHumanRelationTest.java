@@ -84,8 +84,8 @@ public final class MaidHumanRelationTest {
         check(rejectsRawMode, "fixture preserves actual Forge unsupported-raw-bytecode failure");
         check(calls("club/someoneice/humangunner/compat/OptionalMixinPlugin", "shouldApplyMixin",
                 "club/someoneice/humangunner/compat/OptionalMixinPlugin", "readTarget"), "actual plugin uses loader boundary");
-        check(calls(compat, "relationAllowsAttack", "club/someoneice/humangunner/IdentityBadgeAccess", "highestClearance"),
-                "owner inventory and Curios badge access");
+        check(calls(compat, "relationAllowsAttack", "club/someoneice/humangunner/StandingEffects", "blocksInitiatedHostility"),
+                "maid permission shares effective owner politics without retired badges");
         check(calls(compat, "relationAllowsAttack", "club/someoneice/humangunner/HumanRelations", "effectiveOwner"),
                 "hired and temporary owner gate");
         check(calls(compat, "onMaidTick", compat, "humanAttackDecision"), "brain target revalidation");

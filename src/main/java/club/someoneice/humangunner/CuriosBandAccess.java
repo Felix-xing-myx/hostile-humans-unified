@@ -1,5 +1,7 @@
 package club.someoneice.humangunner;
 
+import net.minecraft.world.item.ItemStack;
+
 import net.minecraft.world.entity.player.Player;
 import top.theillusivec4.curios.api.CuriosApi;
 import java.util.*;

@@ -24,14 +24,14 @@ final class RecentDamageTracker {
     }
 
     static void record(Human human, float actualDamage, Entity attacker) {
-        if (actualDamage <= 0.0F || human.level().isClientSide) {
+        if (actualDamage <= 0.0F || !Float.isFinite(actualDamage) || human.level().isClientSide) {
             return;
         }
         DamageWindow window = WINDOWS.computeIfAbsent(human, ignored -> new DamageWindow());
         prune(human, window);
         window.samples.addLast(new DamageSample(
                 human.tickCount,
-                Math.min(actualDamage, Math.max(0.0F, human.getHealth())),
+                actualDamage,
                 attacker == null ? null : attacker.getUUID()
         ));
     }

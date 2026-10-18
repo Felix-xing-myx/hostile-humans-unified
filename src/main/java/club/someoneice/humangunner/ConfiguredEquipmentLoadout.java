@@ -20,7 +20,6 @@ import java.util.function.Predicate;
 
 /** Immutable startup config. Registry availability is checked only when a spawn rolls equipment. */
 public final class ConfiguredEquipmentLoadout {
-    final Rules rules;
     final FactionEquipmentConfig factions;
     private long policyRevision=-1;
     private void refreshPolicy() {
@@ -59,8 +58,8 @@ public final class ConfiguredEquipmentLoadout {
 
     private ConfiguredEquipmentLoadout(JsonObject root, String rank) {
         factions = new FactionEquipmentConfig(root,rank);
-        // Retained record shape for source compatibility; obsolete enchant_chance/elite flags are never read.
-        rules = new Rules(0,0,0,false);
+        if (root.has("rules")) FactionEquipmentConfig.warn(rank + ".rules",
+                "Retired loadout enchant/durability rules are ignored; use faction equipment policies");
         mainhand = items(array(root, "mainhand"), rank + ".mainhand");
         rangedMainhand = items(array(root, "ranged_mainhand"), rank + ".ranged_mainhand");
         inventory = items(array(root, "inventory"), rank + ".inventory");
@@ -166,7 +165,6 @@ public final class ConfiguredEquipmentLoadout {
         HumanGunner.LOGGER.warn("Ignoring invalid equipment config entry {}: {}", path, value);
     }
 
-    record Rules(float enchantChance, float damageMin, float damageMax, boolean eliteEnchantments) { }
     interface WeightedEntry { int weight(); boolean available(); }
     record ItemEntry(ResourceLocation id, int weight, String requiresMod, int count,
                      Map<ResourceLocation, Integer> enchantments) implements WeightedEntry {

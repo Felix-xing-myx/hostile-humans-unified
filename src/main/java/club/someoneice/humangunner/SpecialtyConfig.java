@@ -11,19 +11,22 @@ public record SpecialtyConfig(boolean enabled, double budgetMean, double budgetS
         return new SpecialtyConfig(true, 1, .10, .75, 1.25, .15, .30, .25, .50, 1.80);
     }
     public static SpecialtyConfig get() { return current; }
+    public static SpecialtyConfig prepare(JsonObject data) {
+        SpecialtyConfig candidate = new SpecialtyConfig(
+                !data.has("enabled") || data.get("enabled").getAsBoolean(),
+                number(data, "budget_mean", 1, .5, 2), number(data, "budget_sigma", .10, 0, .5),
+                number(data, "budget_min", .75, .3, 1), number(data, "budget_max", 1.25, 1, 3),
+                number(data, "deviation_sigma", .15, 0, 1), number(data, "deviation_cap", .30, .05, 1),
+                number(data, "cap_budget_exponent", .25, 0, 1),
+                number(data, "multiplier_min", .50, .2, 1), number(data, "multiplier_max", 1.80, 1, 3));
+        if (candidate.budgetMin > candidate.budgetMax || candidate.multiplierMin > candidate.multiplierMax)
+            throw new IllegalArgumentException("inverted bounds");
+        return candidate;
+    }
+    public static void publish(SpecialtyConfig candidate) { current = java.util.Objects.requireNonNull(candidate); }
     public static void configure(JsonObject data) {
-        try {
-            SpecialtyConfig candidate = new SpecialtyConfig(
-                    !data.has("enabled") || data.get("enabled").getAsBoolean(),
-                    number(data, "budget_mean", 1, .5, 2), number(data, "budget_sigma", .10, 0, .5),
-                    number(data, "budget_min", .75, .3, 1), number(data, "budget_max", 1.25, 1, 3),
-                    number(data, "deviation_sigma", .15, 0, 1), number(data, "deviation_cap", .30, .05, 1),
-                    number(data, "cap_budget_exponent", .25, 0, 1),
-                    number(data, "multiplier_min", .50, .2, 1), number(data, "multiplier_max", 1.80, 1, 3));
-            if (candidate.budgetMin > candidate.budgetMax || candidate.multiplierMin > candidate.multiplierMax)
-                throw new IllegalArgumentException("inverted bounds");
-            current = candidate;
-        } catch (RuntimeException failure) {
+        try { publish(prepare(data)); }
+        catch (RuntimeException failure) {
             com.mojang.logging.LogUtils.getLogger().warn("Invalid specialty configuration; retaining previous policy: {}", failure.getMessage());
         }
     }

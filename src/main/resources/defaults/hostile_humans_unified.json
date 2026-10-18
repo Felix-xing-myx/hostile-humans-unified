@@ -285,6 +285,30 @@
           {
             "item": "farmersdelight:grilled_salmon",
             "weight": 1
+          },
+          {
+            "item": "minecraft:apple",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:carrot",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:sweet_berries",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:mushroom_stew",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:beetroot_soup",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:rabbit_stew",
+            "weight": 1
           }
         ]
       },
@@ -741,6 +765,30 @@
           },
           {
             "item": "farmersdelight:grilled_salmon",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:apple",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:carrot",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:sweet_berries",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:mushroom_stew",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:beetroot_soup",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:rabbit_stew",
             "weight": 1
           }
         ]
@@ -1201,6 +1249,30 @@
           },
           {
             "item": "farmersdelight:grilled_salmon",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:apple",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:carrot",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:sweet_berries",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:mushroom_stew",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:beetroot_soup",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:rabbit_stew",
             "weight": 1
           }
         ]
@@ -1664,6 +1736,30 @@
           {
             "item": "farmersdelight:grilled_salmon",
             "weight": 1
+          },
+          {
+            "item": "minecraft:apple",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:carrot",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:sweet_berries",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:mushroom_stew",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:beetroot_soup",
+            "weight": 1
+          },
+          {
+            "item": "minecraft:rabbit_stew",
+            "weight": 1
           }
         ]
       },
@@ -1934,24 +2030,8 @@
     "_说明_中文": "本阶出生装备配置。",
     "_description_en": "Rank spawn equipment configuration.",
     "roamer": {
-      "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。",
-      "_description_en": "Spawn equipment for this rank. Pools use registered item IDs and positive weights; empty pools remain empty.",
-      "_说明_rules_中文": "装备附魔与耐久的共用生成规则。",
-      "_description_rules_en": "Shared enchantment/durability generation rules.",
-      "rules": {
-        "_说明_enchant_chance_中文": "装备获得自动附魔的概率，0–1；具体条目附魔仍按装备池规则。",
-        "_description_enchant_chance_en": "Chance of automatic equipment enchantment, 0–1; entry enchantments follow pool rules.",
-        "enchant_chance": 1,
-        "_说明_damage_percent_min_中文": "初始耐久损耗比例下限，0–1；0表示未损耗。",
-        "_description_damage_percent_min_en": "Minimum initial durability damage ratio, 0–1; 0 is undamaged.",
-        "damage_percent_min": 0,
-        "_说明_damage_percent_max_中文": "初始耐久损耗比例上限，0–1。",
-        "_description_damage_percent_max_en": "Maximum initial durability damage ratio, 0–1.",
-        "damage_percent_max": 0.85,
-        "_说明_elite_enchantments_中文": "是否允许本阶装备使用精英附魔规则。",
-        "_description_elite_enchantments_en": "Allow elite enchantment rules for this rank.",
-        "elite_enchantments": false
-      },
+      "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。 阵营概率/档位/附魔/补给按独立内置表；可用faction_overrides逐阵营覆盖。新gun_chance是唯一枪械概率；旧tacz.gun_chance仅首次显式迁移。",
+      "_description_en": "Spawn equipment for this rank. Pools use registered item IDs and positive weights; empty pools remain empty. Faction policies use the built-in table. Override via faction_overrides. gun_chance is the only gun probability; explicit legacy tacz.gun_chance migrates once.",
       "_说明_mainhand_中文": "近战主手候选池，按正权重抽取一个。",
       "_description_mainhand_en": "Melee main-hand pool; select one using positive relative weights.",
       "mainhand": [
@@ -2105,24 +2185,8 @@
       "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts."
     },
     "tier1": {
-      "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。",
-      "_description_en": "Spawn equipment for this rank. Pools use registered item IDs and positive weights; empty pools remain empty.",
-      "_说明_rules_中文": "装备附魔与耐久的共用生成规则。",
-      "_description_rules_en": "Shared enchantment/durability generation rules.",
-      "rules": {
-        "_说明_enchant_chance_中文": "装备获得自动附魔的概率，0–1；具体条目附魔仍按装备池规则。",
-        "_description_enchant_chance_en": "Chance of automatic equipment enchantment, 0–1; entry enchantments follow pool rules.",
-        "enchant_chance": 0.3,
-        "_说明_damage_percent_min_中文": "初始耐久损耗比例下限，0–1；0表示未损耗。",
-        "_description_damage_percent_min_en": "Minimum initial durability damage ratio, 0–1; 0 is undamaged.",
-        "damage_percent_min": 0,
-        "_说明_damage_percent_max_中文": "初始耐久损耗比例上限，0–1。",
-        "_description_damage_percent_max_en": "Maximum initial durability damage ratio, 0–1.",
-        "damage_percent_max": 0.85,
-        "_说明_elite_enchantments_中文": "是否允许本阶装备使用精英附魔规则。",
-        "_description_elite_enchantments_en": "Allow elite enchantment rules for this rank.",
-        "elite_enchantments": false
-      },
+      "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。 阵营概率/档位/附魔/补给按独立内置表；可用faction_overrides逐阵营覆盖。新gun_chance是唯一枪械概率；旧tacz.gun_chance仅首次显式迁移。",
+      "_description_en": "Spawn equipment for this rank. Pools use registered item IDs and positive weights; empty pools remain empty. Faction policies use the built-in table. Override via faction_overrides. gun_chance is the only gun probability; explicit legacy tacz.gun_chance migrates once.",
       "_说明_mainhand_中文": "近战主手候选池，按正权重抽取一个。",
       "_description_mainhand_en": "Melee main-hand pool; select one using positive relative weights.",
       "mainhand": [
@@ -2266,24 +2330,8 @@
       "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts."
     },
     "tier2": {
-      "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。",
-      "_description_en": "Spawn equipment for this rank. Pools use registered item IDs and positive weights; empty pools remain empty.",
-      "_说明_rules_中文": "装备附魔与耐久的共用生成规则。",
-      "_description_rules_en": "Shared enchantment/durability generation rules.",
-      "rules": {
-        "_说明_enchant_chance_中文": "装备获得自动附魔的概率，0–1；具体条目附魔仍按装备池规则。",
-        "_description_enchant_chance_en": "Chance of automatic equipment enchantment, 0–1; entry enchantments follow pool rules.",
-        "enchant_chance": 1,
-        "_说明_damage_percent_min_中文": "初始耐久损耗比例下限，0–1；0表示未损耗。",
-        "_description_damage_percent_min_en": "Minimum initial durability damage ratio, 0–1; 0 is undamaged.",
-        "damage_percent_min": 0,
-        "_说明_damage_percent_max_中文": "初始耐久损耗比例上限，0–1。",
-        "_description_damage_percent_max_en": "Maximum initial durability damage ratio, 0–1.",
-        "damage_percent_max": 0.85,
-        "_说明_elite_enchantments_中文": "是否允许本阶装备使用精英附魔规则。",
-        "_description_elite_enchantments_en": "Allow elite enchantment rules for this rank.",
-        "elite_enchantments": false
-      },
+      "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。 阵营概率/档位/附魔/补给按独立内置表；可用faction_overrides逐阵营覆盖。新gun_chance是唯一枪械概率；旧tacz.gun_chance仅首次显式迁移。",
+      "_description_en": "Spawn equipment for this rank. Pools use registered item IDs and positive weights; empty pools remain empty. Faction policies use the built-in table. Override via faction_overrides. gun_chance is the only gun probability; explicit legacy tacz.gun_chance migrates once.",
       "_说明_mainhand_中文": "近战主手候选池，按正权重抽取一个。",
       "_description_mainhand_en": "Melee main-hand pool; select one using positive relative weights.",
       "mainhand": [
@@ -2422,24 +2470,8 @@
       "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts."
     },
     "tier3": {
-      "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。",
-      "_description_en": "Spawn equipment for this rank. Pools use registered item IDs and positive weights; empty pools remain empty.",
-      "_说明_rules_中文": "装备附魔与耐久的共用生成规则。",
-      "_description_rules_en": "Shared enchantment/durability generation rules.",
-      "rules": {
-        "_说明_enchant_chance_中文": "装备获得自动附魔的概率，0–1；具体条目附魔仍按装备池规则。",
-        "_description_enchant_chance_en": "Chance of automatic equipment enchantment, 0–1; entry enchantments follow pool rules.",
-        "enchant_chance": 1,
-        "_说明_damage_percent_min_中文": "初始耐久损耗比例下限，0–1；0表示未损耗。",
-        "_description_damage_percent_min_en": "Minimum initial durability damage ratio, 0–1; 0 is undamaged.",
-        "damage_percent_min": 0,
-        "_说明_damage_percent_max_中文": "初始耐久损耗比例上限，0–1。",
-        "_description_damage_percent_max_en": "Maximum initial durability damage ratio, 0–1.",
-        "damage_percent_max": 0,
-        "_说明_elite_enchantments_中文": "是否允许本阶装备使用精英附魔规则。",
-        "_description_elite_enchantments_en": "Allow elite enchantment rules for this rank.",
-        "elite_enchantments": true
-      },
+      "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。 阵营概率/档位/附魔/补给按独立内置表；可用faction_overrides逐阵营覆盖。新gun_chance是唯一枪械概率；旧tacz.gun_chance仅首次显式迁移。",
+      "_description_en": "Spawn equipment for this rank. Pools use registered item IDs and positive weights; empty pools remain empty. Faction policies use the built-in table. Override via faction_overrides. gun_chance is the only gun probability; explicit legacy tacz.gun_chance migrates once.",
       "_说明_mainhand_中文": "近战主手候选池，按正权重抽取一个。",
       "_description_mainhand_en": "Melee main-hand pool; select one using positive relative weights.",
       "mainhand": [
@@ -3066,7 +3098,10 @@
       "_说明_bonus_中文": "超过门槛的额外成长点，0–1000000。",
       "_description_bonus_en": "Additional growth points above threshold, 0–1000000.",
       "bonus": 4
-    }
+    },
+    "structure_baseline_day": 10,
+    "_说明_structure_baseline_day_中文": "结构居民固定出生基线天数0～1000；不改普通出生和已有存档。",
+    "_description_structure_baseline_day_en": "Fixed structure-resident birth day, 0-1000. Ordinary births and saved growth are unchanged."
   },
   "jump_attack": {
     "_说明_中文": "追击近战跳砍。只控制主动拉近距离的跳砍，不控制普通追击/逃跑跳跃；服务器重启生效。",
@@ -3826,5 +3861,214 @@
       "_说明_transition_ticks_中文": "最近状态转换期限；范围20–2400。",
       "_description_transition_ticks_en": "Recent transition lifetime; range 20–2400."
     }
+  },
+  "factions": {
+    "_说明_中文": "普通人类阵营定义；不改变雇主保护。",
+    "_description_en": "Faction identity; ownership protection remains independent.",
+    "_说明_enabled_中文": "关闭时普通人类间使用旧阶级关系。",
+    "_description_enabled_en": "Disable to use legacy rank relations between wild humans.",
+    "enabled": true,
+    "_说明_legacy_tier_mapping_中文": "旧实体首次补写稳定阵营；之后不随阶级重分配。",
+    "_description_legacy_tier_mapping_en": "Migrate legacy identities once, without rerolling stored factions.",
+    "legacy_tier_mapping": true,
+    "_说明_band_render_中文": "同步到客户端的人类与玩家绑带渲染开关。",
+    "_description_band_render_en": "Server-synchronized human and player band rendering switch.",
+    "band_render": true
+  },
+  "standing": {
+    "_说明_中文": "真实声望独立于即时敌意与绑带修正。",
+    "_description_en": "Political standing is separate from anger and band modifiers.",
+    "_说明_enabled_中文": "关闭后普通阵营对玩家基准100，暂停声望变更；自卫/雇主/信标保留。",
+    "_description_enabled_en": "When disabled, use neutral 100 and suspend political changes; defense/owners/beacons remain.",
+    "enabled": true,
+    "_说明_daily_gain_cap_中文": "每玩家每阵营每游戏日正收益上限，0～100。",
+    "_description_daily_gain_cap_en": "Positive gain limit per player/faction/game day, 0-100.",
+    "daily_gain_cap": 30
+  },
+  "identity_band": {
+    "_说明_中文": "单一最高有效绑带；不写回真实声望。所有时长以游戏tick计。",
+    "_description_en": "One selected band; modifiers never rewrite political standing. Durations are game ticks.",
+    "_说明_enabled_中文": "身份绑带功能开关；关闭不恢复旧身份牌。",
+    "_description_enabled_en": "Band function switch; never restores retired badges.",
+    "enabled": true,
+    "_说明_hit_window_ticks_中文": "滚动命中窗口20～1200。",
+    "_description_hit_window_ticks_en": "Rolling hit window, 20-1200.",
+    "hit_window_ticks": 300,
+    "_说明_hit_limit_中文": "触发个体反击的动作次数1～10。",
+    "_description_hit_limit_en": "Actions before individual retaliation, 1-10.",
+    "hit_limit": 5,
+    "_说明_damage_window_ticks_中文": "滚动真实损血窗口40～1200。",
+    "_description_damage_window_ticks_en": "Rolling actual HP loss window, 40-1200.",
+    "damage_window_ticks": 800,
+    "_说明_damage_fraction_中文": "取样最大生命的损血比例0.05～1。",
+    "_description_damage_fraction_en": "Loss fraction of sampled maximum HP, 0.05-1.",
+    "damage_fraction": 0.3,
+    "_说明_anger_ticks_中文": "个体敌意持续100～2400。",
+    "_description_anger_ticks_en": "Individual anger duration, 100-2400.",
+    "anger_ticks": 600,
+    "_说明_group_radius_中文": "同阵营群体通知半径8～64格，不授予视觉。",
+    "_description_group_radius_en": "Same-faction alert radius, 8-64 blocks; no visual confirmation.",
+    "group_radius": 25,
+    "_说明_group_ticks_中文": "群体敌意持续100～2400。",
+    "_description_group_ticks_en": "Group anger duration, 100-2400.",
+    "group_ticks": 600,
+    "_说明_cross_tier_window_ticks_中文": "越级动作滚动窗口20～400。",
+    "_description_cross_tier_window_ticks_en": "Rolling higher-rank window, 20-400.",
+    "cross_tier_window_ticks": 100,
+    "_说明_cross_tier_hits_中文": "中立以上的越级容忍动作1～5；警戒为1。",
+    "_description_cross_tier_hits_en": "Higher-rank tolerated actions at neutral or above, 1-5; wary uses one.",
+    "cross_tier_hits": 2,
+    "_说明_own_bonus_中文": "同阵营四级修正，四个0～1000整数。",
+    "_description_own_bonus_en": "Same-faction grade modifiers, four integers 0-1000.",
+    "own_bonus": [
+      50,
+      75,
+      100,
+      150
+    ],
+    "_说明_enemy_penalty_中文": "敌对阵营四级扣减绝对值，四个0～1000整数。",
+    "_description_enemy_penalty_en": "Enemy-faction grade penalties, four positive integers 0-1000.",
+    "enemy_penalty": [
+      100,
+      150,
+      200,
+      250
+    ]
+  },
+  "boss": {
+    "_说明_中文": "九类头目基准与固定分配；无自然生成或阶段技能。体型固定1.2倍。",
+    "_description_en": "Nine boss variants; no natural spawn or phase skills. Fixed body scale 1.2.",
+    "_说明_enabled_中文": "关闭拒绝新生但保留旧实体。",
+    "_description_enabled_en": "Reject new bosses when disabled; existing bosses survive.",
+    "enabled": true,
+    "_说明_budget_中文": "固定预算0.75～1.25，必须满足专精约束。",
+    "_description_budget_en": "Fixed feasible allocation budget, 0.75-1.25.",
+    "budget": 1.0,
+    "_说明_allocation_amplification_中文": "分配偏科放大1～3，放大后重新守恒。",
+    "_description_allocation_amplification_en": "Preference amplification 1-3, followed by conservation.",
+    "allocation_amplification": 1.8,
+    "_说明_health_multiplier_中文": "相对同阶普通人类的独立乘数。",
+    "_description_health_multiplier_en": "Independent multiplier relative to ordinary humans of the same rank.",
+    "health_multiplier": 2.4,
+    "_说明_armor_multiplier_中文": "相对同阶普通人类的独立乘数。",
+    "_description_armor_multiplier_en": "Independent multiplier relative to ordinary humans of the same rank.",
+    "armor_multiplier": 1.6,
+    "_说明_toughness_multiplier_中文": "相对同阶普通人类的独立乘数。",
+    "_description_toughness_multiplier_en": "Independent multiplier relative to ordinary humans of the same rank.",
+    "toughness_multiplier": 1.6,
+    "_说明_speed_multiplier_中文": "相对同阶普通人类的独立乘数。",
+    "_description_speed_multiplier_en": "Independent multiplier relative to ordinary humans of the same rank.",
+    "speed_multiplier": 0.95,
+    "_说明_detection_multiplier_中文": "相对同阶普通人类的独立乘数。",
+    "_description_detection_multiplier_en": "Independent multiplier relative to ordinary humans of the same rank.",
+    "detection_multiplier": 1.15,
+    "_说明_damage_multiplier_中文": "相对同阶普通人类的独立乘数。",
+    "_description_damage_multiplier_en": "Independent multiplier relative to ordinary humans of the same rank.",
+    "damage_multiplier": 1.3,
+    "_说明_gun_multiplier_中文": "相对同阶普通人类的独立乘数。",
+    "_description_gun_multiplier_en": "Independent multiplier relative to ordinary humans of the same rank.",
+    "gun_multiplier": 1.2,
+    "_说明_spread_multiplier_中文": "相对同阶普通人类的独立乘数。",
+    "_description_spread_multiplier_en": "Independent multiplier relative to ordinary humans of the same rank.",
+    "spread_multiplier": 0.9,
+    "_说明_knockback_add_中文": "击退抗性加值0～1，最终属性遵循原版界限。",
+    "_description_knockback_add_en": "Additive knockback resistance 0-1, bounded by vanilla attributes.",
+    "knockback_add": 0.3
+  },
+  "specialty": {
+    "_说明_中文": "只在出生分配；旧实体全1，不重抽已存结果。",
+    "_description_en": "Birth-only allocation; legacy entities use all ones and saved results never reroll.",
+    "_说明_enabled_中文": "关闭仅临时使用全1，保存结果不变。",
+    "_description_enabled_en": "Disable effective multipliers without rewriting saved allocations.",
+    "enabled": true,
+    "_说明_budget_mean_中文": "出生分配参数；细节见专精机制正文。",
+    "_description_budget_mean_en": "Birth allocation parameter; see the specialty reference.",
+    "budget_mean": 1.0,
+    "_说明_budget_sigma_中文": "出生分配参数；细节见专精机制正文。",
+    "_description_budget_sigma_en": "Birth allocation parameter; see the specialty reference.",
+    "budget_sigma": 0.1,
+    "_说明_budget_min_中文": "出生分配参数；细节见专精机制正文。",
+    "_description_budget_min_en": "Birth allocation parameter; see the specialty reference.",
+    "budget_min": 0.75,
+    "_说明_budget_max_中文": "出生分配参数；细节见专精机制正文。",
+    "_description_budget_max_en": "Birth allocation parameter; see the specialty reference.",
+    "budget_max": 1.25,
+    "_说明_deviation_sigma_中文": "出生分配参数；细节见专精机制正文。",
+    "_description_deviation_sigma_en": "Birth allocation parameter; see the specialty reference.",
+    "deviation_sigma": 0.15,
+    "_说明_deviation_cap_中文": "出生分配参数；细节见专精机制正文。",
+    "_description_deviation_cap_en": "Birth allocation parameter; see the specialty reference.",
+    "deviation_cap": 0.3,
+    "_说明_cap_budget_exponent_中文": "出生分配参数；细节见专精机制正文。",
+    "_description_cap_budget_exponent_en": "Birth allocation parameter; see the specialty reference.",
+    "cap_budget_exponent": 0.25,
+    "_说明_multiplier_min_中文": "出生分配参数；细节见专精机制正文。",
+    "_description_multiplier_min_en": "Birth allocation parameter; see the specialty reference.",
+    "multiplier_min": 0.5,
+    "_说明_multiplier_max_中文": "出生分配参数；细节见专精机制正文。",
+    "_description_multiplier_max_en": "Birth allocation parameter; see the specialty reference.",
+    "multiplier_max": 1.8
+  },
+  "orders": {
+    "_说明_中文": "命令活动范围与作者路线；动作消费者共享同一几何规则。",
+    "_description_en": "Shared order geometry and authored routes.",
+    "_说明_follow_distance_中文": "跟随/护卫活动半径8～96。",
+    "_description_follow_distance_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "follow_distance": 48,
+    "_说明_garrison_radius_中文": "默认驻守半径8～96。",
+    "_description_garrison_radius_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "garrison_radius": 32,
+    "_说明_garrison_return_distance_中文": "到岗距离0.3～3。",
+    "_description_garrison_return_distance_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "garrison_return_distance": 0.8,
+    "_说明_garrison_leave_threshold_中文": "冻结回位路径的额外绕行容差2～16；不推迟拉回。",
+    "_description_garrison_leave_threshold_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "garrison_leave_threshold": 4,
+    "_说明_garrison_walk_speed_中文": "巡逻速度倍率0.3～1。",
+    "_description_garrison_walk_speed_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "garrison_walk_speed": 0.65,
+    "_说明_chase_extra_radius_中文": "追击外圈增量0～32。",
+    "_description_chase_extra_radius_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "chase_extra_radius": 16,
+    "_说明_chase_max_radius_中文": "追击封顶8～96，不小于当前日常R。",
+    "_description_chase_max_radius_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "chase_max_radius": 96,
+    "_说明_chase_duration_ticks_中文": "首次出圈最长40～1200tick；受伤不刷新。",
+    "_description_chase_duration_ticks_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "chase_duration_ticks": 400,
+    "_说明_chase_return_cooldown_ticks_中文": "到位后等待0～400tick。",
+    "_description_chase_return_cooldown_ticks_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "chase_return_cooldown_ticks": 80,
+    "_说明_route_vertical_tolerance_中文": "路点脚部高度容差0.1～1。",
+    "_description_route_vertical_tolerance_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "route_vertical_tolerance": 0.75,
+    "_说明_route_failure_backoff_ticks_中文": "全路线失败后等待20～1200tick。",
+    "_description_route_failure_backoff_ticks_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "route_failure_backoff_ticks": 100,
+    "_说明_route_reach_distance_中文": "路点水平到达0.5～4格。",
+    "_description_route_reach_distance_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "route_reach_distance": 1.5,
+    "_说明_route_timeout_中文": "单点实际执行时限20～1200tick。",
+    "_description_route_timeout_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "route_timeout": 200,
+    "_说明_route_max_points_中文": "路线点数2～256。",
+    "_description_route_max_points_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "route_max_points": 64,
+    "_说明_route_wait_default_中文": "路点默认停留0～1200tick。",
+    "_description_route_wait_default_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
+    "route_wait_default": 0
+  },
+  "squads": {
+    "_说明_中文": "小队不扩大雇佣上限，未加载不强制加载、不补发命令。",
+    "_description_en": "Squads do not increase hire limits or force-load/defer commands.",
+    "_说明_max_squads_中文": "每玩家1～16队。",
+    "_description_max_squads_en": "1-16 squads per player.",
+    "max_squads": 8,
+    "_说明_max_members_中文": "每队1～64人。",
+    "_description_max_members_en": "1-64 members per squad.",
+    "max_members": 32,
+    "_说明_name_length_中文": "名称4～32个Unicode字符。",
+    "_description_name_length_en": "4-32 Unicode characters per name.",
+    "name_length": 16
   }
 }

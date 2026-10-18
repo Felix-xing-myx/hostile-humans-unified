@@ -44,8 +44,8 @@
   "item.hostile_humans_unified.tier_three_contract": "三阶雇佣合同",
   "item.hostile_humans_unified.contract.tooltip": "雇佣费用：%s 颗原版绿宝石；该阶上限：%s 人",
   "item.hostile_humans_unified.contract.payment_tooltip": "雇佣费用：%s 个 %s；该阶上限：%s 人",
-  "message.hostile_humans_unified.hire.payment": "雇佣所需物品不足：需要 %s 个 %s（合同另外消耗）",
-  "message.hostile_humans_unified.hire.invalid_payment": "雇佣费用配置无效或对应物品未注册，请检查服务端 global.json 的 recruitment.payment_by_tier",
+  "message.hostile_humans_unified.hire.payment": "需要 %s 个%s。契约可重复使用，不会额外消耗。",
+  "message.hostile_humans_unified.hire.invalid_payment": "该阵营的雇佣信物配置无效，请检查数据包阵营定义。",
   "item.hostile_humans_unified.roamer_signal_flare": "流浪者援军信号弹",
   "item.hostile_humans_unified.tier_one_signal_flare": "一阶援军信号弹",
   "item.hostile_humans_unified.tier_two_signal_flare": "二阶援军信号弹",
@@ -60,7 +60,7 @@
   "message.hostile_humans_unified.soldier_critical_health": "警告：你雇佣的人类 %s 生命值仅剩 %s%%！",
   "message.hostile_humans_unified.dismissed": "随从因背叛而解除雇佣",
   "message.hostile_humans_unified.hire.wrong_tier": "合同等级与目标不符",
-  "message.hostile_humans_unified.hire.clearance": "身份等级不足或目标正在反击",
+  "message.hostile_humans_unified.hire.clearance": "真实声望不足，或该人类仍对你有短期敌意。",
   "message.hostile_humans_unified.hire.owned": "该人类已有主人",
   "message.hostile_humans_unified.hire.limit": "该等级随从已达上限",
   "message.hostile_humans_unified.hire.emeralds": "原版绿宝石不足",
@@ -523,5 +523,8 @@
   "block.hostile_humans_unified.tribute_chest": "贡品箱（装饰占位）",
   "block.hostile_humans_unified.tribute_chest.tooltip": "当前仅为装饰方块，没有容器、投放贡品或增加声望功能。",
   "message.hostile_humans_unified.boss.disabled": "头目生成已关闭；本次未消耗刷怪蛋。",
-  "attribute_detail.layer.defense_live_adjustment": "运行状态差异（待更新或外部影响）"
+  "attribute_detail.layer.defense_live_adjustment": "运行状态差异（待更新或外部影响）",
+  "item.hostile_humans_unified.identity_badge.retired": "已退役的身份牌，仅作纪念与装饰；不再提供通行或误伤保护。",
+  "item.hostile_humans_unified.contract.faction_terms": "右键对应阶级人类雇佣。需满足该阵营真实声望并支付信物；契约可重复使用。",
+  "message.hostile_humans_unified.signal.requires_band": "请先携带或装备一条有效身份绑带，以确定援军阵营。"
 }

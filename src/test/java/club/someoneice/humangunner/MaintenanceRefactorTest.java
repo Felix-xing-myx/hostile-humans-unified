@@ -135,8 +135,8 @@ public final class MaintenanceRefactorTest {
                 "pursuit/spacing and Better Combat share actual attack geometry");
         check(calls("club/someoneice/humangunner/HumanInventoryCustody", "stowOrDrop",
                 "storePickupTransactionally"), "stowing cannot partly commit before a canceled world drop");
-        check(calls("club/someoneice/humangunner/FirearmSpawnEquipment", "equip", "putItemAway")
-                        && calls("club/someoneice/humangunner/SpartanEquipmentCompat", "equipOrStoreShield", "putItemAway"),
+        check(calls("club/someoneice/humangunner/FirearmSpawnEquipment", "equip", "insertInventory")
+                        && calls("club/someoneice/humangunner/GuaranteedShieldLoadout", "applyOnce", "insertInventory"),
                 "additional firearms and shields preserve existing equipment through custody");
         check(calls("club/someoneice/humangunner/GuaranteedShieldLoadout", "applyOnce", "shield")
                         && calls("club/someoneice/humangunner/HumanSpawnEquipment", "completeIfReady", "generateReserves"),
@@ -160,13 +160,15 @@ public final class MaintenanceRefactorTest {
                     "club/someoneice/humangunner/TierThreeLoadout.class",
                     "club/someoneice/humangunner/RangedSpawnChance.class",
                     "data/curios/slots/identity_badge.json",
+                    "data/hostile_humans_unified/curios/slots/identity_badge.json",
+                    "data/hostile_humans_unified/curios/entities/identity_badge_players.json",
                     "data/hostile_humans_unified/human_loadouts/roamer.json"))
                 check(jar.getEntry(removed) == null, "obsolete artifact absent: " + removed);
             for (String present : List.of("club/someoneice/humangunner/HumanSpawnEquipment.class",
                     "club/someoneice/humangunner/HumanInventoryCustody.class",
                     "club/someoneice/humangunner/ShieldDurability.class",
-                    "data/hostile_humans_unified/curios/slots/identity_badge.json",
-                    "data/hostile_humans_unified/curios/entities/identity_badge_players.json"))
+                    "data/hostile_humans_unified/curios/slots/identity_band.json",
+                    "data/hostile_humans_unified/curios/entities/identity_band_players.json"))
                 check(jar.getEntry(present) != null, "maintained module/resource packaged: " + present);
         }
         System.out.println("MaintenanceRefactorTest: " + checks + " inventory, codec, growth and architecture checks passed");

@@ -147,6 +147,7 @@ public final class HumanRelations {
     static void dismiss(MinecraftServer server, Human human) {
         persistHostileBeaconOrigin(human);
         RecruitmentLedger.get(server).dismiss(human.getUUID());
+        SquadData.get(server).removeMember(human.getUUID());
         human.setTarget(null);
         human.forgetSoldierTarget();
         human.getNavigation().stop();

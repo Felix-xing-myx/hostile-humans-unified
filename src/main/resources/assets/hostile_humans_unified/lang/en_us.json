@@ -44,8 +44,8 @@
   "item.hostile_humans_unified.tier_three_contract": "Tier III Recruitment Contract",
   "item.hostile_humans_unified.contract.tooltip": "Cost: %s vanilla emeralds; tier cap: %s followers",
   "item.hostile_humans_unified.contract.payment_tooltip": "Cost: %s x %s; tier cap: %s followers",
-  "message.hostile_humans_unified.hire.payment": "Not enough recruitment items: requires %s x %s (contract consumed separately)",
-  "message.hostile_humans_unified.hire.invalid_payment": "Invalid recruitment payment or unregistered item; check recruitment.payment_by_tier in server global.json",
+  "message.hostile_humans_unified.hire.payment": "Requires %s %s. The reusable contract has no additional charge.",
+  "message.hostile_humans_unified.hire.invalid_payment": "Invalid faction hiring currency. Check the faction datapack definition.",
   "item.hostile_humans_unified.roamer_signal_flare": "Roamer Reinforcement Flare",
   "item.hostile_humans_unified.tier_one_signal_flare": "Tier I Reinforcement Flare",
   "item.hostile_humans_unified.tier_two_signal_flare": "Tier II Reinforcement Flare",
@@ -60,7 +60,7 @@
   "message.hostile_humans_unified.soldier_critical_health": "Warning: your hired human %s is down to %s%% health!",
   "message.hostile_humans_unified.dismissed": "The follower broke contract after being betrayed",
   "message.hostile_humans_unified.hire.wrong_tier": "The contract does not match this human tier",
-  "message.hostile_humans_unified.hire.clearance": "Insufficient clearance or the target is retaliating",
+  "message.hostile_humans_unified.hire.clearance": "Insufficient true standing, or this human is still angry with you.",
   "message.hostile_humans_unified.hire.owned": "This human already has an owner",
   "message.hostile_humans_unified.hire.limit": "Follower limit reached for this tier",
   "message.hostile_humans_unified.hire.emeralds": "Not enough vanilla emeralds",
@@ -523,5 +523,8 @@
   "block.hostile_humans_unified.tribute_chest": "Tribute Chest (Decorative Placeholder)",
   "block.hostile_humans_unified.tribute_chest.tooltip": "Decorative block only: no storage, tribute submission or standing gain.",
   "message.hostile_humans_unified.boss.disabled": "Boss spawning is disabled; this egg was not consumed.",
-  "attribute_detail.layer.defense_live_adjustment": "Pending or external live adjustment"
+  "attribute_detail.layer.defense_live_adjustment": "Pending or external live adjustment",
+  "item.hostile_humans_unified.identity_badge.retired": "Retired souvenir badge. Provides no clearance or friendly-fire protection.",
+  "item.hostile_humans_unified.contract.faction_terms": "Use on a matching-rank human. Requires true faction standing and faction currency. The contract is reusable.",
+  "message.hostile_humans_unified.signal.requires_band": "Carry or equip an effective identity band to select the reinforcement faction."
 }

@@ -101,6 +101,7 @@ public final class HumanGunner {
         SoldierRosterNetwork.register();
         RecruitmentConfigNetwork.register();
         NavigationDebugNetwork.register();
+        SquadCommandNetwork.register();
         FactionVisualNetwork.register();
         AttributeDetailNetwork.register();
         MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onServerStarting);
@@ -163,6 +164,9 @@ public final class HumanGunner {
                 FactionAuthoringCommands.register(event.getDispatcher()));
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.RegisterCommandsEvent event) ->
                 NaturalStateCommand.register(event.getDispatcher()));
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.RegisterCommandsEvent event) ->
+                StandingCommands.register(event.getDispatcher()));
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> FactionDefinitions.reset());
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.AddReloadListenerEvent event) ->
                 event.addListener(FactionDefinitions.INSTANCE));
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanGunner::onEntityLeave);
@@ -348,6 +352,7 @@ public final class HumanGunner {
         }
         FRESH_HUMANS.put(human, !event.loadedFromDisk());
         HumanFactions.initialize(human, event.loadedFromDisk());
+        FactionContent.onJoin(human, event.loadedFromDisk());
         NaturalState.onJoin(human, event.loadedFromDisk());
         HumanGrowth.onJoin(human, event.loadedFromDisk());
         if (PeacefulHumanPolicy.onJoin(event, human)
@@ -361,6 +366,7 @@ public final class HumanGunner {
         }
         Entity.RemovalReason reason = human.getRemovalReason();
         SoldierFollowNavigation.clear(human);
+        if (reason == Entity.RemovalReason.KILLED) StandingEffects.confirmDeath(human);
         StandingEffects.clear(human);
         OfflineSoldierDeathReports.onEntityLeave(human);
         if (reason != Entity.RemovalReason.KILLED && reason != Entity.RemovalReason.DISCARDED) {
@@ -520,15 +526,12 @@ public final class HumanGunner {
         if (event.getEntity() instanceof Human human
                 && !human.level().isClientSide
                 && event.getAmount() > 0.0F) {
-            // LivingDamageEvent carries the final post-armour, post-enchantment
-            // amount. Counting it avoids treating blocked or mitigated attack
-            // input as health actually lost.
-            RecentDamageTracker.record(human, event.getAmount(), event.getSource().getEntity());
-            StandingEffects.damage(human, event.getSource(), event.getAmount());
+            // Actual health loss is observed by HumanDamageEvents at the shared health-write boundary.
             if (event.getSource().getEntity() instanceof Player player
                     && HumanRelations.isOwnedBy(human, player)
                     && RecruitmentPolicy.betrayed(human.getHealth() - event.getAmount(), human.getMaxHealth())) {
                 RecruitmentLedger.get(player.getServer()).dismiss(human.getUUID());
+                SquadData.get(player.getServer()).removeMember(human.getUUID());
                 human.setOwnerUUID(null);
                 human.setTame(false);
 

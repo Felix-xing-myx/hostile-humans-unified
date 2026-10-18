@@ -22,7 +22,7 @@ public final class HumanTargetCoordinator {
     public static boolean suspended(Human h){
         return h.isNoAi()||h.isSleeping()||NavigationDebugService.controls(h)||HumanGunner.isManualInventoryOpen(h)
                 ||h.level().getDifficulty()==net.minecraft.world.Difficulty.PEACEFUL
-                ||SoldierOrder.isReturningFromRetreat(h)||h.guardCombatState.returning();
+                ||SoldierOrder.isReturningFromRetreat(h)&&!SoldierOrder.isGarrison(h);
     }
     /** Explicit survival counterfire may restore its own known opponent, never generic acquisition. */
     public static LivingEntity counterfire(Human h,LivingEntity target){

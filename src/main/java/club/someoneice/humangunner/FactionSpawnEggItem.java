@@ -38,7 +38,13 @@ public final class FactionSpawnEggItem extends ForgeSpawnEggItem {
         CompoundTag forge = entity.getCompound("ForgeData").copy();
         forge.putString(HumanFactions.FACTION, faction);
         forge.putBoolean(HumanFactions.BOSS, boss);
-        if(spawner)forge.putBoolean(FactionContent.SPAWNER_BIRTH,true);else forge.remove(FactionContent.SPAWNER_BIRTH);
+        forge.putBoolean(FactionContent.AUTHORED_EQUIPMENT, original.contains("HandItems") || original.contains("ArmorItems"));
+        if (spawner) {
+            forge.putBoolean(FactionContent.SPAWNER_BIRTH, true);
+            forge.putBoolean(FactionContent.AUTHORED_EQUIPMENT, original.contains("HandItems") || original.contains("ArmorItems"));
+        } else {
+            forge.remove(FactionContent.SPAWNER_BIRTH);
+        }
         entity.put("ForgeData", forge);
         return entity;
     }

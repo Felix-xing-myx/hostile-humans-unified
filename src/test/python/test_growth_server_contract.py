@@ -47,9 +47,11 @@ class GrowthServerContractTest(unittest.TestCase):
         growth = read("HumanGrowth.java")
         damage = growth.split('static double multiplier(Human human)', 1)[1].split('static double gunSpreadMultiplier', 1)[0]
         health = growth.split('static double fullHealth(Human human)', 1)[1].split('static void tick', 1)[0]
-        self.assertIn('config.damageStagePercent(', damage)
+        self.assertIn('layers(state(human), config).damageMultiplier()', damage)
+        self.assertIn('config.damageStagePercent(stage)', growth)
         self.assertNotIn('config.stagePercent(', damage)
-        self.assertIn('config.stagePercent(', health)
+        self.assertIn('layers(state(human), config).healthMultiplier()', health)
+        self.assertIn('config.stagePercent(stage)', growth)
         self.assertNotIn('damageStagePercent', health)
         for backend in ('TaczIntegration.java', 'ScgunsIntegration.java'):
             text = read(backend)
@@ -90,9 +92,9 @@ class GrowthServerContractTest(unittest.TestCase):
         self.assertIn('@At("HEAD")', mixin)
         self.assertIn('@At("RETURN")', mixin)
         combat = read("GrowthCombat.java")
-        self.assertIn("hit.before - target.getHealth()", combat)
-        self.assertIn("target.getHealth()) - hit.nested", combat)
-        self.assertIn("hit.observedHealth ? hit.healthLoss", combat)
+        self.assertIn("hit.receipt.ownLoss(target.getHealth())", combat)
+        self.assertIn("parent.receipt.childDamage(hit.receipt.subtreeLoss(target.getHealth()))", combat)
+        self.assertIn("hit.receipt.endWrite(target.getHealth())", combat)
         self.assertEqual(mixin.count('m_21153_(F)V'), 2)
         self.assertIn("beforeHealthChange", mixin)
         self.assertIn("afterHealthChange", mixin)
@@ -143,9 +145,10 @@ class GrowthServerContractTest(unittest.TestCase):
         self.assertIn("VanillaModePolicy.clampedHealth", health)
         self.assertNotIn("removeModifier", health)
 
-    def test_server_reload_reapplies_weapon_only_base_without_resetting_other_attributes(self):
+    def test_server_reload_reapplies_shared_bases_without_resetting_external_modifiers(self):
         source = read("HumanGrowth.java")
-        self.assertIn("if (changed) TierAttributes.applyCombatBase(human)", source)
+        self.assertIn("if (changed) { TierAttributes.apply(human)", source)
+        self.assertNotIn("removeModifiers", read("TierAttributes.java"))
         helper = read("TierAttributes.java").split("static void applyCombatBase", 1)[1].split("private static void set", 1)[0]
         self.assertIn("Attributes.ATTACK_DAMAGE", helper)
         self.assertIn("VanillaModePolicy.attackBase", helper)

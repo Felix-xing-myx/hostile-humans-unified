@@ -75,7 +75,7 @@ public final class UnifiedConfig {
     UnifiedConfig(JsonObject configured) {
         JsonObject defaults = defaults();
         root = merge(defaults, configured);
-        SpecialtyConfig.configure(object(root, "specialty"));
+        var preparedSpecialty = SpecialtyConfig.prepare(object(root, "specialty"));
         factionRules = FactionRules.parse(root);
         jumpAttack = JumpAttackConfig.parse(object(root, "jump_attack"));
         armorSwap = ArmorSwapConfig.parse(object(root, "armor_swap"));
@@ -89,6 +89,7 @@ public final class UnifiedConfig {
         activityBudget = ActivityBudgetConfig.parse(object(root,"activity_budget"));
         hostileTargeting = HostileTargetingConfig.parse(object(root, "hostile_mob_targeting"));
         vanillaMode = bool(root, "vanilla_mode", false);
+        var preparedEquipment = FactionEquipmentConfig.prepare(object(root, "equipment_loadouts"), FactionDefinitions.equipmentDefaults());
         Map<String, ConfiguredEquipmentLoadout> loadouts = new LinkedHashMap<>();
         for (String rank : List.of("roamer", "tier1", "tier2", "tier3")) {
             loadouts.put(rank, ConfiguredEquipmentLoadout.parse(
@@ -218,6 +219,9 @@ public final class UnifiedConfig {
                 (int) number(messages, "report_interval_ticks", 100, 20, 1200),
                 (int) number(messages, "report_max_per_minute", 6, 1, 20),
                 (int) number(messages, "report_details_per_message", 3, 1, 5));
+        OrderConfiguration.apply(root);
+        SpecialtyConfig.publish(preparedSpecialty);
+        FactionEquipmentConfig.publish(preparedEquipment);
     }
 
     public static UnifiedConfig get() {
@@ -228,7 +232,12 @@ public final class UnifiedConfig {
         return value;
     }
     static synchronized UnifiedConfig reloadForServer() {
-        instance = load(FMLPaths.CONFIGDIR.get());
+        try {
+            instance = new UnifiedConfig(SplitConfigFiles.loadStrict(FMLPaths.CONFIGDIR.get()));
+        } catch (RuntimeException invalid) {
+            com.mojang.logging.LogUtils.getLogger().error("Keeping previous complete human configuration after reload failure", invalid);
+            if (instance == null) instance = load(FMLPaths.CONFIGDIR.get());
+        }
         GrowthRewards.configurationReloaded(instance.growth().enabled());
         return instance;
     }
@@ -246,6 +255,7 @@ public final class UnifiedConfig {
     }
     public Spawn spawn() { return spawn; }
     public GrowthConfig growth() { return growth; }
+    int structureBaselineDay() { return (int) number(object(root,"growth"),"structure_baseline_day",10,0,1000); }
     public JumpAttackConfig jumpAttack() { return jumpAttack; }
     public ArmorSwapConfig armorSwap() { return armorSwap; }
     public CombatResupplyConfig combatResupply() { return combatResupply; }
@@ -256,6 +266,7 @@ public final class UnifiedConfig {
     public ShieldPressureConfig shieldPressure() { return shieldPressure; }
     public HostileTargetingConfig hostileTargeting() { return hostileTargeting; }
     EquipmentGrowthPolicy equipmentGrowth() { return equipmentGrowth; }
+    JsonObject equipmentSource() { return object(root, "equipment_loadouts").deepCopy(); }
     public ConfiguredEquipmentLoadout equipmentLoadout(String rank) {
         return equipmentLoadouts.getOrDefault(rank, equipmentLoadouts.get("roamer"));
     }

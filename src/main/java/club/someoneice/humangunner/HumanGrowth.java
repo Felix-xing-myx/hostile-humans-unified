@@ -44,9 +44,13 @@ public final class HumanGrowth {
     }
 
     public static void markBirth(Human human, ServerLevelAccessor level) {
+        markBirth(human, level, null);
+    }
+    public static void markBirth(Human human, ServerLevelAccessor level, net.minecraft.world.entity.MobSpawnType source) {
         if (human.level().isClientSide || human.getPersistentData().contains(STATE)) return;
         long time = PlayerProgressionData.timeNear(level, human.blockPosition());
-        long day = time < 0 ? 0 : NaturalSpawnProgression.dayAt(time);
+        long day = source == net.minecraft.world.entity.MobSpawnType.STRUCTURE ? UnifiedConfig.get().structureBaselineDay()
+                : time < 0 ? 0 : NaturalSpawnProgression.dayAt(time);
         GrowthConfig config = UnifiedConfig.get().growth();
         CompoundTag state = new CompoundTag();
         state.putInt("schema", 1);
@@ -118,7 +122,7 @@ public final class HumanGrowth {
     static void tick(Human human) {
         UnifiedConfig config = UnifiedConfig.get();
         boolean changed = CONFIGS.put(human, config) != config;
-        if (changed) TierAttributes.apply(human);
+        if (changed) { TierAttributes.apply(human); HumanFactions.refreshTeam(human); }
         boolean rewarded = GrowthRewards.claim(human);
         if (changed && config.growth().enabled() && human.hasOwner()) award(human, 0);
         if (changed || rewarded || human.tickCount % 20 == 0) GrowthHealth.apply(human);

@@ -19,7 +19,7 @@ final class FactionDefinitions extends SimplePreparableReloadListener<FactionDef
     record Definition(ResourceLocation id, int color, String name, int startingStanding, int weight,
                       Set<ResourceLocation> enemies, Set<ResourceLocation> allies, List<Double> preference,
                       List<Double> bossPreference, String bandStyle, String aggression,
-                      ResourceLocation hireItem, List<Integer> hireCosts, List<Integer> hireStanding, double friendlyDiscount, double allyDiscount) {}
+                      ResourceLocation hireItem, List<Integer> hireCosts, List<Integer> hireStanding, double friendlyDiscount, double allyDiscount, JsonObject equipment) {}
     record Revision(long number, Map<ResourceLocation, Definition> definitions, SpecialtyData.Definitions specialty) {}
     record Prepared(Map<ResourceLocation, JsonElement> factions, Map<ResourceLocation, JsonElement> specialty) {}
     private static volatile Revision current = new Revision(0, builtins(), SpecialtyData.get());
@@ -75,12 +75,25 @@ final class FactionDefinitions extends SimplePreparableReloadListener<FactionDef
                     throw new IllegalArgumentException("Invalid ally " + related + " in " + d.id());
             }
             SpecialtyData.Definitions specialty = SpecialtyData.parse(prepared.specialty());
+            var equipment = FactionEquipmentConfig.prepare(UnifiedConfig.get().equipmentSource(), equipmentDefaults(next));
+            // All modules validate first; publication occurs synchronously on the server reload thread.
+            FactionEquipmentConfig.publish(equipment);
             // Readers of both identities and allocation data observe this single publication.
             current = new Revision(current.number() + 1, Map.copyOf(next), specialty);
         } catch (RuntimeException invalid) {
             LogUtils.getLogger().error("Keeping previous faction revision: {}", invalid.getMessage());
         }
     }
+    static Map<String, JsonObject> equipmentDefaults() { return equipmentDefaults(current.definitions()); }
+    private static Map<String, JsonObject> equipmentDefaults(Map<ResourceLocation, Definition> definitions) {
+        Map<String, JsonObject> result = new LinkedHashMap<>();
+        for (Definition d : definitions.values()) {
+            String key = d.id().getNamespace().equals(HumanGunner.MOD_ID) ? d.id().getPath() : d.id().toString();
+            result.put(key, d.equipment().deepCopy());
+        }
+        return Map.copyOf(result);
+    }
+    static void reset() { current = new Revision(current.number() + 1, builtins(), SpecialtyData.parse(Map.of())); }
     private static Map<ResourceLocation, Definition> builtins() {
         Map<ResourceLocation, Definition> result = new LinkedHashMap<>();
         for (String name : BUILTINS) {
@@ -127,7 +140,12 @@ final class FactionDefinitions extends SimplePreparableReloadListener<FactionDef
                 ids(root, "enemies"), ids(root, "allies"), preference, vector(root.get("boss_preference"), preference),
                 style, aggression, item, List.copyOf(costs), List.copyOf(hireStanding),
                 UnifiedConfig.number(discounts, "friendly", UnifiedConfig.number(hire, "friendly_discount", .9, 0, 1), 0, 1),
-                UnifiedConfig.number(discounts, "allied", UnifiedConfig.number(hire, "ally_discount", .8, 0, 1), 0, 1));
+                UnifiedConfig.number(discounts, "allied", UnifiedConfig.number(hire, "ally_discount", .8, 0, 1), 0, 1), equipment(root));
+    }
+    private static JsonObject equipment(JsonObject root) {
+        if (!root.has("equipment")) return new JsonObject();
+        if (!root.get("equipment").isJsonObject()) throw new IllegalArgumentException("equipment must contain rank objects");
+        return root.getAsJsonObject("equipment").deepCopy();
     }
     private static int standing(String name) {
         return switch (name) {

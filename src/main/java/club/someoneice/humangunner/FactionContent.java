@@ -20,12 +20,24 @@ import java.util.*;
 /** One catalog of built-in faction entities; no natural spawn entries or replacement AI. */
 public final class FactionContent {
     public static final String SPAWNER_BIRTH = HumanGunner.MOD_ID + ":faction_spawner_birth";
+    static final String AUTHORED_EQUIPMENT = HumanGunner.MOD_ID + ":faction_authored_equipment";
     public static final DeferredRegister<Block> BLOCKS = DeferredRegister.create(ForgeRegistries.BLOCKS, HumanGunner.MOD_ID);
     public static final RegistryObject<Block> TRIBUTE_CHEST = BLOCKS.register("tribute_chest", () -> new Block(
             net.minecraft.world.level.block.state.BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS).strength(2.5F).sound(SoundType.WOOD)));
     public record Boss(String faction, int tier, RegistryObject<EntityType<FactionBossHuman>> type) {}
     public static final List<Boss> BOSSES = bosses();
     private FactionContent() {}
+    /** Spawners carrying EntityTag bypass vanilla finalizeSpawn. Consume only an explicit birth marker. */
+    static void onJoin(Human human, boolean fromDisk) {
+        var data = human.getPersistentData();
+        boolean spawnerBirth = data.getBoolean(SPAWNER_BIRTH), authored = data.getBoolean(AUTHORED_EQUIPMENT);
+        data.remove(SPAWNER_BIRTH); data.remove(AUTHORED_EQUIPMENT);
+        if (!fromDisk && authored) HumanSpawnEquipment.preserveAuthored(human);
+        if (fromDisk || !spawnerBirth || authored) return;
+        for (var slot : net.minecraft.world.entity.EquipmentSlot.values())
+            if (!human.getItemBySlot(slot).isEmpty()) return;
+        HumanSpawnEquipment.generate(human, false);
+    }
     private static List<Boss> bosses() {
         List<Boss> values = new ArrayList<>();
         for (String faction : List.of("crimson", "azure", "verdant")) for (int rank = 1; rank <= 3; rank++) {

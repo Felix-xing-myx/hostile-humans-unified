@@ -1,6 +1,7 @@
 """Static integration contracts. These do not execute Forge events or prove live behavior."""
 from pathlib import Path
 import unittest
+import re
 
 JAVA = Path(__file__).resolve().parents[3] / 'src/main/java'
 PKG = JAVA / 'club/someoneice/humangunner'
@@ -12,8 +13,13 @@ class ReviewStateBoundaries(unittest.TestCase):
         self.assertNotIn('MessageCommandHuman', network)
         self.assertFalse((JAVA / 'com/craftix/hostile_humans/network/message/MessageCommandHuman.java').exists())
         order = (PKG / 'SoldierOrder.java').read_text(encoding='utf-8')
-        for signature in ('static void initialize(Human human)', 'static void set(Human human, SoldierOrder order, boolean preserveNavigation)'):
-            method = order.split(signature, 1)[1].split('\n    }', 1)[0]
+        for name in ('initialize', 'set'):
+            match = re.search(r'static void ' + name + (r'\(Human \w+, SoldierOrder \w+, boolean \w+\)\s*\{' if name == 'set' else r'\(Human \w+\)\s*\{'), order)
+            self.assertIsNotNone(match)
+            start = match.end(); depth = 1; end = start
+            while depth:
+                depth += (order[end] == '{') - (order[end] == '}'); end += 1
+            method = order[start:end]
             self.assertIn('setOrderedToSit(false)', method)
             self.assertIn('setInSittingPose(false)', method)
         startup = (PKG / 'HumanGunner.java').read_text(encoding='utf-8')

@@ -3,6 +3,7 @@ package club.someoneice.humangunner;
 import com.craftix.hostile_humans.entity.entities.Human;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import dev.felix.hostilehumans.core.HealthLossReceipt;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
@@ -26,25 +27,17 @@ public final class GrowthCombat {
         final LivingEntity target;
         final Human soldier;
         final java.util.UUID owner;
-        final double before;
-        double nested;
-        double healthLoss;
-        boolean observedHealth;
-        Deque<HealthWrite> healthChanges;
+        final DamageSource source;
+        final HealthLossReceipt receipt;
         Hit(LivingEntity target, DamageSource source) {
             this.target = target;
-            before = target.getHealth();
+            this.source = source;
+            receipt = new HealthLossReceipt(target.getHealth());
             soldier = source.getEntity() instanceof Human human && formal(human)
                     && !HumanRelations.allied(human, target) ? human : null;
             owner = soldier == null ? null : soldier.getOwnerUUID();
         }
     }
-    private static final class HealthWrite {
-        final float before;
-        double nested;
-        HealthWrite(float before) { this.before = before; }
-    }
-
     private GrowthCombat() { }
     private static boolean formal(Human human) { return human.hasOwner() && human.getOwnerUUID() != null; }
 
@@ -53,8 +46,9 @@ public final class GrowthCombat {
         if (target.level().isClientSide) return;
         Deque<Hit> stack = HITS.get();
         if (stack == null) {
-            if (!UnifiedConfig.get().growth().enabled() || !(source.getEntity() instanceof Human soldier)
-                    || !formal(soldier) || HumanRelations.allied(soldier, target)) return;
+            boolean growth = UnifiedConfig.get().growth().enabled() && source.getEntity() instanceof Human soldier
+                    && formal(soldier) && !HumanRelations.allied(soldier, target);
+            if (!(target instanceof Human) && !growth) return;
             stack = new ArrayDeque<>();
             HITS.set(stack);
         }
@@ -67,11 +61,13 @@ public final class GrowthCombat {
         if (stack == null || stack.isEmpty()) { HITS.remove(); return; }
         Hit hit = stack.pop();
         if (hit.target != target) { stack.clear(); HITS.remove(); return; }
-        double loss = hit.observedHealth ? hit.healthLoss
-                : Math.max(0, Math.min(hit.before, hit.before - target.getHealth()) - hit.nested);
+        double loss = hit.receipt.ownLoss(target.getHealth());
         // Reentrant damage to the same entity belongs to the nested source, not both sources.
         for (Hit parent : stack) {
-            if (parent.target == target) { parent.nested += loss; break; }
+            if (parent.target == target) {
+                parent.receipt.childDamage(hit.receipt.subtreeLoss(target.getHealth()));
+                break;
+            }
         }
         if (hit.soldier != null && formal(hit.soldier) && hit.owner.equals(hit.soldier.getOwnerUUID()))
             record(target, hit.soldier, loss);
@@ -85,8 +81,7 @@ public final class GrowthCombat {
         Deque<Hit> stack = HITS.get();
         if (stack == null) return;
         for (Hit hit : stack) if (hit.target == target) {
-            if (hit.healthChanges == null) hit.healthChanges = new ArrayDeque<>();
-            hit.healthChanges.push(new HealthWrite(target.getHealth()));
+            hit.receipt.beginWrite(target.getHealth());
             return;
         }
     }
@@ -96,12 +91,9 @@ public final class GrowthCombat {
         Deque<Hit> stack = HITS.get();
         if (stack == null) return;
         for (Hit hit : stack) if (hit.target == target) {
-            if (hit.healthChanges == null || hit.healthChanges.isEmpty()) return;
-            HealthWrite write = hit.healthChanges.pop();
-            double loss = Math.max(0, Math.min(write.before, write.before - target.getHealth()));
-            if (!hit.healthChanges.isEmpty()) hit.healthChanges.peek().nested += loss;
-            hit.observedHealth = true;
-            hit.healthLoss += Math.max(0, loss - write.nested);
+            double actual = hit.receipt.endWrite(target.getHealth());
+            // This is before death/totem handling, so a lethal action tops up its existing charge exactly once.
+            if (target instanceof Human human) HumanDamageEvents.healthLost(human, hit.source, actual);
             return;
         }
     }

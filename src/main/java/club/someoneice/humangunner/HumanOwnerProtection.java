@@ -13,7 +13,7 @@ public final class HumanOwnerProtection {
 
     public static boolean protects(Entity target, Entity attacker) {
         return target instanceof Human human && attacker instanceof Player player
-                && HumanRelations.isOwnedBy(human, player);
+                && player.getUUID().equals(HumanRelations.effectiveOwner(human));
     }
 
     public static boolean blocksDamage(Human target, DamageSource source) {

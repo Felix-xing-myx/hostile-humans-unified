@@ -14,6 +14,14 @@ final class FactionStandingData extends SavedData {
                 FactionStandingData::new, "hostile_humans_unified_standing");
     }
     int standing(UUID player, String faction) { return entry(player, faction).value(); }
+    /** Permission-gated author command only. Never resets or consumes the gameplay reward allowance. */
+    int set(UUID player, String faction, long value) {
+        Entry previous = entry(player, faction);
+        int next = (int) Math.max(-500L, Math.min(500L, value));
+        players.get(player).put(faction, new Entry(next, previous.rewardDay(), previous.rewardEarned()));
+        setDirty();
+        return next;
+    }
     private Entry entry(UUID player, String faction) {
         Map<String, Entry> values = players.computeIfAbsent(player, ignored -> new HashMap<>());
         Entry stored = values.get(faction);

@@ -18,6 +18,10 @@ public final class HumanFactions {
     private record Group(String faction, SpawnGroupData delegate) implements SpawnGroupData {}
 
     public static String id(Human human) { return human.level().isClientSide ? human.humanGunner$getFaction() : human.getPersistentData().getString(FACTION); }
+    /** Network/display boundary only; never normalize or discard the stored identity on reads. */
+    public static String wireId(String raw) {
+        return raw != null && raw.length() <= 256 && (raw.isEmpty() || FactionDefinitions.id(raw) != null) ? raw : "";
+    }
     public static String shortId(Human human) {
         if (human.getTier() == HumanTier.ROAMER) return "roamer";
         ResourceLocation key = FactionDefinitions.id(id(human));
@@ -27,13 +31,13 @@ public final class HumanFactions {
     public static boolean isBoss(Human human) { return human.level().isClientSide ? human.humanGunner$isBoss() : human.getPersistentData().getBoolean(BOSS); }
     public static boolean same(Human a, Human b) {
         if (a.getTier() == HumanTier.ROAMER || b.getTier() == HumanTier.ROAMER) return false;
-        if (!enabled()) return !a.team.isEmpty() && a.team.equals(b.team);
+        if (!enabled()) return TierAttributes.key(a).equals(TierAttributes.key(b));
         return FactionDefinitions.allies(id(a), id(b));
     }
     public static boolean enemies(Human a, Human b) {
         if (a == b) return false;
         if (a.getTier() == HumanTier.ROAMER || b.getTier() == HumanTier.ROAMER) return true;
-        if (!enabled()) return !a.team.equals(b.team);
+        if (!enabled()) return !TierAttributes.key(a).equals(TierAttributes.key(b));
         return FactionDefinitions.enemies(id(a), id(b));
     }
     public static double[] preference(Human human, boolean boss) {
@@ -85,6 +89,8 @@ public final class HumanFactions {
     public static SpawnGroupData onSpawn(Human human, MobSpawnType source, SpawnGroupData group, CompoundTag spawnTag) {
         CompoundTag entityTag = spawnTag != null && spawnTag.contains("EntityTag", Tag.TAG_COMPOUND)
                 ? spawnTag.getCompound("EntityTag") : spawnTag;
+        if (entityTag != null && (entityTag.contains("HandItems") || entityTag.contains("ArmorItems")))
+            HumanSpawnEquipment.preserveAuthored(human);
         if (entityTag != null && entityTag.contains("ForgeData", Tag.TAG_COMPOUND)) {
             CompoundTag explicit = entityTag.getCompound("ForgeData");
             if (explicit.contains(FACTION, Tag.TAG_STRING)) human.getPersistentData().putString(FACTION, explicit.getString(FACTION));
@@ -122,7 +128,7 @@ public final class HumanFactions {
 
     public static void refreshTeam(Human human) {
         if (human.level().isClientSide) return;
-        human.humanGunner$syncIdentity(id(human), isBoss(human));
+        human.humanGunner$syncIdentity(wireId(id(human)), isBoss(human));
         if (human.getTier() == HumanTier.ROAMER) human.team = "human_roamer_" + human.getUUID();
         else if (enabled()) human.team = id(human).isEmpty() ? "" : "faction:" + id(human);
         else human.team = TierThreeHuman.isTierThree(human) ? "human_level3"

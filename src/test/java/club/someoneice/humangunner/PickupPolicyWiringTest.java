@@ -90,15 +90,17 @@ public final class PickupPolicyWiringTest {
                 "net/minecraft/world/entity/ai/navigation/PathNavigation"),
                 "lifecycle does not directly overwrite pickup navigation");
         check(calls("club/someoneice/humangunner/RecruitmentContractItem", "interactLivingEntity",
-                "club/someoneice/humangunner/RecruitmentConfigNetwork", "serverPrice")
-                && calls("club/someoneice/humangunner/RecruitmentContractItem", "interactLivingEntity",
-                "club/someoneice/humangunner/RecruitmentConfigNetwork", "pay"),
-                "actual hiring uses the tested authoritative terms and item transaction");
-        check(calls("club/someoneice/humangunner/RecruitmentContractItem", "appendHoverText",
-                "club/someoneice/humangunner/RecruitmentConfigClient", "price")
+                "club/someoneice/humangunner/FactionRecruitment", "hire")
+                && calls("club/someoneice/humangunner/FactionRecruitment", "hire",
+                "club/someoneice/humangunner/FactionRecruitment", "quote")
+                && calls("club/someoneice/humangunner/FactionRecruitment", "hire",
+                "club/someoneice/humangunner/RecruitmentPayment", "pay"),
+                "actual hiring uses one faction quote and authoritative payment transaction");
+        check(!calls("club/someoneice/humangunner/RecruitmentContractItem", "appendHoverText",
+                "club/someoneice/humangunner/UnifiedConfig", "get")
                 && !calls("club/someoneice/humangunner/RecruitmentContractItem", "appendHoverText",
-                "club/someoneice/humangunner/UnifiedConfig", "get"),
-                "contract hover reads the synchronized view, not client-local payment settings");
+                "club/someoneice/humangunner/RecruitmentConfigClient", "price"),
+                "generic reusable contract hover never advertises stale rank-only payment or client-local prices");
         System.out.println("PickupPolicyWiringTest: " + assertions + " permission, navigation-ownership and entrypoint checks passed");
     }
 

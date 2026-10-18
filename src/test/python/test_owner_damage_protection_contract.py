@@ -16,7 +16,7 @@ class OwnerDamageProtectionContract(unittest.TestCase):
     def test_owner_check_is_directional_and_independent_of_pvp(self):
         source = (PKG / 'HumanOwnerProtection.java').read_text(encoding='utf-8')
         self.assertIn('target instanceof Human human && attacker instanceof Player player', source)
-        self.assertIn('HumanRelations.isOwnedBy(human, player)', source)
+        self.assertIn('player.getUUID().equals(HumanRelations.effectiveOwner(human))', source)
         self.assertNotIn('allowHiredPvpDamage', source)
         self.assertNotIn('IdentityBadge', source)
         self.assertIn('source.getEntity()', source)

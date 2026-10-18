@@ -23,12 +23,21 @@ final class SplitConfigFiles {
                 rank, data, TierConfigProjection.tier(defaults, rank)));
     }
 
+    static JsonObject loadStrict(Path configDirectory) {
+        JsonObject defaults = UnifiedConfig.defaults();
+        return load(configDirectory, defaults, (rank, data) -> EquipmentIntegrationDefaults.seedRank(
+                rank, data, TierConfigProjection.tier(defaults, rank)), true);
+    }
     static JsonObject load(Path configDirectory, JsonObject defaults,
                            java.util.function.BiPredicate<String, JsonObject> integrations) {
+        return load(configDirectory, defaults, integrations, false);
+    }
+    private static JsonObject load(Path configDirectory, JsonObject defaults,
+                           java.util.function.BiPredicate<String, JsonObject> integrations, boolean strict) {
         Path directory = configDirectory.resolve(DIRECTORY);
         GrowthProfileFiles.relocate(directory, defaults);
         JsonObject result = loadFile(directory.resolve("global.json"), TierConfigProjection.global(defaults),
-                false, integrations);
+                false, integrations, strict);
         // Discard recognized per-tier values accidentally left in a global file. This
         // avoids a second settings source and makes each rank independently authoritative.
         result = TierConfigProjection.global(result);
@@ -38,7 +47,7 @@ final class SplitConfigFiles {
         for (String rank : TierConfigProjection.RANKS) {
             JsonObject fallback = TierConfigProjection.tier(defaults, rank);
             JsonObject data = loadFile(directory.resolve(rank + ".json"), fallback,
-                    true, permittedIntegrations);
+                    true, permittedIntegrations, strict);
             TierConfigProjection.applyTier(result, rank, data);
         }
         result.addProperty("schema_version", 2);
@@ -46,9 +55,10 @@ final class SplitConfigFiles {
     }
 
     private static JsonObject loadFile(Path path, JsonObject defaults, boolean rank,
-                                       java.util.function.BiPredicate<String, JsonObject> integrations) {
-        if (Files.exists(path)) return existing(path, defaults, rank, integrations);
+                                       java.util.function.BiPredicate<String, JsonObject> integrations, boolean strict) {
+        if (Files.exists(path)) return existing(path, defaults, rank, integrations, strict);
         JsonObject data = defaults.deepCopy();
+        if (rank) EquipmentConfigMigration.migrate(data, rankName(path));
         TierConfigProjection.fill(data, defaults, "");
         describe(data, rank);
         if (rank) integrations.test(rankName(path), data);
@@ -59,7 +69,7 @@ final class SplitConfigFiles {
                 writeNew(path, data);
             } catch (FileAlreadyExistsException concurrentWriter) {
                 // Re-read the winner, including its version and payment failure handling.
-                return existing(path, defaults, rank, integrations);
+                return existing(path, defaults, rank, integrations, strict);
             } catch (IOException error) {
                 LogUtils.getLogger().error("Cannot create human configuration {}; using in-memory settings", path, error);
             }
@@ -68,10 +78,12 @@ final class SplitConfigFiles {
     }
 
     private static JsonObject existing(Path path, JsonObject defaults, boolean rank,
-                                       java.util.function.BiPredicate<String, JsonObject> integrations) {
+                                       java.util.function.BiPredicate<String, JsonObject> integrations, boolean strict) {
         try {
             byte[] original = Files.readAllBytes(path);
             JsonObject data = read(path, 2);
+            boolean migrated = rank && EquipmentConfigMigration.migrate(data, rankName(path));
+            if (migrated) Files.copy(path, path.resolveSibling(path.getFileName() + ".before-faction-equipment-" + System.nanoTime() + ".bak"));
             boolean imported = rank && integrations.test(rankName(path), data);
             // Split direct arrow damage into independent bow/crossbow controls; preserve explicit new values.
             if (rank) {
@@ -97,7 +109,8 @@ final class SplitConfigFiles {
                         ? data.getAsJsonObject("scguns") : null;
                 if (scguns != null && !scguns.has("human_gun_damage_multiplier"))
                     scguns.add("human_gun_damage_multiplier", defaults.getAsJsonObject("scguns").get("human_gun_damage_multiplier").deepCopy());
-                for (String key : List.of("jump_attack", "first_aid", "scguns", "shield_pressure", "armor_swap", "combat_resupply", "perception")) {
+                for (String key : List.of("jump_attack", "first_aid", "scguns", "shield_pressure", "armor_swap", "combat_resupply", "perception",
+                        "factions", "standing", "identity_band", "specialty", "boss", "orders", "squads")) {
                     if (!data.has(key) && defaults.has(key)) {
                         JsonObject section = defaults.getAsJsonObject(key).deepCopy();
                         if (key.equals("jump_attack") && TierConfigProjection.at(data, "damage.jump_attack_damage_multiplier") != null)
@@ -143,6 +156,7 @@ final class SplitConfigFiles {
             describe(data, rank);
             return data;
         } catch (Exception invalid) {
+            if (strict) throw new IllegalStateException("Invalid configuration file " + path, invalid);
             LogUtils.getLogger().error("Cannot load human configuration {}; leaving input untouched and using defaults in memory", path, invalid);
             JsonObject data = defaults.deepCopy();
             if (!rank) {

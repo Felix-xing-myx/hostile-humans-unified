@@ -106,7 +106,8 @@ public final class BodyguardAndVanillaModeTest {
         check(calls(prefix + "HumanGunner", "onLivingHurt", prefix + "HumanDamageScaling", "outgoing")
                 && calls(prefix + "HumanDamageScaling", "outgoing", prefix + "UnifiedConfig", "vanillaMode"), "native melee multiplier bypass installed");
         check(calls(prefix + "TierAttributes", "apply", prefix + "TierAttributes", "applyCombatBase"), "initial attributes install weapon-only base");
-        check(calls(prefix + "HumanGrowth", "tick", prefix + "TierAttributes", "applyCombatBase"), "server config reload refreshes weapon-only base");
+        check(calls(prefix + "HumanGrowth", "tick", prefix + "TierAttributes", "apply")
+                && calls(prefix + "TierAttributes", "apply", prefix + "TierAttributes", "applyCombatBase"), "server config reload refreshes shared attributes including weapon-only base");
         check(calls(prefix + "TierAttributes", "applyCombatBase", prefix + "VanillaModePolicy", "attackBase"), "shared weapon-only base installed");
         check(calls(prefix + "GrowthHealth", "change", null, "getMaxHealth"), "growth transition clamps to actual max without free healing");
         check(calls(prefix + "HumanGunner", "onLivingDamage", prefix + "HumanRelations", "defendAfterDamage"), "passive protection waits for actual owner damage");

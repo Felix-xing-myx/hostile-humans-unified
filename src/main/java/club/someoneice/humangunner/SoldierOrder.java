@@ -145,7 +145,7 @@ public enum SoldierOrder {
         }
     }
     private static void tickGarrison(Human h,OrderDistances.Context c) {
-        if(!c.available()){stopMovement(h);NaturalRoute.pause(h,false);return;}
+        if(!c.available()){stopMovement(h);NaturalRoute.stopOwned(h);NaturalRoute.pause(h,false);return;}
         long now=h.level().getGameTime();
         if(isReturningFromRetreat(h))h.guardCombatState.beginReturn();
         if(h.guardCombatState.returning()&&h.guardCombatState.returnRadius()<0)
@@ -254,10 +254,15 @@ public enum SoldierOrder {
         OrderDistances.Context c=OrderDistances.context(h);
         if(c.constrained()) {
             if(!c.available())return false;
+            if(h.guardCombatState.returning()) {
+                // Returning owns movement; a visually confirmed close attacker may still be fought in place.
+                return isRecentSelfAttacker(h,target)&&h.distanceToSqr(target)<=36
+                        &&(!h.hasOwner()||h.soldierCombatMemory.allowed(target.getUUID(),h.level().getGameTime())
+                        &&SoldierCombatMode.allowsTarget(h,target));
+            }
             boolean outside=!c.insideDaily(target.position());
             if(outside&&(!c.settings().chase()||!h.guardCombatState.canExcursion(h.level().getGameTime())))return false;
             if(!c.insideCombat(target.position()))return false;
-            if(h.guardCombatState.returning()&&!isRecentSelfAttacker(h,target))return false;
             if(!h.hasOwner())return true; // wild perception/relationship remain in their existing callers
         }
         if(!h.hasOwner()||h.level().isClientSide)return true;

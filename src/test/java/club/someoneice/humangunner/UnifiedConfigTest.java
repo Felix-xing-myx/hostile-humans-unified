@@ -364,8 +364,8 @@ public final class UnifiedConfigTest {
         }
         check(defaults.equipmentLoadout("tier3").rangedChance == 1
                         && defaults.equipmentLoadout("tier3").rangedInBackpack
-                        && defaults.equipmentLoadout("tier3").rules.eliteEnchantments(),
-                "elite default ranged reserve and enchantment preset");
+                        && defaults.equipmentLoadout("tier3").factions.profile("crimson").number("binding_chance",1,0,1)==0,
+                "tier3 keeps ranged reserve but retires guaranteed elite enchantments");
         JsonObject custom = JsonParser.parseString("""
                 {"equipment_loadouts":{"tier3":{
                   "mainhand":[{"item":"spartanweaponry:diamond_scythe","weight":17,

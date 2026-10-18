@@ -48,7 +48,12 @@ public final class HumanSignalItem extends Item {
                     (ready - now + 19) / 20).withStyle(ChatFormatting.RED), true);
             return InteractionResultHolder.fail(stack);
         }
-        int spawned = spawnWave(server, serverPlayer);
+        String faction = !hostile && tier > 0 ? IdentityBands.selected(player).faction() : "";
+        if (!hostile && tier > 0 && FactionDefinitions.find(faction) == null) {
+            player.displayClientMessage(Component.translatable("message.hostile_humans_unified.signal.requires_band"), true);
+            return InteractionResultHolder.fail(stack);
+        }
+        int spawned = spawnWave(server, serverPlayer, faction);
         if (spawned == 0) {
             player.displayClientMessage(Component.translatable("message.hostile_humans_unified.signal.no_space")
                     .withStyle(ChatFormatting.RED), true);
@@ -63,7 +68,7 @@ public final class HumanSignalItem extends Item {
     }
 
     @SuppressWarnings("unchecked")
-    private int spawnWave(ServerLevel level, ServerPlayer player) {
+    private int spawnWave(ServerLevel level, ServerPlayer player, String faction) {
         EntityType<? extends Human> type = (EntityType<? extends Human>) switch (tier) {
             case 0 -> ModEntityType.ROAMER.get();
             case 1 -> ModEntityType.HUMAN1.get();
@@ -80,6 +85,7 @@ public final class HumanSignalItem extends Item {
             human.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D,
                     level.random.nextFloat() * 360.0F, 0.0F);
             if (!level.noCollision(human)) continue;
+            if (!faction.isEmpty()) HumanFactions.set(human, faction);
             human.finalizeSpawn(level, level.getCurrentDifficultyAt(pos), MobSpawnType.EVENT, null, null);
             if (!hostile) {
                 human.getPersistentData().putUUID(HumanRelations.TEMP_OWNER, player.getUUID());

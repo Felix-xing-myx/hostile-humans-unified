@@ -13,7 +13,15 @@ public final class HumanSpawnEquipment {
     private static final String GENERATED = "hostile_humans_unified:spawn_equipment_generated";
     private static final String FORCE_RANGED = "hostile_humans_unified:spawn_force_ranged";
     private static final String RANGED_REQUESTED = "hostile_humans_unified:spawn_ranged_requested";
+    private static final String AUTHORED = "hostile_humans_unified:authored_loadout";
     private HumanSpawnEquipment() { }
+    /** An explicit author loadout, including empty slots, is authoritative across deferred initialization. */
+    public static void preserveAuthored(Human human) {
+        var tag = human.getPersistentData();
+        tag.putBoolean(AUTHORED, true);
+        for (String key : java.util.List.of(PENDING, FORCE_RANGED, RANGED_REQUESTED,
+                "hostile_humans_unified:pending_loadout", "hostile_humans_unified:pending_ranged")) tag.remove(key);
+    }
 
     public static boolean isBoundGear(ItemStack stack) {
         return !stack.isEmpty() && stack.hasTag() && stack.getTag().getBoolean(BOUND_GEAR);
@@ -21,7 +29,7 @@ public final class HumanSpawnEquipment {
 
     /** Native rank selection happens here, not as a destructive post-spawn tier-three patch. */
     public static void generate(Human human, boolean forceRanged) {
-        if (human.level().isClientSide) return;
+        if (human.level().isClientSide || human.getPersistentData().getBoolean(AUTHORED)) return;
         if (human.hasCustomName() && human.getCustomName().getString().contains("give_random_gear")) {
             forceRanged |= human.getCustomName().getString().contains("ranged");
         }
@@ -44,6 +52,7 @@ public final class HumanSpawnEquipment {
     /** Explicit legacy command/structure request; never erase an owner's loadout. */
     public static void generateRequested(Human human, boolean forceRanged) {
         if (human.hasOwner()) return;
+        human.getPersistentData().remove(AUTHORED);
         if (human.getPersistentData().getBoolean(PENDING)
                 || human.getPersistentData().getBoolean("hostile_humans_unified:pending_loadout")) {
             // finalizeSpawn already honored the special name. Do not clear/re-roll its gear.
@@ -65,6 +74,7 @@ public final class HumanSpawnEquipment {
     static boolean completeIfReady(Human human) {
         if (human.getData() == null || human.getServer() == null || !human.getServer().isSameThread()) return false;
         var tag = human.getPersistentData();
+        if (tag.getBoolean(AUTHORED)) { preserveAuthored(human); return true; }
         if (!tag.getBoolean(PENDING) || tag.getBoolean(GENERATED)) return true;
         // Do not regenerate old/save-loaded or explicitly equipped entities: only generate() creates this lease.
         boolean ranged = tag.getBoolean(FORCE_RANGED);

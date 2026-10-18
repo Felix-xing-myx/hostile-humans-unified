@@ -42,6 +42,10 @@ public final class HumanGunnerRegistries {
     }
     public static final RegistryObject<Item> NAVIGATION_TEST_POINTER = ITEMS.register("navigation_test_pointer",
             () -> new NavigationTestItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> SQUAD_COMMAND_TOKEN = ITEMS.register("squad_command_token",
+            () -> new SquadCommandTokenItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+    public static final RegistryObject<Item> NATURAL_STATE_TOOL = ITEMS.register("natural_state_tool",
+            () -> new NaturalStateToolItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     public static final RegistryObject<Item> ATTRIBUTE_OBSERVER = ITEMS.register("attribute_observer",
             () -> new AttributeObserverItem(new Item.Properties().rarity(Rarity.RARE)));
     public static final RegistryObject<Item> NAVIGATION_OBSERVER_HELMET = ITEMS.register("navigation_observer_helmet",

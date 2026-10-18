@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.10.6'
+version = '3.11.0'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -280,4 +280,24 @@ tasks.register('sanitizeStructureWaystones', JavaExec) {
     mainClass = 'com.craftix.hostile_humans.StructureWaystoneSanitizer'
     args file('src/main/resources').absolutePath
     if (project.hasProperty('applyStructureRepair')) args '--apply'
+}
+
+// New-version contracts; run with check/build, never just manual source inspection.
+["SpecialtyAllocationTest", "SpecialtyPersistenceTest", "SpecialtyDataTest", "AttributeDetailSnapshotTest", "AttributeDetailPolicyTest", "AttributeDetailGrowthViewTest", "FactionContentNbtTest", "FactionEquipmentConfigTest", "FactionEquipmentPolicyTest", "FiniteOrdersPolicyTest", "DefenseAttributePolicyTest", "DefenseAttributesTest", "EquipmentConfigMigrationTest", "ConfigPublicationTest"].each { testClass ->
+    def testTask = 'vnext' + testClass
+    tasks.register(testTask, JavaExec) {
+        dependsOn tasks.named('testClasses')
+        classpath = sourceSets.test.runtimeClasspath
+        mainClass = 'club.someoneice.humangunner.' + testClass
+    }
+    tasks.named('check').configure { dependsOn tasks.named(testTask) }
+}
+['StandingPolicyTest', 'StandingIncidentsTest', 'HealthLossReceiptTest'].each { testClass ->
+    def testTask = 'vnext' + testClass
+    tasks.register(testTask, JavaExec) {
+        dependsOn tasks.named('testClasses')
+        classpath = sourceSets.test.runtimeClasspath
+        mainClass = 'dev.felix.hostilehumans.core.' + testClass
+    }
+    tasks.named('check').configure { dependsOn tasks.named(testTask) }
 }

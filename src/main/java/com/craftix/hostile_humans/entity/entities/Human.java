@@ -1530,7 +1530,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Nullable
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficulty, MobSpawnType mobSpawnType, @Nullable SpawnGroupData spawnGroupData, @Nullable CompoundTag compoundTag) {
         spawnGroupData = club.someoneice.humangunner.HumanFactions.onSpawn(this, mobSpawnType, spawnGroupData, compoundTag);
-        club.someoneice.humangunner.HumanGrowth.markBirth(this, serverLevelAccessor);
+        club.someoneice.humangunner.HumanGrowth.markBirth(this, serverLevelAccessor, mobSpawnType);
         if (mobSpawnType == MobSpawnType.NATURAL || mobSpawnType == MobSpawnType.CHUNK_GENERATION
                 || (mobSpawnType == MobSpawnType.EVENT
                     && club.someoneice.humangunner.NaturalHumanSpawnRules.isAutomaticBattleMember(serverLevelAccessor.getLevel()))) {
@@ -1773,6 +1773,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 isUsingItem() ? getUseItem().getHoverName().getString().substring(0,
                         Math.min(64, getUseItem().getHoverName().getString().length())) : "未使用物品"));
         return java.util.List.copyOf(rows);
+    }
+
+    @Override
+    public ItemStack getPickResult() {
+        ItemStack egg = club.someoneice.humangunner.FactionContent.pickEgg(this);
+        return egg.isEmpty() ? super.getPickResult() : egg;
     }
 
     @Override
@@ -2023,6 +2029,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     protected void dropCustomDeathLoot(DamageSource p_21385_, int p_21386_, boolean p_21387_) {
         super.dropCustomDeathLoot(p_21385_, p_21386_, p_21387_);
+        if (club.someoneice.humangunner.HumanEquipmentDrops.captured(this)) return;
         // Owned death inventory is rebuilt from its pre-death snapshot. Do not
         // apply the wild-human random durability destruction to hired gear.
         if (hasOwner()) return;

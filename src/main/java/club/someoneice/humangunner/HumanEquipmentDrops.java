@@ -19,12 +19,15 @@ import java.util.WeakHashMap;
  * Hired humans return all owned stacks. Wild humans retain their per-item rolls:
  * guns 1% (configurable), equipment 5%, and all other carried supplies 20%.
  */
-final class HumanEquipmentDrops {
+public final class HumanEquipmentDrops {
     private static final double EQUIPMENT_DROP_CHANCE = 0.05D;
     private static final double SUPPLY_DROP_CHANCE = 0.20D;
     private record DeathInventory(List<ItemStack> stacks, boolean hired, boolean hostileBeacon) {}
     private static final Map<Human, DeathInventory> PRE_DEATH_SNAPSHOTS =
             Collections.synchronizedMap(new WeakHashMap<>());
+
+    /** Suppress only known legacy inventory producers, before the final drop event. */
+    public static boolean captured(Human human) { return PRE_DEATH_SNAPSHOTS.containsKey(human); }
 
     private HumanEquipmentDrops() {
     }
@@ -36,8 +39,7 @@ final class HumanEquipmentDrops {
                 !hired && HumanRelations.isHostileBeaconOrigin(human)));
         // The entity is committed to death at this point (totem cancellation
         // has already returned). Suppress the base equipment-roll producer as
-        // a first line of defence; LivingDrops cleanup below is still required
-        // for other contributors and older base paths. A strongly negative
+        // a producer boundary. Third-party event drops remain untouched. A strongly negative
         // chance also remains impossible under Looting adjustments.
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             human.setDropChance(slot, -100.0F);
@@ -49,19 +51,10 @@ final class HumanEquipmentDrops {
     ) {
         DeathInventory snapshot = PRE_DEATH_SNAPSHOTS.remove(human);
         if (snapshot == null) {
-            // Defensive fallback for non-standard death paths.
-            boolean hired = human.hasOwner();
-            snapshot = new DeathInventory(collectOwned(human), hired,
-                    !hired && HumanRelations.isHostileBeaconOrigin(human));
+            // Without a capture receipt, existing producers own their drops. Never erase unknown loot.
+            return;
         }
         List<ItemStack> owned = snapshot.stacks();
-
-        // Hostile Humans changes durability, spawns each equipped stack and
-        // clears the slot before LivingDropsEvent. Exact NBT comparison alone
-        // therefore leaves the mandatory copy behind. Controlled equipment is
-        // matched by item identity; ordinary supplies keep strict NBT matching.
-        List<ItemStack> ownedSnapshot = owned;
-        drops.removeIf(drop -> matchesOwnedDrop(drop.getItem(), ownedSnapshot));
 
         for (ItemStack stack : owned) {
             double chance = dropChance(stack, gunDropChance);
@@ -111,22 +104,6 @@ final class HumanEquipmentDrops {
             }
         }
         return owned;
-    }
-
-    private static boolean matchesOwnedDrop(ItemStack candidate, List<ItemStack> owned) {
-        boolean controlledCandidate = isControlledEquipment(candidate);
-        for (ItemStack stack : owned) {
-            if (ItemStack.isSameItemSameTags(candidate, stack)) {
-                return true;
-            }
-            if (controlledCandidate && isControlledEquipment(stack)
-                    && (candidate.getItem() == stack.getItem()
-                    || (club.someoneice.humangunner.GunSupport.get().isGun(candidate)
-                    && club.someoneice.humangunner.GunSupport.get().isGun(stack)))) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static double dropChance(ItemStack stack, double gunDropChance) {

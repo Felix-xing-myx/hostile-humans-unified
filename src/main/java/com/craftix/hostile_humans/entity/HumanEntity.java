@@ -197,6 +197,8 @@ extends HumanMobEntityData {
     }
 
     protected void dropEquipment() {
+        if (this instanceof com.craftix.hostile_humans.entity.entities.Human human
+                && club.someoneice.humangunner.HumanEquipmentDrops.captured(human)) return;
         if (!this.level().isClientSide) {
             HumanData humanMobEntityData = HumanServerData.get().getHumanMob(this.getUUID());
             if (humanMobEntityData == null) {
