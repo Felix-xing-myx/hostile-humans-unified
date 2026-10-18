@@ -22,24 +22,10 @@ final class FirearmSpawnEquipment {
         if (human.getPersistentData().getBoolean(GUN_ROLL_DONE)) return ItemStack.EMPTY;
         human.getPersistentData().putBoolean(GUN_ROLL_DONE, true);
         HumanGunnerConfig config = HumanGunnerConfig.get();
-        double chance;
-        String tierGunTypeKey;
-        if (TierThreeHuman.isTierThree(human)) {
-            chance = config.tier3GunChance();
-            tierGunTypeKey = "tier3";
-        } else if (human.getTier() == HumanTier.LEVEL1) {
-            chance = config.tier1GunChance();
-            tierGunTypeKey = "tier1";
-        } else if (human.getTier() == HumanTier.LEVEL2) {
-            chance = forceRanged ? config.forcedRangedChance() : config.tier2GunChance();
-            tierGunTypeKey = "tier2";
-        } else if (human.getTier() == HumanTier.ROAMER) {
-            chance = config.roamerGunChance();
-            tierGunTypeKey = "roamer";
-        } else {
-            return ItemStack.EMPTY;
-        }
-        if (config.availableGunCount(tierGunTypeKey) == 0) {
+        // Forced-ranged is a single alternative probability, never an extra gun roll.
+        double chance = forceRanged && human.getTier() == HumanTier.LEVEL2
+                ? config.forcedRangedChance() : FactionEquipmentConfig.of(human).number("gun_chance",0,0,1);
+        if (ConfiguredHumanEquipment.of(human).guns(human).isEmpty()) {
             if (WARNED_EMPTY_GUN_POOL.compareAndSet(false, true)) {
                 LOGGER.warn("Hostile Humans Unified found no configured firearms in the loaded optional gun catalogs");
             }
@@ -49,20 +35,17 @@ final class FirearmSpawnEquipment {
         if (human.getRandom().nextDouble() >= chance) {
             return ItemStack.EMPTY;
         }
-        return config.rollAvailableGun(human.getRandom(), tierGunTypeKey)
-                .map(gunId -> GunSupport.get().createLoadedGun(gunId)).orElse(ItemStack.EMPTY);
+        return ConfiguredHumanEquipment.prepare(human,ConfiguredHumanEquipment.of(human).guns(human).roll(human),EquipmentSlot.MAINHAND);
     }
 
     static void equip(Human human, ItemStack gun) {
             if (gun.isEmpty()) return;
             ItemStack previousWeapon = human.getMainHandItem().copy();
             // The ordinary melee allocation is retained in the backpack.
-            if (!previousWeapon.isEmpty() && !human.putItemAway(previousWeapon)) return;
+            if (!previousWeapon.isEmpty() && !RecoverySupplies.insertInventory(human.getData(),previousWeapon)) return;
             GunCustody.registerPrimaryGun(human, gun);
             human.setItemSlot(EquipmentSlot.MAINHAND, gun);
-            // Make the gun enter Forge's drop collection reliably; the global
-            // drop filter below is the sole 1% gate. Bound tier-3 gear remains
-            // unconditionally removed.
+            // Drop probability is still settled by the existing unified loot policy.
             human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
             // Keep one melee fallback for the custody-owned two-block retreat
             // counterattack. Do not retain an old bow/crossbow: the gun remains

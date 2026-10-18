@@ -101,7 +101,7 @@ public record HumanGunnerConfig(
 
     public long availableGunCount(String rank) { return availableGuns(rank).size(); }
 
-    private Map<GunSupport.GunChoice, Integer> availableGuns(String rank) {
+    Map<GunSupport.GunChoice, Integer> availableGuns(String rank) {
         return UnifiedConfig.get().gunSpawnPools().select(rank, GunSupport.get().catalogsByBackend());
     }
 

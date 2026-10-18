@@ -100,11 +100,6 @@ public final class RecoverySupplies {
         SpawnFoodConfig foodConfig = UnifiedConfig.get().spawnFood(TierAttributes.key(human));
         SpawnFoodConfig.Preset preset = foodConfig.roll(random);
 
-        SpawnPotionConfig.Granted potions = UnifiedConfig.get().spawnPotions(TierAttributes.key(human))
-                .grant(data, random);
-        int insertedPotions = potions.recovery();
-        int tacticalItems = potions.tactical();
-
         int appleCount = preset.goldenApples().roll(random);
         ItemStack apples = new ItemStack(Items.GOLDEN_APPLE, appleCount);
         insertInventory(data, apples);
@@ -112,6 +107,12 @@ public final class RecoverySupplies {
         int enchantedApples = provisionEnchantedGoldenApple(human, foodConfig);
         int foodCount = preset.food().roll(random);
         int insertedFood = provisionFoodVariety(human, data, foodCount, foodConfig);
+        SpawnPotionConfig.Granted potions = UnifiedConfig.get().spawnPotions(TierAttributes.key(human))
+                .grant(human);
+        int insertedPotions = potions.recovery();
+        int tacticalItems = potions.tactical();
+
+        human.getPersistentData().putInt("hostile_humans_unified:spawn_food_shortfall",foodCount-insertedFood);
         human.getPersistentData().putInt("hostile_humans_unified:recovery_kit_potions", insertedPotions);
         human.getPersistentData().putInt("hostile_humans_unified:tactical_kit_items", tacticalItems);
         human.getPersistentData().putInt("hostile_humans_unified:recovery_kit_food", insertedFood);
@@ -1165,32 +1166,38 @@ public final class RecoverySupplies {
         List<Item> available = config.availableFoods(human);
         if (!config.enabled || available.isEmpty() || totalCount <= 0) return 0;
         int variety = Math.min(available.size(), human.getRandom().nextInt(config.varietyMin, config.varietyMax + 1));
-        int remaining = totalCount;
-        for (int i = 0; i < variety && remaining > 0; i++) {
-            Item item = available.get(i);
-            int reserveForOthers = Math.max(0, variety - i - 1);
-            int upper = Math.max(1, remaining - reserveForOthers);
-            int count = i == variety - 1
-                    ? remaining
-                    : human.getRandom().nextInt(1, Math.min(item.getMaxStackSize(), upper) + 1);
-            ItemStack stack = new ItemStack(item, count);
-            int before = stack.getCount();
-            insertInventory(data, stack);
-            remaining -= before - stack.getCount();
+        int remaining=totalCount;
+        int nonStackable=0;
+        for(int slot=0;slot<data.getInventoryItemsSize();slot++) {
+            ItemStack stored=data.getInventoryItem(slot);
+            if(stored.isEdible() && stored.getMaxStackSize()==1) nonStackable+=stored.getCount();
         }
-        int cursor = 0;
-        while (remaining > 0 && cursor < totalCount) {
-            Item item = available.get(cursor % variety);
-            ItemStack stack = new ItemStack(item, Math.min(remaining, item.getMaxStackSize()));
-            int before = stack.getCount();
-            if (!insertInventory(data, stack) && stack.getCount() == before) {
-                break;
-            }
-            remaining -= before - stack.getCount();
-            cursor++;
+        List<Item> selected=available.subList(0,variety);
+        for(int i=0;i<variety&&remaining>0;i++) {
+            Item item=selected.get(i);
+            int upper=Math.max(1,remaining-Math.max(0,variety-i-1));
+            int count=i==variety-1?remaining:human.getRandom().nextInt(1,Math.min(item.getMaxStackSize(),upper)+1);
+            if(item.getMaxStackSize()==1) count=Math.min(count,Math.max(0,2-nonStackable));
+            if(count<=0) continue;
+            ItemStack stack=new ItemStack(item,count);
+            insertInventory(data,stack);
+            int inserted=count-stack.getCount();
+            remaining-=inserted;
+            if(item.getMaxStackSize()==1) nonStackable+=inserted;
         }
-        return totalCount - remaining;
+        // Transfer all remaining count only to selected, allowed, stackable foods.
+        List<Item> stackable=selected.stream().filter(item->item.getMaxStackSize()>1).toList();
+        for(int cursor=0;remaining>0 && !stackable.isEmpty() && cursor<totalCount;cursor++) {
+            Item item=stackable.get(cursor%stackable.size());
+            ItemStack stack=new ItemStack(item,Math.min(remaining,item.getMaxStackSize()));
+            int before=stack.getCount();
+            insertInventory(data,stack);
+            if(stack.getCount()==before) break;
+            remaining-=before-stack.getCount();
+        }
+        return totalCount-remaining;
     }
+
 
 
     private static int provisionEnchantedGoldenApple(Human human, SpawnFoodConfig config) {
@@ -1200,10 +1207,8 @@ public final class RecoverySupplies {
             return 0;
         }
         ItemStack apple = new ItemStack(Items.ENCHANTED_GOLDEN_APPLE);
-        // An enchanted apple is the rarest supply in the kit. Use the shared
-        // lossless/high-value storage path so a successful roll is not silently
-        // discarded merely because ordinary potions filled the backpack first.
-        return HumanLootManager.storeWithEviction(human, apple) ? 1 : 0;
+        // Spawn grants never evict equipment or spill overflow into the world.
+        return insertInventory(human.getData(), apple) ? 1 : 0;
     }
 
     private static int findUsefulDrinkableBuffSlot(Human human) {

@@ -16,8 +16,8 @@ final class SpawnFoodConfig {
         int roll(RandomSource random) { return random.nextInt(minimum, maximum + 1); }
     }
     record Preset(int weight, Range food, Range goldenApples) { }
-    record Entry(ResourceLocation item, int weight) { }
-    private record Available(Item item, int weight) { }
+    record Entry(ResourceLocation item, int weight, int category) { }
+    private record Available(Item item, int weight, int category) { }
     final boolean enabled;
     final List<Preset> presets;
     final List<Entry> entries;
@@ -55,10 +55,16 @@ final class SpawnFoodConfig {
                     String text = row.get("item").getAsString();
                     ResourceLocation id = ResourceLocation.tryParse(text);
                     int weight = integer(row, "weight", 1, 0, 1_000_000);
-                    if (id != null && text.contains(":") && weight > 0) foods.add(new Entry(id, weight));
+                    if (id != null && text.contains(":") && weight > 0) foods.add(new Entry(id, weight, category(row,id)));
                 } catch (RuntimeException ignored) { }
             }
         }
+        JsonObject itemPool=FactionEquipmentConfig.object(root,"item_pool");
+        for(var extra:FactionEquipmentPools.list(itemPool,"extra")) try {
+            ResourceLocation id=ResourceLocation.tryParse(extra.getAsString());
+            if(id!=null && foods.stream().noneMatch(e->e.item().equals(id))) foods.add(new Entry(id,1,category(new JsonObject(),id)));
+        } catch(RuntimeException invalid) { FactionEquipmentConfig.warn(extra.toString(),"Invalid extra food ID"); }
+        foods.removeIf(entry->denied(entry.item(),itemPool));
         entries = List.copyOf(foods);
     }
     private static Range range(JsonObject root, String minKey, String maxKey, int cap) {
@@ -89,18 +95,44 @@ final class SpawnFoodConfig {
                     && new ItemStack(item.get()).getFoodProperties(human) != null
                     && item.get() != net.minecraft.world.item.Items.GOLDEN_APPLE
                     && item.get() != net.minecraft.world.item.Items.ENCHANTED_GOLDEN_APPLE)
-                candidates.add(new Available(item.get(), entry.weight()));
+                if(candidates.stream().noneMatch(e->e.item()==item.get())) candidates.add(new Available(item.get(), entry.weight(),entry.category()));
         }
         List<Item> result = new ArrayList<>();
+        double[] categoryWeights=FactionEquipmentConfig.of(human).weights("food_category_weights",4);
         while (!candidates.isEmpty()) {
-            long total = candidates.stream().mapToLong(Available::weight).sum();
-            double value = human.getRandom().nextDouble() * total;
-            int index = candidates.size() - 1;
-            for (int i = 0; i < candidates.size(); i++) {
-                if ((value -= candidates.get(i).weight()) < 0) { index = i; break; }
+            double[] possible=categoryWeights.clone();
+            for(int group=0;group<4;group++) {
+                final int selected=group;
+                if(candidates.stream().noneMatch(e->e.category()==selected)) possible[group]=0;
             }
-            result.add(candidates.remove(index).item());
+            int group=FactionEquipmentPolicy.choose(possible,human.getRandom().nextDouble());
+            if(group<0) break;
+            List<Available> members=candidates.stream().filter(e->e.category()==group).toList();
+            int chosen=FactionEquipmentPolicy.choose(members.stream().mapToDouble(Available::weight).toArray(),human.getRandom().nextDouble());
+            Available selected=members.get(chosen);
+            result.add(selected.item()); candidates.remove(selected);
         }
         return result;
     }
+    private static boolean denied(ResourceLocation id,JsonObject pool) {
+        for(var deny:FactionEquipmentPools.list(pool,"deny")) if(deny.isJsonPrimitive()) {
+            String text=deny.getAsString();
+            if(text.equals(id.toString())||text.equals(id.getNamespace())||text.equals(id.getNamespace()+":*")) return true;
+        }
+        return false;
+    }
+    private static int category(JsonObject row,ResourceLocation id) {
+        if(row.has("category")&&row.get("category").isJsonPrimitive()) {
+            int index=List.of("cooked_meat","staple","light","meal").indexOf(row.get("category").getAsString());
+            if(index>=0) return index;
+            FactionEquipmentConfig.warn(row.toString(),"Unknown food category; classifying explicit candidate by ID");
+        }
+        return switch(id.toString()) {
+            case "minecraft:cooked_beef","minecraft:cooked_porkchop","minecraft:cooked_chicken","minecraft:cooked_salmon" -> 0;
+            case "minecraft:bread","minecraft:baked_potato" -> 1;
+            case "minecraft:apple","minecraft:carrot","minecraft:sweet_berries" -> 2;
+            default -> 3;
+        };
+    }
+
 }

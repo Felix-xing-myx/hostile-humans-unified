@@ -20,12 +20,12 @@ final class GuaranteedShieldLoadout {
         if (data == null) {
             return;
         }
-        var loadout = ConfiguredHumanEquipment.of(human);
-        int target = human.getPersistentData().getInt(TARGET_COUNT);
-        if (!human.getPersistentData().contains(TARGET_COUNT)
-                || target < loadout.shieldMin || target > loadout.shieldMax) {
-            target = human.getRandom().nextInt(loadout.shieldMin, loadout.shieldMax + 1);
-            human.getPersistentData().putInt(TARGET_COUNT, target);
+        int target;
+        if (human.getPersistentData().contains(TARGET_COUNT)) target = human.getPersistentData().getInt(TARGET_COUNT);
+        else {
+            target = FactionEquipmentPolicy.choose(FactionEquipmentConfig.of(human).shieldCounts(),human.getRandom().nextDouble());
+            if (target < 0) target=0;
+            human.getPersistentData().putInt(TARGET_COUNT,target);
         }
 
         int owned = countShields(human, data);
@@ -35,18 +35,20 @@ final class GuaranteedShieldLoadout {
                 break;
             }
             if (!SpartanEquipmentCompat.isShield(human.getOffhandItem())) {
-                SpartanEquipmentCompat.equipOrStoreShield(human, shield);
-            } else if (!HumanLootManager.storeWithEviction(human, shield.copy())) {
+                ItemStack displaced=human.getOffhandItem().copy();
+                if(!displaced.isEmpty() && !RecoverySupplies.insertInventory(data,displaced)) break;
+                human.setItemSlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND,shield);
+                human.setDropChance(net.minecraft.world.entity.EquipmentSlot.OFFHAND,1.0F);
+            } else if (!RecoverySupplies.insertInventory(data, shield.copy())) {
                 break;
             }
-            owned = countShields(human, data);
+            int next=countShields(human,data);
+            if(next<=owned) break;
+            owned=next;
         }
-        // A failed insertion must remain retryable. Marking completion before
-        // the transaction succeeded could permanently violate the guaranteed
-        // spawn loadout after one transient/full-inventory failure.
-        if (owned >= target) {
-            human.getPersistentData().putBoolean(GENERATED, true);
-        }
+        human.getPersistentData().putInt("hostile_humans_unified:spawn_shield_shortfall",Math.max(0,target-owned));
+        // This is a once-only spawn grant; capacity must not turn into repeated future gifts.
+        human.getPersistentData().putBoolean(GENERATED,true);
     }
 
     private static int countShields(Human human, HumanData data) {

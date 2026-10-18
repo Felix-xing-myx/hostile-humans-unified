@@ -21,6 +21,33 @@ import java.util.function.Predicate;
 /** Immutable startup config. Registry availability is checked only when a spawn rolls equipment. */
 public final class ConfiguredEquipmentLoadout {
     final Rules rules;
+    final FactionEquipmentConfig factions;
+    private long policyRevision=-1;
+    private void refreshPolicy() {
+        long revision=FactionEquipmentConfig.revision();
+        if(policyRevision!=revision) {
+            classified.clear(); enchantPolicies.clear(); gunPolicies.clear(); policyRevision=revision;
+        }
+    }
+    private final Map<String,FactionEquipmentGuns> gunPolicies = new java.util.HashMap<>();
+    private final Map<String,FactionEquipmentPools> classified = new java.util.HashMap<>();
+    private final Map<String,FactionEquipmentEnchantments> enchantPolicies = new java.util.HashMap<>();
+
+    synchronized FactionEquipmentPools pools(com.craftix.hostile_humans.entity.entities.Human human) {
+        refreshPolicy();
+        String key=FactionEquipmentConfig.key(human);
+        return classified.computeIfAbsent(key, ignored -> new FactionEquipmentPools(this,factions.profile(key)));
+    }
+    synchronized FactionEquipmentGuns guns(com.craftix.hostile_humans.entity.entities.Human human) {
+        refreshPolicy();
+        String key=FactionEquipmentConfig.key(human);
+        return gunPolicies.computeIfAbsent(key, ignored -> new FactionEquipmentGuns(factions.profile(key)));
+    }
+    synchronized FactionEquipmentEnchantments enchantments(com.craftix.hostile_humans.entity.entities.Human human) {
+        refreshPolicy();
+        String key=FactionEquipmentConfig.key(human);
+        return enchantPolicies.computeIfAbsent(key, ignored -> new FactionEquipmentEnchantments(factions.profile(key)));
+    }
     final Pool<ItemEntry> mainhand, rangedMainhand, inventory, bonusMainhand, offhand, shields;
     final Pool<ArmorSetEntry> armorSets;
     final double rangedChance, offhandChance, bonusChance;
@@ -31,11 +58,9 @@ public final class ConfiguredEquipmentLoadout {
     final double secondWeaponChance, thirdWeaponChance;
 
     private ConfiguredEquipmentLoadout(JsonObject root, String rank) {
-        JsonObject r = UnifiedConfig.object(root, "rules");
-        float min = (float) UnifiedConfig.number(r, "damage_percent_min", 0, 0, 1);
-        float max = (float) UnifiedConfig.number(r, "damage_percent_max", .85, 0, 1);
-        rules = new Rules((float) UnifiedConfig.number(r, "enchant_chance", 0, 0, 1),
-                Math.min(min, max), Math.max(min, max), UnifiedConfig.bool(r, "elite_enchantments", false));
+        factions = new FactionEquipmentConfig(root,rank);
+        // Retained record shape for source compatibility; obsolete enchant_chance/elite flags are never read.
+        rules = new Rules(0,0,0,false);
         mainhand = items(array(root, "mainhand"), rank + ".mainhand");
         rangedMainhand = items(array(root, "ranged_mainhand"), rank + ".ranged_mainhand");
         inventory = items(array(root, "inventory"), rank + ".inventory");
@@ -56,7 +81,7 @@ public final class ConfiguredEquipmentLoadout {
             } catch (RuntimeException invalid) { warn(rank + ".armor_sets", element); }
         }
         armorSets = new Pool<>(armor);
-        rangedChance = UnifiedConfig.number(root, "ranged_chance", rank.equals("tier3") ? 1 : .2, 0, 1);
+        rangedChance = UnifiedConfig.number(root, "ranged_chance", switch(rank) { case "tier3" -> 1; case "tier2" -> .7; case "tier1" -> .4; default -> .2; }, 0, 1);
         rangedInBackpack = UnifiedConfig.bool(root, "ranged_in_backpack", rank.equals("tier3"));
         firearms = UnifiedConfig.bool(root, "allow_tacz_firearms", true);
         shieldEnchantments = UnifiedConfig.bool(root, "automatic_shield_enchantments", true);
@@ -103,6 +128,8 @@ public final class ConfiguredEquipmentLoadout {
                     count = amount.getAsBigDecimal().intValueExact();
                     if (count < 1 || count > 64) throw new IllegalArgumentException("Count out of range");
                 }
+                if(!enchantments.isEmpty()) FactionEquipmentConfig.warn(path+"/"+id+"/legacy_enchantments",
+                        "旧固定附魔不再作为生成入口；配置字段保留，新出生附魔由统一 enchant 预算、黑名单和适用性决定");
                 result.add(new ItemEntry(id, weight(e), text(e, "requires_mod"), count, Map.copyOf(enchantments)));
             } catch (RuntimeException invalid) { warn(path, element); }
         }

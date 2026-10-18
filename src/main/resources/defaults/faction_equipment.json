@@ -1,0 +1,1716 @@
+{
+  "roamer": {
+    "roamer": {
+      "melee_band_weights": [
+        25,
+        40,
+        30,
+        5,
+        0
+      ],
+      "armor_band_weights": [
+        45,
+        40,
+        15,
+        0,
+        0
+      ],
+      "toughness_band_weights": [
+        80,
+        20,
+        0,
+        0
+      ],
+      "shield_band_weights": [
+        35,
+        55,
+        10,
+        0
+      ],
+      "ranged_band_weights": [
+        40,
+        40,
+        20,
+        0
+      ],
+      "shield_count": {
+        "0": 10,
+        "1": 90,
+        "2": 0
+      },
+      "gun_chance": 0.08,
+      "gun_core_chance": 0,
+      "gun_core": {
+        "pistol": 0,
+        "smg": 0,
+        "shotgun": 0,
+        "rifle": 0,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.1,
+        "armor_chance": 0.08,
+        "budget": 1,
+        "max_enchants": 1,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {}
+      },
+      "vanishing_chance": 0.1,
+      "binding_chance": 0.03,
+      "durability": {
+        "min": 0,
+        "max": 0.85
+      },
+      "ammo_multiplier": 0.6,
+      "food_category_weights": [
+        20,
+        45,
+        25,
+        10
+      ],
+      "recovery_category_weights": [
+        70,
+        25,
+        5
+      ],
+      "tactical_category_weights": [
+        10,
+        20,
+        30,
+        15,
+        15,
+        5,
+        5
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "neutral": {
+      "melee_band_weights": [
+        25,
+        40,
+        30,
+        5,
+        0
+      ],
+      "armor_band_weights": [
+        45,
+        40,
+        15,
+        0,
+        0
+      ],
+      "toughness_band_weights": [
+        80,
+        20,
+        0,
+        0
+      ],
+      "shield_band_weights": [
+        35,
+        55,
+        10,
+        0
+      ],
+      "ranged_band_weights": [
+        40,
+        40,
+        20,
+        0
+      ],
+      "shield_count": {
+        "0": 10,
+        "1": 90,
+        "2": 0
+      },
+      "gun_chance": 0.08,
+      "gun_core_chance": 0,
+      "gun_core": {
+        "pistol": 0,
+        "smg": 0,
+        "shotgun": 0,
+        "rifle": 0,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.1,
+        "armor_chance": 0.08,
+        "budget": 1,
+        "max_enchants": 1,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {}
+      },
+      "vanishing_chance": 0.1,
+      "binding_chance": 0.03,
+      "durability": {
+        "min": 0,
+        "max": 0.85
+      },
+      "ammo_multiplier": 0.6,
+      "food_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "recovery_category_weights": [
+        50,
+        25,
+        25
+      ],
+      "tactical_category_weights": [
+        15,
+        15,
+        14,
+        14,
+        14,
+        14,
+        14
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    }
+  },
+  "tier1": {
+    "crimson": {
+      "melee_band_weights": [
+        5,
+        15,
+        45,
+        35,
+        0
+      ],
+      "armor_band_weights": [
+        25,
+        45,
+        25,
+        5,
+        0
+      ],
+      "toughness_band_weights": [
+        55,
+        40,
+        5,
+        0
+      ],
+      "shield_band_weights": [
+        40,
+        40,
+        18,
+        2
+      ],
+      "ranged_band_weights": [
+        25,
+        30,
+        40,
+        5
+      ],
+      "shield_count": {
+        "0": 5,
+        "1": 95,
+        "2": 0
+      },
+      "gun_chance": 0.14,
+      "gun_core_chance": 0.7,
+      "gun_core": {
+        "pistol": 25,
+        "smg": 35,
+        "shotgun": 40,
+        "rifle": 0,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.3,
+        "armor_chance": 0.2,
+        "budget": 3,
+        "max_enchants": 2,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:sharpness": 2,
+          "minecraft:fire_aspect": 2.5,
+          "minecraft:sweeping": 2
+        }
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0.1,
+        "max": 0.5
+      },
+      "ammo_multiplier": 1.4,
+      "food_category_weights": [
+        55,
+        25,
+        10,
+        10
+      ],
+      "recovery_category_weights": [
+        60,
+        25,
+        15
+      ],
+      "tactical_category_weights": [
+        25,
+        20,
+        10,
+        5,
+        15,
+        20,
+        5
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "azure": {
+      "melee_band_weights": [
+        20,
+        45,
+        30,
+        5,
+        0
+      ],
+      "armor_band_weights": [
+        5,
+        20,
+        55,
+        20,
+        0
+      ],
+      "toughness_band_weights": [
+        20,
+        50,
+        25,
+        5
+      ],
+      "shield_band_weights": [
+        5,
+        25,
+        45,
+        25
+      ],
+      "ranged_band_weights": [
+        30,
+        35,
+        35,
+        0
+      ],
+      "shield_count": {
+        "0": 5,
+        "1": 95,
+        "2": 0
+      },
+      "gun_chance": 0.12,
+      "gun_core_chance": 0.7,
+      "gun_core": {
+        "pistol": 10,
+        "smg": 0,
+        "shotgun": 0,
+        "rifle": 45,
+        "mg": 25,
+        "sniper": 20,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.2,
+        "armor_chance": 0.3,
+        "budget": 3,
+        "max_enchants": 2,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:protection": 2,
+          "minecraft:blast_protection": 2,
+          "minecraft:projectile_protection": 2,
+          "minecraft:thorns": 1.8,
+          "minecraft:unbreaking": 1.5
+        }
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0,
+        "max": 0.25
+      },
+      "ammo_multiplier": 1.6,
+      "food_category_weights": [
+        20,
+        45,
+        5,
+        30
+      ],
+      "recovery_category_weights": [
+        35,
+        35,
+        30
+      ],
+      "tactical_category_weights": [
+        10,
+        10,
+        25,
+        20,
+        10,
+        15,
+        10
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "verdant": {
+      "melee_band_weights": [
+        30,
+        45,
+        20,
+        5,
+        0
+      ],
+      "armor_band_weights": [
+        35,
+        42,
+        20,
+        3,
+        0
+      ],
+      "toughness_band_weights": [
+        75,
+        22,
+        3,
+        0
+      ],
+      "shield_band_weights": [
+        45,
+        40,
+        13,
+        2
+      ],
+      "ranged_band_weights": [
+        15,
+        25,
+        50,
+        10
+      ],
+      "shield_count": {
+        "0": 5,
+        "1": 95,
+        "2": 0
+      },
+      "gun_chance": 0.1,
+      "gun_core_chance": 0.7,
+      "gun_core": {
+        "pistol": 20,
+        "smg": 40,
+        "shotgun": 0,
+        "rifle": 40,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.25,
+        "armor_chance": 0.22,
+        "budget": 3,
+        "max_enchants": 2,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:power": 2,
+          "minecraft:punch": 2,
+          "minecraft:unbreaking": 1.2
+        }
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0.05,
+        "max": 0.4
+      },
+      "ammo_multiplier": 1.2,
+      "food_category_weights": [
+        15,
+        20,
+        55,
+        10
+      ],
+      "recovery_category_weights": [
+        50,
+        35,
+        15
+      ],
+      "tactical_category_weights": [
+        10,
+        35,
+        20,
+        10,
+        10,
+        10,
+        5
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "ashen": {
+      "melee_band_weights": [
+        15,
+        30,
+        35,
+        20,
+        0
+      ],
+      "armor_band_weights": [
+        30,
+        40,
+        30,
+        0,
+        0
+      ],
+      "toughness_band_weights": [
+        60,
+        35,
+        5,
+        0
+      ],
+      "shield_band_weights": [
+        25,
+        45,
+        25,
+        5
+      ],
+      "ranged_band_weights": [
+        30,
+        40,
+        30,
+        0
+      ],
+      "shield_count": {
+        "0": 5,
+        "1": 95,
+        "2": 0
+      },
+      "gun_chance": 0.12,
+      "gun_core_chance": 0.5,
+      "gun_core": {
+        "pistol": 20,
+        "smg": 25,
+        "shotgun": 25,
+        "rifle": 30,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.15,
+        "armor_chance": 0.15,
+        "budget": 3,
+        "max_enchants": 2,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:looting": 2.5,
+          "minecraft:unbreaking": 1.8,
+          "minecraft:projectile_protection": 1.5,
+          "minecraft:smite": 1.5
+        }
+      },
+      "vanishing_chance": 0.05,
+      "binding_chance": 0.02,
+      "durability": {
+        "min": 0.3,
+        "max": 0.8
+      },
+      "ammo_multiplier": 1.3,
+      "food_category_weights": [
+        25,
+        40,
+        20,
+        15
+      ],
+      "recovery_category_weights": [
+        55,
+        30,
+        15
+      ],
+      "tactical_category_weights": [
+        15,
+        15,
+        15,
+        10,
+        15,
+        20,
+        10
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "neutral": {
+      "melee_band_weights": [
+        15,
+        30,
+        35,
+        20,
+        0
+      ],
+      "armor_band_weights": [
+        30,
+        40,
+        30,
+        0,
+        0
+      ],
+      "toughness_band_weights": [
+        60,
+        35,
+        5,
+        0
+      ],
+      "shield_band_weights": [
+        25,
+        45,
+        25,
+        5
+      ],
+      "ranged_band_weights": [
+        30,
+        40,
+        30,
+        0
+      ],
+      "shield_count": {
+        "0": 5,
+        "1": 95,
+        "2": 0
+      },
+      "gun_chance": 0.1,
+      "gun_core_chance": 0,
+      "gun_core": {
+        "pistol": 20,
+        "smg": 25,
+        "shotgun": 25,
+        "rifle": 30,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.2,
+        "armor_chance": 0.2,
+        "budget": 3,
+        "max_enchants": 2,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {}
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0,
+        "max": 0.85
+      },
+      "ammo_multiplier": 1,
+      "food_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "recovery_category_weights": [
+        50,
+        25,
+        25
+      ],
+      "tactical_category_weights": [
+        15,
+        15,
+        14,
+        14,
+        14,
+        14,
+        14
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    }
+  },
+  "tier2": {
+    "crimson": {
+      "melee_band_weights": [
+        0,
+        10,
+        30,
+        45,
+        15
+      ],
+      "armor_band_weights": [
+        0,
+        20,
+        40,
+        30,
+        10
+      ],
+      "toughness_band_weights": [
+        20,
+        45,
+        30,
+        5
+      ],
+      "shield_band_weights": [
+        22,
+        45,
+        28,
+        5
+      ],
+      "ranged_band_weights": [
+        10,
+        25,
+        50,
+        15
+      ],
+      "shield_count": {
+        "0": 0,
+        "1": 95,
+        "2": 5
+      },
+      "gun_chance": 0.48,
+      "gun_core_chance": 0.7,
+      "gun_core": {
+        "pistol": 25,
+        "smg": 35,
+        "shotgun": 40,
+        "rifle": 0,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.65,
+        "armor_chance": 0.5,
+        "budget": 6,
+        "max_enchants": 3,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:sharpness": 2,
+          "minecraft:fire_aspect": 2.5,
+          "minecraft:sweeping": 2
+        }
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0.05,
+        "max": 0.35
+      },
+      "ammo_multiplier": 1.4,
+      "food_category_weights": [
+        55,
+        25,
+        10,
+        10
+      ],
+      "recovery_category_weights": [
+        60,
+        25,
+        15
+      ],
+      "tactical_category_weights": [
+        25,
+        20,
+        10,
+        5,
+        15,
+        20,
+        5
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "azure": {
+      "melee_band_weights": [
+        5,
+        30,
+        40,
+        25,
+        0
+      ],
+      "armor_band_weights": [
+        0,
+        5,
+        25,
+        45,
+        25
+      ],
+      "toughness_band_weights": [
+        5,
+        25,
+        45,
+        25
+      ],
+      "shield_band_weights": [
+        0,
+        10,
+        40,
+        50
+      ],
+      "ranged_band_weights": [
+        20,
+        30,
+        40,
+        10
+      ],
+      "shield_count": {
+        "0": 0,
+        "1": 65,
+        "2": 35
+      },
+      "gun_chance": 0.45,
+      "gun_core_chance": 0.7,
+      "gun_core": {
+        "pistol": 10,
+        "smg": 0,
+        "shotgun": 0,
+        "rifle": 45,
+        "mg": 25,
+        "sniper": 20,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.55,
+        "armor_chance": 0.65,
+        "budget": 6,
+        "max_enchants": 3,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:protection": 2,
+          "minecraft:blast_protection": 2,
+          "minecraft:projectile_protection": 2,
+          "minecraft:thorns": 1.8,
+          "minecraft:unbreaking": 1.5
+        }
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0,
+        "max": 0.15
+      },
+      "ammo_multiplier": 1.6,
+      "food_category_weights": [
+        20,
+        45,
+        5,
+        30
+      ],
+      "recovery_category_weights": [
+        35,
+        35,
+        30
+      ],
+      "tactical_category_weights": [
+        10,
+        10,
+        25,
+        20,
+        10,
+        15,
+        10
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "verdant": {
+      "melee_band_weights": [
+        15,
+        40,
+        35,
+        10,
+        0
+      ],
+      "armor_band_weights": [
+        18,
+        42,
+        32,
+        8,
+        0
+      ],
+      "toughness_band_weights": [
+        50,
+        40,
+        10,
+        0
+      ],
+      "shield_band_weights": [
+        30,
+        45,
+        22,
+        3
+      ],
+      "ranged_band_weights": [
+        5,
+        20,
+        55,
+        20
+      ],
+      "shield_count": {
+        "0": 0,
+        "1": 95,
+        "2": 5
+      },
+      "gun_chance": 0.4,
+      "gun_core_chance": 0.7,
+      "gun_core": {
+        "pistol": 20,
+        "smg": 40,
+        "shotgun": 0,
+        "rifle": 40,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.6,
+        "armor_chance": 0.55,
+        "budget": 6,
+        "max_enchants": 3,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:power": 2,
+          "minecraft:punch": 2,
+          "minecraft:unbreaking": 1.2
+        }
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0,
+        "max": 0.25
+      },
+      "ammo_multiplier": 1.2,
+      "food_category_weights": [
+        15,
+        20,
+        55,
+        10
+      ],
+      "recovery_category_weights": [
+        50,
+        35,
+        15
+      ],
+      "tactical_category_weights": [
+        10,
+        35,
+        20,
+        10,
+        10,
+        10,
+        5
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "ashen": {
+      "melee_band_weights": [
+        5,
+        25,
+        35,
+        30,
+        5
+      ],
+      "armor_band_weights": [
+        10,
+        30,
+        40,
+        20,
+        0
+      ],
+      "toughness_band_weights": [
+        30,
+        45,
+        22,
+        3
+      ],
+      "shield_band_weights": [
+        8,
+        40,
+        40,
+        12
+      ],
+      "ranged_band_weights": [
+        20,
+        35,
+        40,
+        5
+      ],
+      "shield_count": {
+        "0": 0,
+        "1": 90,
+        "2": 10
+      },
+      "gun_chance": 0.45,
+      "gun_core_chance": 0.5,
+      "gun_core": {
+        "pistol": 20,
+        "smg": 25,
+        "shotgun": 25,
+        "rifle": 30,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.4,
+        "armor_chance": 0.35,
+        "budget": 6,
+        "max_enchants": 3,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:looting": 2.5,
+          "minecraft:unbreaking": 1.8,
+          "minecraft:projectile_protection": 1.5,
+          "minecraft:smite": 1.5
+        }
+      },
+      "vanishing_chance": 0.05,
+      "binding_chance": 0.02,
+      "durability": {
+        "min": 0.2,
+        "max": 0.7
+      },
+      "ammo_multiplier": 1.3,
+      "food_category_weights": [
+        25,
+        40,
+        20,
+        15
+      ],
+      "recovery_category_weights": [
+        55,
+        30,
+        15
+      ],
+      "tactical_category_weights": [
+        15,
+        15,
+        15,
+        10,
+        15,
+        20,
+        10
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "neutral": {
+      "melee_band_weights": [
+        5,
+        25,
+        35,
+        30,
+        5
+      ],
+      "armor_band_weights": [
+        10,
+        30,
+        40,
+        20,
+        0
+      ],
+      "toughness_band_weights": [
+        30,
+        45,
+        22,
+        3
+      ],
+      "shield_band_weights": [
+        8,
+        40,
+        40,
+        12
+      ],
+      "ranged_band_weights": [
+        20,
+        35,
+        40,
+        5
+      ],
+      "shield_count": {
+        "0": 0,
+        "1": 90,
+        "2": 10
+      },
+      "gun_chance": 0.4,
+      "gun_core_chance": 0,
+      "gun_core": {
+        "pistol": 20,
+        "smg": 25,
+        "shotgun": 25,
+        "rifle": 30,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.5,
+        "armor_chance": 0.5,
+        "budget": 6,
+        "max_enchants": 3,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {}
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0,
+        "max": 0.85
+      },
+      "ammo_multiplier": 1,
+      "food_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "recovery_category_weights": [
+        50,
+        25,
+        25
+      ],
+      "tactical_category_weights": [
+        15,
+        15,
+        14,
+        14,
+        14,
+        14,
+        14
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    }
+  },
+  "tier3": {
+    "crimson": {
+      "melee_band_weights": [
+        0,
+        0,
+        15,
+        50,
+        35
+      ],
+      "armor_band_weights": [
+        0,
+        5,
+        25,
+        45,
+        25
+      ],
+      "toughness_band_weights": [
+        5,
+        30,
+        45,
+        20
+      ],
+      "shield_band_weights": [
+        5,
+        35,
+        45,
+        15
+      ],
+      "ranged_band_weights": [
+        0,
+        20,
+        55,
+        25
+      ],
+      "shield_count": {
+        "0": 0,
+        "1": 70,
+        "2": 30
+      },
+      "gun_chance": 0.78,
+      "gun_core_chance": 0.7,
+      "gun_core": {
+        "pistol": 25,
+        "smg": 35,
+        "shotgun": 40,
+        "rifle": 0,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 1,
+        "armor_chance": 0.9,
+        "budget": 12,
+        "max_enchants": 5,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:sharpness": 2,
+          "minecraft:fire_aspect": 2.5,
+          "minecraft:sweeping": 2
+        }
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0,
+        "max": 0
+      },
+      "ammo_multiplier": 1.4,
+      "food_category_weights": [
+        55,
+        25,
+        10,
+        10
+      ],
+      "recovery_category_weights": [
+        60,
+        25,
+        15
+      ],
+      "tactical_category_weights": [
+        25,
+        20,
+        10,
+        5,
+        15,
+        20,
+        5
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "azure": {
+      "melee_band_weights": [
+        0,
+        10,
+        40,
+        40,
+        10
+      ],
+      "armor_band_weights": [
+        0,
+        0,
+        15,
+        40,
+        45
+      ],
+      "toughness_band_weights": [
+        0,
+        10,
+        45,
+        45
+      ],
+      "shield_band_weights": [
+        0,
+        0,
+        25,
+        75
+      ],
+      "ranged_band_weights": [
+        10,
+        25,
+        45,
+        20
+      ],
+      "shield_count": {
+        "0": 0,
+        "1": 30,
+        "2": 70
+      },
+      "gun_chance": 0.75,
+      "gun_core_chance": 0.7,
+      "gun_core": {
+        "pistol": 10,
+        "smg": 0,
+        "shotgun": 0,
+        "rifle": 45,
+        "mg": 25,
+        "sniper": 20,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 1,
+        "armor_chance": 1,
+        "budget": 12,
+        "max_enchants": 5,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:protection": 2,
+          "minecraft:blast_protection": 2,
+          "minecraft:projectile_protection": 2,
+          "minecraft:thorns": 1.8,
+          "minecraft:unbreaking": 1.5
+        }
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0,
+        "max": 0
+      },
+      "ammo_multiplier": 1.6,
+      "food_category_weights": [
+        20,
+        45,
+        5,
+        30
+      ],
+      "recovery_category_weights": [
+        35,
+        35,
+        30
+      ],
+      "tactical_category_weights": [
+        10,
+        10,
+        25,
+        20,
+        10,
+        15,
+        10
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "verdant": {
+      "melee_band_weights": [
+        5,
+        30,
+        45,
+        20,
+        0
+      ],
+      "armor_band_weights": [
+        8,
+        35,
+        37,
+        18,
+        2
+      ],
+      "toughness_band_weights": [
+        30,
+        45,
+        22,
+        3
+      ],
+      "shield_band_weights": [
+        12,
+        45,
+        35,
+        8
+      ],
+      "ranged_band_weights": [
+        0,
+        10,
+        60,
+        30
+      ],
+      "shield_count": {
+        "0": 0,
+        "1": 80,
+        "2": 20
+      },
+      "gun_chance": 0.7,
+      "gun_core_chance": 0.7,
+      "gun_core": {
+        "pistol": 20,
+        "smg": 40,
+        "shotgun": 0,
+        "rifle": 40,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 1,
+        "armor_chance": 0.95,
+        "budget": 12,
+        "max_enchants": 5,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:power": 2,
+          "minecraft:punch": 2,
+          "minecraft:unbreaking": 1.2
+        }
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0,
+        "max": 0
+      },
+      "ammo_multiplier": 1.2,
+      "food_category_weights": [
+        15,
+        20,
+        55,
+        10
+      ],
+      "recovery_category_weights": [
+        50,
+        35,
+        15
+      ],
+      "tactical_category_weights": [
+        10,
+        35,
+        20,
+        10,
+        10,
+        10,
+        5
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "ashen": {
+      "melee_band_weights": [
+        0,
+        15,
+        35,
+        35,
+        15
+      ],
+      "armor_band_weights": [
+        5,
+        20,
+        35,
+        30,
+        10
+      ],
+      "toughness_band_weights": [
+        10,
+        35,
+        40,
+        15
+      ],
+      "shield_band_weights": [
+        0,
+        25,
+        50,
+        25
+      ],
+      "ranged_band_weights": [
+        10,
+        30,
+        45,
+        15
+      ],
+      "shield_count": {
+        "0": 0,
+        "1": 60,
+        "2": 40
+      },
+      "gun_chance": 0.75,
+      "gun_core_chance": 0.5,
+      "gun_core": {
+        "pistol": 20,
+        "smg": 25,
+        "shotgun": 25,
+        "rifle": 30,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 0.9,
+        "armor_chance": 0.85,
+        "budget": 12,
+        "max_enchants": 5,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {
+          "minecraft:looting": 2.5,
+          "minecraft:unbreaking": 1.8,
+          "minecraft:projectile_protection": 1.5,
+          "minecraft:smite": 1.5
+        }
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0,
+        "max": 0
+      },
+      "ammo_multiplier": 1.3,
+      "food_category_weights": [
+        25,
+        40,
+        20,
+        15
+      ],
+      "recovery_category_weights": [
+        55,
+        30,
+        15
+      ],
+      "tactical_category_weights": [
+        15,
+        15,
+        15,
+        10,
+        15,
+        20,
+        10
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    },
+    "neutral": {
+      "melee_band_weights": [
+        0,
+        15,
+        35,
+        35,
+        15
+      ],
+      "armor_band_weights": [
+        5,
+        20,
+        35,
+        30,
+        10
+      ],
+      "toughness_band_weights": [
+        10,
+        35,
+        40,
+        15
+      ],
+      "shield_band_weights": [
+        0,
+        25,
+        50,
+        25
+      ],
+      "ranged_band_weights": [
+        10,
+        30,
+        45,
+        15
+      ],
+      "shield_count": {
+        "0": 0,
+        "1": 60,
+        "2": 40
+      },
+      "gun_chance": 0.7,
+      "gun_core_chance": 0,
+      "gun_core": {
+        "pistol": 20,
+        "smg": 25,
+        "shotgun": 25,
+        "rifle": 30,
+        "mg": 0,
+        "sniper": 0,
+        "launcher": 0,
+        "other": 0
+      },
+      "enchant": {
+        "weapon_chance": 1,
+        "armor_chance": 1,
+        "budget": 12,
+        "max_enchants": 5,
+        "include_modded": true,
+        "allow_treasure": false,
+        "allow_curses": false,
+        "blacklist": [
+          "minecraft:swift_sneak",
+          "minecraft:feather_falling",
+          "minecraft:mending",
+          "minecraft:infinity",
+          "minecraft:knockback"
+        ],
+        "bias": {}
+      },
+      "vanishing_chance": 0,
+      "binding_chance": 0,
+      "durability": {
+        "min": 0,
+        "max": 0
+      },
+      "ammo_multiplier": 1,
+      "food_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "recovery_category_weights": [
+        50,
+        25,
+        25
+      ],
+      "tactical_category_weights": [
+        15,
+        15,
+        14,
+        14,
+        14,
+        14,
+        14
+      ],
+      "gun_fallback_mode": "category_uniform",
+      "gun_fallback_uniform": false
+    }
+  }
+}

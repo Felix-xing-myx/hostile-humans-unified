@@ -33,27 +33,18 @@ final class HumanAmmoSpawn {
     }
 
     private static int roll(Human human, int minimum, int maximum) {
-        return minimum + human.getRandom().nextInt(maximum - minimum + 1);
+        int base = minimum + human.getRandom().nextInt(maximum - minimum + 1);
+        return FactionEquipmentPolicy.scaledCount(base,FactionEquipmentConfig.of(human).number("ammo_multiplier",1,0,100));
     }
 
     private static void store(Human human, Item item, int count) {
         ItemStack reserve = new ItemStack(item, count);
-        if (HumanInventoryCustody.storePickupTransactionally(human.getData(), reserve)) return;
-        // Custom equipment can fill all slots. Use existing valuation/eviction, never overwrite gear.
-        while (!reserve.isEmpty()) {
-            ItemStack portion = reserve.copyWithCount(Math.min(reserve.getCount(), reserve.getMaxStackSize()));
-            int before = portion.getCount();
-            HumanLootManager.storeWithEviction(human, portion);
-            int stored = before - portion.getCount();
-            reserve.shrink(stored);
-            if (stored == 0) {
-                // Preserve the supply as a physical drop if every remaining slot is protected.
-                ItemStack overflow = reserve.copyWithCount(Math.min(reserve.getCount(), reserve.getMaxStackSize()));
-                var dropped = human.spawnAtLocation(overflow);
-                if (dropped == null) return;
-                dropped.setPickUpDelay(80);
-                reserve.shrink(overflow.getCount());
-            }
+        int requested=count;
+        RecoverySupplies.insertInventory(human.getData(),reserve);
+        if(!reserve.isEmpty()) {
+            String key="hostile_humans_unified:spawn_ammo_capacity_shortfall";
+            human.getPersistentData().putInt(key,human.getPersistentData().getInt(key)+reserve.getCount());
+            HumanGunner.LOGGER.debug("Initial ammo truncated npc={} requested={} omitted={}",human.getUUID(),requested,reserve.getCount());
         }
     }
 }

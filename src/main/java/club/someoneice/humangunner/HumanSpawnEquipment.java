@@ -77,7 +77,6 @@ public final class HumanSpawnEquipment {
         FirearmSpawnEquipment.equip(human, gun);
         ConfiguredHumanEquipment.finishRanged(human, ranged);
         GuaranteedShieldLoadout.applyOnce(human);
-        ShieldEnchantmentRoll.applyOnce(human);
         ensureMeleeFallback(human);
         ConfiguredHumanEquipment.generateReserves(human);
         NaturalEquipmentGrowth.applyOnce(human);
@@ -118,20 +117,10 @@ public final class HumanSpawnEquipment {
             return;
         }
 
-        // A firearm owner must always retain one dedicated melee fallback in
-        // the backpack. If supplies filled every slot, evict the lowest-value
-        // candidate through the centralized valuation policy instead of
-        // silently leaving the gunner unable to defend at contact distance.
-        if (replacementSlot < 0) {
-            replacementSlot = HumanLootManager.lowestMandatoryMeleeEvictionSlot(human);
-            if (replacementSlot < 0) {
-                return;
-            }
-            ItemStack evicted = data.getInventoryItem(replacementSlot).copy();
-            if (!evicted.isEmpty() && human.spawnAtLocation(evicted) == null) return;
-        }
-
+        // Birth allocation may only use free capacity; never spill existing supplies to add a weapon.
+        if (replacementSlot < 0) return;
         ItemStack fallback = ConfiguredHumanEquipment.backupMelee(human);
+        if (fallback.isEmpty()) return;
         data.setInventoryItem(replacementSlot, fallback);
         human.getPersistentData().putBoolean(HumanGunner.MOD_ID + ":melee_fallback_added", true);
     }
