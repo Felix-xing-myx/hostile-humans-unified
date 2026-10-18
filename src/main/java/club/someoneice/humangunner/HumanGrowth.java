@@ -76,7 +76,8 @@ public final class HumanGrowth {
 
     static double gunSpreadMultiplier(Human human) {
         GrowthConfig config = UnifiedConfig.get().growth();
-        return config.enabled() ? config.gunSpreadMultiplier(state(human).getInt("experience_percent")) : 1;
+        return (config.enabled() ? config.gunSpreadMultiplier(state(human).getInt("experience_percent")) : 1)
+                * EffectiveAttributes.spreadMultiplier(human);
     }
 
     static double gunDamageMultiplier(Human human) {
@@ -86,11 +87,12 @@ public final class HumanGrowth {
 
     /** Both firearm backends apply experience once, independently of attribute growth stages. */
     static float scaleGunDamage(Human human, float nativeDamage, double configuredMultiplier) {
-        return nativeDamage * (float) configuredMultiplier * (float) gunDamageMultiplier(human);
+        return nativeDamage * (float) configuredMultiplier * (float) gunDamageMultiplier(human)
+                * (float) EffectiveAttributes.gunMultiplier(human);
     }
 
     static double fullHealth(Human human) {
-        double staged = TierAttributes.of(human).maxHealth();
+        double staged = EffectiveAttributes.healthBase(human);
         GrowthConfig config = UnifiedConfig.get().growth();
         if (!config.enabled()) return staged;
         CompoundTag state = state(human);
@@ -101,7 +103,7 @@ public final class HumanGrowth {
     static void tick(Human human) {
         UnifiedConfig config = UnifiedConfig.get();
         boolean changed = CONFIGS.put(human, config) != config;
-        if (changed) TierAttributes.applyCombatBase(human);
+        if (changed) TierAttributes.apply(human);
         boolean rewarded = GrowthRewards.claim(human);
         if (changed && config.growth().enabled() && human.hasOwner()) award(human, 0);
         if (changed || rewarded || human.tickCount % 20 == 0) GrowthHealth.apply(human);

@@ -21,7 +21,7 @@ public final class RangedAccuracy {
 
     public static double projectileSpreadDegrees(Human human, boolean crossbow, boolean trident) {
         return TierAttributes.of(human).projectileSpreadDegrees(
-                trident ? "trident" : crossbow ? "crossbow" : "bow");
+                trident ? "trident" : crossbow ? "crossbow" : "bow") * EffectiveAttributes.spreadMultiplier(human);
     }
 
     public static Vec3 applyAngularSpread(Vec3 direction, double degrees, RandomSource random) {

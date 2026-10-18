@@ -1,0 +1,10 @@
+{
+  "assault": { "melee": 1.25 },
+  "resilient": { "health": 1.20, "armor": 1.15 },
+  "swift": { "speed": 1.15 },
+  "precise": { "accuracy": 1.25 },
+  "ranged": { "projectile": 1.22 },
+  "firepower": { "gun": 1.15 },
+  "perceptive": { "detection": 1.25 },
+  "regenerative": { "regeneration": 1.20 }
+}

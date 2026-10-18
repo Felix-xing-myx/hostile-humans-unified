@@ -16,15 +16,14 @@ public final class TierAttributes {
     }
     public static UnifiedConfig.Tier of(Human human) { return UnifiedConfig.get().tier(key(human)); }
     public static void apply(Human human) {
-        var tier = of(human);
-        set(human, Attributes.MOVEMENT_SPEED, tier.baseMovementSpeed());
+        set(human, Attributes.MOVEMENT_SPEED, EffectiveAttributes.speedBase(human));
         // Player-like base damage: weapon modifiers, enchantments and effects
         // are still calculated by the native attack, without a tier bonus.
         applyCombatBase(human);
-        set(human, Attributes.ARMOR, tier.armor());
-        set(human, Attributes.ARMOR_TOUGHNESS, tier.armorToughness());
-        set(human, Attributes.KNOCKBACK_RESISTANCE, tier.knockbackResistance());
-        set(human, Attributes.FOLLOW_RANGE, tier.followRange());
+        set(human, Attributes.ARMOR, EffectiveAttributes.armorBase(human));
+        set(human, Attributes.ARMOR_TOUGHNESS, EffectiveAttributes.toughnessBase(human));
+        set(human, Attributes.KNOCKBACK_RESISTANCE, EffectiveAttributes.knockbackBase(human));
+        set(human, Attributes.FOLLOW_RANGE, EffectiveAttributes.detectionBase(human));
     }
     /** Re-evaluate the weapon-only rule when the server replaces its configuration. */
     static void applyCombatBase(Human human) {

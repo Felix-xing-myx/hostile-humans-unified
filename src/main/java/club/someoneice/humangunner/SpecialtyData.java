@@ -1,0 +1,100 @@
+package club.someoneice.humangunner;
+
+import com.google.gson.*;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraftforge.event.AddReloadListenerEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import java.util.*;
+
+/** Validated immutable dimensions and display thresholds, replaced together on data reload. */
+@Mod.EventBusSubscriber(modid = HumanGunner.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+public final class SpecialtyData extends SimpleJsonResourceReloadListener {
+    public record Label(String id, Map<SpecialtyAttributes.Dimension, Double> thresholds) {
+        public Label { thresholds = Map.copyOf(thresholds); }
+    }
+    public static final class Definitions {
+        private final double[] costs, caps;
+        private final List<Label> labels;
+        Definitions(double[] costs, double[] caps, List<Label> labels) {
+            this.costs = costs.clone(); this.caps = caps.clone(); this.labels = List.copyOf(labels);
+        }
+        public double[] costs() { return costs.clone(); }
+        public double[] caps(double fallback) {
+            double[] result = caps.clone();
+            for (int i = 0; i < result.length; i++) if (Double.isNaN(result[i])) result[i] = fallback;
+            return result;
+        }
+        public List<Label> labels() { return labels; }
+    }
+    private static final ResourceLocation DIMENSIONS = new ResourceLocation(HumanGunner.MOD_ID, "dimensions");
+    private static final ResourceLocation LABELS = new ResourceLocation(HumanGunner.MOD_ID, "labels");
+    private static volatile Definitions current = defaults();
+    public SpecialtyData() { super(new Gson(), "specialty"); }
+    public static Definitions get() { return current; }
+    @SubscribeEvent public static void addReloadListener(AddReloadListenerEvent event) { event.addListener(new SpecialtyData()); }
+
+    @Override protected void apply(Map<ResourceLocation, JsonElement> files, ResourceManager manager, ProfilerFiller profiler) {
+        try {
+            Definitions fallback = defaults();
+            double[] costs = fallback.costs(), caps = fallback.caps.clone();
+            if (files.containsKey(DIMENSIONS)) {
+                JsonObject object = files.get(DIMENSIONS).getAsJsonObject();
+                for (SpecialtyAttributes.Dimension dimension : SpecialtyAttributes.Dimension.values()) {
+                    if (!object.has(dimension.key())) throw new IllegalArgumentException("missing dimension " + dimension.key());
+                    JsonObject entry = object.getAsJsonObject(dimension.key());
+                    double cost = entry.get("cost").getAsDouble();
+                    SpecialtyAllocation.positive(cost);
+                    if (cost > 1000000) throw new IllegalArgumentException("excessive cost");
+                    costs[dimension.ordinal()] = cost;
+                    caps[dimension.ordinal()] = entry.has("deviation_cap") ? entry.get("deviation_cap").getAsDouble() : Double.NaN;
+                    double cap = caps[dimension.ordinal()];
+                    if (!Double.isNaN(cap) && (!Double.isFinite(cap) || cap < 0 || cap > 1))
+                        throw new IllegalArgumentException("invalid cap " + dimension.key());
+                    // NaN in a supplied override is invalid; only omission means global fallback.
+                    if (entry.has("deviation_cap") && Double.isNaN(cap)) throw new IllegalArgumentException("NaN cap");
+                }
+            }
+            List<Label> labels = fallback.labels();
+            if (files.containsKey(LABELS)) {
+                labels = new ArrayList<>();
+                JsonObject object = files.get(LABELS).getAsJsonObject();
+                if (object.size() > 64) throw new IllegalArgumentException("too many labels");
+                for (var entry : object.entrySet()) {
+                    if (!entry.getKey().matches("[a-z0-9_]+")) throw new IllegalArgumentException("label id");
+                    Map<SpecialtyAttributes.Dimension, Double> thresholds = new EnumMap<>(SpecialtyAttributes.Dimension.class);
+                    for (var condition : entry.getValue().getAsJsonObject().entrySet()) {
+                        SpecialtyAttributes.Dimension dimension = dimension(condition.getKey());
+                        double value = condition.getValue().getAsDouble();
+                        SpecialtyAllocation.positive(value);
+                        thresholds.put(dimension, value);
+                    }
+                    if (thresholds.isEmpty()) throw new IllegalArgumentException("empty label condition");
+                    labels.add(new Label(entry.getKey(), thresholds));
+                }
+            }
+            current = new Definitions(costs, caps, labels);
+        } catch (RuntimeException invalid) {
+            com.mojang.logging.LogUtils.getLogger().warn("Invalid specialty data; retaining complete previous revision: {}", invalid.getMessage());
+        }
+    }
+    static SpecialtyAttributes.Dimension dimension(String key) {
+        for (var dimension : SpecialtyAttributes.Dimension.values()) if (dimension.key().equals(key)) return dimension;
+        throw new IllegalArgumentException("unknown dimension " + key);
+    }
+    private static Definitions defaults() {
+        double[] caps = new double[11]; Arrays.fill(caps, Double.NaN); caps[7] = .2; caps[9] = .5;
+        return new Definitions(new double[]{1,1.2,.8,.6,1.1,.5,1.3,1.2,1.2,.7,.9}, caps,
+                List.of(label("assault", "melee", 1.25),
+                        new Label("resilient", Map.of(SpecialtyAttributes.Dimension.HEALTH, 1.2, SpecialtyAttributes.Dimension.ARMOR, 1.15)),
+                        label("swift", "speed", 1.15), label("precise", "accuracy", 1.25),
+                        label("ranged", "projectile", 1.22), label("firepower", "gun", 1.15),
+                        label("perceptive", "detection", 1.25), label("regenerative", "regeneration", 1.2)));
+    }
+    private static Label label(String id, String dimension, double threshold) {
+        return new Label(id, Map.of(dimension(dimension), threshold));
+    }
+}
