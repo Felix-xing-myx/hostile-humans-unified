@@ -54,6 +54,7 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         this.addLayer((RenderLayer)new CustomHeadLayer((RenderLayerParent)this, context.getModelSet(), context.getItemInHandRenderer()));
         this.addLayer((RenderLayer)new ElytraLayer((RenderLayerParent)this, context.getModelSet()));
         this.addLayer((RenderLayer)new BeeStingerLayer((LivingEntityRenderer)this));
+        this.addLayer(new club.someoneice.humangunner.FactionVisualLayer<>(this, false, false));
         // Legacy Traveler's Backpack render layer is suspended together with equipment generation.
     }
 

@@ -16,6 +16,20 @@ public final class HumanGunnerRegistries {
 
     public static final RegistryObject<Item> HUMAN_ARROW = ITEMS.register("human_arrow",
             () -> new HumanAmmoItem(false, new Item.Properties().stacksTo(64)));
+    /** Four factions by four grades; these have no recipe or gameplay acquisition source. */
+    public static final java.util.List<RegistryObject<Item>> IDENTITY_BANDS = registerBands();
+    private static java.util.List<RegistryObject<Item>> registerBands() {
+        java.util.List<RegistryObject<Item>> result = new java.util.ArrayList<>();
+        for (String faction : java.util.List.of("crimson", "azure", "verdant", "ashen")) {
+            for (int grade = 1; grade <= 4; grade++) {
+                final int bandGrade = grade;
+                result.add(ITEMS.register("faction_" + faction + "_band_" + grade,
+                        () -> new IdentityBandItem(faction, bandGrade, new Item.Properties()
+                                .rarity(bandGrade == 4 ? Rarity.EPIC : bandGrade == 3 ? Rarity.RARE : Rarity.UNCOMMON))));
+            }
+        }
+        return java.util.List.copyOf(result);
+    }
     public static final RegistryObject<Item> NAVIGATION_TEST_POINTER = ITEMS.register("navigation_test_pointer",
             () -> new NavigationTestItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     public static final RegistryObject<Item> NAVIGATION_OBSERVER_HELMET = ITEMS.register("navigation_observer_helmet",

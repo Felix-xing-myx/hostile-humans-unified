@@ -325,5 +325,22 @@
   "navigation_debug.test_warning": "测试接管：自主战斗暂停",
   "navigation_debug.not_testing": "焦点正在自主行动，无固定点测试需要结束。",
   "navigation_debug.stopped_observing": "已结束%s的测试，恢复自主AI并保留观察。",
-  "navigation_debug.detail.stop_test": "结束焦点测试"
+  "navigation_debug.detail.stop_test": "结束焦点测试",
+  "item.hostile_humans_unified.faction_crimson_band_1": "赤獠身份绑带 1级",
+  "item.hostile_humans_unified.faction_crimson_band_2": "赤獠身份绑带 2级",
+  "item.hostile_humans_unified.faction_crimson_band_3": "赤獠身份绑带 3级",
+  "item.hostile_humans_unified.faction_crimson_band_4": "赤獠身份绑带 4级",
+  "item.hostile_humans_unified.faction_azure_band_1": "靛磐身份绑带 1级",
+  "item.hostile_humans_unified.faction_azure_band_2": "靛磐身份绑带 2级",
+  "item.hostile_humans_unified.faction_azure_band_3": "靛磐身份绑带 3级",
+  "item.hostile_humans_unified.faction_azure_band_4": "靛磐身份绑带 4级",
+  "item.hostile_humans_unified.faction_verdant_band_1": "苍隼身份绑带 1级",
+  "item.hostile_humans_unified.faction_verdant_band_2": "苍隼身份绑带 2级",
+  "item.hostile_humans_unified.faction_verdant_band_3": "苍隼身份绑带 3级",
+  "item.hostile_humans_unified.faction_verdant_band_4": "苍隼身份绑带 4级",
+  "item.hostile_humans_unified.faction_ashen_band_1": "灰鸦身份绑带 1级",
+  "item.hostile_humans_unified.faction_ashen_band_2": "灰鸦身份绑带 2级",
+  "item.hostile_humans_unified.faction_ashen_band_3": "灰鸦身份绑带 3级",
+  "item.hostile_humans_unified.faction_ashen_band_4": "灰鸦身份绑带 4级",
+  "curios.identifier.identity_band": "身份绑带"
 }

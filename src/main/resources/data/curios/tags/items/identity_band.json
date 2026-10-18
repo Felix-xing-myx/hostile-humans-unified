@@ -1,0 +1,21 @@
+{
+  "replace": false,
+  "values": [
+    "hostile_humans_unified:faction_crimson_band_1",
+    "hostile_humans_unified:faction_crimson_band_2",
+    "hostile_humans_unified:faction_crimson_band_3",
+    "hostile_humans_unified:faction_crimson_band_4",
+    "hostile_humans_unified:faction_azure_band_1",
+    "hostile_humans_unified:faction_azure_band_2",
+    "hostile_humans_unified:faction_azure_band_3",
+    "hostile_humans_unified:faction_azure_band_4",
+    "hostile_humans_unified:faction_verdant_band_1",
+    "hostile_humans_unified:faction_verdant_band_2",
+    "hostile_humans_unified:faction_verdant_band_3",
+    "hostile_humans_unified:faction_verdant_band_4",
+    "hostile_humans_unified:faction_ashen_band_1",
+    "hostile_humans_unified:faction_ashen_band_2",
+    "hostile_humans_unified:faction_ashen_band_3",
+    "hostile_humans_unified:faction_ashen_band_4"
+  ]
+}

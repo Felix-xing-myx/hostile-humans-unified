@@ -325,5 +325,22 @@
   "navigation_debug.test_warning": "TEST: autonomous combat paused",
   "navigation_debug.not_testing": "Focus is autonomous; no fixed-point test to end.",
   "navigation_debug.stopped_observing": "Ended test for %s; autonomous AI restored, observation retained.",
-  "navigation_debug.detail.stop_test": "End focused test"
+  "navigation_debug.detail.stop_test": "End focused test",
+  "item.hostile_humans_unified.faction_crimson_band_1": "Crimson Fang Identity Band 1",
+  "item.hostile_humans_unified.faction_crimson_band_2": "Crimson Fang Identity Band 2",
+  "item.hostile_humans_unified.faction_crimson_band_3": "Crimson Fang Identity Band 3",
+  "item.hostile_humans_unified.faction_crimson_band_4": "Crimson Fang Identity Band 4",
+  "item.hostile_humans_unified.faction_azure_band_1": "Azure Bastion Identity Band 1",
+  "item.hostile_humans_unified.faction_azure_band_2": "Azure Bastion Identity Band 2",
+  "item.hostile_humans_unified.faction_azure_band_3": "Azure Bastion Identity Band 3",
+  "item.hostile_humans_unified.faction_azure_band_4": "Azure Bastion Identity Band 4",
+  "item.hostile_humans_unified.faction_verdant_band_1": "Verdant Falcon Identity Band 1",
+  "item.hostile_humans_unified.faction_verdant_band_2": "Verdant Falcon Identity Band 2",
+  "item.hostile_humans_unified.faction_verdant_band_3": "Verdant Falcon Identity Band 3",
+  "item.hostile_humans_unified.faction_verdant_band_4": "Verdant Falcon Identity Band 4",
+  "item.hostile_humans_unified.faction_ashen_band_1": "Ashen Crow Identity Band 1",
+  "item.hostile_humans_unified.faction_ashen_band_2": "Ashen Crow Identity Band 2",
+  "item.hostile_humans_unified.faction_ashen_band_3": "Ashen Crow Identity Band 3",
+  "item.hostile_humans_unified.faction_ashen_band_4": "Ashen Crow Identity Band 4",
+  "curios.identifier.identity_band": "Identity Band"
 }

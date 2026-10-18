@@ -1,5 +1,5 @@
 {
   "replace": false,
   "entities": ["minecraft:player"],
-  "slots": ["identity_badge"]
+  "slots": ["identity_band"]
 }
