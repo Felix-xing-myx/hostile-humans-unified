@@ -18,10 +18,10 @@ final class FactionEquipmentPools {
     private final List<Candidate<ConfiguredEquipmentLoadout.ItemEntry>> melee = new ArrayList<>(), ranged = new ArrayList<>(), shields = new ArrayList<>();
     private final List<Candidate<ConfiguredEquipmentLoadout.ArmorSetEntry>> armor = new ArrayList<>();
     private final FactionEquipmentConfig.Profile profile;
-    private final ConfiguredEquipmentLoadout loadout;
+    private final ConfiguredEquipmentLoadout.Pool<ConfiguredEquipmentLoadout.ItemEntry> neutralMain,neutralReserve,neutralRanged;
 
     FactionEquipmentPools(ConfiguredEquipmentLoadout loadout, FactionEquipmentConfig.Profile profile) {
-        this.profile = profile; this.loadout=loadout;
+        this.profile = profile;
         Map<ResourceLocation,ConfiguredEquipmentLoadout.ItemEntry> items = new LinkedHashMap<>();
         for (var pool : List.of(loadout.mainhand,loadout.inventory,loadout.bonusMainhand,loadout.rangedMainhand,loadout.offhand,loadout.shields))
             for (var item : pool.entries()) if (item.weight()>0 && item.available() && allowed(item.id(),false)) items.putIfAbsent(item.id(),item);
@@ -47,6 +47,9 @@ final class FactionEquipmentPools {
                 if (Double.isFinite(damage)) melee.add(new Candidate<>(entry,FactionEquipmentPolicy.band(damage,profile.bands("melee_damage",4,6,8,11),false),0,damage));
             }
         }
+        neutralMain=withExplicitExtras(loadout.mainhand,melee);
+        neutralReserve=withExplicitExtras(loadout.inventory,melee);
+        neutralRanged=withExplicitExtras(loadout.rangedMainhand,ranged);
         Set<String> known = new HashSet<>();
         for (var set : loadout.armorSets.entries()) addArmor(set,known,false);
         // Extra armor only forms a set when the same registered material has exactly one candidate per slot.
@@ -60,6 +63,19 @@ final class FactionEquipmentPools {
                     slots.get(EquipmentSlot.LEGS).get(0),slots.get(EquipmentSlot.FEET).get(0)),known,true);
         HumanGunner.LOGGER.debug("Equipment A×T matrix rank={} faction={}: {}",profile.rank,profile.faction,
                 armor.stream().map(c->"A"+(c.band+1)+"/T"+c.toughness).toList());
+    }
+
+    private ConfiguredEquipmentLoadout.Pool<ConfiguredEquipmentLoadout.ItemEntry> withExplicitExtras(
+            ConfiguredEquipmentLoadout.Pool<ConfiguredEquipmentLoadout.ItemEntry> original,
+            List<Candidate<ConfiguredEquipmentLoadout.ItemEntry>> classified) {
+        Map<ResourceLocation,ConfiguredEquipmentLoadout.ItemEntry> entries=new LinkedHashMap<>();
+        Set<ResourceLocation> categoryIds=new HashSet<>();
+        for(var entry:classified) categoryIds.add(entry.value.id());
+        for(var entry:original.entries()) if(categoryIds.contains(entry.id())&&allowed(entry.id(),false)) entries.putIfAbsent(entry.id(),entry);
+        Set<String> extras=new HashSet<>();
+        for(var entry:list(FactionEquipmentConfig.object(profile.data,"item_pool"),"extra")) extras.add(entry.getAsString());
+        for(var entry:classified) if(extras.contains(entry.value.id().toString())) entries.putIfAbsent(entry.value.id(),entry.value);
+        return new ConfiguredEquipmentLoadout.Pool<>(new ArrayList<>(entries.values()));
     }
 
     boolean allowed(ResourceLocation id, boolean extra) { return profile.allowedItem(id,extra); }
@@ -95,16 +111,16 @@ final class FactionEquipmentPools {
     }
 
     ConfiguredEquipmentLoadout.ItemEntry melee(Human human) {
-        return !profile.factionBands()?legacyMelee(loadout.mainhand,human):select(melee,"melee_band_weights",5,human,false);
+        return !profile.factionBands()?legacyMelee(neutralMain,human):select(melee,"melee_band_weights",5,human,false);
     }
     ConfiguredEquipmentLoadout.ItemEntry reserveMelee(Human human) {
-        return !profile.factionBands()?legacyMelee(loadout.inventory,human):select(melee,"melee_band_weights",5,human,false);
+        return !profile.factionBands()?legacyMelee(neutralReserve,human):select(melee,"melee_band_weights",5,human,false);
     }
     private ConfiguredEquipmentLoadout.ItemEntry legacyMelee(ConfiguredEquipmentLoadout.Pool<ConfiguredEquipmentLoadout.ItemEntry> pool,Human human) {
         return pool.roll(human.getRandom(),entry->allowed(entry.id(),false)&&HumanLootManager.isDedicatedMeleeWeapon(new ItemStack(ForgeRegistries.ITEMS.getValue(entry.id()))));
     }
     ConfiguredEquipmentLoadout.ItemEntry ranged(Human human) {
-        return !profile.factionBands()?loadout.rangedMainhand.roll(human.getRandom(),entry->allowed(entry.id(),false))
+        return !profile.factionBands()?neutralRanged.roll(human.getRandom(),entry->allowed(entry.id(),false))
                 :select(ranged,"ranged_band_weights",4,human,false);
     }
     ConfiguredEquipmentLoadout.ItemEntry shield(Human human) { return select(shields,"shield_band_weights",4,human,false); }

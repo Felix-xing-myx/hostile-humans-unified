@@ -63,6 +63,31 @@ public final class FactionEquipmentConfigTest {
         var prepared=FactionEquipmentConfig.prepare(json("{\"tier1\":{\"gun_chance\":0.4}}"),Map.of());
         FactionEquipmentConfig.publish(prepared);
         check(FactionEquipmentConfig.revision()>revision,"publish advances effective revision exactly after valid preparation");
+        JsonObject extensible=json("""
+                {"bands":{"melee_damage":[3,5,7,9]},"tier1":{"faction_overrides":{
+                  "expansion:scouts":{"enchant":{"weapon_chance":0.45}},
+                  "new_recruits":{"melee_band_weights":[100,0,0,0,0]}}}}
+                """);
+        var expanded=FactionEquipmentConfig.prepare(extensible,Map.of(
+                "expansion:scouts",new JsonObject(),"new_recruits",new JsonObject(),
+                "expansion:raiders",json("{\"tier1\":{\"bands\":{\"melee_damage\":[2,4,6,8]},\"gun_chance\":0.23}}")));
+        check(FactionEquipmentConfig.definedKey("expansion:scouts",expanded).equals("expansion:scouts"),"namespaced defined identity preserved");
+        check(FactionEquipmentConfig.definedKey("missing:scouts",expanded).equals("neutral"),"undefined identity safely neutral");
+        check(FactionEquipmentConfig.definedKey("crimson",expanded).equals("neutral"),"removed builtin definition is not a defined live identity");
+        FactionEquipmentConfig.publish(expanded);
+        var expandedConfig=new FactionEquipmentConfig(FactionEquipmentConfig.object(extensible,"tier1"),"tier1");
+        var scouts=expandedConfig.profile("expansion:scouts");
+        check(!scouts.factionBands(),"global bands and explicit enchant-only override preserve neutral candidate semantics");
+        check(scouts.bands("melee_damage",4,6,8,11)[0]==3,"global threshold values still inherit without activating faction bands");
+        check(FactionEquipmentConfig.number(FactionEquipmentConfig.object(scouts.data,"enchant"),"weapon_chance",0,0,1)==.45,"namespaced override applies above neutral defaults");
+        check(expandedConfig.profile("new_recruits").factionBands(),"explicit short-ID band weights activate faction bands");
+        check(expandedConfig.profile("expansion:raiders").factionBands(),"explicit namespaced definition bands activate faction bands");
+        check(expandedConfig.profile("expansion:raiders").number("gun_chance",0,0,1)==.23,"namespaced definition defaults resolve");
+        check(expandedConfig.profile("missing:scouts").faction.equals("neutral"),"unknown profile resolves to neutral");
+        boolean overrideRejected=false;
+        try { FactionEquipmentConfig.prepare(json("{\"tier2\":{\"faction_overrides\":{\"newspace:unregistered\":{\"armor_band_weights\":[1,-1,0,0,0]}}}}"),Map.of()); }
+        catch(IllegalArgumentException expected) { overrideRejected=true; }
+        check(overrideRejected,"union validation checks explicit override-only faction even without definition");
         FactionEquipmentConfig.configure(new JsonObject(),Map.of());
         System.out.println("FactionEquipmentConfigTest: passed");
     }

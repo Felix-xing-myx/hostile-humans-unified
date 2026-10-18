@@ -36,11 +36,18 @@ public final class FactionEquipmentConfig {
         Map<String,JsonObject> copy=new LinkedHashMap<>();
         if(factionDefaults!=null) factionDefaults.forEach((id,data)-> {
             if(id==null||data==null) throw new IllegalArgumentException("Null faction equipment definition");
-            if(!FACTIONS.contains(id)) throw new IllegalArgumentException("Unsupported faction equipment ID: "+id);
+            validateFactionId(id,"definitions");
             copy.put(id,data.deepCopy());
         });
         validateContribution(global,"equipment_loadouts");
         Prepared candidate=new Prepared(global,Map.copyOf(copy),0);
+        Set<String> factions=new LinkedHashSet<>(BUILTIN_FACTIONS);
+        factions.addAll(copy.keySet());
+        collectOverrides(global,factions);
+        for(String rank:RANKS) {
+            collectOverrides(object(global,rank),factions);
+            for(JsonObject definition:copy.values()) collectOverrides(object(definition,rank),factions);
+        }
         for(String rank:RANKS) {
             requireObjectIfPresent(global,rank,"equipment_loadouts");
             JsonObject source=object(global,rank);
@@ -49,7 +56,7 @@ public final class FactionEquipmentConfig {
                 requireObjectIfPresent(entry.getValue(),rank,"definitions."+entry.getKey());
                 validateContribution(object(entry.getValue(),rank),"definitions."+entry.getKey()+"."+rank);
             }
-            for(String faction:FACTIONS) resolve(source,rank,faction,candidate);
+            for(String faction:factions) resolve(source,rank,faction,candidate);
         }
         return candidate;
     }
@@ -67,20 +74,27 @@ public final class FactionEquipmentConfig {
     static String key(Human human) {
         if (TierAttributes.key(human).equals("roamer")) return "roamer";
         String faction = HumanFactions.enabled()?HumanFactions.shortId(human):"";
-        return List.of("crimson", "azure", "verdant", "ashen").contains(faction) ? faction : "neutral";
+        return definedKey(faction,active);
+    }
+    static String definedKey(String faction,Prepared snapshot) {
+        return faction!=null && (faction.equals("roamer")||faction.equals("neutral")||snapshot.definitions.containsKey(faction))?faction:"neutral";
     }
 
     static long revision() { return active.revision; }
     synchronized Profile profile(String faction) {
         Prepared snapshot=active;
         if(seenRevision!=snapshot.revision) { profiles.clear(); seenRevision=snapshot.revision; }
-        return profiles.computeIfAbsent(faction,id->resolve(source,rank,id,snapshot));
+        // Builtin rows remain directly inspectable even before the coordinator publishes its first definitions.
+        String defined=BUILTIN_FACTIONS.contains(faction)?faction:definedKey(faction,snapshot);
+        return profiles.computeIfAbsent(defined,id->resolve(source,rank,id,snapshot));
     }
 
     private static Profile resolve(JsonObject source,String rank,String id,Prepared snapshot) {
         JsonObject ranks=object(DEFAULTS,rank);
         JsonObject data=object(ranks,ranks.has(id)?id:"neutral").deepCopy();
-        merge(data,object(snapshot.definitions.getOrDefault(id,new JsonObject()),rank));
+        JsonObject definition=object(snapshot.definitions.getOrDefault(id,new JsonObject()),rank);
+        JsonObject factionOverride=object(object(source,"faction_overrides"),id);
+        merge(data,definition);
         for(String key:List.of("bands","item_pool","gun_category_map")) {
             JsonObject combined=object(data,key).deepCopy();
             merge(combined,object(snapshot.global,key));
@@ -90,18 +104,21 @@ public final class FactionEquipmentConfig {
         for(var entry:source.entrySet()) if(!entry.getKey().equals("faction_overrides")
                 && !List.of("bands","item_pool","gun_category_map").contains(entry.getKey()))
             mergeEntry(data,entry.getKey(),entry.getValue());
-        merge(data,object(object(source,"faction_overrides"),id));
-        return new Profile(data,rank,id);
+        merge(data,factionOverride);
+        boolean factionBands=(!id.equals("neutral")&&object(DEFAULTS,rank).has(id))
+                || explicitBandPolicy(definition)||explicitBandPolicy(factionOverride);
+        return new Profile(data,rank,id,factionBands);
     }
 
     static final class Profile {
         final JsonObject data;
         final String rank, faction;
-        Profile(JsonObject data, String rank, String faction) {
+        private final boolean factionBands;
+        Profile(JsonObject data, String rank, String faction,boolean factionBands) {
             validateContribution(data,rank+"/"+faction);
-            this.data = data; this.rank = rank; this.faction = faction;
+            this.data = data; this.rank = rank; this.faction = faction; this.factionBands=factionBands;
         }
-        boolean factionBands() { return !faction.equals("neutral"); }
+        boolean factionBands() { return factionBands; }
         double number(String key, double fallback, double min, double max) { return FactionEquipmentConfig.number(data, key, fallback, min, max); }
         double[] weights(String key, int count) { return array(data, key, count, null); }
         double[] bands(String key, double... fallback) { return array(object(data, "bands"), key, fallback.length, fallback); }
@@ -129,8 +146,34 @@ public final class FactionEquipmentConfig {
     }
 
     private static final List<String> RANKS=List.of("roamer","tier1","tier2","tier3");
-    private static final List<String> FACTIONS=List.of("crimson","azure","verdant","ashen","roamer","neutral");
+    private static final List<String> BUILTIN_FACTIONS=List.of("crimson","azure","verdant","ashen","roamer","neutral");
     private static final Set<String> GUN_CATEGORIES=Set.of("pistol","smg","shotgun","rifle","mg","sniper","launcher","other");
+
+    private static void validateFactionId(String id,String path) {
+        if(id==null||id.isEmpty()) invalid(path,"empty faction ID");
+        if(id.contains(":")) {
+            validateId(id,path,false,false);
+            int colon=id.indexOf(':');
+            if(colon<=0||colon==id.length()-1) invalid(path,"empty faction namespace or path");
+        } else if(!id.matches("[a-z0-9/._-]+")) invalid(path,"invalid faction ID: "+id);
+    }
+    private static void collectOverrides(JsonObject source,Set<String> into) {
+        for(var entry:object(source,"faction_overrides").entrySet()) if(!commentKey(entry.getKey())) {
+            validateFactionId(entry.getKey(),"faction_overrides");
+            into.add(entry.getKey());
+            if(entry.getValue().isJsonObject()) collectOverrides(entry.getValue().getAsJsonObject(),into);
+        }
+    }
+    private static boolean commentKey(String key) {
+        return key.startsWith("_description")||key.startsWith("_说明")||key.equals("_comment")||key.equals("_comments");
+    }
+    private static boolean explicitBandPolicy(JsonObject source) {
+        JsonObject bands=object(source,"bands");
+        if(List.of("melee_damage","armor_points","toughness","shield_durability","ranged_damage","ranged_durability")
+                .stream().anyMatch(bands::has)) return true;
+        return List.of("melee_band_weights","armor_band_weights","toughness_band_weights","shield_band_weights","ranged_band_weights")
+                .stream().anyMatch(source::has);
+    }
 
     /** Pure schema validation. Unknown fields survive; explicitly invalid known fields reject the entire candidate. */
     private static void validateContribution(JsonObject root,String path) {
@@ -156,13 +199,13 @@ public final class FactionEquipmentConfig {
         validateIds(pool,"deny",path+".item_pool",false,true);
         JsonObject core=object(root,"gun_core");
         for(String key:core.keySet()) {
-            if(key.startsWith("_")) continue;
+            if(commentKey(key)) continue;
             if(!GUN_CATEGORIES.contains(key)) invalid(path+".gun_core."+key,"unknown gun category");
             strictNumber(core,key,path+".gun_core",0,1e6,false);
         }
         JsonObject mapping=object(root,"gun_category_map");
         for(var entry:mapping.entrySet()) {
-            if(entry.getKey().startsWith("_")) continue;
+            if(commentKey(entry.getKey())) continue;
             validateId(entry.getKey(),path+".gun_category_map",true,false);
             if(!GUN_CATEGORIES.contains(strictString(entry.getValue(),path+".gun_category_map."+entry.getKey())))
                 invalid(path+".gun_category_map."+entry.getKey(),"unknown gun category");
@@ -177,7 +220,7 @@ public final class FactionEquipmentConfig {
             requireObjectIfPresent(enchant,key,path+".enchant");
             JsonObject values=object(enchant,key);
             for(String id:values.keySet()) {
-                if(id.startsWith("_")) continue;
+                if(commentKey(id)) continue;
                 validateId(id,path+".enchant."+key,true,false);
                 strictNumber(values,id,path+".enchant."+key,key.equals("cost_overrides")?1:0,key.equals("cost_overrides")?10000:1e6,key.equals("cost_overrides"));
             }
@@ -189,14 +232,14 @@ public final class FactionEquipmentConfig {
             invalid(path+".durability","min exceeds max");
         JsonObject shields=object(root,"shield_count");
         for(String key:shields.keySet()) {
-            if(key.startsWith("_")) continue;
+            if(commentKey(key)) continue;
             if(!Set.of("0","1","2").contains(key)) invalid(path+".shield_count."+key,"expected 0, 1 or 2");
             strictNumber(shields,key,path+".shield_count",0,1e6,false);
         }
         JsonObject overrides=object(root,"faction_overrides");
         for(String id:overrides.keySet()) {
-            if(id.startsWith("_")) continue;
-            if(!FACTIONS.contains(id)) invalid(path+".faction_overrides."+id,"unknown faction");
+            if(commentKey(id)) continue;
+            validateFactionId(id,path+".faction_overrides");
             requireObjectIfPresent(overrides,id,path+".faction_overrides");
             validateContribution(object(overrides,id),path+".faction_overrides."+id);
         }
