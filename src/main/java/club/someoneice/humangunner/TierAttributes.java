@@ -22,6 +22,7 @@ public final class TierAttributes {
         applyCombatBase(human);
         set(human, Attributes.ARMOR, EffectiveAttributes.armorBase(human));
         set(human, Attributes.ARMOR_TOUGHNESS, EffectiveAttributes.toughnessBase(human));
+        EffectiveAttributes.applyDefenseMultipliers(human);
         set(human, Attributes.KNOCKBACK_RESISTANCE, EffectiveAttributes.knockbackBase(human));
         set(human, Attributes.FOLLOW_RANGE, EffectiveAttributes.detectionBase(human));
     }

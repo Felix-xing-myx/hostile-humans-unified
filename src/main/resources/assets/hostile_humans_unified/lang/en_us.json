@@ -522,5 +522,6 @@
   "item.hostile_humans_unified.faction_ashen_tier3_spawn_egg": "Ashen Crow Tier 3 Human Spawn Egg",
   "block.hostile_humans_unified.tribute_chest": "Tribute Chest (Decorative Placeholder)",
   "block.hostile_humans_unified.tribute_chest.tooltip": "Decorative block only: no storage, tribute submission or standing gain.",
-  "message.hostile_humans_unified.boss.disabled": "Boss spawning is disabled; this egg was not consumed."
+  "message.hostile_humans_unified.boss.disabled": "Boss spawning is disabled; this egg was not consumed.",
+  "attribute_detail.layer.defense_live_adjustment": "Pending or external live adjustment"
 }

@@ -17,8 +17,13 @@ public final class EffectiveAttributes {
         return HumanFactions.bossBase(human, dimension.key());
     }
     public static double healthBase(Human human) { return TierAttributes.of(human).maxHealth() * multiplier(human, SpecialtyAttributes.Dimension.HEALTH); }
-    public static double armorBase(Human human) { return TierAttributes.of(human).armor() * multiplier(human, SpecialtyAttributes.Dimension.ARMOR); }
-    public static double toughnessBase(Human human) { return TierAttributes.of(human).armorToughness() * multiplier(human, SpecialtyAttributes.Dimension.TOUGHNESS); }
+    public static double armorBase(Human human) { return TierAttributes.of(human).armor(); }
+    public static double toughnessBase(Human human) { return TierAttributes.of(human).armorToughness(); }
+    static void applyDefenseMultipliers(Human human) {
+        if(human.level().isClientSide) return;
+        DefenseAttributes.apply(human.getAttribute(Attributes.ARMOR),DefenseAttributes.ARMOR,multiplier(human,SpecialtyAttributes.Dimension.ARMOR));
+        DefenseAttributes.apply(human.getAttribute(Attributes.ARMOR_TOUGHNESS),DefenseAttributes.TOUGHNESS,multiplier(human,SpecialtyAttributes.Dimension.TOUGHNESS));
+    }
     public static double knockbackBase(Human human) {
         return Math.max(0, Math.min(1, TierAttributes.of(human).knockbackResistance()
                 * multiplier(human, SpecialtyAttributes.Dimension.KNOCKBACK_RESISTANCE) + HumanFactions.bossAdd(human, "knockback_resistance")));
@@ -114,6 +119,8 @@ public final class EffectiveAttributes {
     }
     private static AttributeDetailSnapshot.Row physical(Human human, SpecialtyAttributes.Dimension dimension, Attribute attribute,
                                                         double base, String unit, HumanGrowth.Layers growth) {
+        if(dimension==SpecialtyAttributes.Dimension.ARMOR||dimension==SpecialtyAttributes.Dimension.TOUGHNESS)
+            return defense(human,dimension,attribute,base,unit);
         List<AttributeDetailSnapshot.Layer> layers = allocationLayers(human, dimension);
         double expected = base * multiplier(human, dimension), baseline = base;
         if (dimension == SpecialtyAttributes.Dimension.HEALTH) {
@@ -136,6 +143,22 @@ public final class EffectiveAttributes {
         if (dimension == SpecialtyAttributes.Dimension.SPEED) notes.add(note("movement_unit", ""));
         if (!growth.known()) notes.add(note("growth_unknown", ""));
         return row(human, dimension, base, value, true, baseline, unit, layers, notes);
+    }
+    private static AttributeDetailSnapshot.Row defense(Human human,SpecialtyAttributes.Dimension dimension,Attribute attribute,double base,String unit) {
+        var live=human.getAttribute(attribute);
+        java.util.UUID owned=dimension==SpecialtyAttributes.Dimension.ARMOR?DefenseAttributes.ARMOR:DefenseAttributes.TOUGHNESS;
+        double actualBase=live==null?base:live.getBaseValue();
+        double raw=live==null?base:DefenseAttributes.rawWithoutOwned(live,owned);
+        double allocated=raw*multiplier(human,dimension);
+        double sanitized=attribute.sanitizeValue(allocated);
+        double actual=live==null?sanitized:live.getValue();
+        List<AttributeDetailSnapshot.Layer> layers=new ArrayList<>();
+        layers.add(layer("base_adjustment","add",actualBase-base));
+        layers.add(layer("equipment_effects","add",raw-actualBase));
+        layers.addAll(allocationLayers(human,dimension));
+        layers.add(layer("physical_limit","add",sanitized-allocated));
+        if(Math.abs(actual-sanitized)>1e-6) layers.add(layer("defense_live_adjustment","add",actual-sanitized));
+        return row(human,dimension,base,actual,true,attribute.sanitizeValue(raw),unit,layers,List.of());
     }
     private static List<AttributeDetailSnapshot.Layer> allocationLayers(Human human, SpecialtyAttributes.Dimension dimension) {
         List<AttributeDetailSnapshot.Layer> result = new ArrayList<>();

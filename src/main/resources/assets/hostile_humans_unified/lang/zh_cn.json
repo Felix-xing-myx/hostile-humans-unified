@@ -522,5 +522,6 @@
   "item.hostile_humans_unified.faction_ashen_tier3_spawn_egg": "灰鸦三阶人类刷怪蛋",
   "block.hostile_humans_unified.tribute_chest": "贡品箱（装饰占位）",
   "block.hostile_humans_unified.tribute_chest.tooltip": "当前仅为装饰方块，没有容器、投放贡品或增加声望功能。",
-  "message.hostile_humans_unified.boss.disabled": "头目生成已关闭；本次未消耗刷怪蛋。"
+  "message.hostile_humans_unified.boss.disabled": "头目生成已关闭；本次未消耗刷怪蛋。",
+  "attribute_detail.layer.defense_live_adjustment": "运行状态差异（待更新或外部影响）"
 }
