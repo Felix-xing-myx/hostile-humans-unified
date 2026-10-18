@@ -12,6 +12,26 @@ public final class HumanGrowth {
             java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>()));
     private static final java.util.Map<Human, UnifiedConfig> CONFIGS = new java.util.WeakHashMap<>();
     private HumanGrowth() { }
+    /** Shared pure growth layers. Reading a view never initializes or repairs persistent state. */
+    public record Layers(boolean known, double healthStage, double damageStage, double experience,
+                         double gunDamage, double gunSpread) {
+        public double healthMultiplier() { return healthStage * experience; }
+        public double damageMultiplier() { return damageStage * experience; }
+    }
+    static Layers layers(CompoundTag saved, GrowthConfig config) {
+        if (!config.enabled()) return new Layers(true, 1, 1, 1, 1, 1);
+        if (saved == null) return new Layers(false, 1, 1, 1, 1, 1);
+        int stage = Math.max(0, Math.min(5, saved.getInt("level")));
+        int cap = (int) Math.round(config.experienceCapPercent());
+        int experience = Math.max(1, Math.min(cap, saved.getInt("experience_percent")));
+        return new Layers(true, config.stagePercent(stage) / 100.0, config.damageStagePercent(stage) / 100.0,
+                experience / 100.0, config.gunDamageMultiplier(experience), config.gunSpreadMultiplier(experience));
+    }
+    public static Layers readOnlyLayers(Human human) {
+        var data = human.getPersistentData();
+        return layers(data.contains(STATE, net.minecraft.nbt.Tag.TAG_COMPOUND) ? data.getCompound(STATE) : null,
+                UnifiedConfig.get().growth());
+    }
 
     /** Loading an existing entity must not reroll its birth state. Not persisted as a new-spawn flag. */
     public static void onLoad(Human human) {
@@ -68,21 +88,18 @@ public final class HumanGrowth {
     static double multiplier(Human human) {
         GrowthConfig config = UnifiedConfig.get().growth();
         if (!config.enabled()) return 1;
-        CompoundTag state = state(human);
-        // The stage result is computed first, then the experience percentage is applied.
-        return config.damageStagePercent(state.getInt("level")) / 100.0
-                * (state.getInt("experience_percent") / 100.0);
+        return layers(state(human), config).damageMultiplier();
     }
 
     static double gunSpreadMultiplier(Human human) {
         GrowthConfig config = UnifiedConfig.get().growth();
-        return (config.enabled() ? config.gunSpreadMultiplier(state(human).getInt("experience_percent")) : 1)
+        return (config.enabled() ? layers(state(human), config).gunSpread() : 1)
                 * EffectiveAttributes.spreadMultiplier(human);
     }
 
     static double gunDamageMultiplier(Human human) {
         GrowthConfig config = UnifiedConfig.get().growth();
-        return config.enabled() ? config.gunDamageMultiplier(state(human).getInt("experience_percent")) : 1;
+        return config.enabled() ? layers(state(human), config).gunDamage() : 1;
     }
 
     /** Both firearm backends apply experience once, independently of attribute growth stages. */
@@ -95,9 +112,7 @@ public final class HumanGrowth {
         double staged = EffectiveAttributes.healthBase(human);
         GrowthConfig config = UnifiedConfig.get().growth();
         if (!config.enabled()) return staged;
-        CompoundTag state = state(human);
-        staged *= config.stagePercent(state.getInt("level")) / 100.0;
-        return staged * state.getInt("experience_percent") / 100.0;
+        return staged * layers(state(human), config).healthMultiplier();
     }
 
     static void tick(Human human) {

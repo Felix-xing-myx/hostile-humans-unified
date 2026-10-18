@@ -68,7 +68,8 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     }
 
     protected void scale(Human p_117798_, PoseStack p_117799_, float p_117800_) {
-        p_117799_.scale(0.9375f, 0.9375f, 0.9375f);
+        float size = 0.9375F * (float) club.someoneice.humangunner.HumanFactions.bossSize(p_117798_);
+        p_117799_.scale(size, size, size);
     }
 
     protected void renderNameTag(Human human, Component p_117809_, PoseStack p_117810_, MultiBufferSource p_117811_, int p_117812_) {
