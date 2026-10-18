@@ -2,7 +2,7 @@ package dev.felix.hostilehumans.core;
 
 import java.util.*;
 
-/** Per-victim short-term memory. No political scores or entity references are stored here. */
+/** Per-victim short-term memory. Action qualifications are snapshots, never political balances or entity references. */
 public final class StandingIncidents {
     public enum Reason { NONE, SELF_DEFENSE, REPEATED_HITS, DAMAGE_THRESHOLD, HIGHER_RANK, GROUP_ALERT }
     public record Outcome(int standingPenalty, boolean notifyGroup, Reason reason) {}
@@ -29,19 +29,23 @@ public final class StandingIncidents {
     private static final class Action {
         final long tick;
         final String weapon, nativeId;
+        Qualification qualification;
         int charged;
         Action(long tick, String weapon, String nativeId) { this.tick = tick; this.weapon = weapon; this.nativeId = nativeId; }
     }
+    /** First damage owns the whole action's tolerance, including later pellets. */
+    private record Qualification(int effectiveStanding, int bandGrade, int victimGrade) {}
     private static final class Memory {
         long lastActivity, angerUntil;
         double maximumHealth;
+        boolean groupAlerted;
         Reason reason = Reason.NONE;
         final Deque<Action> actions = new ArrayDeque<>();
         final Deque<Damage> damage = new ArrayDeque<>();
         void prune(long now, Settings settings) {
             actions.removeIf(a -> a.tick > now || now - a.tick >= Math.max(settings.hitWindow(), Math.max(settings.damageWindow(), settings.crossTierWindow())));
             damage.removeIf(d -> d.tick > now || now - d.tick >= settings.damageWindow());
-            if (angerUntil <= now || lastActivity > now) { angerUntil = 0; reason = Reason.NONE; }
+            if (angerUntil <= now || lastActivity > now) { angerUntil = 0; reason = Reason.NONE; groupAlerted = false; }
         }
     }
     private Memory memory(UUID player, long now) {
@@ -76,16 +80,23 @@ public final class StandingIncidents {
         Damage last = m.damage.peekLast();
         if (last != null && last.tick == now) last.amount += amount; else m.damage.addLast(new Damage(now, amount));
         Action action = action(m, now, weapon, nativeAction);
+        if (action.qualification == null) action.qualification = new Qualification(effectiveStanding, bandGrade, victimGrade);
+        Qualification qualification = action.qualification;
         int penalty = action.charged == 0 ? 6 : 0;
         action.charged = Math.max(action.charged, 6);
         m.lastActivity = now;
-        boolean tolerant = bandGrade > 0 && effectiveStanding >= -99;
+        boolean tolerant = qualification.bandGrade() > 0 && qualification.effectiveStanding() >= -99;
         boolean group = false;
         Reason reason = m.angerUntil > now ? m.reason : Reason.NONE;
         if (!tolerant) reason = Reason.SELF_DEFENSE;
-        else if (victimGrade > bandGrade) {
+        else if (qualification.victimGrade() > qualification.bandGrade()) {
             long count = m.actions.stream().filter(a -> now - a.tick < settings.crossTierWindow()).count();
-            if (count >= (effectiveStanding >= 50 ? settings.crossTierHits() : 1)) { reason = Reason.HIGHER_RANK; group = penalty > 0; }
+            if (count >= (qualification.effectiveStanding() >= 50 ? settings.crossTierHits() : 1)) {
+                reason = Reason.HIGHER_RANK;
+                // Broadcast on escalation, independent of whether this pellet was charged.
+                group = !m.groupAlerted;
+                m.groupAlerted = true;
+            }
         } else {
             long count = m.actions.stream().filter(a -> now - a.tick < settings.hitWindow()).count();
             double harm = m.damage.stream().mapToDouble(d -> d.amount).sum();
@@ -106,6 +117,7 @@ public final class StandingIncidents {
     public void groupAlert(UUID player, long now) {
         Memory memory = memory(player, now);
         memory.reason = Reason.GROUP_ALERT; memory.angerUntil = now + settings.groupTicks(); memory.lastActivity = now;
+        memory.groupAlerted = true;
     }
     public Reason reason(UUID player, long now) {
         Memory memory = players.get(player);
