@@ -415,3 +415,9 @@ SoundExclusionMemory纯位置/时间策略；SoundInvestigationMemory以弱人�
 SoundExclusionMemory.Region分别保存duration、until和rememberUntil，blocked仅检查now<until，prune以rememberUntil/范围身份/位移释放。新fail若声源中心仍被有效区过滤直接返回，不续期；否则比较所有保留区域的圆柱范围重叠，取最长历史duration×2和初始值的较大者并按exclusion_max_ticks封顶。只替换过期重叠历史，保持邻近有效区域原覆盖；容量仍含活动及历史合计8条。
 
 默认初始exclusion_ticks=240，上限exclusion_max_ticks=1200，history=1200（到期后额外保留），得到12/24/48/60秒。历史不屏蔽也不显示为活动区；过期/淘汰/范围重置恢复初始。原单时长纯策略重载保留，显式history=0不保留历史，生产适配使用新参数。
+
+## 盾牌混合耐久损耗
+
+ShieldDurability.wearCost(damage,maximumDurability)对有效伤害和正最大耐久返回1+floor(damage*(1+0.001*maximumDurability))，非法输入0、超大正值饱和Integer.MAX_VALUE。applyWear读取原记账盾ItemStack.getMaxDamage（非剩余耐久），之后沿用原native hurtAndBreak、Unbreaking及整数溢出保护。2tick合并及换装/保存前flush保持；玩家盾牌流程不接入。
+
+伤害入口维持：Human.hurtCurrentlyUsedShield传原生盾耐久伤害；TaCZ在枪械盾减伤及AP拆分前记录BaseAmount；持枪副手被动防护记录LivingDamage阶段、自身减伤前incoming。不将最终生命扣血0替代格挡伤害，不在此任务调整减伤比例/去重/防御。系数为ShieldDurability源码常量，未新增JSON字段。

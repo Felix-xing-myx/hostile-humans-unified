@@ -14,7 +14,8 @@ class ShieldDurabilityContract(unittest.TestCase):
         self.assertIn('wear(human, shield, hand, blockedDamage)', source)
         self.assertNotIn('setDamageValue(', source)
         self.assertNotIn('hasOwner()', source)
-        self.assertIn('1.0D + Math.floor(damage * 1.5D)', source)
+        self.assertIn('MAX_DURABILITY_RATE_PER_DAMAGE = 0.001D', source)
+        self.assertIn('damage * (1.0D + MAX_DURABILITY_RATE_PER_DAMAGE * maximumDurability)', source)
 
     def test_window_aggregates_hits_instead_of_dropping_them(self):
         source = (PKG / 'ShieldDurability.java').read_text(encoding='utf-8')
@@ -22,7 +23,7 @@ class ShieldDurabilityContract(unittest.TestCase):
         self.assertIn('entry.shield == shield', source)
         self.assertIn('entry.damage + damage', source)
         self.assertIn('now + WEAR_WINDOW_TICKS', source)
-        self.assertIn('wearCost(entry.damage)', source)
+        self.assertIn('wearCost(entry.damage, shield.getMaxDamage())', source)
         self.assertNotIn('NEXT_WEAR', source)
         self.assertLess(source.index('pending.removeIf'), source.index('applyWear(human, entry)'))
 

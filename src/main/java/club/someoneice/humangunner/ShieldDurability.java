@@ -17,6 +17,7 @@ import net.minecraftforge.common.ToolActions;
 /** Aggregate every accepted hit in a short window; never discard pellet damage. */
 public final class ShieldDurability {
     private static final int WEAR_WINDOW_TICKS = 2;
+    private static final double MAX_DURABILITY_RATE_PER_DAMAGE = 0.001D;
     private static final Map<Human, List<PendingWear>> PENDING = new IdentityHashMap<>();
 
     private static final class PendingWear {
@@ -45,9 +46,9 @@ public final class ShieldDurability {
         if (shield.canPerformAction(ToolActions.SHIELD_BLOCK)) wear(human, shield, hand, blockedDamage);
     }
 
-    static int wearCost(double damage) {
-        if (!Double.isFinite(damage) || damage <= 0) return 0;
-        return (int) Math.min(Integer.MAX_VALUE, 1.0D + Math.floor(damage * 1.5D));
+    static int wearCost(double damage, int maximumDurability) {
+        if (!Double.isFinite(damage) || damage <= 0 || maximumDurability <= 0) return 0;
+        return (int) Math.min(Integer.MAX_VALUE, 1.0D + Math.floor(damage * (1.0D + MAX_DURABILITY_RATE_PER_DAMAGE * maximumDurability)));
     }
 
     private static void wear(Human human, ItemStack shield, InteractionHand hand, float damage) {
@@ -110,7 +111,7 @@ public final class ShieldDurability {
         ItemStack shield = entry.shield;
         InteractionHand hand = entry.hand;
         if (shield.isEmpty() || !shield.isDamageableItem()) return;
-        int cost = wearCost(entry.damage);
+        int cost = wearCost(entry.damage, shield.getMaxDamage());
         if (cost == 0) return;
         EquipmentSlot slot = hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
         ItemStack before = shield.copy();
