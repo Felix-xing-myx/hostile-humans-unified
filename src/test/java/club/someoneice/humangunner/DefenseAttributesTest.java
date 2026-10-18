@@ -1,14 +1,23 @@
 package club.someoneice.humangunner;
 
+import net.minecraft.SharedConstants;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.Bootstrap;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.ai.attributes.RangedAttribute;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import java.util.UUID;
 
 /** Real AttributeInstance lifecycle: idempotence, equipment changes, caps and transient save/load. */
 public final class DefenseAttributesTest {
-    public static void main(String[] args) {
-        var type=new RangedAttribute("test.defense",0,0,30);
+    public static void main(String[] args) throws Exception {
+        SharedConstants.tryDetectVersion();
+        // Standalone JavaExec lacks Forge's event-bus transformation; skip the network hook.
+        var bootstrapFlag=Bootstrap.class.getDeclaredField("isBootstrapped");
+        bootstrapFlag.setAccessible(true);
+        bootstrapFlag.setBoolean(null,true);
+        BuiltInRegistries.bootStrap();
+        var type=Attributes.ARMOR;
         var armor=new AttributeInstance(type,ignored->{});
         UUID gear=UUID.randomUUID(),potion=UUID.randomUUID(),external=UUID.randomUUID();
         armor.addPermanentModifier(new AttributeModifier(gear,"armor gear",10,AttributeModifier.Operation.ADDITION));
@@ -48,7 +57,7 @@ public final class DefenseAttributesTest {
         close(boss.getValue(),16,"disabling specialty preserves independent boss defense");
         DefenseAttributes.apply(boss,DefenseAttributes.ARMOR,1);
         close(boss.getValue(),10,"removing boss and specialty returns equipped value");
-        var toughness=new AttributeInstance(new RangedAttribute("test.toughness",0,0,20),ignored->{});
+        var toughness=new AttributeInstance(Attributes.ARMOR_TOUGHNESS,ignored->{});
         toughness.addTransientModifier(new AttributeModifier(gear,"diamond toughness",8,AttributeModifier.Operation.ADDITION));
         DefenseAttributes.apply(toughness,DefenseAttributes.TOUGHNESS,1.5);
         close(toughness.getValue(),12,"toughness uses its own stable modifier");

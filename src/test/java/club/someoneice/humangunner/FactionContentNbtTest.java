@@ -1,11 +1,20 @@
 package club.someoneice.humangunner;
 
+import net.minecraft.SharedConstants;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.server.Bootstrap;
 
 /** Spawn adapters preserve legal author payload and spawner tuning while fixing identity. */
 public final class FactionContentNbtTest {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        SharedConstants.tryDetectVersion();
+        // Standalone JavaExec lacks Forge's event-bus transformation; skip the network hook.
+        var bootstrapFlag=Bootstrap.class.getDeclaredField("isBootstrapped");
+        bootstrapFlag.setAccessible(true);
+        bootstrapFlag.setBoolean(null,true);
+        BuiltInRegistries.bootStrap();
         CompoundTag entity=new CompoundTag(), forge=new CompoundTag();
         entity.putString("CustomName","{\"text\":\"Author NPC\"}");entity.putString("id","minecraft:pig");
         ListTag hands=new ListTag();CompoundTag sword=new CompoundTag();sword.putString("id","minecraft:iron_sword");sword.putByte("Count",(byte)1);hands.add(sword);entity.put("HandItems",hands);
