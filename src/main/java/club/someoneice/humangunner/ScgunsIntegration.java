@@ -89,8 +89,8 @@ final class ScgunsIntegration implements GunSupport {
         // AIGunEvent aims at 80% of the target's eye height, not its eyes.
         return target.position().add(0, target.getEyeHeight() * 0.8D, 0);
     }
-    public double projectileSpeed(ItemStack stack) { return 0; } // AIGunEvent owns native leading; avoid double prediction
-    public double projectileGravity(ItemStack stack) { return 0; } // native AIGunEvent handles projectile physics
+    public double projectileSpeed(ItemStack stack) { return clearanceProjectileSpeed(stack); }
+    public double projectileGravity(ItemStack stack) { return clearanceProjectileGravity(stack); }
     public double clearanceProjectileSpeed(ItemStack stack) {
         return GunModifierHelper.getModifiedProjectileSpeed(stack, definition(stack).getProjectile().getSpeed()
                 * top.ribs.scguns.util.GunEnchantmentHelper.getProjectileSpeedModifier(stack));
@@ -258,10 +258,10 @@ final class ScgunsIntegration implements GunSupport {
     }
     private static void onDamage(LivingHurtEvent event) {
         ScgunsThrowableDamage.onDamage(event);
-        if (!(event.getSource().getDirectEntity() instanceof ProjectileEntity)) return;
+        if (!(event.getSource().getDirectEntity() instanceof ProjectileEntity projectile)) return;
         if (event.getSource().getEntity() instanceof Human attacker) {
             if (HumanRelations.allied(attacker, event.getEntity())) { event.setCanceled(true); return; }
-            event.setAmount(HumanGrowth.scaleGunDamage(attacker, event.getAmount(),
+            event.setAmount(HumanDamagePipeline.scaleGunDamage(attacker, projectile.getWeapon(), event.getAmount(),
                     UnifiedConfig.get().scguns().damageMultiplier()
                             * UnifiedConfig.get().tierScgunsDamage(TierAttributes.key(attacker))));
         }

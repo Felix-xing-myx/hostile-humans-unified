@@ -31,20 +31,20 @@ public final class MaintenanceRefactorTest {
                 && ShieldDurability.wearCost(Float.NaN, 500) == 0
                 && ShieldDurability.wearCost(Float.POSITIVE_INFINITY, 500) == 0, "invalid hits cannot wear shields");
         check(ShieldDurability.wearCost(1, 500) == 2 && ShieldDurability.wearCost(2, 500) == 4
-                && ShieldDurability.wearCost(3, 500) == 5 && ShieldDurability.wearCost(10, 500) == 16
-                && ShieldDurability.wearCost(1.9f, 500) == 3, "shield wear floors after multiplying damage");
+                && ShieldDurability.wearCost(3, 500) == 6 && ShieldDurability.wearCost(10, 500) == 18
+                && ShieldDurability.wearCost(1.9f, 500) == 4, "shield wear floors after multiplying damage");
         check(ShieldDurability.wearCost(Float.MAX_VALUE, 500) == Integer.MAX_VALUE, "large wear cannot overflow");
-        check(ShieldDurability.wearCost(8 * 4.0, 500) == 49,
+        check(ShieldDurability.wearCost(8 * 4.0, 500) == 57,
                 "all shotgun pellets count; flat cost occurs once per batch");
         check(ShieldDurability.wearCost(0.4 + 0.4, 500) == 2,
                 "fractional hits sum before flooring");
         check(ShieldDurability.wearCost(70 + 30, 500) == ShieldDurability.wearCost(100, 500),
                 "AP and normal components retain the same total durability cost");
-        check(ShieldDurability.wearCost(20, 2000) == 61, "hybrid damage and 0.10 percent maximum wear");
-        check(ShieldDurability.wearCost(32, 336) == 43
-                && ShieldDurability.wearCost(32, 1000) == 65
-                && ShieldDurability.wearCost(32, 2500) == 113, "same hit scales with actual maximum durability");
-        check(ShieldDurability.wearCost(8 * 4.0, 2500) == 113
+        check(ShieldDurability.wearCost(20, 2000) == 81, "hybrid damage and 0.15 percent maximum wear");
+        check(ShieldDurability.wearCost(32, 336) == 49
+                && ShieldDurability.wearCost(32, 1000) == 81
+                && ShieldDurability.wearCost(32, 2500) == 153, "same hit scales with actual maximum durability");
+        check(ShieldDurability.wearCost(8 * 4.0, 2500) == 153
                 && ShieldDurability.wearCost(32, 2500) < 8 * ShieldDurability.wearCost(4, 2500),
                 "pellet batch preserves damage and charges fixed base only once");
         check(ShieldDurability.wearCost(1, 0) == 0 && ShieldDurability.wearCost(1, -1) == 0,

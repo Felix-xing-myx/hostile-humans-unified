@@ -249,7 +249,9 @@ final class JegIntegration implements GunSupport {
         if (!isNativeBullet(event.getSource())) return;
         if (event.getSource().getEntity() instanceof Human attacker) {
             if (HumanRelations.allied(attacker, event.getEntity())) { event.setCanceled(true); return; }
-            event.setAmount(HumanGrowth.scaleGunDamage(attacker, event.getAmount(),
+            ItemStack firedWeapon = event.getSource().getDirectEntity() instanceof ProjectileEntity projectile
+                    ? projectile.getWeapon() : attacker.getMainHandItem();
+            event.setAmount(HumanDamagePipeline.scaleGunDamage(attacker, firedWeapon, event.getAmount(),
                     UnifiedConfig.get().scguns().damageMultiplier() * UnifiedConfig.get().tierScgunsDamage(TierAttributes.key(attacker))));
         }
         if (event.getEntity() instanceof Human human)

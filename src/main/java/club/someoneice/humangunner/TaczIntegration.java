@@ -179,7 +179,9 @@ final class TaczIntegration implements GunSupport {
                 event.setBaseAmount(0.0F);
                 return;
             }
-            event.setBaseAmount(HumanGrowth.scaleGunDamage(attacker, event.getBaseAmount(),
+            // Use the fired gun id, so a weapon switch during bullet flight cannot change its category.
+            ItemStack firedWeapon = GunItemBuilder.create().setId(event.getGunId()).build();
+            event.setBaseAmount(HumanDamagePipeline.scaleGunDamage(attacker, firedWeapon, event.getBaseAmount(),
                     UnifiedConfig.get().tierGunDamage(TierAttributes.key(attacker))));
         } else if (event.getAttacker() instanceof Pillager) {
             event.setBaseAmount(event.getBaseAmount()
@@ -190,10 +192,11 @@ final class TaczIntegration implements GunSupport {
             if (isActivelyBlockingWithShield(defender)) {
                 // TaCZ does not pass through vanilla projectile shield handling,
                 // so apply both the shield durability cost and the requested
-                // 60% reduction at its own damage event; native AP sources stay intact.
+                // 50% reduction at its own damage event; native AP sources stay intact.
                 defender.humanGunner$shieldDefense().observeBlockedHit();
                 ShieldDurability.damageShield(defender, event.getBaseAmount());
-                event.setBaseAmount(event.getBaseAmount() * (float) UnifiedConfig.get().gunSetting("shield_damage_multiplier", .4));
+                event.setBaseAmount(event.getBaseAmount() * (float) Math.min(1,
+                        UnifiedConfig.get().gunSetting("shield_damage_multiplier", .5)));
             }
         }
     }

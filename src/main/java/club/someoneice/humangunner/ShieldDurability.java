@@ -17,7 +17,6 @@ import net.minecraftforge.common.ToolActions;
 /** Aggregate every accepted hit in a short window; never discard pellet damage. */
 public final class ShieldDurability {
     private static final int WEAR_WINDOW_TICKS = 2;
-    private static final double MAX_DURABILITY_RATE_PER_DAMAGE = 0.001D;
     private static final Map<Human, List<PendingWear>> PENDING = new IdentityHashMap<>();
 
     private static final class PendingWear {
@@ -47,8 +46,13 @@ public final class ShieldDurability {
     }
 
     static int wearCost(double damage, int maximumDurability) {
+        return wearCost(damage, maximumDurability, .0015);
+    }
+
+    static int wearCost(double damage, int maximumDurability, double rate) {
         if (!Double.isFinite(damage) || damage <= 0 || maximumDurability <= 0) return 0;
-        return (int) Math.min(Integer.MAX_VALUE, 1.0D + Math.floor(damage * (1.0D + MAX_DURABILITY_RATE_PER_DAMAGE * maximumDurability)));
+        if (!Double.isFinite(rate) || rate < 0) rate = .0015;
+        return (int) Math.min(Integer.MAX_VALUE, 1.0D + Math.floor(damage * (1.0D + rate * maximumDurability)));
     }
 
     private static void wear(Human human, ItemStack shield, InteractionHand hand, float damage) {
@@ -111,7 +115,8 @@ public final class ShieldDurability {
         ItemStack shield = entry.shield;
         InteractionHand hand = entry.hand;
         if (shield.isEmpty() || !shield.isDamageableItem()) return;
-        int cost = wearCost(entry.damage, shield.getMaxDamage());
+        int cost = wearCost(entry.damage, shield.getMaxDamage(),
+                UnifiedConfig.get().damage("shield_durability_rate_per_damage", .0015));
         if (cost == 0) return;
         EquipmentSlot slot = hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
         ItemStack before = shield.copy();
