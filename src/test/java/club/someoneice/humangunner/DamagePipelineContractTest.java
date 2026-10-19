@@ -25,6 +25,12 @@ public final class DamagePipelineContractTest {
             }
             var living = read(jar,"net/minecraft/world/entity/LivingEntity");
             check(callPosition(method(living,"hurt","m_6469_"),"onShieldBlock")>=0,"Forge shield hook");
+            var player = read(jar,"net/minecraft/world/entity/player/Player");
+            check(player.superName.equals(living.name), "Player mixin must extend the actual LivingEntity parent");
+            check(living.methods.stream().anyMatch(m -> m.name.equals("getDamageAfterArmorAbsorb") || m.name.equals("m_21161_")),
+                    "armor implementation is declared by LivingEntity");
+            check(player.methods.stream().noneMatch(m -> m.name.equals("getDamageAfterArmorAbsorb") || m.name.equals("m_21161_")),
+                    "Player inherits armor: a declared Player shadow would fail preprocessing");
         }
         System.out.println("DamagePipelineContractTest passed");
     }
