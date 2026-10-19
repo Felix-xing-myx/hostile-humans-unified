@@ -68,7 +68,9 @@ class TaczEffectsContract(unittest.TestCase):
         self.assertEqual(defaults['tacz']['shield_damage_multiplier'], .5)
         self.assertEqual(defaults['tacz']['offhand_shield_damage_reduction'], .1)
         integration = (ADAPTER / 'TaczIntegration.java').read_text(encoding='utf-8')
-        active = integration.split('if (isActivelyBlockingWithShield(defender))', 1)[1].split('private static void onGunDamagePost', 1)[0]
+        active = integration.split('if (isActivelyBlockingWithShield(defender)', 1)[1].split('private static void onGunDamagePost', 1)[0]
+        self.assertIn('defender.isDamageSourceBlocked(normalSource)', active)
+        self.assertIn('HumanDamagePipeline.markCustomShield(defender, normalSource,', active)
         self.assertIn('gunSetting("shield_damage_multiplier", .5)', active)
         self.assertEqual(active.count('event.setBaseAmount('), 1)
         self.assertEqual(active.count('ShieldDurability.damageShield('), 1)
