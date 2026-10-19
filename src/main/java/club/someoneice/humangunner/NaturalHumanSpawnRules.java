@@ -129,7 +129,7 @@ public final class NaturalHumanSpawnRules {
                 || decision == null || !decision.allowed || decision.gameTime != now
                 || decision.origin.distManhattan(mob.blockPosition()) > PACK_DECISION_RADIUS
                 || !isSafePosition(level, mob.blockPosition())
-                || !clock(level).join(now, decision, mob.getType() == ModEntityType.ROAMER.get() ? 1 : 5)) {
+                || !clock(level).join(now, decision, HumanFactions.naturalPackLimit((Human) mob))) {
             event.setCanceled(true);
             return;
         }

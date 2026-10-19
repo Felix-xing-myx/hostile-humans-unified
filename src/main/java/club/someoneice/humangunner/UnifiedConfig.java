@@ -307,6 +307,7 @@ public final class UnifiedConfig {
     public int taczInventoryFedCapacity() { return (int) number(object(root, "tacz"), "inventory_fed_capacity", 150, 1, 4096); }
     GunSpawnPools gunSpawnPools() { return gunSpawnPools; }
     public double damage(String key, double fallback) { return number(object(root, "damage"), key, fallback, 0, 10); }
+    public boolean damageFlag(String key, boolean fallback) { return bool(object(root, "damage"), key, fallback); }
     public double gunSetting(String key, double fallback) { return number(object(root, "tacz"), key, fallback, 0, 10); }
     public double tierGunDamage(String key) {
         return number(object(object(root, "tacz"), "tier_damage_multipliers"), key, .5, 0, 100);

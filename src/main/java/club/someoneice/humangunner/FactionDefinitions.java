@@ -14,12 +14,13 @@ import java.util.*;
 final class FactionDefinitions extends SimplePreparableReloadListener<FactionDefinitions.Prepared> {
     static final List<String> BUILTINS = List.of("crimson", "azure", "verdant", "ashen");
     static final List<String> DIMENSIONS = List.of("health", "armor", "toughness", "knockback_resistance",
-            "speed", "detection", "melee", "gun", "projectile", "accuracy", "regeneration");
+            "speed", "detection", "melee", "gun", "projectile", "accuracy", "regeneration", "attack_speed", "armor_penetration");
     static final FactionDefinitions INSTANCE = new FactionDefinitions();
     record Definition(ResourceLocation id, int color, String name, int startingStanding, int weight,
                       Set<ResourceLocation> enemies, Set<ResourceLocation> allies, List<Double> preference,
                       List<Double> bossPreference, String bandStyle, String aggression,
-                      ResourceLocation hireItem, List<Integer> hireCosts, List<Integer> hireStanding, double friendlyDiscount, double allyDiscount, JsonObject equipment) {}
+                      ResourceLocation hireItem, List<Integer> hireCosts, List<Integer> hireStanding, double friendlyDiscount, double allyDiscount, JsonObject equipment,
+                      Map<String, Double> gunSpecialization) {}
     record Revision(long number, Map<ResourceLocation, Definition> definitions, SpecialtyData.Definitions specialty) {}
     record Prepared(Map<ResourceLocation, JsonElement> factions, Map<ResourceLocation, JsonElement> specialty) {}
     private static volatile Revision current = new Revision(0, builtins(), SpecialtyData.get());
@@ -134,13 +135,16 @@ final class FactionDefinitions extends SimplePreparableReloadListener<FactionDef
         int starting = root.has("starting_standing") ? integer(root, "starting_standing", -200, -500, 500)
                 : initialStanding(UnifiedConfig.string(root, "player_relation", "hostile"));
         JsonObject discounts = UnifiedConfig.object(hire, "discount");
-        List<Double> preference = vector(root.get("allocation_preference"), Collections.nCopies(11, 1.0));
+        List<Double> defaults = new ArrayList<>(Collections.nCopies(DIMENSIONS.size(), 1.0));
+        defaults.set(DIMENSIONS.indexOf("armor_penetration"), 0.0);
+        List<Double> preference = vector(root.get("allocation_preference"), defaults);
         return new Definition(key, Integer.parseInt(color.substring(1), 16), UnifiedConfig.string(root, "name", ""),
                 starting, integer(root, "spawn_weight", 0, 0, 1000000),
                 ids(root, "enemies"), ids(root, "allies"), preference, vector(root.get("boss_preference"), preference),
                 style, aggression, item, List.copyOf(costs), List.copyOf(hireStanding),
                 UnifiedConfig.number(discounts, "friendly", UnifiedConfig.number(hire, "friendly_discount", .9, 0, 1), 0, 1),
-                UnifiedConfig.number(discounts, "allied", UnifiedConfig.number(hire, "ally_discount", .8, 0, 1), 0, 1), equipment(root));
+                UnifiedConfig.number(discounts, "allied", UnifiedConfig.number(hire, "ally_discount", .8, 0, 1), 0, 1), equipment(root),
+                GunSpecialization.parse(root.get("gun_specialization")));
     }
     private static JsonObject equipment(JsonObject root) {
         if (!root.has("equipment")) return new JsonObject();
@@ -179,13 +183,15 @@ final class FactionDefinitions extends SimplePreparableReloadListener<FactionDef
     private static List<Double> vector(JsonElement raw, List<Double> fallback) {
         if (raw == null) return fallback;
         List<Double> values = new ArrayList<>();
-        for (int i = 0; i < 11; i++) {
-            double value = raw.isJsonArray() ? raw.getAsJsonArray().get(i).getAsDouble()
-                    : raw.getAsJsonObject().has(DIMENSIONS.get(i)) ? raw.getAsJsonObject().get(DIMENSIONS.get(i)).getAsDouble() : 1;
-            if (!Double.isFinite(value) || value <= 0 || value > 100) throw new IllegalArgumentException("Invalid allocation preference");
+        if (raw.isJsonArray() && raw.getAsJsonArray().size() != 11 && raw.getAsJsonArray().size() != DIMENSIONS.size())
+            throw new IllegalArgumentException("Eleven legacy or thirteen dimensions required");
+        for (int i = 0; i < DIMENSIONS.size(); i++) {
+            double value = raw.isJsonArray() ? i < raw.getAsJsonArray().size() ? raw.getAsJsonArray().get(i).getAsDouble() : fallback.get(i)
+                    : raw.getAsJsonObject().has(DIMENSIONS.get(i)) ? raw.getAsJsonObject().get(DIMENSIONS.get(i)).getAsDouble() : fallback.get(i);
+            if (!Double.isFinite(value) || value < 0 || (value == 0 && !DIMENSIONS.get(i).equals("armor_penetration")) || value > 100)
+                throw new IllegalArgumentException("Invalid allocation preference");
             values.add(value);
         }
-        if (raw.isJsonArray() && raw.getAsJsonArray().size() != 11) throw new IllegalArgumentException("Eleven dimensions required");
         return List.copyOf(values);
     }
 }

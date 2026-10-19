@@ -255,7 +255,8 @@ public final class BetterCombatMeleeCombat {
         // supplier. Keep this adapter safe for old/custom entity suppliers;
         // new Human instances register the player-equivalent base value (4).
         AttributeInstance attackSpeed = human.getAttribute(Attributes.ATTACK_SPEED);
-        double speed = Math.max(0.1D, attackSpeed == null ? 4.0D : attackSpeed.getValue());
+        double speed = Math.max(0.1D, (attackSpeed == null ? 4.0D : attackSpeed.getValue())
+                * EffectiveAttributes.attackSpeedMultiplier(human));
         int cooldown = (int) Math.ceil(20.0D / speed);
         Object config = getConfig();
         Object intervalCap = field(config, "attack_interval_cap");

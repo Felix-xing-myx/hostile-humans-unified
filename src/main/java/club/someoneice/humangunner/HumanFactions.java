@@ -42,7 +42,11 @@ public final class HumanFactions {
     }
     public static double[] preference(Human human, boolean boss) {
         FactionDefinitions.Definition definition = FactionDefinitions.find(id(human));
-        if (definition == null) { double[] neutral = new double[11]; Arrays.fill(neutral, 1); return neutral; }
+        if (definition == null) {
+            double[] neutral = new double[FactionDefinitions.DIMENSIONS.size()]; Arrays.fill(neutral, 1);
+            neutral[FactionDefinitions.DIMENSIONS.indexOf("armor_penetration")] = 0;
+            return neutral;
+        }
         return (boss ? definition.bossPreference() : definition.preference()).stream().mapToDouble(Double::doubleValue).toArray();
     }
     public static double bossBase(Human human, String dimension) {
@@ -54,6 +58,12 @@ public final class HumanFactions {
     public static double bossSize(Human human) { return isBoss(human) ? BOSS_BODY_SCALE : 1; }
     public static double bossAdd(Human human, String dimension) {
         return isBoss(human) && dimension.equals("knockback_resistance") ? UnifiedConfig.get().factionRules().bossKnockbackAdd() : 0;
+    }
+
+    /** A natural pack shares one faction; placement may yield fewer members than the upper bound. */
+    public static int naturalPackLimit(Human human) {
+        if (human.getTier() == HumanTier.ROAMER) return 1;
+        return enabled() && shortId(human).equals("ashen") ? 2 : 5;
     }
 
     public static SpawnGroupData vanillaSpawnData(SpawnGroupData group) {

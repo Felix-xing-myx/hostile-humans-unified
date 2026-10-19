@@ -1527,6 +1527,16 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     @Override
+    public int getMaxSpawnClusterSize() {
+        return club.someoneice.humangunner.HumanFactions.naturalPackLimit(this);
+    }
+
+    @Override
+    public boolean isMaxGroupSizeReached(int members) {
+        return members >= getMaxSpawnClusterSize();
+    }
+
+    @Override
     @Nullable
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor serverLevelAccessor, DifficultyInstance difficulty, MobSpawnType mobSpawnType, @Nullable SpawnGroupData spawnGroupData, @Nullable CompoundTag compoundTag) {
         spawnGroupData = club.someoneice.humangunner.HumanFactions.onSpawn(this, mobSpawnType, spawnGroupData, compoundTag);

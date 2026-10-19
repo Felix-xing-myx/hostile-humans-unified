@@ -30,7 +30,7 @@ record FactionRules(boolean legacyMapping, int dailyGainCap, int groupRadius,
         return new FactionRules(UnifiedConfig.bool(faction, "legacy_tier_mapping", true),
                 integer(standing, "daily_gain_cap", 30, 0, 100), integer(band, "group_radius", 25, 8, 64), settings,
                 four(band, "own_bonus", List.of(50, 75, 100, 150)), four(band, "enemy_penalty", List.of(100, 150, 200, 250)),
-                UnifiedConfig.number(boss, "budget", 1, .75, 1.25), UnifiedConfig.number(boss, "allocation_amplification", 1.8, 1, 3),
+                UnifiedConfig.number(boss, "budget", 1.05, .8, 1.3), UnifiedConfig.number(boss, "allocation_amplification", 1.8, 1, 3),
                 bases, UnifiedConfig.number(boss, "knockback_add", .30, 0, 1));
     }
     int bandModifier(boolean same, boolean enemies, int grade) {
