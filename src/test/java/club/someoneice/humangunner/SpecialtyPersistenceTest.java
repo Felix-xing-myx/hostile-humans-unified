@@ -10,7 +10,7 @@ import net.minecraft.util.RandomSource;
 public final class SpecialtyPersistenceTest {
     public static void main(String[] args) {
         CompoundTag current = new CompoundTag();
-        double[] values = SpecialtyAttributes.ones(); values[0] = .85; values[9] = 1.25;
+        double[] values = SpecialtyAttributes.baseline(); values[0] = .85; values[9] = 1.25;
         SpecialtyAttributes.store(current, 1.05, values, 123456);
         CompoundTag before = current.copy();
         check(SpecialtyAttributes.retainSaved(current), "existing payload recognized");
@@ -24,13 +24,21 @@ public final class SpecialtyPersistenceTest {
         legacy.put("multipliers", ten); legacy.putInt("allocation_schema", 1); legacy.putFloat("budget", 1);
         legacy.putInt("experience_percent", 117); legacy.putLong("allocation_seed", 99);
         check(SpecialtyAttributes.retainSaved(legacy), "explicit legacy recognized");
-        check(legacy.getInt("allocation_schema") == 2 && legacy.getList("multipliers", Tag.TAG_FLOAT).size() == 11, "legacy expanded");
+        check(legacy.getInt("allocation_schema") == 3 && legacy.getList("multipliers", Tag.TAG_FLOAT).size() == 13, "legacy expanded");
         close(SpecialtyAttributes.storedMultiplier(legacy, SpecialtyAttributes.Dimension.ACCURACY), 1.25, "legacy spread converted once");
         close(SpecialtyAttributes.storedMultiplier(legacy, SpecialtyAttributes.Dimension.REGENERATION), 1, "legacy regeneration baseline");
         check(legacy.getInt("experience_percent") == 117 && legacy.getLong("allocation_seed") == 99, "other growth preserved");
         CompoundTag migrated = legacy.copy(); SpecialtyAttributes.retainSaved(legacy);
         check(legacy.equals(migrated), "idempotent migration");
 
+        CompoundTag eleven = new CompoundTag();
+        ListTag old = new ListTag();
+        for(int i=0;i<11;i++)old.add(FloatTag.valueOf((float)(.8+i*.025)));
+        eleven.put("multipliers",old);eleven.putInt("allocation_schema",2);eleven.putFloat("budget",1.12F);
+        SpecialtyAttributes.retainSaved(eleven);
+        for(int i=0;i<11;i++)close(eleven.getList("multipliers",Tag.TAG_FLOAT).getFloat(i),old.getFloat(i),"old value exact");
+        close(SpecialtyAttributes.storedMultiplier(eleven, SpecialtyAttributes.Dimension.ATTACK_SPEED),1,"old speed one");
+        close(SpecialtyAttributes.storedMultiplier(eleven, SpecialtyAttributes.Dimension.ARMOR_PENETRATION),0,"old penetration zero");
         for (int schema : new int[]{0, 99}) {
             CompoundTag future = new CompoundTag(); future.putInt("allocation_schema", schema);
             future.put("multipliers", ten.copy()); future.putString("future_metadata", "keep me");
@@ -48,10 +56,10 @@ public final class SpecialtyPersistenceTest {
         double total = 0; int high = 0;
         for (int i = 0; i < 100000; i++) {
             double budget = SpecialtyAttributes.sampleBudget(random, defaults);
-            check(budget >= .75 && budget <= 1.25, "truncated budget bounds");
-            total += budget; if (budget > 1.1) high++;
+            check(budget >= .8 && budget <= 1.3, "truncated budget bounds");
+            total += budget; if (budget > 1.15) high++;
         }
-        check(Math.abs(total / 100000 - 1) < .002, "budget mean");
+        check(Math.abs(total / 100000 - 1.05) < .002, "budget mean");
         check(Math.abs(high / 100000.0 - .1544) < .006, "resampling distribution");
         var degenerate = new SpecialtyConfig(true, 2, 0, .75, 1.25, 0, .3, .25, .5, 1.8);
         close(SpecialtyAttributes.sampleBudget(random, degenerate), 1.25, "bounded sigma-zero fallback");

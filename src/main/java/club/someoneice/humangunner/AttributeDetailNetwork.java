@@ -40,7 +40,7 @@ public final class AttributeDetailNetwork {
     private static long clientSequence;
     private static boolean registered;
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(new ResourceLocation(HumanGunner.MOD_ID,"attribute_detail"),
-            () -> "2", "2"::equals,"2"::equals);
+            () -> "3", "3"::equals,"3"::equals);
     private AttributeDetailNetwork() { }
     public static synchronized void register() {
         if(registered)return; registered=true;

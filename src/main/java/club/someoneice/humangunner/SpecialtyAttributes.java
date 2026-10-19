@@ -12,12 +12,12 @@ public final class SpecialtyAttributes {
     public enum Dimension {
         HEALTH("health"), ARMOR("armor"), TOUGHNESS("toughness"), KNOCKBACK_RESISTANCE("knockback_resistance"),
         SPEED("speed"), DETECTION("detection"), MELEE("melee"), GUN("gun"), PROJECTILE("projectile"),
-        ACCURACY("accuracy"), REGENERATION("regeneration");
+        ACCURACY("accuracy"), REGENERATION("regeneration"), ATTACK_SPEED("attack_speed"), ARMOR_PENETRATION("armor_penetration");
         private final String key;
         Dimension(String key) { this.key = key; }
         public String key() { return key; }
     }
-    public static final int DIMENSIONS = 11;
+    public static final int DIMENSIONS = 13;
     private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
     private static final java.util.Set<String> WARNED = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private SpecialtyAttributes() { }
@@ -30,7 +30,7 @@ public final class SpecialtyAttributes {
             human.getPersistentData().put(HumanGrowth.STATE, state);
         if (retainSaved(state)) return;
         if (!newEntity) {
-            store(state, 1, ones(), state.getLong("allocation_seed"));
+            store(state, 1, baseline(), state.getLong("allocation_seed"));
             return;
         }
         long seed = human.getRandom().nextLong();
@@ -40,10 +40,10 @@ public final class SpecialtyAttributes {
         double budget = boss ? HumanFactions.bossBudget() : sampleBudget(random, config);
         SpecialtyData.Definitions data = SpecialtyData.get();
         double[] tilts = ones();
-        if (!boss) for (int i = 0; i < DIMENSIONS; i++) tilts[i] = Math.exp(random.nextGaussian() * config.deviationSigma());
+        for (int i = 0; i < DIMENSIONS; i++) tilts[i] = Math.exp(random.nextGaussian() * config.deviationSigma());
         try {
             SpecialtyAllocation.Result result = SpecialtyAllocation.allocate(budget,
-                    HumanFactions.preference(human, boss), data.costs(), data.caps(config.deviationCap()), tilts,
+                    preference(human, boss), data.costs(), data.caps(config.deviationCap()), tilts,
                     config.capBudgetExponent(), config.multiplierMin(), config.multiplierMax(), boss, HumanFactions.bossAmplification());
             if (!result.feasible()) warn("budget", "Specialty total is outside merged boundaries; keeping boundaries, budget and explicit residual");
             store(state, budget, result.multipliers(), seed);
@@ -51,41 +51,46 @@ public final class SpecialtyAttributes {
             double total = 0, costs = 0;
             ListTag floats = state.getList("multipliers", Tag.TAG_FLOAT);
             double[] c = data.costs();
-            for (int i = 0; i < DIMENSIONS; i++) { total += c[i] * floats.getFloat(i); costs += c[i]; }
+            costs = SpecialtyAllocation.baselineCost(c);
+            for (int i = 0; i < DIMENSIONS; i++) { total += c[i] * floats.getFloat(i); }
             if (result.feasible() && Math.abs(total - budget * costs) > 2e-6 * Math.max(1, budget * costs))
                 warn("float", "Specialty float persistence exceeded cost tolerance");
         } catch (IllegalArgumentException invalid) {
             // Empty intersections cannot preserve both boundary sets. Explicit neutral migration is safe.
             warn("bounds", "Invalid specialty parameters (" + invalid.getMessage() + "); using baseline allocation");
-            store(state, 1, ones(), seed);
+            store(state, 1, baseline(), seed);
         }
     }
 
     static double sampleBudget(RandomSource random, SpecialtyConfig config) {
-        double candidate = config.budgetMean();
-        for (int attempt = 0; attempt < 8; attempt++) {
-            candidate = config.budgetMean() + random.nextGaussian() * config.budgetSigma();
+        if (config.budgetSigma() == 0 || config.budgetMin() == config.budgetMax()) return SpecialtyAllocation.clamp(config.budgetMean(), config.budgetMin(), config.budgetMax());
+        // Rejection sampling preserves a truncated normal, without point masses at the boundaries.
+        while (true) {
+            double candidate = config.budgetMean() + random.nextGaussian() * config.budgetSigma();
             if (candidate >= config.budgetMin() && candidate <= config.budgetMax()) return candidate;
         }
-        warn("resampling", "Specialty budget exhausted 8 resamples; clamping last draw");
-        return SpecialtyAllocation.clamp(candidate, config.budgetMin(), config.budgetMax());
     }
 
     /** Returns true when a payload exists, including unknown future schemas which must be retained. */
     static boolean retainSaved(CompoundTag state) {
         ListTag saved = state.getList("multipliers", Tag.TAG_FLOAT);
         int schema = state.getInt("allocation_schema");
-        if ((schema == 2 && (saved.size() == 10 || saved.size() == 11)) || schema == 1 && saved.size() == 10) {
+        if ((schema == 3 && saved.size() == DIMENSIONS)
+                || (schema == 2 && (saved.size() == 10 || saved.size() == 11)) || schema == 1 && saved.size() == 10) {
             float budget = state.getFloat("budget");
             boolean valid = Float.isFinite(budget) && budget > 0;
-            for (int i = 0; i < saved.size(); i++) valid &= Float.isFinite(saved.getFloat(i)) && saved.getFloat(i) > 0;
+            for (int i = 0; i < saved.size(); i++) {
+                float value = saved.getFloat(i);
+                valid &= Float.isFinite(value) && (i == Dimension.ARMOR_PENETRATION.ordinal() ? value >= 0 && value <= .45 : value > 0);
+            }
             float accuracy = schema == 1 ? (float) (1.0 / saved.getFloat(9)) : saved.getFloat(9);
             valid &= Float.isFinite(accuracy) && accuracy > 0;
             if (valid) {
                 if (schema == 1) saved.set(9, FloatTag.valueOf(accuracy));
                 if (saved.size() == 10) saved.add(FloatTag.valueOf(1));
+                if (saved.size() == 11) { saved.add(FloatTag.valueOf(1)); saved.add(FloatTag.valueOf(0)); }
                 state.put("multipliers", saved);
-                state.putInt("allocation_schema", 2);
+                state.putInt("allocation_schema", 3);
                 return true;
             }
         }
@@ -102,26 +107,26 @@ public final class SpecialtyAttributes {
         state.putFloat("budget", (float) budget);
         state.put("multipliers", list);
         state.putLong("allocation_seed", seed);
-        state.putInt("allocation_schema", 2);
+        state.putInt("allocation_schema", 3);
     }
     public static double storedMultiplier(Human human, Dimension dimension) {
         return storedMultiplier(human.getPersistentData().getCompound(HumanGrowth.STATE), dimension);
     }
     static double storedMultiplier(CompoundTag state, Dimension dimension) {
-        if (state.getInt("allocation_schema") != 2) return 1;
+        double fallback = dimension == Dimension.ARMOR_PENETRATION ? 0 : 1;
+        if (state.getInt("allocation_schema") != 3) return fallback;
         float budget = state.getFloat("budget");
-        if (!Float.isFinite(budget) || budget <= 0) return 1;
+        if (!Float.isFinite(budget) || budget <= 0) return fallback;
         ListTag list = state.getList("multipliers", Tag.TAG_FLOAT);
-        if (list.size() != DIMENSIONS) return 1;
+        if (list.size() != DIMENSIONS) return fallback;
         for (int i = 0; i < DIMENSIONS; i++) {
             float candidate = list.getFloat(i);
-            if (!Float.isFinite(candidate) || candidate <= 0) return 1;
+            if (!Float.isFinite(candidate) || (i == Dimension.ARMOR_PENETRATION.ordinal() ? candidate < 0 || candidate > .45 : candidate <= 0)) return fallback;
         }
-        float value = list.getFloat(dimension.ordinal());
-        return Float.isFinite(value) && value > 0 ? value : 1;
+        return list.getFloat(dimension.ordinal());
     }
     public static double multiplier(Human human, Dimension dimension) {
-        return SpecialtyConfig.get().enabled() ? storedMultiplier(human, dimension) : 1;
+        return SpecialtyConfig.get().enabled() ? storedMultiplier(human, dimension) : (dimension == Dimension.ARMOR_PENETRATION ? 0 : 1);
     }
     public static double budget(Human human) {
         float value = human.getPersistentData().getCompound(HumanGrowth.STATE).getFloat("budget");
@@ -133,6 +138,14 @@ public final class SpecialtyAttributes {
             GrowthHealth.apply(human);
         }
     }
+    static double[] preference(Human human, boolean boss) {
+        double[] original = HumanFactions.preference(human, boss);
+        double[] values = baseline();
+        System.arraycopy(original, 0, values, 0, Math.min(original.length, DIMENSIONS));
+        values[Dimension.ARMOR_PENETRATION.ordinal()] = Math.max(values[Dimension.ARMOR_PENETRATION.ordinal()], SpecialtyConfig.get().penetrationSeed());
+        return values;
+    }
+    static double[] baseline() { double[] values = ones(); values[Dimension.ARMOR_PENETRATION.ordinal()] = 0; return values; }
     static double[] ones() { double[] values = new double[DIMENSIONS]; java.util.Arrays.fill(values, 1); return values; }
     static void warn(String key, String text) { if (WARNED.add(key)) LOGGER.warn(text); }
 }

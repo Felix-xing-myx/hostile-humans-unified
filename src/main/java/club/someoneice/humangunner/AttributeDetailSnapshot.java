@@ -38,11 +38,11 @@ public record AttributeDetailSnapshot(UUID target, int entityId, String name, St
         if (!Float.isFinite(health) || !Float.isFinite(budget) || budget <= 0) throw new IllegalArgumentException("Invalid attribute header");
         int count = count(in, 3); List<Label> labels = new ArrayList<>(count);
         for (int i=0;i<count;i++) {
-            String key = in.readUtf(64); int n = count(in,11); List<String> dimensions = new ArrayList<>(n);
+            String key = in.readUtf(64); int n = count(in,SpecialtyAttributes.DIMENSIONS); List<String> dimensions = new ArrayList<>(n);
             for (int j=0;j<n;j++) dimensions.add(dimension(in.readUtf(32)));
             labels.add(new Label(key, dimensions));
         }
-        count = count(in,11); if(count != 11) throw new IllegalArgumentException("Expected eleven attribute rows");
+        count = count(in,SpecialtyAttributes.DIMENSIONS); if(count != SpecialtyAttributes.DIMENSIONS) throw new IllegalArgumentException("Expected thirteen attribute rows");
         List<Row> rows = new ArrayList<>(count); Set<String> seen = new HashSet<>();
         for (int i=0;i<count;i++) {
             String dimension = dimension(in.readUtf(32)); if (!seen.add(dimension)) throw new IllegalArgumentException("Duplicate dimension");
@@ -54,7 +54,7 @@ public record AttributeDetailSnapshot(UUID target, int entityId, String name, St
                 if(!Set.of("multiply","add","set").contains(operation)) throw new IllegalArgumentException("Unknown layer operation");
                 layers.add(new Layer(key,operation,amount));
             }
-            n=count(in,12); List<Note> notes=new ArrayList<>(n);
+            n=count(in,24); List<Note> notes=new ArrayList<>(n);
             for(int j=0;j<n;j++) notes.add(new Note(in.readUtf(64),in.readUtf(256)));
             rows.add(new Row(dimension,base,stored,effective,value,known,baseline,unit,layers,notes));
         }

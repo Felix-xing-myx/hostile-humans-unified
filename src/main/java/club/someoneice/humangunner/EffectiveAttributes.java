@@ -36,6 +36,15 @@ public final class EffectiveAttributes {
     public static double accuracyMultiplier(Human human) { return multiplier(human, SpecialtyAttributes.Dimension.ACCURACY); }
     public static double spreadMultiplier(Human human) { return 1 / accuracyMultiplier(human); }
     public static double regenerationMultiplier(Human human) { return multiplier(human, SpecialtyAttributes.Dimension.REGENERATION); }
+    /** Applied once to existing close-combat cooldown, never firearm rates. */
+    public static double attackSpeedMultiplier(Human human) {
+        var config = SpecialtyConfig.get();
+        return SpecialtyAllocation.clamp(multiplier(human, SpecialtyAttributes.Dimension.ATTACK_SPEED), config.attackSpeedMin(), config.attackSpeedMax());
+    }
+    /** Stored utility is already a fraction; no unit baseline or nonlinear curve is added. */
+    public static double armorPenetration(Human human) {
+        return SpecialtyAllocation.clamp(SpecialtyAttributes.multiplier(human, SpecialtyAttributes.Dimension.ARMOR_PENETRATION), 0, .45);
+    }
     /** Base recovery only; callers own health clamps and must not feed the scaled amount back here. */
     public static float healing(Human human, float baseAmount) {
         return baseAmount > 0 && Float.isFinite(baseAmount) ? (float) (baseAmount * regenerationMultiplier(human)) : baseAmount;
@@ -44,7 +53,7 @@ public final class EffectiveAttributes {
     public static AttributeDetailSnapshot detailSnapshot(Human human) {
         var tier = TierAttributes.of(human);
         var growth = HumanGrowth.readOnlyLayers(human);
-        List<AttributeDetailSnapshot.Row> rows = new ArrayList<>(11);
+        List<AttributeDetailSnapshot.Row> rows = new ArrayList<>(SpecialtyAttributes.DIMENSIONS);
         rows.add(physical(human, SpecialtyAttributes.Dimension.HEALTH, Attributes.MAX_HEALTH, tier.maxHealth(), "hp", growth));
         rows.add(physical(human, SpecialtyAttributes.Dimension.ARMOR, Attributes.ARMOR, tier.armor(), "points", growth));
         rows.add(physical(human, SpecialtyAttributes.Dimension.TOUGHNESS, Attributes.ARMOR_TOUGHNESS, tier.armorToughness(), "points", growth));
@@ -72,17 +81,22 @@ public final class EffectiveAttributes {
 
         var gunDimension = SpecialtyAttributes.Dimension.GUN;
         layers = allocationLayers(human, gunDimension);
-        double configured = 1;
+        double configured = UnifiedConfig.get().tierGunDamage(TierAttributes.key(human));
         notes = new ArrayList<>();
         if (gun) {
             configured = GunSupport.isTaczGunItem(weapon) ? UnifiedConfig.get().tierGunDamage(TierAttributes.key(human))
                     : UnifiedConfig.get().scguns().damageMultiplier() * UnifiedConfig.get().tierScgunsDamage(TierAttributes.key(human));
             layers.add(layer("backend_config", "multiply", configured));
             notes.add(note("gun_native_unknown", ""));
-        } else notes.add(note("no_gun", ""));
+        } else { layers.add(layer("backend_config", "multiply", configured)); notes.add(note("no_gun", "")); }
+        double gunCategory = gun ? GunSpecialization.damageMultiplier(human, weapon) : 1;
+        layers.add(layer("gun_category", "multiply", gunCategory));
+        double gunCommon = configured * growth.gunDamage() * gunMultiplier(human);
+        for (var entry : GunSpecialization.categoryMultipliers(human).entrySet())
+            notes.add(note("gun_category_" + entry.getKey(), growth.known() ? format(gunCommon * entry.getValue()) : "?"));
         layers.add(layer("gun_experience", "multiply", growth.gunDamage()));
         notes.add(note("damage_limit", ""));
-        rows.add(row(human, gunDimension, 1, configured * growth.gunDamage() * gunMultiplier(human), growth.known(), configured*growth.gunDamage(), "factor", layers, notes));
+        rows.add(row(human, gunDimension, 1, gunCommon * gunCategory, growth.known(), configured*growth.gunDamage()*gunCategory, "factor", layers, notes));
 
         var projectile = SpecialtyAttributes.Dimension.PROJECTILE;
         layers = allocationLayers(human, projectile); growthDamage(layers, growth);
@@ -110,6 +124,14 @@ public final class EffectiveAttributes {
         var regeneration = SpecialtyAttributes.Dimension.REGENERATION;
         rows.add(row(human, regeneration, 1, regenerationMultiplier(human), true, 1, "factor", allocationLayers(human, regeneration),
                 List.of(note("healing_example", format(healing(human, 1))), note("healing_limit", ""))));
+        var attackSpeed = SpecialtyAttributes.Dimension.ATTACK_SPEED;
+        layers = allocationLayers(human, attackSpeed);
+        layers.add(layer("physical_limit", "add", attackSpeedMultiplier(human) - multiplier(human, attackSpeed)));
+        rows.add(row(human, attackSpeed, 1, attackSpeedMultiplier(human), true, 1, "factor", layers,
+                List.of(note("melee_cooldown_only", ""))));
+        var penetration = SpecialtyAttributes.Dimension.ARMOR_PENETRATION;
+        rows.add(row(human, penetration, 0, armorPenetration(human), true, 0, "percent",
+                List.of(layer("specialty", "set", armorPenetration(human))), List.of(note("penetration_fraction", ""))));
         var labels = SpecialtyLabels.of(human).stream().map(match -> new AttributeDetailSnapshot.Label(match.id().substring(0, Math.min(64,match.id().length())),
                 match.dimensions().stream().map(SpecialtyAttributes.Dimension::key).toList())).toList();
         String name = human.getName().getString(); if (name.length()>128) name=name.substring(0,128);
@@ -185,10 +207,10 @@ public final class EffectiveAttributes {
         }
         try {
             var config = SpecialtyConfig.get(); var definitions = SpecialtyData.get();
-            double[] centers = SpecialtyAllocation.center(HumanFactions.preference(human, HumanFactions.isBoss(human)), definitions.costs());
+            double[] centers = SpecialtyAllocation.center(SpecialtyAttributes.preference(human, HumanFactions.isBoss(human)), definitions.costs());
             int i = dimension.ordinal(); double cap = definitions.caps(config.deviationCap())[i];
             double scale = Math.pow(SpecialtyAttributes.budget(human), config.capBudgetExponent());
-            double lower = Math.max(config.multiplierMin(), centers[i]*(1-cap)*scale), upper = Math.min(config.multiplierMax(),centers[i]*(1+cap)*scale);
+            double lower = Math.max(dimension == SpecialtyAttributes.Dimension.ARMOR_PENETRATION ? 0 : config.multiplierMin(), centers[i]*(1-cap)*scale), upper = Math.min(dimension == SpecialtyAttributes.Dimension.ARMOR_PENETRATION ? .45 : config.multiplierMax(),centers[i]*(1+cap)*scale);
             notes.add(note(lower<=upper?"current_bounds":"bounds_unknown", lower<=upper?format(lower) + " – " + format(upper):""));
         } catch (IllegalArgumentException ignored) { notes.add(note("bounds_unknown", "")); }
         return new AttributeDetailSnapshot.Row(dimension.key(), base, SpecialtyAttributes.storedMultiplier(human,dimension),
@@ -212,6 +234,8 @@ public final class EffectiveAttributes {
             case PROJECTILE -> HumanGrowth.multiplier(human) * projectileMultiplier(human);
             case ACCURACY -> accuracyMultiplier(human);
             case REGENERATION -> regenerationMultiplier(human);
+            case ATTACK_SPEED -> attackSpeedMultiplier(human);
+            case ARMOR_PENETRATION -> armorPenetration(human);
         };
     }
 }

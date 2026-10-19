@@ -15,6 +15,7 @@ public final class MeleeAttackTiming {
         } else {
             UnifiedConfig.Tier tier = TierAttributes.of(human);
             cooldown = human.getRandom().nextInt(tier.meleeCooldownMin(), tier.meleeCooldownMax() + 1);
+            cooldown = Math.max(1, (int) Math.ceil(cooldown / EffectiveAttributes.attackSpeedMultiplier(human)));
         }
         READY_AT.put(human, human.tickCount + cooldown);
         return cooldown;

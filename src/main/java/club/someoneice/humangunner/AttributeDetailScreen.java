@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 
-/** Eleven scrollable final values with compact hover help and one pinned inline explanation. */
+/** Thirteen scrollable final values with compact hover help and one pinned inline explanation. */
 public final class AttributeDetailScreen extends Screen {
     private record Hit(int top,int bottom,int row) { }
     private record TagHit(int left,int top,int right,int bottom,List<String> dimensions) { }
@@ -81,7 +81,11 @@ public final class AttributeDetailScreen extends Screen {
         for(var layer:row.layers())result.add(text("layer_line",text("layer."+layer.key()),text("operation."+layer.operation()),number(layer.value())));
         result.add(text("final",displayed(row)));
         result.add(text(!row.known()?"comparison.unknown":row.value()>row.baseline()+1e-6?"comparison.higher":row.value()<row.baseline()-1e-6?"comparison.lower":"comparison.similar",number(row.baseline())));
-        for(var note:row.notes())result.add(text("note."+note.key(),note.detail()));
+        for(var note:row.notes()) {
+            if(note.key().startsWith("gun_category_"))
+                result.add(text("gun_category_value", text("gun_category."+note.key().substring("gun_category_".length())), note.detail()));
+            else result.add(text("note."+note.key(),note.detail()));
+        }
         return result;
     }
     @Override public void render(GuiGraphics graphics,int mouseX,int mouseY,float partialTick){

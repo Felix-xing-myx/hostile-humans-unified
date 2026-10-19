@@ -7,15 +7,22 @@ public final class SpecialtyAllocation {
 
     public static double[] center(double[] raw, double[] costs) {
         if (raw.length != costs.length || raw.length == 0) throw new IllegalArgumentException("dimensions");
-        double sum = 0, cost = 0;
+        double sum = 0, cost = baselineCost(costs);
         for (int i = 0; i < raw.length; i++) {
             positive(raw[i]); positive(costs[i]);
-            sum += costs[i] * raw[i]; cost += costs[i];
+            sum += costs[i] * raw[i];
         }
         positive(sum); positive(cost);
         double[] result = raw.clone();
         for (int i = 0; i < result.length; i++) result[i] *= cost / sum;
         return result;
+    }
+
+    /** The appended penetration dimension is a zero-baseline ratio, not a unit multiplier. */
+    public static double baselineCost(double[] costs) {
+        double total = 0;
+        for (int i = 0; i < costs.length; i++) if (costs.length != 13 || i != 12) total += costs[i];
+        return total;
     }
 
     public static Result allocate(double budget, double[] preference, double[] costs, double[] caps,
@@ -37,22 +44,23 @@ public final class SpecialtyAllocation {
         if (n != caps.length || n != tilts.length) throw new IllegalArgumentException("dimensions");
         double[] center = center(preference, costs);
         double[] boundaryCenter = center.clone();
-        // Bosses have no random tilt. Amplify the complete normalized center, then conserve it.
+        // Amplification changes preference only. Bosses use the same random tilt and merged bounds.
         if (boss) {
             for (int i = 0; i < n; i++) {
-                center[i] = Math.max(1e-6, 1 + (center[i] - 1) * amplification);
+                double baseline = n == 13 && i == 12 ? 0 : 1;
+                center[i] = Math.max(1e-6, baseline + (center[i] - baseline) * amplification);
             }
             center = center(center, costs);
         }
         double[] raw = new double[n], lower = new double[n], upper = new double[n];
-        double cost = 0, denominator = 0;
+        double cost = baselineCost(costs), denominator = 0;
         for (int i = 0; i < n; i++) {
             if (!Double.isFinite(caps[i]) || caps[i] < 0 || caps[i] > 1) throw new IllegalArgumentException("cap");
             positive(tilts[i]);
-            raw[i] = center[i] * (boss ? 1 : clamp(tilts[i], 1 - caps[i], 1 + caps[i]));
-            denominator += raw[i] * costs[i]; cost += costs[i];
-            lower[i] = Math.max(absoluteMin, boundaryCenter[i] * (1 - caps[i]) * Math.pow(budget, alpha));
-            upper[i] = Math.min(absoluteMax, boundaryCenter[i] * (1 + caps[i]) * Math.pow(budget, alpha));
+            raw[i] = center[i] * clamp(tilts[i], 1 - caps[i], 1 + caps[i]);
+            denominator += raw[i] * costs[i];
+            lower[i] = Math.max(n == 13 && i == 12 ? 0 : absoluteMin, boundaryCenter[i] * (1 - caps[i]) * Math.pow(budget, alpha));
+            upper[i] = Math.min(n == 13 && i == 12 ? .45 : absoluteMax, boundaryCenter[i] * (1 + caps[i]) * Math.pow(budget, alpha));
         }
         positive(denominator);
         for (int i = 0; i < n; i++) raw[i] *= budget * cost / denominator;
@@ -67,7 +75,7 @@ public final class SpecialtyAllocation {
         double min = 0, max = 0, right = 0;
         for (int i = 0; i < n; i++) {
             positive(raw[i]); positive(costs[i]);
-            if (!Double.isFinite(lower[i]) || !Double.isFinite(upper[i]) || lower[i] <= 0 || lower[i] > upper[i])
+            if (!Double.isFinite(lower[i]) || !Double.isFinite(upper[i]) || lower[i] < 0 || lower[i] > upper[i])
                 throw new IllegalArgumentException("empty or invalid merged bounds at " + i);
             min += costs[i] * lower[i]; max += costs[i] * upper[i];
             right = Math.max(right, upper[i] / raw[i]);
