@@ -1,4 +1,5 @@
 """Integration contracts only; native Unbreaking/axe behavior requires game acceptance."""
+import json
 import unittest
 from pathlib import Path
 
@@ -14,8 +15,15 @@ class ShieldDurabilityContract(unittest.TestCase):
         self.assertIn('wear(human, shield, hand, blockedDamage)', source)
         self.assertNotIn('setDamageValue(', source)
         self.assertNotIn('hasOwner()', source)
-        self.assertIn('MAX_DURABILITY_RATE_PER_DAMAGE = 0.001D', source)
-        self.assertIn('damage * (1.0D + MAX_DURABILITY_RATE_PER_DAMAGE * maximumDurability)', source)
+        # The percentage is configurable at settlement; the native enchanted transaction remains shared.
+        apply = source.split('private static void applyWear(', 1)[1]
+        self.assertIn('wearCost(entry.damage, shield.getMaxDamage(),', apply)
+        self.assertIn('damage("shield_durability_rate_per_damage", .0015)', apply)
+        self.assertIn('damage * (1.0D + rate * maximumDurability)', source)
+        self.assertIn('!Double.isFinite(rate) || rate < 0', source)
+        self.assertIn('Integer.MAX_VALUE - Math.max(0, before.getDamageValue())', apply)
+        defaults = json.loads((ROOT / 'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8'))
+        self.assertEqual(defaults['damage']['shield_durability_rate_per_damage'], .0015)
 
     def test_window_aggregates_hits_instead_of_dropping_them(self):
         source = (PKG / 'ShieldDurability.java').read_text(encoding='utf-8')
@@ -23,7 +31,10 @@ class ShieldDurabilityContract(unittest.TestCase):
         self.assertIn('entry.shield == shield', source)
         self.assertIn('entry.damage + damage', source)
         self.assertIn('now + WEAR_WINDOW_TICKS', source)
-        self.assertIn('wearCost(entry.damage, shield.getMaxDamage())', source)
+        self.assertIn('wearCost(entry.damage, shield.getMaxDamage(),', source)
+        self.assertIn('if (!all && now < entry.due) return false;', source)
+        self.assertIn('settle(human, Long.MAX_VALUE, true)', source)
+        self.assertLess(source.index('PENDING.remove(human)'), source.index('applyWear(human, entry)'))
         self.assertNotIn('NEXT_WEAR', source)
         self.assertLess(source.index('pending.removeIf'), source.index('applyWear(human, entry)'))
 

@@ -13,6 +13,21 @@ def read(name):
 
 
 class GrowthServerContractTest(unittest.TestCase):
+    def assert_shared_firearm_scaling(self, backend):
+        text = read(backend)
+        self.assertEqual(text.count('HumanDamagePipeline.scaleGunDamage(attacker,'), 1)
+        self.assertNotIn('HumanGrowth.scaleGunDamage(', text)
+        pipeline = read('HumanDamagePipeline.java').split('public static float scaleGunDamage(', 1)[1].split('static boolean physical(', 1)[0]
+        self.assertEqual(pipeline.count('HumanGrowth.scaleGunDamage(attacker, amount, backendMultiplier)'), 1)
+        self.assertEqual(pipeline.count('GunSpecialization.damageMultiplier(attacker, weapon)'), 1)
+        self.assertIn('weapon.isEmpty() ? 1', pipeline)
+        growth = read('HumanGrowth.java').split('static float scaleGunDamage(', 1)[1].split('static double fullHealth(', 1)[0]
+        self.assertIn('configuredMultiplier', growth)
+        self.assertIn('gunDamageMultiplier(human)', growth)
+        self.assertIn('EffectiveAttributes.gunMultiplier(human)', growth)
+        for stage in ('stagePercent', 'damageStagePercent', 'layers(', 'multiplier(human)'):
+            self.assertNotIn(stage, pipeline + growth)
+
     def test_one_global_switch_and_single_health_default(self):
         data = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
         self.assertNotIn("equipment_growth", data)
@@ -53,9 +68,9 @@ class GrowthServerContractTest(unittest.TestCase):
         self.assertIn('layers(state(human), config).healthMultiplier()', health)
         self.assertIn('config.stagePercent(stage)', growth)
         self.assertNotIn('damageStagePercent', health)
-        for backend in ('TaczIntegration.java', 'ScgunsIntegration.java'):
+        for backend in ('TaczIntegration.java', 'ScgunsIntegration.java', 'JegIntegration.java'):
             text = read(backend)
-            self.assertEqual(text.count('HumanGrowth.scaleGunDamage(attacker,'), 1)
+            self.assert_shared_firearm_scaling(backend)
             self.assertNotIn('HumanGrowth.gunDamageMultiplier(attacker)', text)
             self.assertNotIn('HumanGrowth.multiplier(', text)
             self.assertNotIn('damageStagePercent', text)
@@ -156,7 +171,7 @@ class GrowthServerContractTest(unittest.TestCase):
 
     def test_firearm_growth_uses_existing_damage_and_both_accuracy_paths(self):
         tacz = read("TaczIntegration.java")
-        self.assertEqual(tacz.count("HumanGrowth.scaleGunDamage(attacker,"), 1)
+        self.assert_shared_firearm_scaling('TaczIntegration.java')
         self.assertNotIn("HumanGrowth.multiplier", tacz)
         self.assertNotIn("gunDamageMultiplier", read("HumanGunner.java"))
         self.assertIn("HumanGrowth.gunSpreadMultiplier(human)", read("RangedAccuracy.java"))

@@ -58,12 +58,18 @@ class TaczEffectsContract(unittest.TestCase):
         layer = (RENDER / 'HumanAnimatedItemInHandLayer.java').read_text(encoding='utf-8')
         self.assertIn('finally { TaczNpcEffects.end(previous); }', layer)
 
-    def test_aim_reads_sustained_server_intent_and_shield_default_keeps_40_percent(self):
+    def test_aim_reads_sustained_server_intent_and_shield_default_keeps_50_percent(self):
         sample = (RENDER / 'TaczNativeAnimation.java').read_text(encoding='utf-8')
         self.assertIn('operator.getSynIsAiming()', sample)
         animator = (RENDER / 'TaczNpcAnimator.java').read_text(encoding='utf-8')
         self.assertIn('TaczAnimationPolicy.blendAim', animator)
         self.assertNotIn('if (!action || missingAction || sample.bolting()', animator)
         defaults = json.loads((ROOT / 'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8'))
-        self.assertEqual(defaults['tacz']['shield_damage_multiplier'], .4)
-        self.assertEqual(defaults['tacz']['offhand_shield_damage_reduction'], .2)
+        self.assertEqual(defaults['tacz']['shield_damage_multiplier'], .5)
+        self.assertEqual(defaults['tacz']['offhand_shield_damage_reduction'], .1)
+        integration = (ADAPTER / 'TaczIntegration.java').read_text(encoding='utf-8')
+        active = integration.split('if (isActivelyBlockingWithShield(defender))', 1)[1].split('private static void onGunDamagePost', 1)[0]
+        self.assertIn('gunSetting("shield_damage_multiplier", .5)', active)
+        self.assertEqual(active.count('event.setBaseAmount('), 1)
+        self.assertEqual(active.count('ShieldDurability.damageShield('), 1)
+        self.assertNotIn('setDamageSource(', active)

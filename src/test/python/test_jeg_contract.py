@@ -49,7 +49,13 @@ class JegContract(unittest.TestCase):
     def test_no_new_tactical_goal_or_stage_damage_multiplier(self):
         source = (PKG / "JegIntegration.java").read_text(encoding="utf-8")
         self.assertIn("new GunnerGoal<>(human)", source)
-        self.assertIn("HumanGrowth.scaleGunDamage", source)
+        self.assertEqual(source.count("HumanDamagePipeline.scaleGunDamage(attacker,"), 1)
+        self.assertIn("projectile.getWeapon() : ItemStack.EMPTY", source)
+        pipeline = (PKG / "HumanDamagePipeline.java").read_text(encoding="utf-8").split("public static float scaleGunDamage(", 1)[1].split("static boolean physical(", 1)[0]
+        self.assertEqual(pipeline.count("HumanGrowth.scaleGunDamage(attacker, amount, backendMultiplier)"), 1)
+        self.assertIn("weapon.isEmpty() ? 1", pipeline)
+        self.assertNotIn("HumanGrowth.multiplier(", source + pipeline)
+        self.assertNotIn("stagePercent", pipeline)
         self.assertIn("HumanGrowth.gunSpreadMultiplier", source)
         self.assertNotIn("stagePercent", source)
         self.assertIn("HumanAmmo.consumeMagazines", source)

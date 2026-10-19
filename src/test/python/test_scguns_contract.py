@@ -186,7 +186,14 @@ class ScgunsBoundary(unittest.TestCase):
         scguns = source("ScgunsIntegration")
         self.assertIn("tierScgunsDamage(TierAttributes.key(attacker))", scguns)
         self.assertNotIn("tierGunDamage(", scguns)
-        self.assertEqual(scguns.count("HumanGrowth.scaleGunDamage(attacker,"), 1)
+        self.assertEqual(scguns.count("HumanDamagePipeline.scaleGunDamage(attacker, projectile.getWeapon(),"), 1)
+        pipeline = source("HumanDamagePipeline").split("public static float scaleGunDamage(", 1)[1].split("static boolean physical(", 1)[0]
+        self.assertEqual(pipeline.count("HumanGrowth.scaleGunDamage(attacker, amount, backendMultiplier)"), 1)
+        growth = source("HumanGrowth").split("static float scaleGunDamage(", 1)[1].split("static double fullHealth(", 1)[0]
+        self.assertIn("gunDamageMultiplier(human)", growth)
+        self.assertIn("EffectiveAttributes.gunMultiplier(human)", growth)
+        self.assertNotIn("HumanGrowth.multiplier(", pipeline + scguns)
+        self.assertNotIn("layers(", growth)
         self.assertIn("HumanGrowth.gunSpreadMultiplier(human)", scguns)
         self.assertIn("tierGunDamage(TierAttributes.key(attacker))", source("TaczIntegration"))
 
