@@ -27,7 +27,7 @@ public final class HumanDamagePipeline {
 
     public static float scaleGunDamage(Human attacker, ItemStack weapon, float amount, double backendMultiplier) {
         return HumanGrowth.scaleGunDamage(attacker, amount, backendMultiplier)
-                * (float) GunSpecialization.damageMultiplier(attacker, weapon);
+                * (float) (weapon.isEmpty() ? 1 : GunSpecialization.damageMultiplier(attacker, weapon));
     }
 
     static boolean physical(DamageSource source) {
