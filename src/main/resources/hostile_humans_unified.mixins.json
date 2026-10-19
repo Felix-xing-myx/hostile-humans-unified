@@ -30,7 +30,8 @@
     "JegHumanAiOwnershipMixin",
     "JegNativeGunGoalMixin",
     "JegWaterBombOwnerMixin",
-    "ScgunsHumanAimMixin"
+    "ScgunsHumanAimMixin",
+    "ScgunsHumanShieldMixin"
   ],
   "client": [
     "ScgunsNpcMuzzleFlashMixin",

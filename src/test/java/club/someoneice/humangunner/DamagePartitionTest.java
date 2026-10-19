@@ -33,6 +33,15 @@ public final class DamagePartitionTest {
         close(receipt.consume(first,10,.25),.25,"cancel/return cleanup");
         receipt.record(first,10,1); // Simulate an exception before the armor seam, then a new hit.
         receipt.begin(); close(receipt.consume(first,10,.25),.25,"exception cannot leak into next hit");
+        receipt.markCustomShield(first, second, 20);
+        receipt.begin(); // TaCZ starts its normal hurt after its own Pre hook.
+        close(receipt.consumeCustomShield(first,20) ? 1 : 0,1,"native custom block survives hurt begin");
+        close(receipt.consumeCustomShield(first,20) ? 1 : 0,0,"normal part not blocked twice");
+        receipt.clear(); receipt.begin();
+        close(receipt.consumeCustomShield(second,20) ? 1 : 0,1,"separate AP hurt consumes its own source");
+        receipt.markCustomShield(first,second,20);
+        close(receipt.consumeCustomShield(first,21) ? 1 : 0,0,"native shield receipt expires");
+        close(receipt.consumeCustomShield(second,20) ? 1 : 0,0,"expiry invalidates both parts");
         System.out.println("DamagePartitionTest passed");
     }
     private static void close(double actual, double expected, String label) {

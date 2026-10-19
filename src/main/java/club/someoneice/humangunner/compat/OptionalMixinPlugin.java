@@ -30,6 +30,8 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
             "m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z";
     public static final String SCGUNS_HUMAN_AIM =
             "getLeadingDirection(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/entity/LivingEntity;D)Lnet/minecraft/world/phys/Vec3;";
+    public static final String SCGUNS_HUMAN_SHIELD =
+            "onHitEntity(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/world/phys/Vec3;Z)V";
 
     @Override public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         String contract;
@@ -39,12 +41,17 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
         else if (mixinClassName.endsWith(".TaczNpcMuzzleFlashMixin")) contract = TACZ_NPC_FLASH;
         else if (mixinClassName.endsWith(".ScgunsSulfurheadDamageMixin")) contract = SCGUNS_SULFURHEAD_DAMAGE;
         else if (mixinClassName.endsWith(".ScgunsHumanAimMixin")) contract = SCGUNS_HUMAN_AIM;
+        else if (mixinClassName.endsWith(".ScgunsHumanShieldMixin")) contract = SCGUNS_HUMAN_SHIELD;
         else if (mixinClassName.endsWith(".JegNpcMuzzleFlashMixin")) contract =
                 "renderWeapon(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IF)Z";
         else return true;
         if (contract.equals(SCGUNS_HUMAN_AIM)) NativeAimCompatibility.scgunsSharedPrediction(false);
         try {
             ClassNode target = readTarget(MixinService.getService().getBytecodeProvider(), targetClassName);
+            if (contract.equals(SCGUNS_HUMAN_SHIELD) && !supportsScgunsShield(target)) {
+                LOGGER.warn("Retaining native Scguns shield interception: its call site changed");
+                return false;
+            }
             if (contract.equals(SCGUNS_SULFURHEAD_DAMAGE)
                     && !"net/minecraft/world/entity/monster/Monster".equals(target.superName)) {
                 LOGGER.warn("Skipping Sulfurhead damage compatibility: superclass changed to {}", target.superName);
@@ -79,6 +86,15 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
         return target.methods.stream().anyMatch(method -> (method.name + method.desc).equals(contract)
                 && ((method.access & Opcodes.ACC_STATIC) != 0) == isStatic
                 && (method.access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE)) == 0);
+    }
+    private static boolean supportsScgunsShield(ClassNode target) {
+        return target.methods.stream().filter(m -> (m.name + m.desc).equals(SCGUNS_HUMAN_SHIELD))
+                .anyMatch(m -> java.util.stream.StreamSupport.stream(m.instructions.spliterator(), false)
+                        .anyMatch(i -> i instanceof org.objectweb.asm.tree.MethodInsnNode call
+                                && call.getOpcode() == Opcodes.INVOKESTATIC
+                                && call.owner.equals("top/ribs/scguns/entity/projectile/ProjectileEntity$ProjectileHelper")
+                                && call.name.equals("handleShieldHit")
+                                && call.desc.equals("(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;F)Z")));
     }
     @Override public void onLoad(String mixinPackage) { }
     @Override public String getRefMapperConfig() { return null; }

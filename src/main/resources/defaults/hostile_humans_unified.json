@@ -3988,8 +3988,8 @@
     "knockback_add": 0.3
   },
   "specialty": {
-    "_说明_中文": "只在出生分配；旧实体全1，不重抽已存结果。",
-    "_description_en": "Birth-only allocation; legacy entities use all ones and saved results never reroll.",
+    "_说明_中文": "只在出生分配；旧实体原11维保留，补攻速1和穿甲0，不重抽已存结果。",
+    "_description_en": "Birth-only allocation; preserve legacy eleven dimensions, append attack speed 1 and penetration 0, never reroll saved values.",
     "_说明_enabled_中文": "关闭仅临时使用全1，保存结果不变。",
     "_description_enabled_en": "Disable effective multipliers without rewriting saved allocations.",
     "enabled": true,

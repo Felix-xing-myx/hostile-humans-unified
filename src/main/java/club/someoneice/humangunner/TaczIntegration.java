@@ -6,6 +6,7 @@ import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.entity.IGunOperator;
 import com.tacz.guns.api.event.common.EntityHurtByGunEvent;
 import com.tacz.guns.api.event.common.GunShootEvent;
+import com.tacz.guns.api.event.common.GunDamageSourcePart;
 import net.minecraft.world.entity.LivingEntity;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.api.item.builder.GunItemBuilder;
@@ -189,7 +190,9 @@ final class TaczIntegration implements GunSupport {
         }
         if (event.getHurtEntity() instanceof Human defender && event.getBaseAmount() > 0.0F) {
             defender.getPersistentData().putInt(INCOMING_GUNFIRE_UNTIL, defender.tickCount + 40);
-            if (isActivelyBlockingWithShield(defender)) {
+            DamageSource normalSource = event.getDamageSource(GunDamageSourcePart.NON_ARMOR_PIERCING);
+            if (isActivelyBlockingWithShield(defender) && normalSource != null
+                    && defender.isDamageSourceBlocked(normalSource)) {
                 // TaCZ does not pass through vanilla projectile shield handling,
                 // so apply both the shield durability cost and the requested
                 // 50% reduction at its own damage event; native AP sources stay intact.
@@ -197,6 +200,8 @@ final class TaczIntegration implements GunSupport {
                 ShieldDurability.damageShield(defender, event.getBaseAmount());
                 event.setBaseAmount(event.getBaseAmount() * (float) Math.min(1,
                         UnifiedConfig.get().gunSetting("shield_damage_multiplier", .5)));
+                HumanDamagePipeline.markCustomShield(defender, normalSource,
+                        event.getDamageSource(GunDamageSourcePart.ARMOR_PIERCING));
             }
         }
     }

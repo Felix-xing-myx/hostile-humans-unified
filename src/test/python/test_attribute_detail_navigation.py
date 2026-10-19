@@ -13,7 +13,7 @@ def source(name):
 class DetailNavigation(unittest.TestCase):
     def test_return_wire_is_bounded_and_server_directed(self):
         network = source("AttributeDetailNetwork")
-        self.assertIn('() -> "2", "2"::equals,"2"::equals', network)
+        self.assertIn('() -> "3", "3"::equals,"3"::equals', network)
         registration = network.split("CHANNEL.registerMessage(5,Return.class", 1)[1].split("MinecraftForge", 1)[0]
         self.assertIn("new Return(b.readUUID(),b.readBoolean());end(b)", registration)
         self.assertIn("NetworkDirection.PLAY_TO_SERVER", registration)

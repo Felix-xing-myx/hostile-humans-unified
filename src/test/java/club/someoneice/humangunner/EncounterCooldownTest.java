@@ -257,7 +257,7 @@ public final class EncounterCooldownTest {
                 }
             } catch (java.io.IOException error) { throw new AssertionError("Cannot inspect spawn resources", error); }
         }
-        check(roamerEntries == 1 && roamerWeight == 10 && tier1Weight == 3,
-                "single roamer entry retains higher selection weight than tier one");
+        check(roamerEntries == 1 && roamerWeight == 9 && tier1Weight == 3,
+                "single roamer entry yields 60 percent of 9+3+2+1 encounter weight before admission");
     }
 }

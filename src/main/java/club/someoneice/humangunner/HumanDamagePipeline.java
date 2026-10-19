@@ -25,6 +25,12 @@ public final class HumanDamagePipeline {
             new ResourceLocation("jeg", "bullet"));
     private HumanDamagePipeline() { }
 
+    /** Record exact sources only after an optional backend has really applied its active-shield reduction. */
+    public static void markCustomShield(LivingEntity target, DamageSource normal, DamageSource piercing) {
+        ((DamagePipelineState.Access) target).hostileHumansUnified$damageState()
+                .markCustomShield(normal, piercing, target.tickCount);
+    }
+
     public static float scaleGunDamage(Human attacker, ItemStack weapon, float amount, double backendMultiplier) {
         return HumanGrowth.scaleGunDamage(attacker, amount, backendMultiplier)
                 * (float) (weapon.isEmpty() ? 1 : GunSpecialization.damageMultiplier(attacker, weapon));
@@ -65,7 +71,15 @@ public final class HumanDamagePipeline {
     /** Called around Forge's existing shield hook, after other listeners have decided their block. */
     public static ShieldBlockEvent shieldBlock(LivingEntity target, DamageSource source, float amount,
                                                 ShieldBlockEvent event) {
-        if (target.level().isClientSide || event.isCanceled() || !(amount > 0) || !humanAttack(source)) return event;
+        if (target.level().isClientSide || event.isCanceled() || !(amount > 0)) return event;
+        if (target instanceof Human && ((DamagePipelineState.Access) target).hostileHumansUnified$damageState()
+                .consumeCustomShield(source, target.tickCount)) {
+            // The native backend already applied the configured percentage and durability once.
+            event.setBlockedDamage(0);
+            event.setShieldTakesDamage(false);
+            return event;
+        }
+        if (!humanAttack(source)) return event;
         double fraction = piercingFraction(source);
         if (!(fraction > 0)) return event;
         float blocked = Math.min(event.getBlockedDamage(), (float) (amount * (1 - fraction)));
