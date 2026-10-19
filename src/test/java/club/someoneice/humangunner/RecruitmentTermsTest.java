@@ -19,6 +19,7 @@ import java.util.List;
 public final class RecruitmentTermsTest {
     private static int assertions;
     public static void main(String[] args) throws Exception {
+        checkCreativeContractDispatch();
         SharedConstants.tryDetectVersion();
         var flag = Bootstrap.class.getDeclaredField("isBootstrapped");
         flag.setAccessible(true);
@@ -96,6 +97,41 @@ public final class RecruitmentTermsTest {
             } finally { bad.release(); }
         }
         System.out.println("RecruitmentTermsTest: " + assertions + " real payment, codec and connection-cache checks passed");
+    }
+    /** Cover the vanilla creative-copy boundary, not only the free-payment policy. */
+    private static void checkCreativeContractDispatch() throws Exception {
+        var player = readClass("net/minecraft/world/entity/player/Player");
+        var interaction = player.methods.stream().filter(m -> m.name.equals("interactOn")).findFirst().orElseThrow();
+        boolean copied = false, invoked = false;
+        for (var instruction : interaction.instructions) {
+            if (instruction instanceof org.objectweb.asm.tree.MethodInsnNode call) {
+                if (call.owner.equals("net/minecraft/world/item/ItemStack") && call.name.equals("copy")) copied = true;
+                if (call.name.equals("interactLivingEntity")) invoked = copied;
+            }
+        }
+        check(invoked, "real Player interaction copies the stack before item callback");
+        var contract = readClass("club/someoneice/humangunner/RecruitmentContractItem");
+        var callback = contract.methods.stream().filter(m -> m.name.equals("interactLivingEntity")).findFirst().orElseThrow();
+        org.objectweb.asm.tree.MethodInsnNode previousCall = null;
+        boolean heldStackPassed = false;
+        for (var instruction : callback.instructions) {
+            if (instruction instanceof org.objectweb.asm.tree.MethodInsnNode call) {
+                if (call.owner.equals("club/someoneice/humangunner/FactionRecruitment") && call.name.equals("hire")) {
+                    heldStackPassed = previousCall != null && previousCall.name.equals("getItemInHand")
+                            && previousCall.desc.equals("(Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/item/ItemStack;");
+                }
+                previousCall = call;
+            }
+        }
+        check(heldStackPassed, "recruitment authorizes the actual interaction hand rather than the creative callback copy");
+    }
+    private static org.objectweb.asm.tree.ClassNode readClass(String name) throws Exception {
+        try (var stream = RecruitmentTermsTest.class.getClassLoader().getResourceAsStream(name + ".class")) {
+            if (stream == null) throw new AssertionError("Missing class: " + name);
+            var node = new org.objectweb.asm.tree.ClassNode();
+            new org.objectweb.asm.ClassReader(stream).accept(node, 0);
+            return node;
+        }
     }
     private static void check(boolean value, String message) {
         assertions++;

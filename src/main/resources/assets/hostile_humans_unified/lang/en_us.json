@@ -45,6 +45,7 @@
   "item.hostile_humans_unified.contract.tooltip": "Cost: %s vanilla emeralds; tier cap: %s followers",
   "item.hostile_humans_unified.contract.payment_tooltip": "Cost: %s x %s; tier cap: %s followers",
   "message.hostile_humans_unified.hire.payment": "Requires %s %s. The reusable contract has no additional charge.",
+  "message.hostile_humans_unified.hire.invalid_target": "Cannot recruit: invalid or distant target, contract not held, or entity data not ready.",
   "message.hostile_humans_unified.hire.invalid_payment": "Invalid faction hiring currency. Check the faction datapack definition.",
   "item.hostile_humans_unified.roamer_signal_flare": "Roamer Reinforcement Flare",
   "item.hostile_humans_unified.tier_one_signal_flare": "Tier I Reinforcement Flare",

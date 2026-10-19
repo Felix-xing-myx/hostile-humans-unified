@@ -45,6 +45,7 @@
   "item.hostile_humans_unified.contract.tooltip": "雇佣费用：%s 颗原版绿宝石；该阶上限：%s 人",
   "item.hostile_humans_unified.contract.payment_tooltip": "雇佣费用：%s 个 %s；该阶上限：%s 人",
   "message.hostile_humans_unified.hire.payment": "需要 %s 个%s。契约可重复使用，不会额外消耗。",
+  "message.hostile_humans_unified.hire.invalid_target": "无法雇佣：目标无效、距离过远、合同未实际持有，或实体数据尚未就绪。",
   "message.hostile_humans_unified.hire.invalid_payment": "该阵营的雇佣信物配置无效，请检查数据包阵营定义。",
   "item.hostile_humans_unified.roamer_signal_flare": "流浪者援军信号弹",
   "item.hostile_humans_unified.tier_one_signal_flare": "一阶援军信号弹",

@@ -37,7 +37,8 @@ public final class RecruitmentContractItem extends Item {
                                                    InteractionHand hand) {
         if (player.level().isClientSide || !(player instanceof ServerPlayer serverPlayer)
                 || !(target instanceof Human human)) return InteractionResult.PASS;
-        return FactionRecruitment.hire(serverPlayer, human, tier, stack);
+        // Player.interactOn passes a copy in creative mode. Authorize the actual server-held stack.
+        return FactionRecruitment.hire(serverPlayer, human, tier, serverPlayer.getItemInHand(hand));
     }
 
 }
