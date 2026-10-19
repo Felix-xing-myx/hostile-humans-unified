@@ -69,6 +69,7 @@ public enum SoldierOrder {
     }
     private static void resetMovementState(Human h) {
         LongRangeNavigation.cancelAll(h);PursuitNavigation.clear(h);BodyguardProtection.clear(h);
+        GarrisonReturnNavigation.clear(h);
         SoldierFollowNavigation.clear(h);SoldierStuckRecovery.clear(h);ROUTES.remove(h);
         RETURN_POINTS.remove(h);
         h.getPersistentData().remove(PATROL_DESTINATION);h.getPersistentData().remove(NEXT_PATROL);
@@ -90,6 +91,7 @@ public enum SoldierOrder {
         if(!(h.level() instanceof ServerLevel level))return;
         OrderDistances.Context c=OrderDistances.context(h);
         if(!c.constrained()&&h.guardCombatState.returning())h.guardCombatState.reset();
+        if(!h.guardCombatState.returning())GarrisonReturnNavigation.clear(h);
         if(!h.hasOwner()&&!c.constrained())return;
         long now=level.getGameTime();LivingEntity target=h.getTarget();
         if(h.hasOwner()&&get(h)==BODYGUARD)BodyguardProtection.update(h);
@@ -152,12 +154,12 @@ public enum SoldierOrder {
             bindReturn(h,c);
         if(h.guardCombatState.returning()) {
             Vec3 destination=RETURN_POINTS.getOrDefault(h,NaturalRoute.returnPoint(h,c));
-            double reach=c.settings().stay()?OrderDistances.defaults().returnDistance():OrderDistances.defaults().routeReachDistance();
-            if(NaturalRoute.reached(h,destination,reach)){
+            if(GarrisonReturnNavigation.tick(h,c,destination)){
+                GarrisonReturnNavigation.clear(h);
                 h.guardCombatState.returnedToPost(now,OrderDistances.defaults().chaseReturnCooldownTicks());
                 RETURN_POINTS.remove(h);
                 h.getPersistentData().remove(RETURNING_FROM_RETREAT);stopMovement(h);NaturalRoute.pause(h,true);
-            }else if(h.tickCount%10==0||h.getNavigation().isDone())moveToPost(h,BlockPos.containing(destination),OrderDistances.defaults().walkSpeed(),true);
+            }
             return;
         }
         if(h.getTarget()!=null)return;
@@ -190,6 +192,7 @@ public enum SoldierOrder {
         }
     }
     static void stopMovement(Human h) {
+        GarrisonReturnNavigation.stopOwned(h);
         SoldierFollowNavigation.stopOwned(h);Path route=ROUTES.remove(h);
         if(MovementContinuity.ownsRoute(h,route))h.getNavigation().stop();BasicNavigationBudget.cancel(h);
     }
@@ -204,6 +207,9 @@ public enum SoldierOrder {
     }
     private static boolean moveToPostWithGrant(Human h,BlockPos pos,double speed,boolean returning) {
         Path path=h.getNavigation().createPath(pos,0);
+        return installPostPath(h,path,pos,speed,returning);
+    }
+    static boolean installPostPath(Human h,Path path,BlockPos pos,double speed,boolean returning) {
         if(path==null||!path.canReach()||!HumanTerrainSafety.safePath(h,path)
                 ||(returning?!allowsReturnPath(h,path):!allowsDailyPath(h,path)))return false;
         if(!RetreatPathSafety.tryMove(h,path,speed))return false;
@@ -255,8 +261,9 @@ public enum SoldierOrder {
         if(c.constrained()) {
             if(!c.available())return false;
             if(h.guardCombatState.returning()) {
-                // Returning owns movement; a visually confirmed close attacker may still be fought in place.
-                return isRecentSelfAttacker(h,target)&&h.distanceToSqr(target)<=36
+                // Return never permits pursuit, but a confirmed recent shooter can be answered at weapon range.
+                double defenseReach=Math.max(6,BodyguardProtection.rangedReach(h));
+                return isRecentSelfAttacker(h,target)&&h.distanceToSqr(target)<=defenseReach*defenseReach
                         &&(!h.hasOwner()||h.soldierCombatMemory.allowed(target.getUUID(),h.level().getGameTime())
                         &&SoldierCombatMode.allowsTarget(h,target));
             }
@@ -277,6 +284,11 @@ public enum SoldierOrder {
                     &&(target.distanceToSqr(owner)<=OrderDistances.followSquared(h)
                     ||BodyguardProtection.ranged(h)&&h.distanceToSqr(target)<=reach*reach);}
         return true;
+    }
+    /** Release MOVE to the weapon Goal; all combat movement remains forbidden while returning. */
+    static boolean yieldsReturnToDefense(Human h) {
+        LivingEntity target=h.getTarget();
+        return h.guardCombatState.returning()&&target!=null&&allowsTarget(h,target);
     }
     public static boolean allowsCombatPosition(Human h,Vec3 point) {
         OrderDistances.Context c=OrderDistances.context(h);

@@ -19,6 +19,7 @@ final class SoldierOrderGoal extends Goal {
         return (human.hasOwner() || SoldierOrder.isGarrison(human)) && (SoldierOrder.get(human) != SoldierOrder.BODYGUARD
                 || BodyguardProtection.owner(human) == null || SoldierOrder.isReturningFromRetreat(human))
                 && !human.isFleeing && (human.getTarget() == null || human.guardCombatState.returning())
+                && !SoldierOrder.yieldsReturnToDefense(human)
                 && !human.isInLava() && !human.isSeekingShore() && !human.isNoAi()
                 && !human.isSleeping() && !human.isPassenger()
                 && !HumanGunner.isManualInventoryOpen(human) && !NavigationDebugService.controls(human);

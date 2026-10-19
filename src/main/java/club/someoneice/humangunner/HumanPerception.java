@@ -708,6 +708,7 @@ public final class HumanPerception {
         row(rows,"actions","身体/头部角度",String.format(java.util.Locale.ROOT,"%.0f° / %.0f° · 移动单侧限%.0f°",h.yBodyRot,h.getYHeadRot(),HumanAttention.movingHeadLimit(h)));
         row(rows,"actions","匿名来向保护",remaining(s.directionProtectedUntil,now));
         row(rows,"actions","MOVE状态",NavigationDebugService.controls(h)?"固定点测试":h.isFleeing?"撤退":h.getTarget()!=null?"战斗":h.getNavigation().isDone()?"无活动路径":"命令/调查路径");
+        row(rows,"actions","驻守返岗",GarrisonReturnNavigation.status(h));
         row(rows,"actions","行动指令",SoldierOrder.get(h).name());row(rows,"actions","攻击模式",SoldierCombatMode.get(h).name());
         for(var action:h.humanGunner$actionSnapshot())row(rows,action.group(),action.label(),action.value());
         row(rows,"vision","基础视觉距离",String.format(java.util.Locale.ROOT,"%.1f 格",r));

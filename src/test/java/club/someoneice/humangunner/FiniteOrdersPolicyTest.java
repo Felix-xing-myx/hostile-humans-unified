@@ -1,6 +1,7 @@
 package club.someoneice.humangunner;
 
 import dev.felix.hostilehumans.core.RouteProgressPolicy;
+import dev.felix.hostilehumans.core.GuardReturnProgress;
 import java.util.UUID;
 
 /** Pure policy checks; no world, chunk loading or optional mod APIs required. */
@@ -45,6 +46,16 @@ public final class FiniteOrdersPolicyTest {
         check(BodyguardPolicy.attackInRange(9,10000,true,false,true,9409,16384,64),"legal stationary sniper keeps weapon reach outside owner activity circle");
         check(!BodyguardPolicy.attackInRange(64.01,10000,true,false,true,9409,16384,64),"sniper body cannot leave configured activity circle");
         check(!BodyguardPolicy.attackInRange(9,10000,true,false,false,9409,16384,64),"stationary reach grants no attack permission");
+        var progress=new GuardReturnProgress();progress.start();
+        for(int tick=0;tick<60;tick++)check(!progress.stalled(tick,0,100),"first 59 stalled executing ticks remain available");
+        check(progress.stalled(60,0,100),"60 executing stationary ticks stop a bad return route");
+        progress.start();check(!progress.stalled(10,0,100),"fresh attempt starts its own progress window");
+        progress.pause();check(!progress.stalled(10000,0,100),"budget/combat/unloaded gap is not route execution");
+        check(!progress.stalled(9999,0,100),"time rollback is not an execution increment");
+        progress.start();
+        for(int tick=0;tick<200;tick++)check(!progress.stalled(tick,tick,1),"progressive route can use its execution budget");
+        check(progress.stalled(200,200,1),"even a moving bad route has a finite 200-tick attempt");
+        check(!GuardReturnProgress.backoff(3)&&GuardReturnProgress.backoff(4),"four real failures trigger batch backoff");
         System.out.println("FiniteOrdersPolicyTest: "+checks+" checks passed");
     }
 }
