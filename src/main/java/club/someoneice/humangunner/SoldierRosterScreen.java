@@ -17,6 +17,7 @@ public final class SoldierRosterScreen extends Screen {
     private static final int HOVER = 0xFF2A3947, EDGE = 0xFF394653;
     private static final int TEXT = 0xFFE5EAF0, MUTED = 0xFF9DADBB;
     private static final int GOLD = 0xFFF2C66D, DISABLED = 0xFF65717C;
+    private static final int[] SQUAD_X={10,155,208,261,324},SQUAD_WIDTH={141,49,49,59,74};
 
     private final UUID token;
     private List<SoldierRosterNetwork.Entry> entries;
@@ -578,16 +579,23 @@ public final class SoldierRosterScreen extends Screen {
         return false;
     }
 
+    private boolean squadHit(double mx,double my,int x,int by,int column){
+        return hit(mx,my,x+SQUAD_X[column],by,SQUAD_WIDTH[column],18);
+    }
+    private void squadButton(GuiGraphics g,Component label,int mx,int my,int x,int by,int column,boolean active,boolean chosen){
+        button(g,label,x+SQUAD_X[column],by,SQUAD_WIDTH[column],18,squadHit(mx,my,x,by,column),active,chosen,false);
+    }
     private void renderSquads(GuiGraphics g,int mx,int my){
         int x=left(),y=top();
         g.drawString(font,Component.translatable("screen.hostile_humans_unified.command.squad_select",marked.size()),x+10,y+30,GOLD,false);
         int pages=Math.max(1,(squads.size()+6)/7);squadPage=Math.min(squadPage,pages-1);
         for(int i=0;i<7&&squadPage*7+i<squads.size();i++){
             var squad=squads.get(squadPage*7+i);int by=y+46+i*21;
-            button(g,Component.literal(squad.number()+" · "+squad.name()+" ("+squad.members()+")"),x+10,by,197,18,hit(mx,my,x+10,by,197,18),true,editingSquad==squad.number(),false);
-            button(g,Component.translatable("screen.hostile_humans_unified.command.assign"),x+211,by,57,18,hit(mx,my,x+211,by,57,18),!marked.isEmpty(),false,false);
-            button(g,Component.translatable("screen.hostile_humans_unified.command.filter"),x+272,by,57,18,hit(mx,my,x+272,by,57,18),true,squadFilter==squad.number(),false);
-            button(g,Component.translatable("screen.hostile_humans_unified.command.bind"),x+333,by,65,18,hit(mx,my,x+333,by,65,18),true,false,false);
+            squadButton(g,Component.literal(squad.number()+" · "+squad.name()+" ("+squad.members()+")"),mx,my,x,by,0,true,editingSquad==squad.number());
+            squadButton(g,Component.translatable("screen.hostile_humans_unified.command.assign"),mx,my,x,by,1,!marked.isEmpty(),false);
+            squadButton(g,Component.translatable("screen.hostile_humans_unified.command.filter"),mx,my,x,by,2,true,squadFilter==squad.number());
+            squadButton(g,Component.translatable("screen.hostile_humans_unified.command.bind"),mx,my,x,by,3,true,false);
+            squadButton(g,Component.translatable("screen.hostile_humans_unified.command.squad_quick"),mx,my,x,by,4,true,false);
         }
         if(editingSquad>0){squadName.render(g,mx,my,0);button(g,Component.translatable("screen.hostile_humans_unified.command.rename"),x+191,y+207,71,18,hit(mx,my,x+191,y+207,71,18),true,false,false);}
         else g.drawString(font,font.plainSubstrByWidth(squadResult.isEmpty()?Component.translatable("screen.hostile_humans_unified.command.rename_hint").getString():squadResult,252),x+10,y+211,MUTED,false);
@@ -603,10 +611,11 @@ public final class SoldierRosterScreen extends Screen {
     private boolean clickSquads(double mx,double my,int x,int y){
         for(int i=0;i<7&&squadPage*7+i<squads.size();i++){
             var squad=squads.get(squadPage*7+i);int by=y+46+i*21;
-            if(hit(mx,my,x+10,by,197,18)){editingSquad=squad.number();squadName.setX(x+10);squadName.setY(y+207);squadName.setValue(squad.name());squadName.setVisible(true);setFocused(squadName);squadName.setFocused(true);return true;}
-            if(hit(mx,my,x+211,by,57,18)&&!marked.isEmpty()){SoldierRosterNetwork.assign(token,squad.number(),List.copyOf(marked));return true;}
-            if(hit(mx,my,x+272,by,57,18)){SoldierRosterNetwork.request(token,14,NONE,squad.number());closeSquadPanel();return true;}
-            if(hit(mx,my,x+333,by,65,18)){SoldierRosterNetwork.bind(token,squad.number());return true;}
+            if(squadHit(mx,my,x,by,0)){editingSquad=squad.number();squadName.setX(x+10);squadName.setY(y+207);squadName.setValue(squad.name());squadName.setVisible(true);setFocused(squadName);squadName.setFocused(true);return true;}
+            if(squadHit(mx,my,x,by,1)&&!marked.isEmpty()){SoldierRosterNetwork.assign(token,squad.number(),List.copyOf(marked));return true;}
+            if(squadHit(mx,my,x,by,2)){SoldierRosterNetwork.request(token,14,NONE,squad.number());closeSquadPanel();return true;}
+            if(squadHit(mx,my,x,by,3)){SoldierRosterNetwork.bind(token,squad.number());return true;}
+            if(squadHit(mx,my,x,by,4)){SoldierRosterNetwork.request(token,15,NONE,squad.number());return true;}
         }
         if(editingSquad>0&&hit(mx,my,x+191,y+207,71,18)){saveSquadName();return true;}
         if(hit(mx,my,x+270,y+207,23,18)&&squadPage>0)squadPage--;

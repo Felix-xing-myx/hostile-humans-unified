@@ -21,6 +21,7 @@ abstract class CommandPanelScreen extends Screen {
     protected abstract void submit(SquadCommands.Update update);
     protected abstract void secondary();
     protected abstract Component secondaryLabel();
+    protected Component closeLabel(){return tr("close");}
     protected abstract void reanchor();
     protected boolean hasContextWarning(){return !java.util.List.of("ready","free","empty").contains(state.reason());}
     protected Component contextReason(){return tr("context."+state.reason());}
@@ -86,7 +87,7 @@ abstract class CommandPanelScreen extends Screen {
             g.drawString(font,Component.translatable("screen.hostile_humans_unified.command.duration",state.chaseTicks()/20),rx,y+166,MUTED,false);
         }
         if(hasDetails())button(g,tr("attributes"),rx,y+183,106,16,mx,my,true,false,false);
-        button(g,tr("close"),lx,y+202,90,18,mx,my,true,false,false);
+        button(g,closeLabel(),lx,y+202,90,18,mx,my,true,false,false);
         button(g,secondaryLabel(),x+230,y+202,110,18,mx,my,true,false,true);
         if(hit(mx,my,cx,y+71,106,107)){
             int row=(my-y-71)/28;if(row<CommandView.COMBAT.size())g.renderTooltip(font,

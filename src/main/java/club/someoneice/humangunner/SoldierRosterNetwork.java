@@ -398,6 +398,9 @@ final class SoldierRosterNetwork {
                 if(!RecruitmentLedger.get(player.server).isOwnedRecord(packet.human,player.getUUID()))return;
                 Human human=findLoaded(player.server,packet.human);if(human!=null)HumanCommandNetwork.openFor(player,human);
                 return;
+            } else if (packet.action == 15) {
+                SquadCommandNetwork.openFromRoster(player,packet.value);
+                return;
             } else if (packet.action == 14) {
                 if(packet.value< -1||packet.value>16)return;
                 if(packet.value>0&&!SquadData.get(player.server).existingOrAllowed(player.getUUID(),packet.value))return;

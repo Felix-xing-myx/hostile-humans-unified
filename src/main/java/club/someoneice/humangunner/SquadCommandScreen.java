@@ -7,14 +7,14 @@ import net.minecraft.network.chat.Component;
 
 /** Same controls as one soldier; mixed modes and batch outcomes remain visible. */
 public final class SquadCommandScreen extends CommandPanelScreen {
-    private SquadCommandNetwork.View view;private String result="";private boolean members;private int memberPage;
+    private SquadCommandNetwork.View view;private String result="";private boolean members,suppressReturn;private int memberPage;
     private SquadCommandScreen(SquadCommandNetwork.View view){super(Component.translatable("screen.hostile_humans_unified.command.squad_title"),view.commands(),null);this.view=view;result=view.result().getString();}
     static void show(boolean opening,SquadCommandNetwork.View view){
         Minecraft mc=Minecraft.getInstance();if(mc.screen instanceof SquadCommandScreen s&&s.view.token().equals(view.token())){
             s.view=view;s.state=view.commands();if(!view.result().getString().isEmpty())s.result=view.result().getString();
         }else if(opening)mc.setScreen(new SquadCommandScreen(view));
     }
-    static void invalidate(UUID token){if(Minecraft.getInstance().screen instanceof SquadCommandScreen s&&s.view.token().equals(token))s.onClose();}
+    static void invalidate(UUID token){if(Minecraft.getInstance().screen instanceof SquadCommandScreen s&&s.view.token().equals(token)){s.suppressReturn=true;s.onClose();}}
     @Override protected Component heading(){return Component.translatable("screen.hostile_humans_unified.command.squad_heading",view.number(),view.name(),view.total());}
     @Override protected Component status(){return Component.translatable("screen.hostile_humans_unified.command.squad_modes",view.modes().getOrDefault(SoldierOrder.FOLLOW,0),view.modes().getOrDefault(SoldierOrder.BODYGUARD,0),view.modes().getOrDefault(SoldierOrder.GARRISON,0),view.available(),view.unloaded());}
     @Override protected int extraHeight(){return 14;}
@@ -22,6 +22,7 @@ public final class SquadCommandScreen extends CommandPanelScreen {
     @Override protected void reanchor(){SquadCommandNetwork.reanchor(view.token(),view.number());}
     @Override protected void submit(SquadCommands.Update update){SquadCommandNetwork.submit(view.token(),view.number(),update);}
     @Override protected Component secondaryLabel(){return tr("squad_members");}
+    @Override protected Component closeLabel(){return view.fromRoster()?tr("back_to_roster"):super.closeLabel();}
     @Override protected void secondary(){members=true;memberPage=0;}
     @Override public void render(GuiGraphics g,int mx,int my,float partial){
         super.render(g,mx,my,partial);if(!members)return;
@@ -48,5 +49,9 @@ public final class SquadCommandScreen extends CommandPanelScreen {
         else if(hit(mx,my,x+235,by,103,18))members=false;return true;
     }
     @Override public boolean keyPressed(int key,int scan,int mods){if(members&&key==org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE){members=false;return true;}return super.keyPressed(key,scan,mods);}
+    @Override public void onClose(){
+        if(view.fromRoster()&&!suppressReturn&&Minecraft.getInstance().getConnection()!=null)SquadCommandNetwork.returnToRoster(view.token());
+        super.onClose();
+    }
     @Override public void removed(){if(Minecraft.getInstance().getConnection()!=null)SquadCommandNetwork.close(view.token());super.removed();}
 }
