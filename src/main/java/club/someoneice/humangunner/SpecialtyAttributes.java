@@ -63,12 +63,8 @@ public final class SpecialtyAttributes {
     }
 
     static double sampleBudget(RandomSource random, SpecialtyConfig config) {
-        if (config.budgetSigma() == 0 || config.budgetMin() == config.budgetMax()) return SpecialtyAllocation.clamp(config.budgetMean(), config.budgetMin(), config.budgetMax());
-        // Rejection sampling preserves a truncated normal, without point masses at the boundaries.
-        while (true) {
-            double candidate = config.budgetMean() + random.nextGaussian() * config.budgetSigma();
-            if (candidate >= config.budgetMin() && candidate <= config.budgetMax()) return candidate;
-        }
+        return SpecialtyBudgetSampler.sample(random.nextDouble(), config.budgetMean(), config.budgetSigma(),
+                config.budgetMin(), config.budgetMax());
     }
 
     /** Returns true when a payload exists, including unknown future schemas which must be retained. */
