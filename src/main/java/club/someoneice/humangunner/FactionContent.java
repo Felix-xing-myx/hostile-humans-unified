@@ -40,7 +40,7 @@ public final class FactionContent {
     }
     private static List<Boss> bosses() {
         List<Boss> values = new ArrayList<>();
-        for (String faction : List.of("crimson", "azure", "verdant")) for (int rank = 1; rank <= 3; rank++) {
+        for (String faction : List.of("crimson", "azure", "verdant", "ashen")) for (int rank = 1; rank <= 3; rank++) {
             final int tier = rank;
             String name = "faction_" + faction + "_tier" + tier + "_boss";
             var type = ModEntityType.ENTITIES.register(name, () -> EntityType.Builder

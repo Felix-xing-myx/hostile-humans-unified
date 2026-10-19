@@ -17,7 +17,7 @@ public final class HumanTargetCoordinator {
     static boolean lockActive(Human h,LivingEntity target){
         State s=STATES.get(h);return s!=null&&target!=null&&target.getUUID().equals(s.locked)&&HumanPerception.now(h)<s.lockUntil;
     }
-    public static void clear(Human human){STATES.remove(human);}
+    public static void clear(Human human){STATES.remove(human);HumanFinisherSelection.clear(human);}
     public static String reason(Human human){State state=STATES.get(human);return state==null?"尚未选敌":state.reason;}
     public static boolean suspended(Human h){
         return h.isNoAi()||h.isSleeping()||NavigationDebugService.controls(h)||HumanGunner.isManualInventoryOpen(h)
@@ -42,6 +42,8 @@ public final class HumanTargetCoordinator {
         if(suspended(h))return h.getTarget();
         State state=STATES.computeIfAbsent(h,k->new State());long now=HumanPerception.now(h);
         LivingEntity current=h.getTarget();
+        HumanFinisherSelection.observe(h,current);
+        boolean reviewDue=now>=state.nextReview,harvesting=false;
         if(!Objects.equals(state.selected,current==null?null:current.getUUID())){state.selected=current==null?null:current.getUUID();state.changed=now;}
         LivingEntity desired=HumanPerception.canTarget(h,current)?current:null;
         boolean role=BodyguardProtection.isBodyguard(h)&&BodyguardProtection.owner(h)!=null&&!h.isFleeing;
@@ -71,11 +73,20 @@ public final class HumanTargetCoordinator {
                     desired=best;why=close?"已确认的近处威胁评分优先":"动态威胁评分超过切换余量";
                 }
             }
+            // Optional opportunity ranking is subordinate to pressure locks and all existing permissions.
+            if(locked==null&&reviewDue){
+                LivingEntity finisher=HumanFinisherSelection.candidate(h,desired,urgent);
+                if(finisher!=null&&(finisher==desired||dev.felix.hostilehumans.core.PerceptionCoordinationPolicy.switchAllowed(
+                        now,state.changed,PerceptionConfig.get().integer("selection.minimum_hold_ticks"),false,false))){
+                    desired=finisher;harvesting=true;why="已确认残血收割机会（防御与命令优先）";
+                }
+            }
         }
         // Retreat owns its private survival threat; ordinary acquisition must not undo escape cancellation.
         if(h.isFleeing&&current==null)return null;
         if(desired!=null&&(!HumanPerception.canTarget(h,desired)||!role&&!HumanPerception.selectionAllowed(h,desired)))desired=null;
         if(current!=desired){h.setTarget(desired);state.selected=h.getTarget()==null?null:h.getTarget().getUUID();state.changed=now;state.reason=h.getTarget()==desired?why:"最终许可或事件拒绝目标请求";}
+        HumanFinisherSelection.selected(h,h.getTarget(),harvesting,!reviewDue&&!role&&!h.isFleeing&&!urgent);
         if(SoldierOrder.isGarrison(h)&&h.getTarget()!=null)h.guardCombatState.retainTarget(h.getTarget().getUUID());
         return h.getTarget();
     }

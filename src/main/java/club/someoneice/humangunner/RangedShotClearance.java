@@ -30,9 +30,16 @@ public final class RangedShotClearance {
         Vec3 aim = GunSupport.get().shotTargetPoint(weapon, target);
         double speed = GunSupport.get().projectileSpeed(weapon);
         if (speed <= 0) return aim;
-        double ticks = Mth.clamp(origin.distanceTo(aim) / speed, 0, 8);
-        return aim.add(target.getDeltaMovement().scale(ticks))
-                .add(0, 0.5D * GunSupport.get().projectileGravity(weapon) * ticks * ticks, 0);
+        Vec3 motion = GunTargetMotion.velocity(target);
+        double gravity = GunSupport.get().projectileGravity(weapon);
+        double ticks = gunFlightTicks(origin, aim, motion, speed, gravity);
+        return aim.add(motion.scale(ticks)).add(0, 0.5D * gravity * ticks * ticks, 0);
+    }
+
+    private static double gunFlightTicks(Vec3 origin, Vec3 aim, Vec3 motion, double speed, double gravity) {
+        Vec3 delta = aim.subtract(origin);
+        return GunTrackingPolicy.flightTicks(delta.x, delta.y, delta.z,
+                motion.x, motion.y, motion.z, speed, gravity);
     }
 
     public static boolean canShoot(Human human, LivingEntity target) {
@@ -45,10 +52,10 @@ public final class RangedShotClearance {
         if (sample != null && sample.tick() == human.tickCount && sample.target() == target
                 && sample.weapon() == weapon && sample.feet().equals(feet)
                 && sample.oldFeet().equals(oldFeet) && sample.targetFeet().equals(target.position())
-                && sample.motion().equals(target.getDeltaMovement())) return sample.clear();
+                && sample.motion().equals(GunTargetMotion.velocity(target))) return sample.clear();
         boolean clear = lane(human, target, feet, true);
         SAMPLES.put(human, new Sample(human.tickCount, target, weapon, feet, oldFeet,
-                target.position(), target.getDeltaMovement(), clear));
+                target.position(), GunTargetMotion.velocity(target), clear));
         return clear;
     }
 
@@ -74,11 +81,13 @@ public final class RangedShotClearance {
             Vec3 aim = GunSupport.get().shotTargetPoint(weapon, target);
             double speed = GunSupport.get().clearanceProjectileSpeed(weapon);
             if (speed <= 0) return clearSegment(human, origin, aim);
-            // Native Scguns owns leading. Only the TaCZ-style aiming path adds
-            // our prediction; do not apply a second lead to Scguns' firing angle.
+            // All opted-in gun backends share the exact same intercept for shots and lanes.
+            // A zero aiming speed explicitly leaves prediction to an unadapted native backend.
             double aimingSpeed = GunSupport.get().projectileSpeed(weapon);
-            double ticks = aimingSpeed > 0 ? Mth.clamp(origin.distanceTo(aim) / aimingSpeed, 0, 8) : 0;
-            Vec3 predicted = aim.add(target.getDeltaMovement().scale(ticks));
+            Vec3 motion = GunTargetMotion.velocity(target);
+            double ticks = aimingSpeed > 0 ? gunFlightTicks(origin, aim, motion, aimingSpeed,
+                    GunSupport.get().projectileGravity(weapon)) : 0;
+            Vec3 predicted = aim.add(motion.scale(ticks));
             double gravity = GunSupport.get().clearanceProjectileGravity(weapon);
             Vec3 direction = gunAim(origin, weapon, target).subtract(origin);
             return clearArc(human, origin, direction.normalize().scale(speed), predicted, 1, gravity);

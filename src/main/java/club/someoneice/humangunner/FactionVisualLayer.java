@@ -48,6 +48,8 @@ public final class FactionVisualLayer<T extends LivingEntity, M extends Humanoid
         VertexConsumer vertices = buffers.getBuffer(RenderType.entityCutoutNoCull(texture));
         ring(poses, vertices, getParentModel().rightArm, slim ? -3.12F - offset : -4.12F - offset,
                 2.12F + offset, -3.12F - offset, 3.12F + offset, 2, 5, color, light);
+        ring(poses, vertices, getParentModel().leftArm, -2.12F - offset,
+                slim ? 3.12F + offset : 4.12F + offset, -3.12F - offset, 3.12F + offset, 2, 5, color, light);
         ring(poses, vertices, getParentModel().leftLeg, -3.12F - offset, 3.12F + offset,
                 -3.12F - offset, 3.12F + offset, 6, 9, color, light);
     }

@@ -32,6 +32,10 @@ public final class FactionBossHuman extends Human {
         return FactionContent.ordinaryType(birthTier).getDefaultLootTable();
     }
     @Override public EntityDimensions getDimensions(Pose pose) {
-        return super.getDimensions(pose).scale(HumanFactions.BOSS_BODY_SCALE);
+        EntityDimensions ordinary = super.getDimensions(pose);
+        // Keep the larger silhouette/width, but never exceed a two-block doorway.
+        // Sleeping and other short poses retain their ordinary proportional height.
+        return EntityDimensions.scalable(ordinary.width * HumanFactions.BOSS_BODY_SCALE,
+                Math.min(2.0F, ordinary.height * HumanFactions.BOSS_BODY_SCALE));
     }
 }
