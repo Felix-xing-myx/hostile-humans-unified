@@ -546,5 +546,6 @@
   "attribute_detail.gun_category.sniper": "Sniper",
   "attribute_detail.gun_category.machine_gun": "Machine Gun",
   "attribute_detail.gun_category.heavy": "Heavy",
-  "attribute_detail.gun_category.other": "Other / Unknown"
+  "attribute_detail.gun_category.other": "Other / Unknown",
+  "item.hostile_humans_unified.contract.creative_terms": "Creative: ignore faction standing and hostility, with no currency payment. Matching rank, ownership and recruitment limits still apply."
 }

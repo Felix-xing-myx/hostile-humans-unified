@@ -546,5 +546,6 @@
   "attribute_detail.gun_category.sniper": "狙击枪",
   "attribute_detail.gun_category.machine_gun": "机枪",
   "attribute_detail.gun_category.heavy": "重型武器",
-  "attribute_detail.gun_category.other": "其他／未知"
+  "attribute_detail.gun_category.other": "其他／未知",
+  "item.hostile_humans_unified.contract.creative_terms": "创造模式：忽略阵营声望和敌意、不支付信物；仍需同阶合同并受归属与名额限制。"
 }

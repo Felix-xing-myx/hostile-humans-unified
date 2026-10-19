@@ -26,6 +26,8 @@ public final class RecruitmentContractItem extends Item {
     public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("item.hostile_humans_unified.contract.faction_terms")
                 .withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("item.hostile_humans_unified.contract.creative_terms")
+                .withStyle(ChatFormatting.DARK_AQUA));
     }
 
     int tier() { return tier; }

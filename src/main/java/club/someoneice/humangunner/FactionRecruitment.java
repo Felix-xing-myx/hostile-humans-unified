@@ -17,8 +17,12 @@ final class FactionRecruitment {
     record Quote(String faction, Item currency, int count, int tier, int limit) {}
     private FactionRecruitment() {}
     static Quote quote(ServerPlayer player, Human human, int tier) {
+        if (tier < 1 || tier > 3) return null;
+        // Creative testing does not require a faction definition, currency registration or standing lookup.
+        if (player.isCreative()) return new Quote(HumanFactions.id(human), net.minecraft.world.item.Items.AIR,
+                0, tier, UnifiedConfig.get().recruitmentLimit(tier));
         var definition = FactionDefinitions.find(HumanFactions.id(human));
-        if (definition == null || tier < 1 || tier > 3) return null;
+        if (definition == null) return null;
         Item currency = ForgeRegistries.ITEMS.getValue(definition.hireItem());
         if (currency == null || currency == net.minecraft.world.item.Items.AIR) return null;
         int price = StandingPolicy.price(definition.hireCosts().get(tier - 1), StandingEffects.trueStanding(human, player),
@@ -33,7 +37,7 @@ final class FactionRecruitment {
         if (StandingEffects.humanRank(human) != tier || tier < 1 || tier > 3) return fail(player, "wrong_tier");
         if (human.hasOwner() || (HumanRelations.effectiveOwner(human) != null && !HumanRelations.isTemporaryFor(human, player)))
             return fail(player, "owned");
-        if (!StandingEffects.canHire(human, player)) return fail(player, "clearance");
+        if (!player.isCreative() && !StandingEffects.canHire(human, player)) return fail(player, "clearance");
         if (human.getData() == null || HumanServerData.get() == null) return fail(player, "invalid_target");
         Quote quote = quote(player, human, tier);
         if (quote == null) return fail(player, "invalid_payment");
