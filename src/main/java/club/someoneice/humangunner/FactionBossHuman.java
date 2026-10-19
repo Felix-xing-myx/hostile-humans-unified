@@ -32,10 +32,14 @@ public final class FactionBossHuman extends Human {
         return FactionContent.ordinaryType(birthTier).getDefaultLootTable();
     }
     @Override public EntityDimensions getDimensions(Pose pose) {
-        EntityDimensions ordinary = super.getDimensions(pose);
-        // Keep the larger silhouette/width, but never exceed a two-block doorway.
-        // Sleeping and other short poses retain their ordinary proportional height.
-        return EntityDimensions.scalable(ordinary.width * HumanFactions.BOSS_BODY_SCALE,
-                Math.min(2.0F, ordinary.height * HumanFactions.BOSS_BODY_SCALE));
+        return collisionDimensions(super.getDimensions(pose));
+    }
+    /** Physical bounds shared by collision and navigation; visual scaling remains renderer-only. */
+    static EntityDimensions collisionDimensions(EntityDimensions ordinary) {
+        // Vanilla NodeEvaluator uses floor(height + 1): exactly 2.0 needs three air blocks.
+        // A centered 0.72-wide box also overlaps an open door's 3/16-thick side panel.
+        // Leave normal doorway clearance, while retaining proportionally shorter poses.
+        return EntityDimensions.scalable(Math.min(0.6F, ordinary.width * HumanFactions.BOSS_BODY_SCALE),
+                Math.min(1.95F, ordinary.height * HumanFactions.BOSS_BODY_SCALE));
     }
 }
