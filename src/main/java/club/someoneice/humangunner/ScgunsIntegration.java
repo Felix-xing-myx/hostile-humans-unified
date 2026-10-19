@@ -89,8 +89,14 @@ final class ScgunsIntegration implements GunSupport {
         // AIGunEvent aims at 80% of the target's eye height, not its eyes.
         return target.position().add(0, target.getEyeHeight() * 0.8D, 0);
     }
-    public double projectileSpeed(ItemStack stack) { return clearanceProjectileSpeed(stack); }
-    public double projectileGravity(ItemStack stack) { return clearanceProjectileGravity(stack); }
+    public double projectileSpeed(ItemStack stack) {
+        return club.someoneice.humangunner.compat.NativeAimCompatibility.scgunsSharedPrediction()
+                ? clearanceProjectileSpeed(stack) : 0;
+    }
+    public double projectileGravity(ItemStack stack) {
+        return club.someoneice.humangunner.compat.NativeAimCompatibility.scgunsSharedPrediction()
+                ? clearanceProjectileGravity(stack) : 0;
+    }
     public double clearanceProjectileSpeed(ItemStack stack) {
         return GunModifierHelper.getModifiedProjectileSpeed(stack, definition(stack).getProjectile().getSpeed()
                 * top.ribs.scguns.util.GunEnchantmentHelper.getProjectileSpeedModifier(stack));

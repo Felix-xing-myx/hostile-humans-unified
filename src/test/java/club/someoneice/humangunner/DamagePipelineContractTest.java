@@ -6,10 +6,10 @@ import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import java.util.zip.ZipFile;
 
-/** Check the real Forge jar, including Player's separate override. Input: mapped or SRG Forge jar. */
+/** Read actual runtime class bytes without loading Minecraft classes; an explicit Forge jar is optional. */
 public final class DamagePipelineContractTest {
     public static void main(String[] args) throws Exception {
-        try (var jar = new ZipFile(args[0])) {
+        try (var jar = args.length > 0 ? new ZipFile(args[0]) : null) {
             for (String owner : new String[]{"net/minecraft/world/entity/LivingEntity", "net/minecraft/world/entity/player/Player"}) {
                 ClassNode node = read(jar, owner);
                 MethodNode actual = method(node, "actuallyHurt", "m_6475_");
@@ -30,7 +30,13 @@ public final class DamagePipelineContractTest {
     }
     private static ClassNode read(ZipFile jar,String name) throws Exception {
         var node = new ClassNode();
-        try (var stream=jar.getInputStream(jar.getEntry(name+".class"))) { new ClassReader(stream).accept(node,0); }
+        String resource = name+".class";
+        try (var stream = jar == null
+                ? DamagePipelineContractTest.class.getClassLoader().getResourceAsStream(resource)
+                : jar.getInputStream(java.util.Objects.requireNonNull(jar.getEntry(resource), resource))) {
+            if (stream == null) throw new AssertionError("Missing runtime class resource: " + resource);
+            new ClassReader(stream).accept(node,0);
+        }
         return node;
     }
     private static MethodNode method(ClassNode node,String named,String srg) {
