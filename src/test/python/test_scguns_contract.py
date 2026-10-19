@@ -1,7 +1,9 @@
 """Optional integration boundaries and installed-JAR public API contracts; no game/compilation."""
 import json
 import os
+import re
 import struct
+import subprocess
 import unittest
 import zipfile
 from pathlib import Path
@@ -153,11 +155,24 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertEqual(config["scguns"]["throwables"]["initial_speed"], 2.0)
         self.assertIn("!safeArea(human, plan.impact(), safety)", planner)
         self.assertLess(planner.index("human.level().addFreshEntity(projectile)"), planner.index("remainder.shrink(1)"))
-        if os.environ.get("SCGUNS_API_JAR"):
-            with zipfile.ZipFile(os.environ["SCGUNS_API_JAR"]) as jar:
-                registrations = jar.read("top/ribs/scguns/init/ModItems.class")
-                for item in allowed:
-                    self.assertIn(item.split(":")[1].upper().encode(), registrations)
+        native_registries = {
+            "scguns": ("SCGUNS_API_JAR", "top.ribs.scguns.init.ModItems"),
+            "jeg": ("JEG_API_JAR", "ttv.migami.jeg.init.ModItems"),
+        }
+        self.assertTrue({item.split(":", 1)[0] for item in allowed}.issubset(native_registries))
+        for namespace, (variable, registry_class) in native_registries.items():
+            jar = os.environ.get(variable)
+            if not jar:
+                continue  # Source-only checks still run when an optional backend is absent.
+            declarations = subprocess.check_output(
+                [r"D:\Java\17\bin\javap.exe", "-public", "-classpath", jar, registry_class],
+                text=True, encoding="utf-8")
+            registrations = set(re.findall(r"public static final [^;()\n]+ (\w+);", declarations))
+            expected = {item.split(":", 1)[1].upper() for item in allowed
+                        if item.split(":", 1)[0] == namespace}
+            self.assertTrue(expected, namespace)
+            self.assertTrue(expected.issubset(registrations),
+                            f"{namespace} missing public item registrations: {sorted(expected - registrations)}")
 
     def test_human_damage_replaces_both_difficulty_layers(self):
         adapter = source("ScgunsIntegration")
