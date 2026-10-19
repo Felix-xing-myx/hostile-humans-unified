@@ -29,7 +29,8 @@
     "JegSplashDamageAttributionMixin",
     "JegHumanAiOwnershipMixin",
     "JegNativeGunGoalMixin",
-    "JegWaterBombOwnerMixin"
+    "JegWaterBombOwnerMixin",
+    "ScgunsHumanAimMixin"
   ],
   "client": [
     "ScgunsNpcMuzzleFlashMixin",

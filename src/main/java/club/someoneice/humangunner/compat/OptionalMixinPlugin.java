@@ -28,6 +28,8 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
             "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/minecraft/world/item/ItemDisplayContext;II)V";
     public static final String SCGUNS_SULFURHEAD_DAMAGE =
             "m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z";
+    public static final String SCGUNS_HUMAN_AIM =
+            "getLeadingDirection(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/entity/LivingEntity;D)Lnet/minecraft/world/phys/Vec3;";
 
     @Override public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         String contract;
@@ -36,9 +38,11 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
         else if (mixinClassName.endsWith(".ScgunsNpcMuzzleFlashMixin")) contract = SCGUNS_NPC_FLASH;
         else if (mixinClassName.endsWith(".TaczNpcMuzzleFlashMixin")) contract = TACZ_NPC_FLASH;
         else if (mixinClassName.endsWith(".ScgunsSulfurheadDamageMixin")) contract = SCGUNS_SULFURHEAD_DAMAGE;
+        else if (mixinClassName.endsWith(".ScgunsHumanAimMixin")) contract = SCGUNS_HUMAN_AIM;
         else if (mixinClassName.endsWith(".JegNpcMuzzleFlashMixin")) contract =
                 "renderWeapon(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IF)Z";
         else return true;
+        if (contract.equals(SCGUNS_HUMAN_AIM)) NativeAimCompatibility.scgunsSharedPrediction(false);
         try {
             ClassNode target = readTarget(MixinService.getService().getBytecodeProvider(), targetClassName);
             if (contract.equals(SCGUNS_SULFURHEAD_DAMAGE)
@@ -46,7 +50,10 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
                 LOGGER.warn("Skipping Sulfurhead damage compatibility: superclass changed to {}", target.superName);
                 return false;
             }
-            if (hasMethod(target, contract, contract.equals(SPARTAN_RANDOMIZER))) return true;
+            if (hasMethod(target, contract, contract.equals(SPARTAN_RANDOMIZER) || contract.equals(SCGUNS_HUMAN_AIM))) {
+                if (contract.equals(SCGUNS_HUMAN_AIM)) NativeAimCompatibility.scgunsSharedPrediction(true);
+                return true;
+            }
             LOGGER.warn("Skipping optional upstream fix {}: {} no longer exposes {}. "
                     + "The upstream behavior is retained; this fix needs a compatibility review.",
                     mixinClassName, targetClassName, contract);

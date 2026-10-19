@@ -283,7 +283,7 @@ tasks.register('sanitizeStructureWaystones', JavaExec) {
 }
 
 // New-version contracts; run with check/build, never just manual source inspection.
-["SpecialtyAllocationTest", "SpecialtyPersistenceTest", "SpecialtyDataTest", "AttributeDetailSnapshotTest", "AttributeDetailPolicyTest", "AttributeDetailGrowthViewTest", "FactionContentNbtTest", "FactionVisualProtocolTest", "FactionEquipmentConfigTest", "FactionEquipmentPolicyTest", "FiniteOrdersPolicyTest", "DefenseAttributePolicyTest", "DefenseAttributesTest", "EquipmentConfigMigrationTest", "ConfigPublicationTest"].each { testClass ->
+["DamagePartitionTest", "DamagePipelineContractTest", "SpecialtyBudgetSamplerTest", "GunSpecializationTest", "RevisionCombatPolicyTest", "SpecialtyAllocationTest", "SpecialtyPersistenceTest", "SpecialtyDataTest", "AttributeDetailSnapshotTest", "AttributeDetailPolicyTest", "AttributeDetailGrowthViewTest", "FactionContentNbtTest", "FactionVisualProtocolTest", "FactionEquipmentConfigTest", "FactionEquipmentPolicyTest", "FiniteOrdersPolicyTest", "DefenseAttributePolicyTest", "DefenseAttributesTest", "EquipmentConfigMigrationTest", "ConfigPublicationTest"].each { testClass ->
     def testTask = 'vnext' + testClass
     tasks.register(testTask, JavaExec) {
         dependsOn tasks.named('testClasses')
