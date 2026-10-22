@@ -581,8 +581,7 @@ public final class RecoverySupplies {
     }
 
     static boolean hasRecoverableShield(Human human) {
-        return SpartanEquipmentCompat.isShield(human.getOffhandItem()) || SpartanEquipmentCompat.isShield(human.getMainHandItem())
-                || findBestStoredShieldSlot(human.getData()) >= 0;
+        return !HumanLootManager.bestOwnedShield(human).isEmpty();
     }
 
     private static boolean isUsingSessionHand(Human human, UseSession session) {
@@ -592,8 +591,10 @@ public final class RecoverySupplies {
     /** A caller with a current shield need can request its present real layout. */
     public static boolean restoreShieldAfterRecovery(Human human) {
         if (hasActiveUse(human) || unavailable(human)) return false;
+        ItemStack selected = HumanLootManager.bestOwnedShield(human);
+        if (selected.isEmpty()) return false;
         return HumanEquipmentExchange.request(human, "recovery:shield", List.of(
-                new HumanEquipmentExchange.Need(EquipmentSlot.OFFHAND, SpartanEquipmentCompat::isShield)))
+                new HumanEquipmentExchange.Need(EquipmentSlot.OFFHAND, candidate -> candidate == selected)))
                 == HumanEquipmentExchange.Result.SUCCESS;
     }
 
@@ -677,31 +678,6 @@ public final class RecoverySupplies {
             fingerprint.append('#').append(Integer.toHexString(stack.getTag().hashCode()));
         }
         return fingerprint.toString();
-    }
-
-    private static int findBestStoredShieldSlot(HumanData data) {
-        if (data == null) return -1;
-        int bestSlot = -1;
-        long bestScore = Long.MIN_VALUE;
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            ItemStack stored = data.getInventoryItem(i);
-            if (!SpartanEquipmentCompat.isShield(stored)) {
-                continue;
-            }
-            long score = shieldScore(stored);
-            if (score > bestScore) {
-                bestScore = score;
-                bestSlot = i;
-            }
-        }
-        return bestSlot;
-    }
-
-    private static long shieldScore(ItemStack shield) {
-        if (!SpartanEquipmentCompat.isShield(shield)) {
-            return Long.MIN_VALUE;
-        }
-        return SpartanEquipmentCompat.shieldEquipRank(shield);
     }
 
     /** Total Human regeneration; vanilla pulses are suppressed by HumanRecoveryEffects. */

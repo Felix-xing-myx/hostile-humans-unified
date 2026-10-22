@@ -169,15 +169,28 @@ public final class HumanLootManager {
     static ItemStack bestOwnedMeleeWeapon(Human human) {
         ItemStack best = ItemStack.EMPTY;
         double score = Double.NEGATIVE_INFINITY;
-        var actual = new java.util.ArrayList<ItemStack>();
-        actual.add(human.getMainHandItem()); actual.add(human.getOffhandItem());
-        if (human.getData() != null) for (int i = 0; i < human.getData().getInventoryItemsSize(); i++)
-            if (!HumanInventoryCustody.isReservedForRecovery(human, i)) actual.add(human.getData().getInventoryItem(i));
-        for (ItemStack stack : actual) if (isDedicatedMeleeWeapon(stack)) {
+        for (ItemStack stack : ownedEquipment(human)) if (isDedicatedMeleeWeapon(stack)) {
             double value = mainHandWeaponScore(stack);
             if (value > score) { best = stack; score = value; }
         }
         return best;
+    }
+
+    /** Preserve the current offhand on ties; namespace and remaining wear do not affect equip order. */
+    static ItemStack bestOwnedShield(Human human) {
+        ItemStack best = SpartanEquipmentCompat.isShield(human.getOffhandItem())
+                ? human.getOffhandItem() : ItemStack.EMPTY;
+        for (ItemStack stack : ownedEquipment(human))
+            if (SpartanEquipmentCompat.betterShield(stack, best)) best = stack;
+        return best;
+    }
+
+    private static java.util.List<ItemStack> ownedEquipment(Human human) {
+        var actual = new java.util.ArrayList<ItemStack>();
+        actual.add(human.getMainHandItem()); actual.add(human.getOffhandItem());
+        if (human.getData() != null) for (int i = 0; i < human.getData().getInventoryItemsSize(); i++)
+            if (!HumanInventoryCustody.isReservedForRecovery(human, i)) actual.add(human.getData().getInventoryItem(i));
+        return actual;
     }
 
     /** Existing tools are usable backups; never manufacture replacements. */
