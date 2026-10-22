@@ -17,13 +17,17 @@ public final class TaczHumanReloadTransactions {
     private static final java.util.Map<ShooterDataHolder, net.minecraft.resources.ResourceLocation> GUN_IDS = new java.util.WeakHashMap<>();
     private static final java.util.Map<ShooterDataHolder, java.lang.ref.WeakReference<Human>> VISUAL_OWNERS = new java.util.WeakHashMap<>();
     private static final java.util.Map<ShooterDataHolder, Clock> CLOCKS = new java.util.WeakHashMap<>();
+    private static final java.util.Set<ShooterDataHolder> STARTING = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    private static final java.util.Map<ShooterDataHolder,Long> GENERATIONS = new java.util.WeakHashMap<>();
+    private static final java.util.Set<ShooterDataHolder> TICKING = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
     private static final class Clock {
         final HumanEquipmentExchange.Handle weapon;
+        final com.craftix.hostile_humans.entity.data.HumanData inventory;
         final long session;
         long gameTick, wallMillis;
         double work, fraction;
-        Clock(Human human,HumanEquipmentExchange.Handle weapon) {
-            this.weapon=weapon;session=HumanBehaviorControl.actions(human).session();
+        Clock(Human human, GunReloadAuthority.Capture authority) {
+            weapon=authority.handle;session=authority.session;inventory=authority.inventory;
             gameTick=human.level().getGameTime();wallMillis=System.currentTimeMillis();
         }
     }
@@ -32,11 +36,21 @@ public final class TaczHumanReloadTransactions {
     public static boolean start(AbstractGunItem gun, ShooterDataHolder data,
                                 ItemStack weapon, LivingEntity shooter) {
         if (!(shooter instanceof Human human)) return gun.startReload(data, weapon, shooter);
-        if (human.level().isClientSide || human.getServer() == null || !human.getServer().isSameThread()
-                || weapon != human.getMainHandItem()) return false;
-        var index = TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
-        if (index == null || index.getGunData().getReloadData() == null) return false;
+        if (TICKING.contains(data)||!STARTING.add(data)) return false;
+        long generation=GENERATIONS.getOrDefault(data,0L);
+        try { return startHuman(gun,data,weapon,human,generation); }
+        finally { STARTING.remove(data); }
+    }
+
+    private static boolean startHuman(AbstractGunItem gun,ShooterDataHolder data,ItemStack weapon,Human human,long generation) {
+        var authority=GunReloadAuthority.capture(human,weapon);
+        if(authority==null) return false;
+        var gunId=gun.getGunId(weapon);
+        var index = TimelessAPI.getCommonGunIndex(gunId).orElse(null);
+        if (index == null || index.getGunData().getReloadData() == null || !authority.validSource()
+                ||GENERATIONS.getOrDefault(data,0L)!=generation) return false;
         TaczNpcMagazine.normalize(weapon, index);
+        if(!authority.validSource()||GENERATIONS.getOrDefault(data,0L)!=generation) return false;
         int loaded = gun.getCurrentAmmoCount(weapon);
         boolean chambered = gun.hasBulletInBarrel(weapon);
         int capacity = TaczNpcMagazine.capacity(weapon, index);
@@ -59,27 +73,41 @@ public final class TaczHumanReloadTransactions {
         int feedDelay = GunReloadPolicy.inventoryFeedDurationTicks(
                 reload.getFeed() == null ? 0 : empty ? reload.getFeed().getEmptyTime() : reload.getFeed().getTacticalTime(),
                 reload.getCooldown() == null ? 0 : empty ? reload.getCooldown().getEmptyTime() : reload.getCooldown().getTacticalTime());
-        var handle=HumanEquipmentExchange.bind(human,weapon);
-        if(handle==null) return false;
-        boolean started = PAYMENTS.begin(data, weapon,
-                human.level().getGameTime() + GunReloadPolicy.hardLimitTicks(recoveryDelay),
-                () -> HumanAmmo.canReload(human, weapon),
-                () -> inventoryFeed || gun.startReload(data, weapon, shooter),
-                () -> HumanAmmo.consumeMagazines(human, weapon));
-        if (started && inventoryFeed) {
-            // Inventory-feed guns have no native reload script. NPCs instead
-            // carry the configured virtual capacity and use an authorized timed refill.
-            // Consumption-disabled cycles still bind this real weapon and deadline.
-            INVENTORY_FEED_END.put(data, (long)feedDelay);
+        java.util.function.BooleanSupplier validStart=() -> GENERATIONS.getOrDefault(data,0L)==generation
+                &&!PAYMENTS.startingCancelled(data)&&authority.validSource()
+                &&java.util.Objects.equals(gunId,gun.getGunId(weapon))&&authority.validSource()
+                &&GENERATIONS.getOrDefault(data,0L)==generation&&!PAYMENTS.startingCancelled(data);
+        boolean[] nativeInvoked={false};
+        boolean started;
+        try {
+            started = PAYMENTS.begin(data, weapon,
+                    human.level().getGameTime() + GunReloadPolicy.hardLimitTicks(recoveryDelay),
+                    validStart,
+                    () -> HumanAmmo.canReload(human, weapon)&&validStart.getAsBoolean()
+                            &&gun.getCurrentAmmoCount(weapon)==loaded&&gun.hasBulletInBarrel(weapon)==chambered,
+                    () -> {
+                        nativeInvoked[0]=true;
+                        return inventoryFeed || gun.startReload(data, weapon, human);
+                    },
+                    () -> authority.pay(validStart),
+                    () -> {
+                        // A failed callback must not restore snapshots over an
+                        // owner edit, transferred gun, replacement inventory or session.
+                        if(nativeInvoked[0] && validStart.getAsBoolean()) {
+                            gun.setCurrentAmmoCount(weapon, loaded);
+                            if(validStart.getAsBoolean()) gun.setBulletInBarrel(weapon, chambered);
+                        }
+                    });
+        } catch(RuntimeException|LinkageError failure) {
+            HumanGunner.LOGGER.warn("TaCZ NPC reload callback failed; no stale weapon will be restored",failure);
+            return false;
         }
-        if (!started) {
-            // A pack script may mutate rounds before rejecting start, or change the
-            // backpack during start. Failed authorization cannot create ammunition.
-            gun.setCurrentAmmoCount(weapon, loaded);
-            gun.setBulletInBarrel(weapon, chambered);
-        } else {
-            GUN_IDS.put(data, gun.getGunId(weapon));
-            CLOCKS.put(data,new Clock(human,handle));
+        if (!started) return false;
+        if (inventoryFeed) INVENTORY_FEED_END.put(data,(long)feedDelay);
+        GUN_IDS.put(data,gunId);
+        Clock clock=new Clock(human,authority);
+        CLOCKS.put(data,clock);
+        {
             // Gun data cooldown is an endpoint, not an extra delay after feeding.
             double visualSeconds = reload.getCooldown() == null ? 0
                     : empty ? reload.getCooldown().getEmptyTime() : reload.getCooldown().getTacticalTime();
@@ -98,8 +126,10 @@ public final class TaczHumanReloadTransactions {
                     : (int) Math.max(0, Math.min(72000, Math.ceil((visualCooldown - visualFeed) * 20)));
             int visualFeedTicks = (int) Math.max(0, Math.min(72000, Math.ceil(visualFeed * 20)));
             double rate=GunCombatProfile.reloadWork(human,weapon);
-            TaczReloadVisualTimeline.begin(human, gun.getGunId(weapon).toString(),
+            TaczReloadVisualTimeline.begin(human, gunId.toString(),
                     (int)Math.ceil(visualTicks/rate),(int)Math.ceil(visualTail/rate),(int)Math.ceil(visualFeedTicks/rate));
+            TaczReloadVisualTimeline.work(human,0,rate);
+            if(!authority.validIdentity(true)||!validCycle(human,data,weapon,clock)) { finish(human,data);return false; }
             if(GunCombatProfile.silent(human,weapon)) TaczReloadVisualTimeline.clear(human);
             VISUAL_OWNERS.put(data, new java.lang.ref.WeakReference<>(human));
         }
@@ -109,41 +139,63 @@ public final class TaczHumanReloadTransactions {
     public static ReloadState tick(AbstractGunItem gun, ShooterDataHolder data,
                                    ItemStack weapon, LivingEntity shooter) {
         if (!(shooter instanceof Human human)) return gun.tickReload(data, weapon, shooter);
-        if (human.level().isClientSide || !ownsReloadWeapon(human,data,weapon) || !sameGun(data, weapon)
-                || !PAYMENTS.authorized(data, weapon, human.level().getGameTime())) {
-            finish(human, data);
-            return new ReloadState();
+        if (!TICKING.add(data)) {
+            ReloadState pending=new ReloadState();
+            pending.setStateType(data.reloadStateType);
+            pending.setCountDown(1L);
+            return pending;
         }
-        Long feedEnd = INVENTORY_FEED_END.get(data);
-        if (feedEnd != null) {
-            ReloadState state = new ReloadState();
-            Clock clock=CLOCKS.get(data);
-            double remaining=feedEnd-(clock==null?0:clock.work);
-            if (remaining>1e-8) {
-                state.setStateType(data.reloadStateType);
-                state.setCountDown((long)Math.ceil(remaining*50));
-                updateVisual(human,weapon,state.getCountDown(),true);
+        Clock clock=CLOCKS.get(data);
+        try {
+            if (!validCycle(human,data,weapon,clock)) { finish(human,data);return new ReloadState(); }
+            Long feedEnd=INVENTORY_FEED_END.get(data);
+            if(feedEnd!=null) {
+                ReloadState state=new ReloadState();
+                double remaining=feedEnd-clock.work;
+                if(remaining>1e-8) {
+                    state.setStateType(data.reloadStateType);
+                    state.setCountDown((long)Math.ceil(remaining*50));
+                    updateVisual(human,weapon,state.getCountDown(),true);
+                    return state;
+                }
+                var index=TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
+                if(index!=null && validCycle(human,data,weapon,clock)) {
+                    // Claim before native setters/capability callbacks. A partial
+                    // external commit is never retried using the same payment.
+                    PAYMENTS.complete(data,weapon,human.level().getGameTime(),
+                            () -> validBinding(human,data,weapon,clock),
+                            () -> TaczNpcMagazine.fill(weapon,index));
+                }
+                finish(human,data);
                 return state;
             }
-            var index = TimelessAPI.getCommonGunIndex(gun.getGunId(weapon)).orElse(null);
-            if (index != null) {
-                TaczNpcMagazine.fill(weapon, index);
-            }
-            finish(human, data);
+            ReloadState state=gun.tickReload(data,weapon,shooter);
+            if(!validCycle(human,data,weapon,clock)) { finish(human,data);return new ReloadState(); }
+            if(state.getStateType().isReloading())
+                updateVisual(human,weapon,state.getCountDown(),state.getStateType().isReloadFinishing());
+            if(human.getData()!=null&&weapon!=human.getMainHandItem()) human.getData().markInventoryDirty();
+            if(!state.getStateType().isReloading()) finish(human,data);
             return state;
-        }
-        ReloadState state = gun.tickReload(data, weapon, shooter);
-        if (state.getStateType().isReloading())
-            updateVisual(human,weapon,state.getCountDown(),state.getStateType().isReloadFinishing());
-        if (human.getData() != null && weapon != human.getMainHandItem()) human.getData().markInventoryDirty();
-        if (!state.getStateType().isReloading()) finish(human, data);
-        return state;
+        } catch(RuntimeException|LinkageError failure) {
+            finish(human,data);
+            HumanGunner.LOGGER.warn("TaCZ NPC reload tick failed; paid transaction cancelled without a snapshot restore",failure);
+            return new ReloadState();
+        } finally { TICKING.remove(data); }
+    }
+
+    private static boolean validCycle(Human human,ShooterDataHolder data,ItemStack weapon,Clock clock) {
+        return PAYMENTS.authorized(data,weapon,human.level().getGameTime())&&validBinding(human,data,weapon,clock);
+    }
+
+    private static boolean validBinding(Human human,ShooterDataHolder data,ItemStack weapon,Clock clock) {
+        return clock!=null&&CLOCKS.get(data)==clock&&sameGun(data,weapon)
+                &&ownsReloadWeapon(human,data,weapon)&&CLOCKS.get(data)==clock;
     }
 
     public static boolean isPaidReloading(Human human, ShooterDataHolder data) {
         ItemStack weapon = PAYMENTS.weapon(data, human.level().getGameTime());
         boolean active = data.reloadTimestamp != -1L && data.reloadStateType.isReloading()
-                && weapon != null && ownsReloadWeapon(human,data,weapon) && sameGun(data, weapon);
+                && weapon != null && sameGun(data, weapon) && ownsReloadWeapon(human,data,weapon);
         // Queries must not cancel native state; cleanup belongs to tick/cancel.
         return active;
     }
@@ -160,7 +212,7 @@ public final class TaczHumanReloadTransactions {
         }
         ItemStack weapon = PAYMENTS.weapon(data, human.level().getGameTime());
         if (!human.isAlive() || human.isRemoved() || human.isNoAi() || HumanInventorySession.isEditing(human)
-                || weapon == null || !ownsReloadWeapon(human,data,weapon) || !sameGun(data, weapon)) {
+                || weapon == null || !validCycle(human,data,weapon,CLOCKS.get(data))) {
             finish(human, data);
             return false;
         }
@@ -172,11 +224,14 @@ public final class TaczHumanReloadTransactions {
         long ticks=Math.max(0,game-clock.gameTick);
         // Native Lua reads elapsed real milliseconds. Translate only its reload
         // origin so pauses/low TPS cannot finish a silent reload without AI ticks.
-        double work=ticks*GunCombatProfile.reloadWork(human,weapon);
+        double rate=GunCombatProfile.reloadWork(human,weapon);
+        if(!validCycle(human,data,weapon,clock)) { finish(human,data);return false; }
+        double work=ticks*rate;
         double virtualMillis=work*50+clock.fraction;
         long whole=(long)Math.floor(virtualMillis);clock.fraction=virtualMillis-whole;
         data.reloadTimestamp+=wall-clock.wallMillis-whole;
         clock.wallMillis=wall;clock.gameTick=game;clock.work+=work;
+        TaczReloadVisualTimeline.work(human,clock.work,rate);
         return true;
     }
 
@@ -192,9 +247,8 @@ public final class TaczHumanReloadTransactions {
 
     private static boolean ownsReloadWeapon(Human human,ShooterDataHolder data,ItemStack weapon) {
         Clock clock=CLOCKS.get(data);
-        return weapon!=null&&!weapon.isEmpty()&&clock!=null
-                &&clock.session==HumanBehaviorControl.actions(human).session()
-                &&HumanEquipmentExchange.locate(human,clock.weapon)==weapon;
+        return weapon!=null&&!weapon.isEmpty()&&clock!=null&&human.getData()==clock.inventory
+                &&GunReloadAuthority.validIdentity(human,weapon,clock.weapon,clock.session);
     }
 
     private static void finish(Human human, ShooterDataHolder data) {
@@ -211,6 +265,7 @@ public final class TaczHumanReloadTransactions {
     }
 
     public static void end(ShooterDataHolder data) {
+        GENERATIONS.put(data,GENERATIONS.getOrDefault(data,0L)+1);
         clearVisual(data);
         PAYMENTS.end(data);
         INVENTORY_FEED_END.remove(data);

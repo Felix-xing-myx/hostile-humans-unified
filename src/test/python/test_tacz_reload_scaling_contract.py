@@ -21,7 +21,7 @@ class TaczReloadScalingContract(unittest.TestCase):
 
     def test_timeline_is_bound_to_actual_reload_lifecycle(self):
         source = (CORE / "TaczHumanReloadTransactions.java").read_text(encoding="utf-8")
-        self.assertIn("TaczReloadVisualTimeline.begin(human, gun.getGunId(weapon).toString(),", source)
+        self.assertIn("TaczReloadVisualTimeline.begin(human, gunId.toString(),", source)
         self.assertIn("(int)Math.ceil(visualTicks/rate)", source)
         self.assertIn("state.getCountDown(),state.getStateType().isReloadFinishing()", source)
         self.assertIn("VISUAL_OWNERS.remove(data)", source)

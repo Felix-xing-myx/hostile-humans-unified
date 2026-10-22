@@ -75,7 +75,121 @@ public final class ReloadPaymentLedgerTest {
         check(!ledger.authorized(holder, gun, 101), "cancel discards payment without refund");
         check(!new ReloadPaymentLedger<Object, Object>().authorized(holder, gun, 101),
                 "fresh runtime cannot restore persisted authorization");
+        callbackTransactions();
         System.out.println("ReloadPaymentLedgerTest: " + checks + " checks passed");
+    }
+
+    private static void callbackTransactions() {
+        var ledger = new ReloadPaymentLedger<Object, Object>();
+        Object owner = new Object(), original = new Object();
+        int[] payments = {0}, starts = {0}, commits = {0}, aborts = {0};
+        check(ledger.begin(owner, original, 100, () -> true, () -> true, () -> {
+            starts[0]++;
+            check(!ledger.begin(owner, original, 100, () -> true,
+                    () -> { throw new AssertionError("nativeStart re-entered"); },
+                    () -> { throw new AssertionError("nested payment"); }), "nativeStart cannot re-enter begin");
+            return true;
+        }, () -> { payments[0]++; return true; }), "outer callback starts one cycle");
+        check(starts[0] == 1 && payments[0] == 1, "native re-entry has one payment");
+        ledger.end(owner);
+
+        check(!ledger.begin(owner, original, 100, () -> true, () -> true, () -> {
+            ledger.end(owner);
+            check(!ledger.begin(owner, original, 100, () -> true, () -> true,
+                    () -> { payments[0]++; return true; }), "cancel does not unlock nested begin");
+            return true;
+        }, () -> { payments[0]++; return true; }), "cancelled nativeStart cannot register afterwards");
+        check(payments[0] == 1 && !ledger.authorized(owner, original, 1), "cancel before payment has no debit");
+
+        long[] session = {7};
+        Object[] actualWeapon = {original}, state = {new Object()}, inventory = {new Object()};
+        Object expectedState = state[0], expectedInventory = inventory[0];
+        java.util.function.BooleanSupplier valid = () -> session[0] == 7 && actualWeapon[0] == original
+                && state[0] == expectedState && inventory[0] == expectedInventory;
+        check(!ledger.begin(owner, original, 100, valid, () -> true,
+                () -> { session[0]++; return true; }, () -> { payments[0]++; return true; }),
+                "native callback cannot adopt a new behavior session");
+        check(payments[0] == 1, "session invalidation checked before debit");
+        session[0] = 7;
+        check(!ledger.begin(owner, original, 100, valid, () -> true,
+                () -> { actualWeapon[0] = new Object(); return true; }, () -> { payments[0]++; return true; }),
+                "same-model replacement cannot inherit the original request");
+        actualWeapon[0] = original;
+        check(!ledger.begin(owner, original, 100, valid, () -> true,
+                () -> { inventory[0] = new Object(); return true; }, () -> { payments[0]++; return true; }),
+                "native callback cannot debit an owner-edited inventory");
+        inventory[0] = expectedInventory;
+        check(!ledger.begin(owner, original, 100, valid, () -> true,
+                () -> { state[0] = new Object(); return true; }, () -> { payments[0]++; return true; }),
+                "native callback cannot publish over a different state object");
+        state[0] = expectedState;
+        check(payments[0] == 1, "all rejected source changes occurred before payment");
+
+        check(!ledger.begin(owner, original, 100, valid, () -> true, () -> true, () -> {
+            payments[0]++;
+            ledger.end(owner);
+            return true;
+        }), "cancellation during debit cannot re-register authorization");
+        check(payments[0] == 2 && !ledger.authorized(owner, original, 1),
+                "opaque partial debit is not refunded or retried using stale authority");
+
+        check(!ledger.begin(owner, original, 100, valid, () -> true, () -> false, () -> true, () -> {
+            aborts[0]++;
+            ledger.end(owner);
+            check(!ledger.begin(owner, original, 100, () -> true, () -> true, () -> true),
+                    "abort rollback cannot start another cycle on the same callback stack");
+        }), "native refusal runs guarded abort");
+        check(aborts[0] == 1, "abort executes once");
+        boolean threw = false;
+        try {
+            ledger.begin(owner, original, 100, valid, () -> true,
+                    () -> { throw new IllegalStateException("native start failed"); },
+                    () -> { payments[0]++; return true; }, () -> aborts[0]++);
+        } catch (IllegalStateException expected) { threw = true; }
+        check(threw && aborts[0] == 2 && payments[0] == 2 && !ledger.authorized(owner, original, 1),
+                "throwing native start releases attempt and never pays");
+
+        check(ledger.begin(owner, original, 100, valid, () -> true, () -> true,
+                () -> { payments[0]++; return true; }), "fresh request starts after callback unwind");
+        session[0]++;
+        check(!ledger.complete(owner, original, 1, valid, () -> commits[0]++),
+                "completion revalidates captured session immediately before commit");
+        check(commits[0] == 0 && !ledger.authorized(owner, original, 1), "invalid completion retires old payment");
+        session[0] = 7;
+        check(ledger.begin(owner, original, 100, valid, () -> true, () -> true, () -> true), "completion setup");
+        check(ledger.complete(owner, original, 1, valid, () -> {
+            commits[0]++;
+            check(!ledger.complete(owner, original, 1, valid, () -> commits[0]++), "completion cannot re-enter");
+            check(!ledger.begin(owner, original, 100, () -> true, () -> true, () -> true),
+                    "claimed completion cannot register nested replacement");
+        }), "valid completion commits once");
+        check(commits[0] == 1 && !ledger.complete(owner, original, 1, valid, () -> commits[0]++),
+                "old completion never runs twice");
+        check(ledger.begin(owner, original, 100, valid, () -> true, () -> true, () -> true), "throwing completion setup");
+        threw = false;
+        try {
+            ledger.complete(owner, original, 1, valid, () -> {
+                commits[0]++;
+                throw new IllegalStateException("opaque partial energy write");
+            });
+        } catch (IllegalStateException expected) { threw = true; }
+        check(threw && commits[0] == 2 && !ledger.complete(owner, original, 1, valid, () -> commits[0]++),
+                "throwing completion remains claimed and cannot repeat its partial write");
+        check(ledger.begin(owner, original, 100, valid, () -> true, () -> true, () -> true), "cancelled completion setup");
+        check(!ledger.complete(owner, original, 1, valid, () -> {
+            commits[0]++;
+            session[0]++;
+            ledger.end(owner);
+            check(!ledger.begin(owner, original, 100, () -> true, () -> true, () -> true),
+                    "completion cancellation retains its inflight barrier");
+        }), "completion checks the captured session again after its opaque callback");
+        check(commits[0] == 3 && !ledger.complete(owner, original, 1, () -> true, () -> commits[0]++),
+                "a cancelled partial completion cannot replay even under a new valid request");
+        check(!ledger.begin(owner, original, 100, () -> {
+            ledger.end(owner);
+            return true;
+        }, () -> { throw new AssertionError("cancelled validity reached payment check"); },
+                () -> true, () -> true), "validation callback cannot cancel then return stale success");
     }
 
     private static void check(boolean value, String message) {

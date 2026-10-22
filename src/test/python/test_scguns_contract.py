@@ -69,7 +69,7 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertIn("GunEnchantmentHelper.getMagReloadSpeed(stack)", timing)
         self.assertNotIn("net.minecraft.client", timing + audio)
         self.assertNotIn("FakePlayer", timing + integration)
-        self.assertIn('state.put("steps",steps)', source("GunReloadSession"))
+        self.assertIn('state.put("steps", schedule)', source("GunReloadSession"))
         self.assertLess(integration.index("ScgunsReloadTiming.plan("), integration.index("GunReloadSession.begin("))
 
     def test_sulfurhead_restores_only_human_damage_pipeline(self):
@@ -237,7 +237,9 @@ class ScgunsBoundary(unittest.TestCase):
             self.assertIn(api, adapter)
         self.assertNotIn('putInt("Energy"', adapter)
         session = source("GunReloadSession")
-        self.assertLess(session.index("HumanAmmo.consumeMagazines(human,gun)"), session.index('state.putUUID("transaction"'))
+        self.assertLess(session.index("authority.pay(unchanged)"), session.index('state.putUUID("transaction"'))
+        authority = source("GunReloadAuthority")
+        self.assertLess(authority.index("actions.acquire(token)"), authority.index("inventory.setInventoryItem(slot, next)"))
         self.assertIn('state.getUUID("transaction").equals(gun.getTag().getUUID(key))', session)
         self.assertIn('HumanEquipmentExchange.locate', session)
         self.assertIn('GunSupport.get().magazineCost(gun)', source("HumanAmmo"))

@@ -31,9 +31,11 @@ class GunDoctrineWiring(unittest.TestCase):
             self.assertIn("public void cancelReload(", self.source(backend + "Integration"))
         session = self.source("GunReloadSession")
         native = self.source("TaczHumanReloadTransactions")
+        authority = self.source("GunReloadAuthority")
+        self.assertIn("HumanEquipmentExchange.locate", authority)
+        self.assertIn("HumanBehaviorControl.actions(human).session()", authority)
         for source in (session, native):
-            self.assertIn("HumanEquipmentExchange.locate", source)
-            self.assertIn("HumanBehaviorControl.actions(human).session()", source)
+            self.assertIn("GunReloadAuthority", source)
             self.assertIn("GunCombatProfile.reloadWork", source)
         self.assertIn('putDouble("progress"', session)
         self.assertIn("data.reloadTimestamp+=wall-clock.wallMillis-whole", native)
