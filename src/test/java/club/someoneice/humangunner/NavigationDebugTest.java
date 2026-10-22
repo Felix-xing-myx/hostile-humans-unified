@@ -14,7 +14,8 @@ public final class NavigationDebugTest {
     private static void check(boolean condition, String message) {
         checks++; if (!condition) throw new AssertionError(message);
     }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        BehaviorDebugTest.main(args);
         var selection = new NavigationObserverSelection<Integer>(8);
         for (int i=0;i<8;i++) check(selection.add(i), "eight observers fit");
         var before = selection.entries();

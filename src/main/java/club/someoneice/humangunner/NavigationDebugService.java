@@ -254,7 +254,7 @@ public final class NavigationDebugService {
                 run == null ? trace.requested : run.destination, human.getTarget() == null ? null : HumanPerception.knownPosition(human, human.getTarget()),
                 total == 0 ? null : path.getEntityPosAtNode(human, total - 1),
                 List.copyOf(nodes), first, total, path != null && path.canReach(), total - first > nodes.size(),
-                trace.searchMillis, List.copyOf(samples), HumanPerception.snapshot(human));
+                trace.searchMillis, List.copyOf(samples), HumanPerception.snapshot(human), BehaviorDebugSnapshot.capture(human));
     }
     private static String routeBudget(Human human,String original) {
         String detail=LongRangeNavigation.describe(human);

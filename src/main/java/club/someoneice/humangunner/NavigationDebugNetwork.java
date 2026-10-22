@@ -14,7 +14,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 /** Server snapshots and payload-free developer operations on the sender's own focus. */
 public final class NavigationDebugNetwork {
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(HumanGunner.MOD_ID, "navigation_debug"), () -> "6", "6"::equals, "6"::equals);
+            new ResourceLocation(HumanGunner.MOD_ID, "navigation_debug"), () -> "7", "7"::equals, "7"::equals);
     private NavigationDebugNetwork() {}
     static void register() {
         CHANNEL.registerMessage(0, Packet.class, Packet::encode, Packet::decode, Packet::handle,

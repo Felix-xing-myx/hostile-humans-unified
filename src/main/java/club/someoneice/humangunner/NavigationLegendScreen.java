@@ -66,6 +66,7 @@ public final class NavigationLegendScreen extends Screen {
             rows.add(new Row(-1,label("geometry")));
             rows.add(new Row(-1,label("vision_modes")));
         }
+        if(page==4) behaviorRows(rows, s.behavior());
         if(page==4 || page==5) {
             rows.add(new Row(-1,Component.translatable("navigation_debug.card_title",focus.slot()+1,s.name(),Component.translatable("navigation_debug.mode."+s.mode()),"")));
             rows.add(new Row(-1,Component.translatable("navigation_debug.hud_route",Component.translatable("navigation_debug.result."+s.state()),s.firstNode(),s.totalNodes(),s.complete(),s.truncated())));
@@ -81,6 +82,27 @@ public final class NavigationLegendScreen extends Screen {
             for(var marker:p.markers()) if(page==2 && (marker.kind().equals("los") || marker.kind().equals("blocked"))) rows.add(new Row(-1,Component.literal(marker.kind()+": "+marker.label())));
         }
         return rows;
+    }
+    private static void behaviorRows(List<Row> rows, BehaviorDebugSnapshot snapshot) {
+        rows.add(new Row(-1, Component.literal("服务器动作 · 会话 " + (snapshot.authorityPresent() ? snapshot.session() : "尚无协调器")
+                + " · 采样tick " + snapshot.tick())));
+        rows.add(new Row(-1, Component.literal("移动执行桥: " + snapshot.bridge())));
+        if (snapshot.bridge().equals("unbound")) rows.add(new Row(-1, Component.literal("unbound：以下仅显示原GoalSelector运行状态，尚无移动权限归属保证")));
+        if (snapshot.actions().isEmpty()) rows.add(new Row(-1, Component.literal("当前协调动作：无")));
+        for (var action : snapshot.actions()) {
+            String kind = action.lease() ? "租约" + action.leaseTicks() + "t / 心跳 " + (action.lastHeartbeat() == Long.MIN_VALUE ? "尚无" : action.lastHeartbeat()) : "动作时限";
+            rows.add(new Row(-1, Component.literal("#" + action.session() + "/" + action.sequence() + " " + action.name() + " · " + action.status()
+                    + " · p" + action.priority() + " · " + (action.interruptible() ? "可中断" : "不可中断"))));
+            rows.add(new Row(-1, Component.literal("持有 " + String.join(" + ", action.heldResources()) + " / 请求 " + String.join(" + ", action.resources()) + " · 剩余 " + action.remainingTicks() + "t · " + kind)));
+        }
+        for (var goal : snapshot.goals()) rows.add(new Row(-1, Component.literal("Goal " + goal.name() + " · p" + goal.priority() + " · " + String.join("/", goal.flags())
+                + " · " + (goal.entered() ? "已启动" : "未启动") + (goal.executing() ? "/回调中" : "") + " · " + goal.state()
+                + (goal.tokenSequence() == 0 ? "" : " · #" + goal.tokenSession() + "/" + goal.tokenSequence()))));
+        for (var progress : snapshot.progress()) rows.add(new Row(-1, Component.literal(progress.kind() + (progress.item().isEmpty() ? "" : " · " + progress.item())
+                + (progress.remainingTicks() < 0 ? "" : " · 已用 " + progress.elapsedTicks() + "t / 剩余 " + progress.remainingTicks() + "t") + " · " + progress.detail())));
+        for (var feedback : snapshot.feedback()) rows.add(new Row(-1, Component.literal("最近反馈 #" + feedback.session() + "/" + feedback.sequence()
+                + " " + feedback.name() + " · " + feedback.status() + " · " + feedback.reason())));
+        if (snapshot.truncated()) rows.add(new Row(-1, Component.literal("动作/Goal/反馈已按协议上限截断")));
     }
     private boolean matches(String group) {
         return NavigationDebugViewPolicy.pageContains(page, group);
