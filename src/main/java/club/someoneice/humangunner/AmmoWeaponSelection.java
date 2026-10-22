@@ -3,7 +3,6 @@ package club.someoneice.humangunner;
 import com.craftix.hostile_humans.entity.data.HumanData;
 import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TridentItem;
 
@@ -36,10 +35,20 @@ final class AmmoWeaponSelection {
         return melee ? 1 : 0;
     }
 
-    private static int rank(Human human, ItemStack stack, boolean arrows) {
-        return rank(GunSupport.get().isGun(stack), usableGun(human, stack),
+    static int rank(Human human, ItemStack stack, boolean arrows) {
+        int fallback = rank(GunSupport.get().isGun(stack), usableGun(human, stack),
                 RangedWeaponCustody.isBowOrCrossbow(stack), arrows,
                 HumanLootManager.isDedicatedMeleeWeapon(stack) || stack.getItem() instanceof TridentItem);
+        if (fallback == 0) return 0;
+        boolean preferred = switch (CombatPreference.get(human)) {
+            case DEFAULT -> false;
+            case GUN -> GunSupport.get().isGun(stack);
+            case BOW -> stack.getItem() instanceof net.minecraft.world.item.BowItem;
+            case CROSSBOW -> stack.getItem() instanceof net.minecraft.world.item.CrossbowItem;
+            case TRIDENT -> stack.getItem() instanceof TridentItem;
+            case MELEE -> HumanLootManager.isDedicatedMeleeWeapon(stack);
+        };
+        return preferred ? fallback + 8 : fallback;
     }
 
     static void tick(Human human) {
@@ -84,15 +93,12 @@ final class AmmoWeaponSelection {
                     useOffhand = false;
                 }
             }
-            if (useOffhand) {
-                human.setItemSlot(EquipmentSlot.OFFHAND, current.copy());
-                human.setItemSlot(EquipmentSlot.MAINHAND, offhand.copy());
-                human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
-            } else if (bestSlot >= 0) {
-                ItemStack replacement = data.getInventoryItem(bestSlot).copy();
-                data.setInventoryItem(bestSlot, current.copy());
-                human.setItemSlot(EquipmentSlot.MAINHAND, replacement);
-                human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
+            if (useOffhand || bestSlot >= 0) {
+                ItemStack selected = useOffhand ? offhand : data.getInventoryItem(bestSlot);
+                if (HumanEquipmentExchange.request(human, "weapon-preference", java.util.List.of(
+                        new HumanEquipmentExchange.Need(EquipmentSlot.MAINHAND, stack -> stack == selected)))
+                        == HumanEquipmentExchange.Result.SUCCESS)
+                    human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
             } else if (exhausted) {
                 stowExhausted(human, data, EquipmentSlot.MAINHAND);
             }
@@ -103,19 +109,6 @@ final class AmmoWeaponSelection {
     }
 
     private static void stowExhausted(Human human, HumanData data, EquipmentSlot hand) {
-        ItemStack stack = human.getItemBySlot(hand).copy();
-        for (int slot = 0; slot < data.getInventoryItemsSize(); slot++) {
-            if (HumanInventoryCustody.isReservedForRecovery(data, slot)) continue;
-            if (!data.getInventoryItem(slot).isEmpty()) continue;
-            data.setInventoryItem(slot, stack);
-            human.setItemSlot(hand, ItemStack.EMPTY);
-            return;
-        }
-        // With no replacement or empty slot, retain the whole stack as a world item.
-        // Never overwrite protected inventory or reconstruct from a lease snapshot.
-        ItemEntity dropped = new ItemEntity(human.level(), human.getX(), human.getY() + 0.4D,
-                human.getZ(), stack);
-        dropped.setPickUpDelay(60);
-        if (human.level().addFreshEntity(dropped)) human.setItemSlot(hand, ItemStack.EMPTY);
+        HumanEquipmentExchange.stow(human, hand);
     }
 }

@@ -94,7 +94,9 @@ public final class HumanLootManager {
             if (candidate.isEmpty() || storedSlots[i] != slot) {
                 continue;
             }
-            if (weaponOnly && (!isNonGunWeapon(candidate) || AmmoWeaponSelection.isExhausted(human, candidate))) {
+            if (weaponOnly && (!isNonGunWeapon(candidate) || AmmoWeaponSelection.isExhausted(human, candidate)
+                    || AmmoWeaponSelection.rank(human, candidate, HumanAmmo.hasArrows(human))
+                    < AmmoWeaponSelection.rank(human, current, HumanAmmo.hasArrows(human)))) {
                 continue;
             }
             double score = equipmentScore(candidate, slot);
@@ -114,10 +116,11 @@ public final class HumanLootManager {
         if (bestSlot < 0) {
             return;
         }
-        ItemStack replacement = data.getInventoryItem(bestSlot).copy();
-        data.setInventoryItem(bestSlot, current.copy());
+        ItemStack replacement = data.getInventoryItem(bestSlot);
+        if (HumanEquipmentExchange.request(human, "optimize:" + slot.getName(), java.util.List.of(
+                new HumanEquipmentExchange.Need(slot, stack -> stack == replacement)))
+                != HumanEquipmentExchange.Result.SUCCESS) return;
         storedSlots[bestSlot] = current.isEmpty() ? null : preferredEquipmentSlot(current);
-        human.setItemSlot(slot, replacement);
         ArmorSwapPolicy.equipped(human, slot);
         human.setDropChance(slot, 1.0F);
     }

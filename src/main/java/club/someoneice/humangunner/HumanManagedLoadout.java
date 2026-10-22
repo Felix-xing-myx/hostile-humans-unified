@@ -71,11 +71,10 @@ final class HumanManagedLoadout {
         }
         if (bestSlot < 0) return false;
 
-        ItemStack melee = data.getInventoryItem(bestSlot).copy();
-        // Publish the hand copy before clearing the backpack slot. A synchronous
-        // equipment callback can therefore see a duplicate, never a lost item.
-        human.setItemSlot(EquipmentSlot.MAINHAND, melee);
-        data.setInventoryItem(bestSlot, ItemStack.EMPTY);
+        ItemStack melee = data.getInventoryItem(bestSlot);
+        if (HumanEquipmentExchange.request(human, "empty-hand-fallback", java.util.List.of(
+                new HumanEquipmentExchange.Need(EquipmentSlot.MAINHAND, stack -> stack == melee)))
+                != HumanEquipmentExchange.Result.SUCCESS) return false;
         human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
         HumanGunner.LOGGER.debug(
                 "Equipped owner-managed melee fallback npc={} slot={} item={}",

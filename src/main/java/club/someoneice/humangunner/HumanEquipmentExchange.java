@@ -49,24 +49,46 @@ public final class HumanEquipmentExchange {
     }
 
     public static Result request(Human human, String purpose, List<Need> needs) {
+        if (needs.isEmpty()) return Result.SUCCESS;
+        return execute(human, purpose, () -> commitLayout(human, needs));
+    }
+
+    /** Leave a failed/empty weapon in place when a full real backpack cannot accept it. */
+    public static Result stow(Human human, EquipmentSlot hand) {
+        if (hand != EquipmentSlot.MAINHAND && hand != EquipmentSlot.OFFHAND) return Result.UNAVAILABLE;
+        return execute(human, "stow:" + hand.getName(), () -> {
+            List<Place> all = places(human);
+            ItemStack[] actual = new ItemStack[all.size()], expected = new ItemStack[all.size()];
+            for (int i = 0; i < actual.length; i++) {
+                actual[i] = read(human, all.get(i)); expected[i] = actual[i].copy();
+            }
+            int source = all.indexOf(new Place(hand, -1));
+            if (busyHand(human, all.get(source))) return Result.BUSY;
+            if (actual[source].isEmpty()) return Result.SUCCESS;
+            ItemStack[] planned = actual.clone();
+            for (int i = 0; i < all.size(); i++) if (all.get(i).equipment() == null
+                    && actual[i].isEmpty() && !reserved(human, all.get(i))) {
+                planned[i] = actual[source]; planned[source] = ItemStack.EMPTY;
+                return writeLayout(human, all, actual, expected, planned);
+            }
+            return Result.NO_CAPACITY;
+        });
+    }
+
+    private static Result execute(Human human, String purpose, java.util.function.Supplier<Result> transaction) {
         if (human.level().isClientSide || !human.isAlive() || human.isRemoved()
                 || human.isNoAi() || human.getData() == null || HumanInventorySession.isEditing(human))
             return Result.UNAVAILABLE;
         if (WRITING.contains(human)) return Result.BUSY;
-        if (needs.isEmpty()) return Result.SUCCESS;
         var actions = HumanBehaviorControl.actions(human);
         // A selected source can be the other hand. Reserve both before planning any transfer.
         EnumSet<ActionCoordinator.Resource> resources = EnumSet.of(ActionCoordinator.Resource.INVENTORY,
                 ActionCoordinator.Resource.MAIN_HAND, ActionCoordinator.Resource.OFF_HAND);
-        for (Need need : needs) {
-            if (need.destination() == EquipmentSlot.MAINHAND) resources.add(ActionCoordinator.Resource.MAIN_HAND);
-            if (need.destination() == EquipmentSlot.OFFHAND) resources.add(ActionCoordinator.Resource.OFF_HAND);
-        }
         var token = actions.request("exchange:" + purpose, resources, 100, false, 2);
         if (!actions.acquire(token)) return Result.BUSY;
         Result result;
         WRITING.add(human);
-        try { result = commitLayout(human, needs); }
+        try { result = transaction.get(); }
         catch (RuntimeException exception) {
             actions.finish(token, ActionCoordinator.Status.FAILED, "exchange callback failed");
             throw exception;
@@ -142,8 +164,14 @@ public final class HumanEquipmentExchange {
             if (free < 0) return Result.NO_CAPACITY;
             planned[free] = stack;
         }
+        return writeLayout(human, places, actual, expected, planned);
+    }
+
+    private static Result writeLayout(Human human, List<Place> places, ItemStack[] actual,
+                                      ItemStack[] expected, ItemStack[] planned) {
         for (int i = 0; i < actual.length; i++)
-            if (!ItemStack.matches(read(human, places.get(i)), expected[i])) return Result.CHANGED;
+            if (read(human, places.get(i)) != actual[i]
+                    || !ItemStack.matches(read(human, places.get(i)), expected[i])) return Result.CHANGED;
         // Retain object identity so a native reload/payment handle follows the actual weapon.
         List<Integer> written = new ArrayList<>();
         try {
