@@ -112,10 +112,14 @@ public final class RangedTerrainSafetyTest {
         check(calls(root+"RangedFiringMemory","recover",root+"OptionalPathBudget","claim")
                 && calls(root+"RangedFiringMemory","validPath",root+"RangedShotClearance","fromPosition"),
                 "remembered floor still requires budget and current real endpoint ballistics");
-        check(calls(human, "travel", root + "HumanTerrainSafety", "guardTravel"), "all locomotion inputs use final safety guard");
+        check(calls(human, "travel", "com/craftix/hostile_humans/entity/entities/Human", "travelWithMovementInput")
+                && calls(human, "travelWithMovementInput", root + "HumanTerrainSafety", "guardTravel"),
+                "all locomotion inputs pass through original execution context and final safety guard");
         check(calls(human, "getMaxFallDistance", root + "HumanFallPolicy", "accepts"), "A-star descent uses live health budget");
         check(calls(human, "expectedRawFallDamage", null, "calculateFallDamage"), "fall assessment never causes real damage");
-        check(calls("com/craftix/hostile_humans/entity/ai/HumanNavigation", "moveTo", root + "HumanTerrainSafety", "assessPath"), "installed routes return terrain reasons");
+        check(calls("com/craftix/hostile_humans/entity/ai/HumanNavigation", "moveTo", root + "HumanNavigationOwnership", "install")
+                && calls("com/craftix/hostile_humans/entity/ai/HumanNavigation", "installRoute", root + "HumanTerrainSafety", "assessPath"),
+                "real route installation passes original-execution admission before terrain assessment");
         check(calls(root + "HumanSafeJumpControl", "jump", root + "HumanTerrainSafety", "safeCombatJump"), "voluntary jumps check landing including extra height");
         check(calls(root + "RetreatPathSafety", "isSafe", root + "HumanTerrainSafety", "safePath"), "retreat shares height safety");
         for (String goal : new String[]{"BowAttack", "CrossbowGoal"}) {

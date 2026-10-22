@@ -19,16 +19,23 @@ public final class MovementContinuity {
         boolean pendingFullSearch;
         double climbY;
         Vec3 step;
+        dev.felix.hostilehumans.core.ActionCoordinator.Token stepSource;
         Vec3 progressPosition;
         Path route;
         Path repairedFrom, repairedRoute;
     }
     private MovementContinuity() {}
 
+    public static void clear(Human human) {
+        STATES.remove(human);
+        OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.CONTINUITY);
+    }
     /** A final terrain veto must invalidate a previously requested local input as well. */
     public static void cancelStep(Human human) {
         State state = STATES.get(human);
-        if (state != null) state.step = null;
+        if (state != null && (!HumanGoalExecutionBridge.bound(human)
+                || !HumanGoalExecutionBridge.ownsBaseMove(human, state.stepSource)
+                || java.util.Objects.equals(state.stepSource, HumanNavigationOwnership.currentToken(human)))) state.step = null;
     }
 
     public static void tick(Human human) {
@@ -174,6 +181,8 @@ public final class MovementContinuity {
                     || !human.level().getWorldBorder().isWithinBounds(pos)
                     || RetreatPathSafety.isHazard(human, pos)) return false;
         }
+        if (HumanGoalExecutionBridge.bound(human) && HumanNavigationOwnership.writeToken(human) == null) return false;
+        state.stepSource = HumanNavigationOwnership.writeToken(human);
         state.step = candidate;
         state.route = route;
         state.stepUntil = human.tickCount + 5;
@@ -207,6 +216,8 @@ public final class MovementContinuity {
                 || !Double.isFinite(destination.x) || !Double.isFinite(destination.y)
                 || !Double.isFinite(destination.z)) return;
         State state = STATES.computeIfAbsent(human, ignored -> new State());
+        if (HumanGoalExecutionBridge.bound(human) && HumanNavigationOwnership.writeToken(human) == null) return;
+        state.stepSource = HumanNavigationOwnership.writeToken(human);
         state.step = destination;
         state.route = null;
         state.stepUntil = human.tickCount + 2;
@@ -227,6 +238,7 @@ public final class MovementContinuity {
             state.step = null;
             return;
         }
-        human.getMoveControl().setWantedPosition(state.step.x, state.step.y, state.step.z, routeSpeed(human));
+        if (!HumanNavigationOwnership.continueExecution(human, state.stepSource, () ->
+                human.getMoveControl().setWantedPosition(state.step.x, state.step.y, state.step.z, routeSpeed(human)))) state.step = null;
     }
 }

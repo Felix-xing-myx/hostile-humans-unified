@@ -12,6 +12,7 @@ public final class RuntimePoliciesTest {
     public static void main(String[] args) {
         ActionCoordinatorTest.main(args);
         RouteExecutionLeaseTest.main(args);
+        InputExecutionLeaseTest.main(args);
         SoundExclusionMemory sounds=new SoundExclusionMemory();
         sounds.fail("a",0,0,0,0,10,0,0,400,6,4,8,8);
         check(sounds.blocked("a",1,0,0,0,15,4,0));

@@ -1070,6 +1070,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             this.getNavigation().stop();
             this.clearRangedStrafeMotion();
             club.someoneice.humangunner.MovementContinuity.cancelStep(this);
+            if (this.moveControl instanceof HumanMoveControl control
+                    && !control.inputAuthority.request(this, HumanMoveControl.WATER_HOLD, false)) return;
             this.waterCombatHoldingTick = this.tickCount;
             this.directWaterCombatSteeringTick = Integer.MIN_VALUE;
             return;
@@ -1210,16 +1212,24 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     /** Drop the lateral command from a ranged goal before melee takes over. */
     public void clearRangedStrafeMotion() {
         if (this.moveControl instanceof HumanMoveControl control) {
-            control.clearCombatStrafe();
+            if (!control.clearCombatStrafe()) return;
         }
         this.setXxa(0.0F);
+    }
+
+    /** Root session cleanup only: retire AI commands without erasing physical knockback or falling. */
+    public void humanGunner$cancelMovementExecution() {
+        this.groundNavigation.stop(); this.waterNavigation.stop();
+        this.stopSeekingShore();
+        this.directWaterCombatSteeringTick = this.waterCombatHoldingTick = this.directWaterLootSteeringTick = this.directWaterRetreatTick = Integer.MIN_VALUE;
+        if (this.moveControl instanceof HumanMoveControl control) control.cancelExecutionInputs();
+        this.setSpeed(0); this.setXxa(0); this.setZza(0);
     }
 
     /** A current melee spacing request is not leftover bow/gun strafing. */
     public void strafeMelee(float forward, float right) {
         if (this.moveControl instanceof HumanMoveControl control) {
-            control.strafe(forward, right);
-            control.meleeSpacingStrafe = true;
+            control.requestStrafe(forward, right, true);
         }
     }
 
@@ -2501,7 +2511,16 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         return null;
     }
 
-    public void travel(Vec3 p_32394_) {
+    public void travel(Vec3 input) {
+        if (!this.level().isClientSide && club.someoneice.humangunner.HumanGoalExecutionBridge.bound(this)) {
+            if (this.moveControl instanceof HumanMoveControl control && control.appliedTick == this.tickCount
+                    && club.someoneice.humangunner.HumanNavigationOwnership.continueExecution(this, control.appliedSource,
+                            () -> travelWithMovementInput(input))) return;
+            // Reject autonomous commands only. Existing physical momentum, gravity and buoyancy still run.
+            travelWithMovementInput(new Vec3(0, input.y, 0));
+        } else travelWithMovementInput(input);
+    }
+    private void travelWithMovementInput(Vec3 p_32394_) {
         p_32394_ = club.someoneice.humangunner.HumanTerrainSafety.guardTravel(this, p_32394_);
         if (this.isEffectiveAi() && this.shouldUseWaterMovement()) {
             this.moveRelative(0.01f, p_32394_);
@@ -2603,22 +2622,43 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         private float combatStrafeForward;
         private float combatStrafeRight;
         private boolean meleeSpacingStrafe;
+        private dev.felix.hostilehumans.core.ActionCoordinator.Token appliedSource;
+        private int appliedTick = Integer.MIN_VALUE;
+        private void cancelExecutionInputs() {
+            inputAuthority.cancel(); appliedSource = null; appliedTick = Integer.MIN_VALUE;
+            clearCombatStrafeRaw(); operation = MoveControl.Operation.WAIT; shorePopTicks = 0;
+        }
+        private final club.someoneice.humangunner.HumanMovementInputAuthority inputAuthority = new club.someoneice.humangunner.HumanMovementInputAuthority();
+        private static final club.someoneice.humangunner.HumanMovementInputAuthority.Channel WANTED = club.someoneice.humangunner.HumanMovementInputAuthority.Channel.WANTED;
+        private static final club.someoneice.humangunner.HumanMovementInputAuthority.Channel STRAFE = club.someoneice.humangunner.HumanMovementInputAuthority.Channel.STRAFE;
+        private static final club.someoneice.humangunner.HumanMovementInputAuthority.Channel WATER_HOLD = club.someoneice.humangunner.HumanMovementInputAuthority.Channel.WATER_HOLD;
 
         public HumanMoveControl(Human p_32433_) {
             super((Mob)p_32433_);
             this.human = p_32433_;
         }
 
-        @Override
-        public void strafe(float forward, float right) {
+        @Override public void setWantedPosition(double x, double y, double z, double speed) {
+            if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z) || !Double.isFinite(speed)
+                    || !inputAuthority.request(human, WANTED, speed <= 0)) return;
+            super.setWantedPosition(x, y, z, speed);
+        }
+        @Override public void strafe(float forward, float right) { requestStrafe(forward, right, false); }
+        private void requestStrafe(float forward, float right, boolean melee) {
+            if (!Float.isFinite(forward) || !Float.isFinite(right)
+                    || !inputAuthority.request(human, STRAFE, forward == 0 && right == 0)) return;
             super.strafe(forward, right);
-            this.meleeSpacingStrafe = false;
+            this.meleeSpacingStrafe = melee;
             this.combatStrafeTick = this.human.tickCount;
             this.combatStrafeForward = forward;
             this.combatStrafeRight = right;
         }
-
-        private void clearCombatStrafe() {
+        private boolean clearCombatStrafe() {
+            if (!inputAuthority.clear(human, STRAFE)) return false;
+            clearCombatStrafeRaw(); return true;
+        }
+        private void clearCombatStrafeRaw() {
+            inputAuthority.discard(STRAFE);
             this.meleeSpacingStrafe = false;
             this.combatStrafeTick = Integer.MIN_VALUE;
             this.combatStrafeForward = 0.0F;
@@ -2632,6 +2672,32 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
         public void tick() {
             club.someoneice.humangunner.MovementContinuity.applyStep(this.human);
+            if (!inputAuthority.live(human, STRAFE)) clearCombatStrafeRaw();
+            appliedSource = null; appliedTick = Integer.MIN_VALUE;
+            if (!inputAuthority.live(human, WATER_HOLD)) human.waterCombatHoldingTick = Integer.MIN_VALUE;
+            boolean strafe = this.combatStrafeTick == human.tickCount
+                    && (combatStrafeForward != 0 || combatStrafeRight != 0) && !human.isFleeing && !human.seekingShore
+                    && !human.hasShieldFacing();
+            var channel = human.waterCombatHoldingTick == human.tickCount && human.hasWaterCombatMovementInput()
+                    ? WATER_HOLD : strafe ? STRAFE : WANTED;
+            if (!inputAuthority.execute(human, channel, () -> {
+                appliedSource = inputAuthority.source(channel); appliedTick = human.tickCount;
+                Vec3 physicalBefore = human.getDeltaMovement();
+                tickOwnedMovement();
+                if (club.someoneice.humangunner.HumanGoalExecutionBridge.bound(human)
+                        && !club.someoneice.humangunner.HumanGoalExecutionBridge.ownsBaseMove(human, appliedSource)) {
+                    Vec3 after = human.getDeltaMovement();
+                    human.setDeltaMovement(physicalBefore.x, after.y, physicalBefore.z);
+                    cancelExecutionInputs(); human.setSpeed(0); human.setXxa(0); human.setZza(0);
+                } else human.setDeltaMovement(club.someoneice.humangunner.HumanTerrainSafety.guardSteeringImpulse(
+                        human, physicalBefore, human.getDeltaMovement()));
+            })) {
+                operation = MoveControl.Operation.WAIT;
+                clearCombatStrafeRaw();
+                human.setSpeed(0); human.setXxa(0); human.setZza(0);
+            }
+        }
+        private void tickOwnedMovement() {
             this.human.facePendingBetterCombatAttack();
             if (this.shorePopCooldownTicks > 0) {
                 this.shorePopCooldownTicks--;
@@ -2651,10 +2717,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // supply sprint and potion effects. Bound malformed control requests.
             this.speedModifier = Double.isFinite(this.speedModifier)
                     ? Mth.clamp(this.speedModifier, 0.0D, 3.0D) : 0.0D;
-            if (this.human.hasShieldFacing()) clearCombatStrafe();
+            if (this.human.hasShieldFacing()) clearCombatStrafeRaw();
             if (this.human.waterCombatHoldingTick == this.human.tickCount
                     && this.human.hasWaterCombatMovementInput()) {
-                clearCombatStrafe();
+                clearCombatStrafeRaw();
                 club.someoneice.humangunner.HumanAttention.movement(this.human,this.human.getX(),this.human.getZ(),true);
                 this.operation = MoveControl.Operation.WAIT;
                 this.human.setSpeed(0);
@@ -2671,7 +2737,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // of that operation, but never override a retreat or shore route.
             if (HumanUtil.isMeleeWeapon(this.human.getMainHandItem())
                     && this.combatStrafeRight != 0.0F && !this.meleeSpacingStrafe) {
-                clearCombatStrafe();
+                clearCombatStrafeRaw();
             }
             if (this.combatStrafeTick == this.human.tickCount
                     && (this.combatStrafeForward != 0.0F || this.combatStrafeRight != 0.0F)

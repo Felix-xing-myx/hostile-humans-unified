@@ -46,6 +46,16 @@ public final class HumanNavigationOwnership {
         return navigation instanceof OwnedNavigation owned
                 && owned.movementOwnership().runInstalled(human, navigation.getPath(), execution);
     }
+    /** A delayed local input keeps the exact token captured by its real requester. */
+    public static boolean continueExecution(Human human, ActionCoordinator.Token token, Runnable execution) {
+        if (!HumanGoalExecutionBridge.bound(human)) { execution.run(); return true; }
+        if (!HumanGoalExecutionBridge.ownsBaseMove(human, token)) return false;
+        if (HumanGoalExecutionBridge.insideCallback(human) && !token.equals(writeToken(human))) return false;
+        Context previous = CONTINUATION.get();
+        CONTINUATION.set(new Context(human, token));
+        try { execution.run(); return true; }
+        finally { if (previous == null) CONTINUATION.remove(); else CONTINUATION.set(previous); }
+    }
     /** Read an existing context, including stop cleanup; does not acquire permissions. */
     public static ActionCoordinator.Token currentToken(Human human) {
         if (HumanGoalExecutionBridge.insideCallback(human)) return HumanGoalExecutionBridge.currentExecutionToken(human);

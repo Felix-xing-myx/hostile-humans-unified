@@ -46,6 +46,8 @@ public final class HumanBehaviorControl {
             // Old movement callbacks may release their own route, but cannot acquire a new action in cleanup.
             Runnable[] cleanup = {
                     () -> HumanGoalExecutionBridge.cancel(human, reason),
+                    () -> human.humanGunner$cancelMovementExecution(),
+                    () -> MovementContinuity.clear(human),
                     () -> GunCustody.cancelBackgroundReloads(human),
                     () -> MeleeActionControl.clear(human, reason),
                     () -> NpcDualWield.clear(human),

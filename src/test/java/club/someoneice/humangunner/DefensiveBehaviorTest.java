@@ -99,7 +99,8 @@ public final class DefensiveBehaviorTest {
                     "autonomous goal has no enderman exclusion");
         check(calls(HUMAN, "tick", "hasShieldFacing") && calls(HUMAN, "tick", "applyShieldFacing"),
                 "defensive facing restored after navigation and body controls");
-        check(calls(HUMAN + "$HumanMoveControl", "tick", "moveWhileShieldFacing"),
+        check(calls(HUMAN + "$HumanMoveControl", "tick", "execute")
+                        && calls(HUMAN + "$HumanMoveControl", "tickOwnedMovement", "moveWhileShieldFacing"),
                 "movement keeps target-facing shield orientation before travel, not only visually");
         check(calls(SHIELDS, "tickCombat", "markShieldFacingDirection")
                         && calls(SHIELDS, "tickCombat", "meleeBearings"),
@@ -161,7 +162,8 @@ public final class DefensiveBehaviorTest {
         Vec3 overhead = MeleeCombatRange.aimPoint(attackOrigin, new AABB(-0.3, 2, -0.3, 0.3, 3, 0.3));
         check(overhead.x == 0.0D && overhead.z == 0.0D && overhead.y > attackOrigin.y,
                 "directly overhead aim is finite and vertical");
-        check(calls(HUMAN + "$HumanMoveControl", "tick", "facePendingBetterCombatAttack"),
+        check(calls(HUMAN + "$HumanMoveControl", "tick", "execute")
+                        && calls(HUMAN + "$HumanMoveControl", "tickOwnedMovement", "facePendingBetterCombatAttack"),
                 "navigation cannot rotate pending attacks toward a path node");
         check(calls(SHIELDS, "findIncomingArrow", "impactTicks")
                         && calls(SHIELDS, "findIncomingArrow", "describe"),
@@ -185,8 +187,18 @@ public final class DefensiveBehaviorTest {
     }
 
     private static boolean calls(String owner, String method, String called) throws Exception {
-        for (var instruction : method(owner, method).instructions)
+        return callsIncludingLambda(owner, method, called, new java.util.HashSet<>());
+    }
+    private static boolean callsIncludingLambda(String owner, String name, String called, java.util.Set<String> visited) throws Exception {
+        if (!visited.add(name)) return false;
+        for (var instruction : method(owner, name).instructions) {
             if (instruction instanceof MethodInsnNode call && call.name.equals(called)) return true;
+            if (instruction instanceof org.objectweb.asm.tree.InvokeDynamicInsnNode dynamic)
+                for (Object argument : dynamic.bsmArgs)
+                    if (argument instanceof org.objectweb.asm.Handle handle && handle.getOwner().equals(owner)
+                            && handle.getName().startsWith("lambda$")
+                            && callsIncludingLambda(owner, handle.getName(), called, visited)) return true;
+        }
         return false;
     }
 

@@ -11,7 +11,7 @@ import net.minecraft.world.phys.Vec3;
 public final class HumanTerrainSafety {
     private HumanTerrainSafety() {}
 
-    public enum Reason { SAFE, UNAVAILABLE, HAZARD, EXCESSIVE_DROP, UNSUPPORTED, BLOCKED_SHORE }
+    public enum Reason { SAFE, UNAVAILABLE, HAZARD, EXCESSIVE_DROP, UNSUPPORTED, BLOCKED_SHORE, OUTSIDE_ORDER }
     public record Assessment(Reason reason, BlockPos from, BlockPos to) {
         private static final Assessment CLEAR = new Assessment(Reason.SAFE, null, null);
         public boolean safe() { return reason == Reason.SAFE; }
@@ -219,11 +219,11 @@ public final class HumanTerrainSafety {
                         input.z * Math.cos(yaw) + input.x * Math.sin(yaw))
                 : motionBefore.multiply(1, 0, 1);
         double ahead = Math.min(4.0D, Math.max(0.9D, motionBefore.horizontalDistance() * 3.0D + 0.5D));
-        Assessment inputSafety = assessStep(human, direction.normalize().scale(pathLookahead(human, direction, ahead)));
+        Assessment inputSafety = assessSteering(human, direction.normalize().scale(pathLookahead(human, direction, ahead)));
         // A new sideways/backward command does not instantly redirect velocity.
         // Check the old trajectory too, unless it came from an external hit.
         Assessment momentumSafety = human.hurtTime > 0 || motionBefore.horizontalDistanceSqr() < 0.0025D
-                ? Assessment.CLEAR : assessStep(human, motionBefore.multiply(1, 0, 1).normalize()
+                ? Assessment.CLEAR : assessSteering(human, motionBefore.multiply(1, 0, 1).normalize()
                         .scale(pathLookahead(human, motionBefore, ahead)));
         if (inputSafety.safe() && momentumSafety.safe()) return input;
         CombatTerrainNavigation.blocked(human, inputSafety.safe() ? momentumSafety : inputSafety);
@@ -234,6 +234,45 @@ public final class HumanTerrainSafety {
         }
         human.getNavigation().stop();
         return new Vec3(0, input.y, 0);
+    }
+
+    /** Steering additions are AI-owned. Reject them without deleting pre-existing physical momentum. */
+    public static Vec3 guardSteeringImpulse(Human human, Vec3 before, Vec3 after) {
+        if (human.level().isClientSide || !human.isEffectiveAi() || human.isInLava() || human.onClimbable()) return after;
+        Vec3 delta = after.subtract(before).multiply(1, 0, 1);
+        if (delta.horizontalDistanceSqr() < 1.e-8) return after;
+        // In-place water braking does not propel the entity toward the opposite direction.
+        if (after.horizontalDistanceSqr() <= before.horizontalDistanceSqr()
+                && before.x * after.x + before.z * after.z >= 0
+                && Math.abs(before.x * after.z - before.z * after.x) < 1.e-8) return after;
+        Assessment assessment = assessSteering(human, delta.normalize().scale(Math.max(.25, after.horizontalDistance())));
+        if (assessment.safe()) return after;
+        CombatTerrainNavigation.blocked(human, assessment);
+        human.getNavigation().stop();
+        return new Vec3(before.x, after.y, before.z);
+    }
+
+    /** Check the actual next movement envelope; ordinary collision/step resolution remains native travel/move. */
+    private static Assessment assessSteering(Human human, Vec3 offset) {
+        double length = offset.horizontalDistance();
+        if (!Double.isFinite(length) || !Double.isFinite(offset.y) || length > 4)
+            return new Assessment(Reason.UNAVAILABLE, human.blockPosition(), human.blockPosition());
+        double speed = human.getSpeed(), momentum = human.getDeltaMovement().horizontalDistance();
+        if (!Double.isFinite(speed) || !Double.isFinite(momentum))
+            return new Assessment(Reason.UNAVAILABLE, human.blockPosition(), human.blockPosition());
+        double immediate = Math.min(length, Math.max(.05, Math.max(0, speed) + momentum));
+        Vec3 step = length < 1.e-8 ? Vec3.ZERO : offset.normalize().scale(immediate);
+        Vec3 point = human.position().add(step);
+        BlockPos to = BlockPos.containing(point);
+        if (!SoldierOrder.allowsNavigationPosition(human, point))
+            return new Assessment(Reason.OUTSIDE_ORDER, human.blockPosition(), to);
+        var body = human.getBoundingBox().expandTowards(step).deflate(1.e-5);
+        BlockPos min = BlockPos.containing(body.minX, body.minY, body.minZ);
+        BlockPos max = BlockPos.containing(body.maxX, body.maxY, body.maxZ);
+        if (!human.level().hasChunksAt(min, max) || !human.level().getWorldBorder().isWithinBounds(min)
+                || !human.level().getWorldBorder().isWithinBounds(max))
+            return new Assessment(Reason.UNAVAILABLE, human.blockPosition(), to);
+        return assessStep(human, offset);
     }
 
     /** Do not extrapolate a straight input beyond an imminent path corner into a cliff. */
