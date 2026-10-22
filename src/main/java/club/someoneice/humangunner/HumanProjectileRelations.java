@@ -19,16 +19,24 @@ public final class HumanProjectileRelations {
     /** Explosion hit lists are independent of projectile collision candidates. */
     static void onProjectileExplosion(ExplosionEvent.Detonate event) {
         Entity direct = event.getExplosion().getDirectSourceEntity();
+        if (direct == null) direct = ThrowableEffectContext.source();
+        final Entity origin = direct;
         Entity nativeOwner = JegCompat.projectileOwner(direct);
         Entity attacker = nativeOwner != null ? nativeOwner : event.getExplosion().getIndirectSourceEntity();
-        if (!(attacker instanceof Player) && !(direct instanceof Projectile) && nativeOwner == null) return;
-        event.getAffectedEntities().removeIf(candidate -> HumanOwnerProtection.protects(candidate, attacker)
+        if (!(attacker instanceof Player) && !(direct instanceof Projectile) && nativeOwner == null
+                && !ThrowableSource.recordedHuman(direct)) return;
+        event.getAffectedEntities().removeIf(candidate -> ThrowableSource.protectsWithoutOwner(origin, candidate)
+                || HumanOwnerProtection.protects(candidate, attacker)
                 || (nativeOwner != null && passesThroughFromOwner(nativeOwner, candidate))
-                || (direct instanceof Projectile projectile && passesThrough(projectile, candidate)));
+                || (origin instanceof Projectile projectile && passesThrough(projectile, candidate)));
     }
 
     /** Protect both owner/soldier directions before hurt feedback and retaliation listeners. */
     static void onProtectedPlayerAttack(LivingAttackEvent event) {
+        if (ThrowableEffectContext.protects(event.getEntity())
+                || ThrowableSource.protectsWithoutOwner(event.getSource().getDirectEntity(), event.getEntity())) {
+            event.setCanceled(true); return;
+        }
         if (event.getEntity() instanceof Human human && HumanOwnerProtection.blocksDamage(human, event.getSource())) {
             event.setCanceled(true);
             return;
@@ -39,7 +47,14 @@ public final class HumanProjectileRelations {
     }
 
     public static boolean passesThrough(Projectile projectile, Entity candidate) {
-        return passesThroughFromOwner(projectile.getOwner(), candidate);
+        return passesThroughEntity(projectile, candidate);
+    }
+    /** Native area effects reuse their original victim query; never scan for a replacement owner. */
+    public static boolean passesThroughEntity(Entity source, Entity candidate) {
+        if (ThrowableSource.recordedHuman(source)
+                && source.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return true;
+        return passesThroughFromOwner(ThrowableSource.nativeOwner(source), candidate)
+                || ThrowableSource.protectsWithoutOwner(source, candidate);
     }
 
     /** Some native projectile APIs expose a shooter without setting vanilla owner. */

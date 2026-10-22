@@ -25,6 +25,49 @@ public enum SoldierCombatMode {
     private static final int MAX_AUTHORIZED_TARGETS = 8;
     private static final long AUTHORIZATION_TICKS = 200L;
 
+    public record OriginAuthorization(UUID target, long until, String cause) { }
+    /** The existing eight command facts and their original deadlines, never an alliance list. */
+    public record OriginPermissions(SoldierCombatMode mode, java.util.List<OriginAuthorization> entries) {
+        public OriginPermissions { entries = java.util.List.copyOf(entries).stream().limit(MAX_AUTHORIZED_TARGETS).toList(); }
+        public boolean permits(UUID target, long now) {
+            for (var entry : entries) if (entry.target().equals(target) && now <= entry.until())
+                return SoldierCombatMode.permits(mode, entry.cause());
+            return false;
+        }
+        public net.minecraft.nbt.CompoundTag save() {
+            var tag = new net.minecraft.nbt.CompoundTag();
+            tag.putString("mode", mode.name());
+            var list = new net.minecraft.nbt.ListTag();
+            for (var entry : entries) {
+                var row = new net.minecraft.nbt.CompoundTag(); row.putUUID("target", entry.target());
+                row.putLong("until", entry.until()); row.putString("cause", entry.cause()); list.add(row);
+            }
+            tag.put("commands", list); return tag;
+        }
+        public static OriginPermissions load(net.minecraft.nbt.CompoundTag tag) {
+            SoldierCombatMode mode;
+            try { mode = valueOf(tag.getString("mode")); }
+            catch (IllegalArgumentException exception) { return new OriginPermissions(SELF_DEFENSE, java.util.List.of()); }
+            var rows = tag.getList("commands", 10);
+            var entries = new java.util.ArrayList<OriginAuthorization>();
+            for (int i = 0; i < Math.min(MAX_AUTHORIZED_TARGETS, rows.size()); i++) {
+                var row = rows.getCompound(i);
+                if (row.hasUUID("target")) entries.add(new OriginAuthorization(row.getUUID("target"), row.getLong("until"), row.getString("cause")));
+            }
+            return new OriginPermissions(mode, entries);
+        }
+    }
+    public static OriginPermissions originPermissions(Human human) {
+        var entries = new java.util.ArrayList<OriginAuthorization>();
+        for (int i = 0; i < MAX_AUTHORIZED_TARGETS; i++) {
+            String key = slotKey(AUTHORIZED_TARGET, i);
+            if (human.getPersistentData().hasUUID(key)) entries.add(new OriginAuthorization(
+                    human.getPersistentData().getUUID(key), human.getPersistentData().getLong(slotKey(AUTHORIZED_UNTIL, i)),
+                    human.getPersistentData().getString(slotKey(AUTHORIZED_CAUSE, i))));
+        }
+        return new OriginPermissions(get(human), entries);
+    }
+
     public static SoldierCombatMode get(Human human) {
         String value = human.getPersistentData().getString(MODE);
         try {

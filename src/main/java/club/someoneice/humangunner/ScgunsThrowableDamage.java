@@ -16,7 +16,7 @@ final class ScgunsThrowableDamage {
     static void onDamage(LivingHurtEvent event) {
         if (event.getEntity().level().isClientSide
                 || !(event.getSource().getDirectEntity() instanceof ThrowableItemEntity projectile)
-                || !(projectile.getOwner() instanceof Human)) return;
+                || !(projectile.getOwner() instanceof Human) && !ThrowableSource.recordedHuman(projectile)) return;
         ScgunsSettings settings = UnifiedConfig.get().scguns();
         if (!settings.enabled()) return;
         String id = BuiltInRegistries.ITEM.getKey(projectile.getItem().getItem()).toString();

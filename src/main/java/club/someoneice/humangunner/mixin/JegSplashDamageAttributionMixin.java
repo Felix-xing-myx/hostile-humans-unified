@@ -19,6 +19,7 @@ public abstract class JegSplashDamageAttributionMixin {
             target = "Lnet/minecraft/world/entity/LivingEntity;m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z"),
             require = 2, allow = 2)
     private boolean hostileHumans$attributeWaterDamage(LivingEntity victim, DamageSource original, float amount) {
+        if (club.someoneice.humangunner.HumanProjectileRelations.passesThroughEntity((Entity) (Object) this, victim)) return false;
         LivingEntity owner = getOwner();
         DamageSource attributed = owner instanceof Human
                 ? new DamageSource(original.typeHolder(), (Entity) (Object) this, owner) : original;

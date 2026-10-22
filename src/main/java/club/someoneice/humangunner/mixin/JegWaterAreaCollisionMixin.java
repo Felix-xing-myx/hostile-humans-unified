@@ -22,6 +22,7 @@ public abstract class JegWaterAreaCollisionMixin {
             require = 1, allow = 1)
     private List<Entity> hostileHumans$waterCandidates(Level level, Entity except, AABB box) {
         return level.getEntities(except, box,
-                candidate -> !HumanProjectileRelations.passesThroughFromOwner(getOwner(), candidate));
+                candidate -> !HumanProjectileRelations.passesThroughFromOwner(getOwner(), candidate)
+                        && !HumanProjectileRelations.passesThroughEntity((Entity) (Object) this, candidate));
     }
 }

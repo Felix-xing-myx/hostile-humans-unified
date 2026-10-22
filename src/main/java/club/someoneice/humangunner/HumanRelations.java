@@ -49,6 +49,69 @@ public final class HumanRelations {
 
     private HumanRelations() {}
 
+    /** Immutable origin identity plus existing bounded permission/incident facts, not resolved relationships. */
+    public record OriginIdentity(UUID human, UUID owner, long ownerUntil, String tier,
+                                 UUID forcedHostilePlayer, UUID lastAttacker, long retaliationUntil,
+                                 SoldierCombatMode.OriginPermissions commands, StandingEffects.OriginPolitics politics) {
+        public UUID effectiveOwner(long now) { return ownerUntil == 0 || now < ownerUntil ? owner : null; }
+        public net.minecraft.nbt.CompoundTag save() {
+            var tag = new net.minecraft.nbt.CompoundTag(); tag.putUUID("human", human);
+            if (owner != null) tag.putUUID("owner", owner);
+            tag.putLong("owner_until", ownerUntil); tag.putString("tier", tier);
+            if (forcedHostilePlayer != null) tag.putUUID("forced", forcedHostilePlayer);
+            if (lastAttacker != null) tag.putUUID("last_attacker", lastAttacker);
+            tag.putLong("retaliation_until", retaliationUntil);
+            tag.put("commands", commands.save()); tag.put("politics", politics.save()); return tag;
+        }
+        public static OriginIdentity load(net.minecraft.nbt.CompoundTag tag) {
+            if (!tag.hasUUID("human")) return null;
+            return new OriginIdentity(tag.getUUID("human"), tag.hasUUID("owner") ? tag.getUUID("owner") : null,
+                    tag.getLong("owner_until"), tag.getString("tier"), tag.hasUUID("forced") ? tag.getUUID("forced") : null,
+                    tag.hasUUID("last_attacker") ? tag.getUUID("last_attacker") : null, tag.getLong("retaliation_until"),
+                    SoldierCombatMode.OriginPermissions.load(tag.getCompound("commands")),
+                    StandingEffects.OriginPolitics.load(tag.getCompound("politics")));
+        }
+    }
+    public static OriginIdentity originIdentity(Human human) {
+        long now = human.level().getGameTime();
+        UUID owner = effectiveOwner(human);
+        LivingEntity attacker = human.getLastHurtByMob();
+        int age = human.tickCount - human.getLastHurtByMobTimestamp();
+        boolean recent = attacker != null && HumanRelationshipPolicy.recentRetaliation(age, BEACON_RETALIATION_TICKS);
+        return new OriginIdentity(human.getUUID(), owner, human.hasOwner() ? 0 : human.getPersistentData().getLong(TEMP_UNTIL),
+                TierAttributes.key(human), human.getPersistentData().hasUUID(FORCED_HOSTILE_TARGET)
+                    ? human.getPersistentData().getUUID(FORCED_HOSTILE_TARGET) : null,
+                recent ? attacker.getUUID() : null, recent ? now + BEACON_RETALIATION_TICKS - age : Long.MIN_VALUE,
+                SoldierCombatMode.originPermissions(human), StandingEffects.originPolitics(human));
+    }
+    /** The same relationship branches as relation(Human,Entity), with current target/owner politics. */
+    public static boolean originAlliedToHuman(OriginIdentity source, Human target) {
+        long now = target.level().getGameTime();
+        UUID owner = source.effectiveOwner(now), second = effectiveOwner(target);
+        if (owner != null && second != null)
+            return HumanRelationshipPolicy.ownedHumansAllied(owner, second, UnifiedConfig.get().allowHiredPvpDamage());
+        if (owner != null) {
+            if (source.commands().permits(target.getUUID(), now)) return false;
+            LivingEntity last = target.getLastHurtByMob();
+            if (last != null && last.getUUID().equals(source.human())
+                    && HumanRelationshipPolicy.recentRetaliation(target.tickCount - target.getLastHurtByMobTimestamp(), BEACON_RETALIATION_TICKS)) return false;
+            if (beaconThreatensOwner(target, owner)) return false;
+            Player player = target.level().getPlayerByUUID(owner);
+            return player != null && relation(target, player).friendly();
+        }
+        if (second != null) {
+            if (SoldierCombatMode.originPermissions(target).permits(source.human(), now)) return false;
+            if (source.lastAttacker() != null && source.lastAttacker().equals(target.getUUID()) && now <= source.retaliationUntil()) return false;
+            if (second.equals(source.forcedHostilePlayer())) return false;
+            Player player = target.level().getPlayerByUUID(second);
+            return player != null && !player.getUUID().equals(source.forcedHostilePlayer())
+                    && StandingEffects.neutralTo(source.politics(), player, now);
+        }
+        if (source.politics().roamer() || target.getTier() == com.craftix.hostile_humans.entity.entities.HumanTier.ROAMER) return false;
+        return HumanFactions.enabled() ? FactionDefinitions.allies(source.politics().faction(), HumanFactions.id(target))
+                : source.tier().equals(TierAttributes.key(target));
+    }
+
     static boolean isOwnedBy(Human human, Player player) {
         return HumanRelationshipPolicy.isFormalOwner(human.hasOwner(), human.getOwnerUUID(), player.getUUID());
     }

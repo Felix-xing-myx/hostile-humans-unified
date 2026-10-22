@@ -16,18 +16,16 @@ final class ScgunsThrowables {
     static boolean supported(ItemStack stack) { return TacticalThrowables.supported(stack); }
     static void tick(Human human) {
         var settings = UnifiedConfig.get().scguns();
-        if (human.level().isClientSide || !settings.throwablesEnabled() || human.isFleeing || human.isUsingItem()
-                || human.getData() == null || !human.isAlive() || human.getTarget() == null
+        if (human.level().isClientSide || !settings.throwablesEnabled() || human.getData() == null || !human.isAlive() || human.getTarget() == null
                 || (human.tickCount + Math.floorMod(human.getId(), 20)) % 20 != 0) return;
         long now = human.level().getGameTime();
         if (now < human.getPersistentData().getLong(READY)) return;
         // Failed preflight is also throttled; large armies do not rescan every tick.
         human.getPersistentData().putLong(READY, now + 40);
         LivingEntity target = human.getTarget();
-        if (!target.isAlive() || !human.canAttack(target) || !SoldierOrder.allowsTarget(human, target)
-                || HumanRelations.allied(human, target) || !human.getSensing().hasLineOfSight(target)) return;
+        if (!ThrowableTransactions.available(human, target)) return;
         double distance = human.distanceTo(target);
-        if (distance < settings.throwMinRange() || distance > settings.throwMaxRange()) return;
+        if (distance < settings.throwMinRange() || distance > Math.min(32, settings.throwMaxRange())) return;
         boolean hasThrowable = false;
         for (int slot = 0; slot < human.getData().getInventoryItemsSize(); slot++) {
             ItemStack stack = human.getData().getInventoryItem(slot);
@@ -38,6 +36,7 @@ final class ScgunsThrowables {
             }
         }
         if (!hasThrowable) return;
+        final LivingEntity primary = target;
         ClusterAim cluster = clusterAim(human, target, settings);
         target = cluster.target();
         for (int slot = 0; slot < human.getData().getInventoryItemsSize(); slot++) {
@@ -55,16 +54,18 @@ final class ScgunsThrowables {
             ThrowPlan plan = plan(human, target, origin, physics.gravity(), physics.bouncing(),
                     physics.horizon(), settings.throwSpeed());
             if (plan == null || !safeArea(human, plan.impact(), safety)) continue;
-            ThrowableProjectile projectile = TacticalThrowables.create(human, stack, settings.fuseTicks());
-            if (projectile == null) continue;
-            projectile.setPos(origin);
-            Vec3 velocity = plan.velocity();
-            // Native Projectile.shoot initializes both movement and rotation; no random spread.
-            projectile.shoot(velocity.x, velocity.y, velocity.z, (float) velocity.length(), 0);
-            // Settle the real stack only after the server accepted the native projectile.
-            if (!human.level().addFreshEntity(projectile)) return;
-            ItemStack remainder = stack.copy(); remainder.shrink(1);
-            human.getData().setInventoryItem(slot, remainder);
+            final LivingEntity aimTarget = target;
+            final ItemStack selected = stack;
+            boolean thrown = ThrowableTransactions.submit(human, aimTarget, primary, slot,
+                    actual -> actual == selected && supported(actual), one -> {
+                ThrowableProjectile projectile = TacticalThrowables.create(human, one, settings.fuseTicks());
+                if (projectile == null) return null;
+                projectile.setPos(origin);
+                Vec3 velocity = plan.velocity();
+                projectile.shoot(velocity.x, velocity.y, velocity.z, (float) velocity.length(), 0);
+                return projectile;
+            });
+            if (!thrown) return;
             int cooldown = cluster.count() >= settings.clusterMinimumTargets()
                     ? Math.min(settings.throwCooldownTicks(), settings.clusterCooldownTicks())
                     : settings.throwCooldownTicks();
@@ -98,9 +99,9 @@ final class ScgunsThrowables {
                         || entity instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() == human
                         || BodyguardProtection.protectingFromExplosion(human, entity))
                         && !HumanRelations.allied(human, entity)
-                        && SoldierOrder.allowsTarget(human, entity))) {
+                        && SoldierOrder.allowsTarget(human, entity) && HumanPerception.canTarget(human, entity))) {
             double range = human.distanceTo(enemy);
-            if (range < settings.throwMinRange() || range > settings.throwMaxRange()
+            if (range < settings.throwMinRange() || range > Math.min(32, settings.throwMaxRange())
                     || !human.getSensing().hasLineOfSight(enemy)) continue;
             candidates.add(enemy);
             if (candidates.size() >= 16) break;

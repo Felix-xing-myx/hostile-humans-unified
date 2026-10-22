@@ -13,6 +13,7 @@ final class TacticalThrowables {
                 || JegCompat.enabled() && JegThrowables.supported(stack);
     }
     static void tick(Human human) {
+        PotionThrowing.tick(human);
         if (UnifiedConfig.get().scguns().enabled() && (ScgunsCompat.enabled() || JegCompat.enabled()))
             ScgunsThrowables.tick(human);
     }

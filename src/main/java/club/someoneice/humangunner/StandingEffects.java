@@ -12,24 +12,62 @@ import net.minecraft.world.entity.player.Player;
 import java.util.*;
 
 /** Political standing and short-term hostility. Never assigns a combat target or grants visual confirmation. */
-final class StandingEffects {
+public final class StandingEffects {
     private static final Map<Human, StandingIncidents> INCIDENTS = new WeakHashMap<>();
     private record Reward(String faction, int amount) {}
     private record PendingDeath(long tick, Attribution actor, String faction, List<Reward> rewards) {}
     private static final Map<Human, PendingDeath> DEATHS = new WeakHashMap<>();
     private StandingEffects() {}
+    /** Only incident deadlines are captured. Standing, identity bands and configuration remain live. */
+    public record OriginPolitics(String faction, boolean roamer, Map<UUID, Long> retaliationUntil) {
+        public OriginPolitics {
+            Map<UUID, Long> bounded = new LinkedHashMap<>();
+            retaliationUntil.entrySet().stream().limit(16).forEach(entry -> bounded.put(entry.getKey(), entry.getValue()));
+            retaliationUntil = Map.copyOf(bounded);
+        }
+        public net.minecraft.nbt.CompoundTag save() {
+            var tag = new net.minecraft.nbt.CompoundTag(); tag.putString("faction", faction); tag.putBoolean("roamer", roamer);
+            var rows = new net.minecraft.nbt.ListTag();
+            for (var entry : retaliationUntil.entrySet()) {
+                var row = new net.minecraft.nbt.CompoundTag(); row.putUUID("player", entry.getKey()); row.putLong("until", entry.getValue()); rows.add(row);
+            }
+            tag.put("incidents", rows); return tag;
+        }
+        public static OriginPolitics load(net.minecraft.nbt.CompoundTag tag) {
+            Map<UUID, Long> incidents = new LinkedHashMap<>(); var rows = tag.getList("incidents", 10);
+            for (int i = 0; i < Math.min(16, rows.size()); i++) {
+                var row = rows.getCompound(i); if (row.hasUUID("player")) incidents.put(row.getUUID("player"), row.getLong("until"));
+            }
+            return new OriginPolitics(tag.getString("faction"), tag.getBoolean("roamer"), incidents);
+        }
+    }
+    public static OriginPolitics originPolitics(Human human) {
+        var memory = INCIDENTS.get(human);
+        return new OriginPolitics(HumanFactions.id(human), human.getTier() == HumanTier.ROAMER,
+                memory == null ? Map.of() : memory.retaliationExpiries(human.level().getGameTime()));
+    }
+    static boolean neutralTo(OriginPolitics source, Player player, long now) {
+        return !source.roamer() && source.retaliationUntil().getOrDefault(player.getUUID(), Long.MIN_VALUE) <= now
+                && !StandingPolicy.hostile(effectiveStanding(source.faction(), source.roamer(), player));
+    }
     static int trueStanding(Human human, Player player) {
-        if (human.getTier() == HumanTier.ROAMER) return -500;
+        return trueStanding(HumanFactions.id(human), human.getTier() == HumanTier.ROAMER, player);
+    }
+    private static int trueStanding(String faction, boolean roamer, Player player) {
+        if (roamer) return -500;
         if (!UnifiedConfig.get().featureEnabled("standing", true)) return 100;
-        if (player.getServer() == null || FactionDefinitions.find(HumanFactions.id(human)) == null) return 100;
-        return FactionStandingData.get(player.getServer()).standing(player.getUUID(), HumanFactions.id(human));
+        if (player.getServer() == null || FactionDefinitions.find(faction) == null) return 100;
+        return FactionStandingData.get(player.getServer()).standing(player.getUUID(), faction);
     }
     static int effectiveStanding(Human human, Player player) {
-        int standing = trueStanding(human, player);
-        if (!UnifiedConfig.get().featureEnabled("standing", true) || human.getTier() == HumanTier.ROAMER) return standing;
+        return effectiveStanding(HumanFactions.id(human), human.getTier() == HumanTier.ROAMER, player);
+    }
+    private static int effectiveStanding(String faction, boolean roamer, Player player) {
+        int standing = trueStanding(faction, roamer, player);
+        if (!UnifiedConfig.get().featureEnabled("standing", true) || roamer) return standing;
         IdentityBands.Selection band = IdentityBands.selected(player);
-        int modifier = UnifiedConfig.get().factionRules().bandModifier(HumanFactions.id(human).equals(band.faction()),
-                FactionDefinitions.enemies(HumanFactions.id(human), band.faction()), band.grade());
+        int modifier = UnifiedConfig.get().factionRules().bandModifier(faction.equals(band.faction()),
+                FactionDefinitions.enemies(faction, band.faction()), band.grade());
         return StandingPolicy.effective(standing, modifier);
     }
     static boolean isNeutralTo(Human human, Player player) { return !StandingPolicy.hostile(effectiveStanding(human, player)); }

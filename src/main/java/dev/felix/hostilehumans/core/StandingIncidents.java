@@ -125,5 +125,15 @@ public final class StandingIncidents {
         memory.prune(now, settings);
         return memory.angerUntil > now ? memory.reason : Reason.NONE;
     }
+    /** Immutable bounded facts for already committed projectiles; does not prune or extend live memory. */
+    public Map<UUID, Long> retaliationExpiries(long now) {
+        Map<UUID, Long> result = new LinkedHashMap<>();
+        for (var entry : players.entrySet()) {
+            Memory memory = entry.getValue();
+            if (memory.lastActivity <= now && memory.angerUntil > now && memory.reason != Reason.NONE)
+                result.put(entry.getKey(), memory.angerUntil);
+        }
+        return Map.copyOf(result);
+    }
     public int size() { return players.size(); }
 }
