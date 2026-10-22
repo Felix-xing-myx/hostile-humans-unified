@@ -41,6 +41,9 @@ public final class LowHealthCombatController {
         if (!ai.enabled()) return false;
         State state = STATES.computeIfAbsent(human, ignored -> new State());
         double ratio = human.getHealth() / Math.max(1.0F, human.getMaxHealth());
+        if (ratio < ai.retreatHealthRatio() || human.isFleeing) {
+            state.decision.reset(); return false;
+        }
         if (ratio >= ai.resumeHealthRatio()) {
             state.decision.reset();
             return false;

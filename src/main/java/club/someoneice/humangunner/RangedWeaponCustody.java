@@ -37,7 +37,7 @@ public final class RangedWeaponCustody {
 
     /** Loaded ammunition, a payable reload or a paid reload in progress outranks bows. */
     public static boolean hasGunPriority(Human human) {
-        return AmmoWeaponSelection.hasUsableGun(human);
+        return AmmoWeaponSelection.gunHasPriority(human);
     }
 
     public static boolean isCrossbowWeapon(ItemStack stack) {
@@ -243,6 +243,9 @@ public final class RangedWeaponCustody {
         if (!isActive(human) && !data.hasStoredBowOrCrossbow(human.tickCount)) return false;
         int rangedSlot = findBestStoredRangedSlot(human);
         if (rangedSlot >= 0) {
+            if (!AmmoWeaponSelection.mayRestore(human, data.getInventoryItem(rangedSlot))) {
+                clearLease(human); return false;
+            }
             int ownedBefore = countOwnedRanged(human);
             ItemStack ranged = data.getInventoryItem(rangedSlot);
             ItemStack displaced = human.getMainHandItem();

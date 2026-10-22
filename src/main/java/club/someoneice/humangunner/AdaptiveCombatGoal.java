@@ -220,13 +220,7 @@ public final class AdaptiveCombatGoal extends Goal {
     }
 
     private boolean shouldEnterRetreat(LivingEntity currentThreat) {
-        return !LowHealthCombatController.shouldHoldGround(human, currentThreat)
-                && (RetreatRecoveryPolicy.shouldForceRetreat(human)
-                || (HumanUtil.isLowHp(human) && human.shouldStartFleeingThisCombat())
-                || (healthRatio() < config.retreatHealthRatio()
-                && projectedHealthRatio() < config.resumeHealthRatio()
-                && config.itemRecoveryEnabled()
-                && RecoverySupplies.hasCombatRecoverySupply(human)));
+        return RetreatRecoveryPolicy.shouldForceRetreat(human);
     }
 
     @Override
@@ -607,25 +601,7 @@ public final class AdaptiveCombatGoal extends Goal {
             restoreRetreatGun();
         }
 
-        double retreatMeleeRange = BetterCombatMeleeCombat.hasWeaponProfile(human)
-                ? BetterCombatMeleeCombat.attackRange(human) + threat.getBbWidth() * 0.5D
-                : 2.0D;
-        if (distanceSqr <= retreatMeleeRange * retreatMeleeRange) {
-            setRetreatBackpedaling(false);
-            gunOperator.aim(false);
-            retreatAimTicks = 0;
-            if (club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem())) {
-                switchToRetreatMelee();
-                ItemStack fallback = human.getMainHandItem();
-                if (club.someoneice.humangunner.GunSupport.get().isGun(fallback)) {
-                    // Some loadouts have no melee fallback; do not turn a
-                    // point-blank pursuer into a reason to stop returning fire.
-                    return tickRetreatGunfire(fallback);
-                }
-            }
-            performRetreatMeleeCounter();
-            return false;
-        }
+        // Escape never dispatches a melee counter. Keep the current ranged tool available.
 
         ItemStack weapon = human.getMainHandItem();
         int retreatTicks = human.tickCount - retreatStartedTick;
@@ -790,8 +766,8 @@ public final class AdaptiveCombatGoal extends Goal {
                         human.distanceToSqr(threat), human.getSensing().hasLineOfSight(threat),
                         human.getUseItemRemainingTicks()
                 );
-                if (unsafeProximity || (!RecoverySupplies.shouldCommitToUse(human, recoverySession, config)
-                        && recentlyHit)) {
+                if (!RecoverySupplies.isDrinkingPotion(human) && (unsafeProximity
+                        || (!RecoverySupplies.shouldCommitToUse(human, recoverySession, config) && recentlyHit))) {
                     cancelRecoveryUse();
                     nextRecoveryUseTick = human.tickCount + 12;
                 }
@@ -1689,6 +1665,7 @@ public final class AdaptiveCombatGoal extends Goal {
 
     private void setFleeing(boolean fleeing) {
         human.isFleeing = fleeing || human.explosionThreat != null;
+        RetreatRecoveryPolicy.observeEscape(human, human.isFleeing);
         ownsFleeFlag = fleeing;
     }
 

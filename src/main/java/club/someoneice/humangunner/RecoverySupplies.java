@@ -214,7 +214,7 @@ public final class RecoverySupplies {
                         .mapToDouble(e -> Math.min(Math.max(0, 100 - recoveryUseDuration(stack)), e.getDuration()) / 20D * (e.getAmplifier() >= 1 ? 2 : 1)).sum();
                 quality = HumanLootManager.potionValue(PotionUtils.getMobEffects(stack), false);
             } else if (allowFood && isOrdinaryFood(human, stack) && needsFood(human)
-                    && (!human.isFleeing || RetreatRecoveryPolicy.canStart(human, human.getTarget()))) {
+                    && (!human.isFleeing || RetreatRecoveryPolicy.canStartFood(human, human.getTarget()))) {
                 rank = 6; healing = Math.min(foodHealingValue(human, stack), Math.max(0, 100D - recoveryUseDuration(stack)) / Math.max(1, CombatAiConfig.forHuman(human).gradualHealIntervalTicks()));
                 quality = HumanLootManager.foodValue(stack.getFoodProperties(human));
             } else continue;

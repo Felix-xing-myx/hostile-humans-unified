@@ -12,6 +12,11 @@ public enum CombatPreference {
         catch (IllegalArgumentException invalid) { return DEFAULT; }
     }
     public static void set(Human human, CombatPreference value) {
-        if (!human.level().isClientSide) human.getPersistentData().putString(KEY, (value == null ? DEFAULT : value).name());
+        if (!human.level().isClientSide) {
+            CombatPreference desired = value == null ? DEFAULT : value;
+            if (get(human) == desired) return;
+            human.getPersistentData().putString(KEY, desired.name());
+            AmmoWeaponSelection.preferenceChanged(human);
+        }
     }
 }

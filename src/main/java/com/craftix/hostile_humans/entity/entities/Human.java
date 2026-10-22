@@ -1272,6 +1272,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         // Self-defense permission must be established before validating the attacker.
         humanGunner$shieldDefense().recordPressureDamage(damageSource,
                 Math.max(0.0F, previousHealth - this.getHealth()));
+        club.someoneice.humangunner.RecoverySupplies.recordActualDamage(this,
+                Math.max(0.0F, previousHealth - this.getHealth()));
         if (damaged) club.someoneice.humangunner.HumanPerception.hurt(this, damageSource,
                 Math.max(0.0F, previousHealth - this.getHealth()));
         return damaged;
@@ -1579,6 +1581,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public void startUsingItem(@NotNull InteractionHand hand) {
         Human human = this;
         ItemStack requested = human.getItemInHand(hand);
+        if (club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)
+                && !humanGunner$shieldDefense().allowsShieldStart(hand)) return;
         if (humanGunner$hasPendingMeleeAttack()
                 && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)) return;
         boolean holdingGun = club.someoneice.humangunner.GunSupport.isGunItem(human.getMainHandItem());
@@ -1594,7 +1598,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             AttributeInstance movement = this.getAttribute(Attributes.MOVEMENT_SPEED);
             if (movement != null) movement.removeModifier(MODIFIER_UUID);
             club.someoneice.humangunner.MovementSpeedController.limit(this,
-                    club.someoneice.humangunner.MovementSpeedController.Limit.DEFENSE, .6D, true);
+                    club.someoneice.humangunner.MovementSpeedController.Limit.DEFENSE,
+                    club.someoneice.humangunner.CombatAiConfig.forHuman(this).shieldUseSpeedMultiplier(), true);
         }
     }
 

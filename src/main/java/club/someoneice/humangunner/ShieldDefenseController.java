@@ -135,7 +135,7 @@ public final class ShieldDefenseController {
     public void clearAttackObligation() { attackObligation = false; meleeCounterRequested = false; }
     public boolean hasAttackObligation() { return attackObligation; }
     public boolean defenseOwnsFacing() { return ownsCurrentShield(); }
-    public double defenseSpeedFactor() { return ownsCurrentShield() ? (owner == Owner.ADVANCE ? .8D : .6D) : 1; }
+    public double defenseSpeedFactor() { return ownsCurrentShield() ? (owner == Owner.ADVANCE ? .8D : config.shieldUseSpeedMultiplier()) : 1; }
     public double defenseKnockbackFloor() { return ownsCurrentShield() ? (owner == Owner.ADVANCE ? .85D : .7D) : 0; }
     private void detectDefense() {
         if (detectionTick == human.tickCount) return;

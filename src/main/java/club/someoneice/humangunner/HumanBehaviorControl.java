@@ -33,6 +33,9 @@ public final class HumanBehaviorControl {
     }
 
     public static void cancel(Human human, String reason) {
+        RecoverySupplies.clear(human, reason);
+        HumanCombatDirector.clear(human);
+        RetreatRecoveryPolicy.clearEscape(human);
         MovementSpeedController.clearLimits(human);
         ActionCoordinator actions = SESSIONS.remove(human);
         if (actions != null) actions.cancelSession(reason);

@@ -144,6 +144,16 @@ def main():
         integration_page.append("")
     pages[output / "装备联动导入候选.md"] = "\n".join(integration_page)
     faction_defaults = json.loads((PROJECT / "src/main/resources/defaults/faction_equipment.json").read_text(encoding="utf-8"))
+    doctrine_defaults = json.loads((PROJECT / "src/main/resources/defaults/equipment_doctrine.json").read_text(encoding="utf-8"))
+    def overlay(target, contribution):
+        for key, value in contribution.items():
+            if isinstance(value, dict) and isinstance(target.get(key), dict):
+                overlay(target[key], value)
+            else:
+                target[key] = value
+    # Same builtin ordering as FactionEquipmentConfig: basic table then doctrine defaults.
+    # This appendix includes no user config or datapack contribution.
+    overlay(faction_defaults, doctrine_defaults)
     faction_page = ["# 默认值-阵营装备内置表", "", "返回 [[配置索引]] · [[士兵装备、拾取与掉落]]", "",
                     "这是随模组打包的阵营装备缺省表，不是第六份运行时配置文件。修改入口仍在各阶级文件的 equipment_loadout 与 faction_overrides；数据包 equipment 可提供阵营缺省，用户显式覆盖优先。权重是相对份额，不是逐项必定概率。", ""]
     for rank, profiles in faction_defaults.items():

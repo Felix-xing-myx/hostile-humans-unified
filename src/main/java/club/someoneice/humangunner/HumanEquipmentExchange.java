@@ -16,6 +16,8 @@ import java.util.function.Predicate;
 public final class HumanEquipmentExchange {
     private static final String ID = "hostile_humans_unified:equipment_identity";
     private static final Set<Human> WRITING = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    private record Permit(ActionCoordinator actions, ActionCoordinator.Token token, EnumSet<ActionCoordinator.Resource> resources) { }
+    private static final java.util.Map<Human, Permit> PERMITS = new java.util.WeakHashMap<>();
     public enum Result { SUCCESS, BUSY, MISSING, NO_CAPACITY, CHANGED, AMBIGUOUS, UNAVAILABLE }
     public record Handle(UUID identity, UUID owner) { }
     public record Need(EquipmentSlot destination, Predicate<ItemStack> accepts, Handle identity) {
@@ -50,13 +52,27 @@ public final class HumanEquipmentExchange {
 
     public static Result request(Human human, String purpose, List<Need> needs) {
         if (needs.isEmpty()) return Result.SUCCESS;
-        return execute(human, purpose, () -> commitLayout(human, needs));
+        if (human.level().isClientSide || human.getData() == null) return Result.UNAVAILABLE;
+        if (WRITING.contains(human)) return Result.BUSY;
+        EnumSet<ActionCoordinator.Resource> resources = EnumSet.of(ActionCoordinator.Resource.INVENTORY);
+        for (Need need : needs) {
+            addHand(resources, need.destination());
+            for (EquipmentSlot hand : new EquipmentSlot[]{EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND}) {
+                ItemStack candidate = human.getItemBySlot(hand);
+                if (!candidate.isEmpty() && !busyHand(human, new Place(hand, -1))
+                        && (need.identity() == null || matches(candidate, need.identity())) && need.accepts().test(candidate))
+                    addHand(resources, hand);
+            }
+        }
+        return execute(human, purpose, resources, () -> commitLayout(human, needs));
     }
 
     /** Leave a failed/empty weapon in place when a full real backpack cannot accept it. */
     public static Result stow(Human human, EquipmentSlot hand) {
         if (hand != EquipmentSlot.MAINHAND && hand != EquipmentSlot.OFFHAND) return Result.UNAVAILABLE;
-        return execute(human, "stow:" + hand.getName(), () -> {
+        EnumSet<ActionCoordinator.Resource> resources = EnumSet.of(ActionCoordinator.Resource.INVENTORY);
+        addHand(resources, hand);
+        return execute(human, "stow:" + hand.getName(), resources, () -> {
             List<Place> all = places(human);
             ItemStack[] actual = new ItemStack[all.size()], expected = new ItemStack[all.size()];
             for (int i = 0; i < actual.length; i++) {
@@ -75,25 +91,31 @@ public final class HumanEquipmentExchange {
         });
     }
 
-    private static Result execute(Human human, String purpose, java.util.function.Supplier<Result> transaction) {
+    private static void addHand(EnumSet<ActionCoordinator.Resource> resources, EquipmentSlot slot) {
+        if (slot == EquipmentSlot.MAINHAND) resources.add(ActionCoordinator.Resource.MAIN_HAND);
+        if (slot == EquipmentSlot.OFFHAND) resources.add(ActionCoordinator.Resource.OFF_HAND);
+    }
+    private static Result execute(Human human, String purpose, EnumSet<ActionCoordinator.Resource> resources,
+                                  java.util.function.Supplier<Result> transaction) {
         if (human.level().isClientSide || !human.isAlive() || human.isRemoved()
                 || human.isNoAi() || human.getData() == null || HumanInventorySession.isEditing(human))
             return Result.UNAVAILABLE;
         if (WRITING.contains(human)) return Result.BUSY;
         var actions = HumanBehaviorControl.actions(human);
-        // A selected source can be the other hand. Reserve both before planning any transfer.
-        EnumSet<ActionCoordinator.Resource> resources = EnumSet.of(ActionCoordinator.Resource.INVENTORY,
-                ActionCoordinator.Resource.MAIN_HAND, ActionCoordinator.Resource.OFF_HAND);
         var token = actions.request("exchange:" + purpose, resources, 100, false, 2);
-        if (!actions.acquire(token)) return Result.BUSY;
+        if (!actions.acquire(token)) {
+            actions.finish(token, ActionCoordinator.Status.CANCELLED, "exchange resources busy; retry current layout");
+            return Result.BUSY;
+        }
         Result result;
         WRITING.add(human);
+        PERMITS.put(human, new Permit(actions, token, resources.clone()));
         try { result = transaction.get(); }
         catch (RuntimeException exception) {
             actions.finish(token, ActionCoordinator.Status.FAILED, "exchange callback failed");
             throw exception;
         }
-        finally { WRITING.remove(human); }
+        finally { WRITING.remove(human); PERMITS.remove(human); }
         actions.finish(token, result == Result.SUCCESS ? ActionCoordinator.Status.COMPLETED
                 : ActionCoordinator.Status.FAILED, result.name());
         return result;
@@ -154,11 +176,13 @@ public final class HumanEquipmentExchange {
         for (int i = 0; i < sources.size(); i++) planned[targets.get(i)] = actual[sources.get(i)];
         for (ItemStack stack : displaced) {
             int free = -1;
-            for (int i = 0; i < places.size(); i++) {
+            // A transaction may reuse a vacated source hand, but never equip an unrequested
+            // empty hand just because hands appear before backpack places in the layout.
+            for (int pass = 0; pass < 2 && free < 0; pass++) for (int i = 0; i < places.size(); i++) {
                 Place place = places.get(i);
+                if (pass == 0 ? place.equipment() != null : place.equipment() == null || !selected.contains(i)) continue;
                 if (destinations.contains(i) || !planned[i].isEmpty() || reserved(human, place)
                         || busyHand(human, place)) continue;
-                // Inventory and emptied hands accept arbitrary stacks; never put a sword into an armor slot.
                 if (place.equipment() == null || place.equipment() == EquipmentSlot.MAINHAND
                         || place.equipment() == EquipmentSlot.OFFHAND) { free = i; break; }
             }
@@ -173,25 +197,53 @@ public final class HumanEquipmentExchange {
         for (int i = 0; i < actual.length; i++)
             if (read(human, places.get(i)) != actual[i]
                     || !ItemStack.matches(read(human, places.get(i)), expected[i])) return Result.CHANGED;
-        // Retain object identity so a native reload/payment handle follows the actual weapon.
-        List<Integer> written = new ArrayList<>();
+        // Detach every moving reference before publishing destinations. Equipment callbacks
+        // can observe a temporarily empty slot, never two owners for the same actual object.
+        List<Integer> changed = new ArrayList<>();
+        for (int i = 0; i < actual.length; i++) if (actual[i] != planned[i]) changed.add(i);
+        Permit permit = PERMITS.get(human);
+        if (permit == null || !permit.actions().running(permit.token())) return Result.CHANGED;
+        for (int i : changed) {
+            EnumSet<ActionCoordinator.Resource> needed = EnumSet.noneOf(ActionCoordinator.Resource.class);
+            addHand(needed, places.get(i).equipment());
+            if (!permit.resources().containsAll(needed)) return Result.CHANGED;
+        }
+        ItemStack[] stage = actual.clone();
         try {
-            for (int i = 0; i < planned.length; i++) if (actual[i] != planned[i]) {
-                // Register before the write: an equipment-change callback can throw after changing the slot.
-                written.add(i); write(human, places.get(i), planned[i]);
+            for (int i : changed) {
+                stage[i] = ItemStack.EMPTY;
+                write(human, places.get(i), ItemStack.EMPTY);
+                if (!permit.actions().running(permit.token()) || !layoutReferencesMatch(human, places, stage)) throw new IllegalStateException("exchange layout changed while detaching");
+            }
+            for (int i : changed) {
+                stage[i] = planned[i];
+                write(human, places.get(i), planned[i]);
+                if (!permit.actions().running(permit.token()) || !layoutReferencesMatch(human, places, stage)) throw new IllegalStateException("exchange layout changed while publishing");
             }
         } catch (RuntimeException exception) {
-            // Undo only writes still demonstrably ours. Never restore a copied item snapshot.
-            for (int j = written.size() - 1; j >= 0; j--) {
-                int i = written.get(j);
-                if (read(human, places.get(i)) == planned[i]) {
-                    try { write(human, places.get(i), actual[i]); }
-                    catch (RuntimeException rollbackFailure) { exception.addSuppressed(rollbackFailure); }
-                }
+            // Clear only our own attempted writes first; restore original real references once.
+            // External replacement/consumption remains authoritative, never copied back from NBT.
+            for (int i : changed) if (read(human, places.get(i)) == stage[i]) {
+                try { write(human, places.get(i), ItemStack.EMPTY); }
+                catch (RuntimeException failure) { exception.addSuppressed(failure); }
+            }
+            for (int i : changed) if (!actual[i].isEmpty() && read(human, places.get(i)).isEmpty()
+                    && !referencePresent(human, places, actual[i])) {
+                try { write(human, places.get(i), actual[i]); }
+                catch (RuntimeException failure) { exception.addSuppressed(failure); }
             }
             throw exception;
         }
         return Result.SUCCESS;
+    }
+
+    private static boolean layoutReferencesMatch(Human human, List<Place> places, ItemStack[] stage) {
+        for (int i = 0; i < stage.length; i++) if (read(human, places.get(i)) != stage[i]) return false;
+        return true;
+    }
+    private static boolean referencePresent(Human human, List<Place> places, ItemStack stack) {
+        for (Place place : places) if (read(human, place) == stack) return true;
+        return false;
     }
 
     private static boolean matches(ItemStack stack, Handle handle) {

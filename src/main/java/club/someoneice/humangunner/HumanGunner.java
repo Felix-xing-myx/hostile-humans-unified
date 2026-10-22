@@ -365,6 +365,7 @@ public final class HumanGunner {
             return;
         }
         Entity.RemovalReason reason = human.getRemovalReason();
+        HumanBehaviorControl.cancel(human, "entity left level");
         SoldierFollowNavigation.clear(human);
         if (reason == Entity.RemovalReason.KILLED) StandingEffects.confirmDeath(human);
         StandingEffects.clear(human);
@@ -556,6 +557,7 @@ public final class HumanGunner {
             event.setCanceled(true);
             return;
         }
+        HumanBehaviorControl.cancel(human, "confirmed death");
         StandingEffects.death(human, event.getSource());
         MinecraftServer server = human.getServer();
         if (server != null) {

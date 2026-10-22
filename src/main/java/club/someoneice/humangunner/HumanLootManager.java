@@ -315,26 +315,9 @@ public final class HumanLootManager {
             return false;
         }
         if (SpartanEquipmentCompat.isShield(ground)) return ShieldPickupPolicy.collect(human, entity);
-        EquipmentSlot slot = preferredEquipmentSlot(ground);
-        if (isEquipment(ground) && !HumanManagedLoadout.isArmourLocked(human, slot)
-                && shouldEquip(human, ground, slot)) {
-            ItemStack equipped = human.getItemBySlot(slot).copy();
-            ItemStack replacement = ground.copyWithCount(1);
-            if (SpartanEquipmentCompat.isShield(replacement)) {
-                ShieldEnchantmentRoll.applyToShield(human, replacement);
-            }
-            if (!equipped.isEmpty() && !storeWithEviction(human, equipped)) {
-                return false;
-            }
-            human.setItemSlot(slot, replacement);
-            ArmorSwapPolicy.equipped(human, slot);
-            human.setDropChance(slot, HumanSpawnEquipment.isBoundGear(replacement) ? 0.0F : 0.2F);
-            if (slot == EquipmentSlot.MAINHAND
-                    && RangedWeaponCustody.isBowOrCrossbow(replacement)) {
-                RangedWeaponCustody.registerPreferred(human, human.getMainHandItem());
-            }
-            ground.shrink(1);
-        } else if (inventoryValue(human, ground) >= MIN_PICKUP_VALUE) {
+        boolean equipment = isEquipment(ground);
+        if (equipment && shouldEquip(human, ground, preferredEquipmentSlot(ground))
+                || inventoryValue(human, ground) >= MIN_PICKUP_VALUE) {
             ItemStack moving = ground.copy();
             // Owner-managed means the AI must not rearrange explicitly chosen
             // equipment. It must not freeze the backpack's value policy: a
@@ -345,6 +328,9 @@ public final class HumanLootManager {
                 return false;
             }
             ground.setCount(moving.getCount());
+            // Equipment is now a real backpack item. The same exchange entry used by combat
+            // can equip it without partially storing and then deleting an old held stack.
+            if (equipment) optimizeOwnedEquipment(human);
         } else {
             return false;
         }
@@ -371,10 +357,8 @@ public final class HumanLootManager {
         if (SpartanEquipmentCompat.isShield(stack)) return ShieldPickupPolicy.benefit(human, stack, capacity);
         EquipmentSlot slot = preferredEquipmentSlot(stack);
         if (isEquipment(stack) && shouldEquip(human, stack, slot)) {
-            ItemStack equipped = human.getItemBySlot(slot);
-            if (!equipped.isEmpty() && !(capacity == null
-                    ? canStoreOrImprove(human, equipped, inventoryValue(human, equipped))
-                    : capacity.canStore(equipped, inventoryValue(human, equipped)))) return 0.0D;
+            if (!(capacity == null ? canStoreOrImprove(human, stack, inventoryValue(human, stack))
+                    : capacity.canStore(stack, inventoryValue(human, stack)))) return 0.0D;
             return 80.0D + Math.max(0.0D, equipmentScore(stack, slot)
                     - equipmentScore(human.getItemBySlot(slot), slot)) * 5.0D;
         }

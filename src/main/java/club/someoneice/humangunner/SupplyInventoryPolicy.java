@@ -53,7 +53,7 @@ final class SupplyInventoryPolicy {
         }
         // Food quantity matters in every slot, including extra unreserved meals.
         if (incoming.kind() == Kind.FOOD && stored.kind() == Kind.FOOD)
-            return incoming.supplyValue() > stored.supplyValue() + 1.0D;
+            return incoming.supplyValue() > stored.supplyValue() + 1.0E-9D;
         // An old ammo-filled inventory must be able to recover its missing food slots.
         if (incoming.kind() == Kind.FOOD && foods < FOOD_SLOTS && !reserved[index]) return true;
         return incoming.value() > stored.value() + 1.0D;

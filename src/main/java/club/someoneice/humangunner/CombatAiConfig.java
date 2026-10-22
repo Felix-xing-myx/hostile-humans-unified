@@ -102,9 +102,9 @@ public record CombatAiConfig(
     private static CombatAiConfig defaults() {
         return new CombatAiConfig(
                 true,
-                0.30D,
+                0.20D,
                 0.12D,
-                0.65D,
+                0.35D,
                 18,
                 10,
                 1.0D / 6.0D,
@@ -121,7 +121,7 @@ public record CombatAiConfig(
                 22,
                 0.60D,
                 true,
-                0.2D, 0.35D, 0.5D, 0.1D, 0.05D, LowHealthCombatConfig.defaults()
+                0.6D, 0.20D, 0.5D, 0.1D, 0.05D, LowHealthCombatConfig.defaults()
         );
     }
 

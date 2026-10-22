@@ -85,7 +85,7 @@ public final class HumanAttention {
         boolean action=request!=null&&request.tick==human.tickCount&&request.priority>=0;
         // Shield MoveControl already converts route motion into facing-relative inputs.
         // Do not rotate its physical shield back onto the route at the final attention boundary.
-        if(action&&request.pressure)route=null;
+        if(action&&(request.pressure||human.humanGunner$shieldDefense().defenseOwnsFacing()))route=null;
         if(NavigationDebugService.controls(human)){point=null;combat=false;}
         if(human.isFleeing&&(request==null||request.tick!=human.tickCount))point=null;
         OWNERS.put(human,route==null?owner:"导航身体 / "+owner);

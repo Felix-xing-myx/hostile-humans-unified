@@ -43,12 +43,37 @@ final class AmmoWeaponSelection {
         boolean preferred = switch (CombatPreference.get(human)) {
             case DEFAULT -> false;
             case GUN -> GunSupport.get().isGun(stack);
-            case BOW -> stack.getItem() instanceof net.minecraft.world.item.BowItem;
-            case CROSSBOW -> stack.getItem() instanceof net.minecraft.world.item.CrossbowItem;
+            case BOW -> RangedWeaponCustody.isBowWeapon(stack);
+            case CROSSBOW -> RangedWeaponCustody.isCrossbowWeapon(stack);
             case TRIDENT -> stack.getItem() instanceof TridentItem;
             case MELEE -> HumanLootManager.isDedicatedMeleeWeapon(stack);
         };
         return preferred ? fallback + 8 : fallback;
+    }
+
+    static boolean mayRestore(Human human, ItemStack candidate) {
+        boolean arrows = HumanAmmo.hasArrows(human);
+        int candidateRank = rank(human, candidate, arrows);
+        return candidateRank > 0 && candidateRank >= rank(human, human.getMainHandItem(), arrows);
+    }
+    static boolean gunHasPriority(Human human) {
+        boolean arrows = HumanAmmo.hasArrows(human);
+        int gun = 0, best = 0;
+        java.util.List<ItemStack> actual = new java.util.ArrayList<>();
+        actual.add(human.getMainHandItem()); actual.add(human.getOffhandItem());
+        HumanData data = human.getData();
+        if (data != null) for (int i = 0; i < data.getInventoryItemsSize(); i++) actual.add(data.getInventoryItem(i));
+        for (ItemStack stack : actual) {
+            int value = rank(human, stack, arrows);
+            best = Math.max(best, value);
+            if (GunSupport.get().isGun(stack)) gun = Math.max(gun, value);
+        }
+        return gun > 0 && gun >= best;
+    }
+    static void preferenceChanged(Human human) {
+        HumanBehaviorControl.cancel(human, "combat preference changed");
+        GunCustody.adoptManualLoadout(human);
+        RangedWeaponCustody.adoptManualLoadout(human);
     }
 
     static void tick(Human human) {

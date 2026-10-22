@@ -4,6 +4,12 @@ public final class CombatPressurePolicyTest {
     private static int checks;
 
     public static void main(String[] args) {
+        check(!RetreatRecoveryPolicy.foodOpportunity(8.99, false, 59, false), "insufficient healing waits for three blocks before timeout");
+        check(RetreatRecoveryPolicy.foodOpportunity(9, false, 1, true), "insufficient healing permits food at three blocks");
+        check(RetreatRecoveryPolicy.foodOpportunity(1, false, 60, false), "three second failed separation permits emergency food");
+        check(!RetreatRecoveryPolicy.foodOpportunity(64, true, 100, false), "sufficient pending recovery keeps making space through eight blocks");
+        check(RetreatRecoveryPolicy.foodOpportunity(64.01, true, 1, true), "sufficient pending recovery permits food beyond eight blocks");
+
         checkThrowableSpeed();
         ArrowAttackCadence shots = new ArrowAttackCadence();
         shots.bowShot(100);
