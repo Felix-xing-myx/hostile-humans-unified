@@ -126,6 +126,7 @@ public final class ShieldDefenseController {
     public void cancelDefenseSession() {
         if (owner != null) release(owner);
         endPressureExecution(); endAdvance(); advance.end(); clearAttackObligation();
+        guardedCharge.reset();
         pressureFacing.clear(); trackedArrows.clear();
         nearbyMelee = lockedDefenseTargets = List.of(); observedProjectiles = null;
         detectionTick = lastProjectileProbeTick = Integer.MIN_VALUE; lastProjectileProbe = null;
@@ -488,7 +489,14 @@ public final class ShieldDefenseController {
     private void facePressure() {
         detectDefense();
         List<Float> bearings = new ArrayList<>();
-        for (LivingEntity target : lockedDefenseTargets) if (isValidThreat(target)) bearings.add(bearing(target));
+        for (LivingEntity target : lockedDefenseTargets) if (isValidThreat(target)) {
+            // Shared discovery may authorize a target without revealing its current hidden position.
+            Vec3 known = HumanPerception.knownPosition(human, target);
+            if (known == null) continue;
+            Vec3 offset = known.subtract(human.position());
+            if (offset.horizontalDistanceSqr() > 1.0E-8)
+                bearings.add((float) Math.toDegrees(Math.atan2(offset.z, offset.x)) - 90);
+        }
         if (!bearings.isEmpty()) pressureFacing.record(ShieldDefensePolicy.coverageYaw(
                 bearings, human.getYRot(), false, human.getRandom().nextDouble()));
         if (ownsCurrentShield()) human.markShieldFacingDirection(pressureFacing.step(human.tickCount, human.getYRot()));
