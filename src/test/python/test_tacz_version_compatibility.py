@@ -52,7 +52,16 @@ class TaczVersionCompatibility(unittest.TestCase):
         self.assertIn('manager.getMethod("playClientSound", parameters)', source)
         source = (ROOT / "src/main/java/club/someoneice/humangunner/TaczReloadSoundClient.java").read_text(encoding="utf-8")
         self.assertNotIn("SoundPlayManager.playAnimationSound(", source)
-        self.assertEqual(2, source.count("ClientAnimationCompatibility.playTaczReloadSound("))
+        playback = source.split('private static void play(', 1)[1].split('private static ResourceLocation getAnimationFile', 1)[0]
+        self.assertIn('method=manager.getMethod("playAnimationSound",signature)', playback)
+        self.assertIn('catch(NoSuchMethodException oldApi)', playback)
+        self.assertIn('method=manager.getMethod("playClientSound",signature)', playback)
+        self.assertIn('SoundInstance.class.isAssignableFrom(method.getReturnType())', playback)
+        self.assertIn('pending.sounds.add(owned)', playback)
+        self.assertIn('getSoundManager().stop(sound)', playback)
+        self.assertNotIn('stopAll(', playback)
+        self.assertIn('timeline.getDouble("WorkRate")', source)
+        self.assertNotIn('GunCombatProfile.reloadWork', source)
 
 
 if __name__ == "__main__":

@@ -58,7 +58,10 @@ class JegContract(unittest.TestCase):
         self.assertNotIn("stagePercent", pipeline)
         self.assertIn("HumanGrowth.gunSpreadMultiplier", source)
         self.assertNotIn("stagePercent", source)
-        self.assertIn("HumanAmmo.consumeMagazines", source)
+        self.assertIn("GunReloadSession.begin(human,stack,RELOAD,steps)", source)
+        reload = (PKG / "GunReloadSession.java").read_text(encoding="utf-8")
+        self.assertIn("authority.pay(unchanged)", reload)
+        self.assertIn("HumanAmmo.magazineCost(weapon)", (PKG / "GunReloadAuthority.java").read_text(encoding="utf-8"))
         self.assertIn("GunFireAuthorization.allows", source)
 
     def test_inventory_supply_uses_separate_reserve_and_native_capacity(self):
@@ -126,8 +129,12 @@ class JegContract(unittest.TestCase):
         for text in (facade, planner):
             self.assertNotIn("import ttv.migami", text)
             self.assertNotIn("import top.ribs", text)
-        self.assertLess(planner.index("if (!human.level().addFreshEntity(projectile)) return"), planner.index("remainder.shrink(1)"))
-        self.assertIn("human.getData().setInventoryItem(slot, remainder)", planner)
+        self.assertIn("ThrowableTransactions.submit(human, aimTarget, primary, slot", planner)
+        transaction = (PKG / "ThrowableTransactions.java").read_text(encoding="utf-8")
+        self.assertLess(transaction.index("actual.split(1)"), transaction.index("human.level().addFreshEntity(projectile)"))
+        self.assertIn("data.setInventoryItem(slot, remainder)", transaction)
+        self.assertIn("inventory.matchesExcept(data, slot)", transaction)
+        self.assertIn("if (!submitted", transaction)
         self.assertIn("TacticalThrowables.supported(stack)", (PKG / "HumanLootManager.java").read_text(encoding="utf-8"))
         self.assertIn("TacticalThrowables.supported(stack)", (PKG / "SpawnPotionConfig.java").read_text(encoding="utf-8"))
 
@@ -135,7 +142,7 @@ class JegContract(unittest.TestCase):
         allowed = set(DEFAULT["scguns"]["throwables"]["allowed_items"])
         self.assertEqual({item for item in allowed if item.startswith("jeg:")}, {"jeg:grenade", "jeg:water_bomb", "jeg:molotov_cocktail", "jeg:smoke_grenade", "jeg:stun_grenade"})
         for rank in ("roamer", "tier1", "tier2", "tier3"):
-            pool = DEFAULT["tiers"][rank]["potions"]["tactical"]["pool"]
+            pool = DEFAULT["tiers"][rank]["potions"]["throwables"]["pool"]
             self.assertEqual({row["item"]:row["weight"] for row in pool if row["item"].startswith("jeg:")}, {"jeg:grenade":3, "jeg:water_bomb":3})
         backend = (PKG / "JegThrowables.java").read_text(encoding="utf-8")
         self.assertIn("!(item instanceof ExplosiveChargeItem)", backend)

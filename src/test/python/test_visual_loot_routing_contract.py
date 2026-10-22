@@ -10,8 +10,9 @@ class VisualLootRoutingContract(unittest.TestCase):
         self.assertLess(vision.index('boolean nearby='),vision.index('PerceptionBudget.claim(h,"rays"'))
         self.assertIn('if(clear)',vision)
         manager=(PKG/"HumanLootManager.java").read_text(encoding="utf-8")
-        self.assertIn('new AABB(origin,origin).inflate(3.0D,1.5D,3.0D)',manager)
-        self.assertIn('selectionRadiusSqr=preferredPile==null?9.0D:16.0D',manager)
+        self.assertIn('new AABB(origin,origin).inflate(8.0D,1.5D,8.0D)',manager)
+        self.assertIn('selectionRadiusSqr=preferredPile==null?64.0D:16.0D',manager)
+        self.assertIn('delta.horizontalDistanceSqr()<=64',vision)
         self.assertIn('item.position().distanceToSqr(selectionCenter) <= selectionRadiusSqr',manager)
 
     def test_visual_evidence_precedes_selection_and_all_collection(self):

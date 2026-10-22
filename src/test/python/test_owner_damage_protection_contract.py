@@ -28,7 +28,10 @@ class OwnerDamageProtectionContract(unittest.TestCase):
         collision = source.split('public static boolean passesThrough', 1)[1]
         self.assertLess(collision.index('HumanOwnerProtection.protects'), collision.index('instanceof Human shooter'))
         self.assertIn('getIndirectSourceEntity()', source)
-        self.assertIn('removeIf(candidate -> HumanOwnerProtection.protects(candidate, attacker)', source)
+        explosion = source.split('static void onProjectileExplosion', 1)[1].split('static void onProtectedPlayerAttack', 1)[0]
+        self.assertIn('removeIf(candidate -> ThrowableSource.protectsWithoutOwner(origin, candidate)', explosion)
+        self.assertIn('|| HumanOwnerProtection.protects(candidate, attacker)', explosion)
+        self.assertIn('passesThroughFromOwner(nativeOwner, candidate)', explosion)
         self.assertIn('HumanOwnerProtection.blocksDamage(human, event.getSource())', source)
 
     def test_tacz_cancels_before_pressure_shield_or_badge_updates(self):
