@@ -32,7 +32,10 @@ final class OffhandFoodUse {
         if (human.level().isClientSide || !canStart(human)) return false;
         int duration = ForgeEventFactory.onItemUseStart(human, human.getOffhandItem(),
                 Math.max(1, session.expectedCompletionTick() - human.tickCount));
-        if (duration <= 0) return false;
+        if (duration <= 0 || human.getOffhandItem() != session.actualItem()
+                || HumanInventorySession.isEditing(human)
+                || !HumanBehaviorControl.actions(human).running(session.token())
+                || !ItemStack.matches(human.getOffhandItem(), session.itemAtStart())) return false;
         ACTIONS.put(human, new State(session, duration));
         human.setNpcOffhandEating(true);
         return true;
@@ -60,7 +63,7 @@ final class OffhandFoodUse {
         if (state == null || state.ended || state.lastTick == human.tickCount) return;
         state.lastTick = human.tickCount;
         ItemStack stack = human.getOffhandItem();
-        if (!human.isAlive() || !ItemStack.isSameItemSameTags(stack, state.session.itemAtStart())
+        if (!human.isAlive() || stack != state.session.actualItem() || !ItemStack.isSameItemSameTags(stack, state.session.itemAtStart())
                 || stack.getCount() != state.session.itemAtStart().getCount()) {
             state.ended = true;
             human.setNpcOffhandEating(false);
@@ -80,7 +83,7 @@ final class OffhandFoodUse {
         ItemStack before = stack.copy();
         ItemStack result = stack.finishUsingItem(human.level(), human);
         result = ForgeEventFactory.onItemUseFinish(human, before, 0, result);
-        if (ACTIONS.get(human) != state) return;
+        if (ACTIONS.get(human) != state || human.getOffhandItem() != stack) return;
         human.setItemInHand(InteractionHand.OFF_HAND, result);
         // A non-consuming custom item must not grant our additional food healing.
         state.consumed = !ItemStack.isSameItemSameTags(before, result)

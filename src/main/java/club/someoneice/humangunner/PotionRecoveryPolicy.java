@@ -9,7 +9,7 @@ final class PotionRecoveryPolicy {
     }
 
     static boolean regenerationActive(int duration) { return duration > 0 || duration == -1; }
-    static boolean urgentInstantHealing(double actualHealthRatio) { return actualHealthRatio < 0.30D; }
+    static boolean urgentInstantHealing(double actualHealthRatio) { return actualHealthRatio < 0.50D; }
     static int instantHealingUseDuration(int originalTicks) { return Math.min(20, Math.max(1, originalTicks)); }
     static final int REGENERATION_INTERVAL_TICKS = 10;
     static int instantHealingAmount(double exposure) {

@@ -18,6 +18,8 @@ import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 
 import java.util.List;
+import java.util.EnumSet;
+import dev.felix.hostilehumans.core.ActionCoordinator;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -27,7 +29,6 @@ import java.util.WeakHashMap;
  * unless a real consumable completes its use animation.
  */
 public final class RecoverySupplies {
-    static final int MEALS_PER_BATCH = 5;
     private static final String KIT_GRANTED = "hostile_humans_unified:recovery_kit_granted_v2";
     private static final String PENDING_HEAL = "hostile_humans_unified:pending_food_heal";
     private static final String NEXT_HEAL_TICK = "hostile_humans_unified:next_food_heal_tick";
@@ -44,31 +45,15 @@ public final class RecoverySupplies {
      * from settling the same off-hand stack twice.
      */
     private static final Map<Human, UseSession> ACTIVE_USES = new WeakHashMap<>();
+    private static final Map<Human, RecoveryIntentPolicy> INTENTS = new WeakHashMap<>();
+    private static final Map<Human, Boolean> COMPLETION_RECEIPTS = new WeakHashMap<>();
+    private static final String BUFF_COOLDOWN = HumanGunner.MOD_ID + ":self_buff_cooldown";
     private static final Map<Human, PotionRecoveryPolicy.Clock> REGENERATION_CLOCKS = new WeakHashMap<>();
-    /**
-     * Item completion can publish its final hand remainder after an AI goal has
-     * already observed {@code isUsingItem() == false}. Restoring the displaced
-     * shield in that callback lets the late remainder overwrite the shield.
-     * Keep custody until the recovery hand has stayed unchanged for several
-     * complete server ticks, then perform the one and only swap-back.
-     */
-    private static final Map<Human, PendingFinish> PENDING_FINISHES = new WeakHashMap<>();
     private static final Map<Human, ShieldSnapshot> SHIELD_AUDIT = new WeakHashMap<>();
 
-    private static final int FINISH_QUIET_TICKS = 3;
-    private static final int INTERRUPTED_FINISH_QUIET_TICKS = 1;
     private static final double FOOD_USE_TIME_MULTIPLIER = 0.70D;
 
     private record ShieldSnapshot(int count, String state) {
-    }
-
-    private record PendingFinish(
-            UseSession session,
-            boolean completed,
-            int requestedTick,
-            ItemStack observedHand,
-            int stableTicks
-    ) {
     }
 
     public record UseSession(
@@ -78,9 +63,8 @@ public final class RecoverySupplies {
             double startingHealthRatio,
             boolean food,
             boolean healingPotion,
-            int exchangeSlot,
-            ItemStack displacedHandItem,
-            int shieldCountAtStart
+            ItemStack actualItem,
+            ActionCoordinator.Token token
     ) {
     }
 
@@ -146,7 +130,7 @@ public final class RecoverySupplies {
     /** Only an already running drink gets the short completion barrier, never queued/chained uses. */
     static boolean isDrinkingPotion(Human human) {
         UseSession session = ACTIVE_USES.get(human);
-        return session != null && session.itemAtStart().getUseAnimation() == net.minecraft.world.item.UseAnim.DRINK
+        return session != null && session.itemAtStart().is(Items.POTION) && session.itemAtStart().getUseAnimation() == net.minecraft.world.item.UseAnim.DRINK
                 && human.tickCount <= session.expectedCompletionTick() + 40
                 && isUseInProgress(human, session);
     }
@@ -158,8 +142,11 @@ public final class RecoverySupplies {
     }
 
     public static boolean isUseInProgress(Human human, UseSession session) {
+        if (session == null || ACTIVE_USES.get(human) != session) return false;
         return OffhandFoodUse.owns(human, session) ? OffhandFoodUse.running(human, session)
-                : human.isUsingItem() && human.getUsedItemHand() == session.hand();
+                : human.isUsingItem() && human.getUsedItemHand() == session.hand()
+                && human.getItemInHand(session.hand()) == session.actualItem()
+                && ItemStack.matches(session.actualItem(), session.itemAtStart());
     }
 
     static boolean canStartCombatFood(Human human) { return OffhandFoodUse.canStart(human); }
@@ -172,20 +159,13 @@ public final class RecoverySupplies {
                 && (!human.isUsingItem() || human.getUsedItemHand() == session.hand());
     }
 
-    /** Includes the deferred swap-back after the use animation finishes. */
+    /** Hand ownership lasts only for the current real consumable. */
     static boolean hasHandCustody(Human human) {
-        return ACTIVE_USES.containsKey(human) || PENDING_FINISHES.containsKey(human);
+        return ACTIVE_USES.containsKey(human);
     }
 
-    /** Reservation lasts through delayed completion, even for parallel food use. */
-    static boolean reservesInventorySlot(Human human, int slot) {
-        UseSession session = ACTIVE_USES.get(human);
-        if (session == null) {
-            PendingFinish pending = PENDING_FINISHES.get(human);
-            session = pending == null ? null : pending.session();
-        }
-        return session != null && slot == session.exchangeSlot();
-    }
+    /** Inventory ownership belongs only to the exchange transaction. */
+    static boolean reservesInventorySlot(Human human, int slot) { return false; }
 
     /** Combat retreat recovery excludes ordinary food, which has its own bounded goal. */
     public static boolean hasCombatRecoverySupply(Human human) {
@@ -193,6 +173,7 @@ public final class RecoverySupplies {
     }
 
     public static boolean hasOrdinaryFood(Human human) {
+        if (isOrdinaryFood(human, human.getOffhandItem()) || isOrdinaryFood(human, human.getMainHandItem())) return true;
         HumanData data = human.getData();
         if (data == null) return false;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
@@ -201,28 +182,95 @@ public final class RecoverySupplies {
         return false;
     }
 
-    private static boolean hasSupply(Human human, boolean allowFood) {
-        HumanData data = human.getData();
-        if (data == null) return false;
-        boolean allowEnchantedApple = healthRatio(human) <= 0.35D;
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            ItemStack stack = data.getInventoryItem(i);
-            if (stack.isEmpty()) continue;
-            if (stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
-                if (allowEnchantedApple) return true;
-                continue;
-            }
-            if (stack.is(Items.GOLDEN_APPLE) || ((isHealingPotion(stack) || MedicalSupplies.isMedicine(stack)) && canUsePotionNow(human, stack))
-                    || (allowFood && isRecoveryFood(human, stack))) return true;
+    private static int findBestSlot(Human human, boolean preferFood, boolean allowFood) {
+        return findBestSlot(human, preferFood, allowFood, false);
+    }
+    private static int findBestSlot(Human human, boolean preferFood, boolean allowFood, boolean instantOnly) {
+        if (human.getData() == null || unavailable(human)) return -3;
+        double ratio = healthRatio(human), missing = human.getMaxHealth() - human.getHealth();
+        boolean regen = intent(human).wantsRegeneration(human.tickCount, ratio);
+        RecoverySelectionPolicy.Candidate best = null;
+        for (int i = -2; i < human.getData().getInventoryItemsSize(); i++) {
+            ItemStack stack = candidateAt(human, i);
+            if (stack.isEmpty() || !canUsePotionNow(human, stack)) continue;
+            int rank; double healing; double quality;
+            if (isInstantHealingPotion(stack)) {
+                if (!PotionRecoveryPolicy.urgentInstantHealing(ratio)) continue;
+                rank = 1; healing = recoveryUseDuration(stack) <= 100 ? 8 : 0; quality = HumanLootManager.potionValue(PotionUtils.getMobEffects(stack), false);
+            } else if (instantOnly) continue;
+            else if (stack.is(Items.ENCHANTED_GOLDEN_APPLE) || stack.is(Items.GOLDEN_APPLE)) {
+                if (ratio >= .25 || !usefulApple(human, stack)) continue;
+                rank = stack.is(Items.ENCHANTED_GOLDEN_APPLE) ? 0 : 2;
+                healing = appleHealing(human, stack); quality = rank == 0 ? 260 : 160;
+            } else if (MedicalSupplies.isSupply(stack)) {
+                if (ratio >= .25 || !MedicalSupplies.canUse(human, stack)) continue;
+                if (MedicalSupplies.isMorphine(stack)) { rank = 7; healing = 0; }
+                else { rank = MedicalSupplies.directHealing(stack) > 0 ? 3 : 5; healing = MedicalSupplies.expectedHealing(human, stack, 100); }
+                quality = MedicalSupplies.inventoryValue(stack);
+            } else if (isRegenerationPotion(stack)) {
+                if (!regen) continue;
+                rank = 4; healing = PotionUtils.getMobEffects(stack).stream()
+                        .filter(e -> e.getEffect() == MobEffects.REGENERATION)
+                        .mapToDouble(e -> Math.min(Math.max(0, 100 - recoveryUseDuration(stack)), e.getDuration()) / 20D * (e.getAmplifier() >= 1 ? 2 : 1)).sum();
+                quality = HumanLootManager.potionValue(PotionUtils.getMobEffects(stack), false);
+            } else if (allowFood && isOrdinaryFood(human, stack) && needsFood(human)
+                    && (!human.isFleeing || RetreatRecoveryPolicy.canStart(human, human.getTarget()))) {
+                rank = 6; healing = Math.min(foodHealingValue(human, stack), Math.max(0, 100D - recoveryUseDuration(stack)) / Math.max(1, CombatAiConfig.forHuman(human).gradualHealIntervalTicks()));
+                quality = HumanLootManager.foodValue(stack.getFoodProperties(human));
+            } else continue;
+            if (!Double.isNaN(healing) && healing <= 0 && rank == 6) continue;
+            double netMissing = rank == 1 ? missing : Math.max(0, missing - pendingHealingWithin(human, 100));
+            var candidate = new RecoverySelectionPolicy.Candidate(i, rank, Math.min(netMissing, healing), recoveryUseDuration(stack), quality);
+            if (RecoverySelectionPolicy.better(candidate, best)) best = candidate;
+        }
+        return best == null ? -3 : best.slot();
+    }
+    private static boolean hasSupply(Human human, boolean allowFood) { return hasRecoveryChoice(human, allowFood); }
+    public static boolean isRecoverySupply(Human human, ItemStack stack) {
+        return MedicalSupplies.isSupply(stack) || isSupportedSupplyPotion(stack) || isRecoveryFood(human, stack);
+    }
+    public static boolean hasRecoveryChoice(Human human, boolean allowFood) { return findBestSlot(human, false, allowFood) >= -2; }
+    public static boolean recentActualDamage(Human human) { return intent(human).recentDamage(human.tickCount); }
+    public static boolean needsFood(Human human) {
+        return human.getHealth() < human.getMaxHealth() && projectedHealth(human) < human.getMaxHealth();
+    }
+    private static double appleHealing(Human human, ItemStack stack) {
+        FoodProperties food = stack.getFoodProperties(human);
+        if (food == null) return 0;
+        double amount = 0;
+        for (var pair : food.getEffects()) {
+            var effect = pair.getFirst();
+            if (effect.getEffect() != MobEffects.REGENERATION || !newEffectBenefit(human, effect)) continue;
+            amount += Math.min(Math.max(0, 100 - recoveryUseDuration(stack)), effect.getDuration()) / 20D * (effect.getAmplifier() >= 1 ? 2 : 1) * pair.getSecond();
+        }
+        return Math.min(Math.max(0, human.getMaxHealth() - human.getHealth() - pendingHealingWithin(human, 100)), amount);
+    }
+    private static boolean newEffectBenefit(Human human, MobEffectInstance effect) {
+        var current = human.getEffect(effect.getEffect());
+        return current == null || effect.getAmplifier() > current.getAmplifier();
+    }
+    private static boolean usefulApple(Human human, ItemStack stack) {
+        FoodProperties food = stack.getFoodProperties(human);
+        if (food == null) return false;
+        for (var pair : food.getEffects()) {
+            var effect = pair.getFirst();
+            if (!effect.getEffect().isBeneficial() || !newEffectBenefit(human, effect)) continue;
+            if (effect.getEffect() != MobEffects.REGENERATION || appleHealing(human, stack) > 0) return true;
         }
         return false;
     }
-
-    public static boolean isRecoverySupply(Human human, ItemStack stack) {
-        return MedicalSupplies.isSupply(stack) || isSupportedSupplyPotion(stack)
-                || stack.is(Items.GOLDEN_APPLE)
-                || stack.is(Items.ENCHANTED_GOLDEN_APPLE)
-                || isRecoveryFood(human, stack);
+    /** Expected already queued restoration in this horizon, excluding unused food inventory. */
+    static double pendingHealingWithin(Human human, int ticks) {
+        double food = Math.min(Math.max(0, human.getPersistentData().getFloat(PENDING_HEAL)),
+                ticks / Math.max(1D, CombatAiConfig.forHuman(human).gradualHealIntervalTicks()));
+        var state = human.getPersistentData().getCompound(HumanGunner.MOD_ID + ":first_aid");
+        int delay = Math.max(1, state.getInt("next_pulse")), interval = Math.max(1, state.getInt("interval"));
+        int pulses = ticks < delay ? 0 : Math.min(Math.max(0, state.getInt("pulses")), 1 + (ticks - delay) / interval);
+        double scheduled = pulses * Math.max(0, state.getFloat("heal_per_pulse"));
+        var regeneration = human.getEffect(MobEffects.REGENERATION);
+        double regen = regeneration == null ? 0 : Math.min(ticks, regeneration.getDuration() == -1 ? ticks : regeneration.getDuration())
+                / 20D * (regeneration.getAmplifier() >= 1 ? 2 : 1);
+        return food + scheduled + regen;
     }
 
     public static boolean hasPendingGradualHealing(Human human) {
@@ -242,11 +290,7 @@ public final class RecoverySupplies {
     }
 
     public static UseSession beginCombatRecoveryUse(Human human) {
-        if (human.isUsingItem()) {
-            return null;
-        }
-        HumanData data = human.getData();
-        return beginInventoryUse(human, data, findBestSlot(human, false, false));
+        return beginInventoryUse(human, human.getData(), findBestSlot(human, false, false));
     }
 
     public static UseSession beginIdleUse(Human human) {
@@ -255,7 +299,7 @@ public final class RecoverySupplies {
 
     static boolean hasUrgentInstantHealing(Human human) {
         return PotionRecoveryPolicy.urgentInstantHealing(healthRatio(human))
-                && findBestInstantHealingSlot(human) >= 0;
+                && findBestInstantHealingSlot(human) >= -2;
     }
 
     static boolean hasInstantHealingInProgress(Human human) {
@@ -266,21 +310,11 @@ public final class RecoverySupplies {
     }
 
     static UseSession beginUrgentInstantHealing(Human human) {
-        if (!hasUrgentInstantHealing(human)) return null;
-        return beginInventoryUse(human, human.getData(), findBestInstantHealingSlot(human));
+        return beginInventoryUse(human, human.getData(), findBestSlot(human, false, true));
     }
 
     private static int findBestInstantHealingSlot(Human human) {
-        HumanData data = human.getData();
-        if (data == null) return -1;
-        int best = -1, score = Integer.MIN_VALUE;
-        for (int slot = 0; slot < data.getInventoryItemsSize(); slot++) {
-            ItemStack stack = data.getInventoryItem(slot);
-            if (!isInstantHealingPotion(stack)) continue;
-            int candidate = healingPotionScore(human, stack);
-            if (candidate > score) { best = slot; score = candidate; }
-        }
-        return best;
+        return findBestSlot(human, false, false, true);
     }
 
     /** Starts food-only recovery without selecting potions or either golden apple. */
@@ -302,19 +336,16 @@ public final class RecoverySupplies {
     }
 
     public static UseSession beginEmergencyEnchantedAppleUse(Human human) {
-        if (human.isUsingItem()) {
-            return null;
-        }
-        HumanData data = human.getData();
-        return beginInventoryUse(human, data, findItemSlot(data, Items.ENCHANTED_GOLDEN_APPLE));
+        return beginInventoryUse(human, human.getData(), findBestSlot(human, false, true));
     }
 
     public static boolean hasEnchantedGoldenApple(Human human) {
-        return findItemSlot(human.getData(), Items.ENCHANTED_GOLDEN_APPLE) >= 0;
+        return healthRatio(human) < .25D && ((human.getOffhandItem().is(Items.ENCHANTED_GOLDEN_APPLE) && usefulApple(human, human.getOffhandItem()))
+                || findItemSlot(human.getData(), Items.ENCHANTED_GOLDEN_APPLE) >= 0);
     }
 
     public static boolean hasUsefulDrinkableBuff(Human human) {
-        return findUsefulDrinkableBuffSlot(human) >= 0;
+        return findUsefulDrinkableBuffSlot(human) >= -2;
     }
 
     public static int findSplashDebuffSlot(Human human) {
@@ -343,177 +374,84 @@ public final class RecoverySupplies {
         if (data == null || slot < 0 || slot >= data.getInventoryItemsSize()) {
             return ItemStack.EMPTY;
         }
-        ItemStack stored = data.getInventoryItem(slot).copy();
-        if (stored.isEmpty()) {
-            return ItemStack.EMPTY;
+        if (unavailable(human)) return ItemStack.EMPTY;
+        var actions = HumanBehaviorControl.actions(human);
+        var token = actions.request("recovery:take-one", EnumSet.of(ActionCoordinator.Resource.INVENTORY), 70, true, 2);
+        if (!actions.acquire(token)) {
+            actions.finish(token, ActionCoordinator.Status.CANCELLED, "inventory busy"); return ItemStack.EMPTY;
         }
-        ItemStack result = stored.copy();
-        result.setCount(1);
-        stored.shrink(1);
-        data.setInventoryItem(slot, stored);
+        ItemStack actual = data.getInventoryItem(slot);
+        ItemStack result = actual.isEmpty() ? ItemStack.EMPTY : actual.split(1);
+        actions.finish(token, result.isEmpty() ? ActionCoordinator.Status.FAILED : ActionCoordinator.Status.COMPLETED,
+                result.isEmpty() ? "source absent" : "one real item removed");
         return result;
     }
 
     private static UseSession beginUse(Human human, boolean preferFood) {
-        if (human.isUsingItem()) {
-            return null;
-        }
+        if (!OffhandFoodUse.canStart(human)) return null;
         HumanData data = human.getData();
         int slot = findBestSlot(human, preferFood, true);
         return beginInventoryUse(human, data, slot);
     }
 
     private static UseSession beginInventoryUse(Human human, HumanData data, int slot) {
-        if (human.humanGunner$shieldDefense().shouldSuppressRecovery()) return null;
-        // Item-use animation can end before the owning goal receives its stop
-        // callback. During that small window isUsingItem() is already false,
-        // but the old two-location exchange is not settled yet. Starting a
-        // second exchange there would overwrite ACTIVE_USES and orphan the
-        // first reservation, so the session map is the authoritative lock.
-        if (data == null
-                || slot < 0
-                || slot >= data.getInventoryItemsSize()
-                || ACTIVE_USES.containsKey(human)) {
+        if (human.humanGunner$shieldDefense().shouldSuppressRecovery() || unavailable(human)
+                || !CombatAiConfig.forHuman(human).enabled() || !CombatAiConfig.forHuman(human).itemRecoveryEnabled()
+                || data == null || slot < -2 || slot >= data.getInventoryItemsSize() || hasActiveUse(human)) return null;
+        ItemStack actual = candidateAt(human, slot);
+        if (actual.isEmpty() || actualReferences(human, actual) != 1 || !canUsePotionNow(human, actual)) return null;
+        boolean parallelFood = isRecoveryFood(human, actual);
+        if (isOrdinaryFood(human, actual) && !needsFood(human)) return null;
+        if (parallelFood ? !OffhandFoodUse.canStart(human) : human.isUsingItem()) return null;
+        // Exact reference predicate: equal type/NBT never substitutes another real stack.
+        var exchange = HumanEquipmentExchange.request(human, "recovery", List.of(
+                new HumanEquipmentExchange.Need(EquipmentSlot.OFFHAND, candidate -> candidate == actual)));
+        if (exchange != HumanEquipmentExchange.Result.SUCCESS) return null;
+        var actions = HumanBehaviorControl.actions(human);
+        boolean drink = actual.is(Items.POTION) && actual.getUseAnimation() == net.minecraft.world.item.UseAnim.DRINK;
+        // The exchange already released INVENTORY and MAIN_HAND. Parallel food leaves native weapon use free.
+        var resources = EnumSet.of(ActionCoordinator.Resource.OFF_HAND);
+        if (!parallelFood) resources.add(ActionCoordinator.Resource.USE_ITEM);
+        var token = actions.request("recovery:use", resources, 70, !drink, recoveryUseDuration(actual) + 100L);
+        if (!actions.acquire(token)) {
+            actions.finish(token, ActionCoordinator.Status.CANCELLED, "use resources unavailable");
             return null;
         }
-        ItemStack supply = data.getInventoryItem(slot).copy();
-        boolean parallelFood = isRecoveryFood(human, supply);
-        if (supply.isEmpty() || !canUsePotionNow(human, supply)
-                || (parallelFood ? !OffhandFoodUse.canStart(human) : human.isUsingItem())) {
-            return null;
-        }
-
-        // Exact two-location exchange. The displaced off-hand goes into the
-        // supply's own slot and the entire supply stack goes into the hand.
-        // No third slot, capacity search, eviction or drop is involved.
-        ItemStack displaced = human.getOffhandItem().copy();
-        int shieldCount = countOwnedShields(human);
-        // Acquire ownership before either location changes. This also covers
-        // synchronous equipment-change hooks fired from setItemSlot().
-        UseSession session = createSession(
-                human, InteractionHand.OFF_HAND, supply, slot, displaced, shieldCount
-        );
+        UseSession session = new UseSession(InteractionHand.OFF_HAND, actual.copy(),
+                human.tickCount + recoveryUseDuration(actual), healthRatio(human), parallelFood,
+                isHealingPotion(actual), actual, token);
         ACTIVE_USES.put(human, session);
-        data.setInventoryItem(slot, displaced.copy());
-        human.setItemSlot(EquipmentSlot.OFFHAND, supply);
-        if (parallelFood) {
-            OffhandFoodUse.start(human, session);
-        } else {
-            human.startUsingItem(InteractionHand.OFF_HAND);
-            accelerateFoodUse(human, supply);
-        }
-        if (!isUseInProgress(human, session)) {
-            OffhandFoodUse.clear(human);
-            ACTIVE_USES.remove(human, session);
-            rollbackExchange(human, data, slot);
+        COMPLETION_RECEIPTS.remove(human);
+        if (parallelFood) OffhandFoodUse.start(human, session);
+        else { human.startUsingItem(InteractionHand.OFF_HAND); accelerateFoodUse(human, actual); }
+        if (unavailable(human) || !HumanBehaviorControl.actions(human).running(session.token())
+                || !isUseInProgress(human, session)) {
+            HumanBehaviorControl.actions(human).finish(session.token(), ActionCoordinator.Status.FAILED, "use start rejected or changed");
+            finishUse(human, session, false);
+            // A start callback may have cancelled custody before vanilla publishes its use state.
+            if (!ACTIVE_USES.containsKey(human) && human.isUsingItem()
+                    && human.getUsedItemHand() == session.hand() && human.getUseItem() == actual)
+                human.stopUsingItem();
             return null;
         }
-        HumanGunner.LOGGER.debug(
-                "Recovery custody begin npc={} slot={} displaced={} supply={} shields={}",
-                human.getUUID(), slot, itemId(displaced), itemId(supply), shieldCount
-        );
         return session;
     }
 
-    /**
-     * Commits one completed meal and starts the next one without ever
-     * restoring the displaced shield between bites. The original exchange slot
-     * remains the sole owner of that shield until the whole recovery chain ends.
-     */
-    public static UseSession continueFoodUse(
-            Human human,
-            UseSession completedSession,
-            double targetHealthRatio
-    ) {
-        if (human.humanGunner$shieldDefense().shouldSuppressRecovery()) return null;
-        if (hasUrgentInstantHealing(human)) return null;
-        if (completedSession == null
-                || ACTIVE_USES.get(human) != completedSession
-                || !completed(human, completedSession)
-                || !completedSession.food()) {
-            return null;
-        }
-        double projectedAfterMeal = Math.min(
-                human.getMaxHealth(),
-                projectedHealth(human) + foodHealingValue(human, completedSession.itemAtStart())
-        );
-        if (!shouldContinueCombatEating(
-                projectedAfterMeal / Math.max(1.0F, human.getMaxHealth()), targetHealthRatio, true)) {
-            return null;
-        }
-
-        HumanData data = human.getData();
-        if (data == null) {
-            return null;
-        }
-        ItemStack currentHand = human.getItemInHand(completedSession.hand()).copy();
-        int nextSlot = -1;
-        ItemStack nextFood = currentHand;
-        if (!isOrdinaryFood(human, nextFood)) {
-            nextSlot = findBestOrdinaryFoodSlot(human);
-            if (nextSlot < 0 || nextSlot == completedSession.exchangeSlot()) {
-                return null;
-            }
-            nextFood = data.getInventoryItem(nextSlot).copy();
-        }
-
-        UseSession nextSession = createSession(
-                human, completedSession.hand(), nextFood,
-                completedSession.exchangeSlot(), completedSession.displacedHandItem(),
-                completedSession.shieldCountAtStart()
-        );
-        if (nextSlot >= 0) {
-            data.setInventoryItem(nextSlot, currentHand);
-            human.setItemSlot(EquipmentSlot.OFFHAND, nextFood);
-        }
-        ACTIVE_USES.put(human, nextSession);
-        // LivingTick can observe the completed item before this goal ticks and
-        // queue the old session for shield restoration. Chaining supersedes
-        // that request and must remove it before the next custody audit.
-        PendingFinish pending = PENDING_FINISHES.get(human);
-        if (pending != null && pending.session() == completedSession) {
-            PENDING_FINISHES.remove(human, pending);
-        }
-        boolean parallelFood = isRecoveryFood(human, nextFood);
-        if (parallelFood) {
-            OffhandFoodUse.start(human, nextSession);
-        } else {
-            human.startUsingItem(completedSession.hand());
-            accelerateFoodUse(human, nextFood);
-        }
-        if (!isUseInProgress(human, nextSession)) {
-            OffhandFoodUse.clear(human);
-            ACTIVE_USES.put(human, completedSession);
-            if (nextSlot >= 0) {
-                human.setItemSlot(EquipmentSlot.OFFHAND, currentHand);
-                data.setInventoryItem(nextSlot, nextFood);
-            }
-            // The previous meal really finished even when a hook rejects the
-            // next one. Preserve that receipt independently of main-hand use.
-            PENDING_FINISHES.put(human, new PendingFinish(
-                    completedSession, true, human.tickCount, currentHand, 0
-            ));
-            return null;
-        }
-
-        queueFoodHealing(human, completedSession.itemAtStart());
-        rememberRecoveryItem(human, completedSession.itemAtStart());
-        HumanGunner.LOGGER.debug(
-                "Recovery custody continued npc={} reservedSlot={} nextFood={} displaced={} shields={}",
-                human.getUUID(), completedSession.exchangeSlot(), itemId(nextFood),
-                itemId(completedSession.displacedHandItem()), completedSession.shieldCountAtStart()
-        );
-        return nextSession;
+    /** No implicit chained use: yield to defense and choose again from the current layout. */
+    public static UseSession continueFoodUse(Human human, UseSession completedSession, double targetHealthRatio) {
+        // Finish each real use before a new decision. No fixed-slot or hidden multi-meal lease.
+        finishUse(human, completedSession, completed(human, completedSession));
+        return null;
     }
 
     public static boolean completed(Human human, UseSession session) {
-        if (OffhandFoodUse.owns(human, session)) return OffhandFoodUse.completed(human, session);
-        PendingFinish pending = PENDING_FINISHES.get(human);
-        if (pending != null && pending.session() == session) return pending.completed();
-        return !human.isUsingItem() && human.tickCount >= session.expectedCompletionTick() - 1;
+        if (session == null || ACTIVE_USES.get(human) != session) return false;
+        return OffhandFoodUse.owns(human, session) ? OffhandFoodUse.completed(human, session)
+                : Boolean.TRUE.equals(COMPLETION_RECEIPTS.get(human));
     }
 
     public static boolean shouldCommitToUse(Human human, UseSession session, CombatAiConfig config) {
+        if (isDrinkingPotion(human)) return true;
         if (!human.isUsingItem()) {
             return completed(human, session);
         }
@@ -524,63 +462,49 @@ public final class RecoverySupplies {
         return healthCanPay && (nearCompletion || damagePaidRatio < config.recoveryDamageToleranceRatio());
     }
 
-    /**
-     * Living-tick safety net for goals that are interrupted without a final
-     * callback. It also owns the ordinary post-recovery shield reconciliation
-     * when no exchange is active.
-     */
+    /** Living-tick safety net: invalid ownership cannot finish later. */
     public static void tickHandCustody(Human human) {
-        // Check before advancing parallel food: an interrupted last bite must not finish later.
-        if (human.humanGunner$shieldDefense().shouldSuppressRecovery()) {
-            UseSession active = ACTIVE_USES.get(human);
-            if (active != null) finishUse(human, active, completed(human, active));
+        if (unavailable(human) || !CombatAiConfig.forHuman(human).enabled()
+                || !CombatAiConfig.forHuman(human).itemRecoveryEnabled()) { clear(human, "recovery unavailable"); return; }
+        intent(human).advance(human.tickCount);
+        UseSession session = ACTIVE_USES.get(human);
+        if (session == null) return;
+        boolean done = completed(human, session);
+        boolean running = HumanBehaviorControl.actions(human).running(session.token());
+        if (!running || (!done && human.getOffhandItem() != session.actualItem())
+                || human.tickCount > session.expectedCompletionTick() + 40
+                || (human.humanGunner$shieldDefense().shouldSuppressRecovery() && !isDrinkingPotion(human))) {
+            finishUse(human, session, done); return;
         }
         OffhandFoodUse.tick(human);
+        if (!isUseInProgress(human, session)) finishUse(human, session, completed(human, session));
+    }
+
+    private static boolean unavailable(Human human) {
+        return human.level().isClientSide || !human.isAlive() || human.isRemoved()
+                || human.isNoAi() || HumanInventorySession.isEditing(human);
+    }
+    /** Hook for unload, death, editing, ability changes and behavior-session cancellation. */
+    public static void clear(Human human, String reason) {
         UseSession session = ACTIVE_USES.get(human);
-        if (session == null) {
-            OffhandFoodUse.clear(human);
-            PENDING_FINISHES.remove(human);
-            restoreShieldAfterRecovery(human);
-            return;
-        }
-
-        PendingFinish pending = PENDING_FINISHES.get(human);
-        if (pending != null && pending.session() == session) {
-            tickPendingFinish(human, pending);
-            return;
-        }
-
-        if (OffhandFoodUse.running(human, session) || (isUsingSessionHand(human, session)
-                && human.tickCount <= session.expectedCompletionTick() + 40)) {
-            return;
-        }
-        boolean completed = completed(human, session);
-        if (isUsingSessionHand(human, session)) {
-            HumanGunner.LOGGER.warn(
-                    "Forcing overdue recovery custody settlement npc={} slot={} item={}",
-                    human.getUUID(), session.exchangeSlot(), itemId(session.itemAtStart())
-            );
-        }
-        finishUse(human, session, completed);
-    }
-
-    /** Settles any temporary recovery hand swap before an owner edits slots. */
-    public static void prepareForManualInventory(Human human) {
+        if (session != null) finishUse(human, session, completed(human, session));
         OffhandFoodUse.clear(human);
-        UseSession session = ACTIVE_USES.remove(human);
-        PENDING_FINISHES.remove(human);
-        if (session == null) {
-            human.getPersistentData().remove(RECOVERY_LEASE);
-            return;
-        }
-        if (human.isUsingItem()) human.stopUsingItem();
-        settleExchange(human, session);
+        INTENTS.remove(human);
+        COMPLETION_RECEIPTS.remove(human);
+        REGENERATION_CLOCKS.remove(human);
         human.getPersistentData().remove(RECOVERY_LEASE);
-        HumanGunner.LOGGER.debug(
-                "Recovery custody settled for owner inventory edit npc={} slot={}",
-                human.getUUID(), session.exchangeSlot()
-        );
     }
+    private static RecoveryIntentPolicy intent(Human human) {
+        return INTENTS.computeIfAbsent(human, ignored -> new RecoveryIntentPolicy());
+    }
+    /** Supply final real health loss only; blocked/absorbed damage is excluded. */
+    public static void recordActualDamage(Human human, float loss) {
+        if (!human.level().isClientSide && !unavailable(human))
+            intent(human).record(human.tickCount, loss, human.getMaxHealth());
+    }
+
+    /** Cancels without changing the current real layout before manual edits. */
+    public static void prepareForManualInventory(Human human) { clear(human, "manual inventory edit"); }
 
     /**
      * Records the observable equipment boundary independently from the goal
@@ -603,7 +527,7 @@ public final class RecoverySupplies {
         HumanGunner.LOGGER.debug(
                 "Shield offhand transition npc={} from={} to={} activeRecovery={} slot={} ownedShields={}",
                 human.getUUID(), itemId(previous), itemId(current), active != null,
-                active == null ? -1 : active.exchangeSlot(), shieldCount
+                active == null ? "none" : active.token().sequence(), shieldCount
         );
         if (SpartanEquipmentCompat.isShield(previous)
                 && !SpartanEquipmentCompat.isShield(current)
@@ -637,261 +561,40 @@ public final class RecoverySupplies {
     }
 
     public static void finishUse(Human human, UseSession session, boolean completed) {
-        // A goal can stop after the living-tick watchdog has already requested
-        // settlement. Never schedule or process the same exchange twice.
-        if (session == null || ACTIVE_USES.get(human) != session) {
-            return;
+        if (session == null || ACTIVE_USES.get(human) != session) return;
+        boolean receipt = completed && completed(human, session);
+        // Invalidate ownership before native release callbacks can re-enter cleanup.
+        ACTIVE_USES.remove(human, session);
+        if (isUsingSessionHand(human, session) && human.getUseItem() == session.actualItem()) human.stopUsingItem();
+        OffhandFoodUse.clear(human);
+        COMPLETION_RECEIPTS.remove(human);
+        HumanBehaviorControl.actions(human).finish(session.token(), receipt ? ActionCoordinator.Status.COMPLETED
+                : ActionCoordinator.Status.CANCELLED, receipt ? "real consumable completed" : "use cancelled or changed");
+        if (receipt) {
+            if (session.food()) queueFoodHealing(human, session.itemAtStart());
+            if (isBuffPotion(session.itemAtStart())) human.getPersistentData().putInt(BUFF_COOLDOWN, 600);
+            if (isRegenerationPotion(session.itemAtStart())) intent(human).consumed();
+            rememberRecoveryItem(human, session.itemAtStart());
         }
-        PendingFinish existing = PENDING_FINISHES.get(human);
-        if (existing != null && existing.session() == session) {
-            if (completed && !existing.completed()) {
-                PENDING_FINISHES.put(human, new PendingFinish(
-                        session, true, existing.requestedTick(),
-                        existing.observedHand(), existing.stableTicks()
-                ));
-            }
-            return;
-        }
-        if (OffhandFoodUse.owns(human, session)) OffhandFoodUse.clear(human);
-        if (isUsingSessionHand(human, session)) {
-            human.stopUsingItem();
-        }
-        ItemStack observed = human.getItemInHand(session.hand()).copy();
-        PENDING_FINISHES.put(human, new PendingFinish(
-                session, completed, human.tickCount, observed, 0
-        ));
-        HumanGunner.LOGGER.debug(
-                "Recovery custody finish queued npc={} slot={} completed={} hand={} shields={}",
-                human.getUUID(), session.exchangeSlot(), completed,
-                itemId(observed), countOwnedShields(human)
-        );
+        // The current real remainder stays in the real hand. Current tactics request the next layout.
+        human.getPersistentData().remove(RECOVERY_LEASE);
     }
 
     static boolean hasRecoverableShield(Human human) {
-        UseSession active = ACTIVE_USES.get(human);
-        return active != null && SpartanEquipmentCompat.isShield(active.displacedHandItem());
-    }
-
-    private static void tickPendingFinish(Human human, PendingFinish pending) {
-        UseSession session = pending.session();
-        if (ACTIVE_USES.get(human) != session) {
-            PENDING_FINISHES.remove(human, pending);
-            return;
-        }
-        if (isUsingSessionHand(human, session)) {
-            PendingFinish reset = new PendingFinish(
-                    session, pending.completed(), pending.requestedTick(),
-                    human.getItemInHand(session.hand()).copy(), 0
-            );
-            PENDING_FINISHES.put(human, reset);
-            return;
-        }
-
-        ItemStack current = human.getItemInHand(session.hand()).copy();
-        boolean unchanged = sameStack(current, pending.observedHand());
-        int stableTicks = unchanged ? pending.stableTicks() + 1 : 0;
-        if (!unchanged) {
-            HumanGunner.LOGGER.debug(
-                    "Recovery custody quiet wait reset npc={} slot={} from={} to={} shields={}",
-                    human.getUUID(), session.exchangeSlot(), itemId(pending.observedHand()),
-                    itemId(current), countOwnedShields(human)
-            );
-        }
-        PendingFinish updated = new PendingFinish(
-                session, pending.completed(), pending.requestedTick(), current, stableTicks
-        );
-        PENDING_FINISHES.put(human, updated);
-        int requiredQuietTicks = pending.completed()
-                ? FINISH_QUIET_TICKS : INTERRUPTED_FINISH_QUIET_TICKS;
-        if (human.tickCount - pending.requestedTick() < requiredQuietTicks
-                || stableTicks < requiredQuietTicks) {
-            return;
-        }
-        finishUseNow(human, updated);
-    }
-
-    private static void finishUseNow(Human human, PendingFinish pending) {
-        UseSession session = pending.session();
-        if (ACTIVE_USES.get(human) != session
-                || PENDING_FINISHES.get(human) != pending) {
-            return;
-        }
-        PENDING_FINISHES.remove(human, pending);
-        ACTIVE_USES.remove(human, session);
-        settleExchange(human, session);
-        int shieldCountAfter = countOwnedShields(human);
-        if (shieldCountAfter != session.shieldCountAtStart()) {
-            HumanGunner.LOGGER.error(
-                    "Shield custody invariant violated npc={} slot={} before={} after={} displaced={} hand={}",
-                    human.getUUID(), session.exchangeSlot(), session.shieldCountAtStart(),
-                    shieldCountAfter, itemId(session.displacedHandItem()),
-                    itemId(human.getItemInHand(session.hand()))
-            );
-        } else {
-            HumanGunner.LOGGER.debug(
-                    "Recovery custody finish npc={} slot={} completed={} quietTicks={} restored={} shields={}",
-                    human.getUUID(), session.exchangeSlot(), pending.completed(), pending.stableTicks(),
-                    itemId(human.getItemInHand(session.hand())), shieldCountAfter
-            );
-        }
-        // An interrupted use returns its shield promptly. Completed uses
-        // retain the longer quiet window for the final consumed-item remainder.
-
-        if (!pending.completed()) return;
-        if (session.food()) {
-            queueFoodHealing(human, session.itemAtStart());
-        }
-        rememberRecoveryItem(human, session.itemAtStart());
+        return SpartanEquipmentCompat.isShield(human.getOffhandItem()) || SpartanEquipmentCompat.isShield(human.getMainHandItem())
+                || findBestStoredShieldSlot(human.getData()) >= 0;
     }
 
     private static boolean isUsingSessionHand(Human human, UseSession session) {
         return human.isUsingItem() && human.getUsedItemHand() == session.hand();
     }
 
-    /**
-     * Reconciles off-hand custody after food, potion, gun and weapon-switch
-     * actions. The best shield is selected from the whole inventory by maximum durability.
-     * The selected slot and off-hand are exchanged directly, so reconciliation
-     * never depends on a free backpack slot and cannot evict either stack.
-     */
+    /** A caller with a current shield need can request its present real layout. */
     public static boolean restoreShieldAfterRecovery(Human human) {
-        // Old lease metadata is intentionally ignored. Its fixed slot may have
-        // been reused by weapon switching; writing it back was the source of
-        // shield downgrades and deletions in previous builds.
-        human.getPersistentData().remove(RECOVERY_LEASE);
-        UseSession active = ACTIVE_USES.get(human);
-        if (active != null) {
-            return SpartanEquipmentCompat.isShield(active.displacedHandItem())
-                    || SpartanEquipmentCompat.isShield(human.getMainHandItem());
-        }
-        if (human.isUsingItem() && human.getUsedItemHand() == InteractionHand.OFF_HAND) {
-            return SpartanEquipmentCompat.isShield(human.getOffhandItem())
-                    || SpartanEquipmentCompat.isShield(human.getMainHandItem());
-        }
-        ItemStack offhand = human.getOffhandItem();
-        HumanData data = human.getData();
-        if (data == null) {
-            return SpartanEquipmentCompat.isShield(human.getMainHandItem());
-        }
-        int bestShieldSlot = findBestStoredShieldSlot(data);
-        // Keep the equipped shield on ties, independent of wear. Upgrade only maximum durability.
-        if (SpartanEquipmentCompat.isShield(offhand) && (bestShieldSlot < 0
-                || !SpartanEquipmentCompat.betterShield(data.getInventoryItem(bestShieldSlot), offhand))) {
-            return true;
-        }
-        if (bestShieldSlot < 0) {
-            return SpartanEquipmentCompat.isShield(human.getMainHandItem());
-        }
-
-        // Atomic two-location exchange. In particular, do not clear the hand
-        // and then call a generic insert routine: that briefly loses custody
-        // of the displaced item and lets other hand writers observe an empty
-        // slot or make the result depend on backpack capacity.
-        ItemStack bestShield = data.getInventoryItem(bestShieldSlot).copy();
-        data.setInventoryItem(bestShieldSlot, offhand.copy());
-        human.setItemSlot(EquipmentSlot.OFFHAND, bestShield);
-        return true;
-    }
-
-    private static void settleExchange(Human human, UseSession session) {
-        HumanData data = human.getData();
-        int slot = session.exchangeSlot();
-        EquipmentSlot handSlot = session.hand() == InteractionHand.MAIN_HAND
-                ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
-        if (data != null && slot >= 0 && slot < data.getInventoryItemsSize()) {
-            ItemStack reserved = data.getInventoryItem(slot).copy();
-            if (sameStack(reserved, session.displacedHandItem())) {
-                ItemStack usedRemainder = human.getItemInHand(session.hand()).copy();
-                // Paired swap back into the exact same two locations. The
-                // shield never competes for capacity and the same shield,
-                // including its durability/NBT, is returned.
-                data.setInventoryItem(slot, usedRemainder);
-                human.setItemSlot(handSlot, reserved);
-                if (!SpartanEquipmentCompat.isShield(reserved)) restoreShieldAfterRecovery(human);
-                return;
-            }
-        }
-
-        // A third-party or legacy writer touched the reserved slot. Preserve
-        // the current use remainder first, then recover the exact displaced
-        // stack from anywhere in the backpack. Snapshots are diagnostics,
-        // never authority to manufacture an item that may have moved elsewhere.
-        HumanGunner.LOGGER.error(
-                "Recovery custody reservation changed npc={} slot={} expected={}",
-                human.getUUID(), slot, itemId(session.displacedHandItem())
-        );
-        if (!stowCurrentHand(human, session.hand())) return;
-        if (session.displacedHandItem().isEmpty()) {
-            restoreShieldAfterRecovery(human);
-            return;
-        }
-        ItemStack recovered = takeMatchingOwnedStack(
-                human, session.displacedHandItem(), session.hand()
-        );
-        if (recovered.isEmpty()) {
-            HumanGunner.LOGGER.error(
-                    "Displaced recovery item not found; preserving live inventory npc={} item={}",
-                    human.getUUID(), itemId(session.displacedHandItem())
-            );
-            restoreShieldAfterRecovery(human);
-            return;
-        }
-        human.setItemSlot(handSlot, recovered);
-    }
-
-    private static void rollbackExchange(Human human, HumanData data, int slot) {
-        ItemStack returnedSupply = human.getOffhandItem().copy();
-        ItemStack displaced = data.getInventoryItem(slot).copy();
-        data.setInventoryItem(slot, returnedSupply);
-        human.setItemSlot(EquipmentSlot.OFFHAND, displaced);
-    }
-
-    private static boolean stowCurrentHand(Human human, InteractionHand hand) {
-        EquipmentSlot slot = hand == InteractionHand.MAIN_HAND
-                ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
-        ItemStack current = human.getItemInHand(hand).copy();
-        if (current.isEmpty()) {
-            return true;
-        }
-        human.setItemSlot(slot, ItemStack.EMPTY);
-        if (!stowWithEviction(human, current)) {
-            human.setItemSlot(slot, current);
-            return false;
-        }
-        return true;
-    }
-
-    private static ItemStack takeMatchingOwnedStack(
-            Human human,
-            ItemStack expected,
-            InteractionHand destinationHand
-    ) {
-        InteractionHand otherHand = destinationHand == InteractionHand.MAIN_HAND
-                ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
-        ItemStack otherHeld = human.getItemInHand(otherHand);
-        if (sameStack(otherHeld, expected)) {
-            ItemStack result = otherHeld.copy();
-            human.setItemSlot(
-                    otherHand == InteractionHand.MAIN_HAND
-                            ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND,
-                    ItemStack.EMPTY
-            );
-            return result;
-        }
-        HumanData data = human.getData();
-        if (data == null) {
-            return ItemStack.EMPTY;
-        }
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            ItemStack stored = data.getInventoryItem(i);
-            if (!sameStack(stored, expected)) {
-                continue;
-            }
-            ItemStack result = stored.copy();
-            data.setInventoryItem(i, ItemStack.EMPTY);
-            return result;
-        }
-        return ItemStack.EMPTY;
+        if (hasActiveUse(human) || unavailable(human)) return false;
+        return HumanEquipmentExchange.request(human, "recovery:shield", List.of(
+                new HumanEquipmentExchange.Need(EquipmentSlot.OFFHAND, SpartanEquipmentCompat::isShield)))
+                == HumanEquipmentExchange.Result.SUCCESS;
     }
 
     private static boolean sameStack(ItemStack first, ItemStack second) {
@@ -977,6 +680,7 @@ public final class RecoverySupplies {
     }
 
     private static int findBestStoredShieldSlot(HumanData data) {
+        if (data == null) return -1;
         int bestSlot = -1;
         long bestScore = Long.MIN_VALUE;
         for (int i = 0; i < data.getInventoryItemsSize(); i++) {
@@ -998,51 +702,6 @@ public final class RecoverySupplies {
             return Long.MIN_VALUE;
         }
         return SpartanEquipmentCompat.shieldEquipRank(shield);
-    }
-
-    /**
-     * Stores the complete stack without overwriting an occupied slot. If the
-     * backpack is full, the lowest-valued unprotected stack is dropped first.
-     * If every stored item is protected, the incoming remainder itself is
-     * dropped rather than silently deleted.
-     */
-    private static boolean stowWithEviction(Human human, ItemStack source) {
-        if (source.isEmpty()) {
-            return true;
-        }
-        HumanData data = human.getData();
-        if (data == null) {
-            return dropRemainder(human, source);
-        }
-        insertInventory(data, source);
-        while (!source.isEmpty()) {
-            int evictionSlot = HumanLootManager.lowestEvictableSlot(human);
-            if (evictionSlot < 0) {
-                break;
-            }
-            ItemStack evicted = data.getInventoryItem(evictionSlot).copy();
-            net.minecraft.world.entity.item.ItemEntity drop = human.spawnAtLocation(evicted);
-            if (drop == null) {
-                break;
-            }
-            drop.setPickUpDelay(80);
-            data.setInventoryItem(evictionSlot, ItemStack.EMPTY);
-            insertInventory(data, source);
-        }
-        return source.isEmpty() || dropRemainder(human, source);
-    }
-
-    private static boolean dropRemainder(Human human, ItemStack source) {
-        if (source.isEmpty()) {
-            return true;
-        }
-        net.minecraft.world.entity.item.ItemEntity drop = human.spawnAtLocation(source.copy());
-        if (drop == null) {
-            return false;
-        }
-        drop.setPickUpDelay(80);
-        source.setCount(0);
-        return true;
     }
 
     /** Total Human regeneration; vanilla pulses are suppressed by HumanRecoveryEffects. */
@@ -1071,13 +730,19 @@ public final class RecoverySupplies {
 
     /** Called after native completion; all NPC-specific potion settlement belongs here. */
     public static void onUseCompleted(Human human, InteractionHand hand, ItemStack before) {
-        if (human.level().isClientSide || !human.isAlive()) return;
+        UseSession session = ACTIVE_USES.get(human);
+        if (human.level().isClientSide || session == null || !HumanBehaviorControl.actions(human).running(session.token()) || session.hand() != hand
+                || !ItemStack.matches(before, session.itemAtStart()) || COMPLETION_RECEIPTS.containsKey(human)) return;
         consumeCompletedPotion(human, hand, before);
+        ItemStack after = human.getItemInHand(hand);
+        COMPLETION_RECEIPTS.put(human, !ItemStack.isSameItemSameTags(before, after) || after.getCount() < before.getCount());
     }
 
     /** Advance effects even while inventory editing pauses AI equipment writers. */
     static void tickEffects(Human human) {
         if (human.level().isClientSide || !human.isAlive()) return;
+        int buffCooldown = human.getPersistentData().getInt(BUFF_COOLDOWN);
+        if (buffCooldown > 0) human.getPersistentData().putInt(BUFF_COOLDOWN, buffCooldown - 1);
         tickRegenerationHealing(human);
         MedicalSupplies.tick(human);
         tickGradualHealing(human);
@@ -1212,8 +877,6 @@ public final class RecoverySupplies {
         return totalCount-remaining;
     }
 
-
-
     private static int provisionEnchantedGoldenApple(Human human, SpawnFoodConfig config) {
         int requested = config.enchantedAppleCount(human);
         if (requested <= 0) return 0;
@@ -1224,28 +887,40 @@ public final class RecoverySupplies {
     }
 
     private static int findUsefulDrinkableBuffSlot(Human human) {
-        HumanData data = human.getData();
-        if (data == null) {
-            return -1;
-        }
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            ItemStack stack = data.getInventoryItem(i);
-            if (MedicalSupplies.isMorphine(stack) && MedicalSupplies.canUse(human, stack)) return i;
-            if (!stack.is(Items.POTION) || !canUsePotionNow(human, stack)) {
-                continue;
-            }
+        if (human.getPersistentData().getInt(BUFF_COOLDOWN) > 0) return -3;
+        if (human.getData() == null) return -3;
+        for (int i = -2; i < human.getData().getInventoryItemsSize(); i++) {
+            ItemStack stack = candidateAt(human, i);
+            if (!isBuffPotion(stack) || !canUsePotionNow(human, stack)) continue;
+            boolean any = false, duplicate = false;
             for (MobEffectInstance effect : PotionUtils.getMobEffects(stack)) {
-                if (effect.getEffect() == MobEffects.DAMAGE_BOOST
-                        && !human.hasEffect(MobEffects.DAMAGE_BOOST)) {
-                    return i;
-                }
-                if (effect.getEffect() == MobEffects.MOVEMENT_SPEED
-                        && !human.hasEffect(MobEffects.MOVEMENT_SPEED)) {
-                    return i;
-                }
+                if (!effect.getEffect().isBeneficial() || effect.getEffect() == MobEffects.HEAL
+                        || effect.getEffect() == MobEffects.REGENERATION) continue;
+                any = true;
+                if (human.hasEffect(effect.getEffect())) duplicate = true;
             }
+            if (any && !duplicate) return i;
         }
-        return -1;
+        return -3;
+    }
+    private static boolean isBuffPotion(ItemStack stack) {
+        return stack.is(Items.POTION) && !isHealingPotion(stack) && PotionUtils.getMobEffects(stack).stream()
+                .anyMatch(effect -> effect.getEffect().isBeneficial());
+    }
+    private static boolean isRegenerationPotion(ItemStack stack) {
+        return stack.is(Items.POTION) && PotionUtils.getMobEffects(stack).stream()
+                .anyMatch(effect -> effect.getEffect() == MobEffects.REGENERATION);
+    }
+    private static int actualReferences(Human human, ItemStack actual) {
+        int references = 0;
+        for (EquipmentSlot equipment : EquipmentSlot.values()) if (human.getItemBySlot(equipment) == actual) references++;
+        if (human.getData() != null) for (int slot = 0; slot < human.getData().getInventoryItemsSize(); slot++)
+            if (human.getData().getInventoryItem(slot) == actual) references++;
+        return references;
+    }
+    private static ItemStack candidateAt(Human human, int slot) {
+        return slot == -2 ? human.getMainHandItem() : slot == -1 ? human.getOffhandItem()
+                : human.getData().getInventoryItem(slot);
     }
 
     private static int findItemSlot(HumanData data, Item item) {
@@ -1258,23 +933,6 @@ public final class RecoverySupplies {
             }
         }
         return -1;
-    }
-
-    private static UseSession createSession(
-            Human human,
-            InteractionHand hand,
-            ItemStack stack,
-            int exchangeSlot,
-            ItemStack displacedHandItem,
-            int shieldCountAtStart
-    ) {
-        int remaining = recoveryUseDuration(stack);
-        return new UseSession(
-                hand, stack.copy(),
-                human.tickCount + remaining, healthRatio(human),
-                isRecoveryFood(human, stack), isHealingPotion(stack),
-                exchangeSlot, displacedHandItem.copy(), shieldCountAtStart
-        );
     }
 
     private static void accelerateFoodUse(Human human, ItemStack stack) {
@@ -1311,86 +969,16 @@ public final class RecoverySupplies {
         return hasFood && projectedHealthRatio < targetHealthRatio;
     }
 
-    private static int findBestSlot(Human human, boolean preferFood, boolean allowFood) {
-        HumanData data = human.getData();
-        if (data == null) {
-            return -1;
-        }
-        if (PotionRecoveryPolicy.urgentInstantHealing(healthRatio(human))) {
-            int instant = findBestInstantHealingSlot(human);
-            if (instant >= 0) return instant;
-        }
-        int bestPotion = -1;
-        int bestPotionScore = Integer.MIN_VALUE;
-        int goldenApple = -1;
-        int enchantedGoldenApple = -1;
-        int bestFood = -1;
-        int bestFoodScore = Integer.MIN_VALUE;
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            ItemStack stack = data.getInventoryItem(i);
-            int potionScore = healingPotionScore(human, stack);
-            if (potionScore != Integer.MIN_VALUE) {
-                if (potionScore > bestPotionScore) {
-                    bestPotion = i;
-                    bestPotionScore = potionScore;
-                }
-            } else if (stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
-                enchantedGoldenApple = i;
-            } else if (stack.is(Items.GOLDEN_APPLE)) {
-                goldenApple = i;
-            } else if (allowFood && !stack.isEmpty() && stack.isEdible()) {
-                FoodProperties food = stack.getFoodProperties(human);
-                if (food == null) continue;
-                int score = Math.round(food.getNutrition() * (1.0F + food.getSaturationModifier()));
-                if (score > bestFoodScore) {
-                    bestFood = i;
-                    bestFoodScore = score;
-                }
-            }
-        }
-        if (enchantedGoldenApple >= 0 && healthRatio(human) <= 0.35D) {
-            return enchantedGoldenApple;
-        }
-        if (allowFood && preferFood && bestFood >= 0) {
-            return bestFood;
-        }
-        if (allowFood && preferFood && goldenApple >= 0) {
-            return goldenApple;
-        }
-        if (bestPotion >= 0) {
-            return bestPotion;
-        }
-        if (goldenApple >= 0) {
-            return goldenApple;
-        }
-        // Pending gradual healing no longer blocks another meal. Callers use
-        // projectedHealth() to stop the chain before queued healing would
-        // exceed the intended recovery target.
-        return allowFood ? bestFood : -1;
-    }
-
     private static int findBestOrdinaryFoodSlot(Human human) {
-        HumanData data = human.getData();
-        if (data == null) {
-            return -1;
+        if (!needsFood(human) || human.getData() == null) return -3;
+        int best = -3; double amount = -1;
+        for (int i = -2; i < human.getData().getInventoryItemsSize(); i++) {
+            ItemStack stack = candidateAt(human, i);
+            if (!isOrdinaryFood(human, stack)) continue;
+            double heal = Math.min(human.getMaxHealth() - projectedHealth(human), foodHealingValue(human, stack));
+            if (heal > amount) { best = i; amount = heal; }
         }
-        int bestSlot = -1;
-        int bestScore = Integer.MIN_VALUE;
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            ItemStack stack = data.getInventoryItem(i);
-            if (stack.isEmpty() || !stack.isEdible() || stack.is(Items.GOLDEN_APPLE)
-                    || stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
-                continue;
-            }
-            FoodProperties food = stack.getFoodProperties(human);
-            if (food == null) continue;
-            int score = Math.round(food.getNutrition() * (1.0F + food.getSaturationModifier()));
-            if (score > bestScore) {
-                bestSlot = i;
-                bestScore = score;
-            }
-        }
-        return bestSlot;
+        return best;
     }
 
     private static boolean isOrdinaryFood(Human human, ItemStack stack) {

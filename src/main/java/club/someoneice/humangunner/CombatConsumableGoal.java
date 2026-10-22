@@ -12,7 +12,6 @@ import net.minecraft.world.phys.AABB;
 /** Uses finite buff, debuff and emergency supplies without stopping combat movement. */
 public final class CombatConsumableGoal extends Goal {
     private enum Action {
-        ENCHANTED_APPLE,
         DRINK_BUFF,
         THROW_DEBUFF
     }
@@ -33,22 +32,18 @@ public final class CombatConsumableGoal extends Goal {
                 || target == null
                 || !target.isAlive()
                 || human.isUsingItem()
-                || CombatFoodRecoveryGoal.isActive(human)
+                || RecoverySupplies.hasActiveUse(human)
+                || human.humanGunner$shieldDefense().shouldSuppressRecovery()
                 || human.tickCount < nextDecisionTick) {
             return false;
         }
 
-        if (human.getHealth() / Math.max(1.0F, human.getMaxHealth()) <= 0.30F
-                && RecoverySupplies.hasEnchantedGoldenApple(human)) {
-            action = Action.ENCHANTED_APPLE;
-            return true;
-        }
+        if (RecoverySupplies.hasRecoveryChoice(human, true)) return false;
 
         // Decisions are deliberately sparse: supplies are finite and drinking
         // should create an occasional tactical window, not suppress attacks.
         nextDecisionTick = human.tickCount + human.getRandom().nextInt(50, 101);
-        if (RecoverySupplies.hasUsefulDrinkableBuff(human)
-                && human.getRandom().nextFloat() < 0.45F) {
+        if (RecoverySupplies.hasUsefulDrinkableBuff(human)) {
             action = Action.DRINK_BUFF;
             return true;
         }
@@ -81,15 +76,13 @@ public final class CombatConsumableGoal extends Goal {
             nextDecisionTick = human.tickCount + human.getRandom().nextInt(120, 201);
             return;
         }
-        session = action == Action.ENCHANTED_APPLE
-                ? RecoverySupplies.beginEmergencyEnchantedAppleUse(human)
-                : RecoverySupplies.beginCombatBuffUse(human);
+        session = RecoverySupplies.beginCombatBuffUse(human);
         if (session == null) {
             nextDecisionTick = human.tickCount + 40;
         } else {
             human.getPersistentData().putString(
                     "hostile_humans_unified:ai_phase",
-                    action == Action.ENCHANTED_APPLE ? "combat_enchanted_apple" : "combat_drinking_buff"
+                    "combat_drinking_buff"
             );
         }
     }

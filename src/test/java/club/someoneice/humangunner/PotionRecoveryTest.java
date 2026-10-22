@@ -19,9 +19,9 @@ public final class PotionRecoveryTest {
         check(!PotionRecoveryPolicy.regenerationActive(0), "expired buff permits another potion");
         check(PotionRecoveryPolicy.regenerationStep(0) == 0.5F, "level one total half-HP per independent ten-tick pulse");
         check(PotionRecoveryPolicy.regenerationStep(1) == 1.0F, "level two total one HP per independent ten-tick pulse");
-        check(PotionRecoveryPolicy.urgentInstantHealing(0.299999), "strictly below thirty percent needs instant healing");
-        check(!PotionRecoveryPolicy.urgentInstantHealing(0.30), "exactly thirty percent does not override food");
-        check(!PotionRecoveryPolicy.urgentInstantHealing(0.31), "ordinary recovery above threshold is preserved");
+        check(PotionRecoveryPolicy.urgentInstantHealing(0.499999), "strictly below fifty percent needs instant healing");
+        check(!PotionRecoveryPolicy.urgentInstantHealing(0.50), "exactly fifty percent does not request instant healing");
+        check(!PotionRecoveryPolicy.urgentInstantHealing(0.51), "ordinary recovery above threshold is preserved");
         check(PotionRecoveryPolicy.instantHealingUseDuration(32) == 20, "vanilla instant potion drinks in one second");
         check(PotionRecoveryPolicy.instantHealingUseDuration(20) == 20, "one-second custom potion is unchanged");
         check(PotionRecoveryPolicy.instantHealingUseDuration(8) == 8, "already faster custom potion is not slowed");
@@ -50,22 +50,11 @@ public final class PotionRecoveryTest {
         check(callIndex(recovery, "hasUrgentInstantHealing", recovery, "healthRatio") >= 0
                 && callIndex(recovery, "hasUrgentInstantHealing", recovery, "projectedHealth") < 0,
                 "queued food healing cannot mask actual critical health");
-        check(callIndex(recovery, "findBestSlot", recovery, "findBestInstantHealingSlot") >= 0,
-                "idle and retreat selectors prioritize instant healing");
-        check(callIndex(recovery, "continueFoodUse", recovery, "hasUrgentInstantHealing") >= 0,
-                "critical health stops food chaining");
-        check(callIndex(recovery, "createSession", recovery, "recoveryUseDuration") >= 0
-                && callIndex(recovery, "accelerateFoodUse", recovery, "recoveryUseDuration") >= 0,
-                "session completion and native countdown use identical duration");
-        check(callIndex(recovery, "recoveryUseDuration", "club/someoneice/humangunner/PotionRecoveryPolicy", "instantHealingUseDuration") >= 0,
-                "only instant healing has one-second duration cap");
-        check(callIndex("club/someoneice/humangunner/CombatFoodRecoveryGoal", "tick", recovery, "beginUrgentInstantHealing") >= 0,
-                "urgent use shares existing food goal and custody controller");
-        check(callIndex("club/someoneice/humangunner/IdleRecoveryGoal", "tick", recovery, "hasUrgentInstantHealing") >= 0,
-                "idle food yields to emergency potion");
-        for (String method : new String[] {"hasSupply", "beginInventoryUse", "findUsefulDrinkableBuffSlot", "healingPotionScore"}) {
-            check(callIndex(recovery, method, recovery, "canUsePotionNow") >= 0, "regeneration gate: " + method);
-        }
+        check(callIndex(recovery, "beginInventoryUse", "club/someoneice/humangunner/HumanEquipmentExchange", "request") >= 0,
+                "recovery starts through the real exchange layer");
+        for (String goal : new String[] {"CombatFoodRecoveryGoal", "IdleRecoveryGoal"})
+            check(callIndex("club/someoneice/humangunner/" + goal, "canUse", recovery, "hasRecoveryChoice") >= 0,
+                    "recovery goal shares ordered selector: " + goal);
         String human = "com/craftix/hostile_humans/entity/entities/Human";
         int nativeFinish = callIndex(human, "completeUsingItem", "com/craftix/hostile_humans/entity/HumanEntity", "completeUsingItem");
         check(nativeFinish >= 0 && callIndex(human, "completeUsingItem", recovery, "onUseCompleted") > nativeFinish
@@ -80,6 +69,7 @@ public final class PotionRecoveryTest {
                 "buff continues while owner edits inventory");
         for (String effect : new String[] {"tickRegenerationHealing", "tickGradualHealing"})
             check(callIndex(recovery, "tickEffects", recovery, effect) >= 0, "all healing uses one clock entry: " + effect);
+        RecoverySelectionTest.main(args);
         System.out.println("PotionRecoveryTest: " + checks + " checks passed");
     }
 
