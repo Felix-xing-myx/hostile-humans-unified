@@ -12,12 +12,11 @@ final class ProjectileShieldPolicy {
     private ProjectileShieldPolicy() {
     }
 
-    /** Horizontal front half-space; pitch does not turn an overhead shot into rear vision. */
+    /** Full 120 degree cone, including pitch. */
     static boolean insideReactionView(Vec3 look, Vec3 offset) {
-        double facingLength = look.x * look.x + look.z * look.z;
-        double distance = offset.x * offset.x + offset.z * offset.z;
-        return Double.isFinite(facingLength) && Double.isFinite(distance)
-                && facingLength > 1.0E-8 && (distance < 1.0E-8 || look.x * offset.x + look.z * offset.z >= 0);
+        double product = look.lengthSqr() * offset.lengthSqr();
+        return Double.isFinite(product) && look.lengthSqr() > 1.0E-8
+                && (offset.lengthSqr() < 1.0E-8 || look.dot(offset) >= Math.sqrt(product) * .5D);
     }
     static boolean shouldGuardRangedUser(double ticksToImpact) {
         return Double.isFinite(ticksToImpact)
@@ -41,8 +40,13 @@ final class ProjectileShieldPolicy {
     /** Swept, drag-aware trajectory; proximity alone never counts as impact. */
     static double impactTicks(Vec3 position, Vec3 velocity, AABB body, Vec3 defenderMotion,
                               double drag, double gravity) {
+        return impactTicks(position, velocity, body, defenderMotion,
+                new ShieldProjectileBackend.Motion(drag, gravity, true));
+    }
+    static double impactTicks(Vec3 position, Vec3 velocity, AABB body, Vec3 defenderMotion,
+                              ShieldProjectileBackend.Motion model) {
         AABB collision = body.inflate(0.15D, 0.1D, 0.15D);
-        for (int tick = 0; tick < MAX_PREDICTION_TICKS; tick++) {
+        for (int tick = 0; tick < Math.min(MAX_PREDICTION_TICKS, model.horizon()); tick++) {
             // Relative motion handles an advancing/side-stepping defender.
             Vec3 relativeStart = position.subtract(defenderMotion.scale(tick));
             Vec3 next = position.add(velocity);
@@ -54,7 +58,7 @@ final class ProjectileShieldPolicy {
                 return tick + (length < 1.0E-9D ? 0.0D : relativeStart.distanceTo(hit.get()) / length);
             }
             position = next;
-            velocity = velocity.scale(drag).add(0.0D, -gravity, 0.0D);
+            velocity = velocity.add(model.acceleration()).scale(model.drag()).add(0.0D, -model.gravity(), 0.0D);
         }
         return Double.NaN;
     }

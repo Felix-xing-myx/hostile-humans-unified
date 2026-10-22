@@ -25,8 +25,8 @@ import net.minecraft.world.item.UseAnim;
  * Reactive and anticipatory requests share ownership, bounded observation and counter windows.
  */
 public final class ShieldDefenseController {
-    private enum Owner { COMBAT, BODYGUARD, PROJECTILE, PRESSURE }
-    public record IncomingArrow(AbstractArrow projectile, LivingEntity shooter, double ticksToImpact) { }
+    private enum Owner { COMBAT, BODYGUARD, PROJECTILE, PRESSURE, ADVANCE }
+    public record IncomingArrow(Projectile projectile, LivingEntity shooter, double ticksToImpact) { }
     record CombatUpdate(int remainingTicks, boolean counterattack) { }
     private final Human human;
     private final CombatAiConfig config;
@@ -35,8 +35,89 @@ public final class ShieldDefenseController {
     private int deferredPressureGraceUntil = Integer.MIN_VALUE;
     private boolean defendingGunfire;
     private final GuardedRangedCharge guardedCharge = new GuardedRangedCharge();
+    private final ShieldAdvancePolicy advance = new ShieldAdvancePolicy();
+    public ShieldAdvancePolicy advancePolicy() { return advance; }
+    /** Caller supplies verified faction/core shield, grounded melee mode, locked out-of-range
+     * target and permission to move. The same shared snapshot is used for higher priority checks. */
+    public boolean tickAdvance(boolean eligible, int effectiveTicks) {
+        boolean allowed = eligible && !human.isFleeing && canBlockWithShield()
+                && !shouldSuppressRecovery() && meleeBearings().isEmpty()
+                && !RecoverySupplies.hasHandCustody(human) && !human.humanGunner$hasPendingMeleeAttack();
+        boolean requested = advance.observe(allowed, effectiveTicks, human.getRandom()::nextDouble);
+        if (owner == Owner.ADVANCE && (!advance.active() || !ownsCurrentShield())) {
+            release(Owner.ADVANCE); advance.end();
+        }
+        if (requested && !human.isUsingItem()) {
+            InteractionHand hand = SpartanEquipmentCompat.isShield(human.getOffhandItem())
+                    ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+            raise(Owner.ADVANCE, hand, false);
+            if (owner == Owner.ADVANCE && !advance.begin(allowed)) release(Owner.ADVANCE);
+        }
+        if (owner == Owner.ADVANCE && ownsCurrentShield()) {
+            LivingEntity target = human.getTarget();
+            if (target != null && isValidThreat(target)) human.markShieldFacing(target);
+            return true;
+        }
+        return false;
+    }
+    public void endAdvance() { release(Owner.ADVANCE); advance.end(); }
     private boolean preparingCombatGuard;
+    private int lastAttackExecution = Integer.MIN_VALUE;
+    private int meleeBlocks;
+    private int meleeReentryCooldownTicks;
+    /** Gray dual-wield policy supplies 120; all other modes supply zero. */
+    public void meleeReentryCooldownTicks(int ticks) { meleeReentryCooldownTicks = Math.max(0, ticks); }
+    private boolean meleeCounterRequested, attackObligation;
+    private int detectionTick = Integer.MIN_VALUE;
+    private List<LivingEntity> nearbyMelee = List.of(), lockedDefenseTargets = List.of();
+    private List<Projectile> observedProjectiles;
+
+    /** Detection layer may publish one shared snapshot; this module never grants target knowledge. */
+    public void observeDefenseSnapshot(List<LivingEntity> nearby, List<LivingEntity> locked,
+                                       List<Projectile> projectiles) {
+        detectionTick = human.tickCount;
+        nearbyMelee = List.copyOf(nearby);
+        lockedDefenseTargets = List.copyOf(locked);
+        observedProjectiles = List.copyOf(projectiles);
+    }
+    /** Central lifecycle cleanup: release only our actual use, preserve earned cooldown. */
+    public void cancelDefenseSession() {
+        if (ownsCurrentShield()) human.stopUsingItem();
+        owner = null; ownedShield = null;
+        endPressureExecution(); endAdvance(); clearAttackObligation();
+        pressureFacing.clear(); trackedArrows.clear();
+        nearbyMelee = lockedDefenseTargets = List.of(); observedProjectiles = null;
+        detectionTick = lastProjectileProbeTick = Integer.MIN_VALUE; lastProjectileProbe = null;
+    }
+    public void onAttackExecuted() { lastAttackExecution = human.tickCount; attackObligation = false; }
+    public void clearAttackObligation() { attackObligation = false; meleeCounterRequested = false; }
+    public boolean hasAttackObligation() { return attackObligation; }
+    public boolean defenseOwnsFacing() { return ownsCurrentShield(); }
+    public double defenseSpeedFactor() { return ownsCurrentShield() ? (owner == Owner.ADVANCE ? .8D : .6D) : 1; }
+    public double defenseKnockbackFloor() { return ownsCurrentShield() ? (owner == Owner.ADVANCE ? .85D : .7D) : 0; }
+    private void detectDefense() {
+        if (detectionTick == human.tickCount) return;
+        detectionTick = human.tickCount;
+        nearbyMelee = human.level().getEntitiesOfClass(LivingEntity.class,
+                human.getBoundingBox().inflate(4, 3, 4), this::isValidThreat);
+        LivingEntity target = human.getTarget();
+        lockedDefenseTargets = isValidThreat(target) ? List.of(target) : List.of();
+        observedProjectiles = null;
+    }
+    private List<Float> meleeBearings() {
+        detectDefense();
+        List<Float> result = new ArrayList<>();
+        for (LivingEntity candidate : nearbyMelee) if (predictsIncomingMelee(candidate))
+            result.add(bearing(candidate));
+        return result;
+    }
+    private float bearing(LivingEntity entity) {
+        Vec3 offset = entity.position().subtract(human.position());
+        return (float)Math.toDegrees(Math.atan2(offset.z, offset.x)) - 90;
+    }
+
     private final RecoveryPressureWindow recoveryPressure = new RecoveryPressureWindow();
+    private boolean pressureCycleActive;
     private final PressureDefenseCycle pressureCycle = new PressureDefenseCycle();
     private final PressureGuardFacing pressureFacing = new PressureGuardFacing();
     private ItemStack ownedShield;
@@ -58,7 +139,7 @@ public final class ShieldDefenseController {
     private int nextProjectileScan;
     private int lastProjectileProbeTick = Integer.MIN_VALUE;
     private IncomingArrow lastProjectileProbe;
-    private final List<AbstractArrow> trackedArrows = new ArrayList<>();
+    private final List<Projectile> trackedArrows = new ArrayList<>();
     private LivingEntity rememberedShooter;
     private int shooterMemoryUntil;
     private int lastBlockedTick = Integer.MIN_VALUE;
@@ -106,6 +187,7 @@ public final class ShieldDefenseController {
         ShieldPressureConfig rules = UnifiedConfig.get().shieldPressure();
         updatePressureCycle();
         if (!recoveryPressure.active(human.tickCount, rules) && !pressureCycle.attempting()) pressureFacing.clear();
+        if (owner == Owner.COMBAT) defensePressureTick = human.tickCount;
         recoveryPressure.record(human.tickCount, damage, human.getMaxHealth(), rules);
         if (RecoverySupplies.isDrinkingPotion(human) && !pressureCycle.attempting()
                 && recoveryPressure.active(human.tickCount, rules)) pressureWaitingForDrink = true;
@@ -144,9 +226,13 @@ public final class ShieldDefenseController {
 
     private void updatePressureCycle() {
         if (human.level().isClientSide) return;
-        if (!pressureDefenseAvailable()) { pressureCycle.clear(); clearDeferredPressure(); return; }
+        if (!pressureDefenseAvailable()) {
+            if (pressureCycleActive) endPressureExecution();
+            clearDeferredPressure();
+            return;
+        }
         ShieldPressureConfig rules = UnifiedConfig.get().shieldPressure();
-        if (pressureCycle.update(human.tickCount, human.tickCount < deferredPressureGraceUntil
+        if (pressureCycle.update(human.tickCount, pressureWaitingForDrink || human.tickCount < deferredPressureGraceUntil
                 || recoveryPressure.active(human.tickCount, rules), rules)) {
             recoveryPressure.clear();
             clearDeferredPressure();
@@ -163,11 +249,16 @@ public final class ShieldDefenseController {
         return !human.level().isClientSide && config.enabled() && human.isAlive() && human.shieldCoolDown <= 0
                 && !HumanInventorySession.isEditing(human)
                 && human.explosionThreat == null
-                && (hasShieldInHands() || RecoverySupplies.hasRecoverableShield(human))
-                && GunCustody.canBeginPressureDefense(human);
+                && (hasShieldInHands() || RecoverySupplies.hasRecoverableShield(human));
     }
 
-    boolean wantsHighPressureGuard() { return shouldSuppressRecovery() && canBlockWithShield(); }
+    boolean wantsHighPressureGuard() { return shouldSuppressRecovery() && hasShieldInHands() && human.shieldCoolDown <= 0; }
+    private void endPressureExecution() {
+        pressureCycle.ended(human.tickCount, UnifiedConfig.get().shieldPressure());
+        pressureCycleActive = false;
+        recoveryPressure.clear();
+        clearDeferredPressure();
+    }
 
     void prepareHighPressureDefense() {
         if (!shouldSuppressRecovery()) return;
@@ -190,44 +281,12 @@ public final class ShieldDefenseController {
     }
 
     private boolean wantsCombatNow(LivingEntity threat, IncomingArrow incomingArrow) {
-        if (isPressureBreakAttempt()) return false;
         if (wantsHighPressureGuard()) return true;
-        if (human.isFleeing || !canBlockWithShield()) return false;
-        if (CloseRangedTactics.keepDefense(human) && human.tickCount >= nextDefenseTick) return true;
+        if (human.isFleeing || !canBlockWithShield() || isHoldingTaczGun()) return false;
         if (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem())
                 && !RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) return false;
-        // Bow/crossbow counter windows must survive repeated hits long enough to fire.
-        if (hasRangedCounterWindow()) return false;
-        if (underGunfirePressure()) return true;
-        if (human.tickCount < nextCounterGuardTick) return false;
-        if (incomingArrow != null) {
-            projectileDefenseUntil = human.tickCount + ProjectileShieldPolicy.guardWindowTicks(
-                    isDedicatedRangedCombatant(), incomingArrow.ticksToImpact());
-            return true;
-        }
-        // A known visible shooter drawing again is an earlier cue than an arrow at impact.
-        if (human.tickCount >= nextDefenseTick && canPreemptivelyBlockProjectile()
-                && !shouldDeferRangedProjectileGuard() && preparingKnownShot() != null) {
-            rangedWarning = true;
-            rangedWarningUntil = human.tickCount + CombatPressurePolicy.MAX_GUARD_WAIT_TICKS;
-            return true;
-        }
-        if (!canBlockWithShield() || human.tickCount < nextDefenseTick) return false;
-        int gunfireUntil = HumanGunner.recentGunfireUntil(human);
-        int hurtTimestamp = human.getLastHurtByMobTimestamp();
-        boolean freshGunfire = CombatPressurePolicy.isRecentGunfire(human.tickCount, gunfireUntil)
-                && gunfireUntil != lastShieldTriggerGunfireUntil;
-        boolean freshHit = isValidThreat(human.getLastHurtByMob())
-                && CombatPressurePolicy.isRecentHit(human.tickCount, hurtTimestamp)
-                && hurtTimestamp != lastShieldTriggerHurtTimestamp;
-        if (freshGunfire) lastShieldTriggerGunfireUntil = gunfireUntil;
-        if (freshHit) lastShieldTriggerHurtTimestamp = hurtTimestamp;
-        // Close-range intent and recent melee hits are one defense decision, without a dice roll.
-        boolean closeThreat = predictsIncomingMelee(threat)
-                || (freshHit && predictsIncomingMelee(human.getLastHurtByMob()));
-        return closeThreat || freshGunfire || (freshHit
-                && healthRatio() >= config.retreatHealthRatio()
-                && human.distanceToSqr(threat) > 12.25D);
+        if (attackObligation || human.tickCount < nextDefenseTick) return false;
+        return !meleeBearings().isEmpty();
     }
 
     boolean hasHeldMinimumCombatGuard() {
@@ -236,52 +295,30 @@ public final class ShieldDefenseController {
 
     int beginCombat(LivingEntity threat) {
         release(Owner.BODYGUARD);
-        defendingGunfire = underGunfirePressure();
+        endAdvance();
         guardedCharge.capture(human);
         preparingCombatGuard = false;
         if (human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
-        human.setChargingCrossbow(false); // Background charge must not advertise a competing active hand pose.
-        defendingProjectile = human.tickCount < projectileDefenseUntil || rangedWarning;
-        int projectileWindow = projectileDefenseUntil - human.tickCount;
-        int duration = defendingProjectile && isDedicatedRangedCombatant()
-                ? Math.max(1, projectileWindow)
-                : Math.max(rollShieldBlockDuration(), projectileWindow);
-        if (rangedWarning || predictsIncomingMelee(threat))
-            // Goal ticks also run on the start tick (held=0). Keep the lease through held=20.
-            duration = Math.max(duration, CombatPressurePolicy.MAX_GUARD_WAIT_TICKS + 1);
-        // The goal ticks on its start tick. A short predicted impact window must
-        // still survive vanilla's block activation delay before ordinary release.
-        duration = Math.max(duration, CombatPressurePolicy.MINIMUM_EFFECTIVE_BLOCK_TICKS + 1);
-        defenseStartTick = human.tickCount;
-        defensePressureTick = human.tickCount;
-        defenseObservedHurtTimestamp = human.getLastHurtByMobTimestamp();
-        defenseObservedGunfireUntil = HumanGunner.recentGunfireUntil(human);
-        lastShieldTriggerHurtTimestamp = defenseObservedHurtTimestamp;
-        lastShieldTriggerGunfireUntil = defenseObservedGunfireUntil;
+        human.setChargingCrossbow(false);
+        defenseStartTick = defensePressureTick = human.tickCount;
+        meleeBlocks = 0;
+        meleeCounterRequested = false;
         maintainCombat(threat);
-        return duration;
+        return 41;
     }
 
     void endCombat() {
-        int reblockDelay = config.shieldBlockCooldownTicks();
-        if (RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem()))
-            reblockDelay = Math.max(reblockDelay, guardedCharge.counterWindowTicks(human));
-        if (RangedWeaponCustody.isCrossbowWeapon(human.getMainHandItem())
-                || RangedWeaponCustody.isCrossbowWeapon(human.getOffhandItem())) {
-            // Leave a complete crossbow charge-and-shot window after a block.
-            reblockDelay = Math.max(reblockDelay, 24);
-        }
-        reblockDelay = Math.max(reblockDelay, CombatPressurePolicy.COUNTER_WINDOW_TICKS);
-        nextDefenseTick = human.tickCount + reblockDelay;
-        nextCounterGuardTick = human.tickCount + reblockDelay;
-        if (defendingProjectile && isDedicatedRangedCombatant()) {
-            nextProjectileGuardTick = human.tickCount + (isCrossbowCombatant() ? 32 : 24);
-        }
-        defendingGunfire = false;
-        defendingProjectile = false;
-        projectileDefenseUntil = 0;
-        rangedWarning = false;
+        boolean pressureGuard = pressureCycleActive;
         release(Owner.COMBAT);
+        if (pressureGuard) endPressureExecution();
+        else if (!defendingProjectile) {
+            attackObligation = lastAttackExecution < defenseStartTick;
+            nextDefenseTick = human.tickCount + meleeReentryCooldownTicks;
+        }
+        meleeBlocks = 0;
+        meleeCounterRequested = false;
+        defendingGunfire = defendingProjectile = rangedWarning = false;
+        projectileDefenseUntil = 0;
     }
 
     boolean underGunfirePressure() {
@@ -297,121 +334,27 @@ public final class ShieldDefenseController {
     }
 
     CombatUpdate tickCombat(LivingEntity threat, int phaseTicks, boolean canCounterFromCurrentRange) {
-        if (isPressureBreakAttempt()) {
-            release(Owner.COMBAT);
-            return new CombatUpdate(0, false);
+        if (human.humanGunner$hasPendingMeleeAttack() || !canBlockWithShield()
+                || BodyguardProtection.protectingFromExplosion(human, threat)) return new CombatUpdate(0, false);
+        if (wantsHighPressureGuard()) {
+            maintainCombat(threat);
+            if (ownsCurrentShield()) { pressureCycle.guarded(human.tickCount); pressureCycleActive = true; }
+            facePressure();
+            return new CombatUpdate(2, false);
         }
-        if (human.isFleeing || human.humanGunner$hasPendingMeleeAttack()
-                || BodyguardProtection.protectingFromExplosion(human, threat)) {
-            if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) release(Owner.COMBAT);
-            phaseTicks = 0;
-            return new CombatUpdate(0, false);
-        }
-        MovementSpeedController.combat(human, false);
-        if (!canBlockWithShield()
-                && !(defendingProjectile && canPreemptivelyBlockProjectile())) {
-            if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
-                release(Owner.COMBAT);
-            }
-            phaseTicks = 0;
-            return new CombatUpdate(0, false);
-        }
-
-        if (!wantsHighPressureGuard() && !underGunfirePressure() && awaitingProjectile()
-                && shouldDeferRangedProjectileGuard() && hasHeldMinimumCombatGuard()) {
-            projectileDefenseUntil = 0;
-            if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
-                release(Owner.COMBAT);
-            }
-            phaseTicks = 0;
-            return new CombatUpdate(0, false);
-        }
-
-        updateDefensePressure();
+        if (pressureCycleActive || human.isFleeing) return new CombatUpdate(0, false);
         maintainCombat(threat);
         guardedCharge.tick(human);
-        // Instinctive pressure fixes a limited shield direction before ordinary target/arrow tracking.
-        if (wantsHighPressureGuard()) {
-            facePressure();
-            maintainCombat(threat);
-            if (ownsCurrentShield()) pressureCycle.guarded(human.tickCount);
-            return new CombatUpdate(Math.max(phaseTicks, 2), false);
-        }
-        IncomingArrow incomingArrow = findIncomingArrow();
-        net.minecraft.world.entity.Entity facingThreat = threat;
-        if (incomingArrow != null) {
-            defendingProjectile = true;
-            projectileDefenseUntil = human.tickCount
-                    + ProjectileShieldPolicy.guardWindowTicks(
-                    isDedicatedRangedCombatant(), incomingArrow.ticksToImpact());
-            // Face the visible projectile itself, never infer a hidden shooter's position.
-            // Do not change the attack focus merely to orient a shield.
-            facingThreat = incomingArrow.projectile();
-        } else if (rangedWarning && preparingKnownShot() != null) {
-            facingThreat = rememberedShooter;
-        } else if (CombatPressurePolicy.isRecentHit(human.tickCount, human.getLastHurtByMobTimestamp())
-                && isValidThreat(human.getLastHurtByMob())
-                && (threat == human.getLastHurtByMob()
-                || (!BodyguardProtection.isBodyguard(human)
-                && human.distanceToSqr(threat) > 36.0D))) {
-            facingThreat = human.getLastHurtByMob();
-        }
-        if (!NavigationDebugService.controls(human)
-                && (!(facingThreat instanceof LivingEntity living) || HumanPerception.canTarget(human,living))) {
-            human.getLookControl().setLookAt(facingThreat, 90.0F, 90.0F);
-            human.markShieldFacing(facingThreat);
-        }
-        if (rangedWarning && (preparingKnownShot() == null || human.tickCount >= rangedWarningUntil))
-            rangedWarning = false;
-        boolean awaitingProjectile = awaitingProjectile();
-        if (awaitingProjectile) {
-            phaseTicks = Math.max(phaseTicks, projectileDefenseUntil - human.tickCount);
-            if (incomingArrow != null) defensePressureTick = human.tickCount;
-        }
-        if (underGunfirePressure()) {
-            defendingGunfire = true;
-            maintainCombat(threat);
-            if (guardedCharge.ready(human)
-                    && human.tickCount - defenseStartTick >= CombatPressurePolicy.MAX_GUARD_WAIT_TICKS) {
-                release(Owner.COMBAT);
-                return new CombatUpdate(0, true);
-            }
-            return new CombatUpdate(Math.max(phaseTicks, 2), false);
-        }
-        if (defendingGunfire) {
+        List<Float> bearings = meleeBearings();
+        if (!bearings.isEmpty()) human.markShieldFacingDirection(ShieldDefensePolicy.coverageYaw(
+                bearings, human.getYRot(), true, human.getRandom().nextDouble()));
+        if (meleeCounterRequested || meleeBlocks >= 3 || human.tickCount - defensePressureTick >= 40) {
+            boolean counter = meleeCounterRequested;
             release(Owner.COMBAT);
-            return new CombatUpdate(0, true);
+            attackObligation = true;
+            return new CombatUpdate(0, counter);
         }
-        int heldTicks = human.tickCount - defenseStartTick;
-        int quietTicks = human.tickCount - defensePressureTick;
-        boolean meleePressure = predictsIncomingMelee(threat);
-        boolean blockedThisGuard = lastBlockedTick >= defenseStartTick;
-        boolean counterReady = CombatPressurePolicy.shouldCounterAfterGuard(
-                heldTicks, blockedThisGuard, awaitingProjectile);
-        if (counterReady && (canCounterFromCurrentRange || heldTicks >= CombatPressurePolicy.MAX_GUARD_WAIT_TICKS)) {
-            release(Owner.COMBAT);
-            return new CombatUpdate(0, true);
-        }
-        if (!meleePressure && !awaitingProjectile
-                && CombatPressurePolicy.shouldReleaseUnpressuredBlock(heldTicks, quietTicks, false, false)) {
-            release(Owner.COMBAT);
-            human.getPersistentData().putString("hostile_humans_unified:ai_phase", "shield_threat_gone");
-            return new CombatUpdate(0, false);
-        }
-
-        if (!awaitingProjectile && CombatPressurePolicy.shouldReleaseForPursuit(
-                heldTicks, quietTicks, !isRangedThreat(threat),
-                human.distanceToSqr(threat), radialApproachSpeed(threat)
-        )) {
-            if (human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
-                release(Owner.COMBAT);
-            }
-            phaseTicks = 0;
-            human.getPersistentData().putString("hostile_humans_unified:ai_phase", "shield_pursuit_release");
-            return new CombatUpdate(0, false);
-        }
-
-        return new CombatUpdate(phaseTicks, false);
+        return new CombatUpdate(2, false);
     }
 
     private void updateDefensePressure() {
@@ -430,47 +373,32 @@ public final class ShieldDefenseController {
     }
 
     IncomingArrow findIncomingArrow() {
-        if (!canPreemptivelyBlockProjectile() || human.tickCount < nextCounterGuardTick
-                || shouldDeferRangedProjectileGuard()) return null;
+        if (!canPreemptivelyBlockProjectile() || human.tickCount < nextProjectileGuardTick
+                || shouldSuppressRecovery() || owner == Owner.ADVANCE || !meleeBearings().isEmpty()) return null;
         if (lastProjectileProbeTick == human.tickCount) return lastProjectileProbe;
         lastProjectileProbeTick = human.tickCount;
         lastProjectileProbe = null;
-        boolean ranged = isDedicatedRangedCombatant();
-        if (ranged && human.tickCount < nextProjectileGuardTick) return null;
         AABB bounds = human.getBoundingBox();
-        if (human.tickCount >= nextProjectileScan) {
-            // Stagger subsequent refreshes. Geometry for these bounded candidates stays current.
-            nextProjectileScan = human.tickCount + PROJECTILE_SCAN_INTERVAL
-                    + (nextProjectileScan == 0 ? Math.floorMod(human.getId(), 3) : 0);
+        if (observedProjectiles != null) {
+            trackedArrows.clear(); trackedArrows.addAll(observedProjectiles);
+        } else if (human.tickCount >= nextProjectileScan) {
+            nextProjectileScan = human.tickCount + PROJECTILE_SCAN_INTERVAL;
             trackedArrows.clear();
-            PriorityQueue<AbstractArrow> nearest = new PriorityQueue<>(MAX_TRACKED_ARROWS + 1,
-                    Comparator.comparingDouble((AbstractArrow arrow) -> human.distanceToSqr(arrow)).reversed());
-            for (AbstractArrow arrow : human.level().getEntitiesOfClass(AbstractArrow.class,
-                    bounds.inflate(32.0D, 16.0D, 32.0D),
-                    candidate -> candidate.isAlive() && candidate.getOwner() != human
-                            && candidate.getDeltaMovement().lengthSqr() >= 0.04D)) {
-                if (!inFront(arrow.position())) continue;
-                if (arrow.getOwner() instanceof LivingEntity shooter && HumanRelations.allied(human, shooter)) continue;
-                if (bounds.getCenter().subtract(arrow.position()).dot(arrow.getDeltaMovement()) < 0.0D) continue;
-                nearest.offer(arrow);
-                if (nearest.size() > MAX_TRACKED_ARROWS) nearest.poll();
-            }
-            trackedArrows.addAll(nearest);
+            trackedArrows.addAll(human.level().getEntitiesOfClass(Projectile.class,
+                    bounds.inflate(32, 16, 32), candidate -> candidate.isAlive() && candidate.getOwner() != human));
         }
         double earliest = Double.MAX_VALUE;
-        for (AbstractArrow arrow : trackedArrows) {
+        for (Projectile arrow : trackedArrows) {
             if (!arrow.isAlive() || arrow.isRemoved() || arrow.level() != human.level()
-                    || !inFront(arrow.position())) continue;
+                    || arrow.getOwner() == human || !inFront(arrow.position())) continue;
+            ShieldProjectileBackend.Motion model = ShieldProjectileBackend.describe(arrow);
+            if (model == null || !model.shieldable()) continue;
             Vec3 velocity = arrow.getDeltaMovement();
-            if (velocity.lengthSqr() < 0.04D
-                    || bounds.getCenter().subtract(arrow.position()).dot(velocity) < 0.0D) continue;
+            if (velocity.lengthSqr() < .0001D) continue;
             if (arrow.getOwner() instanceof LivingEntity shooter && HumanRelations.allied(human, shooter)) continue;
             double impact = ProjectileShieldPolicy.impactTicks(arrow.position(), velocity, bounds,
-                    human.getDeltaMovement(), arrow.isInWater() ? 0.6D : 0.99D,
-                    arrow.isNoGravity() ? 0.0D : 0.05D);
-            if (!Double.isFinite(impact) || impact >= earliest
-                    || (ranged && !ProjectileShieldPolicy.shouldGuardRangedUser(impact))) continue;
-            if (!trajectoryClear(arrow, impact) || !visibleArrow(arrow)) continue;
+                    human.getDeltaMovement(), model);
+            if (!Double.isFinite(impact) || impact >= earliest || !trajectoryClear(arrow, impact) || !visibleArrow(arrow)) continue;
             lastProjectileProbe = new IncomingArrow(arrow,
                     arrow.getOwner() instanceof LivingEntity shooter ? shooter : null, impact);
             earliest = impact;
@@ -479,14 +407,14 @@ public final class ShieldDefenseController {
     }
 
     private boolean inFront(Vec3 point) {
-        return ProjectileShieldPolicy.insideReactionView(Vec3.directionFromRotation(0, human.getYHeadRot()), point.subtract(human.position()));
+        return ProjectileShieldPolicy.insideReactionView(human.getLookAngle(), point.subtract(human.getEyePosition()));
     }
 
     boolean allowsPressureReaction() {
         return !human.isNoAi() && !human.isSleeping() && !NavigationDebugService.controls(human)
                 && !HumanGunner.isManualInventoryOpen(human)
                 && human.level().getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
-                && !human.isFleeing && !human.isInLava() && !human.isPassenger() && human.explosionThreat == null
+                && !human.isInLava() && !human.isPassenger() && human.explosionThreat == null
                 && !RecoverySupplies.hasActiveUse(human)
                 && (!human.isUsingItem() || SpartanEquipmentCompat.isShield(human.getUseItem())
                     || RangedWeaponCustody.isBowOrCrossbow(human.getUseItem()))
@@ -494,7 +422,10 @@ public final class ShieldDefenseController {
     }
     boolean beginPressureReaction() {
         if (!allowsPressureReaction()) return false;
+        release(Owner.COMBAT);
+        endProjectileReaction();
         release(Owner.BODYGUARD);
+        endAdvance();
         guardedCharge.capture(human);
         if (human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
         human.setChargingCrossbow(false);
@@ -513,6 +444,7 @@ public final class ShieldDefenseController {
         guardedCharge.tick(human);
         MovementSpeedController.combat(human, false);
         pressureCycle.guarded(human.tickCount);
+        pressureCycleActive = true;
         facePressure();
     }
     void endPressureReaction() {
@@ -520,14 +452,19 @@ public final class ShieldDefenseController {
         release(Owner.PRESSURE);
         pressureWaitingForDrink = false;
         deferredPressureGraceUntil = Integer.MIN_VALUE;
-        endCombat(); // Preserve the original recovery/counter windows; never acquire a target.
+        endPressureExecution();
         if (!recoveryPressure.active(human.tickCount, UnifiedConfig.get().shieldPressure())) pressureFacing.clear();
     }
     private void facePressure() {
+        detectDefense();
+        List<Float> bearings = new ArrayList<>();
+        for (LivingEntity target : lockedDefenseTargets) if (isValidThreat(target)) bearings.add(bearing(target));
+        if (!bearings.isEmpty()) pressureFacing.record(ShieldDefensePolicy.coverageYaw(
+                bearings, human.getYRot(), false, human.getRandom().nextDouble()));
         if (ownsCurrentShield()) human.markShieldFacingDirection(pressureFacing.step(human.tickCount, human.getYRot()));
     }
 
-    private boolean visibleArrow(AbstractArrow arrow) {
+    private boolean visibleArrow(Projectile arrow) {
         return inFront(arrow.position()) && human.level().clip(new ClipContext(human.getEyePosition(),
                 arrow.getBoundingBox().getCenter(), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
                 human)).getType() == HitResult.Type.MISS;
@@ -539,19 +476,20 @@ public final class ShieldDefenseController {
                 && !human.isFleeing && !human.isInLava() && human.explosionThreat == null
                 && !human.isPassenger() && !RecoverySupplies.hasHandCustody(human)
                 && !RetreatRecoveryPolicy.shouldForceRetreat(human)
-                && !human.humanGunner$hasPendingMeleeAttack() && !isPressureBreakAttempt() && !shouldSuppressRecovery()
+                && !human.humanGunner$hasPendingMeleeAttack() && !shouldSuppressRecovery()
                 && (!human.isUsingItem() || SpartanEquipmentCompat.isShield(human.getUseItem())
                     || RangedWeaponCustody.isBowOrCrossbow(human.getUseItem()))
-                && canPreemptivelyBlockProjectile();
+                && (owner == null || owner == Owner.PROJECTILE)
+                && meleeBearings().isEmpty() && canPreemptivelyBlockProjectile();
     }
     boolean beginProjectileReaction(IncomingArrow arrow) {
         if (!allowsProjectileReaction() || arrow == null || !visibleArrow(arrow.projectile())) return false;
         release(Owner.BODYGUARD);
+        endAdvance();
         guardedCharge.capture(human);
         if (human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
         human.setChargingCrossbow(false);
-        reactiveGuardUntil = human.tickCount + ProjectileShieldPolicy.guardWindowTicks(
-                isDedicatedRangedCombatant(), arrow.ticksToImpact());
+        reactiveGuardUntil = human.tickCount + 100;
         InteractionHand hand = SpartanEquipmentCompat.isShield(human.getOffhandItem())
                 ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
         raise(Owner.PROJECTILE, hand, true);
@@ -561,7 +499,7 @@ public final class ShieldDefenseController {
     }
     boolean continuesProjectileReaction() {
         return owner == Owner.PROJECTILE && ownsCurrentShield() && allowsProjectileReaction()
-                && human.tickCount < reactiveGuardUntil;
+                && human.tickCount < reactiveGuardUntil && findIncomingArrow() != null;
     }
     void tickProjectileReaction() {
         if (owner != Owner.PROJECTILE || !ownsCurrentShield()) return;
@@ -578,24 +516,20 @@ public final class ShieldDefenseController {
         if (owner != Owner.PROJECTILE) return;
         release(Owner.PROJECTILE);
         reactiveGuardUntil = 0;
-        int delay = Math.max(config.shieldBlockCooldownTicks(), CombatPressurePolicy.COUNTER_WINDOW_TICKS);
-        if (RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem()))
-            delay = Math.max(delay, guardedCharge.counterWindowTicks(human));
-        nextDefenseTick = Math.max(nextDefenseTick, human.tickCount + delay);
-        nextCounterGuardTick = Math.max(nextCounterGuardTick, human.tickCount + delay);
-        if (isDedicatedRangedCombatant()) nextProjectileGuardTick = human.tickCount + (isCrossbowCombatant() ? 32 : 24);
+        nextProjectileGuardTick = human.tickCount + 40;
     }
 
-    private boolean trajectoryClear(AbstractArrow arrow, double impactTicks) {
+    private boolean trajectoryClear(Projectile arrow, double impactTicks) {
         Vec3 point = arrow.position(), velocity = arrow.getDeltaMovement();
-        double drag = arrow.isInWater() ? 0.6D : 0.99D;
-        double gravity = arrow.isNoGravity() ? 0.0D : 0.05D;
+        ShieldProjectileBackend.Motion model = ShieldProjectileBackend.describe(arrow);
+        if (model == null || !model.shieldable()) return false;
+        double drag = model.drag(), gravity = model.gravity();
         for (int tick = 0; tick < Math.ceil(impactTicks); tick++) {
             Vec3 end = point.add(velocity.scale(Math.min(1.0D, impactTicks - tick)));
             if (human.level().clip(new ClipContext(point, end, ClipContext.Block.COLLIDER,
                     ClipContext.Fluid.NONE, human)).getType() != HitResult.Type.MISS) return false;
             point = end;
-            velocity = velocity.scale(drag).add(0.0D, -gravity, 0.0D);
+            velocity = velocity.add(model.acceleration()).scale(drag).add(0.0D, -gravity, 0.0D);
         }
         return true;
     }
@@ -624,6 +558,11 @@ public final class ShieldDefenseController {
     public void observeBlockedHit() {
         if (!human.level().isClientSide) {
             lastBlockedTick = human.tickCount;
+            defensePressureTick = human.tickCount;
+            if (owner == Owner.COMBAT && !pressureCycleActive && !defendingProjectile) {
+                meleeBlocks++;
+                if (human.getRandom().nextInt(3) == 0) meleeCounterRequested = true;
+            }
             recoveryPressure.blocked(human.tickCount, UnifiedConfig.get().shieldPressure());
         }
     }
@@ -686,26 +625,14 @@ public final class ShieldDefenseController {
     }
 
     private boolean predictsIncomingMelee(LivingEntity attacker) {
-        if (!isValidThreat(attacker)
-                || isRangedThreat(attacker)
-                || !human.getSensing().hasLineOfSight(attacker)) {
-            return false;
-        }
-        double distanceSqr = human.distanceToSqr(attacker);
-        if (distanceSqr > 12.25D) {
-            return false;
-        }
-        Vec3 towardHuman = human.position().subtract(attacker.position()).multiply(1.0D, 0.0D, 1.0D);
-        Vec3 direction = towardHuman.lengthSqr() < 0.01D
-                ? attacker.getLookAngle().multiply(1.0D, 0.0D, 1.0D).normalize()
-                : towardHuman.normalize();
-        Vec3 look = attacker.getLookAngle().multiply(1.0D, 0.0D, 1.0D);
-        Vec3 movement = attacker.getDeltaMovement().multiply(1.0D, 0.0D, 1.0D);
-        boolean facingHuman = look.lengthSqr() > 0.01D && look.normalize().dot(direction) >= 0.60D;
-        return CombatPressurePolicy.predictsIncomingMelee(
-                distanceSqr, attacker.swinging, hasMeleeIntent(attacker) || attacker.swinging,
-                facingHuman, movement.dot(direction)
-        );
+        if (!isValidThreat(attacker) || isRangedThreat(attacker)
+                || !human.getSensing().hasLineOfSight(attacker)) return false;
+        Vec3 offset = attacker.position().subtract(human.position());
+        Vec3 toward = offset.multiply(1, 0, 1).normalize();
+        Vec3 enemyLook = attacker.getLookAngle().multiply(1, 0, 1).normalize();
+        Vec3 ownLook = human.getLookAngle().multiply(1, 0, 1).normalize();
+        return ShieldDefensePolicy.meleeCandidate(offset.x, offset.y, offset.z,
+                enemyLook.dot(toward.scale(-1)), ownLook.dot(toward), hasMeleeIntent(attacker) || attacker.swinging);
     }
 
     private double radialApproachSpeed(LivingEntity attacker) {
@@ -726,7 +653,8 @@ public final class ShieldDefenseController {
     }
 
     private void startShieldBlockIfAvailable() {
-        if (human.isFleeing || isHoldingTaczGun() || human.humanGunner$hasPendingMeleeAttack()) return;
+        if ((human.isFleeing || isHoldingTaczGun()) && !wantsHighPressureGuard()
+                || human.humanGunner$hasPendingMeleeAttack()) return;
         if (human.isUsingItem()) return;
         InteractionHand shieldHand = SpartanEquipmentCompat.isShield(human.getOffhandItem())
                 ? InteractionHand.OFF_HAND
@@ -746,7 +674,7 @@ public final class ShieldDefenseController {
     }
 
     private boolean canBlockWithShield() {
-        return hasShieldInHands() && human.shieldCoolDown <= 0 && !isHoldingTaczGun();
+        return hasShieldInHands() && human.shieldCoolDown <= 0 && (!isHoldingTaczGun() || shouldSuppressRecovery());
     }
 
     private int rollShieldBlockDuration() {
@@ -783,7 +711,7 @@ public final class ShieldDefenseController {
 
     /** Bodyguard interception is a request to the same shield owner, without assigning aggro. */
     void tickBodyguard(ServerPlayer player, LivingEntity threat) {
-        if (threat == null || human.isFleeing || isHoldingTaczGun() || isPressureBreakAttempt()) { endBodyguard(); return; }
+        if (threat == null || human.isFleeing || isHoldingTaczGun()) { endBodyguard(); return; }
         if (owner == Owner.BODYGUARD && human.tickCount >= guardBlockUntil) endBodyguard();
         if (human.getTarget() == null && human.shieldCoolDown <= 0 && !human.isUsingItem()
                 && human.tickCount >= nextGuardBlock && human.distanceToSqr(player) <= 16.0D) {
@@ -801,7 +729,8 @@ public final class ShieldDefenseController {
     void endBodyguard() { release(Owner.BODYGUARD); }
 
     private void raise(Owner requestedOwner, InteractionHand hand, boolean projectile) {
-        if (human.level().isClientSide || human.isFleeing || isHoldingTaczGun() || human.isUsingItem()) return;
+        if (human.level().isClientSide || human.isUsingItem()
+                || (human.isFleeing || isHoldingTaczGun()) && !wantsHighPressureGuard()) return;
         if (projectile) human.humanGunner$startProjectileShield(hand);
         else human.humanGunner$startMovementShield(hand);
         // startUsingItem may reject a shield during a committed melee upswing.

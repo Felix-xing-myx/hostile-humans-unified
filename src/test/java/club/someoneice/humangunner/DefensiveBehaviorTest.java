@@ -30,13 +30,14 @@ public final class DefensiveBehaviorTest {
                 "needsExtension"), "native retreat also anticipates");
         Vec3 forward = new Vec3(0, 0, 1);
         for (int degrees = -180; degrees <= 180; degrees++) {
-            if (Math.abs(degrees) == 90) continue; // Exact edge fixtures below avoid floating-point cosine error.
+            if (Math.abs(degrees) == 60) continue;
             double radians = Math.toRadians(degrees);
-            check(ProjectileShieldPolicy.insideReactionView(forward, new Vec3(Math.sin(radians), 4, Math.cos(radians)))
-                    == (Math.abs(degrees) < 90), "front/diagonal/rear angular boundary: " + degrees);
+            check(ProjectileShieldPolicy.insideReactionView(forward, new Vec3(Math.sin(radians), 0, Math.cos(radians)))
+                    == (Math.abs(degrees) < 60), "full cone horizontal boundary: " + degrees);
         }
-        check(ProjectileShieldPolicy.insideReactionView(forward,new Vec3(1, 2, 0))
-                && ProjectileShieldPolicy.insideReactionView(forward,new Vec3(-1, -2, 0)), "exact side boundary is included");
+        check(!ProjectileShieldPolicy.insideReactionView(forward,new Vec3(0, 2, 1))
+                && ProjectileShieldPolicy.insideReactionView(new Vec3(0,1,0),new Vec3(0,2,0)),
+                "vertical field of view follows actual pitch");
         check(!ProjectileShieldPolicy.insideReactionView(forward,new Vec3(0, 0, Double.NaN))
                 && !ProjectileShieldPolicy.insideReactionView(Vec3.ZERO,new Vec3(1,0,1)), "invalid geometry fails closed");
         String reaction = "club/someoneice/humangunner/ProjectileReactionGoal";
@@ -100,8 +101,8 @@ public final class DefensiveBehaviorTest {
                 "defensive facing restored after navigation and body controls");
         check(calls(HUMAN + "$HumanMoveControl", "tick", "moveWhileShieldFacing"),
                 "movement keeps target-facing shield orientation before travel, not only visually");
-        check(calls(SHIELDS, "tickCombat", "markShieldFacing")
-                        && calls(SHIELDS, "tickCombat", "shouldReleaseUnpressuredBlock"),
+        check(calls(SHIELDS, "tickCombat", "markShieldFacingDirection")
+                        && calls(SHIELDS, "tickCombat", "meleeBearings"),
                 "defensive goal uses one-tick facing lease and timely release policy");
         check(calls(ADAPTIVE, "tickDefend", "tickCombat")
                         && calls("club/someoneice/humangunner/BodyguardMovementGoal", "tick", "tickBodyguard"),
@@ -163,7 +164,7 @@ public final class DefensiveBehaviorTest {
         check(calls(HUMAN + "$HumanMoveControl", "tick", "facePendingBetterCombatAttack"),
                 "navigation cannot rotate pending attacks toward a path node");
         check(calls(SHIELDS, "findIncomingArrow", "impactTicks")
-                        && calls(SHIELDS, "findIncomingArrow", "shouldGuardRangedUser"),
+                        && calls(SHIELDS, "findIncomingArrow", "describe"),
                 "live arrow entrypoint uses swept collision prediction and ranged interruption bound");
         check(calls(HUMAN, "readAdditionalSaveData", "remove"),
                 "reload clears tick-count based gunfire memory instead of treating it as fresh pressure");

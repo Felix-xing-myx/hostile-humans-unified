@@ -11,13 +11,19 @@ final class RecoveryPressureWindow {
     void record(int now, float damage, float maximumHealth, ShieldPressureConfig config) {
         if (!config.enabled()) { clear(); return; }
         if (!(damage > 0) || !Float.isFinite(damage) || !(maximumHealth > 0)) return;
-        while (!hits.isEmpty() && now - hits.peekFirst().tick() > config.windowTicks()) hits.removeFirst();
+        int longest = Math.max(config.windowTicks(), config.frequentWindowTicks());
+        while (!hits.isEmpty() && now - hits.peekFirst().tick() >= longest) hits.removeFirst();
         if (hits.size() >= 256) hits.removeFirst();
         hits.addLast(new Hit(now, damage));
-        double total = 0;
-        for (Hit hit : hits) total += hit.damage();
-        if (active(now, config) || (hits.size() >= 2 && total >= maximumHealth * config.damageRatio())
-                || (hits.size() >= config.frequentHits() && total >= maximumHealth * config.frequentDamageRatio()))
+        double recent = 0, frequent = 0;
+        int recentCount = 0, frequentCount = 0;
+        for (Hit hit : hits) {
+            if (now - hit.tick() < config.windowTicks()) { recent += hit.damage(); recentCount++; }
+            if (now - hit.tick() < config.frequentWindowTicks()) { frequent += hit.damage(); frequentCount++; }
+        }
+        if (active(now, config) || damage >= maximumHealth * config.singleDamageRatio()
+                || (recentCount >= 2 && recent >= maximumHealth * config.damageRatio())
+                || (frequentCount >= config.frequentHits() && frequent >= maximumHealth * config.frequentDamageRatio()))
             lastPressureTick = now;
     }
 
