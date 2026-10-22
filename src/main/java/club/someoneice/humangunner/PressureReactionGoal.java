@@ -26,6 +26,5 @@ final class PressureReactionGoal extends Goal {
     @Override public void tick() { shields.tickPressureReaction(); }
     @Override public void stop() {
         shields.endPressureReaction();
-        if (human.getTarget() == null) MovementSpeedController.normal(human);
     }
 }

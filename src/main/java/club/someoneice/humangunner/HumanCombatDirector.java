@@ -12,23 +12,23 @@ public final class HumanCombatDirector {
     private static final class State {
         int nextProjectiles, lastProjectiles = Integer.MIN_VALUE;
         List<Projectile> projectiles = List.of();
-        java.util.UUID obligationTarget;
     }
     private static final Map<Human, State> STATES = new WeakHashMap<>();
     private HumanCombatDirector() { }
     public static void tick(Human human) {
         if (human.level().isClientSide) return;
         var shields = human.humanGunner$shieldDefense();
+        shields.validateDefenseLease();
         if (HumanTargetCoordinator.suspended(human) || !human.isAlive() || human.isRemoved()) {
             clear(human); return;
         }
         State state = STATES.computeIfAbsent(human, ignored -> new State());
         LivingEntity target = human.getTarget();
-        java.util.UUID selected = target == null ? null : target.getUUID();
-        if (!java.util.Objects.equals(state.obligationTarget, selected)
-                || !HumanPerception.canTarget(human, target) || human.isFleeing)
+        if (!HumanPerception.canTarget(human, target) || human.isFleeing
+                || GunSupport.isGunItem(human.getMainHandItem())
+                || !(SpartanEquipmentCompat.isShield(human.getMainHandItem())
+                    || SpartanEquipmentCompat.isShield(human.getOffhandItem())))
             shields.clearAttackObligation();
-        state.obligationTarget = selected;
         // Existing recognized-memory facts are shared; defense cannot grant new offensive knowledge.
         List<LivingEntity> known = HumanPerception.knownDynamicTargets(human).stream()
                 .filter(entity -> HumanPerception.canTarget(human, entity)).limit(64).toList();
@@ -57,7 +57,8 @@ public final class HumanCombatDirector {
         boolean advance = shield && capability.core() && capability.enabled()
                 && HumanFactions.shortId(human).equals("azure") && human.onGround()
                 && HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())
-                && HumanPerception.canTarget(human,target) && !MeleeCombatRange.canStartAttack(human,target)
+                && HumanPerception.canTarget(human,target)
+                && human.distanceToSqr(target) > MeleeCombatRange.reachSqr(human,target)
                 && !SoldierOrder.isHoldingPosition(human) && !human.isFleeing;
         shields.tickAdvance(advance, 1);
     }

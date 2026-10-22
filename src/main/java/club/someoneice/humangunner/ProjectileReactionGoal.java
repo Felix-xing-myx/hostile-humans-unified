@@ -28,6 +28,5 @@ final class ProjectileReactionGoal extends Goal {
     @Override public void stop() {
         shields.endProjectileReaction();
         incoming = null;
-        if (human.getTarget() == null) MovementSpeedController.normal(human);
     }
 }

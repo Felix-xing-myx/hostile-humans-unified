@@ -1,6 +1,7 @@
 package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.HumanUtil;
+import dev.felix.hostilehumans.core.ActionCoordinator;
 import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -31,6 +32,43 @@ public final class ShieldDefenseController {
     private final Human human;
     private final CombatAiConfig config;
     private Owner owner;
+    private ActionCoordinator leaseActions;
+    private ActionCoordinator.Token lease;
+    private boolean raising;
+    private InteractionHand startingHand;
+    private ItemStack startingShield;
+    private ActionCoordinator startingActions;
+    private ActionCoordinator.Token startingToken;
+    /** Human's native item-use override calls this before accepting any shield start. */
+    public boolean allowsShieldStart(InteractionHand hand) {
+        return raising && startingHand == hand && startingShield == human.getItemInHand(hand)
+                && startingActions != null && startingActions.running(startingToken);
+    }
+    private static java.util.EnumSet<ActionCoordinator.Resource> shieldResources() {
+        return java.util.EnumSet.of(ActionCoordinator.Resource.FACING, ActionCoordinator.Resource.USE_ITEM,
+                ActionCoordinator.Resource.MAIN_HAND, ActionCoordinator.Resource.OFF_HAND, ActionCoordinator.Resource.ATTACK);
+    }
+    public boolean ownsCombatDefense() { return owner == Owner.COMBAT && ownsCurrentShield(); }
+    /** Called before any goal can issue another use/facing request on this server tick. */
+    public void validateDefenseLease() {
+        if (owner == null) return;
+        if (!human.isAlive() || human.isRemoved() || human.isNoAi() || HumanInventorySession.isEditing(human)
+                || human.shieldCoolDown > 0 || leaseActions == null || !leaseActions.running(lease)
+                || !ownsCurrentShield()) {
+            Owner lost = owner;
+            release(lost);
+            if (lost == Owner.PRESSURE) endPressureExecution();
+            if (lost == Owner.ADVANCE) advance.end();
+        }
+    }
+    private boolean shieldResourcesAvailable() {
+        var actions = HumanBehaviorControl.actions(human);
+        for (var resource : shieldResources()) {
+            String holder = actions.owner(resource);
+            if (!holder.isEmpty() && (lease == null || !holder.equals(lease.action()))) return false;
+        }
+        return true;
+    }
     private boolean pressureWaitingForDrink;
     private int deferredPressureGraceUntil = Integer.MIN_VALUE;
     private boolean defendingGunfire;
@@ -40,7 +78,8 @@ public final class ShieldDefenseController {
     /** Caller supplies verified faction/core shield, grounded melee mode, locked out-of-range
      * target and permission to move. The same shared snapshot is used for higher priority checks. */
     public boolean tickAdvance(boolean eligible, int effectiveTicks) {
-        boolean allowed = eligible && !human.isFleeing && canBlockWithShield()
+        boolean allowed = config.enabled() && eligible && !human.isFleeing && canBlockWithShield()
+                && (owner == null || owner == Owner.ADVANCE) && shieldResourcesAvailable()
                 && !shouldSuppressRecovery() && meleeBearings().isEmpty()
                 && !RecoverySupplies.hasHandCustody(human) && !human.humanGunner$hasPendingMeleeAttack();
         boolean requested = advance.observe(allowed, effectiveTicks, human.getRandom()::nextDouble);
@@ -60,7 +99,9 @@ public final class ShieldDefenseController {
         }
         return false;
     }
-    public void endAdvance() { release(Owner.ADVANCE); advance.end(); }
+    public void endAdvance() {
+        if (owner == Owner.ADVANCE || advance.active()) { release(Owner.ADVANCE); advance.end(); }
+    }
     private boolean preparingCombatGuard;
     private int lastAttackExecution = Integer.MIN_VALUE;
     private int meleeBlocks;
@@ -83,9 +124,8 @@ public final class ShieldDefenseController {
     }
     /** Central lifecycle cleanup: release only our actual use, preserve earned cooldown. */
     public void cancelDefenseSession() {
-        if (ownsCurrentShield()) human.stopUsingItem();
-        owner = null; ownedShield = null;
-        endPressureExecution(); endAdvance(); clearAttackObligation();
+        if (owner != null) release(owner);
+        endPressureExecution(); endAdvance(); advance.end(); clearAttackObligation();
         pressureFacing.clear(); trackedArrows.clear();
         nearbyMelee = lockedDefenseTargets = List.of(); observedProjectiles = null;
         detectionTick = lastProjectileProbeTick = Integer.MIN_VALUE; lastProjectileProbe = null;
@@ -263,17 +303,9 @@ public final class ShieldDefenseController {
     }
 
     void prepareHighPressureDefense() {
-        if (!shouldSuppressRecovery()) return;
-        // Defense is a weapon handoff, never an implicit counterattack. Cancel
-        // the previous windup before publishing a melee stack to other goals.
-        human.humanGunner$cancelMeleeAttackForDefense();
-        if (RecoverySupplies.hasActiveUse(human)) return;
-        if (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem())) {
-            guardedCharge.capture(human);
-            human.stopUsingItem();
-            human.setChargingCrossbow(false);
-        }
-        if (isHoldingTaczGun()) GunCustody.beginCloseMeleeCounter(human);
+        // Publish/update the latched request only. Hand cancellation and shield use happen
+        // in raise() after the complete defensive lease has been admitted.
+        shouldSuppressRecovery();
     }
 
     /** Shared by every server melee entry, including native/fallback attacks. */
@@ -283,8 +315,9 @@ public final class ShieldDefenseController {
     }
 
     private boolean wantsCombatNow(LivingEntity threat, IncomingArrow incomingArrow) {
-        if (wantsHighPressureGuard()) return true;
-        if (human.isFleeing || !canBlockWithShield() || isHoldingTaczGun()) return false;
+        if (wantsHighPressureGuard() || owner == Owner.PRESSURE || owner == Owner.PROJECTILE) return false;
+        if (human.isFleeing || !canBlockWithShield() || isHoldingTaczGun()
+                || RecoverySupplies.hasActiveUse(human)) return false;
         if (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem())
                 && !RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) return false;
         if (attackObligation || human.tickCount < nextDefenseTick) return false;
@@ -296,20 +329,22 @@ public final class ShieldDefenseController {
     }
 
     int beginCombat(LivingEntity threat) {
+        if (raising) return 0;
+        if (ownsCombatDefense()) return 41; // Keep the original per-raise timer, count and lease.
+        if (owner == Owner.PRESSURE || owner == Owner.PROJECTILE || wantsHighPressureGuard()
+                || RecoverySupplies.hasActiveUse(human)) return 0;
         release(Owner.BODYGUARD);
         endAdvance();
-        guardedCharge.capture(human);
         preparingCombatGuard = false;
-        if (human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
-        human.setChargingCrossbow(false);
         defenseStartTick = defensePressureTick = human.tickCount;
         meleeBlocks = 0;
         meleeCounterRequested = false;
         maintainCombat(threat);
-        return 41;
+        return ownsCombatDefense() ? 41 : 0;
     }
 
     void endCombat() {
+        if (owner != Owner.COMBAT) return; // A stale Goal.stop cannot settle the pressure/projectile owner.
         boolean pressureGuard = pressureCycleActive;
         release(Owner.COMBAT);
         if (pressureGuard) endPressureExecution();
@@ -336,15 +371,10 @@ public final class ShieldDefenseController {
     }
 
     CombatUpdate tickCombat(LivingEntity threat, int phaseTicks, boolean canCounterFromCurrentRange) {
-        if (human.humanGunner$hasPendingMeleeAttack() || !canBlockWithShield()
+        if (owner != Owner.COMBAT || human.humanGunner$hasPendingMeleeAttack() || !canBlockWithShield()
                 || BodyguardProtection.protectingFromExplosion(human, threat)) return new CombatUpdate(0, false);
-        if (wantsHighPressureGuard()) {
-            maintainCombat(threat);
-            if (ownsCurrentShield()) { pressureCycle.guarded(human.tickCount); pressureCycleActive = true; }
-            facePressure();
-            return new CombatUpdate(2, false);
-        }
-        if (pressureCycleActive || human.isFleeing) return new CombatUpdate(0, false);
+        if (!ownsCombatDefense() || wantsHighPressureGuard() || human.isFleeing)
+            return new CombatUpdate(0, false);
         maintainCombat(threat);
         guardedCharge.tick(human);
         List<Float> bearings = meleeBearings();
@@ -352,7 +382,7 @@ public final class ShieldDefenseController {
                 bearings, human.getYRot(), true, human.getRandom().nextDouble()));
         if (meleeCounterRequested || meleeBlocks >= 3 || human.tickCount - defensePressureTick >= 40) {
             boolean counter = meleeCounterRequested;
-            release(Owner.COMBAT);
+            endCombat();
             attackObligation = true;
             return new CombatUpdate(0, counter);
         }
@@ -376,7 +406,7 @@ public final class ShieldDefenseController {
 
     IncomingArrow findIncomingArrow() {
         if (!canPreemptivelyBlockProjectile() || human.tickCount < nextProjectileGuardTick
-                || shouldSuppressRecovery() || owner == Owner.ADVANCE || !meleeBearings().isEmpty()) return null;
+                || shouldSuppressRecovery() || !meleeBearings().isEmpty()) return null;
         if (lastProjectileProbeTick == human.tickCount) return lastProjectileProbe;
         lastProjectileProbeTick = human.tickCount;
         lastProjectileProbe = null;
@@ -423,14 +453,13 @@ public final class ShieldDefenseController {
                 && wantsHighPressureGuard();
     }
     boolean beginPressureReaction() {
+        if (raising) return false;
+        if (owner == Owner.PRESSURE && ownsCurrentShield()) return true;
         if (!allowsPressureReaction()) return false;
-        release(Owner.COMBAT);
+        endCombat();
         endProjectileReaction();
         release(Owner.BODYGUARD);
         endAdvance();
-        guardedCharge.capture(human);
-        if (human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
-        human.setChargingCrossbow(false);
         InteractionHand hand = SpartanEquipmentCompat.isShield(human.getOffhandItem())
                 ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
         raise(Owner.PRESSURE, hand, false);
@@ -480,16 +509,15 @@ public final class ShieldDefenseController {
                 && !human.humanGunner$hasPendingMeleeAttack() && !shouldSuppressRecovery()
                 && (!human.isUsingItem() || SpartanEquipmentCompat.isShield(human.getUseItem())
                     || RangedWeaponCustody.isBowOrCrossbow(human.getUseItem()))
-                && (owner == null || owner == Owner.PROJECTILE)
+                && (owner == null || owner == Owner.PROJECTILE || owner == Owner.ADVANCE)
                 && meleeBearings().isEmpty() && canPreemptivelyBlockProjectile();
     }
     boolean beginProjectileReaction(IncomingArrow arrow) {
+        if (raising) return false;
+        if (owner == Owner.PROJECTILE && ownsCurrentShield()) return true;
         if (!allowsProjectileReaction() || arrow == null || !visibleArrow(arrow.projectile())) return false;
         release(Owner.BODYGUARD);
         endAdvance();
-        guardedCharge.capture(human);
-        if (human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
-        human.setChargingCrossbow(false);
         reactiveGuardUntil = human.tickCount + 100;
         InteractionHand hand = SpartanEquipmentCompat.isShield(human.getOffhandItem())
                 ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
@@ -511,7 +539,6 @@ public final class ShieldDefenseController {
             human.markShieldFacing(incoming.projectile());
         }
         guardedCharge.tick(human);
-        MovementSpeedController.combat(human, false);
     }
     void endProjectileReaction() {
         if (owner != Owner.PROJECTILE) return;
@@ -658,7 +685,7 @@ public final class ShieldDefenseController {
     private void startShieldBlockIfAvailable() {
         if ((human.isFleeing || isHoldingTaczGun()) && !wantsHighPressureGuard()
                 || human.humanGunner$hasPendingMeleeAttack()) return;
-        if (human.isUsingItem()) return;
+        if (human.isUsingItem() && !RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) return;
         InteractionHand shieldHand = SpartanEquipmentCompat.isShield(human.getOffhandItem())
                 ? InteractionHand.OFF_HAND
                 : SpartanEquipmentCompat.isShield(human.getMainHandItem())
@@ -732,31 +759,80 @@ public final class ShieldDefenseController {
     void endBodyguard() { release(Owner.BODYGUARD); }
 
     private void raise(Owner requestedOwner, InteractionHand hand, boolean projectile) {
-        if (human.level().isClientSide || human.isUsingItem()
-                || (human.isFleeing || isHoldingTaczGun()) && !wantsHighPressureGuard()) return;
-        if (projectile) human.humanGunner$startProjectileShield(hand);
-        else human.humanGunner$startMovementShield(hand);
-        // startUsingItem may reject a shield during a committed melee upswing.
-        if (human.isUsingItem() && human.getUsedItemHand() == hand
-                && SpartanEquipmentCompat.isShield(human.getUseItem())) {
-            owner = requestedOwner;
-            ownedShield = human.getUseItem();
-            if (pressureWaitingForDrink && (requestedOwner == Owner.COMBAT || requestedOwner == Owner.PRESSURE)) {
+        if (raising || human.level().isClientSide || !human.isAlive() || human.isRemoved() || human.isNoAi()
+                || HumanInventorySession.isEditing(human) || RecoverySupplies.hasActiveUse(human)
+                || human.isUsingItem() && !RangedWeaponCustody.isBowOrCrossbow(human.getUseItem()) || owner != null
+                || (human.isFleeing || isHoldingTaczGun()) && requestedOwner != Owner.PRESSURE) return;
+        ItemStack candidate = human.getItemInHand(hand);
+        if (!SpartanEquipmentCompat.isShield(candidate) || human.shieldCoolDown > 0) return;
+        raising = true;
+        ActionCoordinator actions = null;
+        ActionCoordinator.Token requested = null;
+        boolean admitted = false;
+        try {
+            actions = HumanBehaviorControl.actions(human);
+            int priority = switch (requestedOwner) {
+                case PRESSURE -> 300; case COMBAT -> 250; case PROJECTILE -> 200;
+                case ADVANCE -> 150; case BODYGUARD -> 100;
+            };
+            requested = actions.request("shield:" + requestedOwner.name().toLowerCase(java.util.Locale.ROOT),
+                    shieldResources(), priority, true, 2410);
+            if (!actions.acquire(requested)) return;
+            if (RecoverySupplies.hasActiveUse(human)
+                    || human.isUsingItem() && !RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())
+                    || human.getItemInHand(hand) != candidate || HumanInventorySession.isEditing(human)) return;
+            if (requestedOwner == Owner.PRESSURE) human.humanGunner$cancelMeleeAttackForDefense();
+            guardedCharge.capture(human);
+            if (human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem())) human.stopUsingItem();
+            human.setChargingCrossbow(false);
+            startingHand = hand; startingShield = candidate;
+            startingActions = actions; startingToken = requested;
+            if (projectile) human.humanGunner$startProjectileShield(hand);
+            else human.humanGunner$startMovementShield(hand);
+            if (!actions.running(requested) || !human.isAlive() || human.isRemoved() || human.isNoAi()
+                    || HumanInventorySession.isEditing(human) || human.getItemInHand(hand) != candidate
+                    || !human.isUsingItem() || human.getUsedItemHand() != hand || human.getUseItem() != candidate) return;
+            owner = requestedOwner; ownedShield = candidate;
+            leaseActions = actions; lease = requested; admitted = true;
+            if (pressureWaitingForDrink && requestedOwner == Owner.PRESSURE) {
                 deferredPressureGraceUntil = human.tickCount + 20;
                 pressureWaitingForDrink = false;
+            }
+        } finally {
+            try {
+                if (!admitted) {
+                    try {
+                        if (human.isUsingItem() && human.getUsedItemHand() == hand && human.getUseItem() == candidate)
+                            human.stopUsingItem();
+                    } finally {
+                        if (requested != null) actions.finish(requested, ActionCoordinator.Status.FAILED, "shield raise rejected");
+                    }
+                }
+            } finally {
+                startingHand = null; startingShield = null; startingActions = null; startingToken = null;
+                raising = false;
             }
         }
     }
 
     private boolean ownsCurrentShield() {
-        return ownedShield != null && human.isUsingItem() && human.getUseItem() == ownedShield;
+        return ownedShield != null && leaseActions != null && leaseActions.running(lease)
+                && human.isUsingItem() && human.getUseItem() == ownedShield
+                && human.getItemInHand(human.getUsedItemHand()) == ownedShield;
     }
 
     private void release(Owner requestedOwner) {
         if (owner != requestedOwner) return;
-        if (ownsCurrentShield()) human.stopUsingItem();
-        owner = null;
-        ownedShield = null;
+        ItemStack released = ownedShield;
+        var actions = leaseActions;
+        var releasedToken = lease;
+        owner = null; ownedShield = null; leaseActions = null; lease = null;
+        try {
+            if (released != null && human.isUsingItem() && human.getUseItem() == released) human.stopUsingItem();
+        } finally {
+            if (actions != null && releasedToken != null)
+                actions.finish(releasedToken, ActionCoordinator.Status.COMPLETED, "shield released");
+        }
     }
 
 }

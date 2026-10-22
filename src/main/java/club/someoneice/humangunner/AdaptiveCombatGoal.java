@@ -154,14 +154,13 @@ public final class AdaptiveCombatGoal extends Goal {
         updateCombatSession(currentThreat);
         if (BodyguardProtection.protectingFromExplosion(human, currentThreat)) return false;
 
-        if (shields.wantsHighPressureGuard()) {
-            pendingPhase = Phase.DEFEND;
-            return true;
-        }
         if (shouldEnterRetreat(currentThreat)) {
             pendingPhase = Phase.RETREAT;
             return true;
         }
+
+        // The independent high-pressure reaction leaves native combat/retreat in charge of movement.
+        if (shields.wantsHighPressureGuard()) return false;
 
         // Preserve the committed upswing; emergency recovery above may still preempt it.
         if (human.humanGunner$hasPendingMeleeAttack()) return false;
@@ -233,8 +232,8 @@ public final class AdaptiveCombatGoal extends Goal {
     @Override
     public boolean canContinueToUse() {
         if(IncomingHitResponseGoal.wantsResponse(human)&&phase!=Phase.RETREAT&&phase!=Phase.RECOVER)return false;
-        if (phase == Phase.DEFEND && shields.isPressureBreakAttempt()) return false;
-        if (phase != Phase.DEFEND && shields.wantsHighPressureGuard()) return false;
+        // Pressure owns only hands/facing/attack; it never replaces retreat's navigation session.
+        if (phase == Phase.DEFEND && (shields.wantsHighPressureGuard() || !shields.ownsCombatDefense())) return false;
         if (BodyguardProtection.isBodyguard(human)) {
             BodyguardProtection.update(human);
             if (BodyguardProtection.protectingFromExplosion(human, BodyguardProtection.threat(human))) return false;
@@ -244,7 +243,7 @@ public final class AdaptiveCombatGoal extends Goal {
         }
         // Suppressive fire can extend DEFEND indefinitely; it must not trap a
         // injured fighter in that phase instead of allowing ordinary retreat.
-        if (phase == Phase.DEFEND && shouldEnterRetreat(threat) && !shields.wantsHighPressureGuard()) return false;
+        if (phase == Phase.DEFEND && shouldEnterRetreat(threat)) return false;
         if ((phase == Phase.FLANK || phase == Phase.PRESSURE || phase == Phase.UNSTUCK)
                 && CombatTerrainNavigation.hasWork(human, threat)) return false;
         if ((!HumanPerception.canTarget(human,threat)
@@ -316,6 +315,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 planUnstuckMove();
             }
         }
+        if (phase == Phase.DEFEND && phaseTicks <= 0) return;
         if (phase == Phase.RETREAT || phase == Phase.RECOVER) {
             MovementSpeedController.retreat(human, true);
         } else {
@@ -417,10 +417,6 @@ public final class AdaptiveCombatGoal extends Goal {
                 human.getPersistentData().putString("hostile_humans_unified:ai_phase",
                         attacked ? "shield_counterattack" : "shield_counter_window");
             }
-            return;
-        }
-        if (shieldMovement.tick(human, threat, config, shields.wantsHighPressureGuard())) {
-            if (!human.isUsingItem()) shields.maintainCombat(threat);
             return;
         }
         boolean advancingMelee = shouldAdvanceToMeleeThreat();
