@@ -11,6 +11,9 @@ public final class HumanBehaviorControl {
     private static final java.util.Set<Human> CANCELLING = java.util.Collections.newSetFromMap(new WeakHashMap<>());
     private HumanBehaviorControl() { }
 
+    /** Observation only: never constructs a session, advances a deadline or renews an execution lease. */
+    public static ActionCoordinator peekActions(Human human) { return SESSIONS.get(human); }
+
     public static ActionCoordinator actions(Human human) {
         ActionCoordinator actions = SESSIONS.computeIfAbsent(human, ignored -> new ActionCoordinator());
         actions.advance(human.level().getGameTime());
