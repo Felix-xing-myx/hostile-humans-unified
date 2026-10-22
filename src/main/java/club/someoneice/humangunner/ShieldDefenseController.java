@@ -290,10 +290,10 @@ public final class ShieldDefenseController {
         return !human.level().isClientSide && config.enabled() && human.isAlive() && human.shieldCoolDown <= 0
                 && !HumanInventorySession.isEditing(human)
                 && human.explosionThreat == null
-                && (hasShieldInHands() || RecoverySupplies.hasRecoverableShield(human));
+                && hasAvailableShield();
     }
 
-    boolean wantsHighPressureGuard() { return shouldSuppressRecovery() && hasShieldInHands() && human.shieldCoolDown <= 0; }
+    boolean wantsHighPressureGuard() { return shouldSuppressRecovery() && hasAvailableShield() && human.shieldCoolDown <= 0; }
     private void endPressureExecution() {
         pressureCycle.ended(human.tickCount, UnifiedConfig.get().shieldPressure());
         pressureCycleActive = false;
@@ -637,7 +637,7 @@ public final class ShieldDefenseController {
     }
 
     private boolean canPreemptivelyBlockProjectile() {
-        if (!hasShieldInHands() || human.shieldCoolDown > 0) {
+        if (!hasAvailableShield() || human.shieldCoolDown > 0) {
             return false;
         }
         return !human.isFleeing && !isHoldingTaczGun();
@@ -698,7 +698,7 @@ public final class ShieldDefenseController {
                 ? InteractionHand.OFF_HAND
                 : SpartanEquipmentCompat.isShield(human.getMainHandItem())
                 ? InteractionHand.MAIN_HAND : null;
-        if (shieldHand == null) return;
+        if (shieldHand == null) shieldHand = InteractionHand.OFF_HAND;
         if (defendingProjectile && human.tickCount < projectileDefenseUntil) {
             raise(Owner.COMBAT, shieldHand, true);
         } else {
@@ -711,8 +711,12 @@ public final class ShieldDefenseController {
                 || SpartanEquipmentCompat.isShield(human.getMainHandItem());
     }
 
+    private boolean hasAvailableShield() {
+        return hasShieldInHands() || RecoverySupplies.hasRecoverableShield(human);
+    }
+
     private boolean canBlockWithShield() {
-        return hasShieldInHands() && human.shieldCoolDown <= 0 && (!isHoldingTaczGun() || shouldSuppressRecovery());
+        return hasAvailableShield() && human.shieldCoolDown <= 0 && (!isHoldingTaczGun() || shouldSuppressRecovery());
     }
 
     private int rollShieldBlockDuration() {
@@ -753,12 +757,11 @@ public final class ShieldDefenseController {
         if (owner == Owner.BODYGUARD && human.tickCount >= guardBlockUntil) endBodyguard();
         if (human.getTarget() == null && human.shieldCoolDown <= 0 && !human.isUsingItem()
                 && human.tickCount >= nextGuardBlock && human.distanceToSqr(player) <= 16.0D) {
-            for (InteractionHand hand : new InteractionHand[] {InteractionHand.OFF_HAND, InteractionHand.MAIN_HAND}) {
-                if (!SpartanEquipmentCompat.isShield(human.getItemInHand(hand))) continue;
-                raise(Owner.BODYGUARD, hand, true);
+            if (hasAvailableShield()) {
+                raise(Owner.BODYGUARD, InteractionHand.OFF_HAND, true);
+                if (owner != Owner.BODYGUARD || !ownsCurrentShield()) return;
                 guardBlockUntil = human.tickCount + 8;
                 nextGuardBlock = human.tickCount + 16;
-                break;
             }
         }
         if (owner == Owner.BODYGUARD && ownsCurrentShield()) human.markShieldFacing(threat);
@@ -771,13 +774,19 @@ public final class ShieldDefenseController {
                 || HumanInventorySession.isEditing(human) || RecoverySupplies.hasActiveUse(human)
                 || human.isUsingItem() && !RangedWeaponCustody.isBowOrCrossbow(human.getUseItem()) || owner != null
                 || (human.isFleeing || isHoldingTaczGun()) && requestedOwner != Owner.PRESSURE) return;
-        ItemStack candidate = human.getItemInHand(hand);
-        if (!SpartanEquipmentCompat.isShield(candidate) || human.shieldCoolDown > 0) return;
+        if (human.shieldCoolDown > 0) return;
+        ItemStack candidate = ItemStack.EMPTY;
         raising = true;
         ActionCoordinator actions = null;
         ActionCoordinator.Token requested = null;
         boolean admitted = false;
         try {
+            // A real tactical need borrows the best real shield through the same exchange as recovery.
+            // Guard the entire preparation so equipment callbacks cannot recursively start another raise.
+            if (!RecoverySupplies.restoreShieldAfterRecovery(human)) return;
+            hand = InteractionHand.OFF_HAND;
+            candidate = human.getItemInHand(hand);
+            if (!SpartanEquipmentCompat.isShield(candidate)) return;
             actions = HumanBehaviorControl.actions(human);
             int priority = switch (requestedOwner) {
                 case PRESSURE -> 300; case COMBAT -> 250; case ADVANCE -> 200;

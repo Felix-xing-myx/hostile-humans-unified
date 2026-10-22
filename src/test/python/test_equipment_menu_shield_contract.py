@@ -67,4 +67,17 @@ class EquipmentMenuShieldContract(unittest.TestCase):
         self.assertNotIn(".copy()", owned)
         self.assertIn("return !HumanLootManager.bestOwnedShield(human).isEmpty()", RECOVERY)
 
+    def test_actual_defense_entry_borrows_a_stored_shield_before_claiming_use(self):
+        controller = (PKG / "ShieldDefenseController.java").read_text(encoding="utf-8")
+        raise_block = controller.split("private void raise(", 1)[1].split("private boolean ownsCurrentShield", 1)[0]
+        self.assertLess(raise_block.index("raising = true"), raise_block.index("RecoverySupplies.restoreShieldAfterRecovery(human)"))
+        self.assertLess(raise_block.index("RecoverySupplies.restoreShieldAfterRecovery(human)"), raise_block.index("actions.acquire(requested)"))
+        self.assertIn("hand = InteractionHand.OFF_HAND", raise_block)
+        self.assertIn("candidate = human.getItemInHand(hand)", raise_block)
+        self.assertIn("RecoverySupplies.hasRecoverableShield(human)", controller)
+        self.assertIn("shouldSuppressRecovery() && hasAvailableShield()", controller)
+        self.assertIn("if (!hasAvailableShield() || human.shieldCoolDown > 0)", controller)
+        director = (PKG / "HumanCombatDirector.java").read_text(encoding="utf-8")
+        self.assertLess(director.index("HumanLootManager.bestOwnedShield(human)"), director.index("getEntitiesOfClass(Projectile.class"))
+
 if __name__ == "__main__": unittest.main()

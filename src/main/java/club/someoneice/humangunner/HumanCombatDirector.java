@@ -37,9 +37,10 @@ public final class HumanCombatDirector {
             var offset = entity.position().subtract(human.position());
             return offset.horizontalDistanceSqr() <= 16 && Math.abs(offset.y) <= 3;
         }).toList();
-        boolean shield = SpartanEquipmentCompat.isShield(human.getMainHandItem())
-                || SpartanEquipmentCompat.isShield(human.getOffhandItem());
+        var heldShield = HumanLootManager.bestOwnedShield(human);
+        boolean shield = !heldShield.isEmpty();
         if (shield && !GunSupport.isGunItem(human.getMainHandItem()) && human.shieldCoolDown <= 0
+                && !RecoverySupplies.hasActiveUse(human)
                 && human.tickCount >= state.nextProjectiles
                 && PerceptionBudget.claim(human, "queries", 1, ":defense_projectiles")) {
             state.projectiles = human.level().getEntitiesOfClass(Projectile.class,
@@ -52,8 +53,6 @@ public final class HumanCombatDirector {
         List<Projectile> projectiles = state.lastProjectiles != Integer.MIN_VALUE
                 && human.tickCount - state.lastProjectiles <= 6 ? state.projectiles : List.of();
         shields.observeDefenseSnapshot(near, known, projectiles);
-        var heldShield = SpartanEquipmentCompat.isShield(human.getOffhandItem())
-                ? human.getOffhandItem() : human.getMainHandItem();
         var capability = EquipmentArchetypes.describe(human, heldShield);
         boolean advance = shield && capability.core() && capability.enabled()
                 && HumanFactions.shortId(human).equals("azure") && human.onGround()
