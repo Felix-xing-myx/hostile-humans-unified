@@ -15,8 +15,12 @@ final class GunAttackAction {
         if(human.isUsingItem()&&SpartanEquipmentCompat.isShield(human.getUseItem())) return;
         var actions=HumanBehaviorControl.actions(human);
         if(!actions.owner(ActionCoordinator.Resource.ATTACK).isEmpty()) return;
-        var token=actions.request("gun-shot",EnumSet.of(ActionCoordinator.Resource.ATTACK),80,false,1);
-        if(!actions.acquire(token)) return;
+        var token=actions.request("gun-shot",EnumSet.of(ActionCoordinator.Resource.ATTACK,
+                ActionCoordinator.Resource.MAIN_HAND, ActionCoordinator.Resource.FACING),80,false,1);
+        if(!actions.acquire(token)) {
+            actions.finish(token,ActionCoordinator.Status.CANCELLED,"shot authority busy");
+            return;
+        }
         boolean completed=false;
         try {
             shot.run();completed=true;

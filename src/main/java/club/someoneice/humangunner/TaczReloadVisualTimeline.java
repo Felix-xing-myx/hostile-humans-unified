@@ -53,4 +53,20 @@ public final class TaczReloadVisualTimeline {
     public static void clear(Human human) {
         if (!human.getTaczReloadVisual().isEmpty()) human.setTaczReloadVisual(new CompoundTag());
     }
+
+    /** Native reload work and its admitted rate are authored by the server, not client configuration. */
+    public static void work(Human human, double work, double rate) {
+        if (human.level().isClientSide || !Double.isFinite(work) || work < 0
+                || !Double.isFinite(rate) || rate <= 0) return;
+        CompoundTag tag = human.getTaczReloadVisual();
+        if (tag.isEmpty()) return;
+        long now = human.level().getGameTime();
+        boolean changedRate = !tag.contains("WorkRate") || Math.abs(tag.getDouble("WorkRate") - rate) > 1e-8;
+        // A periodic checkpoint bounds display drift; rate transitions are immediate.
+        if (!changedRate && now - tag.getLong("WorkTick") < 10) return;
+        tag.putDouble("Work", work);
+        tag.putDouble("WorkRate", rate);
+        tag.putLong("WorkTick", now);
+        human.setTaczReloadVisual(tag);
+    }
 }

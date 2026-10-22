@@ -2296,27 +2296,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     @Override
     public void performPotionRangedAttack(LivingEntity target, float var2) {
-        if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return;
-        if (!club.someoneice.humangunner.PotionThrowing.inRange(this, target)) {
-            return;
-        }
-        ItemStack potionStack = null;
-        if (this.getMainHandItem().getItem() instanceof SplashPotionItem) {
-            potionStack = this.getMainHandItem();
-        } else if (this.getOffhandItem().getItem() instanceof SplashPotionItem) {
-            potionStack = this.getOffhandItem();
-        }
-        if (potionStack == null) {
-            return;
-        }
-        ThrownPotion thrownPotion = new ThrownPotion(this.level(), (LivingEntity)this);
-        thrownPotion.setItem(potionStack.copy());
-        club.someoneice.humangunner.PotionThrowing.shoot(thrownPotion, target);
-        potionStack.shrink(1);
-        if (!this.isSilent()) {
-            this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WITCH_THROW, this.getSoundSource(), 1.0f, 0.8f + this.random.nextFloat() * 0.4f);
-        }
-        this.level().addFreshEntity((Entity)thrownPotion);
+        club.someoneice.humangunner.PotionThrowing.throwDebuff(this, target);
     }
 
     public boolean isVisuallySwimming() {

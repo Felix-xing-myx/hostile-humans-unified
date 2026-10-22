@@ -128,7 +128,7 @@ final class GunCustody {
             var target=human.getTarget();
             boolean close=target!=null&&target.isAlive()&&human.distanceToSqr(target)<=4.5*4.5;
             boolean melee=HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem());
-            if(isActive(human)&&melee&&(human.hasPendingBetterCombatFacing()||human.swinging)) return false;
+            if(isActive(human)&&melee&&(human.humanGunner$hasPendingMeleeAttack()||human.swinging)) return false;
             if(isActive(human)&&close&&melee&&GunCombatProfile.shouldForceMelee(human,gun)) return false;
             if(isActive(human)&&melee&&GunSupport.get().isReloading(human,gun)) return false;
             if(!AmmoWeaponSelection.mayRestore(human,gun)) return false;
@@ -195,6 +195,20 @@ final class GunCustody {
         if (!isActive(human)) return;
         if (human.isUsingItem()) human.stopUsingItem();
         if (!restorePrimaryGun(human, "owner_inventory_open")) clearLease(human);
+    }
+
+    /** Immediate physical cleanup accompanies session revocation; no item is moved or restored. */
+    static void cancelBackgroundReloads(Human human) {
+        if (human.level().isClientSide) return;
+        var actual = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<ItemStack, Boolean>());
+        actual.add(human.getMainHandItem());
+        actual.add(human.getOffhandItem());
+        if (human.getData() != null) for (int i = 0; i < human.getData().getInventoryItemsSize(); i++)
+            actual.add(human.getData().getInventoryItem(i));
+        for (ItemStack stack : actual) if (GunSupport.get().isGun(stack)) GunSupport.get().cancelReload(human, stack);
+        clearLease(human);
+        CloseRangedTactics.clear(human);
+        CloseDefenseHold.clear(human);
     }
 
     static void adoptManualLoadout(Human human) {

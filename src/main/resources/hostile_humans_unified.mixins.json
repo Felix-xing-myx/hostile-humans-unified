@@ -31,7 +31,15 @@
     "JegNativeGunGoalMixin",
     "JegWaterBombOwnerMixin",
     "ScgunsHumanAimMixin",
-    "ScgunsHumanShieldMixin"
+    "ScgunsHumanShieldMixin",
+    "JegWaterThrowOriginMixin",
+    "ScgunsChokeThrowOriginMixin",
+    "ScgunsChokeVictimFilterMixin",
+    "ScgunsCloudVictimFilterMixin",
+    "ScgunsGasThrowOriginMixin",
+    "ScgunsSwarmThrowOriginMixin",
+    "ThrowableAreaEffectCloudMixin",
+    "ThrowableSplashPotionMixin"
   ],
   "client": [
     "ScgunsNpcMuzzleFlashMixin",

@@ -466,7 +466,7 @@ public final class AdaptiveCombatGoal extends Goal {
         double minimum;
         double maximum;
         if (isUsingTaczGun()) {
-            var range = GunRangePolicy.forWeapon(human.getMainHandItem());
+            var range = GunRangePolicy.forWeapon(human, human.getMainHandItem());
             minimum = range.minimum();
             maximum = range.maximum();
         } else if (RangedWeaponCustody.isCrossbowWeapon(human.getMainHandItem())) {
@@ -1134,13 +1134,12 @@ public final class AdaptiveCombatGoal extends Goal {
         double reach;
         if (GunSupport.isGunItem(held)) {
             if (!HumanAmmo.canUseGun(human, held)) return false;
-            reach = GunRangePolicy.firingReach(held,
-                    human.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE));
+            reach = GunRangePolicy.firingReach(human, held);
         } else if (HumanUtil.isTrident(held)) {
-            reach = 36;
+            reach = RangedCombatProfile.of(human, held).maximum();
         } else if (HumanUtil.isRangedWeapon(held)) {
             if (!HumanAmmo.hasArrows(human)) return false;
-            reach = RangedWeaponCustody.isCrossbowWeapon(held) ? 48 : 36;
+            reach = RangedCombatProfile.of(human, held).maximum();
         } else return false;
         return human.distanceToSqr(threat) <= reach * reach;
     }

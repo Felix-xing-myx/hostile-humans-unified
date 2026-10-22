@@ -63,7 +63,7 @@ final class TaczReloadSoundClient {
                 Minecraft minecraft=Minecraft.getInstance();
                 if(minecraft.level==null) return;
                 PendingReload pending=new PendingReload(human,minecraft.level.getGameTime(),List.of(),gunId);
-                play(pending,configuredSound);
+                pending.oneShot = configuredSound;
                 PENDING_RELOADS.add(pending);
                 return;
             }
@@ -106,9 +106,17 @@ final class TaczReloadSoundClient {
                     ||gameTime-pending.startGameTime>3&&human.getTaczReloadVisual().isEmpty()) {
                 stop(pending);iterator.remove();continue;
             }
-            pending.elapsed+=Math.max(0,gameTime-pending.lastTick)*GunCombatProfile.reloadWork(human,human.getMainHandItem())/20;
-            pending.lastTick=gameTime;
-            double elapsedSeconds=pending.elapsed;
+            var timeline = human.getTaczReloadVisual();
+            if (timeline.isEmpty() || !timeline.contains("WorkRate")
+                    || !pending.gunId.toString().equals(timeline.getString("Gun"))) continue;
+            double rate = timeline.getDouble("WorkRate"), work = timeline.getDouble("Work");
+            if (!Double.isFinite(rate) || rate <= 0 || !Double.isFinite(work) || work < 0) continue;
+            // Only interpolate the server checkpoint. Client faction/default config never decides timing.
+            double elapsedSeconds = (work + Math.min(10, Math.max(0, gameTime-timeline.getLong("WorkTick"))) * rate) / 20;
+            if (pending.oneShot != null) {
+                play(pending, pending.oneShot);
+                pending.oneShot = null;
+            }
             while (pending.nextCue < pending.cues.size()
                     && pending.cues.get(pending.nextCue).timeSeconds <= elapsedSeconds + 0.05D) {
                 ReloadCue cue = pending.cues.get(pending.nextCue++);
@@ -224,8 +232,7 @@ final class TaczReloadSoundClient {
         private final List<ReloadCue> cues;
         private int nextCue;
         private final ResourceLocation gunId;
-        private long lastTick;
-        private double elapsed;
+        private ResourceLocation oneShot;
         private final List<net.minecraft.client.resources.sounds.SoundInstance> sounds=new ArrayList<>();
 
         private PendingReload(Human human, long startGameTime, List<ReloadCue> cues,ResourceLocation gunId) {
@@ -233,7 +240,6 @@ final class TaczReloadSoundClient {
             this.startGameTime = startGameTime;
             this.cues = cues;
             this.gunId=gunId;
-            this.lastTick=startGameTime;
         }
     }
 }

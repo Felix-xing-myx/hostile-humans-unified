@@ -656,7 +656,7 @@ public final class ShieldDefenseController {
         LivingEntity target = human.getTarget();
         double dangerRange = isCrossbowCombatant() ? 16.0D : 12.0D;
         if (GunSupport.get().isGun(human.getMainHandItem())) {
-            dangerRange = Math.min(12.0D, GunRangePolicy.forWeapon(human.getMainHandItem()).minimum());
+            dangerRange = Math.min(12.0D, GunRangePolicy.forWeapon(human, human.getMainHandItem()).minimum());
         }
         double dangerRangeSqr = dangerRange * dangerRange;
         return isValidThreat(target) && human.distanceToSqr(target) <= dangerRangeSqr;

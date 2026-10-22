@@ -80,7 +80,7 @@ public final class HumanPerception {
     public static double range(Human h){
         double original=h.getAttributeValue(Attributes.FOLLOW_RANGE);
         if(h.getPersistentData().hasUUID(HumanRelations.FORCED_HOSTILE_TARGET))original=Math.max(0,original-88);
-        if(GunSupport.get().isGun(h.getMainHandItem()))original=Math.max(original,GunRangePolicy.forWeapon(h.getMainHandItem()).fireRange());
+        if(GunSupport.get().isGun(h.getMainHandItem()))original=Math.max(original,GunRangePolicy.forWeapon(h, h.getMainHandItem()).fireRange());
         return Math.max(c().number("vision.minimum_range"),original);
     }
     private static double halfAngle(double distance,boolean familiar){

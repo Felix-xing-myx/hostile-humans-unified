@@ -34,6 +34,7 @@ public final class HumanBehaviorControl {
     }
 
     public static void cancel(Human human, String reason) {
+        GunCustody.cancelBackgroundReloads(human);
         MeleeActionControl.clear(human, reason);
         NpcDualWield.clear(human);
         human.humanGunner$cancelMeleeAttackForDefense();
