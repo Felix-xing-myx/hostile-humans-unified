@@ -491,9 +491,11 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private void recoverStalledNavigation() {
-        club.someoneice.humangunner.WaterCombatNavigation.tick(this);
-        if (!level().isClientSide) club.someoneice.humangunner.CombatTerrainNavigation.validate(this);
-        club.someoneice.humangunner.MovementContinuity.tick(this);
+        club.someoneice.humangunner.HumanNavigationOwnership.continueInstalled(this, this.navigation, () -> {
+            club.someoneice.humangunner.WaterCombatNavigation.tick(this);
+            if (!level().isClientSide) club.someoneice.humangunner.CombatTerrainNavigation.validate(this);
+            club.someoneice.humangunner.MovementContinuity.tick(this);
+        });
     }
 
     public BlockPos investigateSound() {
@@ -530,7 +532,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.initTeam(type);
         this.moveControl = new HumanMoveControl(this);
         this.jumpControl = new club.someoneice.humangunner.HumanSafeJumpControl(this);
-        this.waterNavigation = new WaterBoundPathNavigation((Mob)this, level);
+        this.waterNavigation = new com.craftix.hostile_humans.entity.ai.HumanWaterNavigation((Mob)this, level);
         this.groundNavigation = new com.craftix.hostile_humans.entity.ai.HumanNavigation((Mob)this, level);
         // HumanEntity enables floating on the navigation created by the
         // superclass, but this constructor replaces that navigator. Apply the

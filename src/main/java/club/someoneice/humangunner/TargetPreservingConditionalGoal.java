@@ -28,6 +28,9 @@ public final class TargetPreservingConditionalGoal extends Goal {
     }
 
     @Override
+    public java.util.EnumSet<Flag> getFlags() { return delegate.getFlags(); }
+
+    @Override
     public boolean canUse() {
         return condition.getAsBoolean() && delegate.canUse();
     }

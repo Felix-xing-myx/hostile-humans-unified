@@ -110,6 +110,7 @@ public final class HumanGoalExecutionBridge {
         if (!available(state)) { cancel(state, "entity unavailable or editing", locks); return; }
         ActionCoordinator actions = HumanBehaviorControl.actions(state.human.get());
         for (Execution execution : new ArrayList<>(state.executions.values())) {
+            reconcileReleasedMove(execution, locks);
             if (execution.actions != actions || execution.session != actions.session()
                     || execution.token != null && !actions.running(execution.token))
                 stop(execution, "movement execution/session expired", locks);
@@ -134,6 +135,15 @@ public final class HumanGoalExecutionBridge {
             try { stop(execution, "goal start failed", locks); } catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
             throw failure;
         }
+    }
+    /** Release a MOVE flag dropped inside a delegate before the next native selection pass. */
+    private static void reconcileReleasedMove(Execution execution, Map<Goal.Flag, WrappedGoal> locks) {
+        Set<Goal.Flag> flags = Set.copyOf(execution.wrapped.getFlags());
+        if (!flags.contains(Goal.Flag.MOVE) && execution.token != null) {
+            finish(execution, "dynamic MOVE released");
+            locks.remove(Goal.Flag.MOVE, execution.wrapped);
+        }
+        execution.flags = flags;
     }
     private static boolean acquire(Execution execution) {
         // Native selector already decided priority. This lease cannot independently preempt another movement source.
@@ -190,6 +200,9 @@ public final class HumanGoalExecutionBridge {
         execution.ticking = true;
         try {
             scoped(execution, operation);
+            Human human = state.human.get();
+            if (human != null && human.goalSelector instanceof SelectorAccess access)
+                reconcileReleasedMove(execution, access.hostileHumans$lockedFlags());
             if (execution.entered && execution.token != null) execution.actions.heartbeat(execution.token);
             execution.outcome = "running";
         } finally { execution.ticking = false; }
@@ -239,6 +252,29 @@ public final class HumanGoalExecutionBridge {
     private static void unlock(Map<Goal.Flag, WrappedGoal> locks, WrappedGoal wrapped) {
         locks.entrySet().removeIf(entry -> entry.getValue() == wrapped);
     }
+    public static boolean bound(Human human) { return state(human) != null; }
+    /** Explicitly distinguish a non-MOVE callback from a navigation continuation outside goals. */
+    public static boolean insideCallback(Human human) {
+        Execution execution = CURRENT.get();
+        State state = execution == null ? null : execution.state.get();
+        return state != null && state.human.get() == human;
+    }
+    /** Dynamic flags may change inside tick. Reconcile before the first actual movement write. */
+    public static ActionCoordinator.Token admitMovementWrite(Human human) {
+        Execution execution = CURRENT.get();
+        State state = execution == null ? null : execution.state.get();
+        if (state == null || state.human.get() != human || !available(state)
+                || execution.stopping || !execution.entered || !execution.wrapped.getFlags().contains(Goal.Flag.MOVE)
+                || execution.session != execution.actions.session()) return null;
+        var locks = ((SelectorAccess) human.goalSelector).hostileHumans$lockedFlags();
+        WrappedGoal owner = locks.get(Goal.Flag.MOVE);
+        if (owner != null && owner != execution.wrapped && owner.isRunning()) return null;
+        if (execution.token == null && !acquire(execution)) return null;
+        if (!execution.actions.running(execution.token)) return null;
+        locks.put(Goal.Flag.MOVE, execution.wrapped);
+        execution.flags = Set.copyOf(execution.wrapped.getFlags());
+        return execution.token;
+    }
     /** For root-owned navigation ownership stamps. Null outside an admitted base-movement callback. */
     public static ActionCoordinator.Token currentExecutionToken(Human human) {
         Execution execution = CURRENT.get();
@@ -247,8 +283,9 @@ public final class HumanGoalExecutionBridge {
     }
     public static boolean ownsBaseMove(Human human, ActionCoordinator.Token token) {
         State state = state(human);
-        if (state == null || token == null) return false;
-        return state.executions.values().stream().anyMatch(execution -> token.equals(execution.token) && execution.actions.running(token));
+        if (state == null || token == null || !available(state)) return false;
+        return state.executions.values().stream().anyMatch(execution -> execution.entered && !execution.stopping
+                && execution.wrapped.getFlags().contains(Goal.Flag.MOVE) && token.equals(execution.token) && execution.actions.running(token));
     }
     public static List<GoalSnapshot> snapshot(Human human) {
         State state = state(human);

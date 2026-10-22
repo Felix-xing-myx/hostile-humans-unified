@@ -16,7 +16,9 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /** Human-only navigation. Other mobs' fence/door classification is untouched. */
-public final class HumanNavigation extends GroundPathNavigation {
+public final class HumanNavigation extends GroundPathNavigation implements club.someoneice.humangunner.HumanNavigationOwnership.OwnedNavigation {
+    private final club.someoneice.humangunner.HumanNavigationOwnership movementOwnership = new club.someoneice.humangunner.HumanNavigationOwnership();
+    @Override public club.someoneice.humangunner.HumanNavigationOwnership movementOwnership() { return movementOwnership; }
     private record BlockedEdge(BlockPos from, BlockPos to, long until) {}
     private final Deque<BlockedEdge> blockedEdges = new ArrayDeque<>();
     private Path sampledPath;
@@ -77,6 +79,14 @@ public final class HumanNavigation extends GroundPathNavigation {
         return path != null && path == activeBoundedPath ? activeBoundedGoal : super.getTargetPos();
     }
     @Override public void recomputePath() {
+        if (mob instanceof Human human && movementOwnership != null) {
+            Path before = path;
+            movementOwnership.runInstalled(human, before, () -> {
+                recomputeOwnedPath(); movementOwnership.recomputed(human, before, path);
+            });
+        } else recomputeOwnedPath();
+    }
+    private void recomputeOwnedPath() {
         // The owning controller schedules a fresh bounded query. Do not recompute toward vanilla's old private target.
         if (path != null && path == activeBoundedPath) {
             if (level.getGameTime()-timeLastRecompute > 20) {
@@ -87,6 +97,11 @@ public final class HumanNavigation extends GroundPathNavigation {
         super.recomputePath();
     }
     @Override public void stop() {
+        if (movementOwnership != null && mob instanceof Human human && !movementOwnership.mayStop(human, path)) return;
+        discardRoute();
+        if (movementOwnership != null) movementOwnership.stopped();
+    }
+    private void discardRoute() {
         super.stop();activeBoundedPath = null;activeBoundedGoal = null;boundedRefresh = false;hasDelayedRecomputation = false;
     }
 
@@ -155,6 +170,11 @@ public final class HumanNavigation extends GroundPathNavigation {
     }
 
     @Override public boolean moveTo(Path path, double speed) {
+        return mob instanceof Human human && movementOwnership != null
+                ? movementOwnership.install(human, () -> this.path, () -> installRoute(path, speed), this::discardRoute)
+                : installRoute(path, speed);
+    }
+    private boolean installRoute(Path path, double speed) {
         if (mob instanceof Human human && path != null && !path.isDone()) {
             var assessment = HumanTerrainSafety.assessPath(human, path);
             if (!assessment.safe()) { CombatTerrainNavigation.blocked(human, assessment); return false; }
@@ -194,6 +214,13 @@ public final class HumanNavigation extends GroundPathNavigation {
     }
 
     @Override public void tick() {
+        if (mob instanceof Human human && movementOwnership != null) {
+            if (!movementOwnership.runInstalled(human, path, this::tickOwnedRoute)) {
+                discardRoute(); movementOwnership.stopped();
+            }
+        } else tickOwnedRoute();
+    }
+    private void tickOwnedRoute() {
         if(mob instanceof Human human)club.someoneice.humangunner.HumanPathFollower.beforeTick(human,path);
         if (mob instanceof Human human) advancePassedCombatWaypoint(human);
         if (mob instanceof Human human && path != null && !path.isDone()) {
