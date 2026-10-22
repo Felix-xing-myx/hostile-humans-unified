@@ -20,6 +20,22 @@ public final class TridentCombatModifiers {
     public static int knockbackLevel(Human human) {
         return RangedCombatProfile.of(human, human.getMainHandItem()).damage() > 1 ? 2 : 1;
     }
+    /** Feed the native Mob attack's one knockback operation, rather than applying a second push. */
+    public static boolean meleeKnockback(Human human, java.util.function.BooleanSupplier attack) {
+        if (!(human.getMainHandItem().getItem() instanceof TridentItem)) return attack.getAsBoolean();
+        var attribute = human.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_KNOCKBACK);
+        if (attribute == null) return attack.getAsBoolean();
+        double total = attribute.getValue() + net.minecraft.world.item.enchantment.EnchantmentHelper.getKnockbackBonus(human);
+        double extra = Math.max(0, knockbackLevel(human) - total);
+        if (extra <= 0) return attack.getAsBoolean();
+        java.util.UUID id = java.util.UUID.fromString("82624020-1000-4000-8000-000000000304");
+        if (attribute.getModifier(id) != null) return attack.getAsBoolean();
+        attribute.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(id,
+                "Trident native melee knockback floor", extra,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION));
+        try { return attack.getAsBoolean(); }
+        finally { attribute.removeModifier(id); }
+    }
     @SubscribeEvent
     public static void onHurt(LivingHurtEvent event) {
         if (event.getEntity().level().isClientSide || event.isCanceled()) return;

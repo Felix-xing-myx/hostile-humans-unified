@@ -12,19 +12,15 @@ final class ProjectileReactionGoal extends Goal {
     ProjectileReactionGoal(Human human) {
         this.human = human;
         this.shields = human.humanGunner$shieldDefense();
-        setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        setFlags(EnumSet.noneOf(Flag.class));
     }
     @Override public boolean canUse() {
-        if (!shields.allowsProjectileReaction() || HumanPerception.canTarget(human, human.getTarget())) return false;
+        if (!shields.allowsProjectileReaction()) return false;
         incoming = shields.findIncomingArrow();
         return incoming != null;
     }
     @Override public void start() {
-        if (!shields.beginProjectileReaction(incoming)) return;
-        human.getNavigation().stop();
-        MovementContinuity.cancelStep(human);
-        human.clearRangedStrafeMotion();
-        human.getMoveControl().setWantedPosition(human.getX(), human.getY(), human.getZ(), 0);
+        shields.beginProjectileReaction(incoming);
     }
     @Override public boolean canContinueToUse() { return shields.continuesProjectileReaction(); }
     @Override public boolean requiresUpdateEveryTick() { return true; }

@@ -1284,7 +1284,11 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         // Retain vanilla resistance, knockback events and damage immunity.
         // Shorten the physical hit reaction rather than resetting hurt timers
         // (which would unintentionally increase rapid-fire damage).
-        super.knockback(strength * 0.5D, x, z);
+        double resistance = net.minecraft.util.Mth.clamp(getAttributeValue(Attributes.KNOCKBACK_RESISTANCE), 0, 1);
+        double floor = humanGunner$shieldDefense().defenseKnockbackFloor();
+        double effective = Math.max(1 - (1 - resistance) * 0.5D, floor);
+        double scale = resistance >= 1 ? 0 : (1 - effective) / (1 - resistance);
+        super.knockback(strength * scale, x, z);
         if (grounded && !isInWater() && !isInLava()) {
             Vec3 after = getDeltaMovement();
             setDeltaMovement(after.x, Math.min(after.y, Math.max(before.y, 0.12D)), after.z);
@@ -1463,8 +1467,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private boolean doHurtTargetSingle(Entity entityIn, boolean animate, boolean wearWeapon) {
         if (!humanGunner$canMeleeAttack()) return false;
         this.resetFallDistance();
+        humanGunner$shieldDefense().onAttackExecuted();
         boolean hit = club.someoneice.humangunner.PursuitJumpAttack.strike(this,
-                () -> super.doHurtTarget(entityIn));
+                () -> club.someoneice.humangunner.TridentCombatModifiers.meleeKnockback(this,
+                        () -> super.doHurtTarget(entityIn)));
         if (animate) {
             club.someoneice.humangunner.CloseDefenseHold.attack(this, 8);
             swing(InteractionHand.MAIN_HAND);
@@ -1474,7 +1480,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public boolean humanGunner$canMeleeAttack() {
-        return !club.someoneice.humangunner.GunSupport.isGunItem(getMainHandItem())
+        return !isFleeing && !club.someoneice.humangunner.GunSupport.isGunItem(getMainHandItem())
                 && !humanGunner$shieldDefense().blocksMeleeAttack();
     }
 
@@ -1576,7 +1582,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (humanGunner$hasPendingMeleeAttack()
                 && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)) return;
         boolean holdingGun = club.someoneice.humangunner.GunSupport.isGunItem(human.getMainHandItem());
-        if ((holdingGun || this.shieldCoolDown > 0)
+        if ((holdingGun && !humanGunner$shieldDefense().shouldSuppressRecovery() || this.shieldCoolDown > 0)
                 && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(requested)) {
             return;
         }
@@ -1585,20 +1591,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         ItemStack itemstack = this.getItemInHand(hand);
         boolean shield = itemstack.canPerformAction(ToolActions.SHIELD_BLOCK);
         if (this.isUsingItem() && this.getUsedItemHand() == hand && shield) {
-            AttributeInstance modifiableattributeinstance = this.getAttribute(Attributes.MOVEMENT_SPEED);
-            if (modifiableattributeinstance != null) {
-                modifiableattributeinstance.removeModifier(MODIFIER_UUID);
-                double configuredShieldMultiplier =
-                        club.someoneice.humangunner.CombatAiConfig.forHuman(this).shieldUseSpeedMultiplier();
-                double multiplier = humanGunner$movementShieldAllowance
-                        ? Math.max(0.4D, configuredShieldMultiplier)
-                        : configuredShieldMultiplier;
-                if (multiplier < 1.0D) {
-                    modifiableattributeinstance.addTransientModifier(new AttributeModifier(MODIFIER_UUID,
-                            "Shield use speed penalty",
-                            multiplier - 1.0D, AttributeModifier.Operation.MULTIPLY_TOTAL));
-                }
-            }
+            AttributeInstance movement = this.getAttribute(Attributes.MOVEMENT_SPEED);
+            if (movement != null) movement.removeModifier(MODIFIER_UUID);
+            club.someoneice.humangunner.MovementSpeedController.limit(this,
+                    club.someoneice.humangunner.MovementSpeedController.Limit.DEFENSE, .6D, true);
         }
     }
 
@@ -1623,6 +1619,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public void stopUsingItem() {
         super.stopUsingItem();
         clearUseSpeedPenalty();
+        club.someoneice.humangunner.MovementSpeedController.limit(this,
+                club.someoneice.humangunner.MovementSpeedController.Limit.DEFENSE, 1, false);
     }
 
     private void clearUseSpeedPenalty() {
@@ -1642,11 +1640,23 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public void addAdditionalSaveData(CompoundTag compound) {
         ShieldDurability.flush(this);
         super.addAdditionalSaveData(compound);
+        if (!level().isClientSide) {
+            var advance = humanGunner$shieldDefense().advancePolicy().save();
+            CompoundTag saved = new CompoundTag();
+            saved.putInt("cooldown", advance.cooldown()); saved.putInt("window", advance.window());
+            saved.putInt("batch", advance.batch()); saved.putInt("invalid", advance.invalid());
+            compound.put("hostile_humans_unified:shield_advance", saved);
+        }
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag compound) {
         super.readAdditionalSaveData(compound);
+        if (compound.contains("hostile_humans_unified:shield_advance", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            CompoundTag saved = compound.getCompound("hostile_humans_unified:shield_advance");
+            humanGunner$shieldDefense().advancePolicy().load(new club.someoneice.humangunner.ShieldAdvancePolicy.Saved(
+                    saved.getInt("cooldown"), saved.getInt("window"), saved.getInt("batch"), saved.getInt("invalid")));
+        }
         club.someoneice.humangunner.HumanFactions.initialize(this, true);
         club.someoneice.humangunner.HumanGrowth.onLoad(this);
         // tickCount is not persisted. A saved gunfire-until tick must not look
@@ -1844,6 +1854,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
 
         super.tick();
+        club.someoneice.humangunner.HumanCombatDirector.afterTick(this);
         if (!level().isClientSide && rangedFacingTick == tickCount
                 && rangedFacingTarget != null
                 && rangedFacingTarget == getTarget() && rangedFacingTarget.isAlive()) {
@@ -2018,6 +2029,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public void aiStep() {
+        club.someoneice.humangunner.HumanCombatDirector.tick(this);
         super.aiStep();
         if (this.tickCount % 220 == 0 && this.getTarget() == null && !this.level().isClientSide) {
             if (this.getData() == null) {
@@ -2128,7 +2140,18 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             SpartanRangedCompat.fire(this, target);
             return;
         }
-        if (!club.someoneice.humangunner.HumanArrowCombat.prepareCrossbowVolley(crossbow)) return;
+        int emitted = club.someoneice.humangunner.HumanArrowCombat.fireNativeCrossbow(this, target, crossbow);
+        if (emitted >= 0) {
+            if (emitted > 0) {
+                humanGunner$shieldDefense().onAttackExecuted();
+                wearEquippedItem(crossbow, hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
+                playSound(SoundEvents.CROSSBOW_SHOOT, 1.0F, 1.0F);
+                onCrossbowAttackPerformed();
+            }
+            return;
+        }
+        // Unsupported native payloads (for example fireworks) retain their actual saved ammunition.
+        // Do not synthesize ChargedProjectiles over those payloads.
         List<Projectile> volley = new ArrayList<>(3);
         humanGunner$crossbowVolley = volley;
         try {
@@ -2171,6 +2194,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         } else if (weaponStack.getItem() instanceof BowItem bow) {
             ItemStack itemstack = this.getProjectile(weaponStack);
             if (itemstack.isEmpty()) return;
+            int emitted = club.someoneice.humangunner.HumanArrowCombat.fireVolley(this, target, weaponStack, () -> {
             AbstractArrow mobArrow = ProjectileUtil.getMobArrow((LivingEntity)this, (ItemStack)itemstack, (float)distanceFactor);
             mobArrow = bow.customArrow(mobArrow);
             mobArrow.pickup = AbstractArrow.Pickup.DISALLOWED;
@@ -2183,9 +2207,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             // server tick is too late for the client spawn packet and creates
             // a visibly low phantom trajectory despite a correct server hit.
             HumanGunner.applyFirstTickArrowBallistics(this, mobArrow, target);
-            if (!this.level().addFreshEntity((Entity)mobArrow)) return;
-            club.someoneice.humangunner.HumanArrowCombat.recordBowShot(this);
-            club.someoneice.humangunner.HumanAmmo.consumeArrow(this);
+                return mobArrow;
+            });
+            if (emitted <= 0) return;
+            humanGunner$shieldDefense().onAttackExecuted();
             this.playSound(SoundEvents.SKELETON_SHOOT, 1.0f, 1.0f / (this.getRandom().nextFloat() * 0.4f + 0.8f));
             if (weaponStack.getItem() instanceof BowItem) {
                 wearEquippedItem(weaponStack, weaponHand == InteractionHand.MAIN_HAND
@@ -2234,7 +2259,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             );
             projectile.setOwner(human);
             HumanGunner.applyTridentBallistics(human, projectile, target);
-            human.level().addFreshEntity(projectile);
+            club.someoneice.humangunner.TridentCombatModifiers.markThrown(human, projectile);
+            if (!human.level().addFreshEntity(projectile)) return;
+            humanGunner$shieldDefense().onAttackExecuted();
             wearEquippedItem(held, EquipmentSlot.MAINHAND);
             human.level().playSound(
                     null, human.getX(), human.getY(), human.getZ(),

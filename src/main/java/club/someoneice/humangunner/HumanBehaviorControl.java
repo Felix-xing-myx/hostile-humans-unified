@@ -18,6 +18,14 @@ public final class HumanBehaviorControl {
 
     public static void beforeTick(Human human) {
         if (human.level().isClientSide) return;
+        MovementSpeedController.tickLimits(human);
+        MovementSpeedController.limit(human, MovementSpeedController.Limit.FOOD, 0.8,
+                RecoverySupplies.isEatingFood(human));
+        if (!human.isAlive() || human.isRemoved() || human.isNoAi() || HumanInventorySession.isEditing(human)) {
+            MovementSpeedController.clearLimits(human);
+            cancel(human, "entity unavailable or editing");
+            return;
+        }
         ActionCoordinator actions = SESSIONS.get(human);
         if (actions == null) return;
         actions.advance(human.level().getGameTime());
@@ -25,6 +33,7 @@ public final class HumanBehaviorControl {
     }
 
     public static void cancel(Human human, String reason) {
+        MovementSpeedController.clearLimits(human);
         ActionCoordinator actions = SESSIONS.remove(human);
         if (actions != null) actions.cancelSession(reason);
     }

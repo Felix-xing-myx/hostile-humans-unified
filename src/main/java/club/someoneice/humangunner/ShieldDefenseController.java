@@ -444,7 +444,6 @@ public final class ShieldDefenseController {
     void tickPressureReaction() {
         if (owner != Owner.PRESSURE || !ownsCurrentShield()) return;
         guardedCharge.tick(human);
-        MovementSpeedController.combat(human, false);
         pressureCycle.guarded(human.tickCount);
         pressureCycleActive = true;
         facePressure();

@@ -11,21 +11,17 @@ final class PressureReactionGoal extends Goal {
     PressureReactionGoal(Human human) {
         this.human = human;
         shields = human.humanGunner$shieldDefense();
-        setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        setFlags(EnumSet.noneOf(Flag.class));
     }
     @Override public boolean canUse() {
-        return !HumanPerception.canTarget(human, human.getTarget()) && shields.allowsPressureReaction();
+        return shields.allowsPressureReaction();
     }
     @Override public void start() {
-        if (!shields.beginPressureReaction()) return;
-        human.getNavigation().stop();
-        MovementContinuity.cancelStep(human);
-        human.clearRangedStrafeMotion();
-        human.getMoveControl().setWantedPosition(human.getX(), human.getY(), human.getZ(), 0);
+        shields.beginPressureReaction();
     }
     @Override public boolean requiresUpdateEveryTick() { return true; }
     @Override public boolean canContinueToUse() {
-        return !HumanPerception.canTarget(human, human.getTarget()) && shields.continuesPressureReaction();
+        return shields.continuesPressureReaction();
     }
     @Override public void tick() { shields.tickPressureReaction(); }
     @Override public void stop() {

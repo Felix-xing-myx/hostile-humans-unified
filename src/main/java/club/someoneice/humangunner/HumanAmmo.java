@@ -23,7 +23,7 @@ public final class HumanAmmo {
 
     public static int arrowCount(Human human) { return count(human, ARROW_ID); }
     public static int magazineCount(Human human) { return count(human, MAGAZINE_ID); }
-    public static boolean hasArrows(Human human) { return !consumptionEnabled() || arrowCount(human) > 0; }
+    public static boolean hasArrows(Human human) { return arrowCount(human) > 0; }
     public static boolean consumeArrow(Human human) { return !consumptionEnabled() || consume(human, ARROW_ID, 1); }
     private static boolean consumptionEnabled() { return UnifiedConfig.get().ammoConsumptionEnabled(); }
     public static int magazineCost(ItemStack gun) {

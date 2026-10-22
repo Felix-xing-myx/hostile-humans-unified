@@ -156,7 +156,8 @@ public final class HumanEquipmentExchange {
             int free = -1;
             for (int i = 0; i < places.size(); i++) {
                 Place place = places.get(i);
-                if (destinations.contains(i) || !planned[i].isEmpty() || reserved(human, place)) continue;
+                if (destinations.contains(i) || !planned[i].isEmpty() || reserved(human, place)
+                        || busyHand(human, place)) continue;
                 // Inventory and emptied hands accept arbitrary stacks; never put a sword into an armor slot.
                 if (place.equipment() == null || place.equipment() == EquipmentSlot.MAINHAND
                         || place.equipment() == EquipmentSlot.OFFHAND) { free = i; break; }
