@@ -17,6 +17,7 @@ public final class TaczHumanReloadTransactions {
     private static final java.util.Map<ShooterDataHolder, net.minecraft.resources.ResourceLocation> GUN_IDS = new java.util.WeakHashMap<>();
     private static final java.util.Map<ShooterDataHolder, java.lang.ref.WeakReference<Human>> VISUAL_OWNERS = new java.util.WeakHashMap<>();
     private static final java.util.Map<ShooterDataHolder, Clock> CLOCKS = new java.util.WeakHashMap<>();
+    private static final java.util.Map<Human, java.lang.ref.WeakReference<Clock>> OBSERVATIONS = new java.util.WeakHashMap<>();
     private static final java.util.Set<ShooterDataHolder> STARTING = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
     private static final java.util.Map<ShooterDataHolder,Long> GENERATIONS = new java.util.WeakHashMap<>();
     private static final java.util.Set<ShooterDataHolder> TICKING = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
@@ -24,11 +25,22 @@ public final class TaczHumanReloadTransactions {
         final HumanEquipmentExchange.Handle weapon;
         final com.craftix.hostile_humans.entity.data.HumanData inventory;
         final long session;
+        final long startedTick;
+        final java.lang.ref.WeakReference<Human> human;
+        final java.lang.ref.WeakReference<ShooterDataHolder> holder;
+        final java.lang.ref.WeakReference<ItemStack> actual;
         long gameTick, wallMillis;
         double work, fraction;
-        Clock(Human human, GunReloadAuthority.Capture authority) {
+        double rate = -1;
+        long sampledTick, phaseRemainingMillis = -1;
+        String phase = "starting";
+        Clock(Human human, GunReloadAuthority.Capture authority, ShooterDataHolder holder) {
             weapon=authority.handle;session=authority.session;inventory=authority.inventory;
             gameTick=human.level().getGameTime();wallMillis=System.currentTimeMillis();
+            startedTick=sampledTick=gameTick;
+            this.human=new java.lang.ref.WeakReference<>(human);
+            this.holder=new java.lang.ref.WeakReference<>(holder);
+            actual=new java.lang.ref.WeakReference<>(authority.weapon);
         }
     }
     private TaczHumanReloadTransactions() {}
@@ -105,8 +117,9 @@ public final class TaczHumanReloadTransactions {
         if (!started) return false;
         if (inventoryFeed) INVENTORY_FEED_END.put(data,(long)feedDelay);
         GUN_IDS.put(data,gunId);
-        Clock clock=new Clock(human,authority);
+        Clock clock=new Clock(human,authority,data);
         CLOCKS.put(data,clock);
+        OBSERVATIONS.put(human,new java.lang.ref.WeakReference<>(clock));
         {
             // Gun data cooldown is an endpoint, not an extra delay after feeding.
             double visualSeconds = reload.getCooldown() == null ? 0
@@ -126,6 +139,7 @@ public final class TaczHumanReloadTransactions {
                     : (int) Math.max(0, Math.min(72000, Math.ceil((visualCooldown - visualFeed) * 20)));
             int visualFeedTicks = (int) Math.max(0, Math.min(72000, Math.ceil(visualFeed * 20)));
             double rate=GunCombatProfile.reloadWork(human,weapon);
+            clock.rate=rate;
             TaczReloadVisualTimeline.begin(human, gunId.toString(),
                     (int)Math.ceil(visualTicks/rate),(int)Math.ceil(visualTail/rate),(int)Math.ceil(visualFeedTicks/rate));
             TaczReloadVisualTimeline.work(human,0,rate);
@@ -155,6 +169,7 @@ public final class TaczHumanReloadTransactions {
                 if(remaining>1e-8) {
                     state.setStateType(data.reloadStateType);
                     state.setCountDown((long)Math.ceil(remaining*50));
+                    recordProgress(clock,state);
                     updateVisual(human,weapon,state.getCountDown(),true);
                     return state;
                 }
@@ -171,6 +186,7 @@ public final class TaczHumanReloadTransactions {
             }
             ReloadState state=gun.tickReload(data,weapon,shooter);
             if(!validCycle(human,data,weapon,clock)) { finish(human,data);return new ReloadState(); }
+            recordProgress(clock,state);
             if(state.getStateType().isReloading())
                 updateVisual(human,weapon,state.getCountDown(),state.getStateType().isReloadFinishing());
             if(human.getData()!=null&&weapon!=human.getMainHandItem()) human.getData().markInventoryDirty();
@@ -231,6 +247,7 @@ public final class TaczHumanReloadTransactions {
         long whole=(long)Math.floor(virtualMillis);clock.fraction=virtualMillis-whole;
         data.reloadTimestamp+=wall-clock.wallMillis-whole;
         clock.wallMillis=wall;clock.gameTick=game;clock.work+=work;
+        clock.rate=rate;clock.sampledTick=game;
         TaczReloadVisualTimeline.work(human,clock.work,rate);
         return true;
     }
@@ -238,6 +255,43 @@ public final class TaczHumanReloadTransactions {
     private static void updateVisual(Human human,ItemStack weapon,long millis,boolean finishing) {
         if(GunCombatProfile.silent(human,weapon)) TaczReloadVisualTimeline.clear(human);
         else TaczReloadVisualTimeline.update(human,(long)Math.ceil(millis/GunCombatProfile.reloadWork(human,weapon)),finishing);
+    }
+
+    private static void recordProgress(Clock clock, ReloadState state) {
+        clock.phase=state.getStateType().name();
+        clock.phaseRemainingMillis=state.getCountDown();
+        clock.sampledTick=clock.gameTick;
+    }
+
+    /** No operator lookup, native callbacks, handle resolution or ledger expiry during observation. */
+    public static java.util.List<ActionProgressSnapshot> progress(Human human) {
+        var reference=OBSERVATIONS.get(human);
+        Clock clock=reference==null?null:reference.get();
+        if(human.level().isClientSide || clock==null) return java.util.List.of();
+        ShooterDataHolder data=clock.holder.get();ItemStack actual=clock.actual.get();
+        var authority=HumanBehaviorControl.peekActions(human);
+        String location=ActionProgressSnapshot.location(human,actual);
+        boolean valid=data!=null && CLOCKS.get(data)==clock && human.getData()==clock.inventory
+                && authority!=null && authority.session()==clock.session
+                && actual!=null && PAYMENTS.peekWeapon(data,human.level().getGameTime())==actual
+                && !location.equals("missing") && !location.equals("ambiguous")
+                && human.isAlive() && !human.isRemoved() && !human.isNoAi() && !HumanInventorySession.isEditing(human);
+        Long full=data==null?null:INVENTORY_FEED_END.get(data);
+        double total=full==null?-1:full, rate=Double.isFinite(clock.rate)&&clock.rate>0?clock.rate:-1;
+        double work=Double.isFinite(clock.work)&&clock.work>=0?clock.work:-1;
+        long remaining=!valid?-1:full!=null?ActionProgressSnapshot.remaining(work,total,rate)
+                :clock.phaseRemainingMillis<0||rate<=0?-1:(long)Math.ceil(clock.phaseRemainingMillis/(50*rate));
+        String detail=full==null?"原生阶段余时；脚本整轮总量未知，不计算整体百分比；原枪 ":"原生虚拟弹匣完整计划；原枪 ";
+        return java.util.List.of(new ActionProgressSnapshot("gun_reload",ActionProgressSnapshot.item(actual),location,
+                valid?ActionProgressSnapshot.clip(clock.phase,32):"invalid",clock.sampledTick,work,total,rate,
+                Math.max(0,clock.sampledTick-clock.startedTick),remaining,detail+clock.weapon.identity()));
+    }
+
+    private static void forgetObservation(ShooterDataHolder data) {
+        Clock clock=CLOCKS.get(data);
+        Human human=clock==null?null:clock.human.get();
+        var reference=human==null?null:OBSERVATIONS.get(human);
+        if(reference!=null&&reference.get()==clock) OBSERVATIONS.remove(human);
     }
 
     private static boolean sameGun(ShooterDataHolder data, ItemStack weapon) {
@@ -265,6 +319,7 @@ public final class TaczHumanReloadTransactions {
     }
 
     public static void end(ShooterDataHolder data) {
+        forgetObservation(data);
         GENERATIONS.put(data,GENERATIONS.getOrDefault(data,0L)+1);
         clearVisual(data);
         PAYMENTS.end(data);
@@ -277,6 +332,7 @@ public final class TaczHumanReloadTransactions {
 
     public static void forgetFinished(ShooterDataHolder data) {
         if (!data.reloadStateType.isReloading() || data.reloadTimestamp == -1L) {
+            forgetObservation(data);
             clearVisual(data);
             PAYMENTS.end(data);
             INVENTORY_FEED_END.remove(data);

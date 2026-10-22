@@ -143,7 +143,9 @@ final class NavigationDebugFrameCodec {
         out.writeVarInt(s.progress().size());
         for (var p : s.progress()) {
             out.writeUtf(p.kind(), 24); out.writeUtf(p.item(), BehaviorDebugSnapshot.NAME_LENGTH);
-            out.writeLong(p.elapsedTicks()); out.writeLong(p.remainingTicks()); out.writeUtf(p.detail(), BehaviorDebugSnapshot.REASON_LENGTH);
+            out.writeUtf(p.location(), ActionProgressSnapshot.LOCATION_LENGTH); out.writeUtf(p.state(), ActionProgressSnapshot.STATE_LENGTH);
+            out.writeLong(p.sampledTick()); out.writeDouble(p.work()); out.writeDouble(p.totalWork()); out.writeDouble(p.workPerTick());
+            out.writeLong(p.elapsedTicks()); out.writeLong(p.remainingTicks()); out.writeUtf(p.detail(), ActionProgressSnapshot.DETAIL_LENGTH);
         }
     }
     static BehaviorDebugSnapshot readBehavior(FriendlyByteBuf in) {
@@ -171,9 +173,11 @@ final class NavigationDebugFrameCodec {
             goals.add(new BehaviorDebugSnapshot.RunningGoal(source, name, priority, names, in.readBoolean(), in.readBoolean(),
                     in.readUtf(BehaviorDebugSnapshot.STATE_LENGTH), in.readLong(), in.readLong()));
         }
-        size = count(in, BehaviorDebugSnapshot.MAX_PROGRESS); List<BehaviorDebugSnapshot.Progress> progress = new ArrayList<>(size);
-        for (int i = 0; i < size; i++) progress.add(new BehaviorDebugSnapshot.Progress(in.readUtf(24), in.readUtf(BehaviorDebugSnapshot.NAME_LENGTH),
-                in.readLong(), in.readLong(), in.readUtf(BehaviorDebugSnapshot.REASON_LENGTH)));
+        size = count(in, BehaviorDebugSnapshot.MAX_PROGRESS); List<ActionProgressSnapshot> progress = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) progress.add(new ActionProgressSnapshot(in.readUtf(24), in.readUtf(BehaviorDebugSnapshot.NAME_LENGTH),
+                in.readUtf(ActionProgressSnapshot.LOCATION_LENGTH), in.readUtf(ActionProgressSnapshot.STATE_LENGTH),
+                in.readLong(), in.readDouble(), in.readDouble(), in.readDouble(),
+                in.readLong(), in.readLong(), in.readUtf(ActionProgressSnapshot.DETAIL_LENGTH)));
         return new BehaviorDebugSnapshot(tick, authority, session, bridge, actions, feedback, goals, progress, truncated);
     }
 

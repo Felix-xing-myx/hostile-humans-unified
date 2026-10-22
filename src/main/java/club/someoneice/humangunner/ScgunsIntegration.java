@@ -24,6 +24,7 @@ final class ScgunsIntegration implements GunSupport {
     private static final String RELOAD = HumanGunner.MOD_ID + ":scguns_reload";
     private static final String NEXT_SHOT = HumanGunner.MOD_ID + ":scguns_next_shot";
     public boolean enabled() { return true; }
+    public java.util.List<ActionProgressSnapshot> reloadProgress(Human human) { return GunReloadSession.progress(human, RELOAD); }
     public boolean isGun(ItemStack stack) {
         if (!(stack.getItem() instanceof GunItem)) return false;
         if (!(stack.getItem() instanceof IEnergyGun)) return true;

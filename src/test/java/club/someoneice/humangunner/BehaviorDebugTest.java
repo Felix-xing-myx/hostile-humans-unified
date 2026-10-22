@@ -26,6 +26,12 @@ public final class BehaviorDebugTest {
             new BehaviorDebugSnapshot(0, false, 0, "unbound", Collections.nCopies(BehaviorDebugSnapshot.MAX_ACTIONS + 1, sample.actions().get(0)), List.of(), List.of(), List.of(), false);
             throw new AssertionError("oversized actions");
         } catch (IllegalArgumentException expected) { }
+        for (double invalid : new double[]{Double.NaN, Double.POSITIVE_INFINITY, -2}) {
+            try { new ActionProgressSnapshot("food", "", "", "", 0, invalid, 1, 1, 0, 1, "");
+                throw new AssertionError("invalid execution amount"); } catch (IllegalArgumentException expected) { }
+        }
+        check(ActionProgressSnapshot.remaining(.5, 1, .25) == 2, "remaining uses actual applied rate");
+        check(ActionProgressSnapshot.remaining(.5, -1, .25) == -1, "native unknown total stays unknown");
         var empty = BehaviorDebugSnapshot.EMPTY;
         check(empty.bridge().equals("unbound") && !empty.authorityPresent(), "absence does not manufacture an active authority");
         try { sample.actions().clear(); throw new AssertionError("mutable snapshot"); }
@@ -50,7 +56,7 @@ public final class BehaviorDebugTest {
             throw new AssertionError("oversized resources");
         } catch (IllegalArgumentException expected) { }
         try {
-            new BehaviorDebugSnapshot.Progress("native_use", "", -2, 0, ""); throw new AssertionError("invalid progress");
+            new ActionProgressSnapshot("native_use", "", -2, 0, ""); throw new AssertionError("invalid progress");
         } catch (IllegalArgumentException expected) { }
         var rows = Collections.nCopies(128, new PerceptionDebugSnapshot.Row("组".repeat(32), "标".repeat(96), "值".repeat(256)));
         var markers = Collections.nCopies(64, new PerceptionDebugSnapshot.Marker("类".repeat(32), "点".repeat(96), Vec3.ZERO, Vec3.ZERO, 4096));
@@ -108,7 +114,7 @@ public final class BehaviorDebugTest {
         var feedback = new BehaviorDebugSnapshot.Feedback(1, 2, "动".repeat(96), "态".repeat(16), "因".repeat(160));
         var goal = new BehaviorDebugSnapshot.RunningGoal("源".repeat(24), "名".repeat(96), -12, Collections.nCopies(4, "旗".repeat(16)), true, false,
                 "态".repeat(128), 1, 2);
-        var progress = new BehaviorDebugSnapshot.Progress("类".repeat(24), "物".repeat(96), -1, Long.MAX_VALUE, "说".repeat(160));
+        var progress = new ActionProgressSnapshot("类".repeat(24), "物".repeat(96), "位".repeat(32), "态".repeat(32), Long.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE, -1, Long.MAX_VALUE, "说".repeat(160));
         return new BehaviorDebugSnapshot(42, true, 1, "桥".repeat(128), Collections.nCopies(BehaviorDebugSnapshot.MAX_ACTIONS, action), Collections.nCopies(8, feedback),
                 Collections.nCopies(BehaviorDebugSnapshot.MAX_GOALS, goal), Collections.nCopies(4, progress), true);
     }

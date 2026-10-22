@@ -117,6 +117,21 @@ public final class RecoverySupplies {
                 || medical.effects().stream().anyMatch(ScgunsSettings.Effect::isRegeneration));
     }
 
+    public static java.util.List<ActionProgressSnapshot> progress(Human human) {
+        UseSession session = ACTIVE_USES.get(human);
+        if (session == null || human.level().isClientSide) return java.util.List.of();
+        if (OffhandFoodUse.owns(human, session)) return OffhandFoodUse.progress(human, session);
+        var authority = HumanBehaviorControl.peekActions(human);
+        boolean valid = authority != null && authority.running(session.token()) && isUseInProgress(human, session)
+                && human.isAlive() && !human.isRemoved() && !human.isNoAi() && !HumanInventorySession.isEditing(human);
+        long elapsed = valid ? Math.max(0, human.getTicksUsingItem()) : -1;
+        long remaining = valid ? Math.max(0, human.getUseItemRemainingTicks()) : -1;
+        return java.util.List.of(new ActionProgressSnapshot("recovery", ActionProgressSnapshot.item(session.actualItem()),
+                ActionProgressSnapshot.location(human, session.actualItem()), valid ? "running" : "invalid",
+                human.level().getGameTime(), elapsed, valid ? elapsed + remaining : -1, valid ? 1 : -1,
+                elapsed, remaining, "当前恢复物品的原生实际使用计时"));
+    }
+
     public static boolean hasActiveUse(Human human) {
         return ACTIVE_USES.containsKey(human);
     }

@@ -26,6 +26,7 @@ final class JegIntegration implements GunSupport {
     private final Map<String, String> types = UnifiedConfig.get().jegGunTypes();
     private static final String NEXT_SHOT = HumanGunner.MOD_ID + ":jeg_next_shot";
     public boolean enabled() { return true; }
+    public java.util.List<ActionProgressSnapshot> reloadProgress(Human human) { return GunReloadSession.progress(human, RELOAD); }
     private static final Set<ResourceLocation> SUPPORTED_COMBAT_AMMO = Set.of(
             new ResourceLocation("jeg", "pistol_ammo"), new ResourceLocation("jeg", "rifle_ammo"),
             new ResourceLocation("jeg", "shotgun_shell"), new ResourceLocation("jeg", "handmade_shell"),

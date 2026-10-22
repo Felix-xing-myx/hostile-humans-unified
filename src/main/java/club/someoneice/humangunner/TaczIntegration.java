@@ -32,6 +32,7 @@ final class TaczIntegration implements GunSupport {
     private static final AtomicBoolean LOGGED_FIRST_GUN_HIT = new AtomicBoolean();
     private static final AtomicBoolean LOGGED_FIRST_ROAMER_GUN_HIT = new AtomicBoolean();
     public boolean enabled() { return true; }
+    public java.util.List<ActionProgressSnapshot> reloadProgress(Human human) { return TaczHumanReloadTransactions.progress(human); }
     public boolean isGun(ItemStack stack) { return IGun.getIGunOrNull(stack) != null; }
     public boolean hasLoadedAmmo(ItemStack stack) {
         IGun gun = IGun.getIGunOrNull(stack);

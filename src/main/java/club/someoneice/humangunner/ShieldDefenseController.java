@@ -204,6 +204,8 @@ public final class ShieldDefenseController {
         if (preparingCombatGuard || wantsHighPressureGuard()) guardedCharge.capture(human);
     }
 
+    public java.util.List<ActionProgressSnapshot> rangedChargeProgress() { return guardedCharge.progress(human); }
+
     public void restoreRangedUseAfterGuard() { guardedCharge.restore(human); }
 
     /** Weapon goals must not compete with a shield lease for vanilla's sole use slot. */

@@ -99,12 +99,22 @@ public final class NavigationLegendScreen extends Screen {
         for (var goal : snapshot.goals()) rows.add(new Row(-1, Component.literal("Goal " + goal.name() + " · p" + goal.priority() + " · " + String.join("/", goal.flags())
                 + " · " + (goal.entered() ? "已启动" : "未启动") + (goal.executing() ? "/回调中" : "") + " · " + goal.state()
                 + (goal.tokenSequence() == 0 ? "" : " · #" + goal.tokenSession() + "/" + goal.tokenSequence()))));
-        for (var progress : snapshot.progress()) rows.add(new Row(-1, Component.literal(progress.kind() + (progress.item().isEmpty() ? "" : " · " + progress.item())
-                + (progress.remainingTicks() < 0 ? "" : " · 已用 " + progress.elapsedTicks() + "t / 剩余 " + progress.remainingTicks() + "t") + " · " + progress.detail())));
+        for (var progress : snapshot.progress()) {
+            rows.add(new Row(-1, Component.literal(progress.kind() + " · " + progress.state() + " · " + progress.location()
+                    + (progress.item().isEmpty() ? "" : " · " + progress.item()))));
+            rows.add(new Row(-1, Component.literal("工作量 " + progressNumber(progress.work()) + " / " + progressNumber(progress.totalWork())
+                    + " · 实测速率 " + progressNumber(progress.workPerTick()) + "/t · 采样 " + progress.sampledTick())));
+            rows.add(new Row(-1, Component.literal((progress.remainingTicks() < 0 ? "余时未知" : "余时约 " + progress.remainingTicks() + "t")
+                    + (progress.elapsedTicks() < 0 ? "" : " · 历时 " + progress.elapsedTicks() + "t") + " · " + progress.detail())));
+        }
         for (var feedback : snapshot.feedback()) rows.add(new Row(-1, Component.literal("最近反馈 #" + feedback.session() + "/" + feedback.sequence()
                 + " " + feedback.name() + " · " + feedback.status() + " · " + feedback.reason())));
-        if (snapshot.truncated()) rows.add(new Row(-1, Component.literal("动作/Goal/反馈已按协议上限截断")));
+        if (snapshot.truncated()) rows.add(new Row(-1, Component.literal("动作/Goal/进度/反馈已按协议上限截断")));
     }
+    private static String progressNumber(double value) {
+        return value < 0 ? "未知" : String.format(java.util.Locale.ROOT, "%.3f", value);
+    }
+
     private boolean matches(String group) {
         return NavigationDebugViewPolicy.pageContains(page, group);
     }

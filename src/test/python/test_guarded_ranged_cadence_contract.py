@@ -11,7 +11,9 @@ class GuardedRangedCadenceContract(unittest.TestCase):
         self.assertIn('progress = Math.max(progress, Math.min(1, (double) human.getTicksUsingItem() / duration(weapon)))', charge)
         self.assertIn('if (preparingCombatGuard || wantsHighPressureGuard()) guardedCharge.capture(human)', source('ShieldDefenseController'))
         self.assertIn('charging = HumanEquipmentExchange.bind(human, weapon)', charge)
-        self.assertLess(charge.index('if (lastTick == human.tickCount) return'), charge.index('progress = Math.min(1, progress + foregroundRate(human, weapon) / (1.5 * duration(weapon)))'))
+        self.assertLess(charge.index('if (lastTick == human.tickCount) return'), charge.index('progress = Math.min(1, progress + appliedRate)'))
+        self.assertIn('double appliedRate = foregroundRate(human, weapon) / (1.5 * duration(weapon))', charge)
+        self.assertIn('observe(human, weapon, appliedRate)', charge)
         self.assertIn('weapon.getItem() instanceof BowItem && !HumanArrowCombat.canDrawBow(human)', charge)
     def test_crossbow_resume_keeps_real_loaded_delay(self):
         goal = (GOALS / 'CrossbowGoal.java').read_text(encoding='utf-8')

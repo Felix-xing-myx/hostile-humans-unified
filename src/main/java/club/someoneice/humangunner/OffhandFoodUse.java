@@ -15,11 +15,12 @@ final class OffhandFoodUse {
     private static final Map<Human, State> ACTIONS = new WeakHashMap<>();
     private static final class State {
         final RecoverySupplies.UseSession session;
+        final int total;
         int remaining, lastTick = Integer.MIN_VALUE;
         boolean ended, consumed;
         State(RecoverySupplies.UseSession session, int remaining) {
             this.session = session;
-            this.remaining = remaining;
+            this.remaining = this.total = remaining;
         }
     }
     private OffhandFoodUse() {}
@@ -39,6 +40,20 @@ final class OffhandFoodUse {
         ACTIONS.put(human, new State(session, duration));
         human.setNpcOffhandEating(true);
         return true;
+    }
+
+    static java.util.List<ActionProgressSnapshot> progress(Human human, RecoverySupplies.UseSession session) {
+        State state = ACTIONS.get(human);
+        if (state == null || state.session != session) return java.util.List.of();
+        var authority = HumanBehaviorControl.peekActions(human);
+        boolean valid = authority != null && authority.running(session.token())
+                && human.isAlive() && !human.isRemoved() && !human.isNoAi()
+                && !HumanInventorySession.isEditing(human) && human.getOffhandItem() == session.actualItem();
+        return java.util.List.of(new ActionProgressSnapshot("food", ActionProgressSnapshot.item(session.actualItem()),
+                ActionProgressSnapshot.location(human, session.actualItem()), !valid ? "invalid" : state.ended ? "ended" : "running",
+                human.level().getGameTime(), state.total - Math.max(0, state.remaining), state.total, 1,
+                state.total - Math.max(0, state.remaining), valid ? Math.max(0, state.remaining) : -1,
+                "后台食物真实执行余量；不占原生武器使用"));
     }
 
     static boolean owns(Human human, RecoverySupplies.UseSession session) {

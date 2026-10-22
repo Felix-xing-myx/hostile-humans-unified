@@ -8,7 +8,7 @@ import dev.felix.hostilehumans.core.ActionCoordinator;
 
 /** Bounded server-authored values only. Capture never creates authority, advances time or resolves weapon handles. */
 public record BehaviorDebugSnapshot(long tick, boolean authorityPresent, long session, String bridge,
-        List<Action> actions, List<Feedback> feedback, List<RunningGoal> goals, List<Progress> progress, boolean truncated) {
+        List<Action> actions, List<Feedback> feedback, List<RunningGoal> goals, List<ActionProgressSnapshot> progress, boolean truncated) {
     public static final int MAX_ACTIONS = 12, MAX_FEEDBACK = 8, MAX_GOALS = 12, MAX_PROGRESS = 4;
     public static final int MAX_RESOURCES = 8, MAX_FLAGS = 4;
     public static final int NAME_LENGTH = 96, STATE_LENGTH = 128, REASON_LENGTH = 160;
@@ -35,13 +35,6 @@ public record BehaviorDebugSnapshot(long tick, boolean authorityPresent, long se
         public RunningGoal {
             source = text(source, 24); name = text(name, NAME_LENGTH); state = text(state, STATE_LENGTH);
             flags = bounded(flags, MAX_FLAGS); flags.forEach(value -> text(value, 16));
-        }
-    }
-    /** -1 means unavailable, never a guessed countdown or progress percentage. */
-    public record Progress(String kind, String item, long elapsedTicks, long remainingTicks, String detail) {
-        public Progress {
-            kind = text(kind, 24); item = text(item, NAME_LENGTH); detail = text(detail, REASON_LENGTH);
-            if (elapsedTicks < -1 || remainingTicks < -1) throw new IllegalArgumentException("Invalid progress timing");
         }
     }
     private static <T> List<T> bounded(List<T> values, int max) {
@@ -90,18 +83,20 @@ public record BehaviorDebugSnapshot(long tick, boolean authorityPresent, long se
                         goal.entered(), goal.executing(), clip(goal.state(), STATE_LENGTH), goal.token() == null ? 0 : goal.token().session(),
                         goal.token() == null ? 0 : goal.token().sequence()));
         }
-        List<Progress> progress = new ArrayList<>();
-        if (human.isUsingItem()) {
+        List<ActionProgressSnapshot> progress = new ArrayList<>();
+        progress.addAll(RecoverySupplies.progress(human));
+        var shield = human.humanGunner$peekShieldDefense();
+        if (shield != null) progress.addAll(shield.rangedChargeProgress());
+        progress.addAll(GunSupport.get().reloadProgress(human));
+        if (human.isUsingItem() && progress.stream().noneMatch(p -> p.kind().equals("recovery"))) {
             var item = human.getUseItem();
-            String id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item.getItem()).toString();
-            progress.add(new Progress("native_use", clip(id, NAME_LENGTH), Math.max(0, human.getTicksUsingItem()),
-                    Math.max(0, human.getUseItemRemainingTicks()), "原生物品使用计时；不代表独立后台装填/食物的进度"));
+            progress.add(new ActionProgressSnapshot("native_use", ActionProgressSnapshot.item(item),
+                    ActionProgressSnapshot.location(human, item), "running", human.level().getGameTime(),
+                    Math.max(0, human.getTicksUsingItem()), (long)Math.max(0, human.getTicksUsingItem()) + Math.max(0, human.getUseItemRemainingTicks()),
+                    1, Math.max(0, human.getTicksUsingItem()), Math.max(0, human.getUseItemRemainingTicks()), "原生实际使用计时"));
         }
-        boolean recovery = RecoverySupplies.hasActiveUse(human), eating = RecoverySupplies.isEatingFood(human);
-        progress.add(new Progress("recovery", "", -1, -1, recovery
-                ? eating ? "后台食物正在使用；缺少只读剩余tick接口" : "恢复会话存在；缺少公开会话与实际进度快照"
-                : "当前无恢复使用会话"));
-        progress.add(new Progress("reload", "", -1, -1, "弓弩后台进度、枪后端装填进度未提供统一只读快照"));
+        cut |= progress.size() > MAX_PROGRESS;
+        progress = progress.stream().limit(MAX_PROGRESS).toList();
         return new BehaviorDebugSnapshot(human.level().getGameTime(), authority != null, authority == null ? 0 : authority.session(),
                 clip(bridge, STATE_LENGTH), actions, feedback, goals, progress, cut || active.size() > MAX_ACTIONS || history.size() > MAX_FEEDBACK);
     }

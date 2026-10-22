@@ -35,6 +35,10 @@ public final class ReloadPaymentLedgerTest {
                 "inventory feeding uses pack duration, not a stall recovery timeout");
         check(GunReloadPolicy.inventoryFeedDurationTicks(Double.NaN, -2.0D) == 1,
                 "invalid inventory-feed timing remains bounded");
+        var observed = new ReloadPaymentLedger<Object, Object>();
+        check(observed.begin(holder, gun, 100, () -> true, () -> true, () -> true), "observation fixture starts paid cycle");
+        check(observed.peekWeapon(holder, 99) == gun && observed.peekWeapon(holder, 100) == null, "peek respects deadline");
+        check(observed.peekWeapon(holder, 99) == gun, "peek beyond expiry does not mutate execution ledger");
         int[] magazines = {2}, starts = {0};
         check(!ledger.begin(holder, gun, 100, () -> false,
                 () -> { starts[0]++; return true; }, () -> { magazines[0]--; return true; }),

@@ -8,10 +8,31 @@ import net.minecraft.world.item.ItemStack;
 /** A normalized draw follows the original real weapon across legal equipment exchanges. */
 final class GuardedRangedCharge {
     private HumanEquipmentExchange.Handle charging;
-    private double progress;
+    private java.lang.ref.WeakReference<ItemStack> observedWeapon = new java.lang.ref.WeakReference<>(null);
+    private double progress, observedRate = -1;
+    private long observedTick = -1, observedSession;
+    private com.craftix.hostile_humans.entity.data.HumanData observedInventory;
+    private void observe(Human human, ItemStack weapon, double rate) {
+        observedWeapon = new java.lang.ref.WeakReference<>(weapon);
+        observedRate = rate; observedTick = human.level().getGameTime();
+        var authority = HumanBehaviorControl.peekActions(human);
+        observedSession = authority == null ? 0 : authority.session(); observedInventory = human.getData();
+    }
+    java.util.List<ActionProgressSnapshot> progress(Human human) {
+        ItemStack weapon = observedWeapon.get();
+        if (charging == null || weapon == null) return java.util.List.of();
+        String location = ActionProgressSnapshot.location(human, weapon);
+        var authority = HumanBehaviorControl.peekActions(human);
+        boolean valid = authority != null && authority.session() == observedSession && human.getData() == observedInventory && human.isAlive() && !human.isRemoved() && !human.isNoAi()
+                && !HumanInventorySession.isEditing(human) && !location.equals("missing") && !location.equals("ambiguous");
+        return java.util.List.of(new ActionProgressSnapshot("ranged_charge", ActionProgressSnapshot.item(weapon), location,
+                !valid ? "invalid" : progress >= 1 ? "ready" : "retained", observedTick, progress, 1, observedRate,
+                -1, valid ? ActionProgressSnapshot.remaining(progress, 1, observedRate) : -1,
+                "原弓弩的规范化准备量；余时按最后实际执行速率估计"));
+    }
     private int lastTick = Integer.MIN_VALUE;
 
-    void reset() { charging = null; progress = 0; lastTick = Integer.MIN_VALUE; }
+    void reset() { charging = null; progress = 0; lastTick = Integer.MIN_VALUE; observedWeapon.clear(); observedRate = -1; observedTick = -1; observedSession = 0; observedInventory = null; }
     private ItemStack actual(Human human) { return HumanEquipmentExchange.locate(human, charging); }
     private static int duration(ItemStack weapon) {
         return weapon.getItem() instanceof BowItem ? 20 : CrossbowItem.getChargeDuration(weapon);
@@ -30,6 +51,7 @@ final class GuardedRangedCharge {
         if (charging == null) return;
         progress = Math.max(progress, Math.min(1, (double) human.getTicksUsingItem() / duration(weapon)));
         lastTick = human.tickCount;
+        observe(human, weapon, -1);
     }
     void restore(Human human) {
         if (charging == null) return;
@@ -71,7 +93,9 @@ final class GuardedRangedCharge {
         lastTick = human.tickCount;
         if (weapon.getItem() instanceof CrossbowItem && CrossbowItem.isCharged(weapon)) return;
         if (weapon.getItem() instanceof BowItem && !HumanArrowCombat.canDrawBow(human)) return;
-        progress = Math.min(1, progress + foregroundRate(human, weapon) / (1.5 * duration(weapon)));
+        double appliedRate = foregroundRate(human, weapon) / (1.5 * duration(weapon));
+        progress = Math.min(1, progress + appliedRate);
+        observe(human, weapon, appliedRate);
         if (progress < 1 || !(weapon.getItem() instanceof CrossbowItem crossbow)) return;
         HumanArrowCombat.beginCrossbowLoad(human, weapon);
         crossbow.releaseUsing(weapon, human.level(), human, crossbow.getUseDuration(weapon) - duration(weapon));

@@ -95,4 +95,10 @@ final class ReloadPaymentLedger<K, W> {
         }
         return cycle.weapon();
     }
+
+    /** Inspection cannot expire/remove a cycle; expiry is settled by the execution path. */
+    W peekWeapon(K holder, long now) {
+        Cycle<W> cycle = cycles.get(holder);
+        return cycle != null && now < cycle.deadline() ? cycle.weapon() : null;
+    }
 }

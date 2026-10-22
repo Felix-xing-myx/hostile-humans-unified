@@ -67,6 +67,9 @@ final class CompositeGunSupport implements GunSupport {
     }
     public Goal goal(Human human) { return new GunnerGoal<>(human); }
     public void tickIdleReload(Human human) { providers.forEach(p -> p.tickIdleReload(human)); }
+    public List<ActionProgressSnapshot> reloadProgress(Human human) {
+        return providers.stream().flatMap(provider -> provider.reloadProgress(human).stream()).limit(3).toList();
+    }
     public boolean beginReload(Human human,ItemStack weapon) { return forWeapon(weapon).beginReload(human,weapon); }
     public void cancelReload(Human human,ItemStack weapon) { forWeapon(weapon).cancelReload(human,weapon); }
     public boolean isReloading(Human human) { return providers.stream().anyMatch(p -> p.isReloading(human)); }

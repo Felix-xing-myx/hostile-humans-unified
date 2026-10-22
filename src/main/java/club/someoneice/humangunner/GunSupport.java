@@ -63,6 +63,8 @@ public interface GunSupport {
     default Goal goal(Human human) { return new Goal() { public boolean canUse() { return false; } }; }
     default Control control(Human human) { return Control.NONE; }
     default void tickIdleReload(Human human) {}
+    /** Existing execution records only; observation must not create, tick, cancel or pay a reload. */
+    default java.util.List<ActionProgressSnapshot> reloadProgress(Human human) { return java.util.List.of(); }
     default boolean beginReload(Human human,ItemStack weapon) { return false; }
     default void cancelReload(Human human,ItemStack weapon) {}
     default boolean isReloading(Human human) { return false; }

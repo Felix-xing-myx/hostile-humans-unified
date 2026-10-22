@@ -414,6 +414,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public int shieldCoolDown;
     private club.someoneice.humangunner.ShieldDefenseController humanGunner$shieldDefense;
 
+    public club.someoneice.humangunner.ShieldDefenseController humanGunner$peekShieldDefense() { return humanGunner$shieldDefense; }
+
     public club.someoneice.humangunner.ShieldDefenseController humanGunner$shieldDefense() {
         if (humanGunner$shieldDefense == null)
             humanGunner$shieldDefense = new club.someoneice.humangunner.ShieldDefenseController(this);

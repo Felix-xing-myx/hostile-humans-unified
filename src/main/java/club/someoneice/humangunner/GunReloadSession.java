@@ -10,7 +10,8 @@ import net.minecraft.world.item.ItemStack;
 final class GunReloadSession {
     private static final java.util.UUID RUNTIME = java.util.UUID.randomUUID();
     private static final java.util.Map<Human,Attempt> STARTING = new java.util.WeakHashMap<>();
-    private record Cycle(CompoundTag state, java.lang.ref.WeakReference<com.craftix.hostile_humans.entity.data.HumanData> inventory) { }
+    private record Cycle(CompoundTag state, java.lang.ref.WeakReference<com.craftix.hostile_humans.entity.data.HumanData> inventory,
+                         java.lang.ref.WeakReference<ItemStack> weapon, long startedTick) { }
     private static final java.util.Map<Human,java.util.Map<String,Cycle>> CYCLES = new java.util.WeakHashMap<>();
     private static final java.util.Set<Human> TICKING = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
     private static final class Attempt {
@@ -80,7 +81,8 @@ final class GunReloadSession {
         gun.getOrCreateTag().putUUID(key, state.getUUID("transaction"));
         human.getPersistentData().put(key, state);
         CYCLES.computeIfAbsent(human, ignored -> new java.util.HashMap<>()).put(key,
-                new Cycle(state, new java.lang.ref.WeakReference<>(authority.inventory)));
+                new Cycle(state, new java.lang.ref.WeakReference<>(authority.inventory),
+                        new java.lang.ref.WeakReference<>(gun), human.level().getGameTime()));
         return state;
     }
 
@@ -136,8 +138,33 @@ final class GunReloadSession {
         double work = progress * total;
         state.putDouble("progress", progress);
         state.putDouble("work", work);
+        state.putDouble("work_per_tick", rate);
         state.putInt("ticks", (int) Math.ceil(Math.max(0, total - work - 1e-8)));
         return work;
+    }
+
+    /** Read the exact execution checkpoint. In particular, do not call matches(), which advances authority time. */
+    static java.util.List<ActionProgressSnapshot> progress(Human human, String key) {
+        Cycle cycle = CYCLES.getOrDefault(human, java.util.Map.of()).get(key);
+        if (human.level().isClientSide || cycle == null) return java.util.List.of();
+        var state = cycle.state(); ItemStack weapon = cycle.weapon().get();
+        var authority = HumanBehaviorControl.peekActions(human);
+        String location = ActionProgressSnapshot.location(human, weapon);
+        boolean valid = authority != null && authority.session() == state.getLong("session")
+                && human.getData() == cycle.inventory().get() && human.getPersistentData().get(key) == state
+                && transaction(weapon, key, state) && !location.equals("missing") && !location.equals("ambiguous")
+                && human.isAlive() && !human.isRemoved() && !human.isNoAi() && !HumanInventorySession.isEditing(human);
+        double work = state.getDouble("work"), total = state.getDouble("total_work");
+        double rate = state.contains("work_per_tick") ? state.getDouble("work_per_tick") : -1;
+        if (!Double.isFinite(work) || work < 0 || !Double.isFinite(total) || total <= 0) { valid = false; work = total = -1; }
+        if (!Double.isFinite(rate) || rate <= 0) rate = -1;
+        long sampled = state.contains("last_tick") ? state.getLong("last_tick") : cycle.startedTick();
+        String detail = "阶段 " + state.getInt("step") + "/" + state.getList("steps", Tag.TAG_COMPOUND).size()
+                + "；余时按最后执行速率估计；原枪 " + (state.hasUUID("weapon") ? state.getUUID("weapon") : "unknown");
+        return java.util.List.of(new ActionProgressSnapshot("gun_reload", ActionProgressSnapshot.item(weapon), location,
+                valid ? "running" : "invalid", sampled, work, total, rate,
+                Math.max(0, sampled - cycle.startedTick()), valid ? ActionProgressSnapshot.remaining(work,total,rate) : -1,
+                ActionProgressSnapshot.clip(detail, ActionProgressSnapshot.DETAIL_LENGTH)));
     }
 
     static boolean complete(Human human, ItemStack gun, String key, CompoundTag state, Runnable commit) {
