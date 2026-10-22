@@ -34,13 +34,15 @@ class GrowthUiContractTest(unittest.TestCase):
   self.assertIn('s.token().equals(p.token)',NETWORK)
   self.assertIn('HumanCommandNetwork.closeScreen(sessionToken)',SCREEN)
  def test_disabled_growth_hides_block_and_layout_space(self):
-  self.assertIn('growth!=null&&growth.enabled()?72:0',PANEL)
-  self.assertIn('if(growthHeight()==0)return',PANEL)
-  self.assertIn('y+=growthHeight()+extraHeight()',PANEL)
-  self.assertIn('top()+growthHeight()+extraHeight()',PANEL)
+  block=PANEL.split('private int growth(',1)[1].split('private static String amount',1)[0]
+  self.assertIn('if(growth==null||!growth.enabled())return y',block)
+  self.assertLess(block.index('return y;'),block.index('growth.level()'))
+  self.assertIn('cy=growth(g,x+12,cy,inner)',PANEL)
+  self.assertIn('CommandPanelLayout.twoColumns(inner)',PANEL)
+  self.assertIn('for(var c:controls)',PANEL)
  def test_experience_meters_are_read_only(self):
-  meter=PANEL.split('private void drawProgress',1)[1].split('private void renderGrowth',1)[0]
-  self.assertIn('y+3',meter);self.assertNotIn('dragging',meter)
+  meter=PANEL.split('private int growth(',1)[1].split('private static String amount',1)[0]
+  for forbidden in ('dragging','submit(','sendToServer','setProgress'):self.assertNotIn(forbidden,meter)
   for key in ('stageProgress()','stageRequired()','experienceProgress()','experienceRequired()'):self.assertIn(key,PANEL)
  def test_every_edit_including_dismiss_requires_session(self):
   request=NETWORK.split('private record Request',1)[1].split('private record Close',1)[0]

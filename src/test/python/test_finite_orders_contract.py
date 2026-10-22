@@ -67,7 +67,8 @@ class FiniteOrdersContract(unittest.TestCase):
         self.assertIn("return live==null||", data)
         self.assertIn("human==null){unloaded++;continue;}", commands)
         self.assertIn("player.getUUID().equals(human.getOwnerUUID())", commands)
-        self.assertIn("SoldierOrder.apply(human", commands)
+        self.assertIn("CommandView.apply(human,update)", commands)
+        self.assertIn("SoldierOrder.apply(human,update.order(),settings,update.followDistance())", source("CommandView"))
         self.assertNotIn("requestRecall", commands)
         self.assertNotIn("getChunk(", commands)
 

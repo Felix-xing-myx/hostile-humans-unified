@@ -8,7 +8,7 @@ JAVA=ROOT/'src/main/java/club/someoneice/humangunner'
 def source(name):return (JAVA/(name+'.java')).read_text(encoding='utf-8-sig')
 class CommandUiContract(unittest.TestCase):
  def test_protocols_and_three_mode_adapter(self):
-  self.assertIn('PROTOCOL="8"',source('HumanCommandNetwork'));self.assertIn('PROTOCOL = "7"',source('SoldierRosterNetwork'))
+  self.assertIn('PROTOCOL="9"',source('HumanCommandNetwork'));self.assertIn('PROTOCOL = "7"',source('SoldierRosterNetwork'))
   self.assertIn('List.of(SoldierOrder.FOLLOW,SoldierOrder.BODYGUARD,SoldierOrder.GARRISON)',source('CommandView'))
   for ui in ('SoldierCommandScreen','CommandPanelScreen','SoldierRosterScreen'):self.assertNotIn('SoldierOrder.values()',source(ui))
  def test_single_requests_bind_all_identity_before_any_write(self):
@@ -18,8 +18,11 @@ class CommandUiContract(unittest.TestCase):
  def test_client_only_submits_and_displays_accepted_state(self):
   panel=source('CommandPanelScreen');click=panel.split('public boolean mouseClicked',1)[1]
   self.assertNotIn('state=',click);self.assertNotIn('state.order()=',click)
-  self.assertIn('if(draftDistance!=distance())submit',click)
-  self.assertIn('garrison()?CommandView.settings',click)
+  release=panel.split('public boolean mouseReleased',1)[1].split('public boolean mouseScrolled',1)[0]
+  self.assertIn('if(mixed(field)||draftDistance!=previous)submit',release)
+  self.assertIn('field==CommandView.Field.RADIUS?CommandView.radius(draftDistance):CommandView.follow(draftDistance)',release)
+  self.assertIn('CommandView.stay(mixed(CommandView.Field.STAY)||!state.garrison().stay())',panel)
+  self.assertIn('CommandView.chase(mixed(CommandView.Field.CHASE)||!state.garrison().chase())',panel)
   for forbidden in ('getPersistentData','UnifiedConfig','HumanGrowth'):self.assertNotIn(forbidden,panel)
   self.assertIn('s.state=view',source('SoldierCommandScreen'))
  def test_batch_rechecks_actual_held_type_binding_and_session(self):
@@ -38,7 +41,9 @@ class CommandUiContract(unittest.TestCase):
   for field in ('int squadFilter','int squad','int entityId'):self.assertIn(field,code)
  def test_bounded_packet_values_and_no_growth_client_authority(self):
   code=source('CommandView')
-  for guard in ('mask==0||(mask&~31)!=0','value<8||value>96','ORDERS.contains(update.order())'):self.assertIn(guard,code)
+  for guard in ('mask==0||(mask&~511)!=0','value<8||value>96','ORDERS.contains(update.order())','(mask&~255)!=0'):self.assertIn(guard,code)
+  self.assertIn('(mask&256)!=0?b.readEnum(CombatPreference.class):null',code)
+  self.assertIn('patchedSettings(GarrisonSettings.player(human),update)',code)
   self.assertNotIn('Growth',code.split('public static SquadCommands.Update readUpdate',1)[1])
  def test_natural_tool_calls_permission_checked_existing_entry(self):
   self.assertIn('NaturalStateCommand.useDebugTool(serverPlayer,human,player.isShiftKeyDown())',source('NaturalStateToolItem'))

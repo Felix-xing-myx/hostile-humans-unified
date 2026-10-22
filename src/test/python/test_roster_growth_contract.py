@@ -35,16 +35,17 @@ class RosterGrowthContract(unittest.TestCase):
         self.assertNotIn("award(", saved)
 
     def test_hidden_layout_and_controls_share_offset(self):
-        self.assertIn("entry.growth().enabled() ? 56 : 0", UI)
-        self.assertIn("HEIGHT + growthHeight()", UI)
-        render = UI.split("private void renderDetail", 1)[1].split("public boolean mouseClicked", 1)[0]
-        click = UI.split("private boolean clickDetail", 1)[1]
-        for source in (render, click):
-            self.assertIn("y + 201 + growthHeight()", source)
-            self.assertIn("y + 223 + growthHeight()", source)
-        self.assertIn("if (growthHeight() == 0) return", UI)
-        self.assertIn('roster.last_known"', UI)
-        self.assertIn("statusRefreshTicks >= 100", UI)
+        render = UI.split("private int renderDetail", 1)[1].split("private int renderSquads", 1)[0]
+        click = UI.split("public boolean mouseClicked", 1)[1].split("private void previewPageAt", 1)[0]
+        self.assertIn("if(e.growth()!=null&&e.growth().enabled())", render)
+        self.assertLess(render.index("if(e.growth()!=null&&e.growth().enabled())"), render.index('boolean loaded='))
+        self.assertIn('controls.add(new Control(label,x,y,w,h,active,chosen,action))', UI)
+        self.assertIn('for(var c:controls)if(c.active&&hit(mx,my,c.x,c.y,c.w,c.h))', click)
+        self.assertIn('c.action.run()', click)
+        self.assertIn('my>=bodyTop()&&my<bodyBottom()', click)
+        self.assertIn('CommandPanelLayout.width(width)', UI)
+        self.assertIn('roster("last_known")', render)
+        self.assertIn('refreshTicks', UI)
 
     def test_translations_and_full_progress_display(self):
         for lang in ("en_us", "zh_cn"):
