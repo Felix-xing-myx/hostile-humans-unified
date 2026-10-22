@@ -116,11 +116,9 @@ final class CloseRangedTactics {
     }
 
     static boolean tryGun(Human human, LivingEntity target) {
-        if (!mayTryRanged(human, target)) return false;
-        // Release only this controller's shield use, never food/medicine or another owner.
-        human.humanGunner$shieldDefense().releaseCombat();
-        if (!GunCustody.restorePrimaryGun(human, "close_gun_trial")) return false;
-        return true;
+        // Gun custody uses reload completion and the faction's 4.5 block hold,
+        // rather than bow/crossbow's timed close-range trial.
+        return GunCustody.restorePrimaryGun(human,"close_gun_return");
     }
 
     /** Called with final health loss, after the shared hostile-source validation. */

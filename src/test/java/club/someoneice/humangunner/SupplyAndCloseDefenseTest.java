@@ -124,8 +124,14 @@ public final class SupplyAndCloseDefenseTest {
         check(!hold.holds(new Object(), 131), "actual weapon replacement releases old hold");
         check(hold.holds(sword, 200, true) && !hold.holds(sword, 200, false), "slowed vanilla swing must finish even past deadline");
         for (String owner : List.of("GunCustody", "RangedWeaponCustody")) {
-            check(calls(owner, owner.equals("GunCustody") ? "restorePrimaryGun" : "restorePreferred", "CloseDefenseHold", "shouldHold"), "all automatic restore paths guarded " + owner);
-            check(calls(owner, owner.equals("GunCustody") ? "beginCloseMeleeCounter" : "beginCloseMelee", "CloseDefenseHold", "begin"), "start hold after swap " + owner);
+            if(owner.equals("GunCustody")) {
+                check(calls(owner,"restorePrimaryGun","GunCombatProfile","shouldForceMelee"),"gun return respects faction close hold");
+                check(calls(owner,"beginCloseMeleeCounter","CloseRangedTactics","beginMelee"),"gun switch hands full melee ownership over");
+                check(calls(owner,"beginCloseMeleeCounter","HumanEquipmentExchange","request"),"gun switch uses real shared exchange");
+            } else {
+                check(calls(owner,"restorePreferred","CloseDefenseHold","shouldHold"),"bow restore respects active hold");
+                check(calls(owner,"beginCloseMelee","CloseDefenseHold","begin"),"bow starts existing hold after swap");
+            }
             check(calls(owner, "prepareForManualInventory", "CloseDefenseHold", "clear"), "manual owner action releases hold " + owner);
         }
         check(calls("HumanLootManager", "lowestEvictableSlot", "SupplyInventoryPolicy", "isReserved"), "offhand custody cannot discard survival reserves");

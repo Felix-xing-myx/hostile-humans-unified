@@ -69,8 +69,8 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertIn("GunEnchantmentHelper.getMagReloadSpeed(stack)", timing)
         self.assertNotIn("net.minecraft.client", timing + audio)
         self.assertNotIn("FakePlayer", timing + integration)
-        self.assertIn('state.put("steps", steps)', integration)
-        self.assertLess(integration.index("ScgunsReloadTiming.plan("), integration.index("HumanAmmo.consumeMagazines(human, stack)"))
+        self.assertIn('state.put("steps",steps)', source("GunReloadSession"))
+        self.assertLess(integration.index("ScgunsReloadTiming.plan("), integration.index("GunReloadSession.begin("))
 
     def test_sulfurhead_restores_only_human_damage_pipeline(self):
         mixin = source("mixin/ScgunsSulfurheadDamageMixin")
@@ -229,8 +229,10 @@ class ScgunsBoundary(unittest.TestCase):
         for api in ("ForgeCapabilities.ENERGY", "storage.receiveEnergy(", "extractEnergy(energyCost(weapon), false)"):
             self.assertIn(api, adapter)
         self.assertNotIn('putInt("Energy"', adapter)
-        self.assertLess(adapter.index("HumanAmmo.consumeMagazines(human, stack)"), adapter.index('state.putUUID("transaction"'))
-        self.assertIn('stack.getTag().getUUID(RELOAD).equals(state.getUUID("transaction"))', adapter)
+        session = source("GunReloadSession")
+        self.assertLess(session.index("HumanAmmo.consumeMagazines(human,gun)"), session.index('state.putUUID("transaction"'))
+        self.assertIn('state.getUUID("transaction").equals(gun.getTag().getUUID(key))', session)
+        self.assertIn('HumanEquipmentExchange.locate', session)
         self.assertIn('GunSupport.get().magazineCost(gun)', source("HumanAmmo"))
         config = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
         fees = config["scguns"]["magazines_per_reload_by_type"]

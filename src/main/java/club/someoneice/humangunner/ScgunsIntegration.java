@@ -53,7 +53,8 @@ final class ScgunsIntegration implements GunSupport {
             case "lmg" -> "mg";
             case "magnum" -> "pistol";
             case "heavy", "flamethrower" -> "rpg";
-            case "shock", "laser", "plasma", "special" -> "rifle";
+            case "snipers_rifle", "sniper_rifle" -> "sniper";
+            case "shock", "laser", "plasma", "special" -> "other";
             default -> definition(stack).getGeneral().getWeaponType().name().toLowerCase(Locale.ROOT);
         };
     }
@@ -89,6 +90,10 @@ final class ScgunsIntegration implements GunSupport {
         // AIGunEvent aims at 80% of the target's eye height, not its eyes.
         return target.position().add(0, target.getEyeHeight() * 0.8D, 0);
     }
+    public double maximumProjectileReach(ItemStack stack) {
+        int life=GunModifierHelper.getModifiedProjectileLife(stack,definition(stack).getProjectile().getLife());
+        return Math.max(0,clearanceProjectileSpeed(stack)*Math.max(0,life));
+    }
     public double projectileSpeed(ItemStack stack) {
         return club.someoneice.humangunner.compat.NativeAimCompatibility.scgunsSharedPrediction()
                 ? clearanceProjectileSpeed(stack) : 0;
@@ -112,71 +117,53 @@ final class ScgunsIntegration implements GunSupport {
             if (isReloading(human, human.getData().getInventoryItem(i))) return true;
         return false;
     }
-    public boolean isReloading(Human human, ItemStack stack) {
-        if (!isGun(stack) || stack.getTag() == null || !stack.getTag().hasUUID(RELOAD)) return false;
-        var state = human.getPersistentData().getCompound(RELOAD);
-        return state.hasUUID("transaction") && stack.getTag().getUUID(RELOAD).equals(state.getUUID("transaction"))
-                && state.getInt("ticks") > 0;
+    public boolean isReloading(Human human,ItemStack stack) {
+        return isGun(stack)&&GunReloadSession.matches(human,stack,RELOAD)
+                &&human.getPersistentData().getCompound(RELOAD).getInt("ticks")>0;
     }
+    public boolean beginReload(Human human,ItemStack stack) {
+        if(!isGun(stack)) return false;
+        startReload(human,stack);
+        return isReloading(human,stack);
+    }
+    public void cancelReload(Human human,ItemStack stack) { GunReloadSession.cancel(human,stack,RELOAD); }
     private void startReload(Human human, ItemStack stack) {
-        if (human.level().isClientSide || human.isUsingItem() || isReloading(human)
+        if (human.level().isClientSide || !GunCombatProfile.canReloadDuringUse(human) || isReloading(human)
                 || !HumanAmmo.canReload(human, stack) || remaining(stack) >= capacity(stack)) return;
         Gun gun = definition(stack);
         var plan = ScgunsReloadTiming.plan(human, stack, gun,
                 Math.max(0, capacity(stack) - remaining(stack)), energyWeapon(stack));
-        if (plan.isEmpty() || !HumanAmmo.consumeMagazines(human, stack)) return;
-        var state = new net.minecraft.nbt.CompoundTag();
-        java.util.UUID transaction = java.util.UUID.randomUUID();
-        state.putUUID("transaction", transaction);
-        var steps = new net.minecraft.nbt.ListTag();
-        for (var step : plan) {
-            var entry = new net.minecraft.nbt.CompoundTag();
-            entry.putInt("ticks", step.ticks());
-            entry.putInt("rounds", step.rounds());
-            steps.add(entry);
+        if(plan.isEmpty()) return;
+        var steps=new net.minecraft.nbt.ListTag();
+        for(var step:plan) {
+            var row=new net.minecraft.nbt.CompoundTag();row.putInt("ticks",step.ticks());row.putInt("rounds",step.rounds());steps.add(row);
         }
-        state.put("steps", steps);
-        state.putInt("step", 0);
-        state.putInt("ticks", plan.get(0).ticks());
-        // The gun carries only a stable identity. Per-tick progress stays server-side
-        // on the Human, avoiding an equipment/NBT network update on every reload tick.
-        stack.getOrCreateTag().putUUID(RELOAD, transaction);
-        human.getPersistentData().put(RELOAD, state);
-        ScgunsSounds.reload(human, gun, false);
+        if(GunReloadSession.begin(human,stack,RELOAD,steps)==null) return;
+        if(!GunCombatProfile.silent(human,stack)) ScgunsSounds.reload(human,gun,false);
     }
-    private void tickReload(Human human, ItemStack stack) {
-        if (!isReloading(human, stack)) return;
-        var state = human.getPersistentData().getCompound(RELOAD);
-        long now = human.level().getGameTime();
-        if (state.contains("last_tick") && state.getLong("last_tick") == now) return;
-        state.putLong("last_tick", now);
-        int remaining = state.getInt("ticks") - 1;
-        if (remaining <= 0) {
-            var steps = state.getList("steps", net.minecraft.nbt.Tag.TAG_COMPOUND);
-            int index = state.getInt("step");
-            // Old saved transactions have no schedule: finish their already-paid timer once.
-            if (steps.isEmpty()) fill(stack);
-            else {
-                if (index < 0 || index >= steps.size()) {
-                    stack.getOrCreateTag().remove(RELOAD);
-                    human.getPersistentData().remove(RELOAD);
-                    return; // corrupt schedule must not create free ammo
-                }
-                if (!energyWeapon(stack)) writeRounds(stack, Math.min(capacity(stack), Gun.getAmmoCount(stack)
-                        + Math.max(0, steps.getCompound(index).getInt("rounds"))));
-                if (++index < steps.size()) {
-                    state.putInt("step", index);
-                    state.putInt("ticks", Math.max(1, steps.getCompound(index).getInt("ticks")));
-                    if (steps.getCompound(index).getInt("rounds") > 0)
-                        ScgunsSounds.reload(human, definition(stack), false);
-                    return;
-                }
-                if (energyWeapon(stack)) fill(stack);
-            }
-            stack.getOrCreateTag().remove(RELOAD);
-            human.getPersistentData().remove(RELOAD);
-            ScgunsSounds.reload(human, definition(stack), true);
-        } else state.putInt("ticks", remaining);
+    private void tickReload(Human human,ItemStack stack) {
+        if(!GunReloadSession.matches(human,stack,RELOAD)) return;
+        double work=GunReloadSession.advance(human,stack,RELOAD);
+        if(work<0) return;
+        var state=human.getPersistentData().getCompound(RELOAD);
+        var steps=state.getList("steps",net.minecraft.nbt.Tag.TAG_COMPOUND);
+        if(steps.isEmpty()) { cancelReload(human,stack);return; }
+        int index=state.getInt("step");double boundary=0;
+        for(int i=0;i<steps.size();i++) {
+            boundary+=Math.max(1,steps.getCompound(i).getInt("ticks"));
+            if(i<index||work+1e-8<boundary) continue;
+            state.putInt("step",i+1); // Publish before native item/capability callbacks.
+            int add=Math.max(0,steps.getCompound(i).getInt("rounds"));
+            if(!energyWeapon(stack)) writeRounds(stack,Math.min(capacity(stack),Gun.getAmmoCount(stack)+add));
+            if(!GunCombatProfile.silent(human,stack)&&add>0) ScgunsSounds.reload(human,definition(stack),false);
+        }
+        if(state.getInt("step")>=steps.size()) {
+            GunReloadSession.complete(human,stack,RELOAD,()-> {
+                if(energyWeapon(stack)) fill(stack);
+            }); // Settle and block a second payment before capability callbacks can re-enter.
+            if(!GunCombatProfile.silent(human,stack)) ScgunsSounds.reload(human,definition(stack),true);
+        }
+        if(human.getData()!=null&&stack!=human.getMainHandItem()) human.getData().markInventoryDirty();
     }
     public void tickIdleReload(Human human) {
         if (human.level().isClientSide) return;
@@ -194,7 +181,7 @@ final class ScgunsIntegration implements GunSupport {
     public Control control(Human human) {
         return new Control() {
             public void shoot(ItemStack weapon, net.minecraft.world.entity.LivingEntity target, float pitch, float yaw) {
-                if (!GunFireAuthorization.allows(human, weapon, target) || !isGun(weapon) || human.isUsingItem()) return;
+                if (!GunAttackAction.owns(human)||!GunFireAuthorization.allows(human, weapon, target) || !isGun(weapon) || human.isUsingItem()) return;
                 if (isReloading(human, weapon)) return;
                 if (!hasLoadedAmmo(weapon)) { startReload(human, weapon); return; }
                 long now = human.level().getGameTime();
@@ -202,7 +189,7 @@ final class ScgunsIntegration implements GunSupport {
                 Gun gun = definition(weapon);
                 human.setXRot(pitch); human.setYRot(yaw); human.setYHeadRot(yaw);
                 float accuracy = (float) (UnifiedConfig.get().scguns().accuracyModifier()
-                        / Math.max(.01, HumanGrowth.gunSpreadMultiplier(human)));
+                        / Math.max(.01,HumanGrowth.gunSpreadMultiplier(human)*GunCombatProfile.spread(human,weapon)));
                 AIGunEvent.performGunAttack(human, target, weapon, gun, accuracy);
                 HumanAwareness.gunshot(human);
                 if (!infinite(weapon)) {

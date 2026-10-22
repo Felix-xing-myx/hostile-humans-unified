@@ -45,7 +45,7 @@ final class JegIntegration implements GunSupport {
         String id = gunId(stack).toString();
         String configured = types.get(id);
         if (configured != null) return configured;
-        return "rifle"; // Unknown addon guns have an explicit, documented conservative default.
+        return "other"; // Unknown addon weapons use the confirmed conservative fallback.
     }
     public int magazineCost(ItemStack stack) {
         String type = gunType(stack);
@@ -97,7 +97,7 @@ final class JegIntegration implements GunSupport {
     }
     public double maximumProjectileReach(ItemStack stack) {
         int life = GunModifierHelper.getModifiedProjectileLife(stack, definition(stack).getProjectile().getLife());
-        return Math.max(1, clearanceProjectileSpeed(stack) * Math.max(1, life) - 1);
+        return Math.max(0, clearanceProjectileSpeed(stack) * Math.max(0, life) - 1);
     }
     public double projectileSpeed(ItemStack stack) { return clearanceProjectileSpeed(stack); }
     public double projectileGravity(ItemStack stack) { return clearanceProjectileGravity(stack); }
@@ -110,11 +110,9 @@ final class JegIntegration implements GunSupport {
                 ? -GunModifierHelper.getModifiedProjectileGravity(stack, -.04D) : 0;
     }
     public Goal goal(Human human) { return new GunnerGoal<>(human); }
-    public boolean isReloading(Human human, ItemStack stack) {
-        if (!isGun(stack) || stack.getTag() == null || !stack.getTag().hasUUID(RELOAD)) return false;
-        CompoundTag state = human.getPersistentData().getCompound(RELOAD);
-        return state.hasUUID("transaction") && state.getUUID("transaction").equals(stack.getTag().getUUID(RELOAD))
-                && state.getInt("ticks") > 0;
+    public boolean isReloading(Human human,ItemStack stack) {
+        return isGun(stack)&&GunReloadSession.matches(human,stack,RELOAD)
+                &&human.getPersistentData().getCompound(RELOAD).getInt("ticks")>0;
     }
     private List<ItemStack> custody(Human human) {
         List<ItemStack> stacks = new ArrayList<>();
@@ -124,56 +122,45 @@ final class JegIntegration implements GunSupport {
         return stacks;
     }
     public boolean isReloading(Human human) { return custody(human).stream().anyMatch(s -> isReloading(human, s)); }
+    public boolean beginReload(Human human,ItemStack stack) {
+        if(!isGun(stack)) return false;
+        startReload(human,stack);
+        return isReloading(human,stack);
+    }
+    public void cancelReload(Human human,ItemStack stack) { GunReloadSession.cancel(human,stack,RELOAD); }
     private void startReload(Human human, ItemStack stack) {
-        if (human.level().isClientSide || human.isUsingItem() || isReloading(human)
+        if (human.level().isClientSide || !GunCombatProfile.canReloadDuringUse(human) || isReloading(human)
                 || rounds(stack) >= capacity(stack) || !HumanAmmo.canReload(human, stack)) return;
         Gun gun = definition(stack);
         var plan = JegReloadPlan.create(stack, gun, rounds(stack), capacity(stack));
-        if (plan.isEmpty() || !HumanAmmo.consumeMagazines(human, stack)) return;
-        CompoundTag state = new CompoundTag();
-        UUID transaction = UUID.randomUUID();
-        state.putUUID("transaction", transaction);
-        var steps = new net.minecraft.nbt.ListTag();
-        for (var step : plan) {
-            var entry = new CompoundTag(); entry.putInt("ticks", step.ticks()); entry.putInt("rounds", step.rounds());
-            steps.add(entry);
+        if(plan.isEmpty()) return;
+        var steps=new net.minecraft.nbt.ListTag();
+        for(var step:plan) {
+            var row=new net.minecraft.nbt.CompoundTag();row.putInt("ticks",step.ticks());row.putInt("rounds",step.rounds());steps.add(row);
         }
-        state.put("steps", steps); state.putInt("step", 0); state.putInt("ticks", plan.get(0).ticks());
-        state.putInt("duration", plan.get(0).ticks()); state.putInt("elapsed", 0);
-        stack.getOrCreateTag().putUUID(RELOAD, transaction);
-        human.getPersistentData().put(RELOAD, state);
-
+        if(GunReloadSession.begin(human,stack,RELOAD,steps)==null) return;
     }
-    private void tickReload(Human human, ItemStack stack) {
-        if (!isReloading(human, stack)) return;
-        CompoundTag state = human.getPersistentData().getCompound(RELOAD);
-        long now = human.level().getGameTime();
-        if (state.contains("last_tick") && state.getLong("last_tick") == now) return;
-        state.putLong("last_tick", now);
-        int elapsed = state.getInt("elapsed") + 1;
-        state.putInt("elapsed", elapsed);
-        Gun gun = definition(stack);
-        if (elapsed == 4) JegSounds.send(human, gun.getSounds().getReloadStart(), 1, false, true);
-        int ticks = state.getInt("ticks") - 1;
-        boolean manual = gun.getReloads().getReloadType() == ReloadType.MANUAL;
-        if (!manual && ticks == state.getInt("duration") / 2)
-            JegSounds.send(human, gun.getSounds().getReloadLoad(), 1, false, true);
-        if (!manual && ticks == 5) JegSounds.send(human, gun.getSounds().getEjectorPull(), 1, false, true);
-        if (ticks > 0) { state.putInt("ticks", ticks); return; }
-        var steps = state.getList("steps", net.minecraft.nbt.Tag.TAG_COMPOUND);
-        int index = state.getInt("step");
-        if (index >= 0 && index < steps.size()) {
-            rounds(stack, Math.min(capacity(stack), rounds(stack) + Math.max(0, steps.getCompound(index).getInt("rounds"))));
-            if (++index < steps.size()) {
-                state.putInt("step", index); state.putInt("ticks", Math.max(1, steps.getCompound(index).getInt("ticks")));
-                state.putInt("duration", state.getInt("ticks"));
-                JegSounds.send(human, gun.getSounds().getReloadLoad(), 1, false, true);
-                return;
-            }
-            JegSounds.send(human, gun.getSounds().getReloadEnd(), 1, false, true);
-            JegSounds.send(human, gun.getSounds().getEjectorRelease(), 1, false, true);
-        } // A corrupt schedule never fills a gun.
-        stack.getOrCreateTag().remove(RELOAD); human.getPersistentData().remove(RELOAD);
+    private void tickReload(Human human,ItemStack stack) {
+        if(!GunReloadSession.matches(human,stack,RELOAD)) return;
+        double work=GunReloadSession.advance(human,stack,RELOAD);
+        if(work<0) return;
+        var state=human.getPersistentData().getCompound(RELOAD);
+        var steps=state.getList("steps",net.minecraft.nbt.Tag.TAG_COMPOUND);
+        if(steps.isEmpty()) { cancelReload(human,stack);return; }
+        int index=state.getInt("step");double boundary=0;
+        for(int i=0;i<steps.size();i++) {
+            boundary+=Math.max(1,steps.getCompound(i).getInt("ticks"));
+            if(i<index||work+1e-8<boundary) continue;
+            state.putInt("step",i+1); // Publish before native item/capability callbacks.
+            int add=Math.max(0,steps.getCompound(i).getInt("rounds"));
+            rounds(stack,Math.min(capacity(stack),rounds(stack)+add));
+            if(!GunCombatProfile.silent(human,stack)&&add>0) JegSounds.send(human,definition(stack).getSounds().getReloadLoad(),1,false,true);
+        }
+        if(state.getInt("step")>=steps.size()) {
+            if(!GunCombatProfile.silent(human,stack)) JegSounds.send(human,definition(stack).getSounds().getReloadEnd(),1,false,true);
+            cancelReload(human,stack);
+        }
+        if(human.getData()!=null&&stack!=human.getMainHandItem()) human.getData().markInventoryDirty();
     }
     public void tickIdleReload(Human human) {
         if (human.level().isClientSide) return;
@@ -193,7 +180,7 @@ final class JegIntegration implements GunSupport {
                 if (!aiming) { preparing = ItemStack.EMPTY; preparedTarget = null; }
             }
             public void shoot(ItemStack stack, LivingEntity target, float pitch, float yaw) {
-                if (!GunFireAuthorization.allows(human, stack, target) || !isGun(stack) || human.isUsingItem()
+                if (!GunAttackAction.owns(human)||!GunFireAuthorization.allows(human, stack, target) || !isGun(stack) || human.isUsingItem()
                         || isReloading(human, stack)) return;
                 if (!hasLoadedAmmo(stack)) { startReload(human, stack); return; }
                 long now = human.level().getGameTime();
@@ -209,7 +196,7 @@ final class JegIntegration implements GunSupport {
                 }
                 preparing = ItemStack.EMPTY; preparedTarget = null;
                 human.setXRot(pitch); human.setYRot(yaw); human.setYHeadRot(yaw);
-                float spread = (float) (HumanGrowth.gunSpreadMultiplier(human)
+                float spread = (float) (HumanGrowth.gunSpreadMultiplier(human)*GunCombatProfile.spread(human,stack)
                         / Math.max(.05, UnifiedConfig.get().scguns().accuracyModifier()));
                 AIGunEvent.performGunAttack(human, target, stack, gun, spread, false);
                 HumanAwareness.gunshot(human);

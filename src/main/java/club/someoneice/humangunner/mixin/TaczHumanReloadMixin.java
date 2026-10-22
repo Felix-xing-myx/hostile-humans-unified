@@ -65,7 +65,7 @@ public abstract class TaczHumanReloadMixin {
                 ci.cancel();
                 return;
             }
-            if (human.isUsingItem() || (!data.reloadStateType.isReloading()
+            if (human.isUsingItem() && !club.someoneice.humangunner.SpartanEquipmentCompat.isShield(human.getUseItem()) || (!data.reloadStateType.isReloading()
                     && !HumanAmmo.canReload(human, human.getMainHandItem()))) {
                 ci.cancel();
                 return;
@@ -110,7 +110,8 @@ public abstract class TaczHumanReloadMixin {
     private boolean humanGunner$paidStart(AbstractGunItem gun, ShooterDataHolder holder,
                                          ItemStack weapon, LivingEntity entity) {
         boolean started = TaczHumanReloadTransactions.start(gun, holder, weapon, entity);
-        if (started && entity instanceof Human) {
+        if (started && entity instanceof Human human
+                && !(human.isUsingItem() && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(human.getUseItem()))) {
             // Native TaCZ sends this before startReload. NPC authorization may
             // refuse the cycle, so publish animation/sound only after success.
             NetworkHandler.sendToTrackingEntity(new ServerMessageGunReload(entity.getId(), weapon), entity);

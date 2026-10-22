@@ -24,8 +24,7 @@ public final class GunFireAuthorization {
             BodyguardProtection.update(human);
             if (BodyguardProtection.attack(human) != target) return false;
         }
-        double reach = GunRangePolicy.firingReach(weapon,
-                human.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.FOLLOW_RANGE));
-        return human.distanceToSqr(target) <= reach * reach && RangedShotClearance.canShoot(human, target);
+        double reach = GunRangePolicy.firingReach(human,weapon);
+        return Double.isFinite(reach)&&reach>0&&human.distanceToSqr(target) <= reach * reach && RangedShotClearance.canShoot(human, target);
     }
 }

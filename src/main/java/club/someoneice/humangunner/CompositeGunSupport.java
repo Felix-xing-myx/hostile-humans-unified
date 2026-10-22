@@ -66,9 +66,9 @@ final class CompositeGunSupport implements GunSupport {
         return ItemStack.EMPTY;
     }
     public Goal goal(Human human) { return new GunnerGoal<>(human); }
-    public void tickIdleReload(Human human) { providers.forEach(p -> {
-        if (HumanGunAcceptance.accepts(human.getMainHandItem())) p.tickIdleReload(human);
-    }); }
+    public void tickIdleReload(Human human) { providers.forEach(p -> p.tickIdleReload(human)); }
+    public boolean beginReload(Human human,ItemStack weapon) { return forWeapon(weapon).beginReload(human,weapon); }
+    public void cancelReload(Human human,ItemStack weapon) { forWeapon(weapon).cancelReload(human,weapon); }
     public boolean isReloading(Human human) { return providers.stream().anyMatch(p -> p.isReloading(human)); }
     public boolean isReloading(Human human, ItemStack weapon) { return forWeapon(weapon).isReloading(human, weapon); }
     public void registerEvents() { providers.forEach(GunSupport::registerEvents); }
@@ -91,7 +91,7 @@ final class CompositeGunSupport implements GunSupport {
                     current().aim(false);
                     return;
                 }
-                controls.computeIfAbsent(forWeapon(weapon), p -> p.control(human)).shoot(weapon, target, pitch, yaw);
+                GunAttackAction.run(human,()->controls.computeIfAbsent(forWeapon(weapon), p -> p.control(human)).shoot(weapon,target,pitch,yaw));
             }
         };
     }

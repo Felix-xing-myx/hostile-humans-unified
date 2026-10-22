@@ -35,11 +35,10 @@ class CloseRangedTacticsContract(unittest.TestCase):
 
     def test_human_retreat_cannot_use_unbounded_fallback(self):
         goal = (PKG / 'GunnerGoal.java').read_text(encoding='utf-8')
-        retreat = goal.split('private void retreatFrom(', 1)[1].split('private void moveForFiringPosition', 1)[0]
-        human = retreat.split('} else {', 1)[0]
-        self.assertIn('CloseRangedTactics.maneuver(human, target)', human)
-        self.assertNotIn('getPosAway', human)
-        self.assertNotIn('tryLocalStep', human)
+        self.assertNotIn('tickCloseMeleeDefense(', goal)
+        self.assertNotIn('getPosAway', goal)
+        self.assertNotIn('doHurtTarget(', goal)
+        self.assertIn('RangedTerrainCombat.strafeFacingTarget', goal)
 
     def test_whole_route_budget_and_command_boundary(self):
         code = (PKG / 'CloseRangedTactics.java').read_text(encoding='utf-8')
@@ -55,12 +54,14 @@ class CloseRangedTacticsContract(unittest.TestCase):
         self.assertIn('CloseDefenseHold.shouldHold(human)', code)
         self.assertIn('human.humanGunner$pendingMeleeTicks(target) < 0', code)
         self.assertIn('shieldDefense().shouldSuppressRecovery()', code)
-        self.assertIn('GunCustody.restorePrimaryGun(human, "close_gun_trial")', code)
+        self.assertIn('GunCustody.restorePrimaryGun(human,"close_gun_return")', code)
         self.assertNotIn('setItemSlot', code)
         self.assertNotIn('stopUsingItem', code)
         custody = (PKG / 'GunCustody.java').read_text(encoding='utf-8')
-        self.assertEqual(custody.count('CloseRangedTactics.returnedToGun(human)'), 2)
-        self.assertIn('if (isActive(human) && CloseRangedTactics.keepDefense(human)) return false;', custody)
+        self.assertIn('GunCombatProfile.shouldForceMelee(human,gun)', custody)
+        self.assertIn('GunSupport.get().isReloading(human,gun)', custody)
+        self.assertIn('HumanEquipmentExchange.request', custody)
+        self.assertIn('AmmoWeaponSelection.mayRestore', custody)
 
     def test_damage_uses_final_health_loss_and_valid_enemy(self):
         shield = (PKG / 'ShieldDefenseController.java').read_text(encoding='utf-8')

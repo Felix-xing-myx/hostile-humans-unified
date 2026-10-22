@@ -39,6 +39,11 @@ final class TaczReloadSoundClient {
 
     private static void onReload(GunReloadEvent event) {
         if (!event.getLogicalSide().isClient() || !(event.getEntity() instanceof Human human)) return;
+        if(human.isUsingItem()&&SpartanEquipmentCompat.isShield(human.getUseItem())) return;
+        PENDING_RELOADS.removeIf(pending -> {
+            if(pending.human!=human) return false;
+            stop(pending);return true;
+        });
         ItemStack weapon = event.getGunItemStack();
         IGun gun = IGun.getIGunOrNull(weapon);
         if (gun == null) return;
@@ -55,8 +60,11 @@ final class TaczReloadSoundClient {
             ResourceLocation configuredSound = display.getSounds(sound);
             if (hasSoundResource(configuredSound)) {
                 // Preserve the pack's authored one-shot when it exists.
-                ClientAnimationCompatibility.playTaczReloadSound(human, configuredSound,
-                        1.0F, 1.0F, GunConfig.DEFAULT_GUN_OTHER_SOUND_DISTANCE.get());
+                Minecraft minecraft=Minecraft.getInstance();
+                if(minecraft.level==null) return;
+                PendingReload pending=new PendingReload(human,minecraft.level.getGameTime(),List.of(),gunId);
+                play(pending,configuredSound);
+                PENDING_RELOADS.add(pending);
                 return;
             }
 
@@ -74,7 +82,7 @@ final class TaczReloadSoundClient {
                     ignored -> readReloadCues(animationFile, empty));
             Minecraft minecraft = Minecraft.getInstance();
             if (cues.isEmpty() || minecraft.level == null) return;
-            PENDING_RELOADS.add(new PendingReload(human, minecraft.level.getGameTime(), cues));
+            PENDING_RELOADS.add(new PendingReload(human, minecraft.level.getGameTime(), cues,gunId));
         });
     }
 
@@ -82,6 +90,7 @@ final class TaczReloadSoundClient {
         if (event.phase != TickEvent.Phase.END || PENDING_RELOADS.isEmpty()) return;
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) {
+            for(var pending:PENDING_RELOADS) stop(pending);
             PENDING_RELOADS.clear();
             return;
         }
@@ -90,19 +99,47 @@ final class TaczReloadSoundClient {
         while (iterator.hasNext()) {
             PendingReload pending = iterator.next();
             Human human = pending.human;
-            if (!human.isAlive() || human.level() != minecraft.level) {
-                iterator.remove();
-                continue;
+            IGun held=IGun.getIGunOrNull(human.getMainHandItem());
+            if (!human.isAlive() || human.level() != minecraft.level || held==null
+                    ||!pending.gunId.equals(held.getGunId(human.getMainHandItem()))
+                    ||human.isUsingItem()&&SpartanEquipmentCompat.isShield(human.getUseItem())
+                    ||gameTime-pending.startGameTime>3&&human.getTaczReloadVisual().isEmpty()) {
+                stop(pending);iterator.remove();continue;
             }
-            double elapsedSeconds = Math.max(0L, gameTime - pending.startGameTime) / 20.0D;
+            pending.elapsed+=Math.max(0,gameTime-pending.lastTick)*GunCombatProfile.reloadWork(human,human.getMainHandItem())/20;
+            pending.lastTick=gameTime;
+            double elapsedSeconds=pending.elapsed;
             while (pending.nextCue < pending.cues.size()
                     && pending.cues.get(pending.nextCue).timeSeconds <= elapsedSeconds + 0.05D) {
                 ReloadCue cue = pending.cues.get(pending.nextCue++);
-                ClientAnimationCompatibility.playTaczReloadSound(human, cue.sound,
-                        1.0F, 1.0F, GunConfig.DEFAULT_GUN_OTHER_SOUND_DISTANCE.get());
+                play(pending,cue.sound);
             }
-            if (pending.nextCue >= pending.cues.size()) iterator.remove();
+            // Keep one-shot/cue handles until the real reload ends, so stowing
+            // this NPC's gun can silence only these sounds without touching players.
         }
+    }
+
+    private static void play(PendingReload pending,ResourceLocation sound) {
+        try {
+            Class<?> manager=Class.forName("com.tacz.guns.client.sound.SoundPlayManager");
+            java.lang.reflect.Method method;
+            Class<?>[] signature={net.minecraft.world.entity.Entity.class,ResourceLocation.class,float.class,float.class,int.class};
+            try { method=manager.getMethod("playAnimationSound",signature); }
+            catch(NoSuchMethodException oldApi) { method=manager.getMethod("playClientSound",signature); }
+            if(!net.minecraft.client.resources.sounds.SoundInstance.class.isAssignableFrom(method.getReturnType())) {
+                ClientAnimationCompatibility.warnOnce("TaCZ reload sounds","Native playback has no cancellable sound handle",
+                        new IllegalStateException(method.toString()));
+                return;
+            }
+            Object instance=method.invoke(null,pending.human,sound,1F,1F,GunConfig.DEFAULT_GUN_OTHER_SOUND_DISTANCE.get());
+            if(instance instanceof net.minecraft.client.resources.sounds.SoundInstance owned) pending.sounds.add(owned);
+        } catch(ReflectiveOperationException|LinkageError failure) {
+            ClientAnimationCompatibility.warnOnce("TaCZ reload sounds","Cannot obtain isolated NPC sound handle",failure);
+        }
+    }
+    private static void stop(PendingReload pending) {
+        for(var sound:pending.sounds) Minecraft.getInstance().getSoundManager().stop(sound);
+        pending.sounds.clear();
     }
 
     private static ResourceLocation getAnimationFile(Object displayInstance) {
@@ -186,11 +223,17 @@ final class TaczReloadSoundClient {
         private final long startGameTime;
         private final List<ReloadCue> cues;
         private int nextCue;
+        private final ResourceLocation gunId;
+        private long lastTick;
+        private double elapsed;
+        private final List<net.minecraft.client.resources.sounds.SoundInstance> sounds=new ArrayList<>();
 
-        private PendingReload(Human human, long startGameTime, List<ReloadCue> cues) {
+        private PendingReload(Human human, long startGameTime, List<ReloadCue> cues,ResourceLocation gunId) {
             this.human = human;
             this.startGameTime = startGameTime;
             this.cues = cues;
+            this.gunId=gunId;
+            this.lastTick=startGameTime;
         }
     }
 }

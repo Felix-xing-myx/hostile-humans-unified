@@ -1,14 +1,12 @@
 package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
-import com.craftix.hostile_humans.HumanUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.pathfinder.Path;
-import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -17,8 +15,6 @@ import java.util.EnumSet;
 
 public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private static final double RETREAT_RANGE = 4.0D;
-    private static final double CLOSE_MELEE_ENTER_RANGE = 2.0D;
-    private static final double CLOSE_MELEE_EXIT_RANGE = 4.0D;
     private static final double OBSCURED_ADVANCE_DISTANCE = 10.0D;
     private static final int OBSCURED_ADVANCE_AFTER_TICKS = 30;
     private static final int MIN_AIM_TICKS = 2;
@@ -26,8 +22,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private final GunSupport.Control operator;
     private int aimTicks;
     private int unseenTargetTicks;
-    private int nextCloseMeleeAttackTick;
-    private int nextCloseRetreatPathTick;
     private int nextFiringPositionTick;
     private int nextApproachPathTick;
     private int manualStrafeUntilTick;
@@ -40,9 +34,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private double strafeAnchorTargetZ;
     private boolean strafeAnchorSet;
     private float strafeDirection = 1.0F;
-    private int retreatFailureTicks;
     private boolean retreatSearchQueued;
-    private double lastThreatDistance = Double.POSITIVE_INFINITY;
     private boolean approachingTarget;
     private boolean strafing;
     private boolean seekingFiringPosition;
@@ -71,15 +63,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             mob.setTarget(null);
             return false;
         }
-        boolean closeDefense = mob instanceof Human human
-                && GunCustody.isCloseDefenseActive(human);
-        if (mob instanceof Human human
-                && !AmmoWeaponSelection.usableGun(human, human.getMainHandItem())
-                && (!closeDefense || !AmmoWeaponSelection.hasUsableGun(human))) return false;
-        if (target == null || !target.isAlive()
-                || (!isGun(mob.getMainHandItem()) && !closeDefense)) {
-            return false;
-        }
+        if(mob instanceof Human human&&!AmmoWeaponSelection.usableGun(human,human.getMainHandItem())) return false;
+        if(target==null||!target.isAlive()||!isGun(mob.getMainHandItem())) return false;
         if (mob instanceof Human human && human.isFleeing && !shoreSeeking) {
             return false;
         }
@@ -97,9 +82,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     public void start() {
         aimTicks = 0;
         unseenTargetTicks = 0;
-        retreatFailureTicks = 0;
         retreatSearchQueued = false;
-        lastThreatDistance = Double.POSITIVE_INFINITY;
         approachingTarget = false;
         strafing = false;
         manualStrafeUntilTick = 0;
@@ -144,6 +127,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         if (mob instanceof Human human) {
             MovementSpeedController.combat(human, false);
             GunAttackMovementState.clear(human);
+            MovementSpeedController.limit(human,MovementSpeedController.Limit.RANGED,1,false);
         }
         operator.clearSprintLock();
     }
@@ -167,18 +151,17 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // PlayerLikeMovementGoal runs at a lower goal priority and reads
             // this short-lived hint to suppress combat hops while aiming.
             GunAttackMovementState.clear(human);
+            MovementSpeedController.limit(human,MovementSpeedController.Limit.RANGED,1,false);
         }
         LivingEntity target = mob.getTarget();
         ItemStack weapon = mob.getMainHandItem();
-        boolean closeDefense = mob instanceof Human human
-                && GunCustody.isCloseDefenseActive(human);
         if (target != null && mob instanceof Human human && !human.canAttack(target)) {
             human.setTarget(null);
             setAiming(false);
             return;
         }
         if (target == null || !target.isAlive() || target.isRemoved() || target.level() != mob.level()
-                || (!isGun(weapon) && !closeDefense)) {
+                || !isGun(weapon)) {
             aimTicks = 0;
             setAiming(false);
             return;
@@ -207,35 +190,11 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         GunRangePolicy.Band range = preferredRange(weapon);
         boolean holdingPosition = mob instanceof Human human
                 && SoldierOrder.isHoldingPosition(human);
-        if (mob instanceof Human human) {
-            if (closeDefense) {
-                if ((distance < CLOSE_MELEE_EXIT_RANGE || CloseRangedTactics.keepDefense(human))
-                        && !CloseRangedTactics.tryGun(human, target)) {
-                    tickCloseMeleeDefense(human, target, distance);
-                    return;
-                }
-                GunCustody.restorePrimaryGun(human, "close_defense_distance");
-                weapon = mob.getMainHandItem();
-                aimTicks = 0;
-                if (!isGun(weapon)) {
-                    return;
-                }
-                operator.ensureDrawn();
-                human.getPersistentData().putString(
-                        "hostile_humans_unified:ai_phase", "gun_close_defense_return"
-                );
-                range = preferredRange(weapon);
-            } else {
-                updateRetreatPressure(distance, range);
+        if(mob instanceof Human human) {
+            if(human.isUsingItem()&&SpartanEquipmentCompat.isShield(human.getUseItem())) {
+                setAiming(false);stopLateralMovement();return;
             }
-            if (!closeDefense
-                    && (CloseRangedTactics.keepDefense(human)
-                    || CloseRangedTactics.allowsMeleeEntry(human)
-                    && distance <= closeMeleeRange(human, target) && retreatFailureTicks >= 12)
-                    && GunCustody.beginCloseMeleeCounter(human)) {
-                tickCloseMeleeDefense(human, target, distance);
-                return;
-            }
+            if(GunCustody.beginCloseMeleeCounter(human)) { setAiming(false); return; }
         }
 
         if (mob instanceof Human human) {
@@ -362,49 +321,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         operator.shoot(weapon, target, shotAim.pitch(), shotAim.yaw());
     }
 
-    private void tickCloseMeleeDefense(Human human, LivingEntity target, double distance) {
-        setAiming(false);
-        aimTicks = 0;
-        unseenTargetTicks = 0;
-        boolean shoreSeeking = isShoreSeeking();
-        if (shoreSeeking) {
-            clearLateralInputPreservingNavigation();
-        } else {
-            stopLateralMovement();
-        }
-        operator.clearSprintLock();
-        human.getLookControl().setLookAt(target, 45.0F, 35.0F);
-        human.getPersistentData().putString(
-                "hostile_humans_unified:ai_phase", "gun_close_melee_defense"
-        );
-
-        if (shoreSeeking) {
-            // Preserve the shore route while still allowing an in-range melee response.
-        } else if (SoldierOrder.isHoldingPosition(human)) {
-            if (!SoldierOrder.isReturningToHoldPosition(human)) {
-                human.getNavigation().stop();
-            }
-        } else if (human.tickCount >= nextCloseRetreatPathTick) {
-            retreatFrom(target);
-            nextCloseRetreatPathTick = human.tickCount + 8;
-        }
-        if (distance > closeMeleeRange(human, target)
-                || !human.humanGunner$canMeleeAttack()
-                || human.isUsingItem()
-                || human.tickCount < nextCloseMeleeAttackTick
-                || !(HumanUtil.isMeleeWeapon(human.getMainHandItem())
-                || HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem()))) {
-            return;
-        }
-        if (!MeleeCombatRange.canStartAttack(human, target)) return;
-        human.doHurtTarget(target);
-        nextCloseMeleeAttackTick = human.tickCount + MeleeAttackTiming.nextCooldown(human);
-    }
-
-    private static double closeMeleeRange(Human human, LivingEntity target) {
-        return MeleeCombatRange.reach(human, target);
-    }
-
     private void setAiming(boolean aiming) {
         operator.aim(aiming);
     }
@@ -423,7 +339,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private AimRotation applyShotSpread(AimRotation exactAim, ItemStack weapon) {
         if (GunSupport.get().ownsShotSpread(weapon)) return exactAim;
         double standardDeviation = mob instanceof Human human
-                ? RangedAccuracy.gunSpreadDegrees(human, weapon)
+                ? RangedAccuracy.gunSpreadDegrees(human, weapon)*GunCombatProfile.spread(human,weapon)
                 : 0.6D;
         if (standardDeviation <= 0.0D) {
             return exactAim;
@@ -445,19 +361,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 limit
         );
         return new AimRotation(exactAim.pitch() + pitchOffset, exactAim.yaw() + yawOffset);
-    }
-
-    private void retreatFrom(LivingEntity target) {
-        if (mob instanceof Human human) {
-            MovementSpeedController.combat(human, false);
-            retreatSearchQueued = false;
-            CloseRangedTactics.maneuver(human, target);
-        } else {
-            Vec3 away = DefaultRandomPos.getPosAway(mob, 16, 7, target.position());
-            Path path = away == null ? null : mob.getNavigation().createPath(
-                    net.minecraft.core.BlockPos.containing(away), 0);
-            if (path != null && path.canReach()) mob.getNavigation().moveTo(path, 1.0D);
-        }
     }
 
     private void moveForFiringPosition(LivingEntity target, double distance,
@@ -571,6 +474,13 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             approachTarget(target, range);
             return;
         }
+        if(mob instanceof Human human && (GunCombatProfile.of(human,mob.getMainHandItem()).advance()||distance>range.maximum())) {
+            stopLateralMovement();
+            double desired=GunCombatProfile.of(human,mob.getMainHandItem()).advance()?MeleeCombatRange.reach(human,target):range.maximum();
+            if(distance>desired) approachTarget(target,desired);
+            else { mob.getNavigation().stop(); approachingTarget=false; }
+            return;
+        }
         if (approachingTarget) {
             // A direct chase path must not keep running after reaching gun range.
             mob.getNavigation().stop();
@@ -617,33 +527,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 && targetDirection.lengthSqr() > 0.01D
                 && pathDirection.dot(targetDirection) >= 0.55D) {
             MovementSpeedController.combat(human, true);
-        }
-    }
-
-    private void updateRetreatPressure(double distance, GunRangePolicy.Band range) {
-        if (distance >= range.minimum()) {
-            retreatFailureTicks = 0;
-            retreatSearchQueued = false;
-            lastThreatDistance = distance;
-            return;
-        }
-        if (retreatSearchQueued) {
-            lastThreatDistance = distance;
-            return;
-        }
-        boolean notGainingGround = Double.isFinite(lastThreatDistance)
-                && distance <= lastThreatDistance + 0.05D;
-        boolean pathFailed = mob.getNavigation().isDone() || mob.getNavigation().isStuck();
-        if (notGainingGround || pathFailed) {
-            retreatFailureTicks = Math.min(40, retreatFailureTicks + 1);
-        } else {
-            retreatFailureTicks = Math.max(0, retreatFailureTicks - 2);
-        }
-        lastThreatDistance = distance;
-        if (mob instanceof Human human) {
-            human.getPersistentData().putInt(
-                    "hostile_humans_unified:gun_retreat_failure_ticks", retreatFailureTicks
-            );
         }
     }
 
@@ -694,8 +577,13 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             strafeLegStartZ = mob.getZ();
         }
         if (mob instanceof Human human) {
-            strafing = RangedTerrainCombat.strafeFacingTarget(
-                    human, target, radialStrafeInput(target, range), strafeDirection);
+            MovementSpeedController.limit(human,MovementSpeedController.Limit.RANGED,
+                    GunCombatProfile.of(human,human.getMainHandItem()).movement(),true);
+            strafing = RangedTerrainCombat.strafeFacingTarget(human,target,radialStrafeInput(target,range),strafeDirection);
+            if(!strafing) {
+                MovementSpeedController.limit(human,MovementSpeedController.Limit.RANGED,1,false);
+                approachTarget(target,range.maximum());
+            }
         } else {
             mob.lookAt(target, 30.0F, 30.0F);
             mob.getMoveControl().strafe(radialStrafeInput(target, range), strafeDirection);
@@ -765,7 +653,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     private GunRangePolicy.Band preferredRange(ItemStack weapon) {
-        return GunRangePolicy.forWeapon(weapon);
+        return mob instanceof Human human?GunRangePolicy.forWeapon(human,weapon):GunRangePolicy.forWeapon(weapon);
     }
 
     private double firingRangeSqr(GunRangePolicy.Band range) {

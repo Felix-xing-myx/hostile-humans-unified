@@ -13,6 +13,7 @@ public final class GunCombatPolicyTest {
     private static int checks;
 
     public static void main(String[] args) throws Exception {
+        GunDoctrineTest.main(args);
         GunDrawContinuity state = new GunDrawContinuity();
         Object pistol = new Object(), rifle = new Object();
         int[] draws = {0};

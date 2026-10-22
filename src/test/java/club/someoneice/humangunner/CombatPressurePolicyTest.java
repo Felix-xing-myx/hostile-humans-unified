@@ -324,26 +324,26 @@ public final class CombatPressurePolicyTest {
                         && GunRangePolicy.forType("snipers_rifle").maximum()
                         == GunRangePolicy.forType("sniper").maximum(),
                 "snipers stand farther back and shotguns engage closer than general rifles");
-        check(GunRangePolicy.forType("sniper").minimum() == 32.0D
-                        && GunRangePolicy.forType("rifle").minimum() == 16.0D
-                        && GunRangePolicy.forType("rifle").maximum() == 24.0D
-                        && GunRangePolicy.forType("mg").minimum() == 16.0D
-                        && GunRangePolicy.forType("mg").maximum() == 24.0D
-                        && GunRangePolicy.forType("smg").minimum() == 8.0D
-                        && GunRangePolicy.forType("smg").maximum() == 16.0D
-                        && GunRangePolicy.forType("pistol").minimum() == 6.0D
+        check(GunRangePolicy.forType("sniper").minimum() == 48.0D
+                        && GunRangePolicy.forType("rifle").minimum() == 24.0D
+                        && GunRangePolicy.forType("rifle").maximum() == 36.0D
+                        && GunRangePolicy.forType("mg").minimum() == 20.0D
+                        && GunRangePolicy.forType("mg").maximum() == 32.0D
+                        && GunRangePolicy.forType("smg").minimum() == 12.0D
+                        && GunRangePolicy.forType("smg").maximum() == 20.0D
+                        && GunRangePolicy.forType("pistol").minimum() == 8.0D
                         && GunRangePolicy.forType("pistol").maximum() == 12.0D
-                        && GunRangePolicy.forType("shotgun").minimum() == 1.0D
-                        && GunRangePolicy.forType("shotgun").maximum() == 6.0D
-                        && GunRangePolicy.forType("shotgun").retreatResume() == 4.0D,
-                "each gun family uses the requested spacing band");
+                        && GunRangePolicy.forType("shotgun").minimum() == 3.0D
+                        && GunRangePolicy.forType("shotgun").maximum() == 8.0D
+                        && GunRangePolicy.forType("shotgun").retreatResume() == 5.5D,
+                "each gun family uses the confirmed spacing band");
         check(Math.abs(GunAimPoint.height(0.0D, 2.0D, 1.8D) - 1.4D) < 0.00001D
                         && GunAimPoint.height(0.0D, 2.0D, 1.0D) == 1.0D
                         && Math.abs(GunAimPoint.height(10.0D, 12.0D, 11.8D) - 11.4D) < 0.00001D,
                 "gun aim lowers high eyes to 70 percent of the hitbox without raising low eyes");
-        check(GunRangePolicy.forType("shotgun").fireRange() >= 40.0D
-                        && GunRangePolicy.forType("rifle").fireRange() >= 40.0D
-                        && GunRangePolicy.forType("sniper").fireRange() >= 128.0D,
+        check(GunRangePolicy.forType("shotgun").fireRange() == 20.0D
+                        && GunRangePolicy.forType("rifle").fireRange() == 64.0D
+                        && GunRangePolicy.forType("sniper").fireRange() == 80.0D,
                 "gunfire can begin well outside the desired holding distance");
         check(GunReloadPolicy.recoveryDelayTicks(false, 30, 2.25D, 2.6D) >= 117
                         && GunReloadPolicy.recoveryDelayTicks(true, 5, 1.2D, 0.8D) >= 156,

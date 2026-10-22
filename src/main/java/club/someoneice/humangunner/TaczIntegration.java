@@ -71,6 +71,15 @@ final class TaczIntegration implements GunSupport {
         gun.setFireMode(stack, index.getGunData().getFireModeSet().get(0));
         return stack;
     }
+    public double maximumProjectileReach(ItemStack stack) {
+        IGun gun=IGun.getIGunOrNull(stack);
+        if(gun==null) return 0;
+        return TimelessAPI.getCommonGunIndex(gun.getGunId(stack)).map(index -> {
+            var bullet=index.getBulletData();
+            return GunDoctrine.projectileReach(bullet.getSpeed()/20.0D,
+                    Math.floor(bullet.getLifeSecond()*20.0D),bullet.getFriction());
+        }).orElse(0.0D);
+    }
     public double projectileSpeed(ItemStack stack) {
         IGun gun = IGun.getIGunOrNull(stack);
         return gun == null ? 0 : TimelessAPI.getCommonGunIndex(gun.getGunId(stack))
@@ -91,6 +100,21 @@ final class TaczIntegration implements GunSupport {
         if (human.level().isClientSide) return weapon == human.getMainHandItem() && isReloading(human);
         return TaczHumanReloadTransactions.isReloadingWeapon(human,
                 IGunOperator.fromLivingEntity(human).getDataHolder(), weapon);
+    }
+    public boolean beginReload(Human human,ItemStack weapon) {
+        if(human.level().isClientSide||weapon!=human.getMainHandItem()||!isGun(weapon)
+                ||!GunCombatProfile.canReloadDuringUse(human)) return false;
+        var operator=IGunOperator.fromLivingEntity(human);
+        if(isReloading(human,weapon)) return true;
+        if(TaczGunMechanics.ensureGunDrawn(human,operator)) return false;
+        operator.reload();
+        return isReloading(human,weapon);
+    }
+    public void cancelReload(Human human,ItemStack weapon) {
+        var data=IGunOperator.fromLivingEntity(human).getDataHolder();
+        // Ending our isolated NPC transaction needs no player inventory handler.
+        TaczHumanReloadTransactions.end(data);
+        TaczHumanReloadTransactions.restoreHeldBinding(human,data);
     }
     public void tickIdleReload(Human human) {
         // A staggered one-second check avoids a reload attempt on every tick
@@ -129,7 +153,7 @@ final class TaczIntegration implements GunSupport {
             public void clearSprintLock() { TaczGunMechanics.clearNpcSprintLock(human, operator); }
             public void prepareUrgentShot() { TaczGunMechanics.prepareUrgentCloseShot(human, operator); }
             public void shoot(ItemStack weapon, LivingEntity target, float pitch, float yaw) {
-                if (!GunFireAuthorization.allows(human, weapon, target)) return;
+                if (!GunAttackAction.owns(human)||!GunFireAuthorization.allows(human, weapon, target)) return;
                 IGun gun = IGun.getIGunOrNull(weapon);
                 if (gun == null) return;
                 TimelessAPI.getCommonGunIndex(gun.getGunId(weapon))
@@ -152,7 +176,8 @@ final class TaczIntegration implements GunSupport {
     private static void onGunShoot(GunShootEvent event) {
         if (event.getLogicalSide() == net.minecraftforge.fml.LogicalSide.SERVER
                 && event.getShooter() instanceof Human human
-                && !GunFireAuthorization.allows(human, event.getGunItemStack(), human.getTarget()))
+                && (!GunFireAuthorization.allows(human,event.getGunItemStack(), human.getTarget())
+                ||!GunAttackAction.owns(human)))
             event.setCanceled(true);
     }
     private static void onGunSound(GunShootEvent event){
@@ -160,8 +185,7 @@ final class TaczIntegration implements GunSupport {
             HumanAwareness.gunshot(event.getShooter());
     }
     private static boolean isActivelyBlockingWithShield(Human human) {
-        return !GunSupport.isGunItem(human.getMainHandItem())
-                && human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem());
+        return human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem());
     }
     private static void onGunDamagePre(EntityHurtByGunEvent.Pre event) {
         if (HumanOwnerProtection.protects(event.getHurtEntity(), event.getAttacker())) {
