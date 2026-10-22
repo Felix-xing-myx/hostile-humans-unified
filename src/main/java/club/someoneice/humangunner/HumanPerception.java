@@ -62,7 +62,7 @@ public final class HumanPerception {
         String decision="闲置观察",reason="等待视觉或声音证据",lookOwner="自然观察";
         String scanStatus="尚未执行视觉检测";long scanAt=-1;
         String soundPolicy="暂无声音输入";int geometrySkipped,occlusionSkipped;long soundGlanceUntil;
-        UUID owner; String order=""; boolean initialized;
+        UUID owner; String order="", sharingMode=""; boolean initialized;
         Clue glancedClue; Vec3 glancedPosition,soundGlancePoint; long nextClueGlance;
         long directionProtectedUntil=-1;
         Map<UUID,Long> glanceAt=new HashMap<>();
@@ -71,7 +71,7 @@ public final class HumanPerception {
     private static PerceptionConfig c(){return PerceptionConfig.get();}
     static long now(Human h){return h.getServer()==null?h.level().getGameTime():h.getServer().overworld().getGameTime();}
     private static State state(Human h){return STATES.computeIfAbsent(h,k->new State());}
-    public static void clear(Human h){STATES.remove(h);VisualOcclusionMemory.clear(h);HumanTargetCoordinator.clear(h);}
+    public static void clear(Human h){STATES.remove(h);VisualOcclusionMemory.clear(h);HumanTargetCoordinator.clear(h);HumanTargetSharing.clear(h);}
     private static void transition(State s,long now,String text){
         Transition last=s.transitions.peekLast(); if(last==null || !last.text.equals(text))s.transitions.addLast(new Transition(now,text));
         while(s.transitions.size()>c().integer("debug.transition_limit"))s.transitions.removeFirst();
@@ -133,19 +133,45 @@ public final class HumanPerception {
     public static boolean canTarget(Human h,LivingEntity e){
         if(h.level().isClientSide || !valid(h,e))return false;
         State s=STATES.get(h); Track t=s==null?null:s.tracks.get(e.getUUID());
-        return t!=null&&t.marked&&PerceptionPolicy.live(now(h),t.liveUntil);
+        return (t!=null&&t.marked&&PerceptionPolicy.live(now(h),t.liveUntil))||HumanTargetSharing.canTarget(h,e);
     }
     public static List<LivingEntity> knownDynamicTargets(Human h){
-        if(!(h.level() instanceof ServerLevel level))return List.of();State s=STATES.get(h);if(s==null)return List.of();
+        if(!(h.level() instanceof ServerLevel level))return List.of();State s=state(h);
         List<LivingEntity> result=new ArrayList<>();
         for(Track t:s.tracks.values())if(t.marked&&now(h)<t.liveUntil&&level.getEntity(t.id) instanceof LivingEntity e&&observable(h,e)&&allowsCreatureResponse(h,e))result.add(e);
+        for(LivingEntity e:HumanTargetSharing.targets(h))if(!result.contains(e))result.add(e);
         return List.copyOf(result);
     }
     public static Vec3 knownPosition(Human h,LivingEntity e){
         if(e==null)return null;State s=STATES.get(h);Track t=s==null?null:s.tracks.get(e.getUUID());
-        if(t==null||!t.marked||!observable(h,e)||!allowsCreatureResponse(h,e))return null;
-        return PerceptionPolicy.live(now(h),t.liveUntil)?e.position():
-                now(h)<t.positionAt+c().integer("memory.last_position_ticks")?t.position:null;
+        if(!observable(h,e)||!allowsCreatureResponse(h,e))return null;
+        if(t!=null&&t.marked&&PerceptionPolicy.live(now(h),t.liveUntil))return e.position();
+        Vec3 shared=HumanTargetSharing.position(h,e,t!=null&&t.marked?t.positionAt:-1);if(shared!=null)return shared;
+        return t!=null&&t.marked&&now(h)<t.positionAt+c().integer("memory.last_position_ticks")?t.position:null;
+    }
+    /** Personal evidence only: inherited leases never become new broadcast authority. */
+    static boolean personalDynamic(Human h,LivingEntity target){
+        State s=STATES.get(h);Track t=s==null||target==null?null:s.tracks.get(target.getUUID());
+        return t!=null&&t.marked&&PerceptionPolicy.live(now(h),t.liveUntil)&&sharingAllowed(h,target);
+    }
+    static boolean sharingAllowed(Human h,LivingEntity target){
+        return target!=null&&valid(h,target)&&SoldierCombatMode.allowsTarget(h,target);
+    }
+    static HumanTargetSharing.Evidence sharingEvidence(Human h){
+        State s=STATES.get(h);if(s==null||!(h.level() instanceof ServerLevel level))return null;
+        LivingEntity main=h.getTarget();
+        if(personalDynamic(h,main))return new HumanTargetSharing.Evidence(main.getUUID(),main.position(),true);
+        for(Track t:s.tracks.values())if(level.getEntity(t.id) instanceof LivingEntity target&&personalDynamic(h,target))
+            return new HumanTargetSharing.Evidence(t.id,target.position(),true);
+        long now=now(h);
+        for(Track t:s.tracks.values())if(t.visible&&t.position!=null&&t.checked>=0&&now-t.checked<=20
+                &&level.getEntity(t.id) instanceof LivingEntity target&&sharingAllowed(h,target))
+            return new HumanTargetSharing.Evidence(t.id,t.position,false);
+        if(s.look!=null&&(s.focusHurt||now<s.directionProtectedUntil))
+            return new HumanTargetSharing.Evidence(null,s.look,false);
+        for(Clue clue:s.clues)if(clue.kind.equals("hurt")&&clue.completed<0&&now<clue.until)
+            return new HumanTargetSharing.Evidence(clue.source,clue.position,false);
+        return null;
     }
     private static boolean attentionLocked(State s,long now){
         return s.focus!=null||now<s.directionProtectedUntil;
@@ -288,12 +314,21 @@ public final class HumanPerception {
         UUID owner=HumanRelations.effectiveOwner(h);String order=SoldierOrder.get(h).name();
         if(s.initialized&&(!Objects.equals(s.owner,owner)||!s.order.equals(order))){
             if(!Objects.equals(s.owner,owner)){s.tracks.clear();s.bodyCursors.clear();s.bodySweeps.clear();s.pendingBodies.clear();VisualOcclusionMemory.clear(h);}
+            HumanTargetSharing.clear(h);
             s.clues.clear();s.pending.clear();release(s,"控制关系或命令改变，取消旧动作");h.setTarget(null);HumanTargetCoordinator.clear(h);
             s.glancedClue=null;s.glancedPosition=null;s.nextClueGlance=now;
         }s.owner=owner;s.order=order;s.initialized=true;
+        String sharingMode=SoldierCombatMode.get(h).name();
+        if(!s.sharingMode.isEmpty()&&!s.sharingMode.equals(sharingMode)){
+            HumanTargetSharing.clear(h);s.clues.removeIf(clue->clue.kind.equals("shared"));
+        }
+        s.sharingMode=sharingMode;
+        HumanTargetSharing.tick(h);
         HumanAwareness.flush(h);
         s.clues.removeIf(clue->{
-            boolean invalid=now>=clue.until||!allowsCreatureClue(h,clue.kind,clue.source);
+            boolean sharedInvalid=clue.kind.equals("shared")&&clue.source!=null
+                    &&(!(level.getEntity(clue.source) instanceof LivingEntity source)||!sharingAllowed(h,source));
+            boolean invalid=now>=clue.until||sharedInvalid||!allowsCreatureClue(h,clue.kind,clue.source);
             if(invalid)clue.completed=now; // A running investigation must release this clue too.
             return invalid;
         });
@@ -351,22 +386,26 @@ public final class HumanPerception {
         int baseInterval=c().integer(h.isAlert||s.focus!=null||recognizing(s)>0||h.getTarget()!=null?"budgets.active_interval_ticks":"budgets.idle_interval_ticks");
         int interval=AdaptiveActivityBudget.interval(h,baseInterval,s.focusHurt||now<s.directionProtectedUntil);
         if(now>=s.nextCandidates && PerceptionBudget.claim(h,"queries",1,":candidates")){
-            double movementRadius=HumanAwareness.movementRadius();double r=Math.max(range(h),movementRadius);
+            double movementRadius=HumanAwareness.movementRadius();double r=Math.max(12,Math.max(range(h),movementRadius));
             int cap=AdaptiveActivityBudget.candidates(h,c().integer("budgets.candidates"));long epoch=now/Math.max(1,interval);
             Comparator<LivingEntity> nearest=Comparator.comparingDouble(h::distanceToSqr);
             Comparator<LivingEntity> rotating=Comparator.comparingLong(e->candidateRank(e.getUUID(),epoch));
             BoundedSelection<LivingEntity> close=new BoundedSelection<>((cap+1)/2,nearest);
             BoundedSelection<LivingEntity> discovery=new BoundedSelection<>(cap,rotating);
+            Comparator<Human> friendOrder=Comparator.<Human>comparingDouble(h::distanceToSqr).thenComparing(Entity::getUUID);
+            BoundedSelection<Human> friends=new BoundedSelection<>(cap,friendOrder);
             BoundedSelection<LivingEntity> sounds=new BoundedSelection<>(cap*4,HumanAwareness.movementOrder(h));
             // Stream the loaded spatial section: unrelated entities cannot hide later enemies.
             level.getEntities().get(net.minecraft.world.level.entity.EntityTypeTest.forClass(LivingEntity.class),
                     h.getBoundingBox().inflate(r), e->{
                         if(e!=h&&e.isAlive()){
+                            if(e instanceof Human friendly&&HumanTargetSharing.peers(h,friendly))friends.offer(friendly);
                             if(enemy(h,e)){close.offer(e);discovery.offer(e);}
                             if(HumanAwareness.movementCandidate(h,e))sounds.offer(e);
                         }
                         return net.minecraft.util.AbortableIterationConsumer.Continuation.CONTINUE;
                     });
+            HumanTargetSharing.broadcast(h,friends.values());
             HumanAwareness.sampleMovement(h,sounds.values());
             LinkedHashSet<UUID> chosen=new LinkedHashSet<>();
             for(LivingEntity e:close.values())chosen.add(e.getUUID());
@@ -611,6 +650,7 @@ public final class HumanPerception {
         LivingEntity current=h.getTarget();
         List<LivingEntity> known=new ArrayList<>();
         for(Track t:s.tracks.values())if(t.marked&&now(h)<t.liveUntil&&level.getEntity(t.id) instanceof LivingEntity e&&valid(h,e))known.add(e);
+        for(LivingEntity e:HumanTargetSharing.targets(h))if(!known.contains(e))known.add(e);
         known.sort(Comparator.<LivingEntity>comparingDouble(e->HumanThreatAssessment.score(h,e)).reversed()
                 .thenComparingDouble(h::distanceToSqr).thenComparing(Entity::getUUID));
         for(LivingEntity e:known){

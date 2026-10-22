@@ -22,7 +22,9 @@ public final class LootScreeningTest {
         var feet=new net.minecraft.world.phys.Vec3(0,0,0);
         check(HumanLootVision.nearbyGround(feet,new net.minecraft.world.phys.Vec3(0,.1,-2)),
                 "nearby ground items behind the head can request an actual visibility ray");
-        check(!HumanLootVision.nearbyGround(feet,new net.minecraft.world.phys.Vec3(0,0,3.01)),
+        check(HumanLootVision.nearbyGround(feet,new net.minecraft.world.phys.Vec3(0,1.5,-8)),
+                "eight block near radius includes boundary and keeps vertical limit");
+        check(!HumanLootVision.nearbyGround(feet,new net.minecraft.world.phys.Vec3(0,0,8.01)),
                 "far loot still requires ordinary visual geometry");
         check(!HumanLootVision.nearbyGround(feet,new net.minecraft.world.phys.Vec3(0,2,0)),
                 "near awareness does not discover an entire floor above");

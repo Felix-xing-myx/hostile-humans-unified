@@ -190,8 +190,8 @@ public final class HumanLootManager {
             this.inventory = human.getData();
             this.inventoryRevision = inventory == null ? 0 : inventory.getInventoryRevision();
             selectionCenter=preferredPile==null?origin:preferredPile;
-            selectionRadiusSqr=preferredPile==null?9.0D:16.0D;
-            AABB localPile = preferredPile == null ? new AABB(origin,origin).inflate(3.0D,1.5D,3.0D)
+            selectionRadiusSqr=preferredPile==null?64.0D:16.0D;
+            AABB localPile = preferredPile == null ? new AABB(origin,origin).inflate(8.0D,1.5D,8.0D)
                     : new AABB(preferredPile, preferredPile).inflate(4.0D);
             this.pileArea = localPile != null && searchArea.intersects(localPile) ? searchArea.intersect(localPile) : null;
         }

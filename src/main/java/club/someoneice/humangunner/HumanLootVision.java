@@ -40,7 +40,7 @@ final class HumanLootVision {
     static boolean nearbyGround(Vec3 feet,Vec3 point) {
         Vec3 delta=point.subtract(feet);
         return Double.isFinite(delta.x)&&Double.isFinite(delta.y)&&Double.isFinite(delta.z)
-                &&Math.abs(delta.y)<=1.5&&delta.horizontalDistanceSqr()<=9;
+                &&Math.abs(delta.y)<=1.5&&delta.horizontalDistanceSqr()<=64;
     }
     static Vec3 lastSeen(Human h,ItemEntity item){
         State s=STATES.get(h);Seen seen=s==null?null:s.seen.get(item.getUUID());
