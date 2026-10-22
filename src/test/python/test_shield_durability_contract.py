@@ -61,7 +61,8 @@ class ShieldDurabilityContract(unittest.TestCase):
         source = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
         self.assertIn('canDisableShield(this.getUseItem(), this, entityIn)', source)
         self.assertIn('this.shieldCoolDown = Math.max(this.shieldCoolDown, 100)', source)
-        self.assertIn('(holdingGun || this.shieldCoolDown > 0)', source)
+        # High pressure may keep the real gun and raise a shield; ordinary gun use still blocks it.
+        self.assertIn('holdingGun && !humanGunner$shieldDefense().shouldSuppressRecovery() || this.shieldCoolDown > 0', source)
         self.assertIn('this.shieldCoolDown = Math.max(this.shieldCoolDown, 8)', source)
         passive = (PKG / 'GunnerShieldProtection.java').read_text(encoding='utf-8')
         self.assertNotIn('shieldCoolDown', passive)

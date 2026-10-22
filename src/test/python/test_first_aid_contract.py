@@ -59,7 +59,10 @@ class FirstAidContract(unittest.TestCase):
 
     def test_pickup_and_ai_keep_medical_and_tactical_roles(self):
         self.assertIn("MedicalSupplies.isSupply(stack) || isSupportedSupplyPotion(stack)", RECOVERY)
-        self.assertIn("MedicalSupplies.isMorphine(stack) && MedicalSupplies.canUse(human, stack)", RECOVERY)
+        medical = RECOVERY.split("else if (MedicalSupplies.isSupply(stack))", 1)[1].split("else if (isRegenerationPotion", 1)[0]
+        self.assertIn("ratio >= .25 || !MedicalSupplies.canUse(human, stack)", medical)
+        self.assertIn("MedicalSupplies.isMorphine(stack)", medical)
+        self.assertIn("rank = 7; healing = 0", medical)
         self.assertIn("MedicalSupplies.isMedicine(stack)", LOOT)
         self.assertIn("MedicalSupplies.inventoryValue(stack)", LOOT)
         self.assertIn(", 60, 0, 1000)", SETTINGS)

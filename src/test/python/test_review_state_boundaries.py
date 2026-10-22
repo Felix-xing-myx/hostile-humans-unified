@@ -30,12 +30,17 @@ class ReviewStateBoundaries(unittest.TestCase):
             source = (PKG / (name + '.java')).read_text(encoding='utf-8')
             self.assertIn('isReservedForRecovery(data,', source, name)
         recovery = (PKG / 'RecoverySupplies.java').read_text(encoding='utf-8')
-        reservation = recovery.split('static boolean reservesInventorySlot(', 1)[1].split('\n    }', 1)[0]
-        self.assertIn('ACTIVE_USES.get(human)', reservation)
-        self.assertIn('PENDING_FINISHES.get(human)', reservation)
-        settlement = recovery.split('private static void settleExchange(', 1)[1].split('private static void rollbackExchange(', 1)[0]
-        self.assertNotIn('session.displacedHandItem().copy()', settlement)
-        self.assertIn('if (!stowCurrentHand(human, session.hand())) return', settlement)
+        # Recovery no longer reserves a fixed backpack slot: its real item moves once through exchange.
+        self.assertIn('static boolean reservesInventorySlot(Human human, int slot) { return false; }', recovery)
+        begin = recovery.split('private static UseSession beginInventoryUse(', 1)[1].split('public static UseSession continueFoodUse', 1)[0]
+        self.assertIn('candidate -> candidate == actual', begin)
+        self.assertIn('HumanEquipmentExchange.request', begin)
+        self.assertIn('EnumSet.of(ActionCoordinator.Resource.OFF_HAND)', begin)
+        self.assertIn('if (!parallelFood) resources.add(ActionCoordinator.Resource.USE_ITEM)', begin)
+        settlement = recovery.split('public static void finishUse(', 1)[1].split('static boolean hasRecoverableShield', 1)[0]
+        self.assertNotIn('setItemInHand', settlement)
+        self.assertNotIn('.copy()', settlement)
+        self.assertLess(settlement.index('ACTIVE_USES.remove(human, session)'), settlement.index('human.stopUsingItem()'))
 
     def test_combat_detours_share_order_path_checks(self):
         for name in ('CombatTerrainNavigation', 'WaterCombatNavigation', 'ShieldDefenseMovement', 'RangedHybridMeleeGoal', 'CloseRangedTactics', 'RangedFiringPosition'):

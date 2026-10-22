@@ -10,8 +10,12 @@ PKG = ROOT / "src/main/java/club/someoneice/humangunner"
 class EquipmentConditionContract(unittest.TestCase):
     def test_armor_shared_gate_and_success_only_timer(self):
         code = (PKG / "HumanLootManager.java").read_text(encoding="utf-8")
-        self.assertEqual(code.count("ArmorSwapPolicy.allows(human, slot,"), 2)
-        self.assertEqual(code.count("ArmorSwapPolicy.equipped(human, slot)"), 2)
+        optimize = code.split("private static void equipBestStored(", 1)[1].split("static boolean isNonGunWeapon", 1)[0]
+        self.assertIn("ArmorSwapPolicy.allows(human, slot, candidate)", optimize)
+        self.assertLess(optimize.index("HumanEquipmentExchange.request"), optimize.index("ArmorSwapPolicy.equipped(human, slot)"))
+        self.assertIn("!= HumanEquipmentExchange.Result.SUCCESS) return", optimize)
+        commit_gate = code.split("private static boolean shouldEquip", 1)[1]
+        self.assertIn("ArmorSwapPolicy.allows(human, slot, incoming)", commit_gate)
         policy = (PKG / "ArmorSwapPolicy.java").read_text(encoding="utf-8")
         self.assertIn("HumanManagedLoadout.isArmourLocked", policy)
         self.assertIn("HumanSpawnEquipment.isBoundGear", policy)

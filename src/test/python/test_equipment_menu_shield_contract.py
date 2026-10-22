@@ -53,7 +53,18 @@ class EquipmentMenuShieldContract(unittest.TestCase):
         self.assertNotIn("getDamageValue", rank)
         self.assertNotIn("getNamespace", rank)
         self.assertIn("shieldEquipRank(candidate) > shieldEquipRank(current)", rank)
-        self.assertIn("SpartanEquipmentCompat.betterShield(data.getInventoryItem(bestShieldSlot), offhand)", RECOVERY)
-        self.assertIn("return SpartanEquipmentCompat.shieldEquipRank(shield)", RECOVERY)
+        restore = RECOVERY.split("public static boolean restoreShieldAfterRecovery", 1)[1].split("private static boolean sameStack", 1)[0]
+        self.assertIn("hasActiveUse(human) || unavailable(human)", restore)
+        self.assertIn('HumanEquipmentExchange.request(human, "recovery:shield"', restore)
+        self.assertIn("ItemStack selected = HumanLootManager.bestOwnedShield(human)", restore)
+        self.assertIn("EquipmentSlot.OFFHAND, candidate -> candidate == selected", restore)
+        best = LOOT.split("static ItemStack bestOwnedShield(", 1)[1].split("private static java.util.List<ItemStack> ownedEquipment", 1)[0]
+        self.assertIn("? human.getOffhandItem() : ItemStack.EMPTY", best)
+        self.assertIn("SpartanEquipmentCompat.betterShield(stack, best)", best)
+        owned = LOOT.split("private static java.util.List<ItemStack> ownedEquipment", 1)[1].split("public static boolean equipMeleeFallback", 1)[0]
+        for actual in ("human.getMainHandItem()", "human.getOffhandItem()", "human.getData().getInventoryItem(i)"):
+            self.assertIn(actual, owned)
+        self.assertNotIn(".copy()", owned)
+        self.assertIn("return !HumanLootManager.bestOwnedShield(human).isEmpty()", RECOVERY)
 
 if __name__ == "__main__": unittest.main()
