@@ -116,6 +116,17 @@ final class FactionEquipmentPools {
     ConfiguredEquipmentLoadout.ItemEntry reserveMelee(Human human) { return melee(human); }
     ConfiguredEquipmentLoadout.ItemEntry ranged(Human human) { return select(ranged,"ranged_band_weights",4,human,"ranged"); }
     ConfiguredEquipmentLoadout.ItemEntry shield(Human human) { return select(shields,"shield_band_weights",4,human,"shield"); }
+    boolean matchesFactionArmor(Human human) {
+        for(var override:armorOverrides) {
+            var set=override.set();
+            ResourceLocation[] ids={set.head(),set.chest(),set.legs(),set.feet()};
+            EquipmentSlot[] slots={EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET};
+            boolean matches=true;
+            for(int i=0;i<slots.length;i++) if(!ids[i].equals(ForgeRegistries.ITEMS.getKey(human.getItemBySlot(slots[i]).getItem()))) matches=false;
+            if(matches) return true;
+        }
+        return false;
+    }
     ConfiguredEquipmentLoadout.ArmorSetEntry armor(Human human) {
         if(!armorOverrides.isEmpty()) {
             int selected=FactionEquipmentPolicy.choose(armorOverrides.stream().mapToDouble(ArmorOverride::weight).toArray(),human.getRandom().nextDouble());

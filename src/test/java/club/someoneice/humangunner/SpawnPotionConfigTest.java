@@ -28,12 +28,11 @@ public final class SpawnPotionConfigTest {
         check(parsedDamage.get("scguns:grenade") == 0 && parsedDamage.get("scguns:nail_bomb") == 2.5,
                 "custom damage factors parsed");
         int[] recoveryMin = {1, 3, 5, 7}, recoveryMax = {3, 5, 7, 12};
-        int[] tacticalMin = {1, 2, 4, 6}, tacticalMax = {2, 4, 7, 8};
         String[] ranks = {"roamer", "tier1", "tier2", "tier3"};
         for (int i = 0; i < ranks.length; i++) {
             var value = config.spawnPotions(ranks[i]);
             check(value.recovery.minimum() == recoveryMin[i] && value.recovery.maximum() == recoveryMax[i], "recovery defaults");
-            check(value.tactical.minimum() == tacticalMin[i] && value.tactical.maximum() == tacticalMax[i], "tactical defaults");
+            check(value.tactical.entries().isEmpty(), "retired mixed pool is not a shipped default");
             check(value.recovery.entries().stream().map(entry->entry.potion().toString()).collect(java.util.stream.Collectors.toSet())
                     .equals(java.util.Set.of("minecraft:healing","minecraft:strong_healing","minecraft:long_regeneration","minecraft:strong_regeneration")),
                     "all four recovery categories have candidates");
@@ -42,8 +41,8 @@ public final class SpawnPotionConfigTest {
             check(value.throwables.minimum()==new int[]{2,5,8,12}[i]&&value.throwables.maximum()==new int[]{5,8,12,16}[i],"throwable rank totals");
             check(value.selfBuffs.entries().stream().allMatch(entry->SpawnPotionConfig.category(entry,"self_buff")>=0),"self pool only contains drinkable buffs");
             check(value.throwables.entries().stream().allMatch(entry->SpawnPotionConfig.category(entry,"throwable")>=0),"natural throwable whitelist");
-            checkPool(value.tactical, new String[]{"long_slowness", "long_weakness", "long_strength", "strong_poison", "strong_strength", "long_swiftness"}, new int[]{5, 1, 10, 2, 5, 8});
-            var tools = value.tactical.entries().stream().filter(entry -> entry.potion() == null).toList();
+            checkPool(value.selfBuffs, new String[]{"long_strength", "strong_strength", "long_swiftness"}, new int[]{10, 5, 8});
+            var tools = value.throwables.entries().stream().filter(entry -> entry.potion() == null).toList();
             check(tools.size() == 7, "seven default tactical throwables across two optional mods");
             check(tools.stream().filter(tool -> tool.item().toString().startsWith("jeg:")).map(tool -> tool.item().toString()).toList()
                     .equals(java.util.List.of("jeg:grenade", "jeg:water_bomb")), "only two JEG default supplies");
@@ -98,42 +97,39 @@ public final class SpawnPotionConfigTest {
         JsonObject items = json("{\"pool\":[{\"item\":\"scguns:grenade\",\"weight\":3}]}");
         check(SpawnPotionConfig.parsePool(items).entries().isEmpty(), "recovery pool rejects non-potions");
         check(SpawnPotionConfig.parsePool(items, true).entries().size() == 1, "tactical pool accepts optional item ID");
-        JsonObject defaults = TierConfigProjection.tier(UnifiedConfig.defaults(), "tier1");
-        JsonObject original = defaults.deepCopy();
-        var potionOnly = new com.google.gson.JsonArray();
-        for (var entry : original.getAsJsonObject("potions").getAsJsonObject("tactical").getAsJsonArray("pool"))
-            if (entry.getAsJsonObject().has("potion")) potionOnly.add(entry.deepCopy());
-        original.getAsJsonObject("potions").getAsJsonObject("tactical").add("pool", potionOnly);
-        TacticalSupplyDefaults.refresh(original, defaults, true);
-        check(original.equals(defaults), "exact shipped tactical pool refreshed");
-        var priorPool = new com.google.gson.JsonArray();
-        for (var entry : defaults.getAsJsonObject("potions").getAsJsonObject("tactical").getAsJsonArray("pool")) {
-            var row = entry.getAsJsonObject();
-            if (row.has("potion") || row.get("item").getAsString().equals("scguns:grenade")
-                    || row.get("item").getAsString().equals("scguns:nail_bomb")) priorPool.add(entry.deepCopy());
-        }
-        priorPool.add(json("{\"item\":\"scguns:stun_grenade\",\"weight\":1}"));
-        original.getAsJsonObject("potions").getAsJsonObject("tactical").add("pool", priorPool);
-        TacticalSupplyDefaults.refresh(original, defaults, true);
-        check(original.equals(defaults), "previous shipped pool upgraded and stun removed");
-        var molotovPool = defaults.getAsJsonObject("potions").getAsJsonObject("tactical").getAsJsonArray("pool").deepCopy();
-        // This shipped pool predates JEG; do not manufacture a custom mixed pool from new defaults.
-        for (int i = molotovPool.size() - 1; i >= 0; i--)
-            if (molotovPool.get(i).getAsJsonObject().get("item").getAsString().startsWith("jeg:")) molotovPool.remove(i);
-        for (var entry : molotovPool) {
-            var row = entry.getAsJsonObject();
-            if (row.has("item") && row.get("item").getAsString().equals("scguns:gas_grenade"))
-                row.addProperty("item", "scguns:molotov_cocktail");
-        }
-        original.getAsJsonObject("potions").getAsJsonObject("tactical").add("pool", molotovPool);
-        TacticalSupplyDefaults.refresh(original, defaults, true);
-        check(original.equals(defaults), "exact default molotov pool replaced with gas grenade");
-        original.getAsJsonObject("potions").getAsJsonObject("tactical").add("pool", new com.google.gson.JsonArray());
-        TacticalSupplyDefaults.refresh(original, defaults, true);
-        check(original.getAsJsonObject("potions").getAsJsonObject("tactical").getAsJsonArray("pool").isEmpty(), "empty custom pool preserved");
-        original.getAsJsonObject("potions").getAsJsonObject("tactical").add("pool", items.get("pool").deepCopy());
-        TacticalSupplyDefaults.refresh(original, defaults, true);
-        check(original.getAsJsonObject("potions").getAsJsonObject("tactical").get("pool").equals(items.get("pool")), "custom nonempty pool preserved");
+        JsonObject raw=json("""
+                {"potions":{"tactical":{"count_min":99,"pool":[
+                  {"item":"minecraft:potion","potion":"minecraft:long_strength","weight":7},
+                  {"item":"jeg:grenade","weight":9}]},
+                  "throwables":{"count_min":6}}}
+                """);
+        check(SpawnSupplyMigration.migrateRank(raw),"raw custom mixed pool migrated before fill");
+        var migrated=raw.getAsJsonObject("potions");
+        check(migrated.getAsJsonObject("self_buffs").getAsJsonArray("pool").get(0).getAsJsonObject().get("weight").getAsInt()==7,"custom buff member weight preserved");
+        check(migrated.getAsJsonObject("throwables").get("count_min").getAsInt()==6,"explicit new split count preserved");
+        check(!migrated.getAsJsonObject("self_buffs").has("count_min"),"mixed total is never copied into both independent totals");
+        check(!SpawnSupplyMigration.migrateRank(raw),"migration is idempotent");
+        JsonObject emptyRaw=json("{\"potions\":{\"tactical\":{\"pool\":[]}}}");
+        TierConfigProjection.fill(emptyRaw,TierConfigProjection.tier(UnifiedConfig.defaults(),"tier1"),"");
+        check(emptyRaw.getAsJsonObject("potions").getAsJsonObject("self_buffs").getAsJsonArray("pool").isEmpty()
+                &&emptyRaw.getAsJsonObject("potions").getAsJsonObject("throwables").getAsJsonArray("pool").isEmpty(),
+                "raw explicit empty legacy pool survives new default fill");
+        var directEmpty=new UnifiedConfig(json("{\"tiers\":{\"tier1\":{\"potions\":{\"tactical\":{\"pool\":[]}}}}}"));
+        check(directEmpty.spawnPotions("tier1").selfBuffs.entries().isEmpty()&&directEmpty.spawnPotions("tier1").throwables.entries().isEmpty(),
+                "constructor root default merge also respects raw legacy empty pools");
+        JsonObject emptyMaps=json("{\"food\":{\"enchanted_golden_apple_counts\":{}}}");
+        TierConfigProjection.fill(emptyMaps,TierConfigProjection.tier(UnifiedConfig.defaults(),"tier3"),"");
+        check(emptyMaps.getAsJsonObject("food").getAsJsonObject("enchanted_golden_apple_counts").size()==0,"rank fill preserves explicit empty apple count map");
+        JsonObject rootMaps=json("{\"tiers\":{\"tier3\":{\"food\":{\"enchanted_golden_apple_counts\":{}}}}}");
+        CurrentConfigDefaults.fill(rootMaps,UnifiedConfig.defaults(),"");
+        check(rootMaps.getAsJsonObject("tiers").getAsJsonObject("tier3").getAsJsonObject("food").getAsJsonObject("enchanted_golden_apple_counts").size()==0,
+                "root fill preserves explicit empty apple count map");
+        JsonObject preferred=json("""
+                {"potions":{"tactical":{"pool":[{"item":"jeg:grenade","weight":9}]},
+                  "throwables":{"pool":[]}}}
+                """);
+        SpawnSupplyMigration.migrateRank(preferred);
+        check(preferred.getAsJsonObject("potions").getAsJsonObject("throwables").getAsJsonArray("pool").isEmpty(),"explicit new empty pool wins over legacy members");
         JsonObject globalDefaults = TierConfigProjection.global(UnifiedConfig.defaults());
         JsonObject global = json("{\"scguns\":{\"throwables\":{\"allowed_items\":[\"scguns:grenade\",\"scguns:stun_grenade\",\"scguns:nail_bomb\"]}}}");
         TacticalSupplyDefaults.refresh(global, globalDefaults, false);

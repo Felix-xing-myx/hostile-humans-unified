@@ -11,8 +11,8 @@ public final class HumanAmmoPolicyTest {
         check(HumanAmmoPolicy.magazineCost("SNIPER") == 3, "case-insensitive gun packs");
         check(HumanAmmoPolicy.magazineCost(null) > 0, "missing gun type cannot give free reloads");
         check(HumanAmmoPolicy.magazineCost("custom") > 0, "unknown gun type cannot give free reloads");
-        int[][] budgets = {{32, 128, 6, 12}, {64, 128, 12, 24},
-                {128, 192, 32, 48}, {192, 192, 48, 72}};
+        int[][] budgets = {{32, 64, 4, 8}, {48, 64, 8, 14},
+                {72, 96, 16, 24}, {96, 128, 24, 36}};
         for (int tier = 0; tier < budgets.length; tier++) {
             check(HumanAmmoPolicy.arrowMinimum(tier) == budgets[tier][0], "arrow minimum tier " + tier);
             check(HumanAmmoPolicy.arrowMaximum(tier) == budgets[tier][1], "arrow maximum tier " + tier);

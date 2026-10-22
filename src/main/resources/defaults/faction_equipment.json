@@ -2,40 +2,34 @@
   "roamer": {
     "roamer": {
       "melee_band_weights": [
-        25,
+        35,
         40,
-        30,
+        20,
         5,
         0
       ],
       "armor_band_weights": [
-        45,
-        40,
-        15,
-        0,
-        0
-      ],
-      "toughness_band_weights": [
-        80,
-        20,
+        60,
+        35,
+        5,
         0,
         0
       ],
       "shield_band_weights": [
-        35,
         55,
+        35,
         10,
         0
       ],
       "ranged_band_weights": [
-        40,
-        40,
-        20,
+        55,
+        35,
+        10,
         0
       ],
       "shield_count": {
-        "0": 10,
-        "1": 90,
+        "0": 15,
+        "1": 85,
         "2": 0
       },
       "gun_chance": 0.08,
@@ -73,26 +67,12 @@
         "min": 0,
         "max": 0.85
       },
-      "ammo_multiplier": 0.6,
-      "food_category_weights": [
-        20,
-        45,
-        25,
-        10
-      ],
+      "ammo_multiplier": 1,
       "recovery_category_weights": [
-        70,
         25,
-        5
-      ],
-      "tactical_category_weights": [
-        10,
-        20,
-        30,
-        15,
-        15,
-        5,
-        5
+        25,
+        25,
+        25
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
@@ -106,15 +86,9 @@
         0
       ],
       "armor_band_weights": [
-        45,
-        40,
-        15,
-        0,
-        0
-      ],
-      "toughness_band_weights": [
-        80,
-        20,
+        60,
+        35,
+        5,
         0,
         0
       ],
@@ -170,26 +144,12 @@
         "min": 0,
         "max": 0.85
       },
-      "ammo_multiplier": 0.6,
-      "food_category_weights": [
-        25,
-        25,
-        25,
-        25
-      ],
+      "ammo_multiplier": 1,
       "recovery_category_weights": [
-        50,
+        25,
+        25,
         25,
         25
-      ],
-      "tactical_category_weights": [
-        15,
-        15,
-        14,
-        14,
-        14,
-        14,
-        14
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
@@ -199,21 +159,15 @@
     "crimson": {
       "melee_band_weights": [
         5,
-        15,
-        45,
-        35,
+        20,
+        50,
+        25,
         0
       ],
       "armor_band_weights": [
-        25,
-        45,
-        25,
-        5,
-        0
-      ],
-      "toughness_band_weights": [
-        55,
-        40,
+        0,
+        64,
+        31,
         5,
         0
       ],
@@ -224,22 +178,22 @@
         2
       ],
       "ranged_band_weights": [
-        25,
-        30,
+        20,
+        35,
         40,
         5
       ],
       "shield_count": {
-        "0": 5,
-        "1": 95,
+        "0": 8,
+        "1": 92,
         "2": 0
       },
       "gun_chance": 0.14,
-      "gun_core_chance": 0.7,
+      "gun_core_chance": 0.85,
       "gun_core": {
-        "pistol": 25,
-        "smg": 35,
-        "shotgun": 40,
+        "pistol": 0,
+        "smg": 40,
+        "shotgun": 60,
         "rifle": 0,
         "mg": 0,
         "sniper": 0,
@@ -273,50 +227,30 @@
         "min": 0.1,
         "max": 0.5
       },
-      "ammo_multiplier": 1.4,
-      "food_category_weights": [
-        55,
-        25,
-        10,
-        10
-      ],
+      "ammo_multiplier": 1.2,
       "recovery_category_weights": [
-        60,
-        25,
-        15
-      ],
-      "tactical_category_weights": [
-        25,
-        20,
         10,
-        5,
-        15,
+        40,
         20,
-        5
+        30
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
     },
     "azure": {
       "melee_band_weights": [
-        20,
-        45,
-        30,
+        10,
+        50,
+        35,
         5,
         0
       ],
       "armor_band_weights": [
+        0,
+        64,
+        31,
         5,
-        20,
-        55,
-        20,
         0
-      ],
-      "toughness_band_weights": [
-        20,
-        50,
-        25,
-        5
       ],
       "shield_band_weights": [
         5,
@@ -327,23 +261,23 @@
       "ranged_band_weights": [
         30,
         35,
-        35,
-        0
+        30,
+        5
       ],
       "shield_count": {
-        "0": 5,
-        "1": 95,
+        "0": 8,
+        "1": 92,
         "2": 0
       },
       "gun_chance": 0.12,
-      "gun_core_chance": 0.7,
+      "gun_core_chance": 0.65,
       "gun_core": {
-        "pistol": 10,
+        "pistol": 0,
         "smg": 0,
         "shotgun": 0,
-        "rifle": 45,
-        "mg": 25,
-        "sniper": 20,
+        "rifle": 40,
+        "mg": 30,
+        "sniper": 30,
         "launcher": 0,
         "other": 0
       },
@@ -376,25 +310,11 @@
         "min": 0,
         "max": 0.25
       },
-      "ammo_multiplier": 1.6,
-      "food_category_weights": [
-        20,
-        45,
-        5,
-        30
-      ],
+      "ammo_multiplier": 1.4,
       "recovery_category_weights": [
-        35,
-        35,
-        30
-      ],
-      "tactical_category_weights": [
-        10,
-        10,
-        25,
-        20,
-        10,
-        15,
+        0,
+        30,
+        60,
         10
       ],
       "gun_fallback_mode": "category_uniform",
@@ -402,51 +322,45 @@
     },
     "verdant": {
       "melee_band_weights": [
-        30,
-        45,
         20,
-        5,
+        45,
+        35,
+        0,
         0
       ],
       "armor_band_weights": [
-        35,
-        42,
-        20,
-        3,
-        0
-      ],
-      "toughness_band_weights": [
-        75,
-        22,
-        3,
+        0,
+        64,
+        31,
+        5,
         0
       ],
       "shield_band_weights": [
-        45,
-        40,
-        13,
-        2
+        55,
+        35,
+        10,
+        0
       ],
       "ranged_band_weights": [
-        15,
-        25,
+        10,
+        30,
         50,
         10
       ],
       "shield_count": {
-        "0": 5,
-        "1": 95,
+        "0": 8,
+        "1": 92,
         "2": 0
       },
       "gun_chance": 0.1,
       "gun_core_chance": 0.7,
       "gun_core": {
-        "pistol": 20,
-        "smg": 40,
+        "pistol": 0,
+        "smg": 0,
         "shotgun": 0,
-        "rifle": 40,
+        "rifle": 70,
         "mg": 0,
-        "sniper": 0,
+        "sniper": 30,
         "launcher": 0,
         "other": 0
       },
@@ -477,55 +391,35 @@
         "min": 0.05,
         "max": 0.4
       },
-      "ammo_multiplier": 1.2,
-      "food_category_weights": [
-        15,
-        20,
-        55,
-        10
-      ],
+      "ammo_multiplier": 1.6,
       "recovery_category_weights": [
-        50,
-        35,
-        15
-      ],
-      "tactical_category_weights": [
         10,
-        35,
-        20,
-        10,
-        10,
-        10,
-        5
+        40,
+        25,
+        25
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
     },
     "ashen": {
       "melee_band_weights": [
-        15,
-        30,
+        10,
+        35,
         35,
         20,
         0
       ],
       "armor_band_weights": [
-        30,
-        40,
-        30,
         0,
-        0
-      ],
-      "toughness_band_weights": [
-        60,
-        35,
+        64,
+        31,
         5,
         0
       ],
       "shield_band_weights": [
-        25,
+        30,
         45,
-        25,
+        20,
         5
       ],
       "ranged_band_weights": [
@@ -535,17 +429,17 @@
         0
       ],
       "shield_count": {
-        "0": 5,
-        "1": 95,
+        "0": 8,
+        "1": 92,
         "2": 0
       },
       "gun_chance": 0.12,
-      "gun_core_chance": 0.5,
+      "gun_core_chance": 0.8,
       "gun_core": {
-        "pistol": 20,
+        "pistol": 25,
         "smg": 25,
         "shotgun": 25,
-        "rifle": 30,
+        "rifle": 25,
         "mg": 0,
         "sniper": 0,
         "launcher": 0,
@@ -579,26 +473,12 @@
         "min": 0.3,
         "max": 0.8
       },
-      "ammo_multiplier": 1.3,
-      "food_category_weights": [
-        25,
-        40,
-        20,
-        15
-      ],
+      "ammo_multiplier": 1,
       "recovery_category_weights": [
-        55,
-        30,
-        15
-      ],
-      "tactical_category_weights": [
-        15,
-        15,
-        15,
-        10,
-        15,
-        20,
-        10
+        0,
+        50,
+        0,
+        50
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
@@ -612,15 +492,9 @@
         0
       ],
       "armor_band_weights": [
-        30,
-        40,
-        30,
         0,
-        0
-      ],
-      "toughness_band_weights": [
-        60,
-        35,
+        64,
+        31,
         5,
         0
       ],
@@ -677,25 +551,11 @@
         "max": 0.85
       },
       "ammo_multiplier": 1,
-      "food_category_weights": [
-        25,
-        25,
-        25,
-        25
-      ],
       "recovery_category_weights": [
-        50,
+        25,
+        25,
         25,
         25
-      ],
-      "tactical_category_weights": [
-        15,
-        15,
-        14,
-        14,
-        14,
-        14,
-        14
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
@@ -705,47 +565,41 @@
     "crimson": {
       "melee_band_weights": [
         0,
-        10,
-        30,
+        0,
+        35,
         45,
-        15
+        20
       ],
       "armor_band_weights": [
         0,
-        20,
-        40,
-        30,
+        0,
+        53,
+        37,
         10
       ],
-      "toughness_band_weights": [
-        20,
-        45,
-        30,
-        5
-      ],
       "shield_band_weights": [
-        22,
-        45,
-        28,
+        10,
+        50,
+        35,
         5
       ],
       "ranged_band_weights": [
-        10,
-        25,
-        50,
-        15
+        0,
+        20,
+        55,
+        25
       ],
       "shield_count": {
         "0": 0,
-        "1": 95,
-        "2": 5
+        "1": 90,
+        "2": 10
       },
       "gun_chance": 0.48,
-      "gun_core_chance": 0.7,
+      "gun_core_chance": 0.85,
       "gun_core": {
-        "pistol": 25,
-        "smg": 35,
-        "shotgun": 40,
+        "pistol": 0,
+        "smg": 40,
+        "shotgun": 60,
         "rifle": 0,
         "mg": 0,
         "sniper": 0,
@@ -779,77 +633,57 @@
         "min": 0.05,
         "max": 0.35
       },
-      "ammo_multiplier": 1.4,
-      "food_category_weights": [
-        55,
-        25,
-        10,
-        10
-      ],
+      "ammo_multiplier": 1.2,
       "recovery_category_weights": [
-        60,
-        25,
-        15
-      ],
-      "tactical_category_weights": [
-        25,
-        20,
         10,
-        5,
-        15,
+        40,
         20,
-        5
+        30
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
     },
     "azure": {
       "melee_band_weights": [
-        5,
-        30,
-        40,
-        25,
+        0,
+        20,
+        45,
+        35,
         0
       ],
       "armor_band_weights": [
         0,
-        5,
-        25,
-        45,
-        25
-      ],
-      "toughness_band_weights": [
-        5,
-        25,
-        45,
-        25
+        0,
+        53,
+        37,
+        10
       ],
       "shield_band_weights": [
         0,
         10,
-        40,
-        50
+        30,
+        60
       ],
       "ranged_band_weights": [
-        20,
-        30,
-        40,
-        10
+        0,
+        35,
+        45,
+        20
       ],
       "shield_count": {
         "0": 0,
-        "1": 65,
-        "2": 35
+        "1": 60,
+        "2": 40
       },
       "gun_chance": 0.45,
-      "gun_core_chance": 0.7,
+      "gun_core_chance": 0.65,
       "gun_core": {
-        "pistol": 10,
+        "pistol": 0,
         "smg": 0,
         "shotgun": 0,
-        "rifle": 45,
-        "mg": 25,
-        "sniper": 20,
+        "rifle": 40,
+        "mg": 30,
+        "sniper": 30,
         "launcher": 0,
         "other": 0
       },
@@ -882,25 +716,11 @@
         "min": 0,
         "max": 0.15
       },
-      "ammo_multiplier": 1.6,
-      "food_category_weights": [
-        20,
-        45,
-        5,
-        30
-      ],
+      "ammo_multiplier": 1.4,
       "recovery_category_weights": [
-        35,
-        35,
-        30
-      ],
-      "tactical_category_weights": [
-        10,
-        10,
-        25,
-        20,
-        10,
-        15,
+        0,
+        30,
+        60,
         10
       ],
       "gun_fallback_mode": "category_uniform",
@@ -908,51 +728,45 @@
     },
     "verdant": {
       "melee_band_weights": [
-        15,
-        40,
-        35,
-        10,
+        0,
+        30,
+        50,
+        20,
         0
       ],
       "armor_band_weights": [
-        18,
-        42,
-        32,
-        8,
-        0
-      ],
-      "toughness_band_weights": [
-        50,
-        40,
-        10,
-        0
+        0,
+        0,
+        53,
+        37,
+        10
       ],
       "shield_band_weights": [
-        30,
+        25,
         45,
-        22,
-        3
+        30,
+        0
       ],
       "ranged_band_weights": [
-        5,
-        20,
-        55,
-        20
+        0,
+        10,
+        50,
+        40
       ],
       "shield_count": {
         "0": 0,
-        "1": 95,
-        "2": 5
+        "1": 90,
+        "2": 10
       },
       "gun_chance": 0.4,
       "gun_core_chance": 0.7,
       "gun_core": {
-        "pistol": 20,
-        "smg": 40,
+        "pistol": 0,
+        "smg": 0,
         "shotgun": 0,
-        "rifle": 40,
+        "rifle": 70,
         "mg": 0,
-        "sniper": 0,
+        "sniper": 30,
         "launcher": 0,
         "other": 0
       },
@@ -983,75 +797,55 @@
         "min": 0,
         "max": 0.25
       },
-      "ammo_multiplier": 1.2,
-      "food_category_weights": [
-        15,
-        20,
-        55,
-        10
-      ],
+      "ammo_multiplier": 1.6,
       "recovery_category_weights": [
-        50,
-        35,
-        15
-      ],
-      "tactical_category_weights": [
         10,
-        35,
-        20,
-        10,
-        10,
-        10,
-        5
+        40,
+        25,
+        25
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
     },
     "ashen": {
       "melee_band_weights": [
-        5,
-        25,
+        0,
+        15,
+        40,
         35,
-        30,
-        5
+        10
       ],
       "armor_band_weights": [
-        10,
-        30,
-        40,
-        20,
-        0
-      ],
-      "toughness_band_weights": [
-        30,
-        45,
-        22,
-        3
+        0,
+        0,
+        53,
+        37,
+        10
       ],
       "shield_band_weights": [
-        8,
+        5,
         40,
-        40,
-        12
+        35,
+        20
       ],
       "ranged_band_weights": [
-        20,
-        35,
-        40,
-        5
+        5,
+        30,
+        50,
+        15
       ],
       "shield_count": {
         "0": 0,
-        "1": 90,
-        "2": 10
+        "1": 85,
+        "2": 15
       },
       "gun_chance": 0.45,
-      "gun_core_chance": 0.5,
+      "gun_core_chance": 0.8,
       "gun_core": {
-        "pistol": 20,
+        "pistol": 25,
         "smg": 25,
         "shotgun": 25,
-        "rifle": 30,
+        "rifle": 25,
         "mg": 0,
         "sniper": 0,
         "launcher": 0,
@@ -1085,26 +879,12 @@
         "min": 0.2,
         "max": 0.7
       },
-      "ammo_multiplier": 1.3,
-      "food_category_weights": [
-        25,
-        40,
-        20,
-        15
-      ],
+      "ammo_multiplier": 1,
       "recovery_category_weights": [
-        55,
-        30,
-        15
-      ],
-      "tactical_category_weights": [
-        15,
-        15,
-        15,
-        10,
-        15,
-        20,
-        10
+        0,
+        50,
+        0,
+        50
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
@@ -1118,17 +898,11 @@
         5
       ],
       "armor_band_weights": [
-        10,
-        30,
-        40,
-        20,
-        0
-      ],
-      "toughness_band_weights": [
-        30,
-        45,
-        22,
-        3
+        0,
+        0,
+        53,
+        37,
+        10
       ],
       "shield_band_weights": [
         8,
@@ -1183,25 +957,11 @@
         "max": 0.85
       },
       "ammo_multiplier": 1,
-      "food_category_weights": [
-        25,
-        25,
-        25,
-        25
-      ],
       "recovery_category_weights": [
-        50,
+        25,
+        25,
         25,
         25
-      ],
-      "tactical_category_weights": [
-        15,
-        15,
-        14,
-        14,
-        14,
-        14,
-        14
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
@@ -1212,46 +972,40 @@
       "melee_band_weights": [
         0,
         0,
-        15,
+        0,
         50,
-        35
+        50
       ],
       "armor_band_weights": [
         0,
-        5,
-        25,
-        45,
-        25
-      ],
-      "toughness_band_weights": [
-        5,
-        30,
-        45,
-        20
+        0,
+        0,
+        55,
+        45
       ],
       "shield_band_weights": [
-        5,
-        35,
-        45,
-        15
+        0,
+        20,
+        60,
+        20
       ],
       "ranged_band_weights": [
         0,
-        20,
-        55,
-        25
+        0,
+        30,
+        70
       ],
       "shield_count": {
         "0": 0,
-        "1": 70,
-        "2": 30
+        "1": 65,
+        "2": 35
       },
       "gun_chance": 0.78,
-      "gun_core_chance": 0.7,
+      "gun_core_chance": 0.85,
       "gun_core": {
-        "pistol": 25,
-        "smg": 35,
-        "shotgun": 40,
+        "pistol": 0,
+        "smg": 40,
+        "shotgun": 60,
         "rifle": 0,
         "mg": 0,
         "sniper": 0,
@@ -1285,26 +1039,12 @@
         "min": 0,
         "max": 0
       },
-      "ammo_multiplier": 1.4,
-      "food_category_weights": [
-        55,
-        25,
-        10,
-        10
-      ],
+      "ammo_multiplier": 1.2,
       "recovery_category_weights": [
-        60,
-        25,
-        15
-      ],
-      "tactical_category_weights": [
-        25,
-        20,
         10,
-        5,
-        15,
+        40,
         20,
-        5
+        30
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
@@ -1312,50 +1052,44 @@
     "azure": {
       "melee_band_weights": [
         0,
-        10,
-        40,
-        40,
-        10
+        0,
+        25,
+        55,
+        20
       ],
       "armor_band_weights": [
         0,
         0,
-        15,
-        40,
-        45
-      ],
-      "toughness_band_weights": [
         0,
-        10,
-        45,
+        55,
         45
       ],
       "shield_band_weights": [
         0,
         0,
-        25,
-        75
+        10,
+        90
       ],
       "ranged_band_weights": [
+        0,
         10,
-        25,
-        45,
-        20
+        30,
+        60
       ],
       "shield_count": {
         "0": 0,
-        "1": 30,
-        "2": 70
+        "1": 20,
+        "2": 80
       },
       "gun_chance": 0.75,
-      "gun_core_chance": 0.7,
+      "gun_core_chance": 0.65,
       "gun_core": {
-        "pistol": 10,
+        "pistol": 0,
         "smg": 0,
         "shotgun": 0,
-        "rifle": 45,
-        "mg": 25,
-        "sniper": 20,
+        "rifle": 40,
+        "mg": 30,
+        "sniper": 30,
         "launcher": 0,
         "other": 0
       },
@@ -1388,25 +1122,11 @@
         "min": 0,
         "max": 0
       },
-      "ammo_multiplier": 1.6,
-      "food_category_weights": [
-        20,
-        45,
-        5,
-        30
-      ],
+      "ammo_multiplier": 1.4,
       "recovery_category_weights": [
-        35,
-        35,
-        30
-      ],
-      "tactical_category_weights": [
-        10,
-        10,
-        25,
-        20,
-        10,
-        15,
+        0,
+        30,
+        60,
         10
       ],
       "gun_fallback_mode": "category_uniform",
@@ -1414,51 +1134,45 @@
     },
     "verdant": {
       "melee_band_weights": [
-        5,
-        30,
+        0,
+        10,
         45,
-        20,
-        0
+        40,
+        5
       ],
       "armor_band_weights": [
-        8,
-        35,
-        37,
-        18,
-        2
-      ],
-      "toughness_band_weights": [
-        30,
-        45,
-        22,
-        3
+        0,
+        0,
+        0,
+        55,
+        45
       ],
       "shield_band_weights": [
-        12,
-        45,
-        35,
-        8
+        5,
+        30,
+        55,
+        10
       ],
       "ranged_band_weights": [
         0,
-        10,
-        60,
-        30
+        0,
+        20,
+        80
       ],
       "shield_count": {
         "0": 0,
-        "1": 80,
-        "2": 20
+        "1": 75,
+        "2": 25
       },
       "gun_chance": 0.7,
       "gun_core_chance": 0.7,
       "gun_core": {
-        "pistol": 20,
-        "smg": 40,
+        "pistol": 0,
+        "smg": 0,
         "shotgun": 0,
-        "rifle": 40,
+        "rifle": 70,
         "mg": 0,
-        "sniper": 0,
+        "sniper": 30,
         "launcher": 0,
         "other": 0
       },
@@ -1489,26 +1203,12 @@
         "min": 0,
         "max": 0
       },
-      "ammo_multiplier": 1.2,
-      "food_category_weights": [
-        15,
-        20,
-        55,
-        10
-      ],
+      "ammo_multiplier": 1.6,
       "recovery_category_weights": [
-        50,
-        35,
-        15
-      ],
-      "tactical_category_weights": [
         10,
-        35,
-        20,
-        10,
-        10,
-        10,
-        5
+        40,
+        25,
+        25
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
@@ -1516,48 +1216,42 @@
     "ashen": {
       "melee_band_weights": [
         0,
-        15,
-        35,
-        35,
-        15
-      ],
-      "armor_band_weights": [
-        5,
-        20,
-        35,
-        30,
-        10
-      ],
-      "toughness_band_weights": [
-        10,
-        35,
-        40,
-        15
-      ],
-      "shield_band_weights": [
         0,
         25,
         50,
         25
       ],
+      "armor_band_weights": [
+        0,
+        0,
+        0,
+        55,
+        45
+      ],
+      "shield_band_weights": [
+        0,
+        10,
+        40,
+        50
+      ],
       "ranged_band_weights": [
+        0,
         10,
         30,
-        45,
-        15
+        60
       ],
       "shield_count": {
         "0": 0,
-        "1": 60,
-        "2": 40
+        "1": 50,
+        "2": 50
       },
       "gun_chance": 0.75,
-      "gun_core_chance": 0.5,
+      "gun_core_chance": 0.8,
       "gun_core": {
-        "pistol": 20,
+        "pistol": 25,
         "smg": 25,
         "shotgun": 25,
-        "rifle": 30,
+        "rifle": 25,
         "mg": 0,
         "sniper": 0,
         "launcher": 0,
@@ -1591,26 +1285,12 @@
         "min": 0,
         "max": 0
       },
-      "ammo_multiplier": 1.3,
-      "food_category_weights": [
-        25,
-        40,
-        20,
-        15
-      ],
+      "ammo_multiplier": 1,
       "recovery_category_weights": [
-        55,
-        30,
-        15
-      ],
-      "tactical_category_weights": [
-        15,
-        15,
-        15,
-        10,
-        15,
-        20,
-        10
+        0,
+        50,
+        0,
+        50
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false
@@ -1624,17 +1304,11 @@
         15
       ],
       "armor_band_weights": [
-        5,
-        20,
-        35,
-        30,
-        10
-      ],
-      "toughness_band_weights": [
-        10,
-        35,
-        40,
-        15
+        0,
+        0,
+        0,
+        55,
+        45
       ],
       "shield_band_weights": [
         0,
@@ -1689,25 +1363,11 @@
         "max": 0
       },
       "ammo_multiplier": 1,
-      "food_category_weights": [
-        25,
-        25,
-        25,
-        25
-      ],
       "recovery_category_weights": [
-        50,
+        25,
+        25,
         25,
         25
-      ],
-      "tactical_category_weights": [
-        15,
-        15,
-        14,
-        14,
-        14,
-        14,
-        14
       ],
       "gun_fallback_mode": "category_uniform",
       "gun_fallback_uniform": false

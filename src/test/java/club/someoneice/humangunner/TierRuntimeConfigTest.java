@@ -8,10 +8,10 @@ public final class TierRuntimeConfigTest {
     public static void main(String[] args) {
         UnifiedConfig defaults = new UnifiedConfig(new JsonObject());
         check(defaults.ammoConsumptionEnabled(), "consumption defaults on");
-        check(defaults.ammoReserve("roamer").equals(new UnifiedConfig.AmmoReserve(32, 128, 6, 12)), "roamer budget");
-        check(defaults.ammoReserve("tier1").equals(new UnifiedConfig.AmmoReserve(64, 128, 12, 24)), "tier1 budget");
-        check(defaults.ammoReserve("tier2").equals(new UnifiedConfig.AmmoReserve(128, 192, 32, 48)), "tier2 budget");
-        check(defaults.ammoReserve("tier3").equals(new UnifiedConfig.AmmoReserve(192, 192, 48, 72)), "tier3 budget");
+        check(defaults.ammoReserve("roamer").equals(new UnifiedConfig.AmmoReserve(32, 64, 4, 8)), "roamer budget");
+        check(defaults.ammoReserve("tier1").equals(new UnifiedConfig.AmmoReserve(48, 64, 8, 14)), "tier1 budget");
+        check(defaults.ammoReserve("tier2").equals(new UnifiedConfig.AmmoReserve(72, 96, 16, 24)), "tier2 budget");
+        check(defaults.ammoReserve("tier3").equals(new UnifiedConfig.AmmoReserve(96, 128, 24, 36)), "tier3 budget");
         UnifiedConfig configured = config("""
                 {"ammunition":{"consume_ammunition":false},
                  "tiers":{"tier1":{"ammunition":{"arrows":{"min":8,"max":4},

@@ -50,6 +50,10 @@ public final class SupplyConfigurationTest {
                     && potions.tactical.entries().size() == 1
                     && potions.tactical.entries().get(0).potion().toString().equals("minecraft:long_swiftness"),
                     "disk tactical total and speed-only weighted pool survive full load without one-bottle cap");
+            check(potions.selfBuffs.entries().size()==1&&potions.selfBuffs.entries().get(0).potion().toString().equals("minecraft:long_swiftness")
+                    &&potions.throwables.entries().isEmpty(),"raw speed-only mixed pool splits without manufacturing throwable members");
+            check(potions.selfBuffs.minimum()==2&&potions.selfBuffs.maximum()==3,
+                    "legacy mixed total does not replace independent new totals");
             var armor = config.equipmentLoadout("tier2").armorSets.entries();
             check(armor.size() == 1 && armor.get(0).head().toString().equals("example:helmet")
                     && armor.get(0).feet().toString().equals("example:boots"), "custom armor set survives full load");
@@ -66,14 +70,14 @@ public final class SupplyConfigurationTest {
                     """));
             check(invalid.roll(RandomSource.create(4)).food().maximum() == 0, "disabled supplies roll zero food");
             check(invalid.varietyMin >= 1 && invalid.varietyMax >= invalid.varietyMin, "invalid variety never divides by zero");
-            int[][] quantities = {{20,32,1,1},{32,48,1,2},{64,80,2,3},{96,112,3,4}};
+            int[][] quantities = {{20,32,2,3},{32,48,2,4},{64,80,4,5},{96,112,5,7}};
             int i=0;
             for (String rank : TierConfigProjection.RANKS) {
                 var f = new UnifiedConfig(defaults).spawnFood(rank);
                 var first = f.presets.get(0);
                 check(first.food().minimum()==quantities[i][0] && first.food().maximum()==quantities[i][1]
                         && first.goldenApples().minimum()==quantities[i][2]
-                        && first.goldenApples().maximum()==quantities[i][3], "legacy first quantity preset retained " + rank);
+                        && first.goldenApples().maximum()==quantities[i][3], "confirmed first quantity preset " + rank);
                 check(f.entries.size()==25, "legacy candidates plus six ordinary foods retained " + rank); i++;
             }
             check(calls("club/someoneice/humangunner/RecoverySupplies", "provisionInitialKit",

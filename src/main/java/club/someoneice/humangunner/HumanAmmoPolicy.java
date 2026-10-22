@@ -18,15 +18,15 @@ public final class HumanAmmoPolicy {
     }
 
     public static int arrowMinimum(int tier) {
-        return switch (tier) { case 0 -> 32; case 1 -> 64; case 2 -> 128; default -> 192; };
+        return switch (tier) { case 0 -> 32; case 1 -> 48; case 2 -> 72; default -> 96; };
     }
     public static int arrowMaximum(int tier) {
-        return switch (tier) { case 0, 1 -> 128; default -> 192; };
+        return switch (tier) { case 0, 1 -> 64; case 2 -> 96; default -> 128; };
     }
     public static int magazineMinimum(int tier) {
-        return switch (tier) { case 0 -> 6; case 1 -> 12; case 2 -> 32; default -> 48; };
+        return switch (tier) { case 0 -> 4; case 1 -> 8; case 2 -> 16; default -> 24; };
     }
     public static int magazineMaximum(int tier) {
-        return switch (tier) { case 0 -> 12; case 1 -> 24; case 2 -> 48; default -> 72; };
+        return switch (tier) { case 0 -> 8; case 1 -> 14; case 2 -> 24; default -> 36; };
     }
 }

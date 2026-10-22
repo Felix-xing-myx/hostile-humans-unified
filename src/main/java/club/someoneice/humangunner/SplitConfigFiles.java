@@ -82,7 +82,8 @@ final class SplitConfigFiles {
         try {
             byte[] original = Files.readAllBytes(path);
             JsonObject data = read(path, 2);
-            boolean migrated = rank && EquipmentConfigMigration.migrate(data, rankName(path));
+            boolean migrated = rank && (SpawnSupplyMigration.migrateRank(data)
+                    | EquipmentConfigMigration.migrate(data, rankName(path)));
             if (migrated) Files.copy(path, path.resolveSibling(path.getFileName() + ".before-faction-equipment-" + System.nanoTime() + ".bak"));
             boolean imported = rank && integrations.test(rankName(path), data);
             // Split direct arrow damage into independent bow/crossbow controls; preserve explicit new values.
@@ -152,6 +153,7 @@ final class SplitConfigFiles {
             if ((imported || !Arrays.equals(original, output)) && !writeCurrent(path, original, arranged))
                 data = read(path, 2);
             else data = arranged;
+            if(rank) SpawnSupplyMigration.migrateRank(data);
             TierConfigProjection.fill(data, defaults, "");
             describe(data, rank);
             return data;

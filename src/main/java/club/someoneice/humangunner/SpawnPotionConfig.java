@@ -79,7 +79,7 @@ final class SpawnPotionConfig {
         } catch (RuntimeException invalid) { return 0; }
     }
 
-    private static Entry parseEntry(JsonObject root, boolean tactical) {
+    static Entry parseEntry(JsonObject root, boolean tactical) {
         try {
             String item = root.get("item").getAsString();
             ResourceLocation itemId = ResourceLocation.tryParse(item), potionId = null;

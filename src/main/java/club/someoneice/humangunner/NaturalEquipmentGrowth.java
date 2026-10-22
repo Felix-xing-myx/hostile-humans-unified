@@ -74,10 +74,12 @@ public final class NaturalEquipmentGrowth {
         // One material-quality roll preserves coherent armor sets. Enchantments
         // are scaled separately on every physical equipped AND backpack stack.
         boolean baseline = human.getRandom().nextDouble() < profile.grow(profile.earlyBaselineChance(), day);
+        // A configured faction set remains the exact selected four-piece set; enchantment growth still applies.
+        boolean protectArmor=ConfiguredHumanEquipment.of(human).pools(human).matchesFactionArmor(human);
         EquipmentSlot[] slots = EquipmentSlot.values();
         ItemStack[] worn = new ItemStack[slots.length];
         for (int i = 0; i < slots.length; i++) {
-            worn[i] = adjust(human, human.getItemBySlot(slots[i]), slots[i], profile, day, baseline);
+            worn[i] = adjust(human, human.getItemBySlot(slots[i]), slots[i], profile, day, baseline||protectArmor&&slots[i].getType()==EquipmentSlot.Type.ARMOR);
         }
         var data = human.getData();
         ItemStack[] stored = new ItemStack[data.getInventoryItemsSize()];
@@ -94,6 +96,13 @@ public final class NaturalEquipmentGrowth {
             if (stored[i] != data.getInventoryItem(i)) data.setInventoryItem(i, stored[i]);
         }
         tag.putBoolean(APPLIED, true);
+    }
+
+    private static boolean sameFamily(Human human,ItemStack original,Item replacement) {
+        if(original.getItem() instanceof ArmorItem) return true;
+        var before=EquipmentArchetypes.describe(human,original);
+        var after=EquipmentArchetypes.describe(human,new ItemStack(replacement));
+        return !before.family().equals("other")&&before.category().equals(after.category())&&before.family().equals(after.family());
     }
 
     private static ItemStack adjust(Human human, ItemStack original, EquipmentSlot slot,
@@ -138,7 +147,8 @@ public final class NaturalEquipmentGrowth {
         // If an early candidate is denied/unavailable, preserve the legal item that entered growth.
         var equipment=FactionEquipmentConfig.of(human);
         item=FactionEquipmentPolicy.allowedReplacement(original.getItem(),item,
-                candidate->equipment.allowedItem(BuiltInRegistries.ITEM.getKey(candidate),false));
+                candidate->equipment.allowedItem(BuiltInRegistries.ITEM.getKey(candidate),false)
+                        &&sameFamily(human,original,candidate));
         // Early substitutions must not upgrade an already weaker stock item.
         if (armor && item instanceof ArmorItem next && original.getItem() instanceof ArmorItem old
                 && (next.getDefense() > old.getDefense() || next.getToughness() > old.getToughness())) {

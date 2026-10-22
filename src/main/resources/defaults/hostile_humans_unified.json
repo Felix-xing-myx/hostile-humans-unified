@@ -152,7 +152,7 @@
           "min": 32,
           "_说明_max_中文": "出生数量上限，0–1920整数；包含两端，倒置范围自动交换。",
           "_description_max_en": "Maximum initial count, integer 0–1920; inclusive, with reversed bounds swapped.",
-          "max": 128
+          "max": 64
         },
         "_说明_magazines_中文": "新生枪手通用弹匣数量范围；仅实际携枪时配发一次，受背包空间限制。",
         "_description_magazines_en": "Initial universal magazines for owned firearms; granted once, limited by inventory space.",
@@ -161,10 +161,10 @@
           "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks.",
           "_说明_min_中文": "出生数量下限，0–720整数；0允许不配发。",
           "_description_min_en": "Minimum initial count, integer 0–720; zero allows no supply.",
-          "min": 6,
+          "min": 4,
           "_说明_max_中文": "出生数量上限，0–720整数；包含两端，倒置范围自动交换。",
           "_description_max_en": "Maximum initial count, integer 0–720; inclusive, with reversed bounds swapped.",
-          "max": 12
+          "max": 8
         }
       },
       "food": {
@@ -180,7 +180,7 @@
         "_description_variety_max_en": "Maximum food varieties, 1-30; reversed bounds are swapped.",
         "variety_max": 7,
         "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
-        "_description_enchanted_golden_apple_chance_en": "One enchanted-apple spawn chance, 0-1; zero grants none. Beacon drop restrictions remain independent.",
+        "_description_enchanted_golden_apple_chance_en": "Existence chance only; count is sampled from enchanted_golden_apple_counts. Independent of food scaling.",
         "enchanted_golden_apple_chance": 0.2,
         "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
         "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
@@ -189,22 +189,22 @@
             "weight": 45,
             "count_min": 20,
             "count_max": 32,
-            "golden_apple_min": 1,
-            "golden_apple_max": 1
+            "golden_apple_min": 2,
+            "golden_apple_max": 3
           },
           {
             "weight": 40,
             "count_min": 28,
             "count_max": 42,
-            "golden_apple_min": 1,
-            "golden_apple_max": 2
+            "golden_apple_min": 2,
+            "golden_apple_max": 3
           },
           {
             "weight": 15,
             "count_min": 36,
             "count_max": 48,
             "golden_apple_min": 2,
-            "golden_apple_max": 2
+            "golden_apple_max": 3
           }
         ],
         "_说明_pool_中文": "食物候选：item为注册食物物品ID，weight为正权重；按权重不重复选种类。不识别的物品和非食物跳过，空列表不回退。金苹果用上述专用数量项。",
@@ -310,11 +310,15 @@
             "item": "minecraft:rabbit_stew",
             "weight": 1
           }
-        ]
+        ],
+        "enchanted_golden_apple_counts": {
+          "1": 1
+        },
+        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。"
       },
       "potions": {
-        "_说明_中文": "本阶一次性出生恢复药水与战术道具。",
-        "_description_en": "One-time recovery potions and tactical supplies for this rank.",
+        "_说明_中文": "恢复药水、自身强化药水、投掷物分别独立计数和缩放，不共用总量。",
+        "_description_en": "Independent recovery, self-buff and throwable totals and faction multipliers.",
         "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
         "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
@@ -326,14 +330,19 @@
           "count_min": 1,
           "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
           "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
-          "count_max": 2,
+          "count_max": 3,
           "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
           "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:potion",
+              "potion": "minecraft:healing",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
               "potion": "minecraft:strong_healing",
-              "weight": 2
+              "weight": 1
             },
             {
               "item": "minecraft:potion",
@@ -347,17 +356,34 @@
             }
           ]
         },
-        "tactical": {
-          "_说明_中文": "战术道具总库存：药水与焦燃/JEG投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装对应模组或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
-          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns/JEG throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
-          "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
-          "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
+        "self_buffs": {
+          "_说明_中文": "独立出生总量；先乘本类阵营倍率，再按大类和类内权重抽取；空池不补回。",
+          "_description_en": "Independent spawn total and faction multiplier. Category then member weighted draws; an empty pool grants none.",
           "count_min": 1,
-          "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
-          "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
           "count_max": 2,
-          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃/JEG投掷物；空池不发放。",
-          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns/JEG throwables. Empty pool grants none.",
+          "pool": [
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_strength",
+              "weight": 10
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_strength",
+              "weight": 5
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_swiftness",
+              "weight": 8
+            }
+          ]
+        },
+        "throwables": {
+          "_说明_中文": "独立出生总量；先乘本类阵营倍率，再按大类和类内权重抽取；空池不补回。",
+          "_description_en": "Independent spawn total and faction multiplier. Category then member weighted draws; an empty pool grants none.",
+          "count_min": 2,
+          "count_max": 5,
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -370,24 +396,9 @@
               "weight": 1
             },
             {
-              "item": "minecraft:potion",
-              "potion": "minecraft:long_strength",
-              "weight": 10
-            },
-            {
               "item": "minecraft:splash_potion",
               "potion": "minecraft:strong_poison",
               "weight": 2
-            },
-            {
-              "item": "minecraft:potion",
-              "potion": "minecraft:strong_strength",
-              "weight": 5
-            },
-            {
-              "item": "minecraft:potion",
-              "potion": "minecraft:long_swiftness",
-              "weight": 8
             },
             {
               "item": "scguns:grenade",
@@ -630,10 +641,10 @@
           "_description_en": "Initial arrows for matching ranged loadouts; counts are individual items, not stacks.",
           "_说明_min_中文": "出生数量下限，0–1920整数；0允许不配发。",
           "_description_min_en": "Minimum initial count, integer 0–1920; zero allows no supply.",
-          "min": 64,
+          "min": 48,
           "_说明_max_中文": "出生数量上限，0–1920整数；包含两端，倒置范围自动交换。",
           "_description_max_en": "Maximum initial count, integer 0–1920; inclusive, with reversed bounds swapped.",
-          "max": 128
+          "max": 64
         },
         "_说明_magazines_中文": "新生枪手通用弹匣数量范围；仅实际携枪时配发一次，受背包空间限制。",
         "_description_magazines_en": "Initial universal magazines for owned firearms; granted once, limited by inventory space.",
@@ -642,10 +653,10 @@
           "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks.",
           "_说明_min_中文": "出生数量下限，0–720整数；0允许不配发。",
           "_description_min_en": "Minimum initial count, integer 0–720; zero allows no supply.",
-          "min": 12,
+          "min": 8,
           "_说明_max_中文": "出生数量上限，0–720整数；包含两端，倒置范围自动交换。",
           "_description_max_en": "Maximum initial count, integer 0–720; inclusive, with reversed bounds swapped.",
-          "max": 24
+          "max": 14
         }
       },
       "food": {
@@ -661,8 +672,8 @@
         "_description_variety_max_en": "Maximum food varieties, 1-30; reversed bounds are swapped.",
         "variety_max": 7,
         "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
-        "_description_enchanted_golden_apple_chance_en": "One enchanted-apple spawn chance, 0-1; zero grants none. Beacon drop restrictions remain independent.",
-        "enchanted_golden_apple_chance": 0.3,
+        "_description_enchanted_golden_apple_chance_en": "Existence chance only; count is sampled from enchanted_golden_apple_counts. Independent of food scaling.",
+        "enchanted_golden_apple_chance": 0.4,
         "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
         "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
         "presets": [
@@ -670,22 +681,22 @@
             "weight": 35,
             "count_min": 32,
             "count_max": 48,
-            "golden_apple_min": 1,
-            "golden_apple_max": 2
+            "golden_apple_min": 2,
+            "golden_apple_max": 4
           },
           {
             "weight": 45,
             "count_min": 44,
             "count_max": 64,
             "golden_apple_min": 2,
-            "golden_apple_max": 3
+            "golden_apple_max": 4
           },
           {
             "weight": 20,
             "count_min": 56,
             "count_max": 72,
             "golden_apple_min": 2,
-            "golden_apple_max": 3
+            "golden_apple_max": 4
           }
         ],
         "_说明_pool_中文": "食物候选：item为注册食物物品ID，weight为正权重；按权重不重复选种类。不识别的物品和非食物跳过，空列表不回退。金苹果用上述专用数量项。",
@@ -791,11 +802,16 @@
             "item": "minecraft:rabbit_stew",
             "weight": 1
           }
-        ]
+        ],
+        "enchanted_golden_apple_counts": {
+          "1": 1,
+          "2": 1
+        },
+        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。"
       },
       "potions": {
-        "_说明_中文": "本阶一次性出生恢复药水与战术道具。",
-        "_description_en": "One-time recovery potions and tactical supplies for this rank.",
+        "_说明_中文": "恢复药水、自身强化药水、投掷物分别独立计数和缩放，不共用总量。",
+        "_description_en": "Independent recovery, self-buff and throwable totals and faction multipliers.",
         "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
         "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
@@ -804,17 +820,22 @@
           "_description_en": "Recovery potion reserves.",
           "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
           "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
-          "count_min": 2,
+          "count_min": 3,
           "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
           "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
-          "count_max": 4,
+          "count_max": 5,
           "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
           "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:potion",
+              "potion": "minecraft:healing",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
               "potion": "minecraft:strong_healing",
-              "weight": 2
+              "weight": 1
             },
             {
               "item": "minecraft:potion",
@@ -828,17 +849,34 @@
             }
           ]
         },
-        "tactical": {
-          "_说明_中文": "战术道具总库存：药水与焦燃/JEG投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装对应模组或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
-          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns/JEG throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
-          "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
-          "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
-          "count_min": 2,
-          "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
-          "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
-          "count_max": 4,
-          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃/JEG投掷物；空池不发放。",
-          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns/JEG throwables. Empty pool grants none.",
+        "self_buffs": {
+          "_说明_中文": "独立出生总量；先乘本类阵营倍率，再按大类和类内权重抽取；空池不补回。",
+          "_description_en": "Independent spawn total and faction multiplier. Category then member weighted draws; an empty pool grants none.",
+          "count_min": 1,
+          "count_max": 2,
+          "pool": [
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_strength",
+              "weight": 10
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_strength",
+              "weight": 5
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_swiftness",
+              "weight": 8
+            }
+          ]
+        },
+        "throwables": {
+          "_说明_中文": "独立出生总量；先乘本类阵营倍率，再按大类和类内权重抽取；空池不补回。",
+          "_description_en": "Independent spawn total and faction multiplier. Category then member weighted draws; an empty pool grants none.",
+          "count_min": 5,
+          "count_max": 8,
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -851,24 +889,9 @@
               "weight": 1
             },
             {
-              "item": "minecraft:potion",
-              "potion": "minecraft:long_strength",
-              "weight": 10
-            },
-            {
               "item": "minecraft:splash_potion",
               "potion": "minecraft:strong_poison",
               "weight": 2
-            },
-            {
-              "item": "minecraft:potion",
-              "potion": "minecraft:strong_strength",
-              "weight": 5
-            },
-            {
-              "item": "minecraft:potion",
-              "potion": "minecraft:long_swiftness",
-              "weight": 8
             },
             {
               "item": "scguns:grenade",
@@ -1114,10 +1137,10 @@
           "_description_en": "Initial arrows for matching ranged loadouts; counts are individual items, not stacks.",
           "_说明_min_中文": "出生数量下限，0–1920整数；0允许不配发。",
           "_description_min_en": "Minimum initial count, integer 0–1920; zero allows no supply.",
-          "min": 128,
+          "min": 72,
           "_说明_max_中文": "出生数量上限，0–1920整数；包含两端，倒置范围自动交换。",
           "_description_max_en": "Maximum initial count, integer 0–1920; inclusive, with reversed bounds swapped.",
-          "max": 192
+          "max": 96
         },
         "_说明_magazines_中文": "新生枪手通用弹匣数量范围；仅实际携枪时配发一次，受背包空间限制。",
         "_description_magazines_en": "Initial universal magazines for owned firearms; granted once, limited by inventory space.",
@@ -1126,10 +1149,10 @@
           "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks.",
           "_说明_min_中文": "出生数量下限，0–720整数；0允许不配发。",
           "_description_min_en": "Minimum initial count, integer 0–720; zero allows no supply.",
-          "min": 32,
+          "min": 16,
           "_说明_max_中文": "出生数量上限，0–720整数；包含两端，倒置范围自动交换。",
           "_description_max_en": "Maximum initial count, integer 0–720; inclusive, with reversed bounds swapped.",
-          "max": 48
+          "max": 24
         }
       },
       "food": {
@@ -1145,8 +1168,8 @@
         "_description_variety_max_en": "Maximum food varieties, 1-30; reversed bounds are swapped.",
         "variety_max": 7,
         "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
-        "_description_enchanted_golden_apple_chance_en": "One enchanted-apple spawn chance, 0-1; zero grants none. Beacon drop restrictions remain independent.",
-        "enchanted_golden_apple_chance": 0.4,
+        "_description_enchanted_golden_apple_chance_en": "Existence chance only; count is sampled from enchanted_golden_apple_counts. Independent of food scaling.",
+        "enchanted_golden_apple_chance": 0.6,
         "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
         "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
         "presets": [
@@ -1154,15 +1177,15 @@
             "weight": 30,
             "count_min": 64,
             "count_max": 80,
-            "golden_apple_min": 2,
-            "golden_apple_max": 3
+            "golden_apple_min": 4,
+            "golden_apple_max": 5
           },
           {
             "weight": 50,
             "count_min": 76,
             "count_max": 96,
-            "golden_apple_min": 3,
-            "golden_apple_max": 4
+            "golden_apple_min": 4,
+            "golden_apple_max": 5
           },
           {
             "weight": 20,
@@ -1275,11 +1298,16 @@
             "item": "minecraft:rabbit_stew",
             "weight": 1
           }
-        ]
+        ],
+        "enchanted_golden_apple_counts": {
+          "2": 1,
+          "3": 1
+        },
+        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。"
       },
       "potions": {
-        "_说明_中文": "本阶一次性出生恢复药水与战术道具。",
-        "_description_en": "One-time recovery potions and tactical supplies for this rank.",
+        "_说明_中文": "恢复药水、自身强化药水、投掷物分别独立计数和缩放，不共用总量。",
+        "_description_en": "Independent recovery, self-buff and throwable totals and faction multipliers.",
         "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
         "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
@@ -1288,7 +1316,7 @@
           "_description_en": "Recovery potion reserves.",
           "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
           "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
-          "count_min": 4,
+          "count_min": 5,
           "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
           "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
           "count_max": 7,
@@ -1297,8 +1325,13 @@
           "pool": [
             {
               "item": "minecraft:potion",
+              "potion": "minecraft:healing",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
               "potion": "minecraft:strong_healing",
-              "weight": 2
+              "weight": 1
             },
             {
               "item": "minecraft:potion",
@@ -1312,17 +1345,34 @@
             }
           ]
         },
-        "tactical": {
-          "_说明_中文": "战术道具总库存：药水与焦燃/JEG投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装对应模组或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
-          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns/JEG throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
-          "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
-          "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
-          "count_min": 4,
-          "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
-          "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
-          "count_max": 7,
-          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃/JEG投掷物；空池不发放。",
-          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns/JEG throwables. Empty pool grants none.",
+        "self_buffs": {
+          "_说明_中文": "独立出生总量；先乘本类阵营倍率，再按大类和类内权重抽取；空池不补回。",
+          "_description_en": "Independent spawn total and faction multiplier. Category then member weighted draws; an empty pool grants none.",
+          "count_min": 2,
+          "count_max": 3,
+          "pool": [
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_strength",
+              "weight": 10
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_strength",
+              "weight": 5
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_swiftness",
+              "weight": 8
+            }
+          ]
+        },
+        "throwables": {
+          "_说明_中文": "独立出生总量；先乘本类阵营倍率，再按大类和类内权重抽取；空池不补回。",
+          "_description_en": "Independent spawn total and faction multiplier. Category then member weighted draws; an empty pool grants none.",
+          "count_min": 8,
+          "count_max": 12,
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -1335,24 +1385,9 @@
               "weight": 1
             },
             {
-              "item": "minecraft:potion",
-              "potion": "minecraft:long_strength",
-              "weight": 10
-            },
-            {
               "item": "minecraft:splash_potion",
               "potion": "minecraft:strong_poison",
               "weight": 2
-            },
-            {
-              "item": "minecraft:potion",
-              "potion": "minecraft:strong_strength",
-              "weight": 5
-            },
-            {
-              "item": "minecraft:potion",
-              "potion": "minecraft:long_swiftness",
-              "weight": 8
             },
             {
               "item": "scguns:grenade",
@@ -1600,10 +1635,10 @@
           "_description_en": "Initial arrows for matching ranged loadouts; counts are individual items, not stacks.",
           "_说明_min_中文": "出生数量下限，0–1920整数；0允许不配发。",
           "_description_min_en": "Minimum initial count, integer 0–1920; zero allows no supply.",
-          "min": 192,
+          "min": 96,
           "_说明_max_中文": "出生数量上限，0–1920整数；包含两端，倒置范围自动交换。",
           "_description_max_en": "Maximum initial count, integer 0–1920; inclusive, with reversed bounds swapped.",
-          "max": 192
+          "max": 128
         },
         "_说明_magazines_中文": "新生枪手通用弹匣数量范围；仅实际携枪时配发一次，受背包空间限制。",
         "_description_magazines_en": "Initial universal magazines for owned firearms; granted once, limited by inventory space.",
@@ -1612,10 +1647,10 @@
           "_description_en": "Initial magazines for matching ranged loadouts; counts are individual items, not stacks.",
           "_说明_min_中文": "出生数量下限，0–720整数；0允许不配发。",
           "_description_min_en": "Minimum initial count, integer 0–720; zero allows no supply.",
-          "min": 48,
+          "min": 24,
           "_说明_max_中文": "出生数量上限，0–720整数；包含两端，倒置范围自动交换。",
           "_description_max_en": "Maximum initial count, integer 0–720; inclusive, with reversed bounds swapped.",
-          "max": 72
+          "max": 36
         }
       },
       "food": {
@@ -1631,8 +1666,8 @@
         "_description_variety_max_en": "Maximum food varieties, 1-30; reversed bounds are swapped.",
         "variety_max": 7,
         "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
-        "_description_enchanted_golden_apple_chance_en": "One enchanted-apple spawn chance, 0-1; zero grants none. Beacon drop restrictions remain independent.",
-        "enchanted_golden_apple_chance": 0.8,
+        "_description_enchanted_golden_apple_chance_en": "Existence chance only; count is sampled from enchanted_golden_apple_counts. Independent of food scaling.",
+        "enchanted_golden_apple_chance": 1,
         "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
         "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
         "presets": [
@@ -1640,22 +1675,22 @@
             "weight": 25,
             "count_min": 96,
             "count_max": 112,
-            "golden_apple_min": 3,
-            "golden_apple_max": 4
+            "golden_apple_min": 5,
+            "golden_apple_max": 7
           },
           {
             "weight": 50,
             "count_min": 108,
             "count_max": 124,
-            "golden_apple_min": 4,
-            "golden_apple_max": 5
+            "golden_apple_min": 5,
+            "golden_apple_max": 7
           },
           {
             "weight": 25,
             "count_min": 120,
             "count_max": 128,
             "golden_apple_min": 5,
-            "golden_apple_max": 5
+            "golden_apple_max": 7
           }
         ],
         "_说明_pool_中文": "食物候选：item为注册食物物品ID，weight为正权重；按权重不重复选种类。不识别的物品和非食物跳过，空列表不回退。金苹果用上述专用数量项。",
@@ -1761,11 +1796,16 @@
             "item": "minecraft:rabbit_stew",
             "weight": 1
           }
-        ]
+        ],
+        "enchanted_golden_apple_counts": {
+          "2": 20,
+          "3": 80
+        },
+        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。"
       },
       "potions": {
-        "_说明_中文": "本阶一次性出生恢复药水与战术道具。",
-        "_description_en": "One-time recovery potions and tactical supplies for this rank.",
+        "_说明_中文": "恢复药水、自身强化药水、投掷物分别独立计数和缩放，不共用总量。",
+        "_description_en": "Independent recovery, self-buff and throwable totals and faction multipliers.",
         "_说明_enabled_中文": "本阶出生药水发放开关；还需本阶ai.item_recovery_enabled开启。",
         "_description_enabled_en": "Spawn-potion switch for this rank; also requires ai.item_recovery_enabled.",
         "enabled": true,
@@ -1774,17 +1814,22 @@
           "_description_en": "Recovery potion reserves.",
           "_说明_count_min_中文": "随机瓶数下限，0–30整数；不是单格堆叠上限。",
           "_description_count_min_en": "Minimum bottle count, integer 0–30; not a per-slot stack limit.",
-          "count_min": 6,
+          "count_min": 7,
           "_说明_count_max_中文": "随机瓶数上限，0–30整数；包含两端，倒置范围自动交换。",
           "_description_count_max_en": "Maximum bottle count, integer 0–30; inclusive, reversed bounds swapped.",
-          "count_max": 8,
+          "count_max": 12,
           "_说明_pool_中文": "候选列表：item为瓶形物品ID，potion为药水ID，weight为正权重。空列表不发药水，未注册ID跳过。",
           "_description_pool_en": "Candidate list: item is bottle item ID, potion is potion ID, weight is positive relative weight. Empty lists grant none; unregistered IDs are skipped.",
           "pool": [
             {
               "item": "minecraft:potion",
+              "potion": "minecraft:healing",
+              "weight": 1
+            },
+            {
+              "item": "minecraft:potion",
               "potion": "minecraft:strong_healing",
-              "weight": 2
+              "weight": 1
             },
             {
               "item": "minecraft:potion",
@@ -1798,17 +1843,34 @@
             }
           ]
         },
-        "tactical": {
-          "_说明_中文": "战术道具总库存：药水与焦燃/JEG投掷物在同一池按权重独立抽取，可重复；共享以下总数，不另外增加手榴弹数量。未安装对应模组或道具使用被禁用时跳过不可用投掷物，仅从剩余药水候选抽取。",
-          "_description_en": "Shared tactical pool: weighted draws with repeats from potions and Scorched Guns/JEG throwables. Counts cover all items together. Unavailable/disabled throwables are filtered before weighting; remaining potions retain their relative weights.",
-          "_说明_count_min_中文": "战术道具总件数下限（药水与投掷物合计），整数0–30。",
-          "_description_count_min_en": "Minimum total tactical items, including potions and throwables; integer 0–30.",
-          "count_min": 6,
-          "_说明_count_max_中文": "战术道具总件数上限（含端点，药水与投掷物合计），整数0–30；上下限反向时自动交换。",
-          "_description_count_max_en": "Maximum total tactical items, inclusive; integer 0–30. Reversed bounds are swapped.",
-          "count_max": 8,
-          "_说明_pool_中文": "药水条目填写item、potion、weight；投掷物条目只填item和weight，省略potion。weight为正整数相对权重，一次抽取提供1件。非药水必须是已接入且全局允许使用的焦燃/JEG投掷物；空池不发放。",
-          "_description_pool_en": "Potion entry: item, potion, weight. Throwable entry: item and weight only, omit potion. Positive integer relative weights; one item per draw. Non-potions must be supported, globally allowed Scorched Guns/JEG throwables. Empty pool grants none.",
+        "self_buffs": {
+          "_说明_中文": "独立出生总量；先乘本类阵营倍率，再按大类和类内权重抽取；空池不补回。",
+          "_description_en": "Independent spawn total and faction multiplier. Category then member weighted draws; an empty pool grants none.",
+          "count_min": 3,
+          "count_max": 4,
+          "pool": [
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_strength",
+              "weight": 10
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:strong_strength",
+              "weight": 5
+            },
+            {
+              "item": "minecraft:potion",
+              "potion": "minecraft:long_swiftness",
+              "weight": 8
+            }
+          ]
+        },
+        "throwables": {
+          "_说明_中文": "独立出生总量；先乘本类阵营倍率，再按大类和类内权重抽取；空池不补回。",
+          "_description_en": "Independent spawn total and faction multiplier. Category then member weighted draws; an empty pool grants none.",
+          "count_min": 12,
+          "count_max": 16,
           "pool": [
             {
               "item": "minecraft:splash_potion",
@@ -1821,24 +1883,9 @@
               "weight": 1
             },
             {
-              "item": "minecraft:potion",
-              "potion": "minecraft:long_strength",
-              "weight": 10
-            },
-            {
               "item": "minecraft:splash_potion",
               "potion": "minecraft:strong_poison",
               "weight": 2
-            },
-            {
-              "item": "minecraft:potion",
-              "potion": "minecraft:strong_strength",
-              "weight": 5
-            },
-            {
-              "item": "minecraft:potion",
-              "potion": "minecraft:long_swiftness",
-              "weight": 8
             },
             {
               "item": "scguns:grenade",
@@ -2147,9 +2194,6 @@
           "feet": "minecraft:chainmail_boots"
         }
       ],
-      "_说明_ranged_chance_中文": "非枪械远程武器生成概率，0–1；枪械已抽中时不额外补弓弩。",
-      "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
-      "ranged_chance": 0.2,
       "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
       "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
       "ranged_in_backpack": false,
@@ -2292,9 +2336,6 @@
           "feet": "minecraft:golden_boots"
         }
       ],
-      "_说明_ranged_chance_中文": "非枪械远程武器生成概率，0–1；枪械已抽中时不额外补弓弩。",
-      "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
-      "ranged_chance": 0.4,
       "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
       "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
       "ranged_in_backpack": false,
@@ -2432,9 +2473,6 @@
           "feet": "minecraft:diamond_boots"
         }
       ],
-      "_说明_ranged_chance_中文": "非枪械远程武器生成概率，0–1；枪械已抽中时不额外补弓弩。",
-      "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
-      "ranged_chance": 0.7,
       "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
       "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
       "ranged_in_backpack": false,
@@ -2556,9 +2594,6 @@
           "feet": "minecraft:netherite_boots"
         }
       ],
-      "_说明_ranged_chance_中文": "非枪械远程武器生成概率，0–1；枪械已抽中时不额外补弓弩。",
-      "_description_ranged_chance_en": "Non-firearm ranged weapon chance, 0–1; successful firearm rolls do not add bows/crossbows.",
-      "ranged_chance": 1,
       "_说明_ranged_in_backpack_中文": "将生成的非枪械远程武器放入背包，而不是主手；仍计入武器数量上限。",
       "_description_ranged_in_backpack_en": "Place non-firearm ranged weapons in the backpack instead of the main hand; still counts toward the weapon cap.",
       "ranged_in_backpack": true,

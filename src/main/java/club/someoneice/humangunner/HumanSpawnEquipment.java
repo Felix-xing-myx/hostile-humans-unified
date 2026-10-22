@@ -12,6 +12,7 @@ public final class HumanSpawnEquipment {
     private static final String PENDING = "hostile_humans_unified:spawn_equipment_pending";
     private static final String GENERATED = "hostile_humans_unified:spawn_equipment_generated";
     private static final String FORCE_RANGED = "hostile_humans_unified:spawn_force_ranged";
+    private static final String EXPLICIT_RANGED = "hostile_humans_unified:spawn_explicit_ranged";
     private static final String RANGED_REQUESTED = "hostile_humans_unified:spawn_ranged_requested";
     private static final String AUTHORED = "hostile_humans_unified:authored_loadout";
     private HumanSpawnEquipment() { }
@@ -19,7 +20,7 @@ public final class HumanSpawnEquipment {
     public static void preserveAuthored(Human human) {
         var tag = human.getPersistentData();
         tag.putBoolean(AUTHORED, true);
-        for (String key : java.util.List.of(PENDING, FORCE_RANGED, RANGED_REQUESTED,
+        for (String key : java.util.List.of(PENDING, FORCE_RANGED, EXPLICIT_RANGED, RANGED_REQUESTED,
                 "hostile_humans_unified:pending_loadout", "hostile_humans_unified:pending_ranged")) tag.remove(key);
     }
 
@@ -30,19 +31,17 @@ public final class HumanSpawnEquipment {
     /** Native rank selection happens here, not as a destructive post-spawn tier-three patch. */
     public static void generate(Human human, boolean forceRanged) {
         if (human.level().isClientSide || human.getPersistentData().getBoolean(AUTHORED)) return;
-        if (human.hasCustomName() && human.getCustomName().getString().contains("give_random_gear")) {
-            forceRanged |= human.getCustomName().getString().contains("ranged");
-        }
+        boolean namedRequest=human.hasCustomName()&&human.getCustomName().getString().contains("give_random_gear");
+        // Only explicit author commands can force a non-gun ranged fallback. Natural tier requests cannot.
+        forceRanged=human.getPersistentData().getBoolean(EXPLICIT_RANGED)
+                || namedRequest&&human.getCustomName().getString().contains("ranged");
+        if(forceRanged) human.getPersistentData().putBoolean(EXPLICIT_RANGED,true);
         if (human.getData() == null) {
             human.getPersistentData().putBoolean("hostile_humans_unified:pending_loadout", true);
             human.getPersistentData().putBoolean("hostile_humans_unified:pending_ranged", forceRanged);
             return;
         }
         if (human.getPersistentData().getBoolean(GENERATED) || human.getPersistentData().getBoolean(PENDING)) return;
-        // One non-firearm ranged decision, shared by the configured pools and
-        // reserve guarantee, without a second integration probability roll.
-        human.getPersistentData().putBoolean(RANGED_REQUESTED, forceRanged
-                || human.getRandom().nextFloat() < ConfiguredHumanEquipment.of(human).rangedChance);
         human.getPersistentData().putBoolean(PENDING, true);
         human.getPersistentData().putBoolean(FORCE_RANGED, forceRanged);
         // Optional mod APIs may require the server thread (chunk population can be asynchronous).
@@ -52,6 +51,10 @@ public final class HumanSpawnEquipment {
     /** Explicit legacy command/structure request; never erase an owner's loadout. */
     public static void generateRequested(Human human, boolean forceRanged) {
         if (human.hasOwner()) return;
+        if(forceRanged) {
+            human.getPersistentData().putBoolean(EXPLICIT_RANGED,true);
+            if(human.getPersistentData().getBoolean(PENDING)) human.getPersistentData().putBoolean(FORCE_RANGED,true);
+        }
         human.getPersistentData().remove(AUTHORED);
         if (human.getPersistentData().getBoolean(PENDING)
                 || human.getPersistentData().getBoolean("hostile_humans_unified:pending_loadout")) {
@@ -77,10 +80,12 @@ public final class HumanSpawnEquipment {
         if (tag.getBoolean(AUTHORED)) { preserveAuthored(human); return true; }
         if (!tag.getBoolean(PENDING) || tag.getBoolean(GENERATED)) return true;
         // Do not regenerate old/save-loaded or explicitly equipped entities: only generate() creates this lease.
-        boolean ranged = tag.getBoolean(FORCE_RANGED);
+        boolean ranged = tag.getBoolean(FORCE_RANGED)&&tag.getBoolean(EXPLICIT_RANGED);
         // Resolve the additional firearm chance first. A gunner's ordinary
         // allocation is melee, so the two weapons coexist within the rank cap.
         ItemStack gun = FirearmSpawnEquipment.roll(human, ranged);
+        tag.putBoolean(RANGED_REQUESTED,gun.isEmpty()&&(ranged
+                ||human.getRandom().nextDouble()<FactionEquipmentConfig.rangedChance(human)));
         ConfiguredHumanEquipment.generate(human, ranged, gun.isEmpty());
         InventoryTotemProtection.stowOffhandTotem(human);
         // Legacy automatic Traveler's Backpack equipment is suspended.
@@ -94,6 +99,7 @@ public final class HumanSpawnEquipment {
         tag.putBoolean(GENERATED, true);
         tag.remove(PENDING);
         tag.remove(FORCE_RANGED);
+        tag.remove(EXPLICIT_RANGED);
         tag.remove(RANGED_REQUESTED);
         return true;
     }

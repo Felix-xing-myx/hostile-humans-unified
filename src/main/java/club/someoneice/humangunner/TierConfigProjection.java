@@ -326,6 +326,7 @@ final class TierConfigProjection {
 
     /** Add only absent options. User-authored collections are complete replacements. */
     static void fill(JsonObject data, JsonObject defaults, String path) {
+        if(path.isEmpty()) SpawnSupplyMigration.migrateRank(data);
         for (var entry : defaults.entrySet()) {
             String key = entry.getKey(), child = path.isEmpty() ? key : path + "." + key;
             if (!data.has(key)) data.add(key, entry.getValue().deepCopy());

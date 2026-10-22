@@ -12,9 +12,9 @@ public final class FactionEquipmentConfigTest {
             String[] factions=rank.equals("roamer")?new String[]{"roamer"}:new String[]{"crimson","azure","verdant","ashen"};
             for(String faction:factions) {
                 var profile=config.profile(faction);
-                for(String key:new String[]{"melee_band_weights","armor_band_weights","toughness_band_weights","shield_band_weights","ranged_band_weights",
-                        "food_category_weights","recovery_category_weights","tactical_category_weights"}) {
-                    int size=key.startsWith("melee")||key.startsWith("armor")?5:key.startsWith("recovery")?4:key.startsWith("tactical")?7:4;
+                for(String key:new String[]{"melee_band_weights","armor_band_weights","shield_band_weights","ranged_band_weights",
+                        "recovery_category_weights","self_buff_category_weights","throwable_category_weights"}) {
+                    int size=key.startsWith("melee")||key.startsWith("armor")?5:key.startsWith("self_buff")?2:key.startsWith("throwable")?5:4;
                     check(Math.abs(java.util.Arrays.stream(profile.weights(key,size)).sum()-100)<.001,rank+"/"+faction+"/"+key);
                 }
                 check(java.util.Arrays.stream(profile.shieldCounts()).sum()==100,"shield count row");
