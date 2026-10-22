@@ -82,6 +82,21 @@ class ReloadTransactionContract(unittest.TestCase):
         self.assertNotIn("HumanBehaviorControl.actions", clock)
         self.assertIn("if (TICKING.contains(data)||!STARTING.add(data)) return false", begin)
 
+    def test_native_steps_cannot_reenter_or_inherit_a_replaced_inventory(self):
+        code = source("GunReloadSession")
+        self.assertIn("cycle.state() == state && cycle.inventory().get() == human.getData()", code)
+        tick = code.split("static void runTick", 1)[1].split("static double advance", 1)[0]
+        self.assertLess(tick.index("TICKING.add(human)"), tick.index("advance(human, gun, key)"))
+        self.assertIn("finally { TICKING.remove(human); }", tick)
+        complete = code.split("static boolean complete", 1)[1].split("static void cancel", 1)[0]
+        self.assertIn("human.getData() != inventory", complete)
+        self.assertIn("human.getData() == inventory", complete)
+        for backend in ("ScgunsIntegration", "JegIntegration"):
+            steps = source(backend).split("private void tickReloadSteps", 1)[1].split("public void tickIdleReload", 1)[0]
+            self.assertGreaterEqual(steps.count("GunReloadSession.matches(human,stack,RELOAD,state)"), 3)
+            self.assertIn("GunReloadSession.complete(human,stack,RELOAD,state,", steps)
+            self.assertIn("GunReloadSession.cancel(human,stack,RELOAD,state)", steps)
+
     def test_tacz_completion_and_server_work_have_one_authority(self):
         code = source("TaczHumanReloadTransactions")
         tick = code.split("public static ReloadState tick", 1)[1].split("public static boolean isPaidReloading", 1)[0]

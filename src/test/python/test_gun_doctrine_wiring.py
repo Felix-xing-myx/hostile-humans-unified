@@ -42,7 +42,7 @@ class GunDoctrineWiring(unittest.TestCase):
         self.assertIn("CLOCKS.remove(data)", native)
         for backend in ("Scguns", "Jeg"):
             source = self.source(backend + "Integration")
-            self.assertIn("GunReloadSession.advance", source)
+            self.assertIn("GunReloadSession.runTick", source)
             self.assertIn('state.putInt("step",i+1)', source)
 
     def test_custody_and_server_shots_use_shared_authority(self):

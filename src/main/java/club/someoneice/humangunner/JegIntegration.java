@@ -141,24 +141,29 @@ final class JegIntegration implements GunSupport {
         if(GunReloadSession.begin(human,stack,RELOAD,steps)==null) return;
     }
     private void tickReload(Human human,ItemStack stack) {
-        if(!GunReloadSession.matches(human,stack,RELOAD)) return;
-        double work=GunReloadSession.advance(human,stack,RELOAD);
-        if(work<0) return;
-        var state=human.getPersistentData().getCompound(RELOAD);
+        GunReloadSession.runTick(human,stack,RELOAD,(state,work)->tickReloadSteps(human,stack,state,work));
+    }
+    private void tickReloadSteps(Human human,ItemStack stack,net.minecraft.nbt.CompoundTag state,double work) {
         var steps=state.getList("steps",net.minecraft.nbt.Tag.TAG_COMPOUND);
-        if(steps.isEmpty()) { cancelReload(human,stack);return; }
-        int index=state.getInt("step");double boundary=0;
+        if(steps.isEmpty() || state.getInt("step") < 0 || state.getInt("step") > steps.size()) {
+            GunReloadSession.cancel(human,stack,RELOAD,state);return;
+        }
+        double boundary=0;
         for(int i=0;i<steps.size();i++) {
             boundary+=Math.max(1,steps.getCompound(i).getInt("ticks"));
-            if(i<index||work+1e-8<boundary) continue;
-            state.putInt("step",i+1); // Publish before native item/capability callbacks.
+            if(i<state.getInt("step")||work+1e-8<boundary) continue;
+            if(!GunReloadSession.matches(human,stack,RELOAD,state)) return;
             int add=Math.max(0,steps.getCompound(i).getInt("rounds"));
-            rounds(stack,Math.min(capacity(stack),rounds(stack)+add));
+            int loaded=Math.min(capacity(stack),rounds(stack)+add);
+            if(!GunReloadSession.matches(human,stack,RELOAD,state)) return;
+            state.putInt("step",i+1); // Publish before native item/capability callbacks.
+            rounds(stack,loaded);
+            if(!GunReloadSession.matches(human,stack,RELOAD,state)) return;
             if(!GunCombatProfile.silent(human,stack)&&add>0) JegSounds.send(human,definition(stack).getSounds().getReloadLoad(),1,false,true);
         }
         if(state.getInt("step")>=steps.size()) {
+            if(!GunReloadSession.complete(human,stack,RELOAD,state,()->{})) return;
             if(!GunCombatProfile.silent(human,stack)) JegSounds.send(human,definition(stack).getSounds().getReloadEnd(),1,false,true);
-            cancelReload(human,stack);
         }
         if(human.getData()!=null&&stack!=human.getMainHandItem()) human.getData().markInventoryDirty();
     }
