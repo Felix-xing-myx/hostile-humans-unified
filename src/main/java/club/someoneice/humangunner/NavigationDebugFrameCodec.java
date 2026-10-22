@@ -13,11 +13,16 @@ final class NavigationDebugFrameCodec {
     static NavigationDebugFrame normalize(NavigationDebugFrame frame) {
         if (frame.entries().size() > NavigationDebugFrame.MAX_ENTITIES) throw new IllegalArgumentException("Too many observed entities");
         int entities = Math.max(1, frame.entries().size());
-        int rows = Math.min(PerceptionDebugSnapshot.MAX_ROWS, FRAME_ROWS / entities);
-        int markers = Math.min(PerceptionDebugSnapshot.MAX_MARKERS, FRAME_MARKERS / entities);
+        boolean focusPresent = frame.entries().stream().anyMatch(entry -> entry.snapshot().entityUuid().equals(frame.focused()));
+        int others = Math.max(1, entities - 1);
         var entries = new ArrayList<NavigationDebugFrame.Entry>(frame.entries().size());
         for (var entry : frame.entries()) {
             var s = entry.snapshot(); var p = s.perception();
+            boolean focus = focusPresent && s.entityUuid().equals(frame.focused());
+            int rows = Math.min(PerceptionDebugSnapshot.MAX_ROWS, focus ? FRAME_ROWS
+                    : focusPresent ? (FRAME_ROWS - PerceptionDebugSnapshot.MAX_ROWS) / others : FRAME_ROWS / entities);
+            int markers = Math.min(PerceptionDebugSnapshot.MAX_MARKERS, focus ? FRAME_MARKERS
+                    : focusPresent ? (FRAME_MARKERS - PerceptionDebugSnapshot.MAX_MARKERS) / others : FRAME_MARKERS / entities);
             if (p.rows().size() > PerceptionDebugSnapshot.MAX_ROWS || p.markers().size() > PerceptionDebugSnapshot.MAX_MARKERS)
                 throw new IllegalArgumentException("Oversized perception snapshot");
             boolean cut = p.rows().size() > rows || p.markers().size() > markers;

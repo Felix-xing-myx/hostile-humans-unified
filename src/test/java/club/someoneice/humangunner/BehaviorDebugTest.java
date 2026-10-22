@@ -70,7 +70,15 @@ public final class BehaviorDebugTest {
             check(normalized.entries().size() == 8 && normalized.focused().equals(frame.focused()), "capacity policy retains every observed entity and focus");
             check(normalized.entries().stream().map(entry -> entry.snapshot().entityUuid()).toList()
                     .equals(frame.entries().stream().map(entry -> entry.snapshot().entityUuid()).toList()), "capacity policy retains identity and order");
-            check(normalized.entries().stream().allMatch(entry -> entry.snapshot().capacityTruncated()), "network truncation is explicit per entity");
+            check(!normalized.entries().get(0).snapshot().capacityTruncated()
+                    && normalized.entries().subList(1, 8).stream().allMatch(entry -> entry.snapshot().capacityTruncated()),
+                    "focus keeps complete details; truncated background entities are explicit");
+            check(normalized.entries().get(0).snapshot().perception().rows().size() == 128
+                    && normalized.entries().get(0).snapshot().perception().markers().size() == 64,
+                    "multiple observers cannot erase the focus details");
+            check(normalized.entries().stream().mapToInt(entry -> entry.snapshot().perception().rows().size()).sum() <= 192
+                    && normalized.entries().stream().mapToInt(entry -> entry.snapshot().perception().markers().size()).sum() <= 96,
+                    "focused allocation still respects the same whole-frame limits");
             check(normalized.entries().stream().allMatch(entry -> entry.snapshot().behavior().equals(sample)), "authority details are retained");
             check(NavigationDebugFrameCodec.normalize(normalized).equals(normalized), "normalization is idempotent");
             check(frame.entries().get(0).snapshot().perception().rows().size() == 128, "representation normalization does not edit the source facts");
