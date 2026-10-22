@@ -4,6 +4,7 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Difficulty;
+import dev.felix.hostilehumans.core.ActionCoordinator;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
@@ -13,6 +14,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 
 /** Backpack arrows pay for a shot, never for a projectile query or interrupted draw. */
 public final class HumanArrowCombat {
+    private static final java.util.Set<Human> FIRING = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
     private static final String NPC_LOAD = "hostile_humans_unified:NpcArrowLoad";
     private static final java.util.Map<Human, Integer> INTERVALS = new java.util.WeakHashMap<>();
     private static final java.util.Map<Human, ArrowAttackCadence> CADENCE = new java.util.WeakHashMap<>();
@@ -166,19 +168,57 @@ public final class HumanArrowCombat {
     }
 
     /** Factory must return an unattached arrow with native weapon/enchantment ballistics applied.
-     * The caller owns ATTACK/INVENTORY in the action coordinator and applies wear/sound once.
+     * This boundary owns a short ATTACK/INVENTORY lease; callers apply wear/sound once.
      * No backend may also insert or consume ammunition for this transaction. */
     public static int fireVolley(Human human, LivingEntity target, ItemStack weapon,
             java.util.function.Supplier<net.minecraft.world.entity.projectile.AbstractArrow> factory) {
-        if (!RangedWeaponCustody.isBowOrCrossbow(weapon) || !canShoot(human, target) || HumanInventorySession.isEditing(human)
-                || weapon != human.getMainHandItem() && weapon != human.getOffhandItem()) return 0;
+        if (human.level().isClientSide || !FIRING.add(human)) return 0;
+        ActionCoordinator actions = null;
+        ActionCoordinator.Token token = null;
+        int inserted = 0;
+        boolean settled = false;
+        try {
+            actions = HumanBehaviorControl.actions(human);
+            if (!RangedWeaponCustody.isBowOrCrossbow(weapon) || !canShoot(human, target)
+                    || !shotStillValid(human, target, weapon)) { settled = true; return 0; }
+            token = actions.request("arrow-volley", java.util.EnumSet.of(ActionCoordinator.Resource.ATTACK,
+                    ActionCoordinator.Resource.INVENTORY), 75, false, 2);
+            if (!actions.acquire(token)) { settled = true; return 0; }
+            inserted = executeVolley(human, target, weapon, factory, actions, token);
+            settled = true;
+            return inserted;
+        } finally {
+            try {
+                if (token != null) actions.finish(token, !settled ? ActionCoordinator.Status.FAILED
+                        : inserted > 0 ? ActionCoordinator.Status.COMPLETED : ActionCoordinator.Status.CANCELLED,
+                        !settled ? "arrow callback failed" : inserted > 0 ? "volley fired" : "volley unavailable");
+            } finally { FIRING.remove(human); }
+        }
+    }
+
+    private static boolean shotStillValid(Human human, LivingEntity target, ItemStack weapon) {
+        return !human.level().isClientSide && human.isAlive() && !human.isRemoved() && !human.isNoAi()
+                && !HumanInventorySession.isEditing(human) && human.getData() != null
+                && human.level().getDifficulty() != Difficulty.PEACEFUL
+                && target != null && target.isAlive() && !target.isRemoved() && target.level() == human.level()
+                && HumanPerception.canTarget(human, target) && HumanPerception.allowCombatLook(human, target)
+                && HumanAttention.canAim(human, target)
+                && !human.humanGunner$shieldDefense().reservesRangedUse()
+                && !(human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem()))
+                && (weapon == human.getMainHandItem() || weapon == human.getOffhandItem());
+    }
+
+    private static int executeVolley(Human human, LivingEntity target, ItemStack weapon,
+            java.util.function.Supplier<net.minecraft.world.entity.projectile.AbstractArrow> factory,
+            ActionCoordinator actions, ActionCoordinator.Token token) {
+        if (!actions.running(token) || !shotStillValid(human, target, weapon)) return 0;
         var profile = RangedCombatProfile.of(human, weapon);
         int total = 0;
         net.minecraft.nbt.CompoundTag firstArrow = null;
         int groups = profile.doubleArrow() ? 2 : 1;
         for (int group = 0; group < groups; group++) {
-            if (!target.isAlive() || target.isRemoved() || target.level() != human.level()
-                    || !HumanPerception.canTarget(human, target)) break;
+            if (!actions.running(token) || !shotStillValid(human, target, weapon)) break;
+            var layout = ArrowLayout.capture(human);
             int available = HumanAmmo.arrowCount(human);
             float[] angles = ArrowVolleyPolicy.angles(profile.tripleArrow(),
                     (profile.tripleArrow() || weapon.getItem() instanceof CrossbowItem)
@@ -203,15 +243,20 @@ public final class HumanArrowCombat {
             }
             int cost = ArrowVolleyPolicy.cost(profile.tripleArrow(), available);
             // Recheck after optional native factory hooks, before publishing any projectile.
-            if (HumanAmmo.arrowCount(human) < cost || !human.isAlive()
-                    || weapon != human.getMainHandItem() && weapon != human.getOffhandItem()) break;
+            if (!actions.running(token) || !shotStillValid(human, target, weapon)
+                    || !layout.matches(human) || HumanAmmo.arrowCount(human) < cost) break;
             boolean save = profile.savingChance() > 0 && human.getRandom().nextDouble() < profile.savingChance();
             // Reserve the real arrows first. A failed entity insertion refunds only our untouched slots.
             var payment = ArrowPayment.take(human, save ? 0 : cost);
             if (payment == null) break;
             int inserted = 0;
+            var paidLayout = ArrowLayout.capture(human);
             try {
-                for (var arrow : arrows) if (human.level().addFreshEntity(arrow)) inserted++;
+                for (var arrow : arrows) {
+                    if (!actions.running(token) || !shotStillValid(human, target, weapon)
+                            || !paidLayout.matches(human)) break;
+                    if (human.level().addFreshEntity(arrow)) inserted++;
+                }
             } finally {
                 inserted = (int) arrows.stream().filter(net.minecraft.world.entity.Entity::isAddedToWorld).count();
                 if (inserted == 0) payment.refund(human);
@@ -225,13 +270,41 @@ public final class HumanArrowCombat {
         return total;
     }
 
+    /** Optional factories and entity-join callbacks cannot silently edit the backing layout. */
+    private record ArrowLayout(com.craftix.hostile_humans.entity.data.HumanData data,
+                               java.util.List<ItemStack> references, java.util.List<ItemStack> copies) {
+        static ArrowLayout capture(Human human) {
+            var references = new java.util.ArrayList<ItemStack>();
+            for (var slot : net.minecraft.world.entity.EquipmentSlot.values()) references.add(human.getItemBySlot(slot));
+            var data = human.getData();
+            for (int i = 0; i < data.getInventoryItemsSize(); i++) references.add(data.getInventoryItem(i));
+            return new ArrowLayout(data, references, references.stream().map(ItemStack::copy).toList());
+        }
+        boolean matches(Human human) {
+            if (human.getData() != data || data.getInventoryItemsSize()
+                    + net.minecraft.world.entity.EquipmentSlot.values().length != references.size()) return false;
+            int index = 0;
+            for (var slot : net.minecraft.world.entity.EquipmentSlot.values()) {
+                ItemStack actual = human.getItemBySlot(slot);
+                if (actual != references.get(index) || !ItemStack.matches(actual, copies.get(index++))) return false;
+            }
+            for (int i = 0; i < data.getInventoryItemsSize(); i++) {
+                ItemStack actual = data.getInventoryItem(i);
+                if (actual != references.get(index) || !ItemStack.matches(actual, copies.get(index++))) return false;
+            }
+            return true;
+        }
+    }
+
     /** Real inventory debit. Infinity and the saving roll never create arrows. */
     private record ArrowPayment(java.util.List<Integer> slots, java.util.List<ItemStack> before,
-                                java.util.List<ItemStack> after) {
+                                java.util.List<ItemStack> after, java.util.List<ItemStack> expectedAfter,
+                                com.craftix.hostile_humans.entity.data.HumanData data) {
         static ArrowPayment take(Human human, int cost) {
             var slots = new java.util.ArrayList<Integer>();
             var before = new java.util.ArrayList<ItemStack>();
             var after = new java.util.ArrayList<ItemStack>();
+            var expectedAfter = new java.util.ArrayList<ItemStack>();
             // Explicit global no-consumption configuration still requires a physical reserve.
             if (!UnifiedConfig.get().ammoConsumptionEnabled()) cost = 0;
             if (HumanAmmo.arrowCount(human) < cost) return null;
@@ -245,15 +318,17 @@ public final class HumanArrowCombat {
                 int taken = Math.min(cost, remaining.getCount());
                 remaining.shrink(taken); cost -= taken;
                 if (remaining.isEmpty()) remaining = ItemStack.EMPTY;
-                after.add(remaining); data.setInventoryItem(i, remaining);
+                after.add(remaining); expectedAfter.add(remaining.copy()); data.setInventoryItem(i, remaining);
             }
-            return new ArrowPayment(slots, before, after);
+            return new ArrowPayment(slots, before, after, expectedAfter, data);
         }
         void refund(Human human) {
+            if (human.getData() != data) return;
             for (int i = 0; i < slots.size(); i++) {
                 // An external callback may have edited the slot; never overwrite its new contents.
-                if (human.getData().getInventoryItem(slots.get(i)) == after.get(i))
-                    human.getData().setInventoryItem(slots.get(i), before.get(i));
+                ItemStack actual = data.getInventoryItem(slots.get(i));
+                if (actual == after.get(i) && ItemStack.matches(actual, expectedAfter.get(i)))
+                    data.setInventoryItem(slots.get(i), before.get(i));
             }
         }
     }

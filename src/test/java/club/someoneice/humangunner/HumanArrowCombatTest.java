@@ -32,12 +32,17 @@ public final class HumanArrowCombatTest {
                 "native arrow crossbow goes through the shared paid volley");
         check(calls(HUMAN, "performRangedAttack", ARROWS, "fireVolley"), "bow uses shared paid volley");
         check(calls(SPARTAN, "fire", ARROWS, "fireVolley"), "optional native bolt uses paid volley");
-        check(callsName(ARROWS, "fireVolley", "addFreshEntity"), "one publishing boundary");
+        check(callsName(ARROWS, "executeVolley", "addFreshEntity"), "one publishing boundary");
+        for (String lifecycle : List.of("request", "acquire", "finish"))
+            check(callsName(ARROWS, "fireVolley", lifecycle), "public shot transaction lifecycle: " + lifecycle);
+        check(callsName(ARROWS, "fireVolley", "add") && callsName(ARROWS, "fireVolley", "remove"),
+                "synchronous reentry guard always released");
+        check(callsName(ARROWS, "executeVolley", "shotStillValid"), "factory and insertion revalidate live authority");
         check(!calls(HUMAN, "shootCrossbowProjectile", AMMO, "consumeArrow"), "callback cannot double pay");
         check(!calls(SPARTAN, "fire", AMMO, "consumeArrow"), "bolt backend cannot double pay");
         check(callsAnyMethodName(ARROWS, "createArrow"), "actual native ArrowItem factory retained");
         check(callsAnyMethodName(ARROWS, "setPierceLevel"), "native piercing retained");
-        check(field(ARROWS, "fireVolley", "DISALLOWED"), "all paid NPC volleys cannot be recovered");
+        check(field(ARROWS, "executeVolley", "DISALLOWED"), "all paid NPC volleys cannot be recovered");
         check(callsName(ARROWS, "markNpcLoad", "remove"), "unpaid native payloads removed at charge completion");
         String inventory = "club/someoneice/humangunner/HumanInventoryContainer";
         for (String method : List.of("<init>", "removeItem", "removeItemNoUpdate"))
