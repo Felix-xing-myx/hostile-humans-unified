@@ -105,7 +105,7 @@ public final class RecoverySupplies {
         insertInventory(data, apples);
         int insertedApples = appleCount - apples.getCount();
         int enchantedApples = provisionEnchantedGoldenApple(human, foodConfig);
-        int foodCount = preset.food().roll(random);
+        int foodCount = foodConfig.foodCount(human, preset);
         int insertedFood = provisionFoodVariety(human, data, foodCount, foodConfig);
         SpawnPotionConfig.Granted potions = UnifiedConfig.get().spawnPotions(TierAttributes.key(human))
                 .grant(human);
@@ -1215,14 +1215,12 @@ public final class RecoverySupplies {
 
 
     private static int provisionEnchantedGoldenApple(Human human, SpawnFoodConfig config) {
-        if (!config.enabled) return 0;
-        double chance = config.enchantedAppleChance;
-        if (human.getRandom().nextFloat() >= chance) {
-            return 0;
-        }
-        ItemStack apple = new ItemStack(Items.ENCHANTED_GOLDEN_APPLE);
+        int requested = config.enchantedAppleCount(human);
+        if (requested <= 0) return 0;
+        ItemStack apple = new ItemStack(Items.ENCHANTED_GOLDEN_APPLE, requested);
         // Spawn grants never evict equipment or spill overflow into the world.
-        return insertInventory(human.getData(), apple) ? 1 : 0;
+        insertInventory(human.getData(), apple);
+        return requested - apple.getCount();
     }
 
     private static int findUsefulDrinkableBuffSlot(Human human) {

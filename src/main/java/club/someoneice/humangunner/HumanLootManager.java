@@ -487,10 +487,10 @@ public final class HumanLootManager {
             return SupplyInventoryPolicy.ammoValue(HumanAmmo.isMagazine(stack), gunner, archer);
         }
         if (stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
-            return 150.0D;
+            return foodInventoryValue(human, stack, 260.0D);
         }
         if (stack.is(Items.GOLDEN_APPLE)) {
-            return 120.0D;
+            return foodInventoryValue(human, stack, 160.0D);
         }
         if (stack.is(Items.TOTEM_OF_UNDYING)) {
             return 140.0D;
@@ -502,7 +502,7 @@ public final class HumanLootManager {
             FoodProperties food = stack.getFoodProperties(human);
             return food == null
                     ? 90.0D
-                    : foodValue(food);
+                    : foodInventoryValue(human, stack, foodValue(food));
         }
         if (isEquipment(stack)) {
             // Scale the storage premium too, without applying wear twice to attributes.
@@ -513,7 +513,25 @@ public final class HumanLootManager {
     }
 
     static double foodValue(FoodProperties food) {
-        return 28.0D + food.getNutrition() * 4.0D + food.getSaturationModifier() * 10.0D;
+        return dev.felix.hostilehumans.core.FoodInventoryValue.quality(food.getNutrition(), food.getSaturationModifier());
+    }
+
+    private static double foodInventoryValue(Human human, ItemStack candidate, double quality) {
+        int count = candidate.getCount();
+        HumanData data = human.getData();
+        // Same item and effective NBT form one quantity group, independent of stack splitting.
+        // Bounded real backpack only: no world scan, with a hard comparison cap of 64.
+        if (data != null) for (int i = 0; i < data.getInventoryItemsSize() && count < 64; i++) {
+            ItemStack stored = data.getInventoryItem(i);
+            if (stored != candidate && ItemStack.isSameItemSameTags(stored, candidate))
+                count = Math.min(64, count + stored.getCount());
+        }
+        return dev.felix.hostilehumans.core.FoodInventoryValue.value(quality, count);
+    }
+
+    private static double quantityPremium(Human human, ItemStack stack) {
+        return stack.getFoodProperties(human) != null && RecoverySupplies.isRecoverySupply(human, stack)
+                ? 0 : Math.max(0, stack.getCount() - 1) * 0.5D;
     }
 
     static double potionValue(List<net.minecraft.world.effect.MobEffectInstance> effects, boolean splash) {
@@ -732,7 +750,7 @@ public final class HumanLootManager {
             // single item, without allowing quantity to outweigh strategic
             // equipment categories completely.
             double value = inventoryValue(human, stored)
-                    + Math.max(0, stored.getCount() - 1) * 0.5D;
+                    + quantityPremium(human, stored);
             if (value < lowestValue) {
                 lowestValue = value;
                 lowestSlot = i;
@@ -770,7 +788,7 @@ public final class HumanLootManager {
                     continue;
                 }
                 double value = inventoryValue(human, stack)
-                        + Math.max(0, stack.getCount() - 1) * 0.5D;
+                        + quantityPremium(human, stack);
                 if (value < bestValue) {
                     bestValue = value;
                     bestSlot = i;

@@ -9,7 +9,7 @@ final class SupplyInventoryPolicy {
     static final int FOOD_SLOTS = 3;
     enum Kind { EMPTY, FOOD, MEDICINE, MELEE, HEAD, CHEST, LEGS, FEET, OTHER }
     record Slot(Kind kind, double value, int count, boolean fixed) {
-        double supplyValue() { return value * count; }
+        double supplyValue() { return kind == Kind.FOOD ? value : value * count; }
     }
 
     private final List<Slot> slots;

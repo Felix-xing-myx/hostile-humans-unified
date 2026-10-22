@@ -11,7 +11,8 @@ public final class SupplyAndCloseDefenseTest {
     private static int checks;
     private static final SupplyInventoryPolicy.Slot AMMO = slot(SupplyInventoryPolicy.Kind.OTHER, 180, 24);
     private static SupplyInventoryPolicy.Slot slot(SupplyInventoryPolicy.Kind kind, double value, int count) {
-        return new SupplyInventoryPolicy.Slot(kind, value, count, false);
+        return new SupplyInventoryPolicy.Slot(kind, kind == SupplyInventoryPolicy.Kind.FOOD
+                ? dev.felix.hostilehumans.core.FoodInventoryValue.value(value, count) : value, count, false);
     }
     public static void main(String[] args) throws Exception {
         var resupply = CombatResupplyConfig.parse(new com.google.gson.JsonObject());
@@ -70,19 +71,19 @@ public final class SupplyAndCloseDefenseTest {
                 if (policy.canReplace(index, AMMO)) { inventory.set(index, AMMO); break; }
             }
         }
-        for (int i : List.of(0, 1, 2, 4, 5, 6, 7, 8, 9)) check(inventory.get(i) != AMMO, "retained reserve " + i);
-        check(inventory.get(3) == AMMO, "small extra food stack is expendable");
+        for (int i : List.of(0, 1, 3, 4, 5, 6, 7, 8, 9)) check(inventory.get(i) != AMMO, "retained reserve " + i);
+        check(inventory.get(2) == AMMO, "lower quality extra food is expendable despite its quantity");
         var policy = new SupplyInventoryPolicy(inventory);
-        check(!policy.canReplace(0, slot(SupplyInventoryPolicy.Kind.FOOD, 90, 1)), "one fine meal cannot discard a large reserve");
+        check(policy.canReplace(0, slot(SupplyInventoryPolicy.Kind.FOOD, 90, 1)), "quality can outweigh bounded quantity premium");
         check(policy.canReplace(0, slot(SupplyInventoryPolicy.Kind.FOOD, 90, 64)), "large better food reserve can upgrade");
         var extraFood = new SupplyInventoryPolicy(List.of(food, food, food,
                 slot(SupplyInventoryPolicy.Kind.FOOD, 90, 1)));
-        check(extraFood.canReplace(3, food), "unreserved food also compares full stack value");
-        check(!new SupplyInventoryPolicy(List.of(food, food, food, food))
+        check(!extraFood.canReplace(3, food), "quantity alone cannot evict a higher quality meal");
+        check(new SupplyInventoryPolicy(List.of(food, food, food, food))
                 .canReplace(3, slot(SupplyInventoryPolicy.Kind.FOOD, 90, 1)),
-                "one premium meal cannot evict an extra full stack either");
+                "premium meal can upgrade an extra lower quality stack");
         check(extraFood.replacementCost(3, food) == 90
-                && extraFood.replacementCost(0, food) == 55 * 64,
+                && extraFood.replacementCost(0, food) == dev.felix.hostilehumans.core.FoodInventoryValue.value(55,64),
                 "food eviction chooses the least valuable whole food stack");
         check(ShieldQualityPolicy.fullValue(2000, 0, false)
                 > ShieldQualityPolicy.fullValue(336, 10, false),
@@ -93,8 +94,8 @@ public final class SupplyAndCloseDefenseTest {
         check(ShieldQualityPolicy.fullValue(336, 1, false)
                 - ShieldQualityPolicy.fullValue(336, 0, false) == 3,
                 "shield enchantment weight is counted once and reduced to three");
-        check(new SupplyInventoryPolicy(List.of(slot(SupplyInventoryPolicy.Kind.FOOD, 150, 1)))
-                .canReplace(0, food), "large ordinary stack can upgrade a tiny high-value food reserve");
+        check(!new SupplyInventoryPolicy(List.of(slot(SupplyInventoryPolicy.Kind.FOOD, 160, 1)))
+                .canReplace(0, food), "ordinary quantity cannot displace a golden apple");
         check(policy.canReplace(4, slot(SupplyInventoryPolicy.Kind.MEDICINE, 108, 1)), "last medicine can upgrade to medicine");
         check(policy.canReplace(5, slot(SupplyInventoryPolicy.Kind.MELEE, 95, 1)), "backup melee can upgrade within category");
         check(!policy.canReplace(6, slot(SupplyInventoryPolicy.Kind.CHEST, 190, 1)), "chest cannot replace last backup helmet");
