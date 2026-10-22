@@ -1,0 +1,1066 @@
+{
+  "roamer": {
+    "crimson": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        60,
+        35,
+        5,
+        0,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.5,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1.2,
+      "throwable_multiplier": 1.2,
+      "recovery_category_weights": [
+        10,
+        40,
+        20,
+        30
+      ],
+      "self_buff_category_weights": [
+        60,
+        40
+      ],
+      "throwable_category_weights": [
+        10,
+        10,
+        0,
+        60,
+        20
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    },
+    "azure": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        60,
+        35,
+        5,
+        0,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1.2,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 0.9,
+      "recovery_category_weights": [
+        0,
+        30,
+        60,
+        10
+      ],
+      "self_buff_category_weights": [
+        80,
+        20
+      ],
+      "throwable_category_weights": [
+        10,
+        20,
+        0,
+        30,
+        40
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    },
+    "verdant": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        60,
+        35,
+        5,
+        0,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.7,
+      "recovery_multiplier": 0.8,
+      "self_buff_multiplier": 0.7,
+      "throwable_multiplier": 0.6,
+      "recovery_category_weights": [
+        10,
+        40,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        20,
+        80
+      ],
+      "throwable_category_weights": [
+        20,
+        0,
+        10,
+        35,
+        35
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    },
+    "ashen": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        60,
+        35,
+        5,
+        0,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.6,
+      "recovery_multiplier": 0.8,
+      "self_buff_multiplier": 1.5,
+      "throwable_multiplier": 0.8,
+      "recovery_category_weights": [
+        0,
+        50,
+        0,
+        50
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        20,
+        20,
+        10,
+        25,
+        25
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    },
+    "roamer": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        60,
+        35,
+        5,
+        0,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 1,
+      "recovery_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        50,
+        0,
+        10,
+        20,
+        20
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    },
+    "neutral": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        60,
+        35,
+        5,
+        0,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 1,
+      "recovery_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        50,
+        0,
+        10,
+        20,
+        20
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    }
+  },
+  "tier1": {
+    "crimson": {
+      "doctrine_core_chance": 0.6,
+      "armor_rank_band_weights": [
+        0,
+        64,
+        31,
+        5,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.5,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1.2,
+      "throwable_multiplier": 1.2,
+      "recovery_category_weights": [
+        10,
+        40,
+        20,
+        30
+      ],
+      "self_buff_category_weights": [
+        60,
+        40
+      ],
+      "throwable_category_weights": [
+        10,
+        10,
+        0,
+        60,
+        20
+      ],
+      "ranged_chance": 0.1,
+      "melee_archetype_weights": {
+        "axe": 40,
+        "sword": 40,
+        "spear": 10,
+        "mace": 5,
+        "dagger": 5
+      },
+      "shield_archetype_weights": {
+        "buckler": 45,
+        "round": 45,
+        "tower": 10
+      },
+      "ranged_archetype_weights": {
+        "bow": 60,
+        "crossbow": 40,
+        "trident": 0
+      }
+    },
+    "azure": {
+      "doctrine_core_chance": 0.6,
+      "armor_rank_band_weights": [
+        0,
+        64,
+        31,
+        5,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1.2,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 0.9,
+      "recovery_category_weights": [
+        0,
+        30,
+        60,
+        10
+      ],
+      "self_buff_category_weights": [
+        80,
+        20
+      ],
+      "throwable_category_weights": [
+        10,
+        20,
+        0,
+        30,
+        40
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {
+        "axe": 20,
+        "sword": 10,
+        "spear": 40,
+        "mace": 30,
+        "dagger": 0
+      },
+      "shield_archetype_weights": {
+        "buckler": 10,
+        "round": 20,
+        "tower": 70
+      },
+      "ranged_archetype_weights": {
+        "bow": 20,
+        "crossbow": 70,
+        "trident": 10
+      }
+    },
+    "verdant": {
+      "doctrine_core_chance": 0.6,
+      "armor_rank_band_weights": [
+        0,
+        64,
+        31,
+        5,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.7,
+      "recovery_multiplier": 0.8,
+      "self_buff_multiplier": 0.7,
+      "throwable_multiplier": 0.6,
+      "recovery_category_weights": [
+        10,
+        40,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        20,
+        80
+      ],
+      "throwable_category_weights": [
+        20,
+        0,
+        10,
+        35,
+        35
+      ],
+      "ranged_chance": 0.3,
+      "melee_archetype_weights": {
+        "axe": 20,
+        "sword": 40,
+        "spear": 10,
+        "mace": 10,
+        "dagger": 20
+      },
+      "shield_archetype_weights": {
+        "buckler": 55,
+        "round": 45,
+        "tower": 0
+      },
+      "ranged_archetype_weights": {
+        "bow": 50,
+        "crossbow": 50,
+        "trident": 0
+      }
+    },
+    "ashen": {
+      "doctrine_core_chance": 0.6,
+      "armor_rank_band_weights": [
+        0,
+        64,
+        31,
+        5,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.6,
+      "recovery_multiplier": 0.8,
+      "self_buff_multiplier": 1.5,
+      "throwable_multiplier": 0.8,
+      "recovery_category_weights": [
+        0,
+        50,
+        0,
+        50
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        20,
+        20,
+        10,
+        25,
+        25
+      ],
+      "ranged_chance": 0.1,
+      "melee_archetype_weights": {
+        "axe": 0,
+        "sword": 30,
+        "spear": 5,
+        "mace": 0,
+        "dagger": 65
+      },
+      "shield_archetype_weights": {
+        "buckler": 45,
+        "round": 45,
+        "tower": 10
+      },
+      "ranged_archetype_weights": {
+        "bow": 70,
+        "crossbow": 30,
+        "trident": 0
+      }
+    },
+    "roamer": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        0,
+        64,
+        31,
+        5,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 1,
+      "recovery_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        50,
+        0,
+        10,
+        20,
+        20
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    },
+    "neutral": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        0,
+        64,
+        31,
+        5,
+        0
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 1,
+      "recovery_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        50,
+        0,
+        10,
+        20,
+        20
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    }
+  },
+  "tier2": {
+    "crimson": {
+      "doctrine_core_chance": 0.72,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        53,
+        37,
+        10
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.5,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1.2,
+      "throwable_multiplier": 1.2,
+      "recovery_category_weights": [
+        10,
+        40,
+        20,
+        30
+      ],
+      "self_buff_category_weights": [
+        60,
+        40
+      ],
+      "throwable_category_weights": [
+        10,
+        10,
+        0,
+        60,
+        20
+      ],
+      "ranged_chance": 0.25,
+      "melee_archetype_weights": {
+        "axe": 40,
+        "sword": 40,
+        "spear": 10,
+        "mace": 5,
+        "dagger": 5
+      },
+      "shield_archetype_weights": {
+        "buckler": 45,
+        "round": 45,
+        "tower": 10
+      },
+      "ranged_archetype_weights": {
+        "bow": 60,
+        "crossbow": 40,
+        "trident": 0
+      }
+    },
+    "azure": {
+      "doctrine_core_chance": 0.72,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        53,
+        37,
+        10
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1.2,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 0.9,
+      "recovery_category_weights": [
+        0,
+        30,
+        60,
+        10
+      ],
+      "self_buff_category_weights": [
+        80,
+        20
+      ],
+      "throwable_category_weights": [
+        10,
+        20,
+        0,
+        30,
+        40
+      ],
+      "ranged_chance": 0.4,
+      "melee_archetype_weights": {
+        "axe": 20,
+        "sword": 10,
+        "spear": 40,
+        "mace": 30,
+        "dagger": 0
+      },
+      "shield_archetype_weights": {
+        "buckler": 10,
+        "round": 20,
+        "tower": 70
+      },
+      "ranged_archetype_weights": {
+        "bow": 20,
+        "crossbow": 70,
+        "trident": 10
+      }
+    },
+    "verdant": {
+      "doctrine_core_chance": 0.72,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        53,
+        37,
+        10
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.7,
+      "recovery_multiplier": 0.8,
+      "self_buff_multiplier": 0.7,
+      "throwable_multiplier": 0.6,
+      "recovery_category_weights": [
+        10,
+        40,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        20,
+        80
+      ],
+      "throwable_category_weights": [
+        20,
+        0,
+        10,
+        35,
+        35
+      ],
+      "ranged_chance": 0.6,
+      "melee_archetype_weights": {
+        "axe": 20,
+        "sword": 40,
+        "spear": 10,
+        "mace": 10,
+        "dagger": 20
+      },
+      "shield_archetype_weights": {
+        "buckler": 55,
+        "round": 45,
+        "tower": 0
+      },
+      "ranged_archetype_weights": {
+        "bow": 50,
+        "crossbow": 50,
+        "trident": 0
+      }
+    },
+    "ashen": {
+      "doctrine_core_chance": 0.72,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        53,
+        37,
+        10
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.6,
+      "recovery_multiplier": 0.8,
+      "self_buff_multiplier": 1.5,
+      "throwable_multiplier": 0.8,
+      "recovery_category_weights": [
+        0,
+        50,
+        0,
+        50
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        20,
+        20,
+        10,
+        25,
+        25
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {
+        "axe": 0,
+        "sword": 30,
+        "spear": 5,
+        "mace": 0,
+        "dagger": 65
+      },
+      "shield_archetype_weights": {
+        "buckler": 45,
+        "round": 45,
+        "tower": 10
+      },
+      "ranged_archetype_weights": {
+        "bow": 70,
+        "crossbow": 30,
+        "trident": 0
+      }
+    },
+    "roamer": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        53,
+        37,
+        10
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 1,
+      "recovery_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        50,
+        0,
+        10,
+        20,
+        20
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    },
+    "neutral": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        53,
+        37,
+        10
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 1,
+      "recovery_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        50,
+        0,
+        10,
+        20,
+        20
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    }
+  },
+  "tier3": {
+    "crimson": {
+      "doctrine_core_chance": 0.85,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        0,
+        55,
+        45
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.5,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1.2,
+      "throwable_multiplier": 1.2,
+      "recovery_category_weights": [
+        10,
+        40,
+        20,
+        30
+      ],
+      "self_buff_category_weights": [
+        60,
+        40
+      ],
+      "throwable_category_weights": [
+        10,
+        10,
+        0,
+        60,
+        20
+      ],
+      "ranged_chance": 0.5,
+      "melee_archetype_weights": {
+        "axe": 40,
+        "sword": 40,
+        "spear": 10,
+        "mace": 5,
+        "dagger": 5
+      },
+      "shield_archetype_weights": {
+        "buckler": 45,
+        "round": 45,
+        "tower": 10
+      },
+      "ranged_archetype_weights": {
+        "bow": 60,
+        "crossbow": 40,
+        "trident": 0
+      }
+    },
+    "azure": {
+      "doctrine_core_chance": 0.85,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        0,
+        55,
+        45
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1.2,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 0.9,
+      "recovery_category_weights": [
+        0,
+        30,
+        60,
+        10
+      ],
+      "self_buff_category_weights": [
+        80,
+        20
+      ],
+      "throwable_category_weights": [
+        10,
+        20,
+        0,
+        30,
+        40
+      ],
+      "ranged_chance": 0.6,
+      "melee_archetype_weights": {
+        "axe": 20,
+        "sword": 10,
+        "spear": 40,
+        "mace": 30,
+        "dagger": 0
+      },
+      "shield_archetype_weights": {
+        "buckler": 10,
+        "round": 20,
+        "tower": 70
+      },
+      "ranged_archetype_weights": {
+        "bow": 20,
+        "crossbow": 70,
+        "trident": 10
+      }
+    },
+    "verdant": {
+      "doctrine_core_chance": 0.85,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        0,
+        55,
+        45
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.7,
+      "recovery_multiplier": 0.8,
+      "self_buff_multiplier": 0.7,
+      "throwable_multiplier": 0.6,
+      "recovery_category_weights": [
+        10,
+        40,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        20,
+        80
+      ],
+      "throwable_category_weights": [
+        20,
+        0,
+        10,
+        35,
+        35
+      ],
+      "ranged_chance": 1,
+      "melee_archetype_weights": {
+        "axe": 20,
+        "sword": 40,
+        "spear": 10,
+        "mace": 10,
+        "dagger": 20
+      },
+      "shield_archetype_weights": {
+        "buckler": 55,
+        "round": 45,
+        "tower": 0
+      },
+      "ranged_archetype_weights": {
+        "bow": 50,
+        "crossbow": 50,
+        "trident": 0
+      }
+    },
+    "ashen": {
+      "doctrine_core_chance": 0.85,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        0,
+        55,
+        45
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 0.6,
+      "recovery_multiplier": 0.8,
+      "self_buff_multiplier": 1.5,
+      "throwable_multiplier": 0.8,
+      "recovery_category_weights": [
+        0,
+        50,
+        0,
+        50
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        20,
+        20,
+        10,
+        25,
+        25
+      ],
+      "ranged_chance": 0.3,
+      "melee_archetype_weights": {
+        "axe": 0,
+        "sword": 30,
+        "spear": 5,
+        "mace": 0,
+        "dagger": 65
+      },
+      "shield_archetype_weights": {
+        "buckler": 45,
+        "round": 45,
+        "tower": 10
+      },
+      "ranged_archetype_weights": {
+        "bow": 70,
+        "crossbow": 30,
+        "trident": 0
+      }
+    },
+    "roamer": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        0,
+        55,
+        45
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 1,
+      "recovery_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        50,
+        0,
+        10,
+        20,
+        20
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    },
+    "neutral": {
+      "doctrine_core_chance": 0,
+      "armor_rank_band_weights": [
+        0,
+        0,
+        0,
+        55,
+        45
+      ],
+      "faction_armor": {},
+      "equipment_archetypes": {},
+      "food_multiplier": 1,
+      "recovery_multiplier": 1,
+      "self_buff_multiplier": 1,
+      "throwable_multiplier": 1,
+      "recovery_category_weights": [
+        25,
+        25,
+        25,
+        25
+      ],
+      "self_buff_category_weights": [
+        50,
+        50
+      ],
+      "throwable_category_weights": [
+        50,
+        0,
+        10,
+        20,
+        20
+      ],
+      "ranged_chance": 0.2,
+      "melee_archetype_weights": {},
+      "shield_archetype_weights": {},
+      "ranged_archetype_weights": {}
+    }
+  }
+}

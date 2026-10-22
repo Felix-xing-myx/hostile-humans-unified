@@ -14,13 +14,29 @@ public final class FactionEquipmentConfigTest {
                 var profile=config.profile(faction);
                 for(String key:new String[]{"melee_band_weights","armor_band_weights","toughness_band_weights","shield_band_weights","ranged_band_weights",
                         "food_category_weights","recovery_category_weights","tactical_category_weights"}) {
-                    int size=key.startsWith("melee")||key.startsWith("armor")?5:key.startsWith("recovery")?3:key.startsWith("tactical")?7:4;
+                    int size=key.startsWith("melee")||key.startsWith("armor")?5:key.startsWith("recovery")?4:key.startsWith("tactical")?7:4;
                     check(Math.abs(java.util.Arrays.stream(profile.weights(key,size)).sum()-100)<.001,rank+"/"+faction+"/"+key);
                 }
                 check(java.util.Arrays.stream(profile.shieldCounts()).sum()==100,"shield count row");
                 if(rank.equals("tier3")) check(profile.number("vanishing_chance",99,0,1)==0 && profile.number("binding_chance",99,0,1)==0,"tier3 has no new binding or vanishing");
             }
         }
+        var rankOnlyArmor=new FactionEquipmentConfig(json("""
+                {"faction_overrides":{"crimson":{"armor_band_weights":[100,0,0,0,0],
+                  "bands":{"armor_points":[1,2,3,4]}}}}
+                """),"tier2").profile("crimson");
+        check(java.util.Arrays.equals(rankOnlyArmor.weights("armor_rank_band_weights",5),new double[]{0,0,53,37,10}),
+                "faction armor band weights cannot bias rank baseline");
+        check(rankOnlyArmor.bands("armor_points",7,11,15,19)[0]==7,"faction armor thresholds cannot bias rank baseline");
+        var legacyRecovery=new FactionEquipmentConfig(json("{\"recovery_category_weights\":[50,25,25]}"),"tier1").profile("crimson");
+        check(java.util.Arrays.equals(legacyRecovery.weights("recovery_category_weights",4),new double[]{0,50,25,25}),
+                "legacy recovery weights retain strong-healing membership");
+        var explicitEmpty=new FactionEquipmentConfig(json("{\"shield_archetype_weights\":{},\"equipment_archetypes\":{}}"),"tier1").profile("azure");
+        check(FactionEquipmentConfig.object(explicitEmpty.data,"shield_archetype_weights").size()==0,"explicit empty family weights clear builtin doctrine");
+        FactionEquipmentConfig.prepare(json("{\"equipment_archetypes\":{\"melee\":{\"dagger\":[\"#example:daggers\",\"example:knife\"]}}}"),Map.of());
+        var doctrine=new FactionEquipmentConfig(new JsonObject(),"tier3").profile("azure");
+        check(doctrine.number("doctrine_core_chance",0,0,1)==.85,"tier3 non-gun doctrine chance");
+        check(FactionEquipmentConfig.object(doctrine.data,"shield_archetype_weights").get("tower").getAsInt()==70,"azure tower preference");
         JsonObject global=json("{\"bands\":{\"melee_damage\":[3,5,7,9]},\"item_pool\":{\"integrations\":false}}");
         FactionEquipmentConfig.configure(global,Map.of("crimson",json("{\"tier1\":{\"gun_chance\":0.2}}")));
         var config=new FactionEquipmentConfig(json("{\"gun_chance\":0.3,\"faction_overrides\":{\"crimson\":{\"gun_chance\":0.6}}}"),"tier1");

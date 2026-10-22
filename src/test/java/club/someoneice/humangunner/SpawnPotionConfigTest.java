@@ -27,14 +27,21 @@ public final class SpawnPotionConfigTest {
         var parsedDamage = ScgunsSettings.parse(throwableGlobal.getAsJsonObject("scguns")).throwableDamageMultipliers();
         check(parsedDamage.get("scguns:grenade") == 0 && parsedDamage.get("scguns:nail_bomb") == 2.5,
                 "custom damage factors parsed");
-        int[] recoveryMin = {1, 2, 4, 6}, recoveryMax = {2, 4, 7, 8};
+        int[] recoveryMin = {1, 3, 5, 7}, recoveryMax = {3, 5, 7, 12};
         int[] tacticalMin = {1, 2, 4, 6}, tacticalMax = {2, 4, 7, 8};
         String[] ranks = {"roamer", "tier1", "tier2", "tier3"};
         for (int i = 0; i < ranks.length; i++) {
             var value = config.spawnPotions(ranks[i]);
             check(value.recovery.minimum() == recoveryMin[i] && value.recovery.maximum() == recoveryMax[i], "recovery defaults");
             check(value.tactical.minimum() == tacticalMin[i] && value.tactical.maximum() == tacticalMax[i], "tactical defaults");
-            checkPool(value.recovery, new String[]{"strong_healing", "long_regeneration", "strong_regeneration"}, new int[]{2, 1, 1});
+            check(value.recovery.entries().stream().map(entry->entry.potion().toString()).collect(java.util.stream.Collectors.toSet())
+                    .equals(java.util.Set.of("minecraft:healing","minecraft:strong_healing","minecraft:long_regeneration","minecraft:strong_regeneration")),
+                    "all four recovery categories have candidates");
+            check(value.selfBuffs!=null&&value.throwables!=null,"independent default buff and throwable pools");
+            check(value.selfBuffs.minimum()==new int[]{1,1,2,3}[i]&&value.selfBuffs.maximum()==new int[]{2,2,3,4}[i],"buff rank totals");
+            check(value.throwables.minimum()==new int[]{2,5,8,12}[i]&&value.throwables.maximum()==new int[]{5,8,12,16}[i],"throwable rank totals");
+            check(value.selfBuffs.entries().stream().allMatch(entry->SpawnPotionConfig.category(entry,"self_buff")>=0),"self pool only contains drinkable buffs");
+            check(value.throwables.entries().stream().allMatch(entry->SpawnPotionConfig.category(entry,"throwable")>=0),"natural throwable whitelist");
             checkPool(value.tactical, new String[]{"long_slowness", "long_weakness", "long_strength", "strong_poison", "strong_strength", "long_swiftness"}, new int[]{5, 1, 10, 2, 5, 8});
             var tools = value.tactical.entries().stream().filter(entry -> entry.potion() == null).toList();
             check(tools.size() == 7, "seven default tactical throwables across two optional mods");
@@ -54,6 +61,17 @@ public final class SpawnPotionConfigTest {
         check(!custom.spawnPotions("tier1").enabled && custom.spawnPotions("tier2").enabled, "rank override isolation");
         check(custom.spawnPotions("tier1").recovery.entries().isEmpty(), "explicit empty pool stays empty");
         check(custom.spawnPotions("tier1").grant(null, RandomSource.create(1)).equals(new SpawnPotionConfig.Granted(0, 0)), "disabled config does not touch inventory");
+        var splitEmpty=new SpawnPotionConfig(json("""
+                {"tactical":{"pool":[{"item":"minecraft:potion","potion":"minecraft:long_strength"}]},
+                 "self_buffs":{"count_min":2,"count_max":3,"pool":[]},
+                 "throwables":{"count_min":4,"count_max":5,"pool":[]}}
+                """));
+        check(splitEmpty.selfBuffs.entries().isEmpty()&&splitEmpty.throwables.entries().isEmpty(),"explicit empty split pools do not refill from legacy tactical");
+        var molotov=new SpawnPotionConfig.Entry(net.minecraft.resources.ResourceLocation.tryParse("scguns:molotov_cocktail"),null,1);
+        check(SpawnPotionConfig.category(molotov,"throwable")==-1,"manual molotov never joins natural spawn pool");
+        var healing=new SpawnPotionConfig.Entry(net.minecraft.resources.ResourceLocation.tryParse("minecraft:potion"),net.minecraft.resources.ResourceLocation.tryParse("minecraft:healing"),1);
+        var strongHealing=new SpawnPotionConfig.Entry(healing.item(),net.minecraft.resources.ResourceLocation.tryParse("minecraft:strong_healing"),1);
+        check(SpawnPotionConfig.category(healing,"recovery")==0&&SpawnPotionConfig.category(strongHealing,"recovery")==1,"instant healing versions have independent faction weights");
         var empty = new SpawnPotionConfig(json("""
                 {"recovery":{"count_min":2,"count_max":4,"pool":[]},
                  "tactical":{"count_min":1,"count_max":2,"pool":[]}}

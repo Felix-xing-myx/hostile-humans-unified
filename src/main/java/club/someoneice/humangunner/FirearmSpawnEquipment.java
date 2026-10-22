@@ -1,7 +1,6 @@
 package club.someoneice.humangunner;
 
 import com.craftix.hostile_humans.entity.entities.Human;
-import com.craftix.hostile_humans.entity.entities.HumanTier;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -21,10 +20,8 @@ final class FirearmSpawnEquipment {
                     && !UnifiedConfig.get().naturalFirearmsEnabled())) return ItemStack.EMPTY;
         if (human.getPersistentData().getBoolean(GUN_ROLL_DONE)) return ItemStack.EMPTY;
         human.getPersistentData().putBoolean(GUN_ROLL_DONE, true);
-        HumanGunnerConfig config = HumanGunnerConfig.get();
-        // Forced-ranged is a single alternative probability, never an extra gun roll.
-        double chance = forceRanged && human.getTier() == HumanTier.LEVEL2
-                ? config.forcedRangedChance() : FactionEquipmentConfig.of(human).number("gun_chance",0,0,1);
+        // Every rank, including forced-ranged tier two, shares this single faction roll.
+        double chance = FactionEquipmentConfig.of(human).number("gun_chance",0,0,1);
         if (ConfiguredHumanEquipment.of(human).guns(human).isEmpty()) {
             if (WARNED_EMPTY_GUN_POOL.compareAndSet(false, true)) {
                 LOGGER.warn("Hostile Humans Unified found no configured firearms in the loaded optional gun catalogs");

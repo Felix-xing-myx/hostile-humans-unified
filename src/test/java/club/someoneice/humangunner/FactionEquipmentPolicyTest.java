@@ -16,6 +16,8 @@ public final class FactionEquipmentPolicyTest {
         check(FactionEquipmentPolicy.nearest(1,new boolean[5])==-1,"empty category");
         check(FactionEquipmentPolicy.choose(new double[]{0,0},.5)==-1,"zero sum is explicit empty");
         check(FactionEquipmentPolicy.choose(new double[]{Double.NaN,-1,2},.5)==2,"invalid weights cannot pollute selection");
+        check(FactionEquipmentPolicy.choose(new double[]{Double.MAX_VALUE,Double.MAX_VALUE},.75)==1,"finite armor weights cannot overflow total");
+        check(FactionEquipmentPolicy.choose(new double[]{.01,.03},.5)==1,"fractional armor weight selection");
         check(FactionEquipmentPolicy.scaledCount(24,1.6)==38,"ammunition rounds once after base roll");
         check(FactionEquipmentPolicy.scaledCount(128,1.6)==205,"not clipped to old maximum");
         check(FactionEquipmentPolicy.scaledCount(0,.6)==0,"zero stays zero");

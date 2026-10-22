@@ -54,12 +54,12 @@ final class FactionEquipmentGuns {
         return gun<0?ItemStack.EMPTY:GunSupport.get().createLoadedGun(choices.get(gun));
     }
 
-    private static String category(GunSupport.GunChoice choice,String nativeType,FactionEquipmentConfig.Profile profile) {
+    static String category(GunSupport.GunChoice choice,String nativeType,FactionEquipmentConfig.Profile profile) {
         JsonObject mapping=FactionEquipmentConfig.object(profile.data,"gun_category_map");
-        if(mapping.has(choice.id().toString())&&mapping.get(choice.id().toString()).isJsonPrimitive())
+        if(choice.id()!=null&&mapping.has(choice.id().toString())&&mapping.get(choice.id().toString()).isJsonPrimitive())
             return canonical(mapping.get(choice.id().toString()).getAsString());
         // Explicit item ID wins over tags; equal-priority tags are evaluated in config insertion order.
-        for(var entry:mapping.entrySet()) if(entry.getKey().startsWith("#")&&entry.getValue().isJsonPrimitive()) {
+        for(var entry:mapping.entrySet()) if(choice.id()!=null&&entry.getKey().startsWith("#")&&entry.getValue().isJsonPrimitive()) {
             ResourceLocation tag=ResourceLocation.tryParse(entry.getKey().substring(1));
             if(tag==null) { FactionEquipmentConfig.warn(entry.getKey(),"Invalid gun category tag"); continue; }
             ItemStack gun=GunSupport.get().createLoadedGun(choice);
@@ -68,7 +68,7 @@ final class FactionEquipmentGuns {
         return canonical(nativeType);
     }
     static String canonical(String nativeType) {
-        return switch(nativeType.toLowerCase(Locale.ROOT)) {
+        return switch(nativeType==null?"":nativeType.toLowerCase(Locale.ROOT)) {
             case "pistol","revolver","handgun" -> "pistol";
             case "smg","pdw","submachine_gun" -> "smg";
             case "shotgun" -> "shotgun";

@@ -10,6 +10,7 @@ import java.util.*;
 /** The only faction/rank policy resolver. Builtins < datapack defaults < rank < explicit faction. */
 public final class FactionEquipmentConfig {
     private static final JsonObject DEFAULTS = loadDefaults();
+    private static final JsonObject DOCTRINE = loadResource("/defaults/equipment_doctrine.json");
     private static final Set<String> WARNED = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static final java.util.concurrent.atomic.AtomicLong REVISIONS=new java.util.concurrent.atomic.AtomicLong();
     private static volatile Prepared active=new Prepared(new JsonObject(),Map.of(),0);
@@ -92,19 +93,33 @@ public final class FactionEquipmentConfig {
     private static Profile resolve(JsonObject source,String rank,String id,Prepared snapshot) {
         JsonObject ranks=object(DEFAULTS,rank);
         JsonObject data=object(ranks,ranks.has(id)?id:"neutral").deepCopy();
+        JsonObject doctrineRank=object(DOCTRINE,rank);
+        merge(data,object(doctrineRank,doctrineRank.has(id)?id:"neutral"));
         JsonObject definition=object(snapshot.definitions.getOrDefault(id,new JsonObject()),rank);
         JsonObject factionOverride=object(object(source,"faction_overrides"),id);
         merge(data,definition);
-        for(String key:List.of("bands","item_pool","gun_category_map")) {
+        for(String key:List.of("bands","item_pool","gun_category_map","equipment_archetypes")) {
             JsonObject combined=object(data,key).deepCopy();
-            merge(combined,object(snapshot.global,key));
-            merge(combined,object(source,key));
+            if(key.equals("equipment_archetypes")&&snapshot.global.has(key)&&object(snapshot.global,key).size()==0) combined=new JsonObject();
+            else merge(combined,object(snapshot.global,key));
+            if(key.equals("equipment_archetypes")&&source.has(key)&&object(source,key).size()==0) combined=new JsonObject();
+            else merge(combined,object(source,key));
             data.add(key,combined);
         }
         for(var entry:source.entrySet()) if(!entry.getKey().equals("faction_overrides")
-                && !List.of("bands","item_pool","gun_category_map").contains(entry.getKey()))
+                && !List.of("bands","item_pool","gun_category_map","equipment_archetypes").contains(entry.getKey()))
             mergeEntry(data,entry.getKey(),entry.getValue());
         merge(data,factionOverride);
+        // Armor is rank-only; faction definitions cannot sneak a second armor bias back in.
+        data.add("armor_rank_band_weights",object(object(DOCTRINE,rank),"neutral").get("armor_rank_band_weights").deepCopy());
+        JsonElement rankArmor=source.get("armor_band_weights");
+        if(rankArmor!=null) data.add("armor_rank_band_weights",rankArmor.deepCopy());
+        JsonObject armorBands=object(data,"bands").deepCopy();
+        JsonElement armorThresholds=object(source,"bands").get("armor_points");
+        if(armorThresholds==null) armorThresholds=object(snapshot.global,"bands").get("armor_points");
+        if(armorThresholds==null) armorBands.remove("armor_points");
+        else armorBands.add("armor_points",armorThresholds.deepCopy());
+        data.add("bands",armorBands);
         boolean factionBands=(!id.equals("neutral")&&object(DEFAULTS,rank).has(id))
                 || explicitBandPolicy(definition)||explicitBandPolicy(factionOverride);
         return new Profile(data,rank,id,factionBands);
@@ -120,7 +135,13 @@ public final class FactionEquipmentConfig {
         }
         boolean factionBands() { return factionBands; }
         double number(String key, double fallback, double min, double max) { return FactionEquipmentConfig.number(data, key, fallback, min, max); }
-        double[] weights(String key, int count) { return array(data, key, count, null); }
+        double[] weights(String key, int count) {
+            if(key.equals("recovery_category_weights")&&data.has(key)&&data.getAsJsonArray(key).size()==3) {
+                double[] old=array(data,key,3,null);
+                return new double[]{0,old[0],old[1],old[2]};
+            }
+            return array(data, key, count, null);
+        }
         double[] bands(String key, double... fallback) { return array(object(data, "bands"), key, fallback.length, fallback); }
         double[] shieldCounts() {
             JsonObject counts = object(data, "shield_count");
@@ -178,16 +199,26 @@ public final class FactionEquipmentConfig {
     /** Pure schema validation. Unknown fields survive; explicitly invalid known fields reject the entire candidate. */
     private static void validateContribution(JsonObject root,String path) {
         for(String key:List.of("gun_chance","gun_core_chance","vanishing_chance","binding_chance","ranged_chance",
-                "second_weapon_chance","third_weapon_chance")) strictNumber(root,key,path,0,1,false);
-        strictNumber(root,"ammo_multiplier",path,0,100,false);
+                "second_weapon_chance","third_weapon_chance","doctrine_core_chance")) strictNumber(root,key,path,0,1,false);
+        for(String key:List.of("ammo_multiplier","food_multiplier","recovery_multiplier","self_buff_multiplier","throwable_multiplier"))
+            strictNumber(root,key,path,0,100,false);
         for(String key:List.of("gun_fallback_uniform","allow_tacz_firearms","ranged_in_backpack","automatic_shield_enchantments")) strictBoolean(root,key,path);
         if(root.has("gun_fallback_mode")) {
             String mode=strictString(root.get("gun_fallback_mode"),path+".gun_fallback_mode");
             if(!Set.of("category_uniform","global_weight").contains(mode)) invalid(path+".gun_fallback_mode","unknown mode");
         }
         for(var entry:Map.of("melee_band_weights",5,"armor_band_weights",5,"toughness_band_weights",4,"shield_band_weights",4,
-                "ranged_band_weights",4,"food_category_weights",4,"recovery_category_weights",3,"tactical_category_weights",7).entrySet())
+                "ranged_band_weights",4,"food_category_weights",4,"tactical_category_weights",7).entrySet())
             strictArray(root,entry.getKey(),entry.getValue(),path,false);
+        if(root.has("recovery_category_weights")) {
+            int size=strictJsonArray(root.get("recovery_category_weights"),path+".recovery_category_weights").size();
+            if(size!=3&&size!=4) invalid(path+".recovery_category_weights","expected four categories (legacy three accepted)");
+            strictArray(root,"recovery_category_weights",size,path,false);
+        }
+        strictArray(root,"armor_rank_band_weights",5,path,false);
+        strictArray(root,"self_buff_category_weights",2,path,false);
+        strictArray(root,"throwable_category_weights",5,path,false);
+        validateDoctrine(root,path);
         for(String key:List.of("bands","item_pool","gun_core","gun_category_map","enchant","durability","shield_count","faction_overrides"))
             requireObjectIfPresent(root,key,path);
         JsonObject bands=object(root,"bands");
@@ -262,6 +293,43 @@ public final class FactionEquipmentConfig {
             }
         }
     }
+    public static double rangedChance(Human human) { return of(human).number("ranged_chance",.2,0,1); }
+
+    private static void validateDoctrine(JsonObject root,String path) {
+        Map<String,Set<String>> families=Map.of("melee",Set.of("axe","sword","spear","mace","dagger","other"),
+                "shield",Set.of("buckler","small","round","tower","other"),"ranged",Set.of("bow","crossbow","trident","other"));
+        for(var category:families.entrySet()) {
+            String key=category.getKey()+"_archetype_weights";
+            requireObjectIfPresent(root,key,path);
+            for(String family:object(root,key).keySet()) {
+                if(commentKey(family)) continue;
+                if(!category.getValue().contains(family)) invalid(path+"."+key,"unknown family "+family);
+                strictNumber(object(root,key),family,path+"."+key,0,1e6,false);
+            }
+        }
+        requireObjectIfPresent(root,"equipment_archetypes",path);
+        for(var entry:object(root,"equipment_archetypes").entrySet()) {
+            if(commentKey(entry.getKey())) continue;
+            if(families.containsKey(entry.getKey())) {
+                if(!entry.getValue().isJsonObject()) invalid(path,"family mapping category must be an object");
+                for(var family:entry.getValue().getAsJsonObject().entrySet()) {
+                    if(commentKey(family.getKey())) continue;
+                    if(!families.get(entry.getKey()).contains(family.getKey())) invalid(path,"unknown equipment family");
+                    for(var selector:strictJsonArray(family.getValue(),path+".equipment_archetypes"))
+                        validateId(strictString(selector,path),path+".equipment_archetypes",true,false);
+                }
+            } else {
+                validateId(entry.getKey(),path+".equipment_archetypes",true,false);
+                String family=strictString(entry.getValue(),path+".equipment_archetypes");
+                if(families.values().stream().noneMatch(values->values.contains(family))) invalid(path,"unknown equipment family "+family);
+            }
+        }
+        requireObjectIfPresent(root,"faction_armor",path);
+        // Malformed individual sets are isolated at spawn, rather than rejecting all remaining valid sets.
+        JsonObject armor=object(root,"faction_armor");
+        if(armor.has("sets")) strictJsonArray(armor.get("sets"),path+".faction_armor.sets");
+    }
+
     private static JsonArray arrayOrEmpty(JsonObject root,String key) {
         return root.has(key)?root.getAsJsonArray(key):new JsonArray();
     }
@@ -361,12 +429,20 @@ public final class FactionEquipmentConfig {
     }
     static void merge(JsonObject into, JsonObject from) { from.entrySet().forEach(e -> mergeEntry(into,e.getKey(),e.getValue())); }
     private static void mergeEntry(JsonObject into, String key, JsonElement value) {
+        if(value.isJsonObject()&&value.getAsJsonObject().size()==0
+                &&(key.endsWith("_archetype_weights")||key.equals("equipment_archetypes")||key.equals("faction_armor"))) {
+            into.add(key,new JsonObject());
+            return;
+        }
         if (value.isJsonObject() && into.has(key) && into.get(key).isJsonObject()) merge(into.getAsJsonObject(key),value.getAsJsonObject());
         else into.add(key,value.deepCopy());
     }
     static void warn(String key, String message) { if (WARNED.add(key)) HumanGunner.LOGGER.warn("{}: {}",message,key); }
     private static JsonObject loadDefaults() {
-        try (var stream=FactionEquipmentConfig.class.getResourceAsStream("/defaults/faction_equipment.json")) {
+        return loadResource("/defaults/faction_equipment.json");
+    }
+    private static JsonObject loadResource(String path) {
+        try (var stream=FactionEquipmentConfig.class.getResourceAsStream(path)) {
             if (stream == null) throw new IllegalStateException("Missing faction equipment defaults");
             return JsonParser.parseReader(new InputStreamReader(stream,StandardCharsets.UTF_8)).getAsJsonObject();
         } catch (java.io.IOException error) { throw new IllegalStateException("Cannot load faction equipment defaults",error); }

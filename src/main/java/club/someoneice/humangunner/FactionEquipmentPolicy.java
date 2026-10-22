@@ -11,14 +11,20 @@ final class FactionEquipmentPolicy {
     }
 
     static int choose(double[] weights, double unit) {
-        double total = 0;
-        for (double weight : weights) if (Double.isFinite(weight) && weight > 0) total += weight;
-        if (!(total > 0)) return -1;
-        double roll = Math.min(Math.nextDown(1.0), Math.max(0, unit)) * total;
-        for (int i = 0; i < weights.length; i++) if (Double.isFinite(weights[i]) && weights[i] > 0) {
-            if ((roll -= weights[i]) < 0) return i;
+        double scale=0;
+        for(double weight:weights) if(Double.isFinite(weight)&&weight>scale) scale=weight;
+        if(!(scale>0)) return -1;
+        // Faction armor accepts every finite positive relative weight, even near Double.MAX_VALUE.
+        double total=0;
+        for(double weight:weights) if(Double.isFinite(weight)&&weight>0) total+=weight/scale;
+        double roll=Math.min(Math.nextDown(1.0),Math.max(0,unit))*total;
+        int last=-1;
+        for(int i=0;i<weights.length;i++) if(Double.isFinite(weights[i])&&weights[i]>0) {
+            last=i;
+            if((roll-=weights[i]/scale)<0) return i;
         }
-        return -1;
+        return last;
+
     }
 
     static int nearest(int requested, boolean[] available) {

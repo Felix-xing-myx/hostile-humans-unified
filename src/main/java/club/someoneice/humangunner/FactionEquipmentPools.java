@@ -10,18 +10,38 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.*;
 import net.minecraftforge.registries.ForgeRegistries;
 import java.util.*;
-import java.util.function.ToDoubleFunction;
 
 /** Cached classification of explicit candidates only. Never scans the item registry. */
 final class FactionEquipmentPools {
-    private record Candidate<T>(T value, int band, int toughness, double metric) { }
+    private record Candidate<T>(T value, int band, double metric) { }
     private final List<Candidate<ConfiguredEquipmentLoadout.ItemEntry>> melee = new ArrayList<>(), ranged = new ArrayList<>(), shields = new ArrayList<>();
     private final List<Candidate<ConfiguredEquipmentLoadout.ArmorSetEntry>> armor = new ArrayList<>();
     private final FactionEquipmentConfig.Profile profile;
-    private final ConfiguredEquipmentLoadout.Pool<ConfiguredEquipmentLoadout.ItemEntry> neutralMain,neutralReserve,neutralRanged;
+    private record ArmorOverride(ConfiguredEquipmentLoadout.ArmorSetEntry set,double weight) {}
+    private final List<ArmorOverride> armorOverrides = new ArrayList<>();
 
     FactionEquipmentPools(ConfiguredEquipmentLoadout loadout, FactionEquipmentConfig.Profile profile) {
         this.profile = profile;
+        for(var element:list(FactionEquipmentConfig.object(profile.data,"faction_armor"),"sets")) try {
+            JsonObject row=element.getAsJsonObject();
+            if(row.has("weight")&&(!row.get("weight").isJsonPrimitive()||!row.get("weight").getAsJsonPrimitive().isNumber()))
+                throw new IllegalArgumentException("numeric weight required");
+            double weight=row.has("weight")?row.get("weight").getAsDouble():1;
+            if(!Double.isFinite(weight)||weight<=0) throw new IllegalArgumentException("weight");
+            ResourceLocation[] ids=new ResourceLocation[4]; int index=0;
+            for(String slot:List.of("head","chest","legs","feet")) {
+                String text=row.get(slot).getAsString();
+                ids[index++]=text.contains(":")?ResourceLocation.tryParse(text):null;
+                if(ids[index-1]==null) throw new IllegalArgumentException("missing slot");
+            }
+            var set=new ConfiguredEquipmentLoadout.ArmorSetEntry(1,row.has("requires_mod")?row.get("requires_mod").getAsString():null,
+                    ids[0],ids[1],ids[2],ids[3]);
+            if(set.available()&&Arrays.stream(ids).allMatch(id->allowed(id,false))) armorOverrides.add(new ArmorOverride(set,weight));
+            else FactionEquipmentConfig.warn(profile.rank+"/"+profile.faction+"/armor_unavailable/"+element,
+                    "Faction armor set unavailable (missing mod/item, wrong slot or denied member); skipping whole set");
+        } catch(RuntimeException invalid) { FactionEquipmentConfig.warn(profile.rank+"/"+profile.faction+"/armor/"+element,"Invalid complete armor override; skipping whole set"); }
+        if(!FactionEquipmentConfig.object(profile.data,"faction_armor").entrySet().isEmpty()&&armorOverrides.isEmpty())
+            FactionEquipmentConfig.warn(profile.rank+"/"+profile.faction+"/armor_empty","No valid complete faction armor sets; using rank baseline");
         Map<ResourceLocation,ConfiguredEquipmentLoadout.ItemEntry> items = new LinkedHashMap<>();
         for (var pool : List.of(loadout.mainhand,loadout.inventory,loadout.bonusMainhand,loadout.rangedMainhand,loadout.offhand,loadout.shields))
             for (var item : pool.entries()) if (item.weight()>0 && item.available() && allowed(item.id(),false)) items.putIfAbsent(item.id(),item);
@@ -38,18 +58,15 @@ final class FactionEquipmentPools {
             if (GunSupport.isGunItem(stack)) continue;
             if (SpartanEquipmentCompat.isShield(stack)) {
                 if (stack.getMaxDamage()<=0) { FactionEquipmentConfig.warn(entry.id().toString(),"Cannot classify non-damageable shield; skipping"); continue; }
-                shields.add(new Candidate<>(entry,FactionEquipmentPolicy.band(stack.getMaxDamage(),profile.bands("shield_durability",200,450,1000),true),0,stack.getMaxDamage()));
+                shields.add(new Candidate<>(entry,FactionEquipmentPolicy.band(stack.getMaxDamage(),profile.bands("shield_durability",200,450,1000),true),stack.getMaxDamage()));
             } else if (RangedWeaponCustody.isBowOrCrossbow(stack) || HumanUtil.isTrident(stack)) {
                 // No common reliable projectile damage API: explicitly use the documented durability axis.
-                ranged.add(new Candidate<>(entry,FactionEquipmentPolicy.band(stack.getMaxDamage(),profile.bands("ranged_durability",300,500,900),true),0,stack.getMaxDamage()));
+                ranged.add(new Candidate<>(entry,FactionEquipmentPolicy.band(stack.getMaxDamage(),profile.bands("ranged_durability",300,500,900),true),stack.getMaxDamage()));
             } else if (HumanLootManager.isDedicatedMeleeWeapon(stack)) {
                 double damage=attribute(stack,EquipmentSlot.MAINHAND,Attributes.ATTACK_DAMAGE,1);
-                if (Double.isFinite(damage)) melee.add(new Candidate<>(entry,FactionEquipmentPolicy.band(damage,profile.bands("melee_damage",4,6,8,11),false),0,damage));
+                if (Double.isFinite(damage)) melee.add(new Candidate<>(entry,FactionEquipmentPolicy.band(damage,profile.bands("melee_damage",4,6,8,11),false),damage));
             }
         }
-        neutralMain=withExplicitExtras(loadout.mainhand,melee);
-        neutralReserve=withExplicitExtras(loadout.inventory,melee);
-        neutralRanged=withExplicitExtras(loadout.rangedMainhand,ranged);
         Set<String> known = new HashSet<>();
         for (var set : loadout.armorSets.entries()) addArmor(set,known,false);
         // Extra armor only forms a set when the same registered material has exactly one candidate per slot.
@@ -61,21 +78,8 @@ final class FactionEquipmentPools {
                 .stream().allMatch(slot->slots.containsKey(slot) && slots.get(slot).size()==1))
             addArmor(new ConfiguredEquipmentLoadout.ArmorSetEntry(1,null,slots.get(EquipmentSlot.HEAD).get(0),slots.get(EquipmentSlot.CHEST).get(0),
                     slots.get(EquipmentSlot.LEGS).get(0),slots.get(EquipmentSlot.FEET).get(0)),known,true);
-        HumanGunner.LOGGER.debug("Equipment A×T matrix rank={} faction={}: {}",profile.rank,profile.faction,
-                armor.stream().map(c->"A"+(c.band+1)+"/T"+c.toughness).toList());
-    }
-
-    private ConfiguredEquipmentLoadout.Pool<ConfiguredEquipmentLoadout.ItemEntry> withExplicitExtras(
-            ConfiguredEquipmentLoadout.Pool<ConfiguredEquipmentLoadout.ItemEntry> original,
-            List<Candidate<ConfiguredEquipmentLoadout.ItemEntry>> classified) {
-        Map<ResourceLocation,ConfiguredEquipmentLoadout.ItemEntry> entries=new LinkedHashMap<>();
-        Set<ResourceLocation> categoryIds=new HashSet<>();
-        for(var entry:classified) categoryIds.add(entry.value.id());
-        for(var entry:original.entries()) if(categoryIds.contains(entry.id())&&allowed(entry.id(),false)) entries.putIfAbsent(entry.id(),entry);
-        Set<String> extras=new HashSet<>();
-        for(var entry:list(FactionEquipmentConfig.object(profile.data,"item_pool"),"extra")) extras.add(entry.getAsString());
-        for(var entry:classified) if(extras.contains(entry.value.id().toString())) entries.putIfAbsent(entry.value.id(),entry.value);
-        return new ConfiguredEquipmentLoadout.Pool<>(new ArrayList<>(entries.values()));
+        HumanGunner.LOGGER.debug("Armor rank={} faction={} available bands={}",profile.rank,profile.faction,
+                armor.stream().map(c->"A"+(c.band+1)).toList());
     }
 
     boolean allowed(ResourceLocation id, boolean extra) { return profile.allowedItem(id,extra); }
@@ -85,17 +89,15 @@ final class FactionEquipmentPools {
         if (!List.of(set.head(),set.chest(),set.legs(),set.feet()).stream().allMatch(id->allowed(id,extra))) return;
         String key=set.head()+"/"+set.chest()+"/"+set.legs()+"/"+set.feet();
         if (!known.add(key)) return;
-        double points=0,toughness=0;
+        double points=0;
         ResourceLocation[] ids={set.head(),set.chest(),set.legs(),set.feet()};
         EquipmentSlot[] slots={EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET};
         for (int i=0;i<4;i++) {
             ItemStack stack=new ItemStack(ForgeRegistries.ITEMS.getValue(ids[i]));
             points+=attribute(stack,slots[i],Attributes.ARMOR,0);
-            toughness+=attribute(stack,slots[i],Attributes.ARMOR_TOUGHNESS,0);
         }
-        if (!Double.isFinite(points) || !Double.isFinite(toughness)) return;
-        armor.add(new Candidate<>(set,FactionEquipmentPolicy.band(points,profile.bands("armor_points",7,11,15,19),false),
-                FactionEquipmentPolicy.band(toughness,profile.bands("toughness",0,4,8),false),points));
+        if (!Double.isFinite(points)) return;
+        armor.add(new Candidate<>(set,FactionEquipmentPolicy.band(points,profile.bands("armor_points",7,11,15,19),false),points));
     }
 
     static double attribute(ItemStack stack, EquipmentSlot slot, Attribute attribute, double base) {
@@ -110,57 +112,63 @@ final class FactionEquipmentPools {
         return (value+value*multiplyBase)*multiplyTotal;
     }
 
-    ConfiguredEquipmentLoadout.ItemEntry melee(Human human) {
-        return !profile.factionBands()?legacyMelee(neutralMain,human):select(melee,"melee_band_weights",5,human,false);
-    }
-    ConfiguredEquipmentLoadout.ItemEntry reserveMelee(Human human) {
-        return !profile.factionBands()?legacyMelee(neutralReserve,human):select(melee,"melee_band_weights",5,human,false);
-    }
-    private ConfiguredEquipmentLoadout.ItemEntry legacyMelee(ConfiguredEquipmentLoadout.Pool<ConfiguredEquipmentLoadout.ItemEntry> pool,Human human) {
-        return pool.roll(human.getRandom(),entry->allowed(entry.id(),false)&&HumanLootManager.isDedicatedMeleeWeapon(new ItemStack(ForgeRegistries.ITEMS.getValue(entry.id()))));
-    }
-    ConfiguredEquipmentLoadout.ItemEntry ranged(Human human) {
-        return !profile.factionBands()?neutralRanged.roll(human.getRandom(),entry->allowed(entry.id(),false))
-                :select(ranged,"ranged_band_weights",4,human,false);
-    }
-    ConfiguredEquipmentLoadout.ItemEntry shield(Human human) { return select(shields,"shield_band_weights",4,human,false); }
-    ConfiguredEquipmentLoadout.ArmorSetEntry armor(Human human) { return select(armor,"armor_band_weights",5,human,true); }
-
-    private <T> T select(List<Candidate<T>> values,String key,int count,Human human,boolean conditionToughness) {
-        if (values.isEmpty()) return null; // The original rank pools were already considered, with deny applied.
-        List<Candidate<T>> available=values;
-        if (profile.factionBands()) {
-            int requested=profile.pick(key,count,human);
-            if (requested<0) return null;
-            boolean[] present=new boolean[count];
-            for (var value:values) present[value.band]=true;
-            int actual=FactionEquipmentPolicy.nearest(requested,present);
-            if (actual!=requested) FactionEquipmentConfig.warn(profile.rank+"/"+profile.faction+"/"+key+"/"+requested+"/"+actual,
-                    "Empty equipment band; using nearest available band");
-            available=values.stream().filter(c->c.band==actual).toList();
-            if (conditionToughness) {
-                double[] weights=profile.weights("toughness_band_weights",4);
-                boolean[] toughnessPresent=new boolean[4];
-                for(var value:available) toughnessPresent[value.toughness]=true;
-                for(int i=0;i<4;i++) if(!toughnessPresent[i]) weights[i]=0;
-                int chosen=FactionEquipmentPolicy.choose(weights,human.getRandom().nextDouble());
-                if(chosen<0) {
-                    // A real in-band value, favoring the lowest; never synthesize A/T combinations.
-                    for(int i=0;i<4;i++) if(toughnessPresent[i]) { chosen=i; break; }
-                    FactionEquipmentConfig.warn(profile.rank+"/"+profile.faction+"/toughness/"+actual,"Zero available toughness weights; choosing lowest real toughness");
-                }
-                int selected=chosen;
-                available=available.stream().filter(c->c.toughness==selected).toList();
-            }
+    ConfiguredEquipmentLoadout.ItemEntry melee(Human human) { return select(melee,"melee_band_weights",5,human,"melee"); }
+    ConfiguredEquipmentLoadout.ItemEntry reserveMelee(Human human) { return melee(human); }
+    ConfiguredEquipmentLoadout.ItemEntry ranged(Human human) { return select(ranged,"ranged_band_weights",4,human,"ranged"); }
+    ConfiguredEquipmentLoadout.ItemEntry shield(Human human) { return select(shields,"shield_band_weights",4,human,"shield"); }
+    ConfiguredEquipmentLoadout.ArmorSetEntry armor(Human human) {
+        if(!armorOverrides.isEmpty()) {
+            int selected=FactionEquipmentPolicy.choose(armorOverrides.stream().mapToDouble(ArmorOverride::weight).toArray(),human.getRandom().nextDouble());
+            return selected<0?null:armorOverrides.get(selected).set();
         }
-        // Finite candidate median works for both bounded and unbounded terminal bands.
+        return select(armor,"armor_rank_band_weights",5,human,"");
+    }
+
+    private <T> T select(List<Candidate<T>> values,String key,int count,Human human,String category) {
+        if(values.isEmpty()) return null;
+        int requested=profile.pick(key,count,human);
+        if(requested<0) return null;
+        boolean[] present=new boolean[count];
+        for(var value:values) present[value.band]=true;
+        int actual=FactionEquipmentPolicy.nearest(requested,present);
+        if(actual!=requested) FactionEquipmentConfig.warn(profile.rank+"/"+profile.faction+"/"+key+"/"+requested+"/"+actual,
+                "Empty equipment band; using nearest available band");
+        List<Candidate<T>> available=values.stream().filter(c->c.band==actual).toList();
+        // Calculate the original band's center before doctrine filters candidates.
         double[] metrics=available.stream().mapToDouble(c->c.metric).sorted().toArray();
         double median=metrics.length%2==1?metrics[metrics.length/2]:(metrics[metrics.length/2-1]+metrics[metrics.length/2])/2;
+        boolean coreSelected=false;
+        if(!category.isEmpty() && human.getRandom().nextDouble()<profile.number("doctrine_core_chance",0,0,1)) {
+            var configured=FactionEquipmentConfig.object(profile.data,category+"_archetype_weights");
+            List<String> families=new ArrayList<>(); List<Double> weights=new ArrayList<>();
+            List<Candidate<T>> inBand=available;
+            for(var entry:configured.entrySet()) {
+                double weight=FactionEquipmentConfig.number(configured,entry.getKey(),0,0,1e6);
+                if(weight>0 && inBand.stream().anyMatch(c->family(c,category).equals(EquipmentArchetypes.canonical(entry.getKey())))) {
+                    families.add(EquipmentArchetypes.canonical(entry.getKey())); weights.add(weight);
+                } else if(weight>0) FactionEquipmentConfig.warn(profile.rank+"/"+profile.faction+"/"+category+"/"+actual+"/"+entry.getKey(),
+                        "Core family absent in selected band; renormalizing remaining families in the same band");
+            }
+            int selected=FactionEquipmentPolicy.choose(weights.stream().mapToDouble(Double::doubleValue).toArray(),human.getRandom().nextDouble());
+            if(selected>=0) {
+                coreSelected=true;
+                String family=families.get(selected);
+                available=available.stream().filter(c->family(c,category).equals(family)).toList();
+                HumanGunner.LOGGER.debug("Equipment core rank={} faction={} category={} band={} family={}",profile.rank,profile.faction,category,actual,family);
+            } else FactionEquipmentConfig.warn(profile.rank+"/"+profile.faction+"/"+category+"/"+actual+"/fallback",
+                    "No weighted core families in band; using random supplement without changing band");
+        }
         double[] weights=new double[available.size()];
-        for(int i=0;i<weights.length;i++) weights[i]=profile.factionBands()?1/(1+Math.abs(available.get(i).metric-median))
-                : ((ConfiguredEquipmentLoadout.WeightedEntry)available.get(i).value).weight();
+        for(int i=0;i<weights.length;i++) weights[i]=1/(1+Math.abs(available.get(i).metric-median));
         int chosen=FactionEquipmentPolicy.choose(weights,human.getRandom().nextDouble());
+        if(chosen>=0&&!category.isEmpty()&&!coreSelected) HumanGunner.LOGGER.debug(
+                "Equipment supplement rank={} faction={} category={} band={} family={}",
+                profile.rank,profile.faction,category,actual,family(available.get(chosen),category));
         return chosen<0?null:available.get(chosen).value;
+    }
+    private String family(Candidate<?> candidate,String category) {
+        var entry=(ConfiguredEquipmentLoadout.ItemEntry)candidate.value;
+        return EquipmentArchetypes.family(new ItemStack(ForgeRegistries.ITEMS.getValue(entry.id())),category,profile);
     }
 
     static JsonArray list(JsonObject object,String key) {

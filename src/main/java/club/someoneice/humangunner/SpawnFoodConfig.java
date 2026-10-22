@@ -23,11 +23,23 @@ final class SpawnFoodConfig {
     final List<Entry> entries;
     final int varietyMin, varietyMax;
     final double enchantedAppleChance;
+    private final int[] enchantedCounts;
+    private final double[] enchantedWeights;
     private static final Preset NONE = new Preset(1, new Range(0, 0), new Range(0, 0));
 
     SpawnFoodConfig(JsonObject root) {
         enabled = UnifiedConfig.bool(root, "enabled", true);
         enchantedAppleChance = UnifiedConfig.number(root, "enchanted_golden_apple_chance", 0, 0, 1);
+        List<Integer> counts=new ArrayList<>(); List<Double> weights=new ArrayList<>();
+        JsonObject appleCounts=FactionEquipmentConfig.object(root,"enchanted_golden_apple_counts");
+        for(var entry:appleCounts.entrySet()) try {
+            int count=Integer.parseInt(entry.getKey()); double weight=entry.getValue().getAsDouble();
+            if(count>=1&&count<=64&&Double.isFinite(weight)&&weight>0) { counts.add(count); weights.add(weight); }
+        } catch(RuntimeException ignored) {}
+        // Old files retain their single-apple distribution; explicit empty distribution grants nothing.
+        if(!root.has("enchanted_golden_apple_counts")) { counts.add(1); weights.add(1.0); }
+        enchantedCounts=counts.stream().mapToInt(Integer::intValue).toArray();
+        enchantedWeights=weights.stream().mapToDouble(Double::doubleValue).toArray();
         int low = integer(root, "variety_min", 4, 1, 30);
         int high = integer(root, "variety_max", 7, 1, 30);
         varietyMin = Math.max(1, Math.min(low, high)); varietyMax = Math.max(varietyMin, Math.max(low, high));
@@ -86,6 +98,15 @@ final class SpawnFoodConfig {
         for (var preset : presets) if ((value -= preset.weight()) < 0) return preset;
         return presets.get(presets.size() - 1);
     }
+    int foodCount(Human human,Preset preset) {
+        return FactionEquipmentPolicy.scaledCount(preset.food().roll(human.getRandom()),
+                FactionEquipmentConfig.of(human).number("food_multiplier",1,0,100));
+    }
+    int enchantedAppleCount(Human human) {
+        if(!enabled || human.getRandom().nextDouble()>=enchantedAppleChance) return 0;
+        int chosen=FactionEquipmentPolicy.choose(enchantedWeights,human.getRandom().nextDouble());
+        return chosen<0?0:enchantedCounts[chosen];
+    }
     /** Weighted without replacement: a food weight changes inclusion, not its stack count. */
     List<Item> availableFoods(Human human) {
         List<Available> candidates = new ArrayList<>();
@@ -98,19 +119,11 @@ final class SpawnFoodConfig {
                 if(candidates.stream().noneMatch(e->e.item()==item.get())) candidates.add(new Available(item.get(), entry.weight(),entry.category()));
         }
         List<Item> result = new ArrayList<>();
-        double[] categoryWeights=FactionEquipmentConfig.of(human).weights("food_category_weights",4);
         while (!candidates.isEmpty()) {
-            double[] possible=categoryWeights.clone();
-            for(int group=0;group<4;group++) {
-                final int selected=group;
-                if(candidates.stream().noneMatch(e->e.category()==selected)) possible[group]=0;
-            }
-            int group=FactionEquipmentPolicy.choose(possible,human.getRandom().nextDouble());
-            if(group<0) break;
-            List<Available> members=candidates.stream().filter(e->e.category()==group).toList();
-            int chosen=FactionEquipmentPolicy.choose(members.stream().mapToDouble(Available::weight).toArray(),human.getRandom().nextDouble());
-            Available selected=members.get(chosen);
-            result.add(selected.item()); candidates.remove(selected);
+            int chosen=FactionEquipmentPolicy.choose(candidates.stream().mapToDouble(Available::weight).toArray(),human.getRandom().nextDouble());
+            if(chosen<0) break;
+            Available selected=candidates.remove(chosen);
+            result.add(selected.item());
         }
         return result;
     }
