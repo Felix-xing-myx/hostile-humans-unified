@@ -36,6 +36,15 @@ public final class MovementAuthorityLeaseTest {
         check(!actions.finish(lease, ActionCoordinator.Status.CANCELLED, "late stop") && actions.running(next), "old route cannot end replacement");
         check(actions.pause(next) && !actions.heartbeat(next), "paused execution cannot renew liveness");
         actions.cancelSession("unload"); check(!actions.heartbeat(next), "old session cannot heartbeat");
+        var closing = actions.requestLease("closing route", EnumSet.of(BASE_MOVE), 0, false, 10);
+        check(actions.acquire(closing), "route before cleanup");
+        actions.closeAdmissions();
+        var reentrant = actions.request("cleanup callback", EnumSet.of(ATTACK), 999, true, 10);
+        check(!actions.acquire(reentrant), "cleanup callback cannot start a fresh action");
+        check(actions.running(closing), "old authority remains available to exact route cleanup");
+        check(actions.finish(closing, ActionCoordinator.Status.CANCELLED, "own route released"), "old cleanup can settle its token");
+        actions.cancelSession("cleanup complete");
+        check(!actions.acquire(actions.request("stale coordinator", EnumSet.of(ATTACK), 999, true, 10)), "closed coordinator never reopens");
         System.out.println("MovementAuthorityLeaseTest passed");
     }
     private static void check(boolean value, String reason) { if (!value) throw new AssertionError(reason); }

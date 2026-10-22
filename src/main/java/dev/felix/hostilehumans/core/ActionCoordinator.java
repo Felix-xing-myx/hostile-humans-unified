@@ -15,7 +15,7 @@ public final class ActionCoordinator {
     public record Token(long session, long sequence, String action) { }
     public record Feedback(Token token, Status status, String reason) { }
     /** Immutable observation at the coordinator's already advanced clock; observing never advances it. */
-    public record Snapshot(Token token, Status status, java.util.Set<Resource> resources, int priority,
+    public record Snapshot(Token token, Status status, java.util.Set<Resource> resources, int priority, boolean interruptible,
                            long remainingTicks, boolean lease, long leaseTicks, long lastHeartbeat) {
         public Snapshot { resources = java.util.Set.copyOf(resources); }
     }
@@ -39,6 +39,7 @@ public final class ActionCoordinator {
     private final ArrayDeque<Feedback> history = new ArrayDeque<>();
     private static final java.util.concurrent.atomic.AtomicLong GENERATIONS = new java.util.concurrent.atomic.AtomicLong();
     private long session = GENERATIONS.incrementAndGet(), sequence, now;
+    private boolean admissionsClosed;
 
     public void advance(long tick) {
         now = tick;
@@ -85,13 +86,14 @@ public final class ActionCoordinator {
 
     public List<Snapshot> snapshot() {
         return actions.values().stream().map(action -> new Snapshot(action.token, action.status, action.resources,
-                action.priority, remaining(expires(action)), action.leaseTicks > 0, action.leaseTicks, action.lastHeartbeat)).toList();
+                action.priority, action.interruptible, remaining(expires(action)), action.leaseTicks > 0, action.leaseTicks, action.lastHeartbeat)).toList();
     }
     private long remaining(long deadline) { return deadline <= now ? 0 : deadline - now < 0 ? Long.MAX_VALUE : deadline - now; }
     private long after(long ticks) { return now > Long.MAX_VALUE - ticks ? Long.MAX_VALUE : now + ticks; }
     private static long expires(Action action) { return action.leaseTicks > 0 ? action.leaseDeadline : action.deadline; }
 
     public boolean acquire(Token token) {
+        if (admissionsClosed) return false;
         Action action = current(token);
         if (action == null) return false;
         if (action.status == Status.RUNNING) return true;
@@ -134,6 +136,9 @@ public final class ActionCoordinator {
         for (Action action : new ArrayList<>(actions.values())) end(action, Status.CANCELLED, reason);
         session = GENERATIONS.incrementAndGet();
     }
+
+    /** Closing admission preserves old tokens only for their exact cleanup; this coordinator is never reopened. */
+    public void closeAdmissions() { admissionsClosed = true; }
 
     public String owner(Resource resource) {
         Action action = owners.get(resource);

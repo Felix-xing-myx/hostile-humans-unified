@@ -99,7 +99,7 @@ public final class HumanGoalExecutionBridge {
         try {
             for (Execution execution : new ArrayList<>(state.executions.values())) {
                 try { stop(execution, reason, locks); }
-                catch (RuntimeException | Error exception) { if (failure == null) failure = exception; else failure.addSuppressed(exception); }
+                catch (RuntimeException | Error exception) { if (failure == null) failure = exception; else if (failure != exception) failure.addSuppressed(exception); }
             }
         } finally { state.cancelling = false; state.lastOutcome = reason; }
         if (failure instanceof RuntimeException exception) throw exception;

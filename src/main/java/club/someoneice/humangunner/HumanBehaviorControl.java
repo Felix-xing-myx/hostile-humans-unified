@@ -8,6 +8,7 @@ import java.util.WeakHashMap;
 /** Shared runtime for the active combat behavior session; future hubs reuse this authority. */
 public final class HumanBehaviorControl {
     private static final Map<Human, ActionCoordinator> SESSIONS = new WeakHashMap<>();
+    private static final java.util.Set<Human> CANCELLING = java.util.Collections.newSetFromMap(new WeakHashMap<>());
     private HumanBehaviorControl() { }
 
     public static ActionCoordinator actions(Human human) {
@@ -34,15 +35,34 @@ public final class HumanBehaviorControl {
     }
 
     public static void cancel(Human human, String reason) {
-        GunCustody.cancelBackgroundReloads(human);
-        MeleeActionControl.clear(human, reason);
-        NpcDualWield.clear(human);
-        human.humanGunner$cancelMeleeAttackForDefense();
-        RecoverySupplies.clear(human, reason);
-        HumanCombatDirector.clear(human);
-        RetreatRecoveryPolicy.clearEscape(human);
-        MovementSpeedController.clearLimits(human);
-        ActionCoordinator actions = SESSIONS.remove(human);
-        if (actions != null) actions.cancelSession(reason);
+        if (!CANCELLING.add(human)) return;
+        ActionCoordinator actions = SESSIONS.computeIfAbsent(human, ignored -> new ActionCoordinator());
+        actions.closeAdmissions();
+        Throwable failure = null;
+        try {
+            // Old movement callbacks may release their own route, but cannot acquire a new action in cleanup.
+            Runnable[] cleanup = {
+                    () -> HumanGoalExecutionBridge.cancel(human, reason),
+                    () -> GunCustody.cancelBackgroundReloads(human),
+                    () -> MeleeActionControl.clear(human, reason),
+                    () -> NpcDualWield.clear(human),
+                    () -> human.humanGunner$cancelMeleeAttackForDefense(),
+                    () -> RecoverySupplies.clear(human, reason),
+                    () -> HumanCombatDirector.clear(human),
+                    () -> RetreatRecoveryPolicy.clearEscape(human),
+                    () -> MovementSpeedController.clearLimits(human)
+            };
+            for (Runnable step : cleanup) {
+                try { step.run(); }
+                catch (RuntimeException | Error exception) {
+                    if (failure == null) failure = exception; else if (failure != exception) failure.addSuppressed(exception);
+                }
+            }
+        } finally {
+            try { actions.cancelSession(reason); }
+            finally { SESSIONS.remove(human, actions); CANCELLING.remove(human); }
+        }
+        if (failure instanceof RuntimeException exception) throw exception;
+        if (failure instanceof Error error) throw error;
     }
 }
