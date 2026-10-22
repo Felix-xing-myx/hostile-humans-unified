@@ -14,6 +14,11 @@ public final class ActionCoordinator {
     public enum Status { WAITING, RUNNING, PAUSED, COMPLETED, FAILED, CANCELLED }
     public record Token(long session, long sequence, String action) { }
     public record Feedback(Token token, Status status, String reason) { }
+    /** Immutable observation at the coordinator's already advanced clock; observing never advances it. */
+    public record Snapshot(Token token, Status status, java.util.Set<Resource> resources, int priority,
+                           long remainingTicks, boolean lease, long leaseTicks, long lastHeartbeat) {
+        public Snapshot { resources = java.util.Set.copyOf(resources); }
+    }
     private static final int HISTORY_LIMIT = 24;
     private static final class Action {
         final Token token;
@@ -21,10 +26,12 @@ public final class ActionCoordinator {
         final int priority;
         final boolean interruptible;
         final long deadline;
+        final long leaseTicks;
+        long leaseDeadline, lastHeartbeat = Long.MIN_VALUE;
         Status status = Status.WAITING;
-        Action(Token token, EnumSet<Resource> resources, int priority, boolean interruptible, long deadline) {
+        Action(Token token, EnumSet<Resource> resources, int priority, boolean interruptible, long deadline, long leaseTicks) {
             this.token = token; this.resources = resources.clone(); this.priority = priority;
-            this.interruptible = interruptible; this.deadline = deadline;
+            this.interruptible = interruptible; this.deadline = deadline; this.leaseTicks = leaseTicks; this.leaseDeadline = deadline;
         }
     }
     private final Map<String, Action> actions = new LinkedHashMap<>();
@@ -36,26 +43,53 @@ public final class ActionCoordinator {
     public void advance(long tick) {
         now = tick;
         for (Action action : new ArrayList<>(actions.values()))
-            if (tick >= action.deadline) end(action, Status.FAILED, "action timeout");
+            if (tick >= expires(action)) end(action, Status.FAILED, action.leaseTicks > 0 ? "execution lease heartbeat expired" : "action timeout");
     }
 
     /** Repeated evaluation keeps the original token and deadline, rather than restarting an action. */
     public Token request(String name, EnumSet<Resource> resources, int priority,
                          boolean interruptible, long maximumTicks) {
+        return requestInternal(name, resources, priority, interruptible, maximumTicks, 0);
+    }
+
+    /** A liveness lease, not an action-duration deadline. Only successful execution may heartbeat it. */
+    public Token requestLease(String name, EnumSet<Resource> resources, int priority,
+                              boolean interruptible, long watchdogTicks) {
+        if (watchdogTicks < 1 || watchdogTicks > 1200) throw new IllegalArgumentException("lease watchdog");
+        return requestInternal(name, resources, priority, interruptible, watchdogTicks, watchdogTicks);
+    }
+
+    private Token requestInternal(String name, EnumSet<Resource> resources, int priority,
+                                  boolean interruptible, long maximumTicks, long leaseTicks) {
         if (name == null || name.isBlank() || maximumTicks < 1) throw new IllegalArgumentException("action request");
         Action existing = actions.get(name);
         if (existing != null) {
             if (!existing.resources.equals(resources) || existing.priority != priority
-                    || existing.interruptible != interruptible)
+                    || existing.interruptible != interruptible || (existing.leaseTicks > 0) != (leaseTicks > 0))
                 throw new IllegalArgumentException("active action request changed: " + name);
-            return existing.token;
+            return existing.token; // Neither repeated action requests nor lease requests renew time.
         }
         Token token = new Token(session, ++sequence, name);
-        Action action = new Action(token, resources, priority, interruptible,
-                now > Long.MAX_VALUE - maximumTicks ? Long.MAX_VALUE : now + maximumTicks);
+        Action action = new Action(token, resources, priority, interruptible, after(maximumTicks), leaseTicks);
         actions.put(name, action);
         return token;
     }
+
+    public boolean heartbeat(Token token) {
+        Action action = current(token);
+        if (action == null || action.leaseTicks == 0 || action.status != Status.RUNNING || now >= action.leaseDeadline) return false;
+        action.lastHeartbeat = now;
+        action.leaseDeadline = after(action.leaseTicks);
+        return true;
+    }
+
+    public List<Snapshot> snapshot() {
+        return actions.values().stream().map(action -> new Snapshot(action.token, action.status, action.resources,
+                action.priority, remaining(expires(action)), action.leaseTicks > 0, action.leaseTicks, action.lastHeartbeat)).toList();
+    }
+    private long remaining(long deadline) { return deadline <= now ? 0 : deadline - now < 0 ? Long.MAX_VALUE : deadline - now; }
+    private long after(long ticks) { return now > Long.MAX_VALUE - ticks ? Long.MAX_VALUE : now + ticks; }
+    private static long expires(Action action) { return action.leaseTicks > 0 ? action.leaseDeadline : action.deadline; }
 
     public boolean acquire(Token token) {
         Action action = current(token);
