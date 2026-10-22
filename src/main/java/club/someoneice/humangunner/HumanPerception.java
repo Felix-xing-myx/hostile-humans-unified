@@ -326,8 +326,8 @@ public final class HumanPerception {
         HumanTargetSharing.tick(h);
         HumanAwareness.flush(h);
         s.clues.removeIf(clue->{
-            boolean sharedInvalid=clue.kind.equals("shared")&&clue.source!=null
-                    &&(!(level.getEntity(clue.source) instanceof LivingEntity source)||!sharingAllowed(h,source));
+            boolean sharedInvalid=clue.kind.equals("shared")&&(!HumanTargetSharing.available(h)
+                    ||clue.source!=null&&(!(level.getEntity(clue.source) instanceof LivingEntity source)||!sharingAllowed(h,source)));
             boolean invalid=now>=clue.until||sharedInvalid||!allowsCreatureClue(h,clue.kind,clue.source);
             if(invalid)clue.completed=now; // A running investigation must release this clue too.
             return invalid;

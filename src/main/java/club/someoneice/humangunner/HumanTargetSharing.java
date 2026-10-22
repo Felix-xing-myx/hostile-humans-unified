@@ -40,8 +40,12 @@ final class HumanTargetSharing {
     }
     static int nextCooldown(int remaining){return Math.max(0,Math.min(COOLDOWN,remaining)-1);}
     private HumanTargetSharing() {}
+    static boolean available(Human human){
+        return human.isAlive()&&!human.isRemoved()&&!human.isNoAi()&&!human.isSleeping()
+                &&!NavigationDebugService.controls(human)&&!HumanInventorySession.isEditing(human);
+    }
     static boolean peers(Human a, Human b) {
-        return a!=b&&a.isAlive()&&!a.isRemoved()&&b.isAlive()&&!b.isRemoved()
+        return a!=b&&available(a)&&available(b)
                 &&a.level()==b.level()&&a.distanceToSqr(b)<=RANGE_SQR
                 &&HumanFactions.same(a,b)
                 &&(!HumanFactions.enabled()||HumanFactions.id(a).equals(HumanFactions.id(b)))
@@ -55,6 +59,7 @@ final class HumanTargetSharing {
             int remaining=receiver.getPersistentData().getInt(key);
             if(remaining>0)receiver.getPersistentData().putInt(key,nextCooldown(remaining));
         }
+        if(!available(receiver)){clear(receiver);return;}
         var inbox=INBOX.get(receiver);if(inbox==null)return;
         long now=HumanPerception.now(receiver);
         for(var iterator=inbox.values().iterator();iterator.hasNext();){
@@ -66,7 +71,7 @@ final class HumanTargetSharing {
         }
     }
     private static boolean receiverContext(Human receiver,Lease lease){
-        return receiver.isAlive()&&!receiver.isRemoved()
+        return available(receiver)
                 &&Objects.equals(lease.receiverOwner,HumanRelations.effectiveOwner(receiver))
                 &&lease.receiverOrder.equals(SoldierOrder.get(receiver).name())
                 &&lease.receiverMode.equals(SoldierCombatMode.get(receiver).name());
@@ -99,7 +104,8 @@ final class HumanTargetSharing {
     private static Lease lease(Human receiver,LivingEntity target){
         if(target==null||!HumanPerception.sharingAllowed(receiver,target))return null;
         var inbox=INBOX.get(receiver);Lease lease=inbox==null?null:inbox.get(target.getUUID());
-        if(lease==null||!receiverContext(receiver,lease))return null;
+        if(lease==null)return null;
+        if(!receiverContext(receiver,lease)){inbox.remove(target.getUUID());return null;}
         long now=HumanPerception.now(receiver);refresh(receiver,lease,target,now);
         return !lease.window.retained(now)?null:lease;
     }
@@ -111,13 +117,12 @@ final class HumanTargetSharing {
     }
     /** Invoked only with the existing budgeted candidate query's bounded nearest friendly list. */
     static void broadcast(Human sender,List<Human> nearby){
-        if(sender.getPersistentData().getInt(SEND)>0||sender.isNoAi()||sender.isSleeping())return;
+        if(sender.getPersistentData().getInt(SEND)>0||!available(sender))return;
         Evidence evidence=HumanPerception.sharingEvidence(sender);if(evidence==null)return;
         int delivered=0;long now=HumanPerception.now(sender);
         for(Human receiver:nearby){
             if(delivered>=MAX_RECEIVERS)break;
-            if(!peers(sender,receiver)||receiver.isNoAi()||receiver.isSleeping()
-                    ||receiver.getPersistentData().getInt(RECEIVE)>0)continue;
+            if(!peers(sender,receiver)||receiver.getPersistentData().getInt(RECEIVE)>0)continue;
             LivingEntity target=resolve(receiver,evidence.target());
             if(target!=null&&!HumanPerception.sharingAllowed(receiver,target))continue;
             // An unidentified hurt direction has no confirmed identity to validate or attack.
