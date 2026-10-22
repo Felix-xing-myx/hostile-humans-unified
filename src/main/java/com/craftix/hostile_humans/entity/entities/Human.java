@@ -191,6 +191,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private static final EquipmentSlot[] HIRED_ARMOR_SLOTS = {
             EquipmentSlot.FEET, EquipmentSlot.LEGS, EquipmentSlot.CHEST, EquipmentSlot.HEAD};
     private LivingEntity pendingBetterCombatTarget;
+    private dev.felix.hostilehumans.core.ActionCoordinator.Token pendingMeleeAction;
     public final club.someoneice.humangunner.GuardCombatState guardCombatState =
             new club.someoneice.humangunner.GuardCombatState();
     private ItemStack pendingBetterCombatWeapon = ItemStack.EMPTY;
@@ -1367,38 +1368,50 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     public boolean doHurtTarget(Entity entityIn) {
-        if (entityIn instanceof LivingEntity target && !club.someoneice.humangunner.HumanPerception.canTarget(this,target)) return false;
-        if (!humanGunner$canMeleeAttack()) return false;
-        if (this.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) return false;
-        if (entityIn instanceof LivingEntity target
-                && !club.someoneice.humangunner.MeleeCombatRange.canStartAttack(this, target)) return false;
-        if (BetterCombatMeleeCombat.isEnabled(this) && entityIn instanceof LivingEntity requestedTarget) {
-            if (pendingBetterCombatTarget != null) return false;
-            if (BetterCombatMeleeCombat.hasWeaponProfile(this)) {
-                club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, requestedTarget);
+        if (!(entityIn instanceof LivingEntity requestedTarget)
+                || !club.someoneice.humangunner.HumanPerception.canTarget(this, requestedTarget)
+                || !humanGunner$canMeleeAttack()
+                || level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL
+                || !club.someoneice.humangunner.MeleeCombatRange.canStartAttack(this, requestedTarget)
+                || !club.someoneice.humangunner.MeleeActionControl.begin(this, requestedTarget)) return false;
+        var action = club.someoneice.humangunner.MeleeActionControl.token(this);
+        boolean delayed = false, completed = false;
+        try {
+            if (BetterCombatMeleeCombat.isEnabled(this)) {
+                if (BetterCombatMeleeCombat.hasWeaponProfile(this))
+                    club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, requestedTarget);
+                BetterCombatMeleeCombat.AttackPlan plan = BetterCombatMeleeCombat.createAttackPlan(this, requestedTarget);
+                if (plan != null) {
+                    if (plan.targets().isEmpty()) return false;
+                    setNpcBetterCombatAttackAnimation(plan.profile().animationName(),
+                            plan.profile().cooldownTicks(), plan.profile().animationUpswing());
+                    club.someoneice.humangunner.CloseDefenseHold.attack(this, (int) Math.min(Integer.MAX_VALUE,
+                            MeleeAttackVisual.playbackWindowTicks(plan.profile().cooldownTicks())));
+                    swing(InteractionHand.MAIN_HAND);
+                    pendingMeleeAction = action;
+                    pendingBetterCombatTarget = requestedTarget;
+                    pendingBetterCombatWeapon = getMainHandItem();
+                    pendingBetterCombatUpswingTicks = Math.max(1, Math.round(
+                            plan.profile().cooldownTicks() * plan.profile().animationUpswing()));
+                    delayed = true;
+                    facePendingBetterCombatAttack();
+                    return true;
+                }
             }
-            BetterCombatMeleeCombat.AttackPlan plan =
-                    BetterCombatMeleeCombat.createAttackPlan(this, requestedTarget);
-            if (plan != null) {
-                if (plan.targets().isEmpty()) return false;
-                // Players (and Better Mob Combat's working mob bridge) animate
-                // the upswing before applying damage. Starting at the hit tick
-                // discards the entire first half of the visible player motion.
-                setNpcBetterCombatAttackAnimation(plan.profile().animationName(),
-                        plan.profile().cooldownTicks(), plan.profile().animationUpswing());
-                // NPC recovery can extend past the hit/cooldown boundary. Allow two cycles plus a sync margin.
-                club.someoneice.humangunner.CloseDefenseHold.attack(this, (int) Math.min(Integer.MAX_VALUE,
-                        MeleeAttackVisual.playbackWindowTicks(plan.profile().cooldownTicks())));
-                swing(InteractionHand.MAIN_HAND);
-                pendingBetterCombatTarget = requestedTarget;
-                pendingBetterCombatWeapon = getMainHandItem().copy();
-                pendingBetterCombatUpswingTicks = Math.max(1, Math.round(
-                        plan.profile().cooldownTicks() * plan.profile().animationUpswing()));
-                facePendingBetterCombatAttack();
-                return true;
+            boolean hit = doHurtTargetSingle(entityIn, true);
+            if (hit && club.someoneice.humangunner.MeleeActionControl.impactValid(this, action)) {
+                for (LivingEntity secondary : club.someoneice.humangunner.VanillaMeleeSweep.targets(this, requestedTarget)) {
+                    if (!club.someoneice.humangunner.MeleeActionControl.impactValid(this, action)) break;
+                    club.someoneice.humangunner.VanillaMeleeSweep.strike(this,
+                            () -> doHurtTargetSingle(secondary, false, false));
+                }
             }
+            completed = true;
+            return hit;
+        } finally {
+            if (!delayed) club.someoneice.humangunner.MeleeActionControl.finish(this, action, completed,
+                    completed ? "native swing finished" : "attack setup cancelled");
         }
-        return doHurtTargetSingle(entityIn, true);
     }
 
     private boolean hasPendingBetterCombatFacing() {
@@ -1407,7 +1420,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 && pendingBetterCombatTarget.isAlive() && pendingBetterCombatTarget.level() == level()
                 && isAlive() && !isNoAi() && !isFleeing
                 && canAttack(pendingBetterCombatTarget)
-                && ItemStack.isSameItemSameTags(pendingBetterCombatWeapon, getMainHandItem())
+                && pendingBetterCombatWeapon == getMainHandItem()
+                && club.someoneice.humangunner.MeleeActionControl.valid(this, pendingMeleeAction)
                 && BetterCombatMeleeCombat.isEnabled(this);
     }
     public boolean humanGunner$hasPendingMeleeAttack() {
@@ -1429,37 +1443,40 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     private void finishBetterCombatUpswing() {
         if (pendingBetterCombatTarget == null) return;
-        if (!humanGunner$canMeleeAttack()) {
-            pendingBetterCombatTarget = null;
-            pendingBetterCombatWeapon = ItemStack.EMPTY;
-            pendingBetterCombatUpswingTicks = 0;
-            setNpcBetterCombatAttackAnimation("");
+        if (!hasPendingBetterCombatFacing()) {
+            humanGunner$cancelMeleeAttackForDefense();
             return;
         }
         if (--pendingBetterCombatUpswingTicks > 0) return;
         LivingEntity target = pendingBetterCombatTarget;
-        pendingBetterCombatTarget = null;
         ItemStack attackWeapon = pendingBetterCombatWeapon;
+        var action = pendingMeleeAction;
+        pendingBetterCombatTarget = null;
         pendingBetterCombatWeapon = ItemStack.EMPTY;
-        if (!isAlive() || isNoAi() || isFleeing || !target.isAlive() || !canAttack(target)
-                || !ItemStack.isSameItemSameTags(attackWeapon, getMainHandItem())
-                || !BetterCombatMeleeCombat.isEnabled(this)) return;
-        // Navigation has already ticked and may have faced a nearby waypoint.
-        // The actual melee impact must use the same opponent-facing geometry
-        // as the upswing, rather than the path node's yaw.
-        club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, target);
-        BetterCombatMeleeCombat.AttackPlan plan =
-                BetterCombatMeleeCombat.createAttackPlan(this, target);
-        if (plan == null || plan.targets().isEmpty()) return;
-        boolean hitAny = false;
-        for (LivingEntity victim : plan.targets()) {
-            hitAny |= BetterCombatMeleeCombat.applyDamageMultiplier(this, plan.profile(),
-                    plan.targets().size(), () -> doHurtTargetSingle(victim, false, false));
+        pendingMeleeAction = null;
+        boolean completed = false;
+        try {
+            if (!club.someoneice.humangunner.MeleeActionControl.valid(this, action)
+                    || attackWeapon != getMainHandItem() || !BetterCombatMeleeCombat.isEnabled(this)) return;
+            club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, target);
+            BetterCombatMeleeCombat.AttackPlan plan = BetterCombatMeleeCombat.createAttackPlan(this, target);
+            if (plan == null) return;
+            boolean hitAny = false;
+            for (LivingEntity victim : plan.targets()) {
+                if (!club.someoneice.humangunner.MeleeActionControl.impactValid(this, action)) break;
+                hitAny |= BetterCombatMeleeCombat.applyDamageMultiplier(this, plan.profile(),
+                        plan.targets().size(), () -> doHurtTargetSingle(victim, false, false));
+            }
+            // One actual weapon action wears once, even when several victims are hit.
+            if (hitAny && attackWeapon == getMainHandItem()) wearEquippedItem(attackWeapon, EquipmentSlot.MAINHAND);
+            if (club.someoneice.humangunner.MeleeActionControl.impactValid(this, action)) {
+                BetterCombatMeleeCombat.completeAttack(this);
+                completed = true;
+            }
+        } finally {
+            club.someoneice.humangunner.MeleeActionControl.finish(this, action, completed,
+                    completed ? "delayed swing finished" : "delayed swing cancelled");
         }
-        // A sweep is one weapon action, even when its hitbox reaches several
-        // entities. Apply Unbreaking once after all victims were processed.
-        if (hitAny) wearEquippedItem(getMainHandItem(), EquipmentSlot.MAINHAND);
-        BetterCombatMeleeCombat.completeAttack(this);
     }
 
     private boolean doHurtTargetSingle(Entity entityIn, boolean animate) {
@@ -1467,7 +1484,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private boolean doHurtTargetSingle(Entity entityIn, boolean animate, boolean wearWeapon) {
-        if (!humanGunner$canMeleeAttack()) return false;
+        if (!humanGunner$canMeleeAttack() || entityIn instanceof LivingEntity victim
+                && (!victim.isAlive() || victim.level() != level() || !canAttack(victim)
+                    || !club.someoneice.humangunner.HumanPerception.canTarget(this, victim))) return false;
         this.resetFallDistance();
         humanGunner$shieldDefense().onAttackExecuted();
         boolean hit = club.someoneice.humangunner.PursuitJumpAttack.strike(this,
@@ -1489,6 +1508,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     /** Explicit defense transition: cancel damage and its synchronized visual intent together. */
     public void humanGunner$cancelMeleeAttackForDefense() {
         if (level().isClientSide) return;
+        club.someoneice.humangunner.MeleeActionControl.finish(this, pendingMeleeAction, false, "defense or context transition");
+        pendingMeleeAction = null;
         pendingBetterCombatTarget = null;
         pendingBetterCombatWeapon = ItemStack.EMPTY;
         pendingBetterCombatUpswingTicks = 0;
@@ -1742,13 +1763,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             this.directWaterCombatSteeringTick = Integer.MIN_VALUE;
             this.waterCombatHoldingTick = Integer.MIN_VALUE;
         }
-        if (club.someoneice.humangunner.SoldierOrder.get(this)
-                == club.someoneice.humangunner.SoldierOrder.BODYGUARD
-                && pendingBetterCombatTarget != null && pendingBetterCombatTarget != livingEntity) {
-            pendingBetterCombatTarget = null;
-            pendingBetterCombatWeapon = ItemStack.EMPTY;
-            pendingBetterCombatUpswingTicks = 0;
-            setNpcBetterCombatAttackAnimation("");
+        if (pendingBetterCombatTarget != null && pendingBetterCombatTarget != livingEntity) {
+            humanGunner$cancelMeleeAttackForDefense();
         }
         if (previous != null && (!previous.isAlive() || previous.isRemoved())
                 && club.someoneice.humangunner.GunSupport.isGunItem(getMainHandItem())) {

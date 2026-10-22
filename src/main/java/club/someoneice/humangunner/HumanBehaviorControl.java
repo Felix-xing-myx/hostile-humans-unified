@@ -26,6 +26,7 @@ public final class HumanBehaviorControl {
             cancel(human, "entity unavailable or editing");
             return;
         }
+        MeleeActionControl.tick(human);
         ActionCoordinator actions = SESSIONS.get(human);
         if (actions == null) return;
         actions.advance(human.level().getGameTime());
@@ -33,6 +34,9 @@ public final class HumanBehaviorControl {
     }
 
     public static void cancel(Human human, String reason) {
+        MeleeActionControl.clear(human, reason);
+        NpcDualWield.clear(human);
+        human.humanGunner$cancelMeleeAttackForDefense();
         RecoverySupplies.clear(human, reason);
         HumanCombatDirector.clear(human);
         RetreatRecoveryPolicy.clearEscape(human);

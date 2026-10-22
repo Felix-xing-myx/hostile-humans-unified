@@ -56,6 +56,15 @@ public final class RuntimePoliciesTest {
         check(!LocalPathFollowPolicy.corridor(0,0,4,0,(x,z,dx,dz)->true));
         check(!LocalPathFollowPolicy.corridor(0,0,Double.NaN,0,(x,z,dx,dz)->true));
         check(!LocalPathFollowPolicy.corridor(0,0,2,0,(x,z,dx,dz)->dx<=.25&&x<.5));
+        check(Math.abs(MeleeSpacingPolicy.preferred(3.3,true)-2.55)<1e-9);
+        check(Math.abs(MeleeSpacingPolicy.preferred(3.3,false)-3.05)<1e-9);
+        check(MeleeSpacingPolicy.chasePreferred(3.3,.28,6,true)<2.55);
+        check(MeleeSpacingPolicy.chasePreferred(3.3,.28,6,true)>=.5);
+        for (double reach : new double[]{.1,.3,1,3.3,16}) for (boolean profiled : new boolean[]{false,true}) {
+            check(MeleeSpacingPolicy.tooClose(reach,profiled)>0);
+            check(MeleeSpacingPolicy.tooClose(reach,profiled)<MeleeSpacingPolicy.preferred(reach,profiled));
+            check(MeleeSpacingPolicy.preferred(reach,profiled)<reach);
+        }
         check(MeleeSpacingPolicy.chasePreferred(3.3,0,6)==MeleeSpacingPolicy.preferred(3.3));
         check(MeleeSpacingPolicy.chasePreferred(3.3,.28,6)<MeleeSpacingPolicy.preferred(3.3));
         check(MeleeSpacingPolicy.chasePreferred(3.3,.28,6)>MeleeSpacingPolicy.tooClose(3.3));

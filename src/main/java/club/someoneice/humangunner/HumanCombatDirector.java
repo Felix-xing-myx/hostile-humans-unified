@@ -18,6 +18,7 @@ public final class HumanCombatDirector {
     public static void tick(Human human) {
         if (human.level().isClientSide) return;
         var shields = human.humanGunner$shieldDefense();
+        shields.meleeReentryCooldownTicks(NpcDualWield.ordinaryDefenseCooldown(human));
         shields.validateDefenseLease();
         if (HumanTargetCoordinator.suspended(human) || !human.isAlive() || human.isRemoved()) {
             clear(human); return;

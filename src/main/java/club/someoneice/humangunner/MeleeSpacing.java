@@ -20,7 +20,8 @@ public final class MeleeSpacing {
         double reach = MeleeCombatRange.reach(human, target);
         double distance = human.distanceTo(target);
         double preferred = preferredDistance(human,target);
-        double tooClose = dev.felix.hostilehumans.core.MeleeSpacingPolicy.tooClose(reach);
+        double tooClose = dev.felix.hostilehumans.core.MeleeSpacingPolicy.tooClose(reach,
+                BetterCombatMeleeCombat.hasWeaponProfile(human));
         if (distance > preferred) return false;
         // A visible target on another step may be outside the actual oriented
         // weapon hitbox. Never stop pursuit merely because its feet are near.
@@ -70,20 +71,21 @@ public final class MeleeSpacing {
     public static double preferredDistance(Human human,LivingEntity target) {
         if(target==null)return 0;
         double reach=MeleeCombatRange.reach(human,target);
-        if(!BetterCombatMeleeCombat.hasWeaponProfile(human))return preferredDistance(reach);
+        if(!BetterCombatMeleeCombat.hasWeaponProfile(human))
+            return dev.felix.hostilehumans.core.MeleeSpacingPolicy.preferred(reach, false);
         Vec3 away=target.position().subtract(human.position()).multiply(1,0,1);
-        if(away.lengthSqr()<1.e-6)return preferredDistance(reach);
+        if(away.lengthSqr()<1.e-6)return dev.felix.hostilehumans.core.MeleeSpacingPolicy.preferred(reach, true);
         away=away.normalize();
         double outward=Math.max(target.getDeltaMovement().dot(away),
                 target.position().subtract(new Vec3(target.xo,target.yo,target.zo)).dot(away));
         int pending=human.humanGunner$pendingMeleeTicks(target);
         int upswing=pending>=0?pending:BetterCombatMeleeCombat.upswingTicks(human);
-        return dev.felix.hostilehumans.core.MeleeSpacingPolicy.chasePreferred(reach,outward,upswing);
+        return dev.felix.hostilehumans.core.MeleeSpacingPolicy.chasePreferred(reach,outward,upswing,true);
     }
     /** Shared by spacing, pursuit refresh and sprint; a hit at this instant is not enough reserve. */
     public static boolean needsChaseBuffer(Human human,LivingEntity target) {
         if(target==null||!BetterCombatMeleeCombat.hasWeaponProfile(human))return false;
-        double normal=preferredDistance(MeleeCombatRange.reach(human,target));
+        double normal=dev.felix.hostilehumans.core.MeleeSpacingPolicy.preferred(MeleeCombatRange.reach(human,target),true);
         double preferred=preferredDistance(human,target);
         return preferred<normal-1.e-6&&human.distanceTo(target)>preferred;
     }
@@ -91,7 +93,9 @@ public final class MeleeSpacing {
     private static boolean tryStep(Human human, Vec3 step) {
         BlockPos feet = BlockPos.containing(human.position().add(step));
         BlockPos floor = feet.below();
-        if (!human.level().hasChunkAt(feet)
+        var command = OrderDistances.context(human);
+        if (command.constrained() && (!command.available() || !command.insideCombat(human.position().add(step)))) return false;
+        if (!HumanTerrainSafety.safeStep(human, step) || !human.level().hasChunkAt(feet)
                 || !human.level().getBlockState(floor).isFaceSturdy(human.level(), floor, Direction.UP)
                 || !human.level().getFluidState(feet).isEmpty()
                 || !human.level().noCollision(human, human.getBoundingBox().move(step))) return false;
@@ -100,7 +104,7 @@ public final class MeleeSpacing {
         float forward = (float) (direction.x * -Math.sin(yaw) + direction.z * Math.cos(yaw));
         float right = (float) (direction.x * Math.cos(yaw) + direction.z * Math.sin(yaw));
         human.getNavigation().stop();
-        human.strafeMelee(forward * 0.6F, right * 0.6F);
+        human.strafeMelee(forward * 0.5F, right * 0.5F);
         return true;
     }
 }
