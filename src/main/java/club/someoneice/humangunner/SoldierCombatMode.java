@@ -85,6 +85,8 @@ public enum SoldierCombatMode {
 
     public static void set(Human human, SoldierCombatMode mode) {
         if (!human.hasOwner()) return;
+        java.util.Objects.requireNonNull(mode, "combat mode");
+        HumanBehaviorControl.interruptMovement(human, "soldier combat permission changed");
         BodyguardProtection.clear(human);
         human.getPersistentData().putString(MODE, mode.name());
         clearAuthorization(human);

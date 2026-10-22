@@ -353,11 +353,12 @@ public final class HumanPerception {
         if(current!=null&&!canTarget(h,current)){
             Track t=s.tracks.get(current.getUUID());if(t!=null&&t.position!=null&&valid(h,current)&&now<t.positionAt+c().integer("memory.last_position_ticks"))
                 notice(h,"last",t.position,t.id,(int)(t.positionAt+c().integer("memory.last_position_ticks")-now));
-            var expiredPath=h.getNavigation().getPath();
+            var expiredRoute=HumanNavigationOwnership.captureRoute(h);
+            var expiredPath=expiredRoute.path();
             HumanTargetCoordinator.select(h,null,"原目标失效，记忆接替");
             if(h.getTarget()==current)h.setTarget(null);
             if(h.getTarget()==null&&!NavigationDebugService.controls(h)
-                    &&h.getNavigation().getPath()==expiredPath)h.getNavigation().stop();
+                    &&h.getNavigation().getPath()==expiredPath)HumanNavigationOwnership.stopCapturedRoute(h,expiredRoute);
         }
         h.isAlert=now<s.alertUntil||h.getTarget()!=null;
         if(h.isNoAi()||h.isSleeping()||NavigationDebugService.controls(h)){

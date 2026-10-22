@@ -6,7 +6,7 @@ import dev.felix.hostilehumans.core.InputExecutionLease;
 
 /** Exact source of delayed native inputs; no separate priority system or autonomous movement. */
 public final class HumanMovementInputAuthority {
-    public enum Channel { WANTED, STRAFE, WATER_HOLD }
+    public enum Channel { WANTED, STRAFE, WATER_HOLD, SHORE, SHORE_SEARCH }
     private final InputExecutionLease<Channel, ActionCoordinator.Token> sources = new InputExecutionLease<>(Channel.class);
 
     public boolean request(Human human, Channel channel, boolean clearing) {

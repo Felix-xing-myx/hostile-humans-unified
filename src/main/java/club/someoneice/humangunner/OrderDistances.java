@@ -70,6 +70,7 @@ public final class OrderDistances {
         return new Context(true, false, reason.equals("ready"), anchor, settings, reason);
     }
     public static void setFollow(Human human, int radius) {
+        if (follow(human) != radius(radius)) HumanBehaviorControl.interruptMovement(human, "follow distance changed");
         CompoundTag tag = human.getPersistentData().getCompound(RADII).copy();
         tag.putInt("follow", radius(radius)); human.getPersistentData().put(RADII, tag);
     }

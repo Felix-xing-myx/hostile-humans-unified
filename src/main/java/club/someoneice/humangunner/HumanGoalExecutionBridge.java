@@ -81,6 +81,38 @@ public final class HumanGoalExecutionBridge {
         State state = state(human);
         if (state != null) cancel(state, reason, ((SelectorAccess) human.goalSelector).hostileHumans$lockedFlags());
     }
+    /** Explicit command/environment handoff retires movement delegates without cancelling background actions. */
+    public static void interruptMovement(Human human, String reason) {
+        State state = state(human);
+        if (state == null) {
+            Throwable failure = null;
+            for (var goal : human.goalSelector.getRunningGoals().filter(goal -> goal.getFlags().contains(Goal.Flag.MOVE)).toList()) {
+                try { goal.stop(); }
+                catch (RuntimeException | Error exception) {
+                    if (failure == null) failure = exception; else if (failure != exception) failure.addSuppressed(exception);
+                }
+            }
+            if (failure instanceof RuntimeException exception) throw exception;
+            if (failure instanceof Error error) throw error;
+            return;
+        }
+        if (state.cancelling) return;
+        state.cancelling = true;
+        Throwable failure = null;
+        try {
+            var locks = ((SelectorAccess) human.goalSelector).hostileHumans$lockedFlags();
+            for (Execution execution : new ArrayList<>(state.executions.values())) {
+                if (execution.token == null && !execution.flags.contains(Goal.Flag.MOVE)
+                        && !execution.wrapped.getFlags().contains(Goal.Flag.MOVE)) continue;
+                try { stop(execution, reason, locks); }
+                catch (RuntimeException | Error exception) {
+                    if (failure == null) failure = exception; else if (failure != exception) failure.addSuppressed(exception);
+                }
+            }
+        } finally { state.cancelling = false; state.lastOutcome = reason; }
+        if (failure instanceof RuntimeException exception) throw exception;
+        if (failure instanceof Error error) throw error;
+    }
     /** Token-specific late callbacks cannot stop a replacement execution of the same native Goal. */
     public static boolean cancelExecution(Human human, ActionCoordinator.Token token, String reason) {
         State state = state(human);

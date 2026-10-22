@@ -5,7 +5,7 @@ import java.util.Set;
 
 /** Delayed-input isolation and cleanup checks; Java execution requires build authorization. */
 public final class InputExecutionLeaseTest {
-    private enum Channel { WANTED, STRAFE, HOLD }
+    private enum Channel { WANTED, STRAFE, HOLD, SHORE, SHORE_SEARCH }
     public static void main(String[] args) {
         var inputs = new InputExecutionLease<Channel,String>(Channel.class);
         Set<String> live = new HashSet<>(Set.of("old"));
@@ -21,6 +21,10 @@ public final class InputExecutionLeaseTest {
         check(inputs.live(Channel.STRAFE,true,live::contains), "clearing wanted input does not erase independent strafe");
         check(!inputs.clear(Channel.HOLD,null,true,live::contains), "anonymous empty-channel clear does not authorize a native write");
         check(inputs.clear(Channel.HOLD,"new",true,live::contains), "live admitted movement may clear empty channel");
+        inputs.request(Channel.SHORE,"new",true,live::contains);
+        inputs.request(Channel.SHORE_SEARCH,"new",true,live::contains);
+        check(!inputs.clear(Channel.SHORE_SEARCH,"old",true,live::contains), "late search cancellation cannot clear replacement request");
+        check(inputs.clear(Channel.SHORE_SEARCH,"new",true,live::contains) && inputs.live(Channel.SHORE,true,live::contains), "finished search does not release real shore movement");
         inputs.discard(Channel.STRAFE);check(!inputs.live(Channel.STRAFE,true,live::contains), "execution-side discard retires source");
         inputs.request(Channel.HOLD,"new",true,live::contains);inputs.cancel();
         check(inputs.source(Channel.HOLD)==null && inputs.source(Channel.STRAFE)==null, "root cancellation clears every channel");

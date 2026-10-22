@@ -46,6 +46,20 @@ public final class HumanNavigationOwnership {
         return navigation instanceof OwnedNavigation owned
                 && owned.movementOwnership().runInstalled(human, navigation.getPath(), execution);
     }
+    public record CapturedRoute(PathNavigation navigation, Path path, ActionCoordinator.Token owner) { }
+    /** Freeze the actual source before an external target-selection callback can replace it. */
+    public static CapturedRoute captureRoute(Human human) {
+        PathNavigation navigation = human.getNavigation();
+        ActionCoordinator.Token owner = navigation instanceof OwnedNavigation owned ? owned.movementOwnership().route.owner() : null;
+        return new CapturedRoute(navigation, navigation.getPath(), owner);
+    }
+    public static void stopCapturedRoute(Human human, CapturedRoute captured) {
+        if (captured == null || human.getNavigation() != captured.navigation() || captured.navigation().getPath() != captured.path()) return;
+        if (!HumanGoalExecutionBridge.bound(human)) { captured.navigation().stop(); return; }
+        if (!(captured.navigation() instanceof OwnedNavigation owned)
+                || !java.util.Objects.equals(owned.movementOwnership().route.owner(), captured.owner())) return;
+        if (!continueExecution(human, captured.owner(), captured.navigation()::stop)) captured.navigation().stop();
+    }
     /** A delayed local input keeps the exact token captured by its real requester. */
     public static boolean continueExecution(Human human, ActionCoordinator.Token token, Runnable execution) {
         if (!HumanGoalExecutionBridge.bound(human)) { execution.run(); return true; }

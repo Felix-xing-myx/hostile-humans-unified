@@ -35,6 +35,7 @@ public enum SoldierOrder {
     public static void set(Human h, SoldierOrder order) { set(h,order,false); }
     static void set(Human h, SoldierOrder requested, boolean preserveNavigation) {
         java.util.Objects.requireNonNull(requested, "order");
+        if (!preserveNavigation) HumanBehaviorControl.interruptMovement(h, "soldier movement order changed");
         GarrisonSettings settings = GarrisonSettings.player(h);
         if(requested==HOLD_POSITION) settings=new GarrisonSettings(true,false,settings.radius());
         else if(requested==GUARD) settings=new GarrisonSettings(false,true,settings.radius());
@@ -43,7 +44,7 @@ public enum SoldierOrder {
         NaturalRoute.pause(h,true); resetMovementState(h); h.guardCombatState.reset();NaturalRoute.clearPlayerRuntime(h);
         SoldierOrder order=logical(requested);
         if(order==GARRISON) {
-            GarrisonSettings.set(h,settings);
+            GarrisonSettings.set(h,settings,true);
             h.getPersistentData().putLong(ANCHOR,h.blockPosition().asLong());
             h.getPersistentData().putString(ANCHOR_DIMENSION,h.level().dimension().location().toString());
         }

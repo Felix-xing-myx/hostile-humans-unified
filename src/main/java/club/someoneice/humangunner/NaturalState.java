@@ -29,12 +29,14 @@ public final class NaturalState {
     }
     /** Author tool is explicitly local and unmirrored. Existing instance origin is retained. */
     public static void set(Human human, GarrisonSettings settings) {
+        if (!human.hasOwner()) HumanBehaviorControl.interruptMovement(human, "natural behavior settings changed");
         human.getPersistentData().put(STATE, settings.writeInto(human.getPersistentData().getCompound(STATE).copy()));
         if (!human.getPersistentData().contains(ORIGIN)) initializeNewInstance(human, human.yBodyRot, 0, "none");
         human.getPersistentData().remove(NEW_INSTANCE);
         NaturalRoute.clearNaturalRuntime(human); if (!human.hasOwner()) human.guardCombatState.reset();
     }
     public static void clear(Human human) {
+        if (!human.hasOwner()) HumanBehaviorControl.interruptMovement(human, "natural behavior settings cleared");
         human.getPersistentData().remove(STATE); human.getPersistentData().remove(ORIGIN);
         human.getPersistentData().remove(NEW_INSTANCE);
         NaturalRoute.clearNaturalRuntime(human);

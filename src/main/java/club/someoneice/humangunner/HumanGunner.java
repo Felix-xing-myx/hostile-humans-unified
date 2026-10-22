@@ -214,6 +214,7 @@ public final class HumanGunner {
             AdaptiveActivityBudget.touch(human);
             if (human.getTarget() != null && !HumanTargeting.allowsWildHumanTarget(human, human.getTarget())) {
                 // Also retire stale targets assigned before this rule or by outside AI.
+                HumanBehaviorControl.interruptMovement(human, "external target rejected by current relationship");
                 human.setTarget(null);
                 human.getNavigation().stop();
             }

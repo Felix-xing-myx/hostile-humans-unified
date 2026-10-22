@@ -137,9 +137,11 @@ public final class NavigationDebugService {
         Run run = RUNS.get(human);
         if (run != null && run.owner.equals(player.getUUID())) finish(human, "cancelled");
     }
-    private static void finish(Human human, String result) {
+    private static void finish(Human human, String result) { finish(human, RUNS.get(human), result); }
+    private static void finish(Human human, Run expected, String result) {
+        if (expected == null || !RUNS.remove(human, expected)) return;
         LongRangeNavigation.cancel(human,LongRangeNavigation.Purpose.TEST);
-        RUNS.remove(human);
+        HumanBehaviorControl.interruptMovement(human, "developer test " + result);
         human.getNavigation().stop();
         MovementContinuity.cancelStep(human);
         human.clearRangedStrafeMotion();
@@ -187,6 +189,9 @@ public final class NavigationDebugService {
                 || RecoverySupplies.hasHandCustody(human) || human.humanGunner$hasPendingMeleeAttack()) {
             message(player, "unavailable"); return;
         }
+        // Explicitly hand off the previous movement before publishing the replacement test run.
+        HumanBehaviorControl.interruptMovement(human, "developer destination changed");
+        LongRangeNavigation.cancel(human, LongRangeNavigation.Purpose.TEST);
         // Store only the temporary movement lease. Owner, soldier order and health remain authoritative.
         RUNS.put(human, new Run(player, destination));
         human.setTarget(null);
@@ -289,21 +294,27 @@ public final class NavigationDebugService {
     }
     private static final class TestGoal extends Goal {
         private final Human human;
+        private Run activeRun;
         TestGoal(Human human) { this.human = human; setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK)); }
         @Override public boolean canUse() { return controls(human); }
-        @Override public boolean canContinueToUse() { return canUse(); }
+        @Override public boolean canContinueToUse() { return activeRun != null && RUNS.get(human) == activeRun; }
+        @Override public void start() { activeRun = RUNS.get(human); }
+        @Override public void stop() {
+            Run ending = activeRun; activeRun = null;
+            if (ending != null) finish(human, ending, "interrupted");
+        }
         @Override public boolean requiresUpdateEveryTick() { return true; }
         @Override public void tick() {
-            Run run = RUNS.get(human);
-            if (run == null) return;
+            Run run = activeRun;
+            if (run == null || RUNS.get(human) != run) return;
             ServerPlayer player = human.level().getServer().getPlayerList().getPlayer(run.owner);
             if (player == null || !observed(player, human) || !allowed(player) || !human.isAlive()
                     || human.isNoAi() || human.isSleeping() || human.isPassenger() || HumanGunner.isManualInventoryOpen(human)) {
-                finish(human, "cancelled"); return;
+                finish(human, run, "cancelled"); return;
             }
-            if (human.level().getGameTime() >= run.deadline) { finish(human, "timeout"); message(player, "timeout", slot(SELECTIONS.get(player), human.getUUID()) + 1, human.getDisplayName()); return; }
+            if (human.level().getGameTime() >= run.deadline) { finish(human, run, "timeout"); message(player, "timeout", slot(SELECTIONS.get(player), human.getUUID()) + 1, human.getDisplayName()); return; }
             if (human.position().distanceToSqr(Vec3.atBottomCenterOf(run.destination)) <= 1) {
-                finish(human, "arrived"); message(player, "arrived", slot(SELECTIONS.get(player), human.getUUID()) + 1, human.getDisplayName()); return;
+                finish(human, run, "arrived"); message(player, "arrived", slot(SELECTIONS.get(player), human.getUUID()) + 1, human.getDisplayName()); return;
             }
             MovementSpeedController.normal(human);
             human.getNavigation().setSpeedModifier(1);

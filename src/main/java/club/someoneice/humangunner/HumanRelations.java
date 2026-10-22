@@ -208,6 +208,7 @@ public final class HumanRelations {
     }
 
     static void dismiss(MinecraftServer server, Human human) {
+        HumanBehaviorControl.cancel(human, "ownership dismissed");
         persistHostileBeaconOrigin(human);
         RecruitmentLedger.get(server).dismiss(human.getUUID());
         SquadData.get(server).removeMember(human.getUUID());

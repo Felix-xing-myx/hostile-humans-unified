@@ -9,6 +9,7 @@ import java.util.WeakHashMap;
 public final class HumanBehaviorControl {
     private static final Map<Human, ActionCoordinator> SESSIONS = new WeakHashMap<>();
     private static final java.util.Set<Human> CANCELLING = java.util.Collections.newSetFromMap(new WeakHashMap<>());
+    private static final java.util.Set<Human> INTERRUPTING = java.util.Collections.newSetFromMap(new WeakHashMap<>());
     private HumanBehaviorControl() { }
 
     /** Observation only: never constructs a session, advances a deadline or renews an execution lease. */
@@ -35,6 +36,27 @@ public final class HumanBehaviorControl {
         if (actions == null) return;
         actions.advance(human.level().getGameTime());
         if (!human.isAlive() || human.isRemoved() || human.isNoAi()) actions.cancelSession("entity unavailable");
+    }
+
+    /** Movement command handoff preserves the current behavior session and independent item/reload actions. */
+    public static void interruptMovement(Human human, String reason) {
+        if (human.level().isClientSide || CANCELLING.contains(human) || !INTERRUPTING.add(human)) return;
+        Throwable failure = null;
+        try {
+            Runnable[] cleanup = {
+                    () -> HumanGoalExecutionBridge.interruptMovement(human, reason),
+                    () -> human.humanGunner$cancelMovementExecution(),
+                    () -> MovementContinuity.clear(human)
+            };
+            for (Runnable step : cleanup) {
+                try { step.run(); }
+                catch (RuntimeException | Error exception) {
+                    if (failure == null) failure = exception; else if (failure != exception) failure.addSuppressed(exception);
+                }
+            }
+        } finally { INTERRUPTING.remove(human); }
+        if (failure instanceof RuntimeException exception) throw exception;
+        if (failure instanceof Error error) throw error;
     }
 
     public static void cancel(Human human, String reason) {

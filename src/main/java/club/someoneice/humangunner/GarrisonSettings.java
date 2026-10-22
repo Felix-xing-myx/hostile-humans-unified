@@ -31,8 +31,10 @@ public record GarrisonSettings(boolean stay, boolean chase, int radius) {
         tag.putInt("schema", 1); tag.putBoolean("stay", stay); tag.putBoolean("chase_on_hate", chase);
         tag.putInt("patrol_radius", radius); return tag;
     }
-    public static void set(Human human, GarrisonSettings settings) {
+    public static void set(Human human, GarrisonSettings settings) { set(human, settings, false); }
+    static void set(Human human, GarrisonSettings settings, boolean preserveMovement) {
         GarrisonSettings previous = player(human);
+        if (!preserveMovement && !settings.equals(previous)) HumanBehaviorControl.interruptMovement(human, "garrison settings changed");
         human.getPersistentData().put(PLAYER, settings.writeInto(human.getPersistentData().getCompound(PLAYER).copy()));
         CompoundTag radii = human.getPersistentData().getCompound(OrderDistances.RADII).copy();
         radii.remove("guard"); radii.remove("patrol"); radii.remove("garrison");

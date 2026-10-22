@@ -274,6 +274,7 @@ final class HiredHumanRecall {
         BlockPos destination = destination(owner, placementIndex);
         if (destination == null) return false;
         SoldierOrder order = SoldierOrder.get(human);
+        HumanBehaviorControl.cancel(human, "owner recall relocation");
         human.stopRiding();
         human.forgetSoldierTarget();
         UUID id = human.getUUID();

@@ -858,7 +858,33 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         return this.startSeekingShore(path, speed);
     }
 
+    private boolean mayWriteShore() {
+        return !club.someoneice.humangunner.HumanGoalExecutionBridge.bound(this)
+                || club.someoneice.humangunner.HumanNavigationOwnership.writeToken(this) != null;
+    }
+    private boolean requestShoreSource(club.someoneice.humangunner.HumanMovementInputAuthority.Channel channel) {
+        return this.moveControl instanceof HumanMoveControl control && control.inputAuthority.request(this, channel, false);
+    }
+    private boolean clearShoreSource(club.someoneice.humangunner.HumanMovementInputAuthority.Channel channel) {
+        return this.moveControl instanceof HumanMoveControl control && control.inputAuthority.clear(this, channel);
+    }
+    /** Environment revalidation ends the current real shore lease, never a retained callback's guessed task. */
+    private void releaseShoreForEnvironment() {
+        if (this.moveControl instanceof HumanMoveControl control
+                && control.inputAuthority.execute(this, HumanMoveControl.SHORE, this::stopSeekingShore)) return;
+        this.stopSeekingShore();
+    }
+    /** Switching navigators first releases the exact old route under its own continuation. */
+    private boolean switchNavigation(PathNavigation desired) {
+        if (this.navigation == desired) return true;
+        PathNavigation old = this.navigation;
+        if (!club.someoneice.humangunner.HumanNavigationOwnership.continueInstalled(this, old, old::stop)) old.stop();
+        if (club.someoneice.humangunner.HumanGoalExecutionBridge.bound(this) && old.getPath() != null && !old.isDone()) return false;
+        this.navigation = desired; return true;
+    }
+
     public boolean startSeekingShore(Path path, double speed) {
+        if (!mayWriteShore()) return false;
         if (path == null || !path.canReach()
                 || !club.someoneice.humangunner.HumanTerrainSafety.safePath(this, path)) return false;
         boolean water = this.shoreCandidateNavigators.getOrDefault(path, this.shorePathUsesWaterNavigation);
@@ -868,8 +894,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             if (old != null && !old.isDone()) this.navigation.moveTo(old, speed);
             return false;
         }
-        if (this.navigation != chosen) this.navigation.stop();
-        this.navigation = chosen;
+        if (!switchNavigation(chosen) || !requestShoreSource(HumanMoveControl.SHORE)) {
+            chosen.stop(); return false;
+        }
         this.shorePathUsesWaterNavigation = water;
         this.shoreTransitionPendingTick = Integer.MIN_VALUE;
         this.seekingShore = true;
@@ -881,6 +908,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     /** Keep a valid bank across failed searches instead of turning toward a new bank every retry. */
     public void startSeekingShoreWithoutPath(@Nullable BlockPos retainedDestination,
             @Nullable BlockPos avoidDestination) {
+        if (!mayWriteShore()) return;
         if (retainedDestination != null && !retainedDestination.equals(avoidDestination)
                 && this.isDryStandingPosition(retainedDestination))
             this.shoreFallbackTarget = retainedDestination.immutable();
@@ -892,6 +920,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private void beginSeekingShoreWithoutPath(@Nullable BlockPos avoidDestination) {
+        if (!requestShoreSource(HumanMoveControl.SHORE)) return;
         this.shoreTransitionPendingTick = Integer.MIN_VALUE;
         this.seekingShore = true;
         this.shorePathUsesWaterNavigation = true;
@@ -923,27 +952,29 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             return;
         }
         BlockPos destination = this.shoreFallbackTarget;
-        this.getMoveControl().setWantedPosition(
-                destination.getX() + 0.5D,
-                destination.getY(),
-                destination.getZ() + 0.5D,
-                speed
-        );
+        if (this.moveControl instanceof HumanMoveControl control)
+            control.inputAuthority.execute(this, HumanMoveControl.SHORE, () -> this.getMoveControl().setWantedPosition(
+                    destination.getX() + 0.5D, destination.getY(), destination.getZ() + 0.5D, speed));
     }
 
     public void pauseSeekingShore() {
-        if (this.seekingShore) {
-            this.navigation.stop();
-        }
+        if (this.seekingShore && this.moveControl instanceof HumanMoveControl control)
+            control.inputAuthority.execute(this, HumanMoveControl.SHORE, () -> this.navigation.stop());
     }
 
     public void stopSeekingShore() {
+        if (this.combatShoreSearchPending && !clearShoreSource(HumanMoveControl.SHORE_SEARCH)) return;
+        if (this.seekingShore && !clearShoreSource(HumanMoveControl.SHORE)) return;
+        stopSeekingShoreState();
+    }
+    private void stopSeekingShoreState() {
         boolean wasSeekingShore = this.seekingShore;
         this.shoreTransitionPendingTick = Integer.MIN_VALUE;
         this.seekingShore = false;
         this.shoreFallbackTarget = null;
         this.combatFiringShore = false;
-        this.cancelCombatShoreSearch();
+        this.cancelCombatShoreSearchState();
+        if (this.moveControl instanceof HumanMoveControl control) control.inputAuthority.discard(HumanMoveControl.SHORE);
         this.combatFiringShoreTarget = null;
         // The pickup goal may already have released shore seeking and started
         // its own route before the old shore goal receives stop(). A second
@@ -976,6 +1007,11 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     public boolean isCombatShoreSearchPending() { return this.combatShoreSearchPending; }
     public void cancelCombatShoreSearch() {
+        if (this.combatShoreSearchPending && !clearShoreSource(HumanMoveControl.SHORE_SEARCH)) return;
+        cancelCombatShoreSearchState();
+    }
+    private void cancelCombatShoreSearchState() {
+        if (this.moveControl instanceof HumanMoveControl control) control.inputAuthority.discard(HumanMoveControl.SHORE_SEARCH);
         this.combatShoreSearchPending = false;
         if (!this.combatFiringShore) this.combatFiringShoreTarget = null;
         club.someoneice.humangunner.OptionalPathBudget.cancel(this,
@@ -984,8 +1020,10 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     /** Last-resort ranged movement when no reachable water firing lane was found. */
     public void beginCombatFiringShore(LivingEntity target, double speed) {
+        if (!mayWriteShore()) return;
         if (!this.isInWater() || this.isFleeing || this.combatFiringShore
                 || target == null || !target.isAlive()) return;
+        if (!requestShoreSource(HumanMoveControl.SHORE_SEARCH)) return;
         if (club.someoneice.humangunner.OptionalPathBudget.claimFull(this,
                 club.someoneice.humangunner.OptionalPathBudget.Kind.SHORE_FIRING, 4) != 4) {
             this.combatShoreSearchPending = true;
@@ -993,6 +1031,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             return;
         }
         this.combatShoreSearchPending = false;
+        clearShoreSource(HumanMoveControl.SHORE_SEARCH);
         Path path = this.findNearestShorePath(null);
         club.someoneice.humangunner.OptionalPathBudget.cancel(this,
                 club.someoneice.humangunner.OptionalPathBudget.Kind.SHORE_FIRING);
@@ -1158,15 +1197,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private void selectShoreNavigation() {
-        if (this.shorePathUsesWaterNavigation) {
-            if (this.navigation != this.waterNavigation) {
-                this.navigation.stop();
-                this.navigation = this.waterNavigation;
-            }
-        } else if (this.navigation != this.groundNavigation) {
-            this.navigation.stop();
-            this.navigation = this.groundNavigation;
-        }
+        switchNavigation(this.shorePathUsesWaterNavigation ? this.waterNavigation : this.groundNavigation);
     }
 
     @Override
@@ -1220,7 +1251,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     /** Root session cleanup only: retire AI commands without erasing physical knockback or falling. */
     public void humanGunner$cancelMovementExecution() {
         this.groundNavigation.stop(); this.waterNavigation.stop();
-        this.stopSeekingShore();
+        this.stopSeekingShoreState();
         this.directWaterCombatSteeringTick = this.waterCombatHoldingTick = this.directWaterLootSteeringTick = this.directWaterRetreatTick = Integer.MIN_VALUE;
         if (this.moveControl instanceof HumanMoveControl control) control.cancelExecutionInputs();
         this.setSpeed(0); this.setXxa(0); this.setZza(0);
@@ -2338,22 +2369,22 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     private boolean computeShouldUseWaterMovement() {
         if (!this.isInWater()) {
-            this.stopSeekingShore();
+            this.releaseShoreForEnvironment();
             return false;
         }
         if (this.seekingShore && club.someoneice.humangunner.SoldierOrder.shouldFollowThroughWater(this)
                 && !club.someoneice.humangunner.WaterCombatNavigation.ownsRoute(this))
-            this.stopSeekingShore();
+            this.releaseShoreForEnvironment();
         LivingEntity combatTarget = this.getTarget();
         if (this.combatFiringShore && (combatTarget == null || !combatTarget.isAlive()
                 || !combatTarget.getUUID().equals(this.combatFiringShoreTarget)
-                || this.tickCount >= this.combatFiringShoreUntilTick)) this.stopSeekingShore();
+                || this.tickCount >= this.combatFiringShoreUntilTick)) this.releaseShoreForEnvironment();
         if (this.seekingShore && combatTarget != null && combatTarget.isAlive()
                 && !this.isFleeing && !this.combatFiringShore
                 && !club.someoneice.humangunner.WaterCombatNavigation.ownsRoute(this)) {
             // The idle shore goal has yielded to combat. Release its route
             // immediately, even before GoalSelector runs its next stop pass.
-            this.stopSeekingShore();
+            this.releaseShoreForEnvironment();
         }
         // A shoreline collision can make isNearWaterSurface() false while the
         // eyes are already above water. Switching navigators at that boundary
@@ -2597,10 +2628,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                             || club.someoneice.humangunner.WaterCombatNavigation.surfaceCombat(this),
                     this.seekingShore, this.shorePathUsesWaterNavigation);
             var desired = useWater ? this.waterNavigation : this.groundNavigation;
-            if (this.navigation != desired) {
-                this.navigation.stop();
-                this.navigation = desired;
-            }
+            switchNavigation(desired);
             this.setSwimming(false);
         }
     }
@@ -2632,6 +2660,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         private static final club.someoneice.humangunner.HumanMovementInputAuthority.Channel WANTED = club.someoneice.humangunner.HumanMovementInputAuthority.Channel.WANTED;
         private static final club.someoneice.humangunner.HumanMovementInputAuthority.Channel STRAFE = club.someoneice.humangunner.HumanMovementInputAuthority.Channel.STRAFE;
         private static final club.someoneice.humangunner.HumanMovementInputAuthority.Channel WATER_HOLD = club.someoneice.humangunner.HumanMovementInputAuthority.Channel.WATER_HOLD;
+        private static final club.someoneice.humangunner.HumanMovementInputAuthority.Channel SHORE = club.someoneice.humangunner.HumanMovementInputAuthority.Channel.SHORE;
+        private static final club.someoneice.humangunner.HumanMovementInputAuthority.Channel SHORE_SEARCH = club.someoneice.humangunner.HumanMovementInputAuthority.Channel.SHORE_SEARCH;
 
         public HumanMoveControl(Human p_32433_) {
             super((Mob)p_32433_);

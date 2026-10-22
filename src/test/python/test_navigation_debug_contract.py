@@ -30,9 +30,10 @@ class NavigationDebugContract(unittest.TestCase):
 
     def test_control_is_temporary_and_cancellable(self):
         service = source("NavigationDebugService")
-        for terminal in ['finish(human, "timeout")', 'finish(human, "arrived")', 'finish(human, "cancelled")']:
+        for terminal in ['finish(human, run, "timeout")', 'finish(human, run, "arrived")', 'finish(human, run, "cancelled")']:
             self.assertIn(terminal, service)
-        self.assertIn("RUNS.remove(human)", service)
+        self.assertIn("RUNS.remove(human, expected)", service)
+        self.assertIn("Run ending = activeRun; activeRun = null", service)
         self.assertIn("player.isShiftKeyDown()", source("NavigationTestItem"))
         self.assertNotIn("getPersistentData()", service)
         self.assertIn("PlayerLoggedOutEvent", service)

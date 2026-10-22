@@ -78,6 +78,7 @@ final class SoldierStuckRecovery {
         if (path != null && path.canReach()) { state.failures = 0; return; }
         if (++state.failures < 2) return;
 
+        HumanBehaviorControl.interruptMovement(human, "stuck recovery relocation");
         human.forgetSoldierTarget();
         PursuitNavigation.clear(human);
         BodyguardProtection.clear(human);
