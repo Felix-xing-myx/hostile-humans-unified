@@ -55,9 +55,16 @@ final class GunCustody {
 
     static void registerPrimaryGun(Human human, ItemStack gun) {
         if(!GunSupport.get().isGun(gun)) return;
-        gun.getOrCreateTag().putString(PRIMARY_OWNER,human.getUUID().toString());
         var handle=HumanEquipmentExchange.bind(human,gun);
-        if(handle!=null) human.getPersistentData().putUUID(PRIMARY_HANDLE,handle.identity());
+        if(handle==null) return;
+        var tag=human.getPersistentData();
+        if(tag.hasUUID(PRIMARY_HANDLE) && !tag.getUUID(PRIMARY_HANDLE).equals(handle.identity())) {
+            ItemStack previous=HumanEquipmentExchange.locate(human,
+                    new HumanEquipmentExchange.Handle(tag.getUUID(PRIMARY_HANDLE),human.getUUID()));
+            if(!previous.isEmpty()) GunSupport.get().cancelReload(human,previous);
+        }
+        gun.getOrCreateTag().putString(PRIMARY_OWNER,human.getUUID().toString());
+        tag.putUUID(PRIMARY_HANDLE,handle.identity());
     }
     private static ItemStack primary(Human human) {
         var tag=human.getPersistentData();
@@ -85,10 +92,8 @@ final class GunCustody {
                 ||human.distanceToSqr(target)>4.5*4.5||human.isUsingItem()) return false;
         boolean forced=GunCombatProfile.shouldForceMelee(human,gun);
         if(!forced && (GunSupport.get().hasLoadedAmmo(gun)||!GunSupport.get().isReloading(human,gun))) return false;
-        HumanData data=human.getData();
-        int slot=data==null?-1:bestMeleeSlot(data);
-        if(slot<0) return false;
-        ItemStack melee=data.getInventoryItem(slot);
+        ItemStack melee=HumanLootManager.bestOwnedMeleeWeapon(human);
+        if(melee.isEmpty()) return false;
         registerPrimaryGun(human,gun);
         var result=HumanEquipmentExchange.request(human,"gun-close-melee",java.util.List.of(
                 new HumanEquipmentExchange.Need(EquipmentSlot.MAINHAND,stack->stack==melee)));
@@ -101,24 +106,6 @@ final class GunCustody {
     }
     // High pressure is permitted with the actual gun retained. No melee fallback is required.
     static boolean canBeginPressureDefense(Human human) { return true; }
-
-    private static int bestMeleeSlot(HumanData data) {
-        int meleeSlot = -1;
-        double meleeScore = Double.NEGATIVE_INFINITY;
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            if (HumanInventoryCustody.isReservedForRecovery(data, i)) continue;
-            ItemStack candidate = data.getInventoryItem(i);
-            if (!HumanLootManager.isDedicatedMeleeWeapon(candidate)) {
-                continue;
-            }
-            double score = HumanLootManager.mainHandWeaponScore(candidate);
-            if (score > meleeScore) {
-                meleeScore = score;
-                meleeSlot = i;
-            }
-        }
-        return meleeSlot;
-    }
 
     static boolean restorePrimaryGun(Human human, String reason) {
         ItemStack gun=primary(human);
@@ -159,9 +146,8 @@ final class GunCustody {
             boolean close=target!=null&&target.isAlive()&&human.distanceToSqr(target)<=4.5*4.5;
             if((close&&GunCombatProfile.shouldForceMelee(human,gun)||GunSupport.get().isReloading(human,gun))
                     &&!HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())) {
-                int fallback=human.getData()==null?-1:bestMeleeSlot(human.getData());
-                if(fallback>=0) {
-                    ItemStack selected=human.getData().getInventoryItem(fallback);
+                ItemStack selected=HumanLootManager.bestOwnedMeleeWeapon(human);
+                if(!selected.isEmpty()) {
                     HumanEquipmentExchange.request(human,"gun-melee-replacement",java.util.List.of(
                             new HumanEquipmentExchange.Need(EquipmentSlot.MAINHAND,stack->stack==selected)));
                     return;

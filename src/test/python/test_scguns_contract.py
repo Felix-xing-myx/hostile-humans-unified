@@ -134,18 +134,21 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertIn("ScgunsNpcMuzzleFlashMixin", config["client"])
         self.assertNotIn("ScgunsNpcMuzzleFlashMixin", config["mixins"])
 
-    def test_throwables_share_tactical_counts_and_all_native_hand_items_are_allowed(self):
+    def test_throwables_have_independent_counts_and_native_allowed_items(self):
         config = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
         allowed = config["scguns"]["throwables"]["allowed_items"]
         self.assertEqual(len(allowed), 14)
         self.assertIn("scguns:shotball", allowed)
-        for rank, counts in zip(("roamer", "tier1", "tier2", "tier3"), ((1,2), (2,4), (4,7), (6,8))):
-            tactical = config["tiers"][rank]["potions"]["tactical"]
+        for rank, counts in zip(("roamer", "tier1", "tier2", "tier3"), ((2,5), (5,8), (8,12), (12,16))):
+            tactical = config["tiers"][rank]["potions"]["throwables"]
             self.assertEqual((tactical["count_min"], tactical["count_max"]), counts)
             tools = {row["item"]: row["weight"] for row in tactical["pool"] if "potion" not in row}
             self.assertEqual(tools, {"scguns:grenade":3, "scguns:nail_bomb":3, "scguns:gas_grenade":3, "scguns:choke_bomb":3, "scguns:swarm_bomb":3, "jeg:grenade":3, "jeg:water_bomb":3})
             self.assertTrue(set(tools).issubset(allowed))
-            self.assertEqual(sum("potion" in row for row in tactical["pool"]), 6)
+            self.assertEqual(sum("potion" in row for row in tactical["pool"]), 3)
+            buffs = config["tiers"][rank]["potions"]["self_buffs"]
+            self.assertTrue(all("potion" in row for row in buffs["pool"]))
+            self.assertIsNot(buffs, tactical)
         native = source("ScgunsThrowableAdapter")
         planner = source("ScgunsThrowables")
         self.assertIn("new top.ribs.scguns.entity.throwable.ThrowableShotballEntity(human.level(), human)", native)
@@ -154,7 +157,11 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertNotIn("scguns:stun_grenade", allowed)
         self.assertEqual(config["scguns"]["throwables"]["initial_speed"], 2.0)
         self.assertIn("!safeArea(human, plan.impact(), safety)", planner)
-        self.assertLess(planner.index("human.level().addFreshEntity(projectile)"), planner.index("remainder.shrink(1)"))
+        self.assertIn("ThrowableTransactions.submit", planner)
+        transaction = source("ThrowableTransactions")
+        self.assertLess(transaction.index("actual.split(1)"), transaction.index("human.level().addFreshEntity(projectile)"))
+        self.assertIn("projectile.isAddedToWorld() || projectile.isRemoved()", transaction)
+        self.assertIn("inventory.matchesExcept(data, slot)", transaction)
         native_registries = {
             "scguns": ("SCGUNS_API_JAR", "top.ribs.scguns.init.ModItems"),
             "jeg": ("JEG_API_JAR", "ttv.migami.jeg.init.ModItems"),

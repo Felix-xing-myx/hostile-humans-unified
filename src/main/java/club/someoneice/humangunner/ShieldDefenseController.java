@@ -187,7 +187,6 @@ public final class ShieldDefenseController {
     private int lastBlockedTick = Integer.MIN_VALUE;
     private boolean rangedWarning;
     private int rangedWarningUntil;
-    private int nextCounterGuardTick;
 
 
     public ShieldDefenseController(Human human) {
@@ -213,8 +212,7 @@ public final class ShieldDefenseController {
     }
 
     public boolean hasRangedCounterWindow() {
-        return isPressureBreakAttempt() || RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem())
-                && human.tickCount < nextCounterGuardTick;
+        return attackObligation && RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem());
     }
 
     /** Actual shieldable combat health loss; defense does not require offensive identity/permission. */
@@ -517,7 +515,7 @@ public final class ShieldDefenseController {
                 && !human.humanGunner$hasPendingMeleeAttack() && !shouldSuppressRecovery()
                 && (!human.isUsingItem() || SpartanEquipmentCompat.isShield(human.getUseItem())
                     || RangedWeaponCustody.isBowOrCrossbow(human.getUseItem()))
-                && (owner == null || owner == Owner.PROJECTILE || owner == Owner.ADVANCE)
+                && (owner == null || owner == Owner.PROJECTILE)
                 && meleeBearings().isEmpty() && canPreemptivelyBlockProjectile();
     }
     boolean beginProjectileReaction(IncomingArrow arrow) {
@@ -536,7 +534,9 @@ public final class ShieldDefenseController {
     }
     boolean continuesProjectileReaction() {
         return owner == Owner.PROJECTILE && ownsCurrentShield() && allowsProjectileReaction()
-                && human.tickCount < reactiveGuardUntil && findIncomingArrow() != null;
+                && human.tickCount < reactiveGuardUntil
+                && (human.tickCount < reactiveGuardUntil - 100 + CombatPressurePolicy.MINIMUM_EFFECTIVE_BLOCK_TICKS
+                    || findIncomingArrow() != null);
     }
     void tickProjectileReaction() {
         if (owner != Owner.PROJECTILE || !ownsCurrentShield()) return;
@@ -780,8 +780,8 @@ public final class ShieldDefenseController {
         try {
             actions = HumanBehaviorControl.actions(human);
             int priority = switch (requestedOwner) {
-                case PRESSURE -> 300; case COMBAT -> 250; case PROJECTILE -> 200;
-                case ADVANCE -> 150; case BODYGUARD -> 100;
+                case PRESSURE -> 300; case COMBAT -> 250; case ADVANCE -> 200;
+                case PROJECTILE -> 150; case BODYGUARD -> 100;
             };
             requested = actions.request("shield:" + requestedOwner.name().toLowerCase(java.util.Locale.ROOT),
                     shieldResources(), priority, true, 2410);

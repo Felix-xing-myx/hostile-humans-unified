@@ -183,7 +183,6 @@ public final class PlayerLikeMovementGoal extends Goal {
     private boolean shouldSprintToMeleeTarget(LivingEntity target) {
         if (human.isFleeing
                 || SoldierOrder.isHoldingPosition(human)
-                || AmmoWeaponSelection.hasUsableGun(human)
                 || GunSupport.get().isGun(human.getMainHandItem())
                 || HumanUtil.isRangedWeapon(human.getMainHandItem())
                 || HumanUtil.isTrident(human.getMainHandItem())

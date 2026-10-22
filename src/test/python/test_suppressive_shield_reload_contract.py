@@ -25,20 +25,22 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
 
     def test_short_projectile_guard_survives_block_activation_delay(self):
         shield = source('ShieldDefenseController.java')
-        begin = shield.split('int beginCombat(', 1)[1].split('void endCombat()', 1)[0]
-        self.assertIn('CombatPressurePolicy.MINIMUM_EFFECTIVE_BLOCK_TICKS + 1', begin)
-        self.assertIn('human.setChargingCrossbow(false)', begin)
-        tick = shield.split('CombatUpdate tickCombat(', 1)[1].split('private void updateDefensePressure()', 1)[0]
-        self.assertIn('shouldDeferRangedProjectileGuard() && hasHeldMinimumCombatGuard()', tick)
+        reaction = shield.split('boolean continuesProjectileReaction()', 1)[1].split('void tickProjectileReaction()', 1)[0]
+        self.assertIn('CombatPressurePolicy.MINIMUM_EFFECTIVE_BLOCK_TICKS', reaction)
+        self.assertIn('human.tickCount < reactiveGuardUntil', reaction)
+        self.assertIn('reactiveGuardUntil = human.tickCount + 100', shield)
+        self.assertIn('nextProjectileGuardTick = human.tickCount + 40', shield)
 
-    def test_pressure_handoff_cancels_damage_and_animation_before_weapon_swap(self):
+    def test_pressure_handoff_acquires_authority_before_cancelling_attack(self):
         shield = source('ShieldDefenseController.java')
-        prepare = shield.split('void prepareHighPressureDefense()', 1)[1].split('private boolean wantsCombatNow', 1)[0]
-        self.assertLess(prepare.index('humanGunner$cancelMeleeAttackForDefense()'), prepare.index('GunCustody.beginCloseMeleeCounter'))
+        raise_body = shield.split('private void raise(', 1)[1].split('private boolean ownsCurrentShield()', 1)[0]
+        self.assertLess(raise_body.index('actions.acquire(requested)'), raise_body.index('humanGunner$cancelMeleeAttackForDefense()'))
+        self.assertLess(raise_body.index('actions.acquire(requested)'), raise_body.index('humanGunner$startMovementShield(hand)'))
+        self.assertNotIn('GunCustody.beginCloseMeleeCounter', raise_body)
         human = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
         cancel = human.split('public void humanGunner$cancelMeleeAttackForDefense()', 1)[1].split('private void wearEquippedItem', 1)[0]
         for expected in ('pendingBetterCombatTarget = null', 'pendingBetterCombatUpswingTicks = 0',
-                         'setNpcBetterCombatAttackAnimation("")', 'swinging = false'):
+                         'setNpcBetterCombatAttackAnimation("")', 'swinging = false', 'MeleeActionControl.finish'):
             self.assertIn(expected, cancel)
         self.assertIn('!humanGunner$shieldDefense().blocksMeleeAttack()', human)
 
@@ -60,56 +62,63 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         model = (renderer / 'HumanPlayerModel.java').read_text(encoding='utf-8')
         self.assertIn('human.getUseItem().getUseAnimation() == net.minecraft.world.item.UseAnim.BLOCK', model)
 
-    def test_high_pressure_interrupts_recovery_before_food_advances(self):
+    def test_high_pressure_waits_for_current_drink_but_stops_food_before_advancing(self):
         recovery = source('RecoverySupplies.java')
-        tick = recovery.split('public static void tickHandCustody(Human human)', 1)[1]
+        tick = recovery.split('public static void tickHandCustody(Human human)', 1)[1].split('private static boolean unavailable', 1)[0]
         self.assertLess(tick.index('shouldSuppressRecovery()'), tick.index('OffhandFoodUse.tick(human)'))
-        self.assertIn('finishUse(human, active, completed(human, active))', tick)
-        self.assertIn('SpartanEquipmentCompat.isShield(active.displacedHandItem())', recovery)
+        self.assertIn('shouldSuppressRecovery() && !isDrinkingPotion(human)', tick)
+        self.assertIn('finishUse(human, session, done)', tick)
+        self.assertIn('human.getOffhandItem() != session.actualItem()', tick)
         human = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
         hurt = human.split('float previousHealth = this.getHealth();', 1)[1].split('return damaged;', 1)[0]
         self.assertLess(hurt.index('super.hurt('), hurt.index('recordPressureDamage('))
-        self.assertLess(hurt.index('authorizeSelfDefense('), hurt.index('recordPressureDamage('))
         self.assertIn('previousHealth - this.getHealth()', hurt)
 
-    def test_high_pressure_gunner_uses_custody_and_keeps_lease(self):
+    def test_high_pressure_can_keep_gun_and_does_not_claim_movement(self):
         shield = source('ShieldDefenseController.java')
-        self.assertIn('GunCustody.beginCloseMeleeCounter(human)', shield)
-        self.assertIn('GunCustody.canBeginPressureDefense(human)', shield)
+        prepare = shield.split('void prepareHighPressureDefense()', 1)[1].split('public boolean blocksMeleeAttack()', 1)[0]
+        self.assertNotIn('beginCloseMeleeCounter', prepare)
         self.assertIn('source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_SHIELD)', shield)
         self.assertIn('recoveryPressure.blocked(human.tickCount,', shield)
-        custody = source('GunCustody.java')
-        restore = custody.split('static boolean restorePrimaryGun(', 1)[1]
-        self.assertLess(restore.index('shouldSuppressRecovery()'), restore.index('clearLease(human)'))
-        ticking = source('HumanGunner.java').split('RecoverySupplies.tickHandCustody(human)', 1)[1]
-        self.assertLess(ticking.index('prepareHighPressureDefense()'), ticking.index('GunCustody.tick(human)'))
+        pressure_goal = source('PressureReactionGoal.java')
+        self.assertIn('setFlags(EnumSet.noneOf(Flag.class))', pressure_goal)
+        self.assertNotIn('getNavigation().stop()', pressure_goal)
+        self.assertIn('requestedOwner != Owner.PRESSURE', shield)
+        self.assertIn('GunCustody.cancelBackgroundReloads(human)', source('HumanBehaviorControl.java'))
 
-    def test_high_pressure_is_global_and_precedes_low_health_retreat(self):
+    def test_high_pressure_is_global_and_independent_of_retreat_move(self):
         defaults = json.loads((ROOT / 'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8'))
-        self.assertTrue(defaults['shield_pressure']['enabled'])
-        self.assertEqual(defaults['shield_pressure']['quiet_ticks'], 20)
-        goal = source('AdaptiveCombatGoal.java').split('public boolean canUse()', 1)[1]
-        self.assertLess(goal.index('pendingPhase = Phase.DEFEND'), goal.index('if (shouldEnterRetreat('))
+        expected = {'enabled': True, 'window_ticks': 20, 'damage_ratio': .18, 'frequent_window_ticks': 30,
+                    'frequent_hits': 5, 'frequent_damage_ratio': .10, 'single_damage_ratio': .35,
+                    'quiet_ticks': 20, 'max_guard_ticks': 140, 'cooldown_ticks': 40}
+        for key, value in expected.items():
+            self.assertEqual(defaults['shield_pressure'][key], value)
         self.assertIn('"shield_pressure"', source('SplitConfigFiles.java'))
         self.assertIn('orderGroup(result, "shield_pressure"', source('TierConfigProjection.java'))
+        self.assertIn('setFlags(EnumSet.noneOf(Flag.class))', source('PressureReactionGoal.java'))
 
-    def test_gunfire_is_separate_from_bounded_melee_guard(self):
+    def test_pressure_and_melee_guard_use_separate_execution_owners(self):
         shield = source('ShieldDefenseController.java')
-        pressure = shield.index('if (underGunfirePressure()) {')
-        counter = shield.index('CombatPressurePolicy.shouldCounterAfterGuard(')
-        self.assertLess(pressure, counter)
-        self.assertIn('Math.max(phaseTicks, 2)', shield[pressure:counter])
-        self.assertIn('if (defendingGunfire)', shield[pressure:counter])
-        goal = source('AdaptiveCombatGoal.java')
-        self.assertIn('phase == Phase.DEFEND && shouldEnterRetreat(threat)', goal)
-        self.assertIn('if (!moved && !shields.underGunfirePressure() && !shields.wantsHighPressureGuard())', goal)
+        combat = shield.split('CombatUpdate tickCombat(', 1)[1].split('private void updateDefensePressure()', 1)[0]
+        self.assertIn('owner != Owner.COMBAT', combat)
+        self.assertIn('meleeBlocks >= 3', combat)
+        self.assertIn('human.tickCount - defensePressureTick >= 40', combat)
+        self.assertIn('attackObligation = true', combat)
+        end = shield.split('void endCombat()', 1)[1].split('boolean underGunfirePressure()', 1)[0]
+        self.assertIn('if (owner != Owner.COMBAT) return', end)
+        self.assertIn('case ADVANCE -> 200', shield)
+        self.assertIn('case PROJECTILE -> 150', shield)
 
-    def test_prediction_filters_rear_arrows_before_candidate_budget(self):
+    def test_prediction_filters_rear_projectiles_before_trajectory_work(self):
         shield = source('ShieldDefenseController.java')
-        self.assertLess(shield.index('if (!inFront(arrow.position())) continue;'),
-                        shield.index('nearest.offer(arrow)'))
-        self.assertIn('|| !inFront(arrow.position())) continue;', shield)
-        self.assertIn('!inFront(shooter.position())', shield)
+        probe = shield.split('IncomingArrow findIncomingArrow()', 1)[1].split('private boolean inFront(', 1)[0]
+        self.assertLess(probe.index('!inFront(arrow.position())'), probe.index('ShieldProjectileBackend.describe(arrow)'))
+        self.assertLess(probe.index('!inFront(arrow.position())'), probe.index('ProjectileShieldPolicy.impactTicks'))
+        self.assertIn('visibleArrow(arrow)', probe)
+        self.assertIn('ProjectileShieldPolicy.insideReactionView', shield)
+        director = source('HumanCombatDirector.java')
+        self.assertIn('PerceptionBudget.claim', director)
+        self.assertIn('limit(32)', director)
 
     def test_gun_shield_is_passive_and_not_an_active_block(self):
         shield = source('ShieldDefenseController.java')
@@ -175,25 +184,25 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         self.assertNotIn('startUsingItem(', charge.split('void tick(Human human)', 1)[0])
         self.assertNotIn('consumeArrow(', charge)
 
-    def test_guarded_bow_and_crossbow_progress_survives_guard_release(self):
+    def test_guarded_bow_and_crossbow_progress_follows_original_weapon(self):
         charge = source('GuardedRangedCharge.java')
         shield = source('ShieldDefenseController.java')
-        self.assertIn('progress = Math.min(20, progress + 3)', charge)
-        self.assertIn('human.advanceUseTime(Math.max(0, progress - human.getTicksUsingItem()))', charge)
-        self.assertIn('human.getMainHandItem() != charging', charge)
-        self.assertIn('human.tickCount > expiresAt', charge)
+        self.assertIn('HumanEquipmentExchange.Handle charging', charge)
+        self.assertIn('HumanEquipmentExchange.locate(human, charging)', charge)
+        self.assertIn('foregroundRate(human, weapon) / (1.5 * duration(weapon))', charge)
+        self.assertIn('HumanInventorySession.isEditing(human)', charge)
+        self.assertIn('HumanArrowCombat.crossbowCompletedBehindGuard(human, weapon)', charge)
         end = shield.split('void endCombat()', 1)[1].split('boolean underGunfirePressure()', 1)[0]
         self.assertNotIn('guardedCharge.reset()', end)
-        ticking = shield.split('CombatUpdate tickCombat(', 1)[1]
-        self.assertLess(ticking.index('guardedCharge.tick(human)'), ticking.index('if (underGunfirePressure())'))
 
-    def test_ranged_counter_window_blocks_reentry_and_tactical_preemption(self):
+    def test_actual_counter_obligation_blocks_reentry_without_stale_timer(self):
         shield = source('ShieldDefenseController.java')
         wants = shield.split('private boolean wantsCombatNow(', 1)[1].split('boolean hasHeldMinimumCombatGuard()', 1)[0]
-        self.assertLess(wants.index('if (hasRangedCounterWindow()) return false'), wants.index('if (underGunfirePressure())'))
-        self.assertIn('guardedCharge.counterWindowTicks(human)', shield)
-        self.assertIn('return Math.max(32,', source('GuardedRangedCharge.java'))
-        self.assertIn('guardedCharge.ready(human)', shield)
+        self.assertIn('if (attackObligation || human.tickCount < nextDefenseTick) return false', wants)
+        counter = shield.split('public boolean hasRangedCounterWindow()', 1)[1].split('/** Actual shieldable', 1)[0]
+        self.assertIn('return attackObligation', counter)
+        self.assertNotIn('isPressureBreakAttempt()', counter)
+        self.assertIn('attackObligation = false', shield.split('public void onAttackExecuted()',1)[1].split('public void clearAttackObligation()',1)[0])
         self.assertIn('if (shields.hasRangedCounterWindow()) return false', source('AdaptiveCombatGoal.java'))
 
     def test_weapon_goals_capture_before_stop_and_restore_after_start(self):

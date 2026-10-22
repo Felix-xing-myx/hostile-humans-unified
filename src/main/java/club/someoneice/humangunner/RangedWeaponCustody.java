@@ -190,8 +190,8 @@ public final class RangedWeaponCustody {
         if (data == null) {
             return false;
         }
-        int meleeSlot = findBestMeleeSlot(data);
-        if (meleeSlot < 0) {
+        ItemStack melee = HumanLootManager.bestOwnedMeleeWeapon(human);
+        if (melee.isEmpty()) {
             return false;
         }
 
@@ -202,7 +202,6 @@ public final class RangedWeaponCustody {
         int ownedBefore = countOwnedRanged(human);
         registerPreferred(human, held);
         ItemStack ranged = held;
-        ItemStack melee = data.getInventoryItem(meleeSlot);
         var result = HumanEquipmentExchange.request(human, "bow-close-melee",
                 java.util.List.of(new HumanEquipmentExchange.Need(EquipmentSlot.MAINHAND,
                         candidate -> candidate == melee)));
@@ -212,8 +211,8 @@ public final class RangedWeaponCustody {
         CloseRangedTactics.beginMelee(human);
         human.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
         HumanGunner.LOGGER.debug(
-                "Ranged custody begin npc={} slot={} ranged={} melee={}",
-                human.getUUID(), meleeSlot, itemId(ranged), itemId(melee)
+                "Ranged custody begin npc={} ranged={} melee={}",
+                human.getUUID(), itemId(ranged), itemId(melee)
         );
         assertOwnershipCount(human, ownedBefore, "begin_close_melee");
         return true;
@@ -315,24 +314,6 @@ public final class RangedWeaponCustody {
             return new LivingTarget(false, Double.POSITIVE_INFINITY);
         }
         return new LivingTarget(true, human.distanceToSqr(human.getTarget()));
-    }
-
-    private static int findBestMeleeSlot(HumanData data) {
-        int bestSlot = -1;
-        double bestScore = Double.NEGATIVE_INFINITY;
-        for (int i = 0; i < data.getInventoryItemsSize(); i++) {
-            if (HumanInventoryCustody.isReservedForRecovery(data, i)) continue;
-            ItemStack stack = data.getInventoryItem(i);
-            if (!HumanLootManager.isDedicatedMeleeWeapon(stack)) {
-                continue;
-            }
-            double score = HumanLootManager.mainHandWeaponScore(stack);
-            if (score > bestScore) {
-                bestScore = score;
-                bestSlot = i;
-            }
-        }
-        return bestSlot;
     }
 
     /** Read-only preview of the same weapon restorePreferred will choose. */

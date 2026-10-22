@@ -165,6 +165,21 @@ public final class HumanLootManager {
         return equipmentScore(stack, EquipmentSlot.MAINHAND);
     }
 
+    /** Shared read-only query; callers still request actual layout changes from the exchange module. */
+    static ItemStack bestOwnedMeleeWeapon(Human human) {
+        ItemStack best = ItemStack.EMPTY;
+        double score = Double.NEGATIVE_INFINITY;
+        var actual = new java.util.ArrayList<ItemStack>();
+        actual.add(human.getMainHandItem()); actual.add(human.getOffhandItem());
+        if (human.getData() != null) for (int i = 0; i < human.getData().getInventoryItemsSize(); i++)
+            if (!HumanInventoryCustody.isReservedForRecovery(human, i)) actual.add(human.getData().getInventoryItem(i));
+        for (ItemStack stack : actual) if (isDedicatedMeleeWeapon(stack)) {
+            double value = mainHandWeaponScore(stack);
+            if (value > score) { best = stack; score = value; }
+        }
+        return best;
+    }
+
     /** Existing tools are usable backups; never manufacture replacements. */
     public static boolean equipMeleeFallback(Human human) {
         return HumanManagedLoadout.equipStoredMeleeIfMainHandEmpty(human);

@@ -24,13 +24,17 @@ class CloseRangedTacticsContract(unittest.TestCase):
     def test_no_melee_backup_does_not_cancel_active_bow(self):
         code = (PKG / 'RangedWeaponCustody.java').read_text(encoding='utf-8')
         begin = code.split('static boolean beginCloseMelee(', 1)[1].split('static boolean restorePreferred(', 1)[0]
-        self.assertLess(begin.index('if (meleeSlot < 0)'), begin.index('human.stopUsingItem()'))
+        self.assertLess(begin.index('if (melee.isEmpty())'), begin.index('human.stopUsingItem()'))
         self.assertIn('CloseRangedTactics.beginMelee(human)', begin)
-        self.assertIn('CloseRangedTactics.allowsMeleeEntry(human)', code)
+        self.assertIn('MELEE_ENTER_DISTANCE_SQR = 36.0D', code)
+        self.assertIn('HumanEquipmentExchange.request', begin)
+        self.assertIn('HumanLootManager.bestOwnedMeleeWeapon(human)', begin)
         self.assertEqual(code.count('CloseRangedTactics.returnedToBow(human)'), 2)
         hybrid = (PKG / 'RangedHybridMeleeGoal.java').read_text(encoding='utf-8')
-        self.assertIn('CloseRangedTactics.tryBow(human, target)', hybrid)
-        self.assertIn('CloseRangedTactics.allowsLocalPath(human, path)', hybrid)
+        self.assertIn('RangedWeaponCustody.restorePreferred(human, "close_defense_separated")', hybrid)
+        self.assertIn('human.distanceToSqr(target) > 36', hybrid)
+        self.assertIn('RetreatPathSafety.isSafe', hybrid)
+        self.assertIn('SoldierOrder.allowsCombatPath', hybrid)
         self.assertIn('!CloseRangedTactics.keepDefense(human)', hybrid)
 
     def test_human_retreat_cannot_use_unbounded_fallback(self):
