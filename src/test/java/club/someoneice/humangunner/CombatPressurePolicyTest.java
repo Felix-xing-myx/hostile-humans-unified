@@ -86,6 +86,10 @@ public final class CombatPressurePolicyTest {
         RecoveryPressureWindow single = new RecoveryPressureWindow();
         single.record(0, 35, 100, pressure);
         check(single.active(0, pressure), "single thirty-five percent hit triggers immediately");
+        RecoveryPressureWindow deferred = new RecoveryPressureWindow();
+        deferred.executingEvent(200, pressure);
+        deferred.blocked(219, pressure);
+        check(deferred.active(238, pressure), "executing pressure after a drink accepts new blocked events");
         RecoveryPressureWindow stale = new RecoveryPressureWindow();
         stale.record(0, 9, 100, pressure); stale.record(20, 9, 100, pressure);
         check(!stale.active(20, pressure), "twenty-tick boundary does not retain the old high-damage sample");

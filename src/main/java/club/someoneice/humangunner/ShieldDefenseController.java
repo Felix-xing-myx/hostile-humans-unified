@@ -189,6 +189,7 @@ public final class ShieldDefenseController {
         updatePressureCycle();
         if (!recoveryPressure.active(human.tickCount, rules) && !pressureCycle.attempting()) pressureFacing.clear();
         if (owner == Owner.COMBAT) defensePressureTick = human.tickCount;
+        if (pressureCycleActive) recoveryPressure.executingEvent(human.tickCount, rules);
         recoveryPressure.record(human.tickCount, damage, human.getMaxHealth(), rules);
         if (RecoverySupplies.isDrinkingPotion(human) && !pressureCycle.attempting()
                 && recoveryPressure.active(human.tickCount, rules)) pressureWaitingForDrink = true;
@@ -564,7 +565,9 @@ public final class ShieldDefenseController {
                 meleeBlocks++;
                 if (human.getRandom().nextInt(3) == 0) meleeCounterRequested = true;
             }
-            recoveryPressure.blocked(human.tickCount, UnifiedConfig.get().shieldPressure());
+            if (pressureCycleActive || owner == Owner.PRESSURE)
+                recoveryPressure.executingEvent(human.tickCount, UnifiedConfig.get().shieldPressure());
+            else recoveryPressure.blocked(human.tickCount, UnifiedConfig.get().shieldPressure());
         }
     }
 

@@ -27,6 +27,11 @@ final class RecoveryPressureWindow {
             lastPressureTick = now;
     }
 
+    /** Actual executing pressure guard may have begun after a protected drink outlived the samples. */
+    void executingEvent(int now, ShieldPressureConfig config) {
+        if (config.enabled()) lastPressureTick = now;
+    }
+
     void blocked(int now, ShieldPressureConfig config) {
         if (active(now, config)) lastPressureTick = now;
     }
