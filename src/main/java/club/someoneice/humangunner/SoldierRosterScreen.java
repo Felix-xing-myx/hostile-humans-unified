@@ -25,15 +25,21 @@ public final class SoldierRosterScreen extends Screen {
     private long dismissConfirmUntil;
     private EditBox squadName;
     private int editTop;
+    private record PageTrack(int x,int y,int w) {}
+    private PageTrack pageTrack;
+    private boolean draggingPage,focusEditor;
+    private int dragPreviewPage;
     private SoldierRosterScreen(UUID token,int tier,int page,int total,List<SoldierRosterNetwork.Entry> entries,int[] counts,int[] limits){
         super(tr("screen.hostile_humans_unified.roster.title"));this.token=token;this.tier=tier;this.page=page;this.total=total;this.entries=entries;this.counts=counts;this.limits=limits;
     }
     static void show(UUID token,boolean opening,int tier,int page,int total,List<SoldierRosterNetwork.Entry> entries,int[] counts,int[] limits,int squadFilter,List<SoldierRosterNetwork.SquadEntry> squads,String result){
         Minecraft mc=Minecraft.getInstance();
         if(mc.screen instanceof SoldierRosterScreen s&&s.token.equals(token)){
-            if(s.tier!=tier||s.squadFilter!=squadFilter){s.scroll=0;s.requestedPage=-1;}
+            if(s.tier!=tier||s.squadFilter!=squadFilter){s.scroll=0;s.requestedPage=-1;s.draggingPage=false;}
+            if(s.page!=page)s.scroll=0;
             s.entries=entries;s.tier=tier;s.page=page;s.total=total;s.counts=counts;s.limits=limits;s.squadFilter=squadFilter;s.squads=squads;
             if(!result.isEmpty())s.result=result;
+            if(s.requestedPage>=0)s.requestedPage=Math.min(s.requestedPage,Math.max(0,(total-1)/SoldierRosterNetwork.PAGE_SIZE));
             if(s.requestedPage==page)s.requestedPage=-1;
             if(s.selected!=null&&entries.stream().noneMatch(e->e.id().equals(s.selected))){s.selected=null;s.scroll=0;}
         }else if(opening&&(mc.screen==null||mc.screen instanceof SoldierRosterScreen)){
@@ -53,7 +59,7 @@ public final class SoldierRosterScreen extends Screen {
     private static boolean hit(double mx,double my,int x,int y,int w,int h){return mx>=x&&mx<x+w&&my>=y&&my<y+h;}
     @Override protected void init(){
         String name=squadName==null?"":squadName.getValue();
-        squadName=new EditBox(font,left()+12,bodyTop(),panelWidth()-24,20,cmd("squad_name"));squadName.setMaxLength(64);squadName.setValue(name);squadName.setVisible(false);addWidget(squadName);
+        squadName=new EditBox(font,left()+12,bodyTop(),panelWidth()-24,20,cmd("squad_name"));squadName.setMaxLength(64);squadName.setValue(name);squadName.setVisible(false);addWidget(squadName);focusEditor=editingSquad>0;draggingPage=false;
     }
     private int text(GuiGraphics g,Component label,int x,int y,int w,int color){
         for(var line:font.split(label,Math.max(1,w))){g.drawString(font,line,x,y,color,false);y+=11;}return y;
@@ -74,35 +80,67 @@ public final class SoldierRosterScreen extends Screen {
     @Override public void render(GuiGraphics g,int mx,int my,float partial){
         renderBackground(g);int x=left(),w=panelWidth(),inner=w-24;
         g.fill(x,12,x+w,height-12,CommandPanelScreen.PANEL);g.drawString(font,title,x+12,20,CommandPanelScreen.GOLD,false);
-        controls.clear();g.enableScissor(x+12,bodyTop(),x+w-12,bodyBottom());int y=bodyTop()-scroll;
+        controls.clear();pageTrack=null;g.enableScissor(x+12,bodyTop(),x+w-12,bodyBottom());int y=bodyTop()-scroll;
         squadName.setVisible(false);
         if(squadPanel)y=renderSquads(g,x+12,y,inner);
         else if(selected!=null)y=renderDetail(g,x+12,y,inner);
         else y=renderList(g,x+12,y,inner);
         maxScroll=Math.max(0,y+scroll-bodyBottom());scroll=Math.min(scroll,maxScroll);
         for(var c:controls)drawControl(g,c,mx,my);
-        if(squadName.isVisible())squadName.render(g,mx,my,partial);
+        if(squadName.isVisible()) {
+            boolean inside=editTop>=bodyTop()&&editTop+20<=bodyBottom();squadName.setVisible(inside);
+            if(!inside){squadName.setFocused(false);setFocused(null);}
+            else {if(focusEditor){setFocused(squadName);squadName.setFocused(true);focusEditor=false;}squadName.render(g,mx,my,partial);}
+        }
+        if(pageTrack!=null){
+            int value=draggingPage?dragPreviewPage:requestedPage>=0?requestedPage:page;
+            g.fill(pageTrack.x(),pageTrack.y()+7,pageTrack.x()+pageTrack.w(),pageTrack.y()+11,CommandPanelScreen.EDGE);
+            int knob=pageTrack.x()+(maxPage()==0?0:(pageTrack.w()-8)*value/maxPage());
+            g.fill(knob,pageTrack.y()+2,knob+8,pageTrack.y()+18,CommandPanelScreen.GOLD);
+        }
         g.disableScissor();
         if(maxScroll>0){int bar=bodyTop()+Math.max(0,bodyBottom()-bodyTop()-20)*scroll/maxScroll;g.fill(x+w-7,bar,x+w-4,bar+20,CommandPanelScreen.GOLD);}
         int bw=(inner-6)/2,fy=height-44;
-        drawControl(g,new Control(selected!=null||squadPanel?cmd("back"):cmd("close"),x+12,fy,bw,20,true,false,this::back),mx,my);
+        drawControl(g,new Control(selected!=null||squadPanel||tier!=-1?cmd("back"):cmd("close"),x+12,fy,bw,20,true,false,this::back),mx,my);
         drawControl(g,new Control(cmd("squad_manage",marked.size()),x+18+bw,fy,inner-bw-6,20,true,false,this::openSquads),mx,my);
     }
+    private int maxPage(){return Math.max(0,(total-1)/SoldierRosterNetwork.PAGE_SIZE);}
     private int renderList(GuiGraphics g,int x,int y,int w){
-        for(int i=0;i<4;i++)y=text(g,tr("message.hostile_humans_unified.roster.tier."+i,counts[i],limits[i]),x,y,w,CommandPanelScreen.MUTED);
+        int filterWidth=(w-24)/5,filterBottom=y;
+        for(int filter=-1;filter<4;filter++){final int f=filter;
+            filterBottom=Math.max(filterBottom,add(f<0?roster("all"):roster("tier."+f),x+(f+1)*(filterWidth+6),y,filterWidth,true,tier==f,()->SoldierRosterNetwork.request(token,7,NONE,f)));
+        }
+        y=filterBottom+2;
+        int col=(w-8)/2;
+        if(col<120){for(int i=0;i<4;i++)y=text(g,tr("message.hostile_humans_unified.roster.tier."+i,counts[i],limits[i]),x,y,w,CommandPanelScreen.MUTED);}
+        else for(int i=0;i<4;i+=2){
+            int first=text(g,tr("message.hostile_humans_unified.roster.tier."+i,counts[i],limits[i]),x,y,col,CommandPanelScreen.MUTED);
+            int second=text(g,tr("message.hostile_humans_unified.roster.tier."+(i+1),counts[i+1],limits[i+1]),x+col+8,y,w-col-8,CommandPanelScreen.MUTED);
+            y=Math.max(first,second);
+        }
         y+=8;
-        for(int filter=-1;filter<4;filter++){final int f=filter;y=add(f<0?roster("all"):roster("tier."+f),x,y,w,true,tier==f,()->SoldierRosterNetwork.request(token,7,NONE,f));}
         y=text(g,cmd("squad_filter",squadFilter<0?"*":squadFilter),x,y,w,CommandPanelScreen.MUTED)+8;
         for(var e:entries){
             Component name=Component.literal((marked.contains(e.id())?"☑ ":"☐ ")+(e.name().isBlank()?roster("unnamed").getString():e.name()));
-            y=add(name,x,y,w,true,e.id().equals(selected),()->{selected=e.id();scroll=0;dismissConfirmUntil=0;});
-            y=text(g,roster("status_short."+e.status()),x,y,w,CommandPanelScreen.MUTED)+6;
+            y=add(name,x,y,w,true,e.id().equals(selected),()->{
+                if(hasShiftDown()){if(!marked.remove(e.id())&&marked.size()<64)marked.add(e.id());}
+                else {selected=e.id();scroll=0;dismissConfirmUntil=0;}
+            });
+            y=text(g,Component.literal("["+e.squad()+"] ").append(roster("tier."+e.tier())).append(" · "+e.faction()),x,y,w,CommandPanelScreen.MUTED);
+            y=text(g,roster("status_short."+e.status()),x,y,w,CommandPanelScreen.MUTED);
+            y=text(g,Component.literal(e.dimension()+" · "+e.x()+", "+e.y()+", "+e.z()),x,y,w,CommandPanelScreen.MUTED);
+            y=text(g,Component.translatable("screen.hostile_humans_unified.soldier."+e.order().toLowerCase(Locale.ROOT)),x,y,w,CommandPanelScreen.MUTED);
+            y=text(g,e.health()>=0?roster("health",e.health(),e.maxHealth()):roster("last_known_short"),x,y,w,CommandPanelScreen.TEXT);
+            if(e.growth()!=null&&e.growth().enabled())y=text(g,roster("growth_summary",e.growth().level(),e.growth().experiencePercent()),x,y,w,CommandPanelScreen.MUTED);
+            y+=6;
             y=pair(cmd("mark"),roster("recall_one"),x,y,w,true,true,()->{if(!marked.remove(e.id())&&marked.size()<64)marked.add(e.id());},()->SoldierRosterNetwork.request(token,3,e.id()));
             y=pair(roster("move_earlier"),roster("move_later"),x,y,w,e.canMoveEarlier(),e.canMoveLater(),()->SoldierRosterNetwork.request(token,11,e.id()),()->SoldierRosterNetwork.request(token,12,e.id()));y+=8;
         }
-        int pages=Math.max(1,(total+SoldierRosterNetwork.PAGE_SIZE-1)/SoldierRosterNetwork.PAGE_SIZE);
+        if(entries.isEmpty())y=text(g,cmd("empty_roster"),x,y,w,CommandPanelScreen.MUTED)+8;
+        int pages=maxPage()+1;
         y=text(g,Component.literal((page+1)+" / "+pages),x,y,w,CommandPanelScreen.MUTED)+6;
         y=pair(Component.literal("◀"),Component.literal("▶"),x,y,w,page>0,page<pages-1,()->requestPage(page-1),()->requestPage(page+1));
+        if(maxPage()>0){pageTrack=new PageTrack(x,y,w);y+=26;}
         y=pair(roster("refresh"),roster("recall"),x,y,w,true,true,()->SoldierRosterNetwork.request(token,0,NONE),()->SoldierRosterNetwork.request(token,2,NONE));return y;
     }
     private int renderDetail(GuiGraphics g,int x,int y,int w){
@@ -136,7 +174,7 @@ public final class SoldierRosterScreen extends Screen {
         if(!result.isEmpty())y=text(g,Component.literal(result),x,y,w,CommandPanelScreen.MUTED)+8;
         for(var squad:squads){
             y=add(Component.literal(squad.number()+" · "+squad.name()+" ("+squad.members()+")"),x,y,w,true,editingSquad==squad.number(),()->{
-                editingSquad=squad.number();squadName.setValue(squad.name());setFocused(squadName);squadName.setFocused(true);
+                editingSquad=squad.number();squadName.setValue(squad.name());focusEditor=true;
             });
             if(editingSquad==squad.number()){
                 editTop=y;squadName.setX(x);squadName.setY(y);squadName.setWidth(w);squadName.setVisible(true);y+=26;
@@ -149,19 +187,36 @@ public final class SoldierRosterScreen extends Screen {
         y=pair(cmd("all_squads"),cmd("no_squad"),x,y,w,true,true,()->{SoldierRosterNetwork.request(token,14,NONE,-1);back();},()->{SoldierRosterNetwork.request(token,14,NONE,0);back();});return y;
     }
     private void saveSquadName(){if(editingSquad>0)SoldierRosterNetwork.rename(token,editingSquad,squadName.getValue());editingSquad=0;squadName.setVisible(false);setFocused(null);}
-    private void openSquads(){if(selected!=null)marked.add(selected);selected=null;squadPanel=true;editingSquad=0;scroll=0;}
-    private void back(){if(squadPanel){squadPanel=false;editingSquad=0;squadName.setVisible(false);setFocused(null);scroll=0;}else if(selected!=null){selected=null;scroll=0;}else onClose();}
+    private void openSquads(){if(selected!=null&&marked.size()<64)marked.add(selected);selected=null;squadPanel=true;editingSquad=0;scroll=0;}
+    private void back(){if(squadPanel){squadPanel=false;editingSquad=0;squadName.setVisible(false);setFocused(null);scroll=0;}else if(selected!=null){selected=null;scroll=0;dismissConfirmUntil=0;}else if(tier!=-1){SoldierRosterNetwork.request(token,7,NONE,-1);}else onClose();}
     private void requestPage(int target){target=Math.max(0,Math.min(Math.max(0,(total-1)/SoldierRosterNetwork.PAGE_SIZE),target));if(target==(requestedPage>=0?requestedPage:page))return;requestedPage=target;retryTicks=0;retries=0;SoldierRosterNetwork.request(token,8,NONE,target);}
     @Override public boolean mouseClicked(double mx,double my,int button){
         if(button!=0)return super.mouseClicked(mx,my,button);int x=left(),inner=panelWidth()-24,bw=(inner-6)/2,fy=height-44;
         if(hit(mx,my,x+12,fy,bw,20)){back();return true;}if(hit(mx,my,x+18+bw,fy,inner-bw-6,20)){openSquads();return true;}
         if(my>=bodyTop()&&my<bodyBottom()){
+            if(pageTrack!=null&&hit(mx,my,pageTrack.x(),pageTrack.y(),pageTrack.w(),20)){
+                draggingPage=true;previewPageAt(mx);return true;
+            }
             if(squadName.isVisible()&&hit(mx,my,squadName.getX(),editTop,squadName.getWidth(),20))return squadName.mouseClicked(mx,my,button);
-            for(var c:controls)if(c.active&&hit(mx,my,c.x,c.y,c.w,c.h)){c.action.run();return true;}
+            for(var c:controls)if(c.active&&hit(mx,my,c.x,c.y,c.w,c.h)){squadName.setFocused(false);setFocused(null);c.action.run();return true;}
         }
         return false;
     }
-    @Override public boolean mouseScrolled(double mx,double my,double delta){if(hit(mx,my,left(),bodyTop(),panelWidth(),bodyBottom()-bodyTop())){scroll=Math.max(0,Math.min(maxScroll,scroll-(int)(delta*26)));return true;}return false;}
+    private void previewPageAt(double mx){dragPreviewPage=Math.max(0,Math.min(maxPage(),(int)Math.round((mx-pageTrack.x())/Math.max(1,pageTrack.w()-8)*maxPage())));}
+    @Override public boolean mouseDragged(double mx,double my,int button,double dx,double dy){
+        if(draggingPage&&button==0&&pageTrack!=null){previewPageAt(mx);return true;}
+        return super.mouseDragged(mx,my,button,dx,dy);
+    }
+    @Override public boolean mouseReleased(double mx,double my,int button){
+        if(draggingPage&&button==0){if(pageTrack!=null)previewPageAt(mx);draggingPage=false;requestPage(dragPreviewPage);return true;}
+        return super.mouseReleased(mx,my,button);
+    }
+    @Override public boolean mouseScrolled(double mx,double my,double delta){
+        if(draggingPage)return true;
+        if(delta!=0&&pageTrack!=null&&hit(mx,my,pageTrack.x(),pageTrack.y(),pageTrack.w(),20)){
+            requestPage((requestedPage>=0?requestedPage:page)+(delta>0?-1:1));return true;
+        }
+        if(hit(mx,my,left(),bodyTop(),panelWidth(),bodyBottom()-bodyTop())){scroll=Math.max(0,Math.min(maxScroll,scroll-(int)(delta*26)));return true;}return false;}
     @Override public boolean keyPressed(int key,int scan,int mods){
         if(key==GLFW.GLFW_KEY_ESCAPE){back();return true;}
         if(squadPanel&&editingSquad>0&&key==GLFW.GLFW_KEY_ENTER){saveSquadName();return true;}

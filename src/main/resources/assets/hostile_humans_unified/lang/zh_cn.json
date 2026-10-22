@@ -559,5 +559,6 @@
   "screen.hostile_humans_unified.command.preference.crossbow": "弩",
   "screen.hostile_humans_unified.command.preference.trident": "三叉戟",
   "screen.hostile_humans_unified.command.preference.melee": "近战",
-  "screen.hostile_humans_unified.command.mark": "勾选 / 取消勾选"
+  "screen.hostile_humans_unified.command.mark": "勾选 / 取消勾选",
+  "screen.hostile_humans_unified.command.empty_roster": "此筛选下没有士兵"
 }
