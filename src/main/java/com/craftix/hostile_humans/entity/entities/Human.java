@@ -1831,6 +1831,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public void tick() {
         if (club.someoneice.humangunner.PeacefulHumanPolicy.beforeHumanTick(this)) return;
         bootstrapMissingHumanData();
+        club.someoneice.humangunner.HumanBehaviorControl.beforeTick(this);
         if (!this.level().isClientSide) {
             setNpcBetterCombatMeleeEnabled(BetterCombatMeleeCombat.isEnabled(this));
             this.updateWaterKnockbackResistance();

@@ -31,6 +31,8 @@ public final class ShieldDefenseController {
     private final Human human;
     private final CombatAiConfig config;
     private Owner owner;
+    private boolean pressureWaitingForDrink;
+    private int deferredPressureGraceUntil = Integer.MIN_VALUE;
     private boolean defendingGunfire;
     private final GuardedRangedCharge guardedCharge = new GuardedRangedCharge();
     private boolean preparingCombatGuard;
@@ -105,6 +107,8 @@ public final class ShieldDefenseController {
         updatePressureCycle();
         if (!recoveryPressure.active(human.tickCount, rules) && !pressureCycle.attempting()) pressureFacing.clear();
         recoveryPressure.record(human.tickCount, damage, human.getMaxHealth(), rules);
+        if (RecoverySupplies.isDrinkingPotion(human) && !pressureCycle.attempting()
+                && recoveryPressure.active(human.tickCount, rules)) pressureWaitingForDrink = true;
         pressureCycle.damage(human.tickCount, damage, human.getMaxHealth(), rules);
         recordPressureDirection(source);
     }
@@ -126,8 +130,11 @@ public final class ShieldDefenseController {
 
     public boolean shouldSuppressRecovery() {
         updatePressureCycle();
-        return !pressureCycle.attempting() && pressureDefenseAvailable()
-                && recoveryPressure.active(human.tickCount, UnifiedConfig.get().shieldPressure());
+        if (!pressureDefenseAvailable()) { pressureWaitingForDrink = false; return false; }
+        if (RecoverySupplies.isDrinkingPotion(human)) return false;
+        return !pressureCycle.attempting() && (pressureWaitingForDrink
+                || human.tickCount < deferredPressureGraceUntil
+                || recoveryPressure.active(human.tickCount, UnifiedConfig.get().shieldPressure()));
     }
 
     boolean isPressureBreakAttempt() {
@@ -488,6 +495,8 @@ public final class ShieldDefenseController {
                 ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
         raise(Owner.PRESSURE, hand, false);
         if (owner != Owner.PRESSURE || !ownsCurrentShield()) return false;
+        if (pressureWaitingForDrink) deferredPressureGraceUntil = human.tickCount + 20;
+        pressureWaitingForDrink = false;
         facePressure();
         return true;
     }
@@ -504,6 +513,8 @@ public final class ShieldDefenseController {
     void endPressureReaction() {
         if (owner != Owner.PRESSURE) return;
         release(Owner.PRESSURE);
+        pressureWaitingForDrink = false;
+        deferredPressureGraceUntil = Integer.MIN_VALUE;
         endCombat(); // Preserve the original recovery/counter windows; never acquire a target.
         if (!recoveryPressure.active(human.tickCount, UnifiedConfig.get().shieldPressure())) pressureFacing.clear();
     }

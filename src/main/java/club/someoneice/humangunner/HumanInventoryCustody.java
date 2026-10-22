@@ -52,34 +52,9 @@ public final class HumanInventoryCustody {
             Predicate<ItemStack> predicate,
             EquipmentSlot requestedSlot
     ) {
-        if (human.level().isClientSide) {
-            return false;
-        }
-        HumanData data = human.getData();
-        if (data == null) {
-            return false;
-        }
-        // HumanData currently owns 30 backpack slots. Always trust the live
-        // container size instead of the base mod's historical 0-15 combat
-        // window, otherwise equipment in slots 16-29 exists and is saved but
-        // can never be selected again.
-        int candidateCount = data.getInventoryItemsSize();
-        for (int index = 0; index < candidateCount; index++) {
-            if (isReservedForRecovery(data, index)) continue;
-            ItemStack candidate = data.getInventoryItem(index);
-            if (candidate.isEmpty() || !predicate.test(candidate)) {
-                continue;
-            }
-
-            ItemStack previous = human.getItemBySlot(requestedSlot).copy();
-            ItemStack replacement = candidate.copy();
-            // The inventory slot is the transaction's guaranteed destination;
-            // no capacity check and no second hand mutation are involved.
-            data.setInventoryItem(index, previous);
-            human.setItemSlot(requestedSlot, replacement);
-            return true;
-        }
-        return false;
+        return HumanEquipmentExchange.request(human, "equipment:" + requestedSlot.getName(),
+                java.util.List.of(new HumanEquipmentExchange.Need(requestedSlot, predicate)))
+                == HumanEquipmentExchange.Result.SUCCESS;
     }
 
     /** All-or-nothing pickup storage across the complete live backpack. */

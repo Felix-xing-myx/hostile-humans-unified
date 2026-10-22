@@ -137,6 +137,14 @@ public final class RecoverySupplies {
         return ACTIVE_USES.containsKey(human);
     }
 
+    /** Only an already running drink gets the short completion barrier, never queued/chained uses. */
+    static boolean isDrinkingPotion(Human human) {
+        UseSession session = ACTIVE_USES.get(human);
+        return session != null && session.itemAtStart().getUseAnimation() == net.minecraft.world.item.UseAnim.DRINK
+                && human.tickCount <= session.expectedCompletionTick() + 40
+                && isUseInProgress(human, session);
+    }
+
     /** Server-owned parallel food state; never use it to suppress combat goals. */
     public static boolean isEatingFood(Human human) {
         UseSession session = ACTIVE_USES.get(human);
