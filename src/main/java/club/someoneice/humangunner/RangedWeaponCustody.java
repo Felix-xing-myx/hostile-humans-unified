@@ -16,11 +16,13 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
  */
 public final class RangedWeaponCustody {
     private static final String PRIMARY_OWNER = "hostile_humans_unified:primary_bow_owner";
+    private static final String PRIMARY_ID = "hostile_humans_unified:primary_ranged_identity";
     private static final String ACTIVE = "hostile_humans_unified:ranged_custody_active";
     private static final String RESERVED_SLOT = "hostile_humans_unified:ranged_custody_slot";
     private static final String SNAPSHOT = "hostile_humans_unified:ranged_custody_snapshot";
-    private static final double MELEE_ENTER_DISTANCE_SQR = 16.0D;
+    private static final double MELEE_ENTER_DISTANCE_SQR = 36.0D;
     private static final double RANGED_RETURN_DISTANCE_SQR = 36.0D;
+    private static final java.util.Map<Human, HumanEquipmentExchange.Handle> PRIMARY = new java.util.WeakHashMap<>();
 
     private RangedWeaponCustody() {
     }
@@ -64,6 +66,11 @@ public final class RangedWeaponCustody {
         if (!isBowOrCrossbow(ranged)) {
             return;
         }
+        HumanEquipmentExchange.Handle handle = HumanEquipmentExchange.bind(human, ranged);
+        if (handle != null) {
+            PRIMARY.put(human, handle);
+            human.getPersistentData().putUUID(PRIMARY_ID, handle.identity());
+        }
         String owner = human.getStringUUID();
         if (!ranged.hasTag() || !owner.equals(ranged.getTag().getString(PRIMARY_OWNER))) {
             ranged.getOrCreateTag().putString(PRIMARY_OWNER, owner);
@@ -83,7 +90,7 @@ public final class RangedWeaponCustody {
             if (isActive(human)) {
                 // A third-party hand writer may already have completed the
                 // restoration. Drop stale lease metadata before evaluating
-                // the five-block transition again.
+                // the six-block transition again.
                 clearLease(human);
             }
         }
@@ -119,7 +126,7 @@ public final class RangedWeaponCustody {
         LivingTarget state = targetState(human);
         if (isBowOrCrossbow(human.getMainHandItem())) {
             if (state.valid() && (CloseRangedTactics.keepDefense(human)
-                    || state.distanceSqr() <= MELEE_ENTER_DISTANCE_SQR && CloseRangedTactics.allowsMeleeEntry(human))) {
+                    || state.distanceSqr() <= MELEE_ENTER_DISTANCE_SQR)) {
                 beginCloseMelee(human);
             }
             return;
@@ -132,7 +139,7 @@ public final class RangedWeaponCustody {
                 && state.distanceSqr() <= MELEE_ENTER_DISTANCE_SQR
                 && HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())) {
             adoptExistingCloseMelee(human);
-        } else if (!state.valid() || state.distanceSqr() >= RANGED_RETURN_DISTANCE_SQR) {
+        } else if (!state.valid() || state.distanceSqr() > RANGED_RETURN_DISTANCE_SQR) {
             restorePreferred(human, "prefer_ranged");
         }
     }
@@ -151,6 +158,8 @@ public final class RangedWeaponCustody {
         RangedTerrainCombat.clear(human);
         CloseDefenseHold.clear(human);
         clearLease(human);
+        PRIMARY.remove(human);
+        human.getPersistentData().remove(PRIMARY_ID);
         clearPrimaryMarker(human.getMainHandItem());
         clearPrimaryMarker(human.getOffhandItem());
         HumanData data = human.getData();
@@ -163,6 +172,8 @@ public final class RangedWeaponCustody {
     }
 
     static boolean beginCloseMelee(Human human) {
+        if (human.isFleeing || human.getTarget() == null || !human.getTarget().isAlive()
+                || human.distanceToSqr(human.getTarget()) > MELEE_ENTER_DISTANCE_SQR) return false;
         if (isActive(human) || hasGunPriority(human) || !HumanAmmo.hasArrows(human)) {
             return isActive(human);
         }
@@ -190,17 +201,13 @@ public final class RangedWeaponCustody {
 
         int ownedBefore = countOwnedRanged(human);
         registerPreferred(human, held);
-        ItemStack ranged = held.copy();
-        ItemStack melee = data.getInventoryItem(meleeSlot).copy();
-        CompoundTag ownerData = human.getPersistentData();
-        ownerData.putBoolean(ACTIVE, true);
-        ownerData.putInt(RESERVED_SLOT, meleeSlot);
-        ownerData.put(SNAPSHOT, ranged.save(new CompoundTag()));
-
-        // Publish the ranged weapon into the occupied melee slot first. The
-        // following hand write completes an exact swap and cannot depend on capacity.
-        data.setInventoryItem(meleeSlot, ranged);
-        human.setItemSlot(EquipmentSlot.MAINHAND, melee);
+        ItemStack ranged = held;
+        ItemStack melee = data.getInventoryItem(meleeSlot);
+        var result = HumanEquipmentExchange.request(human, "bow-close-melee",
+                java.util.List.of(new HumanEquipmentExchange.Need(EquipmentSlot.MAINHAND,
+                        candidate -> candidate == melee)));
+        if (result != HumanEquipmentExchange.Result.SUCCESS) return false;
+        human.getPersistentData().putBoolean(ACTIVE, true);
         CloseDefenseHold.begin(human);
         CloseRangedTactics.beginMelee(human);
         human.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
@@ -213,6 +220,9 @@ public final class RangedWeaponCustody {
     }
 
     static boolean restorePreferred(Human human, String reason) {
+        if (isActive(human) && human.getTarget() != null && human.getTarget().isAlive()
+                && human.distanceToSqr(human.getTarget()) <= MELEE_ENTER_DISTANCE_SQR
+                && !reason.equals("owner_inventory_open")) return false;
         if (isActive(human) && (CloseRangedTactics.keepDefense(human)
                 || human.humanGunner$shieldDefense().shouldSuppressRecovery())) return false;
         if (isActive(human) && CloseDefenseHold.shouldHold(human)) return false;
@@ -234,13 +244,15 @@ public final class RangedWeaponCustody {
         int rangedSlot = findBestStoredRangedSlot(human);
         if (rangedSlot >= 0) {
             int ownedBefore = countOwnedRanged(human);
-            ItemStack ranged = data.getInventoryItem(rangedSlot).copy();
-            registerPreferred(human, ranged);
-            ItemStack displaced = human.getMainHandItem().copy();
-            // Write the high-value weapon to the hand before replacing its
-            // backpack slot. An intervening callback can at worst see a duplicate.
-            human.setItemSlot(EquipmentSlot.MAINHAND, ranged);
-            data.setInventoryItem(rangedSlot, displaced);
+            ItemStack ranged = data.getInventoryItem(rangedSlot);
+            ItemStack displaced = human.getMainHandItem();
+            var handle = PRIMARY.get(human);
+            if (handle == null) { registerPreferred(human, ranged); handle = PRIMARY.get(human); }
+            if (handle == null) return false;
+            var result = HumanEquipmentExchange.request(human, "bow-return",
+                    java.util.List.of(new HumanEquipmentExchange.Need(EquipmentSlot.MAINHAND,
+                            RangedWeaponCustody::isBowOrCrossbow, handle)));
+            if (result != HumanEquipmentExchange.Result.SUCCESS) return false;
             if (isActive(human)) CloseRangedTactics.returnedToBow(human);
             human.setDropChance(EquipmentSlot.MAINHAND, 1.0F);
             HumanGunner.LOGGER.debug(
@@ -272,7 +284,7 @@ public final class RangedWeaponCustody {
         CompoundTag ownerData = human.getPersistentData();
         ownerData.putBoolean(ACTIVE, true);
         ownerData.putInt(RESERVED_SLOT, rangedSlot);
-        ownerData.put(SNAPSHOT, ranged.copy().save(new CompoundTag()));
+
         CloseDefenseHold.begin(human);
         CloseRangedTactics.beginMelee(human);
         human.setDropChance(EquipmentSlot.MAINHAND, 0.0F);
@@ -286,7 +298,7 @@ public final class RangedWeaponCustody {
         LivingTarget state = targetState(human);
         if (RangedTerrainCombat.holdsMelee(human)) return false;
         if (state.valid() && CloseRangedTactics.keepDefense(human)) return false;
-        return !state.valid() || state.distanceSqr() >= RANGED_RETURN_DISTANCE_SQR;
+        return !state.valid() || state.distanceSqr() > RANGED_RETURN_DISTANCE_SQR;
     }
 
     static boolean shouldReleaseReturnShield(boolean returningToRanged, boolean defenseActive,
@@ -330,7 +342,19 @@ public final class RangedWeaponCustody {
 
     private static int findBestStoredRangedSlot(Human human) {
         HumanData data = human.getData();
-        if (data == null) {
+        if (data == null) return -1;
+        var handle = PRIMARY.get(human);
+        if (handle == null && human.getPersistentData().hasUUID(PRIMARY_ID)) {
+            handle = new HumanEquipmentExchange.Handle(human.getPersistentData().getUUID(PRIMARY_ID), human.getUUID());
+            PRIMARY.put(human, handle);
+        }
+        if (handle != null) {
+            ItemStack actual = HumanEquipmentExchange.locate(human, handle);
+            if (actual.isEmpty()) {
+                PRIMARY.remove(human); human.getPersistentData().remove(PRIMARY_ID);
+                return -1; // Fail this transaction; a later fresh selection may choose another real weapon.
+            }
+            for (int i = 0; i < data.getInventoryItemsSize(); i++) if (data.getInventoryItem(i) == actual) return i;
             return -1;
         }
         String owner = human.getStringUUID();

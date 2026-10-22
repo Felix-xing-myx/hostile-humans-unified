@@ -14,6 +14,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 /** Backpack arrows pay for a shot, never for a projectile query or interrupted draw. */
 public final class HumanArrowCombat {
     private static final String NPC_LOAD = "hostile_humans_unified:NpcArrowLoad";
+    private static final java.util.Map<Human, Integer> INTERVALS = new java.util.WeakHashMap<>();
     private static final java.util.Map<Human, ArrowAttackCadence> CADENCE = new java.util.WeakHashMap<>();
     private HumanArrowCombat() {}
 
@@ -21,13 +22,22 @@ public final class HumanArrowCombat {
         return CADENCE.computeIfAbsent(human, ignored -> new ArrowAttackCadence());
     }
     public static void configureBowInterval(Human human, int interval) {
-        if (!human.level().isClientSide) cadence(human).bowInterval(interval);
+        if (!human.level().isClientSide) INTERVALS.put(human, interval);
     }
     public static boolean canDrawBow(Human human) {
         return !human.level().isClientSide && cadence(human).canDrawBow(human.tickCount);
     }
     public static void recordBowShot(Human human) {
-        if (!human.level().isClientSide) cadence(human).bowShot(human.tickCount);
+        if (!human.level().isClientSide) {
+            cadence(human).bowInterval(INTERVALS.getOrDefault(human, 32));
+            cadence(human).bowShot(human.tickCount,
+                    RangedCombatProfile.of(human, human.getMainHandItem()).attackRate());
+        }
+    }
+    public static void advanceBowDraw(Human human) {
+        double rate = 3 * RangedCombatProfile.of(human, human.getUseItem()).attackRate();
+        int amount = (int) Math.floor(human.tickCount * rate) - (int) Math.floor((human.tickCount - 1) * rate);
+        human.advanceUseTime(Math.max(0, amount - 1)); // Vanilla already supplied one unit.
     }
     public static void beginCrossbowLoad(Human human, ItemStack weapon) {
         // A new unloaded cycle cannot reuse the deadline of a cancelled prior volley.
@@ -39,6 +49,10 @@ public final class HumanArrowCombat {
         cadence(human).crossbowLoaded(weapon, human.tickCount,
                 ArrowAttackCadence.CROSSBOW_DELAY_MIN + human.getRandom().nextInt(ArrowAttackCadence.CROSSBOW_DELAY_VARIANCE),
                 SpartanRangedCompat.isHeavyCrossbow(weapon));
+    }
+    public static void crossbowCompletedBehindGuard(Human human, ItemStack weapon) {
+        if (!human.level().isClientSide && CrossbowItem.isCharged(weapon))
+            cadence(human).crossbowReadyNow(weapon, human.tickCount);
     }
     public static boolean crossbowReady(Human human, ItemStack weapon) {
         if (human.level().isClientSide || !CrossbowItem.isCharged(weapon)) return false;
@@ -55,10 +69,12 @@ public final class HumanArrowCombat {
         if (!human.level().isClientSide) cadence(human).crossbowShot();
     }
 
+    private static ItemStack shotWeapon(Human human) {
+        return RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem())
+                ? human.getMainHandItem() : human.getOffhandItem();
+    }
     private static boolean cadenceAllowsShot(Human human) {
-        ItemStack weapon = human.getMainHandItem();
-        if (!(weapon.getItem() instanceof net.minecraft.world.item.BowItem || weapon.getItem() instanceof CrossbowItem))
-            weapon = human.getOffhandItem();
+        ItemStack weapon = shotWeapon(human);
         if (weapon.getItem() instanceof CrossbowItem) return crossbowReady(human, weapon);
         return !(weapon.getItem() instanceof net.minecraft.world.item.BowItem) || cadence(human).canFireBow(human.tickCount);
     }
@@ -70,7 +86,8 @@ public final class HumanArrowCombat {
                 && human.level().getDifficulty() != Difficulty.PEACEFUL
                 && target != null && target.isAlive() && !target.isRemoved()
                 && HumanPerception.canTarget(human,target) && HumanPerception.allowCombatLook(human,target) && HumanAttention.canAim(human,target)
-                && target.level() == human.level() && HumanAmmo.hasArrows(human) && cadenceAllowsShot(human)
+                && target.level() == human.level() && HumanAmmo.arrowCount(human) > 0 && HumanAmmo.hasArrows(human) && cadenceAllowsShot(human)
+                && human.distanceToSqr(target) <= RangedCombatProfile.of(human, shotWeapon(human)).maximumSqr()
                 && RangedShotClearance.canShoot(human, target);
     }
 
@@ -83,7 +100,7 @@ public final class HumanArrowCombat {
 
     /** Native loading may shrink this temporary stack; it never touches the backpack. */
     public static ItemStack projectileFor(Human human) {
-        return HumanAmmo.hasArrows(human) ? new ItemStack(Items.ARROW) : ItemStack.EMPTY;
+        return HumanAmmo.arrowCount(human) > 0 && HumanAmmo.hasArrows(human) ? new ItemStack(Items.ARROW) : ItemStack.EMPTY;
     }
 
     public static void markNpcLoad(ItemStack crossbow) {
@@ -113,5 +130,131 @@ public final class HumanArrowCombat {
         for (int i = 0; i < count; i++) arrows.add(new ItemStack(Items.ARROW).save(new CompoundTag()));
         crossbow.getOrCreateTag().put("ChargedProjectiles", arrows);
         return true;
+    }
+    /** Vanilla arrow factory preserves native arrow type, piercing and the existing NPC ballistics. */
+    public static int fireNativeCrossbow(Human human, LivingEntity target, ItemStack weapon) {
+        if (!(weapon.getItem() instanceof CrossbowItem) || !CrossbowItem.isCharged(weapon)
+                || SpartanRangedCompat.isHeavyCrossbow(weapon)) return 0;
+        java.util.List<ItemStack> payload = new java.util.ArrayList<>();
+        if (weapon.hasTag() && weapon.getTag().contains("ChargedProjectiles", net.minecraft.nbt.Tag.TAG_LIST)) {
+            ListTag charged = weapon.getTag().getList("ChargedProjectiles", net.minecraft.nbt.Tag.TAG_COMPOUND);
+            for (int i = 0; i < charged.size(); i++) payload.add(ItemStack.of(charged.getCompound(i)));
+        }
+        if (payload.isEmpty()) payload.add(projectileFor(human));
+        // -1 means unsupported native payload: leave it completely intact for the original backend.
+        if (payload.stream().anyMatch(ammo -> !(ammo.getItem() instanceof net.minecraft.world.item.ArrowItem))) return -1;
+        int[] next = {0};
+        int count = fireVolley(human, target, weapon, () -> {
+            ItemStack ammunition = payload.get(next[0] < payload.size() ? next[0]++ : 0).copy();
+            var item = (net.minecraft.world.item.ArrowItem) ammunition.getItem();
+            var arrow = item.createArrow(human.level(), ammunition, human);
+            arrow.setShotFromCrossbow(true);
+            int piercing = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.PIERCING, weapon);
+            if (piercing > 0) arrow.setPierceLevel((byte) Math.min(127, piercing));
+            arrow.setCritArrow(true);
+            arrow.getPersistentData().putBoolean(HumanGunner.NPC_CROSSBOW_PROJECTILE, true);
+            double dx = target.getX() - human.getX(), dz = target.getZ() - human.getZ();
+            double dy = target.getY(.3333333333333333) - arrow.getY();
+            arrow.shoot(dx, dy + Math.sqrt(dx * dx + dz * dz) * .2, dz, 1.6F,
+                    14 - human.level().getDifficulty().getId() * 4);
+            HumanGunner.applyFirstTickArrowBallistics(human, arrow, target);
+            return arrow;
+        });
+        // Failed insertion retains the ready cycle; no ammo or duplicate payload escapes.
+        if (count > 0) { CrossbowItem.setCharged(weapon, false); markNpcLoad(weapon); }
+        return count;
+    }
+
+    /** Factory must return an unattached arrow with native weapon/enchantment ballistics applied.
+     * The caller owns ATTACK/INVENTORY in the action coordinator and applies wear/sound once.
+     * No backend may also insert or consume ammunition for this transaction. */
+    public static int fireVolley(Human human, LivingEntity target, ItemStack weapon,
+            java.util.function.Supplier<net.minecraft.world.entity.projectile.AbstractArrow> factory) {
+        if (!RangedWeaponCustody.isBowOrCrossbow(weapon) || !canShoot(human, target) || HumanInventorySession.isEditing(human)
+                || weapon != human.getMainHandItem() && weapon != human.getOffhandItem()) return 0;
+        var profile = RangedCombatProfile.of(human, weapon);
+        int total = 0;
+        net.minecraft.nbt.CompoundTag firstArrow = null;
+        int groups = profile.doubleArrow() ? 2 : 1;
+        for (int group = 0; group < groups; group++) {
+            if (!target.isAlive() || target.isRemoved() || target.level() != human.level()
+                    || !HumanPerception.canTarget(human, target)) break;
+            int available = HumanAmmo.arrowCount(human);
+            float[] angles = ArrowVolleyPolicy.angles(profile.tripleArrow(),
+                    (profile.tripleArrow() || weapon.getItem() instanceof CrossbowItem)
+                            && EnchantmentHelper.getItemEnchantmentLevel(Enchantments.MULTISHOT, weapon) > 0, available);
+            if (angles.length == 0) break; // Never gamble on the saving roll without an actual arrow.
+            java.util.List<net.minecraft.world.entity.projectile.AbstractArrow> arrows = new java.util.ArrayList<>();
+            for (float angle : angles) {
+                var arrow = factory.get();
+                if (arrow == null || arrow.isAddedToWorld()) return total;
+                if (profile.doubleArrow()) {
+                    if (firstArrow == null) firstArrow = arrow.saveWithoutId(new CompoundTag());
+                    else {
+                        java.util.UUID ownIdentity = arrow.getUUID();
+                        arrow.load(firstArrow.copy());
+                        arrow.setUUID(ownIdentity);
+                    }
+                }
+                if (angle != 0) arrow.setDeltaMovement(arrow.getDeltaMovement().yRot((float) Math.toRadians(-angle)));
+                arrow.setBaseDamage(arrow.getBaseDamage() * profile.damage());
+                arrow.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
+                arrows.add(arrow);
+            }
+            int cost = ArrowVolleyPolicy.cost(profile.tripleArrow(), available);
+            // Recheck after optional native factory hooks, before publishing any projectile.
+            if (HumanAmmo.arrowCount(human) < cost || !human.isAlive()
+                    || weapon != human.getMainHandItem() && weapon != human.getOffhandItem()) break;
+            boolean save = profile.savingChance() > 0 && human.getRandom().nextDouble() < profile.savingChance();
+            // Reserve the real arrows first. A failed entity insertion refunds only our untouched slots.
+            var payment = ArrowPayment.take(human, save ? 0 : cost);
+            if (payment == null) break;
+            int inserted = 0;
+            try {
+                for (var arrow : arrows) if (human.level().addFreshEntity(arrow)) inserted++;
+            } finally {
+                inserted = (int) arrows.stream().filter(net.minecraft.world.entity.Entity::isAddedToWorld).count();
+                if (inserted == 0) payment.refund(human);
+                total += inserted;
+                if (inserted > 0) {
+                    if (weapon.getItem() instanceof CrossbowItem) recordCrossbowShot(human);
+                    else recordBowShot(human);
+                }
+            }
+        }
+        return total;
+    }
+
+    /** Real inventory debit. Infinity and the saving roll never create arrows. */
+    private record ArrowPayment(java.util.List<Integer> slots, java.util.List<ItemStack> before,
+                                java.util.List<ItemStack> after) {
+        static ArrowPayment take(Human human, int cost) {
+            var slots = new java.util.ArrayList<Integer>();
+            var before = new java.util.ArrayList<ItemStack>();
+            var after = new java.util.ArrayList<ItemStack>();
+            // Explicit global no-consumption configuration still requires a physical reserve.
+            if (!UnifiedConfig.get().ammoConsumptionEnabled()) cost = 0;
+            if (HumanAmmo.arrowCount(human) < cost) return null;
+            var data = human.getData();
+            if (data == null) return null;
+            for (int i = 0; i < data.getInventoryItemsSize() && cost > 0; i++) {
+                ItemStack stack = data.getInventoryItem(i);
+                if (!HumanAmmo.isArrow(stack)) continue;
+                slots.add(i); before.add(stack.copy());
+                ItemStack remaining = stack.copy();
+                int taken = Math.min(cost, remaining.getCount());
+                remaining.shrink(taken); cost -= taken;
+                if (remaining.isEmpty()) remaining = ItemStack.EMPTY;
+                after.add(remaining); data.setInventoryItem(i, remaining);
+            }
+            return new ArrowPayment(slots, before, after);
+        }
+        void refund(Human human) {
+            for (int i = 0; i < slots.size(); i++) {
+                // An external callback may have edited the slot; never overwrite its new contents.
+                if (human.getData().getInventoryItem(slots.get(i)) == after.get(i))
+                    human.getData().setInventoryItem(slots.get(i), before.get(i));
+            }
+        }
     }
 }

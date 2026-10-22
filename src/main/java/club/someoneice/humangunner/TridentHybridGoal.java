@@ -17,13 +17,13 @@ import java.util.EnumSet;
  * which can leave the NPC visually charging forever when another goal wins.
  */
 public final class TridentHybridGoal extends Goal {
-    private static final double ENTER_MELEE_DISTANCE_SQR = 3.25D * 3.25D;
-    private static final double LEAVE_MELEE_DISTANCE_SQR = 4.25D * 4.25D;
-    private static final double MAX_THROW_DISTANCE_SQR = 36.0D * 36.0D;
+    private static final double ENTER_MELEE_DISTANCE_SQR = 6.0D * 6.0D;
+    private static final double MAX_THROW_DISTANCE_SQR = 16.0D * 16.0D;
 
     private final Human human;
     private LivingEntity target;
-    private boolean meleeMode;
+    private int failedSeparationTicks;
+    private double separationDistanceSqr;
     private int attackCooldown;
     private int nextThrowTick;
     private int unseenTicks;
@@ -37,26 +37,23 @@ public final class TridentHybridGoal extends Goal {
     @Override
     public boolean canUse() {
         LivingEntity candidate = human.getTarget();
-        boolean shoreSeeking = isShoreSeeking();
         return isHoldingTrident()
                 && isValidTarget(candidate)
-                && (!human.isFleeing || shoreSeeking
-                || human.distanceToSqr(candidate) <= ENTER_MELEE_DISTANCE_SQR);
+                && !human.isFleeing;
     }
 
     @Override
     public boolean canContinueToUse() {
-        boolean shoreSeeking = isShoreSeeking();
         return isHoldingTrident()
                 && isValidTarget(human.getTarget())
-                && (!human.isFleeing || shoreSeeking
-                || human.distanceToSqr(human.getTarget()) <= ENTER_MELEE_DISTANCE_SQR);
+                && !human.isFleeing;
     }
 
     @Override
     public void start() {
         target = human.getTarget();
-        meleeMode = target != null && human.distanceToSqr(target) <= ENTER_MELEE_DISTANCE_SQR;
+        failedSeparationTicks = 0;
+        separationDistanceSqr = target == null ? 0 : human.distanceToSqr(target);
         attackCooldown = 0;
         unseenTicks = 0;
         nextFiringPositionTick = human.tickCount;
@@ -66,6 +63,8 @@ public final class TridentHybridGoal extends Goal {
 
     @Override
     public void stop() {
+        RangedStrafeSpeed.setTrident(human, false);
+        human.clearRangedStrafeMotion();
         RangedFiringPosition.cancelVisibleSearch(human);
         if (human.isCombatFiringShore()) {
             human.stopSeekingShore();
@@ -92,7 +91,7 @@ public final class TridentHybridGoal extends Goal {
 
     @Override
     public void tick() {
-        if (!human.humanGunner$canMeleeAttack()) return;
+        if (human.isFleeing) return;
         target = human.getTarget();
         if (!isValidTarget(target)) {
             return;
@@ -109,43 +108,28 @@ public final class TridentHybridGoal extends Goal {
         unseenTicks = visible ? 0 : unseenTicks + 1;
         human.getLookControl().setLookAt(target, 45.0F, 35.0F);
 
-        // Separate enter/leave thresholds prevent rapid goal oscillation when
-        // the target stands at the melee/throw boundary.
-        if (meleeMode) {
-            meleeMode = distanceSqr <= LEAVE_MELEE_DISTANCE_SQR;
-        } else {
-            meleeMode = distanceSqr <= ENTER_MELEE_DISTANCE_SQR;
-        }
-
-        if (meleeMode) {
-            tickMelee(distanceSqr, isShoreSeeking());
-        } else {
-            tickRanged(distanceSqr, visible, isShoreSeeking());
-        }
-    }
-
-    private void tickMelee(double distanceSqr, boolean shoreSeeking) {
-        if (shoreSeeking) {
-            attackMeleeIfReady(distanceSqr);
+        // The weapon remains in ranged mode; close contact is a native melee fallback.
+        RangedStrafeSpeed.setTrident(human, !isShoreSeeking() && visible && distanceSqr <= MAX_THROW_DISTANCE_SQR);
+        if (distanceSqr < ENTER_MELEE_DISTANCE_SQR && !isShoreSeeking()
+                && !SoldierOrder.isHoldingPosition(human)) {
+            human.getNavigation().stop();
+            boolean retreat = RangedTerrainCombat.strafeFacingTarget(human, target, -.8F,
+                    ((human.tickCount / 40) & 1) == 0 ? .45F : -.45F);
+            if (distanceSqr > separationDistanceSqr + .25) {
+                failedSeparationTicks = 0; separationDistanceSqr = distanceSqr;
+            } else failedSeparationTicks++;
+            if (!retreat || failedSeparationTicks >= 10) attackMeleeIfReady(distanceSqr);
+            throwTridentIfReady(distanceSqr, visible);
             return;
         }
-        if (SoldierOrder.isHoldingPosition(human)) {
-            if (!SoldierOrder.isReturningToHoldPosition(human)) {
-                human.getNavigation().stop();
-            }
-        } else {
-            boolean spacing = !CombatTerrainNavigation.hasWork(human, target) && MeleeSpacing.control(human, target);
-            if (!spacing) PursuitNavigation.update(human, target, 1.0D);
-        }
-        if (!SoldierOrder.isHoldingPosition(human)) {
-            human.approachCombatTargetInWater(target,
-                    Math.sqrt(meleeReachSqr(target)), 1.0D);
-        }
-        attackMeleeIfReady(distanceSqr);
+        failedSeparationTicks = 0; separationDistanceSqr = distanceSqr;
+        if (distanceSqr < ENTER_MELEE_DISTANCE_SQR) attackMeleeIfReady(distanceSqr);
+        tickRanged(distanceSqr, visible, isShoreSeeking());
     }
 
     private void attackMeleeIfReady(double distanceSqr) {
-        if (distanceSqr <= meleeReachSqr(target) && attackCooldown <= 0
+        if (!human.isFleeing && human.humanGunner$canMeleeAttack()
+                && distanceSqr <= meleeReachSqr(target) && attackCooldown <= 0
                 && MeleeCombatRange.canStartAttack(human, target)) {
             human.doHurtTarget(target);
             attackCooldown = MeleeAttackTiming.nextCooldown(human);
@@ -168,7 +152,7 @@ public final class TridentHybridGoal extends Goal {
             return;
         }
         boolean waterApproach = human.shouldUseWaterMovement()
-                && distanceSqr > 22.0D * 22.0D;
+                && distanceSqr > MAX_THROW_DISTANCE_SQR;
         if (CombatTerrainNavigation.update(human, target, 1.0D,
                 visible && distanceSqr <= MAX_THROW_DISTANCE_SQR).ownsMovement()) {
             throwTridentIfReady(distanceSqr, visible);
@@ -178,7 +162,7 @@ public final class TridentHybridGoal extends Goal {
             if ((human.getNavigation().isDone() || human.getNavigation().isStuck())
                     && human.tickCount >= nextFiringPositionTick) {
                 Path firingPath = RangedFiringPosition.findVisiblePath(
-                        human, target, 4.0D, 36.0D, 10, 12);
+                        human, target, 6.0D, 16.0D, 10, 12);
                 if (firingPath != null) {
                     if (human.getNavigation().moveTo(firingPath, 1.0D))
                         SoldierDialogue.event(human, "reposition");
@@ -191,23 +175,28 @@ public final class TridentHybridGoal extends Goal {
         }
         if (!visible || distanceSqr > MAX_THROW_DISTANCE_SQR || waterApproach) {
             PursuitNavigation.update(human, target, 1.0D);
-            human.approachCombatTargetInWater(target, waterApproach ? 22.0D : 4.0D, 1.0D);
+            human.approachCombatTargetInWater(target, waterApproach ? 16.0D : 6.0D, 1.0D);
             throwTridentIfReady(distanceSqr, visible);
             return;
         }
 
         human.getNavigation().stop();
+        RangedTerrainCombat.strafeFacingTarget(human, target, 0,
+                ((human.tickCount / 40) & 1) == 0 ? .8F : -.8F);
         throwTridentIfReady(distanceSqr, visible);
     }
 
     private void throwTridentIfReady(double distanceSqr, boolean visible) {
-        if (!visible || unseenTicks != 0 || attackCooldown > 0
+        if (human.isFleeing || human.humanGunner$shieldDefense().reservesRangedUse()
+                || human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())
+                || !visible || unseenTicks != 0 || attackCooldown > 0
                 || human.tickCount < nextThrowTick
-                || distanceSqr > MAX_THROW_DISTANCE_SQR) {
+                || distanceSqr > MAX_THROW_DISTANCE_SQR
+                || !RangedShotClearance.canShoot(human, target)) {
             return;
         }
         float distanceFactor = Mth.clamp(
-                (float) (Math.sqrt(distanceSqr) / 36.0D), 0.1F, 1.0F
+                (float) (Math.sqrt(distanceSqr) / 16.0D), 0.1F, 1.0F
         );
         human.performRangedAttackTrident(target, distanceFactor);
         attackCooldown = 14;

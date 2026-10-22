@@ -13,10 +13,13 @@ final class ArrowAttackCadence {
     void bowInterval(int interval) { bowInterval = Math.max(1, interval); }
     boolean canDrawBow(int now) { return now >= bowDrawAt; }
     boolean canFireBow(int now) { return now >= bowFireAt; }
-    void bowShot(int now) {
-        // Existing NPC bow: two cooldown units and three draw units per real tick.
-        bowDrawAt = now + (bowInterval + 1) / 2;
-        bowFireAt = bowDrawAt + 7;
+    void bowShot(int now) { bowShot(now, 1); }
+    void bowShot(int now, double attackRate) {
+        // Scale the whole real-time cycle; a +40% rate divides time by 1.4.
+        double rate = Math.max(.01, attackRate);
+        int cooldown = (bowInterval + 1) / 2;
+        bowDrawAt = now + (int) Math.ceil(cooldown / rate);
+        bowFireAt = now + (int) Math.ceil((cooldown + 7) / rate);
     }
     void crossbowLoaded(Object weapon, int now, int delay, boolean heavy) {
         if (loadedCrossbow == weapon) return; // Repeated guard/start cannot resample or erase the wait.
@@ -31,6 +34,10 @@ final class ArrowAttackCadence {
         return loadedCrossbow == weapon && now >= crossbowFireAt;
     }
     void crossbowShot() { loadedCrossbow = null; }
+    void crossbowReadyNow(Object weapon, int now) {
+        loadedCrossbow = weapon;
+        crossbowFireAt = now;
+    }
     static int crossbowWaitTicks(int loadedAt, int delay, boolean heavy) {
         int ticks = 0;
         do {

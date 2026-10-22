@@ -28,24 +28,16 @@ public final class HumanArrowCombatTest {
         check(callsName(ARROWS, "canShoot", "isAlive") && callsName(ARROWS, "canShoot", "isRemoved")
                 && callsName(ARROWS, "canShoot", "getDifficulty"), "invalid/dead/peaceful attacks rejected");
         check(field(ARROWS, "canShoot", "isClientSide"), "client cannot execute a shot");
-        check(calls(HUMAN, "performCrossbowAttack", ARROWS, "canShoot")
-                && calls(HUMAN, "performCrossbowAttack", ARROWS, "prepareCrossbowVolley"),
-                "native crossbow public entrypoint checks reserve and charged payload");
-        check(calls(HUMAN, "performCrossbowAttack", "net/minecraft/world/entity/monster/CrossbowAttackMob",
-                "performCrossbowAttack"), "native multishot/enchantments preserved");
-        check(calls(HUMAN, "performCrossbowAttack", AMMO, "consumeArrow"), "volley settles one backpack arrow");
-        check(callsName(HUMAN, "performCrossbowAttack", "anyMatch"),
-                "volley settlement checks successfully inserted projectiles");
-        check(!calls(HUMAN, "shootCrossbowProjectile", AMMO, "consumeArrow"), "multishot callback never pays per projectile");
-        check(callsName(HUMAN, "performRangedAttack", "addFreshEntity")
-                && calls(HUMAN, "performRangedAttack", AMMO, "consumeArrow"), "bow insertion settles reserve");
-        check(callsName(SPARTAN, "fire", "addFreshEntity") && calls(SPARTAN, "fire", AMMO, "consumeArrow")
-                && calls(SPARTAN, "fire", ARROWS, "canShoot"), "heavy bolt uses same finite reserve");
-        for (String owner : List.of(HUMAN, SPARTAN)) {
-            String method = owner.equals(HUMAN) ? "performRangedAttack" : "fire";
-            check(field(owner, method, "DISALLOWED"), "NPC arrows cannot be recovered: " + owner);
-        }
-        check(field(HUMAN, "shootCrossbowProjectile", "DISALLOWED"), "all native multishot arrows cannot be recovered");
+        check(calls(HUMAN, "performCrossbowAttack", ARROWS, "fireNativeCrossbow"),
+                "native arrow crossbow goes through the shared paid volley");
+        check(calls(HUMAN, "performRangedAttack", ARROWS, "fireVolley"), "bow uses shared paid volley");
+        check(calls(SPARTAN, "fire", ARROWS, "fireVolley"), "optional native bolt uses paid volley");
+        check(callsName(ARROWS, "fireVolley", "addFreshEntity"), "one publishing boundary");
+        check(!calls(HUMAN, "shootCrossbowProjectile", AMMO, "consumeArrow"), "callback cannot double pay");
+        check(!calls(SPARTAN, "fire", AMMO, "consumeArrow"), "bolt backend cannot double pay");
+        check(callsAnyMethodName(ARROWS, "createArrow"), "actual native ArrowItem factory retained");
+        check(callsAnyMethodName(ARROWS, "setPierceLevel"), "native piercing retained");
+        check(field(ARROWS, "fireVolley", "DISALLOWED"), "all paid NPC volleys cannot be recovered");
         check(callsName(ARROWS, "markNpcLoad", "remove"), "unpaid native payloads removed at charge completion");
         String inventory = "club/someoneice/humangunner/HumanInventoryContainer";
         for (String method : List.of("<init>", "removeItem", "removeItemNoUpdate"))
@@ -90,6 +82,13 @@ public final class HumanArrowCombatTest {
         for (var instruction : method(owner, name).instructions)
             if (instruction instanceof MethodInsnNode call && call.owner.equals(calledOwner)
                     && call.name.equals(calledName)) return true;
+        return false;
+    }
+
+    private static boolean callsAnyMethodName(String owner, String calledName) throws Exception {
+        for (var method : node(owner).methods)
+            for (var instruction : method.instructions)
+                if (instruction instanceof MethodInsnNode call && call.name.equals(calledName)) return true;
         return false;
     }
 

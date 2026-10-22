@@ -57,17 +57,31 @@ extends Goal {
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
+    private double attackRadiusSqr() {
+        return mob instanceof Human human ? club.someoneice.humangunner.RangedCombatProfile
+                .of(human, human.getMainHandItem()).maximumSqr() : attackRadiusSqr;
+    }
+    private double minimumBand() {
+        return mob instanceof Human human ? club.someoneice.humangunner.RangedCombatProfile
+                .of(human, human.getMainHandItem()).minimumBand() : 16;
+    }
+    private double maximumBand() {
+        return mob instanceof Human human ? club.someoneice.humangunner.RangedCombatProfile
+                .of(human, human.getMainHandItem()).maximumBand() : 24;
+    }
+
     public boolean canUse() {
         return this.isValidTarget() && this.isHoldingCrossbow();
     }
 
     private boolean isHoldingCrossbow() {
         if (this.mob instanceof Human human
-                && (!HumanAmmo.hasArrows(human) || RangedWeaponCustody.isActive(human)
+                && (!HumanAmmo.hasArrows(human) || HumanAmmo.arrowCount(human) == 0 || RangedWeaponCustody.isActive(human)
                 || HumanUtil.isMeleeWeapon(human.getMainHandItem()))) {
             return false;
         }
-        return this.mob.isHolding(is -> is.getItem() instanceof CrossbowItem);
+        return mob instanceof Human human ? human.getMainHandItem().getItem() instanceof CrossbowItem
+                : this.mob.isHolding(is -> is.getItem() instanceof CrossbowItem);
     }
 
     public boolean canContinueToUse() {
@@ -175,7 +189,7 @@ extends Goal {
                 // Continue charging/firing while the shore goal owns navigation.
                 this.mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
                 tickShot(livingentity, flag,
-                        d0 <= (double)this.attackRadiusSqr && this.seeTime >= 5);
+                        d0 <= (double)attackRadiusSqr() && this.seeTime >= 5);
                 return;
             }
             if (this.mob instanceof Human human && human.isFleeing) {
@@ -183,45 +197,54 @@ extends Goal {
                 if (this.mob.isUsingItem()
                         && !(this.mob.getUseItem().getItem() instanceof CrossbowItem)) return;
                 this.mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
-                tickShot(livingentity, flag, d0 <= this.attackRadiusSqr && this.seeTime >= 5);
+                tickShot(livingentity, flag, d0 <= attackRadiusSqr() && this.seeTime >= 5);
                 return;
             }
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
+            if (mob instanceof Human human && !holdingPosition
+                    && club.someoneice.humangunner.RangedCombatProfile.of(human, human.getMainHandItem()).advance()) {
+                setOrbitSpeed(false);
+                human.clearRangedStrafeMotion();
+                club.someoneice.humangunner.PursuitNavigation.update(human, livingentity, speedModifier);
+                mob.getLookControl().setLookAt(livingentity, 45, 35);
+                tickShot(livingentity, flag, d0 <= attackRadiusSqr() && seeTime >= 5);
+                return;
+            }
             if(mob instanceof Human human) {
                 club.someoneice.humangunner.RangedFiringMemory.observe(human,livingentity,
-                        flag && d0<=attackRadiusSqr,attackRadiusSqr);
+                        flag && d0<=attackRadiusSqr(),attackRadiusSqr());
                 if(club.someoneice.humangunner.RangedFiringMemory.recover(human,livingentity,speedModifier)) {
                     setOrbitSpeed(false);
                     human.clearRangedStrafeMotion();mob.setXxa(0);mob.setZza(0);this.strafingTime=0;
                     this.pursuingTarget=false;
                     mob.getLookControl().setLookAt(livingentity,45.0F,35.0F);
-                    tickShot(livingentity,flag,d0<=attackRadiusSqr && seeTime>=5);
+                    tickShot(livingentity,flag,d0<=attackRadiusSqr() && seeTime>=5);
                     return;
                 }
             }
             if (mob instanceof Human human && club.someoneice.humangunner.CombatTerrainNavigation
-                    .update(human, livingentity, speedModifier, flag && d0 <= attackRadiusSqr).ownsMovement()) {
+                    .update(human, livingentity, speedModifier, flag && d0 <= attackRadiusSqr()).ownsMovement()) {
                 setOrbitSpeed(false);
                 human.clearRangedStrafeMotion();
                 mob.setXxa(0); mob.setZza(0);
                 this.strafingTime = 0;
                 mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
-                tickShot(livingentity, flag, d0 <= attackRadiusSqr && seeTime >= 5);
+                tickShot(livingentity, flag, d0 <= attackRadiusSqr() && seeTime >= 5);
                 return;
             }
-            if (d0 < RETREAT_DISTANCE_SQR) {
+            if (d0 < minimumBand() * minimumBand()) {
                 this.retreatingForSpace = true;
-            } else if (d0 >= RETREAT_RESUME_DISTANCE_SQR) {
+            } else if (d0 >= minimumBand() * minimumBand()) {
                 this.retreatingForSpace = false;
             }
             boolean retreating = !holdingPosition && this.retreatingForSpace
                     && flag;
             boolean needsShootingAngle = this.seeTime < 5;
-            boolean canEngage = d0 <= (double)this.attackRadiusSqr && this.seeTime >= 5;
-            setOrbitSpeed(!holdingPosition && !retreating && !needsShootingAngle
-                    && flag && d0 <= HOLD_DISTANCE_SQR
-                    && d0 <= (double)this.attackRadiusSqr);
+            boolean canEngage = d0 <= (double)attackRadiusSqr() && this.seeTime >= 5;
+            setOrbitSpeed(!holdingPosition && !needsShootingAngle
+                    && flag && d0 <= maximumBand() * maximumBand()
+                    && d0 <= (double)attackRadiusSqr());
             if (holdingPosition) {
                 this.pursuingTarget = false;
                 if (!SoldierOrder.isReturningToHoldPosition((Human)this.mob)) {
@@ -229,7 +252,7 @@ extends Goal {
                 }
                 this.updatePathDelay = 0;
                 this.strafingTime = 0;
-            } else if (!flag && !retreating && d0 <= (double)this.attackRadiusSqr) {
+            } else if (!flag && !retreating && d0 <= (double)attackRadiusSqr()) {
                 // A blocked firing lane is not a reason to circle blindly.
                 // Find an accessible nearby shot instead; the fleeing branch
                 // above returns before this offensive repositioning logic.
@@ -243,13 +266,13 @@ extends Goal {
                     Path firingPath = this.mob instanceof Human human
                             ? RangedFiringPosition.findAttackWindowPath(
                                     human, livingentity, club.someoneice.humangunner.RangedTerrainCombat.minimumFiringRange(human, Math.sqrt(RETREAT_DISTANCE_SQR)),
-                                    Math.sqrt(this.attackRadiusSqr), 10, 12)
+                                    Math.sqrt(attackRadiusSqr()), 10, 12)
                             : null;
                     if (firingPath != null) {
                         boolean moved = this.mob.getNavigation().moveTo(firingPath,
                                 this.canRun() ? this.speedModifier : this.speedModifier * 0.65D);
                         if (moved && this.mob instanceof Human human) {
-                            club.someoneice.humangunner.RangedFiringMemory.selected(human,livingentity,firingPath,attackRadiusSqr);
+                            club.someoneice.humangunner.RangedFiringMemory.selected(human,livingentity,firingPath,attackRadiusSqr());
                             club.someoneice.humangunner.SoldierDialogue.event(human, "reposition");
                         }
                         if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.searchCompleted(human, livingentity, moved);
@@ -272,6 +295,10 @@ extends Goal {
                 this.mob.getLookControl().setLookAt(livingentity, 30.0F, 30.0F);
                 tickShot(livingentity, false, false);
                 return;
+            } else if (retreating && mob instanceof Human human) {
+                human.getNavigation().stop();
+                this.pursuingTarget = false;
+                strafe(-0.80F, this.strafingClockwise ? 0.45F : -0.45F);
             } else if (retreating) {
                 if (this.pursuingTarget) {
                     this.mob.getNavigation().stop();
@@ -294,9 +321,9 @@ extends Goal {
                     this.updatePathDelay = 7 + this.mob.getRandom().nextInt(6);
                 }
                 this.strafingTime = 0;
-            } else if (d0 > (double)this.attackRadiusSqr
+            } else if (d0 > maximumBand() * maximumBand()
                     || (this.mob instanceof Human human && human.shouldUseWaterMovement()
-                    && d0 > HOLD_DISTANCE_SQR)) {
+                    && d0 > maximumBand() * maximumBand())) {
                 --this.updatePathDelay;
                 if (this.mob instanceof Human pursuingHuman) {
                     this.pursuingTarget = club.someoneice.humangunner.PursuitNavigation.update(pursuingHuman, livingentity,
@@ -315,7 +342,7 @@ extends Goal {
                 }
                 if (this.mob instanceof Human human) {
                     human.approachCombatTargetInWater(livingentity,
-                            Math.sqrt(HOLD_DISTANCE_SQR), this.speedModifier);
+                            maximumBand(), this.speedModifier);
                 }
                 this.strafingTime = 0;
             } else if (needsShootingAngle) {
@@ -334,7 +361,7 @@ extends Goal {
                 this.pursuingTarget = false;
                 this.updatePathDelay = 0;
                 this.mob.getNavigation().stop();
-                if (d0 <= HOLD_DISTANCE_SQR) {
+                if (d0 <= maximumBand() * maximumBand()) {
                     if (++this.strafingTime >= 36) {
                         if (this.mob.getRandom().nextFloat() < 0.35F) {
                             this.strafingClockwise = !this.strafingClockwise;

@@ -84,7 +84,18 @@ public final class RangedTerrainCombat {
     }
 
     public static void strafe(Human human, float forward, float right) {
-        tryStrafe(human, forward, right, human.getYRot(), false);
+        LivingEntity target = human.getTarget();
+        boolean arrowMovement = isArrowMovement(human);
+        float yaw = human.getYRot();
+        if (arrowMovement && target != null) {
+            Vec3 toward = target.position().subtract(human.position());
+            yaw = (float) Math.toDegrees(Math.atan2(toward.z, toward.x)) - 90;
+        }
+        tryStrafe(human, forward, right, yaw, false);
+    }
+    private static boolean isArrowMovement(Human human) {
+        return RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem())
+                || human.getMainHandItem().getItem() instanceof net.minecraft.world.item.TridentItem;
     }
 
     /** Open-band gun movement shares bow/crossbow step safety, without a navigation route. */
@@ -101,6 +112,12 @@ public final class RangedTerrainCombat {
 
     private static boolean tryStrafe(Human human, float forward, float right, float facingYaw, boolean gunMovement) {
         if (forward == 0 && right == 0) { human.getMoveControl().strafe(0, 0); return false; }
+        boolean arrowMovement = isArrowMovement(human);
+        LivingEntity arrowTarget = human.getTarget();
+        if (arrowMovement && (arrowTarget == null || human.isFleeing
+                || human.humanGunner$shieldDefense().reservesRangedUse())) {
+            human.clearRangedStrafeMotion(); return false;
+        }
         double yaw = Math.toRadians(facingYaw);
         float[][] choices = {{forward, right}, {forward, -right}, {forward, 0}, {0, right}, {0, -right}};
         boolean retainedFloor=false;
@@ -108,11 +125,13 @@ public final class RangedTerrainCombat {
             if (choice[0] == 0 && choice[1] == 0) continue;
             Vec3 direction = new Vec3(choice[1] * Math.cos(yaw) - choice[0] * Math.sin(yaw), 0,
                     choice[0] * Math.cos(yaw) + choice[1] * Math.sin(yaw)).normalize().scale(1.25D);
+            if (arrowMovement && (!SoldierOrder.allowsCombatPosition(human, human.position().add(direction))
+                    || !RangedShotClearance.fromPosition(human, human.position().add(direction), arrowTarget))) continue;
             if(!RangedFiringMemory.keepsFiringFloor(human,direction)){retainedFloor=true;continue;}
             if ((!gunMovement || SoldierOrder.allowsCombatPosition(human, human.position().add(direction)))
                     && HumanTerrainSafety.safeStep(human, direction)
                     && human.level().noCollision(human, human.getBoundingBox().expandTowards(direction))) {
-                if (gunMovement) {
+                if (gunMovement || arrowMovement) {
                     human.setYRot(facingYaw);
                     human.setYBodyRot(facingYaw);
                     HumanAttention.movement(human, human.getX(), human.getZ(), true);

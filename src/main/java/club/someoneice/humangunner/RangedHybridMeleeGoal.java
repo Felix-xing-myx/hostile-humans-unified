@@ -46,7 +46,7 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
             cycle.reset();
             sessionTarget = target.getUUID();
             sessionWeapon = human.getMainHandItem();
-            if (human.distanceToSqr(target) <= 16) SoldierDialogue.event(human, "melee_switch");
+            if (human.distanceToSqr(target) <= 36) SoldierDialogue.event(human, "melee_switch");
         }
         // Do not reset the ordinary attack cooldown or discard an effective
         // pursuit route every time a shield reaction returns movement to us.
@@ -78,12 +78,6 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
             sessionTarget = target.getUUID();
             sessionWeapon = human.getMainHandItem();
         }
-        // Share the gunner's timed close-range trial and pressure fallback, but
-        // restore a real bow/crossbow through its own two-location custody.
-        if (human.distanceToSqr(target) < 36 && CloseRangedTactics.tryBow(human, target)) {
-            releaseSeparation();
-            return;
-        }
         boolean maySeparate = !SoldierOrder.isHoldingPosition(human)
                 && !CloseRangedTactics.keepDefense(human)
                 && !human.isInWater() && !human.isInLava() && !human.isSeekingShore()
@@ -91,7 +85,7 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
                 && (cycle.separating() || (!human.humanGunner$hasPendingMeleeAttack() && !human.swinging))
                 && !human.isUsingItem() && !CombatTerrainNavigation.hasWork(human, target);
         boolean progressed = progressPosition == null || human.position().distanceToSqr(progressPosition) >= 0.04D
-                || (human.distanceToSqr(target) >= 36 && human.getSensing().hasLineOfSight(target));
+                || (human.distanceToSqr(target) > 36 && human.getSensing().hasLineOfSight(target));
         if (progressed) progressPosition = human.position();
         cycle.tick(maySeparate, progressed);
 
@@ -129,7 +123,7 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
     }
 
     private boolean tickSeparation(LivingEntity target) {
-        if (human.distanceToSqr(target) >= 36 && human.getSensing().hasLineOfSight(target)) {
+        if (human.distanceToSqr(target) > 36 && human.getSensing().hasLineOfSight(target)) {
             stopOwnedSeparationRoute();
             // Custody restores the bow only after any already-committed attack ends.
             RangedWeaponCustody.restorePreferred(human, "close_defense_separated");
@@ -157,7 +151,7 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
         var node = path.getEndNode();
         BlockPos end = new BlockPos(node.x, node.y, node.z);
         Vec3 feet = Vec3.atBottomCenterOf(end);
-        return target.distanceToSqr(feet) >= 36 && SoldierOrder.allowsCombatPosition(human, feet)
+        return target.distanceToSqr(feet) > 36 && SoldierOrder.allowsCombatPosition(human, feet)
                 && RangedShotClearance.fromPosition(human, feet, target);
     }
 

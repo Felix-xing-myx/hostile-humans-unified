@@ -56,7 +56,8 @@ public final class SpartanRangedCompat {
         }
         ItemStack crossbow = human.getItemInHand(hand);
         if (!CrossbowItem.isCharged(crossbow)) return false;
-        AbstractArrow projectile = createBolt(human);
+        int inserted = HumanArrowCombat.fireVolley(human, target, crossbow, () -> {
+            AbstractArrow projectile = createBolt(human);
         projectile.setOwner(human);
         projectile.pickup = AbstractArrow.Pickup.DISALLOWED;
         projectile.getPersistentData().putBoolean(NPC_BOLT, true);
@@ -73,9 +74,9 @@ public final class SpartanRangedCompat {
         // Apply tier accuracy before entity insertion so the client spawn
         // packet and server simulation begin with the same bolt trajectory.
         HumanGunner.applyFirstTickArrowBallistics(human, projectile, target);
-        if (!human.level().addFreshEntity(projectile)) return false;
-        HumanArrowCombat.recordCrossbowShot(human);
-        HumanAmmo.consumeArrow(human);
+            return projectile;
+        });
+        if (inserted == 0) return false;
 
         EquipmentSlot slot = hand == InteractionHand.MAIN_HAND
                 ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;

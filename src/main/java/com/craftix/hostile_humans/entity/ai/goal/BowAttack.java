@@ -51,6 +51,19 @@ extends Goal {
         if (mob instanceof Human human) club.someoneice.humangunner.HumanArrowCombat.configureBowInterval(human, p_25798_);
     }
 
+    private double attackRadiusSqr() {
+        return mob instanceof Human human ? club.someoneice.humangunner.RangedCombatProfile
+                .of(human, human.getMainHandItem()).maximumSqr() : attackRadiusSqr;
+    }
+    private double minimumBand() {
+        return mob instanceof Human human ? club.someoneice.humangunner.RangedCombatProfile
+                .of(human, human.getMainHandItem()).minimumBand() : 16;
+    }
+    private double maximumBand() {
+        return mob instanceof Human human ? club.someoneice.humangunner.RangedCombatProfile
+                .of(human, human.getMainHandItem()).maximumBand() : 24;
+    }
+
     public boolean canUse() {
         LivingEntity target = this.mob.getTarget();
         return target != null && target.isAlive() && this.isHoldingBow();
@@ -58,11 +71,12 @@ extends Goal {
 
     protected boolean isHoldingBow() {
         if (this.mob instanceof Human human
-                && (!HumanAmmo.hasArrows(human) || RangedWeaponCustody.isActive(human)
+                && (!HumanAmmo.hasArrows(human) || HumanAmmo.arrowCount(human) == 0 || RangedWeaponCustody.isActive(human)
                 || HumanUtil.isMeleeWeapon(human.getMainHandItem()))) {
             return false;
         }
-        return this.mob.isHolding(is -> is.getItem() instanceof BowItem);
+        return mob instanceof Human human ? human.getMainHandItem().getItem() instanceof BowItem
+                : this.mob.isHolding(is -> is.getItem() instanceof BowItem);
     }
 
     public boolean canContinueToUse() {
@@ -116,9 +130,9 @@ extends Goal {
             this.stop();
             return;
         }
-        if (mob instanceof Human) {
+        if (mob instanceof Human human) {
             if (mob.isUsingItem() && mob.getUseItem().getItem() instanceof net.minecraft.world.item.BowItem)
-                mob.advanceUseTime(2);
+                club.someoneice.humangunner.HumanArrowCombat.advanceBowDraw(human);
         }
         LivingEntity livingentity = this.mob.getTarget();
         if (livingentity == null || !livingentity.isAlive()) {
@@ -141,7 +155,7 @@ extends Goal {
                     : this.mob.getSensing().hasLineOfSight(livingentity);
             this.seeTime = visible ? Math.max(1, this.seeTime + 1) : Math.min(-1, this.seeTime - 1);
             this.mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
-            if (this.mob.distanceToSqr(livingentity) <= this.attackRadiusSqr) {
+            if (this.mob.distanceToSqr(livingentity) <= attackRadiusSqr()) {
                 tickShot(livingentity, visible);
             }
             return;
@@ -158,36 +172,45 @@ extends Goal {
             if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.observe(human, livingentity, flag);
             boolean holdingPosition = this.mob instanceof Human human
                     && SoldierOrder.isHoldingPosition(human);
+            if (mob instanceof Human human && !holdingPosition
+                    && club.someoneice.humangunner.RangedCombatProfile.of(human, human.getMainHandItem()).advance()) {
+                setOrbitSpeed(false);
+                human.clearRangedStrafeMotion();
+                club.someoneice.humangunner.PursuitNavigation.update(human, livingentity, speedModifier);
+                mob.getLookControl().setLookAt(livingentity, 45, 35);
+                tickShot(livingentity, flag);
+                return;
+            }
             if(mob instanceof Human human) {
                 club.someoneice.humangunner.RangedFiringMemory.observe(human,livingentity,
-                        flag && d0<=attackRadiusSqr,attackRadiusSqr);
+                        flag && d0<=attackRadiusSqr(),attackRadiusSqr());
                 if(club.someoneice.humangunner.RangedFiringMemory.recover(human,livingentity,speedModifier)) {
                     setOrbitSpeed(false);
                     clearStrafeInput();this.strafingTime=-1;
                     mob.getLookControl().setLookAt(livingentity,45.0F,35.0F);
-                    tickShot(livingentity,flag && d0<=attackRadiusSqr);
+                    tickShot(livingentity,flag && d0<=attackRadiusSqr());
                     return;
                 }
             }
             if (mob instanceof Human human && club.someoneice.humangunner.CombatTerrainNavigation
-                    .update(human, livingentity, speedModifier, flag && d0 <= attackRadiusSqr).ownsMovement()) {
+                    .update(human, livingentity, speedModifier, flag && d0 <= attackRadiusSqr()).ownsMovement()) {
                 setOrbitSpeed(false);
                 clearStrafeInput();
                 this.strafingTime = -1;
                 mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
-                tickShot(livingentity, flag && d0 <= attackRadiusSqr);
+                tickShot(livingentity, flag && d0 <= attackRadiusSqr());
                 return;
             }
             boolean waterApproach = this.mob instanceof Human human
                     && human.shouldUseWaterMovement() && d0 > 22.0D * 22.0D;
-            boolean pursuing = BowRangePolicy.shouldPursue(d0, this.attackRadiusSqr)
+            boolean pursuing = BowRangePolicy.shouldPursue(d0, maximumBand() * maximumBand())
                     || waterApproach;
-            boolean retreating = !holdingPosition && BowRangePolicy.shouldPathRetreat(d0) && flag;
+            boolean retreating = !(mob instanceof Human) && !holdingPosition && BowRangePolicy.shouldPathRetreat(d0) && flag;
             boolean blockedWhileEngaging = !flag
                     && !retreating
                     && !holdingPosition
                     && (!pursuing || (this.mob instanceof Human human && human.isInWater()
-                    && d0 <= this.attackRadiusSqr));
+                    && d0 <= attackRadiusSqr()));
             setOrbitSpeed(!holdingPosition && !retreating
                     && !blockedWhileEngaging && !pursuing);
             if (holdingPosition) {
@@ -222,12 +245,12 @@ extends Goal {
                         Path firingPath = this.mob instanceof Human human
                                 ? RangedFiringPosition.findAttackWindowPath(
                                         human, livingentity, club.someoneice.humangunner.RangedTerrainCombat.minimumFiringRange(human, 14.0D),
-                                        Math.sqrt(this.attackRadiusSqr), 10, 12)
+                                        Math.sqrt(attackRadiusSqr()), 10, 12)
                                 : null;
                         if (firingPath != null) {
                             boolean moved = this.mob.getNavigation().moveTo(firingPath, this.speedModifier);
                             if (moved && this.mob instanceof Human human) {
-                                club.someoneice.humangunner.RangedFiringMemory.selected(human,livingentity,firingPath,attackRadiusSqr);
+                                club.someoneice.humangunner.RangedFiringMemory.selected(human,livingentity,firingPath,attackRadiusSqr());
                                 club.someoneice.humangunner.SoldierDialogue.event(human, "reposition");
                             }
                             if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.searchCompleted(human, livingentity, moved);
@@ -284,7 +307,7 @@ extends Goal {
                 // input so circling cannot silently erase the retreat margin.
                 float side = BowRangePolicy.orbitSideInput(d0);
                 strafe(
-                        BowRangePolicy.orbitForwardInput(d0),
+                        BowRangePolicy.orbitForwardInput(d0, minimumBand(), maximumBand()),
                         this.strafingClockwise ? side : -side
                 );
                 this.mob.lookAt((Entity)livingentity, 30.0f, 30.0f);
