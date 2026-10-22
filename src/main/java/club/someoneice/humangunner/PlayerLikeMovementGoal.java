@@ -17,6 +17,7 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class PlayerLikeMovementGoal extends Goal {
     private final Human human;
+    private dev.felix.hostilehumans.core.ActionCoordinator.Token modifierToken;
     private final CombatAiConfig config;
     private int nextTerrainJumpTick;
     private int nextCombatJumpTick;
@@ -50,6 +51,9 @@ public final class PlayerLikeMovementGoal extends Goal {
 
     @Override
     public void stop() {
+        boolean owned = HumanMovementModifiers.clear(human, modifierToken, "ordinary movement helper stopped");
+        modifierToken = null;
+        if (!owned) return;
         if (human.isFleeing) {
             PursuitJumpAttack.cancel(human, "retreat movement");
             MovementSpeedController.retreat(human, true);
@@ -62,6 +66,9 @@ public final class PlayerLikeMovementGoal extends Goal {
 
     @Override
     public void tick() {
+        modifierToken = HumanMovementModifiers.execute(human, this::tickMovementModifier);
+    }
+    private void tickMovementModifier() {
         MeleeActionControl.tick(human);
         LivingEntity target = movementThreat();
         if (target == null) {

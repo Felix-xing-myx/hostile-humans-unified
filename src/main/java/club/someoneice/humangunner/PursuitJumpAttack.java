@@ -73,7 +73,7 @@ public final class PursuitJumpAttack {
         state.started = human.tickCount;
         state.airborne = false;
         human.setSprinting(distance > reach);
-        human.getJumpControl().jump();
+        HumanMovementModifiers.withToken(human, state.token, () -> human.getJumpControl().jump());
     }
 
     private static boolean safeTakeoff(Human human, LivingEntity target, boolean chasing) {

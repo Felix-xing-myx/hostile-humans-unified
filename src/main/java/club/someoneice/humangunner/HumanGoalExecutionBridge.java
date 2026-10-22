@@ -313,11 +313,18 @@ public final class HumanGoalExecutionBridge {
         State state = execution == null ? null : execution.state.get();
         return state != null && state.human.get() == human ? execution.token : null;
     }
+    /** Existing single BASE_MOVE owner, without creating or renewing any action. */
+    public static ActionCoordinator.Token baseMoveOwner(Human human) {
+        State state = state(human);
+        if (state == null) return null;
+        return state.executions.values().stream().map(execution -> execution.token)
+                .filter(token -> ownsBaseMove(human, token)).findFirst().orElse(null);
+    }
     public static boolean ownsBaseMove(Human human, ActionCoordinator.Token token) {
         State state = state(human);
         if (state == null || token == null || !available(state)) return false;
         return state.executions.values().stream().anyMatch(execution -> execution.entered && !execution.stopping
-                && execution.wrapped.getFlags().contains(Goal.Flag.MOVE) && token.equals(execution.token) && execution.actions.running(token));
+                && execution.wrapped.getFlags().contains(Goal.Flag.MOVE) && token.equals(execution.token) && execution.actions.owns(token, ActionCoordinator.Resource.BASE_MOVE));
     }
     public static List<GoalSnapshot> snapshot(Human human) {
         State state = state(human);

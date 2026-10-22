@@ -112,6 +112,12 @@ public final class ActionCoordinator {
         return true;
     }
 
+    /** Actual current ownership, without advancing deadlines or creating an action. */
+    public boolean owns(Token token, Resource resource) {
+        Action action = current(token);
+        return action != null && action.status == Status.RUNNING && owners.get(resource) == action;
+    }
+
     public boolean running(Token token) {
         Action action = current(token);
         return action != null && action.status == Status.RUNNING;

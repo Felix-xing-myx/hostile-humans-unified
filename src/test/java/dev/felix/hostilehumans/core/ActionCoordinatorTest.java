@@ -49,6 +49,19 @@ public final class ActionCoordinatorTest {
         check(replacement.acquire(replacementAction), "replacement runtime starts");
         check(!replacement.finish(urgent, COMPLETED, "callback from discarded runtime"),
                 "tokens cannot collide after runtime replacement");
+        var motion = new ActionCoordinator(); motion.advance(0);
+        var base = motion.requestLease("native-route", EnumSet.of(BASE_MOVE), 0, false, 40);
+        var ordinary = motion.requestLease("ordinary-hop", EnumSet.of(MOVE_MODIFIER), 20, true, 40);
+        check(motion.acquire(base) && motion.acquire(ordinary), "movement modifier composes with independent base route");
+        var leap = motion.request("melee-jump", EnumSet.of(MOVE_MODIFIER), 50, true, 35);
+        check(motion.acquire(leap) && !motion.running(ordinary), "enhanced melee jump displaces ordinary hopping only");
+        check(motion.running(base), "modifier preemption does not cancel base navigation");
+        check(motion.owns(base, BASE_MOVE) && !motion.owns(base, MOVE_MODIFIER), "ownership queries read the actual resource owner");
+        check(motion.owns(leap, MOVE_MODIFIER) && !motion.owns(ordinary, MOVE_MODIFIER), "displaced token never retains a resource");
+        check(!motion.acquire(ordinary), "stale helper cannot regain a cancelled modifier token");
+        motion.finish(leap, COMPLETED, "landed");
+        var resumed = motion.requestLease("ordinary-hop", EnumSet.of(MOVE_MODIFIER), 20, true, 40);
+        check(motion.acquire(resumed) && !resumed.equals(ordinary), "ordinary helper resumes with a fresh admitted token");
         System.out.println("ActionCoordinator invariants passed");
     }
 }

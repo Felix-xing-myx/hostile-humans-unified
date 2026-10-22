@@ -58,7 +58,7 @@ public record BehaviorDebugSnapshot(long tick, boolean authorityPresent, long se
         var history = authority == null ? List.<ActionCoordinator.Feedback>of() : authority.feedback();
         var actions = active.stream().limit(MAX_ACTIONS).map(value -> new Action(value.token().session(), value.token().sequence(),
                 clip(value.token().action(), NAME_LENGTH), value.status().name(), value.resources().stream().sorted().map(Enum::name).toList(),
-                value.resources().stream().filter(resource -> authority.owner(resource).equals(value.token().action())).sorted().map(Enum::name).toList(),
+                value.resources().stream().filter(resource -> authority.owns(value.token(), resource)).sorted().map(Enum::name).toList(),
                 value.priority(), value.interruptible(), value.remainingTicks(), value.lease(), value.leaseTicks(), value.lastHeartbeat())).toList();
         List<Feedback> feedback = new ArrayList<>();
         for (int i = Math.max(0, history.size() - MAX_FEEDBACK); i < history.size(); i++) {

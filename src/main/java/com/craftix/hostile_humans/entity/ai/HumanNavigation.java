@@ -213,6 +213,12 @@ public final class HumanNavigation extends GroundPathNavigation implements club.
         return path != null && path == activeBoundedPath && !path.isDone() ? false : super.isStuck();
     }
 
+    @Override public void setSpeedModifier(double speed) {
+        if (!Double.isFinite(speed) || speed < 0) return;
+        if (mob instanceof Human human && club.someoneice.humangunner.HumanGoalExecutionBridge.bound(human)
+                && club.someoneice.humangunner.HumanNavigationOwnership.writeToken(human) == null) return;
+        super.setSpeedModifier(speed);
+    }
     @Override public void tick() {
         if (mob instanceof Human human && movementOwnership != null) {
             if (!movementOwnership.runInstalled(human, path, this::tickOwnedRoute)) {

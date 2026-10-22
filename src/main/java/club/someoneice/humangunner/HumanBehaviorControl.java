@@ -46,6 +46,8 @@ public final class HumanBehaviorControl {
             Runnable[] cleanup = {
                     () -> HumanGoalExecutionBridge.interruptMovement(human, reason),
                     () -> human.humanGunner$cancelMovementExecution(),
+                    () -> HumanMovementModifiers.cancel(human, reason),
+                    () -> PursuitJumpAttack.cancel(human, reason),
                     () -> MovementContinuity.clear(human)
             };
             for (Runnable step : cleanup) {
@@ -69,6 +71,8 @@ public final class HumanBehaviorControl {
             Runnable[] cleanup = {
                     () -> HumanGoalExecutionBridge.cancel(human, reason),
                     () -> human.humanGunner$cancelMovementExecution(),
+                    () -> HumanMovementModifiers.cancel(human, reason),
+                    () -> PursuitJumpAttack.cancel(human, reason),
                     () -> MovementContinuity.clear(human),
                     () -> GunCustody.cancelBackgroundReloads(human),
                     () -> MeleeActionControl.clear(human, reason),

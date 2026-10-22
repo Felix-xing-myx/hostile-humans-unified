@@ -30,6 +30,12 @@ public final class HumanWaterNavigation extends WaterBoundPathNavigation impleme
             });
         } else super.recomputePath();
     }
+    @Override public void setSpeedModifier(double speed) {
+        if (!Double.isFinite(speed) || speed < 0) return;
+        if (mob instanceof Human human && club.someoneice.humangunner.HumanGoalExecutionBridge.bound(human)
+                && club.someoneice.humangunner.HumanNavigationOwnership.writeToken(human) == null) return;
+        super.setSpeedModifier(speed);
+    }
     @Override public void tick() {
         if (mob instanceof Human human && ownership != null) {
             if (!ownership.runInstalled(human, path, () -> super.tick())) { super.stop(); ownership.stopped(); }

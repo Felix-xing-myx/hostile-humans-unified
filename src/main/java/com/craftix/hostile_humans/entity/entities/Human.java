@@ -1254,7 +1254,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         this.stopSeekingShoreState();
         this.directWaterCombatSteeringTick = this.waterCombatHoldingTick = this.directWaterLootSteeringTick = this.directWaterRetreatTick = Integer.MIN_VALUE;
         if (this.moveControl instanceof HumanMoveControl control) control.cancelExecutionInputs();
-        this.setSpeed(0); this.setXxa(0); this.setZza(0);
+        if (this.jumpControl instanceof club.someoneice.humangunner.HumanSafeJumpControl control) control.cancelPending();
+        this.setSprinting(false); this.setSpeed(0); this.setXxa(0); this.setZza(0);
     }
 
     /** A current melee spacing request is not leftover bow/gun strafing. */
