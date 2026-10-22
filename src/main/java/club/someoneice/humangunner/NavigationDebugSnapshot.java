@@ -11,7 +11,7 @@ public record NavigationDebugSnapshot(ResourceLocation dimension, int entityId, 
         String name, String mode, String state, String navigator, String budget, String obstruction,
         float health, double fallBudget, int maxDrop, double followRange,
         Vec3 position, BlockPos requested, Vec3 enemy, Vec3 endpoint, List<Vec3> path, int firstNode, int totalNodes,
-        boolean complete, boolean truncated, double searchMillis, List<Sample> samples, PerceptionDebugSnapshot perception, BehaviorDebugSnapshot behavior) {
+        boolean complete, boolean truncated, double searchMillis, List<Sample> samples, PerceptionDebugSnapshot perception, BehaviorDebugSnapshot behavior, boolean capacityTruncated) {
     public NavigationDebugSnapshot(ResourceLocation dimension, int entityId, UUID entityUuid,
             String name, String mode, String state, String navigator, String budget, String obstruction,
             float health, double fallBudget, int maxDrop, double followRange,
@@ -29,6 +29,16 @@ public record NavigationDebugSnapshot(ResourceLocation dimension, int entityId, 
         this(dimension, entityId, entityUuid, name, mode, state, navigator, budget, obstruction, health,
                 fallBudget, maxDrop, followRange, position, requested, enemy, endpoint, path, firstNode, totalNodes,
                 complete, truncated, searchMillis, samples, perception, BehaviorDebugSnapshot.EMPTY);
+    }
+    public NavigationDebugSnapshot(ResourceLocation dimension, int entityId, UUID entityUuid,
+            String name, String mode, String state, String navigator, String budget, String obstruction,
+            float health, double fallBudget, int maxDrop, double followRange,
+            Vec3 position, BlockPos requested, Vec3 enemy, Vec3 endpoint, List<Vec3> path, int firstNode, int totalNodes,
+            boolean complete, boolean truncated, double searchMillis, List<Sample> samples,
+            PerceptionDebugSnapshot perception, BehaviorDebugSnapshot behavior) {
+        this(dimension, entityId, entityUuid, name, mode, state, navigator, budget, obstruction, health,
+                fallBudget, maxDrop, followRange, position, requested, enemy, endpoint, path, firstNode, totalNodes,
+                complete, truncated, searchMillis, samples, perception, behavior, false);
     }
     public static final int MAX_DIMENSION_ID = 256;
     public static final int MAX_PATH = 256;

@@ -64,9 +64,23 @@ public final class BehaviorDebugTest {
         buffer = new FriendlyByteBuf(Unpooled.buffer());
         try {
             NavigationDebugFrameCodec.write(frame, buffer);
-            check(buffer.readableBytes() < 2 * 1024 * 1024, "all maximal diagnostic sections remain below 2 MiB");
-            check(frame.equals(NavigationDebugFrameCodec.read(buffer)), "full frame keeps behavior and perception independent");
+            check(buffer.readableBytes() <= NavigationDebugFrameCodec.MAX_FRAME_BYTES, "all maximal diagnostic sections fit the 900 KiB frame budget");
+            var normalized = NavigationDebugFrameCodec.normalize(frame);
+            check(normalized.equals(NavigationDebugFrameCodec.read(buffer)), "canonical frame keeps behavior and bounded perception independent");
+            check(normalized.entries().size() == 8 && normalized.focused().equals(frame.focused()), "capacity policy retains every observed entity and focus");
+            check(normalized.entries().stream().map(entry -> entry.snapshot().entityUuid()).toList()
+                    .equals(frame.entries().stream().map(entry -> entry.snapshot().entityUuid()).toList()), "capacity policy retains identity and order");
+            check(normalized.entries().stream().allMatch(entry -> entry.snapshot().capacityTruncated()), "network truncation is explicit per entity");
+            check(normalized.entries().stream().allMatch(entry -> entry.snapshot().behavior().equals(sample)), "authority details are retained");
+            check(NavigationDebugFrameCodec.normalize(normalized).equals(normalized), "normalization is idempotent");
+            check(frame.entries().get(0).snapshot().perception().rows().size() == 128, "representation normalization does not edit the source facts");
         } finally { buffer.release(); }
+        var oversized = new FriendlyByteBuf(Unpooled.buffer());
+        try {
+            oversized.writeZero(NavigationDebugFrameCodec.MAX_FRAME_BYTES + 1);
+            try { NavigationDebugFrameCodec.read(oversized); throw new AssertionError("oversized incoming frame accepted"); }
+            catch (IllegalArgumentException expected) { }
+        } finally { oversized.release(); }
         ClassNode node = new ClassNode();
         try (var stream = BehaviorDebugTest.class.getClassLoader().getResourceAsStream("club/someoneice/humangunner/BehaviorDebugSnapshot.class")) {
             if (stream == null) throw new AssertionError("missing class"); new ClassReader(stream).accept(node, 0);

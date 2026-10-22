@@ -124,8 +124,8 @@ public final class NavigationDebugTest {
         var buffer=new FriendlyByteBuf(Unpooled.buffer());
         try {
             NavigationDebugFrameCodec.write(frame,buffer);
-            check(buffer.readableBytes()<2*1024*1024,"maximum UTF-8 frame stays below the 2 MiB transport safety bound");
-            check(frame.equals(NavigationDebugFrameCodec.read(buffer)),"8 entities x 128 rows/64 markers, maximal UTF strings and nullable END round trip");
+            check(buffer.readableBytes()<=NavigationDebugFrameCodec.MAX_FRAME_BYTES,"maximum UTF-8 frame stays within 900 KiB, below native 1 MiB payload limit");
+            check(NavigationDebugFrameCodec.normalize(frame).equals(NavigationDebugFrameCodec.read(buffer)),"8 identities/focus retained; capped rows/markers and maximal UTF strings round trip canonically");
             check(buffer.readableBytes()==0,"maximum frame consumes exactly one payload");
         } finally {buffer.release();}
         for(int field=0;field<3;field++) {

@@ -54,6 +54,7 @@ public final class NavigationLegendScreen extends Screen {
         var s=focus.snapshot(); var p=s.perception();
         rows.add(new Row(NavigationDebugClient.slotColor(focus.slot()),label("focus",focus.slot()+1,s.name())));
         rows.add(new Row(-1,label("readonly")));
+        if(s.capacityTruncated()) rows.add(new Row(-1,Component.literal("因网络容量截断部分诊断细节；观察实体、焦点与动作权限数据保留")));
         if(page!=6) {
             rows.add(new Row(-1,label("state",p.awareness(),p.decision())));
             rows.add(new Row(-1,label("reason",p.reason())));

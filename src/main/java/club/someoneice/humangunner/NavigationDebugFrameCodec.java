@@ -6,7 +6,31 @@ import net.minecraft.world.phys.Vec3;
 
 /** Bounded data-only codec, separate from Forge channel registration for round-trip tests. */
 final class NavigationDebugFrameCodec {
+    static final int MAX_FRAME_BYTES = 900 * 1024;
+    private static final int FRAME_ROWS = 192, FRAME_MARKERS = 96;
     private NavigationDebugFrameCodec() {}
+    /** Representation-only quotas retain every entity, its slot and focus. Idempotent for network/codec callers. */
+    static NavigationDebugFrame normalize(NavigationDebugFrame frame) {
+        if (frame.entries().size() > NavigationDebugFrame.MAX_ENTITIES) throw new IllegalArgumentException("Too many observed entities");
+        int entities = Math.max(1, frame.entries().size());
+        int rows = Math.min(PerceptionDebugSnapshot.MAX_ROWS, FRAME_ROWS / entities);
+        int markers = Math.min(PerceptionDebugSnapshot.MAX_MARKERS, FRAME_MARKERS / entities);
+        var entries = new ArrayList<NavigationDebugFrame.Entry>(frame.entries().size());
+        for (var entry : frame.entries()) {
+            var s = entry.snapshot(); var p = s.perception();
+            if (p.rows().size() > PerceptionDebugSnapshot.MAX_ROWS || p.markers().size() > PerceptionDebugSnapshot.MAX_MARKERS)
+                throw new IllegalArgumentException("Oversized perception snapshot");
+            boolean cut = p.rows().size() > rows || p.markers().size() > markers;
+            var perception = new PerceptionDebugSnapshot(p.tick(), p.eye(), p.view(), p.range(), p.strangerHalfAngle(), p.familiarHalfAngle(),
+                    p.awareness(), p.decision(), p.reason(), List.copyOf(p.rows().subList(0, Math.min(rows, p.rows().size()))),
+                    List.copyOf(p.markers().subList(0, Math.min(markers, p.markers().size()))));
+            entries.add(new NavigationDebugFrame.Entry(entry.slot(), new NavigationDebugSnapshot(s.dimension(), s.entityId(), s.entityUuid(),
+                    s.name(), s.mode(), s.state(), s.navigator(), s.budget(), s.obstruction(), s.health(), s.fallBudget(), s.maxDrop(), s.followRange(),
+                    s.position(), s.requested(), s.enemy(), s.endpoint(), s.path(), s.firstNode(), s.totalNodes(), s.complete(), s.truncated(),
+                    s.searchMillis(), s.samples(), perception, s.behavior(), s.capacityTruncated() || cut)));
+        }
+        return new NavigationDebugFrame(List.copyOf(entries), frame.focused());
+    }
     private static void vector(FriendlyByteBuf out, Vec3 value) { out.writeDouble(value.x); out.writeDouble(value.y); out.writeDouble(value.z); }
     private static Vec3 vector(FriendlyByteBuf in) {
         Vec3 value = new Vec3(in.readDouble(), in.readDouble(), in.readDouble());
@@ -20,10 +44,15 @@ final class NavigationDebugFrameCodec {
         return count;
     }
     static void write(NavigationDebugFrame frame, FriendlyByteBuf out) {
-        if (frame.entries().size() > NavigationDebugFrame.MAX_ENTITIES) throw new IllegalArgumentException("Too many observed entities");
+        frame = normalize(frame);
+        int start = out.writerIndex();
         out.writeVarInt(frame.entries().size());
         out.writeBoolean(frame.focused() != null); if (frame.focused() != null) out.writeUUID(frame.focused());
         for (var entry : frame.entries()) { out.writeVarInt(entry.slot()); writeSnapshot(entry.snapshot(), out); }
+        if (out.writerIndex() - start > MAX_FRAME_BYTES) {
+            out.writerIndex(start);
+            throw new IllegalArgumentException("Navigation snapshot exceeds 900 KiB frame budget");
+        }
     }
     private static void writeSnapshot(NavigationDebugSnapshot s, FriendlyByteBuf out) {
         if (s.path().size() > NavigationDebugSnapshot.MAX_PATH || s.samples().size() > NavigationDebugSnapshot.MAX_SAMPLES)
@@ -46,8 +75,10 @@ final class NavigationDebugFrameCodec {
         }
         PerceptionDebugCodec.write(s.perception(), out);
         writeBehavior(s.behavior(), out);
+        out.writeBoolean(s.capacityTruncated());
     }
     static NavigationDebugFrame read(FriendlyByteBuf in) {
+        if (in.readableBytes() > MAX_FRAME_BYTES) throw new IllegalArgumentException("Oversized navigation frame");
         int size = count(in, NavigationDebugFrame.MAX_ENTITIES);
         var focused = in.readBoolean() ? in.readUUID() : null;
         List<NavigationDebugFrame.Entry> entries = new ArrayList<>(size);
@@ -79,7 +110,7 @@ final class NavigationDebugFrameCodec {
         for (int i = 0; i < samples; i++) points.add(new NavigationDebugSnapshot.Sample(vector(in), in.readUtf(64), in.readUtf(64), in.readDouble()));
         return new NavigationDebugSnapshot(dimension, id, uuid, name, mode, state, navigator, budget,
                 obstruction, health, fall, drop, range, position, requested, enemy, endpoint, List.copyOf(path), first, total,
-                complete, truncated, millis, List.copyOf(points), PerceptionDebugCodec.read(in), readBehavior(in));
+                complete, truncated, millis, List.copyOf(points), PerceptionDebugCodec.read(in), readBehavior(in), in.readBoolean());
     }
     static void writeBehavior(BehaviorDebugSnapshot s, FriendlyByteBuf out) {
         out.writeLong(s.tick()); out.writeBoolean(s.authorityPresent()); out.writeLong(s.session());

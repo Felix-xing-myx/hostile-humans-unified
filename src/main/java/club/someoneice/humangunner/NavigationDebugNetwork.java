@@ -14,7 +14,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 /** Server snapshots and payload-free developer operations on the sender's own focus. */
 public final class NavigationDebugNetwork {
     private static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(HumanGunner.MOD_ID, "navigation_debug"), () -> "7", "7"::equals, "7"::equals);
+            new ResourceLocation(HumanGunner.MOD_ID, "navigation_debug"), () -> "8", "8"::equals, "8"::equals);
     private NavigationDebugNetwork() {}
     static void register() {
         CHANNEL.registerMessage(0, Packet.class, Packet::encode, Packet::decode, Packet::handle,
@@ -25,7 +25,7 @@ public final class NavigationDebugNetwork {
                 Optional.of(NetworkDirection.PLAY_TO_SERVER));
     }
     static void send(ServerPlayer player, NavigationDebugFrame frame) {
-        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new Packet(frame));
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new Packet(NavigationDebugFrameCodec.normalize(frame)));
     }
     static void cycleFocus(){CHANNEL.sendToServer(new CycleFocus());}
     static void stopFocusedTest(){CHANNEL.sendToServer(new StopFocusedTest());}
