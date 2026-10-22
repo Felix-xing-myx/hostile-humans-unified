@@ -123,8 +123,9 @@ final class SplitConfigFiles {
             if (!rank && data.has("shield_pressure") && data.get("shield_pressure").isJsonObject()) {
                 JsonObject pressure = data.getAsJsonObject("shield_pressure");
                 JsonObject template = defaults.getAsJsonObject("shield_pressure");
-                for (String key : List.of("max_guard_ticks", "break_attempt_ticks"))
-                    if (!pressure.has(key)) pressure.add(key, template.get(key).deepCopy());
+                // Copy only missing current defaults; removed legacy keys are not valid template lookups.
+                if (template != null) for (var entry : template.entrySet())
+                    if (!pressure.has(entry.getKey())) pressure.add(entry.getKey(), entry.getValue().deepCopy());
             }
             if (rank && data.has("equipment_loadout") && data.get("equipment_loadout").isJsonObject()) {
                 JsonObject loadout = data.getAsJsonObject("equipment_loadout");
