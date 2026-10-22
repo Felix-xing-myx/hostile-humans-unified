@@ -77,6 +77,7 @@ public final class ActionCoordinator {
     }
 
     public boolean heartbeat(Token token) {
+        if (admissionsClosed) return false;
         Action action = current(token);
         if (action == null || action.leaseTicks == 0 || action.status != Status.RUNNING || now >= action.leaseDeadline) return false;
         action.lastHeartbeat = now;

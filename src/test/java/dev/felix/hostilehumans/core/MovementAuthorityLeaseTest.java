@@ -39,6 +39,7 @@ public final class MovementAuthorityLeaseTest {
         var closing = actions.requestLease("closing route", EnumSet.of(BASE_MOVE), 0, false, 10);
         check(actions.acquire(closing), "route before cleanup");
         actions.closeAdmissions();
+        check(!actions.heartbeat(closing) && !actions.acquire(closing), "cleanup cannot renew or reacquire even an existing lease");
         var reentrant = actions.request("cleanup callback", EnumSet.of(ATTACK), 999, true, 10);
         check(!actions.acquire(reentrant), "cleanup callback cannot start a fresh action");
         check(actions.running(closing), "old authority remains available to exact route cleanup");
