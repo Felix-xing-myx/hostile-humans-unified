@@ -30,7 +30,8 @@ public final class ActionCoordinator {
     private final Map<String, Action> actions = new LinkedHashMap<>();
     private final EnumMap<Resource, Action> owners = new EnumMap<>(Resource.class);
     private final ArrayDeque<Feedback> history = new ArrayDeque<>();
-    private long session = 1, sequence, now;
+    private static final java.util.concurrent.atomic.AtomicLong GENERATIONS = new java.util.concurrent.atomic.AtomicLong();
+    private long session = GENERATIONS.incrementAndGet(), sequence, now;
 
     public void advance(long tick) {
         now = tick;
@@ -43,7 +44,12 @@ public final class ActionCoordinator {
                          boolean interruptible, long maximumTicks) {
         if (name == null || name.isBlank() || maximumTicks < 1) throw new IllegalArgumentException("action request");
         Action existing = actions.get(name);
-        if (existing != null) return existing.token;
+        if (existing != null) {
+            if (!existing.resources.equals(resources) || existing.priority != priority
+                    || existing.interruptible != interruptible)
+                throw new IllegalArgumentException("active action request changed: " + name);
+            return existing.token;
+        }
         Token token = new Token(session, ++sequence, name);
         Action action = new Action(token, resources, priority, interruptible,
                 now > Long.MAX_VALUE - maximumTicks ? Long.MAX_VALUE : now + maximumTicks);
@@ -92,7 +98,7 @@ public final class ActionCoordinator {
 
     public void cancelSession(String reason) {
         for (Action action : new ArrayList<>(actions.values())) end(action, Status.CANCELLED, reason);
-        session++;
+        session = GENERATIONS.incrementAndGet();
     }
 
     public String owner(Resource resource) {

@@ -30,6 +30,10 @@ public final class ActionCoordinatorTest {
         check(actions.running(next), "new owner survives old callback");
         check(actions.request("shield", EnumSet.of(OFF_HAND, FACING), 100, true, 999).equals(next),
                 "repeated evaluation retains original deadline and token");
+        boolean rejected = false;
+        try { actions.request("shield", EnumSet.of(MAIN_HAND), 100, true, 999); }
+        catch (IllegalArgumentException expected) { rejected = true; }
+        check(rejected && actions.running(next), "changed request cannot inherit another resource set");
         actions.advance(30);
         check(!actions.running(next), "deadline is not extended by evaluation");
         check(actions.owner(OFF_HAND).isEmpty(), "timeout releases ownership");
@@ -39,6 +43,12 @@ public final class ActionCoordinatorTest {
         check(actions.acquire(urgent) && !actions.running(low), "urgent request atomically preempts interruptible move");
         check(actions.feedback().stream().anyMatch(f -> f.token().equals(low) && f.status() == CANCELLED),
                 "preempted execution gets explicit cancellation feedback");
+        ActionCoordinator replacement = new ActionCoordinator();
+        replacement.advance(30);
+        var replacementAction = replacement.request("escape", EnumSet.of(BASE_MOVE, FACING), 200, true, 20);
+        check(replacement.acquire(replacementAction), "replacement runtime starts");
+        check(!replacement.finish(urgent, COMPLETED, "callback from discarded runtime"),
+                "tokens cannot collide after runtime replacement");
         System.out.println("ActionCoordinator invariants passed");
     }
 }

@@ -55,7 +55,9 @@ public final class HumanEquipmentExchange {
         if (WRITING.contains(human)) return Result.BUSY;
         if (needs.isEmpty()) return Result.SUCCESS;
         var actions = HumanBehaviorControl.actions(human);
-        EnumSet<ActionCoordinator.Resource> resources = EnumSet.of(ActionCoordinator.Resource.INVENTORY);
+        // A selected source can be the other hand. Reserve both before planning any transfer.
+        EnumSet<ActionCoordinator.Resource> resources = EnumSet.of(ActionCoordinator.Resource.INVENTORY,
+                ActionCoordinator.Resource.MAIN_HAND, ActionCoordinator.Resource.OFF_HAND);
         for (Need need : needs) {
             if (need.destination() == EquipmentSlot.MAINHAND) resources.add(ActionCoordinator.Resource.MAIN_HAND);
             if (need.destination() == EquipmentSlot.OFFHAND) resources.add(ActionCoordinator.Resource.OFF_HAND);
@@ -94,6 +96,7 @@ public final class HumanEquipmentExchange {
             }
             int destination = places.indexOf(new Place(need.destination(), -1));
             if (destination < 0 || !destinations.add(destination)) return Result.AMBIGUOUS;
+            if (busyHand(human, places.get(destination))) return Result.BUSY;
             if (human.isUsingItem() && (need.destination() == EquipmentSlot.MAINHAND
                     && human.getUsedItemHand() == net.minecraft.world.InteractionHand.MAIN_HAND
                     || need.destination() == EquipmentSlot.OFFHAND
@@ -105,6 +108,7 @@ public final class HumanEquipmentExchange {
                     if (pass == 0 && i != destination || pass == 1 && i == destination) continue;
                     Place place = places.get(i);
                     if (selected.contains(i) || actual[i].isEmpty() || reserved(human, place)) continue;
+                    if (busyHand(human, place)) continue;
                     if (place.equipment() != null && place.equipment() != EquipmentSlot.MAINHAND
                             && place.equipment() != EquipmentSlot.OFFHAND && i != destination) continue;
                     if (need.identity() != null && !matches(actual[i], need.identity())) continue;
@@ -151,7 +155,10 @@ public final class HumanEquipmentExchange {
             // Undo only writes still demonstrably ours. Never restore a copied item snapshot.
             for (int j = written.size() - 1; j >= 0; j--) {
                 int i = written.get(j);
-                if (read(human, places.get(i)) == planned[i]) write(human, places.get(i), actual[i]);
+                if (read(human, places.get(i)) == planned[i]) {
+                    try { write(human, places.get(i), actual[i]); }
+                    catch (RuntimeException rollbackFailure) { exception.addSuppressed(rollbackFailure); }
+                }
             }
             throw exception;
         }
@@ -162,6 +169,15 @@ public final class HumanEquipmentExchange {
         return !stack.isEmpty() && stack.hasTag() && stack.getTag().hasUUID(ID)
                 && handle.identity().equals(stack.getTag().getUUID(ID));
     }
+    private static boolean busyHand(Human human, Place place) {
+        EquipmentSlot slot = place.equipment();
+        if (slot != EquipmentSlot.MAINHAND && slot != EquipmentSlot.OFFHAND) return false;
+        if (RecoverySupplies.reservesHand(human, slot)) return true;
+        return human.isUsingItem() && (slot == EquipmentSlot.MAINHAND
+                ? human.getUsedItemHand() == net.minecraft.world.InteractionHand.MAIN_HAND
+                : human.getUsedItemHand() == net.minecraft.world.InteractionHand.OFF_HAND);
+    }
+
     private static boolean reserved(Human human, Place place) {
         return place.equipment() == null && RecoverySupplies.reservesInventorySlot(human, place.inventory());
     }

@@ -137,6 +137,12 @@ public final class RecoverySupplies {
         return ACTIVE_USES.containsKey(human);
     }
 
+    static boolean reservesHand(Human human, EquipmentSlot slot) {
+        UseSession session = ACTIVE_USES.get(human);
+        return session != null && (session.hand() == InteractionHand.MAIN_HAND
+                ? slot == EquipmentSlot.MAINHAND : slot == EquipmentSlot.OFFHAND);
+    }
+
     /** Only an already running drink gets the short completion barrier, never queued/chained uses. */
     static boolean isDrinkingPotion(Human human) {
         UseSession session = ACTIVE_USES.get(human);

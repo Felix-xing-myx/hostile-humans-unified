@@ -144,12 +144,19 @@ public final class ShieldDefenseController {
 
     private void updatePressureCycle() {
         if (human.level().isClientSide) return;
-        if (!pressureDefenseAvailable()) { pressureCycle.clear(); return; }
+        if (!pressureDefenseAvailable()) { pressureCycle.clear(); clearDeferredPressure(); return; }
         ShieldPressureConfig rules = UnifiedConfig.get().shieldPressure();
-        if (pressureCycle.update(human.tickCount, recoveryPressure.active(human.tickCount, rules), rules)) {
+        if (pressureCycle.update(human.tickCount, human.tickCount < deferredPressureGraceUntil
+                || recoveryPressure.active(human.tickCount, rules), rules)) {
             recoveryPressure.clear();
+            clearDeferredPressure();
             pressureFacing.clear();
         }
+    }
+
+    private void clearDeferredPressure() {
+        pressureWaitingForDrink = false;
+        deferredPressureGraceUntil = Integer.MIN_VALUE;
     }
 
     private boolean pressureDefenseAvailable() {
@@ -495,8 +502,6 @@ public final class ShieldDefenseController {
                 ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
         raise(Owner.PRESSURE, hand, false);
         if (owner != Owner.PRESSURE || !ownsCurrentShield()) return false;
-        if (pressureWaitingForDrink) deferredPressureGraceUntil = human.tickCount + 20;
-        pressureWaitingForDrink = false;
         facePressure();
         return true;
     }
@@ -804,6 +809,10 @@ public final class ShieldDefenseController {
                 && SpartanEquipmentCompat.isShield(human.getUseItem())) {
             owner = requestedOwner;
             ownedShield = human.getUseItem();
+            if (pressureWaitingForDrink && (requestedOwner == Owner.COMBAT || requestedOwner == Owner.PRESSURE)) {
+                deferredPressureGraceUntil = human.tickCount + 20;
+                pressureWaitingForDrink = false;
+            }
         }
     }
 
