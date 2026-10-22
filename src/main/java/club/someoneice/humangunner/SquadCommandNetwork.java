@@ -20,7 +20,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 
 /** Both entry points share batches; each session retains its server-chosen item authority. */
 public final class SquadCommandNetwork {
-    private static final String PROTOCOL="2";
+    private static final String PROTOCOL="3";
     private static final SimpleChannel CHANNEL=NetworkRegistry.newSimpleChannel(new ResourceLocation(HumanGunner.MOD_ID,"squad_commands"),
             ()->PROTOCOL,PROTOCOL::equals,PROTOCOL::equals);
     private enum Source { TOKEN, ROSTER }
@@ -69,9 +69,14 @@ public final class SquadCommandNetwork {
                 &&(session.source()==Source.ROSTER?holdsRoster(p):holdsToken(p,number))&&SquadCommands.valid(p,token,number);
     }
     private static CommandView representative(ServerPlayer p,SquadCommands.Snapshot snapshot){
+        CommandView first=null;java.util.Set<CommandView.Field> mixed=java.util.EnumSet.noneOf(CommandView.Field.class);
         for(var member:snapshot.members())if(member.canSubmit()){
-            var human=SquadCommands.findLoaded(p.server,member.id());if(human!=null)return CommandView.of(human);
+            var human=SquadCommands.findLoaded(p.server,member.id());if(human==null)continue;
+            CommandView current=CommandView.of(human);
+            if(first==null)first=current;
+            else for(var field:CommandView.Field.values())if(!first.field(field).equals(current.field(field)))mixed.add(field);
         }
+        if(first!=null)return first.withMixed(mixed);
         var d=OrderDistances.defaults();var settings=new GarrisonSettings(false,true,d.garrisonRadius());
         var c=new OrderDistances.Context(true,false,true,net.minecraft.world.phys.Vec3.ZERO,settings,"empty");
         return new CommandView(SoldierOrder.FOLLOW,SoldierCombatMode.ACTIVE,false,settings,d.followDistance(),(int)c.combatRadius(),d.chaseDurationTicks(),"no_loaded_members");
@@ -126,10 +131,6 @@ public final class SquadCommandNetwork {
             var session=OPEN.get(player);if(!CommandRateLimit.allow(player)){send(player,session,false,Component.translatable("message.hostile_humans_unified.squad.rate_limited"));return;}
             var result=p.reanchor?SquadCommands.reanchor(player,p.token,p.number):SquadCommands.apply(player,p.token,p.number,p.update);
             if(!result.validSession()){OPEN.remove(player);SquadCommands.close(player);invalidate(player,p.token);return;}
-            var saved=com.craftix.hostile_humans.entity.data.HumanServerData.get();
-            if(saved!=null)for(var member:SquadData.get(player.server).squad(player.getUUID(),p.number).members()){
-                var h=SquadCommands.findLoaded(player.server,member);if(h!=null&&h.hasOwner()&&player.getUUID().equals(h.getOwnerUUID()))saved.updateOrRegisterHumanMob(h);
-            }
             Component message=Component.translatable("message.hostile_humans_unified.squad.result",result.applied(),result.unloaded(),result.unauthorized(),result.invalid());
             send(player,session,false,message);SoldierRosterNetwork.refreshIfOpen(player);
         });c.setPacketHandled(true);}

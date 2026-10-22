@@ -96,7 +96,7 @@ public final class EffectiveAttributes {
             notes.add(note("gun_category_" + entry.getKey(), growth.known() ? format(gunCommon * entry.getValue()) : "?"));
         layers.add(layer("gun_experience", "multiply", growth.gunDamage()));
         notes.add(note("damage_limit", ""));
-        rows.add(row(human, gunDimension, 1, gunCommon * gunCategory, growth.known(), configured*growth.gunDamage()*gunCategory, "factor", layers, notes));
+        rows.add(row(human, gunDimension, 1, gunCommon * gunCategory, growth.known(), configured*growth.gunDamage()*gunCategory*gunExpectation(human), "factor", layers, notes));
 
         var projectile = SpecialtyAttributes.Dimension.PROJECTILE;
         layers = allocationLayers(human, projectile); growthDamage(layers, growth);
@@ -139,6 +139,20 @@ public final class EffectiveAttributes {
         return new AttributeDetailSnapshot(human.getUUID(), human.getId(), name, faction, HumanFactions.isBoss(human),
                 SpecialtyConfig.get().enabled(), human.getHealth(), (float) SpecialtyAttributes.budget(human), human.level().getGameTime(), labels, rows);
     }
+    /** Mean-budget faction centre through the same normalization and boss amplification as allocation.
+     * Only the comparison baseline uses this value; no damage multiplier is modified. */
+    private static double gunExpectation(Human human) {
+        if(!SpecialtyConfig.get().enabled())return bossMultiplier(human,SpecialtyAttributes.Dimension.GUN);
+        double[] costs=SpecialtyData.get().costs();
+        double[] center=SpecialtyAllocation.center(SpecialtyAttributes.preference(human,HumanFactions.isBoss(human)),costs);
+        if(HumanFactions.isBoss(human)) {
+            for(int i=0;i<center.length;i++)center[i]=Math.max(1e-6,(i==12?0:1)+(center[i]-(i==12?0:1))*HumanFactions.bossAmplification());
+            center=SpecialtyAllocation.center(center,costs);
+        }
+        double expectedBudget=HumanFactions.isBoss(human)?HumanFactions.bossBudget():SpecialtyConfig.get().budgetMean();
+        return expectedBudget*center[SpecialtyAttributes.Dimension.GUN.ordinal()]*bossMultiplier(human,SpecialtyAttributes.Dimension.GUN);
+    }
+
     private static AttributeDetailSnapshot.Row physical(Human human, SpecialtyAttributes.Dimension dimension, Attribute attribute,
                                                         double base, String unit, HumanGrowth.Layers growth) {
         if(dimension==SpecialtyAttributes.Dimension.ARMOR||dimension==SpecialtyAttributes.Dimension.TOUGHNESS)

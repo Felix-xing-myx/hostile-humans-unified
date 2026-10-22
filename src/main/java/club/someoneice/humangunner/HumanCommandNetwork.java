@@ -19,7 +19,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 
 /** Owner/session/identity validated commands; all panel state is acknowledged by the server. */
 public final class HumanCommandNetwork {
-    private static final String PROTOCOL="8";
+    private static final String PROTOCOL="9";
     private record Session(UUID token,UUID human,int entityId,ResourceKey<Level> dimension,long expiresAt) {}
     private static final Map<ServerPlayer,Session> SESSIONS=new WeakHashMap<>();
     private static final SimpleChannel CHANNEL=NetworkRegistry.newSimpleChannel(new ResourceLocation(HumanGunner.MOD_ID,"soldier_commands"),

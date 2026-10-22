@@ -19,7 +19,12 @@ public final class SquadCommands {
     public record Member(UUID id,boolean loaded,boolean canSubmit,SoldierOrder order) {}
     public record Snapshot(UUID token,int number,String name,int total,int available,int unsynchronized,
                            List<Member> members,Map<SoldierOrder,Integer> modes) {}
-    public record Update(SoldierOrder order,GarrisonSettings garrison,SoldierCombatMode combat,Boolean pickup,Integer followDistance) {}
+    public record Update(SoldierOrder order,GarrisonSettings garrison,SoldierCombatMode combat,Boolean pickup,Integer followDistance,
+                         Boolean stay,Boolean chase,Integer radius,CombatPreference preference) {
+        public Update(SoldierOrder order,GarrisonSettings garrison,SoldierCombatMode combat,Boolean pickup,Integer followDistance) {
+            this(order,garrison,combat,pickup,followDistance,null,null,null,null);
+        }
+    }
     public record Result(boolean validSession,int applied,int unloaded,int unauthorized,int invalid,List<UUID> failed) {
         public int rejected(){return unauthorized+invalid;}
     }
@@ -49,16 +54,14 @@ public final class SquadCommands {
         return new Snapshot(token,number,squad.name(),members.size(),available,members.size()-available,List.copyOf(members),Map.copyOf(modes));
     }
     public static Result apply(ServerPlayer player,UUID token,int number,Update update) {
-        if(update==null||!valid(player,token,number)||update.followDistance()!=null&&(update.followDistance()<8||update.followDistance()>96))
+        if(!CommandView.valid(update)||!valid(player,token,number))
             return new Result(false,0,0,0,0,List.of());
         return applyLoaded(player, token, number, human -> {
-            SoldierOrder.apply(human,update.order(),update.garrison(),update.followDistance());
-            if(update.combat()!=null)SoldierCombatMode.set(human,update.combat());
-            if(update.pickup()!=null)SoldierPickupPolicy.set(human,update.pickup());
+            CommandView.apply(human,update);
         });
     }
     public static Result reanchor(ServerPlayer player, UUID token, int number) {
-        return applyLoaded(player, token, number, human -> SoldierOrder.set(human, SoldierOrder.GARRISON));
+        return applyLoaded(player, token, number, human -> { SoldierOrder.set(human, SoldierOrder.GARRISON); CommandView.persist(human); });
     }
     /** Fixed member snapshot and permission checks shared by all loaded-only batch operations. */
     private static Result applyLoaded(ServerPlayer player, UUID token, int number, java.util.function.Consumer<Human> operation) {

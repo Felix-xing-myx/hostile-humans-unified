@@ -550,5 +550,14 @@
   "attribute_detail.gun_category.other": "其他／未知",
   "item.hostile_humans_unified.contract.creative_terms": "创造模式：忽略阵营声望和敌意、不支付信物；仍需同阶合同并受归属与名额限制。",
   "screen.hostile_humans_unified.command.squad_quick": "快捷指挥",
-  "screen.hostile_humans_unified.command.back_to_roster": "返回对讲机"
+  "screen.hostile_humans_unified.command.back_to_roster": "返回对讲机",
+  "screen.hostile_humans_unified.command.mixed": "混合",
+  "screen.hostile_humans_unified.command.preference": "战斗偏好",
+  "screen.hostile_humans_unified.command.preference.default": "默认",
+  "screen.hostile_humans_unified.command.preference.gun": "枪械",
+  "screen.hostile_humans_unified.command.preference.bow": "弓",
+  "screen.hostile_humans_unified.command.preference.crossbow": "弩",
+  "screen.hostile_humans_unified.command.preference.trident": "三叉戟",
+  "screen.hostile_humans_unified.command.preference.melee": "近战",
+  "screen.hostile_humans_unified.command.mark": "勾选 / 取消勾选"
 }

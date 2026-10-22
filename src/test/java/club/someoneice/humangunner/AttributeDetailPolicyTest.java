@@ -12,7 +12,9 @@ public final class AttributeDetailPolicyTest {
         check(allowed(true,true,true,1,false,false,false,true,true),"wild observer accepted");
         check(!allowed(true,true,true,1,false,false,false,false,true),"wild without tool rejected");
         check(!allowed(true,true,true,1,false,false,true,true,true),"temporary reinforcements rejected as wild");
-        check(!allowed(true,true,true,1,true,true,false,true,true),"owned soldier cannot use wild path");
+        check(allowed(true,true,true,1,true,true,false,true,true),"observer accepts own soldier");
+        check(!allowed(true,true,true,1,false,true,false,true,true),"observer rejects another employer soldier");
+        check(!allowed(true,true,true,1,true,true,false,false,true),"observer own soldier still requires tool");
         check(!allowed(true,true,true,Double.NaN,true,true,false,true,false),"NaN distance rejected");
         check(!allowed(true,true,true,Double.POSITIVE_INFINITY,true,true,false,true,false),"infinite distance rejected");
         check(!AttributeDetailPolicy.expired(160,100)&&AttributeDetailPolicy.expired(161,100),"heartbeat expiration boundary");

@@ -550,5 +550,14 @@
   "attribute_detail.gun_category.other": "Other / Unknown",
   "item.hostile_humans_unified.contract.creative_terms": "Creative: ignore faction standing and hostility, with no currency payment. Matching rank, ownership and recruitment limits still apply.",
   "screen.hostile_humans_unified.command.squad_quick": "Command",
-  "screen.hostile_humans_unified.command.back_to_roster": "Back to Radio"
+  "screen.hostile_humans_unified.command.back_to_roster": "Back to Radio",
+  "screen.hostile_humans_unified.command.mixed": "Mixed",
+  "screen.hostile_humans_unified.command.preference": "Combat preference",
+  "screen.hostile_humans_unified.command.preference.default": "Default",
+  "screen.hostile_humans_unified.command.preference.gun": "Gun",
+  "screen.hostile_humans_unified.command.preference.bow": "Bow",
+  "screen.hostile_humans_unified.command.preference.crossbow": "Crossbow",
+  "screen.hostile_humans_unified.command.preference.trident": "Trident",
+  "screen.hostile_humans_unified.command.preference.melee": "Melee",
+  "screen.hostile_humans_unified.command.mark": "Select / deselect"
 }

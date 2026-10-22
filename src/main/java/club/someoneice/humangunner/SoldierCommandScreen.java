@@ -17,7 +17,7 @@ public final class SoldierCommandScreen extends CommandPanelScreen {
         if(mc.screen instanceof SoldierCommandScreen s&&s.sessionToken.equals(token)&&s.humanId.equals(human)&&s.entityId==entityId){s.state=view;s.growth=growth;s.name=name;s.faction=faction;}
         else if(opening)mc.setScreen(new SoldierCommandScreen(token,human,entityId,name,view,growth,faction));
     }
-    static void invalidate(UUID token){if(Minecraft.getInstance().screen instanceof SoldierCommandScreen s&&s.sessionToken.equals(token))s.onClose();}
+    static void invalidate(UUID token){if(Minecraft.getInstance().screen instanceof SoldierCommandScreen s&&s.sessionToken.equals(token)){if(Minecraft.getInstance().player!=null)Minecraft.getInstance().player.displayClientMessage(Component.translatable("message.hostile_humans_unified.command.failed"),false);s.onClose();}}
     @Override protected Component heading(){return name;}
     @Override protected Component status(){return hasContextWarning()?contextReason():Component.translatable("screen.hostile_humans_unified.command.faction",faction);}
     @Override protected void reanchor(){HumanCommandNetwork.reanchor(sessionToken,humanId,entityId);}
