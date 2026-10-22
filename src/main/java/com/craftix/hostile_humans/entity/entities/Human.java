@@ -491,11 +491,19 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private void recoverStalledNavigation() {
-        club.someoneice.humangunner.HumanNavigationOwnership.continueInstalled(this, this.navigation, () -> {
-            club.someoneice.humangunner.WaterCombatNavigation.tick(this);
-            if (!level().isClientSide) club.someoneice.humangunner.CombatTerrainNavigation.validate(this);
+        if (!club.someoneice.humangunner.HumanNavigationOwnership.continueInstalled(this, this.navigation, () -> {
+            validateMovementPlanners();
             club.someoneice.humangunner.MovementContinuity.tick(this);
-        });
+        })) {
+            // Validation/retirement must still run after a route disappeared; it cannot gain a new movement source.
+            validateMovementPlanners();
+            if (this.navigation.isDone()) club.someoneice.humangunner.MovementContinuity.tick(this);
+            else club.someoneice.humangunner.MovementContinuity.clear(this);
+        }
+    }
+    private void validateMovementPlanners() {
+        club.someoneice.humangunner.WaterCombatNavigation.tick(this);
+        if (!level().isClientSide) club.someoneice.humangunner.CombatTerrainNavigation.validate(this);
     }
 
     public BlockPos investigateSound() {
@@ -1228,8 +1236,22 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.105D).add(Attributes.MAX_HEALTH, 60.0).add(Attributes.ATTACK_DAMAGE, 1.0).add(Attributes.ATTACK_SPEED, 4.0D).add((Attribute)ForgeMod.ENTITY_REACH.get(), 3.0).add(Attributes.FOLLOW_RANGE, 40.0);
     }
 
+    /** Native consumers remain unchanged; a known non-MOVE/old Goal cannot overwrite another execution's axes. */
+    private boolean mayWriteMovementAxis(float value) {
+        if (!Float.isFinite(value)) return false;
+        if (this.level().isClientSide || !club.someoneice.humangunner.HumanGoalExecutionBridge.bound(this)
+                || !club.someoneice.humangunner.HumanGoalExecutionBridge.insideCallback(this)) return true;
+        if (club.someoneice.humangunner.HumanNavigationOwnership.writeToken(this) != null) return true;
+        var owner = club.someoneice.humangunner.HumanGoalExecutionBridge.baseMoveOwner(this);
+        var caller = club.someoneice.humangunner.HumanNavigationOwnership.currentToken(this);
+        return value == 0 && (owner == null || owner.equals(caller));
+    }
+    @Override public void setXxa(float input) { if (mayWriteMovementAxis(input)) super.setXxa(input); }
+    @Override public void setZza(float input) { if (mayWriteMovementAxis(input)) super.setZza(input); }
+
     @Override
     public void setSpeed(float speed) {
+        if (!mayWriteMovementAxis(speed)) return;
         super.setSpeed(speed);
         if (!this.shouldUseWaterMovement()) {
             // Mob#setSpeed also copies speed into forward input, which makes

@@ -31,10 +31,20 @@ class NavigationExecutionOwnershipContract(unittest.TestCase):
         self.assertIn('execution.wrapped.getFlags().contains(Goal.Flag.MOVE)',admission)
         self.assertIn('owner.isRunning()',admission)
         self.assertIn('return delegate.getFlags()',source('TargetPreservingConditionalGoal'))
-    def test_bridge_not_activated_before_input_and_external_control_migration(self):
+    def test_bridge_is_mandatory_and_binds_before_server_goal_execution(self):
         mixins=json.loads((ROOT/'src/main/resources/hostile_humans_unified.mixins.json').read_text(encoding='utf-8'))
-        self.assertNotIn('HumanGoalSelectorExecutionMixin',mixins['mixins'])
-        self.assertNotIn('HumanWrappedGoalExecutionMixin',mixins['mixins'])
+        self.assertIn('HumanGoalSelectorExecutionMixin',mixins['mixins'])
+        self.assertIn('HumanWrappedGoalExecutionMixin',mixins['mixins'])
+        self.assertTrue(mixins['required'])
+        control=source('HumanBehaviorControl').split('public static void beforeTick(',1)[1].split('public static void interruptMovement(',1)[0]
+        self.assertIn('!HumanGoalExecutionBridge.bind(human)',control)
+        self.assertIn('throw new IllegalStateException',control)
+        self.assertIn('if (wrapped.isRunning()) wrapped.stop()',source('HumanGoalExecutionBridge'))
+        human=(ROOT/'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+        tick=human.split('public void tick()',1)[1].split('public void',1)[0]
+        self.assertLess(tick.index('HumanBehaviorControl.beforeTick(this)'),tick.index('super.tick()'))
+        for method in ['setXxa', 'setZza']:
+            self.assertIn('public void '+method+'(float input) { if (mayWriteMovementAxis(input))',human)
     def test_real_test_entry_contains_route_and_coordinator_lifecycle_checks(self):
         entry=(ROOT/'src/test/java/dev/felix/hostilehumans/core/RuntimePoliciesTest.java').read_text(encoding='utf-8')
         self.assertIn('ActionCoordinatorTest.main(args)',entry)

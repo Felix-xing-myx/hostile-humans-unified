@@ -23,6 +23,8 @@ public final class HumanBehaviorControl {
 
     public static void beforeTick(Human human) {
         if (human.level().isClientSide) return;
+        if (!HumanGoalExecutionBridge.bound(human) && !HumanGoalExecutionBridge.bind(human))
+            throw new IllegalStateException("Human movement execution bridge must bind before the first server GoalSelector tick");
         MovementSpeedController.tickLimits(human);
         MovementSpeedController.limit(human, MovementSpeedController.Limit.FOOD, 0.8,
                 RecoverySupplies.isEatingFood(human));

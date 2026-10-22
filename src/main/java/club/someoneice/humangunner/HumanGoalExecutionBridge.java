@@ -188,9 +188,13 @@ public final class HumanGoalExecutionBridge {
     public static void tick(State state, WrappedGoal wrapped, Map<Goal.Flag, WrappedGoal> locks) {
         if (state == null) { wrapped.tick(); return; }
         Execution execution = state.executions.get(wrapped);
-        if (execution == null || !execution.entered || !available(state)) {
-            if (execution != null) stop(execution, "invalid goal tick", locks);
-            return;
+        if (execution == null) {
+            // A direct WrappedGoal.start outside selector admission must not leave a forever-running inert wrapper.
+            if (wrapped.isRunning()) wrapped.stop();
+            unlock(locks, wrapped); state.lastOutcome = "unadmitted native goal stopped"; return;
+        }
+        if (!execution.entered || !available(state)) {
+            stop(execution, "invalid goal tick", locks); return;
         }
         Set<Goal.Flag> flags = Set.copyOf(wrapped.getFlags());
         boolean moved = execution.flags.contains(Goal.Flag.MOVE), moves = flags.contains(Goal.Flag.MOVE);
