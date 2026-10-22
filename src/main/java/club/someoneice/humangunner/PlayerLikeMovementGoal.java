@@ -51,6 +51,7 @@ public final class PlayerLikeMovementGoal extends Goal {
     @Override
     public void stop() {
         if (human.isFleeing) {
+            PursuitJumpAttack.cancel(human, "retreat movement");
             MovementSpeedController.retreat(human, true);
         } else if (human.getTarget() == null) {
             MovementSpeedController.normal(human);
@@ -61,6 +62,7 @@ public final class PlayerLikeMovementGoal extends Goal {
 
     @Override
     public void tick() {
+        MeleeActionControl.tick(human);
         LivingEntity target = movementThreat();
         if (target == null) {
             return;
@@ -85,6 +87,7 @@ public final class PlayerLikeMovementGoal extends Goal {
                 || human.horizontalCollision;
         boolean retreatBackpedaling = human.getPersistentData().getBoolean("hostile_humans_unified:retreat_backpedaling");
         if (human.isFleeing) {
+            PursuitJumpAttack.cancel(human, "retreat movement");
             MovementSpeedController.retreat(human, travelling && !retreatBackpedaling);
         } else {
             // Sprint on every genuine melee approach path, including the last
@@ -100,7 +103,8 @@ public final class PlayerLikeMovementGoal extends Goal {
                 || !human.onGround()
                 || human.isInWater()
                 || human.isInLava()
-                || human.isPassenger()) {
+                || human.isPassenger()
+                || PursuitJumpAttack.active(human)) {
             return;
         }
 
@@ -141,7 +145,7 @@ public final class PlayerLikeMovementGoal extends Goal {
         return isPursuing(target)
                 && !human.humanGunner$hasPendingMeleeAttack()
                 && !PursuitJumpAttack.active(human)
-                && human.distanceTo(target) > Math.max(3.0D, MeleeCombatRange.reach(human, target) + 1.5D);
+                && human.distanceTo(target) > Math.max(3.0D, MeleeCombatRange.reach(human, target) + 1.25D);
     }
 
     private boolean pathSuggestsStepUp() {

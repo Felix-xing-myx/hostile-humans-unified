@@ -36,8 +36,6 @@ public final class BetterCombatMeleeCombat {
     private static volatile Api api;
     private static volatile boolean apiLookupAttempted;
     private static volatile boolean warnedAboutApi;
-    private static volatile boolean betterCombatSettingResolved;
-    private static volatile boolean betterCombatSettingEnabled;
     private static volatile Object betterCombatConfig;
 
     private BetterCombatMeleeCombat() {}
@@ -50,6 +48,7 @@ public final class BetterCombatMeleeCombat {
 
     private static final class ComboState {
         private ItemStack weapon = ItemStack.EMPTY;
+        private ItemStack offhand = ItemStack.EMPTY;
         private Object attributes;
         private boolean attributesResolved;
         private int lastAttributeLookupTick;
@@ -66,14 +65,7 @@ public final class BetterCombatMeleeCombat {
     }
 
     public static boolean isConfiguredEnabled() {
-        if (!betterCombatSettingResolved) synchronized (BetterCombatMeleeCombat.class) {
-            if (!betterCombatSettingResolved) {
-                betterCombatSettingEnabled = UnifiedConfig.get().betterCombatSoldierMeleeEnabled()
-                        && ModList.get().isLoaded("bettercombat");
-                betterCombatSettingResolved = true;
-            }
-        }
-        return betterCombatSettingEnabled;
+        return UnifiedConfig.get().betterCombatSoldierMeleeEnabled() && ModList.get().isLoaded("bettercombat");
     }
 
     /** Gets the effective Better Combat reach, or zero when its optional path is inactive. */
@@ -116,6 +108,7 @@ public final class BetterCombatMeleeCombat {
     public static AttackPlan createAttackPlan(Human human, LivingEntity requestedTarget) {
         if (!isEnabled(human) || !hasWeaponProfile(human) || requestedTarget == null) return null;
         Profile profile = profile(human);
+        if (profile.damageMultiplier() <= 0) return new AttackPlan(profile, List.of());
         List<LivingEntity> targets = collectTargets(human, profile);
         if (!targets.contains(requestedTarget) && canBeHit(human, requestedTarget, profile)) {
             targets.add(requestedTarget);
@@ -210,6 +203,17 @@ public final class BetterCombatMeleeCombat {
         ComboState state = comboState(human);
         state.index++;
         state.lastAttackTick = human.tickCount;
+        NpcDualWield.completed(human);
+    }
+    public static void clear(Human human) { COMBOS.remove(human); NpcDualWield.clear(human); }
+    /** Verified API capability: unavailable or unknown is not one-handed. */
+    public static boolean supportsOneHand(ItemStack stack) {
+        if (!isConfiguredEnabled() || stack.isEmpty() || stack.getCount() != 1) return false;
+        Object attributes = getWeaponAttributes(stack);
+        Object twoHanded = call(attributes, "isTwoHanded");
+        Object attacks = call(attributes, "attacks");
+        return Boolean.FALSE.equals(twoHanded) && attacks != null && attacks.getClass().isArray()
+                && Array.getLength(attacks) > 0 && field(getConfig(), "dual_wielding_attack_speed_multiplier") instanceof Number;
     }
 
     private static Profile profile(Human human) {
@@ -229,6 +233,7 @@ public final class BetterCombatMeleeCombat {
         Object attacks = call(attributes, "attacks");
         if (attacks != null && attacks.getClass().isArray() && Array.getLength(attacks) > 0) {
             Object selected = selectAttack(human, attributes, attacks);
+            if (selected == null) return new Profile(defaultRange, shape, 0, angleDegrees, cooldown, "", .5F);
             if (selected != null) {
                 Object animation = call(selected, "animation");
                 if (animation instanceof String name) animationName = name;
@@ -246,6 +251,11 @@ public final class BetterCombatMeleeCombat {
                         number(call(selected, "angle"), 0.0D)));
             }
         }
+        if (NpcDualWield.active(human)) {
+            String field = NpcDualWield.offhandTurn(human) ? "dual_wielding_off_hand_damage_multiplier"
+                    : "dual_wielding_main_hand_damage_multiplier";
+            damageMultiplier *= Math.max(0, number(field(getConfig(), field), 1));
+        }
         return new Profile(defaultRange, shape, damageMultiplier, angleDegrees, cooldown,
                 animationName, animationUpswing);
     }
@@ -255,12 +265,12 @@ public final class BetterCombatMeleeCombat {
         // supplier. Keep this adapter safe for old/custom entity suppliers;
         // new Human instances register the player-equivalent base value (4).
         AttributeInstance attackSpeed = human.getAttribute(Attributes.ATTACK_SPEED);
-        double speed = Math.max(0.1D, (attackSpeed == null ? 4.0D : attackSpeed.getValue())
-                * EffectiveAttributes.attackSpeedMultiplier(human));
-        int cooldown = (int) Math.ceil(20.0D / speed);
+        double speed = attackSpeed == null ? 4.0D : attackSpeed.getValue();
+        double multiplier = EffectiveAttributes.attackSpeedMultiplier(human);
         Object config = getConfig();
-        Object intervalCap = field(config, "attack_interval_cap");
-        return Math.max(Math.max(1, (int) number(intervalCap, 2.0D)), cooldown);
+        if (NpcDualWield.active(human)) multiplier *= Math.max(.01,
+                number(field(config, "dual_wielding_attack_speed_multiplier"), 1));
+        return MeleeJumpPolicy.cooldown(speed, multiplier, (int)number(field(config, "attack_interval_cap"), 2));
     }
 
     private static Object selectAttack(Human human, Object attributes, Object attacks) {
@@ -278,16 +288,16 @@ public final class BetterCombatMeleeCombat {
                 eligible.add(candidate);
             }
         }
-        return eligible.isEmpty() ? null : eligible.get(Math.floorMod(state.index, eligible.size()));
+        int index = NpcDualWield.active(human) ? state.index / 2 : state.index;
+        return eligible.isEmpty() ? null : eligible.get(Math.floorMod(index, eligible.size()));
     }
 
     private static boolean conditionsMatch(Human human, Object mainAttributes, Object conditions) {
         if (conditions == null || !conditions.getClass().isArray() || Array.getLength(conditions) == 0) return true;
         ItemStack offhand = human.getOffhandItem();
         Object offAttributes = getWeaponAttributes(offhand);
-        boolean dualWield = mainAttributes != null && offAttributes != null
-                && !booleanValue(call(mainAttributes, "isTwoHanded"), false)
-                && !booleanValue(call(offAttributes, "isTwoHanded"), false);
+        boolean dualWield = NpcDualWield.active(human);
+        boolean offhandAttack = NpcDualWield.offhandTurn(human);
         for (int i = 0; i < Array.getLength(conditions); i++) {
             Object condition = Array.get(conditions, i);
             String name = String.valueOf(condition);
@@ -303,11 +313,11 @@ public final class BetterCombatMeleeCombat {
                 case "NO_OFFHAND_ITEM" -> offhand.isEmpty();
                 case "OFF_HAND_SHIELD" -> offhand.getItem() instanceof ShieldItem
                         && !booleanValue(call(mainAttributes, "isTwoHanded"), false);
-                case "MAIN_HAND_ONLY" -> true;
-                case "OFF_HAND_ONLY" -> false;
+                case "MAIN_HAND_ONLY" -> !offhandAttack;
+                case "OFF_HAND_ONLY" -> offhandAttack;
                 case "MOUNTED" -> human.isPassenger();
                 case "NOT_MOUNTED" -> !human.isPassenger();
-                default -> true;
+                default -> false;
             };
             if (!accepted) return false;
         }
@@ -415,19 +425,22 @@ public final class BetterCombatMeleeCombat {
         ComboState state = comboState(human);
         ItemStack weapon = human.getMainHandItem();
         synchronized (state) {
-            if (!state.attributesResolved || !ItemStack.isSameItemSameTags(state.weapon, weapon)) {
-                state.weapon = weapon.copy();
-                state.index = 0;
+            if (!state.attributesResolved || state.weapon != weapon) {
+                boolean swappedPair = NpcDualWield.active(human) && state.weapon == human.getOffhandItem()
+                        && state.offhand == weapon;
+                state.weapon = weapon;
+                state.offhand = human.getOffhandItem();
+                if (!swappedPair) state.index = 0;
                 state.attributes = getWeaponAttributes(weapon);
                 state.attributesResolved = true;
                 state.lastAttributeLookupTick = human.tickCount;
-            } else if (state.attributes == null
-                    && human.tickCount - state.lastAttributeLookupTick >= 20) {
+            } else if (human.tickCount - state.lastAttributeLookupTick >= 20) {
                 // The weapon registry can synchronize after this Human first
                 // appears. A missing profile must not be cached forever.
                 state.attributes = getWeaponAttributes(weapon);
                 state.lastAttributeLookupTick = human.tickCount;
             }
+            state.offhand = human.getOffhandItem();
             return state.attributes;
         }
     }

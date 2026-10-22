@@ -9,17 +9,18 @@ public final class MeleeAttackTiming {
     private MeleeAttackTiming() {}
 
     public static int nextCooldown(Human human) {
-        int cooldown;
-        if (BetterCombatMeleeCombat.hasWeaponProfile(human)) {
-            cooldown = BetterCombatMeleeCombat.cooldownTicks(human);
-        } else {
-            UnifiedConfig.Tier tier = TierAttributes.of(human);
-            cooldown = human.getRandom().nextInt(tier.meleeCooldownMin(), tier.meleeCooldownMax() + 1);
-            cooldown = Math.max(1, (int) Math.ceil(cooldown / EffectiveAttributes.attackSpeedMultiplier(human)));
-        }
+        int cooldown = interval(human);
         READY_AT.put(human, human.tickCount + cooldown);
         return cooldown;
     }
+    public static int interval(Human human) {
+        return BetterCombatMeleeCombat.hasWeaponProfile(human) ? BetterCombatMeleeCombat.cooldownTicks(human)
+                : MeleeJumpPolicy.cooldown(human.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED),
+                        EffectiveAttributes.attackSpeedMultiplier(human), 1);
+    }
+
+    public static void clear(Human human) { READY_AT.remove(human); }
+    public static boolean ready(Human human) { return remainingCooldown(human) == 0; }
 
     /** Forecast only; never opens an attack window or changes the owning goal's timer. */
     static int remainingCooldown(Human human) {

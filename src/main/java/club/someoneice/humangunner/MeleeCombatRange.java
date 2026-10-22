@@ -36,13 +36,20 @@ public final class MeleeCombatRange {
                 || target == null || !target.isAlive() || !human.canAttack(target)) return false;
         if (BetterCombatMeleeCombat.hasWeaponProfile(human))
             return BetterCombatMeleeCombat.canStrike(human, target);
-        return human.distanceToSqr(target) <= reachSqr(human, target)
-                && human.getSensing().hasLineOfSight(target);
+        double actualReach = human.getAttributeValue(ForgeMod.ENTITY_REACH.get());
+        if (!Double.isFinite(actualReach)) actualReach = 3;
+        actualReach = Math.max(.1, Math.min(16, actualReach));
+        Vec3 origin = attackOrigin(human);
+        Vec3 nearest = new Vec3(Mth.clamp(origin.x, target.getBoundingBox().minX, target.getBoundingBox().maxX),
+                Mth.clamp(origin.y, target.getBoundingBox().minY, target.getBoundingBox().maxY),
+                Mth.clamp(origin.z, target.getBoundingBox().minZ, target.getBoundingBox().maxZ));
+        return nearest.distanceToSqr(origin) <= actualReach * actualReach && human.getSensing().hasLineOfSight(target);
     }
 
     /** One pre-animation gate for native attacks and temporary defensive counters. */
     public static boolean canStartAttack(Human human, LivingEntity target) {
         if (target == null || !target.isAlive() || !human.canAttack(target)
+                || human.isFleeing || !NpcDualWield.prepare(human) || !NpcDualWield.layoutReady(human)
                 || !human.humanGunner$canMeleeAttack() || human.humanGunner$hasPendingMeleeAttack()
                 || human.humanGunner$shieldDefense().shouldSuppressRecovery()) return false;
         if (BetterCombatMeleeCombat.hasWeaponProfile(human)) faceTarget(human, target);
