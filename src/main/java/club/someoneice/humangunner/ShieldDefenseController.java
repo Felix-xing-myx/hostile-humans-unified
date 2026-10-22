@@ -79,6 +79,7 @@ public final class ShieldDefenseController {
         nearbyMelee = List.copyOf(nearby);
         lockedDefenseTargets = List.copyOf(locked);
         observedProjectiles = List.copyOf(projectiles);
+        lastProjectileProbeTick = Integer.MIN_VALUE;
     }
     /** Central lifecycle cleanup: release only our actual use, preserve earned cooldown. */
     public void cancelDefenseSession() {

@@ -17,6 +17,7 @@ final class ShieldDefensePolicy {
     static float coverageYaw(List<Float> bearings, float current, boolean stableTie, double random) {
         if (bearings.isEmpty()) return current;
         List<Float> options = new ArrayList<>();
+        if (stableTie) options.add(current);
         for (float yaw : bearings) { options.add(yaw); options.add(wrap(yaw-45)); options.add(wrap(yaw+45)); }
         List<Float> best = new ArrayList<>();
         int most = -1; float leastTurn = Float.MAX_VALUE;

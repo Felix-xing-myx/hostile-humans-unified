@@ -11,6 +11,7 @@ public final class ShieldDefensePolicyTest {
         require(!ShieldDefensePolicy.meleeCandidate(1, 0, 0, .6, 1, true), "enemy facing required");
         require(!ShieldDefensePolicy.meleeCandidate(1, 0, 0, 1, .5, true), "self facing required");
         float yaw = ShieldDefensePolicy.coverageYaw(List.of(-40F, 40F), 0, true, .1);
+        require(yaw == 0, "preserve current facing when it already maximizes coverage");
         require(Math.abs(ShieldDefensePolicy.wrap(-40-yaw)) <= 45.001
                 && Math.abs(ShieldDefensePolicy.wrap(40-yaw)) <= 45.001, "coverage between enemies");
         ShieldAdvancePolicy advance = new ShieldAdvancePolicy();
