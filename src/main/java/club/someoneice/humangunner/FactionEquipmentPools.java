@@ -63,6 +63,7 @@ final class FactionEquipmentPools {
                 // No common reliable projectile damage API: explicitly use the documented durability axis.
                 ranged.add(new Candidate<>(entry,FactionEquipmentPolicy.band(stack.getMaxDamage(),profile.bands("ranged_durability",300,500,900),true),stack.getMaxDamage()));
             } else if (HumanLootManager.isDedicatedMeleeWeapon(stack)) {
+                if (!profile.allowsMeleeFamily(EquipmentArchetypes.family(stack, "melee", profile))) continue;
                 double damage=attribute(stack,EquipmentSlot.MAINHAND,Attributes.ATTACK_DAMAGE,1);
                 if (Double.isFinite(damage)) melee.add(new Candidate<>(entry,FactionEquipmentPolicy.band(damage,profile.bands("melee_damage",4,6,8,11),false),damage));
             }
@@ -113,11 +114,7 @@ final class FactionEquipmentPools {
     }
 
     ConfiguredEquipmentLoadout.ItemEntry melee(Human human) {
-        var policy = profile.meleeReserves();
-        if (policy != null && policy.preferOneHanded()) {
-            var preferred = oneHandedMelee(human);
-            if (preferred != null) return preferred;
-        }
+        // Select doctrine family before hand preference, so rare spear allocations survive.
         return select(melee,"melee_band_weights",5,human,"melee");
     }
     ConfiguredEquipmentLoadout.ItemEntry reserveMelee(Human human) { return melee(human); }
@@ -167,7 +164,8 @@ final class FactionEquipmentPools {
         double[] metrics=available.stream().mapToDouble(c->c.metric).sorted().toArray();
         double median=metrics.length%2==1?metrics[metrics.length/2]:(metrics[metrics.length/2-1]+metrics[metrics.length/2])/2;
         boolean coreSelected=false;
-        if(!category.isEmpty() && human.getRandom().nextDouble()<profile.number("doctrine_core_chance",0,0,1)) {
+        if(!category.isEmpty() && (category.equals("melee")
+                || human.getRandom().nextDouble()<profile.number("doctrine_core_chance",0,0,1))) {
             var configured=FactionEquipmentConfig.object(profile.data,category+"_archetype_weights");
             List<String> families=new ArrayList<>(); List<Double> weights=new ArrayList<>();
             List<Candidate<T>> inBand=available;
@@ -186,6 +184,13 @@ final class FactionEquipmentPools {
                 HumanGunner.LOGGER.debug("Equipment core rank={} faction={} category={} band={} family={}",profile.rank,profile.faction,category,actual,family);
             } else FactionEquipmentConfig.warn(profile.rank+"/"+profile.faction+"/"+category+"/"+actual+"/fallback",
                     "No weighted core families in band; using random supplement without changing band");
+        }
+        // A one-handed axe is not a sword: capability preference must not bypass family selection.
+        var reservePolicy = profile.meleeReserves();
+        if (category.equals("melee") && reservePolicy != null && reservePolicy.preferOneHanded()) {
+            var preferred = available.stream().filter(c -> singleHandedMelee(new ItemStack(
+                    ForgeRegistries.ITEMS.getValue(((ConfiguredEquipmentLoadout.ItemEntry)c.value).id())))).toList();
+            if (!preferred.isEmpty()) available = preferred;
         }
         double[] weights=new double[available.size()];
         for(int i=0;i<weights.length;i++) weights[i]=1/(1+Math.abs(available.get(i).metric-median));

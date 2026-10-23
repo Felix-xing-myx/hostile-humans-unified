@@ -35,7 +35,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "azure": {
       "doctrine_core_chance": 0,
@@ -72,7 +73,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "verdant": {
       "doctrine_core_chance": 0,
@@ -109,7 +111,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "ashen": {
       "doctrine_core_chance": 0,
@@ -146,7 +149,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "roamer": {
       "doctrine_core_chance": 0,
@@ -183,7 +187,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "neutral": {
       "doctrine_core_chance": 0,
@@ -220,7 +225,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     }
   },
   "tier1": {
@@ -273,7 +279,8 @@
         "bow": 60,
         "crossbow": 40,
         "trident": 0
-      }
+      },
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "azure": {
       "doctrine_core_chance": 0.6,
@@ -324,7 +331,8 @@
         "bow": 20,
         "crossbow": 70,
         "trident": 10
-      }
+      },
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "verdant": {
       "doctrine_core_chance": 0.6,
@@ -375,7 +383,8 @@
         "bow": 50,
         "crossbow": 50,
         "trident": 0
-      }
+      },
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "ashen": {
       "doctrine_core_chance": 0.6,
@@ -434,7 +443,14 @@
         "second_weapon_chance": 0.8,
         "third_weapon_chance": 0.2,
         "prefer_one_handed": true
-      }
+      },
+      "melee_allowed_families": [
+        "sword",
+        "dagger",
+        "spear"
+      ],
+      "_说明_melee_allowed_families_中文": "仅限制出生近战候选；未覆盖则继承内置值，解析后缺省表示不限制、空数组禁用；主手与各类备用共用，不影响后续拾取与玩家配装。",
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "roamer": {
       "doctrine_core_chance": 0,
@@ -471,7 +487,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "neutral": {
       "doctrine_core_chance": 0,
@@ -508,7 +525,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     }
   },
   "tier2": {
@@ -561,7 +579,8 @@
         "bow": 60,
         "crossbow": 40,
         "trident": 0
-      }
+      },
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "azure": {
       "doctrine_core_chance": 0.72,
@@ -612,7 +631,8 @@
         "bow": 20,
         "crossbow": 70,
         "trident": 10
-      }
+      },
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "verdant": {
       "doctrine_core_chance": 0.72,
@@ -663,7 +683,8 @@
         "bow": 50,
         "crossbow": 50,
         "trident": 0
-      }
+      },
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "ashen": {
       "doctrine_core_chance": 0.72,
@@ -722,7 +743,14 @@
         "second_weapon_chance": 0.9,
         "third_weapon_chance": 0.35,
         "prefer_one_handed": true
-      }
+      },
+      "melee_allowed_families": [
+        "sword",
+        "dagger",
+        "spear"
+      ],
+      "_说明_melee_allowed_families_中文": "仅限制出生近战候选；未覆盖则继承内置值，解析后缺省表示不限制、空数组禁用；主手与各类备用共用，不影响后续拾取与玩家配装。",
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "roamer": {
       "doctrine_core_chance": 0,
@@ -759,7 +787,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "neutral": {
       "doctrine_core_chance": 0,
@@ -796,7 +825,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     }
   },
   "tier3": {
@@ -849,7 +879,8 @@
         "bow": 60,
         "crossbow": 40,
         "trident": 0
-      }
+      },
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "azure": {
       "doctrine_core_chance": 0.85,
@@ -900,7 +931,8 @@
         "bow": 20,
         "crossbow": 70,
         "trident": 10
-      }
+      },
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "verdant": {
       "doctrine_core_chance": 0.85,
@@ -951,7 +983,8 @@
         "bow": 50,
         "crossbow": 50,
         "trident": 0
-      }
+      },
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "ashen": {
       "doctrine_core_chance": 0.85,
@@ -1010,7 +1043,14 @@
         "second_weapon_chance": 1,
         "third_weapon_chance": 0.5,
         "prefer_one_handed": true
-      }
+      },
+      "melee_allowed_families": [
+        "sword",
+        "dagger",
+        "spear"
+      ],
+      "_说明_melee_allowed_families_中文": "仅限制出生近战候选；未覆盖则继承内置值，解析后缺省表示不限制、空数组禁用；主手与各类备用共用，不影响后续拾取与玩家配装。",
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "roamer": {
       "doctrine_core_chance": 0,
@@ -1047,7 +1087,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     },
     "neutral": {
       "doctrine_core_chance": 0,
@@ -1084,7 +1125,8 @@
       "ranged_chance": 0.2,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
-      "ranged_archetype_weights": {}
+      "ranged_archetype_weights": {},
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
     }
   }
 }

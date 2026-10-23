@@ -11,7 +11,23 @@ public final class SpawnMeleeReservePolicyTest {
         double[] seconds = {.8, .9, 1}, thirds = {.2, .35, .5};
         for (int tier = 0; tier < tiers.length; tier++) {
             var config = new FactionEquipmentConfig(new com.google.gson.JsonObject(), tiers[tier]);
+            check(!config.profile("azure").allowsMeleeFamily("dagger"), "zero family weight cannot enter supplement");
+            check(config.profile("neutral").allowsMeleeFamily("dagger"), "empty neutral family map keeps generic pool");
             var policy = config.profile("ashen").meleeReserves();
+            var gray = config.profile("ashen");
+            check(gray.allowsMeleeFamily("sword") && gray.allowsMeleeFamily("dagger")
+                    && gray.allowsMeleeFamily("spear"), "gray allowed birth families");
+            check(!gray.allowsMeleeFamily("axe") && !gray.allowsMeleeFamily("mace")
+                    && !gray.allowsMeleeFamily("other"), "gray excludes supplement leaks");
+            var familyWeights = gray.data.getAsJsonObject("melee_archetype_weights");
+            check(familyWeights.get("sword").getAsInt() == 30 && familyWeights.get("dagger").getAsInt() == 65
+                    && familyWeights.get("spear").getAsInt() == 5, "gray retains 30/65/5 family weights");
+            check(gray.number("doctrine_core_chance",0,0,1) < 1, "shield/ranged core probability unchanged");
+            for (String faction : new String[]{"crimson", "azure", "verdant", "neutral"}) {
+                var other = config.profile(faction);
+                check(other.allowsMeleeFamily("axe") && other.allowsMeleeFamily("mace"), "positive families remain available");
+            }
+
             check(policy != null && policy.preferOneHanded(), "gray has single-hand supply preference");
             check(policy.secondChance() == seconds[tier] && policy.thirdChance() == thirds[tier], "rank defaults");
             for (String faction : new String[]{"crimson", "azure", "verdant", "neutral"})
@@ -41,6 +57,23 @@ public final class SpawnMeleeReservePolicyTest {
                 .getAsJsonObject("melee_reserves").addProperty("enabled", false);
         check(new FactionEquipmentConfig(override, "tier3").profile("ashen").meleeReserves() == null,
                 "explicit disable restores generic supply");
+        for (String invalid : new String[]{"{\"melee_allowed_families\":[\"invalid\"]}",
+                "{\"melee_allowed_families\":false}"}) {
+            boolean rejected = false;
+            try { FactionEquipmentConfig.prepare(JsonParser.parseString(invalid).getAsJsonObject(), Map.of()); }
+            catch (IllegalArgumentException expected) { rejected = true; }
+            check(rejected, "invalid spawn family settings rejected");
+        }
+        var zeroWeights = JsonParser.parseString("""
+                {"faction_overrides":{"ashen":{"melee_archetype_weights":{
+                 "axe":0,"sword":0,"spear":0,"mace":0,"dagger":0}}}}
+                """).getAsJsonObject();
+        var disabled = new FactionEquipmentConfig(zeroWeights, "tier1").profile("ashen");
+        check(!disabled.allowsMeleeFamily("sword") && !disabled.allowsMeleeFamily("dagger"),
+                "all zero weights do not trigger an unrestricted fallback");
+        var noMelee = JsonParser.parseString("{\"faction_overrides\":{\"ashen\":{\"melee_allowed_families\":[]}}}").getAsJsonObject();
+        check(!new FactionEquipmentConfig(noMelee, "tier1").profile("ashen").allowsMeleeFamily("sword"),
+                "empty explicit family list disables birth melee without fallback");
         for (String malformed : new String[]{"{\"second_weapon_chance\":1.1}",
                 "{\"third_weapon_chance\":-0.1}", "{\"prefer_one_handed\":\"yes\"}"}) {
             boolean rejected = false;

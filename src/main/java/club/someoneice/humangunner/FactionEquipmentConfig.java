@@ -134,6 +134,18 @@ public final class FactionEquipmentConfig {
             this.data = data; this.rank = rank; this.faction = faction; this.factionBands=factionBands;
         }
         boolean factionBands() { return factionBands; }
+        boolean allowsMeleeFamily(String family) {
+            if (data.has("melee_allowed_families")) {
+                boolean allowed = false;
+                for (var entry : data.getAsJsonArray("melee_allowed_families"))
+                    if (entry.getAsString().equals(family)) allowed = true;
+                if (!allowed) return false;
+            }
+            var weights = object(data, "melee_archetype_weights");
+            // Empty maps preserve neutral/random loadouts; explicit zero families cannot leak via fallback.
+            boolean configured = weights.keySet().stream().anyMatch(key -> !commentKey(key));
+            return !configured || FactionEquipmentConfig.number(weights, family, 0, 0, 1e6) > 0;
+        }
         SpawnMeleeReservePolicy meleeReserves() {
             if (!data.has("melee_reserves")) return null;
             JsonObject settings = object(data, "melee_reserves");
@@ -233,6 +245,12 @@ public final class FactionEquipmentConfig {
         strictBoolean(meleeReserves, "prefer_one_handed", path + ".melee_reserves");
         for (String key : List.of("second_weapon_chance", "third_weapon_chance"))
             strictNumber(meleeReserves, key, path + ".melee_reserves", 0, 1, false);
+        if (root.has("melee_allowed_families"))
+            for (var entry : strictJsonArray(root.get("melee_allowed_families"), path + ".melee_allowed_families")) {
+                String family = strictString(entry, path + ".melee_allowed_families");
+                if (!Set.of("axe", "sword", "spear", "mace", "dagger", "other").contains(family))
+                    invalid(path + ".melee_allowed_families", "unknown family " + family);
+            }
         validateDoctrine(root,path);
         for(String key:List.of("bands","item_pool","gun_core","gun_category_map","enchant","durability","shield_count","faction_overrides"))
             requireObjectIfPresent(root,key,path);
