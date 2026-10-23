@@ -6,7 +6,7 @@ PKG=ROOT/"src/main/java/club/someoneice/humangunner"
 def source(name):return (PKG/(name+".java")).read_text(encoding="utf-8")
 class AttackWindowContract(unittest.TestCase):
     def test_three_weapons_share_offensive_window_entry(self):
-        for path in [PKG/"GunMovementExecution.java",ROOT/"src/main/java/com/craftix/hostile_humans/entity/ai/goal/BowMovementExecution.java",ROOT/"src/main/java/com/craftix/hostile_humans/entity/ai/goal/CrossbowGoal.java"]:
+        for path in [PKG/"GunMovementExecution.java",ROOT/"src/main/java/com/craftix/hostile_humans/entity/ai/goal/BowMovementExecution.java",ROOT/"src/main/java/com/craftix/hostile_humans/entity/ai/goal/CrossbowMovementExecution.java"]:
             self.assertIn("RangedFiringPosition.findAttackWindowPath(",path.read_text(encoding="utf-8"))
         wrapper=source("RangedFiringPosition").split("public static Path findAttackWindowPath",1)[1].split("public static Path findVisiblePath",1)[0]
         self.assertIn("HumanPerception.canTarget",wrapper)

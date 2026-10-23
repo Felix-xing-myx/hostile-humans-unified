@@ -98,3 +98,5 @@
 - 枪械移动已从GunnerGoal拆至GunMovementExecution，仍在原Goal获准执行作用域内；中枢按攻击事实和当前策略给出GunPositioning指令，不增另一Goal/优先级或复制预算。9个抽出方法体逐字核对一致，原射界搜索/地形/射位回返入口保留；距离边界和编译后职责检查已写入，未运行Java。
 
 - 弓的移动实现已抽至BowMovementExecution，攻击事实/策略以不可变Request传入，本次射界返回给原tickShot；拉弓/箭矢/节奏不在移动侧执行，不加Goal/权限调度。弩/三叉戟继续迁移，整体中枢协议未完成。
+
+- 弩的移动实现已抽至CrossbowMovementExecution，以Request接收距离/射界/当前可跑动/已选策略，返回Result给原tickShot；装填状态与延迟发射只保留在CrossbowGoal。原驻守、上岸、返回射位与预算保持，三叉戟及中枢整体协议仍待迁移。

@@ -10,7 +10,7 @@ class FiringFloorRetentionContract(unittest.TestCase):
     def test_all_ranged_modes_share_memory_before_general_terrain_planning(self):
         for path in (PKG / 'GunMovementExecution.java',
                      ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal/BowMovementExecution.java',
-                     ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal/CrossbowGoal.java'):
+                     ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal/CrossbowMovementExecution.java'):
             source = path.read_text(encoding='utf-8')
             self.assertIn('RangedFiringMemory.observe(', source)
             self.assertLess(source.index('RangedFiringMemory.recover('),

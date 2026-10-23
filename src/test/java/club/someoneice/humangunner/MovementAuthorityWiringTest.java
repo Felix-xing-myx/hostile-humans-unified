@@ -48,6 +48,19 @@ public final class MovementAuthorityWiringTest {
                         && !call.name.equals("performRangedAttack") && !call.name.equals("acquire"), "bow movement cannot execute attacks or add admission");
             }
         }
+        String crossbow = "com/craftix/hostile_humans/entity/ai/goal/CrossbowGoal";
+        String crossbowMovement = "com/craftix/hostile_humans/entity/ai/goal/CrossbowMovementExecution";
+        check(calls(crossbow, "tick", "tick") && calls(crossbow, "tick", "tickShot"), "crossbow movement results return to original charge/shot state machine");
+        for (var field : node(crossbowMovement).fields) {
+            check(!field.name.equals("crossbowState") && !field.name.equals("attackDelay"), "crossbow movement cannot duplicate charge state");
+        }
+        for (var method : node(crossbowMovement).methods) for (var instruction : method.instructions) {
+            if (instruction instanceof MethodInsnNode call) {
+                check(!call.name.equals("startUsingItem") && !call.name.equals("stopUsingItem")
+                        && !call.name.equals("performRangedAttack") && !call.name.equals("setCharged")
+                        && !call.name.equals("acquire"), "crossbow movement cannot fire, charge or add admission");
+            }
+        }
         System.out.println("MovementAuthorityWiringTest passed");
     }
     private static ClassNode node(String owner) throws Exception {
