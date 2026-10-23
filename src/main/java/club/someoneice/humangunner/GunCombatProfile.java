@@ -18,6 +18,11 @@ public final class GunCombatProfile {
         var style=of(human,gun);
         return GunDoctrine.workPerTick(style.reloadDuration(),style.backgroundDuration(),silent(human,gun));
     }
+    static int reloadHardLimit(Human human, ItemStack gun, int nativeRecoveryDelay) {
+        var style = of(human, gun);
+        return GunDoctrine.reloadHardLimit(GunReloadPolicy.hardLimitTicks(nativeRecoveryDelay),
+                style.reloadDuration(), style.backgroundDuration());
+    }
     static boolean canReloadDuringUse(Human human) {
         return !human.isUsingItem()||SpartanEquipmentCompat.isShield(human.getUseItem());
     }

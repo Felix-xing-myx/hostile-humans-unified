@@ -93,7 +93,7 @@ public final class TaczHumanReloadTransactions {
         boolean started;
         try {
             started = PAYMENTS.begin(data, weapon,
-                    human.level().getGameTime() + GunReloadPolicy.hardLimitTicks(recoveryDelay),
+                    human.level().getGameTime() + GunCombatProfile.reloadHardLimit(human, weapon, recoveryDelay),
                     validStart,
                     () -> HumanAmmo.canReload(human, weapon)&&validStart.getAsBoolean()
                             &&gun.getCurrentAmmoCount(weapon)==loaded&&gun.hasBulletInBarrel(weapon)==chambered,

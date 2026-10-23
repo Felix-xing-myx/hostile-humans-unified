@@ -2,6 +2,7 @@ package club.someoneice.humangunner;
 
 /** Confirmed firearm numbers. Reload multipliers describe duration, never rate. */
 final class GunDoctrine {
+    static final double HUMAN_RELOAD_DURATION = 1.4;
     record Style(double spread, double reloadDuration, double movement, boolean advance,
                  boolean forceMelee, double backgroundDuration) {}
     private GunDoctrine() {}
@@ -33,8 +34,14 @@ final class GunDoctrine {
         return new Style(1,1,.4,nonCore,nonCore,2);
     }
     static double workPerTick(double duration, double background, boolean silent) {
-        double divisor=duration*(silent?background:1);
+        double divisor=HUMAN_RELOAD_DURATION*duration*(silent?background:1);
         return Double.isFinite(divisor)&&divisor>0?1/divisor:0;
+    }
+    /** Native recovery deadlines must allow the slowest foreground/background phase. */
+    static int reloadHardLimit(int nativeLimit, double duration, double background) {
+        double rate = workPerTick(duration, Math.max(1, background), true);
+        return rate > 0 ? (int) Math.min(216000, Math.ceil(nativeLimit * Math.max(1, 1 / rate)))
+                : nativeLimit;
     }
     static double projectileReach(double speedPerTick,double ticks,double drag) {
         if(!Double.isFinite(speedPerTick)||!Double.isFinite(ticks)||speedPerTick<=0||ticks<=0) return 0;
