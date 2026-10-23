@@ -62,6 +62,24 @@ public final class ActionCoordinatorTest {
         motion.finish(leap, COMPLETED, "landed");
         var resumed = motion.requestLease("ordinary-hop", EnumSet.of(MOVE_MODIFIER), 20, true, 40);
         check(motion.acquire(resumed) && !resumed.equals(ordinary), "ordinary helper resumes with a fresh admitted token");
+        var paused = new ActionCoordinator(); paused.advance(100);
+        var task = paused.request("paused-task", EnumSet.of(BASE_MOVE, MAIN_HAND), 20, true, 10);
+        check(paused.acquire(task) && paused.pause(task), "pause preserves intent while releasing control");
+        var replacementMove = paused.request("other-task", EnumSet.of(BASE_MOVE), 20, true, 30);
+        check(paused.acquire(replacementMove), "another task can use released movement");
+        check(!paused.acquire(task) && paused.owner(MAIN_HAND).isEmpty(),
+                "resume rechecks every resource without taking a free subset");
+        paused.advance(110);
+        check(!paused.acquire(task) && paused.running(replacementMove),
+                "paused deadlines keep running and expiry does not cancel the replacement");
+        var lease = paused.requestLease("paused-lease", EnumSet.of(MOVE_MODIFIER), 20, true, 5);
+        check(paused.acquire(lease) && paused.pause(lease), "execution lease can pause");
+        check(!paused.heartbeat(lease), "paused work cannot renew an execution heartbeat");
+        paused.advance(115);
+        check(!paused.acquire(lease), "expired paused lease needs a new request");
+        paused.closeAdmissions();
+        check(paused.pause(replacementMove) && !paused.acquire(replacementMove),
+                "closing a behavior session blocks resuming old work during cleanup");
         System.out.println("ActionCoordinator invariants passed");
     }
 }
