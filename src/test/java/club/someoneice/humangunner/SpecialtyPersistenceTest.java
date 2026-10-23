@@ -112,12 +112,13 @@ public final class SpecialtyPersistenceTest {
         close(SpecialtyAttributes.sampleBudget(random, degenerate), 1.25, "bounded sigma-zero fallback");
         System.out.println("SpecialtyPersistenceTest: all checks passed");
     }
-    /** Real bundled definitions, all caps and absolute limits: tier support is an allocation guarantee. */
+    /** Real bundled definitions: spend feasible budgets and retain explicit residual above bounds. */
     private static void checkTierBudgetFeasibility(SpecialtyConfig config) {
         var dimensions = resource("data/hostile_humans_unified/specialty/dimensions.json");
         var definitions = SpecialtyData.parse(java.util.Map.of(
                 new net.minecraft.resources.ResourceLocation(HumanGunner.MOD_ID, "dimensions"), dimensions));
         close(definitions.caps(config.deviationCap())[7], .3, "gun tilt cap");
+        close(definitions.caps(config.deviationCap())[4], .2, "speed retains explicit twenty-percent cap");
         close(definitions.caps(config.deviationCap())[9], .5, "accuracy retains explicit cap");
         for (String faction : new String[]{"crimson", "azure", "verdant", "ashen"}) {
             var raw = resource("data/hostile_humans_unified/factions/" + faction + ".json")
@@ -152,8 +153,20 @@ public final class SpecialtyPersistenceTest {
                     var result = SpecialtyAllocation.allocate(budget, preference, definitions.costs(),
                             definitions.caps(config.deviationCap()), tilts, config.capBudgetExponent(),
                             config.multiplierMin(), config.multiplierMax());
-                    check(result.feasible(), faction + " budget through 1.68 is feasible");
-                    check(Math.abs(result.residual()) < 1e-7, "feasible budget is fully spent");
+                    double minimum = 0, maximum = 0;
+                    double[] costs = definitions.costs();
+                    for (int i = 0; i < costs.length; i++) {
+                        minimum += costs[i] * result.lower()[i]; maximum += costs[i] * result.upper()[i];
+                        check(result.multipliers()[i] >= result.lower()[i] - 1e-9
+                                        && result.multipliers()[i] <= result.upper()[i] + 1e-9,
+                                "narrow speed cap cannot be bypassed to spend a high budget");
+                    }
+                    double target = budget * SpecialtyAllocation.baselineCost(costs);
+                    boolean feasible = target >= minimum - 1e-12 && target <= maximum + 1e-12;
+                    check(result.feasible() == feasible, "feasibility follows merged bounds");
+                    check(Math.abs(result.residual() - (Math.max(minimum, Math.min(maximum, target)) - target)) < 1e-7,
+                            "infeasible budgets retain explicit residual instead of violating caps");
+                    if (budget <= 1.6) check(feasible, "built-in factions retain full allocation through 1.6");
                     for (int i = 0; i < result.multipliers().length; i++)
                         check(result.multipliers()[i] <= (i == 12 ? .45 : 1.8) + 1e-9,
                                 "expanded relative bounds retain absolute ceilings");

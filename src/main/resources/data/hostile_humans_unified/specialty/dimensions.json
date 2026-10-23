@@ -12,6 +12,7 @@
     "cost": 0.7
   },
   "speed": {
+    "deviation_cap": 0.2,
     "cost": 1.1
   },
   "detection": {

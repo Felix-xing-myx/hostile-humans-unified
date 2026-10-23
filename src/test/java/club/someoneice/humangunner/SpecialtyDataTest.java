@@ -10,6 +10,8 @@ import java.util.Map;
 public final class SpecialtyDataTest {
     public static void main(String[] args) {
         var previous = SpecialtyData.get();
+        check(SpecialtyData.parse(Map.of()).caps(.45)[SpecialtyAttributes.Dimension.SPEED.ordinal()] == .2,
+                "missing dimension resources retain the explicit speed cap fallback");
         ResourceLocation dimensionsId = new ResourceLocation("hostile_humans_unified", "dimensions");
         ResourceLocation labelsId = new ResourceLocation("hostile_humans_unified", "labels");
         Map<ResourceLocation, JsonElement> files = new HashMap<>();
@@ -19,6 +21,7 @@ public final class SpecialtyDataTest {
             dimensions.add(dimension.key(), entry);
         }
         files.put(dimensionsId, dimensions);
+        dimensions.getAsJsonObject("speed").addProperty("deviation_cap", .2);
         JsonObject labels = new JsonObject(), condition = new JsonObject();
         condition.addProperty("accuracy", 1.25); labels.add("precise", condition); files.put(labelsId, labels);
         var candidate = SpecialtyData.parse(files);
