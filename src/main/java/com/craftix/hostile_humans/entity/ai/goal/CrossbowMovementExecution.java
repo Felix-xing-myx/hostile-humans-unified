@@ -2,6 +2,8 @@ package com.craftix.hostile_humans.entity.ai.goal;
 
 
 import com.craftix.hostile_humans.entity.HumanEntity;
+import dev.felix.hostilehumans.core.RangedMovementDecision;
+import dev.felix.hostilehumans.core.RangedMovementDecision.Mode;
 import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.RangedFiringPosition;
 import club.someoneice.humangunner.RangedStrafeSpeed;
@@ -16,7 +18,7 @@ import net.minecraft.world.phys.Vec3;
 /** Movement adapter under the original crossbow Goal; owns no charge or shot clock. */
 final class CrossbowMovementExecution<T extends HumanEntity & CrossbowAttackMob> {
     record Request(double attackRadiusSqr, double minimumBand, double maximumBand,
-                   boolean advance, boolean canRun, int seeTime) { }
+                   RangedMovementDecision decision, boolean canRun) { }
     record Result(boolean visible, boolean canEngage) { }
     private final T mob;
     private final double speedModifier;
@@ -30,21 +32,20 @@ final class CrossbowMovementExecution<T extends HumanEntity & CrossbowAttackMob>
     private static final double RETREAT_DISTANCE_SQR = 16.0D * 16.0D;
     private static final double RETREAT_RESUME_DISTANCE_SQR = 20.0D * 20.0D;
     private static final double HOLD_DISTANCE_SQR = 24.0D * 24.0D;
-    private boolean retreatingForSpace;
 
     CrossbowMovementExecution(T mob, double speedModifier) { this.mob = mob; this.speedModifier = speedModifier; }
-    void reset() { pursuingTarget = false; strafingTime = 0; retreatingForSpace = false; }
+    void reset() { pursuingTarget = false; strafingTime = 0; }
     void start() { nextFiringPositionTick = mob.tickCount; reset(); }
     Result tick(LivingEntity livingentity, double d0, boolean flag, Request request) {
-            boolean holdingPosition = this.mob instanceof Human human
-                    && SoldierOrder.isHoldingPosition(human);
-            if (mob instanceof Human human && !holdingPosition
-                    && request.advance()) {
+            Mode mode = request.decision().mode();
+            if (mode == Mode.UNAVAILABLE) { setOrbitSpeed(false); strafe(0, 0); return new Result(false, false); }
+            boolean holdingPosition = mode == Mode.HOLD;
+            if (mob instanceof Human human && mode == Mode.ADVANCE) {
                 setOrbitSpeed(false);
                 human.clearRangedStrafeMotion();
                 club.someoneice.humangunner.PursuitNavigation.update(human, livingentity, speedModifier);
                 mob.getLookControl().setLookAt(livingentity, 45, 35);
-                return new Result(flag, d0 <= request.attackRadiusSqr() && request.seeTime() >= 5);
+                return new Result(flag, d0 <= request.attackRadiusSqr() && request.decision().canEngage());
             }
             if(mob instanceof Human human) {
                 club.someoneice.humangunner.RangedFiringMemory.observe(human,livingentity,
@@ -54,7 +55,7 @@ final class CrossbowMovementExecution<T extends HumanEntity & CrossbowAttackMob>
                     human.clearRangedStrafeMotion();mob.setXxa(0);mob.setZza(0);this.strafingTime=0;
                     this.pursuingTarget=false;
                     mob.getLookControl().setLookAt(livingentity,45.0F,35.0F);
-                    return new Result(flag, d0<=request.attackRadiusSqr() && request.seeTime()>=5);
+                    return new Result(flag, d0<=request.attackRadiusSqr() && request.decision().canEngage());
                 }
             }
             if (mob instanceof Human human && club.someoneice.humangunner.CombatTerrainNavigation
@@ -64,20 +65,12 @@ final class CrossbowMovementExecution<T extends HumanEntity & CrossbowAttackMob>
                 mob.setXxa(0); mob.setZza(0);
                 this.strafingTime = 0;
                 mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
-                return new Result(flag, d0 <= request.attackRadiusSqr() && request.seeTime() >= 5);
+                return new Result(flag, d0 <= request.attackRadiusSqr() && request.decision().canEngage());
             }
-            if (d0 < request.minimumBand() * request.minimumBand()) {
-                this.retreatingForSpace = true;
-            } else if (d0 >= request.minimumBand() * request.minimumBand()) {
-                this.retreatingForSpace = false;
-            }
-            boolean retreating = !holdingPosition && this.retreatingForSpace
-                    && flag;
-            boolean needsShootingAngle = request.seeTime() < 5;
-            boolean canEngage = d0 <= (double)request.attackRadiusSqr() && request.seeTime() >= 5;
-            setOrbitSpeed(!holdingPosition && !needsShootingAngle
-                    && flag && d0 <= request.maximumBand() * request.maximumBand()
-                    && d0 <= (double)request.attackRadiusSqr());
+            boolean retreating = mode == Mode.RETREAT;
+            boolean needsShootingAngle = mode == Mode.WAIT_AIM;
+            boolean canEngage = request.decision().canEngage();
+            setOrbitSpeed(request.decision().orbitSpeed());
             if (holdingPosition) {
                 this.pursuingTarget = false;
                 if (!SoldierOrder.isReturningToHoldPosition((Human)this.mob)) {
@@ -85,7 +78,7 @@ final class CrossbowMovementExecution<T extends HumanEntity & CrossbowAttackMob>
                 }
                 this.updatePathDelay = 0;
                 this.strafingTime = 0;
-            } else if (!flag && !retreating && d0 <= (double)request.attackRadiusSqr()) {
+            } else if (mode == Mode.SEARCH_WINDOW) {
                 // A blocked firing lane is not a reason to circle blindly.
                 // Find an accessible nearby shot instead; the fleeing branch
                 // above returns before this offensive repositioning logic.
@@ -153,9 +146,7 @@ final class CrossbowMovementExecution<T extends HumanEntity & CrossbowAttackMob>
                     this.updatePathDelay = 7 + this.mob.getRandom().nextInt(6);
                 }
                 this.strafingTime = 0;
-            } else if (d0 > request.maximumBand() * request.maximumBand()
-                    || (this.mob instanceof Human human && human.shouldUseWaterMovement()
-                    && d0 > request.maximumBand() * request.maximumBand())) {
+            } else if (mode == Mode.APPROACH) {
                 --this.updatePathDelay;
                 if (this.mob instanceof Human pursuingHuman) {
                     this.pursuingTarget = club.someoneice.humangunner.PursuitNavigation.update(pursuingHuman, livingentity,

@@ -68,6 +68,10 @@ public final class MovementAuthorityWiringTest {
                         && !call.name.equals("startUsingItem") && !call.name.equals("acquire"), "trident movement only reports attack opportunities");
             }
         }
+        check(calls(bow, "tick", "rangedPositioning") && calls(crossbow, "tick", "rangedPositioning"),
+                "both ranged attack adapters obtain one hub positioning command before movement execution");
+        check(calls("club/someoneice/humangunner/HumanCombatDirector", "rangedPositioning", "choose"),
+                "world facts feed the shared state-free decision module");
         System.out.println("MovementAuthorityWiringTest passed");
     }
     private static ClassNode node(String owner) throws Exception {

@@ -165,10 +165,13 @@ extends Goal {
             }
             this.seeTime = flag ? ++this.seeTime : --this.seeTime;
             if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.observe(human, livingentity, flag);
+            var decision = club.someoneice.humangunner.HumanCombatDirector.rangedPositioning(
+                    mob, d0, flag, attackRadiusSqr(), minimumBand(), maximumBand(),
+                    mob instanceof Human human && club.someoneice.humangunner.RangedCombatProfile
+                            .of(human, human.getMainHandItem()).advance(), seeTime, false);
             boolean visibleForShot = movement.tick(livingentity, d0, flag,
                     new BowMovementExecution.Request(attackRadiusSqr(), minimumBand(), maximumBand(),
-                            mob instanceof Human human && club.someoneice.humangunner.RangedCombatProfile
-                                    .of(human, human.getMainHandItem()).advance()));
+                            decision));
             tickShot(livingentity, visibleForShot);
         }
     }

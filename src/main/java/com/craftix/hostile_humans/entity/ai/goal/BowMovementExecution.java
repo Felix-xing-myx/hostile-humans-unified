@@ -3,6 +3,8 @@ package com.craftix.hostile_humans.entity.ai.goal;
 import com.craftix.hostile_humans.entity.HumanEntity;
 import com.craftix.hostile_humans.entity.entities.Human;
 import club.someoneice.humangunner.BowRangePolicy;
+import dev.felix.hostilehumans.core.RangedMovementDecision;
+import dev.felix.hostilehumans.core.RangedMovementDecision.Mode;
 import club.someoneice.humangunner.RangedFiringPosition;
 import club.someoneice.humangunner.RangedStrafeSpeed;
 import club.someoneice.humangunner.SoldierOrder;
@@ -14,7 +16,7 @@ import net.minecraft.world.phys.Vec3;
 
 /** Bow positioning executes under its original Goal; attack use/cadence remains outside. */
 final class BowMovementExecution<T extends HumanEntity> {
-    record Request(double attackRadiusSqr, double minimumBand, double maximumBand, boolean advance) { }
+    record Request(double attackRadiusSqr, double minimumBand, double maximumBand, RangedMovementDecision decision) { }
     private final T mob;
     private final double speedModifier;
     private boolean strafingClockwise;
@@ -27,10 +29,10 @@ final class BowMovementExecution<T extends HumanEntity> {
     void start() { nextFiringPositionTick = nextWaterApproachPathTick = mob.tickCount; strafingTime = -1; }
     void reset() { strafingTime = -1; }
     boolean tick(LivingEntity livingentity, double d0, boolean flag, Request request) {
-            boolean holdingPosition = this.mob instanceof Human human
-                    && SoldierOrder.isHoldingPosition(human);
-            if (mob instanceof Human human && !holdingPosition
-                    && request.advance()) {
+            Mode mode = request.decision().mode();
+            if (mode == Mode.UNAVAILABLE) { setOrbitSpeed(false); clearStrafeInput(); return false; }
+            boolean holdingPosition = mode == Mode.HOLD;
+            if (mob instanceof Human human && mode == Mode.ADVANCE) {
                 setOrbitSpeed(false);
                 human.clearRangedStrafeMotion();
                 club.someoneice.humangunner.PursuitNavigation.update(human, livingentity, speedModifier);
@@ -55,18 +57,11 @@ final class BowMovementExecution<T extends HumanEntity> {
                 mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
                 return flag && d0 <= request.attackRadiusSqr();
             }
-            boolean waterApproach = this.mob instanceof Human human
-                    && human.shouldUseWaterMovement() && d0 > 22.0D * 22.0D;
-            boolean pursuing = BowRangePolicy.shouldPursue(d0, request.maximumBand() * request.maximumBand())
-                    || waterApproach;
-            boolean retreating = !(mob instanceof Human) && !holdingPosition && BowRangePolicy.shouldPathRetreat(d0) && flag;
-            boolean blockedWhileEngaging = !flag
-                    && !retreating
-                    && !holdingPosition
-                    && (!pursuing || (this.mob instanceof Human human && human.isInWater()
-                    && d0 <= request.attackRadiusSqr()));
-            setOrbitSpeed(!holdingPosition && !retreating
-                    && !blockedWhileEngaging && !pursuing);
+            boolean waterApproach = request.decision().waterApproach();
+            boolean pursuing = mode == Mode.APPROACH;
+            boolean retreating = mode == Mode.RETREAT;
+            boolean blockedWhileEngaging = mode == Mode.SEARCH_WINDOW;
+            setOrbitSpeed(request.decision().orbitSpeed());
             if (holdingPosition) {
                 if (!SoldierOrder.isReturningToHoldPosition((Human)this.mob)) {
                     this.mob.getNavigation().stop();

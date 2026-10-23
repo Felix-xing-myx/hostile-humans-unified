@@ -306,7 +306,7 @@ tasks.register('sanitizeStructureWaystones', JavaExec) {
 [
     'dev.felix.hostilehumans.core': [
         'ActionCoordinatorTest', 'FoodInventoryValueTest', 'InputExecutionLeaseTest',
-        'MovementAuthorityLeaseTest', 'RouteExecutionLeaseTest'
+        'MovementAuthorityLeaseTest', 'RouteExecutionLeaseTest', 'RangedMovementDecisionTest'
     ],
     'club.someoneice.humangunner': [
         'BackgroundThrowingWiringTest', 'BeaconReportPolicyTest', 'BehaviorDebugTest',

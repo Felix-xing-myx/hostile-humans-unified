@@ -186,10 +186,13 @@ extends Goal {
                 tickShot(livingentity, flag, d0 <= attackRadiusSqr() && this.seeTime >= 5);
                 return;
             }
+            var decision = club.someoneice.humangunner.HumanCombatDirector.rangedPositioning(
+                    mob, d0, flag, attackRadiusSqr(), minimumBand(), maximumBand(),
+                    mob instanceof Human human && club.someoneice.humangunner.RangedCombatProfile
+                            .of(human, human.getMainHandItem()).advance(), seeTime, true);
             var result = movement.tick(livingentity, d0, flag,
                     new CrossbowMovementExecution.Request(attackRadiusSqr(), minimumBand(), maximumBand(),
-                            mob instanceof Human human && club.someoneice.humangunner.RangedCombatProfile
-                                    .of(human, human.getMainHandItem()).advance(), canRun(), seeTime));
+                            decision, canRun()));
             tickShot(livingentity, result.visible(), result.canEngage());
         } else {
             movement.setOrbitSpeed(false);

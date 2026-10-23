@@ -28,6 +28,18 @@ public final class HumanCombatDirector {
                 advance ? MeleeCombatRange.reach(human, target) : range.maximum(), advance, obscured);
     }
 
+    /** Select once from attack facts and current command/environment; movement keeps execution and safety. */
+    public static dev.felix.hostilehumans.core.RangedMovementDecision rangedPositioning(
+            net.minecraft.world.entity.PathfinderMob mob, double distanceSqr, boolean visible,
+            double firingRangeSqr, double minimumBand, double maximumBand, boolean advance, int seenTicks, boolean crossbow) {
+        boolean human = mob instanceof Human;
+        boolean holding = mob instanceof Human actor && SoldierOrder.isHoldingPosition(actor);
+        boolean waterMovement = mob instanceof Human actor && actor.shouldUseWaterMovement();
+        var facts = new dev.felix.hostilehumans.core.RangedMovementDecision.Facts(distanceSqr, firingRangeSqr,
+                minimumBand, maximumBand, visible, advance, holding, human, mob.isInWater(), waterMovement, seenTicks);
+        return dev.felix.hostilehumans.core.RangedMovementDecision.choose(facts, crossbow);
+    }
+
     public static void tick(Human human) {
         if (human.level().isClientSide) return;
         var shields = human.humanGunner$shieldDefense();
