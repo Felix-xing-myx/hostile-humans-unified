@@ -10,6 +10,14 @@ public final class RangedCombatProfileTest {
         profile(false, false, "azure", 32, 16, 24, .30, 1.40, 1);
         profile(true, false, "azure", 48, 24, 36, .10, 1, 1.30);
         profile(false, false, "verdant", 32, 16, 24, 1.25, 1, 1);
+        profile(true, false, "verdant", 48, 24, 36, 1.25, 1, 1);
+        var crossbow = RangedCombatProfile.of(true, false, "verdant");
+        check(crossbow.doubleArrow() && !crossbow.tripleArrow() && crossbow.savingChance() == .40,
+                "green crossbow gets two independently paid native volleys");
+        check(!RangedCombatProfile.of(false, true, "verdant").doubleArrow(), "trident has no arrow burst");
+        check(RangedCombatProfile.of(true, false, "azure").savingChance() == 0, "blue crossbow unchanged");
+        check(ArrowVolleyPolicy.angles(false, true, 1).length * 2 == 6
+                && ArrowVolleyPolicy.cost(false, 1) * 2 == 2, "two multishot volleys: six projectiles, two payments");
         profile(false, false, "crimson", 19, 8, 12, .50, 1, 1);
         profile(true, false, "crimson", 28, 12, 18, .30, 1, 1);
         profile(false, true, "", 16, 6, 16, .65, 1, 1);

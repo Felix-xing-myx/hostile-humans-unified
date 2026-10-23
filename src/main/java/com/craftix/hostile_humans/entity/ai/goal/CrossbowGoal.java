@@ -246,9 +246,9 @@ extends Goal {
             }
             if (this.crossbowState == CrossbowState.UNCHARGED) {
                 if (canEngage) {
-                    if (mob instanceof Human human)
-                        club.someoneice.humangunner.HumanArrowCombat.beginCrossbowLoad(human,
-                                mob.getItemInHand(ProjectileUtil.getWeaponHoldingHand(mob, item -> item instanceof CrossbowItem)));
+                    if (mob instanceof Human human
+                            && !club.someoneice.humangunner.HumanArrowCombat.beginCrossbowLoad(human,
+                                mob.getItemInHand(ProjectileUtil.getWeaponHoldingHand(mob, item -> item instanceof CrossbowItem)))) return;
                     this.mob.startUsingItem(ProjectileUtil.getWeaponHoldingHand(this.mob, item -> item instanceof CrossbowItem));
                     if (!this.mob.isUsingItem() || this.mob.getUseItem() != heldCrossbow) return;
                     if (this.mob instanceof Human human) human.humanGunner$shieldDefense().restoreRangedUseAfterGuard();

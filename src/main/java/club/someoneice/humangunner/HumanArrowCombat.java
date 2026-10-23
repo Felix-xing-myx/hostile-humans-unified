@@ -22,8 +22,20 @@ public final class HumanArrowCombat {
     private static final java.util.Map<Human, Followup> FOLLOWUPS = new java.util.WeakHashMap<>();
     private record Followup(java.lang.ref.WeakReference<LivingEntity> target,
                             java.lang.ref.WeakReference<ItemStack> weapon,
-                            net.minecraft.world.entity.EntityType<?> type, CompoundTag payload,
+                            java.util.List<ProjectileSnapshot> projectiles,
                             net.minecraft.world.phys.Vec3 origin, int dueTick, long session) { }
+    /** Pre-spread, pre-profile snapshots preserve each native multishot projectile independently. */
+    private record ProjectileSnapshot(net.minecraft.world.entity.EntityType<?> type, CompoundTag payload) {
+        net.minecraft.world.entity.projectile.AbstractArrow recreate(Human human, net.minecraft.world.phys.Vec3 origin) {
+            var created = type.create(human.level());
+            if (!(created instanceof net.minecraft.world.entity.projectile.AbstractArrow arrow)) return null;
+            java.util.UUID identity = arrow.getUUID();
+            arrow.load(payload.copy());
+            arrow.setUUID(identity); arrow.setOwner(human);
+            arrow.setPos(arrow.position().add(human.position().subtract(origin)));
+            return arrow;
+        }
+    }
     private HumanArrowCombat() {}
 
     /** One scheduled continuation, not a second draw or a queued free projectile. */
@@ -42,15 +54,12 @@ public final class HumanArrowCombat {
         // No backlog or bursts after an interruption: this opportunity is attempted exactly once.
         FOLLOWUPS.remove(human);
         if (!hasFollowupShot(human, target, weapon)) return;
-        publishVolley(human, target, weapon, () -> {
-            var created = shot.type().create(human.level());
-            if (!(created instanceof net.minecraft.world.entity.projectile.AbstractArrow arrow)) return null;
-            java.util.UUID identity = arrow.getUUID();
-            arrow.load(shot.payload().copy());
-            arrow.setUUID(identity); arrow.setOwner(human);
-            arrow.setPos(arrow.position().add(human.position().subtract(shot.origin())));
-            return arrow;
-        }, true);
+        int[] next = {0};
+        int inserted = publishVolley(human, target, weapon, () -> next[0] < shot.projectiles().size()
+                ? shot.projectiles().get(next[0]++).recreate(human, shot.origin()) : null, true);
+        if (inserted > 0 && RangedWeaponCustody.isCrossbowWeapon(weapon))
+            human.playSound(net.minecraft.sounds.SoundEvents.CROSSBOW_SHOOT, 1.0F,
+                    .95F + human.getRandom().nextFloat() * .10F);
     }
     static void clear(Human human) { FOLLOWUPS.remove(human); }
     private static boolean hasFollowupShot(Human human, LivingEntity target, ItemStack weapon) {
@@ -81,10 +90,13 @@ public final class HumanArrowCombat {
         int amount = (int) Math.floor(human.tickCount * rate) - (int) Math.floor((human.tickCount - 1) * rate);
         human.advanceUseTime(Math.max(0, amount - 1)); // Vanilla already supplied one unit.
     }
-    public static void beginCrossbowLoad(Human human, ItemStack weapon) {
+    /** Both loading backends must honor false while a paid continuation is pending. */
+    public static boolean beginCrossbowLoad(Human human, ItemStack weapon) {
+        if (human.level().isClientSide || FOLLOWUPS.containsKey(human)) return false;
         // A new unloaded cycle cannot reuse the deadline of a cancelled prior volley.
-        if (!human.level().isClientSide && !CrossbowItem.isCharged(weapon)
+        if (!CrossbowItem.isCharged(weapon)
                 && cadence(human).hasLoadedCrossbow(weapon)) cadence(human).crossbowShot();
+        return true;
     }
     public static void crossbowLoaded(Human human, ItemStack weapon) {
         if (human.level().isClientSide || !CrossbowItem.isCharged(weapon) || cadence(human).hasLoadedCrossbow(weapon)) return;
@@ -116,6 +128,7 @@ public final class HumanArrowCombat {
                 ? human.getMainHandItem() : human.getOffhandItem();
     }
     private static boolean cadenceAllowsShot(Human human) {
+        if (FOLLOWUPS.containsKey(human)) return false;
         ItemStack weapon = shotWeapon(human);
         if (weapon.getItem() instanceof CrossbowItem) return crossbowReady(human, weapon);
         return !(weapon.getItem() instanceof net.minecraft.world.item.BowItem) || cadence(human).canFireBow(human.tickCount);
@@ -261,18 +274,16 @@ public final class HumanArrowCombat {
         var layout = ArrowLayout.capture(human);
         int available = HumanAmmo.arrowCount(human);
         float[] angles = ArrowVolleyPolicy.angles(profile.tripleArrow(),
-                (profile.tripleArrow() || weapon.getItem() instanceof CrossbowItem)
+                (profile.tripleArrow() || RangedWeaponCustody.isCrossbowWeapon(weapon))
                         && EnchantmentHelper.getItemEnchantmentLevel(Enchantments.MULTISHOT, weapon) > 0, available);
         if (angles.length == 0) return 0;
         java.util.List<net.minecraft.world.entity.projectile.AbstractArrow> arrows = new java.util.ArrayList<>();
-        CompoundTag followupPayload = null;
-        net.minecraft.world.entity.EntityType<?> followupType = null;
+        java.util.List<ProjectileSnapshot> followupProjectiles = new java.util.ArrayList<>();
         for (float angle : angles) {
             var arrow = factory.get();
             if (arrow == null || arrow.isAddedToWorld()) return 0;
             if (profile.doubleArrow() && !followup) {
-                followupPayload = arrow.saveWithoutId(new CompoundTag());
-                followupType = arrow.getType();
+                followupProjectiles.add(new ProjectileSnapshot(arrow.getType(), arrow.saveWithoutId(new CompoundTag())));
             }
             if (angle != 0) arrow.setDeltaMovement(arrow.getDeltaMovement().yRot((float)Math.toRadians(-angle)));
             arrow.setBaseDamage(arrow.getBaseDamage() * profile.damage());
@@ -302,9 +313,9 @@ public final class HumanArrowCombat {
                 else recordBowShot(human);
             }
         }
-        if (inserted > 0 && followupPayload != null && followupType != null && !followup)
+        if (inserted > 0 && !followupProjectiles.isEmpty() && !followup)
             FOLLOWUPS.put(human, new Followup(new java.lang.ref.WeakReference<>(target),
-                    new java.lang.ref.WeakReference<>(weapon), followupType, followupPayload, human.position(),
+                    new java.lang.ref.WeakReference<>(weapon), java.util.List.copyOf(followupProjectiles), human.position(),
                     human.tickCount + DOUBLE_ARROW_DELAY_TICKS, actions.session()));
         return inserted;
     }

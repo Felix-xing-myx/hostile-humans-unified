@@ -97,7 +97,7 @@ final class GuardedRangedCharge {
         progress = Math.min(1, progress + appliedRate);
         observe(human, weapon, appliedRate);
         if (progress < 1 || !(weapon.getItem() instanceof CrossbowItem crossbow)) return;
-        HumanArrowCombat.beginCrossbowLoad(human, weapon);
+        if (!HumanArrowCombat.beginCrossbowLoad(human, weapon)) return;
         crossbow.releaseUsing(weapon, human.level(), human, crossbow.getUseDuration(weapon) - duration(weapon));
         if (SpartanRangedCompat.isHeavyCrossbow(weapon)) SpartanRangedCompat.markChargedForNpc(weapon);
         if (CrossbowItem.isCharged(weapon)) {
