@@ -42,11 +42,11 @@ class GrowthServerContractTest(unittest.TestCase):
             self.assertNotIn("health_max", attributes)
             self.assertEqual(data['tiers'][rank]['growth_profile']['duration_days'], 50)
         for rank, attack, trident in zip(("roamer", "tier1", "tier2", "tier3"),
-                                         (1, 1, 1.25, 1.5), (1, 1.1, 1.2, 1.3)):
+                                         (1, 1, 1.1, 1.2), (1, 1, 1.1, 1.2)):
             damage = data['tiers'][rank]['damage_multipliers']
             self.assertEqual(damage['melee_damage_multiplier'], attack)
-            self.assertEqual(damage['bow_damage_multiplier'], dict(roamer=1.1, tier1=1.1, tier2=1.25, tier3=1.4)[rank])
-            self.assertEqual(damage['crossbow_damage_multiplier'], dict(roamer=1.4, tier1=1.5, tier2=1.6, tier3=1.7)[rank])
+            self.assertEqual(damage['bow_damage_multiplier'], dict(roamer=.9, tier1=.9, tier2=.95, tier3=1)[rank])
+            self.assertEqual(damage['crossbow_damage_multiplier'], dict(roamer=1, tier1=1.05, tier2=1.1, tier3=1.15)[rank])
             self.assertNotIn('arrow_damage_multiplier', damage)
             self.assertEqual(damage['thrown_trident_damage_multiplier'], trident)
             self.assertEqual(damage['damage_taken_multiplier'], 1)
