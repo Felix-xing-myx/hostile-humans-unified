@@ -91,6 +91,7 @@ class CombatTerrainContract(unittest.TestCase):
         self.assertNotIn("BasicNavigationBudget", local)
         self.assertNotIn("findLateralPath", local)
         self.assertNotIn("moveTo(", local)
+        self.assertNotIn("approachTarget(", local)
         self.assertIn("mob.tickCount + 32", local)
         self.assertNotIn("mob.tickCount + 12", local)
         self.assertIn("clearDirectStrafe();", local)

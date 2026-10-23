@@ -135,11 +135,12 @@ public final class RangedWeaponCustody {
         // A non-gunner which owns a bow or crossbow treats it as its default
         // weapon. At close range it keeps an already-held melee weapon; at six
         // blocks or while idle it returns to ranged mode.
-        if (state.valid()
+        if (state.valid() && !HumanCombatDirector.strategies(human).keepsRangedDistance()
                 && state.distanceSqr() <= MELEE_ENTER_DISTANCE_SQR
                 && HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())) {
             adoptExistingCloseMelee(human);
-        } else if (!state.valid() || state.distanceSqr() > RANGED_RETURN_DISTANCE_SQR) {
+        } else if (!state.valid() || state.distanceSqr() > RANGED_RETURN_DISTANCE_SQR
+                || HumanCombatDirector.strategies(human).keepsRangedDistance()) {
             restorePreferred(human, "prefer_ranged");
         }
     }
@@ -178,6 +179,7 @@ public final class RangedWeaponCustody {
             return isActive(human);
         }
         ItemStack held = human.getMainHandItem();
+        if (HumanCombatDirector.keepsRangedDistance(human, held)) return false;
         if (!isBowOrCrossbow(held)) {
             return false;
         }
@@ -219,10 +221,12 @@ public final class RangedWeaponCustody {
     }
 
     static boolean restorePreferred(Human human, String reason) {
-        if (isActive(human) && human.getTarget() != null && human.getTarget().isAlive()
+        boolean keepDistance = HumanCombatDirector.strategies(human).keepsRangedDistance()
+                && HumanAmmo.hasArrows(human);
+        if (isActive(human) && !keepDistance && human.getTarget() != null && human.getTarget().isAlive()
                 && human.distanceToSqr(human.getTarget()) <= RANGED_RETURN_DISTANCE_SQR
                 && !reason.equals("owner_inventory_open")) return false;
-        if (isActive(human) && (CloseRangedTactics.keepDefense(human)
+        if (isActive(human) && ((!keepDistance && CloseRangedTactics.keepDefense(human))
                 || human.humanGunner$shieldDefense().shouldSuppressRecovery())) return false;
         if (isActive(human) && CloseDefenseHold.shouldHold(human)) return false;
         if (hasGunPriority(human) || !HumanAmmo.hasArrows(human) || human.isUsingItem()) {
@@ -298,6 +302,7 @@ public final class RangedWeaponCustody {
 
     private static boolean shouldReturnToRanged(Human human) {
         LivingTarget state = targetState(human);
+        if (HumanCombatDirector.strategies(human).keepsRangedDistance() && HumanAmmo.hasArrows(human)) return true;
         if (RangedTerrainCombat.holdsMelee(human)) return false;
         if (state.valid() && CloseRangedTactics.keepDefense(human)) return false;
         return !state.valid() || state.distanceSqr() > RANGED_RETURN_DISTANCE_SQR;

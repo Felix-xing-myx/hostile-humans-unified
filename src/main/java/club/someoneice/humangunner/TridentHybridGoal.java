@@ -98,16 +98,19 @@ public final class TridentHybridGoal extends Goal {
         unseenTicks = visible ? 0 : unseenTicks + 1;
         human.getLookControl().setLookAt(target, 45.0F, 35.0F);
 
-        // The weapon remains in ranged mode; close contact is a native melee fallback.
+        boolean keepDistance = HumanCombatDirector.keepsRangedDistance(human, human.getMainHandItem());
+        // Other factions retain the hybrid melee fallback; ranged-distance
+        // strategy retries safe separation and throwing even when backed up.
         RangedStrafeSpeed.setTrident(human, !isShoreSeeking() && visible && distanceSqr <= MAX_THROW_DISTANCE_SQR);
         if (distanceSqr < ENTER_MELEE_DISTANCE_SQR && !isShoreSeeking()
                 && !SoldierOrder.isHoldingPosition(human)) {
-            if (movement.separate(target, distanceSqr)) attackMeleeIfReady(distanceSqr);
+            boolean separationFailed = movement.separate(target, distanceSqr);
+            if (separationFailed && !keepDistance) attackMeleeIfReady(distanceSqr);
             throwTridentIfReady(distanceSqr, visible);
             return;
         }
         movement.resetSeparation(distanceSqr);
-        if (distanceSqr < ENTER_MELEE_DISTANCE_SQR) attackMeleeIfReady(distanceSqr);
+        if (!keepDistance && distanceSqr < ENTER_MELEE_DISTANCE_SQR) attackMeleeIfReady(distanceSqr);
         tickRanged(distanceSqr, visible, isShoreSeeking());
     }
 

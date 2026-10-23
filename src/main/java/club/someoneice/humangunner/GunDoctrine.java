@@ -29,7 +29,7 @@ final class GunDoctrine {
             return new Style(1,1,.4,true,true,close?1.2:2);
         }
         if (strategy == CombatStrategySet.GunStyle.MELEE_ASSAULT) return new Style(1,1,.4,true,true,2);
-        boolean nonCore=!core && (strategy == CombatStrategySet.GunStyle.FORTIFIED || strategy == CombatStrategySet.GunStyle.MOBILE);
+        boolean nonCore=!core && strategy == CombatStrategySet.GunStyle.FORTIFIED;
         return new Style(1,1,.4,nonCore,nonCore,2);
     }
     static double workPerTick(double duration, double background, boolean silent) {

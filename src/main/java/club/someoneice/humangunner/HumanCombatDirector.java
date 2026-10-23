@@ -20,6 +20,14 @@ public final class HumanCombatDirector {
         return CombatStrategySet.forFaction(FactionEquipmentConfig.key(human));
     }
 
+    /** One ammo-aware movement intent for gun, bow/crossbow custody and hybrid attacks. */
+    static boolean keepsRangedDistance(Human human, net.minecraft.world.item.ItemStack weapon) {
+        if (!strategies(human).keepsRangedDistance()) return false;
+        if (GunSupport.isGunItem(weapon)) return AmmoWeaponSelection.usableGun(human, weapon);
+        if (RangedWeaponCustody.isBowOrCrossbow(weapon)) return HumanAmmo.hasArrows(human);
+        return weapon.getItem() instanceof net.minecraft.world.item.TridentItem;
+    }
+
     static boolean prefersRangedSeparation(Human human) {
         var identity = EquipmentArchetypes.describe(human, RangedWeaponCustody.preferredForClearance(human));
         var style = strategies(human).ranged(identity.core(), identity.enabled());

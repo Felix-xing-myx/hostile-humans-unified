@@ -90,6 +90,7 @@ final class GunCustody {
         var target=human.getTarget();
         if(!GunSupport.get().isGun(gun)||target==null||!target.isAlive()
                 ||human.distanceToSqr(target)>WeaponTransitionPolicy.GUN_ENTER*WeaponTransitionPolicy.GUN_ENTER||human.isUsingItem()) return false;
+        if (HumanCombatDirector.keepsRangedDistance(human, gun)) return false;
         boolean forced=WeaponTransitionPolicy.holdsMelee(human.distanceToSqr(target), false,
                 GunCombatProfile.shouldForceMelee(human,gun));
         if(!forced && (GunSupport.get().hasLoadedAmmo(gun)||!GunSupport.get().isReloading(human,gun))) return false;
@@ -119,7 +120,8 @@ final class GunCustody {
             boolean melee=HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem());
             if(isActive(human)&&melee&&(human.humanGunner$hasPendingMeleeAttack()||human.swinging)) return false;
             if(isActive(human)&&close&&melee) return false;
-            if(isActive(human)&&melee&&GunSupport.get().isReloading(human,gun)) return false;
+            if(isActive(human)&&melee&&GunSupport.get().isReloading(human,gun)
+                    && !HumanCombatDirector.keepsRangedDistance(human, gun)) return false;
             if(!AmmoWeaponSelection.mayRestore(human,gun)) return false;
         }
         if(human.getMainHandItem()==gun) { clearLease(human); return true; }
@@ -147,7 +149,9 @@ final class GunCustody {
             var target=human.getTarget();
             boolean close=target!=null&&target.isAlive()&&WeaponTransitionPolicy.holdsMelee(
                     human.distanceToSqr(target), true, GunCombatProfile.shouldForceMelee(human,gun));
-            if((close||GunSupport.get().isReloading(human,gun))
+            boolean reloadMelee = GunSupport.get().isReloading(human,gun)
+                    && !HumanCombatDirector.keepsRangedDistance(human, gun);
+            if((close||reloadMelee)
                     &&!HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())) {
                 ItemStack selected=HumanLootManager.bestOwnedMeleeWeapon(human);
                 if(!selected.isEmpty()) {
@@ -158,7 +162,7 @@ final class GunCustody {
             }
             if(close&&HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())) return;
             if(HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())
-                    &&GunSupport.get().isReloading(human,gun)) return;
+                    &&reloadMelee) return;
             // A busy hand is transient; retain the original handle and retry.
             restorePrimaryGun(human,"reload_or_target_completed");
             return;

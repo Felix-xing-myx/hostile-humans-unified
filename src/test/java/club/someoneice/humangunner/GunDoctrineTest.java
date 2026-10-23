@@ -6,6 +6,10 @@ public final class GunDoctrineTest {
         var green=GunDoctrine.style("verdant","sniper",true);
         check(green.spread()==.6&&green.movement()==1.10,"green core precision and movement");
         near(GunDoctrine.workPerTick(green.reloadDuration(),2,false),.7,"green speed means longer duration");
+        var nonCoreGreen = GunDoctrine.style("verdant", "pistol", false);
+        check(!nonCoreGreen.advance() && !nonCoreGreen.forceMelee(), "green non-core retains spacing");
+        check(nonCoreGreen.movement()==.4 && nonCoreGreen.spread()==1 && nonCoreGreen.reloadDuration()==1,
+                "non-core spacing retains normal numerical modifiers");
         var blue=GunDoctrine.style("azure","mg",true);
         near(GunDoctrine.workPerTick(blue.reloadDuration(),2,false),1/.7,"blue duration means shorter duration");
         check(blue.spread()==.7&&blue.movement()==.2,"blue core precision and movement");

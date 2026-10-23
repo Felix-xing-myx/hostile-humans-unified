@@ -32,6 +32,9 @@ record CombatStrategySet(RangedStyle ranged, GunStyle gun, boolean reinforcedJum
         return core && enabled ? ranged : RangedStyle.DEFAULT;
     }
 
+    /** Faction movement intent, independent of core-weapon bonuses. */
+    boolean keepsRangedDistance() { return ranged == RangedStyle.MOBILE; }
+
     boolean allowsOrdinaryShield() { return shield == ShieldStyle.STANDARD; }
 
     boolean reinforcedJump(boolean core, boolean enabled) { return reinforcedJump && core && enabled; }

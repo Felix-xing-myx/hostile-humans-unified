@@ -71,6 +71,20 @@ public final class GunCombatPolicyTest {
                         &&calls(MOD + "GunMovementExecution", "strafeAround", "movement")
                         &&calls(MOD + "GunMovementExecution", "strafeAround", "cancelStep"),
                 "direct firing handoff removes stale input and declares combat facing before aim gate");
+        check(!calls(MOD + "GunMovementExecution", "strafeAround", "approachTarget"),
+                "a rejected safe lateral step cannot manufacture a chase command");
+        check(calls(MOD + "HumanCombatDirector", "keepsRangedDistance", "usableGun")
+                && calls(MOD + "HumanCombatDirector", "keepsRangedDistance", "hasArrows"),
+                "range intent uses actual ammunition, including reloadable or in-progress guns");
+        check(calls(MOD + "GunCustody", "beginCloseMeleeCounter", "keepsRangedDistance")
+                && calls(MOD + "GunCustody", "restorePrimaryGun", "keepsRangedDistance")
+                && calls(MOD + "GunCustody", "tick", "keepsRangedDistance"),
+                "gun entry and both old-lease reload paths honor distance intent");
+        check(calls(MOD + "RangedWeaponCustody", "beginCloseMelee", "keepsRangedDistance")
+                && calls(MOD + "RangedWeaponCustody", "restorePreferred", "keepsRangedDistance")
+                && calls(MOD + "RangedWeaponCustody", "shouldReturnToRanged", "keepsRangedDistance")
+                && calls(MOD + "TridentHybridGoal", "tick", "keepsRangedDistance"),
+                "bows, old bow leases and hybrid tridents share the faction distance intent");
         check(calls(MOD + "GunMovementExecution", "clearDirectStrafe", "strafe"),
                 "stopping navigation also replaces stale MoveControl MOVE_TO when local movement is unsafe");
         MethodNode urgentShot = method(MOD + "TaczGunMechanics", "prepareUrgentCloseShot");

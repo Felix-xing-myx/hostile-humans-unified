@@ -33,6 +33,8 @@ public final class RangedTerrainCombat {
     }
 
     public static double minimumFiringRange(Human human, double normal) {
+        if (HumanCombatDirector.keepsRangedDistance(human, human.getMainHandItem()))
+            return Math.max(normal, RangedCombatProfile.of(human, human.getMainHandItem()).minimumBand());
         State state = STATES.get(human);
         return state != null && human.tickCount - state.blockedSince >= 20 ? Math.min(4.0D, normal) : normal;
     }

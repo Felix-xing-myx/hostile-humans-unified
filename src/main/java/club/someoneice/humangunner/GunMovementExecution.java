@@ -124,7 +124,9 @@ final class GunMovementExecution<T extends PathfinderMob> {
         }
         if (obscured) {
             stopLateralMovement();
-            boolean seekCloserAngle = unseenTargetTicks >= OBSCURED_ADVANCE_AFTER_TICKS
+            boolean keepDistance = mob instanceof Human human
+                    && HumanCombatDirector.keepsRangedDistance(human, human.getMainHandItem());
+            boolean seekCloserAngle = !keepDistance && unseenTargetTicks >= OBSCURED_ADVANCE_AFTER_TICKS
                     && distance > OBSCURED_ADVANCE_DISTANCE;
             if (distance > range.maximum() + 12.0D
                     || (mob instanceof Human human && human.shouldUseWaterMovement()
@@ -318,7 +320,9 @@ final class GunMovementExecution<T extends PathfinderMob> {
             strafing = RangedTerrainCombat.strafeFacingTarget(human,target,radialStrafeInput(target,range),strafeDirection);
             if(!strafing) {
                 MovementSpeedController.limit(human,MovementSpeedController.Limit.RANGED,1,false);
-                approachTarget(target,range.maximum());
+                // A rejected local step is not permission to chase the target.
+                // The hub chose STRAFE; retain the firing lane and retry next
+                // tick. Only APPROACH/SEARCH_WINDOW may install a chase route.
             }
         } else {
             mob.lookAt(target, 30.0F, 30.0F);
