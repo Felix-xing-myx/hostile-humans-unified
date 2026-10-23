@@ -44,6 +44,22 @@ public final class HumanArrowCombatTest {
         check(callsAnyMethodName(ARROWS, "setPierceLevel"), "native piercing retained");
         check(field(ARROWS, "executeVolley", "DISALLOWED"), "all paid NPC volleys cannot be recovered");
         check(callsName(ARROWS, "markNpcLoad", "remove"), "unpaid native payloads removed at charge completion");
+        String snapshot = ARROWS + "$ProjectileSnapshot";
+        String ballistics = "club/someoneice/humangunner/HumanGunner";
+        check(callsName(snapshot, "recreate", "load") && callsName(snapshot, "recreate", "setUUID")
+                && callsName(snapshot, "recreate", "setOwner"), "continuations retain native payload with fresh identity");
+        check(callsName(snapshot, "recreate", "setPos")
+                && calls(snapshot, "recreate", ballistics, "reaimArrowBallistics"),
+                "continuation origin and current target feed the explicit re-aim seam");
+        check(callsName(ballistics, "reaimArrowBallistics", "isAddedToWorld"),
+                "re-aim rejects live flying arrows");
+        check(field(ballistics, "reaimArrowBallistics", "isClientSide"), "re-aim is server only");
+        check(callsName(ballistics, "reaimArrowBallistics", "improveHumanProjectile")
+                && callsName(ballistics, "improveHumanProjectile", "solveArrowBallistics")
+                && callsName(ballistics, "improveHumanProjectile", "getDeltaMovement")
+                && callsName(ballistics, "improveHumanProjectile", "applyAngularSpread"),
+                "first and second shots share live target lead, ballistic solver and independent spread");
+        check(callsName(ballistics, "reaimArrowBallistics", "isFinite"), "invalid new launch fails before payment");
         String inventory = "club/someoneice/humangunner/HumanInventoryContainer";
         for (String method : List.of("<init>", "removeItem", "removeItemNoUpdate"))
             check(calls(inventory, method, ARROWS, "clearNpcLoad"), "NPC action marker cleared on inventory transfer: " + method);

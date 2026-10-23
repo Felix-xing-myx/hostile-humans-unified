@@ -26,14 +26,17 @@ public final class HumanArrowCombat {
                             net.minecraft.world.phys.Vec3 origin, int dueTick, long session) { }
     /** Pre-spread, pre-profile snapshots preserve each native multishot projectile independently. */
     private record ProjectileSnapshot(net.minecraft.world.entity.EntityType<?> type, CompoundTag payload) {
-        net.minecraft.world.entity.projectile.AbstractArrow recreate(Human human, net.minecraft.world.phys.Vec3 origin) {
+        net.minecraft.world.entity.projectile.AbstractArrow recreate(Human human, LivingEntity target, net.minecraft.world.phys.Vec3 origin) {
             var created = type.create(human.level());
             if (!(created instanceof net.minecraft.world.entity.projectile.AbstractArrow arrow)) return null;
             java.util.UUID identity = arrow.getUUID();
             arrow.load(payload.copy());
             arrow.setUUID(identity); arrow.setOwner(human);
             arrow.setPos(arrow.position().add(human.position().subtract(origin)));
-            return arrow;
+            // Keep native arrow state, not the first shot's old direction.
+            // Re-aim only this unattached continuation; paid volley applies
+            // multishot fan angles and faction damage once afterwards.
+            return HumanGunner.reaimArrowBallistics(human, arrow, target) ? arrow : null;
         }
     }
     private HumanArrowCombat() {}
@@ -56,7 +59,7 @@ public final class HumanArrowCombat {
         if (!hasFollowupShot(human, target, weapon)) return;
         int[] next = {0};
         int inserted = publishVolley(human, target, weapon, () -> next[0] < shot.projectiles().size()
-                ? shot.projectiles().get(next[0]++).recreate(human, shot.origin()) : null, true);
+                ? shot.projectiles().get(next[0]++).recreate(human, target, shot.origin()) : null, true);
         if (inserted > 0 && RangedWeaponCustody.isCrossbowWeapon(weapon))
             human.playSound(net.minecraft.sounds.SoundEvents.CROSSBOW_SHOOT, 1.0F,
                     .95F + human.getRandom().nextFloat() * .10F);

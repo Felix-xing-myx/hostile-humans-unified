@@ -627,6 +627,24 @@ public final class HumanGunner {
         applyProjectileBallistics(shooter, projectile, target);
     }
 
+    /** A delayed shot is a new launch: native payload survives, old velocity does not.
+     * Ordinary first-tick hooks still remain idempotent, and already flying arrows cannot be retargeted.
+     */
+    static boolean reaimArrowBallistics(Human shooter, AbstractArrow projectile,
+                                       net.minecraft.world.entity.LivingEntity target) {
+        if (shooter.level().isClientSide || projectile.isAddedToWorld() || projectile instanceof ThrownTrident
+                || projectile.level() != shooter.level() || target == null || !target.isAlive()
+                || target.isRemoved() || target.level() != shooter.level()) return false;
+        // Reuse the same torso aim, current motion lead, gravity/drag solver,
+        // bolt speed and independent tier spread as the first shot.
+        improveHumanProjectile(shooter, projectile, target);
+        Vec3 velocity = projectile.getDeltaMovement();
+        if (!Double.isFinite(velocity.x) || !Double.isFinite(velocity.y) || !Double.isFinite(velocity.z)
+                || velocity.lengthSqr() < 1.0e-12) return false;
+        projectile.getPersistentData().putBoolean(ADAPTIVE_BALLISTICS_APPLIED, true);
+        return true;
+    }
+
     /** Applies the trident-specific trajectory using the attack's actual target. */
     public static void applyTridentBallistics(
             Human shooter, ThrownTrident projectile,
