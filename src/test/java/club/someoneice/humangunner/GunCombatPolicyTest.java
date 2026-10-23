@@ -55,6 +55,14 @@ public final class GunCombatPolicyTest {
                             && !GunRangePolicy.withinPreferredRange(band.minimum() - .1, band),
                     "firing reach does not imply preferred station: " + type);
         }
+        for (var entry : java.util.Map.of("pistol",36d,"smg",48d,"rifle",80d,"shotgun",24d,
+                "mg",56d,"sniper",96d,"launcher",56d).entrySet()) {
+            var base = GunRangePolicy.forType(entry.getKey());
+            check(base.fireRange() == entry.getValue(), "current maximum range: " + entry.getKey());
+            var limited = GunRangePolicy.nativeBand(entry.getKey(), 5);
+            check(limited.fireRange() == 5 && limited.maximum() <= 5,
+                    "extended range cannot exceed native projectile lifetime");
+        }
         check(!GunRangePolicy.withinPreferredRange(Double.NaN, GunRangePolicy.forType("rifle")),
                 "invalid distance cannot grant stationary fire");
         check(!calls(MOD + "GunnerGoal", "canUse", "firingRangeSqr"),

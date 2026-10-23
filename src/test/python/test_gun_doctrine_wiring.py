@@ -16,9 +16,9 @@ class GunDoctrineWiring(unittest.TestCase):
         source = self.source("GunRangePolicy")
         rows = {name: tuple(map(float, values.split(","))) for name, values in
                 re.findall(r'case "(\w+)"->new Band\(([^)]+)\)', source)}
-        self.assertEqual(rows, {"pistol": (8, 12, 10, 36), "sniper": (48, 64, 56, 80),
-                               "rifle": (24, 36, 30, 64), "smg": (12, 20, 16, 32),
-                               "shotgun": (3, 8, 5.5, 20), "mg": (20, 32, 26, 56),
+        self.assertEqual(rows, {"pistol": (8, 12, 10, 36), "sniper": (48, 64, 56, 96),
+                               "rifle": (24, 36, 30, 80), "smg": (12, 20, 16, 48),
+                               "shotgun": (3, 8, 5.5, 24), "mg": (20, 32, 26, 56),
                                "launcher": (32, 48, 40, 56)})
         self.assertIn("default->new Band(8,12,10,24)", source)
         self.assertNotIn("Math.max(band.fireRange(), followRange)", source)

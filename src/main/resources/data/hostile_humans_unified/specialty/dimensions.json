@@ -22,7 +22,7 @@
   },
   "gun": {
     "cost": 1.3,
-    "deviation_cap": 0.2
+    "deviation_cap": 0.3
   },
   "projectile": {
     "cost": 1.2

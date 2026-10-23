@@ -46,7 +46,7 @@ public record SpecialtyConfig(boolean enabled, double budgetMean, double budgetS
     }
     private static volatile SpecialtyConfig current = defaults();
     public static SpecialtyConfig defaults() {
-        return new SpecialtyConfig(true, 1.10, .10, .80, 1.40, .15, .30, .60, .50, 1.80);
+        return new SpecialtyConfig(true, 1.10, .10, .80, 1.40, .20, .45, .60, .50, 1.80);
     }
     public static SpecialtyConfig get() { return current; }
     public static SpecialtyConfig prepare(JsonObject data) {
@@ -54,7 +54,7 @@ public record SpecialtyConfig(boolean enabled, double budgetMean, double budgetS
                 !data.has("enabled") || data.get("enabled").getAsBoolean(),
                 number(data, "budget_mean", 1.10, .5, 2), number(data, "budget_sigma", .10, 0, .5),
                 number(data, "budget_min", .80, .3, 1), number(data, "budget_max", 1.40, 1, 3),
-                number(data, "deviation_sigma", .15, 0, 1), number(data, "deviation_cap", .30, .05, 1),
+                number(data, "deviation_sigma", .20, 0, 1), number(data, "deviation_cap", .45, .05, 1),
                 number(data, "cap_budget_exponent", .60, 0, 1),
                 number(data, "multiplier_min", .50, .2, 1), number(data, "multiplier_max", 1.80, 1, 3),
                 number(data, "penetration_seed", .01, Double.MIN_NORMAL, .45),

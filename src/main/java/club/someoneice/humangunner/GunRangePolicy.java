@@ -61,10 +61,10 @@ final class GunRangePolicy {
         String type=GunDoctrine.category(rawType);
         return switch(type) {
             case "pistol"->new Band(8,12,10,36);
-            case "sniper"->new Band(48,64,56,80);
-            case "rifle"->new Band(24,36,30,64);
-            case "smg"->new Band(12,20,16,32);
-            case "shotgun"->new Band(3,8,5.5,20);
+            case "sniper"->new Band(48,64,56,96);
+            case "rifle"->new Band(24,36,30,80);
+            case "smg"->new Band(12,20,16,48);
+            case "shotgun"->new Band(3,8,5.5,24);
             case "mg"->new Band(20,32,26,56);
             case "launcher"->new Band(32,48,40,56);
             default->new Band(8,12,10,24);

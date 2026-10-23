@@ -53,6 +53,8 @@ public final class SpecialtyPersistenceTest {
 
         SpecialtyConfig defaults = SpecialtyConfig.defaults();
         close(defaults.budgetMean(), 1.1, "new base mean");
+        close(defaults.deviationSigma(), .2, "wider log-normal variation");
+        close(defaults.deviationCap(), .45, "ordinary tilt cap");
         close(defaults.budgetMax(), 1.4, "new base truncation maximum");
         var prepared = SpecialtyConfig.prepare(new com.google.gson.JsonObject());
         for (String tier : new String[]{"roamer", "tier1", "tier2", "tier3"}) {
@@ -98,6 +100,8 @@ public final class SpecialtyPersistenceTest {
         var dimensions = resource("data/hostile_humans_unified/specialty/dimensions.json");
         var definitions = SpecialtyData.parse(java.util.Map.of(
                 new net.minecraft.resources.ResourceLocation(HumanGunner.MOD_ID, "dimensions"), dimensions));
+        close(definitions.caps(config.deviationCap())[7], .3, "gun tilt cap");
+        close(definitions.caps(config.deviationCap())[9], .5, "accuracy retains explicit cap");
         for (String faction : new String[]{"crimson", "azure", "verdant", "ashen"}) {
             var raw = resource("data/hostile_humans_unified/factions/" + faction + ".json")
                     .getAsJsonObject().getAsJsonArray("allocation_preference");

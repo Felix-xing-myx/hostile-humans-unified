@@ -20,7 +20,7 @@ public record RangedCombatProfile(double maximum, double minimumBand, double max
         boolean blue = strategy == CombatStrategySet.RangedStyle.FORTIFIED;
         boolean green = strategy == CombatStrategySet.RangedStyle.MOBILE;
         boolean red = strategy == CombatStrategySet.RangedStyle.VOLLEY && !trident;
-        double maximum = trident ? 16 : crossbow ? 48 : 32;
+        double maximum = trident ? 16 : crossbow ? 64 : 40;
         double lower = trident ? 6 : crossbow ? 24 : 16;
         double upper = trident ? 16 : crossbow ? 36 : 24;
         double speed = trident ? (blue ? .35 : .65) : green ? 1.25
