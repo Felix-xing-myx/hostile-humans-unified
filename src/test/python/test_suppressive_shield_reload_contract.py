@@ -91,7 +91,7 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         defaults = json.loads((ROOT / 'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8'))
         expected = {'enabled': True, 'window_ticks': 20, 'damage_ratio': .18, 'frequent_window_ticks': 30,
                     'frequent_hits': 5, 'frequent_damage_ratio': .10, 'single_damage_ratio': .35,
-                    'quiet_ticks': 20, 'max_guard_ticks': 120, 'cooldown_ticks': 40}
+                    'quiet_ticks': 20, 'max_guard_ticks': 120, 'cooldown_ticks': 70}
         for key, value in expected.items():
             self.assertEqual(defaults['shield_pressure'][key], value)
         self.assertIn('"shield_pressure"', source('SplitConfigFiles.java'))
