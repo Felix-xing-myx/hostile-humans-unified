@@ -142,6 +142,9 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     private static HumanoidModel.ArmPose getArmPose(Human human, InteractionHand hand) {
         ItemStack stack = human.getItemInHand(hand);
         if (stack.isEmpty()) return HumanoidModel.ArmPose.EMPTY;
+        InteractionHand shieldHand = HumanShieldPresentation.activeHand(human);
+        if (shieldHand != null) return hand == shieldHand ? HumanoidModel.ArmPose.BLOCK : HumanoidModel.ArmPose.ITEM;
+        if (club.someoneice.humangunner.SpartanEquipmentCompat.isShield(stack)) return HumanoidModel.ArmPose.ITEM;
         if (human.isUsingItem() && human.getUsedItemHand() == hand
                 && human.getUseItemRemainingTicks() > 0) {
             UseAnim use = stack.getUseAnimation();

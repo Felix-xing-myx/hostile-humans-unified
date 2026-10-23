@@ -44,6 +44,7 @@
     "ThrowableSplashPotionMixin"
   ],
   "client": [
+    "HumanShieldItemPropertyMixin",
     "ScgunsNpcMuzzleFlashMixin",
     "TaczNpcMuzzleFlashMixin",
     "JegNpcMuzzleFlashMixin"

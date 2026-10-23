@@ -38,7 +38,7 @@ final class HumanPlayerModel extends PlayerModel<Human> {
 
     float updateStance(Human human, float partialTick, float bodyYaw) {
         renderStanceYawDegrees = 0.0F;
-        if (!human.isAlive() || !isRangedStance(human)
+        if (!human.isAlive() || HumanShieldPresentation.active(human) || !isRangedStance(human)
                 || human.isVisuallySwimming() || human.isFallFlying()) {
             // In particular, a ranged-to-melee weapon swap must never retain
             // the old sidestep pose while melee animation takes over.
@@ -122,8 +122,7 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         boolean customMeleeAnimation = BetterCombatNpcAnimator.prepare(human)
                 || BetterCombatNpcAnimator.shouldSuppressVanillaSwing(human);
         float vanillaAttackTime = this.attackTime;
-        if (customMeleeAnimation || human.isUsingItem()
-                && human.getUseItem().getUseAnimation() == net.minecraft.world.item.UseAnim.BLOCK)
+        if (customMeleeAnimation || HumanShieldPresentation.active(human))
             this.attackTime = 0.0F;
         try {
             super.setupAnim(human, limbSwing, limbSwingAmount, ageInTicks, aimYaw, headPitch);
@@ -147,6 +146,7 @@ final class HumanPlayerModel extends PlayerModel<Human> {
             else this.rightSleeve.copyFrom(foodArm);
         }
         // Keep the separate skin overlay on the same animated head pose.
+        HumanShieldPresentation.apply(human, this);
         this.hat.copyFrom(this.head);
     }
 

@@ -18,11 +18,11 @@ public final class JegNpcAnimator {
     private JegNpcAnimator() {}
     public static Human drawing() { return DRAWING.get(); }
     static float bodyOffset(Human human) {
-        return GunSupport.isJegGunItem(human.getMainHandItem()) && !human.isUsingItem()
+        return GunSupport.isJegGunItem(human.getMainHandItem()) && !human.isUsingItem() && !HumanShieldPresentation.active(human)
                 ? JegNativePose.bodyOffset(human) : 0;
     }
     static void apply(Human human, PlayerModel<Human> model) {
-        if (!GunSupport.isJegGunItem(human.getMainHandItem()) || human.isUsingItem() || !human.isAlive()
+        if (!GunSupport.isJegGunItem(human.getMainHandItem()) || human.isUsingItem() || HumanShieldPresentation.active(human) || !human.isAlive()
                 || human.isVisuallySwimming() || human.isSleeping() || human.isFallFlying()) return;
         JegNativePose.apply(human, model);
         model.rightSleeve.copyFrom(model.rightArm);

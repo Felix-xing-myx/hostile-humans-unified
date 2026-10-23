@@ -66,7 +66,7 @@ final class BetterCombatNpcAnimator {
         // Shield-use updates may arrive before attack-cancellation metadata.
         // Consume the old sequence while blocking so lowering the shield cannot
         // replay a stale attack after a gun-to-melee handoff.
-        if (human.isUsingItem() && human.getUseItem().getUseAnimation() == net.minecraft.world.item.UseAnim.BLOCK) {
+        if (HumanShieldPresentation.active(human)) {
             if (playback.sequence != sequence || playback.player != null) {
                 playback.sequence = sequence;
                 playback.lastTick = human.tickCount;
@@ -117,6 +117,10 @@ final class BetterCombatNpcAnimator {
 
     static void apply(Human human, HumanoidModel<Human> model, float ageInTicks) {
         prepare(human);
+        if (HumanShieldPresentation.active(human)) {
+            PlayerAnimatorModelBridge.bind(model, null);
+            return;
+        }
         Api resolved = api;
         Playback playback = PLAYBACKS.get(human);
         if (resolved == null || playback == null || playback.stack == null
@@ -158,6 +162,7 @@ final class BetterCombatNpcAnimator {
     /** Player Animator applies the body channel to the whole renderer as well as its limbs. */
     static void applyBodyTransform(Human human, PoseStack poseStack, float partialTick) {
         prepare(human);
+        if (HumanShieldPresentation.active(human)) return;
         Playback playback = PLAYBACKS.get(human);
         Api resolved = api;
         if (playback == null || playback.applier == null || resolved == null) return;
@@ -293,7 +298,7 @@ final class BetterCombatNpcAnimator {
         Api resolved = playback.api;
         if (playback.mainItemPose == null) return;
         boolean leftHanded = human.getMainArm() == HumanoidArm.LEFT;
-        boolean busy = human.swinging || human.isSwimming() || human.isUsingItem()
+        boolean busy = human.swinging || human.isSwimming() || human.isUsingItem() || HumanShieldPresentation.active(human)
                 || CrossbowItem.isCharged(human.getMainHandItem());
         Object mainAttributes = resolved.getWeaponAttributes.invoke(null, human.getMainHandItem());
         Object offAttributes = resolved.getWeaponAttributes.invoke(null, human.getOffhandItem());
@@ -324,7 +329,7 @@ final class BetterCombatNpcAnimator {
     }
 
     private static boolean hasAnimationStack(Human human) {
-        if (!isApplicable(human)) return false;
+        if (!isApplicable(human) || HumanShieldPresentation.active(human)) return false;
         Playback playback = PLAYBACKS.get(human);
         return playback != null && playback.stack != null && playback.applier != null;
     }

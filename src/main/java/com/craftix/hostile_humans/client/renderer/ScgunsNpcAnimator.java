@@ -25,7 +25,7 @@ public final class ScgunsNpcAnimator {
     public static void beginRender(Human human) { ATTACHED.remove(human); }
 
     static float bodyOffset(Human human, float partialTick) {
-        if (!GunSupport.isScgunsGunItem(human.getMainHandItem()) || human.isUsingItem()) return 0;
+        if (!GunSupport.isScgunsGunItem(human.getMainHandItem()) || human.isUsingItem() || HumanShieldPresentation.active(human)) return 0;
         try { return ScgunsMachineGunPose.bodyOffset(human, partialTick); }
         catch (RuntimeException | LinkageError error) { warn(error); return 0; }
     }
@@ -48,7 +48,7 @@ public final class ScgunsNpcAnimator {
         if (!GunSupport.isScgunsGunItem(human.getMainHandItem()) || !human.isAlive()
                 || human.isVisuallySwimming() || human.isSleeping() || human.isFallFlying()) return;
         // Healing/drinking owns its hand animation. Parallel NPC eating does not use this flag.
-        if (human.isUsingItem()) return;
+        if (human.isUsingItem() || HumanShieldPresentation.active(human)) return;
         try {
             ScgunsNativePose.apply(human, model, limbSwing, limbSwingAmount);
         } catch (RuntimeException | LinkageError error) {

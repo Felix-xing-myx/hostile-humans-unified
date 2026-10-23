@@ -137,11 +137,26 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             net.minecraft.network.syncher.SynchedEntityData.defineId(Human.class, net.minecraft.network.syncher.EntityDataSerializers.STRING);
     private static final net.minecraft.network.syncher.EntityDataAccessor<Boolean> FACTION_BOSS =
             net.minecraft.network.syncher.SynchedEntityData.defineId(Human.class, net.minecraft.network.syncher.EntityDataSerializers.BOOLEAN);
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Byte> NPC_SHIELD_HAND =
+            net.minecraft.network.syncher.SynchedEntityData.defineId(Human.class, net.minecraft.network.syncher.EntityDataSerializers.BYTE);
 
     @Override protected void defineSynchedData() {
         super.defineSynchedData();
         entityData.define(FACTION_ID, "");
         entityData.define(FACTION_BOSS, false);
+        entityData.define(NPC_SHIELD_HAND, (byte) 0);
+    }
+    /** Presentation snapshot only: 0 lowered, 1 main hand, 2 offhand. Not a client-side defense decision. */
+    public int getNpcShieldHand() { return entityData.get(NPC_SHIELD_HAND); }
+
+    private void syncShieldPresentation() {
+        if (level().isClientSide) return;
+        int hand = isAlive() && isUsingItem()
+                && getUseItem() == getItemInHand(getUsedItemHand())
+                && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(getUseItem())
+                && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(getItemInHand(getUsedItemHand()))
+                ? (getUsedItemHand() == InteractionHand.MAIN_HAND ? 1 : 2) : 0;
+        entityData.set(NPC_SHIELD_HAND, (byte) hand);
     }
     public String humanGunner$getFaction() { return entityData.get(FACTION_ID); }
     public boolean humanGunner$isBoss() { return entityData.get(FACTION_BOSS); }
@@ -1698,6 +1713,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
     
         super.startUsingItem(hand);
+        syncShieldPresentation();
         ItemStack itemstack = this.getItemInHand(hand);
         boolean shield = itemstack.canPerformAction(ToolActions.SHIELD_BLOCK);
         if (this.isUsingItem() && this.getUsedItemHand() == hand && shield) {
@@ -1729,6 +1745,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     public void stopUsingItem() {
         super.stopUsingItem();
+        syncShieldPresentation();
         clearUseSpeedPenalty();
         club.someoneice.humangunner.MovementSpeedController.limit(this,
                 club.someoneice.humangunner.MovementSpeedController.Limit.DEFENSE, 1, false);
@@ -2084,6 +2101,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (this.shieldUpTicks > 0) {
             --this.shieldUpTicks;
         }
+        syncShieldPresentation();
     }
 
     private void setRangedFacingYaw(float yaw) {

@@ -11,7 +11,7 @@ final class HumanGunPresentation {
 
     /** Server-synchronized actual use; shared by arm pose, animation and item attachment. */
     static boolean activeShield(Human human) {
-        return human.isUsingItem() && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(human.getUseItem());
+        return HumanShieldPresentation.active(human);
     }
 
     static HumanoidArm mainArm(Human human) {

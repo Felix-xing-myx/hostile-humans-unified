@@ -55,12 +55,13 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         renderer = ROOT / 'src/main/java/com/craftix/hostile_humans/client/renderer'
         animation = (renderer / 'BetterCombatNpcAnimator.java').read_text(encoding='utf-8')
         guard = animation.split('// Shield-use updates', 1)[1].split('if (playback.sequence == Integer.MIN_VALUE)', 1)[0]
-        self.assertIn('UseAnim.BLOCK', guard)
+        self.assertIn('HumanShieldPresentation.active(human)', guard)
         self.assertIn('playback.sequence = sequence', guard)
         self.assertIn('playback.attackStack = null', guard)
         self.assertIn('return false', guard)
         model = (renderer / 'HumanPlayerModel.java').read_text(encoding='utf-8')
-        self.assertIn('human.getUseItem().getUseAnimation() == net.minecraft.world.item.UseAnim.BLOCK', model)
+        self.assertIn('HumanShieldPresentation.active(human)', model)
+        self.assertIn('HumanShieldPresentation.apply(human, this)', model)
 
     def test_high_pressure_waits_for_current_drink_but_stops_food_before_advancing(self):
         recovery = source('RecoverySupplies.java')

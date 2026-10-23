@@ -314,7 +314,8 @@ tasks.register('sanitizeStructureWaystones', JavaExec) {
         'GrowthPersistenceTest', 'GrowthProgressionTest', 'GunDoctrineTest', 'GunPositioningTest',
         'MeleeOpportunityTest', 'MeleeBackendAndJumpTest', 'SpawnMeleeReservePolicyTest', 'MovementAuthorityWiringTest', 'RangedCombatProfileTest',
         'RecoverySelectionTest', 'ScopedWorkBudgetTest', 'ShieldDefensePolicyTest', 'TargetSharingPolicyTest'
-    ]
+    ],
+    'com.craftix.hostile_humans.client.renderer': ['HumanShieldPresentationTest']
 ].each { packageName, testClasses ->
     testClasses.each { testClass ->
         def testTask = 'behavior' + testClass

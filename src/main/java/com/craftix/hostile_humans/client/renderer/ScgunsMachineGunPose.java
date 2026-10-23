@@ -38,7 +38,7 @@ final class ScgunsMachineGunPose {
 
     private ScgunsMachineGunPose() {}
     private static boolean active(Human human) {
-        return human.isAlive() && !human.isUsingItem() && !human.isVisuallySwimming()
+        return human.isAlive() && !human.isUsingItem() && !HumanShieldPresentation.active(human) && !human.isVisuallySwimming()
                 && !human.isSleeping() && !human.isFallFlying();
     }
     private static Poses resolve(ItemStack stack) {
