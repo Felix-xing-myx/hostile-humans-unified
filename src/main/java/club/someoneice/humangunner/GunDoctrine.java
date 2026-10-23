@@ -17,16 +17,19 @@ final class GunDoctrine {
             default->"other";
         };
     }
-    static Style style(String faction,String category,boolean core) {
-        if(faction.equals("verdant")&&core) return new Style(.6,1/.7,.8,false,false,2);
-        if(faction.equals("azure")&&(category.equals("rifle")||category.equals("mg")))
+    static Style style(String faction, String category, boolean core) {
+        return style(CombatStrategySet.forFaction(faction).gun(), category, core);
+    }
+    static Style style(CombatStrategySet.GunStyle strategy, String category, boolean core) {
+        if (strategy == CombatStrategySet.GunStyle.MOBILE && core) return new Style(.6,1/.7,.8,false,false,2);
+        if (strategy == CombatStrategySet.GunStyle.FORTIFIED && (category.equals("rifle") || category.equals("mg")))
             return new Style(.7,.7,.2,false,false,2);
-        if(faction.equals("crimson")) {
+        if (strategy == CombatStrategySet.GunStyle.ASSAULT) {
             boolean close=category.equals("smg")||category.equals("shotgun");
             return new Style(1,1,.4,true,!close,close?1.2:2);
         }
-        if(faction.equals("ashen")) return new Style(1,1,.4,true,true,2);
-        boolean nonCore=!core&&(faction.equals("azure")||faction.equals("verdant"));
+        if (strategy == CombatStrategySet.GunStyle.MELEE_ASSAULT) return new Style(1,1,.4,true,true,2);
+        boolean nonCore=!core && (strategy == CombatStrategySet.GunStyle.FORTIFIED || strategy == CombatStrategySet.GunStyle.MOBILE);
         return new Style(1,1,.4,nonCore,nonCore,2);
     }
     static double workPerTick(double duration, double background, boolean silent) {

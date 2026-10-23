@@ -8,7 +8,7 @@ public final class GunCombatProfile {
     private GunCombatProfile() {}
     static GunDoctrine.Style of(Human human,ItemStack gun) {
         var identity=EquipmentArchetypes.describe(human,gun);
-        return GunDoctrine.style(FactionEquipmentConfig.key(human),GunDoctrine.category(identity.family()),identity.core());
+        return GunDoctrine.style(HumanCombatDirector.strategies(human).gun(),GunDoctrine.category(identity.family()),identity.core());
     }
     public static double spread(Human human,ItemStack gun) { return of(human,gun).spread(); }
     static boolean silent(Human human,ItemStack gun) {

@@ -15,6 +15,11 @@ public final class HumanCombatDirector {
     }
     private static final Map<Human, State> STATES = new WeakHashMap<>();
     private HumanCombatDirector() { }
+    /** Shared strategy selection is read-only and follows live faction configuration, never a profession cache. */
+    static CombatStrategySet strategies(Human human) {
+        return CombatStrategySet.forFaction(FactionEquipmentConfig.key(human));
+    }
+
     public static void tick(Human human) {
         if (human.level().isClientSide) return;
         var shields = human.humanGunner$shieldDefense();
@@ -54,8 +59,8 @@ public final class HumanCombatDirector {
                 && human.tickCount - state.lastProjectiles <= 6 ? state.projectiles : List.of();
         shields.observeDefenseSnapshot(near, known, projectiles);
         var capability = EquipmentArchetypes.describe(human, heldShield);
-        boolean advance = shield && capability.core() && capability.enabled()
-                && HumanFactions.shortId(human).equals("azure") && human.onGround()
+        boolean advance = shield && strategies(human).shieldAdvance(capability.core(), capability.enabled())
+                && human.onGround()
                 && HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())
                 && HumanPerception.canTarget(human,target)
                 && human.distanceToSqr(target) > MeleeCombatRange.reachSqr(human,target)

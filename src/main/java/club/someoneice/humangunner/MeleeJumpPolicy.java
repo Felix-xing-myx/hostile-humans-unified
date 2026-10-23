@@ -13,6 +13,6 @@ final class MeleeJumpPolicy {
         return Math.max(Math.max(1, cap), (int)Math.ceil(20 / Math.max(.1, effective)));
     }
     static boolean reinforced(String faction, boolean core, boolean enabled) {
-        return core && enabled && (faction.equals("crimson") || faction.equals("ashen"));
+        return CombatStrategySet.forFaction(faction).reinforcedJump(core, enabled);
     }
 }

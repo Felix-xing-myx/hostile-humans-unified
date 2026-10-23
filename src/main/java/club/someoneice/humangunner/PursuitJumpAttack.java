@@ -52,8 +52,7 @@ public final class PursuitJumpAttack {
         // Preserve the existing path/closing/upswing forecast for the guaranteed first pursuit.
         boolean first = !state.firstUsed && firstApproach(human, target, attackCooldown, reach, distance, jump);
         var identity = EquipmentArchetypes.describe(human, human.getMainHandItem());
-        boolean reinforced = HumanFactions.enabled() && MeleeJumpPolicy.reinforced(HumanFactions.shortId(human),
-                identity.core(), identity.enabled()) && identity.category().equals("melee");
+        boolean reinforced = HumanCombatDirector.strategies(human).reinforcedJump(identity.core(), identity.enabled()) && identity.category().equals("melee");
         if (!first) {
             if (!reinforced || !state.opportunity.mayRoll(human.tickCount, attackCooldown, human.onGround(), true)) return;
             state.opportunity.rolled(human.tickCount, human.getRandom().nextInt(jump.intervalMinTicks(), jump.intervalMaxTicks() + 1));

@@ -58,7 +58,7 @@ class PursuitJumpContract(unittest.TestCase):
 
     def test_first_approach_and_reinforced_roll_share_one_admitted_opportunity(self):
         start = JUMP.split('public static void tryStart(', 1)[1].split('private static boolean safeTakeoff', 1)[0]
-        self.assertIn('MeleeJumpPolicy.reinforced(HumanFactions.shortId(human)', start)
+        self.assertIn('HumanCombatDirector.strategies(human).reinforcedJump(identity.core(), identity.enabled())', start)
         self.assertIn('if (!first)', start)
         self.assertLess(start.index('state.opportunity.rolled('), start.index('human.getRandom().nextDouble() >= jump.chance()'))
         self.assertLess(start.index('if (!actions.acquire(state.token))'), start.index('human.getJumpControl().jump()'))

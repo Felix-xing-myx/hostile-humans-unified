@@ -49,7 +49,7 @@ final class GunRangePolicy {
         var identity=EquipmentArchetypes.describe(human,weapon);
         double nativeReach=GunSupport.get().maximumProjectileReach(weapon);
         Band base=GunDoctrine.category(identity.family()).equals("other")?nativeBand("other",nativeReach):forType(identity.family());
-        if(FactionEquipmentConfig.key(human).equals("verdant")&&identity.core())
+        if(HumanCombatDirector.strategies(human).extendedGunRange(identity.core(),identity.enabled()))
             base=new Band(Math.floor(base.minimum()*1.2),Math.floor(base.maximum()*1.2),
                     Math.floor(base.retreatResume()*1.2),Math.floor(base.fireRange()*1.3));
         return limited(base,GunSupport.get().maximumProjectileReach(weapon));

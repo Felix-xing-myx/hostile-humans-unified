@@ -17,7 +17,7 @@ public final class NpcDualWield {
     }
     private NpcDualWield() { }
     private static boolean faction(Human human) {
-        return HumanFactions.enabled() && HumanFactions.shortId(human).equals("ashen");
+        return HumanCombatDirector.strategies(human).dualWield();
     }
     private static boolean candidate(Human human, ItemStack stack) {
         var identity = EquipmentArchetypes.describe(human, stack);
