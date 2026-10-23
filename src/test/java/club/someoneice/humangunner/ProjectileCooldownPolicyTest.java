@@ -32,18 +32,36 @@ public final class ProjectileCooldownPolicyTest {
         check(!ProjectileCooldownPolicy.allows(false, false, false, false, true, false),
                 "unrelated mob combat remains unchanged");
 
-        check(HumanAttackCooldownPolicy.allowsMelee(false, true, true, true, false, false),
+        check(HumanMeleeDamage.allows(true, true, true, false, false),
                 "human direct melee ignores hurt cooldown at its existing attack rate, including player victims");
-        check(!HumanAttackCooldownPolicy.allowsMelee(true, true, true, true, false, false),
-                "vanilla mode retains melee cooldown");
-        check(!HumanAttackCooldownPolicy.allowsMelee(false, false, true, true, false, false),
+        for (var type : java.util.List.of(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK,
+                net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK_NO_AGGRO,
+                net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK,
+                HumanMeleeDamage.HUMAN, HumanMeleeDamage.NAMED_HUMAN))
+            check(HumanMeleeDamage.isMeleeType(type), "native and actual custom melee keys share one classification: " + type);
+        check(!HumanMeleeDamage.isMeleeType(net.minecraft.world.damagesource.DamageTypes.THORNS)
+                && !HumanMeleeDamage.isMeleeType(net.minecraft.world.damagesource.DamageTypes.MAGIC)
+                && !HumanMeleeDamage.isMeleeType(null), "unrelated or unregistered damage is not a melee type");
+        check(calls("HumanAttackCooldownPolicy", "bypassesCooldown", "HumanMeleeDamage", "isDirectAttack")
+                && calls("GunMeleeProtection", "blocks", "HumanMeleeDamage", "isDirectAttack"),
+                "damage cooldown and forbidden melee protection consume the same source classifier");
+        check(calls("HumanAttackCooldownPolicy", "bypassesCooldown", "UnifiedConfig", "vanillaMode"),
+                "native mode still guards the complete cooldown policy");
+        var producer = read("com/craftix/hostile_humans/mixin/DamageSourceMix");
+        var keys = new java.util.HashSet<String>();
+        for (var method : producer.methods) for (var instruction : method.instructions)
+            if (instruction instanceof FieldInsnNode field && field.getOpcode() == Opcodes.GETSTATIC
+                    && field.owner.equals("club/someoneice/humangunner/HumanMeleeDamage")) keys.add(field.name);
+        check(keys.contains("HUMAN") && keys.contains("NAMED_HUMAN"),
+                "the real damage factory uses exactly the shared unnamed and named melee types");
+        check(!HumanMeleeDamage.allows(false, true, true, false, false),
                 "ordinary mobs attacking humans keep their melee cooldown");
-        check(!HumanAttackCooldownPolicy.allowsMelee(false, true, false, true, false, false),
+        check(!HumanMeleeDamage.allows(true, false, true, false, false),
                 "indirect human damage cannot qualify as melee");
-        check(!HumanAttackCooldownPolicy.allowsMelee(false, true, true, false, false, false),
+        check(!HumanMeleeDamage.allows(true, true, false, false, false),
                 "thorns, fire and other damage types are not direct attacks");
-        check(!HumanAttackCooldownPolicy.allowsMelee(false, true, true, true, true, false)
-                && !HumanAttackCooldownPolicy.allowsMelee(false, true, true, true, false, true),
+        check(!HumanMeleeDamage.allows(true, true, true, true, false)
+                && !HumanMeleeDamage.allows(true, true, true, false, true),
                 "projectiles and explosions retain their own policy");
         check(CreeperFinishPolicy.canFinish(20, 10, 10, 1, 4, 10, true)
                 && !CreeperFinishPolicy.canFinish(20, 10, 10, 1, 4, 10, false),
@@ -75,7 +93,7 @@ public final class ProjectileCooldownPolicyTest {
         }
         check(starts == 1 && ends == 1 && queries == 1,
                 "the real Forge slice contains exactly one cooldown tag query");
-        for (String name : new String[]{"HumanAttackCooldownPolicy", "ProjectileCooldownPolicy", "mixin/LivingEntityProjectileCooldownMixin"}) {
+        for (String name : new String[]{"HumanMeleeDamage", "HumanAttackCooldownPolicy", "ProjectileCooldownPolicy", "mixin/LivingEntityProjectileCooldownMixin"}) {
             for (var method : read("club/someoneice/humangunner/" + name).methods) {
                 for (var instruction : method.instructions) {
                     if (instruction instanceof FieldInsnNode field)
@@ -89,6 +107,15 @@ public final class ProjectileCooldownPolicyTest {
             }
         }
         System.out.println("ProjectileCooldownPolicyTest: " + checks + " checks passed; startup and gameplay require acceptance");
+    }
+
+    private static boolean calls(String owner, String entry, String target, String name) throws Exception {
+        String prefix = "club/someoneice/humangunner/";
+        for (var method : read(prefix + owner).methods) if (method.name.equals(entry))
+            for (var instruction : method.instructions)
+                if (instruction instanceof MethodInsnNode call && call.owner.equals(prefix + target)
+                        && call.name.equals(name)) return true;
+        return false;
     }
 
     private static ClassNode read(String name) throws Exception {

@@ -27,10 +27,13 @@ class GunMeleeProtectionContract(unittest.TestCase):
 
     def test_final_guard_does_not_cancel_bullets_or_effect_damage(self):
         source = (PKG / "GunMeleeProtection.java").read_text(encoding="utf-8")
-        for condition in ("human.humanGunner$canMeleeAttack()", "source.getDirectEntity() != human",
+        self.assertIn("human.humanGunner$canMeleeAttack()", source)
+        self.assertIn("return HumanMeleeDamage.isDirectAttack(source)", source)
+        melee = (PKG / "HumanMeleeDamage.java").read_text(encoding="utf-8")
+        for condition in ("source.getDirectEntity() != source.getEntity()",
                           "DamageTypeTags.IS_PROJECTILE", "DamageTypeTags.IS_EXPLOSION", "isBullet(source)",
                           "DamageTypes.MOB_ATTACK", '"human_with_name"', '"human"'):
-            self.assertIn(condition, source)
+            self.assertIn(condition, melee)
         self.assertIn("EventPriority.HIGHEST", source)
         self.assertIn("!event.getEntity().level().isClientSide", source)
         self.assertNotIn("setHealth", source)
