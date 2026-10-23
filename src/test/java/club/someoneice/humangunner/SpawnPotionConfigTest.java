@@ -6,7 +6,13 @@ import net.minecraft.util.RandomSource;
 
 /** Rank isolation, disabled/empty safety, ranges and ID parsing; no live entity required. */
 public final class SpawnPotionConfigTest {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        net.minecraft.SharedConstants.tryDetectVersion();
+        // Registry-only bootstrap matches other standalone ItemStack tests; no Forge networking.
+        var bootstrapFlag = net.minecraft.server.Bootstrap.class.getDeclaredField("isBootstrapped");
+        bootstrapFlag.setAccessible(true);
+        bootstrapFlag.setBoolean(null, true);
+        net.minecraft.core.registries.BuiltInRegistries.bootStrap();
         UnifiedConfig config = new UnifiedConfig(new JsonObject());
         check(config.taczInventoryFedCapacity() == 150, "TaCZ virtual magazine default");
         check(new UnifiedConfig(json("{\"tacz\":{\"inventory_fed_capacity\":240}}")).taczInventoryFedCapacity() == 240,

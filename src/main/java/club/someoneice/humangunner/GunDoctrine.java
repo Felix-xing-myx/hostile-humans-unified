@@ -21,7 +21,7 @@ final class GunDoctrine {
         return style(CombatStrategySet.forFaction(faction).gun(), category, core);
     }
     static Style style(CombatStrategySet.GunStyle strategy, String category, boolean core) {
-        if (strategy == CombatStrategySet.GunStyle.MOBILE && core) return new Style(.6,1/.7,.8,false,false,2);
+        if (strategy == CombatStrategySet.GunStyle.MOBILE && core) return new Style(.6,1/.7,1.10,false,false,2);
         if (strategy == CombatStrategySet.GunStyle.FORTIFIED && (category.equals("rifle") || category.equals("mg")))
             return new Style(.7,.7,.2,false,false,2);
         if (strategy == CombatStrategySet.GunStyle.ASSAULT) {

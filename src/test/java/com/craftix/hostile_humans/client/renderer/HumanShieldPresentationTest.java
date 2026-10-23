@@ -15,7 +15,11 @@ import net.minecraft.world.item.Items;
 public final class HumanShieldPresentationTest {
     public static void main(String[] args) throws Exception {
         SharedConstants.tryDetectVersion();
-        Bootstrap.bootStrap();
+        // Standalone JavaExec lacks Forge's event-bus transformation, like the existing registry tests.
+        var bootstrapFlag = Bootstrap.class.getDeclaredField("isBootstrapped");
+        bootstrapFlag.setAccessible(true);
+        bootstrapFlag.setBoolean(null, true);
+        net.minecraft.core.registries.BuiltInRegistries.bootStrap();
         ItemStack sword = new ItemStack(Items.IRON_SWORD), shield = new ItemStack(Items.SHIELD);
         check(HumanShieldPresentation.activeHand(0, true, sword, shield) == null, "holding a shield is not blocking");
         check(HumanShieldPresentation.activeHand(2, true, sword, shield) == InteractionHand.OFF_HAND,

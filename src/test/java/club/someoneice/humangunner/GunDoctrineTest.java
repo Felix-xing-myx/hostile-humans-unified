@@ -4,7 +4,7 @@ package club.someoneice.humangunner;
 public final class GunDoctrineTest {
     public static void main(String[] args) {
         var green=GunDoctrine.style("verdant","sniper",true);
-        check(green.spread()==.6&&green.movement()==.8,"green core precision and movement");
+        check(green.spread()==.6&&green.movement()==1.10,"green core precision and movement");
         near(GunDoctrine.workPerTick(green.reloadDuration(),2,false),.7,"green speed means longer duration");
         var blue=GunDoctrine.style("azure","mg",true);
         near(GunDoctrine.workPerTick(blue.reloadDuration(),2,false),1/.7,"blue duration means shorter duration");

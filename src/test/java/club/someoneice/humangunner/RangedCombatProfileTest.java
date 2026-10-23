@@ -9,7 +9,7 @@ public final class RangedCombatProfileTest {
         profile(true, false, "", 48, 24, 36, .30, 1, 1);
         profile(false, false, "azure", 32, 16, 24, .30, 1.40, 1);
         profile(true, false, "azure", 48, 24, 36, .10, 1, 1.30);
-        profile(false, false, "verdant", 32, 16, 24, 1, 1, 1);
+        profile(false, false, "verdant", 32, 16, 24, 1.25, 1, 1);
         profile(false, false, "crimson", 19, 8, 12, .50, 1, 1);
         profile(true, false, "crimson", 28, 12, 18, .30, 1, 1);
         profile(false, true, "", 16, 6, 16, .65, 1, 1);

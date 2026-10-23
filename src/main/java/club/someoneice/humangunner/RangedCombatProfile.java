@@ -24,7 +24,7 @@ public record RangedCombatProfile(double maximum, double minimumBand, double max
         double lower = trident ? 6 : crossbow ? 24 : 16;
         double upper = trident ? 16 : crossbow ? 36 : 24;
         double speed = trident ? (blue ? .35 : .65) : crossbow ? (blue ? .10 : .30)
-                : blue ? .30 : green ? 1 : .50;
+                : blue ? .30 : green ? 1.25 : .50;
         return new RangedCombatProfile(red ? Math.floor(maximum * .60) : maximum,
                 red ? lower * .50 : lower, red ? upper * .50 : upper, speed,
                 blue && !crossbow && !trident ? 1.40 : 1,

@@ -20,7 +20,8 @@ public final class MovementSpeedController {
     public static void limit(Human human, Limit source, double multiplier, boolean active) {
         if (human.level().isClientSide) return;
         var limits = LIMITS.computeIfAbsent(human, ignored -> new java.util.EnumMap<>(Limit.class));
-        if (active && Double.isFinite(multiplier) && multiplier > 0 && multiplier < 1)
+        if (active && Double.isFinite(multiplier) && multiplier > 0 && multiplier != 1
+                && (multiplier < 1 || source == Limit.RANGED))
             limits.put(source, new Restriction(multiplier, human.level().getGameTime() + 2));
         else limits.remove(source);
         publish(human, limits);
@@ -46,8 +47,8 @@ public final class MovementSpeedController {
             var old = speed.getModifier(LIMIT_ID);
             if (old != null && Math.abs(old.getAmount() - (product - 1)) < 1e-8) return;
             if (old != null) speed.removeModifier(LIMIT_ID);
-            if (product < 1) speed.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
-                    LIMIT_ID, "Human admitted action speed limits", product - 1,
+            if (Math.abs(product - 1) > 1e-8) speed.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
+                    LIMIT_ID, "Human admitted action speed factors", product - 1,
                     net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.MULTIPLY_TOTAL));
         }
         if (limits.isEmpty()) LIMITS.remove(human);
