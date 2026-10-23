@@ -9,7 +9,7 @@ PKG = ROOT / 'src/main/java/club/someoneice/humangunner'
 class FiringFloorRetentionContract(unittest.TestCase):
     def test_all_ranged_modes_share_memory_before_general_terrain_planning(self):
         for path in (PKG / 'GunMovementExecution.java',
-                     ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal/BowAttack.java',
+                     ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal/BowMovementExecution.java',
                      ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal/CrossbowGoal.java'):
             source = path.read_text(encoding='utf-8')
             self.assertIn('RangedFiringMemory.observe(', source)

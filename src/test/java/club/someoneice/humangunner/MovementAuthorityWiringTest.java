@@ -39,6 +39,15 @@ public final class MovementAuthorityWiringTest {
                 check(!call.name.equals("request") && !call.name.equals("acquire"), "movement reuses original goal admission");
             }
         }
+        String bow = "com/craftix/hostile_humans/entity/ai/goal/BowAttack";
+        String bowMovement = "com/craftix/hostile_humans/entity/ai/goal/BowMovementExecution";
+        check(calls(bow, "tick", "tick") && calls(bow, "tick", "tickShot"), "bow movement result returns to original attack cadence");
+        for (var method : node(bowMovement).methods) for (var instruction : method.instructions) {
+            if (instruction instanceof MethodInsnNode call) {
+                check(!call.name.equals("startUsingItem") && !call.name.equals("stopUsingItem")
+                        && !call.name.equals("performRangedAttack") && !call.name.equals("acquire"), "bow movement cannot execute attacks or add admission");
+            }
+        }
         System.out.println("MovementAuthorityWiringTest passed");
     }
     private static ClassNode node(String owner) throws Exception {

@@ -27,19 +27,16 @@ public class BowAttack<T extends HumanEntity>
 extends Goal {
     private final T mob;
     private final double speedModifier;
+    private final BowMovementExecution<T> movement;
     private final float attackRadiusSqr;
     private int attackIntervalMin;
     private int attackTime = -1;
     private int seeTime;
-    private boolean strafingClockwise;
-    private int strafingTime = -1;
-    private int updatePathDelay;
-    private int nextFiringPositionTick;
-    private int nextWaterApproachPathTick;
 
     public BowAttack(T p_25792_, double p_25793_, int interval, float p_25795_) {
         this.mob = p_25792_;
         this.speedModifier = p_25793_;
+        this.movement = new BowMovementExecution<>(mob, speedModifier);
         this.attackIntervalMin = interval;
         if (mob instanceof Human human) club.someoneice.humangunner.HumanArrowCombat.configureBowInterval(human, interval);
         this.attackRadiusSqr = p_25795_ * p_25795_;
@@ -89,9 +86,7 @@ extends Goal {
     public void start() {
         super.start();
         this.mob.setAggressive(true);
-        this.nextFiringPositionTick = this.mob.tickCount;
-        this.nextWaterApproachPathTick = this.mob.tickCount;
-        this.strafingTime = -1;
+        movement.start();
     }
 
     public void stop() {
@@ -100,11 +95,11 @@ extends Goal {
         if (this.mob instanceof Human human && human.isCombatFiringShore()) {
             human.stopSeekingShore();
         }
-        setOrbitSpeed(false);
+        movement.setOrbitSpeed(false);
         this.mob.setAggressive(false);
         this.seeTime = 0;
         if (!(mob instanceof Human)) this.attackTime = -1;
-        this.strafingTime = -1;
+        movement.reset();
         if (this.mob.isUsingItem() && this.mob.getUseItem().getItem() instanceof BowItem) {
             if (this.mob instanceof Human human) human.humanGunner$shieldDefense().pauseRangedUseForGuard();
             this.mob.stopUsingItem();
@@ -118,7 +113,7 @@ extends Goal {
                     this.mob.position().x(), this.mob.position().y(), this.mob.position().z(), 0.0D
             );
         }
-        clearStrafeInput();
+        movement.clearStrafeInput();
     }
 
     public boolean requiresUpdateEveryTick() {
@@ -136,9 +131,9 @@ extends Goal {
         }
         LivingEntity livingentity = this.mob.getTarget();
         if (livingentity == null || !livingentity.isAlive()) {
-            setOrbitSpeed(false);
+            movement.setOrbitSpeed(false);
             this.mob.getNavigation().stop();
-            clearStrafeInput();
+            movement.clearStrafeInput();
             return;
         }
         if (this.mob instanceof Human human) {
@@ -148,7 +143,7 @@ extends Goal {
                 && ShoreSeekingPolicy.isShoreTransitionActive(
                         human.isSeekingShore(), human.isShoreTransitionPending());
         if ((this.mob instanceof Human human && human.isFleeing) || shoreSeeking) {
-            setOrbitSpeed(false);
+            movement.setOrbitSpeed(false);
             if (this.mob.isUsingItem() && !(this.mob.getUseItem().getItem() instanceof BowItem)) return;
             boolean visible = this.mob instanceof Human shotHuman
                     ? club.someoneice.humangunner.RangedShotClearance.canShoot(shotHuman, livingentity)
@@ -170,156 +165,11 @@ extends Goal {
             }
             this.seeTime = flag ? ++this.seeTime : --this.seeTime;
             if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.observe(human, livingentity, flag);
-            boolean holdingPosition = this.mob instanceof Human human
-                    && SoldierOrder.isHoldingPosition(human);
-            if (mob instanceof Human human && !holdingPosition
-                    && club.someoneice.humangunner.RangedCombatProfile.of(human, human.getMainHandItem()).advance()) {
-                setOrbitSpeed(false);
-                human.clearRangedStrafeMotion();
-                club.someoneice.humangunner.PursuitNavigation.update(human, livingentity, speedModifier);
-                mob.getLookControl().setLookAt(livingentity, 45, 35);
-                tickShot(livingentity, flag);
-                return;
-            }
-            if(mob instanceof Human human) {
-                club.someoneice.humangunner.RangedFiringMemory.observe(human,livingentity,
-                        flag && d0<=attackRadiusSqr(),attackRadiusSqr());
-                if(club.someoneice.humangunner.RangedFiringMemory.recover(human,livingentity,speedModifier)) {
-                    setOrbitSpeed(false);
-                    clearStrafeInput();this.strafingTime=-1;
-                    mob.getLookControl().setLookAt(livingentity,45.0F,35.0F);
-                    tickShot(livingentity,flag && d0<=attackRadiusSqr());
-                    return;
-                }
-            }
-            if (mob instanceof Human human && club.someoneice.humangunner.CombatTerrainNavigation
-                    .update(human, livingentity, speedModifier, flag && d0 <= attackRadiusSqr()).ownsMovement()) {
-                setOrbitSpeed(false);
-                clearStrafeInput();
-                this.strafingTime = -1;
-                mob.getLookControl().setLookAt(livingentity, 45.0F, 35.0F);
-                tickShot(livingentity, flag && d0 <= attackRadiusSqr());
-                return;
-            }
-            boolean waterApproach = this.mob instanceof Human human
-                    && human.shouldUseWaterMovement() && d0 > 22.0D * 22.0D;
-            boolean pursuing = BowRangePolicy.shouldPursue(d0, maximumBand() * maximumBand())
-                    || waterApproach;
-            boolean retreating = !(mob instanceof Human) && !holdingPosition && BowRangePolicy.shouldPathRetreat(d0) && flag;
-            boolean blockedWhileEngaging = !flag
-                    && !retreating
-                    && !holdingPosition
-                    && (!pursuing || (this.mob instanceof Human human && human.isInWater()
-                    && d0 <= attackRadiusSqr()));
-            setOrbitSpeed(!holdingPosition && !retreating
-                    && !blockedWhileEngaging && !pursuing);
-            if (holdingPosition) {
-                if (!SoldierOrder.isReturningToHoldPosition((Human)this.mob)) {
-                    this.mob.getNavigation().stop();
-                }
-                this.updatePathDelay = 0;
-                this.strafingTime = -1;
-            } else if (retreating) {
-                --this.updatePathDelay;
-                if (this.updatePathDelay <= 0 && (!(this.mob instanceof Human human)
-                        || club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1))) {
-                    Vec3 away = DefaultRandomPos.getPosAway(this.mob, 12, 6, livingentity.position());
-                    if (away != null && BowRangePolicy.usefulRetreatDestination(
-                            d0, livingentity.distanceToSqr(away))) {
-                        this.mob.getNavigation().moveTo(away.x, away.y, away.z, this.speedModifier * 1.1D);
-                    } else {
-                        this.mob.getNavigation().stop();
-                        strafe(
-                                -1.0F, this.strafingClockwise ? 0.45F : -0.45F
-                        );
-                    }
-                    this.updatePathDelay = 6 + this.mob.getRandom().nextInt(5);
-                }
-                this.strafingTime = -1;
-            } else if (blockedWhileEngaging) {
-                // Orbiting blindly can carry the archer behind cover. While
-                // still in attack posture, pause lateral input and seek a
-                // reachable point with a verified firing lane instead.
-                if (this.mob.getNavigation().isDone() || this.mob.getNavigation().isStuck()) {
-                    if (this.mob.tickCount >= this.nextFiringPositionTick) {
-                        Path firingPath = this.mob instanceof Human human
-                                ? RangedFiringPosition.findAttackWindowPath(
-                                        human, livingentity, club.someoneice.humangunner.RangedTerrainCombat.minimumFiringRange(human, 14.0D),
-                                        Math.sqrt(attackRadiusSqr()), 10, 12)
-                                : null;
-                        if (firingPath != null) {
-                            boolean moved = this.mob.getNavigation().moveTo(firingPath, this.speedModifier);
-                            if (moved && this.mob instanceof Human human) {
-                                club.someoneice.humangunner.RangedFiringMemory.selected(human,livingentity,firingPath,attackRadiusSqr());
-                                club.someoneice.humangunner.SoldierDialogue.event(human, "reposition");
-                            }
-                            if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.searchCompleted(human, livingentity, moved);
-                            this.updatePathDelay = 0;
-                        } else if (!(this.mob instanceof Human human && RangedFiringPosition.hasPendingVisibleSearch(human))) {
-                            if (this.mob instanceof Human human && human.isInWater()) {
-                                human.beginCombatFiringShore(livingentity, this.speedModifier);
-                            } else {
-                                this.mob.getNavigation().stop();
-                                if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.searchCompleted(human, livingentity, false);
-                            }
-                            this.updatePathDelay = 0;
-                        }
-                        this.nextFiringPositionTick = this.mob.tickCount
-                                + (this.mob instanceof Human human ? RangedFiringPosition.retryDelay(human, firingPath, 40)
-                                : firingPath == null ? 40 : 10);
-                    }
-                }
-                this.strafingTime = -1;
-                clearStrafeInput();
-                this.mob.getLookControl().setLookAt(livingentity, 30.0F, 30.0F);
-                tickShot(livingentity, false);
-                return;
-            } else if (!pursuing) {
-                // Losing sight inside shooting range is not permission to
-                // charge. Orbit to change the angle while preserving spacing.
-                this.mob.getNavigation().stop();
-                this.updatePathDelay = 0;
-                ++this.strafingTime;
-            } else {
-                if (this.mob instanceof Human pursuingHuman) {
-                    club.someoneice.humangunner.PursuitNavigation.update(pursuingHuman, livingentity, this.speedModifier);
-                } else if (this.mob.tickCount >= this.nextWaterApproachPathTick
-                        && (!(this.mob instanceof Human human)
-                        || club.someoneice.humangunner.BasicNavigationBudget.tryAcquire(human, 1))) {
-                    this.mob.getNavigation().moveTo((Entity)livingentity, this.speedModifier);
-                    this.nextWaterApproachPathTick = this.mob.tickCount + 12;
-                }
-                if (waterApproach && this.mob instanceof Human human) {
-                    human.approachCombatTargetInWater(livingentity, 22.0D, this.speedModifier);
-                }
-                this.updatePathDelay = 0;
-                this.strafingTime = -1;
-            }
-            if (this.strafingTime >= 20) {
-                if ((double)this.mob.getRandom().nextFloat() < 0.3) {
-                    boolean bl2 = this.strafingClockwise = !this.strafingClockwise;
-                }
-                this.strafingTime = 0;
-            }
-            if (this.strafingTime > -1) {
-                // One controller owns both radial spacing and lateral orbiting.
-                // The 14-16 block buffer deliberately mixes backward and side
-                // input so circling cannot silently erase the retreat margin.
-                float side = BowRangePolicy.orbitSideInput(d0);
-                strafe(
-                        BowRangePolicy.orbitForwardInput(d0, minimumBand(), maximumBand()),
-                        this.strafingClockwise ? side : -side
-                );
-                this.mob.lookAt((Entity)livingentity, 30.0f, 30.0f);
-            } else if (retreating && this.mob.getNavigation().isDone()) {
-                // Pathfinding can fail in cramped terrain; keep backpedalling
-                // and firing instead of freezing beside the attacker.
-                strafe(-1.0F, this.strafingClockwise ? 0.45F : -0.45F);
-                this.mob.lookAt((Entity)livingentity, 30.0F, 30.0F);
-            } else {
-                this.mob.getLookControl().setLookAt((Entity)livingentity, 30.0f, 30.0f);
-            }
-            tickShot(livingentity, flag);
+            boolean visibleForShot = movement.tick(livingentity, d0, flag,
+                    new BowMovementExecution.Request(attackRadiusSqr(), minimumBand(), maximumBand(),
+                            mob instanceof Human human && club.someoneice.humangunner.RangedCombatProfile
+                                    .of(human, human.getMainHandItem()).advance()));
+            tickShot(livingentity, visibleForShot);
         }
     }
 
@@ -370,25 +220,4 @@ extends Goal {
         }
     }
 
-    private void clearStrafeInput() {
-        if (this.mob instanceof Human human) {
-            human.clearRangedStrafeMotion();
-        } else {
-            strafe(0.0F, 0.0F);
-        }
-        this.mob.setZza(0.0F);
-        this.mob.setXxa(0.0F);
-    }
-
-    private void strafe(float forward, float right) {
-        if (mob instanceof Human human) club.someoneice.humangunner.RangedTerrainCombat.strafe(human, forward, right);
-        else mob.getMoveControl().strafe(forward, right);
-    }
-
-    private void setOrbitSpeed(boolean orbiting) {
-        if (this.mob instanceof Human human) {
-            RangedStrafeSpeed.setBow(human, orbiting);
-        }
-    }
 }
-

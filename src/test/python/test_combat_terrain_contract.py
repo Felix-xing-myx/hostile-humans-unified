@@ -13,7 +13,7 @@ def read(path):
 
 class CombatTerrainContract(unittest.TestCase):
     def test_weapon_and_defense_controllers_consume_shared_decision(self):
-        for path in [ENTITY / "ai/goal/BowAttack.java", ENTITY / "ai/goal/CrossbowGoal.java",
+        for path in [ENTITY / "ai/goal/BowMovementExecution.java", ENTITY / "ai/goal/CrossbowGoal.java",
                      COMBAT / "GunMovementExecution.java", COMBAT / "TridentHybridGoal.java",
                      COMBAT / "PursuitNavigation.java", COMBAT / "AdaptiveCombatGoal.java"]:
             with self.subTest(path=path.name):
