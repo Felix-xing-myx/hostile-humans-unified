@@ -99,8 +99,8 @@ public final class AttributeDetailScreen extends Screen {
         CommandPanelChrome.frame(graphics,left,panelY,right-left,panelHeight(),accent);
         graphics.drawString(font,title,left+12,panelY+9,CommandPanelScreen.TEXT,false);
         CommandPanelChrome.badge(graphics,left+12,panelY+34,snapshot.faction());
-        Component name=text("header",snapshot.name(),snapshot.boss()?text("boss"):text("ordinary"));
-        graphics.drawString(font,font.plainSubstrByWidth(name.getString(),Math.max(1,wrap-25)),left+30,panelY+34,accent,false);
+        Component identityTitle=text("header",snapshot.name(),snapshot.boss()?text("boss"):text("ordinary"));
+        graphics.drawString(font,font.plainSubstrByWidth(identityTitle.getString(),Math.max(1,wrap-25)),left+30,panelY+34,accent,false);
         graphics.drawString(font,text("health_budget",String.format(Locale.ROOT,"%.2f",snapshot.currentHealth()),String.format(Locale.ROOT,"%.3f",snapshot.budget())),left+30,panelY+47,0xD2DCE6,false);
         Component status=text(snapshot.enabled()?"enabled":"disabled");
         graphics.drawString(font,font.plainSubstrByWidth(text("sample",snapshot.tick(),status).getString(),Math.max(1,right-left-116)),left+12,panelY+panelHeight()-27,0x91A6B6,false);
