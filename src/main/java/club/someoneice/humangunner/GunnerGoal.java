@@ -6,7 +6,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
@@ -15,33 +14,15 @@ import java.util.EnumSet;
 
 public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     private static final double RETREAT_RANGE = 4.0D;
-    private static final double OBSCURED_ADVANCE_DISTANCE = 10.0D;
-    private static final int OBSCURED_ADVANCE_AFTER_TICKS = 30;
     private static final int MIN_AIM_TICKS = 2;
     private final T mob;
     private final GunSupport.Control operator;
     private int aimTicks;
-    private int unseenTargetTicks;
-    private int nextFiringPositionTick;
-    private int nextApproachPathTick;
-    private int manualStrafeUntilTick;
-    private int strafeLegStartTick;
-    private double strafeLegStartX;
-    private double strafeLegStartZ;
-    private double strafeAnchorX;
-    private double strafeAnchorZ;
-    private double strafeAnchorTargetX;
-    private double strafeAnchorTargetZ;
-    private boolean strafeAnchorSet;
-    private float strafeDirection = 1.0F;
-    private boolean retreatSearchQueued;
-    private boolean approachingTarget;
-    private boolean strafing;
-    private boolean seekingFiringPosition;
-    private LivingEntity movementTarget;
+    private final GunMovementExecution<T> movement;
 
     public GunnerGoal(T mob) {
         this.mob = mob;
+        this.movement = new GunMovementExecution<>(mob);
         this.operator = mob instanceof Human human ? GunSupport.get().control(human) : GunSupport.Control.NONE;
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
@@ -81,54 +62,16 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     @Override
     public void start() {
         aimTicks = 0;
-        unseenTargetTicks = 0;
-        retreatSearchQueued = false;
-        approachingTarget = false;
-        strafing = false;
-        manualStrafeUntilTick = 0;
-        strafeAnchorSet = false;
-        seekingFiringPosition = false;
-        strafeDirection = mob.getRandom().nextBoolean() ? 1.0F : -1.0F;
-        strafeLegStartTick = mob.tickCount;
-        strafeLegStartX = mob.getX();
-        strafeLegStartZ = mob.getZ();
-        nextFiringPositionTick = mob.tickCount;
-        nextApproachPathTick = mob.tickCount;
-        movementTarget = mob.getTarget();
-        if (isGun(mob.getMainHandItem())) {
-            operator.ensureDrawn();
-        }
+        movement.start();
+        if (isGun(mob.getMainHandItem())) operator.ensureDrawn();
     }
 
     @Override
     public void stop() {
-        if (mob instanceof Human human) {
-            BasicNavigationBudget.cancel(human);
-            RetreatRouteContinuity.cancelSearch(human);
-        }
-        retreatSearchQueued = false;
-        if (mob instanceof Human human) RangedFiringPosition.cancelVisibleSearch(human);
-        if (mob instanceof Human human && human.isCombatFiringShore()) {
-            human.stopSeekingShore();
-        }
-        if (isShoreSeeking()) {
-            clearLateralInputPreservingNavigation();
-        } else {
-            stopLateralMovement();
-        }
+        movement.stop();
         aimTicks = 0;
-        unseenTargetTicks = 0;
-        approachingTarget = false;
-        seekingFiringPosition = false;
-        manualStrafeUntilTick = 0;
-        strafeAnchorSet = false;
-        movementTarget = null;
         setAiming(false);
-        if (mob instanceof Human human) {
-            MovementSpeedController.combat(human, false);
-            GunAttackMovementState.clear(human);
-            MovementSpeedController.limit(human,MovementSpeedController.Limit.RANGED,1,false);
-        }
+        if (mob instanceof Human human) GunAttackMovementState.clear(human);
         operator.clearSprintLock();
     }
 
@@ -169,22 +112,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         if (mob instanceof Human human) {
             human.updateCombatFiringShore(target, 1.0D);
         }
-        if (movementTarget != target) {
-            if (!ShoreSeekingPolicy.shouldMoveTowardCombatTarget(isShoreSeeking())) {
-                clearLateralInputPreservingNavigation();
-            } else {
-                stopLateralMovement();
-                mob.getNavigation().stop();
-            }
-            movementTarget = target;
-            approachingTarget = false;
-            seekingFiringPosition = false;
-            strafeAnchorSet = false;
-            aimTicks = 0;
-            unseenTargetTicks = 0;
-            nextFiringPositionTick = mob.tickCount;
-            nextApproachPathTick = mob.tickCount;
-        }
+        if (movement.targetChanged(target)) aimTicks = 0;
 
         double distance = mob.distanceTo(target);
         GunRangePolicy.Band range = preferredRange(weapon);
@@ -192,7 +120,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 && SoldierOrder.isHoldingPosition(human);
         if(mob instanceof Human human) {
             if(human.isUsingItem()&&SpartanEquipmentCompat.isShield(human.getUseItem())) {
-                setAiming(false);stopLateralMovement();return;
+                setAiming(false);movement.stopLateralMovement();return;
             }
             if(GunCustody.beginCloseMeleeCounter(human)) { setAiming(false); return; }
         }
@@ -219,33 +147,27 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // Keep moving toward the marked player after a side fight, but do
             // not turn the beacon's pursuit range into extra weapon reach.
             aimTicks = 0;
-            unseenTargetTicks = 0;
+            movement.visible();
             setAiming(false);
             if (!ShoreSeekingPolicy.shouldMoveTowardCombatTarget(isShoreSeeking())) {
                 // The environmental MOVE lease must remain pointed at dry
                 // ground; this special beacon pursuit used to replace it with
                 // a path straight toward the player, often deeper into water.
-                clearLateralInputPreservingNavigation();
+                movement.clearLateralInputPreservingNavigation();
                 return;
             }
-            stopLateralMovement();
-            approachTarget(target, range);
-            enablePursuitSprint(human, target);
+            movement.stopLateralMovement();
+            movement.approachTarget(target, range);
+            movement.enablePursuitSprint(human, target);
             return;
         }
         if (!(mob instanceof Human human ? RangedShotClearance.canShoot(human, target)
                 : mob.getSensing().hasLineOfSight(target))) {
-            unseenTargetTicks = Math.min(OBSCURED_ADVANCE_AFTER_TICKS + 1,
-                    unseenTargetTicks + 1);
-            if (unseenTargetTicks == OBSCURED_ADVANCE_AFTER_TICKS) {
-                // A failed preferred-band search must not postpone the first
-                // closer-angle attempt for the rest of its retry interval.
-                nextFiringPositionTick = mob.tickCount;
-            }
+            movement.occluded();
             aimTicks = 0;
             setAiming(false);
             if (isShoreSeeking()) {
-                clearLateralInputPreservingNavigation();
+                movement.clearLateralInputPreservingNavigation();
                 return;
             }
             if (holdingPosition) {
@@ -256,18 +178,18 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             }
             moveForFiringPosition(target, distance, range, true);
             if (mob instanceof Human human) {
-                enablePursuitSprint(human, target);
+                movement.enablePursuitSprint(human, target);
             }
             return;
         }
-        unseenTargetTicks = 0;
+        movement.visible();
 
         if (isShoreSeeking()) {
             // LeaveWaterWhenIdleGoal owns navigation until the Human is dry.
             // Keep aiming and shooting below active without replacing its path.
-            clearLateralInputPreservingNavigation();
+            movement.clearLateralInputPreservingNavigation();
         } else if (holdingPosition) {
-            stopLateralMovement();
+            movement.stopLateralMovement();
             if (!SoldierOrder.isReturningToHoldPosition((Human)mob)) {
                 mob.getNavigation().stop();
             }
@@ -280,7 +202,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         if (distance * distance > fireRangeSqr) {
             aimTicks = 0;
             setAiming(false);
-            if (mob instanceof Human human) enablePursuitSprint(human, target);
+            if (mob instanceof Human human) movement.enablePursuitSprint(human, target);
             return;
         }
         if(mob instanceof Human human&&!HumanAttention.canAim(human,target)){
@@ -319,6 +241,13 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
         // the projectile, animation and AI target all agree.
         AimRotation shotAim = applyShotSpread(aim, weapon);
         operator.shoot(weapon, target, shotAim.pitch(), shotAim.yaw());
+    }
+
+    private void moveForFiringPosition(LivingEntity target, double distance, GunRangePolicy.Band range, boolean obscured) {
+        var plan = mob instanceof Human human
+                ? HumanCombatDirector.gunPositioning(human, target, distance, range, obscured)
+                : GunPositioning.choose(distance, Math.sqrt(firingRangeSqr(range)), range.maximum(), range.maximum(), false, obscured);
+        movement.moveForFiringPosition(target, distance, range, plan);
     }
 
     private void setAiming(boolean aiming) {
@@ -361,285 +290,6 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
                 limit
         );
         return new AimRotation(exactAim.pitch() + pitchOffset, exactAim.yaw() + yawOffset);
-    }
-
-    private void moveForFiringPosition(LivingEntity target, double distance,
-                                       GunRangePolicy.Band range, boolean obscured) {
-        if (mob instanceof Human human) {
-            RangedFiringMemory.observe(human,target,!obscured && distance*distance<=firingRangeSqr(range)
-                    && HumanAmmo.canUseGun(human,mob.getMainHandItem()),firingRangeSqr(range));
-            if(RangedFiringMemory.recover(human,target,1.0D)) {
-                clearLateralInputPreservingNavigation();
-                approachingTarget=false;seekingFiringPosition=true;
-                return;
-            }
-            if (CombatTerrainNavigation.hasWork(human, target)) stopLateralMovement();
-            var terrain = CombatTerrainNavigation.update(human, target, 1.0D,
-                    GunRangePolicy.directFiringMovement(obscured,distance*distance,firingRangeSqr(range))
-                            && HumanAmmo.canUseGun(human, mob.getMainHandItem()));
-            if (terrain.ownsMovement()) {
-                clearLateralInputPreservingNavigation();
-                approachingTarget = terrain == CombatTerrainNavigation.Decision.ROUTE;
-                seekingFiringPosition = false;
-                return;
-            }
-        }
-        if (obscured) {
-            stopLateralMovement();
-            boolean seekCloserAngle = unseenTargetTicks >= OBSCURED_ADVANCE_AFTER_TICKS
-                    && distance > OBSCURED_ADVANCE_DISTANCE;
-            if (distance > range.maximum() + 12.0D
-                    || (mob instanceof Human human && human.shouldUseWaterMovement()
-                    && distance > range.maximum())) {
-                // The firing-lane search is local. Close most of the gap first
-                // instead of repeatedly searching a 12-block neighborhood
-                // that cannot possibly reach the configured firing band.
-                if (seekingFiringPosition) {
-                    mob.getNavigation().stop();
-                    approachingTarget = false;
-                }
-                seekingFiringPosition = false;
-                approachTarget(target, seekCloserAngle
-                        ? OBSCURED_ADVANCE_DISTANCE : range.maximum());
-                return;
-            }
-            if (!seekingFiringPosition) {
-                // Cancel a stale straight-to-target path once cover blocks the
-                // shot. After sustained occlusion, keep the deliberate closer
-                // approach instead of cancelling it on every following tick.
-                if ((!seekCloserAngle && approachingTarget)
-                        || (!approachingTarget && !mob.getNavigation().isDone())) {
-                    mob.getNavigation().stop();
-                    approachingTarget = false;
-                }
-            }
-            if (seekCloserAngle && !seekingFiringPosition && approachingTarget
-                    && !mob.getNavigation().isDone() && !mob.getNavigation().isStuck()) {
-                approachTarget(target, OBSCURED_ADVANCE_DISTANCE);
-                return;
-            }
-            if ((mob.getNavigation().isDone() || mob.getNavigation().isStuck())
-                    && mob.tickCount >= nextFiringPositionTick
-                    && mob instanceof Human human) {
-                Path firingPath = RangedFiringPosition.findAttackWindowPath(
-                        human,
-                        target,
-                        seekCloserAngle
-                                ? Math.min(OBSCURED_ADVANCE_DISTANCE, range.minimum())
-                                : range.minimum(),
-                        seekCloserAngle
-                                ? Math.max(range.maximum(), distance)
-                                : range.maximum(),
-                        12,
-                        16
-                );
-                // After sustained occlusion, accept a nearer firing lane.
-                // Keeping one bounded search avoids doubling path probes.
-                if (firingPath != null) {
-                    if (RetreatPathSafety.tryMove(human, firingPath, 1.0D)) {
-                        RangedFiringMemory.selected(human,target,firingPath,firingRangeSqr(range));
-                        SoldierDialogue.event(human, "reposition");
-                        approachingTarget = true;
-                        seekingFiringPosition = true;
-                    }
-                } else if (RangedFiringPosition.hasPendingVisibleSearch(human)) {
-                    // Pending is not failure: do not abandon the lane search
-                    // for a different movement/shore policy after its first batch.
-                } else if (seekCloserAngle) {
-                    CombatTerrainNavigation.failed(human, target);
-                    seekingFiringPosition = false;
-                    approachTarget(target, OBSCURED_ADVANCE_DISTANCE);
-                    if (!approachingTarget && human.isInWater()) {
-                        human.beginCombatFiringShore(target, 1.0D);
-                    }
-                } else {
-                    CombatTerrainNavigation.failed(human, target);
-                    if (human.isInWater()) {
-                        human.beginCombatFiringShore(target, 1.0D);
-                    } else {
-                        mob.getNavigation().stop();
-                    }
-                    approachingTarget = false;
-                    seekingFiringPosition = false;
-                }
-                nextFiringPositionTick = mob.tickCount + RangedFiringPosition.retryDelay(
-                        human, firingPath, seekCloserAngle ? 20 : 40);
-            }
-            return;
-        }
-        seekingFiringPosition = false;
-
-        if (!GunRangePolicy.directFiringMovement(false,distance*distance,firingRangeSqr(range))) {
-            stopLateralMovement();
-            approachTarget(target, range);
-            return;
-        }
-        if(mob instanceof Human human && (GunCombatProfile.of(human,mob.getMainHandItem()).advance()||distance>range.maximum())) {
-            stopLateralMovement();
-            double desired=GunCombatProfile.of(human,mob.getMainHandItem()).advance()?MeleeCombatRange.reach(human,target):range.maximum();
-            if(distance>desired) approachTarget(target,desired);
-            else { mob.getNavigation().stop(); approachingTarget=false; }
-            return;
-        }
-        if (approachingTarget) {
-            // A direct chase path must not keep running after reaching gun range.
-            mob.getNavigation().stop();
-            approachingTarget = false;
-        }
-        strafeAround(target, range);
-    }
-
-    private void approachTarget(LivingEntity target, GunRangePolicy.Band range) {
-        approachTarget(target, range.maximum());
-    }
-
-    private void approachTarget(LivingEntity target, double desiredDistance) {
-        // A water navigator cannot always path to a target standing on the far
-        // bank. Do not retry A-star every tick or abandon the weapon's range.
-        if (mob instanceof Human pursuingHuman) {
-            approachingTarget = PursuitNavigation.update(pursuingHuman, target, 1.0D);
-        } else if (mob.tickCount >= nextApproachPathTick) {
-            approachingTarget = mob.getNavigation().moveTo(target, 1.0D);
-            nextApproachPathTick = mob.tickCount + 12;
-        }
-        if (mob instanceof Human human) {
-            human.approachCombatTargetInWater(target, desiredDistance, 1.0D);
-        }
-    }
-
-    /** Sprint on a gunner's non-firing approach path, never during a shot attempt. */
-    private void enablePursuitSprint(Human human, LivingEntity target) {
-        if (human.isFleeing
-                || human.isUsingItem()
-                || (human.hasOwner() && SoldierOrder.isHoldingPosition(human))
-                || !approachingTarget) {
-            return;
-        }
-        Path path = human.getNavigation().getPath();
-        if (path == null || path.isDone() || human.getNavigation().isDone()) {
-            return;
-        }
-        Vec3 pathDirection = NavigationSupport.horizontalDirection(
-                human.position(), Vec3.atCenterOf(path.getNextNodePos())
-        );
-        Vec3 targetDirection = NavigationSupport.horizontalDirection(human.position(), target.position());
-        if (pathDirection.lengthSqr() > 0.01D
-                && targetDirection.lengthSqr() > 0.01D
-                && pathDirection.dot(targetDirection) >= 0.55D) {
-            MovementSpeedController.combat(human, true);
-        }
-    }
-
-    private void strafeAround(LivingEntity target, GunRangePolicy.Band range) {
-        double anchorRadius = Math.max(6.0D,
-                Math.min(9.0D, (range.maximum() - range.minimum()) * 0.9D));
-        if (!strafeAnchorSet
-                || target.position().distanceToSqr(strafeAnchorTargetX, target.getY(),
-                        strafeAnchorTargetZ) > 36.0D
-                || strafeAnchorDistanceSqr() > anchorRadius * anchorRadius * 4.0D) {
-            manualStrafeUntilTick = 0;
-            strafeAnchorX = mob.getX();
-            strafeAnchorZ = mob.getZ();
-            strafeAnchorTargetX = target.getX();
-            strafeAnchorTargetZ = target.getZ();
-            strafeAnchorSet = true;
-        }
-
-        // Only a clear shot within effective firing reach reaches here. A lateral A-star route
-        // would make travel yaw own the body and reject a roughly 90-degree shot.
-        // Out-of-range pursuit, terrain, shore and survival movement return before this branch.
-        mob.getNavigation().stop();
-        clearDirectStrafe(); // Also replace a stale MoveControl MOVE_TO, even if no safe step exists.
-        if (mob instanceof Human human) {
-            LongRangeNavigation.cancel(human,LongRangeNavigation.Purpose.COMBAT);
-            RangedFiringPosition.cancelVisibleSearch(human);
-            RetreatRouteContinuity.cancelSearch(human);
-            retreatSearchQueued=false;
-            MovementContinuity.cancelStep(human);
-            HumanAttention.movement(human,human.getX(),human.getZ(),true);
-        }
-        if (manualStrafeUntilTick > 0 && mob.tickCount >= manualStrafeUntilTick) {
-            manualStrafeUntilTick = 0;
-            strafeDirection = -strafeDirection;
-        }
-        if (manualStrafeUntilTick == 0) {
-            strafeLegStartTick = mob.tickCount;
-            strafeLegStartX = mob.getX();
-            strafeLegStartZ = mob.getZ();
-            manualStrafeUntilTick = mob.tickCount + 32;
-        }
-        if (mob.tickCount - strafeLegStartTick >= 8
-                && (strafeAnchorDistanceSqr() >= anchorRadius * anchorRadius
-                || mob.horizontalCollision || strafeLegDisplacementSqr() < 0.16D)) {
-            strafeDirection = -strafeDirection;
-            strafeLegStartTick = mob.tickCount;
-            strafeLegStartX = mob.getX();
-            strafeLegStartZ = mob.getZ();
-        }
-        if (mob instanceof Human human) {
-            MovementSpeedController.limit(human,MovementSpeedController.Limit.RANGED,
-                    GunCombatProfile.of(human,human.getMainHandItem()).movement(),true);
-            strafing = RangedTerrainCombat.strafeFacingTarget(human,target,radialStrafeInput(target,range),strafeDirection);
-            if(!strafing) {
-                MovementSpeedController.limit(human,MovementSpeedController.Limit.RANGED,1,false);
-                approachTarget(target,range.maximum());
-            }
-        } else {
-            mob.lookAt(target, 30.0F, 30.0F);
-            mob.getMoveControl().strafe(radialStrafeInput(target, range), strafeDirection);
-            strafing = true;
-        }
-    }
-
-    private void clearDirectStrafe() {
-        if (mob instanceof Human human) human.clearRangedStrafeMotion();
-        mob.getMoveControl().strafe(0.0F, 0.0F);
-        mob.setZza(0.0F);
-        mob.setXxa(0.0F);
-        strafing = false;
-    }
-
-    private double strafeLegDisplacementSqr() {
-        double dx = mob.getX() - strafeLegStartX;
-        double dz = mob.getZ() - strafeLegStartZ;
-        return dx * dx + dz * dz;
-    }
-
-    private double strafeAnchorDistanceSqr() {
-        double dx = mob.getX() - strafeAnchorX;
-        double dz = mob.getZ() - strafeAnchorZ;
-        return dx * dx + dz * dz;
-    }
-
-    private float radialStrafeInput(LivingEntity target, GunRangePolicy.Band range) {
-        double ideal = (range.minimum() + range.maximum()) * 0.5D;
-        double distance = mob.distanceTo(target);
-        if (distance > ideal + 1.0D) return 0.4F;
-        if (distance < ideal - 1.0D) return -0.4F;
-        return 0.0F;
-    }
-
-    private void stopLateralMovement() {
-        strafeAnchorSet = false;
-        if (!strafing && manualStrafeUntilTick == 0) {
-            return;
-        }
-        boolean terrainRoute = mob instanceof Human human && CombatTerrainNavigation.ownsRoute(human);
-        if (!terrainRoute) mob.getMoveControl().strafe(0.0F, 0.0F);
-        else if (mob instanceof Human human) human.clearRangedStrafeMotion();
-        mob.setZza(0.0F);
-        mob.setXxa(0.0F);
-        strafing = false;
-        manualStrafeUntilTick = 0;
-    }
-
-    private void clearLateralInputPreservingNavigation() {
-        // Do not issue even a zero-valued STRAFE command here. HumanMoveControl
-        // treats STRAFE as an exclusive water-movement operation, which can
-        // consume the same tick the shore navigator needs to advance its path.
-        strafeAnchorSet = false;
-        strafing = false;
-        manualStrafeUntilTick = 0;
     }
 
     private boolean isShoreSeeking() {

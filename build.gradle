@@ -311,7 +311,7 @@ tasks.register('sanitizeStructureWaystones', JavaExec) {
     'club.someoneice.humangunner': [
         'BackgroundThrowingWiringTest', 'BeaconReportPolicyTest', 'BehaviorDebugTest',
         'CombatStrategySetTest', 'CommandViewPatchTest', 'GrowthConfigTest',
-        'GrowthPersistenceTest', 'GrowthProgressionTest', 'GunDoctrineTest',
+        'GrowthPersistenceTest', 'GrowthProgressionTest', 'GunDoctrineTest', 'GunPositioningTest',
         'MeleeOpportunityTest', 'MovementAuthorityWiringTest', 'RangedCombatProfileTest',
         'RecoverySelectionTest', 'ScopedWorkBudgetTest', 'ShieldDefensePolicyTest', 'TargetSharingPolicyTest'
     ]

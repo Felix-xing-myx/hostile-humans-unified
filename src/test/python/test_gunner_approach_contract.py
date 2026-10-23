@@ -20,17 +20,19 @@ class GunnerApproachContract(unittest.TestCase):
 
     def test_clear_in_range_spacing_does_not_require_preferred_band_navigation(self):
         code = (PKG / "GunnerGoal.java").read_text(encoding="utf-8")
-        movement = code.split("private void moveForFiringPosition", 1)[1].split("private void approachTarget", 1)[0]
+        executor = (PKG / "GunMovementExecution.java").read_text(encoding="utf-8")
+        movement = executor.split("void moveForFiringPosition", 1)[1].split("void approachTarget", 1)[0]
         gate = movement.split("CombatTerrainNavigation.update(", 1)[1].split("if (terrain.ownsMovement())", 1)[0]
         self.assertIn("GunRangePolicy.directFiringMovement(obscured,distance*distance,firingRangeSqr(range))", gate)
         self.assertIn("HumanAmmo.canUseGun", gate)
-        self.assertIn("if (!GunRangePolicy.directFiringMovement(false,distance*distance,firingRangeSqr(range)))", movement)
-        self.assertIn("PursuitNavigation.update(pursuingHuman, target, 1.0D)", code)
+        self.assertIn("HumanCombatDirector.gunPositioning", code)
+        self.assertIn("GunPositioning.Mode.APPROACH", movement)
+        self.assertIn("PursuitNavigation.update(pursuingHuman, target, 1.0D)", executor)
 
     def test_existing_order_and_environment_leases_remain(self):
         code = (PKG / "GunnerGoal.java").read_text(encoding="utf-8")
         self.assertIn("SoldierOrder.isHoldingPosition(human)", code)
-        self.assertIn("if (terrain.ownsMovement())", code)
+        self.assertIn("if (terrain.ownsMovement())", (PKG / "GunMovementExecution.java").read_text(encoding="utf-8"))
         self.assertIn("if (isShoreSeeking())", code)
         pursuit = (PKG / "PursuitNavigation.java").read_text(encoding="utf-8")
         self.assertIn("LongRangeNavigation.Purpose.COMBAT", pursuit)

@@ -20,6 +20,14 @@ public final class HumanCombatDirector {
         return CombatStrategySet.forFaction(FactionEquipmentConfig.key(human));
     }
 
+    /** Attack facts plus selected doctrine produce an intent; executors keep route and safety ownership. */
+    static GunPositioning.Plan gunPositioning(Human human, LivingEntity target, double distance,
+                                               GunRangePolicy.Band range, boolean obscured) {
+        boolean advance = GunCombatProfile.of(human, human.getMainHandItem()).advance();
+        return GunPositioning.choose(distance, range.fireRange(), range.maximum(),
+                advance ? MeleeCombatRange.reach(human, target) : range.maximum(), advance, obscured);
+    }
+
     public static void tick(Human human) {
         if (human.level().isClientSide) return;
         var shields = human.humanGunner$shieldDefense();

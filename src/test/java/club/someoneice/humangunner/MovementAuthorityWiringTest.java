@@ -26,6 +26,19 @@ public final class MovementAuthorityWiringTest {
         }
         check(calls("club/someoneice/humangunner/mixin/HumanGoalSelectorExecutionMixin", "hostileHumans$admitSelectedGoal", "start"), "selector owns admission seam");
         check(calls("club/someoneice/humangunner/mixin/HumanWrappedGoalExecutionMixin", "hostileHumans$stopActualDelegate", "stopDelegate"), "native delegate stop is scoped");
+        String gunner = "club/someoneice/humangunner/GunnerGoal";
+        String gunMovement = "club/someoneice/humangunner/GunMovementExecution";
+        check(calls(gunner, "moveForFiringPosition", "gunPositioning")
+                && calls(gunner, "moveForFiringPosition", "moveForFiringPosition"), "attack facts pass hub command to movement execution");
+        check(calls(gunner, "start", "start") && calls(gunner, "stop", "stop"), "native goal retains movement lifecycle");
+        check(!node(gunMovement).superName.equals("net/minecraft/world/entity/ai/goal/Goal"), "movement execution adds no native scheduler");
+        for (var method : node(gunMovement).methods) for (var instruction : method.instructions) {
+            if (instruction instanceof MethodInsnNode call) {
+                check(!call.name.equals("shoot") && !call.name.equals("beginReload")
+                        && !call.name.equals("startUsingItem") && !call.name.equals("doHurtTarget"), "movement cannot submit weapon outcomes");
+                check(!call.name.equals("request") && !call.name.equals("acquire"), "movement reuses original goal admission");
+            }
+        }
         System.out.println("MovementAuthorityWiringTest passed");
     }
     private static ClassNode node(String owner) throws Exception {

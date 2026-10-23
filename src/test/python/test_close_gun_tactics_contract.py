@@ -42,7 +42,7 @@ class CloseRangedTacticsContract(unittest.TestCase):
         self.assertNotIn('tickCloseMeleeDefense(', goal)
         self.assertNotIn('getPosAway', goal)
         self.assertNotIn('doHurtTarget(', goal)
-        self.assertIn('RangedTerrainCombat.strafeFacingTarget', goal)
+        self.assertIn('RangedTerrainCombat.strafeFacingTarget', (PKG / 'GunMovementExecution.java').read_text(encoding='utf-8'))
 
     def test_whole_route_budget_and_command_boundary(self):
         code = (PKG / 'CloseRangedTactics.java').read_text(encoding='utf-8')

@@ -14,7 +14,7 @@ def read(path):
 class CombatTerrainContract(unittest.TestCase):
     def test_weapon_and_defense_controllers_consume_shared_decision(self):
         for path in [ENTITY / "ai/goal/BowAttack.java", ENTITY / "ai/goal/CrossbowGoal.java",
-                     COMBAT / "GunnerGoal.java", COMBAT / "TridentHybridGoal.java",
+                     COMBAT / "GunMovementExecution.java", COMBAT / "TridentHybridGoal.java",
                      COMBAT / "PursuitNavigation.java", COMBAT / "AdaptiveCombatGoal.java"]:
             with self.subTest(path=path.name):
                 source = read(path)
@@ -77,15 +77,15 @@ class CombatTerrainContract(unittest.TestCase):
         melee = read(ENTITY / "ai/goal/MeleeAttackGoal.java")
         start = melee.split("public void start()", 1)[1].split("public void stop()", 1)[0]
         self.assertIn("CombatTerrainNavigation.hasWork", start)
-        gun = read(COMBAT / "GunnerGoal.java")
-        cleanup = gun.split("private void stopLateralMovement()", 1)[1].split("private void clearLateralInput", 1)[0]
+        gun = read(COMBAT / "GunMovementExecution.java")
+        cleanup = gun.split("void stopLateralMovement()", 1)[1].split("void clearLateralInput", 1)[0]
         self.assertNotIn("getNavigation().stop()", cleanup)
         self.assertIn("if (!terrainRoute) mob.getMoveControl().strafe", cleanup)
         trident_stop = read(COMBAT / "TridentHybridGoal.java").split("public void stop()", 1)[1].split("public boolean requiresUpdateEveryTick", 1)[0]
         self.assertIn("if (!CombatTerrainNavigation.ownsRoute(human))", trident_stop)
 
     def test_gunner_local_strafe_is_direct_and_keeps_facing(self):
-        gun = read(COMBAT / "GunnerGoal.java")
+        gun = read(COMBAT / "GunMovementExecution.java")
         local = gun.split("private void strafeAround(", 1)[1].split("private void clearDirectStrafe", 1)[0]
         self.assertIn("RangedTerrainCombat.strafeFacingTarget", local)
         self.assertNotIn("BasicNavigationBudget", local)
