@@ -1,6 +1,6 @@
 # 敌人感知源码地图
 
-玩法手册：`E:\个人知识库\Hostile Humans Unified\02-战斗系统\01-感知与目标\敌人发现、警觉与锁定.md`；开发手册：`07-开发与观察/敌人感知原理与修改入口.md`。完整调度图从知识库的“战斗系统总览”进入。导航诊断见 [NAVIGATION_DEBUG.md](NAVIGATION_DEBUG.md)。
+玩法手册：`E:\个人知识库\Hostile Humans Unified\02-控制系统\02-战斗系统\01-感知与目标\敌人发现、警觉与锁定.md`；开发手册：`07-开发与观察/敌人感知原理与修改入口.md`。完整调度图从知识库的“战斗系统总览”进入。导航诊断见 [NAVIGATION_DEBUG.md](NAVIGATION_DEBUG.md)。
 
 
 ## 友善动物与中立生物
