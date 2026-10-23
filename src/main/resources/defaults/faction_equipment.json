@@ -188,7 +188,7 @@
         "1": 92,
         "2": 0
       },
-      "gun_chance": 0.14,
+      "gun_chance": 0.05,
       "gun_core_chance": 0.85,
       "gun_core": {
         "pistol": 0,
@@ -277,7 +277,7 @@
         "shotgun": 0,
         "rifle": 40,
         "mg": 30,
-        "sniper": 30,
+        "sniper": 15,
         "launcher": 0,
         "other": 0
       },
@@ -360,7 +360,7 @@
         "shotgun": 0,
         "rifle": 70,
         "mg": 0,
-        "sniper": 30,
+        "sniper": 10,
         "launcher": 0,
         "other": 0
       },
@@ -433,7 +433,7 @@
         "1": 92,
         "2": 0
       },
-      "gun_chance": 0.12,
+      "gun_chance": 0.05,
       "gun_core_chance": 0.8,
       "gun_core": {
         "pistol": 25,
@@ -515,7 +515,7 @@
         "1": 95,
         "2": 0
       },
-      "gun_chance": 0.1,
+      "gun_chance": 0.05,
       "gun_core_chance": 0,
       "gun_core": {
         "pistol": 20,
@@ -594,7 +594,7 @@
         "1": 90,
         "2": 10
       },
-      "gun_chance": 0.48,
+      "gun_chance": 0.25,
       "gun_core_chance": 0.85,
       "gun_core": {
         "pistol": 0,
@@ -675,7 +675,7 @@
         "1": 60,
         "2": 40
       },
-      "gun_chance": 0.45,
+      "gun_chance": 0.3,
       "gun_core_chance": 0.65,
       "gun_core": {
         "pistol": 0,
@@ -683,7 +683,7 @@
         "shotgun": 0,
         "rifle": 40,
         "mg": 30,
-        "sniper": 30,
+        "sniper": 15,
         "launcher": 0,
         "other": 0
       },
@@ -758,7 +758,7 @@
         "1": 90,
         "2": 10
       },
-      "gun_chance": 0.4,
+      "gun_chance": 0.3,
       "gun_core_chance": 0.7,
       "gun_core": {
         "pistol": 0,
@@ -766,7 +766,7 @@
         "shotgun": 0,
         "rifle": 70,
         "mg": 0,
-        "sniper": 30,
+        "sniper": 10,
         "launcher": 0,
         "other": 0
       },
@@ -839,7 +839,7 @@
         "1": 85,
         "2": 15
       },
-      "gun_chance": 0.45,
+      "gun_chance": 0.2,
       "gun_core_chance": 0.8,
       "gun_core": {
         "pistol": 25,
@@ -921,7 +921,7 @@
         "1": 90,
         "2": 10
       },
-      "gun_chance": 0.4,
+      "gun_chance": 0.3,
       "gun_core_chance": 0,
       "gun_core": {
         "pistol": 20,
@@ -1000,7 +1000,7 @@
         "1": 65,
         "2": 35
       },
-      "gun_chance": 0.78,
+      "gun_chance": 0.5,
       "gun_core_chance": 0.85,
       "gun_core": {
         "pistol": 0,
@@ -1089,7 +1089,7 @@
         "shotgun": 0,
         "rifle": 40,
         "mg": 30,
-        "sniper": 30,
+        "sniper": 15,
         "launcher": 0,
         "other": 0
       },
@@ -1164,7 +1164,7 @@
         "1": 75,
         "2": 25
       },
-      "gun_chance": 0.7,
+      "gun_chance": 0.65,
       "gun_core_chance": 0.7,
       "gun_core": {
         "pistol": 0,
@@ -1172,7 +1172,7 @@
         "shotgun": 0,
         "rifle": 70,
         "mg": 0,
-        "sniper": 30,
+        "sniper": 10,
         "launcher": 0,
         "other": 0
       },
@@ -1245,7 +1245,7 @@
         "1": 50,
         "2": 50
       },
-      "gun_chance": 0.75,
+      "gun_chance": 0.6,
       "gun_core_chance": 0.8,
       "gun_core": {
         "pistol": 25,
@@ -1327,7 +1327,7 @@
         "1": 60,
         "2": 40
       },
-      "gun_chance": 0.7,
+      "gun_chance": 0.6,
       "gun_core_chance": 0,
       "gun_core": {
         "pistol": 20,

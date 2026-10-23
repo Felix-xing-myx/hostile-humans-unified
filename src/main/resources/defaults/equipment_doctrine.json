@@ -418,7 +418,7 @@
         25,
         25
       ],
-      "ranged_chance": 0.1,
+      "ranged_chance": 0.2,
       "melee_archetype_weights": {
         "axe": 0,
         "sword": 30,
@@ -718,7 +718,7 @@
         25,
         25
       ],
-      "ranged_chance": 0.2,
+      "ranged_chance": 0.4,
       "melee_archetype_weights": {
         "axe": 0,
         "sword": 30,
@@ -1018,7 +1018,7 @@
         25,
         25
       ],
-      "ranged_chance": 0.3,
+      "ranged_chance": 0.6,
       "melee_archetype_weights": {
         "axe": 0,
         "sword": 30,
@@ -1122,7 +1122,7 @@
         20,
         20
       ],
-      "ranged_chance": 0.2,
+      "ranged_chance": 0.4,
       "melee_archetype_weights": {},
       "shield_archetype_weights": {},
       "ranged_archetype_weights": {},

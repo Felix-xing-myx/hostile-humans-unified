@@ -37,7 +37,7 @@ public final class SpecialtyAttributes {
         RandomSource random = RandomSource.create(seed);
         SpecialtyConfig config = SpecialtyConfig.get();
         boolean boss = HumanFactions.isBoss(human);
-        double budget = boss ? HumanFactions.bossBudget() : sampleBudget(random, config);
+        double budget = boss ? HumanFactions.bossBudget() : sampleBudget(random, config, TierAttributes.key(human));
         SpecialtyData.Definitions data = SpecialtyData.get();
         double[] tilts = ones();
         for (int i = 0; i < DIMENSIONS; i++) tilts[i] = Math.exp(random.nextGaussian() * config.deviationSigma());
@@ -65,6 +65,11 @@ public final class SpecialtyAttributes {
     static double sampleBudget(RandomSource random, SpecialtyConfig config) {
         return SpecialtyBudgetSampler.sample(random.nextDouble(), config.budgetMean(), config.budgetSigma(),
                 config.budgetMin(), config.budgetMax());
+    }
+
+    /** Truncate the base draw first; never clamp away the tier's additional budget afterwards. */
+    static double sampleBudget(RandomSource random, SpecialtyConfig config, String tier) {
+        return sampleBudget(random, config) * config.tierBudgetMultiplier(tier);
     }
 
     /** Returns true when a payload exists, including unknown future schemas which must be retained. */

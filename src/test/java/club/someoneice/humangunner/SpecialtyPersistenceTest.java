@@ -52,18 +52,79 @@ public final class SpecialtyPersistenceTest {
         close(SpecialtyAttributes.storedMultiplier(invalid, SpecialtyAttributes.Dimension.HEALTH), 1, "whole invalid vector neutralized");
 
         SpecialtyConfig defaults = SpecialtyConfig.defaults();
+        close(defaults.budgetMean(), 1.1, "new base mean");
+        close(defaults.budgetMax(), 1.4, "new base truncation maximum");
+        var prepared = SpecialtyConfig.prepare(new com.google.gson.JsonObject());
+        for (String tier : new String[]{"roamer", "tier1", "tier2", "tier3"}) {
+            double factor = switch (tier) { case "tier2" -> 1.1; case "tier3" -> 1.2; default -> 1; };
+            close(prepared.tierBudgetMultiplier(tier), factor, "prepared default tier factor");
+            for (long seed = 0; seed < 128; seed++) {
+                double base = SpecialtyAttributes.sampleBudget(RandomSource.create(seed), defaults);
+                double scaled = SpecialtyAttributes.sampleBudget(RandomSource.create(seed), defaults, tier);
+                close(scaled, base * factor, "same draw is multiplied after truncation");
+                check(scaled >= .8 * factor && scaled <= 1.4 * factor, "tier-specific range");
+            }
+        }
+        double topThird = SpecialtyBudgetSampler.sample(Math.nextDown(1.0), 1.1, .1, .8, 1.4)
+                * defaults.tierBudgetMultiplier("tier3");
+        check(topThird > 1.67 && topThird <= 1.68, "tier budget is not clamped back to the base range");
+        var customData = com.google.gson.JsonParser.parseString(
+                "{\"budget_tier_multipliers\":{\"tier2\":1.3}}").getAsJsonObject();
+        close(SpecialtyConfig.prepare(customData).tierBudgetMultiplier("tier2"), 1.3, "custom tier factor");
+        close(SpecialtyConfig.prepare(customData).tierBudgetMultiplier("tier3"), 1.2, "missing tier keeps default");
+        for (String bad : new String[]{"-1", "0", "4", "\"NaN\""}) {
+            var invalidData = com.google.gson.JsonParser.parseString(
+                    "{\"budget_tier_multipliers\":{\"tier2\":" + bad + "}}").getAsJsonObject();
+            boolean rejected = false;
+            try { SpecialtyConfig.prepare(invalidData); } catch (RuntimeException expected) { rejected = true; }
+            check(rejected, "invalid tier factor rejected");
+        }
+        checkTierBudgetFeasibility(defaults);
         RandomSource random = RandomSource.create(123);
         double total = 0; int high = 0;
         for (int i = 0; i < 100000; i++) {
             double budget = SpecialtyAttributes.sampleBudget(random, defaults);
-            check(budget >= .8 && budget <= 1.3, "truncated budget bounds");
+            check(budget >= .8 && budget <= 1.4, "truncated budget bounds");
             total += budget; if (budget > 1.15) high++;
         }
-        check(Math.abs(total / 100000 - 1.05) < .002, "budget mean");
-        check(Math.abs(high / 100000.0 - .1544) < .006, "resampling distribution");
+        check(Math.abs(total / 100000 - 1.1) < .002, "budget mean");
+        check(Math.abs(high / 100000.0 - .3080) < .006, "resampling distribution");
         var degenerate = new SpecialtyConfig(true, 2, 0, .75, 1.25, 0, .3, .25, .5, 1.8);
         close(SpecialtyAttributes.sampleBudget(random, degenerate), 1.25, "bounded sigma-zero fallback");
         System.out.println("SpecialtyPersistenceTest: all checks passed");
+    }
+    /** Real bundled definitions, all caps and absolute limits: tier support is an allocation guarantee. */
+    private static void checkTierBudgetFeasibility(SpecialtyConfig config) {
+        var dimensions = resource("data/hostile_humans_unified/specialty/dimensions.json");
+        var definitions = SpecialtyData.parse(java.util.Map.of(
+                new net.minecraft.resources.ResourceLocation(HumanGunner.MOD_ID, "dimensions"), dimensions));
+        for (String faction : new String[]{"crimson", "azure", "verdant", "ashen"}) {
+            var raw = resource("data/hostile_humans_unified/factions/" + faction + ".json")
+                    .getAsJsonObject().getAsJsonArray("allocation_preference");
+            double[] preference = new double[SpecialtyAttributes.DIMENSIONS];
+            for (int i = 0; i < preference.length; i++) preference[i] = raw.get(i).getAsDouble();
+            for (int step = 0; step <= 80; step++) {
+                double budget = .8 + step * .01;
+                for (double tilt : new double[]{.1, 1, 10}) {
+                    double[] tilts = SpecialtyAttributes.ones();
+                    for (int i = 0; i < tilts.length; i++) tilts[i] = (i & 1) == 0 ? tilt : 1 / tilt;
+                    var result = SpecialtyAllocation.allocate(budget, preference, definitions.costs(),
+                            definitions.caps(config.deviationCap()), tilts, config.capBudgetExponent(),
+                            config.multiplierMin(), config.multiplierMax(), false);
+                    check(result.feasible(), faction + " budget through 1.6 is feasible");
+                    check(Math.abs(result.residual()) < 1e-7, "feasible budget is fully spent");
+                    for (int i = 0; i < result.multipliers().length; i++)
+                        check(result.multipliers()[i] <= (i == 12 ? .45 : 1.8) + 1e-9,
+                                "expanded relative bounds retain absolute ceilings");
+                }
+            }
+        }
+    }
+    private static com.google.gson.JsonElement resource(String path) {
+        try (var stream = SpecialtyPersistenceTest.class.getClassLoader().getResourceAsStream(path)) {
+            if (stream == null) throw new AssertionError("missing resource " + path);
+            return com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(stream, java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.io.IOException failure) { throw new AssertionError(failure); }
     }
     private static void close(double actual, double expected, String message) { check(Math.abs(actual-expected)<1e-6, message); }
     private static void check(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
