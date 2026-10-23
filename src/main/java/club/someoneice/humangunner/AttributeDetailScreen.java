@@ -72,15 +72,18 @@ public final class AttributeDetailScreen extends Screen {
             default->number(row.value())+" "+text("unit."+row.unit()).getString();
         };
     }
-    private static String arrow(AttributeDetailSnapshot.Row row){return !row.known()?"?":row.value()>row.baseline()+1e-6?"↑":row.value()<row.baseline()-1e-6?"↓":"≈";}
-    private static int color(AttributeDetailSnapshot.Row row){return !row.known()?0xB9C1CA:row.value()>row.baseline()+1e-6?0x95D7AB:row.value()<row.baseline()-1e-6?0xE59A94:0xD7DFE7;}
+    private static boolean comparable(AttributeDetailSnapshot.Row row) {
+        return row.known() && row.notes().stream().noneMatch(note -> note.key().equals("reference_unknown"));
+    }
+    private static String arrow(AttributeDetailSnapshot.Row row){return !comparable(row)?"?":row.value()>row.baseline()+1e-6?"↑":row.value()<row.baseline()-1e-6?"↓":"≈";}
+    private static int color(AttributeDetailSnapshot.Row row){return !comparable(row)?0xB9C1CA:row.value()>row.baseline()+1e-6?0x95D7AB:row.value()<row.baseline()-1e-6?0xE59A94:0xD7DFE7;}
     private List<Component> detail(AttributeDetailSnapshot.Row row){
         List<Component> result=new ArrayList<>();
         result.add(text("stored_effective",number(row.stored()),number(row.effective())));
         result.add(text("base",number(row.base())));
         for(var layer:row.layers())result.add(text("layer_line",text("layer."+layer.key()),text("operation."+layer.operation()),number(layer.value())));
         result.add(text("final",displayed(row)));
-        result.add(text(!row.known()?"comparison.unknown":row.value()>row.baseline()+1e-6?"comparison.higher":row.value()<row.baseline()-1e-6?"comparison.lower":"comparison.similar",number(row.baseline())));
+        result.add(text(!comparable(row)?"comparison.unknown":row.value()>row.baseline()+1e-6?"comparison.higher":row.value()<row.baseline()-1e-6?"comparison.lower":"comparison.similar",number(row.baseline())));
         for(var note:row.notes()) {
             if(note.key().startsWith("gun_category_"))
                 result.add(text("gun_category_value", text("gun_category."+note.key().substring("gun_category_".length())), note.detail()));

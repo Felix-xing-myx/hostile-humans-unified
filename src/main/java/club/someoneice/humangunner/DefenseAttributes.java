@@ -30,12 +30,17 @@ final class DefenseAttributes {
 
     /** Read-only projection. Never remove the live modifier to ask what the value would be without it. */
     static double rawWithoutOwned(AttributeInstance attribute,UUID id) {
+        return projectRaw(attribute, attribute.getBaseValue(), id);
+    }
+
+    /** Shared read-only native-operation projection; null excludes no modifier. */
+    static double projectRaw(AttributeInstance attribute,double base,UUID excluded) {
         var modifiers=attribute.getModifiers().stream().map(modifier->new DefenseAttributePolicy.Modifier(modifier.getId(),
                 switch(modifier.getOperation()) {
                     case ADDITION -> DefenseAttributePolicy.Operation.ADDITION;
                     case MULTIPLY_BASE -> DefenseAttributePolicy.Operation.MULTIPLY_BASE;
                     case MULTIPLY_TOTAL -> DefenseAttributePolicy.Operation.MULTIPLY_TOTAL;
                 },modifier.getAmount())).toList();
-        return DefenseAttributePolicy.rawWithout(attribute.getBaseValue(),modifiers,id);
+        return DefenseAttributePolicy.rawWithout(base,modifiers,excluded);
     }
 }

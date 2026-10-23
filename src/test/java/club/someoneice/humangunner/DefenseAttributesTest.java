@@ -17,6 +17,15 @@ public final class DefenseAttributesTest {
         bootstrapFlag.setAccessible(true);
         bootstrapFlag.setBoolean(null,true);
         BuiltInRegistries.bootStrap();
+        var health = new AttributeInstance(Attributes.MAX_HEALTH, ignored -> { });
+        health.setBaseValue(20);
+        health.addPermanentModifier(new AttributeModifier(UUID.randomUUID(), "gear", 4, AttributeModifier.Operation.ADDITION));
+        health.addPermanentModifier(new AttributeModifier(UUID.randomUUID(), "base effect", .25, AttributeModifier.Operation.MULTIPLY_BASE));
+        health.addPermanentModifier(new AttributeModifier(UUID.randomUUID(), "total effect", .5, AttributeModifier.Operation.MULTIPLY_TOTAL));
+        var healthBefore = health.save();
+        close(AttributeReference.physicalValue(health, 30), 63.75, "reference preserves all native modifier operations");
+        close(health.getValue(), 45, "reference leaves real health attribute unchanged");
+        check(healthBefore.equals(health.save()), "reference never writes attribute data");
         var type=Attributes.ARMOR;
         var armor=new AttributeInstance(type,ignored->{});
         UUID gear=UUID.randomUUID(),potion=UUID.randomUUID(),external=UUID.randomUUID();
