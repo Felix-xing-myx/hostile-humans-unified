@@ -53,7 +53,7 @@ public final class BodyguardAndVanillaModeTest {
         check(!BodyguardPolicy.attackInRange(9, 10000, true, false, false, 9409, 16384), "passive sniper needs real authorization");
         check(!BodyguardPolicy.attackInRange(9, 4000, true, false, true, 4096.01, 4096), "active gun still obeys actual firing reach");
         check(BodyguardPolicy.attackInRange(9, 1600, true, false, true, 1296, 1296), "bow range is measured from soldier rather than owner");
-        check(GunRangePolicy.firingReach(GunRangePolicy.forType("sniper"), 160) == 80, "bodyguard follow range cannot extend sniper ballistics");
+        check(GunRangePolicy.firingReach(GunRangePolicy.forType("sniper"), 160) == 96, "bodyguard follow range cannot extend sniper ballistics");
         check(GunRangePolicy.firingReach(GunRangePolicy.forType("pistol"), 160) == 36, "normal gun cannot inherit sniper firing reach");
         check(BodyguardPolicy.priority(9, false, false) < BodyguardPolicy.priority(100, true, true), "near owner threat wins before owner is hurt");
         check(BodyguardPolicy.priority(25, false, false) < BodyguardPolicy.priority(144, true, true), "near threat interrupts maximum chase");

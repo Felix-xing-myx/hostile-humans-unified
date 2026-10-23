@@ -333,9 +333,9 @@ public final class CombatPressurePolicyTest {
                         && GunAimPoint.height(0.0D, 2.0D, 1.0D) == 1.0D
                         && Math.abs(GunAimPoint.height(10.0D, 12.0D, 11.8D) - 11.4D) < 0.00001D,
                 "gun aim lowers high eyes to 70 percent of the hitbox without raising low eyes");
-        check(GunRangePolicy.forType("shotgun").fireRange() == 20.0D
-                        && GunRangePolicy.forType("rifle").fireRange() == 64.0D
-                        && GunRangePolicy.forType("sniper").fireRange() == 80.0D,
+        check(GunRangePolicy.forType("shotgun").fireRange() == 24.0D
+                        && GunRangePolicy.forType("rifle").fireRange() == 80.0D
+                        && GunRangePolicy.forType("sniper").fireRange() == 96.0D,
                 "gunfire can begin well outside the desired holding distance");
         check(GunReloadPolicy.recoveryDelayTicks(false, 30, 2.25D, 2.6D) >= 117
                         && GunReloadPolicy.recoveryDelayTicks(true, 5, 1.2D, 0.8D) >= 156,

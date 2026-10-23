@@ -79,7 +79,8 @@ public final class FactionCombatTransitionTest {
                 "dual speed/damage require a uniquely bound pair in the actual hands");
         check(calls("club/someoneice/humangunner/NpcDualWield", "candidate", "supportsOneHand"),
                 "actual BC single-hand capability remains mandatory");
-        check(calls("com/craftix/hostile_humans/entity/entities/Human", "finishBetterCombatUpswing", "strike"),
+        check(callsIncludingLambdas("com/craftix/hostile_humans/entity/entities/Human", "finishBetterCombatUpswing",
+                "club/someoneice/humangunner/NpcMeleeWeaponContext", "strike"),
                 "real delayed impact uses scoped attacking weapon rather than physical hand swaps");
         System.out.println("FactionCombatTransitionTest passed");
     }
@@ -129,6 +130,32 @@ public final class FactionCombatTransitionTest {
                 "committed profile pins physical offhand for geometry, damage and wear");
     }
 
+    /** A scoped strike may live in a javac-generated lambda; follow its actual method handle. */
+    private static boolean callsIncludingLambdas(String owner, String entry, String calledOwner,
+                                                String calledName) throws Exception {
+        var node = new org.objectweb.asm.tree.ClassNode();
+        try (var stream = FactionCombatTransitionTest.class.getClassLoader().getResourceAsStream(owner+".class")) {
+            if (stream == null) throw new AssertionError("Missing compiled class: " + owner);
+            new org.objectweb.asm.ClassReader(stream).accept(node, 0);
+        }
+        var pending = new java.util.ArrayDeque<String>();
+        var visited = new java.util.HashSet<String>();
+        pending.add(entry);
+        while (!pending.isEmpty()) {
+            String name = pending.removeFirst();
+            if (!visited.add(name)) continue;
+            for (var method : node.methods) if (method.name.equals(name))
+                for (var instruction : method.instructions) {
+                    if (instruction instanceof org.objectweb.asm.tree.MethodInsnNode call
+                            && call.owner.equals(calledOwner) && call.name.equals(calledName)) return true;
+                    if (instruction instanceof org.objectweb.asm.tree.InvokeDynamicInsnNode dynamic)
+                        for (Object argument : dynamic.bsmArgs)
+                            if (argument instanceof org.objectweb.asm.Handle handle && handle.getOwner().equals(owner)
+                                    && handle.getName().startsWith("lambda$")) pending.add(handle.getName());
+                }
+        }
+        return false;
+    }
     private static boolean calls(String owner, String methodName, String calledName) throws Exception {
         var node = new org.objectweb.asm.tree.ClassNode();
         try (var stream = FactionCombatTransitionTest.class.getClassLoader().getResourceAsStream(owner+".class")) {

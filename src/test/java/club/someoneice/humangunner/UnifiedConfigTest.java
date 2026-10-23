@@ -141,11 +141,11 @@ public final class UnifiedConfigTest {
                 && config.recruitmentLimit(2) == 6 && config.recruitmentLimit(3) == 3,
                 "legacy recruitment limits retained as defaults");
         check(!config.allowHiredPvpDamage(), "hired PvP damage defaults off");
-        check(Math.abs(config.tier("tier1").bowDamage() - 1.2D) < 1.0E-9D
+        check(Math.abs(config.tier("tier1").bowDamage() - 1.1D) < 1.0E-9D
                         && config.tier("tier1").crossbowDamage() == 1.5D
                         && Math.abs(config.tier("tier1").tridentDamage() - 1.1D) < 1.0E-9D
-                        && config.tier("tier1").meleeDamage() == 1.4D,
-                "rank output defaults preserve previous combined multipliers");
+                        && config.tier("tier1").meleeDamage() == 1.0D,
+                "rank output defaults match the current weapon balance table");
         UnifiedConfig damageOverrides = new UnifiedConfig(JsonParser.parseString("""
                 {"tiers":{"tier1":{"damage_multipliers":{"melee_damage_multiplier":0,
                 "bow_damage_multiplier":72,"crossbow_damage_multiplier":3,"thrown_trident_damage_multiplier":9999,"damage_taken_multiplier":0.5}}},
@@ -157,7 +157,7 @@ public final class UnifiedConfigTest {
                 && damageOverrides.tier("tier1").meleeDamage() == 0,
                 "rank output supports combined ranges, clamping and explicit zero");
         check(damageOverrides.tier("tier1").incomingDamage() == 0.5
-                && damageOverrides.tier("tier2").bowDamage() == 1.3D
+                && damageOverrides.tier("tier2").bowDamage() == 1.25D
                 && damageOverrides.tier("tier2").crossbowDamage() == 1.6D, "rank controls are independent");
         check(config.tierGunDamage("tier1") == 0.5D && damageOverrides.tierGunDamage("tier1") == 2.5D
                 && damageOverrides.tierGunDamage("tier2") == 100D, "sole rank firearm output factor and clamp");

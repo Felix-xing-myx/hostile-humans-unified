@@ -90,9 +90,12 @@ public final class HumanArrowCombatTest {
         check(calls("club/someoneice/humangunner/HumanBehaviorControl", "cancel", ARROWS, "clear")
                 || callsAnyOwner("club/someoneice/humangunner/HumanBehaviorControl", ARROWS, "clear"),
                 "root lifecycle cancels pending release through lambda cleanup");
-        for (String loader : List.of("club/someoneice/humangunner/GuardedRangedCharge",
-                "com/craftix/hostile_humans/entity/ai/goal/CrossbowGoal"))
-            check(calls(loader, "tick", ARROWS, "beginCrossbowLoad"), "both loaders request continuation permission");
+        check(calls("club/someoneice/humangunner/GuardedRangedCharge", "tick", ARROWS, "beginCrossbowLoad"),
+                "background loader requests continuation permission");
+        String crossbow = "com/craftix/hostile_humans/entity/ai/goal/CrossbowGoal";
+        check(calls(crossbow, "tick", crossbow, "tickShot")
+                && calls(crossbow, "tickShot", ARROWS, "beginCrossbowLoad"),
+                "foreground tick delegates to a shot boundary that requests continuation permission");
         check(method(ARROWS, "beginCrossbowLoad").desc.endsWith(")Z"), "loading boundary returns permission");
         check(callsName(ARROWS, "beginCrossbowLoad", "containsKey"), "pending continuation prevents reload");
         System.out.println("HumanArrowCombatTest: " + assertions + " shot, goal and pickup wiring checks passed");
