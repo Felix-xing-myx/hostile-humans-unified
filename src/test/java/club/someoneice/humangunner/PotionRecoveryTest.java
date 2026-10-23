@@ -52,7 +52,7 @@ public final class PotionRecoveryTest {
                 "queued food healing cannot mask actual critical health");
         check(callIndex(recovery, "beginInventoryUse", "club/someoneice/humangunner/HumanEquipmentExchange", "request") >= 0,
                 "recovery starts through the real exchange layer");
-        for (String goal : new String[] {"CombatFoodRecoveryGoal", "IdleRecoveryGoal"})
+        for (String goal : new String[] {"CombatRecoveryGoal", "IdleRecoveryGoal"})
             check(callIndex("club/someoneice/humangunner/" + goal, "canUse", recovery, "hasRecoveryChoice") >= 0,
                     "recovery goal shares ordered selector: " + goal);
         String human = "com/craftix/hostile_humans/entity/entities/Human";

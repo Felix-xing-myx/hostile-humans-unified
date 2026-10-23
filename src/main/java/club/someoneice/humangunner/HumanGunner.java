@@ -829,7 +829,7 @@ public final class HumanGunner {
         human.addCombatGoal(ShoreSeekingPolicy.COMBAT_GOAL_PRIORITY, new ProjectileReactionGoal(human));
         human.addCombatGoal(-3, new PlayerLikeMovementGoal(human));
         human.addCombatGoal(-3, new CombatConsumableGoal(human));
-        human.addCombatGoal(-2, new CombatFoodRecoveryGoal(human));
+        human.addCombatGoal(-2, new CombatRecoveryGoal(human));
         human.addCombatGoal(-2, new IdleRecoveryGoal(human));
         // Item search must briefly outrank the hired-order idle movement lock;
         // its own predicate keeps it disabled unless the owner opted in.

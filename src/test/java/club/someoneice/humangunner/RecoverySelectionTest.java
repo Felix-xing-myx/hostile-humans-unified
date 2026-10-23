@@ -4,6 +4,9 @@ package club.someoneice.humangunner;
 public final class RecoverySelectionTest {
     private static int checks;
     public static void main(String[] args) {
+        check(RecoverySelectionPolicy.retreatRank(0,true,true) > RecoverySelectionPolicy.retreatRank(7,false,true), "escape prioritizes every valid non-food medicine before even enchanted apples");
+        check(RecoverySelectionPolicy.retreatRank(0,true,false) == 0, "ordinary emergency apple order is unchanged");
+        check(RecoverySelectionPolicy.retreatRank(6,true,true) > RecoverySelectionPolicy.retreatRank(0,true,true), "escape retains relative food quality order");
         var intent = new RecoveryIntentPolicy();
         intent.record(0, 25, 100);
         check(!intent.wantsRegeneration(0, .8), "exact 25 percent does not trigger loss branch");

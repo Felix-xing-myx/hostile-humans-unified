@@ -18,7 +18,7 @@ class CombatEatingMovementContract(unittest.TestCase):
             self.assertIn(guard, action)
         self.assertLess(action.index('state.ended = true;', action.index('// Mark terminal')), action.index('stack.finishUsingItem'))
     def test_goals_wait_for_own_session_not_main_hand(self):
-        for name in ['CombatFoodRecoveryGoal', 'IdleRecoveryGoal', 'CombatConsumableGoal']:
+        for name in ['CombatRecoveryGoal', 'IdleRecoveryGoal', 'CombatConsumableGoal']:
             self.assertIn('RecoverySupplies.isUseInProgress(human, session)', source(name))
         recovery = source('RecoverySupplies')
         for gate in ['ACTIVE_USES.containsKey(human)', 'OffhandFoodUse.tick(human)', 'OffhandFoodUse.completed(human, session)', 'Boolean.TRUE.equals(COMPLETION_RECEIPTS.get(human))', 'ACTIVE_USES.remove(human, session)', 'boolean parallelFood = isRecoveryFood']:
@@ -26,7 +26,7 @@ class CombatEatingMovementContract(unittest.TestCase):
         finish = recovery.split('public static void finishUse(', 1)[1].split('static boolean hasRecoverableShield', 1)[0]
         self.assertLess(finish.index('ACTIVE_USES.remove(human, session)'), finish.index('human.stopUsingItem()'))
         self.assertIn('if (receipt)', finish)
-        self.assertIn('hasUrgentInstantHealing(human)', source('CombatFoodRecoveryGoal'))
+        self.assertIn('hasUrgentInstantHealing(human)', source('CombatRecoveryGoal'))
     def test_food_does_not_suspend_combat_or_add_stationary_hops(self):
         self.assertNotIn('if (RecoverySupplies.isEatingFood(human)) return false', source('AdaptiveCombatGoal'))
         movement = source('PlayerLikeMovementGoal')

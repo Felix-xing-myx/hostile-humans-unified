@@ -4,6 +4,8 @@ package club.someoneice.humangunner;
 final class RecoverySelectionPolicy {
     record Candidate(int slot, int rank, double healing, int duration, double quality) { }
     private RecoverySelectionPolicy() { }
+    /** All currently valid non-slowing supplies precede food while escaping. Ordinary order stays unchanged. */
+    static int retreatRank(int rank, boolean food, boolean fleeing) { return rank + (food && fleeing ? 8 : 0); }
     static boolean better(Candidate candidate, Candidate current) {
         if (current == null) return true;
         if (candidate.rank() != current.rank()) return candidate.rank() < current.rank();

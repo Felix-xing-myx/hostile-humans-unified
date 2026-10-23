@@ -4,12 +4,12 @@ import com.craftix.hostile_humans.entity.entities.Human;
 import net.minecraft.world.entity.ai.goal.Goal;
 
 /** Single recovery selector in combat; no movement/look/attack claims. */
-final class CombatFoodRecoveryGoal extends Goal {
-    private static final String ACTIVE_KEY = HumanGunner.MOD_ID + ":combat_food_active";
+final class CombatRecoveryGoal extends Goal {
+    private static final String LEGACY_ACTIVE_KEY = HumanGunner.MOD_ID + ":combat_food_active";
     private final Human human;
     private RecoverySupplies.UseSession session;
     private int nextUseTick;
-    CombatFoodRecoveryGoal(Human human) { this.human = human; human.getPersistentData().remove(ACTIVE_KEY); }
+    CombatRecoveryGoal(Human human) { this.human = human; human.getPersistentData().remove(LEGACY_ACTIVE_KEY); }
     @Override public boolean canUse() {
         var config = CombatAiConfig.forHuman(human);
         return config.enabled() && config.itemRecoveryEnabled() && human.isAlive()
@@ -23,7 +23,6 @@ final class CombatFoodRecoveryGoal extends Goal {
     @Override public boolean requiresUpdateEveryTick() { return true; }
     @Override public void start() {
         session = RecoverySupplies.beginUse(human);
-        human.getPersistentData().putBoolean(ACTIVE_KEY, session != null);
     }
     @Override public void tick() {
         if (session == null || RecoverySupplies.isUseInProgress(human, session)) return;
@@ -35,7 +34,5 @@ final class CombatFoodRecoveryGoal extends Goal {
             session = null;
         }
         nextUseTick = human.tickCount + 1;
-        human.getPersistentData().remove(ACTIVE_KEY);
     }
-    static boolean isActive(Human human) { return human.getPersistentData().getBoolean(ACTIVE_KEY); }
 }

@@ -276,9 +276,7 @@ public final class CombatPressurePolicyTest {
                         && !CombatPressurePolicy.shouldReleaseForPursuit(6, 3, true, 25.0D, 0.0D)
                         && !CombatPressurePolicy.shouldReleaseForPursuit(6, 4, false, 25.0D, 0.0D),
                 "pursuit release does not cancel a fresh block or sustained ranged defense");
-        check(!RetreatRecoveryPolicy.canStart(8.0D * 8.0D, true, 20)
-                        && !RetreatRecoveryPolicy.canStart(11.0D * 11.0D, false, 20),
-                "cover alone and a short open-field gap cannot start recovery");
+
         LowHealthCombatConfig lowConfig = LowHealthCombatConfig.defaults();
         check(LowHealthCombatPolicy.critical(14, 100, lowConfig)
                         && !LowHealthCombatPolicy.critical(15, 100, lowConfig)
@@ -306,15 +304,9 @@ public final class CombatPressurePolicyTest {
                         && !RetreatRecoveryPolicy.canResumeAfterHealing(0.74D, 0.75D, 100)
                         && !RetreatRecoveryPolicy.canResumeAfterHealing(1.0D, 0.75D, 39),
                 "real healing ends prolonged retreat without a distance gate, retaining minimum retreat commitment");
-        check(RetreatRecoveryPolicy.canStart(9.0D * 9.0D, true, 11)
-                        && RetreatRecoveryPolicy.canStart(12.0D * 12.0D, false, 11),
-                "retreat recovery starts at nine blocks behind cover or twelve in the open");
-        check(!RetreatRecoveryPolicy.canStart(15.0D * 15.0D, false, 10),
-                "even a distant human waits for a quiet moment before using supplies");
-        check(RetreatRecoveryPolicy.shouldBreakOffUse(8.0D * 8.0D, true, 10)
-                        && !RetreatRecoveryPolicy.shouldBreakOffUse(8.0D * 8.0D, false, 10)
-                        && !RetreatRecoveryPolicy.shouldBreakOffUse(8.0D * 8.0D, true, 3),
-                "exposed close pressure interrupts an early drink but not a protected or nearly finished use");
+
+
+
         check(RetreatRecoveryPolicy.isUsefulRetreatDestination(9.0D * 9.0D, 12.0D * 12.0D)
                         && !RetreatRecoveryPolicy.isUsefulRetreatDestination(9.0D * 9.0D, 9.0D * 9.0D),
                 "native escape paths are judged by increased enemy distance, not travel distance");

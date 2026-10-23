@@ -40,7 +40,6 @@ public final class AdaptiveCombatGoal extends Goal {
     private enum Phase {
         DEFEND,
         RETREAT,
-        RECOVER,
         FLANK,
         PRESSURE,
         UNSTUCK
@@ -89,8 +88,6 @@ public final class AdaptiveCombatGoal extends Goal {
     private UUID combatTarget;
     private int phaseTicks;
     private int repathTicks;
-    private int nextRecoveryUseTick;
-    private RecoverySupplies.UseSession recoverySession;
     private LivingEntity defenseMovementTarget;
     private final ShieldDefenseMovement shieldMovement = new ShieldDefenseMovement();
     private int nextTacticalTick;
@@ -225,7 +222,7 @@ public final class AdaptiveCombatGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        if(IncomingHitResponseGoal.wantsResponse(human)&&phase!=Phase.RETREAT&&phase!=Phase.RECOVER)return false;
+        if(IncomingHitResponseGoal.wantsResponse(human)&&phase!=Phase.RETREAT)return false;
         // Pressure owns only hands/facing/attack; it never replaces retreat's navigation session.
         if (phase == Phase.DEFEND && (shields.wantsHighPressureGuard() || !shields.ownsCombatDefense())) return false;
         if (BodyguardProtection.isBodyguard(human)) {
@@ -245,15 +242,14 @@ public final class AdaptiveCombatGoal extends Goal {
                 || phaseTicks <= 0) {
             return false;
         }
-        if ((phase == Phase.RETREAT || phase == Phase.RECOVER) && recoveredFromRetreat()) {
-            // stop() returns unfinished recovery supplies and releases movement.
+        if (phase == Phase.RETREAT && recoveredFromRetreat()) {
+            // Recovery belongs to the independent restorative executor; stopping movement does not cancel it.
             // An item-use session must not keep a healed soldier fleeing.
             return false;
         }
         return switch (phase) {
-            case RETREAT, RECOVER -> !retreatSafe()
-                    || recoverySession != null
-                    || CombatFoodRecoveryGoal.isActive(human);
+            case RETREAT -> !retreatSafe()
+                    || RecoverySupplies.hasActiveUse(human);
             case PRESSURE, UNSTUCK -> phaseTicks > 0
                     && !RangedWeaponCustody.controlsMainHand(human);
             case DEFEND, FLANK -> phaseTicks > 0;
@@ -288,11 +284,6 @@ public final class AdaptiveCombatGoal extends Goal {
                 setFleeing(true);
                 planRetreat();
             }
-            case RECOVER -> {
-                human.getNavigation().stop();
-                phaseTicks = 200;
-                setFleeing(true);
-            }
             case FLANK -> {
                 phaseTicks = 14;
                 nextTacticalTick = human.tickCount + config.tacticalRepositionInterval();
@@ -310,7 +301,7 @@ public final class AdaptiveCombatGoal extends Goal {
             }
         }
         if (phase == Phase.DEFEND && phaseTicks <= 0) return;
-        if (phase == Phase.RETREAT || phase == Phase.RECOVER) {
+        if (phase == Phase.RETREAT) {
             MovementSpeedController.retreat(human, true);
         } else {
             MovementSpeedController.combat(human, phase != Phase.DEFEND && !isUsingTaczGun());
@@ -324,9 +315,8 @@ public final class AdaptiveCombatGoal extends Goal {
                 && human.getNavigation().getPath() == activePath) human.getNavigation().stop();
         shieldMovement.clear(human);
         boolean shoreTransitionPending = human.isShoreTransitionPending();
-        boolean endedRetreat = phase == Phase.RETREAT || phase == Phase.RECOVER;
+        boolean endedRetreat = phase == Phase.RETREAT;
         if (phase == Phase.DEFEND) shields.endCombat();
-        cancelRecoveryUse();
         if (endedRetreat && !shoreTransitionPending) {
             if (MovementContinuity.ownsRoute(human, activePath)) human.getNavigation().stop();
             if (human.isSeekingShore()) human.stopSeekingShore();
@@ -386,14 +376,13 @@ public final class AdaptiveCombatGoal extends Goal {
             return;
         }
         lastThreatTick = human.tickCount;
-        if (phase != Phase.RETREAT && phase != Phase.RECOVER) phaseTicks--;
+        if (phase != Phase.RETREAT) phaseTicks--;
         repathTicks--;
         if (HumanPerception.allowCombatLook(human,threat)) human.getLookControl().setLookAt(threat, 45.0F, 35.0F);
 
         switch (phase) {
             case DEFEND -> tickDefend();
             case RETREAT -> tickRetreat();
-            case RECOVER -> tickRecover();
             case FLANK -> tickFlank();
             case PRESSURE -> tickPressure();
             case UNSTUCK -> tickUnstuck();
@@ -503,23 +492,9 @@ public final class AdaptiveCombatGoal extends Goal {
     /** Predict an arrow crossing the defender's future collision box, not merely a nearby shot. */
 
 
-
-
-
-
-
-
-
-
     private void tickRetreat() {
         MovementSpeedController.retreat(human, true);
-        double distanceSqr = human.distanceToSqr(threat);
-        boolean recentlyHit = human.getLastHurtByMob() != null
-                && human.tickCount - human.getLastHurtByMobTimestamp() <= 6;
-        boolean mayUseSupply = RetreatRecoveryPolicy.canStart(human, threat);
-        tickMovingRecovery(mayUseSupply, recentlyHit);
-        if (retreatSafe() && recoverySession == null
-                && !CombatFoodRecoveryGoal.isActive(human)) {
+        if (retreatSafe() && !RecoverySupplies.hasActiveUse(human)) {
             phaseTicks = 0;
             human.getPersistentData().putString("hostile_humans_unified:ai_phase", "retreat_safe_to_return");
             return;
@@ -736,68 +711,6 @@ public final class AdaptiveCombatGoal extends Goal {
         GunCustody.restorePrimaryGun(human, "adaptive_combat_exit");
     }
 
-    private void tickRecover() {
-        // Migrate an already-running legacy recovery phase into moving retreat.
-        // This also prevents the post-potion stationary bug.
-        phase = Phase.RETREAT;
-        phaseTicks = Math.max(phaseTicks, 120);
-        MovementSpeedController.retreat(human, true);
-        human.getPersistentData().putString("hostile_humans_unified:ai_phase", "retreat_recovering");
-        if (activePath == null || human.getNavigation().isDone()) {
-            planRetreat();
-        }
-        tickRetreat();
-    }
-
-    private void tickMovingRecovery(boolean mayStart, boolean recentlyHit) {
-        if (CombatFoodRecoveryGoal.isActive(human)) {
-            return;
-        }
-        if (recoverySession != null) {
-            if (recoverySession.food() && RecoverySupplies.hasUrgentInstantHealing(human)) {
-                cancelRecoveryUse();
-                nextRecoveryUseTick = human.tickCount;
-                return;
-            }
-            if (RecoverySupplies.isUseInProgress(human, recoverySession)) {
-                // Food is parallel to combat, so proximity cannot cancel it or take movement away.
-                if (recoverySession.food()) return;
-                boolean unsafeProximity = RetreatRecoveryPolicy.shouldBreakOffUse(
-                        human.distanceToSqr(threat), human.getSensing().hasLineOfSight(threat),
-                        human.getUseItemRemainingTicks()
-                );
-                if (!RecoverySupplies.isDrinkingPotion(human) && (unsafeProximity
-                        || (!RecoverySupplies.shouldCommitToUse(human, recoverySession, config) && recentlyHit))) {
-                    cancelRecoveryUse();
-                    nextRecoveryUseTick = human.tickCount + 12;
-                }
-                return;
-            }
-            boolean completed = RecoverySupplies.completed(human, recoverySession);
-            RecoverySupplies.finishUse(human, recoverySession, completed);
-            recoverySession = null;
-            nextRecoveryUseTick = human.tickCount + (completed ? 6 : 16);
-            human.getPersistentData().putString(
-                    "hostile_humans_unified:ai_phase",
-                    completed ? "retreat_recovery_chain" : "retreat_interrupted_use"
-            );
-            if (healthRatio() > config.criticalHealthRatio()
-                    && projectedHealthRatio() >= config.resumeHealthRatio()
-                    && retreatSafe()) {
-                phaseTicks = 0;
-            }
-        }
-        if (recoverySession == null
-                && mayStart
-                && human.tickCount >= nextRecoveryUseTick
-                && projectedHealthRatio() < config.resumeHealthRatio()
-                && RecoverySupplies.hasCombatRecoverySupply(human)) {
-            recoverySession = RecoverySupplies.beginCombatRecoveryUse(human);
-            if (recoverySession != null) {
-                human.getPersistentData().putString("hostile_humans_unified:ai_phase", "retreat_using_recovery_item");
-            }
-        }
-    }
 
     private void tickFlank() {
         if (repathTicks <= 0 && (tacticalSearch != null || tacticalFallbackPending
@@ -1572,7 +1485,7 @@ public final class AdaptiveCombatGoal extends Goal {
     private boolean moveToCandidate(Vec3 candidate, double speed) {
         Path path = human.getNavigation().createPath(BlockPos.containing(candidate), 0);
         if (path == null || !path.canReach()
-                || (phase == Phase.RETREAT || phase == Phase.RECOVER)
+                || phase == Phase.RETREAT
                 && !RetreatPathSafety.isSafe(human, threat, path, true)) {
             return false;
         }
@@ -1649,18 +1562,6 @@ public final class AdaptiveCombatGoal extends Goal {
         }
     }
 
-
-
-
-
-    private void cancelRecoveryUse() {
-        if (recoverySession == null) {
-            return;
-        }
-        boolean completed = RecoverySupplies.completed(human, recoverySession);
-        RecoverySupplies.finishUse(human, recoverySession, completed);
-        recoverySession = null;
-    }
 
     private void setFleeing(boolean fleeing) {
         human.isFleeing = fleeing || human.explosionThreat != null;

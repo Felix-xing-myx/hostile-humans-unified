@@ -182,10 +182,6 @@ public final class RecoverySupplies {
     /** Inventory ownership belongs only to the exchange transaction. */
     static boolean reservesInventorySlot(Human human, int slot) { return false; }
 
-    /** Combat retreat recovery excludes ordinary food, which has its own bounded goal. */
-    public static boolean hasCombatRecoverySupply(Human human) {
-        return hasSupply(human, false);
-    }
 
     public static boolean hasOrdinaryFood(Human human) {
         if (isOrdinaryFood(human, human.getOffhandItem()) || isOrdinaryFood(human, human.getMainHandItem())) return true;
@@ -234,7 +230,9 @@ public final class RecoverySupplies {
                 quality = HumanLootManager.foodValue(stack.getFoodProperties(human));
             } else continue;
             if (!Double.isNaN(healing) && healing <= 0 && rank == 6) continue;
-            double netMissing = rank == 1 ? missing : Math.max(0, missing - pendingHealingWithin(human, 100));
+            boolean instant = rank == 1;
+            rank = RecoverySelectionPolicy.retreatRank(rank, isRecoveryFood(human, stack), human.isFleeing);
+            double netMissing = instant ? missing : Math.max(0, missing - pendingHealingWithin(human, 100));
             var candidate = new RecoverySelectionPolicy.Candidate(i, rank, Math.min(netMissing, healing), recoveryUseDuration(stack), quality);
             if (RecoverySelectionPolicy.better(candidate, best)) best = candidate;
         }
@@ -304,9 +302,6 @@ public final class RecoverySupplies {
         return beginUse(human, false);
     }
 
-    public static UseSession beginCombatRecoveryUse(Human human) {
-        return beginInventoryUse(human, human.getData(), findBestSlot(human, false, false));
-    }
 
     public static UseSession beginIdleUse(Human human) {
         return beginUse(human, true);
@@ -490,6 +485,12 @@ public final class RecoverySupplies {
                 || human.tickCount > session.expectedCompletionTick() + 40
                 || (human.humanGunner$shieldDefense().shouldSuppressRecovery() && !isDrinkingPotion(human))) {
             finishUse(human, session, done); return;
+        }
+        // Ordinary food yields before its next consumption tick. Golden apples keep their
+        // own selection rank, preventing cancel/reselect loops against urgent healing.
+        if (!done && isOrdinaryFood(human, session.itemAtStart()) && hasUrgentInstantHealing(human)) {
+            finishUse(human, session, false);
+            return;
         }
         OffhandFoodUse.tick(human);
         if (!isUseInProgress(human, session)) finishUse(human, session, completed(human, session));

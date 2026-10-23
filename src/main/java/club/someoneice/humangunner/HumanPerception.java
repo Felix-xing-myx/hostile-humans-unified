@@ -721,7 +721,7 @@ public final class HumanPerception {
             case "PressureReactionGoal" -> "本能高压防御（不依赖锁敌）";
             case "SoldierOrderGoal", "TemporarySupportFollowGoal", "BodyguardMovementGoal" -> "行动指令";
             case "LavaEscapeGoal", "AvoidTNTGoal", "AvoidCreeperGoal", "RunFromTarget" -> "紧急避险";
-            case "CombatFoodRecoveryGoal", "CombatConsumableGoal", "IdleRecoveryGoal" -> "恢复用品";
+            case "CombatRecoveryGoal", "CombatConsumableGoal", "IdleRecoveryGoal" -> "恢复用品";
             case "GunnerGoal", "HumanBowAttackGoal", "HumanCrossbowAttackGoal" -> "远程武器控制";
             case "HumanMeleeAttackGoal", "MeleeAttackGoal" -> "近战控制";
             case "ValuableItemPickupGoal" -> "物品拾取";

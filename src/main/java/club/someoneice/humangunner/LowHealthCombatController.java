@@ -85,7 +85,7 @@ public final class LowHealthCombatController {
             if (sample.damaged() > 0) lastStrike = sample.damaged();
         }
         boolean recovery = ai.itemRecoveryEnabled() && (RecoverySupplies.hasPendingGradualHealing(human)
-                || RecoverySupplies.hasOrdinaryFood(human) || CombatFoodRecoveryGoal.isActive(human))
+                || RecoverySupplies.hasOrdinaryFood(human) || RecoverySupplies.hasActiveUse(human))
                 || human.hasEffect(MobEffects.REGENERATION);
         return state.decision.allow(new LowHealthCombatPolicy.Input(human.tickCount, human.getHealth(),
                 human.getMaxHealth(), threat.getUUID(), state.alone
