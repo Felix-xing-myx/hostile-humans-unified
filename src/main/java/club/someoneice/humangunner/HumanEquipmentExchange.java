@@ -24,6 +24,10 @@ public final class HumanEquipmentExchange {
         public Need(EquipmentSlot destination, Predicate<ItemStack> accepts) { this(destination, accepts, null); }
     }
     private record Place(EquipmentSlot equipment, int inventory) { }
+    /** Expected optimistic-validation failure, distinct from a broken equipment callback. */
+    private static final class LayoutChanged extends RuntimeException {
+        private LayoutChanged() { super(null, null, true, false); }
+    }
     private HumanEquipmentExchange() { }
 
     /** Explicit binding is for an independent real weapon, never every unit of a consumable stack. */
@@ -213,12 +217,12 @@ public final class HumanEquipmentExchange {
             for (int i : changed) {
                 stage[i] = ItemStack.EMPTY;
                 write(human, places.get(i), ItemStack.EMPTY);
-                if (!permit.actions().running(permit.token()) || !layoutReferencesMatch(human, places, stage)) throw new IllegalStateException("exchange layout changed while detaching");
+                if (!permit.actions().running(permit.token()) || !layoutReferencesMatch(human, places, stage)) throw new LayoutChanged();
             }
             for (int i : changed) {
                 stage[i] = planned[i];
                 write(human, places.get(i), planned[i]);
-                if (!permit.actions().running(permit.token()) || !layoutReferencesMatch(human, places, stage)) throw new IllegalStateException("exchange layout changed while publishing");
+                if (!permit.actions().running(permit.token()) || !layoutReferencesMatch(human, places, stage)) throw new LayoutChanged();
             }
         } catch (RuntimeException exception) {
             // Clear only our own attempted writes first; restore original real references once.
@@ -232,6 +236,7 @@ public final class HumanEquipmentExchange {
                 try { write(human, places.get(i), actual[i]); }
                 catch (RuntimeException failure) { exception.addSuppressed(failure); }
             }
+            if (exception instanceof LayoutChanged && exception.getSuppressed().length == 0) return Result.CHANGED;
             throw exception;
         }
         return Result.SUCCESS;

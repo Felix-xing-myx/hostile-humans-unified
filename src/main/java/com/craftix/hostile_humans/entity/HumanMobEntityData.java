@@ -264,12 +264,15 @@ implements HumansDataSync {
         super.setItemSlot(equipmentSlot, itemStack);
         HumanData data = this.getData();
         if (data != null) {
+            // HumanData may share the live equipment lists. A copy here would replace
+            // vanilla's just-installed object and invalidate real-item custody.
+            ItemStack equipped = this.getItemBySlot(equipmentSlot);
             if (equipmentSlot.getType() == EquipmentSlot.Type.ARMOR) {
-                data.setArmorItem(equipmentSlot.getIndex(), itemStack.copy());
+                data.setArmorItem(equipmentSlot.getIndex(), equipped);
             } else if (equipmentSlot == EquipmentSlot.MAINHAND) {
-                data.setHandItem(0, itemStack.copy());
+                data.setHandItem(0, equipped);
             } else if (equipmentSlot == EquipmentSlot.OFFHAND) {
-                data.setHandItem(1, itemStack.copy());
+                data.setHandItem(1, equipped);
             }
         }
         this.setDataSyncNeeded();
@@ -279,7 +282,7 @@ implements HumansDataSync {
         super.setItemInHand(hand, stack);
         HumanData data = this.getData();
         if (data != null) {
-            data.setHandItem(hand == InteractionHand.MAIN_HAND ? 0 : 1, stack.copy());
+            data.setHandItem(hand == InteractionHand.MAIN_HAND ? 0 : 1, this.getItemInHand(hand));
         }
         this.setDataSyncNeeded();
     }

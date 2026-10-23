@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.13.0'
+version = '3.13.1'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -309,7 +309,7 @@ tasks.register('sanitizeStructureWaystones', JavaExec) {
         'MovementAuthorityLeaseTest', 'RouteExecutionLeaseTest', 'RangedMovementDecisionTest'
     ],
     'club.someoneice.humangunner': [
-        'BackgroundThrowingWiringTest', 'BeaconReportPolicyTest', 'BehaviorDebugTest',
+        'BackgroundThrowingWiringTest', 'BeaconReportPolicyTest', 'BehaviorDebugTest', 'EquipmentReferenceContinuityTest',
         'CombatStrategySetTest', 'CommandViewPatchTest', 'GrowthConfigTest',
         'GrowthPersistenceTest', 'GrowthProgressionTest', 'GunDoctrineTest', 'GunPositioningTest',
         'MeleeOpportunityTest', 'MovementAuthorityWiringTest', 'RangedCombatProfileTest',
