@@ -11,6 +11,13 @@ public final class ProjectileCooldownPolicyTest {
     private static int checks;
 
     public static void main(String[] args) throws Exception {
+        net.minecraft.SharedConstants.tryDetectVersion();
+        // Standalone JavaExec has no Forge launch bootstrap; initialize registry-only
+        // fixtures just as the other real ResourceKey/ItemStack contract tests do.
+        var bootstrapFlag = net.minecraft.server.Bootstrap.class.getDeclaredField("isBootstrapped");
+        bootstrapFlag.setAccessible(true);
+        bootstrapFlag.setBoolean(null, true);
+        net.minecraft.core.registries.BuiltInRegistries.bootStrap();
         check(ProjectileCooldownPolicy.allows(false, false, false, true, true, false),
                 "human archers can independently damage an ordinary mob");
         check(ProjectileCooldownPolicy.allows(false, false, true, false, true, false),
