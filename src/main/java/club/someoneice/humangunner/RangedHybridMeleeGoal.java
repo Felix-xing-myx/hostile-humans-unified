@@ -78,21 +78,22 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
             sessionTarget = target.getUUID();
             sessionWeapon = human.getMainHandItem();
         }
-        boolean maySeparate = !SoldierOrder.isHoldingPosition(human)
+        boolean maySeparate = HumanCombatDirector.prefersRangedSeparation(human)
+                && !SoldierOrder.isHoldingPosition(human)
                 && !CloseRangedTactics.keepDefense(human)
                 && !human.isInWater() && !human.isInLava() && !human.isSeekingShore()
                 && !human.isShoreTransitionPending() && !human.onClimbable()
                 && (cycle.separating() || (!human.humanGunner$hasPendingMeleeAttack() && !human.swinging))
                 && !human.isUsingItem() && !CombatTerrainNavigation.hasWork(human, target);
         boolean progressed = progressPosition == null || human.position().distanceToSqr(progressPosition) >= 0.04D
-                || (human.distanceToSqr(target) > 36 && human.getSensing().hasLineOfSight(target));
+                || (!WeaponTransitionPolicy.holdsBowMelee(human.distanceToSqr(target), true) && human.getSensing().hasLineOfSight(target));
         if (progressed) progressPosition = human.position();
         cycle.tick(maySeparate, progressed);
 
         if (cycle.searching()) {
             // Searching never takes movement away from ordinary melee. The existing
             // firing-lane planner spreads candidate paths over the shared budget.
-            Path candidate = RangedFiringPosition.findVisiblePath(human, target, 7, 10, 10, 16);
+            Path candidate = RangedFiringPosition.findVisiblePath(human, target, 8, 10, 10, 16);
             ownsSeparationSearch = RangedFiringPosition.hasPendingVisibleSearch(human);
             if (candidate != null && allowedSeparation(target, candidate)
                     && RetreatPathSafety.tryMove(human, candidate, 1.05D)) {
@@ -123,7 +124,7 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
     }
 
     private boolean tickSeparation(LivingEntity target) {
-        if (human.distanceToSqr(target) > 36 && human.getSensing().hasLineOfSight(target)) {
+        if (!WeaponTransitionPolicy.holdsBowMelee(human.distanceToSqr(target), true) && human.getSensing().hasLineOfSight(target)) {
             stopOwnedSeparationRoute();
             // Custody restores the bow only after any already-committed attack ends.
             RangedWeaponCustody.restorePreferred(human, "close_defense_separated");
@@ -151,7 +152,7 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
         var node = path.getEndNode();
         BlockPos end = new BlockPos(node.x, node.y, node.z);
         Vec3 feet = Vec3.atBottomCenterOf(end);
-        return target.distanceToSqr(feet) > 36 && SoldierOrder.allowsCombatPosition(human, feet)
+        return !WeaponTransitionPolicy.holdsBowMelee(target.distanceToSqr(feet), true) && SoldierOrder.allowsCombatPosition(human, feet)
                 && RangedShotClearance.fromPosition(human, feet, target);
     }
 

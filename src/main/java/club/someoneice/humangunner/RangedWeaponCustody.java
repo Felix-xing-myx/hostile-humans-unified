@@ -20,8 +20,8 @@ public final class RangedWeaponCustody {
     private static final String ACTIVE = "hostile_humans_unified:ranged_custody_active";
     private static final String RESERVED_SLOT = "hostile_humans_unified:ranged_custody_slot";
     private static final String SNAPSHOT = "hostile_humans_unified:ranged_custody_snapshot";
-    private static final double MELEE_ENTER_DISTANCE_SQR = 36.0D;
-    private static final double RANGED_RETURN_DISTANCE_SQR = 36.0D;
+    private static final double MELEE_ENTER_DISTANCE_SQR = WeaponTransitionPolicy.BOW_ENTER * WeaponTransitionPolicy.BOW_ENTER;
+    private static final double RANGED_RETURN_DISTANCE_SQR = WeaponTransitionPolicy.BOW_LEAVE * WeaponTransitionPolicy.BOW_LEAVE;
     private static final java.util.Map<Human, HumanEquipmentExchange.Handle> PRIMARY = new java.util.WeakHashMap<>();
 
     private RangedWeaponCustody() {
@@ -220,7 +220,7 @@ public final class RangedWeaponCustody {
 
     static boolean restorePreferred(Human human, String reason) {
         if (isActive(human) && human.getTarget() != null && human.getTarget().isAlive()
-                && human.distanceToSqr(human.getTarget()) <= MELEE_ENTER_DISTANCE_SQR
+                && human.distanceToSqr(human.getTarget()) <= RANGED_RETURN_DISTANCE_SQR
                 && !reason.equals("owner_inventory_open")) return false;
         if (isActive(human) && (CloseRangedTactics.keepDefense(human)
                 || human.humanGunner$shieldDefense().shouldSuppressRecovery())) return false;

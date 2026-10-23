@@ -36,7 +36,8 @@ final class HumanAnimatedItemInHandLayer extends ItemInHandLayer<Human, PlayerMo
         poseStack.pushPose();
         try {
             if (arm != human.getMainArm() && GunSupport.isGunItem(human.getMainHandItem())
-                    && SpartanEquipmentCompat.isShield(item)) {
+                    && SpartanEquipmentCompat.isShield(item)
+                    && !HumanGunPresentation.activeShield(human)) {
                 BackShieldPose.Profile profile = BackShieldPose.resolve(human, item);
                 if (!profile.offhand()) {
                     renderBackShield(human, item, profile, arm, poseStack, buffer, packedLight);

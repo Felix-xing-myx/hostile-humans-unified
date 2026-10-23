@@ -5,6 +5,12 @@ import java.util.List;
 
 /** Geometry and per-raise melee limits; has no world access or target acquisition. */
 final class ShieldDefensePolicy {
+    static final int MELEE_REENTRY_TICKS = 40, MELEE_GUARD_MAX_TICKS = 20;
+    /** Ordinary blocking spends an attack opportunity; chip damage is handled by pressure instead. */
+    static boolean worthMeleeGuard(double damage, double maximumHealth) {
+        return Double.isFinite(damage) && Double.isFinite(maximumHealth) && maximumHealth > 0
+                && damage >= Math.max(4, maximumHealth * .04);
+    }
     private ShieldDefensePolicy() { }
     static boolean meleeCandidate(double x, double y, double z, double enemyFacingDot, double ownFacingDot,
                                    boolean meleeIntent) {

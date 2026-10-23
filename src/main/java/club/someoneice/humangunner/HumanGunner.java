@@ -294,6 +294,8 @@ public final class HumanGunner {
                 HumanManagedLoadout.equipStoredMeleeIfMainHandEmpty(human);
                 HumanLootManager.optimizeOwnedEquipment(human);
             }
+            NpcDualWield.tickDefaultLayout(human);
+            HumanArrowCombat.tickFollowup(human);
             GunSupport.get().tickIdleReload(human);
             TacticalThrowables.tick(human);
             if (human.getTarget() instanceof Player player

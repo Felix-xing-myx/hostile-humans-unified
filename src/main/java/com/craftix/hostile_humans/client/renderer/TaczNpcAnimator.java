@@ -73,6 +73,7 @@ public final class TaczNpcAnimator {
     private static boolean canAnimate(Human human) {
         return human != null && ModList.get().isLoaded("tacz") && human.isAlive()
                 && !human.isSleeping() && !human.isVisuallySwimming() && !human.isFallFlying()
+                && !HumanGunPresentation.activeShield(human)
                 && club.someoneice.humangunner.GunSupport.isTaczGunItem(human.getMainHandItem());
     }
 

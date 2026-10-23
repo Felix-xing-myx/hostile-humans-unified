@@ -76,7 +76,7 @@ class EquipmentMenuShieldContract(unittest.TestCase):
         self.assertIn("candidate = human.getItemInHand(hand)", raise_block)
         self.assertIn("RecoverySupplies.hasRecoverableShield(human)", controller)
         self.assertIn("shouldSuppressRecovery() && hasAvailableShield()", controller)
-        self.assertIn("if (!hasAvailableShield() || human.shieldCoolDown > 0)", controller)
+        self.assertIn("if (!allowsShieldOwner(Owner.PROJECTILE) || !hasAvailableShield() || human.shieldCoolDown > 0)", controller)
         director = (PKG / "HumanCombatDirector.java").read_text(encoding="utf-8")
         self.assertLess(director.index("HumanLootManager.bestOwnedShield(human)"), director.index("getEntitiesOfClass(Projectile.class"))
 

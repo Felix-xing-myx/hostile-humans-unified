@@ -242,7 +242,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private boolean hasShieldFacing() {
         return shieldFacingTick == tickCount && (Float.isFinite(shieldFacingYaw) || shieldFacingTarget != null
                 && shieldFacingTarget.isAlive() && shieldFacingTarget.level() == level())
-                && !isFleeing && isUsingItem()
+                && isUsingItem()
                 && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(getUseItem());
     }
 
@@ -1692,7 +1692,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         }
     }
 
-    /** Start a mobile block retaining at least 40% speed, with the configured penalty otherwise. */
+    /** Start a mobile block; the shared speed controller applies the configured defense factor. */
     public void humanGunner$startMovementShield(InteractionHand hand) {
         if (!club.someoneice.humangunner.SpartanEquipmentCompat.isShield(getItemInHand(hand))) {
             return;

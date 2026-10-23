@@ -13,7 +13,7 @@ public final class GunDoctrineTest {
         for(String type:new String[]{"pistol","rifle","sniper","smg","shotgun","mg","launcher","other"}) {
             var red=GunDoctrine.style("crimson",type,true);
             boolean close=type.equals("smg")||type.equals("shotgun");
-            check(red.advance()&&red.forceMelee()!=close,"red close firearm exception: "+type);
+            check(red.advance()&&red.forceMelee(),"red close melee priority for all gun classes: "+type);
             near(red.backgroundDuration(),close?1.2:2,"red silent duration: "+type);
             check(GunDoctrine.style("ashen",type,false).forceMelee(),"ashen forces melee for every gun");
         }

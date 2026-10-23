@@ -115,8 +115,8 @@ public final class SupplyAndCloseDefenseTest {
 
         Object sword = new Object();
         var hold = new CloseDefenseHold.State(sword, 100);
-        check(hold.holds(sword, 101) && hold.holds(sword, 139), "initial two-second hold");
-        check(!hold.holds(sword, 140), "idle hold expires");
+        check(hold.holds(sword, 101) && hold.holds(sword, 107), "short initial equipment settling hold");
+        check(!hold.holds(sword, 108), "idle settling hold expires without two-second pause");
         hold.attack(130, 62);
         check(hold.holds(sword, 191) && !hold.holds(sword, 192), "long attack completes after initial hold");
         hold.attack(185, 8);

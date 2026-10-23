@@ -34,8 +34,8 @@ public final class HumanArrowCombatTest {
         check(calls(SPARTAN, "fire", ARROWS, "fireVolley"), "optional native bolt uses paid volley");
         check(callsName(ARROWS, "executeVolley", "addFreshEntity"), "one publishing boundary");
         for (String lifecycle : List.of("request", "acquire", "finish"))
-            check(callsName(ARROWS, "fireVolley", lifecycle), "public shot transaction lifecycle: " + lifecycle);
-        check(callsName(ARROWS, "fireVolley", "add") && callsName(ARROWS, "fireVolley", "remove"),
+            check(callsName(ARROWS, "publishVolley", lifecycle), "public shot transaction lifecycle: " + lifecycle);
+        check(callsName(ARROWS, "publishVolley", "add") && callsName(ARROWS, "publishVolley", "remove"),
                 "synchronous reentry guard always released");
         check(callsName(ARROWS, "executeVolley", "shotStillValid"), "factory and insertion revalidate live authority");
         check(!calls(HUMAN, "shootCrossbowProjectile", AMMO, "consumeArrow"), "callback cannot double pay");
@@ -67,6 +67,13 @@ public final class HumanArrowCombatTest {
                 }
             }
         }
+        check(calls(ARROWS, "fireVolley", ARROWS, "publishVolley"), "initial shot uses common transaction");
+        check(calls(ARROWS, "tickFollowup", ARROWS, "publishVolley"), "delayed shot uses same paid transaction");
+        check(callsName(ARROWS, "tickFollowup", "shotStillValid")
+                && callsName(ARROWS, "tickFollowup", "hasFollowupShot"), "delayed shot rechecks authority and geometry");
+        check(calls("club/someoneice/humangunner/HumanBehaviorControl", "cancel", ARROWS, "clear")
+                || callsAnyOwner("club/someoneice/humangunner/HumanBehaviorControl", ARROWS, "clear"),
+                "root lifecycle cancels pending release through lambda cleanup");
         System.out.println("HumanArrowCombatTest: " + assertions + " shot, goal and pickup wiring checks passed");
     }
 
@@ -90,6 +97,11 @@ public final class HumanArrowCombatTest {
         return false;
     }
 
+    private static boolean callsAnyOwner(String owner, String calledOwner, String name) throws Exception {
+        for (var method : node(owner).methods) for (var instruction : method.instructions)
+            if (instruction instanceof MethodInsnNode call && call.owner.equals(calledOwner) && call.name.equals(name)) return true;
+        return false;
+    }
     private static boolean callsAnyMethodName(String owner, String calledName) throws Exception {
         for (var method : node(owner).methods)
             for (var instruction : method.instructions)

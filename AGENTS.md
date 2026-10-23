@@ -28,6 +28,8 @@
 
 ## 共享文件与现有实现
 
+- 新功能和缺陷修复必须追踪完整调用链，明确策略选择、权限、执行、反馈和取消收尾；使用统一入口维护同类规则，避免散落的阵营硬编码与层层临时覆盖。考虑后续可维护性和可扩展性，复杂任务可分轮实施。允许为清晰、稳健的阵营整体策略保留有依据的少量重复，但近战/远程、移动和实物交换的职责仍分层。
+
 - `Human.java`、`AdaptiveCombatGoal.java`、`UnifiedConfig.java`、`HumanRenderer.java`、`build.gradle` 等易重叠文件必须指定一个接入负责人或顺序实施。独立逻辑尽量放在各自模块，事先约定接口。
 - 已有 `BetterCombatMeleeCombat`、`BetterCombatNpcAnimator`、`TaczNpcAnimator`、`PlayerAnimatorModelBridge`、`TaczNpcAnimatorMixin`。先读当前实现及调用链，不按旧计划重复建立攻击或动画控制系统。
 - 近战现有入口包括 `MeleeAttackTiming`、`MeleeCombatRange` 与 `Human.doHurtTarget` 的 Better Combat 前摇/延迟出伤。改变冷却、命中或移动时检查这些入口及退避/换武器取消规则。

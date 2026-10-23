@@ -18,7 +18,47 @@ public final class HumanArrowCombat {
     private static final String NPC_LOAD = "hostile_humans_unified:NpcArrowLoad";
     private static final java.util.Map<Human, Integer> INTERVALS = new java.util.WeakHashMap<>();
     private static final java.util.Map<Human, ArrowAttackCadence> CADENCE = new java.util.WeakHashMap<>();
+    static final int DOUBLE_ARROW_DELAY_TICKS = 6;
+    private static final java.util.Map<Human, Followup> FOLLOWUPS = new java.util.WeakHashMap<>();
+    private record Followup(java.lang.ref.WeakReference<LivingEntity> target,
+                            java.lang.ref.WeakReference<ItemStack> weapon,
+                            net.minecraft.world.entity.EntityType<?> type, CompoundTag payload,
+                            net.minecraft.world.phys.Vec3 origin, int dueTick, long session) { }
     private HumanArrowCombat() {}
+
+    /** One scheduled continuation, not a second draw or a queued free projectile. */
+    static void tickFollowup(Human human) {
+        Followup shot = FOLLOWUPS.get(human);
+        if (shot == null) return;
+        LivingEntity target = shot.target().get();
+        ItemStack weapon = shot.weapon().get();
+        if (weapon == null || target != human.getTarget() || !shotStillValid(human, target, weapon)
+                || human.isFleeing || RecoverySupplies.hasActiveUse(human)
+                || !RangedCombatProfile.of(human, weapon).doubleArrow()
+                || HumanBehaviorControl.actions(human).session() != shot.session()) {
+            FOLLOWUPS.remove(human); return;
+        }
+        if (human.tickCount < shot.dueTick()) return;
+        // No backlog or bursts after an interruption: this opportunity is attempted exactly once.
+        FOLLOWUPS.remove(human);
+        if (!hasFollowupShot(human, target, weapon)) return;
+        publishVolley(human, target, weapon, () -> {
+            var created = shot.type().create(human.level());
+            if (!(created instanceof net.minecraft.world.entity.projectile.AbstractArrow arrow)) return null;
+            java.util.UUID identity = arrow.getUUID();
+            arrow.load(shot.payload().copy());
+            arrow.setUUID(identity); arrow.setOwner(human);
+            arrow.setPos(arrow.position().add(human.position().subtract(shot.origin())));
+            return arrow;
+        }, true);
+    }
+    static void clear(Human human) { FOLLOWUPS.remove(human); }
+    private static boolean hasFollowupShot(Human human, LivingEntity target, ItemStack weapon) {
+        return shotStillValid(human, target, weapon) && target == human.getTarget()
+                && HumanAmmo.arrowCount(human) > 0 && HumanAmmo.hasArrows(human)
+                && human.distanceToSqr(target) <= RangedCombatProfile.of(human, weapon).maximumSqr()
+                && RangedShotClearance.canShoot(human, target);
+    }
 
     private static ArrowAttackCadence cadence(Human human) {
         return CADENCE.computeIfAbsent(human, ignored -> new ArrowAttackCadence());
@@ -27,7 +67,7 @@ public final class HumanArrowCombat {
         if (!human.level().isClientSide) INTERVALS.put(human, interval);
     }
     public static boolean canDrawBow(Human human) {
-        return !human.level().isClientSide && cadence(human).canDrawBow(human.tickCount);
+        return !human.level().isClientSide && !FOLLOWUPS.containsKey(human) && cadence(human).canDrawBow(human.tickCount);
     }
     public static void recordBowShot(Human human) {
         if (!human.level().isClientSide) {
@@ -172,6 +212,10 @@ public final class HumanArrowCombat {
      * No backend may also insert or consume ammunition for this transaction. */
     public static int fireVolley(Human human, LivingEntity target, ItemStack weapon,
             java.util.function.Supplier<net.minecraft.world.entity.projectile.AbstractArrow> factory) {
+        return publishVolley(human, target, weapon, factory, false);
+    }
+    private static int publishVolley(Human human, LivingEntity target, ItemStack weapon,
+            java.util.function.Supplier<net.minecraft.world.entity.projectile.AbstractArrow> factory, boolean followup) {
         if (human.level().isClientSide || !FIRING.add(human)) return 0;
         ActionCoordinator actions = null;
         ActionCoordinator.Token token = null;
@@ -179,12 +223,13 @@ public final class HumanArrowCombat {
         boolean settled = false;
         try {
             actions = HumanBehaviorControl.actions(human);
-            if (!RangedWeaponCustody.isBowOrCrossbow(weapon) || !canShoot(human, target)
+            if (!RangedWeaponCustody.isBowOrCrossbow(weapon)
+                    || !(followup ? hasFollowupShot(human, target, weapon) : canShoot(human, target))
                     || !shotStillValid(human, target, weapon)) { settled = true; return 0; }
             token = actions.request("arrow-volley", java.util.EnumSet.of(ActionCoordinator.Resource.ATTACK,
                     ActionCoordinator.Resource.INVENTORY), 75, false, 2);
             if (!actions.acquire(token)) { settled = true; return 0; }
-            inserted = executeVolley(human, target, weapon, factory, actions, token);
+            inserted = executeVolley(human, target, weapon, factory, actions, token, followup);
             settled = true;
             return inserted;
         } finally {
@@ -210,64 +255,58 @@ public final class HumanArrowCombat {
 
     private static int executeVolley(Human human, LivingEntity target, ItemStack weapon,
             java.util.function.Supplier<net.minecraft.world.entity.projectile.AbstractArrow> factory,
-            ActionCoordinator actions, ActionCoordinator.Token token) {
+            ActionCoordinator actions, ActionCoordinator.Token token, boolean followup) {
         if (!actions.running(token) || !shotStillValid(human, target, weapon)) return 0;
         var profile = RangedCombatProfile.of(human, weapon);
-        int total = 0;
-        net.minecraft.nbt.CompoundTag firstArrow = null;
-        int groups = profile.doubleArrow() ? 2 : 1;
-        for (int group = 0; group < groups; group++) {
-            if (!actions.running(token) || !shotStillValid(human, target, weapon)) break;
-            var layout = ArrowLayout.capture(human);
-            int available = HumanAmmo.arrowCount(human);
-            float[] angles = ArrowVolleyPolicy.angles(profile.tripleArrow(),
-                    (profile.tripleArrow() || weapon.getItem() instanceof CrossbowItem)
-                            && EnchantmentHelper.getItemEnchantmentLevel(Enchantments.MULTISHOT, weapon) > 0, available);
-            if (angles.length == 0) break; // Never gamble on the saving roll without an actual arrow.
-            java.util.List<net.minecraft.world.entity.projectile.AbstractArrow> arrows = new java.util.ArrayList<>();
-            for (float angle : angles) {
-                var arrow = factory.get();
-                if (arrow == null || arrow.isAddedToWorld()) return total;
-                if (profile.doubleArrow()) {
-                    if (firstArrow == null) firstArrow = arrow.saveWithoutId(new CompoundTag());
-                    else {
-                        java.util.UUID ownIdentity = arrow.getUUID();
-                        arrow.load(firstArrow.copy());
-                        arrow.setUUID(ownIdentity);
-                    }
-                }
-                if (angle != 0) arrow.setDeltaMovement(arrow.getDeltaMovement().yRot((float) Math.toRadians(-angle)));
-                arrow.setBaseDamage(arrow.getBaseDamage() * profile.damage());
-                arrow.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
-                arrows.add(arrow);
+        var layout = ArrowLayout.capture(human);
+        int available = HumanAmmo.arrowCount(human);
+        float[] angles = ArrowVolleyPolicy.angles(profile.tripleArrow(),
+                (profile.tripleArrow() || weapon.getItem() instanceof CrossbowItem)
+                        && EnchantmentHelper.getItemEnchantmentLevel(Enchantments.MULTISHOT, weapon) > 0, available);
+        if (angles.length == 0) return 0;
+        java.util.List<net.minecraft.world.entity.projectile.AbstractArrow> arrows = new java.util.ArrayList<>();
+        CompoundTag followupPayload = null;
+        net.minecraft.world.entity.EntityType<?> followupType = null;
+        for (float angle : angles) {
+            var arrow = factory.get();
+            if (arrow == null || arrow.isAddedToWorld()) return 0;
+            if (profile.doubleArrow() && !followup) {
+                followupPayload = arrow.saveWithoutId(new CompoundTag());
+                followupType = arrow.getType();
             }
-            int cost = ArrowVolleyPolicy.cost(profile.tripleArrow(), available);
-            // Recheck after optional native factory hooks, before publishing any projectile.
-            if (!actions.running(token) || !shotStillValid(human, target, weapon)
-                    || !layout.matches(human) || HumanAmmo.arrowCount(human) < cost) break;
-            boolean save = profile.savingChance() > 0 && human.getRandom().nextDouble() < profile.savingChance();
-            // Reserve the real arrows first. A failed entity insertion refunds only our untouched slots.
-            var payment = ArrowPayment.take(human, save ? 0 : cost);
-            if (payment == null) break;
-            int inserted = 0;
-            var paidLayout = ArrowLayout.capture(human);
-            try {
-                for (var arrow : arrows) {
-                    if (!actions.running(token) || !shotStillValid(human, target, weapon)
-                            || !paidLayout.matches(human)) break;
-                    if (human.level().addFreshEntity(arrow)) inserted++;
-                }
-            } finally {
-                inserted = (int) arrows.stream().filter(net.minecraft.world.entity.Entity::isAddedToWorld).count();
-                if (inserted == 0) payment.refund(human);
-                total += inserted;
-                if (inserted > 0) {
-                    if (weapon.getItem() instanceof CrossbowItem) recordCrossbowShot(human);
-                    else recordBowShot(human);
-                }
+            if (angle != 0) arrow.setDeltaMovement(arrow.getDeltaMovement().yRot((float)Math.toRadians(-angle)));
+            arrow.setBaseDamage(arrow.getBaseDamage() * profile.damage());
+            arrow.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
+            arrows.add(arrow);
+        }
+        int cost = ArrowVolleyPolicy.cost(profile.tripleArrow(), available);
+        // Recheck after optional native factory hooks, before publishing any projectile.
+        if (!actions.running(token) || !shotStillValid(human, target, weapon)
+                || !layout.matches(human) || HumanAmmo.arrowCount(human) < cost) return 0;
+        boolean save = profile.savingChance() > 0 && human.getRandom().nextDouble() < profile.savingChance();
+        var payment = ArrowPayment.take(human, save ? 0 : cost);
+        if (payment == null) return 0;
+        int inserted = 0;
+        var paidLayout = ArrowLayout.capture(human);
+        try {
+            for (var arrow : arrows) {
+                if (!actions.running(token) || !shotStillValid(human, target, weapon)
+                        || !paidLayout.matches(human)) break;
+                if (human.level().addFreshEntity(arrow)) inserted++;
+            }
+        } finally {
+            inserted = (int)arrows.stream().filter(net.minecraft.world.entity.Entity::isAddedToWorld).count();
+            if (inserted == 0) payment.refund(human);
+            if (inserted > 0 && !followup) {
+                if (weapon.getItem() instanceof CrossbowItem) recordCrossbowShot(human);
+                else recordBowShot(human);
             }
         }
-        return total;
+        if (inserted > 0 && followupPayload != null && followupType != null && !followup)
+            FOLLOWUPS.put(human, new Followup(new java.lang.ref.WeakReference<>(target),
+                    new java.lang.ref.WeakReference<>(weapon), followupType, followupPayload, human.position(),
+                    human.tickCount + DOUBLE_ARROW_DELAY_TICKS, actions.session()));
+        return inserted;
     }
 
     /** Optional factories and entity-join callbacks cannot silently edit the backing layout. */

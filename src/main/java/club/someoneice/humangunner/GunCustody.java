@@ -89,8 +89,9 @@ final class GunCustody {
         ItemStack gun=human.getMainHandItem();
         var target=human.getTarget();
         if(!GunSupport.get().isGun(gun)||target==null||!target.isAlive()
-                ||human.distanceToSqr(target)>4.5*4.5||human.isUsingItem()) return false;
-        boolean forced=GunCombatProfile.shouldForceMelee(human,gun);
+                ||human.distanceToSqr(target)>WeaponTransitionPolicy.GUN_ENTER*WeaponTransitionPolicy.GUN_ENTER||human.isUsingItem()) return false;
+        boolean forced=WeaponTransitionPolicy.holdsMelee(human.distanceToSqr(target), false,
+                GunCombatProfile.shouldForceMelee(human,gun));
         if(!forced && (GunSupport.get().hasLoadedAmmo(gun)||!GunSupport.get().isReloading(human,gun))) return false;
         ItemStack melee=HumanLootManager.bestOwnedMeleeWeapon(human);
         if(melee.isEmpty()) return false;
@@ -113,10 +114,11 @@ final class GunCustody {
         boolean editing=reason.equals("owner_inventory_open");
         if(!editing) {
             var target=human.getTarget();
-            boolean close=target!=null&&target.isAlive()&&human.distanceToSqr(target)<=4.5*4.5;
+            boolean close=target!=null&&target.isAlive()&&WeaponTransitionPolicy.holdsMelee(
+                    human.distanceToSqr(target), true, GunCombatProfile.shouldForceMelee(human,gun));
             boolean melee=HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem());
             if(isActive(human)&&melee&&(human.humanGunner$hasPendingMeleeAttack()||human.swinging)) return false;
-            if(isActive(human)&&close&&melee&&GunCombatProfile.shouldForceMelee(human,gun)) return false;
+            if(isActive(human)&&close&&melee) return false;
             if(isActive(human)&&melee&&GunSupport.get().isReloading(human,gun)) return false;
             if(!AmmoWeaponSelection.mayRestore(human,gun)) return false;
         }
@@ -143,8 +145,9 @@ final class GunCustody {
             ItemStack gun=primary(human);
             if(gun.isEmpty()) { clearLease(human); return; }
             var target=human.getTarget();
-            boolean close=target!=null&&target.isAlive()&&human.distanceToSqr(target)<=4.5*4.5;
-            if((close&&GunCombatProfile.shouldForceMelee(human,gun)||GunSupport.get().isReloading(human,gun))
+            boolean close=target!=null&&target.isAlive()&&WeaponTransitionPolicy.holdsMelee(
+                    human.distanceToSqr(target), true, GunCombatProfile.shouldForceMelee(human,gun));
+            if((close||GunSupport.get().isReloading(human,gun))
                     &&!HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())) {
                 ItemStack selected=HumanLootManager.bestOwnedMeleeWeapon(human);
                 if(!selected.isEmpty()) {
@@ -153,8 +156,7 @@ final class GunCustody {
                     return;
                 }
             }
-            if(close&&HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())
-                    &&GunCombatProfile.shouldForceMelee(human,gun)) return;
+            if(close&&HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())) return;
             if(HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())
                     &&GunSupport.get().isReloading(human,gun)) return;
             // A busy hand is transient; retain the original handle and retry.

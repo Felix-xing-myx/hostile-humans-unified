@@ -221,7 +221,7 @@ final class TaczIntegration implements GunSupport {
                 // TaCZ does not pass through vanilla projectile shield handling,
                 // so apply both the shield durability cost and the requested
                 // 50% reduction at its own damage event; native AP sources stay intact.
-                defender.humanGunner$shieldDefense().observeBlockedHit();
+                defender.humanGunner$shieldDefense().observeAttack(normalSource, true, event.getBaseAmount());
                 ShieldDurability.damageShield(defender, event.getBaseAmount());
                 event.setBaseAmount(event.getBaseAmount() * (float) Math.min(1,
                         UnifiedConfig.get().gunSetting("shield_damage_multiplier", .5)));

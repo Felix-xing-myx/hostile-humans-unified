@@ -9,9 +9,15 @@ import net.minecraft.world.item.ItemDisplayContext;
 final class HumanGunPresentation {
     private HumanGunPresentation() {}
 
+    /** Server-synchronized actual use; shared by arm pose, animation and item attachment. */
+    static boolean activeShield(Human human) {
+        return human.isUsingItem() && club.someoneice.humangunner.SpartanEquipmentCompat.isShield(human.getUseItem());
+    }
+
     static HumanoidArm mainArm(Human human) {
         var stack = human.getMainHandItem();
-        return GunSupport.isGunItem(stack)
+        return !activeShield(human)
+                && GunSupport.isGunItem(stack)
                 ? HumanoidArm.RIGHT : human.getMainArm();
     }
 

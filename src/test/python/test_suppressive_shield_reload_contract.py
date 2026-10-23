@@ -102,7 +102,7 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         combat = shield.split('CombatUpdate tickCombat(', 1)[1].split('private void updateDefensePressure()', 1)[0]
         self.assertIn('owner != Owner.COMBAT', combat)
         self.assertIn('meleeBlocks >= 3', combat)
-        self.assertIn('human.tickCount - defensePressureTick >= 40', combat)
+        self.assertIn('human.tickCount - defensePressureTick >= 20', combat)
         self.assertIn('attackObligation = true', combat)
         end = shield.split('void endCombat()', 1)[1].split('boolean underGunfirePressure()', 1)[0]
         self.assertIn('if (owner != Owner.COMBAT) return', end)

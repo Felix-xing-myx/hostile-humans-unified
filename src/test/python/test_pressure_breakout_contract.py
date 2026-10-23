@@ -54,4 +54,4 @@ class PressureBreakoutContract(unittest.TestCase):
         self.assertIn('!pressureCycle.attempting() && (pressureWaitingForDrink', shield)
         record = shield.split('public void recordPressureDamage(', 1)[1].split('private void recordPressureDirection', 1)[0]
         self.assertLess(record.index('BYPASSES_SHIELD'), record.index('recoveryPressure.record('))
-        self.assertIn('recordPressureDirection(source)', record)
+        self.assertIn('recordPressureDirection(source, damage)', record)

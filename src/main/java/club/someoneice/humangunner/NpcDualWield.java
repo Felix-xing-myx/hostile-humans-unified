@@ -10,6 +10,8 @@ import net.minecraft.world.item.ItemStack;
 /** Real one-handed weapon pair; either member can supply the faction core capability. */
 public final class NpcDualWield {
     private static final Map<Human, State> STATES = new WeakHashMap<>();
+    private static final Map<Human, Integer> NEXT_DEFAULT_LAYOUT = new WeakHashMap<>();
+    static final int DEFAULT_LAYOUT_INTERVAL_TICKS = 5;
     private static final class State {
         HumanEquipmentExchange.Handle first, second;
         boolean swap;
@@ -108,8 +110,38 @@ public final class NpcDualWield {
             if (human.getData().getInventoryItem(i) == stack) refs++;
         return refs == 1;
     }
-    public static int ordinaryDefenseCooldown(Human human) {
-        return remembered(human, STATES.get(human)) || active(human) ? 120 : 0;
+    /** Desired daily layout is recomputed after temporary hand users settle, including while idle.
+     * Holding a second weapon does not grant dual attacks without the existing core/BC capability. */
+    static void tickDefaultLayout(Human human) {
+        if (!faction(human) || human.level().isClientSide || !human.isAlive() || human.isRemoved()
+                || human.isNoAi() || HumanInventorySession.isEditing(human) || human.isUsingItem()
+                || human.humanGunner$hasPendingMeleeAttack() || RecoverySupplies.hasActiveUse(human)
+                || human.humanGunner$shieldDefense().shouldSuppressRecovery()) return;
+        if (human.tickCount < NEXT_DEFAULT_LAYOUT.getOrDefault(human, Integer.MIN_VALUE)) return;
+        NEXT_DEFAULT_LAYOUT.put(human, human.tickCount + DEFAULT_LAYOUT_INTERVAL_TICKS);
+        if (!prepare(human)) return;
+        ItemStack offhand = human.getOffhandItem();
+        if (dailyWeapon(human, offhand)) return;
+        ItemStack selected = ItemStack.EMPTY;
+        if (human.getData() != null) for (int i = 0; i < human.getData().getInventoryItemsSize(); i++) {
+            ItemStack item = human.getData().getInventoryItem(i);
+            if (dailyWeapon(human, item) && (selected.isEmpty()
+                    || HumanLootManager.mainHandWeaponScore(item) > HumanLootManager.mainHandWeaponScore(selected)))
+                selected = item;
+        }
+        if (!selected.isEmpty()) {
+            ItemStack desired = selected;
+            HumanEquipmentExchange.request(human, "dual:daily-offhand", List.of(
+                    new HumanEquipmentExchange.Need(EquipmentSlot.OFFHAND, item -> item == desired)));
+        } else if (!offhand.isEmpty() && offhand.getFoodProperties(human) == null) {
+            // A full backpack is a normal refusal, never permission to discard equipment.
+            HumanEquipmentExchange.stow(human, EquipmentSlot.OFFHAND);
+        }
     }
-    public static void clear(Human human) { STATES.remove(human); }
+    private static boolean dailyWeapon(Human human, ItemStack item) {
+        return item != human.getMainHandItem() && HumanLootManager.isDedicatedMeleeWeapon(item)
+                && unique(human, item) && (!BetterCombatMeleeCombat.isConfiguredEnabled()
+                    || BetterCombatMeleeCombat.supportsOneHand(item));
+    }
+    public static void clear(Human human) { STATES.remove(human); NEXT_DEFAULT_LAYOUT.remove(human); }
 }

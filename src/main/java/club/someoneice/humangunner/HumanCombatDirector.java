@@ -20,6 +20,12 @@ public final class HumanCombatDirector {
         return CombatStrategySet.forFaction(FactionEquipmentConfig.key(human));
     }
 
+    static boolean prefersRangedSeparation(Human human) {
+        var identity = EquipmentArchetypes.describe(human, RangedWeaponCustody.preferredForClearance(human));
+        var style = strategies(human).ranged(identity.core(), identity.enabled());
+        return style != CombatStrategySet.RangedStyle.VOLLEY && style != CombatStrategySet.RangedStyle.ADVANCE;
+    }
+
     /** Attack facts plus selected doctrine produce an intent; executors keep route and safety ownership. */
     static GunPositioning.Plan gunPositioning(Human human, LivingEntity target, double distance,
                                                GunRangePolicy.Band range, boolean obscured) {
@@ -43,7 +49,7 @@ public final class HumanCombatDirector {
     public static void tick(Human human) {
         if (human.level().isClientSide) return;
         var shields = human.humanGunner$shieldDefense();
-        shields.meleeReentryCooldownTicks(NpcDualWield.ordinaryDefenseCooldown(human));
+        shields.meleeReentryCooldownTicks(ShieldDefensePolicy.MELEE_REENTRY_TICKS);
         shields.validateDefenseLease();
         if (HumanTargetCoordinator.suspended(human) || !human.isAlive() || human.isRemoved()) {
             clear(human); return;
@@ -56,15 +62,15 @@ public final class HumanCombatDirector {
                     || SpartanEquipmentCompat.isShield(human.getOffhandItem())))
             shields.clearAttackObligation();
         // Existing recognized-memory facts are shared; defense cannot grant new offensive knowledge.
-        List<LivingEntity> known = HumanPerception.knownDynamicTargets(human).stream()
-                .filter(entity -> HumanPerception.canTarget(human, entity)).limit(64).toList();
+        List<LivingEntity> known = strategies(human).allowsOrdinaryShield() ? HumanPerception.knownDynamicTargets(human).stream()
+                .filter(entity -> HumanPerception.canTarget(human, entity)).limit(64).toList() : List.of();
         List<LivingEntity> near = known.stream().filter(entity -> {
             var offset = entity.position().subtract(human.position());
             return offset.horizontalDistanceSqr() <= 16 && Math.abs(offset.y) <= 3;
         }).toList();
         var heldShield = HumanLootManager.bestOwnedShield(human);
         boolean shield = !heldShield.isEmpty();
-        if (shield && !GunSupport.isGunItem(human.getMainHandItem()) && human.shieldCoolDown <= 0
+        if (shield && strategies(human).allowsOrdinaryShield() && !GunSupport.isGunItem(human.getMainHandItem()) && human.shieldCoolDown <= 0
                 && !RecoverySupplies.hasActiveUse(human)
                 && human.tickCount >= state.nextProjectiles
                 && PerceptionBudget.claim(human, "queries", 1, ":defense_projectiles")) {
@@ -77,7 +83,7 @@ public final class HumanCombatDirector {
         }
         List<Projectile> projectiles = state.lastProjectiles != Integer.MIN_VALUE
                 && human.tickCount - state.lastProjectiles <= 6 ? state.projectiles : List.of();
-        shields.observeDefenseSnapshot(near, known, projectiles);
+        shields.observeDefenseSnapshot(near, projectiles);
         var capability = EquipmentArchetypes.describe(human, heldShield);
         boolean advance = shield && strategies(human).shieldAdvance(capability.core(), capability.enabled())
                 && human.onGround()

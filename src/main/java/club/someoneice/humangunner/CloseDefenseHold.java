@@ -6,7 +6,7 @@ import java.util.WeakHashMap;
 
 /** Keeps automatic ranged restoration from cutting off a close-defense attack. */
 public final class CloseDefenseHold {
-    private static final int MIN_HOLD_TICKS = 40;
+    private static final int MIN_HOLD_TICKS = 8;
     private static final Map<Human, State> HOLDS = new WeakHashMap<>();
     private CloseDefenseHold() {}
 

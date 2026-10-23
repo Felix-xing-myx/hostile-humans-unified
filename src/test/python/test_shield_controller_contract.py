@@ -73,7 +73,7 @@ class ShieldControllerContract(unittest.TestCase):
         begin = source.split('int beginCombat(', 1)[1].split('void endCombat()', 1)[0]
         self.assertLess(begin.index('if (ownsCombatDefense()) return 41'), begin.index('meleeBlocks = 0'))
         tick = source.split('CombatUpdate tickCombat(', 1)[1].split('private void updateDefensePressure', 1)[0]
-        self.assertIn('meleeCounterRequested || meleeBlocks >= 3 || human.tickCount - defensePressureTick >= 40', tick)
+        self.assertIn('meleeCounterRequested || meleeBlocks >= 3 || human.tickCount - defensePressureTick >= 20', tick)
         self.assertLess(tick.index('endCombat()'), tick.index('attackObligation = true'))
         self.assertIn('return new CombatUpdate(2, false)', tick)
         self.assertIn('shieldResources(), priority, true, 2410', source)
@@ -93,7 +93,7 @@ class ShieldControllerContract(unittest.TestCase):
         self.assertIn('40, "高压平滑盾面", true', attention)
         controller = (PKG / "ShieldDefenseController.java").read_text(encoding="utf-8")
         block = controller.split("public void observeAttack(", 1)[1].split("public void observeBlockedHit", 1)[0]
-        self.assertLess(block.index("recordPressureDirection(source)"), block.index("rememberedShooter ="))
+        self.assertLess(block.index("recordPressureDirection(source, damage)"), block.index("rememberedShooter ="))
 
 
 if __name__ == "__main__":

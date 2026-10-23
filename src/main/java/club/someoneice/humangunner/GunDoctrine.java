@@ -26,7 +26,7 @@ final class GunDoctrine {
             return new Style(.7,.7,.2,false,false,2);
         if (strategy == CombatStrategySet.GunStyle.ASSAULT) {
             boolean close=category.equals("smg")||category.equals("shotgun");
-            return new Style(1,1,.4,true,!close,close?1.2:2);
+            return new Style(1,1,.4,true,true,close?1.2:2);
         }
         if (strategy == CombatStrategySet.GunStyle.MELEE_ASSAULT) return new Style(1,1,.4,true,true,2);
         boolean nonCore=!core && (strategy == CombatStrategySet.GunStyle.FORTIFIED || strategy == CombatStrategySet.GunStyle.MOBILE);

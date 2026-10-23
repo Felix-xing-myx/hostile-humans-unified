@@ -32,7 +32,7 @@ public final class CombatStrategySetTest {
         check(RangedCombatProfile.of(false, false, gray.ranged(true, true)).advance(), "gray bow advances");
         check(!RangedCombatProfile.of(false, true, gray.ranged(true, true)).advance(), "trident does not inherit bow advance");
         check(GunDoctrine.style(blue.gun(), "rifle", true).reloadDuration() == .7, "blue actual rifle duration");
-        check(!GunDoctrine.style(red.gun(), "shotgun", true).forceMelee(), "red shotgun keeps close firing cycle");
+        check(GunDoctrine.style(red.gun(), "shotgun", true).forceMelee(), "red shotgun respects close melee priority");
         check(GunDoctrine.style(gray.gun(), "shotgun", true).forceMelee(), "gray shotgun uses melee strategy");
         check(GunDoctrine.style(green.gun(), "pistol", false).forceMelee(), "green non-core gun uses existing fallback");
         System.out.println("CombatStrategySetTest passed");

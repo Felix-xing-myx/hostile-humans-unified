@@ -79,6 +79,7 @@ public final class HumanBehaviorControl {
                     () -> GunCustody.cancelBackgroundReloads(human),
                     () -> MeleeActionControl.clear(human, reason),
                     () -> NpcDualWield.clear(human),
+                    () -> HumanArrowCombat.clear(human),
                     () -> human.humanGunner$cancelMeleeAttackForDefense(),
                     () -> RecoverySupplies.clear(human, reason),
                     () -> HumanCombatDirector.clear(human),

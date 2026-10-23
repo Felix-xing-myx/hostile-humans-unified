@@ -44,6 +44,9 @@ public final class ShieldDefenseController {
         return raising && startingHand == hand && startingShield == human.getItemInHand(hand)
                 && startingActions != null && startingActions.running(startingToken);
     }
+    private boolean allowsShieldOwner(Owner requested) {
+        return requested == Owner.PRESSURE || HumanCombatDirector.strategies(human).allowsOrdinaryShield();
+    }
     private static java.util.EnumSet<ActionCoordinator.Resource> shieldResources() {
         return java.util.EnumSet.of(ActionCoordinator.Resource.FACING, ActionCoordinator.Resource.USE_ITEM,
                 ActionCoordinator.Resource.MAIN_HAND, ActionCoordinator.Resource.OFF_HAND, ActionCoordinator.Resource.ATTACK);
@@ -53,7 +56,7 @@ public final class ShieldDefenseController {
     public void validateDefenseLease() {
         if (owner == null) return;
         if (!human.isAlive() || human.isRemoved() || human.isNoAi() || HumanInventorySession.isEditing(human)
-                || human.shieldCoolDown > 0 || leaseActions == null || !leaseActions.running(lease)
+                || !allowsShieldOwner(owner) || human.shieldCoolDown > 0 || leaseActions == null || !leaseActions.running(lease)
                 || !ownsCurrentShield()) {
             Owner lost = owner;
             release(lost);
@@ -78,7 +81,7 @@ public final class ShieldDefenseController {
     /** Caller supplies verified faction/core shield, grounded melee mode, locked out-of-range
      * target and permission to move. The same shared snapshot is used for higher priority checks. */
     public boolean tickAdvance(boolean eligible, int effectiveTicks) {
-        boolean allowed = config.enabled() && eligible && !human.isFleeing && canBlockWithShield()
+        boolean allowed = allowsShieldOwner(Owner.ADVANCE) && config.enabled() && eligible && !human.isFleeing && canBlockWithShield()
                 && (owner == null || owner == Owner.ADVANCE) && shieldResourcesAvailable()
                 && !shouldSuppressRecovery() && meleeBearings().isEmpty()
                 && !RecoverySupplies.hasHandCustody(human) && !human.humanGunner$hasPendingMeleeAttack();
@@ -106,19 +109,17 @@ public final class ShieldDefenseController {
     private int lastAttackExecution = Integer.MIN_VALUE;
     private int meleeBlocks;
     private int meleeReentryCooldownTicks;
-    /** Gray dual-wield policy supplies 120; all other modes supply zero. */
+    /** Ordinary guard yields to an attack and a bounded reentry interval. */
     public void meleeReentryCooldownTicks(int ticks) { meleeReentryCooldownTicks = Math.max(0, ticks); }
     private boolean meleeCounterRequested, attackObligation;
     private int detectionTick = Integer.MIN_VALUE;
-    private List<LivingEntity> nearbyMelee = List.of(), lockedDefenseTargets = List.of();
+    private List<LivingEntity> nearbyMelee = List.of();
     private List<Projectile> observedProjectiles;
 
     /** Detection layer may publish one shared snapshot; this module never grants target knowledge. */
-    public void observeDefenseSnapshot(List<LivingEntity> nearby, List<LivingEntity> locked,
-                                       List<Projectile> projectiles) {
+    public void observeDefenseSnapshot(List<LivingEntity> nearby, List<Projectile> projectiles) {
         detectionTick = human.tickCount;
         nearbyMelee = List.copyOf(nearby);
-        lockedDefenseTargets = List.copyOf(locked);
         observedProjectiles = List.copyOf(projectiles);
         lastProjectileProbeTick = Integer.MIN_VALUE;
     }
@@ -127,8 +128,8 @@ public final class ShieldDefenseController {
         if (owner != null) release(owner);
         endPressureExecution(); endAdvance(); advance.end(); clearAttackObligation();
         guardedCharge.reset();
-        pressureFacing.clear(); trackedArrows.clear();
-        nearbyMelee = lockedDefenseTargets = List.of(); observedProjectiles = null;
+        pressureFacing.clear(); pressureSources.clear(); trackedArrows.clear();
+        nearbyMelee = List.of(); observedProjectiles = null;
         detectionTick = lastProjectileProbeTick = Integer.MIN_VALUE; lastProjectileProbe = null;
     }
     public void onAttackExecuted() { lastAttackExecution = human.tickCount; attackObligation = false; }
@@ -142,8 +143,6 @@ public final class ShieldDefenseController {
         detectionTick = human.tickCount;
         nearbyMelee = human.level().getEntitiesOfClass(LivingEntity.class,
                 human.getBoundingBox().inflate(4, 3, 4), this::isValidThreat);
-        LivingEntity target = human.getTarget();
-        lockedDefenseTargets = isValidThreat(target) ? List.of(target) : List.of();
         observedProjectiles = null;
     }
     private List<Float> meleeBearings() {
@@ -162,6 +161,7 @@ public final class ShieldDefenseController {
     private boolean pressureCycleActive;
     private final PressureDefenseCycle pressureCycle = new PressureDefenseCycle();
     private final PressureGuardFacing pressureFacing = new PressureGuardFacing();
+    private final PressureThreatDirections pressureSources = new PressureThreatDirections();
     private ItemStack ownedShield;
     private int guardBlockUntil, nextGuardBlock;
     private int nextDefenseTick;
@@ -235,11 +235,11 @@ public final class ShieldDefenseController {
         if (RecoverySupplies.isDrinkingPotion(human) && !pressureCycle.attempting()
                 && recoveryPressure.active(human.tickCount, rules)) pressureWaitingForDrink = true;
         pressureCycle.damage(human.tickCount, damage, human.getMaxHealth(), rules);
-        recordPressureDirection(source);
+        recordPressureDirection(source, damage);
     }
 
     /** Direction-only input shared by actual damage and successful shield blocks. */
-    private void recordPressureDirection(DamageSource source) {
+    private void recordPressureDirection(DamageSource source, float damage) {
         // A moving projectile provides arrival direction, never its owner's remote coordinates.
         var direct = source.getDirectEntity();
         var attacker = source.getEntity();
@@ -250,7 +250,8 @@ public final class ShieldDefenseController {
             direction = direct.position().subtract(human.position());
         if (direction != null && Double.isFinite(direction.x) && Double.isFinite(direction.z)
                 && direction.horizontalDistanceSqr() > 1.0E-8)
-            pressureFacing.record((float)Math.toDegrees(Math.atan2(direction.z, direction.x)) - 90);
+            pressureSources.record(attacker != null ? attacker.getUUID() : direct.getUUID(), human.tickCount,
+                    (float)Math.toDegrees(Math.atan2(direction.z, direction.x)) - 90, damage, human.getMaxHealth());
     }
 
     public boolean shouldSuppressRecovery() {
@@ -279,7 +280,7 @@ public final class ShieldDefenseController {
                 || recoveryPressure.active(human.tickCount, rules), rules)) {
             recoveryPressure.clear();
             clearDeferredPressure();
-            pressureFacing.clear();
+            pressureFacing.clear(); pressureSources.clear();
         }
     }
 
@@ -316,7 +317,7 @@ public final class ShieldDefenseController {
     }
 
     private boolean wantsCombatNow(LivingEntity threat, IncomingArrow incomingArrow) {
-        if (wantsHighPressureGuard() || owner == Owner.PRESSURE || owner == Owner.PROJECTILE) return false;
+        if (!allowsShieldOwner(Owner.COMBAT) || wantsHighPressureGuard() || owner == Owner.PRESSURE || owner == Owner.PROJECTILE) return false;
         if (human.isFleeing || !canBlockWithShield() || isHoldingTaczGun()
                 || RecoverySupplies.hasActiveUse(human)) return false;
         if (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem())
@@ -381,7 +382,8 @@ public final class ShieldDefenseController {
         List<Float> bearings = meleeBearings();
         if (!bearings.isEmpty()) human.markShieldFacingDirection(ShieldDefensePolicy.coverageYaw(
                 bearings, human.getYRot(), true, human.getRandom().nextDouble()));
-        if (meleeCounterRequested || meleeBlocks >= 3 || human.tickCount - defensePressureTick >= 40) {
+        if (meleeCounterRequested || meleeBlocks >= 3 || human.tickCount - defensePressureTick >= 20
+                || human.tickCount - defenseStartTick >= ShieldDefensePolicy.MELEE_GUARD_MAX_TICKS) {
             boolean counter = meleeCounterRequested;
             endCombat();
             attackObligation = true;
@@ -484,21 +486,11 @@ public final class ShieldDefenseController {
         pressureWaitingForDrink = false;
         deferredPressureGraceUntil = Integer.MIN_VALUE;
         endPressureExecution();
-        if (!recoveryPressure.active(human.tickCount, UnifiedConfig.get().shieldPressure())) pressureFacing.clear();
+        if (!recoveryPressure.active(human.tickCount, UnifiedConfig.get().shieldPressure())) { pressureFacing.clear(); pressureSources.clear(); }
     }
     private void facePressure() {
-        detectDefense();
-        List<Float> bearings = new ArrayList<>();
-        for (LivingEntity target : lockedDefenseTargets) if (isValidThreat(target)) {
-            // Shared discovery may authorize a target without revealing its current hidden position.
-            Vec3 known = HumanPerception.knownPosition(human, target);
-            if (known == null) continue;
-            Vec3 offset = known.subtract(human.position());
-            if (offset.horizontalDistanceSqr() > 1.0E-8)
-                bearings.add((float) Math.toDegrees(Math.atan2(offset.z, offset.x)) - 90);
-        }
-        if (!bearings.isEmpty()) pressureFacing.record(ShieldDefensePolicy.coverageYaw(
-                bearings, human.getYRot(), false, human.getRandom().nextDouble()));
+        Float direction = pressureSources.yaw(human.tickCount, human.getYRot());
+        if (direction != null) pressureFacing.record(direction);
         if (ownsCurrentShield()) human.markShieldFacingDirection(pressureFacing.step(human.tickCount, human.getYRot()));
     }
 
@@ -574,15 +566,16 @@ public final class ShieldDefenseController {
 
     static void onShieldBlock(net.minecraftforge.event.entity.living.ShieldBlockEvent event) {
         if (!event.isCanceled() && event.getBlockedDamage() > 0.0F && event.getEntity() instanceof Human defender)
-            defender.humanGunner$shieldDefense().observeAttack(event.getDamageSource(), true);
+            defender.humanGunner$shieldDefense().observeAttack(event.getDamageSource(), true, event.getBlockedDamage());
     }
 
     /** Only an observed attacker is remembered; no omniscient scan of every archer. */
-    public void observeAttack(DamageSource source, boolean blocked) {
+    public void observeAttack(DamageSource source, boolean blocked) { observeAttack(source, blocked, 0); }
+    public void observeAttack(DamageSource source, boolean blocked, float damage) {
         if (human.level().isClientSide) return;
         if (blocked) {
             observeBlockedHit();
-            recordPressureDirection(source);
+            recordPressureDirection(source, damage);
         }
         if (source.getEntity() instanceof LivingEntity attacker
                 && !HumanRelations.allied(human, attacker)
@@ -639,7 +632,7 @@ public final class ShieldDefenseController {
     }
 
     private boolean canPreemptivelyBlockProjectile() {
-        if (!hasAvailableShield() || human.shieldCoolDown > 0) {
+        if (!allowsShieldOwner(Owner.PROJECTILE) || !hasAvailableShield() || human.shieldCoolDown > 0) {
             return false;
         }
         return !human.isFleeing && !isHoldingTaczGun();
@@ -667,6 +660,11 @@ public final class ShieldDefenseController {
     private boolean predictsIncomingMelee(LivingEntity attacker) {
         if (!isValidThreat(attacker) || isRangedThreat(attacker)
                 || !human.getSensing().hasLineOfSight(attacker)) return false;
+        // Small vanilla slime has collision but cannot inflict contact damage. Magma cubes differ.
+        if (attacker.getType() == net.minecraft.world.entity.EntityType.SLIME
+                && attacker instanceof net.minecraft.world.entity.monster.Slime slime && slime.getSize() <= 1) return false;
+        var attack = attacker.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        if (attack == null || !ShieldDefensePolicy.worthMeleeGuard(attack.getValue(), human.getMaxHealth())) return false;
         Vec3 offset = attacker.position().subtract(human.position());
         Vec3 toward = offset.multiply(1, 0, 1).normalize();
         Vec3 enemyLook = attacker.getLookAngle().multiply(1, 0, 1).normalize();
@@ -718,7 +716,8 @@ public final class ShieldDefenseController {
     }
 
     private boolean canBlockWithShield() {
-        return hasAvailableShield() && human.shieldCoolDown <= 0 && (!isHoldingTaczGun() || shouldSuppressRecovery());
+        return allowsShieldOwner(Owner.COMBAT) && hasAvailableShield() && human.shieldCoolDown <= 0
+                && (!isHoldingTaczGun() || shouldSuppressRecovery());
     }
 
     private int rollShieldBlockDuration() {
@@ -755,7 +754,7 @@ public final class ShieldDefenseController {
 
     /** Bodyguard interception is a request to the same shield owner, without assigning aggro. */
     void tickBodyguard(ServerPlayer player, LivingEntity threat) {
-        if (threat == null || human.isFleeing || isHoldingTaczGun()) { endBodyguard(); return; }
+        if (!allowsShieldOwner(Owner.BODYGUARD) || threat == null || human.isFleeing || isHoldingTaczGun()) { endBodyguard(); return; }
         if (owner == Owner.BODYGUARD && human.tickCount >= guardBlockUntil) endBodyguard();
         if (human.getTarget() == null && human.shieldCoolDown <= 0 && !human.isUsingItem()
                 && human.tickCount >= nextGuardBlock && human.distanceToSqr(player) <= 16.0D) {
@@ -772,7 +771,7 @@ public final class ShieldDefenseController {
     void endBodyguard() { release(Owner.BODYGUARD); }
 
     private void raise(Owner requestedOwner, InteractionHand hand, boolean projectile) {
-        if (raising || human.level().isClientSide || !human.isAlive() || human.isRemoved() || human.isNoAi()
+        if (!allowsShieldOwner(requestedOwner) || raising || human.level().isClientSide || !human.isAlive() || human.isRemoved() || human.isNoAi()
                 || HumanInventorySession.isEditing(human) || RecoverySupplies.hasActiveUse(human)
                 || human.isUsingItem() && !RangedWeaponCustody.isBowOrCrossbow(human.getUseItem()) || owner != null
                 || (human.isFleeing || isHoldingTaczGun()) && requestedOwner != Owner.PRESSURE) return;

@@ -5,21 +5,23 @@ import java.util.Objects;
 
 /** Immutable faction composition. No actor, item, target, cooldown or execution state lives here. */
 record CombatStrategySet(RangedStyle ranged, GunStyle gun, boolean reinforcedJump,
-                         boolean dualWield, boolean shieldAdvance) {
+                         boolean dualWield, boolean shieldAdvance, ShieldStyle shield) {
     enum RangedStyle { DEFAULT, FORTIFIED, MOBILE, VOLLEY, ADVANCE }
+    enum ShieldStyle { STANDARD, PRESSURE_ONLY }
     enum GunStyle { DEFAULT, FORTIFIED, MOBILE, ASSAULT, MELEE_ASSAULT }
 
     private static final CombatStrategySet DEFAULT = new CombatStrategySet(
-            RangedStyle.DEFAULT, GunStyle.DEFAULT, false, false, false);
+            RangedStyle.DEFAULT, GunStyle.DEFAULT, false, false, false, ShieldStyle.STANDARD);
     private static final Map<String, CombatStrategySet> FACTIONS = Map.of(
-            "azure", new CombatStrategySet(RangedStyle.FORTIFIED, GunStyle.FORTIFIED, false, false, true),
-            "verdant", new CombatStrategySet(RangedStyle.MOBILE, GunStyle.MOBILE, false, false, false),
-            "crimson", new CombatStrategySet(RangedStyle.VOLLEY, GunStyle.ASSAULT, true, false, false),
-            "ashen", new CombatStrategySet(RangedStyle.ADVANCE, GunStyle.MELEE_ASSAULT, true, true, false));
+            "azure", new CombatStrategySet(RangedStyle.FORTIFIED, GunStyle.FORTIFIED, false, false, true, ShieldStyle.STANDARD),
+            "verdant", new CombatStrategySet(RangedStyle.MOBILE, GunStyle.MOBILE, false, false, false, ShieldStyle.STANDARD),
+            "crimson", new CombatStrategySet(RangedStyle.VOLLEY, GunStyle.ASSAULT, true, false, false, ShieldStyle.STANDARD),
+            "ashen", new CombatStrategySet(RangedStyle.ADVANCE, GunStyle.MELEE_ASSAULT, true, true, false, ShieldStyle.PRESSURE_ONLY));
 
     CombatStrategySet {
         Objects.requireNonNull(ranged);
         Objects.requireNonNull(gun);
+        Objects.requireNonNull(shield);
     }
 
     static CombatStrategySet forFaction(String faction) {
@@ -29,6 +31,8 @@ record CombatStrategySet(RangedStyle ranged, GunStyle gun, boolean reinforcedJum
     RangedStyle ranged(boolean core, boolean enabled) {
         return core && enabled ? ranged : RangedStyle.DEFAULT;
     }
+
+    boolean allowsOrdinaryShield() { return shield == ShieldStyle.STANDARD; }
 
     boolean reinforcedJump(boolean core, boolean enabled) { return reinforcedJump && core && enabled; }
     boolean shieldAdvance(boolean core, boolean enabled) { return shieldAdvance && core && enabled; }

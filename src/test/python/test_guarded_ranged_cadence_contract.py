@@ -39,8 +39,8 @@ class GuardedRangedCadenceContract(unittest.TestCase):
         volley = api.split('private static int executeVolley(', 1)[1].split('private record ArrowLayout', 1)[0]
         self.assertIn('if (human.level().addFreshEntity(arrow)) inserted++', volley)
         self.assertIn('arrows.stream().filter(net.minecraft.world.entity.Entity::isAddedToWorld).count()', volley)
-        self.assertLess(volley.index('if (inserted > 0)'), volley.index('recordCrossbowShot(human)'))
-        self.assertLess(volley.index('if (inserted > 0)'), volley.index('recordBowShot(human)'))
+        self.assertLess(volley.index('if (inserted > 0 && !followup)'), volley.index('recordCrossbowShot(human)'))
+        self.assertLess(volley.index('if (inserted > 0 && !followup)'), volley.index('recordBowShot(human)'))
         self.assertIn('if (inserted == 0) payment.refund(human)', volley)
         human = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
         self.assertIn('HumanArrowCombat.fireVolley', human)
