@@ -94,6 +94,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // PlayerLikeMovementGoal runs at a lower goal priority and reads
             // this short-lived hint to suppress combat hops while aiming.
             GunAttackMovementState.clear(human);
+            HumanAttention.clearGunAim(human);
             MovementSpeedController.limit(human,MovementSpeedController.Limit.RANGED,1,false);
         }
         LivingEntity target = mob.getTarget();
@@ -205,7 +206,8 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             if (mob instanceof Human human) movement.enablePursuitSprint(human, target);
             return;
         }
-        if(mob instanceof Human human&&!HumanAttention.canAim(human,target)){
+        AimRotation aim = calculateAim(target, weapon);
+        if(mob instanceof Human human&&!HumanAttention.beginGunAim(human,target,aim.yaw(),aim.pitch())){
             aimTicks=0;setAiming(false);return;
         }
         setAiming(true);
@@ -219,14 +221,10 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
             // urgent counter-shot while continuing to retreat.
             operator.prepareUrgentShot();
         }
-        AimRotation aim = calculateAim(target, weapon);
         mob.setXRot(aim.pitch());
         mob.setYRot(aim.yaw());
         mob.setYHeadRot(aim.yaw());
         mob.setYBodyRot(aim.yaw());
-        if (mob instanceof Human human) {
-            human.markRangedFacing(target, aim.yaw());
-        }
         // The synchronized aiming-progress value is presentation state, not a
         // server-side ballistic requirement. It can remain at zero while the
         // Human is swimming, which used to suppress every underwater shot.
@@ -251,6 +249,7 @@ public final class GunnerGoal<T extends PathfinderMob> extends Goal {
     }
 
     private void setAiming(boolean aiming) {
+        if (!aiming && mob instanceof Human human) HumanAttention.clearGunAim(human);
         operator.aim(aiming);
     }
 

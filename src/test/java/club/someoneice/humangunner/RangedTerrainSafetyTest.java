@@ -142,6 +142,18 @@ public final class RangedTerrainSafetyTest {
         check(calls(root + "RangedHybridMeleeGoal", "canUse", root + "RangedTerrainCombat", "isTerrainMelee"), "terrain leases retain the native melee goal");
         check(calls(root + "RangedHybridMeleeGoal", "tick", "com/craftix/hostile_humans/entity/ai/goal/MeleeAttackGoal", "tick"), "temporary fighters reuse ordinary melee movement and attacks");
         check(calls(root + "RangedHybridMeleeGoal", "tick", root + "RangedFiringPosition", "findVisiblePath"), "voluntary separation shares the budgeted firing-lane planner");
+        check(calls(root + "GunnerGoal", "tick", root + "HumanAttention", "beginGunAim"), "validated firing goal publishes exact ballistic aim");
+        check(calls(root + "GunnerGoal", "setAiming", root + "HumanAttention", "clearGunAim")
+                && calls(root + "HumanBehaviorControl", "cancel", null, "clearGunAim"), "aim exit and session cancellation retire gun facing");
+        check(calls(root + "HumanAttention", "navigationYaw", root + "HumanAttention", "hasGunAim")
+                && calls(root + "HumanAttention", "finish", root + "HumanAttention", "applyGunAim"), "final attention cannot pull active gun aim onto route yaw");
+        check(calls(human, "hasCombatFacing", root + "HumanAttention", "hasGunAim")
+                && calls(human, "applyCombatFacing", root + "HumanAttention", "applyGunAim"), "gun stance shares existing BC and shield movement conversion");
+        check(calls(human + "$HumanMoveControl", "tickOwnedMovement", human + "$HumanMoveControl", "moveWhileCombatFacing")
+                && calls(human + "$HumanMoveControl", "moveWhileCombatFacing", human, "applyCombatFacing"), "aim applied before path-relative travel, not only after movement");
+        for (String method : new String[]{"beginGunAim", "hasGunAim", "applyGunAim", "clearGunAim"})
+            check(!calls(root + "HumanAttention", method, null, "getNavigation")
+                    && !calls(root + "HumanAttention", method, null, "getMoveControl"), "orientation lease cannot replace path: " + method);
         System.out.println("RangedTerrainSafetyTest: " + checks + " checks passed; voxel terrain gameplay remains to be tested");
     }
     private static boolean calls(String owner, String method, String target, String name) throws Exception {
@@ -150,7 +162,7 @@ public final class RangedTerrainSafetyTest {
             if (input == null) throw new AssertionError("Missing " + owner);
             new ClassReader(input).accept(node, 0);
         }
-        for (var entry : node.methods) if (entry.name.equals(method))
+        for (var entry : node.methods) if (entry.name.equals(method) || entry.name.startsWith("lambda$" + method + "$"))
             for (var instruction : entry.instructions)
                 if (instruction instanceof MethodInsnNode call && (target == null || call.owner.equals(target)) && call.name.equals(name)) return true;
         return false;

@@ -5,6 +5,9 @@ import dev.felix.hostilehumans.core.AttentionFacingPolicy;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.item.ItemStack;
+import java.lang.ref.WeakReference;
+import dev.felix.hostilehumans.core.ActionCoordinator;
 
 /** Final orientation boundary. Observation never owns a Goal MOVE/LOOK lease. */
 public final class HumanAttention {
@@ -21,8 +24,11 @@ public final class HumanAttention {
         Float yaw=combatStance?null:dx*dx+dz*dz<1.e-8?h.getYRot():(float)Math.toDegrees(Math.atan2(dz,dx))-90;
         MOVEMENT.put(h,new Movement(h.tickCount,yaw));
     }
-    private record Request(int tick,Vec3 point,int priority,String owner,boolean pressure) {
-        Request(int tick,Vec3 point,int priority,String owner) { this(tick,point,priority,owner,false); }
+    private record GunAim(WeakReference<LivingEntity> target, WeakReference<ItemStack> weapon,
+                          ActionCoordinator actions, long session, float yaw, float pitch) {}
+    private record Request(int tick,Vec3 point,int priority,String owner,boolean pressure,GunAim gunAim) {
+        Request(int tick,Vec3 point,int priority,String owner) { this(tick,point,priority,owner,false,null); }
+        Request(int tick,Vec3 point,int priority,String owner,boolean pressure) { this(tick,point,priority,owner,pressure,null); }
     }
     private HumanAttention() {}
     public static String owner(Human h){return OWNERS.getOrDefault(h,"自然朝向");}
@@ -40,6 +46,55 @@ public final class HumanAttention {
         if(old==null||old.tick!=h.tickCount||priority>=old.priority)REQUESTS.put(h,new Request(h.tickCount,point,priority,owner));
     }
 
+    /** Called only after the gun goal's target, range and firing-lane checks. Does not acquire movement. */
+    static boolean beginGunAim(Human human, LivingEntity target, float yaw, float pitch) {
+        if (!Float.isFinite(yaw) || !Float.isFinite(pitch) || target != human.getTarget()
+                || !HumanPerception.allowCombatLook(human, target)
+                || !GunSupport.isGunItem(human.getMainHandItem())) return false;
+        Request old = REQUESTS.get(human);
+        if (old != null && old.tick == human.tickCount && old.priority > 20) return false;
+        ActionCoordinator actions = HumanBehaviorControl.peekActions(human);
+        GunAim aim = new GunAim(new WeakReference<>(target), new WeakReference<>(human.getMainHandItem()),
+                actions, actions == null ? 0 : actions.session(), yaw, pitch);
+        Vec3 point = human.getEyePosition().add(Vec3.directionFromRotation(pitch, yaw).scale(8));
+        REQUESTS.put(human, new Request(human.tickCount, point, 20, "枪械瞄准朝向", false, aim));
+        if (hasGunAim(human)) return true;
+        clearGunAim(human);
+        return false;
+    }
+
+    /** One tick, one exact weapon/target/session. Higher-priority requests replace the whole request. */
+    public static boolean hasGunAim(Human human) {
+        Request request = REQUESTS.get(human);
+        if (request == null || request.tick != human.tickCount || request.gunAim == null) return false;
+        GunAim aim = request.gunAim;
+        LivingEntity target = aim.target.get();
+        ActionCoordinator actions = HumanBehaviorControl.peekActions(human);
+        return !human.level().isClientSide && human.isAlive() && !human.isRemoved() && !human.isNoAi()
+                && !human.isSleeping() && !HumanInventorySession.isEditing(human)
+                && !NavigationDebugService.controls(human)
+                && target != null && target == human.getTarget() && target.isAlive() && !target.isRemoved()
+                && target.level() == human.level() && aim.weapon.get() == human.getMainHandItem()
+                && !human.getMainHandItem().isEmpty()
+                && actions == aim.actions && (actions == null || actions.session() == aim.session)
+                && !human.humanGunner$hasPendingMeleeAttack()
+                && !human.humanGunner$shieldDefense().defenseOwnsFacing()
+                && !(human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem()));
+    }
+
+    public static boolean applyGunAim(Human human) {
+        if (!hasGunAim(human)) return false;
+        GunAim aim = REQUESTS.get(human).gunAim;
+        human.setYRot(aim.yaw); human.setYBodyRot(aim.yaw); human.setYHeadRot(aim.yaw);
+        human.setXRot(aim.pitch);
+        return true;
+    }
+
+    static void clearGunAim(Human human) {
+        Request request = REQUESTS.get(human);
+        if (request != null && request.gunAim != null) REQUESTS.remove(human);
+    }
+
     /** Defensive yaw is derived from an impact, without a target entity or hidden coordinates. */
     public static void pressureFacing(Human h, float yaw) {
         if (h.level().isClientSide || !Float.isFinite(yaw)) return;
@@ -51,6 +106,7 @@ public final class HumanAttention {
 
     /** Planned movement, rather than knockback velocity, owns ordinary travel yaw. */
     public static Float navigationYaw(Human human) {
+        if (hasGunAim(human)) return null;
         if(RETREAT_AIM.getOrDefault(human,Integer.MIN_VALUE)==human.tickCount)return null;
         Movement movement=MOVEMENT.get(human);
         if(movement!=null&&movement.tick==human.tickCount)return movement.yaw;
@@ -74,6 +130,12 @@ public final class HumanAttention {
     public static void finish(Human human,Vec3 observation,boolean urgent) {finish(human,observation,urgent,false);}
     public static void finish(Human human,Vec3 observation,boolean urgent,boolean soundGlance) {
         if(human.level().isClientSide||human.isNoAi()||human.isSleeping())return;
+        if (applyGunAim(human)) {
+            OWNERS.put(human, "枪械瞄准朝向");
+            remember(human);
+            return;
+        }
+        clearGunAim(human); // An invalidated gun request must not survive as generic combat attention.
         Float route=navigationYaw(human);
         LivingEntity target=human.getTarget();
         boolean combat=HumanPerception.canTarget(human,target);

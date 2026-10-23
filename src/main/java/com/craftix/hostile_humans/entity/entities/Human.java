@@ -259,6 +259,18 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         setRangedFacingYaw(Mth.approachDegrees(getYRot(), yaw, 75.0F));
     }
 
+    /** Combat facing changes orientation only; the existing route still supplies world movement. */
+    private boolean hasCombatFacing() {
+        return hasShieldFacing() || hasPendingBetterCombatFacing()
+                || club.someoneice.humangunner.HumanAttention.hasGunAim(this);
+    }
+
+    private void applyCombatFacing() {
+        if (hasPendingBetterCombatFacing()) facePendingBetterCombatAttack();
+        else if (hasShieldFacing()) applyShieldFacing();
+        else club.someoneice.humangunner.HumanAttention.applyGunAim(this);
+    }
+
     private BowAttack<Human> humanGunner$enhancedBowGoal;
 
     private CrossbowGoal<Human> humanGunner$enhancedCrossbowGoal;
@@ -2880,10 +2892,9 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                     return;
                 }
                 double horizontalDistance = Math.sqrt(d0 * d0 + d2 * d2);
-                club.someoneice.humangunner.HumanAttention.movement(this.human,this.wantedX,this.wantedZ,this.human.hasShieldFacing()||this.human.hasPendingBetterCombatFacing());
-                if (this.human.hasShieldFacing()) this.human.applyShieldFacing();
-                if (horizontalDistance > 1.0E-4D && !this.human.hasPendingBetterCombatFacing()
-                        && !this.human.hasShieldFacing()) {
+                club.someoneice.humangunner.HumanAttention.movement(this.human,this.wantedX,this.wantedZ,this.human.hasCombatFacing());
+                if (this.human.hasCombatFacing()) this.human.applyCombatFacing();
+                if (horizontalDistance > 1.0E-4D && !this.human.hasCombatFacing()) {
                     float yaw = (float)(Mth.atan2(d2, d0) * 57.2957763671875) - 90.0F;
                     this.human.setYRot(this.rotlerp(this.human.getYRot(), yaw, 90.0F));
                     this.human.yBodyRot = this.human.getYRot();
@@ -2903,22 +2914,21 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 // MOVE_TO and WAIT do not clear the side input that the last
                 // ranged STRAFE wrote. Clear it before normal path movement.
                 this.human.setXxa(0.0F);
-                if(this.operation==MoveControl.Operation.MOVE_TO)club.someoneice.humangunner.HumanAttention.movement(this.human,this.wantedX,this.wantedZ,this.human.hasShieldFacing()||this.human.hasPendingBetterCombatFacing());
-                if ((this.human.hasPendingBetterCombatFacing() || this.human.hasShieldFacing())
+                if(this.operation==MoveControl.Operation.MOVE_TO)club.someoneice.humangunner.HumanAttention.movement(this.human,this.wantedX,this.wantedZ,this.human.hasCombatFacing());
+                if (this.human.hasCombatFacing()
                         && this.operation == MoveControl.Operation.MOVE_TO) {
-                    this.moveWhileShieldFacing();
+                    this.moveWhileCombatFacing();
                 } else {
                     super.tick();
                 }
             }
         }
 
-        private void moveWhileShieldFacing() {
+        private void moveWhileCombatFacing() {
             double dx = wantedX - human.getX();
             double dz = wantedZ - human.getZ();
             double distance = Math.sqrt(dx * dx + dz * dz);
-            if (human.hasPendingBetterCombatFacing()) human.facePendingBetterCombatAttack();
-            else human.applyShieldFacing();
+            human.applyCombatFacing();
             operation = MoveControl.Operation.WAIT;
             if (distance < 0.05D) {
                 human.setZza(0.0F);
@@ -2926,7 +2936,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 return;
             }
             float yaw = human.getYRot() * ((float) Math.PI / 180.0F);
-            // Move toward the path in world space while facing the attacker:
+            // Move toward the path in world space while keeping the active combat facing:
             // the body is not repeatedly pulled toward each navigation node.
             human.setSpeed((float) (speedModifier * human.getAttributeValue(Attributes.MOVEMENT_SPEED)));
             human.setZza((float) ((dz * Mth.cos(yaw) - dx * Mth.sin(yaw)) / distance));
@@ -2935,7 +2945,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             if (human.onGround() && path != null && !path.isDone()
                     && wantedY > human.getY() + human.getStepHeight()
                     && wantedY <= human.getY() + 1.1D && distance <= 1.5D) {
-                // Only a real one-block rise may jump during defense.
+                // Only a real one-block rise may jump during this combat stance.
                 human.getJumpControl().jump();
             }
         }

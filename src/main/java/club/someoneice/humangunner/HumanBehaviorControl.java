@@ -80,6 +80,7 @@ public final class HumanBehaviorControl {
                     () -> MeleeActionControl.clear(human, reason),
                     () -> NpcDualWield.clear(human),
                     () -> HumanArrowCombat.clear(human),
+                    () -> HumanAttention.clearGunAim(human),
                     () -> human.humanGunner$cancelMeleeAttackForDefense(),
                     () -> RecoverySupplies.clear(human, reason),
                     () -> HumanCombatDirector.clear(human),

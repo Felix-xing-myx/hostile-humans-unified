@@ -44,7 +44,8 @@ class WaterCombatAuthorityContract(unittest.TestCase):
         self.assertIn('WaterCombatPolicy.chasingMovingTarget(', water)
         self.assertLess(water.index('if (canFight)'), water.index('if (ownsRoute(human)) return true'))
         self.assertIn('if (this.human.hasShieldFacing()) this.human.applyShieldFacing()', HUMAN)
-        self.assertIn('&& !this.human.hasShieldFacing())', HUMAN)
+        self.assertIn('&& !this.human.hasCombatFacing())', HUMAN)
+        self.assertIn('return hasShieldFacing() || hasPendingBetterCombatFacing()', HUMAN)
         self.assertNotIn('getEntitiesOfClass', water)
 
 

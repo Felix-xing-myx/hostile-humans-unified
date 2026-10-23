@@ -32,8 +32,9 @@ class ShieldDefenseMovementTests(unittest.TestCase):
         # The old low-health shield-only retreat overlay is no longer ticked. Defense
         # keeps ordinary navigation; the final MoveControl converts it into body-local inputs.
         human = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
-        move = human.split('private void moveWhileShieldFacing()', 1)[1].split('private void applyShorePopImpulse', 1)[0]
-        self.assertIn('else human.applyShieldFacing()', move)
+        move = human.split('private void moveWhileCombatFacing()', 1)[1].split('private void applyShorePopImpulse', 1)[0]
+        self.assertIn('human.applyCombatFacing()', move)
+        self.assertIn('else if (hasShieldFacing()) applyShieldFacing()', human)
         self.assertIn('dz * Mth.cos(yaw) - dx * Mth.sin(yaw)', move)
         self.assertIn('dx * Mth.cos(yaw) + dz * Mth.sin(yaw)', move)
         self.assertIn('wantedY > human.getY() + human.getStepHeight()', move)

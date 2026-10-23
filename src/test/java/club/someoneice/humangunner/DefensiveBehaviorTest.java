@@ -100,7 +100,7 @@ public final class DefensiveBehaviorTest {
         check(calls(HUMAN, "tick", "hasShieldFacing") && calls(HUMAN, "tick", "applyShieldFacing"),
                 "defensive facing restored after navigation and body controls");
         check(calls(HUMAN + "$HumanMoveControl", "tick", "execute")
-                        && calls(HUMAN + "$HumanMoveControl", "tickOwnedMovement", "moveWhileShieldFacing"),
+                        && calls(HUMAN + "$HumanMoveControl", "tickOwnedMovement", "moveWhileCombatFacing"),
                 "movement keeps target-facing shield orientation before travel, not only visually");
         check(calls(SHIELDS, "tickCombat", "markShieldFacingDirection")
                         && calls(SHIELDS, "tickCombat", "meleeBearings"),
