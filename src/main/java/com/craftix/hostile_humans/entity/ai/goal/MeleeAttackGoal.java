@@ -170,8 +170,10 @@ extends Goal {
     public void tick() {
         if (this.mob instanceof Human human) {
             club.someoneice.humangunner.MeleeActionControl.tick(human);
-            if (human.isFleeing || !human.humanGunner$canMeleeAttack()) return;
-            club.someoneice.humangunner.NpcDualWield.prepare(human);
+            if (human.isFleeing || !human.humanGunner$shieldDefense().permitsMeleeMovement()) return;
+            // An advance shield forbids strikes, not the existing pursuit/terrain executor.
+            // Equipment preparation still belongs to an available attack hand.
+            if (human.humanGunner$canMeleeAttack()) club.someoneice.humangunner.NpcDualWield.prepare(human);
         }
         if (club.someoneice.humangunner.GunSupport.isGunItem(this.mob.getMainHandItem())) return;
         LivingEntity livingEntity = this.mob.getTarget();

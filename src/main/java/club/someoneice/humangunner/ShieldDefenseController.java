@@ -316,6 +316,13 @@ public final class ShieldDefenseController {
                 && human.getUseItem().getUseAnimation() == UseAnim.BLOCK;
     }
 
+    /** Movement is independent from a strike: only our live advance guard may keep pursuing.
+     * Ordinary/projectile/pressure guards retain their existing movement executors. */
+    public boolean permitsMeleeMovement() {
+        return !blocksMeleeAttack() || owner == Owner.ADVANCE && advance.active()
+                && ownsCurrentShield() && !shouldSuppressRecovery();
+    }
+
     private boolean wantsCombatNow(LivingEntity threat, IncomingArrow incomingArrow) {
         if (!allowsShieldOwner(Owner.COMBAT) || wantsHighPressureGuard() || owner == Owner.PRESSURE || owner == Owner.PROJECTILE) return false;
         if (human.isFleeing || !canBlockWithShield() || isHoldingTaczGun()
