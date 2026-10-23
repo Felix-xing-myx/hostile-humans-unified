@@ -24,3 +24,15 @@ class ThreatAssessmentContract(unittest.TestCase):
         candidate=source("HumanPerception").split("public static LivingEntity candidate",1)[1].split("private static boolean isSelfAttacker",1)[0]
         self.assertIn("HumanThreatAssessment.score(h,e)",candidate)
         self.assertIn("playerLimit(h,player)",candidate)
+
+    def test_relay_keeps_original_authority_and_only_mints_from_personal_evidence(self):
+        code=source("HumanTargetSharing")
+        self.assertIn("lease.report.created(),lease.positionAt,lease.report.threat()",code)
+        self.assertIn("report.created()+COOLDOWN",code)
+        self.assertIn("now>=report.created()+LOCK_TICKS",code)
+        self.assertIn("HumanPerception.personalDynamic(sender",code)
+        self.assertNotIn("setTarget(",code)
+        self.assertNotIn("getEntities(",code)
+        self.assertIn("TargetReportLedger",code)
+        finisher=source("HumanFinisherSelection")
+        self.assertIn("HumanThreatAssessment.shouldSwitch(h,e,current)",finisher)

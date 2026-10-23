@@ -53,6 +53,8 @@ final class HumanFinisherSelection {
         double bestScore = 0, fallbackScore = Double.NEGATIVE_INFINITY;
         for (LivingEntity e : known) {
             if (!HumanPerception.selectionAllowed(h, e) || !HumanPerception.recentlySaw(h, e.getUUID())) continue;
+            // Optional wounded-mob harvesting cannot undo a decisive high-threat selection.
+            if(current!=null&&e!=current&&HumanThreatAssessment.shouldSwitch(h,e,current))continue;
             var history = s.attempts.get(e.getUUID());
             if (history != null && history.blocked(now)) continue;
             double threat = HumanThreatAssessment.score(h, e);

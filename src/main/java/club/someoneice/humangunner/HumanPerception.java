@@ -149,7 +149,7 @@ public final class HumanPerception {
         Vec3 shared=HumanTargetSharing.position(h,e,t!=null&&t.marked?t.positionAt:-1);if(shared!=null)return shared;
         return t!=null&&t.marked&&now(h)<t.positionAt+c().integer("memory.last_position_ticks")?t.position:null;
     }
-    /** Personal evidence only: inherited leases never become new broadcast authority. */
+    /** Personal evidence only: relays preserve the original report rather than minting recognition. */
     static boolean personalDynamic(Human h,LivingEntity target){
         State s=STATES.get(h);Track t=s==null||target==null?null:s.tracks.get(target.getUUID());
         return t!=null&&t.marked&&PerceptionPolicy.live(now(h),t.liveUntil)&&sharingAllowed(h,target);
@@ -159,10 +159,13 @@ public final class HumanPerception {
     }
     static HumanTargetSharing.Evidence sharingEvidence(Human h){
         State s=STATES.get(h);if(s==null||!(h.level() instanceof ServerLevel level))return null;
-        LivingEntity main=h.getTarget();
-        if(personalDynamic(h,main))return new HumanTargetSharing.Evidence(main.getUUID(),main.position(),true);
-        for(Track t:s.tracks.values())if(level.getEntity(t.id) instanceof LivingEntity target&&personalDynamic(h,target))
-            return new HumanTargetSharing.Evidence(t.id,target.position(),true);
+        LivingEntity best=null;double highest=Double.NEGATIVE_INFINITY;
+        for(Track t:s.tracks.values())if(level.getEntity(t.id) instanceof LivingEntity target
+                &&personalDynamic(h,target)&&!HumanTargetSharing.seen(h,t.id)){
+            double rank=HumanThreatAssessment.intrinsic(h,target)+HumanThreatAssessment.priority(h,target);
+            if(rank>highest){best=target;highest=rank;}
+        }
+        if(best!=null)return new HumanTargetSharing.Evidence(best.getUUID(),best.position(),true);
         long now=now(h);
         for(Track t:s.tracks.values())if(t.visible&&t.position!=null&&t.checked>=0&&now-t.checked<=20
                 &&level.getEntity(t.id) instanceof LivingEntity target&&sharingAllowed(h,target))

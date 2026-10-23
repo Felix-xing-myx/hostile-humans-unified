@@ -28,6 +28,12 @@ public final class PerformancePoliciesTest {
         double farThreat=ThreatScorePolicy.score(basicThreat,30,0,20,false,6);
         double nearThreat=ThreatScorePolicy.score(basicThreat,3,0,20,false,6);
         check(ThreatScorePolicy.stronger(farThreat,nearThreat,.25,5), "confirmed nearby threat beats unpressuring distant enemy");
+        double factionThreat=ThreatScorePolicy.score(ThreatScorePolicy.intrinsic(20,8,6,true),16,0,20,false,6)
+                +ThreatScorePolicy.reportPriority(true,0,20);
+        double weakMob=ThreatScorePolicy.score(basicThreat,3,0,20,false,6);
+        check(ThreatScorePolicy.stronger(weakMob,factionThreat,.25,5),"reported faction combatant interrupts unpressuring weak-mob cleanup");
+        check(ThreatScorePolicy.reportPriority(true,10000,1)==80,"reported tactical priority is capped");
+        check(ThreatScorePolicy.reportPriority(false,Double.NaN,0)==0,"invalid pressure cannot manufacture danger");
         double shooter=ThreatScorePolicy.score(basicThreat+8,30,10,20,true,6);
         check(shooter>nearThreat, "recent damaging far shooter remains a serious threat");
         check(!ThreatScorePolicy.stronger(40,44,.25,5), "similar scores cannot oscillate primary target");
