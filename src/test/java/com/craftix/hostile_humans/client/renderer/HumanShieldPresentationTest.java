@@ -141,26 +141,45 @@ public final class HumanShieldPresentationTest {
         return node;
     }
     private static boolean nativePropertyHookMatches() throws Exception {
+        // The built mod has no refmap. Verify production selectors as well as the actual
+        // invocation in the mapped development bytecode; a Mojmap-only hook must fail this test.
+        String resolveDesc = "(Lnet/minecraft/client/resources/model/BakedModel;Lnet/minecraft/world/item/ItemStack;"
+                + "Lnet/minecraft/client/multiplayer/ClientLevel;Lnet/minecraft/world/entity/LivingEntity;I)"
+                + "Lnet/minecraft/client/resources/model/BakedModel;";
+        String propertyDesc = "(Lnet/minecraft/world/item/Item;Lnet/minecraft/resources/ResourceLocation;)"
+                + "Lnet/minecraft/client/renderer/item/ItemPropertyFunction;";
         String target = null;
+        boolean productionMethod = false, explicitNamespace = false, required = false, unique = false;
         var mixin = read("club/someoneice/humangunner/mixin/HumanShieldItemPropertyMixin");
         for (var method : mixin.methods) {
             var annotations = new java.util.ArrayList<org.objectweb.asm.tree.AnnotationNode>();
             if (method.visibleAnnotations != null) annotations.addAll(method.visibleAnnotations);
             if (method.invisibleAnnotations != null) annotations.addAll(method.invisibleAnnotations);
             for (var annotation : annotations) if (annotation.desc.endsWith("/Redirect;"))
-                for (int i = 0; i < annotation.values.size(); i += 2) if (annotation.values.get(i).equals("at")) {
-                    var at = (org.objectweb.asm.tree.AnnotationNode) annotation.values.get(i + 1);
-                    for (int j = 0; j < at.values.size(); j += 2)
-                        if (at.values.get(j).equals("target")) target = (String) at.values.get(j + 1);
+                for (int i = 0; i < annotation.values.size(); i += 2) {
+                    Object key = annotation.values.get(i), value = annotation.values.get(i + 1);
+                    if (key.equals("method")) productionMethod = value instanceof java.util.List<?> methods
+                            && methods.contains("m_173464_" + resolveDesc);
+                    if (key.equals("remap")) explicitNamespace = Boolean.FALSE.equals(value);
+                    if (key.equals("require")) required = Integer.valueOf(1).equals(value);
+                    if (key.equals("allow")) unique = Integer.valueOf(1).equals(value);
+                    if (key.equals("at")) {
+                        var at = (org.objectweb.asm.tree.AnnotationNode) value;
+                        for (int j = 0; j < at.values.size(); j += 2)
+                            if (at.values.get(j).equals("target")) target = (String) at.values.get(j + 1);
+                    }
                 }
         }
-        if (target == null) return false;
+        if (!productionMethod || !explicitNamespace || !required || !unique || !(
+                "Lnet/minecraft/client/renderer/item/ItemProperties;m_117829_" + propertyDesc).equals(target)) return false;
         var nativeClass = read("net/minecraft/client/renderer/block/model/ItemOverrides");
-        for (var method : nativeClass.methods) if (method.name.equals("resolve"))
+        int invocations = 0;
+        for (var method : nativeClass.methods) if (method.name.equals("resolve") && method.desc.equals(resolveDesc))
             for (var instruction : method.instructions)
                 if (instruction instanceof org.objectweb.asm.tree.MethodInsnNode call
-                        && target.equals("L" + call.owner + ";" + call.name + call.desc)) return true;
-        return false;
+                        && call.owner.equals("net/minecraft/client/renderer/item/ItemProperties")
+                        && call.name.equals("getProperty") && call.desc.equals(propertyDesc)) invocations++;
+        return invocations == 1;
     }
     private static void near(float actual, float expected, String message) { check(Math.abs(actual - expected) < .00001F, message); }
     private static void check(boolean condition, String message) { if (!condition) throw new AssertionError(message); }
