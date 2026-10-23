@@ -187,13 +187,21 @@ public final class DefensiveBehaviorTest {
         }
         return node.methods.stream().filter(m -> m.name.equals(name)).findFirst().orElseThrow();
     }
+    private static java.util.List<MethodNode> overloads(String owner, String name) throws Exception {
+        ClassNode node = new ClassNode();
+        try (var stream = DefensiveBehaviorTest.class.getClassLoader().getResourceAsStream(owner + ".class")) {
+            if (stream == null) throw new AssertionError("Missing compiled class " + owner);
+            new ClassReader(stream).accept(node, 0);
+        }
+        return node.methods.stream().filter(m -> m.name.equals(name)).toList();
+    }
 
     private static boolean calls(String owner, String method, String called) throws Exception {
         return callsIncludingLambda(owner, method, called, new java.util.HashSet<>());
     }
     private static boolean callsIncludingLambda(String owner, String name, String called, java.util.Set<String> visited) throws Exception {
         if (!visited.add(name)) return false;
-        for (var instruction : method(owner, name).instructions) {
+        for (var overload : overloads(owner, name)) for (var instruction : overload.instructions) {
             if (instruction instanceof MethodInsnNode call && call.name.equals(called)) return true;
             if (instruction instanceof org.objectweb.asm.tree.InvokeDynamicInsnNode dynamic)
                 for (Object argument : dynamic.bsmArgs)
