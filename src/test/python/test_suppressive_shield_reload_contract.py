@@ -54,9 +54,9 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
     def test_client_consumes_old_attack_sequence_while_blocking(self):
         renderer = ROOT / 'src/main/java/com/craftix/hostile_humans/client/renderer'
         animation = (renderer / 'BetterCombatNpcAnimator.java').read_text(encoding='utf-8')
-        guard = animation.split('// Shield-use updates', 1)[1].split('if (playback.sequence == Integer.MIN_VALUE)', 1)[0]
+        guard = animation.split('// Shield-use updates', 1)[1].split('if (sequence != playback.sequence)', 1)[0]
         self.assertIn('HumanShieldPresentation.active(human)', guard)
-        self.assertIn('playback.sequence = sequence', guard)
+        self.assertIn('if (!visual.active(now)) playback.sequence = sequence', guard)
         self.assertIn('playback.attackStack = null', guard)
         self.assertIn('return false', guard)
         model = (renderer / 'HumanPlayerModel.java').read_text(encoding='utf-8')
@@ -219,3 +219,15 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+    def test_verified_bc_profile_survives_read_failure_without_native_damage(self):
+        adapter=source('BetterCombatMeleeCombat.java')
+        self.assertIn('profile || failures < MAX_PROFILE_FAILURES ? WAIT : NATIVE',adapter)
+        self.assertIn('if (read.available()) state.attributes = read.attributes()',adapter)
+        self.assertIn('state.attributes = null;',adapter)
+        renderer=ROOT / 'src/main/java/com/craftix/hostile_humans/client/renderer'
+        animation=(renderer / 'BetterCombatNpcAnimator.java').read_text(encoding='utf-8')
+        suppress=animation.split('static boolean shouldSuppressVanillaSwing',1)[1].split('/** True',1)[0]
+        self.assertIn('!isApplicable(human) || resolveApi() == null',suppress)
+        self.assertIn('playback.failedSequence != human.getNpcBetterCombatAttackAnimationSequence()',suppress)
+        self.assertNotIn('hasActiveCustomAnimation',suppress)

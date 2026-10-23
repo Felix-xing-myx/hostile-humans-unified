@@ -32,6 +32,10 @@ public final class MeleeBackendAndJumpTest {
             check(MeleeJumpPolicy.waitingForAttack(lead,true,lead), "blocked takeoff cannot masquerade as airborne attack");
         }
         check(MeleeJumpPolicy.attackLeadTicks(2) > MeleeJumpPolicy.attackLeadTicks(7), "shorter weapon windup allows longer visible jump preparation");
+        check(BetterCombatMeleeCombat.Backend.choose(true,true,false,true,3) == wait,
+                "verified BC weapon cannot become native after repeated transient reads");
+        check(BetterCombatMeleeCombat.Backend.choose(true,true,true,true,0) == bc,
+                "verified weapon resumes BC after a successful refresh");
         String human = "com/craftix/hostile_humans/entity/entities/Human";
         var attack = method(human,"doHurtTarget");
         JumpInsnNode nullPlan = null;

@@ -64,6 +64,7 @@ class ReviewStateBoundaries(unittest.TestCase):
         self.assertIn('advancePlayback(playback, human, elapsedTicks)', animator)
         self.assertIn('advancePlayback(playback, human, Math.min(elapsedTicks, 20))', animator)
         self.assertIn('playbackWindowTicks(duration)', metadata)
-        self.assertIn('return human.swinging && hasActiveCustomAnimation(human)', animator)
+        self.assertIn('!human.swinging || !isApplicable(human) || resolveApi() == null', animator)
+        self.assertIn('playback.failedSequence != human.getNpcBetterCombatAttackAnimationSequence()', animator)
         renderer = (JAVA / 'com/craftix/hostile_humans/client/renderer/ClientRenderer.java').read_text(encoding='utf-8')
         self.assertIn('BetterCombatNpcAnimator.resetPlayback()', renderer)

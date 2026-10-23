@@ -65,7 +65,7 @@ public final class BetterCombatMeleeCombat {
         NATIVE, BETTER_COMBAT, WAIT;
         static Backend choose(boolean configured, boolean bridgeAvailable, boolean lookupAvailable, boolean profile, int failures) {
             if (!configured || !bridgeAvailable) return NATIVE;
-            if (!lookupAvailable) return failures >= MAX_PROFILE_FAILURES ? NATIVE : WAIT;
+            if (!lookupAvailable) return profile || failures < MAX_PROFILE_FAILURES ? WAIT : NATIVE;
             return profile ? BETTER_COMBAT : NATIVE;
         }
     }
@@ -455,7 +455,9 @@ public final class BetterCombatMeleeCombat {
     }
     private static void refreshAttributes(ComboState state, ItemStack weapon, int tick) {
         AttributesRead read = readWeaponAttributes(weapon);
-        state.attributes = read.attributes(); state.lookupAvailable = read.available();
+        // A transient read cannot revoke a verified weapon or turn it into an instant native attack.
+        if (read.available()) state.attributes = read.attributes();
+        state.lookupAvailable = read.available();
         state.lookupFailures = read.available() ? 0 : Math.min(MAX_PROFILE_FAILURES, state.lookupFailures+1);
         state.attributesResolved = true; state.lastAttributeLookupTick = tick;
     }
@@ -471,6 +473,7 @@ public final class BetterCombatMeleeCombat {
                 state.offhand = human.getOffhandItem();
                 if (!swappedPair) state.index = 0;
                 state.lookupFailures = 0;
+                state.attributes = null; // Never carry another physical weapon's verified profile.
                 refreshAttributes(state, weapon, human.tickCount);
             } else if (human.tickCount - state.lastAttributeLookupTick >=
                     (state.lookupAvailable || state.lookupFailures >= MAX_PROFILE_FAILURES ? PROFILE_REFRESH_TICKS : PROFILE_RETRY_TICKS)) {
@@ -544,7 +547,7 @@ public final class BetterCombatMeleeCombat {
     private static void warnApiOnce(Throwable error) {
         if (!warnedAboutApi) synchronized (BetterCombatMeleeCombat.class) {
             if (!warnedAboutApi) {
-                LOGGER.warn("Better Combat NPC melee profile lookup failed; transient failures wait for retry, unavailable bridges or repeated failures use native fallback", error);
+                LOGGER.warn("Better Combat NPC melee profile lookup failed; transient failures wait for retry, verified weapons retain BC authority; unsupported bridges or repeatedly unreadable new weapons use native fallback", error);
                 warnedAboutApi = true;
             }
         }

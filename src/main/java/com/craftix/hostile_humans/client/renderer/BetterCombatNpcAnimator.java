@@ -62,13 +62,14 @@ final class BetterCombatNpcAnimator {
         if (resolved == null) return false;
 
         Playback playback = PLAYBACKS.computeIfAbsent(human, ignored -> new Playback());
-        int sequence = human.getNpcBetterCombatAttackAnimationSequence();
-        // Shield-use updates may arrive before attack-cancellation metadata.
-        // Consume the old sequence while blocking so lowering the shield cannot
-        // replay a stale attack after a gun-to-melee handoff.
+        var visual = human.getNpcBetterCombatAttackVisual();
+        int sequence = visual.sequence();
+        long now = human.level().getGameTime();
+        // Shield-use updates and new attack metadata can cross during a handoff.
+        // Consume cancellation, but leave a newly active sequence pending until the shield clears.
         if (HumanShieldPresentation.active(human)) {
-            if (playback.sequence != sequence || playback.player != null) {
-                playback.sequence = sequence;
+            if (!visual.active(now)) playback.sequence = sequence;
+            if (playback.player != null || playback.stack == null) {
                 playback.lastTick = human.tickCount;
                 playback.player = null;
                 playback.attackStack = null;
@@ -77,8 +78,6 @@ final class BetterCombatNpcAnimator {
             }
             return false;
         }
-        var visual = human.getNpcBetterCombatAttackVisual();
-        long now = human.level().getGameTime();
         if (!visual.active(now)) {
             if (playback.sequence != sequence || playback.player != null || playback.stack == null) {
                 playback.sequence = sequence;
@@ -93,7 +92,10 @@ final class BetterCombatNpcAnimator {
             int elapsed = visual.elapsed(now);
             // Never replay an expired attack from frame zero on late tracking.
             // Bound catch-up work for extreme custom attack durations.
-            if (elapsed <= 200) start(playback, resolved, human, elapsed);
+            if (elapsed <= 200) {
+                start(playback, resolved, human, elapsed);
+                playback.failedSequence = playback.player == null ? sequence : Integer.MIN_VALUE;
+            }
             else {
                 clearAttack(playback);
                 startIdle(playback, resolved, human);
@@ -102,9 +104,12 @@ final class BetterCombatNpcAnimator {
         return isActive(playback, resolved);
     }
 
-    /** Only an accepted, playable custom attack may suppress the vanilla fallback. */
+    /** A verified BC weapon reserves its visual channel while the vanilla swing packet races metadata. */
     static boolean shouldSuppressVanillaSwing(Human human) {
-        return human.swinging && hasActiveCustomAnimation(human);
+        if (!human.swinging || !isApplicable(human) || resolveApi() == null) return false;
+        Playback playback = PLAYBACKS.get(human);
+        // A genuinely unplayable resource retains the explicit cosmetic fallback.
+        return playback == null || playback.failedSequence != human.getNpcBetterCombatAttackAnimationSequence();
     }
 
     /** True while this Human's Better Combat attack layer is actively playing. */
@@ -568,6 +573,7 @@ final class BetterCombatNpcAnimator {
 
     private static final class Playback {
         private int sequence = Integer.MIN_VALUE;
+        private int failedSequence = Integer.MIN_VALUE;
         private int lastTick = Integer.MIN_VALUE;
         private Api api;
         private Object player;
