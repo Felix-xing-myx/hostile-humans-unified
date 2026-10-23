@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.function.BooleanSupplier;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -42,7 +43,15 @@ public final class BetterCombatMeleeCombat {
     private BetterCombatMeleeCombat() {}
 
     public record Profile(double range, Shape shape, double damageMultiplier, double angleDegrees,
-                          int cooldownTicks, String animationName, float animationUpswing) {}
+                          int cooldownTicks, String animationName, float animationUpswing, boolean offhandAttack) {
+        public Profile(double range, Shape shape, double damageMultiplier, double angleDegrees,
+                       int cooldownTicks, String animationName, float animationUpswing) {
+            this(range, shape, damageMultiplier, angleDegrees, cooldownTicks, animationName, animationUpswing, false);
+        }
+        public net.minecraft.world.entity.EquipmentSlot attackSlot() {
+            return offhandAttack ? net.minecraft.world.entity.EquipmentSlot.OFFHAND : net.minecraft.world.entity.EquipmentSlot.MAINHAND;
+        }
+    }
     public enum Shape { FORWARD_BOX, VERTICAL_PLANE, HORIZONTAL_PLANE }
     public record AttackPlan(Profile profile, List<LivingEntity> targets) {}
     record CreeperForecast(Profile subsequent, double firstDamageMultiplier) {}
@@ -50,6 +59,7 @@ public final class BetterCombatMeleeCombat {
     private static final class ComboState {
         private ItemStack weapon = ItemStack.EMPTY;
         private ItemStack offhand = ItemStack.EMPTY;
+        private ItemStack primary = ItemStack.EMPTY;
         private Object attributes;
         private boolean attributesResolved;
         private boolean lookupAvailable;
@@ -71,7 +81,7 @@ public final class BetterCombatMeleeCombat {
     }
     /** Unsupported weapons may use native attacks; a failed lookup must not become a fast native hit. */
     public static Backend backend(Human human) {
-        if (!canReadWeaponProfile(human) || human.getMainHandItem().isEmpty()) return Backend.NATIVE;
+        if (!canReadWeaponProfile(human) || human.getItemBySlot(EquipmentSlot.MAINHAND).isEmpty()) return Backend.NATIVE;
         if (resolveApi() == null) return Backend.NATIVE; // Permanently unsupported optional bridge, logged once.
         Object attributes = weaponAttributes(human);
         ComboState state = comboState(human);
@@ -92,7 +102,7 @@ public final class BetterCombatMeleeCombat {
     public static double attackRange(Human human) {
         if (!canReadWeaponProfile(human)) return 0.0D;
         Object attributes = weaponAttributes(human);
-        if (attributes == null || human.getMainHandItem().isEmpty()) return 0.0D;
+        if (attributes == null || human.getItemBySlot(EquipmentSlot.MAINHAND).isEmpty()) return 0.0D;
         double range = number(call(attributes, "attackRange"), 3.0D);
         return Double.isFinite(range) ? Math.min(16.0D, Math.max(0.1D, range)) : 3.0D;
     }
@@ -103,14 +113,14 @@ public final class BetterCombatMeleeCombat {
     }
 
     public static boolean hasWeaponProfile(Human human) {
-        return canReadWeaponProfile(human) && !human.getMainHandItem().isEmpty()
+        return canReadWeaponProfile(human) && !human.getItemBySlot(EquipmentSlot.MAINHAND).isEmpty()
                 && weaponAttributes(human) != null;
     }
 
     /** Defensive spacing still needs the weapon's reach while attacks are temporarily blocked. */
     private static boolean canReadWeaponProfile(Human human) {
         return human != null && !human.level().isClientSide
-                && !GunSupport.isGunItem(human.getMainHandItem()) && isConfiguredEnabled();
+                && !GunSupport.isGunItem(human.getItemBySlot(EquipmentSlot.MAINHAND)) && isConfiguredEnabled();
     }
 
     /** Single-target geometry check; never performs the sweep's entity query. */
@@ -158,7 +168,7 @@ public final class BetterCombatMeleeCombat {
         if (attacks != null && attacks.getClass().isArray()) {
             int length = Array.getLength(attacks);
             if (length > 64) return new CreeperForecast(new Profile(current.range(), current.shape(), 0,
-                    current.angleDegrees(), current.cooldownTicks(), "", 1), 0);
+                    current.angleDegrees(), current.cooldownTicks(), "", 1, current.offhandAttack()), 0);
             for (int i = 0; i < length; i++) {
                 Object step = Array.get(attacks, i);
                 minimumDamage = Math.min(minimumDamage, Math.max(0, number(call(step, "damageMultiplier"), 1)));
@@ -172,7 +182,7 @@ public final class BetterCombatMeleeCombat {
         int targets = plan == null ? 65 : Math.max(1, plan.targets().size());
         double sweep = sweepDamageMultiplier(human, targets);
         return new CreeperForecast(new Profile(current.range(), current.shape(), minimumDamage * sweep,
-                current.angleDegrees(), current.cooldownTicks(), "", maximumUpswing),
+                current.angleDegrees(), current.cooldownTicks(), "", maximumUpswing, current.offhandAttack()),
                 current.damageMultiplier() * sweep);
     }
 
@@ -216,7 +226,7 @@ public final class BetterCombatMeleeCombat {
         double enchantRestore = Math.max(0.0D, number(field(getConfig(),
                 "reworked_sweeping_enchant_restores"), 0.5D));
         int sweepingLevel = EnchantmentHelper.getItemEnchantmentLevel(
-                Enchantments.SWEEPING_EDGE, human.getMainHandItem());
+                Enchantments.SWEEPING_EDGE, NpcDualWield.attackWeapon(human));
         double perTargetPenalty = maxPenalty / extraTargetLimit
                 * Math.min(extraTargetLimit, targetCount - 1);
         double enchantBonus = enchantRestore / Enchantments.SWEEPING_EDGE.getMaxLevel()
@@ -282,7 +292,7 @@ public final class BetterCombatMeleeCombat {
             damageMultiplier *= Math.max(0, number(field(getConfig(), field), 1));
         }
         return new Profile(defaultRange, shape, damageMultiplier, angleDegrees, cooldown,
-                animationName, animationUpswing);
+                animationName, animationUpswing, NpcDualWield.offhandTurn(human));
     }
 
     static String resolveAnimationName(Object value, boolean twoHanded) {
@@ -296,7 +306,8 @@ public final class BetterCombatMeleeCombat {
         // supplier. Keep this adapter safe for old/custom entity suppliers;
         // new Human instances register the player-equivalent base value (4).
         AttributeInstance attackSpeed = human.getAttribute(Attributes.ATTACK_SPEED);
-        double speed = attackSpeed == null ? 4.0D : attackSpeed.getValue();
+        double speed = attackSpeed == null ? 4.0D
+                : NpcMeleeWeaponContext.attackSpeed(human, NpcDualWield.attackWeapon(human));
         double multiplier = EffectiveAttributes.attackSpeedMultiplier(human);
         Object config = getConfig();
         if (NpcDualWield.active(human)) multiplier *= Math.max(.01,
@@ -326,9 +337,9 @@ public final class BetterCombatMeleeCombat {
     private static boolean conditionsMatch(Human human, Object mainAttributes, Object conditions) {
         if (conditions == null || !conditions.getClass().isArray() || Array.getLength(conditions) == 0) return true;
         ItemStack offhand = human.getOffhandItem();
-        Object offAttributes = getWeaponAttributes(offhand);
         boolean dualWield = NpcDualWield.active(human);
         boolean offhandAttack = NpcDualWield.offhandTurn(human);
+        Object offAttributes = getWeaponAttributes(offhandAttack ? human.getItemBySlot(EquipmentSlot.MAINHAND) : offhand);
         for (int i = 0; i < Array.getLength(conditions); i++) {
             Object condition = Array.get(conditions, i);
             String name = String.valueOf(condition);
@@ -336,7 +347,7 @@ public final class BetterCombatMeleeCombat {
                 case "NOT_DUAL_WIELDING" -> !dualWield;
                 case "DUAL_WIELDING_ANY" -> dualWield;
                 case "DUAL_WIELDING_SAME" -> dualWield
-                        && ItemStack.isSameItem(human.getMainHandItem(), offhand);
+                        && ItemStack.isSameItem(human.getItemBySlot(EquipmentSlot.MAINHAND), offhand);
                 case "DUAL_WIELDING_SAME_CATEGORY" -> dualWield
                         && nonEmptyString(call(mainAttributes, "category"))
                         && nonEmptyString(call(offAttributes, "category"))
@@ -464,14 +475,12 @@ public final class BetterCombatMeleeCombat {
 
     private static Object weaponAttributes(Human human) {
         ComboState state = comboState(human);
-        ItemStack weapon = human.getMainHandItem();
+        ItemStack weapon = NpcDualWield.attackWeapon(human);
         synchronized (state) {
+            // Alternating the attacking hand is not changing physical equipment or restarting a combo.
+            if (state.primary != human.getItemBySlot(EquipmentSlot.MAINHAND) || state.offhand != human.getOffhandItem()) state.index = 0;
             if (!state.attributesResolved || state.weapon != weapon) {
-                boolean swappedPair = NpcDualWield.active(human) && state.weapon == human.getOffhandItem()
-                        && state.offhand == weapon;
                 state.weapon = weapon;
-                state.offhand = human.getOffhandItem();
-                if (!swappedPair) state.index = 0;
                 state.lookupFailures = 0;
                 state.attributes = null; // Never carry another physical weapon's verified profile.
                 refreshAttributes(state, weapon, human.tickCount);
@@ -481,6 +490,7 @@ public final class BetterCombatMeleeCombat {
                 // appears. A missing profile must not be cached forever.
                 refreshAttributes(state, weapon, human.tickCount);
             }
+            state.primary = human.getItemBySlot(EquipmentSlot.MAINHAND);
             state.offhand = human.getOffhandItem();
             return state.attributes;
         }

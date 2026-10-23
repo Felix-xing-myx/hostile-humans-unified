@@ -3,6 +3,13 @@ package com.craftix.hostile_humans.client.renderer;
 /** Regression check for parity with Better Combat's player attack timing formula. */
 public final class BetterCombatAnimationTimingTest {
     public static void main(String[] args) {
+        check(!BetterCombatNpcAnimator.mirrorForHand(false, false), "right-handed main attacks right");
+        check(BetterCombatNpcAnimator.mirrorForHand(false, true), "right-handed offhand attacks left");
+        check(BetterCombatNpcAnimator.mirrorForHand(true, false), "left-handed main attacks left");
+        check(!BetterCombatNpcAnimator.mirrorForHand(true, true), "left-handed offhand attacks right");
+        var offhandVisual = new com.craftix.hostile_humans.entity.HumanMobEntityData.MeleeAttackVisual(
+                9, 100L, "slash", 20, .5F, true);
+        check(offhandVisual.offhand() && offhandVisual.active(100), "offhand belongs to the same active snapshot");
         float standard = BetterCombatNpcAnimator.calculateRecoverySpeed(3.0F, 0.25F, 1.0F);
         check(close(standard, 1.0F), "standard upswing uses Better Combat's recovery endpoint");
 

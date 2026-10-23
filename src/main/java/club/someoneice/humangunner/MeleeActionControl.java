@@ -14,7 +14,8 @@ public final class MeleeActionControl {
     private static final class State {
         ActionCoordinator.Token token;
         LivingEntity target;
-        ItemStack weapon;
+        ItemStack weapon, primary, offhand;
+        net.minecraft.world.entity.EquipmentSlot slot;
         int orderSignature;
         int ready;
     }
@@ -28,13 +29,19 @@ public final class MeleeActionControl {
         }
         if (human.tickCount < state.ready) return false;
         var actions = HumanBehaviorControl.actions(human);
-        var token = actions.request("melee:attack", EnumSet.of(ActionCoordinator.Resource.ATTACK,
-                ActionCoordinator.Resource.MAIN_HAND, ActionCoordinator.Resource.FACING), 60, true,
+        var resources = EnumSet.of(ActionCoordinator.Resource.ATTACK,
+                ActionCoordinator.Resource.MAIN_HAND, ActionCoordinator.Resource.FACING);
+        if (NpcDualWield.active(human)) resources.add(ActionCoordinator.Resource.OFF_HAND);
+        var token = actions.request("melee:attack", resources, 60, true,
                 MeleeAttackTiming.interval(human) + 60L);
         if (!actions.acquire(token)) {
             actions.finish(token, ActionCoordinator.Status.CANCELLED, "attack authority unavailable"); return false;
         }
-        state.token = token; state.target = target; state.weapon = human.getMainHandItem(); state.orderSignature = OrderDistances.signature(human);
+        state.token = token; state.target = target;
+        state.slot = NpcDualWield.attackSlot(human); state.weapon = human.getItemBySlot(state.slot);
+        state.primary = human.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+        state.offhand = NpcDualWield.active(human) ? human.getOffhandItem() : null;
+        state.orderSignature = OrderDistances.signature(human);
         state.ready = human.tickCount + MeleeAttackTiming.interval(human);
         PursuitJumpAttack.markEngaged(human);
         return true;
@@ -51,7 +58,7 @@ public final class MeleeActionControl {
         return state != null && expected != null && expected.equals(state.token)
                 && !human.level().isClientSide && human.isAlive() && !human.isRemoved() && !human.isNoAi()
                 && !human.isFleeing && !HumanInventorySession.isEditing(human)
-                && human.humanGunner$canMeleeAttack() && state.weapon == human.getMainHandItem()
+                && human.humanGunner$canMeleeAttack() && weaponValid(human, state)
                 && state.target == human.getTarget() && state.orderSignature == OrderDistances.signature(human)
                 && HumanBehaviorControl.actions(human).running(expected);
     }
@@ -61,8 +68,14 @@ public final class MeleeActionControl {
     public static boolean valid(Human human) {
         State state = STATES.get(human);
         return state != null && state.token != null && available(human, state.target)
-                && state.target == human.getTarget() && state.weapon == human.getMainHandItem()
+                && state.target == human.getTarget() && weaponValid(human, state)
                 && state.orderSignature == OrderDistances.signature(human) && HumanBehaviorControl.actions(human).running(state.token);
+    }
+    private static boolean weaponValid(Human human, State state) {
+        return state.weapon != null
+                && state.weapon == human.getItemBySlot(state.slot)
+                && state.primary == human.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND)
+                && (state.offhand == null || state.offhand == human.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND));
     }
     private static boolean available(Human human, LivingEntity target) {
         return !human.level().isClientSide && human.isAlive() && !human.isRemoved() && !human.isNoAi()

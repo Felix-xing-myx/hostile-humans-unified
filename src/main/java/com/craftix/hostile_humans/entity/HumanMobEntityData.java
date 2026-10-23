@@ -109,7 +109,10 @@ implements HumansDataSync {
     }
 
     /** One atomic server-authored snapshot prevents sequence/timing fields arriving separately. */
-    public record MeleeAttackVisual(int sequence, long startedAt, String animation, int duration, float upswing) {
+    public record MeleeAttackVisual(int sequence, long startedAt, String animation, int duration, float upswing, boolean offhand) {
+        public MeleeAttackVisual(int sequence, long startedAt, String animation, int duration, float upswing) {
+            this(sequence, startedAt, animation, duration, upswing, false);
+        }
         public int elapsed(long now) {
             return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, now - startedAt));
         }
@@ -125,7 +128,7 @@ implements HumansDataSync {
     public MeleeAttackVisual getNpcBetterCombatAttackVisual() {
         CompoundTag data = this.entityData.get(DATA_BETTER_COMBAT_ATTACK_VISUAL);
         return new MeleeAttackVisual(data.getInt("sequence"), data.getLong("started_at"),
-                data.getString("animation"), Math.max(1, data.getInt("duration")), data.getFloat("upswing"));
+                data.getString("animation"), Math.max(1, data.getInt("duration")), data.getFloat("upswing"), data.getBoolean("offhand"));
     }
 
     public String getNpcBetterCombatAttackAnimation() { return getNpcBetterCombatAttackVisual().animation(); }
@@ -138,12 +141,16 @@ implements HumansDataSync {
     }
 
     public void setNpcBetterCombatAttackAnimation(String animation, int durationTicks, float upswing) {
+        setNpcBetterCombatAttackAnimation(animation, durationTicks, upswing, false);
+    }
+    public void setNpcBetterCombatAttackAnimation(String animation, int durationTicks, float upswing, boolean offhand) {
         if (this.level().isClientSide) return;
         CompoundTag snapshot = new CompoundTag();
         snapshot.putInt("sequence", getNpcBetterCombatAttackAnimationSequence() + 1);
         snapshot.putLong("started_at", this.level().getGameTime());
         snapshot.putString("animation", animation == null ? "" : animation);
         snapshot.putInt("duration", Math.max(1, durationTicks));
+        snapshot.putBoolean("offhand", offhand);
         float safeUpswing = Float.isFinite(upswing) ? upswing : 0.5F;
         snapshot.putFloat("upswing", Math.max(0.05F, Math.min(0.95F, safeUpswing)));
         this.entityData.set(DATA_BETTER_COMBAT_ATTACK_VISUAL, snapshot);

@@ -1463,6 +1463,11 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         return !this.hasOwner();
     }
 
+    @Override
+    public ItemStack getMainHandItem() {
+        return club.someoneice.humangunner.NpcMeleeWeaponContext.effectiveMainHand(this, super.getMainHandItem());
+    }
+
     public boolean doHurtTarget(Entity entityIn) {
         if (!(entityIn instanceof LivingEntity requestedTarget)
                 || !club.someoneice.humangunner.HumanPerception.canTarget(this, requestedTarget)
@@ -1481,13 +1486,13 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 BetterCombatMeleeCombat.AttackPlan plan = BetterCombatMeleeCombat.createAttackPlan(this, requestedTarget);
                 if (plan == null || plan.targets().isEmpty()) return false;
                 setNpcBetterCombatAttackAnimation(plan.profile().animationName(),
-                        plan.profile().cooldownTicks(), plan.profile().animationUpswing());
+                        plan.profile().cooldownTicks(), plan.profile().animationUpswing(), plan.profile().offhandAttack());
                 club.someoneice.humangunner.CloseDefenseHold.attack(this, (int) Math.min(Integer.MAX_VALUE,
                         MeleeAttackVisual.playbackWindowTicks(plan.profile().cooldownTicks())));
-                swing(InteractionHand.MAIN_HAND);
+                swing(plan.profile().offhandAttack() ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND);
                 pendingMeleeAction = action;
                 pendingBetterCombatTarget = requestedTarget;
-                pendingBetterCombatWeapon = getMainHandItem();
+                pendingBetterCombatWeapon = getItemBySlot(plan.profile().attackSlot());
                 pendingBetterCombatProfile = plan.profile();
                 pendingBetterCombatUpswingTicks = Math.max(1, Math.round(
                         plan.profile().cooldownTicks() * plan.profile().animationUpswing()));
@@ -1517,7 +1522,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 && pendingBetterCombatTarget.isAlive() && pendingBetterCombatTarget.level() == level()
                 && isAlive() && !isNoAi() && !isFleeing
                 && canAttack(pendingBetterCombatTarget)
-                && pendingBetterCombatWeapon == getMainHandItem()
+                && pendingBetterCombatProfile != null
+                && pendingBetterCombatWeapon == getItemBySlot(pendingBetterCombatProfile.attackSlot())
                 && club.someoneice.humangunner.MeleeActionControl.valid(this, pendingMeleeAction)
                 && BetterCombatMeleeCombat.isEnabled(this);
     }
@@ -1556,7 +1562,8 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         boolean completed = false;
         try {
             if (!club.someoneice.humangunner.MeleeActionControl.valid(this, action)
-                    || attackWeapon != getMainHandItem() || !BetterCombatMeleeCombat.isEnabled(this)) return;
+                    || attackProfile == null || attackWeapon != getItemBySlot(attackProfile.attackSlot())
+                    || !BetterCombatMeleeCombat.isEnabled(this)) return;
             club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, target);
             BetterCombatMeleeCombat.AttackPlan plan = BetterCombatMeleeCombat.createAttackPlan(this, target, attackProfile);
             if (plan == null) return;
@@ -1564,10 +1571,12 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             for (LivingEntity victim : plan.targets()) {
                 if (!club.someoneice.humangunner.MeleeActionControl.impactValid(this, action)) break;
                 hitAny |= BetterCombatMeleeCombat.applyDamageMultiplier(this, plan.profile(),
-                        plan.targets().size(), () -> doHurtTargetSingle(victim, false, false));
+                        plan.targets().size(), () -> club.someoneice.humangunner.NpcMeleeWeaponContext.strike(this,
+                                attackWeapon, action, () -> doHurtTargetSingle(victim, false, false)));
             }
             // One actual weapon action wears once, even when several victims are hit.
-            if (hitAny && attackWeapon == getMainHandItem()) wearEquippedItem(attackWeapon, EquipmentSlot.MAINHAND);
+            if (hitAny && attackWeapon == getItemBySlot(attackProfile.attackSlot()))
+                wearEquippedItem(attackWeapon, attackProfile.attackSlot());
             if (club.someoneice.humangunner.MeleeActionControl.impactValid(this, action)) {
                 BetterCombatMeleeCombat.completeAttack(this);
                 completed = true;

@@ -437,7 +437,8 @@ final class BetterCombatNpcAnimator {
             resolved.setSpeed.invoke(speedModifier, initialSpeed, gears);
 
             Object mirrorModifier = resolved.attackStackMirrorField.get(playback.attackStack);
-            resolved.setMirrorEnabled.invoke(mirrorModifier, human.getMainArm() == HumanoidArm.LEFT);
+            resolved.setMirrorEnabled.invoke(mirrorModifier, mirrorForHand(human.getMainArm() == HumanoidArm.LEFT,
+                    human.getNpcBetterCombatAttackVisual().offhand()));
 
             int beginTick = Math.max(1, resolved.beginTickField.getInt(preparedAnimation));
             Object fade = resolved.standardFadeIn.invoke(null, beginTick, resolved.inOutSine);
@@ -460,6 +461,8 @@ final class BetterCombatNpcAnimator {
             playback.applier = null;
         }
     }
+
+    static boolean mirrorForHand(boolean leftHanded, boolean offhand) { return leftHanded ^ offhand; }
 
     private static Function<String, Optional<Object>> attackAdjustment(Api resolved, Human human) {
         WeakReference<Human> humanReference = new WeakReference<>(human);

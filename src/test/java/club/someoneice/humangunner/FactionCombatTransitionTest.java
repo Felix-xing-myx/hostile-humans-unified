@@ -5,6 +5,7 @@ import java.util.UUID;
 /** Scenario boundaries for strategy selection and actual-damage direction memory. No Minecraft launch. */
 public final class FactionCombatTransitionTest {
     public static void main(String[] args) throws Exception {
+        verifyOffhandAttributes();
         boolean melee = false;
         int switches = 0;
         for (double distance : new double[]{8,4.4,4.6,4.3,5.9,4.5,5.8,6.1}) {
@@ -71,8 +72,63 @@ public final class FactionCombatTransitionTest {
         check(calls("club/someoneice/humangunner/NpcDualWield", "hasMainHandMeleeWeapon", "isDedicatedMeleeWeapon")
                 && !calls("club/someoneice/humangunner/NpcDualWield", "hasMainHandMeleeWeapon", "isNonGunWeapon"),
                 "gun, bow and trident cannot authorize a melee offhand");
+        check(!calls("club/someoneice/humangunner/NpcDualWield", "pair", "core")
+                && !calls("club/someoneice/humangunner/NpcDualWield", "candidate", "core"),
+                "non-core axes and maces are not rejected by an extra core requirement");
+        check(calls("club/someoneice/humangunner/NpcDualWield", "active", "locate"),
+                "dual speed/damage require a uniquely bound pair in the actual hands");
+        check(calls("club/someoneice/humangunner/NpcDualWield", "candidate", "supportsOneHand"),
+                "actual BC single-hand capability remains mandatory");
+        check(calls("com/craftix/hostile_humans/entity/entities/Human", "finishBetterCombatUpswing", "strike"),
+                "real delayed impact uses scoped attacking weapon rather than physical hand swaps");
         System.out.println("FactionCombatTransitionTest passed");
     }
+    private static void verifyOffhandAttributes() {
+        var attribute = new net.minecraft.world.entity.ai.attributes.RangedAttribute("test.dual.damage", 10, 0, 1000);
+        var attributes = new net.minecraft.world.entity.ai.attributes.AttributeMap(
+                net.minecraft.world.entity.ai.attributes.AttributeSupplier.builder().add(attribute, 10).build());
+        var instance = attributes.getInstance(attribute);
+        UUID shared = UUID.randomUUID();
+        var main = new net.minecraft.world.entity.ai.attributes.AttributeModifier(shared, "main", 4,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION);
+        var off = new net.minecraft.world.entity.ai.attributes.AttributeModifier(shared, "off", 8,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION);
+        var unrelated = new net.minecraft.world.entity.ai.attributes.AttributeModifier(UUID.randomUUID(), "buff", 2,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION);
+        instance.addPermanentModifier(main); instance.addTransientModifier(unrelated);
+        var mainModifiers = com.google.common.collect.HashMultimap
+                .<net.minecraft.world.entity.ai.attributes.Attribute, net.minecraft.world.entity.ai.attributes.AttributeModifier>create();
+        var offModifiers = com.google.common.collect.HashMultimap
+                .<net.minecraft.world.entity.ai.attributes.Attribute, net.minecraft.world.entity.ai.attributes.AttributeModifier>create();
+        mainModifiers.put(attribute, main); offModifiers.put(attribute, off);
+        check(instance.getValue() == 16, "normal main weapon plus unrelated buff");
+        double value = NpcMeleeWeaponContext.withAttributeModifiers(attributes, mainModifiers, offModifiers,
+                () -> instance.getValue());
+        check(value == 20 && instance.getValue() == 16, "offhand replaces rather than adds main damage and restores");
+        boolean failed = false;
+        try {
+            NpcMeleeWeaponContext.withAttributeModifiers(attributes, mainModifiers, offModifiers, () -> {
+                check(instance.getValue() == 20, "exception callback receives offhand attributes");
+                throw new IllegalStateException("expected native callback failure");
+            });
+        } catch (IllegalStateException expected) { failed = true; }
+        check(failed && instance.getValue() == 16 && instance.getModifier(shared) == main,
+                "callback failure restores exact original modifier");
+        check(instance.removePermanentModifier(shared), "permanent status survives the scope");
+        instance.addPermanentModifier(main);
+        var foreign = new net.minecraft.world.entity.ai.attributes.AttributeModifier(shared, "foreign", 12,
+                net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION);
+        NpcMeleeWeaponContext.withAttributeModifiers(attributes, mainModifiers, offModifiers, () -> {
+            instance.removeModifier(shared); instance.addTransientModifier(foreign); return true;
+        });
+        check(instance.getModifier(shared) == foreign && instance.getModifier(unrelated.getId()) == unrelated,
+                "foreign callback changes and unrelated modifiers are not overwritten");
+        var offProfile = new BetterCombatMeleeCombat.Profile(3, BetterCombatMeleeCombat.Shape.FORWARD_BOX,
+                1, 0, 20, "slash", .5F, true);
+        check(offProfile.attackSlot() == net.minecraft.world.entity.EquipmentSlot.OFFHAND,
+                "committed profile pins physical offhand for geometry, damage and wear");
+    }
+
     private static boolean calls(String owner, String methodName, String calledName) throws Exception {
         var node = new org.objectweb.asm.tree.ClassNode();
         try (var stream = FactionCombatTransitionTest.class.getClassLoader().getResourceAsStream(owner+".class")) {
