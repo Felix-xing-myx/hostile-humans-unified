@@ -157,7 +157,7 @@ public final class ShieldDefenseController {
         return (float)Math.toDegrees(Math.atan2(offset.z, offset.x)) - 90;
     }
 
-    private final RecoveryPressureWindow recoveryPressure = new RecoveryPressureWindow();
+    private final DamagePressureTracker recoveryPressure = new DamagePressureTracker();
     private boolean pressureCycleActive;
     private final PressureDefenseCycle pressureCycle = new PressureDefenseCycle();
     private final PressureGuardFacing pressureFacing = new PressureGuardFacing();

@@ -13,8 +13,11 @@ class PressureBreakoutContract(unittest.TestCase):
         cfg = json.loads((ROOT / 'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8'))['shield_pressure']
         self.assertEqual(cfg['max_guard_ticks'], 120)
         self.assertEqual(cfg['cooldown_ticks'], 70)
-        self.assertEqual(cfg['frequent_window_ticks'], 30)
-        self.assertEqual(cfg['single_damage_ratio'], .35)
+        self.assertEqual(cfg['dps_smoothing_ticks'], 10)
+        self.assertEqual(cfg['dps_ratio'], .22)
+        for retired in ('window_ticks', 'damage_ratio', 'frequent_window_ticks',
+                        'frequent_hits', 'frequent_damage_ratio', 'single_damage_ratio'):
+            self.assertNotIn(retired, cfg)
         self.assertNotIn('break_attempt_ticks', cfg)
         storage = source('SplitConfigFiles')
         backfill = storage.split('JsonObject pressure = data.getAsJsonObject("shield_pressure")', 1)[1].split('if (rank &&', 1)[0]
