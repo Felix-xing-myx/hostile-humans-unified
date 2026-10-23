@@ -319,7 +319,7 @@ final class BetterCombatNpcAnimator {
     private static boolean isApplicable(Human human) {
         return human != null && ModList.get().isLoaded("bettercombat")
                 && human.isNpcBetterCombatMeleeEnabled()
-                && com.craftix.hostile_humans.HumanUtil.isMeleeWeapon(human.getMainHandItem())
+                && !human.getMainHandItem().isEmpty()
                 && !club.someoneice.humangunner.GunSupport.get().isGun(human.getMainHandItem());
     }
 

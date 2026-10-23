@@ -29,7 +29,7 @@ class PursuitJumpContract(unittest.TestCase):
         self.assertIn('BetterCombatMeleeCombat.upswingTicks(human)',spacing)
         self.assertIn('MeleeSpacing.preferredDistance(human,target)',GOAL)
     def test_distance_and_time_share_weapon_budget(self):
-        for condition in ("attackCooldown > 0", "12 - BetterCombatMeleeCombat.upswingTicks(human)", "closing * approachTicks",
+        for condition in ("attackCooldown > 0", "12 - upswing - MeleeJumpPolicy.attackLeadTicks(upswing)", "closing * approachTicks",
                           "reach - .5", "closing < .04", "Math.abs(target.getY() - human.getY()) > jump.maxHeightDifference()"):
             self.assertIn(condition, JUMP)
         self.assertIn("BetterCombatMeleeCombat.upswingTicks(human)", JUMP)
@@ -82,9 +82,9 @@ class PursuitJumpContract(unittest.TestCase):
     def test_airborne_lifecycle_and_target_weapon_identity(self):
         for condition in ("state.airborne = true", "else if (state.airborne", "state.started > 3",
                           "state.started > 30", "state.target.equals(target.getUUID())",
-                          "state.weapon != human.getMainHandItem()", "state.orderSignature != OrderDistances.signature(human)", "!HumanBehaviorControl.actions(human).running(state.token)", "active(human) && human.onGround()"):
+                          "state.weapon != human.getMainHandItem()", "state.orderSignature != OrderDistances.signature(human)", "!HumanBehaviorControl.actions(human).running(state.token)", "MeleeJumpPolicy.waitingForAttack(human.tickCount-state.started, human.onGround(), state.attackLead)"):
             self.assertIn(condition, JUMP)
-        self.assertIn("PursuitJumpAttack.awaitingTakeoff(human)", GOAL)
+        self.assertIn("PursuitJumpAttack.awaitingAttackWindow(human)", GOAL)
         self.assertIn("!club.someoneice.humangunner.PursuitJumpAttack.active(human)", GOAL)
 
 if __name__ == "__main__": unittest.main()

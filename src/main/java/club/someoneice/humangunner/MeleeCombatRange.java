@@ -34,6 +34,7 @@ public final class MeleeCombatRange {
     public static boolean canReachTarget(Human human, LivingEntity target) {
         if (GunSupport.isGunItem(human.getMainHandItem())
                 || target == null || !target.isAlive() || !human.canAttack(target)) return false;
+        if (BetterCombatMeleeCombat.backend(human) == BetterCombatMeleeCombat.Backend.WAIT) return false;
         if (BetterCombatMeleeCombat.hasWeaponProfile(human))
             return BetterCombatMeleeCombat.canStrike(human, target);
         double actualReach = human.getAttributeValue(ForgeMod.ENTITY_REACH.get());
@@ -49,7 +50,7 @@ public final class MeleeCombatRange {
     /** One pre-animation gate for native attacks and temporary defensive counters. */
     public static boolean canStartAttack(Human human, LivingEntity target) {
         if (target == null || !target.isAlive() || !human.canAttack(target)
-                || human.isFleeing || !NpcDualWield.prepare(human) || !NpcDualWield.layoutReady(human)
+                || human.isFleeing || PursuitJumpAttack.awaitingAttackWindow(human) || !NpcDualWield.prepare(human) || !NpcDualWield.layoutReady(human)
                 || !human.humanGunner$canMeleeAttack() || human.humanGunner$hasPendingMeleeAttack()
                 || human.humanGunner$shieldDefense().shouldSuppressRecovery()) return false;
         if (BetterCombatMeleeCombat.hasWeaponProfile(human)) faceTarget(human, target);

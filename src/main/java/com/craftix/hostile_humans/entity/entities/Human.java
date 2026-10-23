@@ -195,6 +195,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     public final club.someoneice.humangunner.GuardCombatState guardCombatState =
             new club.someoneice.humangunner.GuardCombatState();
     private ItemStack pendingBetterCombatWeapon = ItemStack.EMPTY;
+    private BetterCombatMeleeCombat.Profile pendingBetterCombatProfile;
     private int pendingBetterCombatUpswingTicks;
     private int humanGunner$fastGunRetargetUntilTick = -1;
 
@@ -1440,31 +1441,32 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 || !club.someoneice.humangunner.HumanPerception.canTarget(this, requestedTarget)
                 || !humanGunner$canMeleeAttack()
                 || level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL
-                || !club.someoneice.humangunner.MeleeCombatRange.canStartAttack(this, requestedTarget)
+                || !club.someoneice.humangunner.MeleeCombatRange.canStartAttack(this, requestedTarget)) return false;
+        var backend = BetterCombatMeleeCombat.backend(this);
+        if (backend == BetterCombatMeleeCombat.Backend.WAIT
                 || !club.someoneice.humangunner.MeleeActionControl.begin(this, requestedTarget)) return false;
         var action = club.someoneice.humangunner.MeleeActionControl.token(this);
         boolean delayed = false, completed = false;
         try {
-            if (BetterCombatMeleeCombat.isEnabled(this)) {
+            if (backend == BetterCombatMeleeCombat.Backend.BETTER_COMBAT) {
                 if (BetterCombatMeleeCombat.hasWeaponProfile(this))
                     club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, requestedTarget);
                 BetterCombatMeleeCombat.AttackPlan plan = BetterCombatMeleeCombat.createAttackPlan(this, requestedTarget);
-                if (plan != null) {
-                    if (plan.targets().isEmpty()) return false;
-                    setNpcBetterCombatAttackAnimation(plan.profile().animationName(),
-                            plan.profile().cooldownTicks(), plan.profile().animationUpswing());
-                    club.someoneice.humangunner.CloseDefenseHold.attack(this, (int) Math.min(Integer.MAX_VALUE,
-                            MeleeAttackVisual.playbackWindowTicks(plan.profile().cooldownTicks())));
-                    swing(InteractionHand.MAIN_HAND);
-                    pendingMeleeAction = action;
-                    pendingBetterCombatTarget = requestedTarget;
-                    pendingBetterCombatWeapon = getMainHandItem();
-                    pendingBetterCombatUpswingTicks = Math.max(1, Math.round(
-                            plan.profile().cooldownTicks() * plan.profile().animationUpswing()));
-                    delayed = true;
-                    facePendingBetterCombatAttack();
-                    return true;
-                }
+                if (plan == null || plan.targets().isEmpty()) return false;
+                setNpcBetterCombatAttackAnimation(plan.profile().animationName(),
+                        plan.profile().cooldownTicks(), plan.profile().animationUpswing());
+                club.someoneice.humangunner.CloseDefenseHold.attack(this, (int) Math.min(Integer.MAX_VALUE,
+                        MeleeAttackVisual.playbackWindowTicks(plan.profile().cooldownTicks())));
+                swing(InteractionHand.MAIN_HAND);
+                pendingMeleeAction = action;
+                pendingBetterCombatTarget = requestedTarget;
+                pendingBetterCombatWeapon = getMainHandItem();
+                pendingBetterCombatProfile = plan.profile();
+                pendingBetterCombatUpswingTicks = Math.max(1, Math.round(
+                        plan.profile().cooldownTicks() * plan.profile().animationUpswing()));
+                delayed = true;
+                facePendingBetterCombatAttack();
+                return true;
             }
             boolean hit = doHurtTargetSingle(entityIn, true);
             if (hit && club.someoneice.humangunner.MeleeActionControl.impactValid(this, action)) {
@@ -1518,16 +1520,18 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         if (--pendingBetterCombatUpswingTicks > 0) return;
         LivingEntity target = pendingBetterCombatTarget;
         ItemStack attackWeapon = pendingBetterCombatWeapon;
+        BetterCombatMeleeCombat.Profile attackProfile = pendingBetterCombatProfile;
         var action = pendingMeleeAction;
         pendingBetterCombatTarget = null;
         pendingBetterCombatWeapon = ItemStack.EMPTY;
+        pendingBetterCombatProfile = null;
         pendingMeleeAction = null;
         boolean completed = false;
         try {
             if (!club.someoneice.humangunner.MeleeActionControl.valid(this, action)
                     || attackWeapon != getMainHandItem() || !BetterCombatMeleeCombat.isEnabled(this)) return;
             club.someoneice.humangunner.MeleeCombatRange.faceTarget(this, target);
-            BetterCombatMeleeCombat.AttackPlan plan = BetterCombatMeleeCombat.createAttackPlan(this, target);
+            BetterCombatMeleeCombat.AttackPlan plan = BetterCombatMeleeCombat.createAttackPlan(this, target, attackProfile);
             if (plan == null) return;
             boolean hitAny = false;
             for (LivingEntity victim : plan.targets()) {
@@ -1580,6 +1584,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         pendingMeleeAction = null;
         pendingBetterCombatTarget = null;
         pendingBetterCombatWeapon = ItemStack.EMPTY;
+        pendingBetterCombatProfile = null;
         pendingBetterCombatUpswingTicks = 0;
         if (!getNpcBetterCombatAttackAnimation().isEmpty()) setNpcBetterCombatAttackAnimation("");
         swinging = false;
@@ -1932,7 +1937,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         bootstrapMissingHumanData();
         club.someoneice.humangunner.HumanBehaviorControl.beforeTick(this);
         if (!this.level().isClientSide) {
-            setNpcBetterCombatMeleeEnabled(BetterCombatMeleeCombat.isEnabled(this));
+            setNpcBetterCombatMeleeEnabled(BetterCombatMeleeCombat.hasWeaponProfile(this) || hasPendingBetterCombatFacing());
             this.updateWaterKnockbackResistance();
         }
         if (!level().isClientSide && !attributesMigrated) {

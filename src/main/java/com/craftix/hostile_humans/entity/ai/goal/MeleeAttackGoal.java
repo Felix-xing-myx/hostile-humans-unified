@@ -265,7 +265,7 @@ extends Goal {
         // let the old melee goal lower the shield and create a swing packet.
         if (this.mob instanceof Human human && (human.isFleeing || !human.humanGunner$canMeleeAttack())) return;
         if (this.mob instanceof Human human && (human.humanGunner$hasPendingMeleeAttack()
-                || club.someoneice.humangunner.PursuitJumpAttack.awaitingTakeoff(human))) return;
+                || club.someoneice.humangunner.PursuitJumpAttack.awaitingAttackWindow(human))) return;
         if (canStrike(livingEntity) && this.ticksUntilNextAttack <= 0) {
             HumanEntity humanEntity;
             if (this.mob.isBlocking()) {
@@ -294,7 +294,7 @@ extends Goal {
         if (this.mob instanceof Human human) {
             club.someoneice.humangunner.NpcDualWield.prepare(human);
             club.someoneice.humangunner.PursuitJumpAttack.tryStart(human, target, this.ticksUntilNextAttack);
-            if (club.someoneice.humangunner.PursuitJumpAttack.awaitingTakeoff(human)) return false;
+            if (club.someoneice.humangunner.PursuitJumpAttack.awaitingAttackWindow(human)) return false;
             MeleeCombatRange.faceTarget(human, target);
         }
         if (this.mob instanceof Human human ? !MeleeCombatRange.canStartAttack(human, target)

@@ -24,6 +24,7 @@ public final class PursuitJumpAttack {
         dev.felix.hostilehumans.core.ActionCoordinator.Token token;
         int orderSignature;
         boolean airborne;
+        int attackLead;
     }
     private PursuitJumpAttack() { }
 
@@ -70,6 +71,7 @@ public final class PursuitJumpAttack {
         state.target = target.getUUID();
         state.weapon = human.getMainHandItem();
         state.started = human.tickCount;
+        state.attackLead = MeleeJumpPolicy.attackLeadTicks(BetterCombatMeleeCombat.upswingTicks(human));
         state.airborne = false;
         human.setSprinting(distance > reach);
         HumanMovementModifiers.withToken(human, state.token, () -> human.getJumpControl().jump());
@@ -93,7 +95,8 @@ public final class PursuitJumpAttack {
         if (forward < .06 || route.dot(direction) < .80) return false;
         double closing = forward - target.getDeltaMovement().multiply(1, 0, 1).dot(direction);
         if (closing < .04 || distance <= Math.max(MeleeSpacing.preferredDistance(reach) + .35, reach - .5)) return false;
-        int approachTicks = 12 - BetterCombatMeleeCombat.upswingTicks(human) - Math.max(0, cooldown) - 2;
+        int upswing = BetterCombatMeleeCombat.upswingTicks(human);
+        int approachTicks = 12 - upswing - MeleeJumpPolicy.attackLeadTicks(upswing) - Math.max(0, cooldown);
         return approachTicks >= 2 && distance <= reach + Math.min(Math.min(1.25, jump.approachExtra()), closing * approachTicks);
     }
     public static void markEngaged(Human human) {
@@ -135,9 +138,11 @@ public final class PursuitJumpAttack {
         return true;
     }
 
-    /** Give the jump controller a tick to leave the ground; never postpone an ordinary attack. */
-    public static boolean awaitingTakeoff(Human human) {
-        return active(human) && human.onGround();
+    /** Only this intentional jump delays its own attack: visible takeoff precedes the weapon upswing. */
+    public static boolean awaitingAttackWindow(Human human) {
+        if (!active(human)) return false;
+        State state = STATES.get(human);
+        return MeleeJumpPolicy.waitingForAttack(human.tickCount-state.started, human.onGround(), state.attackLead);
     }
 
     /** Evaluate at actual impact, including Better Combat's delayed upswing and each sweep victim. */

@@ -28,6 +28,7 @@ import dev.felix.hostilehumans.core.CachedReflection;
 /** Optional server-side adapter for Better Combat's weapon profiles and melee hitboxes. */
 public final class BetterCombatMeleeCombat {
     private static final Logger LOGGER = LogUtils.getLogger();
+    static final int PROFILE_RETRY_TICKS = 4, PROFILE_REFRESH_TICKS = 20, MAX_PROFILE_FAILURES = 3;
     private static final java.util.UUID DAMAGE_MODIFIER_ID = java.util.UUID.fromString(
             "9b8bc786-6829-4ac0-9b88-e5260f39e422");
     private static final java.util.UUID SWEEP_MODIFIER_ID = java.util.UUID.fromString(
@@ -51,12 +52,31 @@ public final class BetterCombatMeleeCombat {
         private ItemStack offhand = ItemStack.EMPTY;
         private Object attributes;
         private boolean attributesResolved;
+        private boolean lookupAvailable;
+        private int lookupFailures;
         private int lastAttributeLookupTick;
         private int index;
         private int lastAttackTick;
     }
 
     private record Api(Method getAttributes, Field configField) {}
+    private record AttributesRead(Object attributes, boolean available) { }
+    public enum Backend {
+        NATIVE, BETTER_COMBAT, WAIT;
+        static Backend choose(boolean configured, boolean bridgeAvailable, boolean lookupAvailable, boolean profile, int failures) {
+            if (!configured || !bridgeAvailable) return NATIVE;
+            if (!lookupAvailable) return failures >= MAX_PROFILE_FAILURES ? NATIVE : WAIT;
+            return profile ? BETTER_COMBAT : NATIVE;
+        }
+    }
+    /** Unsupported weapons may use native attacks; a failed lookup must not become a fast native hit. */
+    public static Backend backend(Human human) {
+        if (!canReadWeaponProfile(human) || human.getMainHandItem().isEmpty()) return Backend.NATIVE;
+        if (resolveApi() == null) return Backend.NATIVE; // Permanently unsupported optional bridge, logged once.
+        Object attributes = weaponAttributes(human);
+        ComboState state = comboState(human);
+        return Backend.choose(true, true, state.lookupAvailable, attributes != null, state.lookupFailures);
+    }
 
     public static boolean isEnabled(Human human) {
         return human != null && !human.level().isClientSide
@@ -107,7 +127,12 @@ public final class BetterCombatMeleeCombat {
     /** Resolve the active combo step and collect the hostile entities in its oriented hitbox. */
     public static AttackPlan createAttackPlan(Human human, LivingEntity requestedTarget) {
         if (!isEnabled(human) || !hasWeaponProfile(human) || requestedTarget == null) return null;
-        Profile profile = profile(human);
+        return createAttackPlan(human, requestedTarget, profile(human));
+    }
+
+    /** Re-evaluate victims using the profile committed at swing start, never select another combo at impact. */
+    public static AttackPlan createAttackPlan(Human human, LivingEntity requestedTarget, Profile profile) {
+        if (!isEnabled(human) || requestedTarget == null || profile == null) return null;
         if (profile.damageMultiplier() <= 0) return new AttackPlan(profile, List.of());
         List<LivingEntity> targets = collectTargets(human, profile);
         if (!targets.contains(requestedTarget) && canBeHit(human, requestedTarget, profile)) {
@@ -226,7 +251,8 @@ public final class BetterCombatMeleeCombat {
         if (attributes == null) return new Profile(defaultRange, shape, damageMultiplier,
                 angleDegrees, cooldown, "", 0.5F);
 
-        String animationName = "";
+        boolean twoHanded = booleanValue(call(attributes, "isTwoHanded"), false);
+        String animationName = resolveAnimationName(null, twoHanded);
         float animationUpswing = 0.5F;
         double configuredRange = number(call(attributes, "attackRange"), defaultRange);
         if (configuredRange > 0.0D) defaultRange = Math.min(configuredRange, 16.0D);
@@ -235,8 +261,7 @@ public final class BetterCombatMeleeCombat {
             Object selected = selectAttack(human, attributes, attacks);
             if (selected == null) return new Profile(defaultRange, shape, 0, angleDegrees, cooldown, "", .5F);
             if (selected != null) {
-                Object animation = call(selected, "animation");
-                if (animation instanceof String name) animationName = name;
+                animationName = resolveAnimationName(call(selected, "animation"), twoHanded);
                 animationUpswing = (float) Math.max(0.05D, Math.min(0.95D,
                         number(call(selected, "upswing"), 0.5D)));
                 Object hitbox = call(selected, "hitbox");
@@ -258,6 +283,12 @@ public final class BetterCombatMeleeCombat {
         }
         return new Profile(defaultRange, shape, damageMultiplier, angleDegrees, cooldown,
                 animationName, animationUpswing);
+    }
+
+    static String resolveAnimationName(Object value, boolean twoHanded) {
+        return value instanceof String name && !name.isBlank() ? name
+                : twoHanded ? "bettercombat:two_handed_slash_horizontal_right"
+                : "bettercombat:one_handed_slash_horizontal_right";
     }
 
     private static int attackCooldown(Human human) {
@@ -410,15 +441,23 @@ public final class BetterCombatMeleeCombat {
         return Math.toDegrees(Math.acos(dot)) <= angleDegrees * 0.5D;
     }
 
-    private static Object getWeaponAttributes(ItemStack stack) {
+    private static Object getWeaponAttributes(ItemStack stack) { return readWeaponAttributes(stack).attributes(); }
+    private static AttributesRead readWeaponAttributes(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return new AttributesRead(null, true);
         Api bridge = resolveApi();
-        if (bridge == null || stack == null || stack.isEmpty()) return null;
+        if (bridge == null) return new AttributesRead(null, false);
         try {
-            return bridge.getAttributes().invoke(null, stack);
+            return new AttributesRead(bridge.getAttributes().invoke(null, stack), true);
         } catch (ReflectiveOperationException | LinkageError error) {
             warnApiOnce(error);
-            return null;
+            return new AttributesRead(null, false);
         }
+    }
+    private static void refreshAttributes(ComboState state, ItemStack weapon, int tick) {
+        AttributesRead read = readWeaponAttributes(weapon);
+        state.attributes = read.attributes(); state.lookupAvailable = read.available();
+        state.lookupFailures = read.available() ? 0 : Math.min(MAX_PROFILE_FAILURES, state.lookupFailures+1);
+        state.attributesResolved = true; state.lastAttributeLookupTick = tick;
     }
 
     private static Object weaponAttributes(Human human) {
@@ -431,14 +470,13 @@ public final class BetterCombatMeleeCombat {
                 state.weapon = weapon;
                 state.offhand = human.getOffhandItem();
                 if (!swappedPair) state.index = 0;
-                state.attributes = getWeaponAttributes(weapon);
-                state.attributesResolved = true;
-                state.lastAttributeLookupTick = human.tickCount;
-            } else if (human.tickCount - state.lastAttributeLookupTick >= 20) {
+                state.lookupFailures = 0;
+                refreshAttributes(state, weapon, human.tickCount);
+            } else if (human.tickCount - state.lastAttributeLookupTick >=
+                    (state.lookupAvailable || state.lookupFailures >= MAX_PROFILE_FAILURES ? PROFILE_REFRESH_TICKS : PROFILE_RETRY_TICKS)) {
                 // The weapon registry can synchronize after this Human first
                 // appears. A missing profile must not be cached forever.
-                state.attributes = getWeaponAttributes(weapon);
-                state.lastAttributeLookupTick = human.tickCount;
+                refreshAttributes(state, weapon, human.tickCount);
             }
             state.offhand = human.getOffhandItem();
             return state.attributes;
@@ -506,7 +544,7 @@ public final class BetterCombatMeleeCombat {
     private static void warnApiOnce(Throwable error) {
         if (!warnedAboutApi) synchronized (BetterCombatMeleeCombat.class) {
             if (!warnedAboutApi) {
-                LOGGER.warn("Better Combat NPC melee bridge could not access the optional Better Combat API; using conservative built-in hitbox defaults", error);
+                LOGGER.warn("Better Combat NPC melee profile lookup failed; transient failures wait for retry, unavailable bridges or repeated failures use native fallback", error);
                 warnedAboutApi = true;
             }
         }
