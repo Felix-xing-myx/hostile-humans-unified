@@ -188,7 +188,8 @@ public final class TierConfigFilesTest {
             rank.getAsJsonObject("damage_multipliers").remove("crossbow_damage_multiplier");
             Files.writeString(rankPath, rank.toString());
             var loaded = new UnifiedConfig(SplitConfigFiles.load(dir, defaults, (r, data) -> false));
-            check(loaded.tier("tier1").bowDamage() == 9 && loaded.tier("tier1").crossbowDamage() == 1.5,
+            check(loaded.tier("tier1").bowDamage() == 9
+                            && loaded.tier("tier1").crossbowDamage() == new UnifiedConfig(defaults).tier("tier1").crossbowDamage(),
                     "explicit bow survives while missing crossbow uses its independent default");
             global = JsonParser.parseString(Files.readString(globalPath)).getAsJsonObject();
             damage = global.getAsJsonObject("damage");
