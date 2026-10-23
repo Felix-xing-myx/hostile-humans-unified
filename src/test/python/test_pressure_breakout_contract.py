@@ -11,7 +11,7 @@ def source(name): return (PKG / (name + '.java')).read_text(encoding='utf-8')
 class PressureBreakoutContract(unittest.TestCase):
     def test_current_defaults_backfill_missing_entries_without_overwriting_users(self):
         cfg = json.loads((ROOT / 'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8'))['shield_pressure']
-        self.assertEqual(cfg['max_guard_ticks'], 140)
+        self.assertEqual(cfg['max_guard_ticks'], 120)
         self.assertEqual(cfg['cooldown_ticks'], 40)
         self.assertEqual(cfg['frequent_window_ticks'], 30)
         self.assertEqual(cfg['single_damage_ratio'], .35)

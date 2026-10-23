@@ -3420,12 +3420,12 @@
     "_description_jeg_inventory_fed_capacity_en": "NPC-only virtual capacity for JEG inventory-fed ballistic guns: default 100, range 1-4096. One category-priced payment per empty reload; player capacity is unchanged."
   },
   "shield_pressure": {
-    "_说明_中文": "本能高压防御，只统计可盾防生物/弹体攻击造成的实际扣血；环境、绕盾、取消、零扣血不计。三分支任一触发：1秒2次合计18%，1.5秒5次合计10%，单次35%。已开始的当前一瓶药先完成再接管，不连续开瓶饿死举盾。高压可保留枪械，不需要先切近战。只接管手/盾面/攻击权，逃跑或原导航继续按世界方向移动。实际受伤或有效格挡续期，安静1秒或最长7秒结束，固定冷却2秒；冷却中不能重新锁盾。",
-    "_description_en": "Instinctive shieldable real-health-loss defense. Thresholds: 2 hits/18% within 20 ticks, 5 hits/10% within 30 ticks, or a single 35% hit. Finish one current potion first. Preserve firearm and navigation; end after 20 quiet ticks or 140 active ticks, followed by 40 ticks mandatory cooldown.",
+    "_说明_中文": "本能高压防御，只统计可盾防生物/弹体攻击造成的实际扣血；环境、绕盾、取消、零扣血不计。三分支任一触发：1秒2次合计18%，1.5秒5次合计10%，单次35%。已开始的当前一瓶药先完成再接管，不连续开瓶饿死举盾。高压可保留枪械，不需要先切近战。只接管手/盾面/攻击权，逃跑或原导航继续按世界方向移动。实际受伤或有效格挡续期，安静1秒或最长6秒结束，固定冷却2秒；冷却中不能重新锁盾。",
+    "_description_en": "Instinctive shieldable real-health-loss defense. Thresholds: 2 hits/18% within 20 ticks, 5 hits/10% within 30 ticks, or a single 35% hit. Finish one current potion first. Preserve firearm and navigation; end after 20 quiet ticks or 120 active ticks, followed by 40 ticks mandatory cooldown.",
     "enabled": true,
-    "_说明_max_guard_ticks_中文": "一次实际高压举盾最长140tick（7秒），范围1–2400；等待喝药不计入。",
-    "_description_max_guard_ticks_en": "Maximum active guard duration, 140 ticks (7 seconds); waiting for the current potion does not count.",
-    "max_guard_ticks": 140,
+    "_说明_max_guard_ticks_中文": "一次实际高压举盾最长120tick（6秒），范围1–2400；等待喝药不计入。",
+    "_description_max_guard_ticks_en": "Maximum active guard duration, 120 ticks (6 seconds); waiting for the current potion does not count.",
+    "max_guard_ticks": 120,
     "_说明_window_ticks_中文": "伤害统计窗口，默认20 tick（1秒），范围5～100。只记有实际扣血的命中。",
     "_description_window_ticks_en": "Actual health-loss sampling window, default 20 ticks (one second), range 5–100.",
     "window_ticks": 20,

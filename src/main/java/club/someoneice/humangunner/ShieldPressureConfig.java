@@ -20,7 +20,7 @@ public record ShieldPressureConfig(boolean enabled, int windowTicks, double dama
                 (int) UnifiedConfig.number(json, "frequent_hits", 5, 2, 64),
                 UnifiedConfig.number(json, "frequent_damage_ratio", .10, .001, 1),
                 (int) UnifiedConfig.number(json, "quiet_ticks", 20, 5, 200),
-                (int) UnifiedConfig.number(json, "max_guard_ticks", 140, 1, 2400),
+                (int) UnifiedConfig.number(json, "max_guard_ticks", 120, 1, 2400),
                 (int) UnifiedConfig.number(json, "cooldown_ticks", 40, 1, 400),
                 (int) UnifiedConfig.number(json, "frequent_window_ticks", 30, 5, 200),
                 UnifiedConfig.number(json, "single_damage_ratio", .35, .01, 1));
