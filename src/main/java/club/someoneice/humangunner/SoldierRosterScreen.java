@@ -54,10 +54,13 @@ public final class SoldierRosterScreen extends Screen {
     private static Component roster(String key,Object...args){return tr("screen.hostile_humans_unified.roster."+key,args);}
     private int panelWidth(){return CommandPanelLayout.width(width);}
     private int left(){return (width-panelWidth())/2;}
-    private int bodyTop(){return 40;}
-    private int bodyBottom(){return height-58;}
+    private int panelHeight(){return CommandPanelLayout.height(height);}
+    private int top(){return (height-panelHeight())/2;}
+    private int bodyTop(){return top()+34;}
+    private int bodyBottom(){return top()+panelHeight()-48;}
     private static boolean hit(double mx,double my,int x,int y,int w,int h){return mx>=x&&mx<x+w&&my>=y&&my<y+h;}
     @Override protected void init(){
+        controls.clear();pageTrack=null;scroll=0;maxScroll=0;
         String name=squadName==null?"":squadName.getValue();
         squadName=new EditBox(font,left()+12,bodyTop(),panelWidth()-24,20,cmd("squad_name"));squadName.setMaxLength(64);squadName.setValue(name);squadName.setVisible(false);addWidget(squadName);focusEditor=editingSquad>0;draggingPage=false;
     }
@@ -72,14 +75,11 @@ public final class SoldierRosterScreen extends Screen {
         return Math.max(add(a,x,y,col,aa,false,ra),add(b,x+col+6,y,w-col-6,ab,false,rb));
     }
     private void drawControl(GuiGraphics g,Control c,int mx,int my){
-        g.fill(c.x,c.y,c.x+c.w,c.y+c.h,c.selected?CommandPanelScreen.GOLD:CommandPanelScreen.EDGE);
-        g.fill(c.x+1,c.y+1,c.x+c.w-1,c.y+c.h-1,hit(mx,my,c.x,c.y,c.w,c.h)?CommandPanelScreen.HOVER:CommandPanelScreen.SURFACE);
-        int y=c.y+(c.h-font.split(c.label,Math.max(1,c.w-12)).size()*10)/2;
-        for(var line:font.split(c.label,Math.max(1,c.w-12))){g.drawString(font,line,c.x+6,y,c.active?CommandPanelScreen.TEXT:CommandPanelScreen.DISABLED,false);y+=10;}
+        CommandPanelChrome.control(g,font,c.label,c.x,c.y,c.w,c.h,hit(mx,my,c.x,c.y,c.w,c.h),c.active,c.selected,false,CommandPanelScreen.GOLD);
     }
     @Override public void render(GuiGraphics g,int mx,int my,float partial){
         renderBackground(g);int x=left(),w=panelWidth(),inner=w-24;
-        g.fill(x,12,x+w,height-12,CommandPanelScreen.PANEL);g.drawString(font,title,x+12,20,CommandPanelScreen.GOLD,false);
+        CommandPanelChrome.frame(g,x,top(),w,panelHeight(),CommandPanelScreen.GOLD);g.drawString(font,title,x+12,top()+9,CommandPanelScreen.GOLD,false);
         controls.clear();pageTrack=null;g.enableScissor(x+12,bodyTop(),x+w-12,bodyBottom());int y=bodyTop()-scroll;
         squadName.setVisible(false);
         if(squadPanel)y=renderSquads(g,x+12,y,inner);
@@ -100,7 +100,7 @@ public final class SoldierRosterScreen extends Screen {
         }
         g.disableScissor();
         if(maxScroll>0){int bar=bodyTop()+Math.max(0,bodyBottom()-bodyTop()-20)*scroll/maxScroll;g.fill(x+w-7,bar,x+w-4,bar+20,CommandPanelScreen.GOLD);}
-        int bw=(inner-6)/2,fy=height-44;
+        int bw=(inner-6)/2,fy=top()+panelHeight()-34;
         drawControl(g,new Control(selected!=null||squadPanel||tier!=-1?cmd("back"):cmd("close"),x+12,fy,bw,20,true,false,this::back),mx,my);
         drawControl(g,new Control(cmd("squad_manage",marked.size()),x+18+bw,fy,inner-bw-6,20,true,false,this::openSquads),mx,my);
     }
@@ -121,17 +121,29 @@ public final class SoldierRosterScreen extends Screen {
         y+=8;
         y=text(g,cmd("squad_filter",squadFilter<0?"*":squadFilter),x,y,w,CommandPanelScreen.MUTED)+8;
         for(var e:entries){
+            CommandPanelChrome.badge(g,x,y+2,e.faction());
             Component name=Component.literal((marked.contains(e.id())?"☑ ":"☐ ")+(e.name().isBlank()?roster("unnamed").getString():e.name()));
-            y=add(name,x,y,w,true,e.id().equals(selected),()->{
+            y=add(name,x+18,y,w-18,true,e.id().equals(selected),()->{
                 if(hasShiftDown()){if(!marked.remove(e.id())&&marked.size()<64)marked.add(e.id());}
                 else {selected=e.id();scroll=0;dismissConfirmUntil=0;}
             });
-            y=text(g,Component.literal("["+e.squad()+"] ").append(roster("tier."+e.tier())).append(" · "+e.faction()),x,y,w,CommandPanelScreen.MUTED);
-            y=text(g,roster("status_short."+e.status()),x,y,w,CommandPanelScreen.MUTED);
-            y=text(g,Component.literal(e.dimension()+" · "+e.x()+", "+e.y()+", "+e.z()),x,y,w,CommandPanelScreen.MUTED);
-            y=text(g,Component.translatable("screen.hostile_humans_unified.soldier."+e.order().toLowerCase(Locale.ROOT)),x,y,w,CommandPanelScreen.MUTED);
-            y=text(g,e.health()>=0?roster("health",e.health(),e.maxHealth()):roster("last_known_short"),x,y,w,CommandPanelScreen.TEXT);
-            if(e.growth()!=null&&e.growth().enabled())y=text(g,roster("growth_summary",e.growth().level(),e.growth().experiencePercent()),x,y,w,CommandPanelScreen.MUTED);
+            y=text(g,Component.literal("["+e.squad()+"] ").append(roster("tier."+e.tier())).append(" · ").append(CommandPanelChrome.factionName(e.faction())),x,y,w,CommandPanelScreen.MUTED);
+            if(CommandPanelLayout.twoColumns(w)){
+                int metadataCol=CommandPanelLayout.columnWidth(w);
+                int first=text(g,roster("status_short."+e.status()),x,y,metadataCol,CommandPanelScreen.MUTED);
+                int second=text(g,e.health()>=0?roster("health",e.health(),e.maxHealth()):roster("last_known_short"),x+metadataCol+8,y,metadataCol,CommandPanelScreen.TEXT);
+                y=Math.max(first,second);
+                y=text(g,Component.literal(e.dimension()+" · "+e.x()+", "+e.y()+", "+e.z()),x,y,w,CommandPanelScreen.MUTED);
+                first=text(g,Component.translatable("screen.hostile_humans_unified.soldier."+e.order().toLowerCase(Locale.ROOT)),x,y,metadataCol,CommandPanelScreen.MUTED);
+                second=e.growth()!=null&&e.growth().enabled()?text(g,roster("growth_summary",e.growth().level(),e.growth().experiencePercent()),x+metadataCol+8,y,metadataCol,CommandPanelScreen.MUTED):y;
+                y=Math.max(first,second);
+            }else{
+                y=text(g,roster("status_short."+e.status()),x,y,w,CommandPanelScreen.MUTED);
+                y=text(g,Component.literal(e.dimension()+" · "+e.x()+", "+e.y()+", "+e.z()),x,y,w,CommandPanelScreen.MUTED);
+                y=text(g,Component.translatable("screen.hostile_humans_unified.soldier."+e.order().toLowerCase(Locale.ROOT)),x,y,w,CommandPanelScreen.MUTED);
+                y=text(g,e.health()>=0?roster("health",e.health(),e.maxHealth()):roster("last_known_short"),x,y,w,CommandPanelScreen.TEXT);
+                if(e.growth()!=null&&e.growth().enabled())y=text(g,roster("growth_summary",e.growth().level(),e.growth().experiencePercent()),x,y,w,CommandPanelScreen.MUTED);
+            }
             y+=6;
             y=pair(cmd("mark"),roster("recall_one"),x,y,w,true,true,()->{if(!marked.remove(e.id())&&marked.size()<64)marked.add(e.id());},()->SoldierRosterNetwork.request(token,3,e.id()));
             y=pair(roster("move_earlier"),roster("move_later"),x,y,w,e.canMoveEarlier(),e.canMoveLater(),()->SoldierRosterNetwork.request(token,11,e.id()),()->SoldierRosterNetwork.request(token,12,e.id()));y+=8;
@@ -140,27 +152,32 @@ public final class SoldierRosterScreen extends Screen {
         int pages=maxPage()+1;
         y=text(g,Component.literal((page+1)+" / "+pages),x,y,w,CommandPanelScreen.MUTED)+6;
         y=pair(Component.literal("◀"),Component.literal("▶"),x,y,w,page>0,page<pages-1,()->requestPage(page-1),()->requestPage(page+1));
-        if(maxPage()>0){pageTrack=new PageTrack(x,y,w);y+=26;}
+        if(maxPage()>0){pageTrack=new PageTrack(x,y,Math.min(w,160));y+=26;}
         y=pair(roster("refresh"),roster("recall"),x,y,w,true,true,()->SoldierRosterNetwork.request(token,0,NONE),()->SoldierRosterNetwork.request(token,2,NONE));return y;
     }
     private int renderDetail(GuiGraphics g,int x,int y,int w){
         var e=entries.stream().filter(entry->entry.id().equals(selected)).findFirst().orElse(null);if(e==null)return y;
         y=text(g,Component.literal(e.name()),x,y,w,CommandPanelScreen.GOLD)+6;
-        y=text(g,Component.literal(e.faction()+" · "+e.dimension()+" · "+e.x()+", "+e.y()+", "+e.z()),x,y,w,CommandPanelScreen.MUTED);
+        y=text(g,CommandPanelChrome.factionName(e.faction()).copy().append(" · "+e.dimension()+" · "+e.x()+", "+e.y()+", "+e.z()),x,y,w,CommandPanelScreen.MUTED);
         y=text(g,roster("status_short."+e.status()),x,y,w,CommandPanelScreen.MUTED);
         y=text(g,e.health()>=0?roster("health",e.health(),e.maxHealth()):roster("last_known"),x,y,w,CommandPanelScreen.TEXT)+8;
         if(e.growth()!=null&&e.growth().enabled()){
             var growth=e.growth();String p="screen.hostile_humans_unified.soldier.growth.";
             y=text(g,tr(p+"level",growth.level()),x,y,w,CommandPanelScreen.GOLD);
             y=text(g,tr(p+"experience",growth.experiencePercent(),growth.experienceMinPercent(),growth.experienceCapPercent()),x,y,w,CommandPanelScreen.TEXT);
+            CommandPanelChrome.meter(g,x,y+2,Math.min(w,160),growth.experiencePercent()-growth.experienceMinPercent(),growth.experienceCapPercent()-growth.experienceMinPercent(),CommandPanelChrome.accent(e.faction()));y+=8;
             y=text(g,growth.level()>=5?tr(p+"max_level"):tr(p+"stage",growth.stagePercent(),growth.stageProgress(),growth.stageRequired()),x,y,w,CommandPanelScreen.MUTED);
             y=text(g,growth.experiencePercent()>=growth.experienceCapPercent()?tr(p+"experience_capped"):tr(p+"next_point",growth.experienceProgress(),growth.experienceRequired()),x,y,w,CommandPanelScreen.MUTED)+8;
         }
         boolean loaded="online".equals(e.status());
         y=text(g,cmd("movement"),x,y,w,CommandPanelScreen.MUTED)+6;
-        for(int i=0;i<CommandView.ORDERS.size();i++){var order=CommandView.ORDERS.get(i);final int index=i;y=add(CommandPanelScreen.orderName(order),x,y,w,loaded,e.order().equals(order.name()),()->SoldierRosterNetwork.request(token,4,e.id(),index));}
-        y+=8;y=text(g,cmd("combat"),x,y,w,CommandPanelScreen.MUTED)+6;
-        for(var mode:CommandView.COMBAT)y=add(CommandPanelScreen.combatName(mode),x,y,w,loaded,e.combat().equals(mode.name()),()->SoldierRosterNetwork.request(token,5,e.id(),mode.ordinal()));
+        int col=CommandPanelLayout.twoColumns(w)?CommandPanelLayout.columnWidth(w):w;
+        int movementY=y,combatY=col==w?y:y-17;
+        for(int i=0;i<CommandView.ORDERS.size();i++){var order=CommandView.ORDERS.get(i);final int index=i;movementY=add(CommandPanelScreen.orderName(order),x,movementY,col,loaded,e.order().equals(order.name()),()->SoldierRosterNetwork.request(token,4,e.id(),index));}
+        int combatX=col==w?x:x+col+8;
+        combatY=text(g,cmd("combat"),combatX,col==w?movementY+8:combatY,col,CommandPanelScreen.MUTED)+6;
+        for(var mode:CommandView.COMBAT)combatY=add(CommandPanelScreen.combatName(mode),combatX,combatY,col,loaded,e.combat().equals(mode.name()),()->SoldierRosterNetwork.request(token,5,e.id(),mode.ordinal()));
+        y=Math.max(movementY,combatY);
         y+=8;y=text(g,cmd("settings"),x,y,w,CommandPanelScreen.MUTED)+6;
         y=add(cmd(e.pickup()?"pickup_on":"pickup_off"),x,y,w,loaded,e.pickup(),()->SoldierRosterNetwork.request(token,6,e.id(),e.pickup()?0:1));
         y=pair(cmd("full_panel"),cmd("attributes"),x,y,w,loaded,loaded&&e.entityId()>=0,()->SoldierRosterNetwork.request(token,13,e.id()),()->AttributeDetailNetwork.requestOwned(e.entityId(),e.id()));
@@ -191,7 +208,7 @@ public final class SoldierRosterScreen extends Screen {
     private void back(){if(squadPanel){squadPanel=false;editingSquad=0;squadName.setVisible(false);setFocused(null);scroll=0;}else if(selected!=null){selected=null;scroll=0;dismissConfirmUntil=0;}else if(tier!=-1){SoldierRosterNetwork.request(token,7,NONE,-1);}else onClose();}
     private void requestPage(int target){target=Math.max(0,Math.min(Math.max(0,(total-1)/SoldierRosterNetwork.PAGE_SIZE),target));if(target==(requestedPage>=0?requestedPage:page))return;requestedPage=target;retryTicks=0;retries=0;SoldierRosterNetwork.request(token,8,NONE,target);}
     @Override public boolean mouseClicked(double mx,double my,int button){
-        if(button!=0)return super.mouseClicked(mx,my,button);int x=left(),inner=panelWidth()-24,bw=(inner-6)/2,fy=height-44;
+        if(button!=0)return super.mouseClicked(mx,my,button);int x=left(),inner=panelWidth()-24,bw=(inner-6)/2,fy=top()+panelHeight()-34;
         if(hit(mx,my,x+12,fy,bw,20)){back();return true;}if(hit(mx,my,x+18+bw,fy,inner-bw-6,20)){openSquads();return true;}
         if(my>=bodyTop()&&my<bodyBottom()){
             if(pageTrack!=null&&hit(mx,my,pageTrack.x(),pageTrack.y(),pageTrack.w(),20)){

@@ -33,7 +33,7 @@ public final class AttributeDetailScreen extends Screen {
     void disconnect(){suppressClose=true;}
     private static Component text(String key,Object...args){return Component.translatable("attribute_detail."+key,args);}
     private static Component dimension(String key){return text("dimension."+key);}
-    @Override protected void init(){addRenderableWidget(Button.builder(Component.translatable("gui.done"),b->onClose()).bounds(width/2-50,height-25,100,20).build());}
+    @Override protected void init(){hits.clear();tagHits.clear();scroll=0;maxScroll=0;addRenderableWidget(Button.builder(Component.translatable("gui.done"),b->onClose()).bounds(right()-95,panelTop()+panelHeight()-33,88,20).build());}
     @Override public boolean isPauseScreen(){return false;}
     @Override public void tick(){if(++ticks%20==0)AttributeDetailNetwork.keepAlive(token);}
     @Override public void removed(){if(!suppressClose)AttributeDetailNetwork.close(token);}
@@ -46,10 +46,12 @@ public final class AttributeDetailScreen extends Screen {
             minecraft.setScreen(null); // only a fresh server opening may restore command controls
         } else minecraft.setScreen(parent);
     }
-    private int left(){return Math.max(4,(width-Math.min(580,width-12))/2);}
+    private int panelHeight(){return CommandPanelLayout.height(height);}
+    private int panelTop(){return (height-panelHeight())/2;}
+    private int left(){return (width-CommandPanelLayout.width(width))/2;}
     private int right(){return width-left();}
     private int viewTop(){return contentTop;}
-    private int viewBottom(){return Math.max(viewTop()+12,height-31);}
+    private int viewBottom(){return Math.max(viewTop()+12,panelTop()+panelHeight()-45);}
     @Override public boolean mouseScrolled(double x,double y,double delta){scroll=Mth.clamp(scroll-(int)(delta*24),0,maxScroll);return true;}
     @Override public boolean mouseClicked(double x,double y,int button){
         if(button==0){
@@ -93,36 +95,45 @@ public final class AttributeDetailScreen extends Screen {
     }
     @Override public void render(GuiGraphics graphics,int mouseX,int mouseY,float partialTick){
         renderBackground(graphics);int left=left(),right=right(),wrap=Math.max(24,right-left-18);
-        graphics.fill(left-2,4,right+2,height-29,0xED172029);
-        graphics.drawString(font,text("header",snapshot.name(),snapshot.boss()?text("boss"):text("ordinary")),left+7,10,0xF1E7CF,false);
-        graphics.drawString(font,text("health_budget",String.format(Locale.ROOT,"%.2f",snapshot.currentHealth()),String.format(Locale.ROOT,"%.3f",snapshot.budget())),left+7,24,0xD2DCE6,false);
+        int panelY=panelTop(),accent=CommandPanelChrome.accent(snapshot.faction());
+        CommandPanelChrome.frame(graphics,left,panelY,right-left,panelHeight(),accent);
+        graphics.drawString(font,title,left+12,panelY+9,CommandPanelScreen.TEXT,false);
+        CommandPanelChrome.badge(graphics,left+12,panelY+34,snapshot.faction());
+        Component name=text("header",snapshot.name(),snapshot.boss()?text("boss"):text("ordinary"));
+        graphics.drawString(font,font.plainSubstrByWidth(name.getString(),Math.max(1,wrap-25)),left+30,panelY+34,accent,false);
+        graphics.drawString(font,text("health_budget",String.format(Locale.ROOT,"%.2f",snapshot.currentHealth()),String.format(Locale.ROOT,"%.3f",snapshot.budget())),left+30,panelY+47,0xD2DCE6,false);
         Component status=text(snapshot.enabled()?"enabled":"disabled");
-        graphics.drawString(font,text("sample",snapshot.tick(),status),left+7,38,snapshot.enabled()?0xAFC7D9:0xE2AF78,false);
-        tagHits.clear();int tagX=left+7,tagY=52;
+        graphics.drawString(font,font.plainSubstrByWidth(text("sample",snapshot.tick(),status).getString(),Math.max(1,right-left-116)),left+12,panelY+panelHeight()-27,0x91A6B6,false);
+        tagHits.clear();int tagX=left+12,tagY=panelY+64;
         if(snapshot.labels().isEmpty())graphics.drawString(font,text("no_labels"),tagX,tagY+3,0x8D9DAA,false);
         for(var label:snapshot.labels()){
             Component name=text("label."+label.key());int tagWidth=font.width(name)+12;
-            if(tagX+tagWidth>right-5){tagX=left+7;tagY+=17;}
+            if(tagX+tagWidth>right-5){tagX=left+12;tagY+=17;}
             graphics.fill(tagX,tagY,Math.min(right-4,tagX+tagWidth),tagY+15,highlighted.equals(Set.copyOf(label.dimensions()))?0xFF43634F:0xFF2E414D);
             graphics.drawString(font,name,tagX+6,tagY+3,0xDAE8DB,false);
             tagHits.add(new TagHit(tagX,tagY,Math.min(right-4,tagX+tagWidth),tagY+15,label.dimensions()));tagX+=tagWidth+4;
         }
-        int hintY=tagY+21;contentTop=hintY+14;
-        graphics.drawString(font,text("hint"),left+7,hintY,0x91A6B6,false);
+        int hintY=tagY+21;contentTop=Math.min(hintY+14,panelY+panelHeight()-57);
+        graphics.drawString(font,font.plainSubstrByWidth(text("hint").getString(),wrap),left+12,hintY,0x91A6B6,false);
         int top=viewTop(),bottom=viewBottom(),y=top-scroll;hits.clear();
         graphics.enableScissor(left,top,right,bottom);
         AttributeDetailSnapshot.Row hovered=null;
         for(int index=0;index<snapshot.rows().size();index++){
             var row=snapshot.rows().get(index);int rowTop=y;
-            Component heading=Component.literal((expanded.equals(row.dimension())?"▾ ":"▸ ")+arrow(row)+" ").append(dimension(row.dimension())).append(": "+displayed(row));
-            List<FormattedCharSequence> headingLines=font.split(heading,wrap);
-            int headingHeight=Math.max(22,headingLines.size()*11+8);
-            graphics.fill(left+2,y,right-4,y+headingHeight,highlighted.contains(row.dimension())?0xFF344E43:index%2==0?0xFF202E3A:0xFF253441);
-            int lineY=y+5;for(var line:headingLines){graphics.drawString(font,line,left+7,lineY,color(row),false);lineY+=11;}
+            Component heading=Component.literal(expanded.equals(row.dimension())?"▾ ":"▸ ").append(dimension(row.dimension()));
+            Component shown=Component.literal(arrow(row)+" "+displayed(row));
+            int valueWidth=Math.min(wrap/2,Math.max(72,font.width(shown)+4));
+            List<FormattedCharSequence> headingLines=font.split(heading,Math.max(1,wrap-valueWidth-10));
+            List<FormattedCharSequence> valueLines=font.split(shown,Math.max(1,valueWidth));
+            int headingHeight=Math.max(25,Math.max(headingLines.size(),valueLines.size())*11+10);
+            graphics.fill(left+7,y,right-7,y+headingHeight,highlighted.contains(row.dimension())?0xFF344E43:index%2==0?0xFF202E3A:0xFF253441);
+            graphics.fill(left+7,y+4,left+9,y+headingHeight-4,highlighted.contains(row.dimension())?accent:0xFF455B68);
+            int lineY=y+6;for(var line:headingLines){graphics.drawString(font,line,left+14,lineY,0xFFE1E7EC,false);lineY+=11;}
+            lineY=y+6;for(var line:valueLines){graphics.drawString(font,line,right-13-font.width(line),lineY,color(row),false);lineY+=11;}
             y+=headingHeight;
             if(expanded.equals(row.dimension())){
                 for(Component line:detail(row))for(var wrapped:font.split(line,wrap-8)){
-                    graphics.fill(left+2,y,right-4,y+12,0xFF1B2832);graphics.drawString(font,wrapped,left+11,y+1,0xC4D1DC,false);y+=12;
+                    graphics.fill(left+7,y,right-7,y+12,0xFF1B2832);graphics.drawString(font,wrapped,left+15,y+1,0xC4D1DC,false);y+=12;
                 }
                 y+=4;
             }

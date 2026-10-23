@@ -25,7 +25,8 @@ public final class CommandViewPatchTest {
         check(!CommandView.valid(new SquadCommands.Update(null,a,null,null,null,true,null,null,null)),"ambiguous whole and partial settings rejected");
         check(CommandPanelLayout.width(320)==296&&CommandPanelLayout.height(240)==216,"320x240 margins");
         check(CommandPanelLayout.twoColumns(272)&&!CommandPanelLayout.twoColumns(232),"minimum column width");
-        check(CommandPanelLayout.width(1920)==480,"wide screen cap");
+        check(CommandPanelLayout.width(1920)==400,"wide screen cap");
+        check(CommandPanelLayout.height(1080)==420,"tall screen keeps compact centred panel");
         System.out.println("CommandViewPatchTest: all checks passed");
     }
     private static void check(boolean value,String message){if(!value)throw new AssertionError(message);}
