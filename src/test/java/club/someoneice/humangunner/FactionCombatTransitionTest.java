@@ -66,8 +66,11 @@ public final class FactionCombatTransitionTest {
         check(calls("club/someoneice/humangunner/NpcDualWield", "tickDefaultLayout", "request")
                 && calls("club/someoneice/humangunner/NpcDualWield", "tickDefaultLayout", "stow"),
                 "daily layout only moves real equipment through exchange");
-        check(calls("club/someoneice/humangunner/NpcDualWield", "tickDefaultLayout", "hasMainHandWeapon"),
-                "daily offhand layout requires a current main weapon before restoring a remembered pair");
+        check(calls("club/someoneice/humangunner/NpcDualWield", "tickDefaultLayout", "hasMainHandMeleeWeapon"),
+                "daily offhand layout requires current melee before restoring a remembered pair");
+        check(calls("club/someoneice/humangunner/NpcDualWield", "hasMainHandMeleeWeapon", "isDedicatedMeleeWeapon")
+                && !calls("club/someoneice/humangunner/NpcDualWield", "hasMainHandMeleeWeapon", "isNonGunWeapon"),
+                "gun, bow and trident cannot authorize a melee offhand");
         System.out.println("FactionCombatTransitionTest passed");
     }
     private static boolean calls(String owner, String methodName, String calledName) throws Exception {

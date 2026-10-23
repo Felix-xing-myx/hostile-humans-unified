@@ -114,18 +114,26 @@ public final class NpcDualWield {
      * Holding a second weapon does not grant dual attacks without the existing core/BC capability. */
     static void tickDefaultLayout(Human human) {
         if (!faction(human) || human.level().isClientSide || !human.isAlive() || human.isRemoved()
-                || human.isNoAi() || HumanInventorySession.isEditing(human) || human.isUsingItem()
-                || human.humanGunner$hasPendingMeleeAttack() || RecoverySupplies.hasActiveUse(human)
-                || human.humanGunner$shieldDefense().shouldSuppressRecovery()) return;
+                || human.isNoAi() || HumanInventorySession.isEditing(human)) return;
         if (human.tickCount < NEXT_DEFAULT_LAYOUT.getOrDefault(human, Integer.MIN_VALUE)) return;
         NEXT_DEFAULT_LAYOUT.put(human, human.tickCount + DEFAULT_LAYOUT_INTERVAL_TICKS);
-        if (!hasMainHandWeapon(human)) {
-            // A remembered pair must not restore an old main weapon over the current non-weapon.
+        if (!hasMainHandMeleeWeapon(human)) {
+            // Never restore a remembered melee pair over a gun, bow, consumable or empty main hand.
             STATES.remove(human);
-            if (heldWeapon(human.getOffhandItem()))
-                HumanEquipmentExchange.stow(human, EquipmentSlot.OFFHAND);
+            if (!human.humanGunner$hasPendingMeleeAttack()
+                    && HumanLootManager.isDedicatedMeleeWeapon(human.getOffhandItem())) {
+                // Only the offhand is reconciled; using the main hand must not indefinitely block cleanup.
+                var result = HumanEquipmentExchange.stow(human, EquipmentSlot.OFFHAND);
+                if (result == HumanEquipmentExchange.Result.NO_CAPACITY)
+                    HumanEquipmentExchange.request(human, "dual:non-melee-offhand", List.of(
+                            new HumanEquipmentExchange.Need(EquipmentSlot.OFFHAND,
+                                    item -> item != human.getMainHandItem() && SpartanEquipmentCompat.isShield(item))));
+            }
             return;
         }
+        if (human.isUsingItem() || human.humanGunner$hasPendingMeleeAttack()
+                || RecoverySupplies.hasActiveUse(human)
+                || human.humanGunner$shieldDefense().shouldSuppressRecovery()) return;
         if (!prepare(human)) return;
         ItemStack offhand = human.getOffhandItem();
         if (dailyWeapon(human, offhand)) return;
@@ -145,11 +153,8 @@ public final class NpcDualWield {
             HumanEquipmentExchange.stow(human, EquipmentSlot.OFFHAND);
         }
     }
-    private static boolean hasMainHandWeapon(Human human) {
-        return heldWeapon(human.getMainHandItem());
-    }
-    private static boolean heldWeapon(ItemStack stack) {
-        return !stack.isEmpty() && (GunSupport.get().isGun(stack) || HumanLootManager.isNonGunWeapon(stack));
+    private static boolean hasMainHandMeleeWeapon(Human human) {
+        return HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem());
     }
     private static boolean dailyWeapon(Human human, ItemStack item) {
         return item != human.getMainHandItem() && HumanLootManager.isDedicatedMeleeWeapon(item)
