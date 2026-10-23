@@ -33,15 +33,15 @@ public final class PursuitNavigationTest {
         check(moving > 0 && moving <= 50, "moving target remains bounded to at most five searches per second");
         check(failure == 10, "stationary unreachable target only retries once per second");
         String root = "club/someoneice/humangunner/";
-        for (String goal : new String[]{"MeleeAttackGoal", "BowAttack", "CrossbowGoal"})
+        for (String goal : new String[]{"MeleeAttackGoal", "BowMovementExecution", "CrossbowMovementExecution"})
             check(calls("com/craftix/hostile_humans/entity/ai/goal/" + goal, "tick", root + "PursuitNavigation", "update"), "native weapon pursuit wired: " + goal);
-        check(calls(root + "GunnerGoal", "approachTarget", root + "PursuitNavigation", "update"), "gun approach uses same continuity gate");
-        for (String branch : new String[]{"tickMelee", "tickRanged"}) {
-            check(calls(root + "TridentHybridGoal", "tick", root + "TridentHybridGoal", branch),
-                    "trident tick dispatches pursuit branch: " + branch);
-            check(calls(root + "TridentHybridGoal", branch, root + "PursuitNavigation", "update"),
-                    "trident pursuit uses same gate: " + branch);
-        }
+        check(calls(root + "GunMovementExecution", "approachTarget", root + "PursuitNavigation", "update"), "gun approach uses same continuity gate");
+        check(calls(root + "TridentHybridGoal", "tick", root + "TridentMovementExecution", "separate"),
+                "close trident contact uses bounded direct separation, not forced pursuit");
+        check(calls(root + "TridentHybridGoal", "tickRanged", root + "TridentMovementExecution", "ranged"),
+                "trident attack forwards ranged movement without moving its attack clocks");
+        check(calls(root + "TridentMovementExecution", "ranged", root + "PursuitNavigation", "update"),
+                "trident pursuit uses same continuity gate");
         check(calls(root + "PursuitNavigation", "update", root + "LongRangeNavigation", "search"), "all explicit pursuit refresh shares the staged seam");
         check(calls(root + "LongRangeNavigation", "search", root + "BasicNavigationBudget", "tryAcquire"), "ordinary staged work retains the FIFO budget");
         check(calls(root + "PursuitNavigation", "update", root + "HumanTerrainSafety", "safePath"), "replacement retains terrain safety");

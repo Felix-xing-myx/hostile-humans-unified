@@ -32,10 +32,10 @@ public final class CombatTerrainPolicyTest {
         check(CombatTerrainPolicy.meleeAllowed(false, true), "safe complete approach permits melee");
         String root = "club/someoneice/humangunner/";
         check(calls(root + "PursuitNavigation", "update", root + "CombatTerrainNavigation", "update"), "ordinary pursuit consumes the shared decision");
-        for (String goal : new String[]{"BowAttack", "CrossbowGoal"})
+        for (String goal : new String[]{"BowMovementExecution", "CrossbowMovementExecution"})
             check(calls("com/craftix/hostile_humans/entity/ai/goal/" + goal, "tick", root + "CombatTerrainNavigation", "update"), "ranged tick consumes decision: " + goal);
-        check(calls(root + "GunnerGoal", "moveForFiringPosition", root + "CombatTerrainNavigation", "update"), "gun movement consumes decision without replacing its firing controller");
-        check(calls(root + "TridentHybridGoal", "tickRanged", root + "CombatTerrainNavigation", "update"), "trident movement consumes decision");
+        check(calls(root + "GunMovementExecution", "moveForFiringPosition", root + "CombatTerrainNavigation", "update"), "gun movement consumes decision without replacing its firing controller");
+        check(calls(root + "TridentMovementExecution", "ranged", root + "CombatTerrainNavigation", "update"), "trident movement consumes decision");
         check(calls(root + "AdaptiveCombatGoal", "tickDefend", root + "CombatTerrainNavigation", "update"), "shield defense consumes the same decision");
         check(calls(root + "MovementContinuity", "tick", root + "CombatTerrainNavigation", "ownsRoute"), "generic repair yields to the combat route");
         check(calls(root + "RangedTerrainCombat", "beginTerrainMelee", root + "CombatTerrainNavigation", "canApproachForMelee"), "weapon switch requires a reachable approach");

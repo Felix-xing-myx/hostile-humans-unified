@@ -61,6 +61,13 @@ public final class MovementAuthorityWiringTest {
                         && !call.name.equals("acquire"), "crossbow movement cannot fire, charge or add admission");
             }
         }
+        String tridentMovement = "club/someoneice/humangunner/TridentMovementExecution";
+        for (var method : node(tridentMovement).methods) for (var instruction : method.instructions) {
+            if (instruction instanceof MethodInsnNode call) {
+                check(!call.name.equals("doHurtTarget") && !call.name.equals("performRangedAttackTrident")
+                        && !call.name.equals("startUsingItem") && !call.name.equals("acquire"), "trident movement only reports attack opportunities");
+            }
+        }
         System.out.println("MovementAuthorityWiringTest passed");
     }
     private static ClassNode node(String owner) throws Exception {

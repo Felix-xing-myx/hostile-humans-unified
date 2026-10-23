@@ -14,7 +14,7 @@ def read(path):
 class CombatTerrainContract(unittest.TestCase):
     def test_weapon_and_defense_controllers_consume_shared_decision(self):
         for path in [ENTITY / "ai/goal/BowMovementExecution.java", ENTITY / "ai/goal/CrossbowMovementExecution.java",
-                     COMBAT / "GunMovementExecution.java", COMBAT / "TridentHybridGoal.java",
+                     COMBAT / "GunMovementExecution.java", COMBAT / "TridentMovementExecution.java",
                      COMBAT / "PursuitNavigation.java", COMBAT / "AdaptiveCombatGoal.java"]:
             with self.subTest(path=path.name):
                 source = read(path)
@@ -81,7 +81,7 @@ class CombatTerrainContract(unittest.TestCase):
         cleanup = gun.split("void stopLateralMovement()", 1)[1].split("void clearLateralInput", 1)[0]
         self.assertNotIn("getNavigation().stop()", cleanup)
         self.assertIn("if (!terrainRoute) mob.getMoveControl().strafe", cleanup)
-        trident_stop = read(COMBAT / "TridentHybridGoal.java").split("public void stop()", 1)[1].split("public boolean requiresUpdateEveryTick", 1)[0]
+        trident_stop = read(COMBAT / "TridentMovementExecution.java").split("void stop()", 1)[1].split("boolean separate", 1)[0]
         self.assertIn("if (!CombatTerrainNavigation.ownsRoute(human))", trident_stop)
 
     def test_gunner_local_strafe_is_direct_and_keeps_facing(self):

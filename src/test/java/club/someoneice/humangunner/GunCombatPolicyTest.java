@@ -59,7 +59,7 @@ public final class GunCombatPolicyTest {
                 "invalid distance cannot grant stationary fire");
         check(!calls(MOD + "GunnerGoal", "canUse", "firingRangeSqr"),
                 "gunner pursuit remains active beyond firing reach");
-        check(calls(MOD + "GunnerGoal", "moveForFiringPosition", "directFiringMovement"),
+        check(calls(MOD + "GunMovementExecution", "moveForFiringPosition", "directFiringMovement"),
                 "clear effective firing range controls navigation handoff, not preferred spacing");
         for(double distance:new double[]{4,15,16,24,25,40,64})
             check(GunRangePolicy.directFiringMovement(false,distance*distance,64*64),"clear in-range spacing remains direct: "+distance);
@@ -67,11 +67,11 @@ public final class GunCombatPolicyTest {
                 &&!GunRangePolicy.directFiringMovement(false,65*65,4096)
                 &&!GunRangePolicy.directFiringMovement(false,Double.NaN,4096),
                 "occlusion, excessive range or invalid distance cannot claim direct firing movement");
-        check(calls(MOD + "GunnerGoal", "strafeAround", "clearDirectStrafe")
-                        &&calls(MOD + "GunnerGoal", "strafeAround", "movement")
-                        &&calls(MOD + "GunnerGoal", "strafeAround", "cancelStep"),
+        check(calls(MOD + "GunMovementExecution", "strafeAround", "clearDirectStrafe")
+                        &&calls(MOD + "GunMovementExecution", "strafeAround", "movement")
+                        &&calls(MOD + "GunMovementExecution", "strafeAround", "cancelStep"),
                 "direct firing handoff removes stale input and declares combat facing before aim gate");
-        check(calls(MOD + "GunnerGoal", "clearDirectStrafe", "strafe"),
+        check(calls(MOD + "GunMovementExecution", "clearDirectStrafe", "strafe"),
                 "stopping navigation also replaces stale MoveControl MOVE_TO when local movement is unsafe");
         MethodNode urgentShot = method(MOD + "TaczGunMechanics", "prepareUrgentCloseShot");
         int prepWrites = 0;

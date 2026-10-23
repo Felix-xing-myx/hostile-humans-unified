@@ -100,3 +100,6 @@
 - 弓的移动实现已抽至BowMovementExecution，攻击事实/策略以不可变Request传入，本次射界返回给原tickShot；拉弓/箭矢/节奏不在移动侧执行，不加Goal/权限调度。弩/三叉戟继续迁移，整体中枢协议未完成。
 
 - 弩的移动实现已抽至CrossbowMovementExecution，以Request接收距离/射界/当前可跑动/已选策略，返回Result给原tickShot；装填状态与延迟发射只保留在CrossbowGoal。原驻守、上岸、返回射位与预算保持，三叉戟及中枢整体协议仍待迁移。
+
+- 三叉戟移动抽至TridentMovementExecution，退开失败返回近战机会，远距移动返回是否保留本次投掷评估；近刺/投掷/冷却仍在TridentHybridGoal，不真正丢出实物。驻守/上岸/预算和实际路线来源保留。
+- 审阅发现旧Java字节码断言仍查拆分前的枪/弓/弩入口，已逐项迁移CombatTerrainPolicyTest、RangedTerrainSafetyTest、PursuitNavigationTest、GunCombatPolicyTest；三叉戟旧tickMelee断言与当前实现不符，改查直接退开和原追击通道。测试条件保留，未执行Java，不能把静态绿灯当作这些断言通过。

@@ -99,9 +99,9 @@ public final class RangedTerrainSafetyTest {
         check(!RangedTerrainPolicy.keepMelee(400, 0), "unreachable chase periodically retries ranged");
         String root = "club/someoneice/humangunner/";
         String human = "com/craftix/hostile_humans/entity/entities/Human";
-        for(String goal:new String[]{root+"GunnerGoal","com/craftix/hostile_humans/entity/ai/goal/BowAttack",
-                "com/craftix/hostile_humans/entity/ai/goal/CrossbowGoal"}) {
-            String method=goal.endsWith("GunnerGoal")?"moveForFiringPosition":"tick";
+        for(String goal:new String[]{root+"GunMovementExecution","com/craftix/hostile_humans/entity/ai/goal/BowMovementExecution",
+                "com/craftix/hostile_humans/entity/ai/goal/CrossbowMovementExecution"}) {
+            String method=goal.endsWith("GunMovementExecution")?"moveForFiringPosition":"tick";
             check(calls(goal,method,root+"RangedFiringMemory","observe")
                     &&calls(goal,method,root+"RangedFiringMemory","recover"), "all three ranged modes share firing memory and recovery");
             check(calls(goal,method,root+"RangedFiringMemory","selected"),
@@ -122,15 +122,15 @@ public final class RangedTerrainSafetyTest {
                 "real route installation passes original-execution admission before terrain assessment");
         check(calls(root + "HumanSafeJumpControl", "jump", root + "HumanTerrainSafety", "safeCombatJump"), "voluntary jumps check landing including extra height");
         check(calls(root + "RetreatPathSafety", "isSafe", root + "HumanTerrainSafety", "safePath"), "retreat shares height safety");
-        for (String goal : new String[]{"BowAttack", "CrossbowGoal"}) {
+        for (String goal : new String[]{"BowMovementExecution", "CrossbowMovementExecution"}) {
             String type = "com/craftix/hostile_humans/entity/ai/goal/" + goal;
             check(calls(type, "strafe", root + "RangedTerrainCombat", "strafe"), goal + " cannot orbit blindly");
             check(calls(type, "tick", root + "RangedTerrainCombat", "searchCompleted"), goal + " distinguishes failed lane from budget waiting");
             check(calls(type, "tickShot", root + "RangedWeaponCustody", "isActive"), goal + " never shoots after melee hand switch");
         }
-        check(calls(root + "GunnerGoal", "strafeAround", root + "RangedTerrainCombat", "strafeFacingTarget"), "gun strafe uses the shared direct movement boundary");
-        check(!calls(root + "GunnerGoal", "strafeAround", root + "BasicNavigationBudget", "tryAcquire")
-                && !calls(root + "GunnerGoal", "strafeAround", root + "RangedFiringPosition", "findLateralPath"), "local firing strafe cannot become a navigation route");
+        check(calls(root + "GunMovementExecution", "strafeAround", root + "RangedTerrainCombat", "strafeFacingTarget"), "gun strafe uses the shared direct movement boundary");
+        check(!calls(root + "GunMovementExecution", "strafeAround", root + "BasicNavigationBudget", "tryAcquire")
+                && !calls(root + "GunMovementExecution", "strafeAround", root + "RangedFiringPosition", "findLateralPath"), "local firing strafe cannot become a navigation route");
         check(calls(root + "RangedTerrainCombat", "strafe", root + "RangedTerrainCombat", "tryStrafe")
                 && calls(root + "RangedTerrainCombat", "strafeFacingTarget", root + "RangedTerrainCombat", "tryStrafe"), "bows and guns share terrain safety implementation");
         check(calls(root + "RangedTerrainCombat", "tryStrafe", root + "HumanTerrainSafety", "safeStep")
