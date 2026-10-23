@@ -143,7 +143,7 @@ class ScgunsBoundary(unittest.TestCase):
             tactical = config["tiers"][rank]["potions"]["throwables"]
             self.assertEqual((tactical["count_min"], tactical["count_max"]), counts)
             tools = {row["item"]: row["weight"] for row in tactical["pool"] if "potion" not in row}
-            self.assertEqual(tools, {"scguns:grenade":3, "scguns:nail_bomb":3, "scguns:gas_grenade":3, "scguns:choke_bomb":3, "scguns:swarm_bomb":3, "jeg:grenade":3, "jeg:water_bomb":3})
+            self.assertEqual(tools, {"scguns:nail_bomb":3, "scguns:gas_grenade":3, "scguns:choke_bomb":3, "scguns:swarm_bomb":3, "jeg:grenade":3, "jeg:water_bomb":3})
             self.assertTrue(set(tools).issubset(allowed))
             self.assertEqual(sum("potion" in row for row in tactical["pool"]), 3)
             buffs = config["tiers"][rank]["potions"]["self_buffs"]

@@ -16,6 +16,7 @@ final class SpawnPotionConfig {
     private static final java.util.Set<String> UNAVAILABLE = java.util.concurrent.ConcurrentHashMap.newKeySet();
     record Entry(ResourceLocation item, ResourceLocation potion, int weight) {
         ItemStack resolve() {
+            if (excludedFromSpawn(item)) return ItemStack.EMPTY;
             var registeredItem = BuiltInRegistries.ITEM.getOptional(item);
             if (potion == null) {
                 if (registeredItem.isEmpty()) return ItemStack.EMPTY; // Optional mod absent.
@@ -168,6 +169,7 @@ final class SpawnPotionConfig {
         return inserted;
     }
     static int category(Entry entry,String kind) {
+        if (excludedFromSpawn(entry.item())) return -1;
         if(entry.potion()!=null) {
             String potion=entry.potion().toString();
             if(kind.equals("recovery")) {
@@ -193,9 +195,14 @@ final class SpawnPotionConfig {
         if(!kind.equals("throwable")) return -1;
         // Recognition of manually supplied tools does not admit them into natural spawn pools.
         return switch(entry.item().toString()) {
-            case "scguns:grenade","scguns:nail_bomb","jeg:grenade" -> 3;
+            case "scguns:nail_bomb","jeg:grenade" -> 3;
             case "scguns:gas_grenade","scguns:choke_bomb","scguns:swarm_bomb","jeg:water_bomb" -> 4;
             default -> -1;
         };
+    }
+    /** Only natural supplies: the native Scguns grenade can destroy blocks. Manual use stays supported.
+     * Enforced during classification and resolution so old/custom and legacy mixed pools cannot grant it. */
+    private static boolean excludedFromSpawn(ResourceLocation item) {
+        return item.toString().equals("scguns:grenade");
     }
 }

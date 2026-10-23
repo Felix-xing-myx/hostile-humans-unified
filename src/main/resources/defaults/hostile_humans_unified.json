@@ -402,10 +402,6 @@
               "weight": 2
             },
             {
-              "item": "scguns:grenade",
-              "weight": 3
-            },
-            {
               "item": "scguns:nail_bomb",
               "weight": 3
             },
@@ -894,10 +890,6 @@
               "item": "minecraft:splash_potion",
               "potion": "minecraft:strong_poison",
               "weight": 2
-            },
-            {
-              "item": "scguns:grenade",
-              "weight": 3
             },
             {
               "item": "scguns:nail_bomb",
@@ -1393,10 +1385,6 @@
               "weight": 2
             },
             {
-              "item": "scguns:grenade",
-              "weight": 3
-            },
-            {
               "item": "scguns:nail_bomb",
               "weight": 3
             },
@@ -1890,10 +1878,6 @@
               "item": "minecraft:splash_potion",
               "potion": "minecraft:strong_poison",
               "weight": 2
-            },
-            {
-              "item": "scguns:grenade",
-              "weight": 3
             },
             {
               "item": "scguns:nail_bomb",

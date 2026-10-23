@@ -27,6 +27,13 @@ public final class SpawnPotionConfigTest {
         var parsedDamage = ScgunsSettings.parse(throwableGlobal.getAsJsonObject("scguns")).throwableDamageMultipliers();
         check(parsedDamage.get("scguns:grenade") == 0 && parsedDamage.get("scguns:nail_bomb") == 2.5,
                 "custom damage factors parsed");
+        var destructive = new SpawnPotionConfig.Entry(net.minecraft.resources.ResourceLocation.tryParse("scguns:grenade"), null, 99);
+        check(SpawnPotionConfig.category(destructive, "throwable") == -1, "old/custom pool cannot classify destructive grenade");
+        check(destructive.resolve().isEmpty(), "legacy pool resolution rejects destructive grenade before registry lookup");
+        check(SpawnPotionConfig.category(new SpawnPotionConfig.Entry(
+                net.minecraft.resources.ResourceLocation.tryParse("jeg:grenade"), null, 3), "throwable") == 3,
+                "JEG hand grenade remains a natural explosive supply");
+        check(config.scguns().allowedThrowables().contains("scguns:grenade"), "manual Scguns grenade support remains");
         int[] recoveryMin = {1, 3, 5, 7}, recoveryMax = {3, 5, 7, 12};
         String[] ranks = {"roamer", "tier1", "tier2", "tier3"};
         for (int i = 0; i < ranks.length; i++) {
@@ -43,13 +50,13 @@ public final class SpawnPotionConfigTest {
             check(value.throwables.entries().stream().allMatch(entry->SpawnPotionConfig.category(entry,"throwable")>=0),"natural throwable whitelist");
             checkPool(value.selfBuffs, new String[]{"long_strength", "strong_strength", "long_swiftness"}, new int[]{10, 5, 8});
             var tools = value.throwables.entries().stream().filter(entry -> entry.potion() == null).toList();
-            check(tools.size() == 7, "seven default tactical throwables across two optional mods");
+            check(tools.size() == 6, "six default tactical throwables across two optional mods");
             check(tools.stream().filter(tool -> tool.item().toString().startsWith("jeg:")).map(tool -> tool.item().toString()).toList()
                     .equals(java.util.List.of("jeg:grenade", "jeg:water_bomb")), "only two JEG default supplies");
-            check(tools.get(0).item().toString().equals("scguns:grenade") && tools.get(0).weight() == 3, "grenade weight");
+            check(tools.get(0).item().toString().equals("scguns:nail_bomb") && tools.get(0).weight() == 3, "nail bomb weight");
             check(tools.stream().allMatch(tool -> tool.weight() == 3), "equal throwable weights");
             check(tools.stream().noneMatch(tool -> tool.item().toString().equals("scguns:stun_grenade")), "stun excluded");
-            check(tools.get(1).item().toString().equals("scguns:nail_bomb") && tools.get(1).weight() == 3, "nail bomb weight");
+            check(tools.get(1).item().toString().equals("scguns:gas_grenade") && tools.get(1).weight() == 3, "gas grenade weight");
             check(!UnifiedConfig.defaults().getAsJsonObject("tiers").getAsJsonObject(ranks[i]).getAsJsonObject("potions").has("bonus"), "no separate speed probability entry");
             JsonObject projected = TierConfigProjection.tier(UnifiedConfig.defaults(), ranks[i]);
             check(projected.getAsJsonObject("potions").getAsJsonObject("recovery").has("pool"), "rank-file projection includes potions");

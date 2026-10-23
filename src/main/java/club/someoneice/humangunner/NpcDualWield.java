@@ -119,6 +119,13 @@ public final class NpcDualWield {
                 || human.humanGunner$shieldDefense().shouldSuppressRecovery()) return;
         if (human.tickCount < NEXT_DEFAULT_LAYOUT.getOrDefault(human, Integer.MIN_VALUE)) return;
         NEXT_DEFAULT_LAYOUT.put(human, human.tickCount + DEFAULT_LAYOUT_INTERVAL_TICKS);
+        if (!hasMainHandWeapon(human)) {
+            // A remembered pair must not restore an old main weapon over the current non-weapon.
+            STATES.remove(human);
+            if (heldWeapon(human.getOffhandItem()))
+                HumanEquipmentExchange.stow(human, EquipmentSlot.OFFHAND);
+            return;
+        }
         if (!prepare(human)) return;
         ItemStack offhand = human.getOffhandItem();
         if (dailyWeapon(human, offhand)) return;
@@ -137,6 +144,12 @@ public final class NpcDualWield {
             // A full backpack is a normal refusal, never permission to discard equipment.
             HumanEquipmentExchange.stow(human, EquipmentSlot.OFFHAND);
         }
+    }
+    private static boolean hasMainHandWeapon(Human human) {
+        return heldWeapon(human.getMainHandItem());
+    }
+    private static boolean heldWeapon(ItemStack stack) {
+        return !stack.isEmpty() && (GunSupport.get().isGun(stack) || HumanLootManager.isNonGunWeapon(stack));
     }
     private static boolean dailyWeapon(Human human, ItemStack item) {
         return item != human.getMainHandItem() && HumanLootManager.isDedicatedMeleeWeapon(item)
