@@ -139,17 +139,14 @@ public final class EffectiveAttributes {
         return new AttributeDetailSnapshot(human.getUUID(), human.getId(), name, faction, HumanFactions.isBoss(human),
                 SpecialtyConfig.get().enabled(), human.getHealth(), (float) SpecialtyAttributes.budget(human), human.level().getGameTime(), labels, rows);
     }
-    /** Mean-budget faction centre through the same normalization and boss amplification as allocation.
+    /** Faction centre through the same normalization and rank-aware budget policy as allocation.
      * Only the comparison baseline uses this value; no damage multiplier is modified. */
     private static double gunExpectation(Human human) {
         if(!SpecialtyConfig.get().enabled())return bossMultiplier(human,SpecialtyAttributes.Dimension.GUN);
         double[] costs=SpecialtyData.get().costs();
         double[] center=SpecialtyAllocation.center(SpecialtyAttributes.preference(human,HumanFactions.isBoss(human)),costs);
-        if(HumanFactions.isBoss(human)) {
-            for(int i=0;i<center.length;i++)center[i]=Math.max(1e-6,(i==12?0:1)+(center[i]-(i==12?0:1))*HumanFactions.bossAmplification());
-            center=SpecialtyAllocation.center(center,costs);
-        }
-        double expectedBudget=HumanFactions.isBoss(human)?HumanFactions.bossBudget():SpecialtyConfig.get().budgetMean();
+        double expectedBudget=HumanFactions.isBoss(human)?HumanFactions.bossBudget(human)
+                :SpecialtyConfig.get().budgetMean()*SpecialtyConfig.get().tierBudgetMultiplier(TierAttributes.key(human));
         return expectedBudget*center[SpecialtyAttributes.Dimension.GUN.ordinal()]*bossMultiplier(human,SpecialtyAttributes.Dimension.GUN);
     }
 
@@ -224,7 +221,7 @@ public final class EffectiveAttributes {
             double[] centers = SpecialtyAllocation.center(SpecialtyAttributes.preference(human, HumanFactions.isBoss(human)), definitions.costs());
             int i = dimension.ordinal(); double cap = definitions.caps(config.deviationCap())[i];
             double scale = Math.pow(SpecialtyAttributes.budget(human), config.capBudgetExponent());
-            double lower = Math.max(dimension == SpecialtyAttributes.Dimension.ARMOR_PENETRATION ? 0 : config.multiplierMin(), centers[i]*(1-cap)*scale), upper = Math.min(dimension == SpecialtyAttributes.Dimension.ARMOR_PENETRATION ? .45 : config.multiplierMax(),centers[i]*(1+cap)*scale);
+            double lower = Math.max(dimension == SpecialtyAttributes.Dimension.ARMOR_PENETRATION ? 0 : config.multiplierMin(), centers[i]*(1-cap)*scale), upper = Math.min(dimension == SpecialtyAttributes.Dimension.ARMOR_PENETRATION ? .45 : HumanFactions.allocationMaximum(human),centers[i]*(1+cap)*scale);
             notes.add(note(lower<=upper?"current_bounds":"bounds_unknown", lower<=upper?format(lower) + " – " + format(upper):""));
         } catch (IllegalArgumentException ignored) { notes.add(note("bounds_unknown", "")); }
         return new AttributeDetailSnapshot.Row(dimension.key(), base, SpecialtyAttributes.storedMultiplier(human,dimension),

@@ -26,15 +26,7 @@ public final class SpecialtyAllocation {
     }
 
     public static Result allocate(double budget, double[] preference, double[] costs, double[] caps,
-                                  double[] tilts, double alpha, double absoluteMin, double absoluteMax,
-                                  boolean boss) {
-        return allocate(budget, preference, costs, caps, tilts, alpha, absoluteMin, absoluteMax, boss, 1.8);
-    }
-    public static Result allocate(double budget, double[] preference, double[] costs, double[] caps,
-                                  double[] tilts, double alpha, double absoluteMin, double absoluteMax,
-                                  boolean boss, double amplification) {
-        if (!Double.isFinite(amplification) || amplification < 1 || amplification > 3)
-            throw new IllegalArgumentException("boss amplification");
+                                  double[] tilts, double alpha, double absoluteMin, double absoluteMax) {
         positive(budget);
         if (!Double.isFinite(alpha) || alpha < 0 || alpha > 1)
             throw new IllegalArgumentException("alpha must be finite in [0,1]");
@@ -43,15 +35,6 @@ public final class SpecialtyAllocation {
         int n = costs.length;
         if (n != caps.length || n != tilts.length) throw new IllegalArgumentException("dimensions");
         double[] center = center(preference, costs);
-        double[] boundaryCenter = center.clone();
-        // Amplification changes preference only. Bosses use the same random tilt and merged bounds.
-        if (boss) {
-            for (int i = 0; i < n; i++) {
-                double baseline = n == 13 && i == 12 ? 0 : 1;
-                center[i] = Math.max(1e-6, baseline + (center[i] - baseline) * amplification);
-            }
-            center = center(center, costs);
-        }
         double[] raw = new double[n], lower = new double[n], upper = new double[n];
         double cost = baselineCost(costs), denominator = 0;
         for (int i = 0; i < n; i++) {
@@ -59,8 +42,8 @@ public final class SpecialtyAllocation {
             positive(tilts[i]);
             raw[i] = center[i] * clamp(tilts[i], 1 - caps[i], 1 + caps[i]);
             denominator += raw[i] * costs[i];
-            lower[i] = Math.max(n == 13 && i == 12 ? 0 : absoluteMin, boundaryCenter[i] * (1 - caps[i]) * Math.pow(budget, alpha));
-            upper[i] = Math.min(n == 13 && i == 12 ? .45 : absoluteMax, boundaryCenter[i] * (1 + caps[i]) * Math.pow(budget, alpha));
+            lower[i] = Math.max(n == 13 && i == 12 ? 0 : absoluteMin, center[i] * (1 - caps[i]) * Math.pow(budget, alpha));
+            upper[i] = Math.min(n == 13 && i == 12 ? .45 : absoluteMax, center[i] * (1 + caps[i]) * Math.pow(budget, alpha));
         }
         positive(denominator);
         for (int i = 0; i < n; i++) raw[i] *= budget * cost / denominator;

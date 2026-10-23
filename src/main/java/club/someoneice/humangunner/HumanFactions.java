@@ -53,8 +53,13 @@ public final class HumanFactions {
         if (!isBoss(human)) return 1;
         return UnifiedConfig.get().factionRules().bossBases().getOrDefault(dimension, 1.0);
     }
-    public static double bossBudget() { return UnifiedConfig.get().factionRules().bossBudget(); }
-    public static double bossAmplification() { return UnifiedConfig.get().factionRules().bossAmplification(); }
+    public static double bossBudget(Human human) {
+        return UnifiedConfig.get().factionRules().bossBudget(SpecialtyConfig.get(), TierAttributes.key(human));
+    }
+    public static double allocationMaximum(Human human) {
+        var specialty = SpecialtyConfig.get();
+        return isBoss(human) ? UnifiedConfig.get().factionRules().allocationMaximum(specialty) : specialty.multiplierMax();
+    }
     public static double bossSize(Human human) { return isBoss(human) ? BOSS_BODY_SCALE : 1; }
     public static double bossAdd(Human human, String dimension) {
         return isBoss(human) && dimension.equals("knockback_resistance") ? UnifiedConfig.get().factionRules().bossKnockbackAdd() : 0;

@@ -85,7 +85,7 @@ public final class SpecialtyData {
     }
     private static Definitions defaults() {
         double[] caps = new double[SpecialtyAttributes.DIMENSIONS]; Arrays.fill(caps, Double.NaN); caps[7] = .3; caps[9] = .5;
-        return new Definitions(new double[]{1.2,1.4,1,.7,1.1,.4,1.25,1.3,1.2,.6,1.25,1.2,1.2}, caps,
+        return new Definitions(new double[]{1.2,1.4,1,0.7,1.1,0.4,1.25,1.45,1,0.6,1,1.2,1.2}, caps,
                 List.of(label("assault", "melee", 1.25),
                         new Label("resilient", Map.of(SpecialtyAttributes.Dimension.HEALTH, 1.2, SpecialtyAttributes.Dimension.ARMOR, 1.15)),
                         label("swift", "speed", 1.15), label("precise", "accuracy", 1.25),

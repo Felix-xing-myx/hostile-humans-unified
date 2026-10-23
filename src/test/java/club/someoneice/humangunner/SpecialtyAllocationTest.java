@@ -3,7 +3,7 @@ package club.someoneice.humangunner;
 import java.util.Arrays;
 import java.util.Random;
 
-/** Pure 13-dimensional budget, ratio and boss regressions, with no Minecraft runtime. */
+/** Pure 13-dimensional budget and ratio regressions, with no Minecraft runtime. */
 public final class SpecialtyAllocationTest {
     private static final double[] COSTS = {1.2,1.4,1,.7,1.1,.4,1.25,1.3,1.2,.6,1.25,1.2,1.2};
     private static final double[] CAPS = {.3,.3,.3,.3,.3,.3,.3,.2,.3,.5,.3,.3,.3};
@@ -35,21 +35,20 @@ public final class SpecialtyAllocationTest {
                 double budget = n%2==0 ? .8 : 1.3;
                 double[] tilts = new double[13];
                 for(int i=0;i<13;i++)tilts[i]=Math.exp(random.nextGaussian()*(n%3==0?2:.15));
-                verify(allocate(budget,preference,tilts,false),budget);
-                if(n<1000)verify(allocate(1.05,preference,tilts,true),1.05);
+                verify(allocate(budget,preference,tilts),budget);
             }
         }
         double[] tilted=ones();tilted[0]=1.3;tilted[6]=.7;
-        var boss=allocate(1.05,PREFERENCES[1],ones(),true);
-        var randomBoss=allocate(1.05,PREFERENCES[1],tilted,true);
-        require(Math.abs(boss.multipliers()[0]-randomBoss.multipliers()[0])>1e-5,"boss tilt has an effect");
-        verify(boss,1.05);verify(randomBoss,1.05);
+        var base=allocate(1.05,PREFERENCES[1],ones());
+        var randomTilt=allocate(1.05,PREFERENCES[1],tilted);
+        require(Math.abs(base.multipliers()[0]-randomTilt.multipliers()[0])>1e-5,"random tilt has an effect");
+        verify(base,1.05);verify(randomTilt,1.05);
         for(double invalid:new double[]{Double.NaN,Double.POSITIVE_INFINITY,-.01,1.01})
-            rejects(()->SpecialtyAllocation.allocate(1,PREFERENCES[0],COSTS,CAPS,ones(),invalid,.5,1.8,false));
-        System.out.println("SpecialtyAllocationTest: all checks passed (100000 ordinary, 5000 boss cases)");
+            rejects(()->SpecialtyAllocation.allocate(1,PREFERENCES[0],COSTS,CAPS,ones(),invalid,.5,1.8));
+        System.out.println("SpecialtyAllocationTest: all checks passed (100000 random allocations; actual boss budgets are covered by SpecialtyPersistenceTest)");
     }
-    private static SpecialtyAllocation.Result allocate(double b,double[] p,double[] e,boolean boss) {
-        return SpecialtyAllocation.allocate(b,p,COSTS,CAPS,e,.25,.5,1.8,boss);
+    private static SpecialtyAllocation.Result allocate(double b,double[] p,double[] e) {
+        return SpecialtyAllocation.allocate(b,p,COSTS,CAPS,e,.25,.5,1.8);
     }
     private static void verify(SpecialtyAllocation.Result result,double budget) {
         require(result.feasible(),"default policy feasible");

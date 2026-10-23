@@ -56,6 +56,23 @@ public final class SpecialtyPersistenceTest {
         close(defaults.deviationSigma(), .2, "wider log-normal variation");
         close(defaults.deviationCap(), .45, "ordinary tilt cap");
         close(defaults.budgetMax(), 1.4, "new base truncation maximum");
+        var bossDefaults = FactionRules.parse(new com.google.gson.JsonObject());
+        close(bossDefaults.bossBudget(defaults, "tier1"), 1.54, "tier-one boss");
+        close(bossDefaults.bossBudget(defaults, "tier2"), 1.694, "tier-two boss");
+        close(bossDefaults.bossBudget(defaults, "tier3"), 1.848, "tier-three boss");
+        close(bossDefaults.allocationMaximum(defaults), 2.1, "boss-only allocation ceiling");
+        close(bossDefaults.bossBases().get("health"), 1.8, "reduced independent boss health");
+        close(bossDefaults.bossBases().get("melee"), 1.15, "reduced independent boss melee");
+        var staleBoss = FactionRules.parse(com.google.gson.JsonParser.parseString(
+                "{\"boss\":{\"budget\":0.8,\"allocation_amplification\":3}}").getAsJsonObject());
+        close(staleBoss.bossBudget(defaults, "tier3"), 1.848, "obsolete fixed budget cannot defeat rank guarantee");
+        var customBoss = FactionRules.parse(com.google.gson.JsonParser.parseString(
+                "{\"boss\":{\"budget_multiplier\":1.2,\"allocation_multiplier_max\":2.3}}").getAsJsonObject());
+        var customSpecialty = SpecialtyConfig.prepare(com.google.gson.JsonParser.parseString(
+                "{\"budget_max\":1.6,\"budget_tier_multipliers\":{\"tier2\":1.4}}").getAsJsonObject());
+        close(customBoss.bossBudget(customSpecialty, "tier2"), 1.6 * 1.4 * 1.2, "custom rank and base ceiling are respected");
+        close(customBoss.allocationMaximum(customSpecialty), 2.3, "custom boss ceiling");
+
         var prepared = SpecialtyConfig.prepare(new com.google.gson.JsonObject());
         for (String tier : new String[]{"roamer", "tier1", "tier2", "tier3"}) {
             double factor = switch (tier) { case "tier2" -> 1.1; case "tier3" -> 1.2; default -> 1; };
@@ -107,15 +124,35 @@ public final class SpecialtyPersistenceTest {
                     .getAsJsonObject().getAsJsonArray("allocation_preference");
             double[] preference = new double[SpecialtyAttributes.DIMENSIONS];
             for (int i = 0; i < preference.length; i++) preference[i] = raw.get(i).getAsDouble();
-            for (int step = 0; step <= 80; step++) {
+            var rootConfig = resource("defaults/hostile_humans_unified.json").getAsJsonObject();
+            var bossRules = FactionRules.parse(rootConfig);
+            for (String tier : new String[]{"tier1", "tier2", "tier3"}) {
+                double ordinaryCeiling = config.budgetMax() * config.tierBudgetMultiplier(tier);
+                double bossBudget = bossRules.bossBudget(config, tier);
+                close(bossBudget, ordinaryCeiling * 1.10, "boss budget follows actual rank ceiling");
+                check(bossBudget > ordinaryCeiling, "boss target budget exceeds every ordinary draw of its rank");
+                for (double tilt : new double[]{.1, 1, 10}) {
+                    double[] tilts = SpecialtyAttributes.ones();
+                    for (int i = 0; i < tilts.length; i++) tilts[i] = (i & 1) == 0 ? tilt : 1 / tilt;
+                    var result = SpecialtyAllocation.allocate(bossBudget, preference, definitions.costs(),
+                            definitions.caps(config.deviationCap()), tilts, config.capBudgetExponent(),
+                            config.multiplierMin(), bossRules.allocationMaximum(config));
+                    check(result.feasible() && Math.abs(result.residual()) < 1e-7,
+                            "actual boss budget fits without unspent residual: " + faction + "/" + tier);
+                    for (int i = 0; i < result.multipliers().length; i++)
+                        check(result.multipliers()[i] <= (i == 12 ? .45 : 2.1) + 1e-9,
+                                "boss-specific ceiling retains penetration cap");
+                }
+            }
+            for (int step = 0; step <= 88; step++) {
                 double budget = .8 + step * .01;
                 for (double tilt : new double[]{.1, 1, 10}) {
                     double[] tilts = SpecialtyAttributes.ones();
                     for (int i = 0; i < tilts.length; i++) tilts[i] = (i & 1) == 0 ? tilt : 1 / tilt;
                     var result = SpecialtyAllocation.allocate(budget, preference, definitions.costs(),
                             definitions.caps(config.deviationCap()), tilts, config.capBudgetExponent(),
-                            config.multiplierMin(), config.multiplierMax(), false);
-                    check(result.feasible(), faction + " budget through 1.6 is feasible");
+                            config.multiplierMin(), config.multiplierMax());
+                    check(result.feasible(), faction + " budget through 1.68 is feasible");
                     check(Math.abs(result.residual()) < 1e-7, "feasible budget is fully spent");
                     for (int i = 0; i < result.multipliers().length; i++)
                         check(result.multipliers()[i] <= (i == 12 ? .45 : 1.8) + 1e-9,
