@@ -312,7 +312,7 @@ tasks.register('sanitizeStructureWaystones', JavaExec) {
         'BackgroundThrowingWiringTest', 'BeaconReportPolicyTest', 'BehaviorDebugTest', 'EquipmentReferenceContinuityTest',
         'CombatStrategySetTest', 'FactionCombatTransitionTest', 'CommandViewPatchTest', 'GrowthConfigTest',
         'GrowthPersistenceTest', 'GrowthProgressionTest', 'GunDoctrineTest', 'GunPositioningTest',
-        'MeleeOpportunityTest', 'MeleeBackendAndJumpTest', 'MovementAuthorityWiringTest', 'RangedCombatProfileTest',
+        'MeleeOpportunityTest', 'MeleeBackendAndJumpTest', 'SpawnMeleeReservePolicyTest', 'MovementAuthorityWiringTest', 'RangedCombatProfileTest',
         'RecoverySelectionTest', 'ScopedWorkBudgetTest', 'ShieldDefensePolicyTest', 'TargetSharingPolicyTest'
     ]
 ].each { packageName, testClasses ->

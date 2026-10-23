@@ -134,6 +134,15 @@ public final class FactionEquipmentConfig {
             this.data = data; this.rank = rank; this.faction = faction; this.factionBands=factionBands;
         }
         boolean factionBands() { return factionBands; }
+        SpawnMeleeReservePolicy meleeReserves() {
+            if (!data.has("melee_reserves")) return null;
+            JsonObject settings = object(data, "melee_reserves");
+            if (!UnifiedConfig.bool(settings, "enabled", true)) return null;
+            return new SpawnMeleeReservePolicy(
+                    FactionEquipmentConfig.number(settings, "second_weapon_chance", 0, 0, 1),
+                    FactionEquipmentConfig.number(settings, "third_weapon_chance", 0, 0, 1),
+                    UnifiedConfig.bool(settings, "prefer_one_handed", true));
+        }
         double number(String key, double fallback, double min, double max) { return FactionEquipmentConfig.number(data, key, fallback, min, max); }
         double[] weights(String key, int count) {
             if(key.equals("recovery_category_weights")&&data.has(key)&&data.getAsJsonArray(key).size()==3) {
@@ -218,6 +227,12 @@ public final class FactionEquipmentConfig {
         strictArray(root,"armor_rank_band_weights",5,path,false);
         strictArray(root,"self_buff_category_weights",2,path,false);
         strictArray(root,"throwable_category_weights",5,path,false);
+        requireObjectIfPresent(root, "melee_reserves", path);
+        JsonObject meleeReserves = object(root, "melee_reserves");
+        strictBoolean(meleeReserves, "enabled", path + ".melee_reserves");
+        strictBoolean(meleeReserves, "prefer_one_handed", path + ".melee_reserves");
+        for (String key : List.of("second_weapon_chance", "third_weapon_chance"))
+            strictNumber(meleeReserves, key, path + ".melee_reserves", 0, 1, false);
         validateDoctrine(root,path);
         for(String key:List.of("bands","item_pool","gun_core","gun_category_map","enchant","durability","shield_count","faction_overrides"))
             requireObjectIfPresent(root,key,path);

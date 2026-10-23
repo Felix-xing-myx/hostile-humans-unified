@@ -426,6 +426,14 @@
         "bow": 70,
         "crossbow": 30,
         "trident": 0
+      },
+      "_说明_melee_reserves_中文": "出生近战补给独立于通用武器数量抽取；先抽两把，再条件抽三把，受原武器总上限、候选与容量约束；单手优先也作用于初始近战与普通备用近战。",
+      "_description_melee_reserves_en": "Spawn-only melee supply; third chance is conditional on the second roll. Existing total weapon cap and candidate filters remain authoritative.",
+      "melee_reserves": {
+        "enabled": true,
+        "second_weapon_chance": 0.8,
+        "third_weapon_chance": 0.2,
+        "prefer_one_handed": true
       }
     },
     "roamer": {
@@ -706,6 +714,14 @@
         "bow": 70,
         "crossbow": 30,
         "trident": 0
+      },
+      "_说明_melee_reserves_中文": "出生近战补给独立于通用武器数量抽取；先抽两把，再条件抽三把，受原武器总上限、候选与容量约束；单手优先也作用于初始近战与普通备用近战。",
+      "_description_melee_reserves_en": "Spawn-only melee supply; third chance is conditional on the second roll. Existing total weapon cap and candidate filters remain authoritative.",
+      "melee_reserves": {
+        "enabled": true,
+        "second_weapon_chance": 0.9,
+        "third_weapon_chance": 0.35,
+        "prefer_one_handed": true
       }
     },
     "roamer": {
@@ -986,6 +1002,14 @@
         "bow": 70,
         "crossbow": 30,
         "trident": 0
+      },
+      "_说明_melee_reserves_中文": "出生近战补给独立于通用武器数量抽取；先抽两把，再条件抽三把，受原武器总上限、候选与容量约束；单手优先也作用于初始近战与普通备用近战。",
+      "_description_melee_reserves_en": "Spawn-only melee supply; third chance is conditional on the second roll. Existing total weapon cap and candidate filters remain authoritative.",
+      "melee_reserves": {
+        "enabled": true,
+        "second_weapon_chance": 1,
+        "third_weapon_chance": 0.5,
+        "prefer_one_handed": true
       }
     },
     "roamer": {

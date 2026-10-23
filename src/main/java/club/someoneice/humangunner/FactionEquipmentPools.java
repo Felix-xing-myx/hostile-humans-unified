@@ -112,8 +112,26 @@ final class FactionEquipmentPools {
         return (value+value*multiplyBase)*multiplyTotal;
     }
 
-    ConfiguredEquipmentLoadout.ItemEntry melee(Human human) { return select(melee,"melee_band_weights",5,human,"melee"); }
+    ConfiguredEquipmentLoadout.ItemEntry melee(Human human) {
+        var policy = profile.meleeReserves();
+        if (policy != null && policy.preferOneHanded()) {
+            var preferred = oneHandedMelee(human);
+            if (preferred != null) return preferred;
+        }
+        return select(melee,"melee_band_weights",5,human,"melee");
+    }
     ConfiguredEquipmentLoadout.ItemEntry reserveMelee(Human human) { return melee(human); }
+    ConfiguredEquipmentLoadout.ItemEntry oneHandedMelee(Human human) {
+        var candidates = melee.stream().filter(candidate -> singleHandedMelee(
+                new ItemStack(ForgeRegistries.ITEMS.getValue(candidate.value.id())))).toList();
+        return select(candidates,"melee_band_weights",5,human,"melee");
+    }
+    /** Same verified BC capability as combat. Without that backend only sword-class items are preferred. */
+    static boolean singleHandedMelee(ItemStack stack) {
+        return HumanLootManager.isDedicatedMeleeWeapon(stack)
+                && (BetterCombatMeleeCombat.isConfiguredEnabled()
+                    ? BetterCombatMeleeCombat.supportsOneHand(stack) : stack.getItem() instanceof SwordItem);
+    }
     ConfiguredEquipmentLoadout.ItemEntry ranged(Human human) { return select(ranged,"ranged_band_weights",4,human,"ranged"); }
     ConfiguredEquipmentLoadout.ItemEntry shield(Human human) { return select(shields,"shield_band_weights",4,human,"shield"); }
     boolean matchesFactionArmor(Human human) {

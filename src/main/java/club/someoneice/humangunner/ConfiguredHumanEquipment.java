@@ -58,12 +58,36 @@ final class ConfiguredHumanEquipment {
     static ItemStack shield(Human human) { return stack(human,of(human).pools(human).shield(human),EquipmentSlot.OFFHAND); }
     static void generateReserves(Human human) {
         var loadout=of(human);
+        generateMeleeReserves(human, loadout);
         int target=SpawnWeaponCountPolicy.roll(loadout.weaponMax,loadout.secondWeaponChance,loadout.thirdWeaponChance,
                 human.getRandom().nextDouble(),human.getRandom().nextDouble());
         for(int owned=weaponCount(human);owned<target;owned++) {
             ItemStack spare=backupMelee(human);
             if(spare.isEmpty() || !RecoverySupplies.insertInventory(human.getData(),spare)) break;
         }
+    }
+    private static void generateMeleeReserves(Human human, ConfiguredEquipmentLoadout loadout) {
+        var policy = FactionEquipmentConfig.of(human).meleeReserves();
+        if (policy == null) return;
+        int target = policy.target(loadout.weaponMax, human.getRandom().nextDouble(), human.getRandom().nextDouble());
+        int owned = 0;
+        for (EquipmentSlot slot : new EquipmentSlot[]{EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND})
+            if (reserveMatches(human.getItemBySlot(slot), policy)) owned += human.getItemBySlot(slot).getCount();
+        for (int i = 0; i < human.getData().getInventoryItemsSize(); i++) {
+            ItemStack item = human.getData().getInventoryItem(i);
+            if (reserveMatches(item, policy)) owned += item.getCount();
+        }
+        int additional = policy.additional(target, owned, weaponCount(human), loadout.weaponMax);
+        for (int i = 0; i < additional; i++) {
+            var entry = policy.preferOneHanded() ? loadout.pools(human).oneHandedMelee(human)
+                    : loadout.pools(human).reserveMelee(human);
+            ItemStack item = stack(human, entry, EquipmentSlot.MAINHAND);
+            if (item.isEmpty() || !RecoverySupplies.insertInventory(human.getData(), item)) break;
+        }
+    }
+    private static boolean reserveMatches(ItemStack item, SpawnMeleeReservePolicy policy) {
+        return policy.preferOneHanded() ? FactionEquipmentPools.singleHandedMelee(item)
+                : HumanLootManager.isDedicatedMeleeWeapon(item);
     }
     static int weaponCount(Human human) {
         int count=0;
