@@ -1339,22 +1339,6 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         Entity equipmentSlotArray = damageSource.getEntity();
         LivingEntity attacker = equipmentSlotArray instanceof LivingEntity living && living != this
                 ? living : null;
-        // Wild humans retain the original rare whole-piece break. Hired gear
-        // instead wears down through hurtArmor, like equipment worn by a player.
-        if (amount > 1.0f && !this.hasOwner()) {
-            EquipmentSlot[] slots;
-            for (EquipmentSlot equipmentslot : slots = EquipmentSlot.values()) {
-                ItemStack item;
-                if (equipmentslot.getType() != EquipmentSlot.Type.ARMOR) continue;
-                double d = this.random.nextFloat();
-                double d2 = this.getTier() == HumanTier.LEVEL1 ? 0.0025 : 0.00125;
-                if (!(d < d2) || (item = this.getItemBySlot(equipmentslot)).isEmpty()) continue;
-                // Route through the shared break-sound gate: the equipment
-                // change listener can observe the same removal synchronously.
-                club.someoneice.humangunner.EquipmentBreakSounds.playNow(this, equipmentslot, item.copy());
-                this.setItemSlot(equipmentslot, Items.AIR.getDefaultInstance());
-            }
-        }
         float previousHealth = this.getHealth();
         boolean damaged = super.hurt(damageSource, amount);
         club.someoneice.humangunner.LowHealthCombatController.recordDamage(this,
@@ -1397,7 +1381,19 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     @Override
     protected void hurtArmor(DamageSource source, float amount) {
         if (!this.hasOwner()) {
-            super.hurtArmor(source, amount);
+            if (level().isClientSide || !(amount > 0.0F) || !Float.isFinite(amount)) return;
+            // Match player Inventory.hurtArmor: every worn ArmorItem loses
+            // max(1, floor(incoming damage / 4)), before armor mitigation.
+            // Keep this at the native armor callback so blocked/bypassing
+            // damage and hurt invulnerability retain their existing rules.
+            int wear = Math.max(1, (int) (amount / 4.0F));
+            for (EquipmentSlot slot : HIRED_ARMOR_SLOTS) {
+                ItemStack armor = getItemBySlot(slot);
+                if (armor.getItem() instanceof net.minecraft.world.item.ArmorItem
+                        && !(source.is(DamageTypeTags.IS_FIRE) && armor.getItem().isFireResistant())) {
+                    wearEquippedItem(armor, slot, wear);
+                }
+            }
             return;
         }
         if (amount <= 0.0F) {
@@ -1630,11 +1626,15 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     }
 
     private void wearEquippedItem(ItemStack stack, EquipmentSlot slot) {
-        if (level().isClientSide || !stack.isDamageableItem()) return;
+        wearEquippedItem(stack, slot, 1);
+    }
+
+    private void wearEquippedItem(ItemStack stack, EquipmentSlot slot, int amount) {
+        if (level().isClientSide || !stack.isDamageableItem() || amount <= 0) return;
         ItemStack beforeDamage = stack.copy();
         // ItemStack.hurtAndBreak delegates to the vanilla Unbreaking roll for
         // weapons and armor. Direct setDamageValue would bypass that roll.
-        stack.hurtAndBreak(1, this, broken -> {
+        stack.hurtAndBreak(amount, this, broken -> {
             club.someoneice.humangunner.EquipmentBreakSounds.playNow(this, slot, beforeDamage);
             broadcastBreakEvent(slot);
         });

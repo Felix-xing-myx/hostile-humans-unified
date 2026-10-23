@@ -61,7 +61,7 @@ class ThrowableLaunchSpeedContract(unittest.TestCase):
     def test_distance_speed_and_cluster_controls_are_exposed(self):
         config = json.loads((ROOT / 'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8'))['scguns']['throwables']
         expected = dict(maximum_range=32, initial_speed=2, cluster_radius=4,
-                        cluster_minimum_targets=3, cluster_cooldown_ticks=80, cooldown_ticks=160, quality=170)
+                        cluster_minimum_targets=3, cluster_cooldown_ticks=200, cooldown_ticks=500, quality=170)
         parser = (JAVA / 'ScgunsSettings.java').read_text(encoding='utf-8')
         loot = (JAVA / 'HumanLootManager.java').read_text(encoding='utf-8')
         self.assertIn('if (TacticalThrowables.supported(stack)) return UnifiedConfig.get().scguns().throwableQuality();', loot)
