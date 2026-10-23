@@ -46,15 +46,18 @@ public final class HumanShieldPresentation {
         InteractionHand hand = activeHand(human);
         if (hand == null) return;
         HumanoidArm side = hand == InteractionHand.MAIN_HAND ? human.getMainArm() : human.getMainArm().getOpposite();
-        applyArm(model, side);
+        applyArm(model, side, ShieldBlockPose.resolve(human, hand, side));
         PlayerAnimatorModelBridge.bind(model, null);
     }
 
     static void applyArm(PlayerModel<?> model, HumanoidArm side) {
+        applyArm(model, side, ShieldBlockPose.vanilla(side));
+    }
+    static void applyArm(PlayerModel<?> model, HumanoidArm side, ShieldBlockPose.ArmAngles angles) {
         ModelPart arm = side == HumanoidArm.RIGHT ? model.rightArm : model.leftArm;
-        // Vanilla BLOCK rest angles. Keep the existing crouch/shoulder pivots and do not layer it twice.
-        arm.xRot = -0.9424779F;
-        arm.yRot = side == HumanoidArm.RIGHT ? -0.5235988F : 0.5235988F;
+        // Absolute arm angles avoid layering the block twice; retain crouch/shoulder pivots.
+        arm.xRot = angles.pitch();
+        arm.yRot = angles.yaw();
         arm.zRot = 0;
         if (side == HumanoidArm.RIGHT) model.rightSleeve.copyFrom(arm);
         else model.leftSleeve.copyFrom(arm);

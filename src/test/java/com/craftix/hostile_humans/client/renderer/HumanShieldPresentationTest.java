@@ -56,12 +56,68 @@ public final class HumanShieldPresentationTest {
         HumanShieldPresentation.applyArm(model, HumanoidArm.RIGHT);
         near(model.rightArm.yRot, -.5235988F, "right block mirrors left");
         near(model.rightSleeve.xRot, model.rightArm.xRot, "right sleeve follows block");
+        verifyShieldFaceAlignment(model);
+        check(calls("HumanShieldPresentation", "apply", "ShieldBlockPose", "resolve"),
+                "production pose resolves the actual item model instead of fixed arm constants");
         check(calls("HumanPlayerModel", "setupAnim", "HumanShieldPresentation", "apply"), "final player model enforces shield arm");
         check(calls("BetterCombatNpcAnimator", "apply", "HumanShieldPresentation", "active")
                 && calls("BetterCombatNpcAnimator", "hasAnimationStack", "HumanShieldPresentation", "active"),
                 "BC model and held-item channels share shield exclusion");
         check(nativePropertyHookMatches(), "model-property injection matches an actual native invocation descriptor");
         System.out.println("HumanShieldPresentationTest passed; in-game animation acceptance remains unverified");
+    }
+    private static void verifyShieldFaceAlignment(PlayerModel<?> model) {
+        for (HumanoidArm side : HumanoidArm.values()) {
+            // Actual vanilla shield and Spartan tower shield blocking models share these rotations.
+            var tower = new net.minecraft.client.renderer.block.model.ItemTransform(
+                    new org.joml.Vector3f(45, 135, 0), new org.joml.Vector3f(), new org.joml.Vector3f(1));
+            var aligned = ShieldBlockPose.resolve(tower, side);
+            near(aligned.pitch(), -(float)Math.PI / 4, "standard shield pitch is model-derived");
+            near(aligned.yaw(), (side == HumanoidArm.LEFT ? 1 : -1) * (float)Math.PI / 4,
+                    "standard shield yaw mirrors between hands");
+            var old = normal(ShieldBlockPose.vanilla(side), tower, side);
+            check(Math.abs(old.x) > .1F || Math.abs(old.y) > .1F, "legacy fixed arm retains visible plane tilt");
+            assertParallel(aligned, tower, side);
+            model.leftArm.y = 5;
+            HumanShieldPresentation.applyArm(model, side, aligned);
+            HumanShieldPresentation.applyArm(model, side, aligned);
+            near((side == HumanoidArm.LEFT ? model.leftArm : model.rightArm).xRot, aligned.pitch(),
+                    "repeated final pose does not accumulate rotations");
+            near(model.leftArm.y, 5, "alignment preserves the crouch shoulder pivot");
+            // Spartan generated/basic shields have different native display transforms.
+            var basic = new net.minecraft.client.renderer.block.model.ItemTransform(
+                    new org.joml.Vector3f(40, 330, 0), new org.joml.Vector3f(), new org.joml.Vector3f(1));
+            assertParallel(ShieldBlockPose.resolve(basic, side), basic, side);
+            var forgeTransform = new net.minecraft.client.renderer.block.model.ItemTransform(
+                    new org.joml.Vector3f(45, 135, 0), new org.joml.Vector3f(), new org.joml.Vector3f(1.2F, .9F, 1.1F));
+            forgeTransform.rightRotation.set(5, 5, -5);
+            assertParallel(ShieldBlockPose.resolve(forgeTransform, side), forgeTransform, side);
+            var excessive = new net.minecraft.client.renderer.block.model.ItemTransform(
+                    new org.joml.Vector3f(120, 135, 0), new org.joml.Vector3f(), new org.joml.Vector3f(1));
+            check(ShieldBlockPose.resolve(excessive, side).equals(ShieldBlockPose.vanilla(side)),
+                    "unnatural arm twist uses the native fallback");
+            check(ShieldBlockPose.resolve(net.minecraft.client.renderer.block.model.ItemTransform.NO_TRANSFORM, side)
+                    .equals(ShieldBlockPose.vanilla(side)), "missing transforms keep native fallback");
+            var invalid = new net.minecraft.client.renderer.block.model.ItemTransform(
+                    new org.joml.Vector3f(Float.NaN, 0, 0), new org.joml.Vector3f(), new org.joml.Vector3f(1));
+            check(ShieldBlockPose.resolve(invalid, side).equals(ShieldBlockPose.vanilla(side)),
+                    "invalid resource transform cannot corrupt the model pose");
+        }
+    }
+    private static void assertParallel(ShieldBlockPose.ArmAngles angles,
+            net.minecraft.client.renderer.block.model.ItemTransform transform, HumanoidArm side) {
+        var normal = normal(angles, transform, side);
+        check(Math.abs(normal.x) < .00001F && Math.abs(normal.y) < .00001F && Math.abs(normal.z) > .99999F,
+                "shield face is parallel to the standing torso after the complete native transform");
+    }
+    private static org.joml.Vector3f normal(ShieldBlockPose.ArmAngles angles,
+            net.minecraft.client.renderer.block.model.ItemTransform transform, HumanoidArm side) {
+        var pose = new com.mojang.blaze3d.vertex.PoseStack();
+        pose.mulPose(new org.joml.Quaternionf().rotationZYX(0, angles.yaw(), angles.pitch()));
+        pose.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-90));
+        pose.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180));
+        transform.apply(side == HumanoidArm.LEFT, pose);
+        return pose.last().normal().transform(new org.joml.Vector3f(0, 0, 1)).normalize();
     }
     private static boolean calls(String owner, String methodName, String target, String called) throws Exception {
         var node = new org.objectweb.asm.tree.ClassNode();
