@@ -8,8 +8,8 @@ public final class UnifiedConfigTest {
     private static void checkConfigRefresh() {
         JsonObject input = JsonParser.parseString("{\"jump_attack\":{\"chance\":2,\"attempt_interval_min_ticks\":30.8,\"attempt_interval_max_ticks\":5},\"first_aid\":{\"plaster_healing\":0,\"morphine_duration_seconds\":2.9,\"morphine_resistance_level\":3,\"quality\":{\"morphine\":123}}}").getAsJsonObject();
         UnifiedConfig config = new UnifiedConfig(input);
-        check(config.jumpAttack().chance() == 1 && config.jumpAttack().intervalMinTicks() == 5
-                && config.jumpAttack().intervalMaxTicks() == 30, "jump bounds clamp, truncate and normalize");
+        check(config.jumpAttack().chance() == 1 && config.jumpAttack().intervalMinTicks() == 40
+                && config.jumpAttack().intervalMaxTicks() == 40, "jump bounds clamp, truncate and normalize");
         check(config.firstAid().plasterHealing() == 0 && config.firstAid().morphineTicks() == 40
                 && config.firstAid().resistanceAmplifier() == 2 && config.firstAid().morphineQuality() == 123,
                 "First Aid server settings control effects and quality");

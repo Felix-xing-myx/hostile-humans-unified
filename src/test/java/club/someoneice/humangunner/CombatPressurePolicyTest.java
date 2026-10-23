@@ -418,7 +418,7 @@ public final class CombatPressurePolicyTest {
                 "near orbiting retains a radial retreat component");
         check(BowRangePolicy.orbitForwardInput(18.0D * 18.0D) == 0.0F,
                 "safe orbiting is purely lateral");
-        check(BowRangePolicy.orbitForwardInput(23.0D * 23.0D) > 0.0F,
+        check(BowRangePolicy.orbitForwardInput(25.0D * 25.0D, 16, 24) > 0.0F,
                 "very distant bow users may close slowly");
         check(!BowRangePolicy.usefulRetreatDestination(13.0D * 13.0D, 15.0D * 15.0D),
                 "retreat paths that remain inside the orbit buffer are rejected");

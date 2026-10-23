@@ -311,10 +311,11 @@
             "weight": 1
           }
         ],
+        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。",
+        "_description_enchanted_golden_apple_counts_en": "Count weights after the appearance roll; independent of faction food multipliers. Tier three receives two or three with weights 20:80.",
         "enchanted_golden_apple_counts": {
           "1": 1
-        },
-        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。"
+        }
       },
       "potions": {
         "_说明_中文": "恢复药水、自身强化药水、投掷物分别独立计数和缩放，不共用总量。",
@@ -803,11 +804,12 @@
             "weight": 1
           }
         ],
+        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。",
+        "_description_enchanted_golden_apple_counts_en": "Count weights after the appearance roll; independent of faction food multipliers. Tier three receives two or three with weights 20:80.",
         "enchanted_golden_apple_counts": {
           "1": 1,
           "2": 1
-        },
-        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。"
+        }
       },
       "potions": {
         "_说明_中文": "恢复药水、自身强化药水、投掷物分别独立计数和缩放，不共用总量。",
@@ -1299,11 +1301,12 @@
             "weight": 1
           }
         ],
+        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。",
+        "_description_enchanted_golden_apple_counts_en": "Count weights after the appearance roll; independent of faction food multipliers. Tier three receives two or three with weights 20:80.",
         "enchanted_golden_apple_counts": {
           "2": 1,
           "3": 1
-        },
-        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。"
+        }
       },
       "potions": {
         "_说明_中文": "恢复药水、自身强化药水、投掷物分别独立计数和缩放，不共用总量。",
@@ -1797,11 +1800,12 @@
             "weight": 1
           }
         ],
+        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。",
+        "_description_enchanted_golden_apple_counts_en": "Count weights after the appearance roll; independent of faction food multipliers. Tier three receives two or three with weights 20:80.",
         "enchanted_golden_apple_counts": {
           "2": 20,
           "3": 80
-        },
-        "_说明_enchanted_golden_apple_counts_中文": "出现判定后按数量权重抽取；不乘阵营食物倍率。三阶必有2或3颗，权重20:80。"
+        }
       },
       "potions": {
         "_说明_中文": "恢复药水、自身强化药水、投掷物分别独立计数和缩放，不共用总量。",
@@ -3436,26 +3440,32 @@
     "_description_en": "Instinctive shieldable real-health-loss defense. Thresholds: 2 hits/18% within 20 ticks, 5 hits/10% within 30 ticks, or a single 35% hit. Finish one current potion first. Preserve firearm and navigation; end after 20 quiet ticks or 140 active ticks, followed by 40 ticks mandatory cooldown.",
     "enabled": true,
     "_说明_max_guard_ticks_中文": "一次实际高压举盾最长140tick（7秒），范围1–2400；等待喝药不计入。",
+    "_description_max_guard_ticks_en": "Maximum active guard duration, 140 ticks (7 seconds); waiting for the current potion does not count.",
     "max_guard_ticks": 140,
     "_说明_window_ticks_中文": "伤害统计窗口，默认20 tick（1秒），范围5～100。只记有实际扣血的命中。",
     "_description_window_ticks_en": "Actual health-loss sampling window, default 20 ticks (one second), range 5–100.",
     "window_ticks": 20,
     "_说明_damage_ratio_中文": "至少2次真实扣血在20tick内合计18%。",
+    "_description_damage_ratio_en": "At least two shieldable real-health losses total 18% of maximum health in 20 ticks.",
     "damage_ratio": 0.18,
     "_说明_frequent_hits_中文": "高频分支所需的实际扣血命中次数；还必须满足frequent_damage_ratio，避免极轻微伤害一直锁盾。",
     "_description_frequent_hits_en": "Damaging hit count for the frequency branch; frequent_damage_ratio must also be met to avoid locking shields for trivial chip damage.",
     "frequent_hits": 5,
     "_说明_frequent_damage_ratio_中文": "至少5次真实扣血在30tick内合计10%。",
+    "_description_frequent_damage_ratio_en": "At least five shieldable real-health losses total 10% of maximum health.",
     "frequent_damage_ratio": 0.1,
     "_说明_quiet_ticks_中文": "触发后，距离最后一次实际扣血或成功格挡达到此tick数才解除；默认20 tick（1秒）。无效攻击不会续期。",
     "_description_quiet_ticks_en": "Release after this many ticks without actual health loss or a successful block; default 20 ticks. Invalid hits do not extend pressure.",
     "quiet_ticks": 20,
-    "frequent_window_ticks": 30,
-    "single_damage_ratio": 0.35,
-    "cooldown_ticks": 40,
     "_说明_frequent_window_ticks_中文": "高频统计窗口，默认30tick（1.5秒），范围5–200。",
+    "_description_frequent_window_ticks_en": "Frequent-hit sampling window, 30 ticks (1.5 seconds).",
+    "frequent_window_ticks": 30,
     "_说明_single_damage_ratio_中文": "单次可盾防实际扣血达到最大生命35%即触发。",
-    "_说明_cooldown_ticks_中文": "实际高压举盾结束后的固定冷却，默认40tick（2秒），范围1–400。"
+    "_description_single_damage_ratio_en": "One shieldable real-health loss of 35% maximum health triggers pressure defense.",
+    "single_damage_ratio": 0.35,
+    "_说明_cooldown_ticks_中文": "实际高压举盾结束后的固定冷却，默认40tick（2秒），范围1–400。",
+    "_description_cooldown_ticks_en": "Mandatory cooldown after active pressure guard ends, 40 ticks (2 seconds).",
+    "cooldown_ticks": 40
   },
   "activity_budget": {
     "enabled": true,

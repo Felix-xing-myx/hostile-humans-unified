@@ -33,7 +33,8 @@ public final class HumanProjectileRelationsTest {
         ClassNode relation = read(root + "HumanProjectileRelations");
         check(calls(read("com/craftix/hostile_humans/entity/entities/Human"), "hurt",
                 root + "HumanOwnerProtection", "blocksDamage") == 1, "native Human damage boundary protects against owner attacks");
-        check(calls(relation, "passesThrough", root + "HumanProjectileRelations", "passesThroughFromOwner") == 1,
+        check(calls(relation, "passesThrough", root + "HumanProjectileRelations", "passesThroughEntity") == 1
+                        && calls(relation, "passesThroughEntity", root + "HumanProjectileRelations", "passesThroughFromOwner") == 1,
                 "vanilla projectile collision delegates to explicit-shooter protection");
         check(calls(relation, "passesThroughFromOwner", root + "HumanOwnerProtection", "protects") == 1,
                 "owner projectiles are filtered before fire and collision effects");

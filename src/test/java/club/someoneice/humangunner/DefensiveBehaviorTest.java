@@ -108,8 +108,8 @@ public final class DefensiveBehaviorTest {
         check(calls(ADAPTIVE, "tickDefend", "tickCombat")
                         && calls("club/someoneice/humangunner/BodyguardMovementGoal", "tick", "tickBodyguard"),
                 "combat and interception both delegate shield strategy to one controller");
-        check(calls(SHIELDS,"tickCombat","facePressure") && calls(SHIELDS,"tickPressureReaction","facePressure"),
-                "known and anonymous pressure use the same stable impact-direction facing");
+        check(calls(SHIELDS,"beginPressureReaction","facePressure") && calls(SHIELDS,"tickPressureReaction","facePressure"),
+                "pressure starts and continues with the same impact-direction controller; ordinary melee uses its own bearings");
         check(!calls(SHIELDS,"beginPressureReaction","getOwner") && !calls(SHIELDS,"beginPressureReaction","canTarget")
                 && !calls("club/someoneice/humangunner/PressureReactionGoal","start","setTarget"),
                 "instinctive guard neither requires shooter knowledge nor grants aggro");
@@ -118,7 +118,9 @@ public final class DefensiveBehaviorTest {
         check(calls(SHIELDS,"recordPressureDamage","recordPressureDirection")
                 && calls(SHIELDS,"observeAttack","recordPressureDirection"),
                 "damage and successful blocks both update physical pressure arrival direction");
-        check(calls(SHIELDS, "release", "ownsCurrentShield"),
+        check(calls(SHIELDS, "release", "getUseItem") && method(SHIELDS, "release").instructions.iterator().hasNext()
+                        && java.util.stream.StreamSupport.stream(method(SHIELDS, "release").instructions.spliterator(), false)
+                        .anyMatch(instruction -> instruction.getOpcode() == Opcodes.IF_ACMPNE),
                 "ending one defense owner cannot cancel another owner's item use");
         check(!calls(ADAPTIVE, "tickDefend", "jump"), "defense phase never requests random combat jumps");
         check(calls(ADAPTIVE, "tickDefend", "moveWhileDefendingRanged"),

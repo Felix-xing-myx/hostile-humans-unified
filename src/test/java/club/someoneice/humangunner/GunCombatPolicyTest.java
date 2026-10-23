@@ -90,9 +90,12 @@ public final class GunCombatPolicyTest {
                 "final damage guard uses the same held-gun gate as melee scheduling");
         check(calls(MOD + "TaczGunItemIdentity", "onGunMelee", "setCanceled"),
                 "public TaCZ melee event cancels NPC gun-butt startup");
-        for (String entry : new String[]{"humanGunner$isMeleeMode", "doHurtTarget", "hasPendingBetterCombatFacing",
-                "finishBetterCombatUpswing"})
+        for (String entry : new String[]{"humanGunner$isMeleeMode", "doHurtTarget", "hasPendingBetterCombatFacing"})
             check(calls(HUMAN, entry, "humanGunner$canMeleeAttack"), "gun guard at " + entry);
+        check(calls(HUMAN, "finishBetterCombatUpswing", "valid")
+                && calls(MOD + "MeleeActionControl", "valid", "available")
+                && calls(MOD + "MeleeActionControl", "available", "humanGunner$canMeleeAttack"),
+                "delayed strike reaches the same gun/retreat/permission guard through its original action token");
         MethodNode damage = node(HUMAN).methods.stream().filter(method -> method.name.equals("doHurtTargetSingle")
                 && method.desc.endsWith(";ZZ)Z")).findFirst().orElseThrow();
         check(index(damage, "humanGunner$canMeleeAttack") < index(damage, "doHurtTarget"),
@@ -170,7 +173,8 @@ public final class GunCombatPolicyTest {
         return Integer.MAX_VALUE;
     }
     private static boolean calls(String owner, String entry, String name) throws Exception {
-        return index(method(owner, entry), name) != Integer.MAX_VALUE;
+        return node(owner).methods.stream().filter(method -> method.name.equals(entry))
+                .anyMatch(method -> index(method, name) != Integer.MAX_VALUE);
     }
     private static void check(boolean value, String message) {
         checks++;

@@ -19,7 +19,7 @@ public final class HumanAmmoConfigSwitchTest {
     public static void main(String[] args) throws Exception {
         check(calls(AMMO, "consumptionEnabled", CONFIG, "ammoConsumptionEnabled"),
                 "runtime gate reads the shared cached configuration API");
-        for (String name : List.of("hasArrows", "consumeArrow", "canReload", "consumeMagazines")) {
+        for (String name : List.of("consumeArrow", "canReload", "consumeMagazines")) {
             check(calls(AMMO, name, AMMO, "consumptionEnabled"), "consumption gate wired: " + name);
             for (int reserve : new int[]{0, 19}) {
                 int[] backpack = {reserve};
@@ -27,6 +27,10 @@ public final class HumanAmmoConfigSwitchTest {
                 check(backpack[0] == reserve, "disabled mode preserves physical inventory: " + name);
             }
         }
+        check(calls(AMMO, "hasArrows", AMMO, "arrowCount") && !calls(AMMO, "hasArrows", AMMO, "consumptionEnabled"),
+                "arrows still require a physical reserve before a saving/free-consumption outcome");
+        check(!evaluate("hasArrows", false, true, new int[]{0}) && evaluate("hasArrows", false, true, new int[]{19}),
+                "waiving consumption does not create missing arrows");
         for (String name : List.of("canReload", "consumeMagazines")) {
             check(!evaluate(name, false, false, new int[]{0}), "free mode still rejects non-guns: " + name);
         }
@@ -41,11 +45,14 @@ public final class HumanAmmoConfigSwitchTest {
                 "selection retains free-mode empty guns and the last paid reload");
         check(calls("club/someoneice/humangunner/AmmoWeaponSelection", "usableGun",
                 "club/someoneice/humangunner/GunSupport", "isReloading"), "active reload remains usable");
-        check(calls(RELOAD, "start", "club/someoneice/humangunner/ReloadPaymentLedger", "begin"),
+        check(calls(RELOAD, "start", RELOAD, "startHuman")
+                        && calls(RELOAD, "startHuman", "club/someoneice/humangunner/ReloadPaymentLedger", "begin"),
                 "free refill still requires a bound timed transaction");
-        check(calls(RELOAD, "start", "club/someoneice/humangunner/GunReloadPolicy", "reloadThresholdSatisfied"),
+        check(calls(RELOAD, "startHuman", "club/someoneice/humangunner/GunReloadPolicy", "reloadThresholdSatisfied"),
                 "start retains combat-empty and idle-below25-percent thresholds");
-        check(anyCalls(RELOAD, AMMO, "canReload") && anyCalls(RELOAD, AMMO, "consumeMagazines"),
+        check(anyCalls(RELOAD, AMMO, "canReload")
+                        && anyCalls(RELOAD, "club/someoneice/humangunner/GunReloadAuthority$Capture", "pay")
+                        && calls("club/someoneice/humangunner/GunReloadAuthority$Capture", "pay", AMMO, "canReload"),
                 "transaction callbacks use the same gate for authorization and payment");
         check(!calls("club/someoneice/humangunner/TaczIntegration", "hasLoadedAmmo", CONFIG, "ammoConsumptionEnabled"),
                 "gun loaded-round queries remain physical even in free mode");
@@ -117,7 +124,7 @@ public final class HumanAmmoConfigSwitchTest {
                     case "canReload" -> result = evaluate("canReload", enabled, gun, allowed, inventory) ? 1 : 0;
                     case "consumptionEnabled" -> result = enabled ? 1 : 0;
                     case "arrowCount", "magazineCount", "magazineCost", "consume" -> {
-                        if (!enabled) throw new AssertionError("Disabled mode accessed reserves in " + name + ": " + call.name);
+                        if (!enabled && !name.equals("hasArrows")) throw new AssertionError("Disabled mode accessed reserves in " + name + ": " + call.name);
                         if (call.name.equals("magazineCost")) result = 1;
                         else if (call.name.equals("consume")) {
                             result = inventory[0] > 0 ? 1 : 0;

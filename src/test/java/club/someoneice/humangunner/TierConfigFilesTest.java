@@ -283,7 +283,7 @@ public final class TierConfigFilesTest {
                         && sections.indexOf("ai") < sections.indexOf("growth_profile")
                         && sections.indexOf("growth_profile") < sections.indexOf("equipment_loadout"), "consistent section order " + rank);
                 for (String path : List.of("attributes.max_health", "movement.base_speed", "ai.retreat_health_ratio",
-                        "equipment_loadout.ranged_chance", "ammunition.arrows.min",
+                        "equipment_loadout.mainhand", "ammunition.arrows.min",
                         "potions.recovery.count_min", "tacz.gun_chance", "spawning.first_spawn_day")) {
                     int dot = path.lastIndexOf('.');
                     JsonObject section = TierConfigProjection.at(file, path.substring(0, dot)).getAsJsonObject();

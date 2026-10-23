@@ -23,15 +23,20 @@ public final class AmmoWeaponSelectionTest {
                 "paid in-progress reload survives a now-empty magazine inventory");
         check(selection.contains("HumanInventorySession.isEditing(human)"),
                 "manual inventory session prevents AI hand exchanges");
-        check(selection.contains("if (human.level().addFreshEntity(dropped))"),
-                "full backpack clears the hand only after preserving the world item");
+        check(selection.contains("HumanEquipmentExchange.stow(human, hand)"),
+                "exhausted equipment uses the shared real-layout transaction");
+        String exchange = Files.readString(source.resolve("HumanEquipmentExchange.java"));
+        String stow = exchange.substring(exchange.indexOf("public static Result stow("), exchange.indexOf("private static void addHand("));
+        check(stow.contains("return Result.NO_CAPACITY;") && stow.contains("return writeLayout(")
+                        && !stow.contains("addFreshEntity") && !stow.contains("setItemSlot("),
+                "full backpack returns without clearing the hand or creating a world copy");
         String gun = Files.readString(source.resolve("GunCustody.java"));
         String ranged = Files.readString(source.resolve("RangedWeaponCustody.java"));
         check(!gun.contains("ItemStack.of(") && !ranged.contains("ItemStack.of("),
                 "stale custody snapshots cannot reconstruct weapons");
         check(gun.contains("AmmoWeaponSelection.tick(human)"),
                 "the existing every-tick custody entry also runs without TaCZ");
-        check(ranged.contains("return AmmoWeaponSelection.hasUsableGun(human)"),
+        check(ranged.contains("return AmmoWeaponSelection.gunHasPriority(human)"),
                 "stored exhausted guns do not suppress supplied bows");
     }
 

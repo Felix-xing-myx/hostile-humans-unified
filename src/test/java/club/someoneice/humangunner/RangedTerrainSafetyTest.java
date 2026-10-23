@@ -126,7 +126,8 @@ public final class RangedTerrainSafetyTest {
             String type = "com/craftix/hostile_humans/entity/ai/goal/" + goal;
             check(calls(type, "strafe", root + "RangedTerrainCombat", "strafe"), goal + " cannot orbit blindly");
             check(calls(type, "tick", root + "RangedTerrainCombat", "searchCompleted"), goal + " distinguishes failed lane from budget waiting");
-            check(calls(type, "tickShot", root + "RangedWeaponCustody", "isActive"), goal + " never shoots after melee hand switch");
+            String attack = "com/craftix/hostile_humans/entity/ai/goal/" + (goal.startsWith("Bow") ? "BowAttack" : "CrossbowGoal");
+            check(calls(attack, "tickShot", root + "RangedWeaponCustody", "isActive"), goal + " never shoots after melee hand switch");
         }
         check(calls(root + "GunMovementExecution", "strafeAround", root + "RangedTerrainCombat", "strafeFacingTarget"), "gun strafe uses the shared direct movement boundary");
         check(!calls(root + "GunMovementExecution", "strafeAround", root + "BasicNavigationBudget", "tryAcquire")
