@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.13.14'
+version = '3.13.15'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -241,6 +241,14 @@ tasks.register('taczAmmoMixinContractTest', JavaExec) {
     args taczApiJar.absolutePath
 }
 tasks.named('check').configure { dependsOn tasks.named('taczAmmoMixinContractTest') }
+
+tasks.register('spectatorSoundContractTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'club.someoneice.humangunner.SpectatorSoundContractTest'
+    args taczApiJar.absolutePath, scgunsApiJar.absolutePath, jegApiJar.absolutePath
+}
+tasks.named('check').configure { dependsOn tasks.named('spectatorSoundContractTest') }
 
 tasks.register('unifiedNamespaceTest', JavaExec) {
     dependsOn tasks.named('testClasses'), tasks.named('reobfJar')
