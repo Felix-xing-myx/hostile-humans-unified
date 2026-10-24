@@ -17,6 +17,7 @@ public final class HumanArrowCombatTest {
     private static int assertions;
 
     public static void main(String[] args) throws Exception {
+        dev.felix.hostilehumans.core.VolleyContinuationTest.main(args);
         check(calls(HUMAN, "getProjectile", ARROWS, "projectileFor"), "projectile requests use actual reserve");
         for (String method : List.of("projectileFor", "prepareCrossbowVolley", "canShoot")) {
             check(!calls(ARROWS, method, AMMO, "consumeArrow"), "queries/loading do not charge: " + method);
@@ -85,8 +86,10 @@ public final class HumanArrowCombatTest {
         }
         check(calls(ARROWS, "fireVolley", ARROWS, "publishVolley"), "initial shot uses common transaction");
         check(calls(ARROWS, "tickFollowup", ARROWS, "publishVolley"), "delayed shot uses same paid transaction");
-        check(callsName(ARROWS, "tickFollowup", "shotStillValid")
-                && callsName(ARROWS, "tickFollowup", "hasFollowupShot"), "delayed shot rechecks authority and geometry");
+        check(callsName(ARROWS, "tickFollowup", "followupIdentityValid")
+                && callsName(ARROWS, "tickFollowup", "hasFollowupShot"), "delayed shot rechecks identity separately from temporary release geometry");
+        check(callsName(ARROWS, "followupIdentityValid", "shotContextValid")
+                && callsName(ARROWS, "hasFollowupShot", "shotStillValid"), "identity retention never bypasses release safety");
         check(calls("club/someoneice/humangunner/HumanBehaviorControl", "cancel", ARROWS, "clear")
                 || callsAnyOwner("club/someoneice/humangunner/HumanBehaviorControl", ARROWS, "clear"),
                 "root lifecycle cancels pending release through lambda cleanup");

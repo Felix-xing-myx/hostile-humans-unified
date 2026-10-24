@@ -5,6 +5,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Difficulty;
 import dev.felix.hostilehumans.core.ActionCoordinator;
+import dev.felix.hostilehumans.core.VolleyContinuation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
@@ -18,12 +19,14 @@ public final class HumanArrowCombat {
     private static final String NPC_LOAD = "hostile_humans_unified:NpcArrowLoad";
     private static final java.util.Map<Human, Integer> INTERVALS = new java.util.WeakHashMap<>();
     private static final java.util.Map<Human, ArrowAttackCadence> CADENCE = new java.util.WeakHashMap<>();
-    static final int DOUBLE_ARROW_DELAY_TICKS = 6;
+    static final int DOUBLE_ARROW_DELAY_TICKS = 4;
+    static final int FOLLOWUP_MAXIMUM_WAIT_TICKS = 40;
+    static final int FOLLOWUP_RETRY_TICKS = 2;
     private static final java.util.Map<Human, Followup> FOLLOWUPS = new java.util.WeakHashMap<>();
     private record Followup(java.lang.ref.WeakReference<LivingEntity> target,
                             java.lang.ref.WeakReference<ItemStack> weapon,
                             java.util.List<ProjectileSnapshot> projectiles,
-                            net.minecraft.world.phys.Vec3 origin, int dueTick, long session) { }
+                            net.minecraft.world.phys.Vec3 origin, VolleyContinuation timing, long session) { }
     /** Pre-spread, pre-profile snapshots preserve each native multishot projectile independently. */
     private record ProjectileSnapshot(net.minecraft.world.entity.EntityType<?> type, CompoundTag payload) {
         net.minecraft.world.entity.projectile.AbstractArrow recreate(Human human, LivingEntity target, net.minecraft.world.phys.Vec3 origin) {
@@ -41,32 +44,54 @@ public final class HumanArrowCombat {
     }
     private HumanArrowCombat() {}
 
-    /** One scheduled continuation, not a second draw or a queued free projectile. */
+    /** One bounded continuation: short interruptions defer it, identity/lifecycle changes cancel it. */
     static void tickFollowup(Human human) {
         Followup shot = FOLLOWUPS.get(human);
         if (shot == null) return;
         LivingEntity target = shot.target().get();
         ItemStack weapon = shot.weapon().get();
-        if (weapon == null || target != human.getTarget() || !shotStillValid(human, target, weapon)
-                || human.isFleeing || RecoverySupplies.hasActiveUse(human)
-                || !RangedCombatProfile.of(human, weapon).doubleArrow()
-                || HumanBehaviorControl.actions(human).session() != shot.session()) {
-            FOLLOWUPS.remove(human); return;
+        if (!followupIdentityValid(human, target, weapon, shot.session())) {
+            shot.timing().cancel(); FOLLOWUPS.remove(human, shot); return;
         }
-        if (human.tickCount < shot.dueTick()) return;
-        // No backlog or bursts after an interruption: this opportunity is attempted exactly once.
-        FOLLOWUPS.remove(human);
-        if (!hasFollowupShot(human, target, weapon)) return;
+        long now = human.level().getGameTime();
+        if (!shot.timing().canAttempt(now)) {
+            if (shot.timing().terminal()) FOLLOWUPS.remove(human, shot);
+            return;
+        }
+        // Do not spend arrows or instantiate projectiles while defence/recovery/geometry blocks firing.
+        if (RecoverySupplies.hasActiveUse(human) || !hasFollowupShot(human, target, weapon)) {
+            shot.timing().attempted(now, false); return;
+        }
         int[] next = {0};
-        int inserted = publishVolley(human, target, weapon, () -> next[0] < shot.projectiles().size()
-                ? shot.projectiles().get(next[0]++).recreate(human, target, shot.origin()) : null, true);
-        if (inserted > 0 && RangedWeaponCustody.isCrossbowWeapon(weapon))
-            human.playSound(net.minecraft.sounds.SoundEvents.CROSSBOW_SHOOT, 1.0F,
-                    .95F + human.getRandom().nextFloat() * .10F);
+        boolean settled = false;
+        try {
+            int inserted = publishVolley(human, target, weapon, () -> next[0] < shot.projectiles().size()
+                    ? shot.projectiles().get(next[0]++).recreate(human, target, shot.origin()) : null, true);
+            // The pending record stays installed during callbacks, preventing a new draw/load cycle.
+            shot.timing().attempted(now, inserted > 0);
+            settled = true;
+            if (inserted > 0 && RangedWeaponCustody.isCrossbowWeapon(weapon))
+                human.playSound(net.minecraft.sounds.SoundEvents.CROSSBOW_SHOOT, 1.0F,
+                        .95F + human.getRandom().nextFloat() * .10F);
+        } finally {
+            // A callback exception cannot be retried with an uncertain publication/payment result.
+            if (!settled) shot.timing().cancel();
+            if (shot.timing().terminal()) FOLLOWUPS.remove(human, shot);
+        }
     }
-    static void clear(Human human) { FOLLOWUPS.remove(human); }
+    private static boolean followupIdentityValid(Human human, LivingEntity target, ItemStack weapon, long session) {
+        var actions = HumanBehaviorControl.peekActions(human);
+        return weapon != null && shotContextValid(human, target, weapon) && target == human.getTarget()
+                && !human.isFleeing && HumanAmmo.arrowCount(human) > 0 && HumanAmmo.hasArrows(human)
+                && RangedCombatProfile.of(human, weapon).doubleArrow()
+                && actions != null && actions.session() == session;
+    }
+    static void clear(Human human) {
+        Followup shot = FOLLOWUPS.remove(human);
+        if (shot != null) shot.timing().cancel();
+    }
     private static boolean hasFollowupShot(Human human, LivingEntity target, ItemStack weapon) {
-        return shotStillValid(human, target, weapon) && target == human.getTarget()
+        return shotStillValid(human, target, weapon, true) && target == human.getTarget()
                 && HumanAmmo.arrowCount(human) > 0 && HumanAmmo.hasArrows(human)
                 && human.distanceToSqr(target) <= RangedCombatProfile.of(human, weapon).maximumSqr()
                 && RangedShotClearance.canShoot(human, target);
@@ -257,22 +282,32 @@ public final class HumanArrowCombat {
         }
     }
 
-    private static boolean shotStillValid(Human human, LivingEntity target, ItemStack weapon) {
-        return !human.level().isClientSide && human.isAlive() && !human.isRemoved() && !human.isNoAi()
+    private static boolean shotContextValid(Human human, LivingEntity target, ItemStack weapon) {
+        return !human.level().isClientSide && human.isAlive() && !human.isRemoved() && !human.isNoAi() && !human.isSleeping()
                 && !HumanInventorySession.isEditing(human) && human.getData() != null
                 && human.level().getDifficulty() != Difficulty.PEACEFUL
                 && target != null && target.isAlive() && !target.isRemoved() && target.level() == human.level()
-                && HumanPerception.canTarget(human, target) && HumanPerception.allowCombatLook(human, target)
+                && HumanPerception.canTarget(human, target)
+                && (weapon == human.getMainHandItem() || weapon == human.getOffhandItem());
+    }
+
+    /** Immediate release checks remain mandatory for both original shots and delayed continuations. */
+    private static boolean shotStillValid(Human human, LivingEntity target, ItemStack weapon) {
+        return shotStillValid(human, target, weapon, false);
+    }
+    private static boolean shotStillValid(Human human, LivingEntity target, ItemStack weapon, boolean followup) {
+        return shotContextValid(human, target, weapon) && HumanPerception.allowCombatLook(human, target)
                 && HumanAttention.canAim(human, target)
                 && !human.humanGunner$shieldDefense().reservesRangedUse()
                 && !(human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem()))
-                && (weapon == human.getMainHandItem() || weapon == human.getOffhandItem());
+                && (!followup || target == human.getTarget() && !human.isFleeing
+                && !RecoverySupplies.hasActiveUse(human) && RangedCombatProfile.of(human, weapon).doubleArrow());
     }
 
     private static int executeVolley(Human human, LivingEntity target, ItemStack weapon,
             java.util.function.Supplier<net.minecraft.world.entity.projectile.AbstractArrow> factory,
             ActionCoordinator actions, ActionCoordinator.Token token, boolean followup) {
-        if (!actions.running(token) || !shotStillValid(human, target, weapon)) return 0;
+        if (!actions.running(token) || !shotStillValid(human, target, weapon, followup)) return 0;
         var profile = RangedCombatProfile.of(human, weapon);
         var layout = ArrowLayout.capture(human);
         int available = HumanAmmo.arrowCount(human);
@@ -295,7 +330,7 @@ public final class HumanArrowCombat {
         }
         int cost = ArrowVolleyPolicy.cost(profile.tripleArrow(), available);
         // Recheck after optional native factory hooks, before publishing any projectile.
-        if (!actions.running(token) || !shotStillValid(human, target, weapon)
+        if (!actions.running(token) || !shotStillValid(human, target, weapon, followup)
                 || !layout.matches(human) || HumanAmmo.arrowCount(human) < cost) return 0;
         boolean save = profile.savingChance() > 0 && human.getRandom().nextDouble() < profile.savingChance();
         var payment = ArrowPayment.take(human, save ? 0 : cost);
@@ -304,7 +339,7 @@ public final class HumanArrowCombat {
         var paidLayout = ArrowLayout.capture(human);
         try {
             for (var arrow : arrows) {
-                if (!actions.running(token) || !shotStillValid(human, target, weapon)
+                if (!actions.running(token) || !shotStillValid(human, target, weapon, followup)
                         || !paidLayout.matches(human)) break;
                 if (human.level().addFreshEntity(arrow)) inserted++;
             }
@@ -319,7 +354,8 @@ public final class HumanArrowCombat {
         if (inserted > 0 && !followupProjectiles.isEmpty() && !followup)
             FOLLOWUPS.put(human, new Followup(new java.lang.ref.WeakReference<>(target),
                     new java.lang.ref.WeakReference<>(weapon), java.util.List.copyOf(followupProjectiles), human.position(),
-                    human.tickCount + DOUBLE_ARROW_DELAY_TICKS, actions.session()));
+                    new VolleyContinuation(human.level().getGameTime() + DOUBLE_ARROW_DELAY_TICKS,
+                            FOLLOWUP_MAXIMUM_WAIT_TICKS, FOLLOWUP_RETRY_TICKS), actions.session()));
         return inserted;
     }
 
