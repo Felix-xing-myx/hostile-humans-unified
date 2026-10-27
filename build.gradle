@@ -78,27 +78,41 @@ tasks.named('jar', Jar).configure {
         'MixinConfigs': 'hostile_humans_unified.mixins.json,hostile_humans_unified.world.mixins.json') }
     finalizedBy 'reobfJar'
 }
+// Resolve executable test owners from their actual packages; moving a module does not leave stale launch strings.
+def testOwners = [:]
+fileTree('src/test/java').matching { include '**/*.java' }.files.each { source ->
+    def declaration = source.getText('UTF-8') =~ /(?m)^package ([\w.]+);/
+    if (!declaration.find()) throw new GradleException("Missing test package: ${source}")
+    def simpleName = source.name.substring(0, source.name.length() - 5)
+    if (testOwners.containsKey(simpleName)) throw new GradleException("Duplicate test class: ${simpleName}")
+    testOwners[simpleName] = declaration.group(1) + '.' + simpleName
+}
+def testEntrypoint = { String simpleName ->
+    if (!testOwners.containsKey(simpleName)) throw new GradleException("Unknown executable test: ${simpleName}")
+    testOwners[simpleName]
+}
+
 tasks.register('encounterPolicyTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.EncounterCooldownTest'
+    mainClass = testEntrypoint('EncounterCooldownTest')
 }
 tasks.register('runtimePoliciesTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'dev.felix.hostilehumans.core.RuntimePoliciesTest'
+    mainClass = testEntrypoint('RuntimePoliciesTest')
 }
 
 tasks.register('performancePoliciesTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'dev.felix.hostilehumans.core.PerformancePoliciesTest'
+    mainClass = testEntrypoint('PerformancePoliciesTest')
 }
 
 tasks.register('lootScreeningTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.LootScreeningTest'
+    mainClass = testEntrypoint('LootScreeningTest')
 }
 tasks.named('check').configure {
     dependsOn tasks.named('encounterPolicyTest'), tasks.named('runtimePoliciesTest'), tasks.named('performancePoliciesTest')
@@ -107,13 +121,13 @@ tasks.named('check').configure {
 tasks.register('optionalRuntimeTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.OptionalRuntimeTest'
+    mainClass = testEntrypoint('OptionalRuntimeTest')
     args sourceSets.main.output.classesDirs.singleFile.absolutePath
 }
 tasks.register('unifiedConfigTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.UnifiedConfigTest'
+    mainClass = testEntrypoint('UnifiedConfigTest')
 }
 tasks.named('check').configure {
     dependsOn tasks.named('optionalRuntimeTest'), tasks.named('unifiedConfigTest')
@@ -122,7 +136,7 @@ tasks.named('check').configure {
 tasks.register('structureCompatTest', JavaExec) {
     dependsOn tasks.named('testClasses'), tasks.named('reobfJar')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.craftix.hostile_humans.StructureCompatTest'
+    mainClass = testEntrypoint('StructureCompatTest')
     def scratchDir = file("$buildDir/tmp/structure-compat")
     doFirst { scratchDir.mkdirs() }
     args tasks.named('jar', Jar).get().archiveFile.get().asFile.absolutePath,
@@ -133,56 +147,56 @@ tasks.named('check').configure { dependsOn tasks.named('structureCompatTest') }
 tasks.register('recruitmentCombatTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.RecruitmentCombatTest'
+    mainClass = testEntrypoint('RecruitmentCombatTest')
 }
 tasks.named('check').configure { dependsOn tasks.named('recruitmentCombatTest') }
 
 tasks.register('combatPressurePolicyTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.CombatPressurePolicyTest'
+    mainClass = testEntrypoint('CombatPressurePolicyTest')
 }
 tasks.named('check').configure { dependsOn tasks.named('combatPressurePolicyTest') }
 
 tasks.register('betterCombatAnimationTimingTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.craftix.hostile_humans.client.renderer.BetterCombatAnimationTimingTest'
+    mainClass = testEntrypoint('BetterCombatAnimationTimingTest')
 }
 tasks.named('check').configure { dependsOn tasks.named('betterCombatAnimationTimingTest') }
 
 tasks.register('rangedWeaponCustodyPolicyTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.RangedWeaponCustodyPolicyTest'
+    mainClass = testEntrypoint('RangedWeaponCustodyPolicyTest')
 }
 tasks.named('check').configure { dependsOn tasks.named('rangedWeaponCustodyPolicyTest') }
 
 tasks.register('soldierCombatModeTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.SoldierCombatModeTest'
+    mainClass = testEntrypoint('SoldierCombatModeTest')
 }
 tasks.named('check').configure { dependsOn tasks.named('soldierCombatModeTest') }
 
 tasks.register('recruitmentTermsTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.RecruitmentTermsTest'
+    mainClass = testEntrypoint('RecruitmentTermsTest')
 }
 tasks.named('check').configure { dependsOn tasks.named('recruitmentTermsTest') }
 
 tasks.register('pickupPolicyWiringTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.PickupPolicyWiringTest'
+    mainClass = testEntrypoint('PickupPolicyWiringTest')
 }
 tasks.named('check').configure { dependsOn tasks.named('pickupPolicyWiringTest') }
 
 tasks.register('defensiveBehaviorTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.DefensiveBehaviorTest'
+    mainClass = testEntrypoint('DefensiveBehaviorTest')
 }
 tasks.named('check').configure { dependsOn tasks.named('defensiveBehaviorTest') }
 
@@ -190,7 +204,7 @@ tasks.named('check').configure { dependsOn tasks.named('defensiveBehaviorTest') 
 tasks.register('maintenanceRefactorTest', JavaExec) {
     dependsOn tasks.named('testClasses'), tasks.named('reobfJar')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.MaintenanceRefactorTest'
+    mainClass = testEntrypoint('MaintenanceRefactorTest')
     args tasks.named('jar', Jar).get().archiveFile.get().asFile.absolutePath
 }
 
@@ -199,7 +213,7 @@ tasks.named('check').configure { dependsOn tasks.named('maintenanceRefactorTest'
 tasks.register('hostileBeaconFoodPolicyTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.HostileBeaconFoodPolicyTest'
+    mainClass = testEntrypoint('HostileBeaconFoodPolicyTest')
 }
 
 tasks.named('check').configure { dependsOn tasks.named('hostileBeaconFoodPolicyTest') }
@@ -207,7 +221,7 @@ tasks.named('check').configure { dependsOn tasks.named('hostileBeaconFoodPolicyT
 tasks.register('taczAnimationPolicyTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.craftix.hostile_humans.client.renderer.TaczAnimationPolicyTest'
+    mainClass = testEntrypoint('TaczAnimationPolicyTest')
 }
 
 tasks.named('check').configure { dependsOn tasks.named('taczAnimationPolicyTest') }
@@ -215,7 +229,7 @@ tasks.named('check').configure { dependsOn tasks.named('taczAnimationPolicyTest'
 tasks.register('humanAmmoPolicyTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.HumanAmmoPolicyTest'
+    mainClass = testEntrypoint('HumanAmmoPolicyTest')
 }
 
 tasks.named('check').configure { dependsOn tasks.named('humanAmmoPolicyTest') }
@@ -225,10 +239,10 @@ tasks.named('check').configure { dependsOn tasks.named('humanAmmoPolicyTest') }
     tasks.register(taskName, JavaExec) {
         dependsOn tasks.named('testClasses')
         classpath = sourceSets.test.runtimeClasspath
-        mainClass = 'club.someoneice.humangunner.' + testClass
+        mainClass = testEntrypoint(testClass)
         if (testClass == 'HumanProjectileRelationsTest') args taczApiJar.absolutePath
         if (testClass == 'TntEscapeSourceTest') {
-            args file('src/main/java/com/craftix/hostile_humans/entity/ai/goal/AvoidTNTGoal.java').absolutePath
+            args file('src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/AvoidTNTGoal.java').absolutePath
         }
     }
     tasks.named('check').configure { dependsOn tasks.named(taskName) }
@@ -237,7 +251,7 @@ tasks.named('check').configure { dependsOn tasks.named('humanAmmoPolicyTest') }
 tasks.register('taczAmmoMixinContractTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.TaczAmmoMixinContractTest'
+    mainClass = testEntrypoint('TaczAmmoMixinContractTest')
     args taczApiJar.absolutePath
 }
 tasks.named('check').configure { dependsOn tasks.named('taczAmmoMixinContractTest') }
@@ -245,7 +259,7 @@ tasks.named('check').configure { dependsOn tasks.named('taczAmmoMixinContractTes
 tasks.register('spectatorSoundContractTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.SpectatorSoundContractTest'
+    mainClass = testEntrypoint('SpectatorSoundContractTest')
     args taczApiJar.absolutePath, scgunsApiJar.absolutePath, jegApiJar.absolutePath
 }
 tasks.named('check').configure { dependsOn tasks.named('spectatorSoundContractTest') }
@@ -253,7 +267,7 @@ tasks.named('check').configure { dependsOn tasks.named('spectatorSoundContractTe
 tasks.register('unifiedNamespaceTest', JavaExec) {
     dependsOn tasks.named('testClasses'), tasks.named('reobfJar')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.UnifiedNamespaceTest'
+    mainClass = testEntrypoint('UnifiedNamespaceTest')
     args tasks.named('jar', Jar).flatMap { it.archiveFile }.get().asFile.absolutePath
 }
 tasks.named('check').configure { dependsOn tasks.named('unifiedNamespaceTest') }
@@ -262,7 +276,7 @@ tasks.named('check').configure { dependsOn tasks.named('unifiedNamespaceTest') }
 tasks.register('scgunsReloadPlanTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.ScgunsReloadPlanTest'
+    mainClass = testEntrypoint('ScgunsReloadPlanTest')
     args scgunsApiJar.absolutePath
 }
 tasks.named('check').configure { dependsOn tasks.named('scgunsReloadPlanTest') }
@@ -270,14 +284,14 @@ tasks.named('check').configure { dependsOn tasks.named('scgunsReloadPlanTest') }
 tasks.register('navigationDebugTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.NavigationDebugTest'
+    mainClass = testEntrypoint('NavigationDebugTest')
 }
 tasks.named('check').configure { dependsOn tasks.named('navigationDebugTest') }
 
 tasks.register('perceptionPolicyTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'club.someoneice.humangunner.PerceptionPolicyTest'
+    mainClass = testEntrypoint('PerceptionPolicyTest')
 }
 tasks.named('check').configure { dependsOn tasks.named('perceptionPolicyTest') }
 
@@ -285,7 +299,7 @@ tasks.named('check').configure { dependsOn tasks.named('perceptionPolicyTest') }
 tasks.register('sanitizeStructureWaystones', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.craftix.hostile_humans.StructureWaystoneSanitizer'
+    mainClass = testEntrypoint('StructureWaystoneSanitizer')
     args file('src/main/resources').absolutePath
     if (project.hasProperty('applyStructureRepair')) args '--apply'
 }
@@ -296,7 +310,7 @@ tasks.register('sanitizeStructureWaystones', JavaExec) {
     tasks.register(testTask, JavaExec) {
         dependsOn tasks.named('testClasses')
         classpath = sourceSets.test.runtimeClasspath
-        mainClass = 'club.someoneice.humangunner.' + testClass
+        mainClass = testEntrypoint(testClass)
     }
     tasks.named('check').configure { dependsOn tasks.named(testTask) }
 }
@@ -305,32 +319,32 @@ tasks.register('sanitizeStructureWaystones', JavaExec) {
     tasks.register(testTask, JavaExec) {
         dependsOn tasks.named('testClasses')
         classpath = sourceSets.test.runtimeClasspath
-        mainClass = 'dev.felix.hostilehumans.core.' + testClass
+        mainClass = testEntrypoint(testClass)
     }
     tasks.named('check').configure { dependsOn tasks.named(testTask) }
 }
 
 // Behavior refactor contracts have standalone main entry points; compilation alone does not run them.
 [
-    'dev.felix.hostilehumans.core': [
+    'runtime-policies': [
         'ActionCoordinatorTest', 'FoodInventoryValueTest', 'InputExecutionLeaseTest',
         'MovementAuthorityLeaseTest', 'RouteExecutionLeaseTest', 'RangedMovementDecisionTest'
     ],
-    'club.someoneice.humangunner': [
+    'behavior-contracts': [
         'BackgroundThrowingWiringTest', 'BeaconReportPolicyTest', 'BehaviorDebugTest', 'EquipmentReferenceContinuityTest',
         'CombatStrategySetTest', 'FactionCombatTransitionTest', 'CommandViewPatchTest', 'GrowthConfigTest',
         'GrowthPersistenceTest', 'GrowthProgressionTest', 'GunDoctrineTest', 'GunPositioningTest',
         'MeleeOpportunityTest', 'MeleeBackendAndJumpTest', 'SpawnMeleeReservePolicyTest', 'MovementAuthorityWiringTest', 'RangedCombatProfileTest',
         'RecoverySelectionTest', 'ScopedWorkBudgetTest', 'ShieldDefensePolicyTest', 'TargetSharingPolicyTest'
     ],
-    'com.craftix.hostile_humans.client.renderer': ['HumanShieldPresentationTest']
-].each { packageName, testClasses ->
+    'client-shield': ['HumanShieldPresentationTest']
+].each { regressionGroup, testClasses ->
     testClasses.each { testClass ->
         def testTask = 'behavior' + testClass
         tasks.register(testTask, JavaExec) {
             dependsOn tasks.named('testClasses')
             classpath = sourceSets.test.runtimeClasspath
-            mainClass = packageName + '.' + testClass
+            mainClass = testEntrypoint(testClass)
         }
         tasks.named('check').configure { dependsOn tasks.named(testTask) }
     }
