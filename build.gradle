@@ -377,6 +377,7 @@ def monitorMinecraftJar = {
     tasks.register(testTask, JavaExec) {
         dependsOn tasks.named('testClasses')
         classpath = sourceSets.test.runtimeClasspath
+        if (testClass == 'NativeAnimationWeightTest') classpath += files(taczApiJar)
         mainClass = testEntrypoint(testClass)
         if (testClass in ['MonitorPredictionBytecodeTest','HumanSpectatorProjectionContractTest'])
             doFirst { setArgs([monitorMinecraftJar()]) }
