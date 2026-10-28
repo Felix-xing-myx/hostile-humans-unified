@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.13.27'
+version = '3.13.28'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -390,3 +390,31 @@ tasks.register('monitorPredictionArtifactTest', JavaExec) {
     doFirst { setArgs([monitorMinecraftJar(), tasks.named('jar').get().archiveFile.get().asFile.absolutePath]) }
 }
 tasks.named('check').configure { dependsOn tasks.named('monitorPredictionArtifactTest') }
+
+// Verify native presentation against the selected compile API AND the actual deployment dependency.
+// The local release helper supplies taczRuntimeJar after discovering modId=tacz in the target instance.
+tasks.register('taczNativeRuntimeLinkageTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = testEntrypoint('TaczNativeRuntimeLinkageTest')
+    doFirst {
+        def runtimeApi = file(findProperty('taczRuntimeJar') ?: taczApiJar)
+        if (!runtimeApi.isFile()) throw new GradleException('Missing TaCZ runtime JAR: ' + runtimeApi)
+        setArgs([sourceSets.main.output.classesDirs.singleFile.absolutePath, taczApiJar.absolutePath, runtimeApi.absolutePath])
+    }
+}
+tasks.named('check').configure { dependsOn tasks.named('taczNativeRuntimeLinkageTest') }
+
+['Baseline','Installed'].each { dependencyKind ->
+    def taskName = 'taczNativeMaterial' + dependencyKind + 'Test'
+    tasks.register(taskName, JavaExec) {
+        dependsOn tasks.named('testClasses')
+        mainClass = testEntrypoint('TaczNativeMaterialCompatibilityTest')
+        classpath = sourceSets.test.runtimeClasspath
+        doFirst {
+            def dependencyJar = dependencyKind == 'Baseline' ? taczApiJar : file(findProperty('taczRuntimeJar') ?: taczApiJar)
+            classpath = sourceSets.test.runtimeClasspath + files(dependencyJar)
+        }
+    }
+    tasks.named('check').configure { dependsOn tasks.named(taskName) }
+}
