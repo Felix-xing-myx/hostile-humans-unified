@@ -371,7 +371,7 @@ def monitorMinecraftJar = {
     if (candidate == null) throw new GradleException('Mapped Minecraft runtime JAR is required for monitor bytecode contracts')
     candidate.absolutePath
 }
-['SpectatorMotionTrackTest','NativeReloadPlanTest','MonitorInputReconciliationTest','MonitorNativeMotionBridgeTest','MonitorPresentationTrackTest',
+['NativeAnimationWeightTest','SpectatorMotionTrackTest','NativeReloadPlanTest','MonitorInputReconciliationTest','MonitorNativeMotionBridgeTest','MonitorPresentationTrackTest',
  'MonitorPredictionBytecodeTest','HumanSpectatorProjectionContractTest'].each { testClass ->
     def testTask = testClass[0].toLowerCase() + testClass.substring(1)
     tasks.register(testTask, JavaExec) {
