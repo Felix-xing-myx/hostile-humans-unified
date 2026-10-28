@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.13.25'
+version = '3.13.26'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -360,3 +360,33 @@ tasks.register('sanitizeStructureWaystones', JavaExec) {
     }
     tasks.named('check').configure { dependsOn tasks.named(taskName) }
 }
+
+// Native monitor modules: deterministic intent, collision bridges, visual clock and actual injection seams.
+def monitorMinecraftJar = {
+    def candidate = sourceSets.test.runtimeClasspath.files.find { entry ->
+        entry.isFile() && entry.name.endsWith('.jar') && new java.util.zip.ZipFile(entry).withCloseable { archive ->
+            archive.getEntry('net/minecraft/world/entity/Entity.class') != null
+        }
+    }
+    if (candidate == null) throw new GradleException('Mapped Minecraft runtime JAR is required for monitor bytecode contracts')
+    candidate.absolutePath
+}
+['NativeReloadPlanTest','MonitorInputReconciliationTest','MonitorNativeMotionBridgeTest','MonitorPresentationTrackTest',
+ 'MonitorPredictionBytecodeTest','HumanSpectatorProjectionContractTest'].each { testClass ->
+    def testTask = testClass[0].toLowerCase() + testClass.substring(1)
+    tasks.register(testTask, JavaExec) {
+        dependsOn tasks.named('testClasses')
+        classpath = sourceSets.test.runtimeClasspath
+        mainClass = testEntrypoint(testClass)
+        if (testClass in ['MonitorPredictionBytecodeTest','HumanSpectatorProjectionContractTest'])
+            doFirst { setArgs([monitorMinecraftJar()]) }
+    }
+    tasks.named('check').configure { dependsOn tasks.named(testTask) }
+}
+tasks.register('monitorPredictionArtifactTest', JavaExec) {
+    dependsOn tasks.named('testClasses'), tasks.named('reobfJar')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = testEntrypoint('MonitorPredictionBytecodeTest')
+    doFirst { setArgs([monitorMinecraftJar(), tasks.named('jar').get().archiveFile.get().asFile.absolutePath]) }
+}
+tasks.named('check').configure { dependsOn tasks.named('monitorPredictionArtifactTest') }
