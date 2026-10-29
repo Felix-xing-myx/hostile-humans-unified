@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.13.37'
+version = '3.13.38'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -371,7 +371,7 @@ def monitorMinecraftJar = {
     if (candidate == null) throw new GradleException('Mapped Minecraft runtime JAR is required for monitor bytecode contracts')
     candidate.absolutePath
 }
-['BoundedSearchCycleTest','RangedEngagementProgressTest','TaczMonitorSpreadTest','NativeAimTimelineTest','TaczOpticRenderContextTest','ManualRecoveryExecutionTest','MonitorCombatPolicyTest','NativeAnimationWeightTest','SpectatorMotionTrackTest','NativeReloadPlanTest','MonitorInputReconciliationTest','MonitorNativeMotionBridgeTest','MonitorPresentationTrackTest',
+['MonitorHudPresentationTest','MonitorWeaponSnapshotTest','NativeCrouchPlanTest','NativeBoltPlanTest','BoundedSearchCycleTest','RangedEngagementProgressTest','TaczMonitorSpreadTest','NativeAimTimelineTest','TaczOpticRenderContextTest','ManualRecoveryExecutionTest','MonitorCombatPolicyTest','NativeAnimationWeightTest','SpectatorMotionTrackTest','NativeReloadPlanTest','MonitorInputReconciliationTest','MonitorNativeMotionBridgeTest','MonitorPresentationTrackTest',
  'MonitorPredictionBytecodeTest','HumanSpectatorProjectionContractTest'].each { testClass ->
     def testTask = testClass[0].toLowerCase() + testClass.substring(1)
     tasks.register(testTask, JavaExec) {
