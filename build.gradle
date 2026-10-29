@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.13.31'
+version = '3.13.32'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -371,7 +371,7 @@ def monitorMinecraftJar = {
     if (candidate == null) throw new GradleException('Mapped Minecraft runtime JAR is required for monitor bytecode contracts')
     candidate.absolutePath
 }
-['MonitorCombatPolicyTest','NativeAnimationWeightTest','SpectatorMotionTrackTest','NativeReloadPlanTest','MonitorInputReconciliationTest','MonitorNativeMotionBridgeTest','MonitorPresentationTrackTest',
+['TaczOpticRenderContextTest','ManualRecoveryExecutionTest','MonitorCombatPolicyTest','NativeAnimationWeightTest','SpectatorMotionTrackTest','NativeReloadPlanTest','MonitorInputReconciliationTest','MonitorNativeMotionBridgeTest','MonitorPresentationTrackTest',
  'MonitorPredictionBytecodeTest','HumanSpectatorProjectionContractTest'].each { testClass ->
     def testTask = testClass[0].toLowerCase() + testClass.substring(1)
     tasks.register(testTask, JavaExec) {
@@ -419,3 +419,23 @@ tasks.named('check').configure { dependsOn tasks.named('taczNativeRuntimeLinkage
     }
     tasks.named('check').configure { dependsOn tasks.named(taskName) }
 }
+
+// Inspect native optic resources and public seams against both the compile and deployed versions.
+tasks.register('taczOpticNativeContractTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = testEntrypoint('TaczOpticNativeContractTest')
+    doFirst {
+        systemProperty 'hhu.opticsClasses', sourceSets.main.output.classesDirs.singleFile.absolutePath
+        setArgs([taczApiJar.absolutePath, file(findProperty('taczRuntimeJar') ?: taczApiJar).absolutePath])
+    }
+}
+tasks.named('check').configure { dependsOn tasks.named('taczOpticNativeContractTest') }
+
+tasks.register('taczOpticShaderStateTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = testEntrypoint('TaczOpticShaderStateTest')
+    doFirst { setArgs([sourceSets.main.output.classesDirs.singleFile.absolutePath, monitorMinecraftJar()]) }
+}
+tasks.named('check').configure { dependsOn tasks.named('taczOpticShaderStateTest') }
