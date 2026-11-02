@@ -23,6 +23,7 @@ import net.minecraft.world.inventory.Slot;
 public final class HumanInventoryScreen extends AbstractContainerScreen<HumanInventoryMenu> {
     private static final int HUMAN_SLOTS = 36, WIDTH = 420;
 
+    private boolean compact;
     private int cell = 24, pitch = 26, equipmentTop = 40, backpackTop = 198, playerTop = 310;
 
     public HumanInventoryScreen(HumanInventoryMenu menu, Inventory inventory, Component title) {
@@ -34,13 +35,15 @@ public final class HumanInventoryScreen extends AbstractContainerScreen<HumanInv
     @Override
     protected void init() {
         super.init();
-        cell = height >= 560 ? 24 : height >= 470 ? 21 : 18;
+        compact = height < 560;
+        cell = compact ? Math.max(16, Math.min(24, (height - 96) / 8 - 2)) : 24;
+        cell = Math.min(cell, Math.max(16, (width - 52) / 10 - 2));
         pitch = cell + 2;
-        equipmentTop = 40;
-        backpackTop = equipmentTop + 4 * pitch + 34;
-        playerTop = backpackTop + 3 * pitch + 34;
-        imageHeight = playerTop + 4 * pitch + 46;
-        imageWidth = WIDTH;
+        equipmentTop = compact ? 34 : 40;
+        backpackTop = equipmentTop + (compact ? pitch + 18 : 4 * pitch + 34);
+        playerTop = backpackTop + 3 * pitch + (compact ? 18 : 34);
+        imageHeight = playerTop + 4 * pitch + (compact ? 26 : 46);
+        imageWidth = Math.min(WIDTH, Math.max(220, width - 24));
         leftPos = Math.max(0, (width - imageWidth) / 2);
         topPos = Math.max(0, (height - imageHeight) / 2);
         layoutSlots();
@@ -49,17 +52,18 @@ public final class HumanInventoryScreen extends AbstractContainerScreen<HumanInv
     /** Three zones: equipment, the human's backpack, then the player's rows and hotbar. */
     private void layoutSlots() {
         int left = leftPos, top = topPos;
-        int armourX = left + 60, armourY = top + equipmentTop + 22;
-        for (int i = 0; i < 4; i++) place(32 + i, armourX, armourY + i * pitch);
-        place(30, left + 152, armourY);
-        place(31, left + 152, armourY + pitch);
+        int armourX = left + (compact ? 14 : 60), armourY = top + equipmentTop + (compact ? 16 : 22);
+        for (int i = 0; i < 4; i++)
+            place(32 + i, armourX + (compact ? i * pitch : 0), armourY + (compact ? 0 : i * pitch));
+        place(30, compact ? armourX + 5 * pitch : left + 152, armourY);
+        place(31, compact ? armourX + 6 * pitch : left + 152, armourY + (compact ? 0 : pitch));
 
-        int packX = left + 14, packY = top + backpackTop + 22;
+        int packX = left + 14, packY = top + backpackTop + (compact ? 16 : 22);
         for (int row = 0; row < 3; row++)
             for (int column = 0; column < 10; column++)
                 place(row * 10 + column, packX + column * pitch, packY + row * pitch);
 
-        int playerX = left + 14, playerY = top + playerTop + 22;
+        int playerX = left + 14, playerY = top + playerTop + (compact ? 16 : 22);
         for (int row = 0; row < 3; row++)
             for (int column = 0; column < 9; column++)
                 place(36 + row * 9 + column, playerX + column * pitch, playerY + row * pitch);
@@ -87,9 +91,9 @@ public final class HumanInventoryScreen extends AbstractContainerScreen<HumanInv
         UiDraw.frame(graphics, leftPos, topPos, imageWidth, imageHeight, theme);
         UiDraw.headerBand(graphics, leftPos + 1, topPos, imageWidth - 2, 28, theme);
         UiDraw.rule(graphics, leftPos + 12, topPos + 31, imageWidth - 24, theme.ruleDark(), theme.ruleLight());
-        zone(graphics, theme, topPos + equipmentTop, 4 * pitch + 34, true);
-        zone(graphics, theme, topPos + backpackTop, 3 * pitch + 34, true);
-        zone(graphics, theme, topPos + playerTop, 4 * pitch + 42, false);
+        zone(graphics, theme, topPos + equipmentTop, (compact ? pitch + 18 : 4 * pitch + 34), true);
+        zone(graphics, theme, topPos + backpackTop, 3 * pitch + (compact ? 18 : 34), true);
+        zone(graphics, theme, topPos + playerTop, 4 * pitch + (compact ? 22 : 42), false);
         for (Slot slot : menu.slots) drawSlot(graphics, theme, slot);
     }
 
@@ -137,7 +141,7 @@ public final class HumanInventoryScreen extends AbstractContainerScreen<HumanInv
                 playerTop + 6,
                 theme.accent(),
                 false);
-        note(
+        if (!compact) note(
                 graphics,
                 theme,
                 Component.translatable("screen.hostile_humans_unified.inventory.gun_rule"),

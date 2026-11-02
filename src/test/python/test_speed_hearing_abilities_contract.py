@@ -76,7 +76,7 @@ class SpeedHearingAbilitiesContract(unittest.TestCase):
         config = json.loads((ROOT/'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8'))
         abilities = config['faction_abilities']
         self.assertEqual(abilities['assignments'], {'hostile_humans_unified:ashen': ['dodge']})
-        self.assertEqual(abilities['definitions']['dodge']['chance_by_tier'], {'roamer': 0, 'tier1': .05, 'tier2': .10, 'tier3': .20})
+        self.assertEqual(abilities['definitions']['dodge']['chance_by_tier'], {'roamer': 0, 'tier1': .10, 'tier2': .18, 'tier3': .28})
         self.assertEqual(config['perception']['hearing']['bowshot_radius'], 24)
         self.assertEqual(config['perception']['hearing']['crossbowshot_radius'], 28)
 

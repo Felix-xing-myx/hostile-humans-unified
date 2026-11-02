@@ -6,9 +6,9 @@
         "type": "dodge",
         "chance_by_tier": {
           "roamer": 0,
-          "tier1": 0.05,
-          "tier2": 0.1,
-          "tier3": 0.2
+          "tier1": 0.1,
+          "tier2": 0.18,
+          "tier3": 0.28
         },
         "sound_cooldown_ticks": 24
       }

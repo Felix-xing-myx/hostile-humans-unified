@@ -27,7 +27,7 @@
 | 勾选行（8×8 方框） | `UiDraw.checkbox` / `PanelCheck` | 单兵命令、小队命令 |
 | 短滑轨（标签左、数值右、3px 轨道、6×9 滑块） | `UiDraw.track` / `PanelSlider` | 单兵命令 |
 | 分段进度条（高 4，每 8px 一条 1px 分隔） | `UiDraw.meter(segmented)` / `PanelMeter` | 单兵命令、小队命令、对讲机 |
-| 细胞血条（5 点/tick，5 tick/格，上限 8 格，按比例换色） | `UiDraw.health` / `PanelHealth` | 单兵命令、小队命令、对讲机 |
+| 细胞血条（8 tick/格，上限8格，按实际生命比例填充及换色） | `UiDraw.health` / `PanelHealth` | 单兵命令、小队命令、对讲机 |
 | 名单行（状态点、姓名列、血条列、数值列、第二行元数据、选中/离线态） | `PanelRosterRow` | 对讲机 |
 | 阵营主题：强调色 + 徽记 + 顶栏晕染比例 | `UiTheme` / `UiThemes` / `gui/theme.json` | 全部面板页 |
 | 低强度噪点（64px 平铺） | `UiDraw.grain` | 全部面板页 |
