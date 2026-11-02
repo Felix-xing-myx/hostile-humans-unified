@@ -75,5 +75,6 @@
 
 - 已迁移：单兵命令（`CommandPanelScreen` + `SoldierCommandScreen`）、小队命令（`SquadCommandScreen`，继承单兵底座）、对讲机（`SoldierRosterScreen`）、属性详情、巡逻等待、导航图例、经济（页签改到过滤带）、据点（页签改到过滤带）、背包容器页（三块分区 + 24px 槽位，槽位位置由界面层指派，菜单与校验不动）、监视器 HUD（360×62 半透明板 + 3px 阵营饰条）。
 - 仅继承外壳、未逐项重排：培养页（单流程表单，没有页签结构，暂未改布局）。
+- 注意工作目录：main 已在本会话期间前进（主控合入第一轮并修了 `UiRect.inset(h,v)`、`split` 空体保护、单栏 `revealFocus` 偏移、贴图混合状态、滑块渲染可见性）。第二轮提交 `71e5264` 基于 `da7cd76`，未回退这些修复。
 - 新增公共件：`PanelKeyValue`（只读标签/数值行）、`PanelGroup`（分组底带）、`PanelCheck`（勾选行）、`PanelButton.compact()`（标签尺寸控件）、`PanelDisclosure` 改为参考行样式（左标签、右数值、展开明细）。
 - 尚无客户端界面的参考页：人类对话（`SoldierDialogue` 只有文本派发，没有客户端界面与网络协议；实现需要新增协议，超出界面任务范围，待主控决定）。
