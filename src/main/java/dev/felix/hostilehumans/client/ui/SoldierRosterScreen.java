@@ -1,15 +1,19 @@
 package dev.felix.hostilehumans.client.ui;
 
 import dev.felix.hostilehumans.client.ui.framework.PanelButton;
+import dev.felix.hostilehumans.client.ui.framework.PanelCheck;
 import dev.felix.hostilehumans.client.ui.framework.PanelEditBox;
 import dev.felix.hostilehumans.client.ui.framework.PanelGeometry;
+import dev.felix.hostilehumans.client.ui.framework.PanelGroup;
 import dev.felix.hostilehumans.client.ui.framework.PanelHealth;
 import dev.felix.hostilehumans.client.ui.framework.PanelMeter;
 import dev.felix.hostilehumans.client.ui.framework.PanelPageSlider;
 import dev.felix.hostilehumans.client.ui.framework.PanelRosterRow;
 import dev.felix.hostilehumans.client.ui.framework.PanelScreen;
+import dev.felix.hostilehumans.client.ui.framework.PanelText;
 import dev.felix.hostilehumans.client.ui.framework.RosterPageCache;
 import dev.felix.hostilehumans.client.ui.framework.UiLayout;
+import dev.felix.hostilehumans.client.ui.framework.UiThemes;
 import dev.felix.hostilehumans.observer.AttributeDetailNetwork;
 import dev.felix.hostilehumans.soldier.CommandView;
 import dev.felix.hostilehumans.soldier.SoldierRosterNetwork;
@@ -24,10 +28,12 @@ import java.util.*;
 
 /**
  * Master/detail roster. Five-row server pages remain authoritative; eight cached pages are
- * view-only.
+ * view-only. The left column and the detail pane scroll independently.
  */
 public final class SoldierRosterScreen extends PanelScreen {
     private static final UUID NONE = new UUID(0, 0);
+    private static final int LIST_WIDTH = 280;
+
     private final UUID token;
     private final RosterPageCache<SoldierRosterNetwork.Entry> cache = new RosterPageCache<>(8);
     private final Set<UUID> marked = new LinkedHashSet<>();
@@ -121,7 +127,7 @@ public final class SoldierRosterScreen extends PanelScreen {
         for (var entry : entries) if (entry.id().equals(selected)) selectedEntry = entry;
         // Absence from one page is neither a death nor a deletion. Keep a stale detail until fresh
         // evidence arrives.
-        if (filterChanged && squadName != null) scrollTo(0);
+        if (filterChanged && squadName != null) scrollTo(-1, 0);
     }
 
     public static void invalidate(UUID token) {
@@ -173,21 +179,54 @@ public final class SoldierRosterScreen extends PanelScreen {
         return selectedEntry == null ? "" : selectedEntry.faction();
     }
 
+    @Override
+    protected int splitWidth() {
+        return LIST_WIDTH;
+    }
+
+    @Override
+    protected Component headerStatus() {
+        return Component.literal((displayedPage() + 1) + " / " + (maxPage() + 1));
+    }
+
+    @Override
+    protected Component bandStatus() {
+        return Component.empty();
+    }
+
     private UiLayout.Node muted(Component message) {
         return text(message, () -> theme().muted());
     }
 
     private UiLayout.Node action(
             String id, Component label, boolean active, boolean selected, Runnable run) {
+        return action(id, label, active, selected, false, run);
+    }
+
+    private UiLayout.Node action(
+            String id,
+            Component label,
+            boolean active,
+            boolean selected,
+            boolean danger,
+            Runnable run) {
         PanelButton b = body(new PanelButton(label, button -> run.run(), this::theme));
         b.active = active;
         b.selected(selected);
+        b.danger(danger);
         controls.put(id, b);
         return node(b);
     }
 
+    private void chip(String id, Component label, boolean selected, Runnable run) {
+        PanelButton b = band(new PanelButton(label, button -> run.run(), this::theme));
+        b.active = true;
+        b.selected(selected);
+        controls.put(id, b);
+    }
+
     private UiLayout.Node pair(UiLayout.Node a, UiLayout.Node b) {
-        return UiLayout.grid(2, 6, 100, List.of(a, b));
+        return UiLayout.grid(2, 4, 100, List.of(a, b));
     }
 
     private void refresh(boolean resetScroll) {
@@ -201,7 +240,7 @@ public final class SoldierRosterScreen extends PanelScreen {
         boolean editor = squadName != null && squadName.isFocused();
         if (squadName != null) draftName = squadName.getValue();
         rebuildWidgets();
-        if (resetScroll) scrollTo(0);
+        if (resetScroll) scrollReset();
         AbstractWidget next = editor ? squadName : controls.get(focus);
         if (next != null) {
             setFocused(next);
@@ -211,22 +250,28 @@ public final class SoldierRosterScreen extends PanelScreen {
     }
 
     @Override
-    protected UiLayout.Node buildContent() {
+    protected void buildBand() {
+        for (int filter = -1; filter < 4; filter++) {
+            final int f = filter;
+            chip(
+                    "tier." + f,
+                    f < 0 ? roster("all") : roster("tier." + f),
+                    tier == f,
+                    () -> filterTier(f));
+        }
+        chip("squads", cmd("squad_manage", marked.size()), squadPanel, () -> {
+            if (selected != null && marked.size() < 64) marked.add(selected);
+            squadPanel = true;
+            editingSquad = 0;
+            refresh(false);
+        });
+    }
+
+    @Override
+    protected void buildLeft(List<UiLayout.Node> out) {
         controls.clear();
         squadName = null;
         pageSlider = null;
-        List<UiLayout.Node> root = new ArrayList<>(), filters = new ArrayList<>();
-        for (int filter = -1; filter < 4; filter++) {
-            final int f = filter;
-            filters.add(
-                    action(
-                            "tier." + f,
-                            f < 0 ? roster("all") : roster("tier." + f),
-                            true,
-                            tier == f,
-                            () -> filterTier(f)));
-        }
-        root.add(UiLayout.grid(5, 4, 40, filters));
         List<UiLayout.Node> quotas = new ArrayList<>();
         for (int i = 0; i < 4; i++)
             quotas.add(
@@ -235,119 +280,98 @@ public final class SoldierRosterScreen extends PanelScreen {
                                     "message.hostile_humans_unified.roster.tier." + i,
                                     counts[i],
                                     limits[i])));
-        root.add(UiLayout.grid(4, 6, 100, quotas));
-        root.add(muted(cmd("squad_filter", squadFilter < 0 ? "*" : squadFilter)));
-        root.add(UiLayout.row(12, List.of(list(), squadPanel ? squadManagement() : detail())));
-        return UiLayout.column(6, root);
-    }
-
-    private UiLayout.Node list() {
-        List<UiLayout.Node> rows = new ArrayList<>();
+        out.add(UiLayout.grid(2, 4, 120, quotas));
+        out.add(muted(cmd("squad_filter", squadFilter < 0 ? "*" : squadFilter)));
         List<SoldierRosterNetwork.Entry> shown =
                 displayedPage() == page ? entries : cache.get(displayedPage());
-        if (requestedPage >= 0) rows.add(muted(ui("loading")));
-        for (var entry : shown) {
-            boolean current = fresh(entry) && "online".equals(entry.status());
-            String name = entry.name().isBlank() ? roster("unnamed").getString() : entry.name();
-            String metadata =
-                    roster("tier." + entry.tier()).getString()
-                            + " · ["
-                            + entry.squad()
-                            + "] · "
-                            + (current
-                                            ? roster("status_short." + entry.status())
-                                            : roster("last_known_short"))
-                                    .getString();
-            Component narration =
-                    Component.literal(name + ". " + metadata)
-                            .append(". ")
-                            .append(
-                                    current
-                                            ? roster("health", entry.health(), entry.maxHealth())
-                                            : roster("last_known"));
-            PanelRosterRow button =
-                    body(
-                            new PanelRosterRow(
-                                    name,
-                                    metadata,
-                                    entry.health(),
-                                    entry.maxHealth(),
-                                    current,
-                                    marked.contains(entry.id()),
-                                    narration,
-                                    b -> {
-                                        if (hasShiftDown()) toggleMark(entry.id());
-                                        else {
-                                            selected = entry.id();
-                                            selectedEntry = entry;
-                                            dismissConfirmUntil = 0;
-                                            refresh(false);
-                                        }
-                                    },
-                                    this::theme));
-            button.selected(entry.id().equals(selected));
-            controls.put("entry." + entry.id(), button);
-            rows.add(node(button));
-        }
+        if (requestedPage >= 0) out.add(muted(ui("loading")));
+        for (var entry : shown) out.add(node(row(entry)));
         if (shown.isEmpty())
-            rows.add(muted(requestedPage >= 0 ? ui("loading") : cmd("empty_roster")));
-        rows.add(muted(tr("gui.hostile_humans_unified.page", displayedPage() + 1, maxPage() + 1)));
-        rows.add(
-                pair(
-                        action(
-                                "previous",
-                                Component.literal("◀"),
-                                displayedPage() > 0,
-                                false,
-                                () -> requestPage(displayedPage() - 1)),
-                        action(
-                                "next",
-                                Component.literal("▶"),
-                                displayedPage() < maxPage(),
-                                false,
-                                () -> requestPage(displayedPage() + 1))));
+            out.add(muted(requestedPage >= 0 ? ui("loading") : cmd("empty_roster")));
         if (maxPage() > 0) {
+            out.add(
+                    pair(
+                            action(
+                                    "previous",
+                                    Component.literal("◀"),
+                                    displayedPage() > 0,
+                                    false,
+                                    () -> requestPage(displayedPage() - 1)),
+                            action(
+                                    "next",
+                                    Component.literal("▶"),
+                                    displayedPage() < maxPage(),
+                                    false,
+                                    () -> requestPage(displayedPage() + 1))));
             pageSlider =
                     body(
                             new PanelPageSlider(
                                     displayedPage(), maxPage(), this::requestPage, this::theme));
             controls.put("page", pageSlider);
-            rows.add(node(pageSlider));
+            out.add(node(pageSlider));
         }
-        rows.add(
-                action(
-                        "refresh",
-                        roster("refresh"),
-                        true,
-                        false,
-                        () -> request(0, NONE, 0, false)));
-        rows.add(
-                action(
-                        "recallAll",
-                        System.currentTimeMillis() < recallConfirmUntil
-                                ? ui("recall_confirm")
-                                : roster("recall"),
-                        true,
-                        false,
-                        () -> {
-                            if (System.currentTimeMillis() < recallConfirmUntil) {
-                                recallConfirmUntil = 0;
-                                request(2, NONE, 0, true);
-                            } else {
-                                recallConfirmUntil = System.currentTimeMillis() + 4000;
-                                refresh(false);
-                            }
-                        }));
-        return UiLayout.column(6, rows);
     }
 
-    private UiLayout.Node detail() {
-        if (selectedEntry == null) return muted(ui("select"));
+    private PanelRosterRow row(SoldierRosterNetwork.Entry entry) {
+        boolean current = fresh(entry) && "online".equals(entry.status());
+        String name = entry.name().isBlank() ? roster("unnamed").getString() : entry.name();
+        String metadata =
+                roster("tier." + entry.tier()).getString()
+                        + " · ["
+                        + entry.squad()
+                        + "] · "
+                        + (current
+                                        ? roster("status_short." + entry.status())
+                                        : roster("last_known_short"))
+                                .getString();
+        Component narration =
+                Component.literal(name + ". " + metadata)
+                        .append(". ")
+                        .append(
+                                current
+                                        ? roster("health", entry.health(), entry.maxHealth())
+                                        : roster("last_known"));
+        PanelRosterRow button =
+                body(
+                        new PanelRosterRow(
+                                name,
+                                metadata,
+                                entry.health(),
+                                entry.maxHealth(),
+                                current,
+                                marked.contains(entry.id()),
+                                narration,
+                                b -> {
+                                    if (hasShiftDown()) toggleMark(entry.id());
+                                    else {
+                                        selected = entry.id();
+                                        selectedEntry = entry;
+                                        dismissConfirmUntil = 0;
+                                        refresh(false);
+                                    }
+                                },
+                                this::theme));
+        button.selected(entry.id().equals(selected));
+        button.tone("online".equals(entry.status()) ? 0xFF8FC7A6
+                : "recalling".equals(entry.status()) ? 0xFFF2C66D : 0xFF4A5560);
+        controls.put("entry." + entry.id(), button);
+        return button;
+    }
+
+    @Override
+    protected void buildRight(List<UiLayout.Node> out) {
+        if (squadPanel) {
+            squadManagement(out);
+            return;
+        }
+        if (selectedEntry == null) {
+            out.add(muted(ui("select")));
+            return;
+        }
         var e = selectedEntry;
         boolean live = fresh(e) && "online".equals(e.status());
-        List<UiLayout.Node> nodes = new ArrayList<>();
-        nodes.add(text(Component.literal(e.name()), () -> theme().accent()));
-        nodes.add(
+        out.add(text(Component.literal(e.name()), () -> theme().accent()));
+        out.add(
                 muted(
                         CommandPanelChrome.factionName(e.faction())
                                 .copy()
@@ -360,30 +384,21 @@ public final class SoldierRosterScreen extends PanelScreen {
                                                 + e.y()
                                                 + ", "
                                                 + e.z())));
-        nodes.add(muted(live ? roster("status_short." + e.status()) : roster("last_known")));
-        nodes.add(
-                text(
-                        live
-                                ? roster("health", e.health(), e.maxHealth())
-                                : roster("last_known_short"),
-                        () -> theme().text()));
+        out.add(muted(live ? roster("status." + e.status()) : roster("last_known")));
         if (live) {
-            PanelHealth health = body(new PanelHealth());
+            PanelHealth health = body(new PanelHealth().heading(true));
             health.update(e.health(), e.maxHealth());
-            nodes.add(UiLayout.leaf(health::measureHeight, health::place));
+            out.add(node(health));
+            out.add(
+                    text(
+                            roster("health", e.health(), e.maxHealth()),
+                            () -> theme().muted()));
         }
         if (e.growth() != null && e.growth().enabled()) {
             var growth = e.growth();
             String p = "screen.hostile_humans_unified.soldier.growth.";
-            nodes.add(muted(tr(p + "level", growth.level())));
-            nodes.add(
-                    muted(
-                            tr(
-                                    p + "experience",
-                                    growth.experiencePercent(),
-                                    growth.experienceMinPercent(),
-                                    growth.experienceCapPercent())));
-            nodes.add(
+            out.add(text(tr(p + "level", growth.level()), () -> theme().accent()));
+            out.add(
                     node(
                             body(
                                     new PanelMeter(
@@ -394,7 +409,7 @@ public final class SoldierRosterScreen extends PanelScreen {
                                                     growth.experienceCapPercent()
                                                             - growth.experienceMinPercent(),
                                             () -> theme().accent()))));
-            nodes.add(
+            out.add(
                     muted(
                             growth.level() >= 5
                                     ? tr(p + "max_level")
@@ -403,7 +418,7 @@ public final class SoldierRosterScreen extends PanelScreen {
                                             growth.stagePercent(),
                                             growth.stageProgress(),
                                             growth.stageRequired())));
-            nodes.add(
+            out.add(
                     muted(
                             growth.experiencePercent() >= growth.experienceCapPercent()
                                     ? tr(p + "experience_capped")
@@ -412,7 +427,7 @@ public final class SoldierRosterScreen extends PanelScreen {
                                             growth.experienceProgress(),
                                             growth.experienceRequired())));
         }
-        nodes.add(muted(cmd("movement")));
+        out.add(node(body(new PanelGroup(cmd("movement"), UiThemes.MARKER_MOVE, this::theme))));
         List<UiLayout.Node> modes = new ArrayList<>();
         for (int i = 0; i < CommandView.ORDERS.size(); i++) {
             var order = CommandView.ORDERS.get(i);
@@ -425,8 +440,8 @@ public final class SoldierRosterScreen extends PanelScreen {
                             e.order().equals(order.name()),
                             () -> request(4, e.id(), index, true)));
         }
-        nodes.add(UiLayout.grid(2, 6, modes));
-        nodes.add(muted(cmd("combat")));
+        out.add(UiLayout.grid(2, 4, 100, modes));
+        out.add(node(body(new PanelGroup(cmd("combat"), UiThemes.MARKER_FIGHT, this::theme))));
         modes = new ArrayList<>();
         for (var mode : CommandView.COMBAT)
             modes.add(
@@ -436,15 +451,18 @@ public final class SoldierRosterScreen extends PanelScreen {
                             live,
                             e.combat().equals(mode.name()),
                             () -> request(5, e.id(), mode.ordinal(), true)));
-        nodes.add(UiLayout.grid(2, 6, modes));
-        nodes.add(
-                action(
-                        "pickup",
-                        cmd(e.pickup() ? "pickup_on" : "pickup_off"),
-                        live,
-                        e.pickup(),
-                        () -> request(6, e.id(), e.pickup() ? 0 : 1, true)));
-        nodes.add(
+        out.add(UiLayout.grid(2, 4, 100, modes));
+        PanelCheck pickup =
+                body(
+                        new PanelCheck(
+                                cmd(e.pickup() ? "pickup_on" : "pickup_off"),
+                                e.pickup(),
+                                b -> request(6, e.id(), e.pickup() ? 0 : 1, true),
+                                this::theme));
+        pickup.active = live;
+        controls.put("pickup", pickup);
+        out.add(node(pickup));
+        out.add(
                 pair(
                         action(
                                 "full",
@@ -458,14 +476,14 @@ public final class SoldierRosterScreen extends PanelScreen {
                                 live && e.entityId() >= 0,
                                 false,
                                 () -> AttributeDetailNetwork.requestOwned(e.entityId(), e.id()))));
-        nodes.add(
+        out.add(
                 action(
                         "monitor",
                         tr("human_monitor.roster.open"),
                         true,
                         false,
                         () -> request(16, e.id(), 0, false)));
-        nodes.add(
+        out.add(
                 pair(
                         action(
                                 "mark",
@@ -479,7 +497,7 @@ public final class SoldierRosterScreen extends PanelScreen {
                                 true,
                                 false,
                                 () -> request(3, e.id(), 0, true))));
-        nodes.add(
+        out.add(
                 pair(
                         action(
                                 "earlier",
@@ -493,7 +511,7 @@ public final class SoldierRosterScreen extends PanelScreen {
                                 fresh(e) && e.canMoveLater(),
                                 false,
                                 () -> request(12, e.id(), 0, true))));
-        nodes.add(
+        out.add(
                 action(
                         "dismiss",
                         System.currentTimeMillis() < dismissConfirmUntil
@@ -501,6 +519,7 @@ public final class SoldierRosterScreen extends PanelScreen {
                                 : tr("screen.hostile_humans_unified.soldier.dismiss"),
                         true,
                         false,
+                        true,
                         () -> {
                             if (System.currentTimeMillis() < dismissConfirmUntil) {
                                 dismissConfirmUntil = 0;
@@ -510,24 +529,18 @@ public final class SoldierRosterScreen extends PanelScreen {
                                 refresh(false);
                             }
                         }));
-        return UiLayout.column(6, nodes);
     }
 
-    private UiLayout.Node squadManagement() {
-        List<UiLayout.Node> nodes = new ArrayList<>();
-        nodes.add(text(cmd("squad_select", marked.size()), () -> theme().accent()));
-        if (!result.isEmpty()) nodes.add(muted(Component.literal(result)));
+    private void squadManagement(List<UiLayout.Node> out) {
+        out.add(text(cmd("squad_select", marked.size()), () -> theme().accent()));
+        if (!result.isEmpty()) out.add(muted(Component.literal(result)));
         for (var squad : squads) {
-            nodes.add(
+            out.add(
                     action(
                             "squad." + squad.number(),
                             Component.literal(
-                                    squad.number()
-                                            + " · "
-                                            + squad.name()
-                                            + " ("
-                                            + squad.members()
-                                            + ")"),
+                                    squad.number() + " · " + squad.name() + " ("
+                                            + squad.members() + ")"),
                             true,
                             editingSquad == squad.number(),
                             () -> {
@@ -545,10 +558,10 @@ public final class SoldierRosterScreen extends PanelScreen {
                 squadName = body(new PanelEditBox(font, cmd("squad_name"), this::theme));
                 squadName.setValue(draftName);
                 controls.put("editor", squadName);
-                nodes.add(node(squadName));
-                nodes.add(action("rename", cmd("rename"), true, false, this::saveSquadName));
+                out.add(node(squadName));
+                out.add(action("rename", cmd("rename"), true, false, this::saveSquadName));
             }
-            nodes.add(
+            out.add(
                     pair(
                             action(
                                     "assign." + squad.number(),
@@ -566,7 +579,7 @@ public final class SoldierRosterScreen extends PanelScreen {
                                     true,
                                     false,
                                     () -> filterSquad(squad.number()))));
-            nodes.add(
+            out.add(
                     pair(
                             action(
                                     "bind." + squad.number(),
@@ -581,36 +594,54 @@ public final class SoldierRosterScreen extends PanelScreen {
                                     false,
                                     () -> request(15, NONE, squad.number(), false))));
         }
-        nodes.add(
+        out.add(
                 action(
                         "removeSquad",
                         cmd("remove_squad"),
                         !marked.isEmpty(),
                         false,
+                        true,
                         () -> {
                             cache.clear();
                             SoldierRosterNetwork.assign(token, 0, List.copyOf(marked));
                         }));
-        nodes.add(
+        out.add(
                 pair(
                         action("allSquads", cmd("all_squads"), true, false, () -> filterSquad(-1)),
                         action("noSquad", cmd("no_squad"), true, false, () -> filterSquad(0))));
-        return UiLayout.column(6, nodes);
     }
 
     @Override
     protected void buildFooter() {
         footer(
-                selected != null || squadPanel || tier != -1 ? cmd("back") : cmd("close"),
+                selected != null || squadPanel || tier != -1
+                        ? roster("back")
+                        : cmd("close"),
                 b -> back());
+        footerSpacer();
+        if (squadPanel) {
+            footer(cmd("remove_squad"), b -> {
+                        cache.clear();
+                        SoldierRosterNetwork.assign(token, 0, List.copyOf(marked));
+                    })
+                    .active = !marked.isEmpty();
+            return;
+        }
+        footer(roster("refresh"), b -> request(0, NONE, 0, false));
         footer(
-                cmd("squad_manage", marked.size()),
+                System.currentTimeMillis() < recallConfirmUntil
+                        ? ui("recall_confirm")
+                        : roster("recall"),
                 b -> {
-                    if (selected != null && marked.size() < 64) marked.add(selected);
-                    squadPanel = true;
-                    editingSquad = 0;
-                    refresh(false);
-                });
+                    if (System.currentTimeMillis() < recallConfirmUntil) {
+                        recallConfirmUntil = 0;
+                        request(2, NONE, 0, true);
+                    } else {
+                        recallConfirmUntil = System.currentTimeMillis() + 4000;
+                        refresh(false);
+                    }
+                })
+                .danger();
     }
 
     private void toggleMark(UUID id) {

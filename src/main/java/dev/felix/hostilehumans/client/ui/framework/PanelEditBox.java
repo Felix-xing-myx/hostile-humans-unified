@@ -35,14 +35,14 @@ public final class PanelEditBox extends EditBox {
     }
 
     public int measureHeight(int width) {
-        return 24;
+        return 20;
     }
 
     public void place(UiRect b) {
-        setX(b.x() + 5);
-        setY(b.y() + 5);
-        setWidth(Math.max(1, b.width() - 10));
-        setHeight(Math.max(1, b.height() - 10));
+        setX(b.x() + 6);
+        setY(b.y() + 6);
+        setWidth(Math.max(1, b.width() - 12));
+        setHeight(Math.max(1, b.height() - 12));
     }
 
     @Override
@@ -57,10 +57,10 @@ public final class PanelEditBox extends EditBox {
         UiTheme t = theme.get();
         UiDraw.control(
                 g,
-                getX() - 5,
-                getY() - 5,
-                width + 10,
-                height + 10,
+                getX() - 6,
+                getY() - 6,
+                width + 12,
+                height + 12,
                 t,
                 false,
                 true,

@@ -680,6 +680,8 @@
   "gui.hostile_humans_unified.command.health_representative": "Representative %s · Health %s / %s · %s",
   "gui.hostile_humans_unified.command.health_mixed": "Member health differs; not a sum",
   "gui.hostile_humans_unified.command.health_sample": "Server snapshot",
+  "gui.hostile_humans_unified.command.health_line": "Health %s / %s",
+  "gui.hostile_humans_unified.command.squad_total": "%s members",
   "gui.hostile_humans_unified.cultivation.title": "Training Center",
   "gui.hostile_humans_unified.cultivation.test_mode": "Creative test entry · Unbalanced data does not enable production fees",
   "gui.hostile_humans_unified.cultivation.pending": "Waiting for server acknowledgement; no change confirmed",

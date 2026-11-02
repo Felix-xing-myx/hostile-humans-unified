@@ -1,23 +1,36 @@
 {
+  "headTint": 0.09,
   "top": "#15212A",
-  "bottom": "#0C151B",
+  "mid": "#0E171E",
+  "bottom": "#090F13",
   "inset": "#0B141A",
-  "surface": "#1B2731",
+  "surface": "#1D252B",
   "edge": "#41525F",
   "text": "#E6EBEF",
   "muted": "#929FA9",
   "disabled": "#5F707C",
   "danger": "#E49B92",
+  "animation": true,
   "factions": {
-    "hostile_humans_unified:crimson": "#DC8A76",
-    "hostile_humans_unified:azure": "#80B3DD",
-    "hostile_humans_unified:verdant": "#91C99D",
-    "hostile_humans_unified:ashen": "#C0B3CF"
-  },
-  "emblems": {
-    "hostile_humans_unified:crimson": "hostile_humans_unified:textures/gui/icon/crimson.png",
-    "hostile_humans_unified:azure": "hostile_humans_unified:textures/gui/icon/azure.png",
-    "hostile_humans_unified:verdant": "hostile_humans_unified:textures/gui/icon/verdant.png",
-    "hostile_humans_unified:ashen": "hostile_humans_unified:textures/gui/icon/ashen.png"
+    "hostile_humans_unified:crimson": {
+      "accent": "#DC8A76",
+      "headTint": 0.09,
+      "emblem": "hostile_humans_unified:textures/gui/icon/crimson.png"
+    },
+    "hostile_humans_unified:azure": {
+      "accent": "#80B3DD",
+      "headTint": 0.085,
+      "emblem": "hostile_humans_unified:textures/gui/icon/azure.png"
+    },
+    "hostile_humans_unified:verdant": {
+      "accent": "#91C99D",
+      "headTint": 0.08,
+      "emblem": "hostile_humans_unified:textures/gui/icon/verdant.png"
+    },
+    "hostile_humans_unified:ashen": {
+      "accent": "#C0B3CF",
+      "headTint": 0.07,
+      "emblem": "hostile_humans_unified:textures/gui/icon/ashen.png"
+    }
   }
 }

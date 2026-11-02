@@ -65,6 +65,11 @@ public final class SquadCommandScreen extends CommandPanelScreen {
     }
 
     @Override
+    protected Component headerStatus() {
+        return Component.translatable("gui.hostile_humans_unified.command.squad_total", view.total());
+    }
+
+    @Override
     protected Component heading() {
         return Component.translatable(
                 "screen.hostile_humans_unified.command.squad_heading",

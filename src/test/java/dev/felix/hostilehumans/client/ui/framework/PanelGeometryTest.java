@@ -1,6 +1,6 @@
 package dev.felix.hostilehumans.client.ui.framework;
 
-/** Boundary regressions for scaled windows, focus reveal and long-life bars. */
+/** Boundary regressions for scaled windows, focus reveal, panel chrome and long-life bars. */
 public final class PanelGeometryTest {
     public static void main(String[] args) {
         check(PanelGeometry.frame(PanelGeometry.Size.M, 1920, 1080).width() == 600, "M width");
@@ -15,6 +15,28 @@ public final class PanelGeometryTest {
         check(PanelGeometry.healthCells(10000) == 8, "long life has bounded ticks");
         check(PanelGeometry.healthTick(Double.NaN, 300, 0) == 0, "invalid health safe");
         check(PanelGeometry.healthTick(0, 300, 0) == 0, "dead health empty");
+
+        // Panel chrome keeps the reference 12/14 margins and the fixed action bar.
+        UiRect frame = new UiRect(0, 0, 400, 420);
+        UiRect plain = PanelGeometry.body(frame, false);
+        check(plain.x() == 12 && plain.width() == 374, "body margins match the reference");
+        check(plain.y() == 33, "body starts below the header rule");
+        check(plain.bottom() == frame.bottom() - 40, "action bar keeps 40px");
+        UiRect banded = PanelGeometry.body(frame, true);
+        check(banded.y() == 60, "filter band pushes the shelf down");
+        check(banded.height() == 420 - 40 - 60, "banded shelf height");
+        UiRect band = PanelGeometry.band(frame);
+        check(band.y() == 32 && band.height() == 24, "filter band geometry");
+        check(band.width() == 376, "filter band respects the margins");
+
+        UiRect[] columns = PanelGeometry.split(plain, 280);
+        check(columns[0].width() == 280 && columns[1].x() == 292, "split columns stay adjacent");
+        check(columns[1].width() == 94, "split keeps the remainder");
+        check(PanelGeometry.split(plain, 9999)[0].width() == 373, "split never fills the row");
+        check(PanelGeometry.split(plain, 0)[0].width() == 1, "split keeps both columns alive");
+
+        check(PanelGeometry.Size.S_PLUS.width() == 420, "S+ width");
+        check(PanelGeometry.Size.S_PLUS.height() == 520, "S+ height");
         System.out.println("PanelGeometryTest: all checks passed");
     }
 

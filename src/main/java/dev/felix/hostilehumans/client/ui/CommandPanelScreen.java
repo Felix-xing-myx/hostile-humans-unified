@@ -2,13 +2,16 @@ package dev.felix.hostilehumans.client.ui;
 
 import dev.felix.hostilehumans.behavior.combat.CombatPreference;
 import dev.felix.hostilehumans.client.ui.framework.PanelButton;
+import dev.felix.hostilehumans.client.ui.framework.PanelCheck;
 import dev.felix.hostilehumans.client.ui.framework.PanelGeometry;
+import dev.felix.hostilehumans.client.ui.framework.PanelGroup;
 import dev.felix.hostilehumans.client.ui.framework.PanelHealth;
 import dev.felix.hostilehumans.client.ui.framework.PanelMeter;
 import dev.felix.hostilehumans.client.ui.framework.PanelScreen;
 import dev.felix.hostilehumans.client.ui.framework.PanelSlider;
 import dev.felix.hostilehumans.client.ui.framework.PanelText;
 import dev.felix.hostilehumans.client.ui.framework.UiLayout;
+import dev.felix.hostilehumans.client.ui.framework.UiThemes;
 import dev.felix.hostilehumans.progression.GrowthSnapshot;
 import dev.felix.hostilehumans.soldier.CommandHealthSnapshot;
 import dev.felix.hostilehumans.soldier.CommandView;
@@ -16,27 +19,19 @@ import dev.felix.hostilehumans.soldier.SoldierCombatMode;
 import dev.felix.hostilehumans.soldier.SoldierOrder;
 import dev.felix.hostilehumans.soldier.SquadCommands;
 
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.*;
 import java.util.function.*;
 
 /** Shared native command composition. Domain updates still pass unchanged to the owning channel. */
 public abstract class CommandPanelScreen extends PanelScreen {
-    protected static final int PANEL = 0xF0101820,
-            SURFACE = 0xFF202B36,
-            HOVER = 0xFF2A3947,
-            EDGE = 0xFF394653,
-            TEXT = 0xFFE6EBEF,
-            MUTED = 0xFF929FA9,
-            GOLD = 0xFFF2C66D,
-            DISABLED = 0xFF5F707C;
     protected CommandView state;
     protected GrowthSnapshot growth;
     private final List<Runnable> bindings = new ArrayList<>();
-    private final Map<String, AbstractWidget> identities = new HashMap<>();
+    private final Map<String, AbstractWidget> identities = new LinkedHashMap<>();
     private String structure = "";
     private boolean deferredStructure;
     private PanelButton close, secondary;
@@ -107,18 +102,6 @@ public abstract class CommandPanelScreen extends PanelScreen {
         return frame.height();
     }
 
-    protected float panelScale() {
-        return 1F;
-    }
-
-    protected int left() {
-        return frame.x();
-    }
-
-    protected int top() {
-        return frame.y();
-    }
-
     protected int accent() {
         return theme().accent();
     }
@@ -132,12 +115,12 @@ public abstract class CommandPanelScreen extends PanelScreen {
         return headerFaction();
     }
 
-    protected static Component tr(String key) {
-        return Component.translatable("screen.hostile_humans_unified.command." + key);
+    protected static Component tr(String key, Object... args) {
+        return Component.translatable("screen.hostile_humans_unified.command." + key, args);
     }
 
-    protected static boolean hit(double mx, double my, int x, int y, int w, int h) {
-        return mx >= x && mx < x + w && my >= y && my < y + h;
+    protected static Component ui(String key, Object... args) {
+        return Component.translatable("gui.hostile_humans_unified.command." + key, args);
     }
 
     static Component orderName(SoldierOrder order) {
@@ -149,33 +132,6 @@ public abstract class CommandPanelScreen extends PanelScreen {
         return Component.translatable(
                 "screen.hostile_humans_unified.soldier.combat."
                         + mode.name().toLowerCase(Locale.ROOT));
-    }
-
-    protected void button(
-            GuiGraphics g,
-            Component label,
-            int x,
-            int y,
-            int w,
-            int h,
-            int mx,
-            int my,
-            boolean active,
-            boolean chosen,
-            boolean danger) {
-        CommandPanelChrome.control(
-                g,
-                font,
-                label,
-                x,
-                y,
-                w,
-                h,
-                hit(mx, my, x, y, w, h),
-                active,
-                chosen,
-                danger,
-                accent());
     }
 
     private boolean mixed(CommandView.Field field) {
@@ -244,9 +200,7 @@ public abstract class CommandPanelScreen extends PanelScreen {
             BooleanSupplier selected,
             Runnable action) {
         PanelButton button =
-                body(
-                        new PanelButton(
-                                fieldLabel(message.get(), field), b -> action.run(), this::theme));
+                body(new PanelButton(fieldLabel(message.get(), field), b -> action.run(), this::theme));
         identities.put(key, button);
         Runnable bind =
                 () -> {
@@ -258,55 +212,82 @@ public abstract class CommandPanelScreen extends PanelScreen {
         return node(button);
     }
 
-    private UiLayout.Node group(Component heading, List<UiLayout.Node> content) {
+    /** Checkbox row bound to a boolean field; keeps the mixed label rule of ordinary buttons. */
+    private UiLayout.Node toggle(
+            String key,
+            Supplier<Component> message,
+            CommandView.Field field,
+            BooleanSupplier checked,
+            Runnable action) {
+        PanelCheck button =
+                body(new PanelCheck(fieldLabel(message.get(), field), checked.getAsBoolean(), b -> action.run(), this::theme));
+        identities.put(key, button);
+        Runnable bind =
+                () -> {
+                    button.setMessage(fieldLabel(message.get(), field));
+                    button.checked(checked.getAsBoolean());
+                    button.active = true;
+                };
+        bindings.add(bind);
+        bind.run();
+        return node(button);
+    }
+
+    private UiLayout.Node group(Component heading, ResourceLocation marker, List<UiLayout.Node> content) {
         List<UiLayout.Node> nodes = new ArrayList<>();
-        nodes.add(label(() -> heading, false));
+        nodes.add(node(body(new PanelGroup(heading, marker, this::theme))));
         nodes.addAll(content);
-        return UiLayout.column(6, List.copyOf(nodes));
+        return UiLayout.column(4, List.copyOf(nodes));
     }
 
     private UiLayout.Node movement() {
-        List<UiLayout.Node> nodes = new ArrayList<>();
+        List<UiLayout.Node> orders = new ArrayList<>();
         for (var order : CommandView.ORDERS)
-            nodes.add(
+            orders.add(
                     action(
                             "order." + order,
                             () -> orderName(order),
                             CommandView.Field.ORDER,
                             () -> state.order() == order,
                             () -> submit(CommandView.order(order))));
-        if (state.order() == SoldierOrder.GARRISON || mixed(CommandView.Field.ORDER)) {
-            nodes.add(
-                    action(
-                            "stay",
-                            () -> tr(state.garrison().stay() ? "stay_on" : "stay_off"),
-                            CommandView.Field.STAY,
-                            () -> state.garrison().stay(),
-                            () ->
-                                    submit(
-                                            CommandView.stay(
-                                                    mixed(CommandView.Field.STAY)
-                                                            || !state.garrison().stay()))));
-            nodes.add(
-                    action(
-                            "chase",
-                            () -> tr(state.garrison().chase() ? "chase_on" : "chase_off"),
-                            CommandView.Field.CHASE,
-                            () -> state.garrison().chase(),
-                            () ->
-                                    submit(
-                                            CommandView.chase(
-                                                    mixed(CommandView.Field.CHASE)
-                                                            || !state.garrison().chase()))));
-            nodes.add(
-                    action(
-                            "reanchor",
-                            () -> tr("reanchor"),
-                            CommandView.Field.ORDER,
-                            () -> false,
-                            this::reanchor));
-        }
-        return group(tr("movement"), nodes);
+        return group(tr("movement"), UiThemes.MARKER_MOVE, List.of(UiLayout.grid(3, 4, 96, orders)));
+    }
+
+    private UiLayout.Node garrison() {
+        List<UiLayout.Node> nodes = new ArrayList<>();
+        nodes.add(
+                toggle(
+                        "stay",
+                        () -> tr(state.garrison().stay() ? "stay_on" : "stay_off"),
+                        CommandView.Field.STAY,
+                        () -> state.garrison().stay(),
+                        () ->
+                                submit(
+                                        CommandView.stay(
+                                                mixed(CommandView.Field.STAY)
+                                                        || !state.garrison().stay()))));
+        nodes.add(
+                toggle(
+                        "chase",
+                        () -> tr(state.garrison().chase() ? "chase_on" : "chase_off"),
+                        CommandView.Field.CHASE,
+                        () -> state.garrison().chase(),
+                        () ->
+                                submit(
+                                        CommandView.chase(
+                                                mixed(CommandView.Field.CHASE)
+                                                        || !state.garrison().chase()))));
+        nodes.add(
+                action(
+                        "reanchor",
+                        () -> tr("reanchor"),
+                        CommandView.Field.ORDER,
+                        () -> false,
+                        this::reanchor));
+        return group(
+                Component.translatable("screen.hostile_humans_unified.soldier.garrison"),
+                UiThemes.MARKER_GUARD,
+                nodes);
     }
 
     private UiLayout.Node combat() {
@@ -327,21 +308,25 @@ public abstract class CommandPanelScreen extends PanelScreen {
                             CommandView.Field.PREFERENCE,
                             () -> state.preference() == preference,
                             () -> submit(CommandView.preference(preference))));
-        List<UiLayout.Node> nodes = new ArrayList<>();
-        nodes.add(group(tr("combat"), List.of(UiLayout.grid(2, 6, modes))));
-        nodes.add(group(tr("preference"), List.of(UiLayout.grid(2, 6, preferences))));
+        List<UiLayout.Node> groups = new ArrayList<>();
+        groups.add(group(tr("combat"), UiThemes.MARKER_FIGHT, List.of(UiLayout.grid(2, 4, 100, modes))));
+        groups.add(
+                group(
+                        tr("preference"),
+                        UiThemes.MARKER_PREFER,
+                        List.of(UiLayout.grid(2, 4, 100, preferences))));
         if (hasDetails())
-            nodes.add(
+            groups.add(
                     action("attributes", () -> tr("attributes"), null, () -> false, this::details));
         if (hasPatrolSettings())
-            nodes.add(
+            groups.add(
                     action(
                             "patrol",
                             () -> Component.translatable("patrol_wait.open"),
                             null,
                             () -> false,
                             this::patrolSettings));
-        return UiLayout.column(9, nodes);
+        return UiLayout.column(9, groups);
     }
 
     private UiLayout.Node distance(boolean garrison) {
@@ -351,41 +336,43 @@ public abstract class CommandPanelScreen extends PanelScreen {
                 body(
                         new PanelSlider(
                                 value.getAsInt(),
-                                v ->
-                                        tr(garrison ? "garrison_activity" : "owner_activity")
-                                                .copy()
-                                                .append(" · ")
-                                                .append(
-                                                        Component.translatable(
-                                                                "screen.hostile_humans_unified.command.distance",
-                                                                v)),
+                                v -> tr(garrison ? "garrison_activity" : "owner_activity"),
                                 v ->
                                         submit(
                                                 garrison
                                                         ? CommandView.radius(v)
                                                         : CommandView.follow(v)),
-                                this::theme));
+                                this::theme)
+                                .value(v -> tr("distance", v)));
         identities.put(garrison ? "radius" : "follow", slider);
         bindings.add(() -> slider.accept(value.getAsInt(), mixed(field)));
         return node(slider);
     }
 
     private UiLayout.Node settings() {
-        return group(
-                tr("settings"),
-                List.of(
-                        action(
-                                "pickup",
-                                () -> tr(state.pickup() ? "pickup_on" : "pickup_off"),
-                                CommandView.Field.PICKUP,
-                                () -> state.pickup(),
-                                () ->
-                                        submit(
-                                                CommandView.pickup(
-                                                        mixed(CommandView.Field.PICKUP)
-                                                                || !state.pickup()))),
-                        distance(true),
-                        distance(false)));
+        List<UiLayout.Node> nodes = new ArrayList<>();
+        nodes.add(
+                toggle(
+                        "pickup",
+                        () -> tr(state.pickup() ? "pickup_on" : "pickup_off"),
+                        CommandView.Field.PICKUP,
+                        () -> state.pickup(),
+                        () ->
+                                submit(
+                                        CommandView.pickup(
+                                                mixed(CommandView.Field.PICKUP)
+                                                        || !state.pickup()))));
+        nodes.add(distance(true));
+        nodes.add(distance(false));
+        return group(tr("settings"), UiThemes.MARKER_RANGE, nodes);
+    }
+
+    /** Short faction caption in the title band; pages may replace it with a count. */
+    @Override
+    protected Component headerStatus() {
+        return headerFaction().isBlank()
+                ? Component.empty()
+                : CommandPanelChrome.factionName(headerFaction());
     }
 
     @Override
@@ -395,36 +382,16 @@ public abstract class CommandPanelScreen extends PanelScreen {
         structure = structure();
         List<UiLayout.Node> nodes = new ArrayList<>();
         nodes.add(label(this::heading, true));
+        nodes.add(label(this::status, false));
         if (healthSnapshot().available()) {
-            PanelHealth health = body(new PanelHealth());
+            PanelHealth health = body(new PanelHealth().heading(true));
             Runnable bind =
                     () -> health.update(healthSnapshot().current(), healthSnapshot().maximum());
             bindings.add(bind);
             bind.run();
-            nodes.add(UiLayout.leaf(health::measureHeight, health::place));
-            nodes.add(
-                    label(
-                            () ->
-                                    Component.translatable(
-                                            representativeHealth()
-                                                    ? "gui.hostile_humans_unified.command.health_representative"
-                                                    : "gui.hostile_humans_unified.command.health",
-                                            healthSnapshot().name(),
-                                            String.format(
-                                                    Locale.ROOT,
-                                                    "%.1f",
-                                                    healthSnapshot().current()),
-                                            String.format(
-                                                    Locale.ROOT,
-                                                    "%.1f",
-                                                    healthSnapshot().maximum()),
-                                            Component.translatable(
-                                                    healthSnapshot().mixed()
-                                                            ? "gui.hostile_humans_unified.command.health_mixed"
-                                                            : "gui.hostile_humans_unified.command.health_sample")),
-                            false));
+            nodes.add(node(health));
+            nodes.add(label(this::healthLine, false));
         }
-        nodes.add(label(this::status, false));
         nodes.add(label(this::additionalStatus, false));
         if (growth != null && growth.enabled()) {
             String p = "screen.hostile_humans_unified.soldier.growth.";
@@ -450,11 +417,13 @@ public abstract class CommandPanelScreen extends PanelScreen {
             nodes.add(
                     label(
                             () ->
-                                    Component.translatable(
-                                            p + "experience",
-                                            growth.experiencePercent(),
-                                            growth.experienceMinPercent(),
-                                            growth.experienceCapPercent()),
+                                    growth.experiencePercent() >= growth.experienceCapPercent()
+                                            ? Component.translatable(p + "experience_capped")
+                                            : Component.translatable(
+                                                    p + "experience",
+                                                    growth.experiencePercent(),
+                                                    growth.experienceMinPercent(),
+                                                    growth.experienceCapPercent()),
                             false));
             nodes.add(
                     node(
@@ -467,21 +436,47 @@ public abstract class CommandPanelScreen extends PanelScreen {
                                                     growth.experienceCapPercent()
                                                             - growth.experienceMinPercent(),
                                             () -> 0xFF8BB6BC))));
-            nodes.add(
-                    label(
-                            () ->
-                                    growth.experiencePercent() >= growth.experienceCapPercent()
-                                            ? Component.translatable(p + "experience_capped")
-                                            : Component.translatable(
-                                                    p + "next_point",
-                                                    amount(growth.experienceProgress()),
-                                                    amount(growth.experienceRequired())),
-                            false));
+            if (growth.experiencePercent() < growth.experienceCapPercent())
+                nodes.add(
+                        label(
+                                () ->
+                                        Component.translatable(
+                                                p + "next_point",
+                                                amount(growth.experienceProgress()),
+                                                amount(growth.experienceRequired())),
+                                false));
         }
-        nodes.add(
-                UiLayout.row(
-                        8, List.of(UiLayout.column(9, List.of(movement(), settings())), combat())));
-        return UiLayout.column(9, nodes);
+        nodes.add(movement());
+        if (state.order() == SoldierOrder.GARRISON || mixed(CommandView.Field.ORDER))
+            nodes.add(garrison());
+        nodes.add(settings());
+        nodes.add(combat());
+        return UiLayout.column(6, nodes);
+    }
+
+    /** Health line under the ticks; the squad view keeps the representative wording. */
+    private Component healthLine() {
+        var snapshot = healthSnapshot();
+        if (!representativeHealth())
+            return snapshot.mixed()
+                    ? ui("health_line", number(snapshot.current()), number(snapshot.maximum()))
+                            .copy()
+                            .append(" · ")
+                            .append(ui("health_mixed"))
+                    : ui("health_line", number(snapshot.current()), number(snapshot.maximum()));
+        return Component.translatable(
+                "gui.hostile_humans_unified.command.health_representative",
+                snapshot.name(),
+                number(snapshot.current()),
+                number(snapshot.maximum()),
+                Component.translatable(
+                        snapshot.mixed()
+                                ? "gui.hostile_humans_unified.command.health_mixed"
+                                : "gui.hostile_humans_unified.command.health_sample"));
+    }
+
+    private static String number(double value) {
+        return String.format(Locale.ROOT, "%.0f", value);
     }
 
     private static String amount(double value) {
@@ -491,6 +486,7 @@ public abstract class CommandPanelScreen extends PanelScreen {
     @Override
     protected void buildFooter() {
         close = footer(closeLabel(), b -> onClose());
+        footerSpacer();
         secondary =
                 footer(
                                 secondaryLabel(),
@@ -505,6 +501,7 @@ public abstract class CommandPanelScreen extends PanelScreen {
         if (close != null) {
             close.setMessage(closeLabel());
             secondary.setMessage(secondaryLabel());
+            secondary.danger(secondaryDanger());
         }
     }
 

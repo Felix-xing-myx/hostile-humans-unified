@@ -2043,6 +2043,10 @@
     "class": "dev.felix.hostilehumans.client.ui.framework.PanelButton",
     "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelButton.java"
   },
+  "PanelCheck": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelCheck",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelCheck.java"
+  },
   "PanelDisclosure": {
     "class": "dev.felix.hostilehumans.client.ui.framework.PanelDisclosure",
     "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelDisclosure.java"
@@ -2054,6 +2058,10 @@
   "PanelGeometry": {
     "class": "dev.felix.hostilehumans.client.ui.framework.PanelGeometry",
     "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelGeometry.java"
+  },
+  "PanelGroup": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelGroup",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelGroup.java"
   },
   "PanelHealth": {
     "class": "dev.felix.hostilehumans.client.ui.framework.PanelHealth",
@@ -3338,6 +3346,10 @@
   "TurnResponse": {
     "class": "dev.felix.hostilehumans.perception.TurnResponse",
     "path": "src/main/java/dev/felix/hostilehumans/perception/TurnResponse.java"
+  },
+  "UiColor": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.UiColor",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/UiColor.java"
   },
   "UiDraw": {
     "class": "dev.felix.hostilehumans.client.ui.framework.UiDraw",

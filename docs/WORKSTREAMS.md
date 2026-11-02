@@ -3982,3 +3982,10 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 ## 前端协作基线提交
 - 用户明确要求先提交当前工作，供后续前端独立开发接回。主控按当前main完整源码状态建立一次本地快照，包含此前目录迁移和已整合变更；不再把本次明确授权视为“擅自提交既有修改”。不提交维护目录、实例文件、JAR、缓存或知识库外部文件，不推送。
 - 交接见docs/FRONTEND_HANDOFF.md。最近构建/同步仍为3.14.2，最新接管枪声适配仅有19项静态检查与真实JAR接口核对，未编译或试听；界面视觉仍需前端整改。旧工作树HEAD保持原状，后续须基于本次提交新建或安全衔接，不能强制重置。
+
+## 界面框架视觉还原（2026-11-02，公共底座 + 两个代表页）
+- 负责人：前端组件会话；基线 main 53fa094d318598cbc51967616a2aa4afe4bb2ef0（前端协作基线），分支 ui/panel-visual-fidelity，在 project 工作目录内编辑（worktrees 目录不在本会话可写范围；已核对开始时暂存区为空、工作树干净，无其他会话并发修改）。
+- 范围：client/ui/framework 全部绘制与控件、CommandPanelScreen/SoldierCommandScreen/SquadCommandScreen/SoldierRosterScreen 布局、5 个分组刻符贴图与 gui/theme.json、界面维护文档。未改战斗、导航、感知、背包结算、声望、价格、奖励、权限、存档规则、注册 ID、网络协议与持久化结构；未新增协议或客户端权威计算。
+- 公共接口：PanelScreen 增加 headerStatus/buildBand/bandStatus/splitWidth/buildLeft/buildRight/footerSpacer 与控件 node 重载；新增 UiColor、PanelGroup、PanelCheck；UiTheme 增加 headTint 与派生色；UiDraw 重写骨架绘制并删除九宫格阴影。详见 docs/UI_FRAME.md。
+- 已迁移：单兵命令、小队命令（继承）、对讲机（主从双栏）。未迁移页面仍用旧骨架。
+- 验证：参考页 13 个界面在 Chromium 无头浏览器中逐页截图核对（四阵营之一），已完成静态审查与 PanelGeometryTest 几何用例补充；**未编译**——本会话环境无 JDK17/javac，Gradle 依赖缓存不在可访问路径，代理拒绝下载 JDK 包；未启动游戏、未替换实例 JAR、未推送。游戏内视觉与点击命中仍待主控构建后验收。

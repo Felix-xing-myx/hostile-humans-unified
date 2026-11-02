@@ -10,6 +10,8 @@ import java.util.function.Supplier;
 
 /** Local page draft, committed on release; server still owns page contents. */
 public final class PanelPageSlider extends AbstractSliderButton {
+    public static final int HEIGHT = 24;
+
     private final int maximum;
     private final IntConsumer request;
     private final Supplier<UiTheme> theme;
@@ -17,7 +19,7 @@ public final class PanelPageSlider extends AbstractSliderButton {
     private boolean dragging;
 
     public PanelPageSlider(int page, int maximum, IntConsumer request, Supplier<UiTheme> theme) {
-        super(0, 0, 1, 24, Component.empty(), maximum > 0 ? page / (double) maximum : 0);
+        super(0, 0, 1, HEIGHT, Component.empty(), maximum > 0 ? page / (double) maximum : 0);
         this.maximum = maximum;
         this.request = request;
         this.theme = theme;
@@ -80,7 +82,7 @@ public final class PanelPageSlider extends AbstractSliderButton {
     }
 
     public int measureHeight(int width) {
-        return 28;
+        return HEIGHT;
     }
 
     public void place(UiRect b) {
@@ -93,16 +95,9 @@ public final class PanelPageSlider extends AbstractSliderButton {
     @Override
     public void renderWidget(GuiGraphics g, int mx, int my, float partial) {
         UiTheme t = theme.get();
-        g.drawString(Minecraft.getInstance().font, getMessage(), getX(), getY(), t.muted(), false);
-        UiDraw.rect(g, getX(), getY() + 18, width, 2, t.edge());
-        UiDraw.roundRect(
-                g,
-                getX() + (int) Math.round(value * Math.max(0, width - 8)),
-                getY() + 14,
-                8,
-                10,
-                2,
-                t.accent());
-        if (isFocused()) UiDraw.outline(g, getX(), getY(), width, height, t.text());
+        g.drawString(
+                Minecraft.getInstance().font, getMessage(), getX(), getY() + 1, t.muted(), false);
+        UiDraw.track(g, getX(), getY() + 13, width, 11, value, t);
+        if (isFocused()) UiDraw.outline(g, getX() - 1, getY() + 11, width + 2, 15, t.accent());
     }
 }

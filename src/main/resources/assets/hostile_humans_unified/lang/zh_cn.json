@@ -680,6 +680,8 @@
   "gui.hostile_humans_unified.command.health_representative": "代表值 %s · 生命 %s / %s · %s",
   "gui.hostile_humans_unified.command.health_mixed": "成员生命不同，不是总和",
   "gui.hostile_humans_unified.command.health_sample": "服务端快照",
+  "gui.hostile_humans_unified.command.health_line": "生命 %s / %s",
+  "gui.hostile_humans_unified.command.squad_total": "%s 人",
   "gui.hostile_humans_unified.cultivation.title": "训练中心",
   "gui.hostile_humans_unified.cultivation.test_mode": "创造测试入口 · 未平衡数据不代表正式收费开放",
   "gui.hostile_humans_unified.cultivation.pending": "等待服务端回执；操作尚未确认",

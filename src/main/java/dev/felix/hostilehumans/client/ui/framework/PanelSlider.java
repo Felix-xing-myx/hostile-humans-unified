@@ -9,36 +9,46 @@ import java.util.function.IntConsumer;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
 
-/** Native slider draft: mouse commits only on release, keyboard commits accepted steps. */
+/**
+ * Native slider draft: mouse commits only on release, keyboard commits accepted steps. The caption
+ * is drawn left and the committed value right, matching the reference terminal rows.
+ */
 public final class PanelSlider extends AbstractSliderButton {
+    public static final int HEIGHT = 24;
+
     private final Supplier<UiTheme> theme;
     private final IntConsumer commit;
-    private final IntFunction<Component> label;
+    private final IntFunction<Component> name;
+    private IntFunction<Component> valueText;
     private Supplier<UiRect> viewport;
     private boolean dragging, mixed, changed;
     private int accepted;
 
     public PanelSlider(
-            int current,
-            IntFunction<Component> label,
-            IntConsumer commit,
-            Supplier<UiTheme> theme) {
-        super(0, 0, 1, 24, Component.empty(), (current - 8) / 88.0);
+            int current, IntFunction<Component> name, IntConsumer commit, Supplier<UiTheme> theme) {
+        super(0, 0, 1, HEIGHT, Component.empty(), (current - 8) / 88.0);
         this.accepted = current;
-        this.label = label;
+        this.name = name;
         this.commit = commit;
         this.theme = theme;
         updateMessage();
+    }
+
+    /** Optional right-hand value, e.g. {@code v -> Component.literal(v + " 格")}. */
+    public PanelSlider value(IntFunction<Component> text) {
+        this.valueText = text;
+        updateMessage();
+        return this;
     }
 
     public void viewport(Supplier<UiRect> viewport) {
         this.viewport = viewport;
     }
 
-    public void accept(int value, boolean mixed) {
+    public void accept(int amount, boolean mixed) {
         if (!dragging) {
-            accepted = value;
-            this.value = (value - 8) / 88.0;
+            accepted = amount;
+            this.value = (amount - 8) / 88.0;
             this.mixed = mixed;
             changed = false;
             updateMessage();
@@ -50,22 +60,23 @@ public final class PanelSlider extends AbstractSliderButton {
     }
 
     private int amount() {
-        return Math.max(8, Math.min(96, 8 + (int) Math.round(value * 88)));
+        return Math.max(8, Math.min(96, 8 + (int) Math.round(this.value * 88)));
     }
 
     @Override
     protected void updateMessage() {
-        if (label != null) {
-            Component message = label.apply(amount());
-            if (mixed && !dragging && !changed)
-                message =
-                        message.copy()
-                                .append(" · ")
-                                .append(
-                                        Component.translatable(
-                                                "screen.hostile_humans_unified.command.mixed"));
-            setMessage(message);
-        }
+        if (name == null) return;
+        Component message = name.apply(amount());
+        if (valueText != null) message = message.copy().append(" · ").append(valueText.apply(amount()));
+        if (mixed && !dragging && !changed)
+            message =
+                    message
+                            .copy()
+                            .append(" · ")
+                            .append(
+                                    Component.translatable(
+                                            "screen.hostile_humans_unified.command.mixed"));
+        setMessage(message);
     }
 
     @Override
@@ -115,7 +126,7 @@ public final class PanelSlider extends AbstractSliderButton {
     }
 
     public int measureHeight(int width) {
-        return 32;
+        return HEIGHT;
     }
 
     public void place(UiRect b) {
@@ -126,14 +137,15 @@ public final class PanelSlider extends AbstractSliderButton {
     }
 
     @Override
-    public void renderWidget(GuiGraphics g, int mx, int my, float partial) {
+    protected void renderWidget(GuiGraphics g, int mx, int my, float partial) {
         UiTheme t = theme.get();
-        int x = getX(), y = getY(), w = getWidth();
-        g.drawString(Minecraft.getInstance().font, getMessage(), x, y, t.muted(), false);
-        UiDraw.rect(g, x, y + 20, w, 2, t.edge());
-        int knob = x + (int) Math.round(value * Math.max(0, w - 6));
-        UiDraw.rect(g, x, y + 20, knob - x + 3, 2, t.accent());
-        UiDraw.roundRect(g, knob, y + 15, 6, 12, 2, t.accent());
-        if (isFocused()) UiDraw.outline(g, x, y, w, getHeight(), t.text());
+        var font = Minecraft.getInstance().font;
+        g.drawString(font, name.apply(amount()), getX(), getY() + 1, t.muted(), false);
+        if (valueText != null) {
+            Component text = valueText.apply(amount());
+            g.drawString(font, text, getX() + width - font.width(text), getY() + 1, t.text(), false);
+        }
+        UiDraw.track(g, getX(), getY() + 13, width, 11, this.value, t);
+        if (isFocused()) UiDraw.outline(g, getX() - 1, getY() + 11, width + 2, 15, t.accent());
     }
 }

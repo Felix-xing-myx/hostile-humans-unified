@@ -8,28 +8,36 @@ import net.minecraft.network.chat.Component;
 import java.util.function.DoubleSupplier;
 import java.util.function.IntSupplier;
 
-/** Noninteractive proportional progress, separate from absolute health ticks. */
+/** Noninteractive proportional progress with 8px divisions, separate from absolute health ticks. */
 public final class PanelMeter extends AbstractWidget {
+    public static final int HEIGHT = 4, RIGHT_INSET = 30;
+
     private final DoubleSupplier value, maximum;
     private final IntSupplier color;
+    private boolean segmented = true;
 
     public PanelMeter(DoubleSupplier value, DoubleSupplier maximum, IntSupplier color) {
-        super(0, 0, 1, 6, Component.empty());
+        super(0, 0, 1, HEIGHT, Component.empty());
         this.value = value;
         this.maximum = maximum;
         this.color = color;
         active = false;
     }
 
+    public PanelMeter segmented(boolean value) {
+        segmented = value;
+        return this;
+    }
+
     public int measureHeight(int width) {
-        return 6;
+        return HEIGHT + 4;
     }
 
     public void place(UiRect b) {
         setX(b.x());
         setY(b.y());
         setWidth(b.width());
-        setHeight(b.height());
+        setHeight(HEIGHT);
     }
 
     @Override
@@ -37,12 +45,13 @@ public final class PanelMeter extends AbstractWidget {
         UiDraw.meter(
                 g,
                 getX(),
-                getY() + 1,
-                width,
-                3,
+                getY() + 2,
+                Math.max(1, width - RIGHT_INSET),
+                HEIGHT,
                 value.getAsDouble(),
                 maximum.getAsDouble(),
-                color.getAsInt());
+                color.getAsInt(),
+                segmented);
     }
 
     @Override

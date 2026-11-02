@@ -23,7 +23,7 @@ public class PanelText extends AbstractWidget {
 
     public int measureHeight(int width) {
         lines = Minecraft.getInstance().font.split(getMessage(), Math.max(1, width));
-        return Math.max(11, lines.size() * 11);
+        return Math.max(10, lines.size() * 10);
     }
 
     public void place(UiRect b) {
@@ -38,7 +38,7 @@ public class PanelText extends AbstractWidget {
         int y = getY();
         for (var line : lines) {
             g.drawString(Minecraft.getInstance().font, line, getX(), y, color.getAsInt(), false);
-            y += 11;
+            y += 10;
         }
     }
 
