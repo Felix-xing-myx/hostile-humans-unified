@@ -1,5 +1,7 @@
 package dev.felix.hostilehumans.client.ui.framework;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 
@@ -142,6 +144,8 @@ public final class UiDraw {
     /** 64px tile of the pack grain. Stretched blits were the source of the white speckle. */
     public static void grain(GuiGraphics g, int x, int y, int width, int height) {
         if (!UiThemes.surfaceAvailable() || width <= 0 || height <= 0) return;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
         g.setColor(1F, 1F, 1F, .30F);
         try {
             for (int ty = 0; ty < height; ty += GRAIN)
@@ -162,6 +166,7 @@ public final class UiDraw {
                 }
         } finally {
             g.setColor(1F, 1F, 1F, 1F);
+            RenderSystem.disableBlend();
         }
     }
 
@@ -221,11 +226,14 @@ public final class UiDraw {
         rect(g, x, y, width, height, t.groupBand());
         rect(g, x, y + 1, 2, 7, UiColor.alpha(t.accent(), .9F));
         if (icon != null) {
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
             g.setColor(1F, 1F, 1F, .85F);
             try {
                 g.blit(icon, x + 7, y + (height - 8) / 2, 8, 8, 0F, 0F, 16, 16, 16, 16);
             } finally {
                 g.setColor(1F, 1F, 1F, 1F);
+                RenderSystem.disableBlend();
             }
         }
         ruleFade(g, x, y + height - 1, width - 10, UiColor.alpha(0xFF000000, .6F));
@@ -407,11 +415,14 @@ public final class UiDraw {
         int size = Math.min(width - 2, height - 2);
         if (size > 12) size = 12;
         int left = x + (width - size) / 2, top = y + (height - size) / 2;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
         g.setColor(1F, 1F, 1F, 1F);
         try {
             g.blit(icon, left, top, size, size, 0F, 0F, 96, 96, 96, 96);
         } finally {
             g.setColor(1F, 1F, 1F, 1F);
+            RenderSystem.disableBlend();
         }
     }
 
@@ -421,11 +432,14 @@ public final class UiDraw {
         int size = 86;
         int x = frame.right() - 12 - size, y = frame.bottom() - 40 - size - 6;
         if (x < frame.x() || y < frame.y()) return;
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
         g.setColor(1F, 1F, 1F, .14F);
         try {
             g.blit(emblem, x, y, size, size, 0F, 0F, 96, 96, 96, 96);
         } finally {
             g.setColor(1F, 1F, 1F, 1F);
+            RenderSystem.disableBlend();
         }
     }
 

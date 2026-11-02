@@ -53,7 +53,7 @@ public final class PanelGeometry {
 
     /** Left and right columns of a master/detail body; the divider is the left column's last pixel. */
     public static UiRect[] split(UiRect body, int leftWidth) {
-        int split = Math.max(1, Math.min(body.width() - 1, leftWidth));
+        int split = body.width() <= 1 ? body.width() : Math.max(1, Math.min(body.width() - 1, leftWidth));
         return new UiRect[] {
             new UiRect(body.x(), body.y(), split, body.height()),
             new UiRect(body.x() + split, body.y(), Math.max(0, body.width() - split), body.height())

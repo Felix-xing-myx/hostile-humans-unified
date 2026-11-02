@@ -3989,3 +3989,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 公共接口：PanelScreen 增加 headerStatus/buildBand/bandStatus/splitWidth/buildLeft/buildRight/footerSpacer 与控件 node 重载；新增 UiColor、PanelGroup、PanelCheck；UiTheme 增加 headTint 与派生色；UiDraw 重写骨架绘制并删除九宫格阴影。详见 docs/UI_FRAME.md。
 - 已迁移：单兵命令、小队命令（继承）、对讲机（主从双栏）。未迁移页面仍用旧骨架。
 - 验证：参考页 13 个界面在 Chromium 无头浏览器中逐页截图核对（四阵营之一），已完成静态审查与 PanelGeometryTest 几何用例补充；**未编译**——本会话环境无 JDK17/javac，Gradle 依赖缓存不在可访问路径，代理拒绝下载 JDK 包；未启动游戏、未替换实例 JAR、未推送。游戏内视觉与点击命中仍待主控构建后验收。
+
+
+## 3.14.3 前端交付集成与发行核查
+- 主控；交付1787ac5，基线53fa094d318598cbc51967616a2aa4afe4bb2ef0；独立工作树worktrees/ui-frame-release-3.14.3，分支release/ui-frame-3.14.3。范围：交付公共组件兼容性、透明绘制、几何/焦点与版本日志；服务端行为保持原职责。
+- 初审发现UiRect缺少已被调用的双参数inset，普通单栏revealFocus误用双栏滚动偏移，零宽split越界；已集中修复。GuiGraphics普通纹理blit不自行启用混合，透明纹理各入口显式启用标准混合并在finally恢复颜色/关闭混合。
+- 旧构建工作树与归属清单保留，本轮建立新基线工作树，不重置旧WIP。前端未迁移页面见docs/UI_FRAME.md；本轮Java/自动回归及部署结果由统一发行状态登记。游戏内视觉、命中与实际枪声仍待用户验收。

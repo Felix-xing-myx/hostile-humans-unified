@@ -23,6 +23,13 @@ public record UiRect(int x, int y, int width, int height) {
         return bottom > y && top < bottom();
     }
 
+    /** Independent horizontal/vertical padding, bounded even in tiny viewports. */
+    public UiRect inset(int horizontal, int vertical) {
+        int dx = Math.min(Math.max(0, horizontal), width / 2);
+        int dy = Math.min(Math.max(0, vertical), height / 2);
+        return new UiRect(x + dx, y + dy, width - 2 * dx, height - 2 * dy);
+    }
+
     public UiRect inset(int amount) {
         int a = Math.min(amount, Math.min(width, height) / 2);
         return new UiRect(x + a, y + a, width - 2 * a, height - 2 * a);

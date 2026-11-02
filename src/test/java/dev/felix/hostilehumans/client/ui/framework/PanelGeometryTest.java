@@ -37,6 +37,8 @@ public final class PanelGeometryTest {
 
         check(PanelGeometry.Size.S_PLUS.width() == 420, "S+ width");
         check(PanelGeometry.Size.S_PLUS.height() == 520, "S+ height");
+        check(new UiRect(0, 0, 30, 20).inset(8, 6).equals(new UiRect(8, 6, 14, 8)), "independent padding");
+        check(PanelGeometry.split(new UiRect(0, 0, 0, 20), 280)[0].width() == 0, "empty split stays empty");
         System.out.println("PanelGeometryTest: all checks passed");
     }
 

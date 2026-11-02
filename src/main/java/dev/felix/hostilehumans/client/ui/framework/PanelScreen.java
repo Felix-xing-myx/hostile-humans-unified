@@ -426,7 +426,7 @@ public abstract class PanelScreen extends Screen {
     protected final void revealFocus() {
         if (!(getFocused() instanceof AbstractWidget w) || !body.contains(w)) return;
         UiRect clip = viewportOf(w);
-        int offset = leftSide.contains(w) ? scrollLeft : scrollRight;
+        int offset = splitWidth() <= 0 ? scroll : leftSide.contains(w) ? scrollLeft : scrollRight;
         int top = w.getY() - clip.y() + offset;
         int target = PanelGeometry.reveal(offset, top, top + w.getHeight(), clip.height());
         if (splitWidth() > 0) {
