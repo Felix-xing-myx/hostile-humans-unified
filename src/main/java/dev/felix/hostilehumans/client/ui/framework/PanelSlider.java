@@ -137,7 +137,7 @@ public final class PanelSlider extends AbstractSliderButton {
     }
 
     @Override
-    protected void renderWidget(GuiGraphics g, int mx, int my, float partial) {
+    public void renderWidget(GuiGraphics g, int mx, int my, float partial) {
         UiTheme t = theme.get();
         var font = Minecraft.getInstance().font;
         g.drawString(font, name.apply(amount()), getX(), getY() + 1, t.muted(), false);

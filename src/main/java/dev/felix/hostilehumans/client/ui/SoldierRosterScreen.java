@@ -641,7 +641,7 @@ public final class SoldierRosterScreen extends PanelScreen {
                         refresh(false);
                     }
                 })
-                .danger();
+                .danger(true);
     }
 
     private void toggleMark(UUID id) {
