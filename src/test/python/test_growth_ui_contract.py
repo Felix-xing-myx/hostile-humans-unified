@@ -57,11 +57,11 @@ class GrowthUiContractTest(unittest.TestCase):
   self.assertIn('new PanelMeter(',block)
   self.assertEqual(block.count('new PanelMeter('),2)
   self.assertEqual(build.count('new PanelMeter('),2)
-  self.assertTrue(compact(build[build.index(block)+len(block):]).startswith('nodes.add(UiLayout.row('))
+  self.assertTrue(compact(build[build.index(block)+len(block):]).startswith('nodes.add(movement())'))
   # Disabled/null growth contributes no leaf, placeholder or fixed spacer to the tree.
   outside=build.replace(block,'',1)
   for value in ('growth.level()', 'growth.stageProgress()', 'growth.experiencePercent()', 'new PanelMeter('):self.assertNotIn(value,outside)
-  self.assertIn('returnUiLayout.column(9,nodes)',compact(build))
+  self.assertIn('returnUiLayout.column(6,nodes)',compact(build))
   layout=compact(java_block(source('UiLayout'),'public static Node column('))
   self.assertIn('for(Noden:children)h+=n.measure(w)',layout)
   self.assertIn('Math.max(0,children.size()-1)*gap',layout)
