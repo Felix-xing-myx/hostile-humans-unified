@@ -1,0 +1,340 @@
+package dev.felix.hostilehumans.behavior.combat.ranged;
+
+import dev.felix.hostilehumans.entity.Human;
+import dev.felix.hostilehumans.common.IncrementalBestSearch;
+import dev.felix.hostilehumans.common.BoundedSearchCycle;
+
+import dev.felix.hostilehumans.navigation.HumanTerrainSafety;
+import dev.felix.hostilehumans.navigation.NavigationSupport;
+import dev.felix.hostilehumans.navigation.OptionalPathBudget;
+import dev.felix.hostilehumans.observer.NavigationDebugService;
+import dev.felix.hostilehumans.perception.HumanPerception;
+import dev.felix.hostilehumans.soldier.SoldierOrder;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.phys.Vec3;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.WeakHashMap;
+import net.minecraft.world.item.Item;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
+
+/** Finds a reachable nearby position with a clear shot, without taking over retreat behavior. */
+public final class RangedFiringPosition {
+    // Values contain only geometry, identifiers and paths, never their Human
+    // key or the world. Interrupted searches cannot keep unloaded entities alive.
+    private static final Map<Human, VisibleSearch> VISIBLE_SEARCHES = new WeakHashMap<>();
+    private static final java.util.Set<Human> VISIBLE_WAITING=java.util.Collections.newSetFromMap(new WeakHashMap<>());
+    private static final class SearchVisit {
+        int tick;
+        SearchVisit(int tick) { this.tick = tick; }
+    }
+    private record VisibleSearch(UUID target, ResourceKey<Level> dimension, Item weapon, Vec3 origin, Vec3 targetPosition,
+                                 double minimum, double maximum, int radius, int attempts,
+                                 SearchVisit visit, IncrementalBestSearch<BlockPos, Path> search) {}
+
+    public enum AttackStatus { FOUND, PENDING, EXHAUSTED, DEFERRED, UNAVAILABLE }
+    public record AttackWindow(AttackStatus status, Path path) {
+        public AttackWindow {
+            if ((status == AttackStatus.FOUND) != (path != null)) throw new IllegalArgumentException("window result/path mismatch");
+        }
+        public boolean failed() { return status == AttackStatus.EXHAUSTED; }
+        public boolean retryApproach() { return failed() || status == AttackStatus.DEFERRED; }
+        public int retryTicks() { return status == AttackStatus.PENDING ? 1 : status == AttackStatus.FOUND ? 10 : status == AttackStatus.DEFERRED ? 10 : 40; }
+    }
+    private record AttackCycle(UUID target, ResourceKey<Level> dimension, Item weapon, BoundedSearchCycle cycle) { }
+    private static final Map<Human, AttackCycle> ATTACK_CYCLES = new WeakHashMap<>();
+    public static boolean hasPendingVisibleSearch(Human human) { return VISIBLE_SEARCHES.containsKey(human)||VISIBLE_WAITING.contains(human); }
+    public static void cancelVisibleSearch(Human human) {
+        VISIBLE_SEARCHES.remove(human);VISIBLE_WAITING.remove(human);ATTACK_CYCLES.remove(human);
+        human.cancelCombatShoreSearch();
+        OptionalPathBudget.cancel(human, OptionalPathBudget.Kind.FIRING_LANE);
+    }
+    public static int retryDelay(Human human, Path result, int failureDelay) {
+        return retryDelay(hasPendingVisibleSearch(human) || human.isCombatShoreSearchPending(), result != null, failureDelay);
+    }
+    static int retryDelay(boolean pending, boolean found, int failureDelay) {
+        return pending ? 1 : found ? 10 : failureDelay;
+    }
+    private RangedFiringPosition() {
+    }
+
+    private static boolean available(Human human, LivingEntity target) {
+        return !human.isFleeing && !SoldierOrder.isHoldingPosition(human)
+                && !human.level().isClientSide && target != null && target.isAlive()
+                && target.level() == human.level() && HumanPerception.canTarget(human, target);
+    }
+
+    /** An offensive episode survives geometry restarts; budget starvation never means unreachable. */
+    public static AttackWindow searchAttackWindow(Human h, LivingEntity target, double minimum, double maximum, int radius, int attempts) {
+        if (!available(h, target)) {
+            cancelVisibleSearch(h); return new AttackWindow(AttackStatus.UNAVAILABLE, null);
+        }
+        AttackCycle state = ATTACK_CYCLES.get(h);
+        if (state == null || !state.target().equals(target.getUUID()) || !state.dimension().equals(h.level().dimension())
+                || state.weapon() != h.getMainHandItem().getItem()) {
+            cancelVisibleSearch(h);
+            state = new AttackCycle(target.getUUID(), h.level().dimension(), h.getMainHandItem().getItem(), new BoundedSearchCycle());
+            ATTACK_CYCLES.put(h, state);
+        }
+        state.cycle().begin(h.tickCount);
+        var outcome = state.cycle().outcome(h.tickCount);
+        if (outcome != BoundedSearchCycle.Outcome.OPEN) {
+            cancelVisibleSearch(h);
+            return new AttackWindow(outcome == BoundedSearchCycle.Outcome.EXHAUSTED ? AttackStatus.EXHAUSTED : AttackStatus.DEFERRED, null);
+        }
+        double localMinimum = Math.min(minimum, Math.max(2, h.distanceTo(target) - 2));
+        Path path = findVisiblePath(h, target, localMinimum, maximum, radius, attempts, state.cycle());
+        if (path != null) return new AttackWindow(AttackStatus.FOUND, path);
+        if (!hasPendingVisibleSearch(h)) return new AttackWindow(AttackStatus.EXHAUSTED, null);
+        outcome = state.cycle().outcome(h.tickCount);
+        if (outcome != BoundedSearchCycle.Outcome.OPEN) {
+            cancelVisibleSearch(h);
+            return new AttackWindow(outcome == BoundedSearchCycle.Outcome.EXHAUSTED ? AttackStatus.EXHAUSTED : AttackStatus.DEFERRED, null);
+        }
+        return new AttackWindow(AttackStatus.PENDING, null);
+    }
+
+    /** Publish only a route actually accepted by navigation. */
+    public static boolean startAttackWindow(Human h, LivingEntity target, Path path, double speed, double maximumRangeSqr) {
+        if (!available(h, target) || !dev.felix.hostilehumans.behavior.combat.retreat.RetreatPathSafety.tryMove(h, path, speed)) return false;
+        RangedFiringMemory.selected(h, target, path, maximumRangeSqr);
+        dev.felix.hostilehumans.soldier.SoldierDialogue.event(h, "reposition");
+        return true;
+    }
+
+    public static Path findVisiblePath(
+            Human human,
+            LivingEntity target,
+            double minimumRange,
+            double maximumRange,
+            int searchRadius,
+            int attempts
+    ) {
+        return findVisiblePath(human, target, minimumRange, maximumRange, searchRadius, attempts, null);
+    }
+    private static Path findVisiblePath(Human human, LivingEntity target, double minimumRange, double maximumRange,
+                                        int searchRadius, int attempts, BoundedSearchCycle cycle) {
+        if (!available(human, target)) {
+            cancelVisibleSearch(human);
+            return null;
+        }
+
+        double currentRange = human.distanceTo(target);
+        double preferredRange = Math.max(minimumRange, Math.min(maximumRange, currentRange));
+        double minimumRangeSqr = minimumRange * minimumRange;
+        double maximumRangeSqr = maximumRange * maximumRange;
+        VisibleSearch session = VISIBLE_SEARCHES.get(human);
+        if (session == null || !session.target().equals(target.getUUID())
+                || !session.dimension().equals(human.level().dimension())
+                || session.weapon() != human.getMainHandItem().getItem()
+                || session.origin().distanceToSqr(human.position()) > 4.0D
+                || session.targetPosition().distanceToSqr(target.position()) > 4.0D
+                || Math.abs(session.minimum() - minimumRange) > 0.5D
+                || Math.abs(session.maximum() - maximumRange) > 0.5D
+                || session.radius() != searchRadius || session.attempts() != attempts
+                || human.tickCount < session.visit().tick || human.tickCount - session.visit().tick > 20) {
+            VISIBLE_SEARCHES.remove(human);session=null;
+        }
+        if(session!=null)session.visit().tick=human.tickCount;
+        VISIBLE_WAITING.add(human);
+        int budget = OptionalPathBudget.claim(human, OptionalPathBudget.Kind.FIRING_LANE, 4);
+        if (cycle != null) budget = Math.min(budget, cycle.remainingWork());
+        if (budget == 0) return null;
+        VISIBLE_WAITING.remove(human);
+        if(session==null){
+            List<BlockPos> candidates = RangedWindowCandidates.collect(human,target,searchRadius,attempts);
+            BlockPos remembered=RangedFiringMemory.preferredCandidate(human,target,searchRadius);
+            if(remembered!=null){
+                var ordered=new java.util.ArrayList<BlockPos>(candidates);
+                ordered.remove(remembered);ordered.add(0,remembered);
+                if(ordered.size()>RangedWindowCandidates.MAX_CANDIDATES)ordered.remove(ordered.size()-1);
+                candidates=List.copyOf(ordered);
+            }
+            session = new VisibleSearch(target.getUUID(), human.level().dimension(), human.getMainHandItem().getItem(),
+                    human.position(), target.position(),
+                    minimumRange, maximumRange, searchRadius, attempts, new SearchVisit(human.tickCount),
+                    new IncrementalBestSearch<>(candidates.iterator()));
+            VISIBLE_SEARCHES.put(human, session);
+        }
+        // Budget waiting is live work, not an abandoned search. Refresh only
+        // its visit time; movement/target/weapon validation still runs above.
+        session.visit().tick = human.tickCount;
+        Map<BlockPos, Boolean> clearShots = new HashMap<>();
+        Path bestPath = session.search().advance(budget, candidateBlock -> {
+            if (cycle != null) cycle.work(1);
+            Vec3 candidateFeet = HumanTerrainSafety.firingFeet(human,candidateBlock);
+            if(candidateFeet==null)return null;
+            NavigationDebugService.candidate(human, candidateFeet, "firing", "candidate", Double.NaN);
+            double candidateRangeSqr = target.distanceToSqr(candidateFeet);
+            String filter = candidateRangeSqr < minimumRangeSqr || candidateRangeSqr > maximumRangeSqr ? "range"
+                    : candidateFeet.distanceToSqr(human.position()) < 0.25D ? "near"
+                    : !human.level().hasChunkAt(candidateBlock) ? "unloaded"
+                    : !clearShots.computeIfAbsent(candidateBlock, pos -> RangedShotClearance.fromPosition(human, candidateFeet, target)) ? "sight" : null;
+            if (filter != null) {
+                NavigationDebugService.candidate(human, candidateFeet, "firing", filter, Double.NaN);
+                return null;
+            }
+            Path path = human.getNavigation().createPath(candidateBlock, 0);
+            String rejection = path == null ? "no_path" : !path.canReach() ? "partial" : path.getNodeCount() < 2 ? "near"
+                    : !HumanTerrainSafety.safePath(human, path) ? "unsafe" : !SoldierOrder.allowsCombatPath(human, path) ? "command" : null;
+            if (rejection != null) {
+                NavigationDebugService.candidate(human, candidateFeet, "firing", rejection, Double.NaN);
+                return null;
+            }
+            return path;
+        }, path -> {
+            var end=path.getEndNode();
+            Vec3 destination = HumanTerrainSafety.firingFeet(human,new BlockPos(end.x,end.y,end.z));
+            if(destination==null)return Double.NEGATIVE_INFINITY;
+            double targetDistanceSqr = target.distanceToSqr(destination);
+            if (targetDistanceSqr < minimumRangeSqr || targetDistanceSqr > maximumRangeSqr
+                    || destination.distanceToSqr(human.position()) < 0.25D) {
+                return Double.NEGATIVE_INFINITY;
+            }
+
+            if (!clearShots.computeIfAbsent(BlockPos.containing(destination), pos ->
+                    RangedShotClearance.fromPosition(human, destination, target))) {
+                return Double.NEGATIVE_INFINITY;
+            }
+
+            double targetDistance = Math.sqrt(targetDistanceSqr);
+            double travelDistance = Math.sqrt(destination.distanceToSqr(human.position()));
+            double verticalChange = Math.abs(destination.y - human.getY());
+            double score = Math.abs(targetDistance - preferredRange) * 3.0D
+                    + travelDistance * 0.35D
+                    + path.getNodeCount() * 0.55D
+                    + verticalChange * 2.0D;
+            if (human.isInWater()
+                    && !human.level().getFluidState(path.getTarget()).is(FluidTags.WATER)) {
+                // A clear dry firing lane is preferable, but never mandatory:
+                // an archer can still shoot while crossing a river.
+                score -= 12.0D;
+            }
+            NavigationDebugService.candidate(human, destination, "firing", "scored", -score);
+            return -score;
+        });
+        if (bestPath == null && session.search().hasRemaining()) return null;
+        // A verified reachable window is usable now; do not wait for every worse candidate.
+        cancelVisibleSearch(human);
+        return SoldierOrder.allowsCombatPath(human, bestPath) ? bestPath : null;
+    }
+
+    /**
+     * Pick a reachable, visibly clear lateral firing position. The lateral
+     * offset is intentionally several blocks so an armed Human makes a real
+     * tactical reposition instead of the barely perceptible strafe input used
+     * by MoveControl.
+     */
+    public static Path findLateralPath(
+            Human human,
+            LivingEntity target,
+            double minimumRange,
+            double maximumRange,
+            int sideDirection
+    ) {
+        return findLateralPath(human, target, minimumRange, maximumRange,
+                sideDirection, human.getX(), human.getZ(), Double.MAX_VALUE);
+    }
+
+    public static Path findLateralPath(
+            Human human,
+            LivingEntity target,
+            double minimumRange,
+            double maximumRange,
+            int sideDirection,
+            double anchorX,
+            double anchorZ,
+            double anchorRadius
+    ) {
+        if (human.isFleeing || SoldierOrder.isHoldingPosition(human)
+                || human.level().isClientSide || target == null || !target.isAlive()) {
+            return null;
+        }
+
+        Vec3 outward = NavigationSupport.horizontalDirection(target.position(), human.position());
+        if (outward.lengthSqr() < 0.01D) {
+            return null;
+        }
+        Vec3 lateral = new Vec3(-outward.z, 0.0D, outward.x)
+                .scale(sideDirection < 0 ? -1.0D : 1.0D);
+        double margin = Math.min(2.0D, Math.max(0.0D, (maximumRange - minimumRange) * 0.2D));
+        double lowerRange = minimumRange + margin;
+        double upperRange = Math.max(lowerRange, maximumRange - margin);
+        double preferredRange = (lowerRange + upperRange) * 0.5D;
+        double minimumRangeSqr = minimumRange * minimumRange;
+        double maximumRangeSqr = maximumRange * maximumRange;
+        Path bestPath = null;
+        double bestScore = Double.POSITIVE_INFINITY;
+
+        for (double lateralDistance : new double[]{6.0D, 8.0D, 10.0D}) {
+            double radialSqr = preferredRange * preferredRange
+                    - lateralDistance * lateralDistance;
+            if (radialSqr <= 0.0D) {
+                continue;
+            }
+            double radialDistance = Math.sqrt(radialSqr);
+            Vec3 candidate = target.position()
+                    .add(outward.scale(radialDistance))
+                    .add(lateral.scale(lateralDistance));
+            double anchorDx = candidate.x - anchorX;
+            double anchorDz = candidate.z - anchorZ;
+            if (anchorDx * anchorDx + anchorDz * anchorDz > anchorRadius * anchorRadius) {
+                continue;
+            }
+            BlockPos candidateBlock = BlockPos.containing(candidate.x, human.getY(), candidate.z);
+            if (candidateBlock.distSqr(human.blockPosition()) < 16.0D) {
+                continue;
+            }
+            Vec3 candidateFeet = Vec3.atBottomCenterOf(candidateBlock);
+            double candidateRangeSqr = target.distanceToSqr(candidateFeet);
+            if (candidateRangeSqr < minimumRangeSqr || candidateRangeSqr > maximumRangeSqr
+                    || candidateFeet.distanceToSqr(human.position()) < 30.25D
+                    || !human.level().hasChunkAt(candidateBlock)
+                    || !RangedShotClearance.fromPosition(human, candidateFeet, target)) {
+                continue;
+            }
+            Path path = human.getNavigation().createPath(candidateBlock, 0);
+            if (path == null || !path.canReach() || path.getNodeCount() < 2 || !HumanTerrainSafety.safePath(human, path)
+                    || !SoldierOrder.allowsCombatPath(human, path)) {
+                continue;
+            }
+
+            Vec3 destination = Vec3.atBottomCenterOf(path.getTarget());
+            double destinationDx = destination.x - anchorX;
+            double destinationDz = destination.z - anchorZ;
+            if (destinationDx * destinationDx + destinationDz * destinationDz
+                    > anchorRadius * anchorRadius) {
+                continue;
+            }
+            double targetDistanceSqr = target.distanceToSqr(destination);
+            double travelDistanceSqr = human.position().distanceToSqr(destination);
+            if (targetDistanceSqr < minimumRangeSqr || targetDistanceSqr > maximumRangeSqr
+                    || travelDistanceSqr < 30.25D) {
+                continue;
+            }
+            if (!path.getTarget().equals(candidateBlock)
+                    && !RangedShotClearance.fromPosition(human, destination, target)) {
+                continue;
+            }
+
+            double targetDistance = Math.sqrt(targetDistanceSqr);
+            double travelDistance = Math.sqrt(travelDistanceSqr);
+            double score = Math.abs(targetDistance - preferredRange) * 3.0D
+                    + Math.abs(travelDistance - lateralDistance) * 0.5D
+                    + path.getNodeCount() * 0.25D;
+            if (score < bestScore) {
+                bestScore = score;
+                bestPath = path;
+            }
+        }
+        return bestPath;
+    }
+
+}

@@ -1,8 +1,8 @@
 """Independent bow/crossbow defaults, config ownership and saved firing-origin contracts."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / 'src/main/java/club/someoneice/humangunner'
+PKG = ROOT / 'src/main/java/dev/felix/hostilehumans'
 def source(name): return (PKG / (name + '.java')).read_text(encoding='utf-8')
 class SplitBowCrossbowDamageContract(unittest.TestCase):
     def test_damage_uses_projectile_origin_not_current_weapon(self):
@@ -15,7 +15,7 @@ class SplitBowCrossbowDamageContract(unittest.TestCase):
         self.assertLess(damage.index('instanceof ThrownTrident'), damage.index('instanceof AbstractArrow'))
         classifier = source('HumanArrowCombat').split('public static boolean isCrossbowProjectile(', 1)[1].split('/** Native loading', 1)[0]
         self.assertIn('arrow.shotFromCrossbow()', classifier)
-        self.assertIn('HumanGunner.NPC_CROSSBOW_PROJECTILE', classifier)
+        self.assertIn('HumanRuntime.NPC_CROSSBOW_PROJECTILE', classifier)
         self.assertIn('SpartanRangedCompat.NPC_BOLT', classifier)
     def test_new_keys_are_independent_and_old_shared_key_is_retired(self):
         config = source('UnifiedConfig')

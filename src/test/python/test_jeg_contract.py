@@ -4,9 +4,9 @@ import os
 import sys
 import unittest
 import zipfile
-from pathlib import Path
+from source_paths import SourcePath as Path
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 DEFAULT = json.loads((ROOT / "src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))
 JAR = os.environ.get("JEG_API_JAR")
 
@@ -122,7 +122,7 @@ class JegContract(unittest.TestCase):
     def test_paid_throwables_use_one_scheduler_and_no_foreign_types_in_core(self):
         facade = (PKG / "TacticalThrowables.java").read_text(encoding="utf-8")
         planner = (PKG / "ScgunsThrowables.java").read_text(encoding="utf-8")
-        main = (PKG / "HumanGunner.java").read_text(encoding="utf-8")
+        main = (PKG / "HumanRuntime.java").read_text(encoding="utf-8")
         self.assertEqual(main.count("TacticalThrowables.tick(human)"), 1)
         self.assertNotIn("ScgunsCompat.tick(human)", main)
         self.assertEqual(facade.count("ScgunsThrowables.tick(human)"), 1)

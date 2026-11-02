@@ -6,10 +6,10 @@ import struct
 import subprocess
 import unittest
 import zipfile
-from pathlib import Path
+from source_paths import SourcePath as Path
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 def source(name):
     return (PKG / (name + ".java")).read_text(encoding="utf-8")
@@ -93,7 +93,7 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertIn(("m_6469_", "(Lnet/minecraft/world/damagesource/DamageSource;F)Z"), methods)
 
     def test_client_grips_shields_and_flash_share_one_weapon_transform(self):
-        client = ROOT / "src/main/java/com/craftix/hostile_humans/client/renderer"
+        client = ROOT / "src/main/java/dev/felix/hostilehumans/client/render"
         pose = (client / "ScgunsNativePose.java").read_text(encoding="utf-8")
         facade = (client / "ScgunsNpcAnimator.java").read_text(encoding="utf-8")
         layer = (client / "HumanAnimatedItemInHandLayer.java").read_text(encoding="utf-8")
@@ -109,7 +109,7 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertLess(layer.index("renderBackShield(human"), layer.index("translateToHand(visualArm"))
         self.assertIn("getParentModel().body.translateAndRotate(poses)", layer)
         self.assertIn("? 25 : -25", layer)
-        placement = (ROOT / "src/main/java/com/craftix/hostile_humans/client/renderer/BackShieldPose.java").read_text(encoding="utf-8")
+        placement = (ROOT / "src/main/java/dev/felix/hostilehumans/client/render/BackShieldPose.java").read_text(encoding="utf-8")
         self.assertIn("BackShieldPose.resolve(human, item)", layer)
         self.assertIn("if (!profile.offhand())", layer)
         self.assertIn(".isCustomRenderer()", placement)
@@ -145,7 +145,8 @@ class ScgunsBoundary(unittest.TestCase):
             tools = {row["item"]: row["weight"] for row in tactical["pool"] if "potion" not in row}
             self.assertEqual(tools, {"scguns:nail_bomb":3, "scguns:gas_grenade":3, "scguns:choke_bomb":3, "scguns:swarm_bomb":3, "jeg:grenade":3, "jeg:water_bomb":3})
             self.assertTrue(set(tools).issubset(allowed))
-            self.assertEqual(sum("potion" in row for row in tactical["pool"]), 3)
+            self.assertEqual({row["potion"] for row in tactical["pool"] if "potion" in row},
+                             {"minecraft:long_slowness", "minecraft:strong_poison"})
             buffs = config["tiers"][rank]["potions"]["self_buffs"]
             self.assertTrue(all("potion" in row for row in buffs["pool"]))
             self.assertIsNot(buffs, tactical)
@@ -226,7 +227,7 @@ class ScgunsBoundary(unittest.TestCase):
         self.assertIn("operator.shoot(weapon, target, shotAim.pitch(), shotAim.yaw())", goal)
         self.assertIn("previous.aim(false)", source("CompositeGunSupport"))
         self.assertNotIn("new GunAttackGoal", source("ScgunsIntegration"))
-        animator = (ROOT / "src/main/java/com/craftix/hostile_humans/client/renderer/TaczNpcAnimator.java").read_text(encoding="utf-8")
+        animator = (ROOT / "src/main/java/dev/felix/hostilehumans/client/render/TaczNpcAnimator.java").read_text(encoding="utf-8")
         self.assertIn("GunSupport.isTaczGunItem", animator)
         self.assertNotIn("GunSupport.get().isGun", animator)
         self.assertIn("instanceof IEnergyGun", source("ScgunsIntegration"))

@@ -3,13 +3,13 @@ import json
 import os
 import unittest
 import zipfile
-from pathlib import Path
+from source_paths import SourcePath as Path
 from test_scguns_contract import public_methods
 
 ROOT = Path(__file__).resolve().parents[3]
 JAVA = ROOT / 'src/main/java'
-RENDER = JAVA / 'com/craftix/hostile_humans/client/renderer'
-ADAPTER = JAVA / 'club/someoneice/humangunner'
+RENDER = JAVA / 'dev/felix/hostilehumans/client/render'
+ADAPTER = JAVA / 'dev/felix/hostilehumans'
 
 
 class TaczEffectsContract(unittest.TestCase):

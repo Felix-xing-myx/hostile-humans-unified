@@ -1,0 +1,5 @@
+{
+  "enabled": false,
+  "_说明_中文": "正式价格、额度、押金与奖励尚未平衡，默认关闭。只有显式创造测试会话使用测试表，钱包容器可独立使用。",
+  "_description_en": "Formal economic tables are disabled until balanced and validated. Explicit creative test sessions are separate; wallet storage remains usable."
+}

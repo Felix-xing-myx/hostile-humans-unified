@@ -1,11 +1,11 @@
 """Source/API regression checks; no Java compilation or gameplay simulation."""
 import os
-from pathlib import Path
+from source_paths import SourcePath as Path
 import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 
 class GunMeleeProtectionContract(unittest.TestCase):
@@ -23,11 +23,11 @@ class GunMeleeProtectionContract(unittest.TestCase):
         adapter = (PKG / "TaczGunItemIdentity.java").read_text(encoding="utf-8")
         self.assertIn("event.getShooter() instanceof Human", adapter)
         self.assertIn("event.setCanceled(true)", adapter)
-        self.assertIn("GunMeleeProtection.register()", (PKG / "HumanGunner.java").read_text(encoding="utf-8"))
+        self.assertIn("GunMeleeProtection.register()", (PKG / "HumanRuntime.java").read_text(encoding="utf-8"))
 
     def test_final_guard_does_not_cancel_bullets_or_effect_damage(self):
         source = (PKG / "GunMeleeProtection.java").read_text(encoding="utf-8")
-        self.assertIn("human.humanGunner$canMeleeAttack()", source)
+        self.assertIn("human.hhu$canMeleeAttack()", source)
         self.assertIn("return HumanMeleeDamage.isDirectAttack(source)", source)
         melee = (PKG / "HumanMeleeDamage.java").read_text(encoding="utf-8")
         for condition in ("source.getDirectEntity() != source.getEntity()",

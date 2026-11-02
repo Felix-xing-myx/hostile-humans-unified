@@ -1,7 +1,7 @@
 """Packaged pool integrity; Java behavior regressions live in UnifiedConfigTest/TierConfigFilesTest."""
 import json
 import os
-from pathlib import Path
+from source_paths import SourcePath as Path
 import re
 import unittest
 import zipfile
@@ -49,7 +49,7 @@ class GunPoolConfig(unittest.TestCase):
 
     def test_blacklist_reaches_input_selection_and_final_shot(self):
         def java(name):
-            return (PROJECT / "src/main/java/club/someoneice/humangunner" / name).read_text(encoding="utf-8")
+            return (PROJECT / "src/main/java/dev/felix/hostilehumans" / name).read_text(encoding="utf-8")
         self.assertIn("HumanGunAcceptance.acceptsOwnerInput(stack)", java("HumanInventoryContainer.java"))
         self.assertIn("HumanGunAcceptance.accepts(stack)", java("AmmoWeaponSelection.java"))
         self.assertIn("GunFireAuthorization.allows(human, weapon, target)", java("CompositeGunSupport.java"))

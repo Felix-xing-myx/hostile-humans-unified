@@ -13,17 +13,17 @@
   "allocation_preference": [
     1.3,
     1.3,
-    1.1,
+    1.3,
     1.8,
     0.9,
-    0.91,
-    1,
+    0.9,
+    1.1,
     0.85,
     1.25,
-    1.03,
+    1.15,
     1.5,
-    1.05,
-    0.1
+    1,
+    0.05
   ],
   "band_style": "base",
   "hire": {
@@ -37,12 +37,12 @@
     "ally_discount": 0.8
   },
   "gun_specialization": {
-    "pistol": 0.95,
-    "smg": 0.92,
-    "rifle": 1,
-    "shotgun": 1.05,
+    "pistol": 0.8,
+    "smg": 0.85,
+    "rifle": 1.1,
+    "shotgun": 0.9,
     "sniper": 0.7,
     "machine_gun": 1.05,
-    "heavy": 1.15
+    "heavy": 1.25
   }
 }

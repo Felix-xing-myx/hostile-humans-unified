@@ -1,5 +1,5 @@
 """Structural checks for the version boundary; no Minecraft classes are loaded."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import sys
 import unittest
 from unittest.mock import patch
@@ -40,23 +40,26 @@ class TaczVersionCompatibility(unittest.TestCase):
         dependency = next(d for d in metadata["dependencies"]["hostile_humans_unified"] if d["modId"] == "tacz")
         self.assertEqual("[1.1.5,)", dependency["versionRange"])
         self.assertFalse(dependency["mandatory"])
-        hook = (ROOT / "src/main/java/club/someoneice/humangunner/mixin/TaczHumanShootMixin.java").read_text(encoding="utf-8")
+        hook = (ROOT / "src/main/java/dev/felix/hostilehumans/mixin/TaczHumanShootMixin.java").read_text(encoding="utf-8")
         self.assertIn("{TaczAmmoMixinContract.SHOOT, TaczAmmoMixinContract.SHOOT_LEGACY}", hook)
         self.assertIn("require = 1, allow = 1", hook)
 
     def test_sound_compatibility_preserves_new_api_and_only_falls_back_for_missing_method(self):
-        client = ROOT / "src/main/java/com/craftix/hostile_humans/client/renderer/ClientAnimationCompatibility.java"
+        client = ROOT / "src/main/java/dev/felix/hostilehumans/client/render/ClientAnimationCompatibility.java"
         source = client.read_text(encoding="utf-8")
         self.assertIn('manager.getMethod("playAnimationSound", parameters)', source)
         self.assertIn('catch (NoSuchMethodException olderApi)', source)
         self.assertIn('manager.getMethod("playClientSound", parameters)', source)
-        source = (ROOT / "src/main/java/club/someoneice/humangunner/TaczReloadSoundClient.java").read_text(encoding="utf-8")
+        source = (ROOT / "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczReloadSoundClient.java").read_text(encoding="utf-8")
         self.assertNotIn("SoundPlayManager.playAnimationSound(", source)
         playback = source.split('private static void play(', 1)[1].split('private static ResourceLocation getAnimationFile', 1)[0]
-        self.assertIn('method=manager.getMethod("playAnimationSound",signature)', playback)
-        self.assertIn('catch(NoSuchMethodException oldApi)', playback)
-        self.assertIn('method=manager.getMethod("playClientSound",signature)', playback)
-        self.assertIn('SoundInstance.class.isAssignableFrom(method.getReturnType())', playback)
+        self.assertIn('ClientAnimationCompatibility.playTaczReloadSound(', playback)
+        bridge = client.read_text(encoding='utf-8')
+        self.assertIn('catch (NoSuchMethodException olderApi)', bridge)
+        self.assertIn('SoundInstance.class.isAssignableFrom(playback.getReturnType())', bridge)
+        self.assertIn('index.getPojo().getDisplay()', source)
+        self.assertIn('display.getAnimationLocation()', source)
+        self.assertNotIn('getDeclaredField("display")', bridge)
         self.assertIn('pending.sounds.add(owned)', playback)
         self.assertIn('getSoundManager().stop(sound)', playback)
         self.assertNotIn('stopAll(', playback)

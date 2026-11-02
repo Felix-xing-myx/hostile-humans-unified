@@ -1,12 +1,12 @@
 """Source integration checks, not compilation or in-game acceptance."""
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 ROOT = Path(__file__).resolve().parents[3]
 JAVA = ROOT / "src/main/java"
-PKG = JAVA / "club/someoneice/humangunner"
+PKG = JAVA / "dev/felix/hostilehumans"
 JUMP = (PKG / "PursuitJumpAttack.java").read_text(encoding="utf-8")
-GOAL = (JAVA / "com/craftix/hostile_humans/entity/ai/goal/MeleeAttackGoal.java").read_text(encoding="utf-8")
-HUMAN = (JAVA / "com/craftix/hostile_humans/entity/entities/Human.java").read_text(encoding="utf-8")
+GOAL = (JAVA / "dev/felix/hostilehumans/behavior/combat/melee/MeleeAttackGoal.java").read_text(encoding="utf-8")
+HUMAN = (JAVA / "dev/felix/hostilehumans/entity/Human.java").read_text(encoding="utf-8")
 
 class PursuitJumpContract(unittest.TestCase):
     def test_optional_hops_use_short_runway_without_blocking_step_jumps(self):
@@ -25,7 +25,7 @@ class PursuitJumpContract(unittest.TestCase):
         spacing=(PKG/"MeleeSpacing.java").read_text(encoding="utf-8")
         self.assertIn('MeleeSpacing.needsChaseBuffer(human,target)',movement)
         self.assertIn('MeleeSpacing.needsChaseBuffer(human,target)',pursuit)
-        self.assertIn('human.humanGunner$pendingMeleeTicks(target)',spacing)
+        self.assertIn('human.hhu$pendingMeleeTicks(target)',spacing)
         self.assertIn('BetterCombatMeleeCombat.upswingTicks(human)',spacing)
         self.assertIn('MeleeSpacing.preferredDistance(human,target)',GOAL)
     def test_distance_and_time_share_weapon_budget(self):
@@ -49,7 +49,7 @@ class PursuitJumpContract(unittest.TestCase):
     def test_distant_movement_hops_do_not_require_attack_readiness(self):
         movement = (PKG / "PlayerLikeMovementGoal.java").read_text(encoding="utf-8")
         distant = movement.split("private boolean isDistantPursuit", 1)[1].split("private boolean pathSuggestsStepUp", 1)[0]
-        for condition in ("isPursuing(target)", "!human.humanGunner$hasPendingMeleeAttack()",
+        for condition in ("isPursuing(target)", "!human.hhu$hasPendingMeleeAttack()",
                           "!PursuitJumpAttack.active(human)", "MeleeCombatRange.reach(human, target) + 1.25D"):
             self.assertIn(condition, distant)
         self.assertNotIn("attackCooldown", distant)
@@ -85,6 +85,6 @@ class PursuitJumpContract(unittest.TestCase):
                           "state.weapon != human.getMainHandItem()", "state.orderSignature != OrderDistances.signature(human)", "!HumanBehaviorControl.actions(human).running(state.token)", "MeleeJumpPolicy.waitingForAttack(human.tickCount-state.started, human.onGround(), state.attackLead)"):
             self.assertIn(condition, JUMP)
         self.assertIn("PursuitJumpAttack.awaitingAttackWindow(human)", GOAL)
-        self.assertIn("!club.someoneice.humangunner.PursuitJumpAttack.active(human)", GOAL)
+        self.assertIn("!dev.felix.hostilehumans.behavior.combat.melee.PursuitJumpAttack.active(human)", GOAL)
 
 if __name__ == "__main__": unittest.main()

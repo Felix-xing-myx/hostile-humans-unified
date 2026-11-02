@@ -1,9 +1,9 @@
 """Module ownership/phase contracts. No Minecraft execution or damage simulation."""
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 
 def source(name):
@@ -12,7 +12,7 @@ def source(name):
 
 class ModuleInterfaces(unittest.TestCase):
     def test_healing_effects_continue_under_menu_lock_without_equipment_writes(self):
-        hook = source("HumanGunner.java").split("private static void onLivingTick", 1)[1]
+        hook = source("HumanRuntime.java").split("private static void onLivingTick", 1)[1]
         self.assertLess(hook.index("RecoverySupplies.tickEffects(human)"), hook.index("HumanInventorySession.isEditing(human)"))
         self.assertLess(hook.index("HumanInventorySession.isEditing(human)"), hook.index("RecoverySupplies.tickHandCustody(human)"))
         self.assertEqual(hook.count("RecoverySupplies.tickEffects(human)"), 1)
@@ -30,7 +30,7 @@ class ModuleInterfaces(unittest.TestCase):
         self.assertIn("getInt(FOOD_HEAL_DELAY) - 1", timer)
 
     def test_potion_entity_hook_does_not_own_item_specific_healing(self):
-        human = (ROOT / "src/main/java/com/craftix/hostile_humans/entity/entities/Human.java").read_text(encoding="utf-8")
+        human = (ROOT / "src/main/java/dev/felix/hostilehumans/entity/Human.java").read_text(encoding="utf-8")
         finish = human.split("protected void completeUsingItem()", 1)[1].split("public void tick()", 1)[0]
         self.assertLess(finish.index("super.completeUsingItem()"), finish.index("RecoverySupplies.onUseCompleted"))
         self.assertNotIn("heal(", finish)
@@ -48,7 +48,7 @@ class ModuleInterfaces(unittest.TestCase):
             self.assertNotIn("instanceof ProjectileWeaponItem", text)
         custody = source("RangedWeaponCustody.java")
         self.assertIn("CombatWeaponPolicy.isBowOrCrossbow(stack)", custody)
-        util = (ROOT / "src/main/java/com/craftix/hostile_humans/HumanUtil.java").read_text(encoding="utf-8")
+        util = (ROOT / "src/main/java/dev/felix/hostilehumans/entity/HumanUtil.java").read_text(encoding="utf-8")
         self.assertIn("CombatWeaponPolicy.isRangedWeapon(value)", util)
 
     def test_damage_scaling_has_one_phase_and_does_not_scale_bullets_as_melee(self):
@@ -56,7 +56,7 @@ class ModuleInterfaces(unittest.TestCase):
         self.assertLess(scaling.index("source.is(TACZ_BULLET_DAMAGE)"), scaling.index("source.getDirectEntity() == attacker"))
         self.assertEqual(scaling.count("HumanGrowth.multiplier(attacker)"), 1)
         self.assertIn("UnifiedConfig.get().vanillaMode()", scaling)
-        hook = source("HumanGunner.java")
+        hook = source("HumanRuntime.java")
         self.assertEqual(hook.count("HumanDamageScaling.outgoing("), 1)
         self.assertEqual(hook.count("HumanDamageScaling.incoming("), 1)
         self.assertNotIn("jump_attack_until", hook)

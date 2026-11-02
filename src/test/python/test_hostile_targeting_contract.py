@@ -1,10 +1,10 @@
 """Core targeting isolation and ownership contracts; actual AI requires game acceptance."""
 import json
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / 'src/main/java/club/someoneice/humangunner'
+PKG = ROOT / 'src/main/java/dev/felix/hostilehumans'
 
 
 class HostileTargetingContract(unittest.TestCase):
@@ -12,7 +12,7 @@ class HostileTargetingContract(unittest.TestCase):
         code = (PKG / 'HostileHumanTargeting.java').read_text(encoding='utf-8')
         for optional in ('top.ribs', 'com.tacz', 'ModList', 'ScgunsCompat', 'GunSupport'):
             self.assertNotIn(optional, code)
-        main = (PKG / 'HumanGunner.java').read_text(encoding='utf-8')
+        main = (PKG / 'HumanRuntime.java').read_text(encoding='utf-8')
         start = main.index('private static void onEntityJoin(')
         end = main.index('// Internal launchers', start)
         self.assertIn('HostileHumanTargeting.onJoin(mob)', main[start:end])

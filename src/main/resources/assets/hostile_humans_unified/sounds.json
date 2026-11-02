@@ -1,0 +1,9 @@
+{
+  "ability.dodge": {
+    "subtitle": "subtitles.hostile_humans_unified.ability.dodge",
+    "sounds": [
+      { "name": "hostile_humans_unified:ability/dodge_soft_ring", "weight": 1 },
+      { "name": "hostile_humans_unified:ability/dodge_soft_low", "weight": 1 }
+    ]
+  }
+}

@@ -1,10 +1,10 @@
 """Source wiring for delayed inputs and final steering safety; not physical/game simulation."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 ROOT=Path(__file__).resolve().parents[3]
-PKG=ROOT/'src/main/java/club/someoneice/humangunner'
+PKG=ROOT/'src/main/java/dev/felix/hostilehumans'
 def source(name):return (PKG/(name+'.java')).read_text(encoding='utf-8')
-HUMAN=(ROOT/'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+HUMAN=(ROOT/'src/main/java/dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
 class MovementInputExecutionContract(unittest.TestCase):
     def test_native_inputs_capture_separate_real_sources_before_writes(self):
         control=HUMAN.split('static class HumanMoveControl',1)[1]
@@ -24,10 +24,10 @@ class MovementInputExecutionContract(unittest.TestCase):
         self.assertIn('physicalBefore = human.getDeltaMovement()',control)
         self.assertIn('guardSteeringImpulse(',control)
     def test_cancel_and_late_cleanup_do_not_erase_external_motion(self):
-        cleanup=HUMAN.split('public void humanGunner$cancelMovementExecution()',1)[1].split('/** A current melee',1)[0]
+        cleanup=HUMAN.split('public void hhu$cancelMovementExecution()',1)[1].split('/** A current melee',1)[0]
         self.assertNotIn('setDeltaMovement',cleanup)
         self.assertIn('cancelExecutionInputs()',cleanup)
-        self.assertIn('human.humanGunner$cancelMovementExecution()',source('HumanBehaviorControl'))
+        self.assertIn('human.hhu$cancelMovementExecution()',source('HumanBehaviorControl'))
         clear=HUMAN.split('public void clearRangedStrafeMotion()',1)[1].split('/** Root session',1)[0]
         self.assertIn('if (!control.clearCombatStrafe()) return',clear)
     def test_local_delayed_step_keeps_original_token(self):

@@ -1,10 +1,10 @@
 """Integration constraints for cliff detours; not world collision or gameplay tests."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3] / 'src/main/java'
-PKG = ROOT / 'club/someoneice/humangunner'
-HUMAN = (ROOT / 'com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+PKG = ROOT / 'dev/felix/hostilehumans'
+HUMAN = (ROOT / 'dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
 WATER = (PKG / 'WaterCombatNavigation.java').read_text(encoding='utf-8')
 
 class WaterCliffNavigationContract(unittest.TestCase):
@@ -29,7 +29,7 @@ class WaterCliffNavigationContract(unittest.TestCase):
         self.assertIn('human.isSeekingShore() || human.isShoreTransitionPending()', pursuit)
         self.assertIn('if (ownsRoute(human)) human.stopSeekingShore()', WATER)
         swimming = HUMAN.split('private boolean computeShouldUseWaterMovement()', 1)[1].split('private boolean isNearWaterSurface()', 1)[0]
-        self.assertEqual(swimming.count('!club.someoneice.humangunner.WaterCombatNavigation.ownsRoute(this)'), 2)
+        self.assertEqual(swimming.count('!dev.felix.hostilehumans.navigation.WaterCombatNavigation.ownsRoute(this)'), 2)
         self.assertIn('this.shoreCandidateNavigators.getOrDefault(path, this.shorePathUsesWaterNavigation)) return false', HUMAN)
 
     def test_cliff_checks_actual_surface_and_body_not_just_drop(self):
@@ -39,7 +39,7 @@ class WaterCliffNavigationContract(unittest.TestCase):
                      'level.hasChunksAt', '++scanned >= 16'):
             self.assertIn(call, safety)
         self.assertLess(safety.index('shoreExitReason(human, from, to)'), safety.index('if (drop == 0'))
-        nav = (ROOT / 'com/craftix/hostile_humans/entity/ai/HumanNavigation.java').read_text(encoding='utf-8')
+        nav = (ROOT / 'dev/felix/hostilehumans/navigation/HumanNavigation.java').read_text(encoding='utf-8')
         self.assertIn('avoidTransition(surface, node, untilTick)', nav)
         self.assertIn('getNextNodeIndex() - 1', nav)
 

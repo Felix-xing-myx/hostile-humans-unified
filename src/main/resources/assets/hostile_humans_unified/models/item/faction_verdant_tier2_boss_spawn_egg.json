@@ -1,7 +1,8 @@
 {
-  "parent": "minecraft:item/template_spawn_egg",
+  "parent": "minecraft:item/generated",
   "textures": {
-    "layer2": "hostile_humans_unified:item/faction_egg_corner",
-    "layer3": "hostile_humans_unified:item/faction_boss_egg_mark"
+    "layer0": "minecraft:item/spawn_egg",
+    "layer1": "minecraft:item/spawn_egg_overlay",
+    "layer2": "hostile_humans_unified:item/faction_identity/egg_verdant_2_boss"
   }
 }

@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "hostile_humans_unified:block/training_center_top",
+    "bottom": "hostile_humans_unified:block/training_center_bottom",
+    "side": "hostile_humans_unified:block/training_center_side"
+  }
+}

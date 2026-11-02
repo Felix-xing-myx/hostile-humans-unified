@@ -19,7 +19,7 @@
 1. FMLCommonSetup 的服务器配置准备调用 `UnifiedConfig.reloadForServer()`。`SplitConfigFiles.load` 先读 global，再读四阶。旧单文件和 TOML 已不作为设置来源。
 2. 文件必须是有效 JSON 且 `schema_version=2`。坏文件原样保留，日志报错并在内存使用该文件的默认值；不会把部分成功字段拼进坏文件。现有文件只整理原字段，缺项仅内存补默认，不创建继承或迁移备份。
 3. `TierConfigProjection.applyTier` 将各阶 food/potions 放入 `tiers.<阶级>`，装备放入 `equipment_loadouts.<阶级>`，AI放入 `tier_ai.<阶级>`。`UnifiedConfig` 合并缺项时保留显式数组和空数组，再形成不可变分阶快照。
-4. 实体数据准备好后 `HumanSpawnEquipment.completeIfReady` 生成装备、护甲、武器备用、成长修正与弹药；`HumanGunner.configureCombatAi` 再调用 `RecoverySupplies.provisionInitialKit`。
+4. 实体数据准备好后 `HumanSpawnEquipment.completeIfReady` 生成装备、护甲、武器备用、成长修正与弹药；`HumanRuntime.configureCombatAi` 再调用 `RecoverySupplies.provisionInitialKit`。
 5. 出生补给依赖全局 `ai.enabled` 和本阶 `ai.item_recovery_enabled`，另受各组 enabled 控制。NBT 的补给领取标记防止卸载/重载重发。库存满则发放数量可能小于配置要求，通常一瓶药水占一个背包槽。
 
 ## 2026-10-08 发现与修复（历史记录）

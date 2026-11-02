@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "hostile_humans_unified:item/faction_identity/ashen/band_3_icon_cloth",
+    "layer1": "hostile_humans_unified:item/faction_identity/ashen/band_3_icon_trim"
+  }
+}

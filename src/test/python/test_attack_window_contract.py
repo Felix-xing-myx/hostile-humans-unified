@@ -1,16 +1,16 @@
 """Window hints and identity handoff contracts, not gameplay or hit-rate proof."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest,json
 ROOT=Path(__file__).resolve().parents[3]
-PKG=ROOT/"src/main/java/club/someoneice/humangunner"
+PKG=ROOT/"src/main/java/dev/felix/hostilehumans"
 def source(name):return (PKG/(name+".java")).read_text(encoding="utf-8")
 class AttackWindowContract(unittest.TestCase):
     def test_three_weapons_share_offensive_window_entry(self):
-        for path in [PKG/"GunMovementExecution.java",ROOT/"src/main/java/com/craftix/hostile_humans/entity/ai/goal/BowMovementExecution.java",ROOT/"src/main/java/com/craftix/hostile_humans/entity/ai/goal/CrossbowMovementExecution.java"]:
-            self.assertIn("RangedFiringPosition.findAttackWindowPath(",path.read_text(encoding="utf-8"))
-        wrapper=source("RangedFiringPosition").split("public static Path findAttackWindowPath",1)[1].split("public static Path findVisiblePath",1)[0]
-        self.assertIn("HumanPerception.canTarget",wrapper)
-        self.assertIn("Math.max(2,h.distanceTo(target)-2)",wrapper)
+        for path in [PKG/"GunMovementExecution.java",ROOT/"src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/BowMovementExecution.java",ROOT/"src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/CrossbowMovementExecution.java"]:
+            self.assertIn("RangedFiringPosition.searchAttackWindow(",path.read_text(encoding="utf-8"))
+        wrapper=source("RangedFiringPosition").split("public static AttackWindow searchAttackWindow",1)[1].split("public static Path findVisiblePath",1)[0]
+        self.assertIn("available(h, target)",wrapper)
+        self.assertIn("Math.max(2, h.distanceTo(target) - 2)",wrapper)
     def test_loaded_hints_have_bounded_inspection_and_exploration(self):
         code=source("RangedWindowCandidates")
         for guard in ("MAX_CANDIDATES=96","MAX_INSPECTIONS=192","hasChunkAt","noCollision","SoldierOrder.allowsCombatPosition","getCollisionShape","phase=Math.floorMod","seeds.inspectionLimit=112"):

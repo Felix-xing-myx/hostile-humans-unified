@@ -1,0 +1,8 @@
+{
+  "size": 1,
+  "order": 220,
+  "icon": "hostile_humans_unified:item/faction_wallet",
+  "validators": [
+    "curios:tag"
+  ]
+}

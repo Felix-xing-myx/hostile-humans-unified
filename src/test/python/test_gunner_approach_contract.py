@@ -1,9 +1,9 @@
 """Movement handoff contracts; navigation and combat still need game acceptance."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 
 class GunnerApproachContract(unittest.TestCase):

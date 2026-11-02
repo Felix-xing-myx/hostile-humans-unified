@@ -1,9 +1,9 @@
 """Authority, bounds and deferred-work contracts; not Java/runtime or TPS verification."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import json
 import unittest
 ROOT=Path(__file__).resolve().parents[3]
-PKG=ROOT/"src/main/java/club/someoneice/humangunner"
+PKG=ROOT/"src/main/java/dev/felix/hostilehumans"
 def source(name):return (PKG/(name+".java")).read_text(encoding="utf-8")
 
 class LongRangeNavigationContract(unittest.TestCase):
@@ -17,7 +17,7 @@ class LongRangeNavigationContract(unittest.TestCase):
         self.assertIn('"navigation_search"',source("TierConfigProjection"))
 
     def test_trial_is_isolated_and_uses_native_human_safety(self):
-        nav=(ROOT/"src/main/java/com/craftix/hostile_humans/entity/ai/HumanNavigation.java").read_text(encoding="utf-8")
+        nav=(ROOT/"src/main/java/dev/felix/hostilehumans/navigation/HumanNavigation.java").read_text(encoding="utf-8")
         trial=nav.split("public Path createBoundedPath",1)[1].split("@Override public BlockPos getTargetPos",1)[0]
         self.assertNotIn("super.createPath",trial)
         self.assertNotIn("this.path =",trial)
@@ -81,7 +81,7 @@ class LongRangeNavigationContract(unittest.TestCase):
         self.assertNotIn("Math.max(s.nextTick,tick",reuse)
 
     def test_route_reuse_keeps_watchdog_and_new_acceptance_resets_node_timeout(self):
-        nav=(ROOT/"src/main/java/com/craftix/hostile_humans/entity/ai/HumanNavigation.java").read_text(encoding="utf-8")
+        nav=(ROOT/"src/main/java/dev/felix/hostilehumans/navigation/HumanNavigation.java").read_text(encoding="utf-8")
         move=nav.split("boolean moveTo(Path",1)[1].split("@Override public boolean isStuck",1)[0]
         reuse=move.split("if (sameRoute)",1)[1].split("else accepted",1)[0]
         self.assertIn("setSpeedModifier(speed)",reuse)

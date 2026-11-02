@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-source = (ROOT / "src/main/java/club/someoneice/humangunner/PerceptionConfig.java").read_text(encoding="utf-8-sig")
+source = (ROOT / "src/main/java/dev/felix/hostilehumans/perception/PerceptionConfig.java").read_text(encoding="utf-8-sig")
 settings = re.findall(r'add\(m,"([^"]+)",([.\d]+),([.\d]+),([.\d]+),"([^"]+)"\);', source)
 if not settings:
     raise SystemExit("No perception setting declarations found")

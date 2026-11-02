@@ -1,4 +1,139 @@
+## 3.14 本轮集成收尾
+
+基线 d3bee48078937cd4a097b951b6e7d86b4ea7574d，保留主仓库既有未提交迁移；所有开发使用隔离工作树，最终只以baseline SHA核对本轮delta。复用UI/监控与培养/分区与经济三代理，交付冻结波、原/新SHA及验证边界；主控接公共配置、注册、协议入口、行为让位、跨模块权限与文档。
+
+已集成UI1–7、培养1–4、分区24文件、经济1–7、TaCZ逐发和三枪械后坐力；新Java统一4空格格式化，仅处理本轮新增文件，未重排继承文件。审查修正TEST来源隔离、退款混合存档恢复、未知NBT保留、500封顶预览、真实坐标逆变换、N5正式雇佣、N6在线/离线共同准入、跨ROOT绑定、固定实例阶级、失败生成不绑定和分页/续租。
+
+本轮维护证据与正式报告：`maintenance-tools/vnext-execution`。最终完整构建/部署与哈希结果由发行记录补充；源码和自动验证不代替游戏内AI、多人、界面及动画验收。无推送、无自动启动游戏，不覆盖实例自定义配置。
+
 # 开发任务与整合记录
+
+## 方案正式实施与九项监控/群战修复（执行中）
+
+- 用户已启动完整目标：按06方案实施，共享UI忠实HTML总览，新增方块初版材质，修复九项问题，源码完成后构建同步约定实例。需求矩阵与证据维护于维护目录 maintenance-tools/vnext-execution；不缩减为只做试点。
+- 当前main基线 d3bee48078937cd4a097b951b6e7d86b4ea7574d，版本3.13.38；继承1797个实际文件的快照（含既有迁移WIP），基线哈希在维护目录baseline.json。暂存区为空，不擅自提交已有修改。
+- /root：worktrees/vnext-master、feature/vnext-master；负责据点/培养/经济/方块公共注册、Human、HumanRuntime、UnifiedConfig、Mixin JSON、build.gradle、公共文档/测试入口和最终整合。
+- 固定UI开发者：worktrees/vnext-ui、feature/vnext-ui；client/ui（gun子目录除外）、observer界面、soldier界面及对应独立测试/资源。先共享框架与属性试点，再逐界面迁移；不得修改monitor和公共bootstrap。
+- 固定监控开发者：worktrees/vnext-monitor、feature/vnext-monitor；monitor、client/render/tacz、client/ui/gun、compat/tacz展示/输入及相关Mixin与独立测试。负责BUG1/2/3/6/7；共享Human等只报告需要的接入。
+- 固定感知兼容开发者：worktrees/vnext-perception、feature/vnext-perception；perception、behavior/combat的射位闭环、TaCZ听觉桥接与碰撞Mixin/兼容测试。负责BUG4/5/8/9；不改monitor或公共配置/注册文件。
+- 各编辑目录隔离，全部基于相同当前文件快照；共享文件由/root接入。开发者不得merge main/部署/push，编译统一由主控调度。继承迁移WIP不混合提交，先交准确文件哈希和任务差异；提交以可分离任务边界为准。
+- 第二阶段复用感知开发者：worktrees/vnext-settlement、feature/vnext-settlement，仍基线d3bee48078937cd4a097b951b6e7d86b4ea7574d，实际快照含第一批公共UI/监控/分配/几何，哈希在settlement-baseline.json。仅settlement（RegionBox/TemplateTransform/SettlementRegion只读）、settlement/client以外的据点后端、独立生成Mixin及测试；注册/JSON/菜单UI由主控和UI负责人接。先作者/索引闭环，再生成适配。
+- 第二阶段复用监控开发者：worktrees/vnext-cultivation、feature/vnext-cultivation，HEAD仍d3bee48078937cd4a097b951b6e7d86b4ea7574d，实际快照哈希cultivation-baseline.json；负责cultivation模块、progression培养接口及独立测试，SpecialtyBounds/Allocation/Policy的已通过数学核心变更须报根审核。注册/Entity/配置/全局生命周期仍root接。
+- 第三阶段复用据点开发者：worktrees/vnext-economy、feature/vnext-economy，HEAD仍d3bee48078937cd4a097b951b6e7d86b4ea7574d，基线economy-baseline.json。负责economy模块与faction的许可/任务/真实奖励公共入口（含根已建Passage/Quota基础的安全扩展），root停止修改这些文件；仅测试模式经济，不擅自正式上线占位价格，N3复用tribute_chest ID。
+- 首批分配与几何Java验证已执行；统一compileJava/compileTestJava运行中。实际实例TaCZ为1.1.8-hotfix2并有Arcana，须针对两JAR复核。没有启动游戏、修改实例配置或push授权。
+
+
+## 分段自然转向与动态曲线（2026-10-26，源码与数学/静态核查完成）
+
+- 已授权按视角转向自然化方案实施，用户明确保留枪械、原版近战与Better Combat各自的攻击许可/命中职责。/root单人顺序负责，基线main b4ea08c9e8037e6868a8ff8a28c87acdc97611a7，工作树worktrees/turn-gestures、分支feature/turn-gestures，继承156项既有修改，归属哈希备份/turn-gestures-baseline.json；不提交混合WIP。
+- 范围：TurnResponse统一有界执行/同tick事务状态；TurnGesture动作级采样与连续曲线；HumanTurnControl提供实体种子及目标身份。攻击/弹道/命中/5°开火门槛不改，不另建战斗控制器。知识库当前机制与方案归档同步。
+- 本轮未授权构建，不运行Gradle或Java编译，不启动游戏、改实例配置、同步JAR或push；先做源码、数学参考及静态核查。
+- 交付：TurnGesture集中抽样并生成保留起点速度/加速度的五次曲线，端点导数保持的时间扭曲、可选极小落点修正、规划可行性采样；TurnResponse三阶阻尼执行、每tick4小步、同tick快照、明确制动、紧急无等待重规划。HumanTurnControl提供UUID种子及目标身份，不消费游戏随机流，不决定攻击许可。HumanAttention没有观察/导航方向时释放控制。没有向枪械、近战或盾牌额外散布同类策略。
+- 校准：参考数学模型128个种子的90°静止场景，普通进入并保持5°范围均值10.10tick（8～13），紧急6.21tick（6～7）；对应旧参考约13/8tick，耗时约缩短22%。扫描限速1.5°/tick的闲置仍优先服从原预算，不能承诺全场景固定提速。归一化轨迹有显著差异，连续4/8/12/18°每tick跟随可保持原5°门槛；修正结束无持续驱动力，取消后无自激转动。
+- 验证范围：参考数学模型71372项断言通过，不是Java执行；375项纯源码Python检查通过、5项环境跳过，7个可能调用外部命令的模块未运行。新增NaturalTurnResponseTest接入既有PerformancePoliciesTest入口，覆盖同tick临时请求、同实体多段差异、C2衔接、收尾、跟随、限角、取消与重置，未Java编译运行。校准与源码哈希保留analysis-only/turn-gestures。
+- 文档：备份后重写公共视角转向正文、更新预算、移动已实施方案到08归档并调整索引。主仓库整合前按逐文件基线哈希核对，保留其他WIP；不提交混合修改。源码版本仍3.13.17，实例仍为此前已部署产物，未包含本轮变更。
+- 待游戏验收：普通/首领旁观附身平滑性、连续多次转向差异、目标急停和反向、导航转角、普通/撤退开枪、原版/Better Combat近战、单源及多源盾防、动作取消及NoAI/编辑恢复。实际手感与多人插值未因数学检查而视作通过。
+
+## 玩家式惯性视角转向（2026-10-25～26，源码与数学/静态核查完成）
+
+- 目标：统一角加速、粘滞到位、连续目标跟随与反向制动，不改变敌我、发现条件或导航搜索。/root独占所有接入；基线main ece87845eb3ff7f6f4abd7b2d382a61f1334c523，工作树worktrees/playerlike-attention、分支feature/playerlike-attention，继承148项现有修改，哈希在备份/playerlike-attention-baseline.json。
+- 范围：TurnResponse纯曲线/同tick重算、HumanTurnControl实体生命周期；HumanAttention最终视角、枪械及撤退瞄准、近战与盾牌朝向统一接入。实际出枪需朝向到位，保留路径及移动输入换算。知识库同步曲线、规则和参数。
+- 无本轮构建指令：只做源码、数学模拟和静态核查，不运行Gradle/Java编译，不启动游戏、部署、改实例配置或推送。
+- 交付：统一TurnResponse与实体生命周期接入，三个响应档位，普通/闲置身体速度上限为头部90%、加速与收敛80%，紧急不额外拖慢。普通/撤退枪械同时检查实际身体、头、俯仰5°到位；近战和盾牌实际朝向也复用曲线。旧AttentionFacingPolicy匀速step/idleStep无生产调用，已移除并迁移原有测试，不并存两套执行控制器。
+- 核查：14个纯源码Python测试模块共65项通过；参考数学脚本从源码读取五个档位，152002项数学断言通过，覆盖启动加速、减速到位、连续目标/随机转向、速度/加速界限、角度接缝与反向制动。结果在analysis-only/playerlike-attention；这不是Java执行。PerformancePoliciesTest与PerceptionPolicyTest新增/迁移真实曲线及同tick重算、头身过渡、间断重置断言，未编译运行。跳过可能调用编译/外部命令的其他模块。
+- 文档：公共层新增视角转向与朝向控制，五篇相关机制/索引同步并备份；记录公式、档位、身体滞后、实际出枪到位和生命周期。主工作区整合前逐文件检查基线哈希，原有未提交工作保留，不提交混合修改。
+- 待游戏验收：普通/首领附身视角、前后突变目标与连续侧移目标、窄角导航转弯、近战前摇与命中、单源/多源盾防、三种枪械普通与撤退开火。尚未Java编译、构建、同步、push或启动游戏。
+
+## 感知事件、明确收割、开阔张望与通报遮蔽（2026-10-25，源码与静态审查完成）
+
+- 目标四项：扩大合乎逻辑的声音输入（保留普通动物/创造旁观过滤、视觉才锁敌、声音不可达排除）；残血收割仅明确机会高优先级且不能压制现实自卫；闲置方向采样避墙并偶尔回头；同阵营链式报告隔墙衰减，保留威胁、去重和原始期限。
+- 基线main `ece87845eb3ff7f6f4abd7b2d382a61f1334c523`；/root单人顺序负责，工作树`worktrees/perception-tactical-review`，分支`feature/perception-tactical-review`。继承当前138项未提交覆盖，归属哈希记录`备份/perception-tactical-review-baseline.json`，不得夹带提交或覆盖。当前前两轮刷怪笼/空手及出生补给修改仍未构建部署。
+- 接口与范围：新增原版GameEvent只读适配器→HumanAwareness统一队列；HumanFinisherSelection/FinisherPolicy→HumanTargetCoordinator；独立IdleSurvey→HumanAttention末端；通报独立传播几何策略→HumanTargetSharing的发送/动态续接。PerceptionConfig、SoundExclusionMemory及知识库同步；共享Human.java仅替换随机张望Goal，保留导航、动作和攻击所有权。所有额外几何工作按PerceptionBudget计费，预算不足暂缓，不当成无遮挡。
+- 授权：源码、必要静态/纯脚本检查与文档；未有本轮构建指令，不运行Gradle或Java编译，不启动游戏、不改实例配置、不push。收尾按四项逐条审查并报告新增事件与默认值。
+- 交付：原生动作适配、近场明确收割/真实伤害让位、分批开阔张望与偶尔后视、逐跳遮蔽传播。近旁玩家注视仍有独立预算视线，张望沿原surveyStep按感知间隔减速，补足预计转身时间；修复移动后旧原点导致持续延期的边界。四篇知识库正文与七份生成附录同步，修改前备份在维护目录。
+- 验证：8个相关Python测试模块合计36项通过；Java映射依赖只读核对原生事件常量与LookAtPlayerGoal.lookAt访问权限；JSON解析与七份附录一致性通过。新补Java行为断言已登记在原有RevisionCombatPolicyTest/TargetSharingPolicyTest，未编译执行。未构建、未部署、未推送，保留主工作区既有修改；整合前逐文件基线哈希核对。
+- 游戏内待验收：生存模式弓弩/容器/机械等输入、动物及创造旁观排除；弱残血怪与已确认攻击者并存时切敌；室内墙角/后方开阔/走动后张望；不同感知倍率、隔墙/开门/中继通报及预算拥堵。静态结果不代表这些场景已经验收。
+
+## 出生图腾独立概率与附魔金苹果调整（2026-10-25，源码完成）
+
+- 需求：图腾改为直接出生概率，流浪者/一阶/二阶/三阶5%/5%/10%/20%，移除旧副手权重与成长保留的交叠；附魔金苹果2%/10%/25%/65%，数量分布保持。头目按自身阶级；不重抽已有个体。
+- 基线main `ece87845eb3ff7f6f4abd7b2d382a61f1334c523`；负责人/root；工作树`worktrees/birth-survival-supplies`，分支`balance/birth-survival-supplies`，继承主工作区当前文件并存归属哈希`备份/birth-survival-supplies-baseline-20261025.json`。不提交既有修改，不触碰实例配置/存档。
+- 文件范围与接口：出生配装统一入口、ConfiguredEquipmentLoadout、图腾出生供给模块、旧供给配置迁移、装备成长记录/读取、默认资源、相关回归与知识库；共享文件/root顺序接入。图腾只抽一次、成功最多一枚入背包，不占副手、不腾位丢物，不受阵营或成长倍率；旧副手图腾候选和旧成长保留字段停止生效并迁移移除。新概率显式配置优先，不把旧加权概率折算为新概率。
+- 实现：SpawnTotemSupply.grantOnce统一从出生配装完成链调用，按equipment_loadout.totem_chance单次roll一枚入背包，持久化receipt阻止重复补发；无容量不腾位，不依赖恢复AI开关。移除成长Profile字段和二次删图腾逻辑；旧副手条目加载时移除，运行时副手过滤也拒绝图腾，避免绕过或重复赠送。移除旧成长字段及说明，不折算旧权重，不覆盖显式新概率。苹果只改四阶默认机会，数量权重与恢复开关不变。
+- 验证/交付：Python出生供给4、成长配置3、装备条件4、装备菜单/盾6、此前刷怪笼/空手接线3，共20项通过；新增Java迁移、显式0与自定义项保留、幂等及四阶默认值断言尚未编译执行。JSON逐字段对比仅有本轮概率/图腾旧字段改动；git diff --check、7份默认附录核对及4页机制Wiki链接通过。四机制正文和默认附录修改前备份至备份/birth-survival-supplies-knowledge-20261025。
+- 已按原文件归属哈希核对，将本轮16文件增量整合主工作区，原文件及补丁留存备份/birth-survival-supplies-integration-20261025和备份/birth-survival-supplies-task.patch；未提交夹带历史修改的快照。本轮未授权构建，未运行Gradle/Java编译、同步、游戏或push，未改实例配置。既有实例苹果概率仍20/40/60/100%，未来需按用户授权精确改值或重新生成，不能声称已部署。
+- 游戏验收待做：四阶/对应首领新出生及刷怪笼批次抽样，成长早期与满进度概率一致，图腾0/1边界，满背包、重载不补发，显式作者装备优先和新旧配置迁移。
+
+## 刷怪笼出生 NBT 隔离与空手攻速（2026-10-24，源码完成）
+
+- 需求：阵营刷怪蛋设置刷怪笼后，连续出生偶发完全空装备；空手最终近战攻速上限1.5。用户已澄清直接用蛋正常。本轮不构建、不同步、不启动游戏、不推送。
+- 基线：main `ece87845eb3ff7f6f4abd7b2d382a61f1334c523`；负责人/root，独立工作树`worktrees/spawn-egg-unarmed`、分支`fix/spawn-egg-unarmed`。继承主工作区122个既有文件覆盖以审查实际实现，归属哈希清单位于维护目录`备份/spawn-egg-unarmed-baseline-20261024.json`；不得提交或覆盖这些继承修改。
+- 范围/共享接入：Human.java的NBT读取边界由/root独占；MeleeAttackTiming、MeleeJumpPolicy及相关测试，CHANGELOG/本记录和知识库装备、近战、建筑导入正文。维持统一出生配装与攻击冷却入口，不另造阵营装备或攻击计时器。
+- 证据：Forge1.20.1映射依赖Entity.load将传入ForgeData直接赋给persistentData，BaseSpawner反复用同一SpawnData.entity加载实体。Human.readAdditionalSaveData的身份初始化和FactionContent.onJoin的一次性标记消费会修改共用模板；后续GENERATED等状态也可能污染模板。拟在Human.load统一深复制，保持每个实例数据隔离。装备生成仍沿现有阶级/阵营池；显式作者装备和普通存档状态保留。空手按最终速度封顶，武器仍保留4的原版属性基准及自身修饰。
+- 交付/验证：Human.load在进入Forge加载前深复制全部NBT；MeleeJumpPolicy新增空手最终1.5上限，由MeleeAttackTiming按主手是否为空接入。新增6个Java冷却边界断言（未编译执行）；Python出生模板与空手接线3项、追击跳砍8项、防御近战2项共13项通过，git diff --check通过；只读javap确认Forge引用及刷怪笼复用链。知识库装备、近战、冷却总表和建筑导入4页同步并备份。已将本轮7个明确文件的增量整合主工作区，未创建夹带历史修改的提交；未运行Java编译/Gradle/构建/同步/推送/游戏。旧世界中已污染的笼模板需重新用对应阵营蛋设置；验收覆盖各阵营各阶/首领笼多轮生成、卸载重载、作者明确空装备保留，以及武器破损后/高攻速专精下空手14tick、持械BC时序不变。
+
+## 食物与药水恢复重平衡（2026-10-18，源码完成）
+
+- 基线40b677c5e7d6b9590327aeed04be7b9bdb78d161；主控/root独占worktrees/recovery-rebalance、feature/recovery-rebalance，范围RecoverySupplies/纯策略/人类效果桥接及Mixin、默认配置与回归/知识库。共享文件顺序接入。用户要求瞬间治疗总8点，再生I/II总1/2点每秒，食物间隔10→15；不构建或同步。main已有未提交讨论与盾牌记录，保持原样，本任务登记也仅在主工作树维护，不纳入功能提交以免提交已有修改。
+- 实现：人类HEAL I/II完整作用8点，移除onUseCompleted额外12；HumanRecoveryEffects/MobEffect Mixin替换实际效果，不依赖治疗后扣血修正，喷溅/云按原生exposure缩放且上限1，反转治疗保留原生。REGENERATION原生tick取消，由既有独立Clock固定10tick治0.5/1，I/II（更高封顶II）总1/2点每秒，食物默认15tick最多1点；配装/消费/急救/持续时间不改，玩家及医疗直接heal保持，金苹果/联动附带同种再生统一新速率。
+- 接口与验证：新增核心MobEffect Mixin注册，SRG m_6742_与m_19461_完整描述符与本地Forge1.20.1映射只读核对（require=1/remap=false）。Python311（299通过、12跳过）、495Java语法、六默认附录、九页Wiki及diff通过；新增纯Java8点/暴露比例/非法输入、10秒总脉冲与接线回归尚未编译执行。知识库三正文+六附录先备份再同步，记录验证日志/recovery-rebalance-knowledge.json。
+- 本地提交50ed6db并快进整合main，保留main既有未提交WORKSTREAMS；未Gradle/编译/构建/同步/push/游戏启动。测试实例仍3.10.6，且roamer/tier1/tier2/tier3.json的ai.gradual_heal_interval_ticks显式为10；后续用户要求构建同步时必须先备份，仅精确改这四字段为15，其余配置保持。盾牌40b677c同样未部署。
+- 待编译及游戏验收：Mixin在真实Forge变换生效、饮用I/II单次8、喷溅距离/云、I/II总速率与无原版叠加、金苹果/医疗附带再生、食物15tick及总额度不变、玩家效果原样、背包编辑/换装/存档与恢复时钟；无CPU/FPS实测。
+
+
+
+## 盾牌最大耐久比例损耗（2026-10-18，源码完成）
+
+- 基线77ca830089291916b584f0e282a77568d88b043e；主控/root独占worktrees/shield-percent-wear、feature/shield-percent-wear。用户认可复合公式并要求降低比例，采用0.10%，范围统一ShieldDurability损耗/回归/机制文档；不改伤害输入阶段、合并窗、原生附魔或盾防减伤。未要求构建。main已有WORKSTREAMS未提交的方案讨论记录，本任务保留且不擅自提交；本节登记仅在主工作树维护，不随功能提交覆盖该文件。
+- 实现：wearCost(D,M)=1+floor(D*(1+0.001*M))，正有效输入，非法值返回0、超大值饱和。applyWear读取该盾getMaxDamage，不用剩余耐久。2tick汇总、固定+1每批一次、hurtAndBreak/耐久附魔、换装保存前flush及三个原伤害输入阶段保持；只改本模组人类，不改玩家盾牌、减伤/破盾/冷却。0.001为源码常量，未新增配置。
+- 验证：Python308（296通过、12跳过）、493Java语法、六默认附录、盾牌页Wiki与12个表格算术值通过；更新Java无效/大数/霰弹/AP合并用例，并补20伤害2000耐久=61、32伤害336/1000/2500耐久=43/65/113及非法最大耐久。未编译执行Java用例，未Gradle/构建/部署/push；实例仍3.10.6。知识库盾牌正文先备份再替换旧公式及表，记录验证日志/shield-percent-wear-knowledge.json。
+- 本地提交40b677c5e7d6b9590327aeed04be7b9bdb78d161并快进整合main。合并遇到旧0字节.git/index.lock，经确认无git进程后仅删除陈旧锁重试；未清理用户修改，既有方案记录仍未提交。待游戏验收不同盾最大耐久/原生耐久附魔、同窗多弹丸与连续射击、原生格挡/TaCZ/副手被动三入口、换盾/保存及实际破盾音效；静态检查不代表这些行为通过。
+
+
+
+## 改进方案梳理：阵营与指挥体系（2026-10-17，讨论中）
+
+- 需求：用户指定原始想法第1、4、5、6、7条，要求逐步详细的合理方案，允许中途提问。本轮只产出方案文档，不改源码、不构建、不部署、不 push。
+- 澄清：用户答四项设计——阵营数据驱动且默认3～4个；玩家组队本轮不做，只做单人对士兵；小队在名册内手动编队，快捷方式改为可绑定小队的指挥物品右键打开界面，不用键盘快捷键；距离采用全局默认+单兵滑杆覆盖。
+- 产出：新增`06-修改方案/02-阵营与身份/队伍阵营与身份标识.md`（第1条）、`06-修改方案/05-士兵指挥/指挥体系与行动模式改造.md`（第4、5、6、7条）与`士兵指挥方案索引.md`；更新`00-修改方案索引.md`（新增模块行与阶段0～7推进顺序）及`阵营与身份方案索引.md`（状态改讨论中、补链接）。
+- 设计要点：阵营落为实体字段并与`team`派生同步，关系判定收敛到单一入口，绑带用新增渲染层，刷怪蛋受物品注册时机限制只为内置阵营提供；命令保留五值枚举、界面映射为三模式加驻守子菜单；半径先收敛解析函数再改四个准入点；小队用`SquadData`与指挥物品承载；自然状态写入实体NBT、锚点于加载首tick计算以避免模板绝对坐标污染。
+- 边界：未改源码、未编译、未构建、未同步实例、未push；两份方案状态为讨论中，待用户确认待决定事项后进入实施。知识库新页链接自检65页0断链。
+- 讨论修订（同日）：新增第四阵营`ashen`（灰鸦，有组织但无据点的武装团体、成员互不攻击、默认权重50、与三个有据点阵营敌对）；建筑归属只到居民层，结构生成逻辑与结构JSON均不改，原拟的`settled`字段因无代码读取而删除；`spawn_weight`唯一来源改为阵营定义，配置只留全局开关；阵营定义增加可选`name`函数字段。术语统一：全文以“流浪者”指代`human_roamer`，导航理论三页同步改名。另修正`SpawnerEntity`并非据点生成器而是野外战斗事件`human_group`，并加入“自然生成按群抽一次阵营”的一致性规则。
+- 追加决定（同日）：流浪者不渲染任何绑带，以“没有颜色”作为可辨认身份；同阵营之间不允许误伤，误射/投掷物/范围伤害统一拦截且不提供友伤配置，仅战斗控制器显式授权可例外。
+- 关系模型改版（同日）：身份牌退役，五件牌保留为装饰品；玩家与阵营的关系改为“声望（-100～100，六档）”，雇佣看声望档位而非牌级；敌对状态下仍可通过击杀其敌人、贡品箱、悬赏回升。个体记忆与区域热度按用户决定本轮不实现，方案中已删除仅留待后续讨论。新增 `06-修改方案/06-成长与专精/专精倾向与属性分布.md` 与模块索引，六种专精按阵营权重抽取、轻微改属性与成长曲线，旧存档一律按均衡迁移；00-修改方案索引新增模块行并把推进顺序改为阶段 0～8。
+- 生成流水线（同日）：确定“准入（仅野生）→阶级→阵营→出生掷骰→属性解析→成长层→装备背包→死亡掉落”顺序；结构居民跳过准入、出生日改用固定基线`growth.structure_baseline_day`（避免`timeNear=-1`写成第0天）；属性采用阶级基线+专精分布；掉落物全部来自背包、不走战利品表——野生按概率掉落并承担耐久损耗，雇佣兵才全额掉落；现有三张按阶级的表需清空或返回空表。
+- 成长层改版（同日）：确认“世界曲线”与“成长进度”是两个独立乘区——世界曲线保留现值（生命50→100、伤害75→100，用于让早期生成的人类偏弱），成长进度保持出生90～110%、上限125%（基准+25%），且不对属性数值设上下限；应用顺序为阶级基础×专精×浮动→世界曲线→成长进度→枪械→装备；旧实体沿用原经验百分比，不重置。
+- 专精幅度（同日，已被同日“专精改版”取代）：曾按用户要求调大固定模板乘数区间至 0.70～1.40，五种专精各有两项以上明显代价；允许相邻阶级单项重叠，但跨两阶仍以阶级为主。
+- 据点辖区（同日）：确定用 SavedData 据点索引（维度/结构ID/包围盒）在生成时记录，玩家侧每20tick查索引判定辖区，不加载区块、不强制加载据点；辖区判定与据点内容交互分离；阵营化辖区需要“结构ID→阵营”数据包对照表。
+- 绑带渲染（同日）：基础样式改为右手与左腿各一道绑带纹理，渲染层挂在 HumanRenderer 上，不新建模型；流浪者不渲染；后续阵营专属生物可用自己的渲染方案；绑带纹理本身待定（每阵营独立贴图或灰度染色二选一）。
+- 刷怪蛋（同日）：确定 4 阵营 × 3 阶级共 12 种阵营蛋（`faction_<id>_<tier>_spawn_egg`），生成时写入阵营并选对应阶级；原四个阶级蛋保留注册但创造栏隐藏，等价于默认阵营绯红；蛋图标沿用阶级底色并在右上角叠加阵营色角标，便于创造栏辨认；`/summon` 写 `ForgeData` 亦可。
+- 阵营头目（同日）：三个有据点阵营 × 三阶级共 9 种头目实体（灰鸦无头目）；头目=普通人类特化版，固定取阵营主专精并按 1+(m-1)×1.8 放大（钳制0.50～1.90），另叠基准倍率（生命2.4/护甲1.6/近战1.3）；本轮只做生物与头目蛋，不做据点放置、不自然生成，行为强化留作保留项。
+- 专精改版（2026-10-18）：六个固定乘数模板改为“个体总预算（正态）+ 十维成本加权分配 + 偏差钳制”。维度调整：维度总数改为 10 个——保留“枪械伤害”独立维度但把偏差上限单独收紧到 ±20%，枪械散布按“准度”对称浮动 ±50%（内部换算为散布乘数 1/a，约 0.67～2.00），新增“弹射物伤害”维度（弓/弩/三叉戟，±30%，接入 `HumanDamageScaling.outgoing` 分类分支）；偏差上限改为逐维度可配，全局值只作默认。单项乘数已含预算、不重复相乘（用户指出原公式 40×1.05×0.85 为重复计算）。分配改为“期望份额 × 有界倾斜（对数正态，倾斜截断 ±30%）再归一化”，归一化后仍按 ±30% 相对期望做迭代钳制并在未钳项间守恒；保留绝对边界 0.50～1.80 作第二层。六个专精名改为结果标签，按固定阈值从最终乘数反推、可多标签。预算参数、成本权重与阈值待调。实测两万次：有界倾斜下单项最高倍率中位数约1.23、前1%约1.46；无界独立随机再归一化则中位数2.46、前1%达4.4，故禁止后者。
+- 雇佣标识（2026-10-18）：玩家雇佣某阵营士兵后，臂章不消失，保留原阵营色、只把纹理切换为统一的雇佣样式；解除雇佣恢复普通纹理、颜色不变。原阵营不在战场头顶额外显示，只在命令界面与名册详情中以文字和色块标出（如“原阵营：绯红”）。方案正文、跨模块、实施步骤与验收场景已同步；维度计数由九维统一更正为十维（新增弹射物伤害）。
+- 身份绑带（2026-10-18）：Curios 专用栏位由身份牌改为身份绑带，身份牌保留为装饰品且不再参与判定；每阵营四级、共16件（`faction_<阵营ID>_band_<等级>`），一至四级分别对应一阶/二阶/三阶/首领。本轮不开放配方与获取途径，只在创造栏与指令中提供，后续由任务系统发放。任意等级都阻止对应阵营人类主动攻击（含首领），只影响对应阵营的三阶与首领、不影响流浪者。宽容范围按等级递进：二级带宽容一~二阶，偶尔误伤不记仇；100 tick 内 3 次命中、200 tick 内累计 20% 生命或生命低于 60% 任一条触发个体仇恨，仅该个体敌对并记忆 600 tick；打到超高一级的人类一次即触发群体仇恨，25 格内同阵营全员敌对（含低阶）600 tick。绑带与声望的合并方式待用户后续给出，本轮按“各管一段”占位。无 Curios 时背包兜底；旧存档原栏位的身份牌退回背包。
+- 绑带样式统一（2026-10-18）：人类与玩家共用同一套四级绑带模型，每阵营四级共16套；人类按阶级取级（一阶1、二阶2、三阶3、头目4），玩家按装备的绑带等级取样式；玩家在第三人称与其他玩家视角于右臂/左腿渲染，位置与人类一致、比例按玩家模型调整，绘制在护甲层外；物品图标复用同一套样式。玩家渲染数据由服务端在装备变化时同步“阵营+等级”，人类等级由阶级推导。雇佣表现由“换纹理”改为“保留等级绑带+叠加雇佣标记”（做法待定），避免丢失等级信息。待定：雇佣标记、同步半径、独立贴图还是灰度染色。
+- 声望与绑带合并（2026-10-18）：绑带不改写真实声望，只修正“有效声望 = clamp(真实声望 + 绑带修正, -100, 100)”；同阵营一~四级 +10/+15/+20/+30，敌对阵营（任一方 enemies 命中）-20/-30/-40/-50，其他阵营 0。有效声望按六档判定：警戒及以上不主动攻击，敌对/仇敌主动攻击。同阵营四级最多 +30，仇敌（≤-60）最多抬到 -30（敌对），仍会攻击，满足“声望过差时本阵营绑带也保不住”；中立玩家佩戴敌对阵营绑带可能被拉到敌对，取决于真实声望与等级。绑带修正只用于敌我判定，不改写声望，也不改变交易/雇佣/折扣门槛；误伤容忍仅在警戒及以上生效。配置增加 own_bonus/enemy_penalty；有效声望服务端即时计算、不落盘。本条数值随后按“声望刻度放大”一条整体放大五倍。
+- 声望刻度放大（2026-10-18）：范围 -100～100 → -500～500，六档边界五倍：仇敌≤-300、敌对-299~-100、警戒-99~99、中立100~249、友好250~399、盟友≥400；绑带修正同步五倍（同阵营+50/+75/+100/+150，敌对阵营-100/-150/-200/-250）。声望增减值保持原值（击杀+3、贡品每价值10点+1、悬赏+12等），涨落明显变慢；每日上限不变。默认起点：敌对-200、警戒0、中立150。有效声望 clamp 改为 -500~500；示例与验收同步。
+- 待定事项答复（2026-10-18）：配色保留，阵营中文名定为赤獠（crimson）/靛磐（azure）/苍隼（verdant）/灰鸦（ashen）；声望阈值与初始值暂按默认（-500～500，七档）；流浪者任何情况下对玩家敌对且不可雇佣；灰鸦雇佣门槛暂缓，后续按阵营区分雇佣成本与交易模式；贡品箱先做方块、物品与贴图，不接功能、不进自然建筑；赎买契约不做；个体记忆与区域热度继续保留待定；绑带先用灰度底图按阵营色染色加等级纹样，背景完善后再定制；头目体型 1.2 不变、绑带用四阶、头目蛋仅创造模式、基准倍率按默认，进入据点方式待定；误伤阈值改为 300 tick 内 5 次或 800 tick 内 30% 最大生命；群体仇恨半径 25 格，首领同为 25 格；越级命中在有效声望中立及以上给 100 tick 两次窗口，警戒状态一次即触发；绑带不添加正式获取途径，只做物品与功能，无 Curios 时背包兜底；雇佣标记为在等级绑带上叠加小标记；玩家绑带渲染距离与玩家实体一致；绑带不叠加，判定只取等级最高的一条，物品最大堆叠 1。
+- 声望七档（2026-10-18）：警戒改为 -99～49、中立 50～149、新增好感 150～249（不主动攻击、可交易、可雇佣三阶、无折扣）、友好 250～399、盟友≥400；默认起点 敌对-200/警戒0/中立100/好感200/友好300/盟友450；三阶雇佣门槛由友好改为好感，折扣仍从友好开始（-10%）、盟友-20%。
+- 驻守数据格式（2026-10-18）：行动模式合并为跟随/护卫/驻守；驻守三参数 `stay`（原地不动）、`chase_on_hate`（有仇恨时是否离开锚点/半径追击）、`patrol_radius`（8～64，默认32）。旧 HOLD_POSITION/GUARD/PATROL 读取时映射为参数组合。野生建筑居民写复合 `hostile_humans_unified:natural_state`（同三字段，缺失=自由游荡）；玩家命令写 `order_garrison`，两份分开，避免雇佣/解散覆盖作者设定。自然锚点 `natural_anchor` 与玩家锚点 `order_anchor` 分开，模板不存坐标。本轮只定格式与调试工具，不做自然建筑生成。
+- 巡逻路线格式（2026-10-18）：`natural_state` 与 `order_garrison` 可选 `route` 路点列表，坐标相对锚点的本地坐标（x=右手、z=前向、y=高度），支持 `loop`/`ping_pong`/`once`、每点 `wait`、`route_speed`、`route_rotation`；结构旋转时随实体朝向一起转。单条最多 64 点，路点 200 tick 走不到则跳过。本轮只定格式，不做玩家绘制工具。
+- 属性详情界面（2026-10-18）：每个个体的面板列出十一维属性最终值（生命/护甲/韧性/击退/移速/探测/近战/枪械/弹射物/散布/再生），显示所有乘区叠加后的实战值而不是单层倍率，伤害维度不含附魔（附魔伤害由原版结算）；悬停给紧凑逐层提示，点击展开完整计算（基础值→分配→世界曲线→成长→头目基准→装备/状态→最终值）。服务端组装 `AttributeSnapshot`，复用 `EffectiveAttributes` 与伤害入口，客户端只渲染；面板打开时每 20 tick 刷新，关闭停止；野外人类仅按现有观察权限查看。布局用两列六行或滚动，待定。
+- 再生维度与精度（2026-10-18）：新增第 11 维“再生”，成本权重 0.9、偏差 ±30%，是最终乘区，统一在 `Human.heal` 入口乘；靛磐倾向 1.32，用于补偿生命/护甲在回血机制下的收益偏低。回血底层是 float，1.05 不会被截断；基础即时治疗在 `instantHealingAmount` 里按整数取整后再乘（8×1.05=8.4），渐进治疗 `pending` 是 float、每脉冲上限 1.0 但不丢量；名册 `Math.round` 只用于列表，属性详情用 float。直接 `setHealth`（最大生命、保命、第三方）不乘。旧存档 10 个乘数加载时补第 11 个 1.0。
+- 苍隼移速（2026-10-18）：阵营倾向表中的移速期望从 1.31 调到 1.20；其余维度不变，加载时仍按十一维成本加权归一化（实际约 1.21）。
+- 迅捷阈值（2026-10-18）：迅捷标签的移速阈值从 1.18 下调到 1.15；其余标签阈值不变。
+- 标签与准度（2026-10-18）：删除“均衡”标签，未命中任何阈值的人不再显示标签；精准只看准度（≥1.25，散布≤0.80），不再评估弹射物伤害；新增“远击”（弹射物伤害≥1.22）与“火力”（枪械伤害≥1.15）。射击散布统一作用于枪械、弓、弩与三叉戟，阵营表的“散布”列仍为散布乘数，界面与标签按准度=1/散布。
+- 属性分布图（2026-10-18）：按当前 11 维、成本权重与默认偏差上限模拟 30 万次，生成 `06-修改方案/06-成长与专精/属性抽取分布.png`，并在方案中补充 A/B/C/D/E 说明；实测参考更新为 11 维结果（最大项中位数 1.22、P99 1.49；无界 1.83/3.02）。
+- 属性计算详解与 α=0.25（2026-10-18）：新增 `06-修改方案/06-成长与专精/属性随机计算详解.md`，完整说明预算/倾斜/归一化/最终乘数/两次钳制的公式、顺序、例子与图表；新增 `属性随机计算_总览.png` 与 `属性随机计算_顶格计数.png`。最终钳制边界改为 `t_i(1±cap_i)·B^α`，当前 α=0.25；α 只作用于归一化后的钳制，不改预截断、归一化与 m_i。上限口径下 3 维以上顶格从 7.1% 降到 2.9%，恰好 1 维 15.3%→16.4%，恰好 2 维 8.4%→7.1%；B=1.25 时 30% 维有效上限 1.375。主方案与索引已同步。
+- 阵营出生装备与附魔数据（2026-10-18）：新增 `06-修改方案/02-阵营与身份/阵营出生装备与附魔.md`。第二版按“数值分档 + 阵营权重”描述：近战按攻击伤害 D1～D5、护甲按四件合计护甲 A1～A5 与韧性 T0～T3、盾按耐久 S1～S4、弓弩按弹道伤害 R1～R4。候选池只来自联动清单（`equipment_integrations` + 枪械兼容层）与配置 `item_pool.extra`，加载时只对这些候选读属性归档，不遍历整个注册表，也不写死联动模组物品 ID。盾档拉宽为 S1<200 / S2 200–449 / S3 450–999 / S4 1000+，三阶 1–2 面；弓弩按“伤害 + 最大耐久”两轴；枪械改为阵营携带概率 + 核心池 + 全枪回退，保留现有白名单/黑名单/池来源。枪械为“阵营核心池 70% + 全枪回退池 30%”（灰鸦核心 50%），核心按手枪/冲锋枪/霰弹枪/步枪/机枪/狙击类别，回退覆盖全部已加载枪械。附魔拆成武器/护甲概率，预算 1/3/6/12，最大条数 1/2/3/5，概率随阶级拉开（流浪者 10%/8%，一阶 15–30%，二阶 35–65%，三阶 85–100%）；附魔改为无保底加权抽取，阵营只给偏好倍率，模组附魔从注册表自动入池；默认黑名单排除迅捷潜行、摔落保护、经验修补、无限、击退。2026-10-18 设计收尾；未改源码与配置。
+
+## 知识库一致性核查（2026-10-17，已完成）
+
+- 需求：用户要求挂载知识库并核对与当前源码的同步状态；只做核查与文档修正，不改变功能、不构建、不同步实例、不 push。基线main 77ca830（3.10.6），工作区干净。
+- 范围与方法：62个Markdown页面；Wiki链接与孤儿页；`tools/export_knowledge_defaults.py --check`核对六份默认附录；脚本比对3.10.0→HEAD新增13个配置键的正文覆盖；逐项抽查3.10.0–3.10.6机制正文；核对`PressureGuardFacing`与`activity_budget`常量。知识库此前未挂载，本轮已取得路径访问后读取。
+- 结果：0断链、0歧义、0孤儿页；六份附录与默认资源完全一致；13个新增键全部在附录与正文出现；无版本号或旧同步口径残留；声音排除区12/24/48/60、枪声40格/10tick、活动预算5/3与16/8/4、盾面12°/30°/12tick等均与源码或默认值一致。
+- 修正：`06-修改方案/01-生物行为/敌人探测与目标感知.md`第106行仍写`body_rays_per_target`默认27条，改为9条（范围1～27不变）；该页其余数值与当前默认一致。修改前备份至文档备份/敌人感知计划页默认值-20261017-191401，修改后复核链接与附录仍通过，diff仅此一行。核查记录见验证日志/knowledge-sync-audit-20261017.json。
+- 边界：未运行Gradle、Java编译、构建、实例同步或游戏；未逐条复算全部硬编码常量，仅核对本轮新版机制涉及的常量与默认值。本轮文件改动尚未提交。
 
 ## 声音排除区动态退避／3.10.6（2026-10-16，已完成）
 
@@ -2397,3 +2532,1453 @@ Java17、六个显式只读API依赖、gradlew.bat build lootScreeningTest --off
 - 交付：新增知识库02-战斗与生存/敌人发现、警觉与锁定.md、05-开发参考/敌人感知原理与修改入口.md，合计10712字符；更新总览、控制权、阵营、开发入口、导航理论入口和生物行为方案参考共6页，未展开或实施新方案。既有页先备份至文档备份/敌人发现与锁定-20261015-162326。仓库新增docs/ENEMY_AWARENESS.md源码地图。
 - 核心结论：初次玩家候选需LOS，未警觉再验距离收窄的方向公式；isAlert传播不等于共享目标。玩家自定义保留省略LOS/未见计数，会追踪已锁实体实时位置。事件声音仅调查BlockPos，覆盖破坏/放置/部分门操作/伤害/爆炸，不是任意音效听觉；通知无声传播遮挡。反击/同类求援、战术记忆/近敌重排、主人指派/信标有不同无LOS入口。max_targeting默认3为玩家Goal周围15盒的局部限制，不是统一setTarget全局硬限。
 - 验证：只读默认与实例global及四阶配置，核对3和40/40/40/48；本机原版候选默认LOS、HurtBy忽略LOS/隐身、未见参数、随机间隔reducedTickDelay、Sensing及源码入口逐项核对。8页Wiki链接/表格/围栏/Unicode和4档视锥半角公式核算通过，6默认附录与git diff --check通过。无源码/配置改动，未运行Gradle、Java编译、自动行为测试或游戏，未构建同步/push。具体隔墙/警觉/调查实验写作可操作方法，不声称已游戏验收。
+
+
+## 新版本方案全面审查与实施总指引（2026-10-18，文档完成）
+
+- 用户仅授权通读知识库修改方案、核对数值与边界并形成实施总指引；未授权本轮功能实施。主控单会话，基线 main 50ed6dbb47e0bcce7a18a186becef25f603763cb；仅编辑仓库外知识库与本协作记录，不创建源码编辑工作树，不覆盖此前未提交记录。
+- 已通读06-修改方案17篇Markdown并查看3张分布图，针对性核对当前HumanGrowth/GrowthConfig、HumanDamageScaling、HumanRelations、SoldierOrder、ConfiguredHumanEquipment/Loadout、HumanEquipmentDrops、GunSupport、网络协议和默认恢复/感知配置。
+- 新增01-本轮实施总指引，整合阵营、指挥、专精及原总排期遗漏的出生装备模块；19项客观纠错／说明澄清，12项待确认决策，统一职责、迁移、配置、导航控制权、阶段与验收矩阵。保留详细方案和原图，更新总索引及阵营/指挥/成长三模块索引，建议不冒充用户确认。
+- 关键问题：散布正向成本反转准度价值；不可释放钳制错误及最终硬截破坏守恒；枪械现行成长独立于世界伤害曲线；辖区排除与交互验收冲突；驻守越界追击与有限半径冲突；普通重载自然锚点漂移；三阶dropChance与统一背包掉落冲突；附魔互斥/适用性及分类均匀概率错误。
+- 文档备份：文档备份/本轮实施总指引-20261018-230413；核查报告：验证日志/本轮实施总指引-20261018-230413.json。复算成本总和10.5、65行装备权重各100及汇总期望；验证截断分位数、钳制反例和准度成本方向；5篇新增/更新页面68处Wiki链接无缺失，围栏/表格通过。16份原文件（含全部原详细方案和图片）逐字节保持。
+- 未运行Gradle、Java编译、构建、部署、推送或启动游戏；未提交本协作记录（其中仍含其他会话既有修改）。确认决策后应把最终规则直接回填相关方案正文，再按阶段取得正式实施授权。
+
+
+## 修改方案客观错误正文修复（2026-10-18，文档完成）
+
+- 用户授权仅修复方案文档中的客观错误并报告结果；不实施模组功能。主控单会话，保留已有协作记录，未创建源码编辑工作树。
+- 直接修订专精主方案、计算详解、阵营出生装备附魔、指挥方案小队验收及实施总指引共5篇。修正永久固定项算法误判和末尾硬截破坏守恒，改为合并边界与单调有界求解；重算3组全向量例子及alpha对照、分位数、成本加权例子；澄清均值/预算/实战强度、附魔显示与伤害事件阶段、性能算术；修正非法附魔、弓弩回退、类别均匀概率、非零档位与小队人数，并明确小数阈值。未确认D05准度变量和D09枪伤成长仍保留待决说明，未代替用户定玩法。
+- 原始权重与主要倾向数表、D01～D12决策行、3张图片均逐项/字节保持。旧模拟与图表在对应正文降为历史参考，不作为修正版验收数；不编造新分布图。
+- 备份：文档备份/方案客观纠错-20261018-231737；报告：验证日志/方案客观纠错-current.json、重算示例.json、数学解析.json。80处Wiki引用无缺失，表格/围栏检查通过；KaTeX解析141条数学表达式无错误；10001组数学求解与3组重算例子检查通过。这些是文档/模型核查，不是模组Java测试。
+- 未修改Java/资源配置/实例/存档，未运行Gradle、Java编译、构建、部署、push或游戏；本协作记录继续未提交以免混入其他会话既有修改。
+
+
+## 新版本设计决定回填（2026-10-18，文档完成）
+
+- 用户确认D01、D03～D12，D02阵营关系矩阵后续讨论；授权自定头目预算、补给权重及参考当前代码的追击参数，仅修订方案。本轮10篇方案/索引与2张模型图更新，无源码编辑工作树。
+- 头目固定预算1.0、1.8偏科后重新守恒；正向准度计预算，散布只在后端取倒数；经验枪伤最高1.10与专精独立相乘。重算3普通例和3阵营头目结果、10万中性样本两张alpha图，旧独立分布图保留历史用途。
+- 驻守R=8～96，有限外圈min(96,R+16)，出圈400tick不因受击续，到位80tick再主动出圈；路线水平1.5/高差0.75、执行200tick、整线失败退避100。新实例锚点/维度/基向量一次初始化并持久，未来模板旋转镜像显式传递，未创建模板/改世界生成。
+- 据点/贡品功能/悬赏移出，同雇主/PvP保护优先；攻击动作去重、致死动作合计-18，多玩家滚动窗口，声望与即时反击原因分开。掉落保留统一背包/雇佣全额/信标特例和旧表其他条目，仅去身份牌，不新增三阶不可替换绑定或dropChance归零。15行补给类别权重各100，原阶级数量为基础、仅现有可用效果，非堆叠餐食合计至多2件，容量不足有界截断；各关闭开关只影响自身层。
+- 只读核查27份结构NBT、81名人类、50份旧HomePos，无新自然/路线字段；EventHandler名字配装/家初始化、原版StructureTemplate旋转镜像、GuardCombatState400tick、现有食物/药水/投掷入口。未将旧绝对家字段当成新路线坐标。
+- 备份：文档备份/方案决策回填-20261018-234056；报告：验证日志/方案决策回填-current.json及属性模型/属性例子JSON。157处Wiki无缺失、表格围栏、127条KaTeX表达式、15行权重与中心成本和/例子/枪伤乘法检查通过，两张图目视检查；这是文档模型核查，不是Java或游戏验收。
+- 未修改Java、源码资源配置、实例JAR/配置、结构NBT或存档；未Gradle/Java编译/构建/部署/push/启动游戏。原有WORKSTREAMS未提交内容按字节保留，未混入提交。
+
+
+## 新版本正式开发（2026-10-19，开发中）
+
+- 授权：按知识库01-本轮实施总指引及四模块详细方案正式开发、审查后构建同步既定实例；部署后暂停待用户游戏验收，不推送、不启动游戏。
+- 基线：50ed6dbb47e0bcce7a18a186becef25f603763cb。保留main协作记录既有未提交内容；盾牌/恢复已提交修改包括在本轮基线中。
+- 主控：worktrees/vnext-integration，feature/vnext-integration；负责阵营定义/声望/关系/注册/客户端/公共配置/实体入口/网络及集成验收。Human.java、HumanGunner.java、UnifiedConfig.java、HumanRenderer.java、build.gradle、默认合并配置与TierConfigProjection由主控独占。
+- 专精开发者：worktrees/vnext-specialty，feature/vnext-specialty；独占新增Specialty*、EffectiveAttributes*及对应测试/维度资源，可编辑HumanGrowth、TierAttributes、HumanDamageScaling、已有枪械后端伤害/散布接入；不编辑上述主控公共文件。接口SpecialtyAttributes.multiplier(Human,Dimension)、initialize(Human,boolean newEntity)、apply(Human)，数据写现有growth复合allocation_schema=2；维度完整顺序按方案。主控接入初始化、tick、heal与配置。
+- 装备开发者：worktrees/vnext-equipment，feature/vnext-equipment；独占ConfiguredHumanEquipment、ConfiguredEquipmentLoadout、HumanSpawnEquipment、FirearmSpawnEquipment、SpawnFoodConfig、SpawnPotionConfig和新增FactionEquipment*模块/独立装备数据/测试；不编辑主控公共文件。阵营读取HumanFactions.shortId(Human)，流浪者返回roamer；主控提供公开方法，配置以新增模块静态parse/配置钩子方式协商，不建立第六用户配置文件。
+- 命令开发者：worktrees/vnext-orders，feature/vnext-orders；独占SoldierOrder、SoldierOrderGoal、GuardCombatState、新增Natural*与Squad*服务/策略测试；第一阶段实现单兵/自然状态及接口，网络/UI与旧界面调用由主控接入。公共Human.java等不得编辑，列出必要钩子。数据按D07/D08，远程/局部移动既有消费者同步审核。
+- 各任务先读详细方案和当前调用链，交付本地提交、文件清单、接口、验证与未决问题，不自行合并main/部署/发布/push。开始先静态核查，统一编译由主控在接线后执行。知识库正文更新与方案完成归档由主控在实际验收后处理，不先标完成。
+
+- 用户补充工程规范：统一Interface和状态所有者，禁止相同规则散落各消费者；复杂Module分阶段开发。新增集成树docs/VNEXT_IMPLEMENTATION.md保留完整范围与未完成清单。
+- 专精交付99b0b661、审查修复65ca2b38已审后整合到integration（fabd39a、8345f6b）；发现原独立定义重载可能混搭修订，撤销独立listener，中央重载由主控接入。第一基础提交5865f4d含阵营与声望纯策略/短期记忆，Java17纯策略7031+63项通过；尚非全模组编译，尚未main整合/构建/部署。
+- 可视化后续任务：负责人原专精开发者，worktrees/vnext-visuals，feature/vnext-visuals；基线8345f6b；独占HumanGunnerRegistries中的绑带注册、新FactionVisual*客户端渲染/同步模块、HumanRenderer绑带层接入、新绑带模型纹理与翻译文件（仅新增绑带相关键）。不得改Human.java/HumanGunner.java/UnifiedConfig/旧网络，主控提供生命周期注册与同步实体字段，注册普通蛋/头目由主控待该文件交付后顺序接入。
+
+- 可视化交付efc22d2（待主控集成审查），后续属性详情任务：原专精/可视化负责人，worktrees/vnext-attributes-ui / feature/vnext-attributes-ui，基线efc22d2a3cd8d7fd5f7f98baf307111c0ae72153。独占新增AttributeDetail*、AttributeObserverItem、HumanGunnerRegistries仅观察镜注册、HumanRenderer仅头目体型倍率接入、新属性界面所需资源翻译；不得改旧命令/名册网络与界面，主控之后提供打开详情按钮薄接线。主控提供网络register/common事件接入，所有显示使用服务端EffectiveAttributes快照，不初始化、不额外权威扫描。
+- 装备审查发现自然装备成长可绕过新deny，批准装备负责人追加NaturalEquipmentGrowth的候选过滤适配，保留原成长曲线；空池保留原合法装备而非硬回退被deny原版物品。装备prepare追加严格纯数据校验后再发布。
+
+- 命令底层交付a9f9ba57（待整合审查）；后续命令/小队界面任务：原命令负责人，worktrees/vnext-command-ui / feature/vnext-command-ui，基线a9f9ba5734e23e5fb1cfdb45cce9368848a32dfa。独占HumanCommandNetwork/SoldierRosterNetwork/SoldierCommandScreen/SoldierRosterScreen及新增SquadCommandNetwork/Screen/CommandTokenItem/NaturalStateToolItem、HumanData命令快照字段；新资源/翻译仅相关新增键。HumanGunnerRegistries和HumanGunner/UnifiedConfig/实体生命周期由主控接入，不与属性界面/绑带开发交叉写。此任务复用已交付单兵和小队Interface，不能新造第二套决策规则。
+
+- 专精/视觉/属性界面原负责人后续内容任务：worktrees/vnext-content / feature/vnext-content，基线b26dd6106f0d6f948e83ed5caa923571b05d763a。独占FactionContent/FactionBossHuman/FactionSpawnEggItem、HumanGunnerRegistries（仅内容注册）、ClientRenderer（仅九头目renderer）、UnifiedCreativeTab、相关新内容资源/翻译。完成12普通蛋+9头目蛋/实体/贡品箱纯外观；已有主控类型骨架按统一Interface完善。HumanGunner生命周期/配置/关系/定义由主控继续持有，客户端小队/属性网络不交叉编辑。
+
+### vnext incident review correction
+Baseline 8e6c327; owner vnext_orders; worktree ../worktrees/vnext-incidents-review, branch feature/vnext-incidents-review; scope StandingIncidents.java and StandingIncidentsTest.java only. Freeze attack-start tolerance eligibility across pellet fallback aggregation; no shared entrypoint edits. No build/deploy by worker.
+
+### vnext total-defense attributes
+Baseline 8e6c327; owner vnext_equipment; worktree ../worktrees/vnext-defense-attributes; branch feature/vnext-defense-attributes. Scope EffectiveAttributes/TierAttributes/new pure helper+tests+only new lang keys. User confirmed armor/toughness specialty and boss factors apply after equipment; primary owns rest. No deploy.
+
+### vnext detail navigation
+Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation branch feature/vnext-detail-navigation; scope AttributeDetailClient/Screen, SoldierCommandScreen/RosterScreen and tightly scoped session reopen helper/tests only. Parent closed token cannot be reused. Primary owns source events/config; no worker deployment.
+
+
+## vNext 3.11.0 开发与部署收尾（2026-10-19）
+
+- 四模块已审核并本地整合main；发行源码3ba8fa2dfb8de45fb6b549a09a35bf2e5847a58f，完整范围与边界见docs/VNEXT_IMPLEMENTATION.md。修复损血收据/死亡确认、配置原子发布、作者装备覆盖、返岗自卫、详情失效会话与阵营编解码初始化边界。
+- 最终build+lootScreeningTest成功，73项任务；788核心类可选依赖缺席链接，Python336项（跳过12），专精100000随机边界，知识库768处引用与125公式通过。未启动客户端或专用服务器，未做多人/游戏验收。
+- 六方案归档，未来项单列；正文及默认附录已同步，保留原图与笔记。
+- 已停止实例检查后备份旧JAR和五配置，同步3.11.0至约定Forge47.4.21实例；四阶级食物间隔10→15及相应说明，其他配置保留。三方SHA256：4D68A8ACE616BE917B84D53941A0865B47AE3C7EA14D1BBBC2BFBCF9294A53DC。
+- 部署记录：维护目录构建记录/3.11.0-deployment-20261019-014545.json；完整验收清单：3.11.0-交付说明.md；备份backups/release-3.11.0-20261019-014545。未push，未启动游戏。
+- 既有未提交WORKSTREAMS逐字节保留，本追加记录也不混入代码提交。按用户要求，开发部署后暂停，等待游戏验收反馈。
+- 知识库结构：已完成内容归档到 `06-修改方案/90-已实施方案/3.11.0-阵营专精与指挥/`；后续零散调整统一写入 `06-修改方案/修改建议.md`，不再拆独立方案，也不自动授权实施。
+
+
+## 3.11 后续修改建议正式实施（2026-10-19）
+
+- 授权来源：用户当前目标，按知识库06-修改方案/修改建议.md的20条及收尾边界开发，完成构建同步指定实例。基线23d5f916c89f92f7d25da9785e776f23b1b4aca1。保留既有WORKSTREAMS未提交修改；主控独占版本、公共配置、Human.java、HumanGunner.java、FactionDefinitions、资源默认合并文件和集成。
+- revision_attributes：worktrees/revision-attributes，feature/revision-attributes；负责Specialty*、EffectiveAttributes、MeleeAttackTiming与AttributeDetail*、专精维度资源和独立测试。13维/预算/旧迁移/头目放宽/攻速、面板枪伤修正与分类明细；不得改主控公共文件及枪械后端。公共Interface：EffectiveAttributes.attackSpeedMultiplier(Human)、armorPenetration(Human)，枪类型读取主控GunSpecialization。
+- revision_damage：worktrees/revision-damage，feature/revision-damage；负责集中穿甲/盾伤/盾减伤、HumanDamageScaling/HumanDamageEvents、三枪械伤害适配和必要mixins及测试。不得改Specialty*/EffectiveAttributes/UI/配置默认合并文件；读取EffectiveAttributes.armorPenetration(Human)；枪类型额外因子由主控GunSpecialization.damageMultiplier(Human,ItemStack)接入。
+- revision_combat：worktrees/revision-combat，feature/revision-combat；负责枪械跟枪、残血目标选择、双臂绑带、灰鸦首领/碰撞箱：HumanTargetCoordinator/HumanTargeting/PerceptionTargetGoal、枪械瞄准独立类、FactionVisualLayer/FactionContent/FactionBossHuman/FactionSpawnEggItem/ClientRenderer、独立测试。不得改Human.java、HumanGunner.java、HumanGunnerRegistries、FactionDefinitions、后端枪械类或Specialty*/UI。需要公共接线由主控处理。
+- 主控：main，负责自然刷新权重与群体/生成入口、GunSpecialization分类配置、共享入口、必要接线及文档、知识库、编译构建验证、审查整合与发布。工作树源码不共享编辑；所有Agent仅交付本地提交，不部署、不合并main、不push、不启动游戏。
+- 第12条贴图/模型重做不实施。未定数值不硬编码成已确认规则，留配置/旧行为并列出边界；统一伤害与分配Interface，避免后端各自重复实现。
+
+
+### 3.12.0 交付收尾
+
+- 基线23d5f91，主控本地整合至发行源码5748bc2；属性5ec4d96/db72ae8、伤害33cfc8b/3b6a565/97440fc、战斗1034fb6/68d991b经审查整合，追加集中配置/分类/生成与原生盾链修复。主控公共文件独占，原WORKSTREAMS字节前缀保留，未混入提交。
+- 编译与完整build+lootScreeningTest最终78任务成功，Python338项在真实API及实例TaCZ上无跳过通过；807核心缺依赖链接，13维100000普通/5000头目及窄区间采样、真实47.4.16/47.4.21护甲契约通过。构建JVM曾异常退出，保留日志，最终单worker/2GB/C1完整验证；不把失败当通过。
+- 知识库21正文和7默认附录已同步，75篇/803引用/125公式核查；第12条留下一轮，零散建议在原页登记结果，3.11归档及图片保留。
+- 已检查停止后备份同步3.12.0至指定Forge47.4.21实例，dist留存，三方SHA256 F29E52F05EB9EF49C56251036A562E95977D3E3B70DCFC55AD4A19C005E80913。备份backups/release-3.12.0-20261019-140008。global仅六明确平衡字段与对应说明，四阶级文件及其他自定义保留。
+- 明细见docs/REVISION_3_12.md、构建记录/3.12.0-交付说明.md与3.12.0-deployment-20261019-140008.json。未push、未启动游戏/专服、未做多人或游戏行为验收。
+
+
+### 3.12.1 Player护甲Mixin启动修复（2026-10-19）
+
+- 用户反馈启动失败，14:05最新日志明确InvalidMixinException：PlayerDamagePipelineMixin中Shadow m_21161_未在Player声明。该方法实际上声明于LivingEntity，上一轮调用owner检查不能证明Shadow能绑定。基线500eff3a0b3b9c68ae2cf6f9ced7c296a729ac3d；主控独占main，仅修该Mixin/对应契约测试/版本日志，不删除玩家穿甲功能。
+- 改用Mixin继承真实LivingEntity父类并正常调用受保护护甲方法；新增3项Python声明/同批SC影子检查，补Java ASM声明归属检查；341项实际API Python全过。延续本轮构建同步授权作为发行验收修复，未启动游戏；待构建同步登记。
+
+- 3.12.1构建同步完成：426c6c4，341 Python全过，78构建任务通过，发行字节码父类调用已重映射正确；部署记录构建记录/3.12.1-deployment-20261019-141004.json，三方SHA256 91CBF429A003262DCE7255AB3DBAA3401198965FEED9ABF645E8BEA551DCC0E8。旧JAR/配置/失败日志备份backups/release-3.12.1-20261019-141004；所有实例配置字节保持。未启动游戏、未push，启动验收待用户。
+
+
+### 创造模式雇佣测试便利（2026-10-19，源码完成）
+
+- 用户要求创造模式使用雇佣合同忽略阵营声望及物品消耗。基线e9610d2，主控main单编辑者，负责FactionRecruitment/RecruitmentContractItem/合同两语言提示；保持已有WORKSTREAMS修改。
+- 免费报价先于阵营定义/货币/声望读取；只在创造模式跳过canHire与支付。保留存活、距离/维度、实际持有同阶合同、目标阶级、既有雇主与临时归属、服务端数据、每阶上限；不新增流浪者正式雇佣。成功复用同一tame/账本/名册/命令面板事务，不建立第二套归属写入口。
+- 知识库雇佣士兵与命令名册正文备份后同步。实际三API Python静态回归341项全过；75篇/803引用的Wiki检查通过。此项未执行Java编译、Gradle构建、同步、push或游戏验收，待明确构建要求。
+
+
+### 对讲机每队快捷指挥入口（2026-10-19，源码完成）
+
+- 用户要求每小队快捷指令面板放入对讲机，追加明确保留原小队命令牌入口。基线d910c9f；主控main单编辑者，范围SoldierRosterScreen/Network、SquadCommandScreen/Network、CommandPanelScreen关闭标签薄钩子、两语言与CHANGELOG；不改SquadCommands批量写入口及AI。
+- 名册小队列表每行新增快捷指挥（保留绑定/分组/筛选/改名）。服务端先验证名册会话，再实际持有对讲机创建ROSTER小队会话；TOKEN入口仍要求本人绑定令牌。每批根据服务器保存的入口来源检查对应实际持有物品，不能互相冒充。共用原apply/reanchor、逐成员归属与已加载校验、部分失败结果，无强加载或旧命令补发。
+- 小队快照协议2携带只读fromRoster；返回包仅带token，匹配ROSTER会话且物品有效才消费小队会话并打开新名册token，旧关闭包不能清新会话。服务端失效关闭不发起返回重开。布局渲染与点击共用列宽坐标。
+- 知识库小队与指挥物品/雇佣士兵与命令名册备份后同步；Python静态回归341项全过，75篇/804引用Wiki检查通过。未运行Java编译/Gradle构建/同步/push/游戏UI验收；实际测试需核对两入口、批量模式/驻守/距离/拾取及退出返回。
+
+
+### 3.12.2 创造雇佣与对讲机小队入口发行（2026-10-19）
+
+- 用户明确要求构建同步；主控main单发布者，发行提交6e63747673cc61c81926f033456c7841f4d46386，合并内容d910c9f与88e873b，无额外功能变更。保留本文件原有未提交修改，未整体暂存。
+- Java编译、完整build+lootScreeningTest通过，78任务（75执行、3无需重跑）；既有源码Python341项无跳过通过，知识库正文已同步。日志验证日志/3.12.2-build.txt。
+- 确认游戏停止后备份旧3.12.1、五份配置和日志，部署3.12.2到约定Forge47.4.21实例；配置字节保持，dist归档三方SHA256 A47AB682C590838FA1BAAB0BA3B7A3357F2F004AAC9F37440655E9D556B06C80。
+- 备份E:\MC\Create-Delight\HostileHumansUnified-维护\backups\release-3.12.2-20261019-144602；明细构建记录/3.12.2-deployment-20261019-144602.json及3.12.2-构建同步说明.md。未push、未启动游戏，合同边界、两个指挥入口/返回与多人游戏验收待用户测试。
+
+
+### 3.12.3 创造雇佣副本校验修复（2026-10-19，进行中）
+
+- 基线6e63747673cc61c81926f033456c7841f4d46386；主控单编辑者，工作树worktrees/creative-contract-copy，分支fix/creative-contract-copy。范围FactionRecruitment、RecruitmentContractItem、既有RecruitmentTermsTest、中英语言、版本日志；发布在main顺序整合。
+- 已从真实Forge Player.interactOn字节码确认创造模式调用ItemStack副本，现有对象身份检查误拒绝。接口改传InteractionHand并在服务器读取实际手持合同，保留等级/归属/上限；补invalid_target翻译。用户授权修复并构建同步；配置保持。
+
+- 实际修复进一步收窄：保持FactionRecruitment事务接口及实际持有校验不变，仅RecruitmentContractItem在交互入口从InteractionHand读取服务端原栈；无需扩大事务接口。cbe7e30已本地整合，新增RecruitmentTermsTest真实Player字节码与物品入口衔接回归，版本3.12.3；正在完整构建。知识库主副手规则备份后补全。
+
+- 3.12.3完成：源码cbe7e30c84923a9243631838b45faa4de03d6507；Java编译及完整build+lootScreeningTest 78任务成功（76执行、2无需重跑），新增真实交互边界回归通过；Python341项全过、Wiki75/804通过。停止状态下备份并同步指定实例，五配置字节保持，dist/构建/部署SHA256 48C7569CC65926D6C6278CBE5006FE11733057DDC93CC756C49C4ACEE9E66A9D。明细构建记录/3.12.3-deployment-20261019-145405.json与3.12.3-雇佣修复交付.md。未push、未自行启动游戏，主副手创造合同/生存收费边界待用户验收。
+
+
+### 头目标准门洞通行修复（2026-10-19，进行中）
+
+- 用户要求检查并修复头目不能寻路通过1×2门洞；未要求本轮构建。基线cbe7e30c84923a9243631838b45faa4de03d6507，主控单编辑者，工作树worktrees/boss-door-clearance，分支fix/boss-door-clearance。范围FactionBossHuman、既有FactionContentNbtTest、CHANGELOG与知识库成长正文；不改普通人类或全局NodeEvaluator。
+- 真实Forge NodeEvaluator.prepare字节码证实entityHeight=floor(getBbHeight()+1)，旧2.0高度按三格检查；宽0.72中心通行会与敞开门板3/16厚度重叠。计划集中将头目碰撞宽度封顶0.6、高度封顶1.95，保留渲染1.2及较短姿态。
+
+- 工作树交付941b038，主仓库整合fe6a1a5，FactionBossHuman.getDimensions集中调用collisionDimensions，碰撞宽封顶0.6、高封顶1.95；外观1.2保留，普通人类及全局寻路不改。扩充既有FactionContentNbtTest覆盖原版占用取整、四朝向双门轴真实门板碰撞、低顶与短姿态；Java回归尚未运行。
+- 静态核查真实NodeEvaluator与门形API声明，341项Python在真实三API全过无跳过；知识库成长表/原理和方案收尾备份同步，75篇805引用无断链。未运行Gradle/Java编译，未构建部署或push，尚需游戏内门洞与敞开门通行验收。
+
+
+### 驻守返岗软锁修复（2026-10-19，进行中）
+
+- 用户要求修复最后存活雇佣士兵返岗时不动不攻击，并追加完成后构建同步；同时包含已整合fe6a1a5头目门洞修复。基线fe6a1a5，主控单编辑者，worktrees/garrison-return-recovery、fix/garrison-return-recovery。范围SoldierOrder/SoldierOrderGoal、新增独立返岗路径与纯进度策略、既有有限命令测试、观察详情一行、版本日志和知识库。
+- 公共接口：原SoldierOrder保留命令/范围/返回完成写入口；返岗适配器仅在原MOVE Goal持有期间查询/安装路线，使用原Basic预算和地形/范围安全；纯进度策略区分实际运行与暂停。目标许可仍经感知记忆、关系和战斗模式，反击不授予追击。仅主控整合/构建部署，不push或启动游戏。
+
+- 已交付：9dd4328→89366c877d3666ae8dfcbde0895bf4ec8fbf3202，同时包含头目fe6a1a5；新适配器仅接管返岗自有路径，原命令写入/地形和范围门槛保留，观察详情增加状态，无存档字段迁移。知识库雇佣/安全/预算正文备份后同步，与成长/门洞说明一致，75篇806引用核对通过。
+- 完整Java编译/build+lootScreeningTest 78任务通过（75执行、3无需重跑），FiniteOrdersPolicyTest291检查及真实门板碰撞通过；341 Python无跳过全过。构建日志验证日志/3.12.4-build.txt。
+- 已确认停止后备份同步3.12.4至既定Forge47.4.21测试实例，五配置字节保持，dist归档；三方SHA256 27687EF341CD71ADA218AFB6AEF48F70548788077608D52B82641BD848DE5910。备份E:\MC\Create-Delight\HostileHumansUnified-维护\backups\release-3.12.4-20261019-155349，明细构建记录/3.12.4-deployment-20261019-155349.json及3.12.4-返岗与门洞修复交付.md。未push、未启动游戏，原士兵返岗/反击及头目门洞游戏验收待用户。
+
+
+### 2026-10-22 正式行为系统实施（进行中）
+
+- 授权：用户目标“执行本轮修改方案的正式源码实施”；以知识库06修改方案最新总清单与各子页为行为契约。旧v2只是历史参考；美术、农耕/砍树、新建筑/世界生成等后续不做。未授权本轮Gradle/Java编译、构建、同步、push或游戏启动。
+- 基线完整SHA：89366c877d3666ae8dfcbde0895bf4ec8fbf3202。主仓库main有既有7项未提交修改，单独备份并保留；不自动提交或覆盖。独立工作树不含这些未提交内容，读取主仓库作为对照，集成时保留其增量。
+- 主控root：worktrees/behavior-control-full，feature/behavior-control-full；拥有Human.java、AdaptiveCombatGoal、UnifiedConfig、build.gradle、恢复/盾牌/武器/朝向/移动接入、CHANGELOG和本记录。其他分工不得改这些共享文件。
+- equipment：worktrees/behavior-equipment，feature/behavior-equipment；范围FactionEquipmentConfig/Pools/Policy/Guns、ConfiguredEquipmentLoadout、FirearmSpawnEquipment、SpawnFoodConfig/SpawnPotionConfig和独立辅助/测试；不编辑RecoverySupplies、HumanSpawnEquipment、默认总JSON或既有四阵营/专精文件，需主控接线时报告接口。
+- interface：worktrees/behavior-interface，feature/behavior-interface；范围SoldierCommandScreen、SquadCommandScreen、SoldierRosterScreen、AttributeObserverItem、AttributeDetailSnapshot/Screen、共用UI辅助及必要测试；协议/服务器命令修改先报告接口，不编辑共享Human/UnifiedConfig/build.gradle。
+- perception：worktrees/behavior-perception，feature/behavior-perception；范围HumanPerception、HumanLootVision、弹射物友军碰撞mixins、目标共享独立辅助及测试；不修改HumanAttention、HumanTargetCoordinator、Human.java、统一资源注册/配置。共享必须同阵营且同雇主或均野生、12格/3人/双方10秒/共享6秒，保留感知准入和现有声音排除。
+- 各编辑者仅本地交付提交与文件/接口/静态验证及未解问题；不得合并main、部署、push或编译。主控逐项审核后本地整合。知识库正式机制正文由主控在对应能力整合后统一同步，分工不并行改知识库。
+
+### 正式实施续接：防御执行器
+
+- 基线：71a803e（完整SHA以工作树git HEAD为准）；负责人behavior_defense；独立工作树worktrees/behavior-defense，分支feature/behavior-defense。
+- 独占范围：ShieldDefenseController、ShieldPressureConfig、PressureDefenseCycle、RecoveryPressureWindow、ProjectileShieldPolicy、ShieldDefenseMovement及其专用纯策略/测试；不编辑Human、AdaptiveCombatGoal、RecoverySupplies、UnifiedConfig、默认资源与知识库。公共接线由主控按交付接口完成。
+- 范围：按知识库防御层确认规则迁移高压/普通/弹体防御生命周期与朝向，复用原入口；保留既有安全/感知边界。无Gradle或编译授权。
+- 前阶段整合：efbcb12动作与交换基础；c4d30ea/a074537共享感知与弹体碰撞；独立静态审查发现源手占用、令牌碰撞、锁存遗漏等，71a803e修正后整合。装备与UI交付尚在主控审核，未宣称完成。
+
+- behavior_equipment追加所有权（基线33c0163）：在原behavior-equipment独立工作树继续HumanSpawnEquipment、NaturalEquipmentGrowth、SplitConfigFiles/TierConfigProjection、totaldefaults与faction_equipment默认资源的收口接线；不修改RecoverySupplies/四阵营datapack/SpecialtyData/知识库。主控审核后整合；既有dirty四阵营值仍保留不提交。
+- behavior_ranged追加分工：基线71a803e；worktrees/behavior-ranged、feature/behavior-ranged；独占HumanArrowCombat、RangedWeaponCustody、RangedHybridMeleeGoal、BowRangePolicy、GuardedRangedCharge、弓弩三叉戟专用新模块/测试；Human/AdaptiveCombatGoal/MovementSpeedController公共接线由主控。
+
+- behavior_ranged扩展独占：BowAttack/CrossbowGoal/TridentHybridGoal、SpartanRangedCompat、ArrowAttackCadence、RangedTerrainCombat（限弓弩戟分支且保持枪公共接口）。
+- behavior_equipment扩展CurrentConfigDefaults、HumanAmmoPolicy与相关默认断言；4929292已交付，主控审核整合中。
+- behavior_recovery：基线720000e，worktrees/behavior-recovery/feature/behavior-recovery；独占RecoverySupplies、OffhandFoodUse、CombatFoodRecoveryGoal、IdleRecoveryGoal、CombatConsumableGoal、PotionRecoveryPolicy、MedicalSupplies及新增恢复纯策略/专用测试；不碰Human/AdaptiveCombatGoal/UnifiedConfig/移动公用层/默认JSON/知识库。完成确认恢复条件及统一交换/生命周期；主控接公共钩子与默认值。
+
+- 防御整合审查修复转交behavior_ranged：基线9ca8d76，独立worktrees/behavior-defense-integration分支feature/behavior-defense-integration；独占AdaptiveCombatGoal、ShieldDefenseController、PressureReactionGoal、ProjectileReactionGoal、HumanCombatDirector。主控暂不编辑这些，Human与通用速度仍主控负责，精确接线接口随交付。避免高压/撤退与双盾owner的竞争，补动作权限/防御义务清理，不能只删Goal flag。
+
+- behavior_equipment结束只读审查后转枪械分工：基线9f53119，worktrees/behavior-guns/feature/behavior-guns；独占GunCustody、枪械Goal/Backend/Reload专用模块、CloseRangedTactics及新枪策略/测试；RangedWeaponCustody与AmmoWeaponSelection偏好接入仍主控。禁止共享Human/Adaptive/UnifiedConfig/默认JSON/知识库。公共消费接口仍统一实际物品/交换/生命周期。
+
+- behavior_recovery完成d7603bf后转近战：基线9f53119，worktrees/behavior-melee/feature/behavior-melee；独占PursuitJumpAttack、BetterCombatMeleeCombat、MeleeCombatRange/MeleeAttackTiming、PlayerLikeMovementGoal及模组MeleeAttackGoal、新近战/双持策略/测试。Human/Adaptive仍原负责人；动公共入口需报告精确钩子，不并行覆盖共享文件。
+
+- behavior_ranged完成防御整合7fdf02f/7b2e3e4后转后台投掷：基线9f53119，worktrees/behavior-throwables/feature/behavior-throwables；独占CombatConsumableGoal、TacticalThrowables/PotionThrowing/ScgunsThrowables/JegThrowables及专用adapter/纯策略/测试。RecoverySupplies/Human/公共配置和知识库不碰，完成32格统一后台实物提交与生命周期，主控接必要公共钩子。
+
+### 主控近战与知识库接入（2026-10-22）
+- 主控在behavior-control-full基线0417f7e继续审核近战8f5bfbd，已整合至main d78c9a6、782f4aa；近战原武器/动作令牌、真实双持句柄对、原生横扫及距离带接入完成，未编译。
+- 近战补充由root接手（原开发会话不可继续分派；平台thread limit），仅改其独占模块和root共享入口，没有在其他活跃Agent工作树编辑。
+- 知识库已备份并融入盾牌防御、撤退与低血搏斗、食物药水与医疗恢复、弓弩与三叉戟、近战命中与追击跳砍、战斗选择与控制权和装备正文；方案状态按实际接入同步。7份默认附录导出一致，147篇/1572引用检查无断链/失效锚点。
+- 静态619 Java语法、JSON解析和diff检查通过；新增Java测试未执行。未Gradle、编译、部署、启动或push。枪械与投掷独立分工仍在进行；全目标尚未完成。
+- 原7项未提交修改继续保留，不自动提交WORKSTREAMS或用户阵营/专精修改。
+
+### 基础移动执行适配分工（2026-10-22）
+- 基线：b17b33305b042e06b9ba6ef1a88b81c79019d216；负责人：behavior_ranged（GPT-6.1 Sol / medium）；工作树worktrees/behavior-movement-authority，分支feature/behavior-movement-authority。
+- 范围：ActionCoordinator 独立移动租约/活性心跳与只读快照、新HumanGoalExecutionBridge、新GoalSelector/WrappedGoal专用Mixin及测试。保留原Goal对象、排序/flags、原导航及预算，不在canUse获取权限，不以固定动作超时重启长期路线。
+- Human、HumanBehaviorControl、导航路径归属、动态Trident/岸线交接、Mixin JSON注册及知识库由root接；该分工不改这些共享文件。具体动态flags/无法接入部分必须交付明确缺口，不能宣称全层已迁移。
+- 枪械换弹补充仍由behavior_equipment只改其原独占事务文件，root持有枪托管、声效快照与其他共享调用，文件不重叠。禁止编译、构建、部署、push。
+
+### 行为重构：服务器动作诊断切片（主控登记）
+- 基线：64bdab83d2a9de0b81fd0ff67fe3e0ee4bac7ea4；负责人 /root/behavior_ranged；工作树 E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\behavior-diagnostics；分支 feature/behavior-diagnostics。
+- 范围：只读行为诊断快照、NavigationDebugSnapshot/FrameCodec/Service/LegendScreen、对应隔离测试；不编辑 Human/Adaptive/交换/装填/ActionCoordinator/移动桥/知识库。
+- 接口：只观察现有 ActionCoordinator.snapshot/feedback 和 GoalExecutionBridge.snapshot；不得通过 actions(human) 创建会话、推进时钟、心跳或启动策略。主控提供 peekActions(human) 只读入口。
+- 验收：快照有上限、字段长度/枚举/数量有界，网络版本匹配；客户端只显示服务器状态，未绑定执行桥时明确显示而非伪造已接管。新增Java测试不执行，严禁编译/同步/推送。
+
+### 行为重构：枪械、后台装填、投掷整合结果
+- 主控整合工作树 behavior-control-full；本阶段main整合至62a4f0d，机制/进度文档随后整合。枪械原交付c6faa34、装填补充79272fe149cdac9e18f6348e46c71cd0faaca124、投掷原交付b6c448a及主控接口修正均已进入main。
+- 实际接入：7类射程/阵营策略、真实近战备用查询、ATTACK+MAIN_HAND+FACING射击权限、原会话/武器/背包/事务装填、阶段回调重入保护、即时库存付款、服务器Work进度及静默音轨；投掷即时库存事务与8处来源/当前关系过滤接点。
+- 执行桥4a1077b已整合，仍未注册2个Mixin或绑定selector；旧移动系统继续运行。必须补齐路径来源、动态MOVE、上岸交接与最终位移权限后才可启用。公共取消已先关闭准入，旧清理仍可结束自身令牌，全部清理均尝试后撤销会话。
+- 验证：53项Python静态专项中51通过/2跳过；642份Java仅语法解析，339JSON解析，13处投掷原生javap契约及差异检查；Java测试未运行，未编译、构建、同步、启动或push。
+- 知识库：当前枪械/投掷/联动/盾/交换/小队/成长正文及8份枪械投掷方案状态已更新，147篇1595Wiki引用与128公式解析通过，7默认附录一致；批次先备份在维护目录文档备份。机制页不写构建/测试记录。
+- 保留main既有7项dirty；其中6份源码/资源逐字节哈希一致，WORKSTREAMS原修改保留。目标数值与既有未提交资源有11处不同，源C=10.25/方案10.30，明细maintenance-tools/behavior-source-plan-numeric-differences-20261022.json，尚未覆盖原修改。
+
+### 行为重构：旧静态契约收口
+- 基线3e1486acd6e599421c101592806aa5e29abd0aa9；/root/behavior_equipment；工作树 E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\behavior-static-contracts；feature/behavior-static-contracts。
+- 只编辑src/test/python中恢复/盾/近战/跑跳/弓弩旧契约的12个明确文件；不修改源码、构建、资源、知识库。失效断言需沿新真实入口重新证明原边界，不能仅删除失败断言或恢复旧机制。真实逻辑问题报告主控。
+- 全65份Python静态审计353项：29断言失败/10测试解析错误/13跳过，证据maintenance-tools/behavior-python-audit-20261022.*；源码字符串搬移与已废策略导致的过时契约须与真实回归区分。不得宣称完整回归已通过。无编译授权。
+
+### 用户确认数值与静态契约收口
+- 用户明确确认采用修改方案目标；已备份原6份未提交源码/资源，在原修改上仅调整11处语义差异并同步SpecialtyData故障回退成本。当前C=10.30；四阵营T分别10.704/11.410/11.0815/11.1300，源值与方案一致。6份原修改仍未自动暂存或提交，整合工作树仅镜像此6份实际内容供一致核查。
+- 数值差异清单已改为已应用结果：maintenance-tools/behavior-source-plan-numeric-differences-20261022.json；备份behavior-confirmed-plan-values-*。此前“哈希保持一致”仅指用户本次确认调整之前的整合检查，不代表确认后故意调整的11处仍未变化。
+- 旧静态契约收口交付ab6dd3f92655206b564bdc4497b6beb1d44fa7d6，仅整合12个测试文件；主控另修8个UI/联动静态契约。发现并修复现行pressure模板缺失键NPE、盾牌择优断链、实际举盾入口未取回包内盾。
+- 最终Python静态355项：342通过/13因可选API未指定跳过、零失败/错误；644Java只语法与339JSON解析通过。证据maintenance-tools/behavior-python-audit-final-20261022.*。不代表Java类型或运行时已通过；未编译/构建/启动/同步/push。
+- 观察诊断交付860e4c1、后续1eb4249已整合；主控保留焦点完整感知细节。修正2MiB误判为实际原生1MiB限制，整帧硬限900KiB，不删除8观察成员/焦点/路径/动作权限；感知表示额度共享192行/96标记，容量截断有独立标志。源码动作读取不构造会话、不推进时钟、不续租；后台进度缺口明确展示而不虚构。
+- 主控继续核查发现恢复盾函数此前没有实际调用者，已让全部真实举盾入口在重入保护内调用统一盾布局准备，且可用性检查含包内盾；普通/弹射物防御与蓝队推进仍受当前枪械、恢复、逃生和权限限制。新增最终接线契约，避免仅测试无人调用的排序helper。
+- 最新机制知识库147篇/1599Wiki引用、128KaTeX公式、7默认附录一致；动作观察页已说明真实占用与请求、unbound含义、后台进度缺口、焦点优先容量配额。工程矩阵/未发布日志同步；数值输入与确认目标全部对齐，但原6份参数修改继续保留未提交状态。
+- 接续重点：BASE_MOVE执行桥还未注册/绑定，先补最终路径来源与迟到回调、动态MOVE及岸线交接，再启用；恢复/弓弩/枪后台进度需建立安全只读接口；战斗中枢请求/反馈组合和全链异常收尾继续核查。完整目标未结束，不以本阶段静态全绿代替全任务完成。
+
+### 后台执行进度：枪械只读接口
+- 基线e3356e9（完整SHA由git rev-parse记录）；负责人 /root/behavior_equipment；工作树 E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\behavior-progress-guns；分支feature/behavior-progress-guns。
+- 只负责GunSupport/CompositeGunSupport、GunReloadSession、TaCZ reload事务与ledger、三后端Integration只读接口及隔离测试；不得改Human/恢复/弓弩/诊断codec/知识库/共享ActionProgressSnapshot。
+- 公共值接口ActionProgressSnapshot：kind/item/location/state/sampleTick/work/totalWork/workPerTick/elapsed/remaining/detail；读原执行记录，不调用actions/advance/tick/装填/可用弹药判定，不改权限或原NBT。未知真实阶段/总量明确-1，不猜完整装填比例。
+- 主控负责RecoverySupplies/OffhandFoodUse/GuardedRangedCharge/Shield只读出口、BehaviorDebugSnapshot/Codec/界面与协议、知识库同步。原6份用户参数仅在主控树镜像，分工树不带入，不并行编辑。
+- 分工未实际启动：旧会话续接和新会话创建均返回agent thread limit reached。现由主控在behavior-control-full顺序负责全部进度接线；behavior-progress-guns保留为干净的基线工作树，不视为运行中的任务。
+
+## 统一执行进度只读接口（2026-10-22）
+
+- 主控顺序接入，工作树behavior-control-full、分支feature/behavior-control-full；基线e3356e9acfca2e4cc8113721b935de19b2514a1c。新建behavior-progress-guns工作树未启动编辑Agent，受平台线程数量限制改为主控实施。
+- 文件范围：ActionProgressSnapshot、BehaviorDebugSnapshot、RecoverySupplies/OffhandFoodUse、GuardedRangedCharge/ShieldDefenseController、Human只读peek、GunSupport/Composite及三后端reload、ReloadPaymentLedger、观察codec/network/UI和对应测试。共享文件由主控单独接入。
+- 接口：统一11字段值记录；物品位置只按真实引用查询，读取不绑定、不交换、不推进权限或装填；TaCZ仅缓存原生实际阶段，脚本总量未知保留未知；lease/expiry的执行清理由执行入口负责。协议9新增字段，4条进度上限与900KiB整帧上限保留。
+- 静态：359项Python检查346通过13因API环境跳过，645份Java仅语法解析；Wiki147篇1600引用与128公式通过，7默认附录核对。Java codec最大帧/异常值/ledger只读测试补齐但未执行。未Gradle、Java编译、游戏、构建、部署、push。
+- 知识库：观察工具正文、枪械装填正文、动作生命周期规范同步；备份于维护目录文档备份/behavior-execution-progress-*。原六份参数dirty未暂存，仍按用户确认的修改方案目标值；完整目标与剩余移动接管见BEHAVIOR_IMPLEMENTATION。
+
+- 本地审核交付：primary e3356e9、ee2b5a8；main 2b61f62、b1f39dd。
+
+## 地面/水下路线执行归属（2026-10-22，接入未启用）
+
+- 主控顺序接入，工作树behavior-control-full、分支feature/behavior-control-full；基线ee2b5a8。根任务仍是完整本轮正式实施，未缩为路线接口这一子项。
+- 文件：HumanGoalExecutionBridge、HumanNavigationOwnership、纯RouteExecutionLease、HumanNavigation、HumanWaterNavigation、Human导航构造与连续性修复、TargetPreservingConditionalGoal、RuntimePoliciesTest与新增路线生命周期/静态接线测试。共享文件单负责人，无并行编辑。
+- 接口：只有真实安装记录原执行令牌；查询不改活动路线归属。native recompute直接写path字段另行继承原令牌；两导航器及repair用同一真实路线接续上下文，旧callback不能停止后继者路线。Goal在tick内新增MOVE需写入前再准入，释放MOVE后及下一选择前及时清锁；非MOVE回调不可借外层路线权限。
+- 实际行为边界：新水下类仍继承原WaterBoundPathNavigation，不替换搜索/跟随；执行桥未绑定未注册，两导航器保持原运行路径。最终输入、无路径水岸、外部命令中断尚待迁移，完成前不启用桥。
+- 验证：364项Python静态351通过13跳过，649份Java语法解析，7默认附录，Wiki147篇1601引用与128公式通过；只读javap确认WaterBoundPathNavigation可继承、native moveTo和recompute路径写入方式。RuntimePolicies入口已登记ActionCoordinatorTest与RouteExecutionLeaseTest；Java编译和这些测试未运行。未构建、同步、启动游戏、push。
+- 知识库：移动层实施状态、路线归属规范、动作生命周期及观察unbound边界已同步，备份为维护目录文档备份/behavior-route-ownership-*。原六份参数dirty未暂存。
+
+- 本地审核交付：primary d6c7b35；main 46accdb。
+
+## 直接移动输入与最终安全（2026-10-22，桥仍未启用）
+
+- 主控顺序接入，behavior-control-full工作树、feature/behavior-control-full分支，基线d6c7b35；共享Human/HumanBehaviorControl归主控，无并行编辑。
+- 文件：HumanMovementInputAuthority、纯InputExecutionLease、HumanMoveControl/travel、HumanNavigationOwnership接续、MovementContinuity、HumanTerrainSafety和状态/ASM/静态接线测试。权限总调度仍是原ActionCoordinator，不另造优先级或时钟。
+- 接口：WANTED/STRAFE/WATER_HOLD分别记录原令牌；非MOVE回调不可借用外层来源；本tick实际MoveControl执行才向travel传递来源。零输入及迟到stop只能清本源，原会话取消清所有自主输入/局部状态但保留物理速度；延迟step保留原令牌。水中直接水平速度增量的安全失败仅退回增量前水平速度，纯减速不误判反向行走；行走原脚部扫描补命令/身体加载边界，实际碰撞/台阶仍由原版处理。
+- 剩余：无路径水岸状态、外部命令/网络/感知的显式移动中断仍待迁移；桥未注册绑定，不将基础接入当成全目标完成。
+- 静态：369项Python356通过13跳过，652份Java语法、7默认附录、Wiki147篇1603引用及128公式通过；只读javap核对LivingEntity速度getter。新InputExecutionLeaseTest登记进RuntimePolicies入口；Java编译、Java状态/ASM测试均未执行，未构建/同步/启动/push。
+- 文档：移动层、战斗选择与控制权、观察工具和活动预算正文同步；备份于维护目录文档备份/behavior-input-execution-*。6份确认参数dirty未暂存。
+
+- 本地审核交付：primary a191876；main a0ef464。
+
+## 岸线状态与外部命令移动接管（2026-10-22，执行桥仍未启用）
+
+- 主控顺序实施，工作树behavior-control-full、分支feature/behavior-control-full，基线a191876；共享Human/HumanGunner/感知/命令/观察均由主控单独接入。
+- 文件：HumanMovementInputAuthority、Human岸线/导航器切换、HumanGoalExecutionBridge/HumanBehaviorControl、SoldierOrder/GarrisonSettings/OrderDistances/SoldierCombatMode/NaturalState、HumanRelations/HiredHumanRecall/SoldierStuckRecovery/HumanGunner、NavigationDebugService、HumanNavigationOwnership/HumanPerception及对应测试。
+- 接口：岸线/待搜索两个来源与目标输入/平移/水中停位统一存原令牌；旧清理不能取消新岸线。环境释放承接当前岸线来源，导航器切换前结束原路线。interruptMovement仅停止MOVE执行与清理输入，保留行为会话/独立后台动作；dismiss/recall取消旧会话。SoldierOrder preserveNavigation=true和其内部GarrisonSettings写入保留既有离线逃跑例外。
+- 开发测试：Run实例先移除再中断，旧Goal按activeRun结束；改变目的地先中断旧移动再发布新Run。感知目标失效在选择回调前捕获PathNavigation/Path/Token，回调后只停止仍是原归属的同一路线。
+- 验证：374项Python静态361通过13跳过，652份Java仅语法解析，7默认附录，Wiki147篇1604引用及128公式通过；输入纯Java状态测试补找岸/搜索独立与迟到取消，但未执行Java编译或测试。未Gradle、构建、同步、游戏、push。
+- 剩余：所有移动写入及普通机动修正的完整审查、启动Mixin接线、总调度/战术组合协议收口与其余矩阵条目仍须完成；桥未注册绑定，完整目标保持不变。
+- 知识库：移动层、战斗控制、观察工具、活动预算已同步，备份文档备份/behavior-shore-command-*；原六份参数修改保持未暂存。
+
+- 本地审核交付：primary c0e4458；main 5cd36c4。
+
+## 普通机动修正与延迟跳跃（2026-10-22，基础桥仍未启用）
+
+- 主控顺序实施，behavior-control-full工作树、feature/behavior-control-full分支，基线c0e4458；共享Human/ActionCoordinator/Goal桥/观察和跳砍由主控单独接入。
+- 文件：HumanMovementModifiers、PlayerLikeMovementGoal、HumanSafeJumpControl、PursuitJumpAttack、HumanBehaviorControl/Human/HumanGoalExecutionBridge、双导航速度入口、ActionCoordinator/BehaviorDebugSnapshot及状态/静态测试。
+- 接口：普通助手仅申请MOVE_MODIFIER，优先20/可中断/40tick心跳；不取得BASE_MOVE，不另造路线或攻击调度。强化跳砍复用原50/35tick修正。请求跳跃保存原BASE及MODIFIER，消费前复核权限/实体/落地；水/熔岩浮起保留环境分支。失效旧修正收尾不恢复旧冲刺；中断取消修正及pending jump，不抹除已起跳物理动量。实际权限统一用ActionCoordinator.owns，无快照分配或推进时间。
+- 验证：379项Python366通过13跳过，653份Java仅语法解析、7默认附录、Wiki147篇1604引用及128公式通过；新增纯状态机导航/修正共存和跳砍抢占断言已登记原测试入口，但未Java编译/状态/ASM执行。未Gradle、构建、同步、游戏或push。
+- 知识库：移动层、近战跳砍、预算、观察动作正文同步；备份文档备份/behavior-movement-modifiers-*。原六份参数dirty未暂存。
+- 剩余：基础桥未启用，继续审查全部移动写入与最终启动/Mixin接线、全行为调度及完整矩阵；本子项不代表整体目标完成。
+
+- 本地审核交付：primary 78a3799；main ce61513。
+
+## 基础移动执行桥注册与原版调用校核（2026-10-22，源码接线已启用）
+
+- 主控单独接入，behavior-control-full工作树、feature/behavior-control-full分支，基线78a3799。共享Human/HumanBehaviorControl/Goal桥/Mixin配置及协议测试均归主控。
+- 注册HumanGoalSelectorExecutionMixin与HumanWrappedGoalExecutionMixin；服务器beforeTick在首次super.tick前绑定，只有Human.goalSelector绑定，targetSelector及其他生物保持原行为。核心绑定失败报错，不静默缺失权限；未经准入却运行的wrapper停止并解锁，避免永远运行不执行。
+- Human速度与左右/前后轴写入：已知非MOVE或失效Goal不得覆盖另一个移动动作的轴；原生消费和客户端同步保留。补无路线时状态验证/退休，实际修复仍只承接原路线来源。
+- 只读native校核：tools/check_goal_execution_contract.py读取本机Forge47.4.16-srg.jar，5处Selector/WrappedGoal调用各1、Shadow字段和原锁/运行状态先后顺序、Mob轴setter公开非final均通过。原始javap和JSON放维护目录maintenance-tools；没有执行Java编译/游戏或Mixin引导。
+- 379项Python静态366通过13跳过，653份Java仅语法解析，7默认附录及知识库147篇1604引用/128公式通过。未Gradle、Java测试、构建、同步、游戏或push。
+- 知识库移动层、战斗控制、预算、观察说明已替换旧“桥未启用”规则，备份文档备份/behavior-bridge-activation-*；原六份参数dirty未暂存。
+- 完整目标仍未完成：总调度/策略组合协议及完整实施矩阵审查、Java类型/回归与启动验收待做，不能以本次桥接线替代全目标。
+
+- 本地审核交付：primary e1150e8；main 928a0e3。
+
+## 统一撤退恢复入口整合（2026-10-23）
+
+- 负责人主控，来源工作树behavior-control-full、分支feature/behavior-control-full、交付791f168cd07f7f158604d4c162f18457ae9c0268，主仓库整合前基线928a0e3。范围为AdaptiveCombatGoal/RecoverySupplies及恢复策略、安装/诊断、测试和机制说明；共享文件顺序接入。
+- 撤退不再持有重复恢复会话或12/9格药物门槛；共用恢复入口独立执行，逃跑时非食物优先，普通食物受紧急瞬疗中断但金苹果保持顺序。知识库正文及逃跑/恢复子计划同步，备份文档备份/behavior-unified-retreat-recovery-20261022-195955。
+- 静态检查379项366通过13跳过，653份Java语法、7默认附录、147篇Wiki/1605引用及128公式解析通过。未执行Java编译/测试、Gradle、构建、同步、游戏或push。完整目标的总调度/策略组合与最终矩阵审查仍待完成。
+- 六份原有参数修改未暂存，遵循用户以修改方案目标为准的决定；未覆盖其他现有修改。
+
+## 阵营策略组合整合（2026-10-23）
+
+- 主控从behavior-control-full/feature/behavior-control-full交付44fd1c6fd42db395f0bfc35bea1512cfa1e60624整合，main整合前基线5e33876。范围共同策略表、枪械/弓弩/跳砍/双持/盾推进的策略选择和build.gradle独立测试登记，原执行算法/时序/数值保留。
+- 共同表仅持不可变策略，HumanCombatDirector按当前配置选择，各执行器继续检查实物能力与原动作权限；不复制职业、物品、目标或冷却。未知/关闭阵营回退默认。
+- 发现20个独立Java main测试此前未接check，现登记behavior前缀任务，并新增策略组合/能力缺席/枪种例外测试。此前“测试已登记”不能用作该20项当时已有任务的证据。未运行Java测试。
+- 静态379项366通过13跳过，655份Java语法、7默认附录、147篇Wiki1606引用和128公式检查通过；未Gradle、编译、构建、同步、游戏或push。知识库中枢/总计划同步，备份文档备份/behavior-strategy-composition-20261023-102602。
+- 六份原有参数dirty与整合工作树逐字节一致、保持未暂存；WORKSTREAMS旧修改保留。总体中枢战术/移动请求与生命周期协议和完整验证仍待做，整体目标继续。
+
+## 枪械移动独立执行整合（2026-10-23）
+
+- 主控来源behavior-control-full/feature/behavior-control-full，交付e1fa2c91dc35393fc60d0d131303508eb1798d1f；main整合前基线3eb9798。共享GunnerGoal/HumanCombatDirector/build.gradle顺序接入。
+- GunnerGoal保留瞄准和原生射击，GunMovementExecution集中原追击/射界/优势射位返回/直接平移，GunPositioning为中枢生成无执行状态的移动意图。执行仍在原Goal来源内，不添加调度/路径预算或改动原数值；9个抽出方法体逐字核对一致。
+- 379项静态366通过13跳过；658份Java语法无错误，Java距离与编译后职责测试已登记但未执行，7默认附录一致。知识库中枢/移动层/枪械正文同步，备份文档备份/behavior-gun-movement-20261023-103158。未Gradle、编译、构建、同步、游戏或push。
+- 原六份参数dirty和WORKSTREAMS已有修改保留。弓弩/三叉戟与中枢其余请求、生命周期、完整矩阵及运行验证继续，不能将枪械拆分标为全目标完成。
+
+## 弓移动执行整合（2026-10-23）
+
+- 主控从behavior-control-full交付2391b727f99fe0cc5b4d6cf10b9d7304bd4d42eb整合；main整合前基线f4918dd。BowAttack拉弓/发射与BowMovementExecution移动分离，事实/策略Request与射界结果交接，不新增Goal或调度，原预算/距离/节奏保留。
+- 静态379项366通过13跳过，659份Java仅语法解析；编译后职责断言未执行。知识库中枢和弓弩正文已同步并备份。未Java/Gradle、构建、同步、游戏或push。原六份参数dirty及已有文档修改保留。
+- 弩/三叉戟、中枢其余协议与完整矩阵及运行验证继续，整体目标未完成。
+
+## 弩移动独立执行整合（2026-10-23）
+
+- 主控从behavior-control-full/feature/behavior-control-full交付614be7762f43644081bab768a79b88799d4a14b1整合，main整合前基线204f9e9。范围CrossbowGoal/CrossbowMovementExecution、静态与编译后职责检查、机制文档；共享文件顺序接入。
+- 移动只接收距离/射界/已选策略/当前可跑动，返回可见/可射击；装填进度和延迟发射保留原攻击侧。原驻守/上岸/射位回返/地形与预算不变，不增加Goal或仲裁。
+- 静态379项366通过13跳过；660份Java仅语法解析、7默认附录、知识库147篇1607引用和128公式通过。Java编译与职责断言未执行；未Gradle、构建、同步、游戏或push。知识库中枢与弓弩正文同步并备份。
+- 原六份参数dirty及WORKSTREAMS旧修改保留。三叉戟、中枢整体请求协议及完整矩阵/运行验证继续；整体目标未完成。
+
+## 三叉戟移动与契约入口整合（2026-10-23）
+
+- 主控从behavior-control-full交付3c29645485fcd69f5882002cb83c8dbe87226787整合，main整合前基线ad80bea；三叉戟移动从攻击侧抽离，退开失败仅反馈近刺机会，原投掷/实物/冷却/范围保留。
+- Java地形/射位/追击/枪械字节码断言迁到实际执行入口，修正原三叉戟tickMelee过时定位；保留原约束，新增移动不得直接伤害/投掷/使用或新仲裁断言，未执行Java。
+- 379项静态366通过13跳过，661份Java语法、7默认附录、147篇Wiki1607引用及128公式解析通过；知识库正文已同步并备份。未Java/Gradle、构建、同步、游戏或push。原六份参数dirty及已有文档修改保留。
+- 整体目标继续：中枢完整请求与反馈/生命周期协议及最终矩阵/运行验证仍待完成，不能将本次模块拆分等同全部实施完成。
+
+## 授权构建回归修正整合（2026-10-23，暂不同步）
+
+- 主控从behavior-control-full交付a756a1453f5f9f5af193283dad1dd2698b4c7fac整合；main整合前基线8b2006e。用户授权构建和回归、暂不同步；执行环境Java17、Forge47.4.16，八个显式只读API路径。
+- 主源码/测试源码编译与JAR重映射通过；完整build lootScreeningTest --continue --offline通过，100项任务95执行/5最新。默认配置说明格式收敛后assemble tierConfigFilesTest再通过，最终打包资源与源码字节一致。报告maintenance-tools/behavior-build-validation-20261023.json。
+- 修复过时回归入口/行为及重载查询误判，配置10处双语帮助成对排列，所有非说明值保持不变。一次本轮插入JSON错误已纠正；未将失败产物部署。
+- 内部验证包仍为3.12.4，不作正式发行或覆盖dist，SHA256 8d8b2e11c7356ec7e7ceab4ae35a2fe15094d05af5d3dcae0c57697193863312。未启动游戏、未同步、未push；真实Forge/Mixin与AI/动画/多人仍未验收。
+- 六份用户参数dirty与整合工作树逐字节一致并保持未暂存，WORKSTREAMS旧修改保留。整体中枢/完整矩阵实施继续，构建通过不等于整个目标完成。
+
+## 弓弩中枢决策整合（2026-10-23）
+
+- 主控从behavior-control-full交付7f3dfdbc111272c112e7c656b8116f75ffc4cc8a整合，main整合前基线14dd375；中枢统一选弓弩移动Mode，攻击事实/命令/环境进入纯决策，执行保留路径/平移/预算/安全，无第二调度。
+- Java主源码/测试编译及完整build+lootScreeningTest通过：101项任务98执行/3最新；静态379项366通过13跳过，7默认附录、147篇Wiki1607引用与128公式通过。知识库中枢/弓弩正文已同步，备份behavior-ranged-decisions-20261023-105907。
+- 内部验证JAR SHA256 317fe14977ed5c5dcc7d536bcf2cd7795eb567f5909b4252f648b73f4a367e05，报告maintenance-tools/behavior-ranged-decisions-validation-20261023.json。未同步、未游戏、未push。原六份参数dirty及已有文档修改保留。
+- 用户授权在全面重构完成且整体检查通过后直接构建同步；条件尚未满足，继续整体矩阵/会话协议审查，不将本子项视为完整目标完成。
+
+## 行为重构完整收尾与3.13.0同步（2026-10-23）
+
+- 范围：本轮06修改方案完整工程收尾；主控/root，feature/behavior-control-full，工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\behavior-control-full。原始基线89366c877d3666ae8dfcbde0895bf4ec8fbf3202；本次收尾基线7f3dfdbc111272c112e7c656b8116f75ffc4cc8a；交付1b060495a4cfe896b57d7470887ac7479e75050b，主仓库整合effc09866c901a1552ed4a4a262067dfc448c6d5。
+- 负责文件：build.gradle版本3.13.0、CHANGELOG、BEHAVIOR_IMPLEMENTATION及ActionCoordinatorTest。完整矩阵按当前入口收敛；中枢/执行/交换/感知/命令的共同权限与会话边界已接，未来中枢复用公共取消/暂停/重新准入，不新增空调度器。
+- 补充Java回归：暂停释放、恢复重新整体申请、冲突不部分占用、暂停硬期限/租约到期、暂停不心跳、关闭准入后不能恢复；全部通过。完整build lootScreeningTest --continue --offline：101任务97执行4最新，成功。379静态366通过13可选API跳过；939核心类缺可选运行依赖链接通过。
+- 知识库：先备份06目录至文档备份/behavior-final-review-20261023-110952，再纠正总索引及各子计划陈旧状态，明确源码接入与游戏验收分别标识。147篇/1607引用/128公式及7默认附录验证通过。
+- 已确认游戏未运行，旧3.12.4备份到E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.0-20261023-111303；仅替换既定Forge47.4.21实例本模组JAR。保留9个现有配置文件内容，不启动游戏，不推送。
+- dist、构建JAR、部署JAR一致；SHA-256 669E6B59E2DE820612DB545C9ACFB8C801A3C2DAEB8F1C49040701BBD2B2D15D。正式包E:\MC\Create-Delight\HostileHumansUnified-维护\dist\hostile-humans-unified-1.20.1-3.13.0.jar。详细报告maintenance-tools/behavior-release-3.13.0-20261023.json，完整构建日志behavior-final-release-3.13.0-20261023.log。
+- 原6份数值修改保持未暂存/未提交，内容main/工作树一致，按已确认方案参与构建；本次额外将原文件复制至发行备份approved-uncommitted-source便于复现。WORKSTREAMS原修改保留。
+- 工程实施与构建同步已完成；未完成的是实际游戏验收而非本轮新增开发范围。运行时Mixin引导、多人观察/指挥、各枪后端真实射击/换弹、防御恢复互斥、撤退/射位返回及卸载/编辑取消场景须在游戏验证；见BEHAVIOR_IMPLEMENTATION验收清单。农耕、砍树、美术、新建筑及导航引擎替换不在本轮。
+
+## 知识库完整重组与现行机制整理（2026-10-23）
+
+- 用户要求：整体目录层次重组、现行机制与数值、完整战斗调度图、普通中文说明及完成方案归档。主控/root独占知识库及本次仓库文档入口；源码基线effc09866c901a1552ed4a4a262067dfc448c6d5，无玩法源码编辑，无并行编辑、构建、实例同步或push。
+- 修改前全库150文件已复制并逐文件SHA核对；备份E:\MC\Create-Delight\HostileHumansUnified-维护\文档备份\knowledge-restructure-20261023-112112。库内旧备份迁至维护目录文档备份/知识库旧内嵌备份-20261023-112201，避免搜索重复；原始想法内容一致，3张历史PNG逐字节保留并移至对应归档图示目录。
+- 当前结构：01人类/士兵、02战斗（感知/中枢与动作/攻击/防御恢复/移动导航）、03装备物品建筑、04配置数值、05联动、06未完成方案、07开发观察、08已完成设计。合计147篇：当前机制/参考70、后续方案11、已完成设计66；没有把跨高度、农耕/砍树、预判冗余或新美术/建筑当作已完成。
+- 新正文：战斗总览完整调度图、公共交换与生命周期、阵营实时策略、5类场景协作示例、数值阅读方法及来源核对的13维成本/阵营中心/枪种独立因子。保留原有机制详细公式、数量、限制与配置；建筑结构居民与箱表拆为独立列表。普通中文优先，代码名只作为公共接口与职责定位。
+- 修正真实陈旧说明：独立恢复已无撤退12/9格及安静10tick门槛，普通食物3/8格/3秒另算；不存在RECOVER阶段；药水/盾/双持与移动按统一权限；蓝队按枪种的装填耗时70%与绿核心速度70%分清；关闭扣弹不免弓弩实物储备；感知5类/导航6池；近8格物品注意可全向但必须LOS。
+- 仓库文档入口已更新，提交28c0d888868510f64640b0a26db1c1c149e5b112；另将BEHAVIOR_IMPLEMENTATION陈旧“未同步”与任务统计校正为既有3.13.0实际记录，没有重跑构建。原参数六文件及WORKSTREAMS dirty保留未暂存。
+- 最终检查：147/147页面由首页可达，重名0；1646 Wiki引用/章节无断链；125公式KaTeX解析无错误；9 Mermaid实际解析无错误；7默认附录与源码一致；git diff --check通过。报告maintenance-tools/knowledge-restructure-validation-20261023.json，移动映射及文档维护脚本同目录。
+
+## 装备交换发布崩溃修复（2026-10-23，进行中）
+- 需求：用户要求查看最新游戏崩溃日志并修复。两份服务端报告11:20:10/11:22:06均为HumanEquipmentExchange.writeLayout发布布局异常，3.13.0已实际运行；TaCZ display字段音效警告不是终止异常。
+- 基线e9057c6c55596f95235bce6b9b620d186c08f7d7；主控/root；分支fix/equipment-exchange-publish-crash；工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\equipment-exchange-crash。源码范围HumanMobEntityData装备同步、HumanEquipmentExchange布局失效边界、专项回归与build/CHANGELOG；共享文件仅主控修改。
+- 原6份已确认数值从main逐字节复制进入工作树以复现既有构建，继续保持未暂存，不作为本次提交。日志备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\exchange-crash-evidence-20261023-114153。
+- 根因：HumanData手/甲列表引用生物真实列表，setItemSlot/setItemInHand又写入copy，正常发布因此替换实物引用；需保留原版最终实际装备引用。正常布局失效回退返回CHANGED，未知异常与回退异常仍明确暴露。专项验证使用实际编译装备设置方法和共享/非共享列表，不以源码字符串检查替代此复现。
+
+## 装备交换崩溃修复交付与同步3.13.1（2026-10-23）
+- 已完成：HumanMobEntityData同步最终实际装备，不向共享装备列表写copy；HumanEquipmentExchange可预期布局/权限失效安全回退返回CHANGED，真正回调/回退异常不吞掉。无行为数值变化，不删除问题实体、不编辑存档。
+- 交付af98b6ec3618d2101196c33079e6c9e43f6e9865；main整合4016be6ababb7c9a0ae006c5910d8151c2519eb6；5个明确文件，原6份参数与WORKSTREAMS dirty保留未暂存。
+- 新增EquipmentReferenceContinuityTest执行实际编译的装备同步方法，在轻量父容器/真实HumanData中重现旧copy经共享列表替换实物，验证共享/独立列表、六装备槽、双手、磨损与原生最终替换结果。该测试不是Forge世界运行验收。首次测试错误触发独立JavaExec不能使用的Forge网络bootstrap，按既有测试方式纠正；保留初次失败日志。
+- Java主源码和测试源码编译、最终build lootScreeningTest --continue --offline成功，102任务98执行4最新；新专项及既有装备/恢复/动作/可选依赖回归均通过；940核心类缺可选API运行链接通过。静态379项366通过13可选检查跳过；知识库两页机制正文备份后同步，1647引用/125公式通过。
+- 发布前再次确认没有游戏进程，13个现有配置内容保持；旧3.13.0备份到E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.1-20261023-114751，保留旧dist历史包。仅部署Forge47.4.21既定实例3.13.1；构建/dist/实例SHA-256均为88745A65D4695D4F29AFC54BD3305F92D837387DD769806E14935BE0A79996F9。
+- 报告maintenance-tools/equipment-exchange-crash-3.13.1-release.json，最终日志equipment-exchange-crash-3.13.1-final-build.log。重混淆JAR两处setter字节码已核对不复制，所有打包数据JSON与源码逐字节一致。原6份已确认dirty参数另复制至发行备份approved-uncommitted-source，便于复现。
+- 未启动游戏、未push。需游戏验证：重新加载原世界、自然生成或拾取更好武器/护甲触发自动换装，随后测试盾/药/双持/换枪与存档重载；确认不再发生正常发布异常且物品数量/耐久保持真实。TaCZ display换弹音效字段警告独立于本次崩溃，原有降级仍保留。
+
+## 知识库控制系统总层与分支依赖（2026-10-23）
+- 用户要求：02改为控制系统，战斗作为子分支，明确未来同级行为接入与模式整体切换的边界。主控/root独占知识库与仓库两处文档链接；基线4016be6ababb7c9a0ae006c5910d8151c2519eb6；本次仅文档，没有Java/配置机制编辑、构建、同步或push。
+- 修改前全库已备份并逐文件校验到E:\MC\Create-Delight\HostileHumansUnified-维护\文档备份\control-system-hierarchy-20261023-114940。原30篇机制保留并重新归属：公共权限/实物交换、共同导航/安全/实际命中结算置01公共能力，战斗感知/目标/武器策略/攻防/战术移动置02战斗分支，03仅未来扩展说明。
+- 新增控制系统总览、公共能力索引、公共感知/生存解释、模式切换依赖矩阵及其他行为预留；公共能力与分支混合模块分别说明，当前原Goal执行桥不等于已实现跨中枢总调度。
+- 源码依据：Human.aiStep/tick固定调用HumanCombatDirector；武器Goal与战斗/闲置恢复独立注册；HumanBehaviorControl.cancel显式清理战斗模块。明确只停止Director不会自动停掉所有Goal，单动作pause不等于暂停整个行为系统；未来还需分支归属、开始/继续执行门槛与统一退出。
+- 区分行动命令、战斗模式、阵营风格与未来行为系统；切换应更换任务/意图而非复制身体/库存/导航，不倒放真实消耗、伤害、药效或已投出弹体。高压本能、恢复与感知的未来跨模式策略未伪装为现成实现。
+- 检查：152/152篇由首页可达、重名0、1683链接/锚点无断链、125公式与10 Mermaid实际解析通过，7默认附录一致；全部移动映射目标存在，原始想法内容保持；git diff --check通过。报告maintenance-tools/control-system-hierarchy-validation-20261023.json，映射与备份路径同目录。
+
+## 阵营战斗接换与防御审查（2026-10-23，进行中）
+- 基线46528bc10ee4743dcdfc9f3b3666161ddf77c134；负责人/root；工作树worktrees/faction-combat-transitions；分支fix/faction-combat-transitions。范围：阵营近远程决策、箭矢间隔、副手布局、盾方向/渲染、动作接换、专项验证及知识库。Human/renderer/build/AGENTS共享文件由主控独占。
+- 公共约定：阵营策略集中解析；实物交换只经现有交换层；防御资格集中于盾控制器，方向只取实际威胁事件；保留原动作权限/移动模块。原六份参数逐字节带入但不暂存；主库WORKSTREAMS原修改保留。未获本轮明确构建指令，不运行Gradle。
+
+## 阵营接换与进攻优先源码交付（2026-10-23）
+- 交付并本地快进整合763e587cbf70170bd061f55c98565d67cf96c167；34个明确文件；原六份已确认参数与既有WORKSTREAMS修改保留未暂存。未改版本号，CHANGELOG登记未发布。
+- 绿核心弓双箭间隔6tick，第二箭独立复核/付箭/取消，不重置首箭节奏。红所有枪4.5进入/6格退出强制近战；弓弩6/7.5缓冲与拉开退出一致，红灰核心不接受通用定时分离；初始保护8tick保留真实攻击收尾。
+- 防御风格独立于双持能力；灰仅高压可主动举盾，日常副手每5tick按当前实物重排。高压方向使用40tick/64报告的显著实际来源（来源累计2%最大生命），移除已锁定名单覆盖；客户端统一activeShield控制持枪盾回手与动画退让，撤退中的真实盾面也保留。
+- 普通近战格挡先评估攻击意图/预计伤害max(4,最大生命4%)，无害小史莱姆跳过；最多20tick，收盾40tick再入且留实际攻击机会，高压触发配置不变。
+- 已验证：静态379项366通过13跳过，7默认附录一致，git diff检查通过；知识库153篇/1699引用/125公式/10Mermaid无错误，原库155文件备份，8页正文更新+1页完整策略冷却总表，其他用户笔记/图片保持。
+- 新增FactionCombatTransitionTest及扩展箭/策略/装备收尾Java回归已接check；本轮未获明确构建指令，Java编译、Java回归、打包/实例同步/游戏验收均未执行。构建选择已提问，未答不视为授权；未push。
+- 已将可维护/扩展要求写入AGENTS及用户明确要求的记忆扩展备注。报告maintenance-tools/faction-combat-transitions-20261023.json；需游戏测试绿双箭中断、红近距/后台装填、灰恢复/双持/仅高压盾、单/多来源转盾、持枪左右手盾模型、弱敌优先进攻和高压自保。
+
+## Better Combat攻击后端与跳砍时序（2026-10-23，进行中）
+- 基线763e587cbf70170bd061f55c98565d67cf96c167；主控/root；分支fix/melee-backend-jump-timing，工作树worktrees/melee-backend-jump-timing。范围：BC后端选择/连招/动画缓存，跳砍起跳与出手，专项回归及对应知识库；Human/build/动画等共享文件由主控独占。
+- 保留前轮未发布修复及原六份参数，参数逐字节带入但不暂存；日志显示当前实际运行3.13.1及BC1.9.0。后端状态区分无支持与临时未就绪，跳砍使用有界独立起跳阶段；不复制伤害/导航控制器。本轮未请求构建，不运行Gradle。
+
+## BC攻击分流与跳砍时序源码交付（2026-10-23）
+- 交付并本地快进整合ab148127aaab2f8d3f5080756fa601fa87fbcb77，11个明确文件；六份原参数与WORKSTREAMS未暂存修改保留。前轮763e587未发布修改完整保留；当前实际日志/JAR仍3.13.1，BC1.9.0。未将源码修复描述为游戏复现已通过。
+- BC分流显式NATIVE/BC/WAIT：计划无效不落入原版；读取异常4tick重试，3次后明确回退并20tick复查，武器真实无档案/后端缺席保留正常回退。服务端同步能力不再用瞬时攻击许可，客户端移除窄剑斧分类，缺省动画用BC单/双手横斩。
+- BC起手固定动作Profile，延迟命中只重算几何与权限，不重新选连招；目标/武器/会话失效照旧取消。主动跳砍起跳后clamp(9-前摇,3,6)tick才开攻击窗口，普通/反击与直接入口共用；原冷却、BC前摇及空中实际命中增伤条件保留，长前摇不保证落地前命中。
+- 静态379项366通过13跳过，git diff检查通过，7附录一致；3页知识库备份后更新，153篇/1700链接无断链、125公式解析通过，无图表变更。新增MeleeBackendAndJumpTest检查分类、腾空时序、实际编译入口plan==null控制流不可触及原版伤害、动作Profile与显示判定；已接check但Java编译/Java回归未执行。
+- 未构建、未同步、未push或启动游戏；报告maintenance-tools/melee-backend-jump-20261023.json。待游戏验收第三方BC武器显示、空计划不补原版、红灰短/长前摇跳砍、受阻起跳与双持/盾/食物中断。
+- 架构评估：建议后续把复杂阵营的完整决策流程各自内聚，允许少量策略重复，保留统一攻击/移动/换装执行；不在本轮未经要求复制四套底层AI或开展新一轮整体重构。
+
+## 3.13.2 构建与正式同步（2026-10-23T15:21:29.411724+08:00）
+- 用户明确授权“构建同步”。主控/root在worktrees/melee-backend-jump-timing、fix/melee-backend-jump-timing发布；整合763e587（阵营/盾防）与ab14812（BC/跳砍），发行提交e3b283026ca72fc3486c70d72eff6140116768f1已快进main。仅提交build.gradle、CHANGELOG与DefensiveBehaviorTest；六份原参数与原WORKSTREAMS未暂存修改保留。
+- Java17/Forge47.4.16编译与完整build lootScreeningTest --continue --offline（八个API完整路径）通过：104任务，100执行/4复用。首轮仅旧盾防ASM检查漏看方法重载失败，修正测试查找后全套重跑通过；两轮日志保留。新增阵营策略及BC/跳砍回归通过；218份打包数据JSON逐字节匹配，版本清单核对通过。静态379项366通过/13可选API跳过、7默认附录一致；知识库当前机制已于两轮源码交付同步。
+- 替换前检查无Minecraft进程；旧3.13.1与13份配置、6份原dirty参数备份：E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.2-20261023-152129。仅同步既定Forge47.4.21实例，未修改配置；构建产物/dist/部署三处SHA-256一致：589f1ea6046833a0d944d1d4c99a0eae8160f519295ef4a0c57a7b8955ebe5fd。正式JAR：E:\MC\Create-Delight\HostileHumansUnified-维护\dist\hostile-humans-unified-1.20.1-3.13.2.jar。
+- 报告：E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\combat-fixes-3.13.2-release.json。未启动游戏、未push；构建不代表游戏验收。待测试：BC武器连续攻击/动画与无效计划不补原版；红队腾空后挥击及近距切换；绿队双箭间隔与取消；灰队恢复后双持/仅高压盾；普通弱敌优先进攻、单/多方向高压转盾及持枪手部盾渲染。
+
+## 灰队日常副手与安全投掷出生池（2026-10-23，进行中）
+- 基线e3b283026ca72fc3486c70d72eff6140116768f1；负责人/root；分支fix/ashen-offhand-safe-supplies，工作树worktrees/ashen-offhand-safe-supplies。范围NpcDualWield、SpawnPotionConfig、四阶默认池、对应回归和机制正文；共享defaults由主控独占，原六份参数逐字节带入不暂存。
+- 灰队日常副手必须有真实主手武器，沿现有交换事务整理；恢复/高压占手期间不抢占。实装焦燃0.5.5普通grenade调用createRocketExplosion(...,false)，全局允许破坏时走DESTROY；JEG0.14.5人类手抛grenade走createExplosion(...,true)并KEEP，保留。仅移除scguns:grenade自然补给及过滤旧池，不删除手动供给能力或其他手雷。
+- 本轮未要求构建；只运行静态验证，不运行Gradle、不部署、不启动游戏或push。
+
+## 灰队副手与安全出生投掷池源码交付（2026-10-23）
+- 交付并快进main：c337b6dfd5c9da6cccd420bbaf59760e6d4ef5ff，7个明确文件；六份已确认参数与原WORKSTREAMS修改保留未暂存。未升版本号，CHANGELOG记未发布。
+- 灰队每5tick的日常副手整理先验证当前主手为武器（沿既有近战/弓弩/三叉戟/枪械识别）；否则取消旧双持记忆，现有副手武器通过交换层收起。不抢恢复、高压、物品使用/前摇或玩家编辑；满包保留实物并等待后续重试。
+- 精确移除四阶scguns:grenade条目，其他默认值逐字段完全不变。分类与resolve共用出生排除规则，旧/自定义池及旧混合池也不再发放该物品；保留全局可用名单和手动供给、已有库存，未改其他手雷/爆炸物。实装scguns0.5.5与JEG0.14.5原生字节码已保存maintenance-tools/ashen-offhand-safe-supplies-native-audit，物品行为与API哈希登记于报告。
+- 静态379项366通过/13可选API跳过，7默认附录一致，默认JSON精确差异与主手门槛执行顺序核对通过，git diff --check通过。更新Java回归：旧池排除/手动能力保留/JEG保留，以及实际入口主手门槛；尚未编译执行。
+- 知识库备份后更新6机制页与4阶默认附录；全库153篇/1700链接无断链、125公式无错误。报告E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\ashen-offhand-safe-supplies-20261023.json。
+- 本轮未要求构建，未运行Gradle、未同步、未push、未启动游戏。待构建及游戏验收：灰队空手/食物主手、恢复/高压结束、满包重试、重新持武器恢复副手；新生各阶不带焦燃普通手雷且JEG手雷/钉弹保留。已有背包不自动清理。
+
+## 灰队单手近战出生补给（2026-10-23，进行中）
+- 基线c337b6dfd5c9da6cccd420bbaf59760e6d4ef5ff，负责人/root；工作树worktrees/ashen-melee-spawn-supply，分支feature/ashen-melee-spawn-supply。范围：统一阵营装备Profile/分类池/出生消费者、内置灰队缺省、配置校验与Java/Python验证、对应知识库。原六份参数保留并逐字节带入不暂存，共享defaults/配置/生成入口由主控独占。
+- 以通用可配置melee_reserves策略接入现有装备管线，灰队各阶提高两把/三把真实单手近战库存概率；候选必须沿原白名单/档位/核心偏好，不靠颜色临时覆写装备，不增加武器总数上限，不重复给旧士兵发补给。未请求本轮构建，不运行Gradle。
+
+## 灰队单手近战出生补给源码交付（2026-10-23）
+- 交付并快进main：af25db5cb3c56ca9574a7c9a0932383888315d5c，8个明确文件；六份原参数逐字节保持未暂存，原WORKSTREAMS修改保留。CHANGELOG登记未发布，未改版本。
+- 通用Profile新增melee_reserves（enabled、second_weapon_chance、third_weapon_chance、prefer_one_handed）；纯SpawnMeleeReservePolicy提供条件数量与剩余名额。默认仅灰鸦tier1/2/3启用，两把尝试80/90/100%，条件第三把20/35/50%；初始/备用近战优先已过滤单手候选。实例按本阶equipment_loadout.faction_overrides.ashen.melee_reserves覆盖，无配置文件直接写入。
+- 专项补给先于原通用数量补足，以实际主副手/背包近战计数；枪弓不算专项近战但占原总武器上限（普通阶3/流浪2）。同型号的独立实物可并存，不复制原物。仍按白名单/deny、伤害档与核心偏好；BC启用用原supportsOneHand，后端不启用优先SwordItem兼容类；专项空池停发、基础配装可退回原池。背包满不丢物，旧士兵不补发，出生后自然成长仍沿现有同家族替换/附魔缩放。
+- 静态379项366通过/13跳过，7默认附录一致，JSON核对仅灰队3行新增配置，其他阵营不变；git diff --check通过。新Java回归覆盖30万次目标分布、条件三把、枪械占位/已足量/上限、覆盖/禁用/无效参数拒绝及实际接线；已登记check但未编译运行。
+- 知识库备份后更新4正文和阵营默认附录；153篇1704链接无断链，125公式无错误。报告：E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\ashen-melee-spawn-supply-20261023.json。
+- 未运行Gradle、未构建/同步/游戏测试/推送。待授权构建后验证BC存在/缺席、各阶灰队不同枪弓主手与双剑/匕首、显式空池/deny/满包、旧实体不补发及其他阵营配装不变。
+
+## 阵营战术知识库按阵营分篇（2026-10-23）
+- 用户要求通用行为独立、四阵营各自独立，逐项写明特殊行为与通用策略覆盖；主控/root仅编辑知识库及本协作记录，源码基线af25db5cb3c56ca9574a7c9a0932383888315d5c保持。未创建编辑源码工作树、未修改游戏行为或默认数值，未构建/同步/推送。
+- 改前全库备份逐文件哈希核对：E:\MC\Create-Delight\HostileHumansUnified-维护\文档备份\faction-strategy-pages-20261023-154518。将原阵营战术与武器策略页拆入02-控制系统/02-战斗系统/02-中枢与动作协调/阵营战术与策略：保留原同名索引，加通用战斗策略及蓝/绿/红/灰独立页。
+- 每个阵营页包括生效条件、特殊项/被覆盖的通用项对照、时序/取消/回退和继承通用规则；保留蓝枪种优先/绿速度与耗时、红近战保持/箭数、灰主手前提/双持/仅高压盾/独立出生近战补给等既有边界。共享完整动作冷却表保留为统一查数值入口。
+- 原Wiki索引名保持唯一，外链仍可解析；定向更新公共装备交换、战斗总览、冷却总表3页入口。旧页已在完整备份，新增6页/删除旧单页/3页链接调整，其余原有文件逐字节保持。
+- 验证：158篇/1747 Wiki引用无断链或锚点问题，125公式实际解析无错，7默认值附录一致。报告：E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\faction-strategy-pages-20261023.json。
+
+## 枪械瞄准推进朝向协调（2026-10-23，进行中）
+- 用户要求瞄准推进时身体/面部对准实际攻击目标，保留导航路径，普通赶路不锁朝向。基线af25db5cb3c56ca9574a7c9a0932383888315d5c；主控/root独占；工作树worktrees/gun-aim-navigation-facing，分支fix/gun-aim-navigation-facing。
+- 范围HumanAttention单tick枪械朝向请求、GunnerGoal瞄准入口/退出、HumanMoveControl现有战斗朝向下的路径输入换算、生命周期与回归、当前知识库。Human和共享Attention由主控接入；原六份参数保留且镜像不暂存。
+- 已确认枪手原本markRangedFacing会被最终HumanAttention.finish按导航体向覆盖，并被canAim移动偏角阻止；保留弓弩/普通观察原有限头部规则，只给当前真实枪/目标/会话的瞄准请求单tick许可，盾防和近战更高优先级不被覆盖。复用既有盾/BC的世界路线到身体局部输入转换，不改路径或另建移动控制器。未请求构建，不运行Gradle。
+
+## 枪械瞄准推进朝向源码交付（2026-10-23）
+- 交付并快进main：292c80da48e25995fe31085d6693d0d4c9e11321，9个明确文件。前轮未发布灰队/投掷池/出生补给完整保留；六份原参数与WORKSTREAMS既有修改未暂存，参数与工作树逐字节一致。未改版本号，CHANGELOG记未发布。
+- 根因：GunnerGoal虽然设定弹道yaw并markRangedFacing，但最终HumanAttention.finish仍按navigationYaw恢复路径身体方向；canAim又用普通移动头角阻断转弯中的射击。
+- HumanAttention增加枪械瞄准Request，绑定当帧/当前主目标/原真实主手枪/行为会话；请求不操作路线，不读取隐藏目标。仅在原射程/射界/目标准入后建立，最终使用同一弹道yaw/pitch对齐头/身体，原枪弹散布及实际射击准入仍保留。更高优先级盾/近战请求和真实盾使用禁止枪械抢朝向；失效请求不降格成普通观察继续生效。
+- HumanMoveControl将原moveWhileShieldFacing规范扩为moveWhileCombatFacing，盾/BC/瞄准枪共用，陆地按原下一节点世界方向换算身体局部输入、水中继续原世界方向推进，普通MOVE_TO仍走原版；不改路径、节点、目的地或预算，不额外选点。setAiming(false)、Goal停止/新帧和行为会话取消清理请求。
+- 静态379项366通过/13可选依赖跳过，原静态水中朝向断言更新至统一战斗朝向入口；git diff --check通过。原有Java地形/盾防字节码回归迁移方法名，增加实际枪手瞄准、结束/会话取消、最终朝向、移动输入前应用及无导航写入的检查，尚未编译运行。
+- 知识库备份后同步枪械、通用战术、控制权及2篇开发入口说明；158篇/1751引用无断链锚点问题，125公式解析无错，7默认附录一致。报告：E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\gun-aim-navigation-facing-20261023.json。
+- 本轮未请求构建，未运行Gradle、未构建同步/推送或启动游戏。待游戏验收：三后端枪手直线/转角/侧向路径瞄准推进、普通远距赶路解除、遮挡/超程/换刀/目标死亡释放、举盾不抢朝向、上坡/台阶/水中保留路径移动；静态通过不代表上述实际场景已验收。
+
+## 主动盾牌显示与动画仲裁（2026-10-23，进行中）
+- 用户报告真实举盾有时仍显示副手下垂；主控/root；基线292c80da48e25995fe31085d6693d0d4c9e11321，分支fix/active-shield-presentation，工作树worktrees/active-shield-presentation。范围Human主动使用手的服务器同步、共享客户端盾显示入口、模型末端/套袖及枪械/BC姿态退让、针对回归与机制知识库；Human/模型/渲染共享文件主控独占。原六参数镜像保留不暂存。
+- 已核对原生LivingEntity.onSyncedDataUpdated直接读使用手建立本地useItem，不经过Human.startUsingItem；不把其服务器准入误认作原因。现有渲染额外依赖本地useItem剩余时间，且BC的prepare在盾挡时仍保留待机层、apply会在原版之后继续写臂。统一读取服务器当前真实举盾手并复核当前手持盾，避免交换/元数据顺序依赖；不改变盾防资格、伤害或耐久。
+- 未要求本轮构建，不运行Gradle、不替换实例或启动游戏。
+
+## 主动盾显示与动画仲裁源码交付（2026-10-23）
+- 交付并快进main：391a11b98c50e381a077cb5f09e1f6f3e3f11290，15个明确文件。前轮未发布修改完整保留，六份原参数与既有WORKSTREAMS未暂存修改保留，参数与工作树逐字节一致；未升版本，CHANGELOG记未发布。
+- Human新增服务器单向同步NPC_SHIELD_HAND（Byte，0未举/1主/2副），仅实际isUsingItem、useItem与当前手同一实物且为盾才同步举盾；start/stop及tick末更新，不写NBT、不改变防御判定。客户端HumanShieldPresentation统一解析当前盾装备，主动BLOCK不再依赖本地倒计时。
+- HumanPlayerModel末端按原版BLOCK静止角强制盾臂与套袖，保留肩点/蹲姿且幂等，主动盾取消额外侧移躯干偏转；枪械/BC全身、待机、攻击与物品弯曲统一让出。BC仍消费旧序号，收盾不重播已取消攻击；按真实惯用手与实际使用手映射。
+- 核对原生shield/shield_blocking的第三人称变换确实不同；新增仅客户端HumanShieldItemPropertyMixin，在ItemOverrides.resolve现有getProperty调用处接公共blocking属性入口，仅替换本模组人类的已识别盾牌且需当前实物身份；其他实体、其他属性和缺失函数原样返回，不覆盖全局玩家getter。require=0保留其他渲染器替换原流程时的安全回退；完全自定义渲染器仍沿其规则。Mixin没有Shadow；实际映射jar目标签名/调用核对证据保存在maintenance-tools/active-shield-presentation-native-audit。
+- 静态379项366通过/13可选依赖跳过，7默认附录一致，git diff --check通过。新增HumanShieldPresentationTest已接check：服务器手/装备缺失/食物/死亡/未知手、实际烘焙模型左右盾臂/套袖/幂等/保留肩点、非NPC属性委托、BC退让和客户端Mixin注解目标与原生调用描述符匹配。尚未编译或运行Java测试，静态不代表Mixin实际注入及启动已验证。
+- 知识库备份后同步盾牌、冷却表、近战及机制入口4页；158篇/1752引用无断链锚点错误，125公式解析无错。报告：E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\active-shield-presentation-20261023.json。
+- 未要求构建，未运行Gradle、未构建/同步/推送或启动游戏。待验收：三枪械后端/近战/弓弩持盾，左右惯用手、普通盾/塔盾，高压从背盾/食物/双持换盾，移动/蹲姿/护甲与BC/PlayerAnimator组合，收盾后恢复姿态；新客户端钩子须在下一次构建后实际启动检验。
+
+
+## 2026-10-23 同阵营威胁通报与有界链式传播
+- 状态：实施中；负责人/root；基线391a11b98c50e381a077cb5f09e1f6f3e3f11290。
+- 工作树worktrees/threat-report-relay；分支fix/threat-report-relay。
+- 范围：HumanTargetSharing、HumanPerception、HumanThreatAssessment、HumanFinisherSelection、ThreatScorePolicy、相关测试和知识库。共享文件由/root顺序接入。
+- 接口：通报只提供有期限的知识及威胁证据，经统一选敌中枢排序；不直接setTarget、不绕过命令或射界。链式转发不续期，目标去重及容量有界。
+- 主仓库6份既有参数修改仅逐字镜像用于兼容核查，不纳入提交；WORKSTREAMS既有修改保留。未授权本任务构建，不运行Gradle或同步实例。
+
+- 交付：bbad8026ff95ac1ba3aa94072f7c07c817f513d9，已快进整合main；10份任务文件。统一威胁排序加入敌对人类60分及最多20分伤害摘要，按较高值而非多份相加；残血收割让出显著高威胁目标。每跳12格、每批3人、20tick发送；保留原始120tick许可与200tick去重截止，8租约/32去重容量，冻结优先淘汰、防循环项不被挤出。本人确认可更新直接报告位置，纯转发仅沿用合法快照，不递归刷新全链。
+- 验证：Python静态380项（367通过、13可选跳过）；7默认附录一致；知识库5页更新，158篇/1757引用无断链，125公式通过；diff检查通过。新增Java生命周期/闭环/满容量/威胁切换回归尚未编译执行。
+- 未执行Java编译、Gradle构建、部署、游戏内验收和推送。6份既有参数保留未提交；结果maintenance-tools/threat-report-relay-20261023.json。源码任务完成，游戏内场景见该报告。
+
+
+## 2026-10-23 BC放盾/动作交接攻击审查
+- 状态实施中；负责人/root；基线bbad8026ff95ac1ba3aa94072f7c07c817f513d9；分支fix/bc-defense-handoff；工作树worktrees/bc-defense-handoff。
+- 范围Human.doHurtTarget、BetterCombatNpcAnimator、对应回归与知识库，Human共享入口由/root独占。检查动作权限获取前后装备变化与客户端盾/攻击同步交接；保留既有参数，不提交原修改。不运行Gradle、构建或同步。
+
+- 交付d4332b40421a880cd558a4279b27dcb460699bca已快进main，6份任务文件。已验证同实物档案在读取失败时保持WAIT；换实物清缓存；放盾显示不吞新有效序号，按服务器时钟接续，保留不可播放资源的显示回退。Human.doHurtTarget已复核，本轮无需修改。
+- 静态380项367通过/13可选跳过、7默认附录、158篇1758引用无断链、125公式通过。知识库3页同步并备份，6份原参数不提交不覆盖。Java回归已补，未编译/执行；未构建、同步、游戏验收或推送。运行时具体根因仍需放盾/恢复/换武器实测验证；详细报告maintenance-tools/bc-defense-handoff-20261023.json。
+
+
+## 2026-10-23 全量平衡知识表册
+- /root，文档任务；基线d4332b40421a880cd558a4279b27dcb460699bca。只读当前默认资源和计算入口，保留6份已存在未提交参数；按当前文件值整理，不修改平衡或配置。
+- 范围：知识库04平衡表册、已有机制索引/阵营页互链；先备份。分清携枪概率、非枪远程条件概率、核心家族/枪种及具体候选权重，补齐阶级伤害、专精、头目、成长、补给、附魔与修改入口。未运行编译/构建/同步。
+
+- 完成：知识库04-配置与数值/平衡表册新增总览与7份专题，共8页；10份既有总览/机制/阵营页接入链接。覆盖13组主要阵营阶级配装，额外列中性回退；显式装备/枪ID、概率分层、档位、伤害/散布、十三维/枪种专精、成长/头目、补给全池与附魔成本。
+- 验证：195项实际源码到表格核对；7份默认附录一致；166篇Markdown/1852个Wiki引用无断链、125公式无错误；既有158篇及图片全部保留，仅10篇入口追加相关链接，修改前已完整备份。
+- 未修改源码默认数值、实例配置，未编译/构建/同步/推送；HEAD仍d4332b40421a880cd558a4279b27dcb460699bca，6份既有参数修改原样保留。备份文档备份/balance-handbook-20261023；检查记录maintenance-tools/balance-handbook-20261023.json。
+
+
+## 2026-10-23 绿队侧移调整与3.13.3发行
+- /root；基线d4332b40421a880cd558a4279b27dcb460699bca；工作树worktrees/verdant-strafe-release；分支balance/verdant-strafe-release。
+- 范围RangedCombatProfile绿队核心弓侧移1→1.25、GunDoctrine绿队核心枪0.8→1.10，知识库同步；版本/日志/root独占。现有已授权6参数逐字镜像参与构建但不纳入提交。
+- 用户已授权构建同步既定Forge47.4.21实例；正式产物留dist，替换前检查游戏停止，备份并校验哈希，配置保留；不启动游戏或推送。本次发行包含先前整合但未部署的修复。
+
+- 执行链核查补充：MovementSpeedController原本仅接收小于1的限制，改为仅RANGED允许大于1并发布乘算正向修饰；食物/防御仍只接受减速，生命周期/2tick租约保留。范围增加此公共文件，由/root顺序接入。
+
+- 首次完整构建Java编译通过；两份新ItemStack回归缺少/误用Forge初始化，独立JavaExec中失败。HumanShieldPresentationTest与SpawnPotionConfigTest已统一采用仓库既有注册表专用初始化，不修改运行时代码；最终构建重跑全部检查。
+
+- 完成提交44e3395fd49fbb4df10043a5edd51bae422da8ba，已快进main；9份任务文件（含2份仅测试初始化修正），6份既有参数不提交。知识库5页同步，166篇1853引用无断链，125公式/7默认附录通过。
+- 完整构建与回归最终通过：BUILD SUCCESSFUL，106任务（102执行/4最新）；380静态项367通过13可选跳过；本轮与此前盾牌显示、BC交接、友军通报等回归均已编译执行。最终日志maintenance-tools/verdant-strafe-3.13.3-final-build.log；首次日志保留。
+- 已确认Minecraft客户端停止，备份旧3.13.2并同步既定Forge47.4.21实例；正式JAR已存dist。218份data JSON与已授权阵营/专精参数核对；13配置原样保留。
+- SHA-256 c5b58281e45954ef1289e8f3e5151ecca7684ba252dcd57b9e16090bbedc8704；构建/dist/实例三者一致。备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.3-20261023-181745；发行登记maintenance-tools/verdant-strafe-3.13.3-release.json。未启动游戏/推送；需验收绿队核心弓125%/枪110%侧移、进食叠乘、退出走位速度清理，以及放盾后BC动作与共享高威胁切换。
+
+## 绿队核心弩双轮射击
+- 基线：44e3395fd49fbb4df10043a5edd51bae422da8ba；负责人：root（唯一编辑者）。
+- 工作树：worktrees/verdant-crossbow-burst；分支：feature/verdant-crossbow-burst。
+- 范围：RangedCombatProfile、HumanArrowCombat、CrossbowGoal、GuardedRangedCharge、对应测试与知识库；由root统一负责共享入口。
+- 接口：沿用公共双发事务，扩展多弹丸快照；装填入口返回许可，双发期间不重装。保留六项未提交平衡参数，复制用于静态上下文但不纳入提交。
+- 状态：实施中；本轮无构建、同步或推送授权。
+- 交付：a585482bedb29f14431151a04fe87d7a6fa491ad，已快进整合主仓库。七个明确文件纳入提交；六项原未提交平衡参数保持不变且未提交。
+- 机制：核心弩两轮相隔6tick，每轮多重射击3箭、每轮独立40%节箭/支付1箭；原射程48、优势24～36、额外伤害倍率1；侧移125%。多弹丸快照在散射和阵营伤害前保存，避免二次叠加；共用取消/权限/库存事务。前后台装填必须遵守续射许可，已出手弹丸独立存在。
+- 验证：380项Python静态检查（367通过、13跳过）；默认值附录7页通过；知识库166页/1853引用无失链、125公式解析通过；diff空白检查通过；增加Java策略数值及装填/续射入口回归，未编译运行。
+- 知识库：绿队策略、弓弩与三叉戟、战斗策略与冷却总表、武器伤害与命中精度表已同步，原文备份于文档备份/verdant-crossbow-burst。
+- 未执行：Java编译、构建、实例同步、推送、游戏内验收。待测普通弩2箭、多重射击3+3、节箭与缺箭、换武器/目标/举盾取消、125%侧移及重弩兼容。
+
+## 阵营出生近战家族链路核查
+- 基线：a585482bedb29f14431151a04fe87d7a6fa491ad；负责人root，唯一编辑者。工作树worktrees/faction-spawn-families，分支fix/faction-spawn-families。
+- 范围：FactionEquipmentConfig/Pools、equipment_doctrine、对应测试和知识库；共享入口均由root修改。接口：出生允许家族独立于核心概率、单手能力；同一家族内优先单手。主手/备用/专项共用池。
+- 保留六项原未提交参数，本轮不构建、不部署、不推送。
+- 用户追加决策：所有阵营近战不再设置核心概率门槛，直接按近战家族权重抽取；撤销本轮暂拟的melee_core_chance配置，不引入此字段。盾/弓弩/枪械原概率保持。
+- 最终交付：f5263750b9602f7938b56d9ca33db3753ab04ad3，已快进整合。近战直接使用家族权重（不抽核心概率），非空家族表排除零权重家族；灰队出生额外允许剑/匕首/长矛，30/65/5，先家族后单手偏好。空表保留通用池，全零/不可用不越界回退。统一池覆盖主手、枪械备用、普通与专项备用；品质成长保持家族，模板指定装备与后续拾取/雇主配装不清洗。盾/弓弩/枪械核心概率保持。
+- 证据：测试实例3.13.3 JAR内旧核心概率为60%/72%/85%，灰队单手优先只检查BC能力，故单手斧锤与补充池可进入。当前全局/分阶实例配置未见相关覆盖。
+- 验证：380项Python静态检查（367通过、13跳过）；默认附录7页通过；166知识页1854引用无失链、125公式解析通过、diff检查通过。新增Java回归覆盖灰队家族、零权重、空表/空列表与配置校验，未编译执行。六项原平衡参数未提交且保留。
+- 知识库：概率表、候选档位表、装备正文、灰队策略和生成默认附录已同步，原文备份于文档备份/faction-spawn-families。未构建、同步或推送；待游戏验收各阵营多阶出生分布、缺失联动、备用数量及枪械配装。
+
+## 灰队副手近战与主手类别约束
+- 基线f5263750b9602f7938b56d9ca33db3753ab04ad3；负责人root，唯一编辑者；工作树worktrees/ashen-melee-offhand，分支fix/ashen-melee-offhand。
+- 范围NpcDualWield、FactionCombatTransitionTest、CHANGELOG与知识库；统一日常副手入口收紧为主手近战，保留实物交换/忙手/高压权限边界。六项未提交平衡参数保留且不提交。本轮不构建、部署或推送。
+- 交付97e58ad8afa009eaebf8f2bd6e71c11b38f9b1e8，已快进整合。原错误为hasMainHandWeapon使用枪械/所有非枪武器判断，且isUsingItem全局提前返回；改为统一专用近战识别，先处理非近战主手的独立副手清理，再处理双持重排忙手条件。主手射击不再阻塞副手收纳；待结算近战与副手占手仍保护。满包时可用背包盾与副手近战合法互换，无空间/盾或权限不足保留实物重试。盾牌普通防御权限未更改，灰队仅高压主动举盾。
+- 验证：380项Python静态检查（367通过、13跳过）；默认附录7页通过；166知识页1854引用无失链、125公式通过；diff检查通过。新增Java编译后入口回归尚未编译运行。知识库灰队策略、交换生命周期、冷却表和近战正文同步，备份文档备份/ashen-melee-offhand。六项原未提交参数保持。
+- 未执行Java编译/构建、部署、推送或游戏验收；待测双持切枪/弓弩/三叉戟/食物/空手、恢复后重排、主手持续使用、满包盾互换、高压取盾与常规盾防禁用。
+
+## 灰队Better Combat真实出手手别
+- 基线97e58ad8afa009eaebf8f2bd6e71c11b38f9b1e8；负责人root，唯一编辑者；工作树worktrees/ashen-native-dual-hand，分支fix/ashen-native-dual-hand。
+- 用户明确决策：所有BC确认单手近战组合均可双持，不再要求核心家族。范围NpcDualWield、BetterCombatMeleeCombat、MeleeActionControl、Human.java、HumanMobEntityData、BetterCombatNpcAnimator及新统一属性/攻击武器作用域、测试与知识库。Human.java共享接入由root独占。
+- 接口：固定真实主副手、服务器锁定出手手别/实物、短时属性与原生攻击读取作用域并finally恢复；同步同一攻击快照中的手别驱动动画镜像。保持唯一前摇/出伤权限与原有取消边界。原六项平衡修改保留不提交，本轮不构建/部署。
+- 交付f37d4f91efb62383aac9c9a2b06f00207714100a，已快进整合。10个明确文件纳入提交；原六项平衡文件未提交且完整保留。
+- 原因：旧pair要求至少一把核心，灰队斧/锤均非核心时不启用双持；已启用组合仍交换实物到主手，动画仅按主手镜像。现固定双手实物，绑定两件唯一身份后才给双持增益；两把BC确认单手近战均可，不要求核心。主副手完成后交替出手，原有index/2组合保持；实物主手被替换不强行恢复旧配对。
+- 接口：Profile新增offhandAttack/attackSlot，保留旧构造器；MeleeAttackVisual同一CompoundTag快照新增offhand，保留旧构造器/发射接口；NpcDualWield.attackSlot/attackWeapon区分实际出手与物理装备。MeleeActionControl锁定实际手别/两把实物，双持预留OFF_HAND。NpcMeleeWeaponContext.strike需原令牌，短时以副手属性/原生武器读取运行Mob攻击，finally恢复属性/线程局部上下文，保留永久性及外部回调的新修改，不交换或复制库存。属性读取回调后复核装备/原权限；玩家专用BC接口不直接用于NPC。
+- 渲染：按服务器出手手别发swing包、镜像BC动画，并按实际出手槽位磨损一次。左右惯用手都处理。取消、换物、恢复、高压与编辑继续走唯一近战权限/前摇。灰队禁止常规主动举盾保持。
+- 核查：实际BC1.9.0 JAR公开API与配置（双持攻速1.2、主/副伤害1/1）；Minecraft映射API只读核对，确认getMainHandItem可覆盖、AttributeInstance公开removePermanentModifier可用于恢复永久性，不引用私有成员。380项Python静态（367通过13跳过）、7默认附录、166知识页1857链接无断链、125公式解析及diff检查通过。
+- Java回归已扩展：属性替换不叠加主手、异常恢复、永久状态、外部修改保留、出手槽位、资格与实际入口、左右手镜像和原子快照；未编译或执行。知识库5页更新并备份文档备份/ashen-native-dual-hand。
+- 未构建/部署/推送/启动游戏。待游戏测试原版斧+单手mace、双剑/双匕首、两件非核心、双手锤拒绝、左右惯用手、分别伤害/附魔/耐久、取消/武器损坏/恢复和高压后继续双持、无BC回退与多人观察。
+
+## 主动举盾盾面朝胸前对齐
+- 基线f37d4f91efb62383aac9c9a2b06f00207714100a；负责人root，唯一编辑者；工作树worktrees/shield-chest-alignment，分支fix/shield-chest-alignment。
+- 用户确认原版盾与斯巴达塔盾。实物模型均为第三人称45/135旋转；原固定BLOCK手臂姿势不保证最终盾面与躯干平行。范围HumanShieldPresentation、新ShieldBlockPose模型变换解析/缓存、对应测试与知识库；仅客户端可视姿势，服务器举盾权限/判定不变。
+- 接口从实际已解析物品模型的第三人称变换计算自然手臂角度，无物品ID/版本特判；无效或过度旋转回退原姿势。六项原未提交平衡参数保留且不提交，本轮不构建或部署。
+- 交付33be4b316fea57bb42f664b47e3cc0d571c818d5，已快进整合；4个明确文件提交，原六项参数保持未提交。原固定手臂角是原BLOCK参考姿势，并非左右方向写反；本轮按用户胸前盾面平行目标改为模型变换求解。
+- 统一ShieldBlockPose读取客户端实际blocking覆写后的BakedModel，经公开applyTransform（含缩放/rightRotation）计算盾面局部Z法线，求最接近BLOCK的俯仰/偏航，原版盾/斯巴达塔盾约-45与左右45。约束pitch[-90,0]、|yaw|<=75，缺变换/无效值/超限保留原BLOCK。保持挂点、套袖与权威举盾手，按模型/左右臂弱缓存，资源重载模型身份更新后重算。无物品ID或版本分支，服务器逻辑不变。
+- 验证：实际MC与Spartan JAR模型读取；独立标准矩阵重放6组左右模型，原版/塔盾原偏16.587度、调整后0度，基础盾原3.464度、调整后0度，正反方向保持。此为静态几何核查，不是Java或游戏执行。380项Python静态（367通过13跳过）、默认附录7页、166知识页1857链接与125公式、diff检查通过。公开模型API只读字节码核对。
+- HumanShieldPresentationTest扩展了原版/塔盾、基础盾、左右手、重复赋值、肩部挂点、Forge右侧旋转/非均匀缩放、缺省/无效/超限回退和生产接线；未编译运行。知识库盾牌防御页同步，原文备份文档备份/shield-chest-alignment。未构建/部署/推送/启动游戏。
+- 待验收：原版盾与塔盾正侧面、两种惯用手、主副手主动盾、站立/移动/蹲伏、高压持枪换盾与收盾，资源重载及非标准自定义盾渲染。
+
+## 战术投掷冷却与未雇佣护甲原生磨损
+- 基线33be4b316fea57bb42f664b47e3cc0d571c818d5；负责人root，唯一编辑者；工作树worktrees/throw-armor-wear，分支balance/throw-armor-wear。
+- 范围Human.java受伤/护甲入口、ScgunsSettings与默认资源、回归与知识库；共享文件由root独占。战术手投物普通500tick、集群200tick；未雇佣护甲按原版玩家规则扣耐久并经过耐久附魔，删除随机整件移除。雇佣分支逐字保留。
+- 保留六项既有参数，镜像仅用于核查不提交；不运行Java编译/构建，不部署或推送。
+- 交付7e983328045fff213b8a193af2cc496df9089471，已快进整合，5份任务文件提交；六份既有参数保持未提交。未雇佣按原版Inventory.hurtArmor公式max(1,floor(amount/4))逐ArmorItem扣耐久，火伤耐火例外与原生耐久附魔保留；随机整件移除删除。雇佣分支逐字对比相同，原单点公共磨损路径等价，武器/盾/死亡掉落规则未更改。
+- 已核对当前映射Minecraft原版护甲实现；380项静态检查（367通过13跳过）、7默认附录、166知识页1858链接/125公式、diff通过；知识库4页同步备份于文档备份/throw-armor-wear，核查报告maintenance-tools/throw-armor-wear-review.json。未执行Java编译、构建、部署、推送或游戏验收。
+- 实例global.json显式覆盖scguns.throwables.cooldown_ticks=200；本轮保留玩家配置不修改，后续构建同步应备份后按用户本次指定范围将该字段改500，集群采用新默认200。喷溅药水独立时序未调整。待验收单/群成功冷却、耐久附魔、有无雇主切换、护甲破损、盾挡/AP与高频伤害下的雇佣原3秒规则。
+
+## 绿队远程整体保持距离
+- 基线7e983328045fff213b8a193af2cc496df9089471；root唯一编辑；工作树worktrees/verdant-ranged-spacing；分支fix/verdant-ranged-spacing。
+- 用户澄清非核心枪推进是原方案失误，绿队所有持有可用弹药的远程均保持距离。范围CombatStrategySet/GunDoctrine/HumanCombatDirector的统一策略、GunMovementExecution、枪与弓弩托管、射界最低距离、三叉戟与对应测试/知识库；共享入口root独占。保留各核心数值增益、无弹药回退与防御/恢复/命令/安全权限，不将侧移失败变成近战追击。
+- 六项既有参数保留镜像、不提交；本轮无构建部署指令，不运行Gradle或启动游戏。
+- 交付cf2a54eb41afb761f7ab29120c797d80ef7d645f，13份明确文件已快进main；六份原参数完整保留未提交。核查确认非核心绿枪推进原为显式策略（已有测试/文档亦如此），用户澄清后更正为全绿队有弹药远程保持距离，非其他阵营误调用。另删除直接侧移失败后未获中枢许可的追击回退。
+- 统一CombatStrategySet声明距离意图，HumanCombatDirector结合真实弹药能力供枪/弓弩托管、混合三叉戟、射界距离使用。非核心绿枪保留普通数值；核心增益不扩大。换弹不主动换刀，旧托管在待结算攻击/占手/实物交换许可允许后返回；三叉戟退步失败不近刺。无弹药选择、其他阵营、危险地形/驻守/恢复/高压优先级保留。
+- 380项Python静态（367通过13跳过）、7默认附录、166知识页1859链接无断链、125公式解析、diff检查通过；扩展Java策略全枪种/核心矩阵和生产权限入口回归，但未编译执行。4篇知识正文同步，备份文档备份/verdant-ranged-spacing；核查记录maintenance-tools/verdant-ranged-spacing-review.json。
+- 未构建/同步/推送/启动游戏。待验收开阔场地绿队核心及非核心各枪种优势带、贴近换弹、弓弩近身/旧托管恢复、三叉戟退避受阻、缺弹回退与红蓝灰原策略。保持距离不保证能甩开更快敌人，不绕过命令或地形安全；射程外允许接近至射程/优势带。
+
+## 用户平衡表册箭头值与分阶专精总预算
+- 基线cf2a54eb41afb761f7ab29120c797d80ef7d645f；root唯一编辑；工作树worktrees/handbook-tier-budgets，分支balance/handbook-tier-budgets。
+- 范围平衡表册全部数值箭头、枪/远程概率及核心枪种权重、4阵营弹射物偏好/枪种专精、SpecialtyConfig/Attributes分阶出生预算、关联回归/默认值/知识库派生表。已登记原始请求maintenance-tools/balance-handbook-request-20261023.json。共享入口root独占，已有6份未提交参数备份保留不擅自纳入提交；4阵营文件与本轮重叠，仅提交本轮指定字段，整合时保留原修改。
+- 正在确认预算固定值还是原随机预算的阶级倍率；其他箭头变更先实施。本轮不编译、构建、同步、推送或启动游戏。
+- 用户确认预算口径：基础正态均值1.1、标准差0.1、截断0.8～1.4，再乘流浪者/一阶/二阶/三阶1/1/1.1/1.2，不对结果再次截断；后续明确要求可完整分配到1.6。沿已有cap_budget_exponent由0.25改0.6，普通倍率绝对1.8、穿甲0.45不变；不是增加统一硬预算截断。新生普通个体适用，头目固定预算、旧保存分配不重抽。
+- 交付90aa845bc85d750726bba7e88d5ff144d7d81529，11份任务文件已快进main。本轮与既有4份阵营文件重叠，只提交指定弹射物/狙击/蓝机枪字段；原其它字段及SpecialtyData/dimensions全部保留未提交。原文件备份于备份/handbook-tier-budgets-source；整合时4份旧修改暂存为保留stash 0db5eb817b38a6d3bf0ae36b3bdda04863b38d2f，再按显式残余补丁还原，未提交旧修改、未丢弃任何原值。
+- 27处箭头逐项对照源码落地并整理为最终值；7篇手工知识正文、默认附录同步。更新非枪远程理想占比、核心枪种内归一占比、四阵营全部13维理论中心（各阶分别展示）、7类枪种相对伤害因子及主装备表；还纠正主装备说明遗留的旧核心权重。原文备份文档备份/handbook-tier-budgets。
+- 核查：380项Python静态（367通过13跳过）、972组独立Python数值重放（4阵营×81个0.8～1.6预算×3组倾斜）、7默认附录、166知识页1861引用无断链、125公式解析、提交及工作区diff均通过。新增Java覆盖采样阶级乘算、默认/自定义/非法配置、实际资源预算可行性与绝对边界、原保存不重抽；未编译执行。核查报告maintenance-tools/handbook-tier-budgets-review.json，派生数据handbook-tier-budgets-derived.json。
+- 可分配上界由现有参数共同决定：红约1.657、蓝1.635、绿1.689、灰1.629；全部覆盖1.6，但三阶抽到高端1.68时红蓝灰仍可能有余量，正文已说明，不宣称每个个体都等幅变强。
+- 未Java编译/构建/部署/推送/启动游戏。实例global.json仍显式覆盖budget_mean=1.05、budget_max=1.3、cap_budget_exponent=0.25；保留自定义配置，后续同步需备份后按本任务精确更新。待验收新生各阶属性/预算、装备出生分布、旧实体保持、枪种切换因子与自定义覆盖优先级。
+
+## 绿队第二箭按当前目标重新瞄准
+- 基线90aa845bc85d750726bba7e88d5ff144d7d81529；root唯一编辑；工作树worktrees/verdant-followup-aim，分支fix/verdant-followup-aim。
+- 范围HumanArrowCombat快照续射、HumanGunner既有统一箭矢弹道入口、HumanArrowCombatTest及对应知识正文；共享文件root独占。延迟6tick保留，第二箭/弩第二轮按当前出手位置和同一目标的新位置/运动重新求弹道与独立散布；箭种/效果/穿透/伤害、齐射角、付款/取消保持。只重瞄未加入世界的新弹丸，不引入飞行制导。
+- 六项原未提交参数镜像核查、不提交；无本轮构建/部署指令，不编译、不启动游戏、不推送。
+- 交付0a9cf4e1fee3689d19b141738d88bf49368b9caa，4份明确文件已快进main；6份原未提交参数完整保留未提交。已确认旧快照只平移出手点，Motion沿首箭；新未入世界弹丸在平移后调用HumanGunner.reaimArrowBallistics，复用原improveHumanProjectile/弹道求解，对原目标的当前位置和运动重新瞄准并独立应用散布。原UUID重建、箭种/效果/穿透保留，随后由原统一齐射入口一次应用展开角和伤害。
+- 守卫：仅服务器、同世界活目标、未入世界且非三叉戟箭弹；新速度非有限或无效时取消，不消耗库存。标记已应用首tick弹道，防止生成后的兼容回退重新改向。普通首箭和已有弹道算法逐字保持，executeVolley以下的付款/归还/插入/冷却/取消等逻辑逐字保持。
+- 检查：380项Python静态（367通过13跳过）；8组独立零散布Python弹道重放（普通箭/弩矢，射手移动、目标移动、双向移动及高度变化），新矢量按既有模型误差小于0.001格，旧平移矢量在各夹具偏离至少1格；这不是Java或游戏内验收。7默认附录、166页1861链接、125公式与diff检查通过。新增Java编译后接线回归，未编译执行。
+- 知识库弓弩与三叉戟、绿队策略2页正文同步，备份文档备份/verdant-followup-aim；维护报告maintenance-tools/verdant-followup-aim-review.json。未构建、部署、推送或启动游戏。待验收绿弓侧移双箭、移动目标、原版多重弩3+3、斯巴达弩矢、目标切换/换武器/举盾/缺箭取消；保留真实散布，不保证必中，发射后无制导。
+
+## 远程基准射程统一查表
+- root文档核查，源码基线0a9cf4e1fee3689d19b141738d88bf49368b9caa；无功能修改、未建立额外源码工作树。GunRangePolicy/RangedCombatProfile及投掷入口已核对。
+- 在知识库武器伤害与命中精度表补齐11类远程通用最大射程/优势带、红核心弓弩19/28与绿核心步枪/狙击83/104覆盖、后台投掷物使用距离、原生弹丸射程裁剪和代码/配置入口；原表原值与用户笔记保留。总索引及弓弩/枪械机制页链接同步，4篇原文备份文档备份/ranged-range-reference。
+- 本轮仅文档，不改变射程或实例配置、不编译/构建/部署/推送/启动游戏；六项既有源码修改保持。
+- 额外注明三叉戟档案与TridentHybridGoal/TridentMovementExecution中6/16格执行阈值的重复边界，后续改值不能只改档案。7枪种及4阵营覆盖算例核对通过；166知识页1867引用无断链，125公式解析通过。
+
+## 武器平衡表新值与专精分布放宽
+- 基线0a9cf4e1fee3689d19b141738d88bf49368b9caa；root唯一编辑；工作树worktrees/weapon-specialty-spread；分支balance/weapon-specialty-spread。
+- 范围武器表12处箭头（6射程/4近战/2弓倍率）、RangedCombatProfile/GunRangePolicy、SpecialtyConfig/Data/dimensions、对应回归/默认值/知识库及概率图。共享入口root独占。普通偏差帽0.30→0.45，枪伤0.20→0.30；准度显式0.50保留。倾斜sigma0.15→0.20（方差0.0225→0.04），预算随机sigma0.10不变。
+- 保留原6份未提交参数，备份后镜像核查，仅提交本轮重叠字段，不提交旧成本/偏好。请求清单maintenance-tools/weapon-spread-request-20261023.json；本轮不编译/构建/部署/启动游戏/推送。概率图用科学绘图库生成，并明确原始正态、裁剪点质量与最终分配区别。
+
+
+## 武器表新值与专精浮动收尾（2026-10-23，已本地整合）
+
+- 基线：0a9cf4e1fee3689d19b141738d88bf49368b9caa；负责人：当前主控单会话；工作树worktrees/weapon-specialty-spread，分支balance/weapon-specialty-spread。共享SpecialtyData及dimensions由主控独占；不新增公共接口。
+- 按知识库武器伤害与命中精度表12个箭头值调整6类最大射程、4项近战倍率、2项弓伤；表中已回填并删除数值箭头。赤獠核心弓/弩24/38、苍隼核心步枪/狙击104/124同步重算，优势带、准度散布、弹药与原生弹丸距离限制保持原规则。
+- 普通专精帽45%、枪伤30%，准度原有独立帽50%保留；随机对数倾斜标准差0.15→0.20、方差0.0225→0.04，预算sigma0.10和抽取范围不变，保存个体不重抽。配置、数据定义、缺省回退统一。
+- 外部知识库11篇正文与7篇数值附录同步；修正新的预算可行上界、当前四阵营可完整分配到1.68的说明。原始中心加权T与可行预算上界是不同量，分别核对。备份在文档备份/weapon-specialty-spread。
+- 验证：Python静态回归380项，367通过、13跳过；7默认附录一致。四阵营×三阶系数×61预算点×3随机倾斜共2196数值样本，目标上限1.68可行，最大加权误差3.56e-15。知识库166页、1867 Wiki引用无断链/格式问题；125公式通过KaTeX解析；git diff --check通过。Java回归断言已随源码更新，但本轮未运行Java编译、Gradle、构建、同步、游戏或push。
+- 图表：维护目录图表/专精分布-20261023，含调整前后4面板PNG/SVG、十三维一阶赤獠PNG、完整两页PDF、分布统计JSON；脚本maintenance-tools/plot-specialty-spread-20261023.py，随机种子20261023，每种方案40000样本。图表区分正态对数、裁剪倾斜和最终分配；端点概率质量单列，不把直方图当严格连续密度。图片已视觉检查；模拟不等于游戏验收。
+- 本地整合提交：0cd0030ffaaf51feb2a73516ce45ddc5d29a25f2。原有6项未提交成本/阵营修改均保留，未夹带提交；重叠2文件先备份并保存stash 7755ab99e80ba33169d3e7c33c887bde940be4fa，整合后按残留补丁还原，核对与工作树一致。暂存区清空。运行时仍需测试新生成人类的属性分配、各类武器最大射程与原生射程夹取；现有实例配置未覆盖。
+
+
+## 3.13.4 构建同步（2026-10-23，已完成）
+- 用户明确授权构建同步；基线0cd0030ffaaf51feb2a73516ce45ddc5d29a25f2，主控单会话，工作树worktrees/balance-release-3.13.4，分支release/balance-3.13.4；范围版本/发行日志、编译回归、既定Forge47.4.21实例JAR和本轮配置字段。6项原未提交参数镜像参与构建，不提交、不覆盖；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.4-source-20261023-201406。Java17，仓库gradlew.bat，八个API显式路径；不启动游戏、不push。
+
+- 发行提交f2a7d39（版本/日志）及57a17451479cc0ec60084c9df70f6316bdb3e3df（5项旧回归契约修订）均快进main。首轮5处失败：3项旧射程/伤害期望、2项重构后的委托/编译lambda调用检查，逐项核对真实源码后更新测试，不改变游戏逻辑。首轮日志balance-3.13.4-build-attempt1.log；最终build + lootScreeningTest --offline成功，106任务（102执行4最新），本次注册Java回归任务97项。覆盖普通10万/头目5000专精分配、当前实际资源分阶预算、绿色弓弩二轮、BC副手/朝向/盾、可选依赖缺席、配置迁移、命名空间和结构包等；Python367通过13跳过，7默认值附录一致。
+- 打包核验339份JSON并逐项与源码资源比较；确认manifest3.13.4、未打入Minecraft或联动API类。6项原未提交参数参与构建，主仓库逐字节保留且未提交。
+- 同步前再次核对Minecraft未运行；旧3.13.3 JAR、实例配置目录和日志备份至E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.4-20261023-201854。只更新本轮14项配置：6项分阶伤害、2项手投物冷却、专精预算均值/上限/分阶系数/倾斜sigma/帽/边界预算指数；其余配置值和已有备份文件保持。未修改存档，原保存专精不重抽。
+- 构建产物、正式dist归档、Forge47.4.21实例JAR三方SHA-256一致：d2f56a7318656e85926e2a06584a08059023c8e12ecf74688ce5ae35f9075bcf；mods仅留本模组3.13.4，历史dist版本保留。发行记录maintenance-tools/balance-3.13.4-release.json，精确字段清单balance-3.13.4-config-patch.json。未启动游戏、未push，游戏验收仍待用户检查新生1/2/3阶预算、各武器射程/伤害、绿队续射重瞄及灰队双持/盾显示。
+
+
+## 盾牌正式环境举盾模型桥接（2026-10-23，源码已整合）
+- 用户反馈3.13.4原版盾/斯巴达塔盾举起仍倾斜；基线57a17451479cc0ec60084c9df70f6316bdb3e3df，root单编辑，工作树worktrees/shield-production-model，分支fix/shield-production-model。范围HumanShieldItemPropertyMixin、盾渲染契约回归、知识库盾页与日志；不改服务器防御、盾耐久、装备或手臂几何。当前用户未要求新构建，本轮不Gradle、不同步。
+- 初步证据：正式3.13.4 JAR中该Redirect仍为resolve/getProperty字面名称，无refmap；实际SRG为ItemOverrides.m_173464_与ItemProperties.m_117829_，require=0允许匹配失败；独立几何回归并未覆盖正式环境注入。
+
+- 已本地整合3f041e10c90329f96a302b114b8ed5a66ba5d031：Redirect改用完整m_173464_与m_117829_描述符、remap=false且require=allow=1，和现有显式SRG注入惯例一致。原始属性函数及Human/实际举盾手/当前物品校验保持，不改玩家/其它生物。未更改ShieldBlockPose角度或叠加姿态补丁。
+- 修改后的Java契约同时要求正式选择器、必需/唯一匹配、与开发原版字节码实际单一调用对照。静态Python380项（367通过13跳过）、7默认附录与diff检查通过；本机1.20.1 SRG→official映射逐项核验，旧3.13.4正式JAR注解字面已核验。报告maintenance-tools/shield-production-model-review.json；知识库盾牌防御页已备份并补充“先选模型再求臂姿，实际绘制模型保持一致”。未Java编译/Gradle构建/部署/push或启动游戏，仍须游戏确认原版/塔盾左右手、持枪高压举盾、收盾及玩家显示。6项原未提交参数逐字节保持，实例仍为3.13.4。
+
+
+## 蓝队持盾推进移动与攻击权限分离（2026-10-23，源码已整合）
+- 基线3f041e10c90329f96a302b114b8ed5a66ba5d031；root单编辑；工作树worktrees/azure-shield-pursuit，分支fix/azure-shield-pursuit。范围ShieldDefenseController防御权限、原MeleeAttackGoal移动/攻击门禁、回归及知识库盾/蓝队策略。共享文件root接入；不改导航搜索、采样概率或服务器防御数值；保留此前盾模型修复及6份未提交参数，不构建/部署。
+- 证据：MeleeAttackGoal.tick在humanGunner$canMeleeAttack为false时整段返回；该查询在所有UseAnim.BLOCK期间false，ADVANCE虽不占BASE_MOVE仍无法更新追击导航。
+
+- 交付8a8336d213eedf05e1ba59c18235fb3f69175686，4份明确文件快进main，6份原未提交参数逐字节保留。ShieldDefenseController.permitsMeleeMovement提供独立许可：普通可攻击状态沿旧规则，仅有效ADVANCE执行、当前真实盾占用及非高压才可在禁攻时继续近战移动。MeleeAttackGoal.tick不再用攻击许可提前结束全部导航；双持准备仍按攻击许可。checkAndPerformAttack原出伤门禁及收盾前检查保持，跳砍既有使用物品禁止也保持。
+- 不修改推进概率/200tick窗口/400tick最长/200tick冷却、0.8防御移速或0.85抗性；不申请第二个移动Goal或导航预算。到达近战范围等eligibility失效仍由原tickAdvance结束并收盾。
+- 已增加Java字节码契约核对移动门禁、原追击执行器、攻击门禁先于收盾、有效盾所有权/活动推进/高压约束；本轮未授权构建，未编译执行。Python静态380项（367通过13跳过）、7默认附录与diff检查通过。盾牌防御与蓝队策略正文已备份到文档备份/azure-shield-pursuit并同步。未构建/部署/启动游戏/push；实例仍3.13.4。待游戏检验蓝队核心盾开阔地推进至近战后收盾出手、驻守不越界、高压打断/撤退、无路时既有导航恢复，以及普通盾防未受影响。
+
+
+## 高攻速人类近战丢伤与自定义伤害类型（2026-10-23，源码已整合）
+- 基线8a8336d213eedf05e1ba59c18235fb3f69175686；root单编辑；worktrees/melee-damage-cooldown，分支fix/melee-damage-cooldown。范围统一近战伤害身份判定、HumanAttackCooldownPolicy、GunMeleeProtection、回归和无敌帧/近战知识页；不改攻速/BC前摇、生命写入或清空共享受击计时；不构建/同步。
+- 证据：world mixin配置及refmap启用DamageSourceMix，把原mobAttack替换为hostile_humans_unified:human或human_with_name；当前Cooldown只认MOB_ATTACK和MOB_ATTACK_NO_AGGRO，GunMeleeProtection却另外认两种自定义及PLAYER_ATTACK，身份分类不一致。
+
+- 交付50ca0ebaa170a713262794983cc5db09bff6c489，8份明确文件已快进main；此前盾模型、蓝队推进修改保留，6项原参数未提交改动逐字节保持。HumanMeleeDamage维护两个实际自定义类型键和直接人类近战身份，DamageSourceMix生产、Cooldown绕过和GunMeleeProtection禁攻共用；原生mob_attack/no_aggro/player_attack兼容。仍排除间接弹丸、爆炸/状态伤害；原版模式与弹射物玩家范围保持。
+- 检查BC待结算：MeleeActionControl.begin已禁止有效前摇攻击被后一个动作覆盖，impactValid与武器/目标/令牌校验保留；本轮不改变前摇、攻速或冷却。未人为补打、不改伤害源或生命，不清空invulnerableTime/hurtTime，护甲/盾牌/关系/Forge取消正常。
+- Python静态380项（367通过13跳过）、7附录、166页1868 Wiki引用、125公式解析及diff检查通过。新增Java实际类型键覆盖、真实DamageSourceMix共享键、Cooldown/禁攻共同入口字节码检查，扩展不写计时器/生命的契约；尚未编译执行。独立数值重放示例：每5tick一次等伤害，40tick内旧保护仅4/8次接受，绕过时8/8；仅说明原版冷却数学，不作游戏验收。报告maintenance-tools/melee-damage-cooldown-review.json。
+- 知识库近战与受伤无敌帧页已备份并同步；顺便修正近战正文遗漏的旧四阶近战倍率为1/1/1.25/1.5及例子0.75，与既有武器表一致，未再改源码伤害数值。未Java编译/Gradle构建/部署/push或启动游戏。待验收命名/未命名人类高攻速普通/BC/双持连续命中、玩家/生物目标、原版模式、格挡/换手取消与无关伤害保护。实例仍为3.13.4。
+
+
+## 专精表新值与头目预算层（2026-10-23，源码已整合）
+- 基线50ca0ebaa170a713262794983cc5db09bff6c489；root单编辑；worktrees/specialty-boss-table，分支balance/specialty-boss-table。范围表内箭头成本与阵营属性中心、默认回退、头目预算/展示及相应回归与知识库。6项原未提交参数先备份镜像，按新任务字段选择暂存，不夹带原修改。公共配置/数据/展示root接入；无当前构建授权。头目预算规则向用户澄清，同时先执行明确表格新值。
+
+- 用户澄清头目预算须高于当前同阶普通人类，可降低后续独立倍率作代价。落地按同阶普通预算上限×1.10：1.54/1.694/1.848；boss.budget_multiplier默认1.10，boss.allocation_multiplier_max默认2.1。普通上限1.8、穿甲0.45和有效攻速最终1.8限制保持。预算/上限统一经FactionRules与HumanFactions解析；分配器移除头目偏科放大参数/分支，不把头目标记塞回纯数学模块，所有5处调用与回归同步。
+- 头目分配后独立倍率降低：生命2.4→1.8，护甲/韧性1.6→1.3，近战1.3→1.15、枪伤1.2→1.1、探测1.15→1.1、散布0.9→0.95、击退加0.3→0.2，速度0.95保持。弓弩/三叉戟不额外套近战倍率。旧boss.budget与allocation_amplification不读；既有保存分配不重抽，配置读取型独立倍率会影响旧头目，完整新预算须新生成验收。
+- 完成28处箭头值（5成本+23阵营中心），fallback成本同步；成本C=11.00、全部成本12.20，归一中心与普通/头目可行上限重算。枪种原始偏好标题改为枪种伤害倍率，明确它是归一化前的伤害输入而非选枪概率；不改枪种归一算法。知识库4篇正文与7默认附录同步，用户原表和其他页先备份于文档备份/specialty-boss-table，当前表无数值箭头。
+- 验证：380项Python静态（367通过13跳过）；3504组独立分配数值样本覆盖四阵营0.8～1.68普通预算及实际三阶头目预算/极端倾斜/200随机倾斜，默认全部可行且全额分配。最大double残差7.11e-15、float持久化残差7.42e-7。7附录一致、166页1868 Wiki引用无断链、125公式解析及git diff --check通过。新增Java回归覆盖同阶上界保证、配置和legacy字段、实际资源新预算/2.1边界；未编译执行。
+- 提交63b3be8f72a93ad7f42bd527318986c392441620已快进main；只提交本任务字段，6份原未提交修改中未被本次明确数值覆盖的字段语义逐项保留。原完整输入备份，整合保留stash 42186dcdc0dbb81be1052c3f5f050be754712b5a，按工作树残留补丁还原；暂存区清空。报告specialty-boss-table-request/derived/integration.json，后续同步需处理的12项boss配置delta已列specialty-boss-table-deployment-config.json但未应用。
+- 未Java编译/Gradle构建/同步/启动游戏/push；实例仍3.13.4。待游戏检查新生一二三阶头目预算、护甲含装备/生命/伤害单次乘区、普通人类分布不被头目上限污染、属性面板当前边界/枪伤比较基线、旧保存保持和独立倍率读配置行为。
+
+
+## 3.13.5 构建同步
+- 基线：63b3be8f72a93ad7f42bd527318986c392441620；负责人：主控；工作树：E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.5；分支：release/balance-3.13.5。
+- 范围：版本、CHANGELOG、构建回归及既定实例发布；镜像现有 SpecialtyData 与四阵营、专精 dimensions 六份未提交文件，保持主仓库原修改。
+- 共享文件 build.gradle 由主控接入；公共接口无新增。源码备份：E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-source-3.13.5-20261023-211641。
+
+- 完成：发布提交 d8be7bba59676d62ba5de35d33e25d374853fea1；六份原有未提交文件与发布前备份逐字节一致，未擅自提交。
+- 验证：Java 编译、build/check 全套回归与 lootScreeningTest 通过；Python 380项（367通过、13跳过）；7份默认附录、166页/1868链接、125公式检查通过；正式JAR盾牌SRG选择器已核对。
+- 首轮仅 projectileCooldownPolicyTest 缺注册表引导而失败；补齐既有测试初始化方式后重新完整回归通过，首轮失败日志保留。
+- 发布：构建/dist/Forge47.4.21实例 SHA-256 一致：156fa890c9f1a3ef8ef912ee7f3442ae22dccf04ee1068caca1e3f3b853de925；备份 E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.5-20261023-212113；头目12项数值/废弃字段精确迁移并同步原默认说明，用户自定义说明和无关配置保留。
+- 正式产物：E:\MC\Create-Delight\HostileHumansUnified-维护\dist\hostile-humans-unified-1.20.1-3.13.5.jar；记录 maintenance-tools/balance-3.13.5-release.json。未启动游戏、未游戏内验收、未推送；待测原版/斯巴达塔盾盾面、蓝队持盾推进、高攻速近战、新生头目预算，旧专精不重抽。
+
+
+## 高压举盾六秒上限
+- 基线 d8be7bba59676d62ba5de35d33e25d374853fea1；负责人主控；工作树 E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\pressure-guard-six-seconds；分支 fix/pressure-guard-six-seconds。
+- 范围：ShieldPressureConfig、默认资源、两个既有Python契约、CHANGELOG；统一 max_guard_ticks 由140改120。PressureDefenseCycle仍从实际举盾开始计时，不因受伤刷新上限；安静20tick、冷却40tick保留。
+- 同步当前机制正文、总表、索引、已完成方案对应值及默认值附录；文档备份 E:\MC\Create-Delight\HostileHumansUnified-维护\文档备份\pressure-guard-six-seconds-20261023-212753。本轮未请求构建，不运行Gradle，不替换实例配置或JAR；已部署3.13.5仍为旧上限。
+- 已整合提交 e3a9de4；静态差异与JSON检查通过；Python 380项（367通过、13跳过），7份默认附录、166页1868链接检查通过。未执行Java编译、构建、实例同步或游戏内验收。
+
+
+## 高压举盾冷却3.5秒
+- 基线 e3a9de456b47c47ac2345335e207eb05545f5913；负责人主控；工作树 worktrees/pressure-guard-cooldown；分支 fix/pressure-guard-cooldown。
+- 范围：ShieldPressureConfig、默认资源、两个既有Python契约与CHANGELOG；高压结束冷却40→70 tick，最长120 tick和安静20 tick不变。公共接口不变，统一计时器按配置读取。知识库同步对应正文/总表/索引/归档及默认附录；本轮不构建或部署。
+- 已整合提交 1cb3cc8；差异/JSON静态检查通过，Python380项（367通过、13跳过），7份默认附录与166页1868链接检查通过；未执行Gradle、构建、部署或游戏内验收，既有主仓库未提交平衡修改保留。
+
+
+## 实时受伤DPS高压判定
+- 基线 1cb3cc8857c20bf0bfe080bb9c1d9ec1e6f36e97；负责人主控；工作树 E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\realtime-pressure-dps；分支 feature/realtime-pressure-dps。
+- 范围：高压伤害输入/配置/既有回归与机制文档；共享 ShieldDefenseController 由主控接入。DamagePressureTracker 替代 RecoveryPressureWindow，ShieldPressureConfig 改为enabled/dpsSmoothingTicks/dpsRatio/quietTicks/maxGuardTicks/cooldownTicks六字段，所有仓库消费者一起迁移。
+- 旧机制本已逐伤害事件检查，非满窗口结算。改为指数衰减DPS估计，每次有效真实扣血立即更新，默认平滑10tick、阈值最大生命22%/秒；相对原主要分支18%/秒提升约22%。取消次数和单次独立分支，维持120tick举盾/70tick冷却/20tick安静。已开始的一瓶药等待及权限安全边界保留。
+- 旧六项伤害窗口字段不再读取；既有配置加载器补齐新字段，保留用户旧文件但旧键不生效；不改运行中实例配置。未授权本轮构建，不运行Gradle或Java编译。
+- 已整合 d4177eb；静态核对伤害入口为 Human.hurt 后实际生命差→ShieldDefenseController→DamagePressureTracker→原防御调度；已迁移全部配置构造/消费者。Python380项（367通过、13跳过），7份默认附录、166页1869链接、125公式检查通过。新增/更新Java回归覆盖即时突发、阈值等号、指数衰减、零散低伤、同tick分片等价、非有限输入、时钟倒退、禁用清理、等待喝药、6秒上限与3.5秒冷却；本轮未执行Java编译或Java回归，未构建、同步或推送，游戏内验收未执行。
+
+
+## 属性面板分配中心参考
+- 基线 d4177eb71ae9acd54fd00e634f7d0141fa4782d3；主控负责人；工作树 worktrees/attribute-reference-center；分支 fix/attribute-reference-center；范围只读参考计算、EffectiveAttributes快照、中英文UI文案/比较资格、既有回归与知识库。
+- 根因：除枪伤外参考仍用无分配1倍/穿甲0，预算/阵营/阶级调整未进入比较。统一按当前阵营、阶级、普通/头目身份和当前配置生成不带随机倾斜的中心分配，复用实际约束分配器；普通参考预算mean×tier，头目引用公共bossBudget。并非统计人口均值，不用该个体预算掩盖其预算优劣。
+- 同成长/武器分支/装备与状态比较；生命/移速等只读反事实原生属性投影，护甲/韧性原始含装备总属性乘参考系数。头目独立倍率/击退加算与攻速/穿甲钳制一致。无重抽、无属性修改、无新增实体扫描，服务器每快照仅求一次中心；沿用原网络baseline字段。
+- 不构建或同步，原有六份平衡WIP保留。
+- 已整合 deac457；属性原生操作投影与已有DefenseAttributes/DefenseAttributePolicy共用，不重复实现另一套运算；13行同源中心且仅参考失效时隐藏比较，保留实际值；实际属性/NBT/原快照协议不变。Python380项（367通过13跳过）、7份默认附录、166页1870链接与125公式检查通过。已补Java回归覆盖阶级参考预算/守恒/头目上限/确定性和含三种原生修正的只读投影，但本轮未编译或执行Java测试；未构建、同步、启动游戏或推送。
+
+
+## 分阶伤害表13项调整
+- 基线 deac4575045e026da409d57b208d81b52ab2ec44；主控；工作树 E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\tier-damage-table；分支 balance/tier-damage-table；范围默认资源、既有配置回归、CHANGELOG及知识库。
+- 对照用户表格13处箭头逐项校验旧值后应用；反向补丁验证其它默认值不变。面板EffectiveAttributes实际值和baseline两条链共同读取TierAttributes.of→UnifiedConfig.Tier，本轮不另写面板硬编码。
+- 不改普通/头目预算、阵营中心、承伤、枪伤与射程。文档原件备份 E:\MC\Create-Delight\HostileHumansUnified-维护\文档备份\tier-damage-table-20261023-215042；待未来构建同步的13项实例精确迁移记录在maintenance-tools/tier-damage-table-config-patch.json，本轮不部署。
+- 已整合4025c0e；13项新值与源码逐项一致，反向补丁核对无其它配置改动，原六份平衡WIP与发布前快照逐字节一致。Python380项（367通过13跳过），默认值7份、166页1871链接、125公式检查通过。知识库原值箭头已清理，近战/远程正文与默认附录已更新；面板中心由当前Tier配置动态换算。已更新Java配置回归但未编译执行；未构建、同步、启动游戏或推送。
+
+
+## 人类枪械公共装填耗时1.4倍
+- 基线4025c0e6eb6e0dbe8e289c20d6d25e99ca4d5769；负责人主控；工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\human-reload-duration；分支balance/human-reload-duration。共享GunDoctrine/GunCombatProfile/TaczHumanReloadTransactions由主控顺序编辑。
+- 单一HUMAN_RELOAD_DURATION=1.4在workPerTick分母施加一次，再乘既有阵营/后台耗时；三个后端、虚拟弹匣、同会话补能与动画观察同源。原生总工作量不另放大；取回主手/举盾不重置进度。
+- TaCZ付款事务硬截止采用含最慢后台的同源倍率，保留216000tick总上限；不误改非Human原生回退、拉栓、玩家及弩装填。
+- GunDoctrineTest新增统一乘算/后台与有界截止回归；文档备份E:\MC\Create-Delight\HostileHumansUnified-维护\文档备份\human-reload-duration-20261023-215543。未授权本轮构建，不运行Java编译/Gradle，不部署。
+- 已整合eb1547d；Python380项（367通过13跳过）、7份默认附录、166页1877链接与125公式检查通过。Java回归已更新为1.4基准下的前台/后台乘算、模式切换连续进度与有界截止，未编译执行；未构建、同步、启动游戏或推送。知识库统一公式及七页正文/策略已同步，原生3秒示例通用4.2、蓝2.94、绿6、红轻型后台5.04。
+
+
+## 紧凑指挥/对讲机/属性UI
+- 基线eb1547d8cea389ddeda02ae73ed2f03865d30211；负责人主控；工作树worktrees/compact-command-radio；分支ui/compact-command-radio。
+- 文件责任：CommandPanelLayout/CommandPanelScreen/SoldierCommandScreen/SoldierRosterScreen/AttributeDetailScreen、共用客户端Chrome、双语阵营名、既有布局回归、CHANGELOG与知识库。
+- 范围为表现布局：400×420逻辑像素上限、两栏自适应、短滑条、只读成长仪表、统一边框/分区/阵营识别；网络命令、实体AI、数值与权限不改。小屏保留单栏滚动；所有点击沿实际绘制矩形。用户未要求构建，不运行Gradle、不启动游戏。
+- 已完成UI源码整合；四类界面共用CommandPanelChrome，布局400×420封顶、160短轨道，GUI缩放清理旧拖动区域。纯布局既有回归已更新宽高上限；Python380项（367通过13跳过）、默认附录7份、166页1878链接、125公式检查通过。阵营徽记双语名及三份知识库正文已同步；此前原六份未提交数据保持。
+- 维护目录maintenance-tools/ui-preview/compact-interface-preview.png为Pillow绘制的静态方向示意，已目视检查，非Minecraft实际截图，不作为原生字体、控制命中和游戏内验收证明。Java编译/回归、构建、实例同步、启动游戏及推送均未执行。
+
+
+## 3.13.6 构建同步
+- 基线851826d91b73064fc25bb36434bb337d4fd7a2a8；主控负责；工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.6；分支release/balance-3.13.6；范围版本/CHANGELOG、完整构建回归、精确配置迁移及既定实例部署。
+- 六份既有未提交平衡文件按当前字节镜像入工作树，仅用于构建，不擅自提交；源码备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-source-3.13.6-20261023-221351。
+
+- 完成发布：d4bc133dbae8eae4a0238111175fbf0d69683285；Python380项（367通过13跳过），Java完整build/check与lootScreeningTest通过，默认附录7份、166页1878链接与125公式通过。首轮属性页标题/标签局部变量重名已修复；第二轮配置迁移测试仍写死旧弩1.5，改为校验当前默认，独立配置回归仍明确校验1.05等目标表值；再次完整重跑通过，两轮失败日志保留。
+- 保留六份原未提交源码字节且不擅自提交；构建/dist/Forge47.4.21同步哈希一致：7a884351cbc8f23f52c61a29d28865debf1961575acfcfbc19835ed551e151a1；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.6-20261023-221925。
+- 实例配置精确迁移13项分阶伤害与高压DPS/6秒/3.5秒；只移除旧默认窗口键，已有自定义旧键及注释前缀保留，旧键不再读取；已识别的旧机制说明更新为现行说明。其余配置逐文件核对不变。正式产物E:\MC\Create-Delight\HostileHumansUnified-维护\dist\hostile-humans-unified-1.20.1-3.13.6.jar；详情maintenance-tools/balance-3.13.6-release.json。
+- 未启动游戏、未游戏内验收、未推送；待测四类UI在不同GUI缩放下的换行/滚动/点击/返回，三后端前后台换弹及动画、高压快速突发/零散轻伤/冷却、新旧个体属性中心比较。
+
+
+## 移速个体偏差20%
+- 基线d4bc133dbae8eae4a0238111175fbf0d69683285；负责人主控；工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\speed-deviation-cap；分支balance/speed-deviation-cap；范围dimensions速度独立帽、SpecialtyData回退、默认说明、既有分配测试、CHANGELOG与知识库。
+- 两份共享文件已有未提交成本修改，采用精确零上下文补丁只暂存本次帽差异，保留原成本/阵营值；其他文档新箭头不实施不清理。
+- 原生分配、AttributeReference与详情边界均通过definitions.caps统一读取，不另改速度运行时控制器或保存乘数。数值边界审计maintenance-tools/speed-cap-feasibility.json；0.6指数下普通完整分配上界赤1.701998/蓝1.675204/绿1.737380/灰1.662742，三阶蓝/灰极值1.68存在余量，全部头目默认预算仍可行。
+- 备份E:\MC\Create-Delight\HostileHumansUnified-维护\文档备份\speed-cap-20261023-223030；不构建、不部署、不启动游戏。
+- 交付工作树4ff8f4f；主仓库以精确差异整合ce5ba0b，单独暂存本次六文件帽/说明/回归，保留原有成本与阵营WIP；两份共享文件原件及补丁在备份/speed-cap-source-20261023-223122。JSON反向还原与Java源码去除新增帽行后分别等于原件，四阵营文件哈希不变。
+- 静态差异检查与Python380项（367通过13跳过）通过；默认附录7份、166页1878链接及125公式通过。数值审计为预算上下界计算，不能替代Java执行或游戏验收；Java分配回归已更新为高预算守边界并正确报告余量，但本轮未编译或运行Java测试。未构建、同步或推送。
+
+
+## 专精表八项数值与苍隼侧移回调
+- 基线：ce5ba0b8b270313570c711bd94fe0e999e0bd233；负责人及共享文件接入：主控。
+- 工作树：`../worktrees/specialty-table-verdant-strafe`；分支：`balance/specialty-table-verdant-strafe`。
+- 范围：SpecialtyData、dimensions、四阵营 allocation_preference、RangedCombatProfile、GunDoctrine、对应既有验证、说明与知识库。
+- 基线说明：主仓库六份未提交成本/偏好文件已备份并镜像为本轮实际起点；不覆盖其他成本、枪种偏好、移速偏差帽或存档。
+- 接口：沿现有数据定义、分配中心和统一远程移动入口；无新增接口。举盾仅核对源码与实例值，不改实例配置。
+- 状态：实施中；未获本轮构建指令，不运行Gradle、不同步实例、不推送。
+- 收尾：源码已整合到主仓库，原有未提交成本/偏好保持；表中8处新值已逐单元核对并清理箭头，C=11.30/总成本12.50，三阶中心与预算可行上界已重算。绿队核心弓弩100%、核心枪80%。静态数值审计、Python 380项（367通过、13跳过）、166页/1878链接/125公式及7页默认值附录检查通过；既有Java策略测试期望已同步但未编译执行。本轮未构建、未部署、未推送，改动暂存为工作区修改。举盾默认保留60%，测试实例四阶均自定义保留20%，蓝队推进保留80%，实例配置只读。
+
+## 感知缩放友军信息传播与盔甲附魔解释
+- 基线：ce5ba0b8b270313570c711bd94fe0e999e0bd233；负责人：主控；工作树：../worktrees/perception-scaled-sharing；分支：feature/perception-scaled-sharing。
+- 范围：HumanTargetSharing、HumanPerception、既有TargetSharingPolicyTest、CHANGELOG和对应知识库；共享文件由主控独占接入。保留主仓库其他未提交平衡修改。
+- 接口约定：每跳发送者16格×统一有效感知倍率（专精及头目层），查询范围和续期距离检查共用同一函数；不改变接收方敌我、权限、去重和原始报告期限。附魔为只读核对默认及实例配置，提供条件期望与示例。
+- 不运行Gradle，不构建、部署、启动游戏或推送。
+- 收尾：开发分支交付4a04756，已审查并将三个源码/验证文件及单条日志精确接入main工作区；保留其他未提交修改。单跳16×发送者有效感知，候选查询同步扩展，链路动态检查复用range；原有期限/去重/投递预算保持。知识库已备份并更新通信正文和附魔期望、条件等级均值、合法实例、自然成长边界。Python 380项（367通过、13跳过）、166页/1879链接/125公式、7页默认值及diff静态检查通过；Java回归期望已补充但未编译执行；未构建/同步/推送/游戏验收。附魔默认与测试实例13条阵营阶级配置对照见维护目录maintenance-tools/armor-enchant-expectation-20261023.json。
+
+## 属性详情取消属性行悬停浮层
+- 基线：ce5ba0b8b270313570c711bd94fe0e999e0bd233；负责人/共享文件接入：主控；工作树：../worktrees/attribute-detail-no-hover；分支：ui/attribute-detail-no-hover。
+- 范围：AttributeDetailScreen及知识库对应交互说明、CHANGELOG；删除属性行hover命中和tooltip渲染，保留点击原行展开、标签高亮、滚动与服务端快照。其他工作区平衡修改保持。
+- 本轮未要求构建，不运行Gradle、不部署、不推送。
+- 收尾：已精确接入main工作区；删除属性行hover检测、提示内容组装及浮层渲染，详细计算仍通过原行点击展开。知识库交互说明已同步并备份。既有属性详情导航Python 6项通过、Wiki 166页1879链接无失效、diff静态检查通过；本轮未编译、构建、同步或推送。开发分支本地提交可由ui/attribute-detail-no-hover定位。
+
+
+## 3.13.7 构建同步
+- 基线ce5ba0b8b270313570c711bd94fe0e999e0bd233；主控负责；工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.7，分支release/balance-3.13.7；镜像当前17份工作区文件并备份，不擅自提交既有未提交修改。范围：累计专精数值/移速帽、苍隼侧移回调、感知缩放友军传播、属性页取消hover，版本日志/完整构建与既定Forge47.4.21部署。预算分布保留。
+
+- 3.13.7发布完成：6d4c62c0e1da547d3878fa9fa442080204061494；Java完整build/check与lootScreeningTest、Python380项（367通过13跳过）、知识库166页1879链接125公式及7份附录通过。构建/dist/既定实例JAR SHA-256一致：1544a57d67c464d5a6402b51e6b2d4786a86194f3a9a3c809be79b1bbc782e41。备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.7-20261023-225933，工作区补丁和完整源哈希已留存供复现。实例专用配置目录当前存在=False，未迁移/创建/覆盖配置；主仓库源码修改逐文件保留。未启动游戏、未游戏内验收、未推送。待测绿队三种远程侧移、不同感知单跳/链传、属性页点击展开无hover、新生专精与旧个体保存。详情maintenance-tools/balance-3.13.7-release.json。
+
+## 野生护甲滚动损耗上限与灰鸦出生单手资格
+- 基线：6d4c62c0e1da547d3878fa9fa442080204061494；主控独占接入Human、FactionEquipmentConfig/Pools、NaturalEquipmentGrowth及对应测试与装备默认定义。
+- 工作树：../worktrees/wild-armor-cap-ashen-spawn；分支：fix/wild-armor-cap-ashen-spawn；原有全部工作区修改保留。
+- 边界：未雇佣护甲按部位滚动20tick最多实际损失10耐久；原版耐久附魔/火抗/损坏通知与雇佣60tick规则保持。灰鸦近战出生资格在选档前统一检查BC单手能力，所有主手/备用入口及自然退阶候选复用，不按物品名称黑名单。无BC沿原合法家族生成，不提供双持能力。
+- 本轮未要求构建，不运行Gradle。
+
+- 审查补全：荆棘原生损耗绕过Human.hurtArmor，已取消仅Human局部实现，将所有穿戴护甲原生hurtAndBreak的内部hurt统一接至WildArmorWear（新增公共适配器与ItemStackWildArmorWearMixin），沿原版Unbreaking和外层损坏回调；hasOwner人类、玩家、非护甲及背包物品原路返回。已用当前Forge映射JAR的javap只读核对真实调用描述符，补充实际类字节码契约回归，未编译。
+- 收尾：主仓库工作区已精确接入；新增WildArmorWear统一物品耐久适配器、ItemStack原生损耗挂接和按部位滚动限额，不改变Human原损耗分支与已雇佣规则。灰鸦内置melee_one_handed_only=true，候选筛选先于档位和家族，备用及自然退阶同入口；现有库存不清洗。已备份并同步装备机制、灰鸦策略及生成附录。Python380项（367通过、13跳过）、主仓库7附录、166页1879链接125公式、diff检查通过。新Java滚动窗口随机参考回归和实际Mixin目标调用契约已登记但未编译执行；本轮未构建、未实例同步、未推送、未游戏验收。开发分支fix/wild-armor-cap-ashen-spawn保留交付提交。
+
+## 撤退受困近战子状态
+- 基线：6d4c62c0e1da547d3878fa9fa442080204061494；主控负责；工作树：../worktrees/retreat-cornered-melee；分支：feature/retreat-cornered-melee。
+- 文件范围：AdaptiveCombatGoal、Human、MeleeActionControl/Range、GunCustody、HumanBehaviorControl及独立受困进展策略/状态与既有回归入口，知识库撤退/权限/阵营说明。共享文件主控独占接入；原有全部未提交修改保持。
+- 约定：保留isFleeing与撤退移动权限，受困状态仅授予当前合法近处威胁的近战；不开追击/跳砍，不复制伤害执行器；路径缺失与实际位移独立采样，恢复进展立即撤销。不中断真实恢复/高优先级盾防/避爆；不新增世界扫描或额外算路。
+- 本轮无构建指令，不运行Gradle。
+- 收尾：已精确接入main工作区。进展策略0.5格净位移、无路12tick/有路卡住20tick，6格内合法当前威胁才准入，2tick短权限、实际出伤前重验；实际移动恢复、目标/实体/编辑/会话失效都清理，跳砍与普通追击仍禁止。保留原MOVE执行/重算预算/安全逃脱步，武器交换与枪弓持物意图复用现有模块，Better Combat延迟姿态和出伤也接受同一权限。没有新增扫描或算路池。知识库五页正文/边界与关联链接已备份同步。Python380项（367通过13跳过）、主仓库7份附录、166页1882链接125公式及diff检查通过；新增Java进展回归含无路、有路卡住、原地跳、晃动、慢速移动、攀爬和恢复位移，已登记但未编译执行。本轮未构建/部署/推送/游戏验收，开发交付见feature/retreat-cornered-melee。后续发行镜像必须同时纳入本轮及上一轮新增的未跟踪Java文件，不能只收集git diff的已跟踪文件。
+
+
+## 3.13.8 构建同步
+- 基线6d4c62c0e1da547d3878fa9fa442080204061494；主控负责；工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.8，分支release/balance-3.13.8；镜像当前41份工作区文件并备份，不擅自提交既有未提交修改。范围：野生护甲按部位10/20tick实际耐久限额、灰鸦出生近战原生单手过滤、撤退受困反击，保留既有平衡与界面修改；完整构建回归与既定Forge47.4.21部署。
+
+- 3.13.8发行核对补正：新增护甲耐久Mixin改用本源码集现有的显式SRG接入方式（m_41622_→m_220157_，remap=false，require/allow=1）；原Mojmap选择器无生成refmap，存在正式环境注入失败风险。已按当前映射核对并补充编译字节码注解契约检查；主仓库仅同步这两处定点修改，原始文件已在发行源码备份中保留。
+
+- 3.13.8发布完成：093935b098af282a6ac9b05a622859eaf77b568c；Java完整build/check与lootScreeningTest、Python380项（367通过13跳过）、知识库166页1882链接125公式及7份附录通过。构建/dist/既定实例JAR SHA-256一致：60416c23c27891e0708e73763e72f43360c7a85107ba0300c65c5b3c351fcae5。备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.8-20261024-011518，工作区补丁和完整源哈希已留存供复现。实例专用配置目录当前存在=True，未迁移/创建/覆盖配置；主仓库源码修改逐文件保留。未启动游戏、未游戏内验收、未推送。待测野生护甲含荆棘每部位滚动10/20tick与雇佣旧规则不变、灰鸦新生成原生单手资格、受困反击与移动恢复立即撤销、Better Combat延迟命中/换武器及新增Mixin启动。详情maintenance-tools/balance-3.13.8-release.json。
+
+
+## 原版药水4瓶堆叠
+- 基线093935b098af282a6ac9b05a622859eaf77b568c；主控单独负责；工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\vanilla-potion-stacks，分支feature/vanilla-potion-stacks；范围：统一原版三类药水物品堆叠上限、核对出生/拾取/消耗与NBT边界、注册接入、回归契约和知识库；不改出生数量、药效或其他模组药品。公共mixins注册仅主控定点接入并保留原WIP，主仓库已有39份源码变更和7份新文件均保留。未授权本轮Gradle，不构建同步。
+- 已审核整合95e552bfb51d0f6293c078c5baeec5b8277173ea：3份新文件和3份原先未改文件精确同步，公共Mixin注册/日志定点插入，保留野生护甲Mixin及其余已有WIP；整合前备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\potion-stacks-integration-20261024-013413。VanillaPotionStacks为统一上限接口；SpawnPotionConfig→RecoverySupplies.insertInventory沿原生上限合堆，未增加背包扫描或改出生数量。知识库3页已备份同步，Python367通过13跳过、166页1886链接和125公式检查通过。Java回归新增但未编译/执行，本轮未构建、同步、启动游戏或推送。
+
+
+## 首领专精绝对上限放宽
+- 基线093935b098af282a6ac9b05a622859eaf77b568c；主控负责；工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\boss-allocation-ceiling、分支balance/boss-allocation-ceiling。范围：boss.allocation_multiplier_max默认2.1→3.0及解析回退、资源说明、回归与知识库；普通上限1.8、下限0.5、预算/相对边界/穿甲/最终攻速不变。内置首领沿普通阵营allocation_preference，可选boss_preference仅是属性分配权重，不是技能定义。共享默认JSON由主控仅定点整合，保留其余WIP。未授权本轮构建，不运行Gradle或同步实例/配置。
+- 交付整合9ddc96a709ddd4ec299fc39cec2e4ebf9e813072；只定点修改共享默认JSON的上限/中英文说明并保留其余工作区修改，整合前备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\boss-ceiling-integration-20261024-014136。首领继续普通偏好，boss_preference仅数值权重，不实现技能。本轮知识库同步；现有实例global.json仍显式2.1，未改配置，后续同步需按本范围备份精确更新，已有保存个体不重抽。未Java编译/构建/部署/推送。
+- 收尾验证：Python380项（367通过13跳过）；默认资源3.0/普通1.8/下限0.5/有效攻速1.8与四阵营首领继承偏好静态断言通过；知识库166页1886链接、125公式解析通过，7份附录已刷新。Java新增断言未编译或运行，实例配置未变更。
+
+
+## 3.13.9 构建同步
+- 基线093935b098af282a6ac9b05a622859eaf77b568c；主控负责；工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/balance-3.13.9；镜像当前50份工作区文件并备份，不擅自提交既有未提交修改。范围：原版三类药水4瓶堆叠、首领独立分配上限3.0并继承普通阵营偏好，保留已部署行为与既有平衡修改；完整构建回归与既定Forge47.4.21部署。用户明确要求不改、不删实例配置，由用户自行重新生成。
+
+- 3.13.9首轮完整回归捕获测试夹具错误：VanillaPotionStackingTest在注册表冻结后构造未注册PotionItem，触发Registry is already frozen；改用已有蜂蜜瓶及箭/玻璃瓶作为排除样本，不改运行时代码，不对注册表解冻。保留首次日志，修复后重新完整构建验证；真实合堆/NBT/保存与生产选择器断言保留。
+
+- 3.13.9发布完成：580a8f9b7853b6bd323fac6930287b64483ac050；Java完整build/check与lootScreeningTest、Python380项（367通过13跳过）、知识库166页1886链接125公式及7份附录通过。构建/dist/既定实例JAR SHA-256一致：ce6104780990f19dc77fa7ab94a4461a3174db6c7c097c704925084cea08aaa9。备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.9-20261024-014921，工作区补丁和完整源哈希已留存供复现。实例专用配置目录当前存在=False，未迁移/创建/覆盖配置；主仓库源码修改逐文件保留。未启动游戏、未游戏内验收、未推送。待测三类药水出生/拾取合堆、NBT隔离、玩家/士兵逐瓶使用和酿造单瓶槽，以及重新生成配置后新生首领分配与原生属性修复联动。遵从本次明确要求，不修改或删除任何实例配置，由用户自行重生成。详情maintenance-tools/balance-3.13.9-release.json。
+
+
+## 首领专精相对偏差90%
+- 主控；工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\boss-deviation-cap，分支balance/boss-deviation-cap；基线9ddc96a709ddd4ec299fc39cec2e4ebf9e813072（已交付首领3.0上限分支），主仓库HEAD580a8f9b7853b6bd323fac6930287b64483ac050。范围：boss.deviation_cap默认0.90，统一首领出生/面板帽入口覆盖各维普通帽；保留普通帽与独立绝对/有效限制、预算和保存规则。共享FactionRules/SpecialtyAttributes/EffectiveAttributes/默认JSON主控顺序接入，已有源码WIP精确保留。不构建、不改实例配置。
+- 已审核整合d6a8ef38100ae57b3ed3e468f2409477c2dad1c5；统一帽入口FactionRules.allocationCaps供出生和面板同用，默认JSON只插入boss.deviation_cap及双语说明。普通各维帽、首领3.0/下限0.5/穿甲45%/最终攻速0.5～1.8、预算和保存规则不变。整合备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\boss-deviation-integration-20261024-015727；未构建、未同步实例、未推送。
+- 收尾：默认首领偏差0.90、出生/面板统一入口及有效攻速0.5～1.8静态断言通过；Python367通过13跳过、知识库166页1886链接/125公式、7份默认附录核查通过。已补正文说明普通维度帽与首领90%的区别；新增Java断言尚未编译或运行。本轮未构建、未同步实例配置/JAR、未推送。
+
+
+## 最终近战攻速上限3倍
+- 主控；基线d6a8ef38100ae57b3ed3e468f2409477c2dad1c5（首领90%帽分支），主仓库HEAD580a8f9b7853b6bd323fac6930287b64483ac050；工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\melee-speed-ceiling，分支balance/melee-speed-ceiling。最终近战攻速0.5～3.0，默认/空配置回退独立于普通分配倍率上限1.8；审计所有专精独立限制。补齐AttributeReference中心参考沿首领统一帽入口，避免新首领面板基线不一致。共享默认JSON定点修改保留现有WIP；不构建、不改实例配置。
+- 已审核整合2edb65cf39054d5bfc5f22ac2d41bd761fc1a6ab：最终近战倍率0.5～3.0默认与缺省解析；AttributeReference补齐统一首领帽，使中心参考/出生/边界一致。默认JSON定点保留其余WIP，整合备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\melee-speed-integration-20261024-020014。普通分配上限仍1.8，首领3.0；无其他专精数值调整。新增Java断言未编译执行，未改实例配置，未构建同步或推送。
+- 收尾：默认有效攻速0.5～3.0、普通分配1.8和首领偏差90%静态断言通过，出生/中心参考/参考边界均经统一帽入口；Python367通过13跳过，知识库166页1886链接/125公式、7份默认附录核对通过。知识库平衡表新增分配之后的独立限制表，记录灰鸦1.6为原始权重。新增Java断言尚未编译或执行，未构建同步/推送，实例配置保持不动。
+
+
+## 发布流程收敛与3.13.10
+- 用户要求先优化流程再构建同步。主控单独负责；主仓库基线580a8f9b7853b6bd323fac6930287b64483ac050，构建复用worktrees/balance-release-3.13.9并切换同HEAD新分支release/local-build。维护工具位于仓库外maintenance-tools（不初始化父目录Git）。统一参数化入口、完整归属哈希保护、差异镜像保留时间戳/缓存、单轮静态/知识库检查、完整Java回归、文件日志与阶段汇总、凭证核对后可暂停恢复部署；不改实例配置。AGENTS/构建说明主控接入，原源码WIP保留。
+- 发布流程4项临时Git/临时目录安全回归通过：版本顺序、路径拒绝越界、相同内容保留时间戳、归属清单拒绝修改/新增/删除；复用前1408份源码归属与3.13.9归档一致。首领90%偏差/近战3倍与面板中心参考为本轮产品范围，仍需完整编译回归和游戏验收。
+
+
+## 3.13.10 构建同步
+- 主控；基线580a8f9b7853b6bd323fac6930287b64483ac050；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：首领各维偏差90%、最终近战攻速0.5～3.0与面板中心参考统一；复用发布工作树并精简检查日志。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.10。
+
+- 3.13.10完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致ce3c3d9fb04f84b768836d8f9fe4e28999826e9ab0b816881d65cd35decc0c50；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.10-20261024-021031。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.10.
+- 流程实际验收：本次Gradle完整构建/回归一次完成，原生日志耗时1m47s（106任务，104执行、2复用）；首次包装器误将PowerShell5的UTF-16当UTF-8，已按原始退出码0证据保留凭证并通过accept-build复核，未重复编译。增加UTF-16/UTF-8回归，流程安全测试共5项通过；Git换行提示转存日志。3.13.10已同步，配置哈希未变，全部产品源码及构建/dist/目标哈希复核一致。
+
+## 移速软上限、战斗声音与可复用阵营能力
+
+基线：333e31fef244a2862923f1152f4d2d3af8d93105。负责人：主控；分支 feature/speed-hearing-abilities；独立工作树 worktrees/speed-hearing-abilities。已将主仓库当前未提交文件作为只读前像备份并镜像；不提交继承修改。范围：MovementSpeedController、属性参考、HumanAwareness/Perception/Attention/ThreatAssessment、统一配置、事件接入、新增阵营能力模块与对应测试文档。共享配置和 HumanGunner 由主控单独接入。未授权本轮构建、同步或推送。
+
+交付接口：公共移速 MovementSpeedController.refreshCeiling/projectedSpeed，SoftSpeedLimit 单一平滑规则；FactionAbilities 注册/定义/阵营分配及 IncomingAttack 能力触发，默认灰鸦 DodgeAbility；弓弩新箭事件 → HumanAwareness.projectileShot → 原有声音队列 → 有限回看 → 视觉确认 → 威胁选择。HumanThreatAssessment 统一弱主目标回看与已确认近敌换目标边界；HumanAttention 只在获准声音回看时让普通瞄准让位，保留实际近战、防御、物品、受击及逃生优先。
+
+复查：当前目标自己的声音、已知友军非求援以及已看过的固定线索不能堵塞战斗声音回看队列；声音优先级不读取未确认声源属性。旧主仓库配置所有原有值逐项保持；用户配置不覆盖。KB已先完整备份Markdown，人工同步机制、灰鸦、移动、平衡表、开发入口并导出7份默认值附录。验证：Python385项共372通过、13跳过；Wiki168页/1898链接无断链；KaTeX125公式无错误。新增Java软上限性质测试与能力配置复用/去重/禁用/非法输入测试已登记，未执行Java编译或Java测试。未构建、未部署、未启动游戏、未推送。待游戏验收：高速首领/效果与装备叠加、弱怪交战期间近敌脚步回看与转火、弓弩多重射击与墙后声源排除、灰鸦近战/箭弹闪避及环境伤害/护甲耐久边界。
+
+交付提交：本轮不把继承的主仓库未提交改动打包提交；本轮增量补丁及完整前像保留于维护目录备份/speed-hearing-abilities-baseline。主控按前像SHA校验逐文件整合，所有既有修改保留。
+
+## 绿队弓弩压力下连发续射修复
+
+基线333e31fef244a2862923f1152f4d2d3af8d93105；主控单人负责，分支fix/verdant-followup-continuation，独立工作树worktrees/verdant-followup-continuation。已镜像并备份主仓库现有未提交修改，不提交继承修改。本轮范围HumanArrowCombat及独立续射生命周期、对应回归与知识库；共享测试登记及WORKSTREAMS/CHANGELOG由主控接入。不修改阵营策略分配，不运行Gradle或部署。
+
+完成：正常双发间隔按用户追加要求由6改为4tick（0.2秒）；第二发自预定时间起固定最多额外等待40tick，每2tick复查。新增纯时间生命周期VolleyContinuation，将硬失效与短暂出手阻塞分开。临时朝向/射界/盾牌/恢复/动作资源阻塞保留同一续射；目标、原武器、弹药、阶级策略/会话或实体生命周期失效取消，不绕过防御、不占用导航、不提前付款或重复补发。等待期间阻止下一轮拉弓/装填；所有第二轮仍走统一付箭、重瞄和多重射击事务，可选回调前后都复查权限，异常时取消以防不确定结果被再次发布。
+
+交付提交：e01e2f734ac6c70c1b9dc547fb2a06bc05aea589，仅5个本轮独立源码/测试文件，不含继承的主仓库WIP。主控核对前像后本地快进整合。知识库已备份并同步苍隼策略、弓弩与三叉戟、策略冷却总表。验证：Python390项，377通过、13跳过；Wiki168页/1898链接无断链；7份默认值附录一致；diff --check通过。新增Java续射状态测试及已编译入口审计已登记，未执行Java编译或Java测试；未构建、未同步、未启动游戏、未推送。
+
+待游戏验收：绿队核心弓/普通弩/多重射击弩及斯巴达弩，首发后受击转头、短暂举盾、恢复占手、射界短暂被遮挡再恢复；验证4tick正常间隔、合法重试、真实弹药、两轮多重射击、换目标/换武器/死亡/长时间举盾/会话取消时不补发。
+
+
+## 3.13.11 构建同步
+- 主控；基线e01e2f734ac6c70c1b9dc547fb2a06bc05aea589；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：绿队弓弩4tick连发与压力续射修复；最终移速平滑上限；弓弩声音及近场威胁回看；可复用灰鸦概率闪避能力。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.11。
+
+- 3.13.11完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致efeef96c926a9a4795ebd5fe9ee3e09ca9a935e8584fe83d957c7f71be279264；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.11-20261024-122132。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.11.
+
+## 灰鸦闪避资格与药效独立移速结算
+
+基线311643d276595682b59f0c21480e892e5487151f；主控负责，独立工作树worktrees/dodge-eligibility-effect-speed，分支fix/dodge-eligibility-effect-speed。现有WIP已逐文件备份镜像，不提交继承修改。范围：DodgeAbility/FactionAbilities与观测、MovementSpeedController/属性投影、默认三阶概率与相关测试文档；共享HumanPerception、EffectiveAttributes、默认配置由主控接入。本轮未授权构建或同步，不改实例配置。
+
+完成：DodgeAbility不再将玩家政治中立/友好当成伤害免疫，仅按实际雇主保护和人类友伤规则过滤；直接物理分类复用HumanDamagePipeline，覆盖已联动非原版Projectile的枪弹契约。三阶及对应首领默认概率20%，原提示音量1.0/音调1.5，8tick提示间隔保持。FactionAbility增加只读describe，侦察“动作”页展示检查、合格、成功和最近原因；不靠观察再次抽签。
+
+移速按活动状态效果公开属性Modifier UUID剥离药效，对其余属性执行SoftSpeedLimit，再按效果原生加算/乘算顺序参与；修饰器以目标值/原值比例结算，实际与面板参考共用MovementSpeedLimitPolicy。既有压缩Modifier不参与原值，不删除装备或药效。速度/缓慢及联动状态效果、信标/命令同类效果均不受0.234限制；非药效部分仍受限。
+
+实际验证：Python394项，381通过、13跳过；Wiki168页/1898链接无断链；默认数值附录7页已导出并人工同步机制。新增Java药效叠加/移除/旧修饰排除性质测试已接入DefenseAttributePolicyTest，未执行Java编译或Java测试；未构建、未部署、未启动游戏、未推送。知识库Markdown已先备份。源码交付为本轮独立增量补丁，不把继承WIP提交；补丁和前像保留于备份/dodge-eligibility-effect-speed-baseline。
+
+待游戏验收：野生灰队对中立/敌对玩家近战，侦察检查数和触发数、音效；同阵营及雇主伤害保护、环境持续伤害排除；三阶及首领20%；高速普通/首领叠加速度和缓慢、药效消失回到非药效上限；面板中心参考。用户反馈为近战攻击野生人类，未将其归因于枪械事件。
+
+## 移除出生补给中的喷溅虚弱药水
+
+基线311643d276595682b59f0c21480e892e5487151f；主控负责；工作树worktrees/no-spawn-splash-weakness，分支fix/no-spawn-splash-weakness。已镜像并逐文件备份主仓库WIP。范围SpawnPotionConfig、四阶默认药水池及对应测试与知识库；不更改既有背包物品和手动配装，不修改实例配置；本轮无构建/同步授权。
+
+完成：四阶默认throwables池删除long_weakness；出生分类停用原虚弱索引1而不移动其他索引，旧/自定义及旧混合池在Entry.resolve按SplashPotionItem与实际WEAKNESS药效过滤，涵盖普通/长效及同效果变体，不清理已生成库存或禁止手动配装。其余类别按既有可用成员归一。知识库正文、完整池成员与有效权重表同步，旧值及个人笔记已备份；7份默认值附录已导出并检查一致。
+
+验证：Python394项，381通过、13跳过；Wiki168页/1898链接无断链；diff --check通过。原Scguns池测试改为核对实际两种保留药水，Java注册表回归增加普通/长效喷溅虚弱拒绝与迟缓保留，未执行Java编译或测试。未构建、未同步、未改实例配置、未启动游戏、未推送。交付本轮增量补丁及前像归档于备份/no-spawn-splash-weakness-baseline，不提交继承WIP。待游戏验收：新生四阶及首领背包不再生成喷溅虚弱，旧配置仍列虚弱时同样跳过，其他投掷物继续生成，旧库存保留。
+
+## 通用高压举盾20%全伤害减免
+
+主控负责；基线311643d276595682b59f0c21480e892e5487151f；独立工作树worktrees/pressure-guard-mitigation，分支feature/pressure-guard-mitigation。已备份镜像当前WIP，范围ShieldPressureConfig/ShieldDefenseController/最终承伤事件入口及测试、默认配置、知识库。共享HumanGunner和默认配置由主控接入，不改其他策略；本轮未授权构建或同步，不改实例配置。
+
+完成：shield_pressure.damage_reduction默认0.20，0～1可配置；ShieldPressureConfig.damageMultiplier统一系数并保留原六参数构造兼容。ShieldDefenseController仅实际Owner.PRESSURE、原盾仍在使用且权限有效时授予，准备/冷却/其他盾动作或不可行动不授予。HumanGunner唯一LivingDamage入口在护甲、抗性和吸收后对剩余生命伤害乘0.8，不筛来源类型/方向，不改护甲盾耐久或吸收消耗，不另发伤害事件。所有阵营、身份、首领通用。
+
+验证：Python397项，384通过、13跳过；Wiki168页/1899链接无断链；7份默认值附录已导出并核对；diff --check通过。Java配置与执行/等待/禁用/零系数/自定义系数测试已登记，未编译和执行Java测试。知识库已先备份并同步盾牌正文、通用策略、冷却总表。未构建、未部署、未启动游戏、未推送、未修改实例配置。交付为当前主仓库WIP的独立增量补丁，不提交继承修改；前像及补丁在备份/pressure-guard-mitigation-baseline。待游戏验收：实际高压期间各类最终扣血20%减免，普通盾/推进/准备/冷却无加成，盾失效即时取消及现有护甲/吸收/耐久行为。
+
+
+## 3.13.12 构建同步
+- 主控；基线311643d276595682b59f0c21480e892e5487151f；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：灰鸦闪避资格修复与三阶20%；药效独立移速上限；出生补给移除喷溅虚弱；通用高压举盾20%最终生命伤害减免。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.12。
+
+- 3.13.12完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致b68559639de753308900157eaca9060a4a233c2cfb714c326c8d24a3514e7151；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.12-20261024-124750。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.12.
+
+
+## 灰鸦闪避双音色短提示
+
+主控负责；基线ffc8beef99f9cc630a7ed1586d40eb87ca74344f；工作树worktrees/dodge-metallic-audio，分支feature/dodge-metallic-audio。范围：DodgeAbility仅声音调用、ModSoundEvents统一注册、sounds.json及两段单声道音频、中英文字幕、第三方来源、日志与知识库。先复制本次涉及文件的当前WIP并备份前像；共享文件均由主控顺序接入，不提交继承WIP。两版保持各自试听音高，以时间伸缩缩至0.4秒，客户端资源等权随机，服务端仅发送一个声音事件，沿用8tick声音节流与原闪避概率。本轮未要求构建或同步。
+
+完成并整合：两段CC0音效经atempo保持音高缩短，容器各0.400秒、实际解码各0.3971秒（Vorbis编解码边界）；单声道44.1kHz，峰值0.335/0.348，无削波。统一注册ability.dodge，sounds.json两变体等权，运行时pitch=1，不额外消耗AI随机数。中英文字幕、素材来源及知识库正文已同步。静态校验资源引用/字幕/权重/声音单入口、音频解码和diff空白通过；未编译、构建、同步、启动游戏或推送。待游戏测试：随机音色、音量和多人密集闪避混音。原有WIP前像及独立补丁保存在备份/dodge-metallic-audio-baseline。
+
+音效时长修订：按用户试听反馈，两版由约0.4秒延长到约0.55秒；重新从各自柔和试听源进行保持音高的atempo时间伸缩，未对0.4秒成品直接降速。运行时pitch=1、等权随机和8tick声音节流不变；两音频解码、峰值及引用核对通过。知识库及素材说明同步，未构建/同步。
+
+
+## 人类旁观附身手臂视角
+
+主控负责；基线ffc8beef99f9cc630a7ed1586d40eb87ca74344f；工作树worktrees/spectator-human-arms，分支feature/spectator-human-arms。范围：HumanRenderer/HumanPlayerModel的隔离手臂渲染模式、新客户端旁观渲染入口、日志和知识库。当前涉及文件WIP已复制并备份，不触碰服务端AI/碰撞/眼高/伤害和可选枪械API。复用原动画和物品层，只补绘手臂及衣袖/手持物；不加入完整躯干、头盔或第三方护甲模型以免遮挡。相机保留原版眼高，补绘手臂取景归一化，首领不重复放大。无新增Mixin或热键，未授权构建/同步。
+
+实现已静态核对并整合：只读客户端世界渲染事件，实际相机不移位；普通/首领独立取景，头/躯干/腿不可见。审查原版HumanoidMobRenderer字节码确认父构造还会添加头饰和鞘翅图层，因此手臂实例先清空全部图层再仅加入现有手持物层，避免头盔漏绘遮挡。独立模型与私有缓冲保证普通世界模型不受可见性污染；退出/第三人称/死亡/隐身/睡眠等立即停用。已核对6个实际映射客户端API、Forge阶段入口、源码边界、知识库新页链接和diff空白；未运行Gradle/Java编译、未构建部署或游戏验收。待验收：普通/首领俯仰与门内贴墙、双持/跳砍/盾牌、三种枪械持握、换目标/退出附身、第三方镜头及武器资源包。备份和本次独立补丁在备份/spectator-human-arms-baseline；不提交继承WIP。
+
+3.13.13首次预检：旧回归断言仍要求原版PLAYER_ATTACK_NODAMAGE，已按新声音接口更新并增加真实OGG引用/字幕/等权资源检查，保留首次失败日志；未修改游戏行为来迎合旧断言。
+
+
+## 3.13.13 构建同步
+- 主控；基线ffc8beef99f9cc630a7ed1586d40eb87ca74344f；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：闪避双音色0.55秒等权随机提示；旁观附身人类手臂与真实动作补绘，普通与首领取景归一化。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.13。
+
+- 3.13.13完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致4eac607ffb69bc6d5eac6cfbca8d3d5deeb1b522ba03ae1128d708e1caf9e806；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.13-20261024-134606。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.13.
+
+
+## 旁观附身附魔物品渲染崩溃
+
+主控负责；基线e15f93a3b2917a310a7e03988e3f943d93f317fb；工作树worktrees/spectator-buffer-isolation，分支fix/spectator-buffer-isolation。范围HumanSpectatorView缓冲生命周期/失败收尾、日志及知识库，保留当前WIP。证据为2026-10-24 13:49:40客户端崩溃Duplicate delegates，ItemRenderer光效多消费者经旁观手持物层触发；原版RenderBuffers以独立固定通道分配7种glint，而单fallback immediate对两次getBuffer返回相同Builder。改用一次性懒初始化的独立原版RenderBuffers，保留本体和光效，不改游戏判定；可选展示失败时停用本世界的补绘并保留原版旁观。未获本轮新的构建指令，不运行Gradle或编译。
+
+追加用户范围：旁观附身时按原显示层开关展示该人类导航/感知几何，使用既有管理员权限、头盔门槛和调试快照频率，临时只读订阅不改变持久多选/测试任务；退出恢复原选择。范围增加NavigationDebugService/Client/LegendScreen，由主控顺序接入。
+
+收尾：已整合6个限定文件并保留继承WIP，暂存区未改。日志根因经原版映射字节码核对：附魔本体/光效需要独立消费者，原版RenderBuffers提供7种glint固定通道；改为静态懒初始化完整原版缓冲，独立姿态栈避免异常破坏世界栈，保留首次渲染异常并将批次收尾异常作为suppressed，当前世界故障熔断且弱引用不保留旧世界。附身观察使用现有调试频率/权限/头盔，最多单实体临时快照，不改原选择/测试任务，切换相机过滤旧快照，退出/失去权限或头盔发空帧。F8调试控制同时在UI与服务器禁用。Python398项通过（13跳过），新增逻辑已静态核对，知识库两页及链接同步；未Java编译、构建同步或启动游戏，当前实例仍是3.13.13。待实际验收：附魔双持/盾弓/三枪械普通与首领附身、参考图层关闭/焦点/全部切换、无预选附身、换人/退出恢复原选择、多玩家权限隔离。
+
+
+## 闪避音效单体1.2秒节流
+
+主控负责；基线e15f93a3b2917a310a7e03988e3f943d93f317fb；工作树worktrees/dodge-sound-cooldown，分支fix/dodge-sound-cooldown。范围DodgeAbility声音状态、默认配置、更新日志与知识库；继承WIP前像已备份，公共配置由主控接入。单实体24tick内最多播一次；按实际播出时刻计时，静音期间仍独立闪避、不排队补播，不同实体互不影响，多个闪避定义共享实体音效节流；旧显式配置小于24向上钳制，较长配置保留，不改实例文件。未要求新一轮构建。
+
+完成：默认与缺省声音间隔24tick，解析保留原0～200校验后最低钳制24；LAST_SOUND弱引用映射跨能力定义共享且只在实际播出后更新，未动免伤抽签、计数、事件取消或两音色/音量/音调。知识库机制正文、冷却总表与默认附录同步；静态核对默认/兼容旧值/单体隔离和静音不吞闪避的代码路径。未Java编译、构建同步或游戏验收。
+
+
+## 3.13.14 构建同步
+- 主控；基线e15f93a3b2917a310a7e03988e3f943d93f317fb；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：修复旁观附魔物品缓冲崩溃；附身时按观察开关显示导航与索敌快照；单实体闪避音效最短1.2秒。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.14。
+
+- 3.13.14完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致178e678a4b5b12c001e20c069abfce020a0625cc2622b47f66808adea95b2af2；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.14-20261024-141209。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.14.
+
+
+## 旁观监听跟随与枪械动作声音审查
+
+主控负责；基线7d8781fcc62f38fa4d35f973c27369cb86858e31；工作树worktrees/spectator-audio-listener，分支fix/spectator-audio-listener。范围客户端统一监听位置、三枪械原生手动距离衰减及TaCZ动画声道的受门控可选Mixin、TaCZ换弹公开资源解析/可取消播放句柄/资源刷新、测试与知识库。共享Mixin清单/插件/build.gradle由主控顺序接入；WIP与日志已备份。证据：TaCZ1.1.7-hotfix2和1.1.8均有GunSoundInstance按LocalPlayer位置构造衰减，SC0.5.5/JEG0.14.5同构；TaCZ动画sound channel还会预衰减。14:31日志NoSuchFieldException display确认旧换弹音轨解析失效。保留原生声音/增益/消音/距离参数，不额外重放或传送玩家，不新增记录仪物品、录制/回放/远程摄像机授权。当前未授权新构建。
+
+完成并整合：统一SpectatorAudioListener按有效人类附身摄像机计算手动衰减；三枪械原生声道与TaCZ动画预衰减接入字节码门控Mixin，普通视角不变。TaCZ换弹移除私有display字段依赖，使用公开枪包显示资源，集中返回独立可取消声音句柄；断线/资源刷新/装填取消收尾。已核查原版SoundEngine.updateSource(Camera)以摄像机更新监听位置；食物饮用、弓弩、脚步、格挡、破损、闪避沿既有声音，不额外复制。知识库两页同步音效清单/限制和记录仪扩展边界。
+验证：Python398项通过、13项跳过；只读javap核对TaCZ1.1.7-hotfix2/1.1.8-hotfix、SC0.5.5/JEG0.14.5共6个距离计算方法及公开API；Mixin JSON/受影响Wiki链接/git diff --check通过。新增ASM契约Java测试已接入check但本轮未执行。未Java编译/Gradle构建、未同步或推送、未游戏试听；尚需验收附身长距离移动/消音枪/各后端装填/资源刷新/切换镜头。输入WIP按SHA保护整合，暂存区保持空；任务独立差异与证据在备份/spectator-audio-listener-baseline，未将继承WIP擅自提交。
+
+
+## 附身摄像机略微抬高与3.13.15发布
+主控；基线7d8781fcc62f38fa4d35f973c27369cb86858e31；沿用fix/spectator-audio-listener及同名工作树。主控独占客户端摄像机入口/Mixin清单/手臂说明与知识库，普通人类及首领第一人称附身统一提高0.12格，保留真实眼高和动作/弹道，仅改变观看位置，向上方碰撞裁剪；合并本轮声音修复后完整构建同步既定实例，配置不变。
+
+
+## 3.13.15 构建同步
+- 主控；基线7d8781fcc62f38fa4d35f973c27369cb86858e31；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：旁观人类摄像机提高0.12格、三枪械声音随摄像机衰减与TaCZ换弹音轨修复。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.15。
+
+- 3.13.15完成：完整build/check+lootScreeningTest通过（重试88.47秒），Python/默认附录/Wiki/KaTeX通过；TaCZ1.1.7/1.1.8、SC/JEG额外ASM契约6方法通过。首次失败源于1.1.8新增构造重载，已覆盖并保留attempt-1-failed记录。构建/dist/实例SHA-256一致d93f640170725ba4c7e17dd9f4dd0302cabdee4ab144a66e8a56b044f3ef8da8；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.15-20261024-145517。实例配置未修改，未启动游戏/推送，游戏取景与声音待验收。发布检测已排除测试类路径误报；本轮build.gradle新增测试任务与版本提交重叠，按限定路径stash备份、FF及apply合并，已核对仅增加版本号且暂存区为空，保留stash备份。
+
+- 3.13.15完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致cafe8ff9cf3e4fdf6550dff293abeaa7da675c4534cf6f26b3633da16a5835af；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.15-20261024-145835。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.15.
+
+- 3.13.15最终产物复核：摄像机入口及setPosition使用已核对的Forge1.20.1生产SRG选择器，完整重建90.74秒通过并重新同步；同版本中间产物已备份，最终三处SHA为cafe8ff9cf3e4fdf6550dff293abeaa7da675c4534cf6f26b3633da16a5835af。本轮重复发布保留已有日志标题；游戏进程检查已排除测试类路径误报。
+
+
+## 旁观调试标记改为显式选择
+主控；基线1e682b1826796582dfc8271ca2eb1c5b276ebacb；分支fix/spectator-selected-only，独立同名工作树。范围NavigationDebugService服务器订阅门控、NavigationLegendScreen提示、日志与知识库。继承WIP备份后接入；附身仅能观察指针预先标记的人类，保留头盔/权限/显示层条件、原多选列表及附身只读限制，不改变摄像机和手臂音效。本轮未请求构建。
+
+完成：服务端在写入WATCHED、生成快照之前要求当前附身人类属于本玩家同维度指针选择；未标记发送空帧，不创建自动观察。保留摄像机远离玩家实体时已标记对象的合法订阅、附身只读、切换镜头客户端过滤及原多选列表。更新详情提示和知识库两页。Python398项通过（13跳过）、Wiki链接与差异空白检查通过；未Java编译/构建同步/游戏验收或推送。
+
+
+## 附身手臂取景与远程副手可见性
+主控；基线1e682b1826796582dfc8271ca2eb1c5b276ebacb；工作树worktrees/spectator-hand-framing，分支fix/spectator-hand-framing。独占HumanRenderer/HumanPlayerModel/HumanAnimatedItemInHandLayer/HumanSpectatorView、统一展示策略、展示规则测试、知识库与日志；继承WIP按文件哈希备份。仅附身专用渲染通道降低/缩小镜头相对手臂取景，过滤远程闲置副手物品，保留实际使用/举盾与支撑手；真实装备、摄像机高度、AI及普通第三人称不变。未请求本轮构建。
+
+完成：新增HumanSpectatorPresentation统一取景（85%、前移0.36格、屏幕下移0.16格，标准眼位1.53）和远程闲置副手可见性。独立armsOnly层传入展示标志，按真实物理副手过滤物品但不隐藏支撑手；同步举盾/实际副手使用优先恢复。附身模型取消通用走位肩部偏转，保留原生枪械肩位，普通世界模型不变。原相机+0.12不改。新增九种摄像机朝向/副手边界Java测试，经原HumanShieldPresentationTest入口接入下次构建；本轮未执行Java编译和测试。Python398项通过（13跳过）、Wiki1906引用无断链及git diff --check通过。知识库正文/规则表同步。未构建、同步、推送或游戏内验收；需实测极端俯仰、大型枪械、左右手、持弓装弩、抬盾/放盾与喝药切换。
+
+
+## 附身手臂肩部渐隐
+主控；基线1e682b1826796582dfc8271ca2eb1c5b276ebacb；工作树worktrees/spectator-forearms，分支fix/spectator-forearms（目录历史名，不实施硬截断）。本轮明确授权源码实施渐隐，未授权构建。独占附身皮肤遮罩、缓存/资源生命周期、HumanRenderer/ClientRenderer入口和展示回归、知识库。继承WIP按哈希备份；只为独立armsOnly通道创建派生皮肤，UV固定肩到肘渐隐，保留原模型骨骼、原皮肤、手掌与装备。
+
+完成并整合：新增SpectatorArmMask按64×64原生UV遮罩四组手臂/衣袖；肩端面和前2像素透明、2～6像素平滑渐隐、前臂6像素及手掌端面保持原像素，RGB/原有透明度不被增强。仅armsOnly渲染器经getTextureLocation使用派生纹理，物品/真实皮肤/第三人称不变。SpectatorSkinTextures按皮肤LRU缓存，上限40条和4,194,304像素，支持64～1024正方形64整数倍；失败缓存回退原纹理，资源刷新/注销/淘汰仅释放自有纹理；只读javap确认TextureManager.release通过safeClose同时收尾动态纹理及NativeImage。37张默认皮肤头部核验均64×64。新增纯像素UV边界/渐隐/衣袖/原alpha保持Java测试，经既有展示测试入口接入，未执行编译。Python398项通过（13跳过），Wiki1906引用无断链，差异空白检查通过。知识库正文及资源边界表同步。未Gradle/Java编译、构建同步、游戏验收或推送；仍需实测BC弯臂、枪/弓/弩/盾、极端俯仰、高清资源包、F3+T和反复换世界/皮肤。
+
+
+## 附身近战动作适配
+主控；基线1e682b1826796582dfc8271ca2eb1c5b276ebacb；分支fix/spectator-melee-presentation及同名独立工作树。主控独占HumanRenderer/HumanPlayerModel/BetterCombatNpcAnimator、新展示策略、展示测试与日志/知识库；继承WIP按文件哈希备份。仅armsOnly读取原同步攻击时序/左右手及原动画手掌轨迹做有界共同取景修正、衰减第三人称身体通道，保留原武器关键帧、弯臂和两手握持关系；不改AI/伤害/攻速/世界渲染。本轮源码实施，无构建指令。
+
+完成并整合：新增SpectatorMeleePresentation，独立armsOnly模型在原动画应用后、盾姿态之前取样实际攻击手及原弯臂手腕；按原visual序列/起始时间/时长/前摇或原版挥手进度驱动0～1强度，近战身体通道25%、远程/使用与普通世界仍100%。对双臂施加共同有界位移（左右±0.18、上0.60/下0.14、前后±0.12标准模型单位），保留原旋转/弯臂/武器关键帧与两手相对关系。1.25tick指数平滑，不靠渲染推进攻击；换装备/使用/盾防等收尾。新增阶段、坏输入、镜像、有界轨迹、帧率独立与握持关系Java测试，通过既有展示测试入口接入但本轮未编译执行。Python398项通过（13跳过）、Wiki1906引用无断链、差异空白检查通过；知识库公式/数值及限制同步。未Java/Gradle构建、实例同步、游戏验收或推送；待验收BC横斩/下劈/突刺/双持、原版近战、左右手、首领、盾防切换、不同FOV及自定义资源。
+
+
+## 3.13.16 构建同步
+- 主控；基线1e682b1826796582dfc8271ca2eb1c5b276ebacb；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：附身观察显式标记、手臂取景与肩部渐隐、远程闲置副手隐藏及第一人称近战动作适配。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.16。
+
+- 3.13.16完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致9b6257c8d538a3711ea26f5b8ae0e17f34c2daf9937979701b1ef3e86b785d0d；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.16-20261024-174335。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.16.
+
+
+## 3.13.17 构建同步
+- 主控；基线ece87845eb3ff7f6f4abd7b2d382a61f1334c523；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：玩家式惯性转向、感知与收割及隔墙通报优化、刷怪笼配装与空手攻速修复、出生图腾和附魔金苹果概率调整。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.17。
+
+- 3.13.17完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致9b18c58447d1917c9abf331319178efdb3b79683228e4d1f03504704a00472ac；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.17-20261026-002704。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.17.
+
+
+## 3.13.18 构建同步
+- 主控；基线b4ea08c9e8037e6868a8ff8a28c87acdc97611a7；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：自然转向动作级曲线、节奏与轻微落点差异，连续角加速及紧急接管，保留独立瞄准与近战许可。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.18。
+
+- 3.13.18完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致4ad9a2f24ac6f32b5d08242b74f4ed183483dc999595e3df8669dd21a094cccb；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.18-20261026-103219。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.18.
+
+
+## 观察工具持久化
+- 主控；基线a028773d79a9038b032104fe2249932f2f627f63；工作树worktrees/observer-persistence，分支feature/observer-persistence；继承主仓库WIP的逐文件哈希见维护目录备份/observer-persistence-baseline.json。独占NavigationDebugClient/Service/LegendScreen、NavigationObserverSelection、新持久化模块及原NavigationDebugTest、知识库与日志。客户端仅保存显示偏好；服务器按玩家/维度保存UUID、稳定槽位和焦点，不保存临时测试命令。未授权本轮编译或构建。
+
+- 完成：NavigationObserverPreferences统一本地JSON显示偏好，缺失/损坏安全回退、临时文件原子替换；NavigationObserverState仅编码被动UUID/槽位/焦点，PlayerPersisted按玩家/维度保存并在Clone深复制。NavigationDebugService区分detach与明确clear，未加载/超距保留标记、禁止强加载和恢复测试；在线KILLED离场后清理，区分可取消死亡与真实移除。NavigationObserverSelection恢复稳定槽位并支持跳过待恢复成员轮换。
+- 静态核查：纯源码Python 377项（5跳过），8个可能调用外部命令的模块未执行；差异空白检查通过。知识库172页/1940引用无断链；新增NavigationObserverPersistenceTest接入NavigationDebugTest，覆盖JSON新读/原子替换/坏输入、NBT跨维度/空槽/焦点/去重、主动清空和跳过待恢复对象，未执行Java编译或回归。
+- 本轮无Gradle构建、同步、启动游戏或推送；实例仍3.13.18。待游戏验收：F8修改后重启、同存档重连/重生、不同存档/服务器及维度隔离、实体卸载/128格外恢复、真实死亡与取消死亡、手动清空后重启、附身时列表恢复、重启不恢复固定点测试。
+
+
+## 各阶基础感知距离提高100%
+- 主控；基线a028773d79a9038b032104fe2249932f2f627f63；工作树worktrees/detection-base-double，分支balance/detection-base-double。继承WIP哈希备份/检测记录在备份/detection-base-double/source-hashes.json；范围仅默认资源、知识库、日志。流浪者/一阶/二阶40→80格，三阶48→96格；首领使用同阶基础后沿原有效专精/首领层计算，不改视角、射程、识别时间、预算或实例自定义配置。未授权本轮构建。
+- 完成：JSON语义差异精确为四个follow_range字段各乘2，均在现有8～128配置范围内；源码读值与属性/面板沿统一TierAttributes/EffectiveAttributes自动使用新基准。机制正文、基础表及默认数值附录同步。静态核对通过；未Java编译、构建、同步、启动游戏或推送。既有实例显式配置保持不变，待下次构建部署后使用更新的配置基值验收。
+
+
+## 创造模式人类监视器
+- 主控单人顺序；基线a028773d79a9038b032104fe2249932f2f627f63；工作树worktrees/human-monitor，分支feature/human-monitor。继承WIP哈希备份/ human-monitor/source-hashes.json。独占新增Monitor会话/网络/物品/客户端/屏幕、HumanGunner注册、HumanGunnerRegistries、HumanInventoryMenu、NavigationDebugClient/Service/Legend及三处附身摄像机/渲染/声音入口、资源和测试/知识库。
+- 目标：创造模式右键任意本模组人类，非旁观游戏模式的摄像机及手臂/声音复用、释放鼠标的小型UI、服务器血量、背包键编辑真实背包、无需头盔的检测标记与按身份接入现有行动模式。服务器会话明确核对令牌/UUID/实体ID/维度/创造状态/距离/活性并有限心跳；退出不改变归属和玩家原位置，不强加载。仅源码实施，本轮未获构建指令，不运行Gradle/Java编译。
+
+- 源码实现：HumanMonitorService统一服务器会话（8格打开/128格有效、60tick租期、20tick心跳、5tick生命快照，令牌/UUID/ID/维度核对），HumanMonitorClient管理非旁观摄像机、鼠标、子界面及迟到消息收尾；HumanCameraView为两种视角共用的呈现许可。侧栏生命、背包键、诊断开关/F8和按自然/雇佣身份的行动按钮已接入；不更改归属、玩家位置或游戏模式。
+- 接入范围补充：HumanInventorySession为统一背包生命周期负责人；编辑时记录原NoAI，finally无条件恢复，HumanGunner加载时收尾自动保存遗留。客户端/公共逻辑隔离，未添加新Mixin；监控诊断不改原探针名单，目标离场/失效或断线收尾。
+- 验证：6项监控静态合约通过；纯源码Python合计383项（5跳过，8个可能执行外部命令的模块未运行），173页/1951个Wiki引用及125公式无错误。新增HumanMonitorProtocolTest接入NavigationDebugTest，覆盖快照/操作编解码、非法动作/模式/尾随字段/非有限生命，尚未Java编译或执行。
+- 完成验收仍未证明：本轮没有“构建”指令，遵守AGENTS.md不运行Gradle/Java编译；未启动游戏或同步实例。需要授权后执行Java和协议回归，再由游戏验证普通/首领与枪/弓/弩/BC/盾动画、鼠标释放、背包进入/返回及AI恢复、无头盔诊断与原名单恢复、自然/雇佣行动、退出/死亡/距离/维度/断线收尾。活动目标保留，未以静态通过宣称完整功能已验收。
+
+
+## 3.13.19 构建同步
+- 主控；基线a028773d79a9038b032104fe2249932f2f627f63；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：创造模式人类监视器、共享摄像机与手臂呈现、自由鼠标侧栏/背包/诊断/行动模式，F8观察持久化及各阶基础感知翻倍。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.19。
+
+- 3.13.19完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致078cfa2b80374eb1ec017e2275818a47b2521fb5d31d7f32f758ddcc248d4b4d；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.19-20261026-151804。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.19.
+
+- 人类监视器后续验证：用户明确授权构建并同步；3.13.19完整build/check+lootScreeningTest通过，HumanMonitorProtocolTest/NavigationObserverPersistenceTest均执行通过，NavigationDebugTest共1163检查通过。422项Python（13跳过）、知识库173页/1951引用及125公式通过。JAR内核对7项监视器类/物品模型和80/80/80/96默认感知，构建/dist/47.4.21实例哈希一致078cfa2b80374eb1ec017e2275818a47b2521fb5d31d7f32f758ddcc248d4b4d。实例配置保持40/40/40/48，不擅自覆盖；未启动游戏或推送。剩余监视器游戏内取景/鼠标/背包及AI恢复/诊断与行动/失效退出验收，目标保持未完成验收。
+
+
+## 监控模式隐藏真实玩家第一人称手持物
+- 主控；基线76217ec8b8265eaf940d2f5c22a763da6b370473；工作树worktrees/monitor-player-hands、分支fix/monitor-player-hands；继承WIP归属哈希见备份/monitor-player-hands/source-hashes.json。独占HumanMonitorClient、CHANGELOG/本记录与监视器知识库正文。范围：相机确实附着于当前监控人类时，取消原版RenderHandEvent双手绘制；不改NPC独立RenderLevelStageEvent补绘、真实库存或游戏行为。本轮未请求构建。
+- 完成：在客户端统一监控生命周期入口以最高优先级取消RenderHandEvent，条件复用viewing的人类UUID/ID/世界绑定，并核对当前相机实体，覆盖真实玩家主/副手与空手；NPC独立补绘入口不变。只读javap核对Forge RenderHandEvent存在且可取消；现有6项监控静态合约及173页/1951引用Wiki检查通过。未Java编译、构建、同步、游戏验收或push；实例仍3.13.19，需下次构建后实测双手物品/空手和退出恢复。
+
+
+## 雇佣士兵归巢护符
+- 主控单人顺序；基线76217ec8b8265eaf940d2f5c22a763da6b370473；工作树worktrees/soldier-recall-charm、分支feature/soldier-recall-charm；继承主仓库WIP，归属哈希备份/soldier-recall-charm/source-hashes.json。独占新物品/锚点/致命救援事务、HumanGunner死亡入口、HumanGunnerRegistries注册、HumanLootManager保留、安全落点共用接口与背包编辑边界、测试/资源/知识库。
+- 用户确认：成功传送才消耗1个，恢复25%生命并清除负面效果，改为落点驻守；限已雇佣士兵背包。标记与生命保护先实施，无合成/交易/自然建筑战利品/出生池接入。不运行Gradle或Java编译，不启动游戏、同步实例或推送。复用已有召回的原生跨维度传送、安全落点及动作收尾，有限加载等待不永久加载区块。
+
+## 监视器导航订阅收尾与简洁HUD
+- 主控顺序接入，基线76217ec8b8265eaf940d2f5c22a763da6b370473，工作树worktrees/soldier-recall-charm；追加独占NavigationDebugService/Client、HumanMonitorService/Client及监控合约，不与归巢事务源码交叉。已核对主仓库归属哈希并备份后整合。
+- 修复监控结束的双端临时快照残留；观察实体离开世界时以活动名单为准释放编号并持久化，运行期卸载也释放，停服保留缓存；监控隐藏左上角HUD，世界诊断几何与F8保留。18项Python静态合约通过；未Java编译、构建、同步、游戏验收或推送。知识库同步两页。
+
+- 归巢护符源码收尾：统一致命救援事务、物品锚点NBT、原生跨维度传送与真实碰撞箱安全校验；成功后扣1个、25%生命和驻守，失败回放原死亡流程；保护自动清包与武器腾空兜底、关闭背包编辑、隔离并发普通召回、加载额度/超时/区块票据释放/停服恢复。6项新增静态合约通过，资源JSON解析通过。归属哈希核对后整合15个明确文件，原有修改保留，知识库新增机制页并链接物品与雇佣页。未Java编译、构建、部署或游戏验收，未推送。
+
+## 监视器声音接收范围
+- 主控；基线76217ec8b8265eaf940d2f5c22a763da6b370473；工作树worktrees/monitor-audio，分支fix/monitor-audio，继承已有WIP且已快照哈希。独占新声音受众入口、PlayerList声音广播接入、HumanMonitorService受众访问、Scguns/JEG声音适配与必要测试、知识库。客户端已沿HumanCameraView计算衰减；本次修复服务端仍按真实玩家位置筛除声音的链路。无构建授权，不编译、不部署、不启动游戏。
+
+- 完成源码整合：PlayerList.broadcast尾部仅补发声音/方块事件白名单，复用真实包与范围；HumanMonitorAudio统一校验服务器/维度/有效监控会话并排除原受众，实体绑定补发转坐标声音以覆盖未追踪声源；Scguns/JEG专用人类声音复用受众入口。现有客户端HumanCameraView/SpectatorAudioListener无需重建。只读javap及映射确认m_11241_完整签名、原严格球形范围与Framework sendToPlayer接口。41项Python检查（5跳过）通过，未Java编译/构建/部署/游戏验收/推送。知识库更新监视器与附身声音正文。
+
+## 头目外观微调与灰鸦本地化
+- 主控；基线76217ec8b8265eaf940d2f5c22a763da6b370473；工作树worktrees/boss-visual-size、分支fix/boss-visual-size。独占HumanRenderer/zh_cn，按主仓库当前文件快照接入，保留已有WIP；仅客户端全身模型相对普通人类由1.20改为1.15，旁观手臂路径不变；FactionBossHuman/HumanFactions及碰撞箱代码不改。灰鸦三阶头目及蛋共6项首领改为头目。静态核对资源、碰撞入口不变及差异范围，知识库表同步；未编译/构建/部署/推送。
+
+## 人类监视器底部HUD重排
+- 主控；基线76217ec8b8265eaf940d2f5c22a763da6b370473；工作树worktrees/monitor-bottom-bar、分支ui/monitor-bottom-bar。独占HumanMonitorScreen、新监控按钮（如需）、中英语言与知识库说明；共享CommandPanelChrome只复用不修改。沿现有会话请求与退出生命周期，仅改显示布局，底部居中、响应式操作行、自绘按钮、阵营色；不编译/构建/部署/启动游戏。已复制既有WIP并保存归属哈希。
+
+- 已整合：底栏最大620宽，GUI宽552起单行63高、否则双行88高，底边8；通过11种GUI宽度（320～1920）的控件边界/互不覆盖核对。自绘MonitorActionButton复用CommandPanelChrome.control，原生Button输入/读屏保留，模式/诊断选中以服务器状态为准；保留背包键/F8/Esc及会话协议。只读javap核对Button构造与renderWidget签名，9项监视器静态合约通过，中英JSON解析通过；知识库与README更新。未Java编译、构建、同步、游戏截图/验收或推送。
+
+
+## 3.13.20 构建同步
+- 主控；基线76217ec8b8265eaf940d2f5c22a763da6b370473；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：监视器底部HUD与自绘按钮、现场声音接收及观察收尾，归巢护符，头目视觉缩放与灰鸦名称统一。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.20。
+
+- 3.13.20首轮构建在归巢伤害恢复的registryAccess API调用处编译失败；失败日志与状态归档attempt-1-registry-api。改从human.level().registryAccess读取，保留版本准备提交，逐文件核对输入后重新执行验证和构建，不复用失败凭证。
+
+- 3.13.20完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致fd035fba089b475b90943b882fd031fe12fdb2f66bf2151e7a6f2519d69651a1；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.20-20261026-222233。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.20.
+
+## 阵营绑带与刷怪蛋视觉重制
+- 主控单人；基线8a41aa4f07598fc49517add97ab622b149b6ce94；工作树worktrees/faction-identity、分支art/faction-identity；继承WIP并登记归属哈希。范围：四阵营×四级绑带的贴图与物品/穿戴模型、四阵营×三阶×普通/头目刷怪蛋视觉，精细头目徽记；沿用现有阵营色与身份/关系接口，不修改AI、属性、获取或碰撞。独占FactionVisualLayer/Client、ClientRenderer颜色处理（如需）、新增外观资源与离线生成/审查工具、知识库。当前目标为完整美术重制，尚未完成验收；无本轮构建授权，不运行Gradle或启动游戏。
+
+- 已按用户两次美术反馈修订：短侧等级杠1/2/3/4，减去细缝线、抖色和重复徽章边框；物品栏转向短侧并按16像素离线投影核对。主仓库整合112个明确文件；40套cloth/trim纹理（含中性兜底）、26张蛋纹理、16个绑带模型、24个蛋模型、客户端分层接入和生成/审查工具。6项静态资源/几何合约通过；20张实际PNG短侧扫描行的连通条数严格等于等级。预览维护目录faction-identity-review。未Java编译/构建/游戏验收/推送；目标的完整完成仍待最终资源审查与运行验证，不以概念图当作游戏验证。知识库新增外观手册并移除旧暂不设计登记。
+
+- 继续按用户美术反馈重画徽记：赤獠短獠牙＋束带铆钉，靛磐盾徽，苍隼弯曲翼根与三长羽，灰鸦保留剑刃/护手/剑柄的双剑；每面32像素、整张穿戴图集128×32，既有UV四分面比例不变。双短侧统一阶级牌，避免左臂外侧只有接合处；当前为40张绑带纹理（20套cloth/trim），不是40套。6项资源合约通过；概念大图与离线原生贴图预览均留维护目录，未将概念图直接作为游戏小贴图。未编译/构建/游戏验收。
+
+- 最新用户美术决定：统一纯色硬边几何剪影。赤獠不再使用实体獠牙、束带或面甲，改为三道斜向野兽爪痕；苍隼为简洁三长羽侧翼；靛磐为盾形边框＋中脊；灰鸦为有护手/柄的交叉双剑。统一概念稿已留maintenance-tools/faction-identity-review/unified-flat-three-claws.png。用户另要求提高穿戴纹理清晰度、单独制作物品贴图；此两项与最新剪影的完整资源落地仍需继续，不能把概念稿算作最终游戏资源。
+
+- 最新资源落地：赤獠三爪中央大两侧小；靛磐较高盾框、粗横梁/中柱及方形留白；苍隼三长羽剪影；灰鸦交叉双匕首、紧凑柄/护手与简化刀槽。穿戴图集512×128并补偿宽扁面比例，独立物品材质256×64、GUI图标64×64，原物品ID不变。Forge原生separate_transforms区分GUI图标与手持模型，已直接核对本地47.4.16源码的注册ID、base/perspectives结构及生成物品模型的烘焙入口。雇佣标识改下沿白签以避免覆盖阶级杠，去掉不用的旧图集分支。7项静态合约通过，独立图标/手持/穿戴资源路径均有检查。无本轮构建授权，仍未Java编译、构建、同步或游戏验收；目标继续待最终审查。
+
+- 用户已明确授权本轮构建并同步47.4.21测试实例。新增FactionIdentityModelTest从既有FactionVisualProtocolTest接入，无新Gradle任务；将调用原版BlockModel和Forge SeparateTransformsModel读取72份模型，当前尚未执行，等待本轮完整回归。
+
+
+## 3.13.21 构建同步
+- 主控；基线8a41aa4f07598fc49517add97ab622b149b6ce94；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：四阵营身份绑带与刷怪蛋视觉重制：高分辨率穿戴、独立物品图标、分级条纹及统一头目标识。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.21。
+
+- 3.13.21首轮Java编译通过，新增原生模型测试因隔离工作目录下的源码相对路径失败；原日志/状态已归档attempt-1-source-relative-test。测试改从类路径的实际构建资源读取，先单项验证，再完整构建；不跳过原生读取检查。
+
+- 3.13.21完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致123faea6207c79e6498cbdca0b77ad7145a0e52e17099981bd531529689bd0eb；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.21-20261026-235927。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.21.
+
+- 美术目标交付完成：3.13.21完整build/check+lootScreeningTest通过，446项Python（13跳过）与本轮10项资源/像素合约通过；原版/Forge实际读取全部72份模型成功。JAR内72份JSON及130张PNG逐字节匹配主仓库；构建/dist/实例SHA-256一致123faea6207c79e6498cbdca0b77ad7145a0e52e17099981bd531529689bd0eb，实例配置未变。审计maintenance-tools/faction-identity-review/completion-audit.json；构建与部署记录maintenance-tools/releases/3.13.21。未启动游戏、未推送。游戏视觉验收仍由用户检查双臂/细臂/护甲与动画、雇佣白签、物品栏与手持视图、普通/头目蛋辨识，不以原生格式读取替代游戏渲染验收。
+
+
+## 监视器热键与接管、贴身绑带、原版风格刷怪蛋
+- 主控单人；基线8d31d6b48503f7ad10ba801af2a3957f3ecdc829；工作树worktrees/monitor-takeover，分支feature/monitor-takeover；继承WIP并按哈希快照备份。独占HumanMonitor系列及新接管控制模块、必要Human/感知/输入入口、FactionVisualLayer与尺寸策略、刷怪蛋资源生成/颜色、对应测试和知识库。目标：HUD热键/聊天菜单兼容、服务器独占移动与鼠标视角接管/全生命周期恢复、按胸甲与护腿贴身尺寸、原版蛋底图。未授权本轮构建，不运行Gradle/不部署。
+
+
+## 3.13.22 构建同步
+- 主控；基线8d31d6b48503f7ad10ba801af2a3957f3ecdc829；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：监视器热键HUD与玩家接管、按护甲贴合绑带及原版风格阵营刷怪蛋。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.22。
+
+- 3.13.22完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致1f508c0d8f2d37d650b2d7333aea3078d3a6f355f1f4bb1bb6531b1e8c441fd4；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.22-20261027-094459。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.22.
+
+- 3.13.22已完成源码整合与构建同步：热键HUD/Backspace退出/原生聊天菜单、服务器独占移动与鼠标视角及跳跃接管、无持久NoAI的恢复生命周期、移动权限入口的原版物理接管、胸甲/护腿/靴子分层贴合、24种原版基底阵营蛋。首次构建通过后因补充移动交接与护甲厚度审查而拒绝部署，凭证留attempt-1-before-final-travel-handoff；最终完整build/check+lootScreeningTest通过，452项Python（13跳过）、72份原生模型和协议/尺寸检查通过。SHA-256 1f508c0d8f2d37d650b2d7333aea3078d3a6f355f1f4bb1bb6531b1e8c441fd4，构建/dist/实例一致；配置不变，未启动游戏、未游戏验收或推送。审计maintenance-tools/monitor-takeover-review/completion-audit.json，详细发布记录maintenance-tools/releases/3.13.22。
+
+
+## 接管流畅度、蓝队举盾推进与接管感知记忆
+- 主控单人；基线4646da0206a82a793e7cbe0ea3e1a0ec28772400；工作树worktrees/monitor-shield-coordination，分支fix/monitor-shield-coordination；继承WIP并保存哈希快照。范围：接管相机/方向输入同步、盾牌推进移动权限与执行、接管下感知识别和记忆（不授予自主攻击/移动/转向）、对应回归与知识库。共享Human、HumanPerception和ShieldDefenseController由主控顺序接入。本轮无构建要求，不运行Gradle。
+
+- 完成源码修正：蓝队近战条件包装器改查独立canMeleeMove，保留出刀canMeleeAttack；本地接管相机使用Forge摄像机角事件，取消每帧覆写跟踪实体；第一人称手臂绘制内局部姿态try/finally恢复；单槽输入在模拟时取最新值；接管保留现有视觉识别/记忆/配额，关闭自主线索转头与动作。用户新增10:03:34掉线：日志确认Invalid monitor input，源码复现合法累计yaw超±180被拒且初始yaw未归一；输入记录统一有限角度归一，新增多圈/非有限角度协议用例。458项Python（13跳过）、git diff --check及175页/1960Wiki链接通过；Java协议/上层盾推进ASM回归已补齐但未编译运行。知识库3页同步并备份。尚未构建/同步/推送/游戏验收，待明确构建授权。
+
+
+## 统一功能包迁移
+- 主控单人；基线4646da0206a82a793e7cbe0ea3e1a0ec28772400；独立工作树worktrees/feature-packages，分支refactor/feature-packages；已复制并快照全部既有WIP，保留接管/掉线/蓝盾源码修正。631个生产类及115个测试类统一dev.felix.hostilehumans，按功能归属；Mixin/反射/构建和源文件测试入口同步；旧实体/物品/资源/NBT/注册ID不变。启动类更名HostileHumansUnified，原HumanGunner事件汇聚入口按职能更名HumanRuntime；共享Human/注册/构建由主控顺序接入。按真实跨模块调用记录类型和成员开放，不一键全public。用户已授权构建并同步约定47.4.21测试实例，配置不改、不启动游戏、不推送。历史协作、发行与第三方署名保留原文。
+
+
+## 3.13.23 构建同步
+- 主控；基线43e4270daa065f71b5f86dc45de17bf9d5b59835；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：统一Java功能包与启动入口；迁移631个生产类、115个测试类及注入/反射/构建引用；保留并验证接管流畅度、合法累计朝向掉线、蓝队持盾推进和接管感知记忆修正；同步源码维护地图与知识库。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.23。
+
+- 3.13.23完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致4dbf24ecd86c5cafdabe48d848288180bc94070bf82af4e43962add628d044de；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.23-20261027-112221。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.23.
+
+- 功能包迁移收尾：631个生产类、115个原有Java测试完成归位，另有统一测试查找工具；43个功能包的清单和生成入口已建立。生产词法审计中629类除地址/名称/访问修饰外保持一致，另2类只改经等价读取接口接入；资源与注册ID不变。463项Python（13跳过）、完整Java build/check与lootScreeningTest（108任务）及最终产物审计通过；1094个类、18507处自有成员引用、57项Mixin登记、744份资源核对通过。3.13.23构建/dist/实例同哈希；旧空目录清理，继承WIP与整合前内容均有备份，仅构建脚本迁移和版本准备作本地提交，功能源码WIP未擅自提交。知识库7页同步。详见maintenance-tools/package-migration/completion-audit.json；尚需游戏启动、接管/跳跃/转向、蓝队持盾推进及接管感知记忆验收。
+
+
+## 监控指示隐藏悬浮人物标签
+- 主控单人；基线22d895921e2d799d3d404b861580687fefbc534f；独立工作树worktrees/monitor-indicator-label，分支fix/monitor-indicator-label；完整镜像当前WIP后编辑，仅整合NavigationDebugClient.label的监控会话绘制门禁，不改实体名称或观察数据。工作树与主仓库文件基线逐字节核对，原文件及知识库页备份于备份/monitor-indicator-label；更新监控机制正文。用户本轮未要求构建，未执行Gradle、同步、推送或游戏验收。
+- 静态回归：26项监控契约与9项导航观察契约通过；修正既有测试将world方法后整段文件误作方法体的范围识别，分别检查几何持续绘制与姓名牌仅在监控时抑制。git diff --check通过。另整合test_human_monitor_contract.py，原文件同目录备份；未执行Java编译或游戏验收。
+
+
+## 绑带优先级、监控命令提示与玩家巡逻路线
+- 主控单人；基线22d895921e2d799d3d404b861580687fefbc534f；worktrees/patrol-route-authoring，分支feature/patrol-route-authoring；完整镜像并记录既有WIP哈希。范围：IdentityBands/Curios适配；监控HUD本地化；soldier巡逻定义、服务器编辑会话、指挥棒、创造控制物品、命令面板与路点等待协议；原NaturalRoute及OrderDistances/SoldierOrder统一接入，由主控顺序负责；物品注册、资源、回归及知识库同步。借用现有路线进度/导航预算/中断所有权，不另建AI调度器；编辑稿仅服务器内存，最终路线与战斗锚点分开保存。无明确构建授权，当前不运行Gradle或编译验证。
+
+- 源码实施完成待编译验证：新增8个生产类及3个Java回归入口；身份绑带按功能饰品槽优先，监控HUD读取实际键名；绘制、撤销、取消、双手缓存、权限、服务器修订检查、简单闭环/复杂往返、逐点停留与动态中心已接入原导航预算和安全链路。固定世界路线与动态驻守中心分开，走廊仅授权本路线，不扩大战斗和拾取范围。
+- 恢复后静态核查：469项Python（13跳过）通过；639个生产类及119个测试类Java语法解析无错误；7份默认值附录核对通过；178页、1979处Wiki链接与125条公式通过。Java编译/三项新增Java回归及游戏验收尚未执行。主仓库整合采用baseline.json逐文件比较，保留继承WIP；维护记录位于maintenance-tools/patrol-route-authoring。未构建、同步或推送；未宣称游戏行为验证通过。
+
+
+## 3.13.24 构建同步
+- 主控；基线22d895921e2d799d3d404b861580687fefbc534f；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：Curios身份绑带优先、监控行动提示、指定巡逻路线与逐点停留及动态岗位中心。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.24。
+
+- 3.13.24首次Java编译发现Request记录的human访问器遮蔽外层查询方法；统一更名resolveHuman，失败日志保留于attempt-1，未部署失败产物。按修正源码刷新验证与构建输入后重试。
+
+- 第二次构建已通过生产与测试编译，绑带及路线策略回归通过；独立协议回归暴露静态通道提前初始化Forge事件总线。沿现有HumanMonitorNetwork的Connection持有器实现延迟初始化，不删除/绕过测试，保留attempt-2失败记录后重新完整验证。
+
+- 3.13.24完成：完整build/check+lootScreeningTest共111任务通过，新增绑带/路线/协议3项Java入口全部通过；469项Python（13跳过）及附录/Wiki/公式检查通过。构建/dist/约定实例SHA-256一致b5873d45326c3c5054fb85eba687c8bfa0f93a974002c592fbc7ecdb15d541d0，旧JAR备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.24-20261028-081445。配置哈希检查通过，未启动游戏/游戏验收/推送。发布收尾因build.gradle包含本任务测试入口而阻止快进；核对其内容与发行提交完全一致后，仅暂存该文件再快进成功，原有WIP未丢弃。
+
+
+## 创造控制面板与巡逻草稿高亮
+- 主控单人；基线bff7fb57c3fc7ac14b6758befb266e302721b585；独立工作树worktrees/patrol-controller-ui，分支feature/patrol-controller-ui；完整镜像当前WIP并保存baseline.json。范围：创造控制器面板、PatrolToolNetwork服务器权限/协议、NaturalState与PatrolRoutes统一写入、客户端草稿高亮、战斗经验文案及知识库。共享文件由主控顺序接入，不新增AI调度器。本轮用户未要求构建，不运行Gradle。
+
+- 源码实施：控制器右键打开服务器权威面板；通过独立创造会话校验无主/临时雇主/模式/范围/UUID/租约，提供自由/驻守/巡逻、追击和范围、路点顺序/删除/等待修改；自由状态路线只读预览。路点编辑复用PatrolRoutes事务并保留点位等待配对。草稿仅编辑/清理时单播，客户端按同维度和手持过滤绘制128格内最多257框；导航诊断与草稿抽取共享DebugWorldLines单例缓冲，保留原渲染状态。成长等级不变，经验相关UI文案统一战斗经验。知识库3页备份并融入正文。
+- 验证：473项Python（13跳过）通过，642个生产类和119个Java测试语法解析通过；7份默认附录、178页1981处Wiki链接核对通过。新增/扩展协议Java回归用例已准备，但本轮没有构建授权，未运行Java编译、Gradle或游戏验收，未构建/同步/推送。
+
+
+## 3.13.25 构建同步
+- 主控；基线bff7fb57c3fc7ac14b6758befb266e302721b585；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：创造控制器状态与巡逻面板、战斗经验文案、巡逻指挥棒路点线框及共享诊断渲染资源。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.25。
+
+- 3.13.25完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致2483439ab11f75c6f891f91f67a8789fc8cee45e45b129a6375c355d2a8b6134；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.25-20261028-155341。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.25.
+
+
+## 监控原生枪械表现与流畅接管
+- 主控；基线4d4dbeab0436021618b15fdc62483146544dc3ba；worktrees/monitor-native-control，feature/monitor-native-control；完整镜像既有WIP并存哈希，两个只读研究Agent分别核查TaCZ第一人称原生换弹和接管输入/相机/同步。研究登记maintenance-tools/monitor-native-control/assignment.json。共享入口HumanMonitorClient/Network/Control、HumanSpectatorView与Mixin由主控负责；实施分工和接口待研究后登记，编辑Agent须独立工作树。用户已授权最终构建并同步既定47.4.21实例，配置不改，不启动游戏/推送。
+
+- 实施分工：Sol medium的tacz_first_person_research在worktrees/monitor-native-tacz交付2a456ec08e166a053441eb2a75f9ff9489451392、e584876eb1c5df0398f4b6ed325f1e47483842ce；takeover_latency_research在worktrees/monitor-native-motion交付dbb22ec72ce2361eb8a0988d94861bf69b9cce99、1213e8fe866997646e7b024e63fa823f815afddb、a4496399149d9abbf2f612917088033986219218。主控按登记基线逐文件整合并审查，不把子提交直接合入main或夹带继承WIP；交付及整合哈希集中maintenance-tools/monitor-native-control。
+- 主控接入：统一原生/旧臂绘制选择、独立手部投影与finally恢复、NPC枪口光和皮肤渐隐、物品副本缓存、未知前台动作保留；模块图、薄客户端Mixin与Gradle回归入口统一维护。修正编译发现的可选库父接口耦合（只使用公开骨骼坐标）、final预测类Mixin双重转换；不新增可选依赖要求。
+- 专项验证：477项Python通过（13跳过），Java编译与六项新入口通过。逐发M870/M1014原生脚本和阶段倒计时、Forge构造事件隔离、暂停历史和连续收包轨迹已反向审查；未执行游戏/实际GPU渲染或多人延迟验收。知识库5页机制/索引更新，完成设计归档，原文备份备份/monitor-native-control-knowledge；预算参数与回退边界写入正文。
+
+
+## 3.13.26 构建同步
+- 主控；基线4d4dbeab0436021618b15fdc62483146544dc3ba；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：TaCZ独立原生第一人称换弹与服务器阶段对齐、接管有界预测及帧内轨迹校正。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.26。
+
+- 3.13.26完整构建未通过，未部署：OptionalRuntimeTest尚未把三个有意置于可选依赖门禁内的TaCZ实现登记为重依赖类。精确登记TaczNativePresentation/TaczPresentationResources/NativeReloadAudio（包括其内部类），没有跳过独立纯规则和公开门面；后者仍在无TaCZ的JVM逐类链接。失败日志和凭证保留原目录；只整合已审定的版本描述符提交，以3.13.27继续。
+- 同时最终物理审查补齐预测体setJumping输入：原版梯子travel会直接读取该标志，不能只有地面跳跃冲量。新增编译和重混淆产物的实际方法调用断言。反向核对空中速度、跳跃冷却、当步碰撞、流体眼位和药水无其它已知遗漏。
+- 发布辅助流程修复：合并版本前逐字核对目标build.gradle只比当前多版本变化，仅暂存该描述符再快进；已用真实临时Git仓库验证新增测试入口、继承WIP不被提交及差异拒绝，失败记录保留。没有更改源码清理规则或跳过全回归。
+
+
+## 3.13.27 构建同步
+- 主控；基线61f8d55fbcb1b8196290c7b29cb43498869e320c；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：TaCZ原生第一人称换弹与实际阶段对齐、接管有界预测及帧内校正、可选依赖隔离及攀爬输入收尾。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.27。
+
+- 3.13.27完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致f8520d4eeee2dffb25e44e1876878fa221d6c2848217810e93812b9eeca06e07；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.27-20261028-171739。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.27.
+
+- 主目标收尾：两模块已随3.13.27正式交付；118个Gradle任务（114执行、4复用）、477项Python（13跳过）与无可选模组1092核心类链接通过；新增攀爬jump标志在开发类和重混淆产物均验证。原生换弹和本地预测的范围/回退均写入当前机制页。未执行实际游戏渲染、网络手感或GPU验收，不把自动测试视为游戏确认。
+
+
+## TaCZ原生第一人称运行时接口兼容
+- 主控单人；基线5996eb360710f4761a28784abc101a296834cad6；worktrees/tacz-native-runtime-abi，fix/tacz-native-runtime-abi。完整继承当前源码WIP，基线逐文件哈希在maintenance-tools/tacz-native-runtime-abi/baseline.json；不提交混合修改。范围为原生渲染适配、实际安装版接口契约、知识库与本次构建同步。沿用用户原两项目标的构建同步授权，不改实例依赖、配置或启动游戏。
+- 日志证据：3.13.27原生渲染在GunDisplay.enablesTransparency()Z发生NoSuchMethodError后回退。编译API为1.1.8-hotfix，测试实例为1.1.7-hotfix2，必须集中处理实际返回描述符差异，并核对整个新增TaCZ接口链。
+
+- 修复：TaczPresentationResources集中缓存可选公开透明材质入口；1.1.7缺该方法时沿原cutout材质继续原生动画，1.1.8透明设置保留，不按版本或枪名分支。不修改换弹权威、弹药或接管模块。
+- 验证：以旧3.13.27编译类作负对照，ABI检查精确拦截缺失方法；修复后258处TaCZ直接/字段/lambda接口在编译1.1.8与实际1.1.7分别通过。两版真实GunDisplay的可选材质行为均通过，Java编译通过；尚未游戏内渲染验收。统一发布辅助从目标实例modId声明发现实际JAR，并绑定独立运行时契约；Python资源检查也区分编译样例与实际实例。
+- 知识库两页机制正文备份后同步，备份/tacz-native-runtime-abi-knowledge。后续正式构建与同步仍按原授权，只同步约定实例，不改配置/依赖，不启动游戏、不推送。
+
+
+## 3.13.28 构建同步
+- 主控；基线5996eb360710f4761a28784abc101a296834cad6；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：修复TaCZ旧版缺少透明接口导致原生换弹回退，增加编译与实际安装依赖双版本契约及真实类行为验证。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.28。
+
+- 3.13.28完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致d451112e4767132fe1f3a78a4db0b160a22056959d26457d16050b660a261ec6；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.28-20261028-182504。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.28.
+
+## 旁观移动动画与视角晃动（2026-10-28，已构建同步）
+
+- 基线 main 2aa1ec2c284d3c16769de05d5477f40ce15caf0f；/root 独占编辑 worktrees/spectator-motion，分支 feature/spectator-motion。继承未提交源码，逐文件哈希见 maintenance-tools/spectator-motion/baseline.json，不提交混合修改。
+- 范围：client.render 的统一移动呈现、TaCZ 独立动画采样、薄客户端渲染注入及测试与知识库。服务端行为和射击权限不改。先完成源码与静态核查。
+
+
+## 3.13.29 构建同步
+- 主控；基线2aa1ec2c284d3c16769de05d5477f40ce15caf0f；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：完善旁观与监视移动镜头晃动、TaCZ原生行走跑步动画及连续采样。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.29。
+
+- 同任务新增音频范围，由/root顺序独占：compat.tacz服务器工作时间轴/客户端声音、monitor共享受众、TaczMonitorSoundBroadcastMixin与可选能力检查。只读Agent tacz_first_person_research核对真实1.1.7与编译API链路；它未编辑或构建。先前3.13.29首轮构建因新增步态交接断言失败，未部署；修正run_end取消和四元数权重后连同音频复验，保留失败凭证。
+
+- 3.13.29完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致263a486f95c433a78fb70707987137767ae970e69b97fea93aea82295e789a64；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.29-20261028-233417。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.29.
+
+- 同任务收尾：原生默认步态/跑步与0.2秒加权过渡、四元数/Euler旋转、精确时钟、共享原版式镜头晃动和0.07秒ADS展示响应已整合。后台TaCZ会话音轨覆盖收枪/盾防/成功起点通知/自然完成尾音；Complete终态不能被前台动画重播；legacy音轨共用Work时钟。监视受众补原生TaCZ声音且严格去重，周边未追踪枪手的位置回退明确未实施。
+- 验证：483项Python（13环境跳过）、新增步态/权重Java回归、真实MC投影及bob注入契约、278处TaCZ公共引用分别对实际1.1.7和编译1.1.8验证、无可选依赖1099核心类链接、完整build/check与lootScreeningTest通过（93.88秒）。失败轮次原始源码清单与日志保存在同版本attempt-*，均未部署。
+- 最终3.13.29正式JAR、dist、Forge47.4.21实例三处SHA一致，配置未修改、无游戏启动和push；知识库正文、数值和已知边界同步。实际GPU帧率、取景、举盾/换刀后台音轨与自然完成后重新开火实听仍待用户游戏内验收。
+
+## 瞄准移动摆幅收敛（2026-10-28）
+
+- 基线 main 242aa5d67754c4d045e0706882a7e78997dca27d；/root独占 worktrees/ads-movement-sway，分支fix/ads-movement-sway，继承现有WIP并按maintenance-tools/ads-movement-sway/baseline.json逐文件保护。
+- 范围：NativeMovementPlan统一ADS移动幅度、原生枪械呈现和手部独立bob、回归与知识库。瞄准时走路/残留跑步摆动和枪械步行bob平滑降至20%；普通行走、开火后坐力和世界镜头晃动各自原规则保留。不运行编译或同步。
+
+- 源码完成：NativeMovementPlan.movementScale统一平滑ADS幅度；步态输出和原生手部bob复用，保持内部过渡权重归一与相位。回归补充端点、单调性和实际取样幅度/相位断言，未编译执行；知识库已备份并同步。本轮不运行Gradle，未构建/同步/推送，游戏观感待验收。
+
+- 后续获明确构建同步授权。实际实例TaCZ1.1.7的FirstPersonRenderGunEvent.cancelItemInHandViewBobbing确认玩家持枪取消原版手部bob；人类原生通道此前额外叠加，现移除并撤回无用途的手部bob缩放重载。普通枪包步态100%、ADS步态20%，世界镜头bob独立。真实依赖回归新增两版上游取消契约和人类不重复叠加的字节码断言。
+
+
+## 3.13.30 构建同步
+- 主控；基线242aa5d67754c4d045e0706882a7e78997dca27d；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：修正TaCZ观察持枪移动的重复手部晃动，并降低瞄准步态幅度至20%。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.30。
+
+- 3.13.30完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致764974c2e7c59c8098ed60b4816063d64291f0424a4d9bacb05af3190d673c22；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.30-20261028-235110。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.30.
+
+- 3.13.30完成：完整build/check+lootScreeningTest通过（95.6秒），包含上一轮ADS幅度数学/取样回归、两版实际TaCZ玩家取消手部bob契约及人类不重复叠加检查。Python483项（13环境跳过）、默认附录/Wiki/公式检查通过，构建/dist/既定实例三处哈希一致；知识库更新，配置未改，无游戏启动和push。仍需用户实测普通持枪/跑步/瞄准移动的摆幅和资源包差异。
+
+## TaCZ起跳与落地第一人称惯性（2026-10-29，实施中）
+
+- 基线main 067962b7ddc4b690a6e0eebea594aae6863db8fa；/root顺序独占worktrees/tacz-jump-presentation，分支fix/tacz-jump-presentation。继承WIP且按maintenance-tools/tacz-jump-presentation/baseline.json保护。
+- 范围：独立原生跳跃呈现、接管预测只读落地状态、步态腾空过渡、回归及知识库。实际TaCZ1.1.7 applyJumpingSway与默认Lua为对照；不调用真实LocalPlayer/共享静态跳跃状态/额外线程，不改跳跃物理、射击或第三人称AI。未获本轮构建指令，先完成源码和静态核查。
+
+- 源码及静态核查完成：独立跳跃弹簧、原生起落速度参照/输入衰减、根节点整枪与双手缓冲、ADS20%、原生空中淡化和起跑顺序；接管只读预测落地。补齐离地标志先到但位移为零的0.1秒一次性补帧、落地点先停但接触标志迟到的下落记录。
+- 25项定向Python资源/模块/监控输入与生命周期检查通过，知识库已备份并同步。新增Java数学/动作回归已准备，未执行Java编译或Gradle；未构建、部署、启动游戏或push。需要下轮构建及游戏验收普通/首领原地跳、跑跳、ADS跳、落台、台阶、暂停、晚进入、换枪和预测失效。
+
+## 接管战斗输入与武器操作（2026-10-29，目标进行中）
+
+- 明确目标：手动近战、TaCZ腰射/ADS/换弹、弓弩，接管键避开R，连同已整合跳跃修复完成构建同步。基线main067962b7ddc4b690a6e0eebea594aae6863db8fa，/root独占worktrees/monitor-combat-control，分支feature/monitor-combat-control；继承现有WIP，基线哈希maintenance-tools/monitor-combat-control/baseline.json。
+- 分工：/root编辑并整合所有模块/共享Human.java与接口；tacz_first_person_research只读核对真实1.1.7和编译1.1.8输入/操作能力，未编辑构建。
+- 范围：monitor控制协议/生命周期/客户端按键、独立monitor战斗执行；现有攻击/装填/箭矢事务提供显式手动意图入口，可选TaCZ原生输入门禁；不伪造玩家或AI感知目标、不直接发伤害、不复制弹药、无客户端权威。配置、知识库与回归同任务同步，最后统一构建同步既定实例。
+
+- 实施与审查完成：新增monitor.combat模块和与UI无依赖的HumanCombatAuthority；服务端按真实视角选近战实体，复用Better Combat延迟出伤；TaCZ使用两版共有原生API与已付费换弹，弓弩共享原扣箭/发布/续发，重弩保留独立bolt工厂。真实玩家输入隔离，F6替换旧R，自定义键保留。中性输入帧防止换武器/失焦恢复误射。只读审查发现并修正重弩及自定义键混用问题；补齐原生目标事件和普通近战最终命中的权限接入。
+- 已执行：Java主/测试编译；定向7项Gradle回归全部通过（含跳跃轨迹、协议、可选依赖、314条两版TaCZ真实引用和输入注入目标）；Python488项通过、13环境跳过。首轮完整check发现协议手工测试载荷未追加按钮及可选适配器分类漏项，已修正并定向复验。知识库正文三页已备份同步。最终完整发行构建待统一入口执行；未启动游戏或push。
+
+
+## 3.13.31 构建同步
+- 主控；基线067962b7ddc4b690a6e0eebea594aae6863db8fa；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：接管近战、TaCZ腰射瞄准换弹、弓弩及F6输入隔离；统一战斗权限与跳跃动画修复。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.31。
+
+- 发行前最终受击链路审查发现高压防御的旧shouldSuppressRecovery可在接管时阻止手动近战；现于pressureDefenseAvailable统一排除外部控制，不在攻击器内逐处跳过。首轮完整build/check+lootScreeningTest已通过（124任务），冻结源码检查因这项追加修正拒绝部署；保留第一轮全部日志，补充契约后重新构建同一未部署版本。
+
+- 3.13.31完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致916a2d261ec1e1f822fce6e19ad99a4df9d9e4b50332515a05bc0f84b7a0726a；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.31-20261029-005320。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.31.
+
+## 监控接管完整体验（2026-10-29，目标进行中）
+
+- 主控/root；基线7343c617bedcd2a8b8762dfe17fdf30f87e64ca5；主工作树worktrees/monitor-player-experience，分支feature/monitor-player-experience。全部继承WIP经maintenance-tools/monitor-player-experience/baseline.json登记并保护。
+- 范围：附件瞄准镜、接管背包暂挂/恢复、生存本人雇佣权限与人类内部整理、移动表现、攻击菜单与切武器、待转换生命HUD、主动食物药水/副手切换与手动固定；统一入口，更新知识库，最后构建同步既定实例。
+- /root独占共享Human.java、控制/网络/会话/背包/交换/恢复接入及HUD，最终整合与版本发布。scope_optics：独立worktrees/monitor-scope-optics，只编辑client/render/tacz及自有光学薄桥/测试，不改共用Mixin配置与HumanMonitorClient；motion_smoothing：独立worktrees/monitor-motion-smoothing，只编辑MonitorMovementPrediction、MonitorPredictionBody、MonitorPresentationTrack及对应测试，服务端需求向root反馈；recovery_review仅只读追踪。
+- 接口：渲染仅消费服务器ADS/实物附件与统一摄像机位置，无战斗权威/真实玩家代理；移动保留服务器裁决与有限预测；主控统一动作和背包编辑生命周期。生存仅自己雇佣士兵，监控背包禁止跨玩家转移，创造保持全权限。
+
+- 用户补充9/10已纳入目标范围：远程区块与实体追踪、对讲机入口、物品先绑定后观看。远程模块remote_view子任务独立worktrees/monitor-remote-view，交付1027e7153b65a6d28af2e6e59905ea35a7181e48；范围monitor.remote与3个新薄Mixin/字节码测试。
+- 已审核整合：scope_optics ab7d6547556d23ff3cad8ae47b7ca216ce00301e、4599a5728777eeba8aa8c59e1c2bc847b0b8588c、ec850bbdc505734dc5429c4ba3169fcd06344f85；motion_smoothing 326242f78d9c78219ea6d97afd4204deff305ace；recovery aaca8d6bad5f841d23d7e03d552e6bb8bed6aaab。只复制基线哈希匹配的归属文件，不覆盖父共享修改。主控统一权限/协议/生命周期/菜单/副手/装备事务与文档。
+- 阶段验证：统一主/测试Java编译与11项定向任务通过，含175条双TaCZ光学引用、真实Shader缓存、Recovery手动执行/租约、菜单协议与运动预测；Python506项通过13环境跳过。之后补充按钮/菜单畸形载荷与正常动作取消保留再生脉冲的边界，最终完整发行回归待执行。远程源码/原生登出与bootstrap顺序经只读复审，未发现确定权限/票据漏洞；实际游戏仍待用户测试，不启动游戏。
+
+
+## 3.13.32 构建同步
+- 主控；基线7343c617bedcd2a8b8762dfe17fdf30f87e64ca5；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：监控完整体验：附件瞄准镜、背包暂挂与生存内部整理、武器副手恢复菜单、食物生命条、平滑接管及远程区块跟踪/对讲机绑定入口。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.32。
+
+- 3.13.32完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致1502247503f8237d988594b52bab41f39a4150f743d615166e9d1ffe589fb546；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.32-20261029-100244。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.32.
+
+- 最终按键核查读取真实实例options：H已有key.tacz.inspect.desc与key.scguns.swap_ammo绑定，F7未占用。因此补给默认键改为F7，避免对讲机进入监控时真实玩家手持枪械仍触发检视/弹种切换；知识库同步，用户自定义按键和实例配置不直接修改。单独构建3.13.33作为最终交付，保留已部署3.13.32历史。
+
+
+## 3.13.33 构建同步
+- 主控；基线56294b59f4dea3c26d3333670c881c99ef84ea49；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：补给默认F7避开实际TaCZ检视与焦燃弹种H键冲突，作为监控完整体验最终交付。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.33。
+
+- 3.13.33完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致7c15b7519fc0b655717adeb9ca9b809f375531a1cf67c1f1f220258a1cac2083；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.33-20261029-100832。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.33.
+
+- 用户明确撤回F7建议，要求易按的默认键并自行改绑定；恢复H默认，保留所有已保存的自定义设置。追加动态热更新全部HUD按键显示，数字格读取各自实际keyHotbarSlots绑定，详情读取同一导航详情KeyMapping，其余键原已动态读取；不新增客户端配置写入。3.13.34作为最终交付。
+
+
+## 3.13.34 构建同步
+- 主控；基线59a826b93dda36fa5c3de046c643249ed8a6516d；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：保留H默认补给键；武器格与全部监控HUD提示动态热更新实际绑定键名。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.34。
+
+- 3.13.34完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致2fd7bed58622226f61a8a273462433b692f522f8102262df7de84a1feb4beece；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.34-20261029-101227。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.34.
+
+
+## 手动副手连续进食
+- 基线ec66d9f2c57030cd3abb8c756e131a6d59e12538；主控；worktrees/manual-food-repeat；fix/manual-food-repeat。已镜像主仓库现有WIP并逐文件记录SHA，保留原修改。范围：RecoverySupplies手动补给生命周期、对应回归及机制文档；公共文件主控顺序接入。空副手从真实背包补食物，成功食物回执允许长按继续；失败、取消与药水保持松键重试边界。不改变自动恢复。未获本轮构建指令，不运行Gradle或同步。
+
+- 实施结果：空副手补食物与成功后长按连续进食已接入RecoverySupplies；仅允许收纳本次食物实际留下的容器，不覆盖其他手持物。失败/取消/药水保留松键边界，取消与退出不重置既有治疗时钟。Python507项通过、13项环境跳过；工作树初次全量检查暴露镜像残留的旧包文件，已移至任务备份后重跑通过。未编译、构建、部署、推送或游戏验收。正式知识库当前操作说明已同步。
+
+
+## 3.13.35 构建同步
+- 主控；基线ec66d9f2c57030cd3abb8c756e131a6d59e12538；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：修复接管H补给空副手不补食物，支持长按连续进食，保留手动布局与药水按次使用。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.35。
+
+- 3.13.35完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致ef3f2408c5b50f6c0386923ca37a12f6266534da897c3ff92a72946a7bcb1910；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.35-20261029-110642。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.35.
+
+
+## 开镜平滑、倍率灵敏度与三枪接管
+- 基线18f930ffd1d04f84c81b801d17884bf9e437bb97；主控：worktrees/monitor-optics-input，fix/monitor-optics-input，负责共同输入/factory、TaCZ光学显示、Mixin能力门禁、知识库及整合。开发extra_gun_takeover（GPT-6.1 Sol medium）：worktrees/monitor-extra-guns，feature/monitor-extra-guns，独占compat/scguns、compat/jeg适配器与原发射内核及专属回归。两工作树已镜像当前全部WIP，哈希清单maintenance-tools/monitor-optics-extra-guns/baseline.json。
+- 接口：ScgunsMonitorWeapons/JegMonitorWeapons(Human,MonitorCombatSession)实现MonitorGunActions；各MonitorInput提供attackDown/aimDown/reloadDown/register，主控顺序接入公共文件。空地开火只在GunFireAuthorization的当前手动意图内生效，禁止假玩家/假目标与独立伤害链。
+- 本轮用户未下构建指令，不运行Gradle、编译、部署或启动游戏；静态验证后保留待构建。
+
+- 整合extra_gun_takeover交付7bde7ef145a948cf6b487979cb510f4073ceb953的11个新增文件，并逐项审核/整合其两个继承未跟踪Integration文件；未整文件覆盖冲突。主控追加统一factory/输入路由、fireIntent权限查询、SC/JEG受控null-target原生发射桥及实际调用点门禁，注册6个真实玩家输入隔离Mixin。
+- TaCZ显示改为NativeAimTimeline共享连续采样（aim tau45ms、倍率tau70ms），瞄准镜FOV/模型与接管鼠标统一；后者使用TaCZ原生zoomSensitivityRatio和用户ZoomConfig，不更改实际射速或精度。未提高发包频率。
+- Python516项通过、3项环境跳过（显式提供实际SC/JEG API路径，额外客户端Hook与原生目标调用点检查均执行）；正式知识库179页/2006个Wiki引用无坏链或锚点问题。NativeAimTimelineTest已登记至check，尚未执行Java编译/测试。主控完成静态生命周期、可选依赖及AI/手动边界审查；当前未构建、同步、推送或游戏验收。待实际测试高倍镜连贯性、灵敏度、空地射击/半自动/持续预热/松键发射、缺弹手动换弹、背包及退出取消。
+
+
+## 3.13.36 构建同步
+- 主控；基线18f930ffd1d04f84c81b801d17884bf9e437bb97；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：开镜逐帧平滑与倍率灵敏度缩放；焦燃和JEG接入接管开火、原生输入隔离及手动换弹。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.36。
+
+- 3.13.36首轮编译通过但optionalRuntimeTest拦截新射击Mixin签名泄漏JEG可选Gun类型，未部署。修正两桥的附加上下文参数为@Coerce Object，保留原生注入目标的精确描述符、参数顺序和权限检查；不扩大测试白名单。首轮日志保留maintenance-tools/releases/3.13.36/attempt-1；重新完整验证。
+
+- 3.13.36完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致35365252f06c77442d39fe2e270f86db010e5e60a5a9444c5322ac7b8267a3d8；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.36-20261029-115419。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.36.
+
+
+## TaCZ接管腰射散布
+- 基线1c5319981e21345f4a3f3a33cc7b3ea2ae12f899；主控，worktrees/tacz-controlled-hip-spread，feature/tacz-controlled-hip-spread；已镜像当前WIP并保留逐文件SHA。范围仅compat/tacz手动射击散布、对应测试、构建测试登记及文档；共享build.gradle/模块地图由主控顺序接入。腰射基础额外标准差3度，与本阶枪种基础散布按平方和合成后乘精度/成长/策略系数；按服务端实际瞄准进度平方衰减至0，完全开镜不额外惩罚。不转动镜头，不影响自主AI或其他枪械接管。当前本轮无构建指令，不运行Gradle或同步。
+
+- 已完成源代码与知识库同步；Python518项通过、14项环境跳过。新增TaczMonitorSpreadTest（分布10万次采样、两轴独立、全ADS零额外误差/不额外取随机数、过渡与界限）已登记check但尚未运行；未编译、构建、同步或推送。待游戏内对比同枪/同距离腰射与完整开镜弹着，验证开镜过渡及镜头不被随机转动。
+
+
+## 接管副手空容器与补给切换
+- 基线1c5319981e21345f4a3f3a33cc7b3ea2ae12f899；主控；worktrees/monitor-offhand-containers；fix/monitor-offhand-containers。已完整镜像当前main含未发布腰射散布与其他WIP，逐文件SHA保存于maintenance-tools/monitor-offhand-containers/baseline.json。独占MonitorLoadout、ControlledEquipmentPolicy及RecoverySupplies和对应回归/文档，根共享文件主控顺序接入。明确区分食物、药水和空容器，所有收纳/换装经HumanEquipmentExchange，不丢弃余物、不覆盖失败布局；灰队原副手约束不变。当前本轮未授权构建，不执行Gradle或同步。
+
+- 完成：统一受控食物/余物分类，PotionItem显式排除食物快捷选择；F遇空瓶/碗优先选战斗副手，否则仅收纳容器；H明确输入可拿空容器换食物，手动完整药水按次饮用。所有物品移动仍经原HumanEquipmentExchange，灰队/主手合格限制保留。Python521项通过、14项环境跳过；无Java编译/构建、部署、推送或游戏验收。正式操作手册已同步，待测试药水余瓶、汤余碗、背包满与灰队主手远程四种场景。
+
+
+## 远程射位与交战进展闭环
+- 基线1c5319981e21345f4a3f3a33cc7b3ea2ae12f899；主控，worktrees/ranged-engagement-progress，fix/ranged-engagement-progress，负责共用搜索周期、交战结果/目标处理反馈、枪弓弩接入及文档。开发Agent terrain_search_lifecycle（GPT-6.1 Sol medium），worktrees/terrain-search-lifecycle，fix/terrain-search-lifecycle，仅负责CombatTerrainNavigation/CombatTerrainPolicy与专属测试。完整WIP按SHA镜像，保留未发布腰射与空瓶修复。
+- 接口：common/BoundedSearchCycle统一预算等待与已执行搜索界限；导航Decision.EXHAUSTED不占MOVE，调用方映射到远程交战结果，禁止导航模块替角色选敌。感知/威胁记忆不删除，驻守/护卫/逃跑/外部接管权限不扩大。当前无本轮构建指令，不运行Gradle/编译或部署。
+
+- 完成共享BoundedSearchCycle、五态进攻窗口与RangedEngagement事实入口；枪弓弩沿原Goal接入，不添加选敌Goal或改变底层搜索算法。地形Decision.EXHAUSTED释放MOVE；目标移动不无限续期，整轮160tick/128候选，超时实际检查不足32时仅延期。原位命令/逃跑取消不映射失败，非本模块路径不被清理。
+- 目标中枢仅在普通复核、无压力锁/紧急事件且满足持敌间隔时，处理反复射位失败、持续受阻且实际不移动的目标；可暂处理近期可见的已确认备选，不删除原目标记忆。绿队有射界时仍保距，遮挡持续30个活跃tick后允许暂时缩距找角度。知识库5个相关正文已同步并逐文件备份。
+- 子任务提交02db9467272edddeba03091f5a45f709a364b50c已逐文件审核接入；复核补齐正常取消语义并保留压力锁优先级。模块索引更新至718个生产类/46包。静态Python回归523项：509通过、14项环境跳过；新增BoundedSearchCycleTest与RangedEngagementProgressTest已登记check，未执行Java编译/回归、构建、部署、推送或游戏验收。本轮源码按基线SHA核对后整合，保留已有WIP；证据maintenance-tools/ranged-engagement-progress。
+- 待游戏验收：开阔地正常保距与连射；长墙/一格窗口；移动墙后目标；完整封闭目标与可见备选并存；台面失位返回；低预算群战；驻守/护卫/撤退/手动接管打断。编译与实测成功前不宣称游戏表现已修复。
+
+
+## 3.13.37 构建同步
+- 主控；基线1c5319981e21345f4a3f3a33cc7b3ea2ae12f899；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：补齐远程射位搜索与目标进展闭环、TaCZ接管腰射散布及副手空容器切换修复。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.37。
+
+- 首轮3.13.37编译通过，完整回归由RangedTerrainSafetyTest旧的逐武器selected直连断言拦截。已改为验证各武器调用统一startAttackWindow，并检查其实际字节码在tryMove失败返回后才进入selected；不修改生产逻辑、不跳过回归。失败日志归档后重新执行同版本完整构建。
+
+- 3.13.37完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致fcc1ea99fc827023685d5ba7b33aa76cc96420bd8c5d8d57e7a19b1308a2a326；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.37-20261030-001126。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.37.
+
+
+## 监视枪械HUD与TaCZ下蹲腰射
+- 用户设定目标，完成后构建同步；基线ce8680ce600b4a22b6f20ea63621a167438e56d8。主控worktrees/monitor-gun-hud（feature/monitor-gun-hud）负责公共HUD接口、TaCZ/Scguns/JEG客户端显示适配与布局、整合/测试/文档/发布；完整当前WIP按SHA镜像，清单maintenance-tools/monitor-gun-hud/baseline.json。
+- 子任务monitor_crouch（GPT-6.1 Sol medium）：worktrees/monitor-tacz-crouch（feature/monitor-tacz-crouch），独占client/render/tacz姿态相关类及专属测试，研究原生玩家下蹲腰射倾斜，保留ADS/跑跳/换弹/动作优先级。仅局部提交，不自行同步、推送或合并main。
+- 共享HumanMonitorScreen、build.gradle、Mixin清单、模块索引、翻译和文档由主控顺序接入。HUD只读被观察人类真实枪与同步状态，不能修改玩家库存或全局原生枪械缓存；可选模组缺席/接口不符时安全回退，生产逻辑及弹药权威保持服务端。
+
+- 用户追加：TaCZ普通命中/爆头/击杀图标与音效、闲置副手原生动作接入检查、狙击枪独立拉栓动画及自定义枪包兼容解释。terrain_search_lifecycle只读核对三模组原生HUD/事件，根负责当前交付全部HUD/网络/后端快照；monitor_crouch追加拥有HumanSpectatorPresentation/GunView/Tacz wrapper的动作所有权。
+- 已整合子任务4d7cd87b3fd177482229a87696418a83da65b61d与f4d2df3f5f6241be2dcc6e2949bed471b0b4a36b共9文件，逐文件基线SHA核对。原狙击枪getSynIsBolting直接return false已去除，采样枪包真实bolt；idle副手无阻止native条件，修复的真实缺口为同步盾防先于use timer的双臂所有权。
+- HUD采用GunSupport.hud统一只读后端事实、session绑定MonitorWeaponSnapshot（协议6），5tick原有复核且变化才发送；客户端不读取真实玩家库存。NativeHitFeedback复用TaCZ互斥CLIENT Post/Kill而非额外网络，沿原生事件而非最终扣血证明；声音使用被观察Human并保留本项目镜头音频桥接。
+- 工作树Java生产/测试编译、MonitorHudPresentationTest、MonitorWeaponSnapshotTest、NativeCrouchPlanTest、NativeBoltPlanTest通过；TaCZ实际编译1.1.8与目标1.1.7各402处精确引用通过。初次编译发现SG/JEG FireMode是记录/普通类，已沿其公开id/getId修正，失败日志保留。Python523项（509通过、14环境跳过），知识库4正文已备份同步。待最终完整回归/部署及游戏画面验收。
+
+
+## 3.13.38 构建同步
+- 主控；基线ce8680ce600b4a22b6f20ea63621a167438e56d8；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：监视三枪械HUD与TaCZ命中反馈、下蹲腰射/拉栓原生动画及副手动作所有权。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.38。
+
+- 首轮完整构建被OptionalRuntimeTest拦截：新增依赖TaCZ的显示适配器须加入现有明确隔离清单；仅登记该类，公共监控入口仍参与无依赖JVM链接。另最小GUI布局复核发现上下堆叠挤占准星，改为底部并排，窄GUI枪械HUD最低55%、生命数值按宽度缩放，回归新增准星空区约束。失败日志保留，整轮重新验证后才部署。
+
+- 3.13.38完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致d827577934bcf681eb682a19d25880d6f1429ececf4f39bcd8819055e36a9312；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.13.38-20261030-005030。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.13.38.
+
+
+## 3.14.0 构建同步
+- 主控；基线d3bee48078937cd4a097b951b6e7d86b4ea7574d；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：共享原生界面、据点分区与三席培养、钱包通行最小委托、三枪械监控/接管修复及知识库同步；正式经济默认关闭。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.0。
+
+- 3.14.0完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致ee9f65571213547d9f4684cc31d9a2153b4514751ed50bc6be95574c149bc47e；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.14.0-20261102-182041。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.0.
+
+
+## 3.14.1 启动失败修复
+- 主控独占声效Mixin、其回归、构建参数及版本/日志；基线d3bee48078937cd4a097b951b6e7d86b4ea7574d，沿worktrees/vnext-master编辑并核对前像后整合main。保留全部既有WIP和空暂存区，无提交。
+- 实例latest/debug日志确认SpectatorGunSoundDistanceMixin在TaCZ新重载下0/1注入。改为显式匹配全部已验证构造方法，仍严格要求唯一sqrt注入；不放宽require或禁用声音跟随。回归读取实际Mixin注解并使用Mixin自身选择器量词，覆盖旧选择器漏选。
+
+
+## 3.14.1 构建同步
+- 主控；基线d3bee48078937cd4a097b951b6e7d86b4ea7574d；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：修复TaCZ1.1.8声音构造重载导致的启动Mixin注入失败；实际Mixin选择器及部署JAR回归，保留监控声音跟随。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.1。
+
+- 3.14.1完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致6ec41fdacc6865595073078db73680ded87f02e10c9372144f0ecb438e204396；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.14.1-20261102-182853。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.1.
+
+
+## 3.14.2 世界加载注入修复
+- 主控独占公共Mixin配置/refmap、compat原版目标产物回归、build.gradle及发行记录；基线d3bee48078937cd4a097b951b6e7d86b4ea7574d。沿worktrees/vnext-master编辑并按前像核对整合main，保留既有WIP和空暂存区，不提交混合修改。
+- 18:35实际日志确认SettlementStructureStartMixin找不到placeInChunk；核心配置未关联refmap且新据点两类没有映射。统一接入现有映射表，补placeInChunk→m_226850_、placeInWorld→m_230328_，两者均带完整描述符；Forge新增processBlockInfos保持原名。
+- 新增VanillaMixinTargetsTest检查实际reobf发行JAR、两配置及真实SRG Forge类的所有原版必需目标，默认/searge上下文均验证；不禁用据点登记，不降require=1。实际世界进入仍需游戏验收。
+
+
+## 3.14.2 构建同步
+- 主控；基线d3bee48078937cd4a097b951b6e7d86b4ea7574d；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\balance-release-3.13.9，分支release/local-build；范围：修复进入世界的据点结构/模板注入映射缺失；统一refmap并新增发行产物对真实SRG原版目标的回归检查。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.2。
+
+- 3.14.2完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致d3d4f9b446ffa1a56c54db249d88a673567ce35c60109e381fbb40803b9f3ed9；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.14.2-20261102-184206。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.2.
+
+
+## 接管TaCZ手动开枪无声（源码阶段）
+- 用户确认：实际TaCZ1.1.8-hotfix2，手动开枪正常出弹、后坐力/伤害存在，同一监视视角AI开火有声。主控仅负责声音后端；前端组件由其他Agent负责，本任务不动任何UI布局/控件/资源。
+- 基线d3bee48078937cd4a097b951b6e7d86b4ea7574d，编辑worktrees/vnext-master并逐文件核对前像整合main；范围：compat.tacz接管原生声音消息适配、唯一客户端Mixin、OptionalMixinPlugin能力检查、SpectatorSoundContract和对应测试/模块索引/知识库。不提交混合WIP。
+- 接管不进入玩家LocalPlayerShoot第一人称枪声链；在真实ServerMessageSound到达时，将被控制摄像机人类的shoot_3p/silence_3p交给原枪包shoot/silence资源。保留消息gun/display、音量、音调、距离；成功播放才消费原3P消息，缺资源/无效控制/其它声音或实体保留原生流程。不是根据点击或GunFire重复补音。
+- 不改服务器开火、扣弹、射速、伤害及广播受众。不设置require=0；上游公共播放ABI改变则跳过可选适配。当前未获本轮构建指令，不运行Gradle/Java编译、不部署；真实无声根因和修复效果仍待实际试听确认。
+- 静态验证：接管声效4、原监控声效6、后台换弹声效4、模块布局5，共19项通过；javap只读核对编译API与实例1.1.8-hotfix2公共播放描述符相符。新增Java能力合同已写入但未编译/执行。未运行Gradle、未同步实例，未启动游戏或试听，未推送。证据maintenance-tools/takeover-tacz-audio。
+
+
+## 前端协作基线提交
+- 用户明确要求先提交当前工作，供后续前端独立开发接回。主控按当前main完整源码状态建立一次本地快照，包含此前目录迁移和已整合变更；不再把本次明确授权视为“擅自提交既有修改”。不提交维护目录、实例文件、JAR、缓存或知识库外部文件，不推送。
+- 交接见docs/FRONTEND_HANDOFF.md。最近构建/同步仍为3.14.2，最新接管枪声适配仅有19项静态检查与真实JAR接口核对，未编译或试听；界面视觉仍需前端整改。旧工作树HEAD保持原状，后续须基于本次提交新建或安全衔接，不能强制重置。

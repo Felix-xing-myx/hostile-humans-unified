@@ -1,9 +1,9 @@
 """Final defense steering, resource ownership and retreat boundaries; not a game simulation."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-JAVA = ROOT / 'src/main/java/club/someoneice/humangunner'
+JAVA = ROOT / 'src/main/java/dev/felix/hostilehumans'
 
 
 class ShieldDefenseMovementTests(unittest.TestCase):
@@ -14,9 +14,9 @@ class ShieldDefenseMovementTests(unittest.TestCase):
         self.assertNotIn('MeleeCombatRange.canStrike(', decisions)
         ranges = (JAVA / 'MeleeCombatRange.java').read_text(encoding='utf-8')
         geometry = ranges.split('public static boolean canReachTarget(', 1)[1].split('public static boolean canStartAttack(', 1)[0]
-        self.assertNotIn('humanGunner$canMeleeAttack()', geometry)
+        self.assertNotIn('hhu$canMeleeAttack()', geometry)
         self.assertIn('GunSupport.isGunItem(', geometry)
-        self.assertIn('human.humanGunner$canMeleeAttack() && canReachTarget(human, target)', ranges)
+        self.assertIn('human.hhu$canMeleeAttack() && canReachTarget(human, target)', ranges)
 
     def test_better_combat_reach_remains_available_while_blocking(self):
         source = (JAVA / 'BetterCombatMeleeCombat.java').read_text(encoding='utf-8')
@@ -24,14 +24,14 @@ class ShieldDefenseMovementTests(unittest.TestCase):
         profile = source.split('public static boolean hasWeaponProfile(', 1)[1].split('/** Single-target geometry', 1)[0]
         self.assertIn('canReadWeaponProfile(human)', reach)
         self.assertIn('canReadWeaponProfile(human)', profile)
-        self.assertNotIn('humanGunner$canMeleeAttack()', profile)
+        self.assertNotIn('hhu$canMeleeAttack()', profile)
         execution = source.split('public static AttackPlan createAttackPlan(', 1)[1].split('/** Same selected weapon', 1)[0]
         self.assertIn('!isEnabled(human)', execution)
 
     def test_defense_facing_preserves_world_path_motion_and_only_real_step_jumps(self):
         # The old low-health shield-only retreat overlay is no longer ticked. Defense
         # keeps ordinary navigation; the final MoveControl converts it into body-local inputs.
-        human = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+        human = (ROOT / 'src/main/java/dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
         move = human.split('private void moveWhileCombatFacing()', 1)[1].split('private void applyShorePopImpulse', 1)[0]
         self.assertIn('human.applyCombatFacing()', move)
         self.assertIn('else if (hasShieldFacing()) applyShieldFacing()', human)
@@ -78,7 +78,7 @@ class ShieldDefenseMovementTests(unittest.TestCase):
         controller = (JAVA / 'ShieldDefenseController.java').read_text(encoding='utf-8')
         self.assertIn('owner == Owner.ADVANCE ? .8D : config.shieldUseSpeedMultiplier()', controller)
         self.assertIn('owner == Owner.ADVANCE ? .85D : .7D', controller)
-        human = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+        human = (ROOT / 'src/main/java/dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
         stop = human.split('public void stopUsingItem()', 1)[1].split('private void clearUseSpeedPenalty', 1)[0]
         self.assertIn('MovementSpeedController.Limit.DEFENSE, 1, false', stop)
 

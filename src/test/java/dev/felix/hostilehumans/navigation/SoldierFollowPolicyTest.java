@@ -1,0 +1,213 @@
+package dev.felix.hostilehumans.navigation;
+import dev.felix.hostilehumans.performance.FairWorkBudget;
+import dev.felix.hostilehumans.soldier.GarrisonSettings;
+import dev.felix.hostilehumans.soldier.OrderDistances;
+import dev.felix.hostilehumans.soldier.OwnerOfflinePolicy;
+import dev.felix.hostilehumans.soldier.SoldierOrder;
+
+import dev.felix.hostilehumans.config.UnifiedConfig;
+import dev.felix.hostilehumans.navigation.NavigationSearchConfig;
+import dev.felix.hostilehumans.navigation.ShoreSeekingPolicy;
+import dev.felix.hostilehumans.navigation.SoldierFollowNavigation;
+import dev.felix.hostilehumans.navigation.SoldierStuckRecovery;
+import dev.felix.hostilehumans.navigation.WaterCombatPolicy;
+
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+/** Follow hysteresis, independent speed overrides and offline order eligibility. */
+public final class SoldierFollowPolicyTest {
+    private static int checks;
+    public static void main(String[] args) throws Exception {
+        NavigationSearchConfig routeDefaults=NavigationSearchConfig.parse(new JsonObject());
+        check(routeDefaults.normalRange()==48&&routeDefaults.extendedRange()==80&&routeDefaults.longRange()==128,
+                "explicit route distance defaults are independent of rank attributes");
+        check(routeDefaults.normalNodes()==1536&&routeDefaults.extendedNodes()==2048&&routeDefaults.longNodes()==4096
+                &&routeDefaults.remoteUnits()==8,"bounded node thresholds and server cost defaults");
+        JsonObject constrained=JsonParser.parseString("{\"normal_range\":128,\"extended_range\":8,\"long_range\":8,\"long_nodes\":16384,\"remote_units_per_tick\":1,\"failure_ticks\":2400,\"maximum_failure_ticks\":20}").getAsJsonObject();
+        NavigationSearchConfig normalized=NavigationSearchConfig.parse(constrained);
+        check(normalized.extendedRange()==128&&normalized.longRange()==128,"staged ranges cannot shrink");
+        check(normalized.remoteUnits()>=16,"largest remote job always fits configured pool");
+        check(normalized.maximumFailureTicks()>=normalized.failureTicks(),"failure fallback cannot precede its minimum delay");
+        check(WaterCombatPolicy.closingProgress(8, 7.5), "half block water approach counts");
+        check(!WaterCombatPolicy.closingProgress(8, 8), "circling without approach is not progress");
+        check(!WaterCombatPolicy.closingProgress(8, 7.8), "water jitter does not reset watchdog");
+        check(!WaterCombatPolicy.closingProgress(8, Double.NaN), "invalid progress is rejected");
+        check(WaterCombatPolicy.directApproach(true, 64, 1.5, true), "bounded visible surface pursuit");
+        check(!WaterCombatPolicy.directApproach(true, 64.01, 0, true), "distant combat keeps path planning");
+        check(!WaterCombatPolicy.directApproach(true, 4, 2, true), "deep target does not force diving");
+        check(!WaterCombatPolicy.directApproach(true, 4, 0, false), "wall occlusion prevents eager direct pursuit");
+        check(WaterCombatPolicy.chasingMovingTarget(1, .6, .1), "equally fast fleeing target still permits progress");
+        check(!WaterCombatPolicy.chasingMovingTarget(0, .6, .1), "static target requires closing distance");
+        check(!WaterCombatPolicy.chasingMovingTarget(1, .6, 1), "lateral circling is not forward pursuit");
+        check(!WaterCombatPolicy.chasingMovingTarget(1, -.6, 0), "moving away is not pursuit");
+        check(!SoldierFollowNavigation.shouldChase(false, 16), "start boundary");
+        check(SoldierFollowNavigation.shouldChase(false, 16.01), "start beyond four blocks");
+        check(SoldierFollowNavigation.shouldChase(true, 9), "keep chasing inside start radius");
+        check(!SoldierFollowNavigation.shouldChase(false, 9), "idle inside start radius");
+        check(!SoldierFollowNavigation.shouldChase(true, 6.25), "stop at two and a half blocks");
+        check(SoldierFollowNavigation.shouldChase(true, 6.26), "continue above stop radius");
+        check(!SoldierFollowNavigation.rescueDue(199, 100), "short stalls cannot teleport");
+        check(SoldierFollowNavigation.rescueDue(200, 100), "long stalls may rescue nearby soldiers");
+        check(!SoldierFollowNavigation.rescueDue(300, 6.25), "no rescue inside follow spacing");
+        check(!SoldierFollowNavigation.meaningfulApproach(10, 10, 2.5), "node changes without physical approach do not defer rescue");
+        check(!SoldierFollowNavigation.meaningfulApproach(9.75, 10, 2.5), "small obstacle jitter does not defer rescue");
+        check(SoldierFollowNavigation.meaningfulApproach(9.49, 10, 2.5), "real approach refreshes rescue timer");
+        check(SoldierFollowNavigation.meaningfulApproach(2.5, 2.5, 2.5), "arrival ends rescue pressure");
+        check(SoldierFollowNavigation.rescueDue(200, 400), "twenty-block obstruction is eligible without the long-distance teleport gate");
+        check(SoldierFollowNavigation.retryDelay(1) == 10, "failed follow searches back off");
+        check(SoldierFollowNavigation.retryDelay(100) == 40, "retry delay stays bounded");
+        for (SoldierOrder order : SoldierOrder.values()) {
+            check(SoldierStuckRecovery.eligibleOrder(order)
+                            == (order == SoldierOrder.FOLLOW || order == SoldierOrder.BODYGUARD),
+                    "only owner-following modes permit teleport rescue: " + order);
+            check(SoldierStuckRecovery.eligibleOrder(order)
+                            == SoldierStuckRecovery.eligibleOrder(SoldierOrder.logical(order)),
+                    "legacy anchored aliases cannot bypass garrison safe-path recovery: " + order);
+        }
+        checkGarrisonCombinations();
+        check(!SoldierStuckRecovery.due(199, 100, true), "combat rescue waits ten seconds");
+        check(SoldierStuckRecovery.due(200, 100, true), "target presence cannot disable combat rescue deadline");
+        check(!SoldierStuckRecovery.due(200, 6.25, true), "follow spacing excluded");
+        check(SoldierStuckRecovery.due(200, 6.26, true), "follow displacement beyond spacing");
+        check(!SoldierStuckRecovery.due(200, 2.25, false), "standing at guard or patrol destination excluded");
+        check(SoldierStuckRecovery.due(200, 2.26, false), "guard and patrol use tighter arrival spacing");
+        Object server = new Object();
+        java.util.UUID first = new java.util.UUID(0, 1), second = new java.util.UUID(0, 2);
+        check(ShoreSeekingPolicy.reserveShorePathSearch(server, 1, first), "first swimmer gets this tick");
+        ShoreSeekingPolicy.cancelShorePathSearch(server, first);
+        check(!ShoreSeekingPolicy.reserveShorePathSearch(server, 1, second), "one shore search per tick");
+        check(!ShoreSeekingPolicy.reserveShorePathSearch(server, 2, first), "first swimmer cannot starve queued peer");
+        check(ShoreSeekingPolicy.reserveShorePathSearch(server, 2, second), "queued swimmer gets next tick");
+        var batches = new dev.felix.hostilehumans.performance.FairWorkBudget<Integer>(32, 4, 40);
+        boolean[] served = new boolean[11];
+        for (int tick = 1; tick <= 3; tick++) {
+            for (int id = 0; id < served.length; id++) {
+                int grant = batches.claimFull(tick, id, 3);
+                check(grant == 0 || grant == 3, "a three-search operation never consumes a partial grant");
+                served[id] |= grant == 3;
+            }
+        }
+        for (boolean value : served) check(value, "all callers receive full capacity despite a two-slot remainder");
+        for (boolean water : new boolean[]{false, true}) {
+            for (boolean shore : new boolean[]{false, true}) {
+                for (boolean waterShore : new boolean[]{false, true}) {
+                    check(!ShoreSeekingPolicy.shouldUseWaterNavigator(true, water, true, shore, waterShore),
+                            "surface following keeps walking navigation across land, water and stale shore state");
+                }
+            }
+        }
+        check(ShoreSeekingPolicy.shouldUseWaterNavigator(true, true, false, false, false),
+                "ordinary water navigation remains available outside owner-follow routing");
+        check(!ShoreSeekingPolicy.shouldUseWaterNavigator(true, true, false, true, false),
+                "ground shore route retains its navigator");
+        check(!ShoreSeekingPolicy.shouldUseWaterNavigator(false, true, false, false, false),
+                "disabled AI stays on ground navigation");
+        check(updateSwimmingUsesSurfacePolicy(), "compiled navigator selection uses the surface-follow policy");
+        UnifiedConfig defaults = new UnifiedConfig(new JsonObject());
+        for (String rank : new String[]{"roamer", "tier1", "tier2", "tier3"}) {
+            check(defaults.followSpeed(rank, false) == 1.35, "normal default " + rank);
+            check(defaults.followSpeed(rank, true) == 1.6, "catch-up default " + rank);
+        }
+        UnifiedConfig custom = new UnifiedConfig(JsonParser.parseString("""
+                {"tiers":{"tier1":{"movement":{"follow_speed_multiplier":1.7,
+                "follow_catch_up_multiplier":1.2}},"tier2":{"movement":{
+                "follow_speed_multiplier":99,"follow_catch_up_multiplier":-1}}}}
+                """).getAsJsonObject());
+        check(custom.followSpeed("tier1", false) == 1.7, "rank override");
+        check(custom.followSpeed("tier1", true) == 1.7, "catch-up cannot slow normal follow");
+        check(custom.followSpeed("tier3", false) == 1.35, "rank isolation");
+        check(custom.followSpeed("tier2", false) == 3, "upper bound");
+        check(custom.followSpeed("tier2", true) == 3, "bounded catch-up floor");
+        for (SoldierOrder order : SoldierOrder.values()) {
+            check(OwnerOfflinePolicy.shouldGuard(true, true, order)
+                            == (order == SoldierOrder.FOLLOW || order == SoldierOrder.BODYGUARD),
+                    "only owner-following orders convert " + order);
+            check(!OwnerOfflinePolicy.shouldGuard(false, true, order), "wild orders untouched " + order);
+            check(!OwnerOfflinePolicy.shouldGuard(true, false, order), "dead orders untouched " + order);
+        }
+        for (SoldierOrder order : java.util.List.of(SoldierOrder.FOLLOW, SoldierOrder.BODYGUARD)) {
+            var data = new net.minecraft.nbt.CompoundTag();
+            OwnerOfflinePolicy.remember(data, first, order);
+            // Round-trip the actual persisted record, not an in-memory entity map.
+            var restored = net.minecraft.nbt.NbtIo.readCompressed(new java.io.ByteArrayInputStream(saveTag(data)));
+            check(OwnerOfflinePolicy.resumeOrder(restored, first, SoldierOrder.GUARD) == order,
+                    "saved original order survives NBT round trip " + order);
+            check(OwnerOfflinePolicy.resumeOrder(restored, second, SoldierOrder.GUARD) == null,
+                    "new owner cannot inherit previous owner's resume order");
+            check(OwnerOfflinePolicy.resumeOrder(restored, null, SoldierOrder.GUARD) == null,
+                    "dismissed soldier cannot resume");
+            for (SoldierOrder current : SoldierOrder.values()) {
+                check(OwnerOfflinePolicy.resumeOrder(restored, first, current)
+                                == (SoldierOrder.logical(current) == SoldierOrder.GARRISON ? order : null),
+                        "offline recovery recognizes garrison aliases but not superseding owner-following orders " + current);
+            }
+        }
+        var invalid = new net.minecraft.nbt.CompoundTag();
+        check(OwnerOfflinePolicy.resumeOrder(invalid, first, SoldierOrder.GUARD) == null,
+                "ordinary guards never become followers without a saved resume record");
+        for (SoldierOrder order : java.util.List.of(SoldierOrder.GUARD, SoldierOrder.PATROL, SoldierOrder.HOLD_POSITION, SoldierOrder.GARRISON)) {
+            OwnerOfflinePolicy.remember(invalid, first, order);
+            check(OwnerOfflinePolicy.resumeOrder(invalid, first, SoldierOrder.GUARD) == null,
+                    "non-following orders never produce resume records");
+        }
+        var malformed = new net.minecraft.nbt.CompoundTag();
+        var record = new net.minecraft.nbt.CompoundTag();
+        record.putUUID("Owner", first);
+        record.putString("Order", "NOT_AN_ORDER");
+        malformed.put("hostile_humans_unified:owner_offline_resume", record);
+        check(OwnerOfflinePolicy.resumeOrder(malformed, first, SoldierOrder.GUARD) == null,
+                "corrupt command name never defaults to follow");
+        record.putString("Order", "FOLLOW");
+        record.remove("Owner");
+        check(OwnerOfflinePolicy.resumeOrder(malformed, first, SoldierOrder.GUARD) == null,
+                "resume record requires a saved owner identity");
+        System.out.println("SoldierFollowPolicyTest: " + checks + " checks passed");
+    }
+    private static void checkGarrisonCombinations() {
+        for (boolean stay : new boolean[]{false, true}) for (boolean chase : new boolean[]{false, true}) {
+            var settings = new GarrisonSettings(stay, chase, 32);
+            var saved = settings.writeInto(new net.minecraft.nbt.CompoundTag());
+            check(GarrisonSettings.read(saved, new GarrisonSettings(!stay, !chase, 8)).equals(settings),
+                    "stay/chase remain independent after persistence: " + stay + "/" + chase);
+            var context = new OrderDistances.Context(true, false, true, net.minecraft.world.phys.Vec3.ZERO, settings, "ready");
+            check(context.insideDaily(new net.minecraft.world.phys.Vec3(32, 0, 0))
+                            && !context.insideDaily(new net.minecraft.world.phys.Vec3(32.01, 0, 0)),
+                    "all four combinations retain the same daily geometry, independently of stay");
+            check(context.combatRadius() == (chase ? 48 : 32),
+                    "only chase expands the permitted combat ring; stay does not silently disable it");
+            check(context.insideCombat(new net.minecraft.world.phys.Vec3(40, 0, 0)) == chase,
+                    "outer-ring target geometry follows chase for both stay values");
+            check(!SoldierStuckRecovery.eligibleOrder(SoldierOrder.GARRISON),
+                    "every anchored combination retries safe paths without teleport rescue");
+        }
+        var maximum = new OrderDistances.Context(true, false, true, net.minecraft.world.phys.Vec3.ZERO,
+                new GarrisonSettings(false, true, 96), "ready");
+        check(maximum.combatRadius() == 96, "maximum daily radius does not gain an unbounded outer ring");
+    }
+    private static byte[] saveTag(net.minecraft.nbt.CompoundTag data) throws java.io.IOException {
+        var output = new java.io.ByteArrayOutputStream();
+        net.minecraft.nbt.NbtIo.writeCompressed(data, output);
+        return output.toByteArray();
+    }
+    private static boolean updateSwimmingUsesSurfacePolicy() throws Exception {
+        var node = new org.objectweb.asm.tree.ClassNode();
+        try (var stream = SoldierFollowPolicyTest.class.getClassLoader().getResourceAsStream(
+                dev.felix.hostilehumans.testutil.ModuleTestSources.resource("dev/felix/hostilehumans/entity/Human.class"))) {
+            if (stream == null) throw new AssertionError("Human class missing");
+            new org.objectweb.asm.ClassReader(stream).accept(node, 0);
+        }
+        var method = node.methods.stream().filter(m -> m.name.equals("updateSwimming"))
+                .findFirst().orElseThrow();
+        for (var instruction : method.instructions) {
+            if (instruction instanceof org.objectweb.asm.tree.MethodInsnNode call
+                    && call.owner.equals(dev.felix.hostilehumans.testutil.ModuleTestSources.owner("dev/felix/hostilehumans/navigation/ShoreSeekingPolicy"))
+                    && call.name.equals("shouldUseWaterNavigator")) return true;
+        }
+        return false;
+    }
+    private static void check(boolean value, String message) {
+        checks++;
+        if (!value) throw new AssertionError(message);
+    }
+}

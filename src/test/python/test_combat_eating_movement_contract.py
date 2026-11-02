@@ -1,8 +1,8 @@
 """Source architecture guards; these do not replace live combat tests."""
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / 'src/main/java/club/someoneice/humangunner'
+PKG = ROOT / 'src/main/java/dev/felix/hostilehumans'
 def source(name):
     return (PKG / (name + '.java')).read_text(encoding='utf-8')
 class CombatEatingMovementContract(unittest.TestCase):
@@ -36,7 +36,7 @@ class CombatEatingMovementContract(unittest.TestCase):
         for name in ['GunCustody', 'RangedWeaponCustody']:
             self.assertNotIn('&& !RecoverySupplies.isEatingFood(human)', source(name))
     def test_server_visual_state_and_no_food_speed_penalty(self):
-        entity = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/HumanMobEntityData.java').read_text(encoding='utf-8')
+        entity = (ROOT / 'src/main/java/dev/felix/hostilehumans/entity/HumanMobEntityData.java').read_text(encoding='utf-8')
         self.assertIn('if (!level().isClientSide) this.entityData.set(DATA_OFFHAND_EATING, eating)', entity)
         defaults = (ROOT / 'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8')
         self.assertNotIn('food_use_speed_multiplier', defaults)

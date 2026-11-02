@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "hostile_humans_unified:block/faction_trader_top",
+    "bottom": "hostile_humans_unified:block/faction_trader_bottom",
+    "side": "hostile_humans_unified:block/faction_trader_side"
+  }
+}

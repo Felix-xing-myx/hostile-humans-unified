@@ -1,9 +1,9 @@
 """Wiring contracts for damage-independent bow/crossbow pacing (not a game simulation)."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / 'src/main/java/club/someoneice/humangunner'
-GOALS = ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal'
+PKG = ROOT / 'src/main/java/dev/felix/hostilehumans'
+GOALS = ROOT / 'src/main/java/dev/felix/hostilehumans/entity/ai/goal'
 def source(name): return (PKG / (name + '.java')).read_text(encoding='utf-8')
 class GuardedRangedCadenceContract(unittest.TestCase):
     def test_capture_retains_progress_and_does_not_double_tick(self):
@@ -42,7 +42,7 @@ class GuardedRangedCadenceContract(unittest.TestCase):
         self.assertLess(volley.index('if (inserted > 0 && !followup)'), volley.index('recordCrossbowShot(human)'))
         self.assertLess(volley.index('if (inserted > 0 && !followup)'), volley.index('recordBowShot(human)'))
         self.assertIn('if (inserted == 0) payment.refund(human)', volley)
-        human = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+        human = (ROOT / 'src/main/java/dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
         self.assertIn('HumanArrowCombat.fireVolley', human)
         self.assertIn('HumanArrowCombat.fireNativeCrossbow', human)
     def test_counter_window_uses_remaining_normalized_draw(self):

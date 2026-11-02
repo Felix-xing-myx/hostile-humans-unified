@@ -53,7 +53,7 @@ def audit(jar, compiled, javap, contract):
     # Existing bytecode predates the sound bridge edit. Audit its source replacement
     # explicitly until the next authorized build refreshes main classes.
     obsolete_sound = ("com/tacz/guns/client/sound/SoundPlayManager", "playAnimationSound")
-    sound_source = Path("src/main/java/club/someoneice/humangunner/TaczReloadSoundClient.java").read_text(encoding="utf-8")
+    sound_source = Path("src/main/java/dev/felix/hostilehumans/compat/tacz/TaczReloadSoundClient.java").read_text(encoding="utf-8")
     uses_bridge = "ClientAnimationCompatibility.playTaczReloadSound(" in sound_source and "SoundPlayManager.playAnimationSound(" not in sound_source
     inherited = {
         ("java/lang/Enum", "name", "()Ljava/lang/String;"),
@@ -153,7 +153,7 @@ if __name__ == "__main__":
     parser.add_argument("jars", nargs="+", type=Path)
     parser.add_argument("--compiled", type=Path, default=Path("build/classes/java/main"))
     parser.add_argument("--javap", type=Path, default=Path("D:/Java/17/bin/javap.exe"))
-    parser.add_argument("--contract", type=Path, default=Path("src/main/java/club/someoneice/humangunner/TaczAmmoMixinContract.java"))
+    parser.add_argument("--contract", type=Path, default=Path("src/main/java/dev/felix/hostilehumans/compat/tacz/TaczAmmoMixinContract.java"))
     args = parser.parse_args()
     reports = [audit(jar, args.compiled, args.javap, args.contract) for jar in args.jars]
     print(json.dumps(reports, indent=2, ensure_ascii=False))

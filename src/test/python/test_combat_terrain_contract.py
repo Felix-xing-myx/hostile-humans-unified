@@ -1,10 +1,10 @@
 """Static integration checks only; Java/runtime terrain validation requires an authorized build."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2] / "main/java"
-COMBAT = ROOT / "club/someoneice/humangunner"
-ENTITY = ROOT / "com/craftix/hostile_humans/entity"
+COMBAT = ROOT / "dev/felix/hostilehumans"
+ENTITY = ROOT / "dev/felix/hostilehumans/entity"
 
 
 def read(path):
@@ -28,6 +28,36 @@ class CombatTerrainContract(unittest.TestCase):
         self.assertIn("if (budget == 0) return mark(human, Decision.PENDING)", source)
         self.assertIn("state.cursor < state.candidates.size()", source)
         self.assertIn("while (state.visited.size() >= 16)", source)
+
+    def test_completed_or_deferred_attempt_releases_control_once(self):
+        source = read(COMBAT / "CombatTerrainNavigation.java")
+        decision = source.split("public enum Decision", 1)[1].split("private record Visit", 1)[0]
+        self.assertIn("this != NORMAL && this != EXHAUSTED", decision)
+        finish = source.split("private static Decision finishSearch", 1)[1].split("private static Decision mark", 1)[0]
+        for cleanup in ("state.candidates = null", "state.searching = false", "state.cycle.reset()",
+                        "OptionalPathBudget.cancel", "Decision.EXHAUSTED : Decision.NORMAL"):
+            self.assertIn(cleanup, finish)
+        self.assertNotIn("getNavigation().stop()", finish)
+        self.assertIn("if (human.tickCount < state.nextSearch) return mark(human, Decision.NORMAL)", source)
+        active = source.split("public static boolean hasWork", 1)[1].split("public static boolean ownsRoute", 1)[0]
+        self.assertIn("state.searching", active)
+        self.assertIn("human.tickCount >= state.nextSearch", active)
+        self.assertNotIn("state.failures", active)
+        self.assertNotIn("state.vetoTick", active)
+
+    def test_search_round_survives_resampling_and_accounts_only_executed_work(self):
+        source = read(COMBAT / "CombatTerrainNavigation.java")
+        resample = source.split("if (target.position().distanceToSqr(state.targetPosition) > 16)", 1)[1].split("state.visited.removeIf", 1)[0]
+        self.assertIn("state.candidates = null", resample)
+        self.assertNotIn("cycle.reset", resample)
+        self.assertNotIn("searchWork = 0", resample)
+        self.assertIn("state.cycle.begin(human.tickCount)", source)
+        work = source.index("state.cycle.work(1)")
+        self.assertGreater(work, source.index("if (budget == 0) return mark(human, Decision.PENDING)"))
+        self.assertGreater(work, source.index("Vec3 point = state.candidates.get(state.cursor++)"))
+        self.assertIn("outcome == BoundedSearchCycle.Outcome.EXHAUSTED", source)
+        self.assertIn("CombatTerrainPolicy.completedSearch(state.searchWork)", source)
+        self.assertIn("if (stalled) return finishSearch(human, state, true)", source)
 
     def test_partial_path_uses_real_endpoint(self):
         source = read(COMBAT / "CombatTerrainNavigation.java").split("static boolean usefulPath", 1)[1].split("public static Decision update", 1)[0]
@@ -116,6 +146,8 @@ class CombatTerrainContract(unittest.TestCase):
         accepted = read(COMBAT / "CombatTerrainNavigation.java").split("static void accepted", 1)[1].split("private static boolean visited", 1)[0]
         self.assertIn("Path path = human.getNavigation().getPath()", accepted)
         self.assertIn("if (!eligible(human, target)) return", accepted)
+        self.assertIn("if (state.approach != path && state.route != path)", accepted)
+        self.assertIn("state.progressTick = human.tickCount", accepted)
 
 
 if __name__ == "__main__":

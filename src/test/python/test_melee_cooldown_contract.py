@@ -1,8 +1,8 @@
 """Melee cooldown scope and integration contracts, not Java/Mixin gameplay tests."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / 'src/main/java/club/someoneice/humangunner'
+PKG = ROOT / 'src/main/java/dev/felix/hostilehumans'
 def read(name): return (PKG / (name + '.java')).read_text(encoding='utf-8')
 class MeleeCooldownContract(unittest.TestCase):
     def test_only_actual_human_melee_qualifies(self):
@@ -16,7 +16,7 @@ class MeleeCooldownContract(unittest.TestCase):
         self.assertIn('HUMAN.equals(type)', melee)
         self.assertIn('NAMED_HUMAN.equals(type)', melee)
         self.assertIn('&& !projectile && !explosion', melee)
-        factory = (ROOT / 'src/main/java/com/craftix/hostile_humans/mixin/DamageSourceMix.java').read_text(encoding='utf-8')
+        factory = (ROOT / 'src/main/java/dev/felix/hostilehumans/mixin/DamageSourceMix.java').read_text(encoding='utf-8')
         self.assertIn('HumanMeleeDamage.NAMED_HUMAN : HumanMeleeDamage.HUMAN', factory)
         self.assertIn('victim.level().isClientSide || UnifiedConfig.get().vanillaMode()', policy)
         self.assertIn('return ProjectileCooldownPolicy.bypassesCooldown(victim, source)', policy)

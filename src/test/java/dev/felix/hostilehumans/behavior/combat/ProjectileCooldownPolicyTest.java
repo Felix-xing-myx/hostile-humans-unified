@@ -1,0 +1,147 @@
+package dev.felix.hostilehumans.behavior.combat;
+
+import dev.felix.hostilehumans.testutil.ModuleTestSources;
+
+import dev.felix.hostilehumans.behavior.combat.defense.GunMeleeProtection;
+import dev.felix.hostilehumans.config.UnifiedConfig;
+import dev.felix.hostilehumans.damage.HumanMeleeDamage;
+
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+
+/** Scope matrix plus the actual Forge cooldown-query bytecode contract. */
+public final class ProjectileCooldownPolicyTest {
+    private static int checks;
+
+    public static void main(String[] args) throws Exception {
+        net.minecraft.SharedConstants.tryDetectVersion();
+        // Standalone JavaExec has no Forge launch bootstrap; initialize registry-only
+        // fixtures just as the other real ResourceKey/ItemStack contract tests do.
+        var bootstrapFlag = net.minecraft.server.Bootstrap.class.getDeclaredField("isBootstrapped");
+        bootstrapFlag.setAccessible(true);
+        bootstrapFlag.setBoolean(null, true);
+        net.minecraft.core.registries.BuiltInRegistries.bootStrap();
+        check(ProjectileCooldownPolicy.allows(false, false, false, true, true, false),
+                "human archers can independently damage an ordinary mob");
+        check(ProjectileCooldownPolicy.allows(false, false, true, false, true, false),
+                "a human can receive successive skeleton/player projectiles");
+        check(ProjectileCooldownPolicy.allows(false, false, true, true, true, false),
+                "hostile human factions can exchange successive projectiles");
+        for (boolean victimHuman : new boolean[]{false, true}) {
+            for (boolean shooterHuman : new boolean[]{false, true}) {
+                check(!ProjectileCooldownPolicy.allows(true, false, victimHuman, shooterHuman, true, false),
+                        "vanilla mode preserves original cooldown handling");
+                check(!ProjectileCooldownPolicy.allows(false, true, victimHuman, shooterHuman, true, false),
+                        "never extend bypass to player victims, including hired PvP");
+                check(!ProjectileCooldownPolicy.allows(false, false, victimHuman, shooterHuman, false, false),
+                        "melee, environmental and status-effect damage are unaffected");
+                check(!ProjectileCooldownPolicy.allows(false, false, victimHuman, shooterHuman, true, true),
+                        "projectile-attributed explosions are unaffected");
+            }
+        }
+        check(!ProjectileCooldownPolicy.allows(false, false, false, false, true, false),
+                "unrelated mob combat remains unchanged");
+
+        check(HumanMeleeDamage.allows(true, true, true, false, false),
+                "human direct melee ignores hurt cooldown at its existing attack rate, including player victims");
+        for (var type : java.util.List.of(net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK,
+                net.minecraft.world.damagesource.DamageTypes.MOB_ATTACK_NO_AGGRO,
+                net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK,
+                HumanMeleeDamage.HUMAN, HumanMeleeDamage.NAMED_HUMAN))
+            check(HumanMeleeDamage.isMeleeType(type), "native and actual custom melee keys share one classification: " + type);
+        check(!HumanMeleeDamage.isMeleeType(net.minecraft.world.damagesource.DamageTypes.THORNS)
+                && !HumanMeleeDamage.isMeleeType(net.minecraft.world.damagesource.DamageTypes.MAGIC)
+                && !HumanMeleeDamage.isMeleeType(null), "unrelated or unregistered damage is not a melee type");
+        check(calls("HumanAttackCooldownPolicy", "bypassesCooldown", "HumanMeleeDamage", "isDirectAttack")
+                && calls("GunMeleeProtection", "blocks", "HumanMeleeDamage", "isDirectAttack"),
+                "damage cooldown and forbidden melee protection consume the same source classifier");
+        check(calls("HumanAttackCooldownPolicy", "bypassesCooldown", "UnifiedConfig", "vanillaMode"),
+                "native mode still guards the complete cooldown policy");
+        var producer = read("dev/felix/hostilehumans/mixin/DamageSourceMix");
+        var keys = new java.util.HashSet<String>();
+        for (var method : producer.methods) for (var instruction : method.instructions)
+            if (instruction instanceof FieldInsnNode field && field.getOpcode() == Opcodes.GETSTATIC
+                    && field.owner.equals(dev.felix.hostilehumans.testutil.ModuleTestSources.owner("dev/felix/hostilehumans/damage/HumanMeleeDamage"))) keys.add(field.name);
+        check(keys.contains("HUMAN") && keys.contains("NAMED_HUMAN"),
+                "the real damage factory uses exactly the shared unnamed and named melee types");
+        check(!HumanMeleeDamage.allows(false, true, true, false, false),
+                "ordinary mobs attacking humans keep their melee cooldown");
+        check(!HumanMeleeDamage.allows(true, false, true, false, false),
+                "indirect human damage cannot qualify as melee");
+        check(!HumanMeleeDamage.allows(true, true, false, false, false),
+                "thorns, fire and other damage types are not direct attacks");
+        check(!HumanMeleeDamage.allows(true, true, true, true, false)
+                && !HumanMeleeDamage.allows(true, true, true, false, true),
+                "projectiles and explosions retain their own policy");
+        check(CreeperFinishPolicy.canFinish(20, 10, 10, 1, 4, 10, true)
+                && !CreeperFinishPolicy.canFinish(20, 10, 10, 1, 4, 10, false),
+                "creeper forecast recognizes actual fast melee hits without speeding up attacks");
+
+        ClassNode living = read("net/minecraft/world/entity/LivingEntity");
+        var hurt = living.methods.stream().filter(m -> (m.name.equals("hurt") || m.name.equals("m_6469_"))
+                && m.desc.equals("(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
+                .findFirst().orElseThrow();
+        boolean inside = false;
+        int starts = 0, ends = 0, queries = 0;
+        for (var instruction : hurt.instructions) {
+            if (instruction instanceof FieldInsnNode field) {
+                if (field.owner.equals(dev.felix.hostilehumans.testutil.ModuleTestSources.owner("net/minecraft/tags/DamageTypeTags"))
+                        && (field.name.equals("BYPASSES_COOLDOWN") || field.name.equals("f_273918_"))) {
+                    inside = true;
+                    starts++;
+                }
+                if (inside && field.owner.equals(dev.felix.hostilehumans.testutil.ModuleTestSources.owner("net/minecraft/world/entity/LivingEntity"))
+                        && (field.name.equals("lastHurt") || field.name.equals("f_20898_"))) {
+                    inside = false;
+                    ends++;
+                }
+            }
+            if (inside && instruction instanceof MethodInsnNode call
+                    && call.owner.equals(dev.felix.hostilehumans.testutil.ModuleTestSources.owner("net/minecraft/world/damagesource/DamageSource"))
+                    && (call.name.equals("is") || call.name.equals("m_269533_"))
+                    && call.desc.equals("(Lnet/minecraft/tags/TagKey;)Z")) queries++;
+        }
+        check(starts == 1 && ends == 1 && queries == 1,
+                "the real Forge slice contains exactly one cooldown tag query");
+        for (String name : new String[]{"HumanMeleeDamage", "HumanAttackCooldownPolicy", "ProjectileCooldownPolicy", "mixin/LivingEntityProjectileCooldownMixin"}) {
+            for (var method : read("dev/felix/hostilehumans/" + name).methods) {
+                for (var instruction : method.instructions) {
+                    if (instruction instanceof FieldInsnNode field)
+                        check(field.getOpcode() != Opcodes.PUTFIELD || !field.name.equals("invulnerableTime")
+                                && !field.name.equals("f_19802_"), "never reset the shared cooldown timer");
+                    if (instruction instanceof MethodInsnNode call)
+                        check(!call.name.equals("hurt") && !call.name.equals("m_6469_")
+                                && !call.name.equals("setHealth") && !call.name.equals("m_21153_"),
+                                "never synthesize hits or write health outside the normal damage pipeline");
+                }
+            }
+        }
+        System.out.println("ProjectileCooldownPolicyTest: " + checks + " checks passed; startup and gameplay require acceptance");
+    }
+
+    private static boolean calls(String owner, String entry, String target, String name) throws Exception {
+        String prefix = "dev/felix/hostilehumans/";
+        for (var method : read(dev.felix.hostilehumans.testutil.ModuleTestSources.owner(prefix + owner)).methods) if (method.name.equals(entry))
+            for (var instruction : method.instructions)
+                if (instruction instanceof MethodInsnNode call && call.owner.equals(dev.felix.hostilehumans.testutil.ModuleTestSources.owner(prefix + target))
+                        && call.name.equals(name)) return true;
+        return false;
+    }
+
+    private static ClassNode read(String name) throws Exception {
+        ClassNode node = new ClassNode();
+        try (var input = ProjectileCooldownPolicyTest.class.getClassLoader().getResourceAsStream(dev.felix.hostilehumans.testutil.ModuleTestSources.owner(name) + ".class")) {
+            if (input == null) throw new AssertionError("Missing class " + name);
+            new ClassReader(input).accept(node, 0);
+        }
+        return node;
+    }
+
+    private static void check(boolean condition, String message) {
+        checks++;
+        if (!condition) throw new AssertionError(message);
+    }
+}

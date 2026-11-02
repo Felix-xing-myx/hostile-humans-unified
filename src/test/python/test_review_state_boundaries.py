@@ -1,17 +1,17 @@
 """Static integration contracts. These do not execute Forge events or prove live behavior."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 import re
 
 JAVA = Path(__file__).resolve().parents[3] / 'src/main/java'
-PKG = JAVA / 'club/someoneice/humangunner'
+PKG = JAVA / 'dev/felix/hostilehumans'
 
 
 class ReviewStateBoundaries(unittest.TestCase):
     def test_legacy_commands_cannot_bypass_current_orders(self):
-        network = (JAVA / 'com/craftix/hostile_humans/network/NetworkHandler.java').read_text(encoding='utf-8')
+        network = (JAVA / 'dev/felix/hostilehumans/network/NetworkHandler.java').read_text(encoding='utf-8')
         self.assertNotIn('MessageCommandHuman', network)
-        self.assertFalse((JAVA / 'com/craftix/hostile_humans/network/message/MessageCommandHuman.java').exists())
+        self.assertFalse((JAVA / 'dev/felix/hostilehumans/network/message/MessageCommandHuman.java').exists())
         order = (PKG / 'SoldierOrder.java').read_text(encoding='utf-8')
         for name in ('initialize', 'set'):
             match = re.search(r'static void ' + name + (r'\(Human \w+, SoldierOrder \w+, boolean \w+\)\s*\{' if name == 'set' else r'\(Human \w+\)\s*\{'), order)
@@ -22,7 +22,7 @@ class ReviewStateBoundaries(unittest.TestCase):
             method = order[start:end]
             self.assertIn('setOrderedToSit(false)', method)
             self.assertIn('setInSittingPose(false)', method)
-        startup = (PKG / 'HumanGunner.java').read_text(encoding='utf-8')
+        startup = (PKG / 'HumanRuntime.java').read_text(encoding='utf-8')
         self.assertIn('if (human.hasOwner()) SoldierOrder.initialize(human)', startup)
 
     def test_recovery_reservations_protect_automatic_weapon_selectors(self):
@@ -48,15 +48,15 @@ class ReviewStateBoundaries(unittest.TestCase):
             self.assertIn('SoldierOrder.allowsCombatPath(human,', source, name)
         for name in ('WaterCombatNavigation', 'CloseDefenseHold'):
             source = (PKG / (name + '.java')).read_text(encoding='utf-8')
-            self.assertNotIn('humanGunner$canMeleeAttack()', source)
+            self.assertNotIn('hhu$canMeleeAttack()', source)
             self.assertIn('!GunSupport.isGunItem(human.getMainHandItem())', source)
 
     def test_animation_uses_atomic_server_timeline_and_playable_fallback(self):
-        metadata = (JAVA / 'com/craftix/hostile_humans/entity/HumanMobEntityData.java').read_text(encoding='utf-8')
+        metadata = (JAVA / 'dev/felix/hostilehumans/entity/HumanMobEntityData.java').read_text(encoding='utf-8')
         self.assertIn('DATA_BETTER_COMBAT_ATTACK_VISUAL', metadata)
         self.assertNotIn('DATA_BETTER_COMBAT_ATTACK_ANIMATION_SEQUENCE', metadata)
         self.assertIn('snapshot.putLong("started_at", this.level().getGameTime())', metadata)
-        animator = (JAVA / 'com/craftix/hostile_humans/client/renderer/BetterCombatNpcAnimator.java').read_text(encoding='utf-8')
+        animator = (JAVA / 'dev/felix/hostilehumans/client/render/BetterCombatNpcAnimator.java').read_text(encoding='utf-8')
         self.assertIn('if (!visual.active(now))', animator)
         self.assertIn('int elapsed = visual.elapsed(now)', animator)
         seek = animator.split('private static void advancePlayback(', 1)[1].split('/** The reference', 1)[0]
@@ -66,5 +66,5 @@ class ReviewStateBoundaries(unittest.TestCase):
         self.assertIn('playbackWindowTicks(duration)', metadata)
         self.assertIn('!human.swinging || !isApplicable(human) || resolveApi() == null', animator)
         self.assertIn('playback.failedSequence != human.getNpcBetterCombatAttackAnimationSequence()', animator)
-        renderer = (JAVA / 'com/craftix/hostile_humans/client/renderer/ClientRenderer.java').read_text(encoding='utf-8')
+        renderer = (JAVA / 'dev/felix/hostilehumans/client/render/ClientRenderer.java').read_text(encoding='utf-8')
         self.assertIn('BetterCombatNpcAnimator.resetPlayback()', renderer)

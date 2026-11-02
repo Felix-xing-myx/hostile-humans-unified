@@ -1,7 +1,7 @@
 """Entry-point contracts only; Java policy and in-world detours require separate execution."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
-PKG=Path(__file__).resolve().parents[3]/"src/main/java/club/someoneice/humangunner"
+PKG=Path(__file__).resolve().parents[3]/"src/main/java/dev/felix/hostilehumans"
 
 class VisualLootRoutingContract(unittest.TestCase):
     def test_near_awareness_keeps_los_and_near_selection_finishes_before_broad_search(self):

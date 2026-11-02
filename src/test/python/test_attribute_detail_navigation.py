@@ -1,14 +1,33 @@
 """Regression guards for consuming detail capability before reopening a parent."""
 import unittest
-from pathlib import Path
+import re
+from source_paths import SourcePath as Path
 
 ROOT = Path(__file__).resolve().parents[3]
-JAVA = ROOT / "src/main/java/club/someoneice/humangunner"
+JAVA = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 
 def source(name):
     return (JAVA / (name + ".java")).read_text(encoding="utf-8-sig")
 
+
+def compact(code):
+ return re.sub(r"\s+", "", code)
+
+def java_block(code, marker):
+ """Read the real balanced Java body, ignoring braces in strings/comments."""
+ pattern=r"\s*".join(re.escape(token) for token in re.findall(r"\w+|[^\w\s]",marker))
+ match=re.search(pattern,code)
+ if match is None:raise AssertionError("Missing Java contract marker: "+marker)
+ start=code.index("{",match.end());depth=0
+ tokens=re.finditer(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|//[^\n]*|/\*.*?\*/|[{}]',code[start:],re.S)
+ for token in tokens:
+  value=token.group()
+  if value=="{":depth+=1
+  elif value=="}":
+   depth-=1
+   if depth==0:return code[start:start+token.end()]
+ raise AssertionError("Unclosed Java block: "+marker)
 
 class DetailNavigation(unittest.TestCase):
     def test_return_wire_is_bounded_and_server_directed(self):
@@ -35,23 +54,29 @@ class DetailNavigation(unittest.TestCase):
         self.assertIn("if(holdsRoster)SoldierRosterNetwork.open(viewer)", handler)
 
     def test_manual_return_never_restores_closed_command_screen(self):
-        screen = source("AttributeDetailScreen")
-        close = screen.split("public void onClose()", 1)[1].split("private int left", 1)[0]
-        managed = close.split("} else", 1)[0]
-        self.assertIn("!suppressClose&&minecraft.getConnection()!=null", managed)
-        self.assertLess(managed.index("returnToParent(token"), managed.index("minecraft.setScreen(null)"))
-        self.assertNotIn("setScreen(parent)", managed)
-        # Opening details still closes the original parent; no hidden session remains.
-        self.assertIn("HumanCommandNetwork.closeScreen(sessionToken)", source("SoldierCommandScreen"))
-        self.assertIn("SoldierRosterNetwork.request(token,9,NONE)", source("SoldierRosterScreen"))
-
+        screen=source("AttributeDetailScreen")
+        close=java_block(screen,"public void onClose()")
+        managed=compact(java_block(close,"if(managedParent())"))
+        self.assertIn("!session.suppressed()&&minecraft.getConnection()!=null",managed)
+        self.assertLess(managed.index("returnToParent(token()"),managed.index("minecraft.setScreen(null)"))
+        self.assertNotIn("setScreen(parent)",managed)
+        self.assertIn("elseminecraft.setScreen(parent)",compact(close))
+        self.assertIn("HumanCommandNetwork.closeScreen(sessionToken)",source("SoldierCommandScreen"))
+        self.assertIn("SoldierRosterNetwork.request(token,9,NONE)",compact(source("SoldierRosterScreen")))
     def test_server_rejection_and_disconnect_cannot_reopen_parent(self):
-        screen = source("AttributeDetailScreen")
-        server_close = screen.split("void serverClosed()", 1)[1].split("private static Component text", 1)[0]
-        self.assertIn("suppressClose=true;minecraft.setScreen(managedParent()?null:parent)", server_close)
-        self.assertIn("void disconnect(){suppressClose=true;}", server_close)
-        self.assertNotIn("returnToParent", server_close)
-
+        screen=source("AttributeDetailScreen")
+        server_close=compact(java_block(screen,"void serverClosed()"))
+        self.assertLess(server_close.index("session.suppressClose()"),server_close.index("minecraft.setScreen(managedParent()?null:parent)"))
+        disconnect=compact(java_block(screen,"void disconnect()"))
+        self.assertIn("session.suppressClose()",disconnect)
+        for code in (server_close,disconnect):self.assertNotIn("returnToParent",code)
+        self.assertIn("session.removed()",java_block(screen,"public void removed()"))
+        self.assertIn("newPanelSessionView(token,20,()->AttributeDetailNetwork.keepAlive(token),()->AttributeDetailNetwork.close(token))",compact(screen))
+        session=source("PanelSessionView")
+        removed=compact(java_block(session,"public void removed()"))
+        self.assertIn("if(!closed){closed=true;if(!suppressed)close.run();}",removed)
+        self.assertIn("suppressed=true",compact(java_block(session,"public void suppressClose()")))
+        self.assertIn("!closed&&!suppressed",compact(java_block(session,"public void tick()")))
     def test_unknown_persisted_faction_is_bounded_before_snapshot_and_encode(self):
         command = source("HumanCommandNetwork")
         self.assertIn("HumanFactions.wireId(HumanFactions.id(h))", command)

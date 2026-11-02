@@ -1,9 +1,9 @@
 """Read-only progress wiring. No compiler, backend execution or game acceptance."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import re
 import unittest
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / 'src/main/java/club/someoneice/humangunner'
+PKG = ROOT / 'src/main/java/dev/felix/hostilehumans'
 def source(name): return (PKG / (name + '.java')).read_text(encoding='utf-8')
 def body(text, signature):
     start = text.index('{', text.index(signature)) + 1
@@ -22,7 +22,7 @@ class ExecutionProgressContract(unittest.TestCase):
             self.assertIn('peekActions(human)', code)
     def test_capture_uses_real_producers_and_no_placeholder_progress(self):
         capture = body(source('BehaviorDebugSnapshot'), 'capture(Human')
-        for call in ['RecoverySupplies.progress(human)', 'rangedChargeProgress()', 'reloadProgress(human)', 'humanGunner$peekShieldDefense()']:
+        for call in ['RecoverySupplies.progress(human)', 'rangedChargeProgress()', 'reloadProgress(human)', 'hhu$peekShieldDefense()']:
             self.assertIn(call, capture)
         self.assertNotIn('缺少', capture)
         self.assertIn('cut |= progress.size() > MAX_PROGRESS', capture)

@@ -1,0 +1,85 @@
+package dev.felix.hostilehumans.behavior.combat.defense;
+
+/** Pure combat decisions shared by the live goal and behavior regression tests. */
+public final class CombatPressurePolicy {
+    static final int MINIMUM_EFFECTIVE_BLOCK_TICKS = 6;
+    static final int MAX_GUARD_WAIT_TICKS = 20;
+    static final int COUNTER_WINDOW_TICKS = 10;
+
+    static boolean shouldCounterAfterGuard(int heldTicks, boolean blocked, boolean awaitingProjectile) {
+        return heldTicks >= MINIMUM_EFFECTIVE_BLOCK_TICKS
+                && ((!awaitingProjectile && blocked) || heldTicks >= MAX_GUARD_WAIT_TICKS);
+    }
+    static final int QUIET_RELEASE_TICKS = 10;
+    static final int RECENT_HIT_TICKS = 6;
+    static final int GUNFIRE_MEMORY_TICKS = 40;
+    public static final int CROWD_THREAT_COUNT = 3;
+    public static final int CROWD_PRESSURE_MEMORY_TICKS = 20;
+    public static final int NEARBY_THREAT_DAMAGE_WINDOW_TICKS = 60;
+
+    private CombatPressurePolicy() {
+    }
+
+    static boolean isRecentHit(int currentTick, int hurtTick) {
+        return hurtTick >= 0 && currentTick >= hurtTick
+                && currentTick - hurtTick <= RECENT_HIT_TICKS;
+    }
+
+    static boolean isRecentGunfire(int currentTick, int gunfireUntil) {
+        return gunfireUntil >= currentTick
+                && gunfireUntil - currentTick >= GUNFIRE_MEMORY_TICKS - RECENT_HIT_TICKS;
+    }
+
+    static boolean predictsIncomingMelee(
+            double distanceSqr, boolean swinging, boolean hasIntent,
+            boolean facingDefender, double approachSpeed
+    ) {
+        if (distanceSqr > 12.25D || !hasIntent || !facingDefender
+                || approachSpeed <= -0.025D) {
+            return false;
+        }
+        return swinging || distanceSqr <= 9.0D || approachSpeed >= 0.035D;
+    }
+
+    static boolean shouldReleaseForPursuit(
+            int heldTicks, int quietTicks, boolean meleeThreat,
+            double distanceSqr, double approachSpeed
+    ) {
+        return heldTicks >= MINIMUM_EFFECTIVE_BLOCK_TICKS
+                && quietTicks >= 4
+                && meleeThreat
+                && (distanceSqr > 16.0D
+                || (distanceSqr > 6.25D && approachSpeed <= -0.025D));
+    }
+
+    static boolean shouldReleaseUnpressuredBlock(int heldTicks, int quietTicks,
+                                                boolean incomingProjectile, boolean incomingMelee) {
+        return heldTicks >= MINIMUM_EFFECTIVE_BLOCK_TICKS && quietTicks >= 4
+                && !incomingProjectile && !incomingMelee;
+    }
+
+    public static boolean shouldPrioritizeCloserThreat(double currentDistanceSqr,
+                                                 double candidateDistanceSqr,
+                                                 float recentCurrentDamage,
+                                                 float maximumHealth) {
+        return candidateDistanceSqr <= 36.0D
+                && candidateDistanceSqr + 9.0D < currentDistanceSqr
+                && candidateDistanceSqr * 2.0D < currentDistanceSqr
+                && recentCurrentDamage < maximumHealth * 0.15F;
+    }
+
+    public static boolean shouldUseCrowdCounterfire(
+            boolean ownsGun, boolean crowdPressureActive, boolean hasLineOfSight, double distanceSqr
+    ) {
+        return ownsGun && crowdPressureActive && hasLineOfSight && distanceSqr <= 784.0D;
+    }
+
+    public static boolean shouldUseRetreatCounterfire(
+            double distanceSqr, int retreatTicks, double minimumRange, double maximumRange,
+            int minimumRetreatTicks
+    ) {
+        return retreatTicks >= minimumRetreatTicks
+                && distanceSqr > minimumRange * minimumRange
+                && distanceSqr <= maximumRange * maximumRange;
+    }
+}

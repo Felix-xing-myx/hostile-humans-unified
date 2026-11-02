@@ -23,7 +23,7 @@
 
 | 责任 | 入口 | 必须保持的边界 |
 | --- | --- | --- |
-| 实际近战许可 | `Human.humanGunner$canMeleeAttack`、`MeleeCombatRange.canStartAttack` | 持枪、举盾、高压保护不产生未经许可的近战伤害 |
+| 实际近战许可 | `Human.hhu$canMeleeAttack`、`MeleeCombatRange.canStartAttack` | 持枪、举盾、高压保护不产生未经许可的近战伤害 |
 | 武器可达范围 | `MeleeCombatRange.canReachTarget` | 只预测几何可达，不授予收盾或出伤许可；举盾时仍可读取 Better Combat 武器范围 |
 | 临时恢复保留槽 | `HumanInventoryCustody.isReservedForRecovery` → `RecoverySupplies.reservesInventorySlot` | 自动选择、存储和腾槽均跳过；玩家编辑前先结清会话 |
 | 战斗路径命令边界 | `SoldierOrder.allowsCombatPath` | 检查剩余全部节点；地形安全、局部半径仍由各模块负责；普通返队/逃生不能机械套用此限制 |

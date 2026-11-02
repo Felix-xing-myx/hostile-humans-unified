@@ -1,0 +1,41 @@
+package dev.felix.hostilehumans.behavior.combat.gun;
+
+import dev.felix.hostilehumans.entity.Human;
+
+import dev.felix.hostilehumans.behavior.combat.ranged.RangedShotClearance;
+import dev.felix.hostilehumans.bootstrap.HumanRuntime;
+import dev.felix.hostilehumans.faction.HumanRelations;
+import dev.felix.hostilehumans.perception.HumanAttention;
+import dev.felix.hostilehumans.perception.HumanPerception;
+import dev.felix.hostilehumans.soldier.BodyguardProtection;
+
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+
+/** Final firing permission, shared by ordinary fire, retreat fire and native events. */
+public final class GunFireAuthorization {
+    private GunFireAuthorization() { }
+
+    public static boolean allows(Human human, ItemStack weapon, LivingEntity target) {
+        if (!(human.level() instanceof ServerLevel level) || !human.isAlive() || human.isRemoved()
+                || human.isNoAi() || human.isSleeping() || human.isActivelyCollectingLoot()
+                || HumanRuntime.isManualInventoryOpen(human)
+                || weapon != human.getMainHandItem() || !HumanGunAcceptance.accepts(weapon)
+                || !GunSupport.isGunItem(weapon)) return false;
+        if (dev.felix.hostilehumans.behavior.combat.HumanCombatAuthority.bound(human))
+            return human.level().getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
+                    && dev.felix.hostilehumans.behavior.combat.HumanCombatAuthority.gunIntent(human, weapon);
+        if (target == null || target == human || target != human.getTarget()
+                || !target.isAlive() || target.isRemoved() || target.isSpectator()
+                || target.level() != level || level.getEntity(target.getUUID()) != target
+                || !human.canAttack(target) || HumanRelations.allied(human, target)
+                || !HumanPerception.canTarget(human,target) || !HumanPerception.allowCombatLook(human,target) || !HumanAttention.canAim(human,target)) return false;
+        if (BodyguardProtection.isBodyguard(human)) {
+            BodyguardProtection.update(human);
+            if (BodyguardProtection.attack(human) != target) return false;
+        }
+        double reach = GunRangePolicy.firingReach(human,weapon);
+        return Double.isFinite(reach)&&reach>0&&human.distanceToSqr(target) <= reach * reach && RangedShotClearance.canShoot(human, target);
+    }
+}

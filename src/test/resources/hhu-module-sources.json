@@ -1,0 +1,3438 @@
+{
+  "AbstractArrowBallisticsMixin": {
+    "class": "dev.felix.hostilehumans.mixin.AbstractArrowBallisticsMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/AbstractArrowBallisticsMixin.java"
+  },
+  "ActionCoordinator": {
+    "class": "dev.felix.hostilehumans.behavior.ActionCoordinator",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/ActionCoordinator.java"
+  },
+  "ActionProgressSnapshot": {
+    "class": "dev.felix.hostilehumans.behavior.ActionProgressSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/ActionProgressSnapshot.java"
+  },
+  "ActiveRuntimeClock": {
+    "class": "dev.felix.hostilehumans.cultivation.ActiveRuntimeClock",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/ActiveRuntimeClock.java"
+  },
+  "ActivityBudgetConfig": {
+    "class": "dev.felix.hostilehumans.performance.ActivityBudgetConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/performance/ActivityBudgetConfig.java"
+  },
+  "ActivityLoadPolicy": {
+    "class": "dev.felix.hostilehumans.performance.ActivityLoadPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/performance/ActivityLoadPolicy.java"
+  },
+  "AdaptiveActivityBudget": {
+    "class": "dev.felix.hostilehumans.performance.AdaptiveActivityBudget",
+    "path": "src/main/java/dev/felix/hostilehumans/performance/AdaptiveActivityBudget.java"
+  },
+  "AdaptiveCombatGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.AdaptiveCombatGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/AdaptiveCombatGoal.java"
+  },
+  "AggressionMode": {
+    "class": "dev.felix.hostilehumans.entity.AggressionMode",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/AggressionMode.java"
+  },
+  "AmmoWeaponSelection": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.AmmoWeaponSelection",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/AmmoWeaponSelection.java"
+  },
+  "ArmorSwapConfig": {
+    "class": "dev.felix.hostilehumans.equipment.ArmorSwapConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/ArmorSwapConfig.java"
+  },
+  "ArmorSwapPolicy": {
+    "class": "dev.felix.hostilehumans.equipment.ArmorSwapPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/ArmorSwapPolicy.java"
+  },
+  "ArrowAttackCadence": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.ArrowAttackCadence",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/ArrowAttackCadence.java"
+  },
+  "ArrowVolleyPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.ArrowVolleyPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/ArrowVolleyPolicy.java"
+  },
+  "AttentionFacingPolicy": {
+    "class": "dev.felix.hostilehumans.perception.AttentionFacingPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/AttentionFacingPolicy.java"
+  },
+  "AttributeDetailClient": {
+    "class": "dev.felix.hostilehumans.observer.AttributeDetailClient",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/AttributeDetailClient.java"
+  },
+  "AttributeDetailNetwork": {
+    "class": "dev.felix.hostilehumans.observer.AttributeDetailNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/AttributeDetailNetwork.java"
+  },
+  "AttributeDetailPolicy": {
+    "class": "dev.felix.hostilehumans.observer.AttributeDetailPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/AttributeDetailPolicy.java"
+  },
+  "AttributeDetailScreen": {
+    "class": "dev.felix.hostilehumans.observer.client.AttributeDetailScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/client/AttributeDetailScreen.java"
+  },
+  "AttributeDetailSnapshot": {
+    "class": "dev.felix.hostilehumans.observer.AttributeDetailSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/AttributeDetailSnapshot.java"
+  },
+  "AttributeObserverItem": {
+    "class": "dev.felix.hostilehumans.observer.AttributeObserverItem",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/AttributeObserverItem.java"
+  },
+  "AttributeReference": {
+    "class": "dev.felix.hostilehumans.observer.AttributeReference",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/AttributeReference.java"
+  },
+  "AvoidCreeperGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.AvoidCreeperGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/AvoidCreeperGoal.java"
+  },
+  "AvoidTNTGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.AvoidTNTGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/AvoidTNTGoal.java"
+  },
+  "BackShieldPose": {
+    "class": "dev.felix.hostilehumans.client.render.BackShieldPose",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/BackShieldPose.java"
+  },
+  "BadgePolicy": {
+    "class": "dev.felix.hostilehumans.faction.BadgePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/BadgePolicy.java"
+  },
+  "BasicNavigationBudget": {
+    "class": "dev.felix.hostilehumans.navigation.BasicNavigationBudget",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/BasicNavigationBudget.java"
+  },
+  "BeaconReportPolicy": {
+    "class": "dev.felix.hostilehumans.perception.BeaconReportPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/BeaconReportPolicy.java"
+  },
+  "BeaconReportingService": {
+    "class": "dev.felix.hostilehumans.perception.BeaconReportingService",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/BeaconReportingService.java"
+  },
+  "BeardifierMix": {
+    "class": "dev.felix.hostilehumans.mixin.BeardifierMix",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/BeardifierMix.java"
+  },
+  "BehaviorDebugSnapshot": {
+    "class": "dev.felix.hostilehumans.behavior.BehaviorDebugSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/BehaviorDebugSnapshot.java"
+  },
+  "BetterCombatMeleeCombat": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.BetterCombatMeleeCombat",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/BetterCombatMeleeCombat.java"
+  },
+  "BetterCombatNpcAnimator": {
+    "class": "dev.felix.hostilehumans.client.render.BetterCombatNpcAnimator",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/BetterCombatNpcAnimator.java"
+  },
+  "BlockMixin": {
+    "class": "dev.felix.hostilehumans.mixin.BlockMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/BlockMixin.java"
+  },
+  "BodyVisibilitySamples": {
+    "class": "dev.felix.hostilehumans.perception.BodyVisibilitySamples",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/BodyVisibilitySamples.java"
+  },
+  "BodyguardMovementGoal": {
+    "class": "dev.felix.hostilehumans.soldier.BodyguardMovementGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/BodyguardMovementGoal.java"
+  },
+  "BodyguardPolicy": {
+    "class": "dev.felix.hostilehumans.soldier.BodyguardPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/BodyguardPolicy.java"
+  },
+  "BodyguardProtection": {
+    "class": "dev.felix.hostilehumans.soldier.BodyguardProtection",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/BodyguardProtection.java"
+  },
+  "BoundedSearchCycle": {
+    "class": "dev.felix.hostilehumans.common.BoundedSearchCycle",
+    "path": "src/main/java/dev/felix/hostilehumans/common/BoundedSearchCycle.java"
+  },
+  "BoundedSelection": {
+    "class": "dev.felix.hostilehumans.common.BoundedSelection",
+    "path": "src/main/java/dev/felix/hostilehumans/common/BoundedSelection.java"
+  },
+  "BowAttack": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.BowAttack",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/BowAttack.java"
+  },
+  "BowMovementExecution": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.BowMovementExecution",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/BowMovementExecution.java"
+  },
+  "BowRangePolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.BowRangePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/BowRangePolicy.java"
+  },
+  "BrokerIndex": {
+    "class": "dev.felix.hostilehumans.economy.BrokerIndex",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/BrokerIndex.java"
+  },
+  "BudgetedSearch": {
+    "class": "dev.felix.hostilehumans.performance.BudgetedSearch",
+    "path": "src/main/java/dev/felix/hostilehumans/performance/BudgetedSearch.java"
+  },
+  "BudgetedUpdates": {
+    "class": "dev.felix.hostilehumans.performance.BudgetedUpdates",
+    "path": "src/main/java/dev/felix/hostilehumans/performance/BudgetedUpdates.java"
+  },
+  "CachedOcclusionProof": {
+    "class": "dev.felix.hostilehumans.perception.CachedOcclusionProof",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/CachedOcclusionProof.java"
+  },
+  "CachedReflection": {
+    "class": "dev.felix.hostilehumans.common.CachedReflection",
+    "path": "src/main/java/dev/felix/hostilehumans/common/CachedReflection.java"
+  },
+  "ChunkGeneratorMix": {
+    "class": "dev.felix.hostilehumans.mixin.ChunkGeneratorMix",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ChunkGeneratorMix.java"
+  },
+  "ClientAnimationCompatibility": {
+    "class": "dev.felix.hostilehumans.client.render.ClientAnimationCompatibility",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/ClientAnimationCompatibility.java"
+  },
+  "ClientRenderer": {
+    "class": "dev.felix.hostilehumans.client.render.ClientRenderer",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/ClientRenderer.java"
+  },
+  "ClientSessionEvents": {
+    "class": "dev.felix.hostilehumans.client.ClientSessionEvents",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ClientSessionEvents.java"
+  },
+  "ClientSetup": {
+    "class": "dev.felix.hostilehumans.client.ClientSetup",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ClientSetup.java"
+  },
+  "ClientUiResourceEvents": {
+    "class": "dev.felix.hostilehumans.bootstrap.ClientUiResourceEvents",
+    "path": "src/main/java/dev/felix/hostilehumans/bootstrap/ClientUiResourceEvents.java"
+  },
+  "CloseDefenseHold": {
+    "class": "dev.felix.hostilehumans.behavior.combat.CloseDefenseHold",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/CloseDefenseHold.java"
+  },
+  "CloseRangedTactics": {
+    "class": "dev.felix.hostilehumans.behavior.combat.CloseRangedTactics",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/CloseRangedTactics.java"
+  },
+  "CombatAiConfig": {
+    "class": "dev.felix.hostilehumans.behavior.combat.CombatAiConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/CombatAiConfig.java"
+  },
+  "CombatConsumableGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.recovery.CombatConsumableGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/recovery/CombatConsumableGoal.java"
+  },
+  "CombatPreference": {
+    "class": "dev.felix.hostilehumans.behavior.combat.CombatPreference",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/CombatPreference.java"
+  },
+  "CombatPressurePolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.CombatPressurePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/CombatPressurePolicy.java"
+  },
+  "CombatRecoveryGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.recovery.CombatRecoveryGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/recovery/CombatRecoveryGoal.java"
+  },
+  "CombatResupply": {
+    "class": "dev.felix.hostilehumans.inventory.CombatResupply",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/CombatResupply.java"
+  },
+  "CombatResupplyConfig": {
+    "class": "dev.felix.hostilehumans.inventory.CombatResupplyConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/CombatResupplyConfig.java"
+  },
+  "CombatStrategySet": {
+    "class": "dev.felix.hostilehumans.behavior.combat.CombatStrategySet",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/CombatStrategySet.java"
+  },
+  "CombatTerrainNavigation": {
+    "class": "dev.felix.hostilehumans.navigation.CombatTerrainNavigation",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/CombatTerrainNavigation.java"
+  },
+  "CombatTerrainPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.CombatTerrainPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/CombatTerrainPolicy.java"
+  },
+  "CombatWeaponPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.CombatWeaponPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/CombatWeaponPolicy.java"
+  },
+  "CommandHealthCodec": {
+    "class": "dev.felix.hostilehumans.soldier.CommandHealthCodec",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/CommandHealthCodec.java"
+  },
+  "CommandHealthSnapshot": {
+    "class": "dev.felix.hostilehumans.soldier.CommandHealthSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/CommandHealthSnapshot.java"
+  },
+  "CommandPanelChrome": {
+    "class": "dev.felix.hostilehumans.client.ui.CommandPanelChrome",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/CommandPanelChrome.java"
+  },
+  "CommandPanelLayout": {
+    "class": "dev.felix.hostilehumans.client.ui.CommandPanelLayout",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/CommandPanelLayout.java"
+  },
+  "CommandPanelScreen": {
+    "class": "dev.felix.hostilehumans.client.ui.CommandPanelScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/CommandPanelScreen.java"
+  },
+  "CommandRateLimit": {
+    "class": "dev.felix.hostilehumans.soldier.CommandRateLimit",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/CommandRateLimit.java"
+  },
+  "CommandView": {
+    "class": "dev.felix.hostilehumans.soldier.CommandView",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/CommandView.java"
+  },
+  "CompositeGunSupport": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.CompositeGunSupport",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/CompositeGunSupport.java"
+  },
+  "ConditionalGoal": {
+    "class": "dev.felix.hostilehumans.behavior.ConditionalGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/ConditionalGoal.java"
+  },
+  "Config": {
+    "class": "dev.felix.hostilehumans.config.Config",
+    "path": "src/main/java/dev/felix/hostilehumans/config/Config.java"
+  },
+  "ConfigFieldHelp": {
+    "class": "dev.felix.hostilehumans.config.ConfigFieldHelp",
+    "path": "src/main/java/dev/felix/hostilehumans/config/ConfigFieldHelp.java"
+  },
+  "ConfiguredEquipmentLoadout": {
+    "class": "dev.felix.hostilehumans.equipment.ConfiguredEquipmentLoadout",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/ConfiguredEquipmentLoadout.java"
+  },
+  "ConfiguredHumanEquipment": {
+    "class": "dev.felix.hostilehumans.equipment.ConfiguredHumanEquipment",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/ConfiguredHumanEquipment.java"
+  },
+  "ContentRegistry": {
+    "class": "dev.felix.hostilehumans.bootstrap.ContentRegistry",
+    "path": "src/main/java/dev/felix/hostilehumans/bootstrap/ContentRegistry.java"
+  },
+  "ControlledEquipmentPolicy": {
+    "class": "dev.felix.hostilehumans.inventory.ControlledEquipmentPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/ControlledEquipmentPolicy.java"
+  },
+  "CreativeSoldierControllerItem": {
+    "class": "dev.felix.hostilehumans.soldier.CreativeSoldierControllerItem",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/CreativeSoldierControllerItem.java"
+  },
+  "CreeperFinishPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.CreeperFinishPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/CreeperFinishPolicy.java"
+  },
+  "CreeperMeleeCommitment": {
+    "class": "dev.felix.hostilehumans.behavior.combat.CreeperMeleeCommitment",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/CreeperMeleeCommitment.java"
+  },
+  "CreeperSafetyPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.CreeperSafetyPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/CreeperSafetyPolicy.java"
+  },
+  "CrossbowGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.CrossbowGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/CrossbowGoal.java"
+  },
+  "CrossbowMovementExecution": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.CrossbowMovementExecution",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/CrossbowMovementExecution.java"
+  },
+  "CultivationCommands": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationCommands",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationCommands.java"
+  },
+  "CultivationContent": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationContent",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationContent.java"
+  },
+  "CultivationCycle": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationCycle",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationCycle.java"
+  },
+  "CultivationData": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationData",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationData.java"
+  },
+  "CultivationFacade": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationFacade",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationFacade.java"
+  },
+  "CultivationFacility": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationFacility",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationFacility.java"
+  },
+  "CultivationFacilityPolicy": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationFacilityPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationFacilityPolicy.java"
+  },
+  "CultivationNbt": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationNbt",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationNbt.java"
+  },
+  "CultivationNetwork": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationNetwork.java"
+  },
+  "CultivationPauseObserver": {
+    "class": "dev.felix.hostilehumans.cultivation.client.CultivationPauseObserver",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/client/CultivationPauseObserver.java"
+  },
+  "CultivationPlanner": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationPlanner",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationPlanner.java"
+  },
+  "CultivationProfile": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationProfile",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationProfile.java"
+  },
+  "CultivationRecord": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationRecord",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationRecord.java"
+  },
+  "CultivationRules": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationRules",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationRules.java"
+  },
+  "CultivationRuntime": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationRuntime",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationRuntime.java"
+  },
+  "CultivationScreen": {
+    "class": "dev.felix.hostilehumans.cultivation.client.CultivationScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/client/CultivationScreen.java"
+  },
+  "CultivationService": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationService",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationService.java"
+  },
+  "CultivationSettlementIntegration": {
+    "class": "dev.felix.hostilehumans.bootstrap.CultivationSettlementIntegration",
+    "path": "src/main/java/dev/felix/hostilehumans/bootstrap/CultivationSettlementIntegration.java"
+  },
+  "CultivationSnapshot": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationSnapshot.java"
+  },
+  "CultivationSnapshotCodec": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationSnapshotCodec",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationSnapshotCodec.java"
+  },
+  "CultivationTrainingBlock": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationTrainingBlock",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationTrainingBlock.java"
+  },
+  "CultivationTrainingBlockEntity": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationTrainingBlockEntity",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationTrainingBlockEntity.java"
+  },
+  "CultivationTrainingGoal": {
+    "class": "dev.felix.hostilehumans.cultivation.CultivationTrainingGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/CultivationTrainingGoal.java"
+  },
+  "CuriosBandAccess": {
+    "class": "dev.felix.hostilehumans.faction.visual.CuriosBandAccess",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/visual/CuriosBandAccess.java"
+  },
+  "CuriosWalletAccess": {
+    "class": "dev.felix.hostilehumans.economy.CuriosWalletAccess",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/CuriosWalletAccess.java"
+  },
+  "Currency": {
+    "class": "dev.felix.hostilehumans.economy.Currency",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/Currency.java"
+  },
+  "CurrencyItem": {
+    "class": "dev.felix.hostilehumans.economy.CurrencyItem",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/CurrencyItem.java"
+  },
+  "CurrentConfigDefaults": {
+    "class": "dev.felix.hostilehumans.config.CurrentConfigDefaults",
+    "path": "src/main/java/dev/felix/hostilehumans/config/CurrentConfigDefaults.java"
+  },
+  "DamagePartition": {
+    "class": "dev.felix.hostilehumans.damage.DamagePartition",
+    "path": "src/main/java/dev/felix/hostilehumans/damage/DamagePartition.java"
+  },
+  "DamagePipelineState": {
+    "class": "dev.felix.hostilehumans.damage.DamagePipelineState",
+    "path": "src/main/java/dev/felix/hostilehumans/damage/DamagePipelineState.java"
+  },
+  "DamagePressureTracker": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.DamagePressureTracker",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/DamagePressureTracker.java"
+  },
+  "DamageSourceMix": {
+    "class": "dev.felix.hostilehumans.mixin.DamageSourceMix",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/DamageSourceMix.java"
+  },
+  "DebugWorldLines": {
+    "class": "dev.felix.hostilehumans.client.render.DebugWorldLines",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/DebugWorldLines.java"
+  },
+  "DefenseAttributePolicy": {
+    "class": "dev.felix.hostilehumans.progression.DefenseAttributePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/DefenseAttributePolicy.java"
+  },
+  "DefenseAttributes": {
+    "class": "dev.felix.hostilehumans.progression.DefenseAttributes",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/DefenseAttributes.java"
+  },
+  "DodgeAbility": {
+    "class": "dev.felix.hostilehumans.faction.ability.DodgeAbility",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/ability/DodgeAbility.java"
+  },
+  "DoorInteractHumanGoal": {
+    "class": "dev.felix.hostilehumans.navigation.DoorInteractHumanGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/DoorInteractHumanGoal.java"
+  },
+  "DoorMixin": {
+    "class": "dev.felix.hostilehumans.mixin.DoorMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/DoorMixin.java"
+  },
+  "DungeonMobs": {
+    "class": "dev.felix.hostilehumans.compat.DungeonMobs",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/DungeonMobs.java"
+  },
+  "EconomyBrokerBlock": {
+    "class": "dev.felix.hostilehumans.economy.EconomyBrokerBlock",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyBrokerBlock.java"
+  },
+  "EconomyBrokerEntity": {
+    "class": "dev.felix.hostilehumans.economy.EconomyBrokerEntity",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyBrokerEntity.java"
+  },
+  "EconomyContent": {
+    "class": "dev.felix.hostilehumans.economy.EconomyContent",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyContent.java"
+  },
+  "EconomyEvents": {
+    "class": "dev.felix.hostilehumans.economy.EconomyEvents",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyEvents.java"
+  },
+  "EconomyNetwork": {
+    "class": "dev.felix.hostilehumans.economy.EconomyNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyNetwork.java"
+  },
+  "EconomyPolicy": {
+    "class": "dev.felix.hostilehumans.economy.EconomyPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyPolicy.java"
+  },
+  "EconomyRecovery": {
+    "class": "dev.felix.hostilehumans.economy.EconomyRecovery",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyRecovery.java"
+  },
+  "EconomyScreen": {
+    "class": "dev.felix.hostilehumans.economy.client.EconomyScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/client/EconomyScreen.java"
+  },
+  "EconomyService": {
+    "class": "dev.felix.hostilehumans.economy.EconomyService",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyService.java"
+  },
+  "EconomyTables": {
+    "class": "dev.felix.hostilehumans.economy.EconomyTables",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyTables.java"
+  },
+  "EconomyTaskBoardBlock": {
+    "class": "dev.felix.hostilehumans.economy.EconomyTaskBoardBlock",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyTaskBoardBlock.java"
+  },
+  "EconomyTasks": {
+    "class": "dev.felix.hostilehumans.economy.EconomyTasks",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyTasks.java"
+  },
+  "EconomyTraderBlock": {
+    "class": "dev.felix.hostilehumans.economy.EconomyTraderBlock",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyTraderBlock.java"
+  },
+  "EconomyView": {
+    "class": "dev.felix.hostilehumans.economy.EconomyView",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/EconomyView.java"
+  },
+  "EffectiveAttributes": {
+    "class": "dev.felix.hostilehumans.progression.EffectiveAttributes",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/EffectiveAttributes.java"
+  },
+  "EmfAnimationCompat": {
+    "class": "dev.felix.hostilehumans.client.render.EmfAnimationCompat",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/EmfAnimationCompat.java"
+  },
+  "EncounterCooldown": {
+    "class": "dev.felix.hostilehumans.faction.EncounterCooldown",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/EncounterCooldown.java"
+  },
+  "EquipmentArchetypes": {
+    "class": "dev.felix.hostilehumans.equipment.EquipmentArchetypes",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/EquipmentArchetypes.java"
+  },
+  "EquipmentBreakSounds": {
+    "class": "dev.felix.hostilehumans.equipment.EquipmentBreakSounds",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/EquipmentBreakSounds.java"
+  },
+  "EquipmentCondition": {
+    "class": "dev.felix.hostilehumans.equipment.EquipmentCondition",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/EquipmentCondition.java"
+  },
+  "EquipmentConfigMigration": {
+    "class": "dev.felix.hostilehumans.equipment.EquipmentConfigMigration",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/EquipmentConfigMigration.java"
+  },
+  "EquipmentGrowthPolicy": {
+    "class": "dev.felix.hostilehumans.equipment.EquipmentGrowthPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/EquipmentGrowthPolicy.java"
+  },
+  "EquipmentIntegrationDefaults": {
+    "class": "dev.felix.hostilehumans.equipment.EquipmentIntegrationDefaults",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/EquipmentIntegrationDefaults.java"
+  },
+  "EquipmentWearCooldown": {
+    "class": "dev.felix.hostilehumans.equipment.EquipmentWearCooldown",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/EquipmentWearCooldown.java"
+  },
+  "EquipmentWearLimit": {
+    "class": "dev.felix.hostilehumans.equipment.EquipmentWearLimit",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/EquipmentWearLimit.java"
+  },
+  "EventHandler": {
+    "class": "dev.felix.hostilehumans.bootstrap.EventHandler",
+    "path": "src/main/java/dev/felix/hostilehumans/bootstrap/EventHandler.java"
+  },
+  "EventHandlerMod": {
+    "class": "dev.felix.hostilehumans.bootstrap.EventHandlerMod",
+    "path": "src/main/java/dev/felix/hostilehumans/bootstrap/EventHandlerMod.java"
+  },
+  "FactionAbilities": {
+    "class": "dev.felix.hostilehumans.faction.ability.FactionAbilities",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/ability/FactionAbilities.java"
+  },
+  "FactionAbility": {
+    "class": "dev.felix.hostilehumans.faction.ability.FactionAbility",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/ability/FactionAbility.java"
+  },
+  "FactionAuthoringCommands": {
+    "class": "dev.felix.hostilehumans.faction.FactionAuthoringCommands",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/FactionAuthoringCommands.java"
+  },
+  "FactionBandAppearance": {
+    "class": "dev.felix.hostilehumans.faction.visual.FactionBandAppearance",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/visual/FactionBandAppearance.java"
+  },
+  "FactionBandFit": {
+    "class": "dev.felix.hostilehumans.faction.visual.FactionBandFit",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/visual/FactionBandFit.java"
+  },
+  "FactionBossHuman": {
+    "class": "dev.felix.hostilehumans.entity.FactionBossHuman",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/FactionBossHuman.java"
+  },
+  "FactionContent": {
+    "class": "dev.felix.hostilehumans.faction.FactionContent",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/FactionContent.java"
+  },
+  "FactionDefinitions": {
+    "class": "dev.felix.hostilehumans.faction.FactionDefinitions",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/FactionDefinitions.java"
+  },
+  "FactionEconomyLedger": {
+    "class": "dev.felix.hostilehumans.faction.FactionEconomyLedger",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/FactionEconomyLedger.java"
+  },
+  "FactionEquipmentConfig": {
+    "class": "dev.felix.hostilehumans.equipment.FactionEquipmentConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/FactionEquipmentConfig.java"
+  },
+  "FactionEquipmentEnchantments": {
+    "class": "dev.felix.hostilehumans.equipment.FactionEquipmentEnchantments",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/FactionEquipmentEnchantments.java"
+  },
+  "FactionEquipmentGuns": {
+    "class": "dev.felix.hostilehumans.equipment.FactionEquipmentGuns",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/FactionEquipmentGuns.java"
+  },
+  "FactionEquipmentPolicy": {
+    "class": "dev.felix.hostilehumans.equipment.FactionEquipmentPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/FactionEquipmentPolicy.java"
+  },
+  "FactionEquipmentPools": {
+    "class": "dev.felix.hostilehumans.equipment.FactionEquipmentPools",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/FactionEquipmentPools.java"
+  },
+  "FactionPassage": {
+    "class": "dev.felix.hostilehumans.faction.FactionPassage",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/FactionPassage.java"
+  },
+  "FactionRecruitment": {
+    "class": "dev.felix.hostilehumans.faction.FactionRecruitment",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/FactionRecruitment.java"
+  },
+  "FactionRules": {
+    "class": "dev.felix.hostilehumans.faction.FactionRules",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/FactionRules.java"
+  },
+  "FactionSpawnEggItem": {
+    "class": "dev.felix.hostilehumans.world.FactionSpawnEggItem",
+    "path": "src/main/java/dev/felix/hostilehumans/world/FactionSpawnEggItem.java"
+  },
+  "FactionStandingData": {
+    "class": "dev.felix.hostilehumans.faction.FactionStandingData",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/FactionStandingData.java"
+  },
+  "FactionVisualClient": {
+    "class": "dev.felix.hostilehumans.faction.visual.FactionVisualClient",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/visual/FactionVisualClient.java"
+  },
+  "FactionVisualCodec": {
+    "class": "dev.felix.hostilehumans.faction.visual.FactionVisualCodec",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/visual/FactionVisualCodec.java"
+  },
+  "FactionVisualLayer": {
+    "class": "dev.felix.hostilehumans.faction.visual.FactionVisualLayer",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/visual/FactionVisualLayer.java"
+  },
+  "FactionVisualNetwork": {
+    "class": "dev.felix.hostilehumans.faction.visual.FactionVisualNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/visual/FactionVisualNetwork.java"
+  },
+  "FairWorkBudget": {
+    "class": "dev.felix.hostilehumans.performance.FairWorkBudget",
+    "path": "src/main/java/dev/felix/hostilehumans/performance/FairWorkBudget.java"
+  },
+  "FarmersDelight": {
+    "class": "dev.felix.hostilehumans.compat.FarmersDelight",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/FarmersDelight.java"
+  },
+  "FenceInteractGoal": {
+    "class": "dev.felix.hostilehumans.navigation.FenceInteractGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/FenceInteractGoal.java"
+  },
+  "FinisherPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.FinisherPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/FinisherPolicy.java"
+  },
+  "FirearmCompatConfig": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.FirearmCompatConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/FirearmCompatConfig.java"
+  },
+  "FirearmSpawnEquipment": {
+    "class": "dev.felix.hostilehumans.equipment.FirearmSpawnEquipment",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/FirearmSpawnEquipment.java"
+  },
+  "FirstAidApiBridge": {
+    "class": "dev.felix.hostilehumans.compat.firstaid.FirstAidApiBridge",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/firstaid/FirstAidApiBridge.java"
+  },
+  "FirstAidCompat": {
+    "class": "dev.felix.hostilehumans.compat.firstaid.FirstAidCompat",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/firstaid/FirstAidCompat.java"
+  },
+  "FirstAidSettings": {
+    "class": "dev.felix.hostilehumans.compat.firstaid.FirstAidSettings",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/firstaid/FirstAidSettings.java"
+  },
+  "FoodInventoryValue": {
+    "class": "dev.felix.hostilehumans.equipment.FoodInventoryValue",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/FoodInventoryValue.java"
+  },
+  "GarrisonReturnNavigation": {
+    "class": "dev.felix.hostilehumans.navigation.GarrisonReturnNavigation",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/GarrisonReturnNavigation.java"
+  },
+  "GarrisonSettings": {
+    "class": "dev.felix.hostilehumans.soldier.GarrisonSettings",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/GarrisonSettings.java"
+  },
+  "GrowthCombat": {
+    "class": "dev.felix.hostilehumans.progression.GrowthCombat",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/GrowthCombat.java"
+  },
+  "GrowthConfig": {
+    "class": "dev.felix.hostilehumans.progression.GrowthConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/GrowthConfig.java"
+  },
+  "GrowthHealth": {
+    "class": "dev.felix.hostilehumans.progression.GrowthHealth",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/GrowthHealth.java"
+  },
+  "GrowthProfileFiles": {
+    "class": "dev.felix.hostilehumans.progression.GrowthProfileFiles",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/GrowthProfileFiles.java"
+  },
+  "GrowthProgression": {
+    "class": "dev.felix.hostilehumans.progression.GrowthProgression",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/GrowthProgression.java"
+  },
+  "GrowthRewards": {
+    "class": "dev.felix.hostilehumans.progression.GrowthRewards",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/GrowthRewards.java"
+  },
+  "GrowthSnapshot": {
+    "class": "dev.felix.hostilehumans.progression.GrowthSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/GrowthSnapshot.java"
+  },
+  "GuaranteedShieldLoadout": {
+    "class": "dev.felix.hostilehumans.equipment.GuaranteedShieldLoadout",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/GuaranteedShieldLoadout.java"
+  },
+  "GuardCombatState": {
+    "class": "dev.felix.hostilehumans.behavior.combat.GuardCombatState",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/GuardCombatState.java"
+  },
+  "GuardReturnProgress": {
+    "class": "dev.felix.hostilehumans.navigation.GuardReturnProgress",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/GuardReturnProgress.java"
+  },
+  "GuardedRangedCharge": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.GuardedRangedCharge",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/GuardedRangedCharge.java"
+  },
+  "GunAimPoint": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunAimPoint",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunAimPoint.java"
+  },
+  "GunAttackAction": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunAttackAction",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunAttackAction.java"
+  },
+  "GunAttackMovementState": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunAttackMovementState",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunAttackMovementState.java"
+  },
+  "GunCombatProfile": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunCombatProfile",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunCombatProfile.java"
+  },
+  "GunCustody": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunCustody",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunCustody.java"
+  },
+  "GunDoctrine": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunDoctrine",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunDoctrine.java"
+  },
+  "GunDrawContinuity": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunDrawContinuity",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunDrawContinuity.java"
+  },
+  "GunFireAuthorization": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunFireAuthorization",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunFireAuthorization.java"
+  },
+  "GunHudData": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunHudData",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunHudData.java"
+  },
+  "GunMeleeProtection": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.GunMeleeProtection",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/GunMeleeProtection.java"
+  },
+  "GunMovementExecution": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunMovementExecution",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunMovementExecution.java"
+  },
+  "GunOcclusionApproach": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunOcclusionApproach",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunOcclusionApproach.java"
+  },
+  "GunPositioning": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunPositioning",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunPositioning.java"
+  },
+  "GunRangePolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunRangePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunRangePolicy.java"
+  },
+  "GunReloadAuthority": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunReloadAuthority",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunReloadAuthority.java"
+  },
+  "GunReloadPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunReloadPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunReloadPolicy.java"
+  },
+  "GunReloadSession": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunReloadSession",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunReloadSession.java"
+  },
+  "GunSpawnPools": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunSpawnPools",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunSpawnPools.java"
+  },
+  "GunSpecialization": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunSpecialization",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunSpecialization.java"
+  },
+  "GunSpreadPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunSpreadPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunSpreadPolicy.java"
+  },
+  "GunSupport": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunSupport",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunSupport.java"
+  },
+  "GunTargetMotion": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunTargetMotion",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunTargetMotion.java"
+  },
+  "GunTrackingPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunTrackingPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunTrackingPolicy.java"
+  },
+  "GunnerGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.GunnerGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/GunnerGoal.java"
+  },
+  "GunnerShieldProtection": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.GunnerShieldProtection",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/GunnerShieldProtection.java"
+  },
+  "HealthLossReceipt": {
+    "class": "dev.felix.hostilehumans.damage.HealthLossReceipt",
+    "path": "src/main/java/dev/felix/hostilehumans/damage/HealthLossReceipt.java"
+  },
+  "HearingRelevance": {
+    "class": "dev.felix.hostilehumans.perception.HearingRelevance",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/HearingRelevance.java"
+  },
+  "HiredHumanAmmoWarning": {
+    "class": "dev.felix.hostilehumans.soldier.HiredHumanAmmoWarning",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/HiredHumanAmmoWarning.java"
+  },
+  "HiredHumanHealthWarning": {
+    "class": "dev.felix.hostilehumans.soldier.HiredHumanHealthWarning",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/HiredHumanHealthWarning.java"
+  },
+  "HiredHumanRecall": {
+    "class": "dev.felix.hostilehumans.soldier.HiredHumanRecall",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/HiredHumanRecall.java"
+  },
+  "HostileBeaconFoodPolicy": {
+    "class": "dev.felix.hostilehumans.soldier.HostileBeaconFoodPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/HostileBeaconFoodPolicy.java"
+  },
+  "HostileHumanTargeting": {
+    "class": "dev.felix.hostilehumans.behavior.combat.HostileHumanTargeting",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/HostileHumanTargeting.java"
+  },
+  "HostileHumansUnified": {
+    "class": "dev.felix.hostilehumans.bootstrap.HostileHumansUnified",
+    "path": "src/main/java/dev/felix/hostilehumans/bootstrap/HostileHumansUnified.java"
+  },
+  "HostileTargetingConfig": {
+    "class": "dev.felix.hostilehumans.behavior.combat.HostileTargetingConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/HostileTargetingConfig.java"
+  },
+  "Human": {
+    "class": "dev.felix.hostilehumans.entity.Human",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/Human.java"
+  },
+  "HumanAbility": {
+    "class": "dev.felix.hostilehumans.entity.HumanAbility",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumanAbility.java"
+  },
+  "HumanAmmo": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.HumanAmmo",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/HumanAmmo.java"
+  },
+  "HumanAmmoItem": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.HumanAmmoItem",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/HumanAmmoItem.java"
+  },
+  "HumanAmmoPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.HumanAmmoPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/HumanAmmoPolicy.java"
+  },
+  "HumanAmmoSpawn": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.HumanAmmoSpawn",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/HumanAmmoSpawn.java"
+  },
+  "HumanAnimatedItemInHandLayer": {
+    "class": "dev.felix.hostilehumans.client.render.HumanAnimatedItemInHandLayer",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanAnimatedItemInHandLayer.java"
+  },
+  "HumanArrowCombat": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.HumanArrowCombat",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/HumanArrowCombat.java"
+  },
+  "HumanAttackCooldownPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.HumanAttackCooldownPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/HumanAttackCooldownPolicy.java"
+  },
+  "HumanAttention": {
+    "class": "dev.felix.hostilehumans.perception.HumanAttention",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/HumanAttention.java"
+  },
+  "HumanAwareness": {
+    "class": "dev.felix.hostilehumans.perception.HumanAwareness",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/HumanAwareness.java"
+  },
+  "HumanBackpackLayer": {
+    "class": "dev.felix.hostilehumans.client.render.HumanBackpackLayer",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanBackpackLayer.java"
+  },
+  "HumanBehaviorControl": {
+    "class": "dev.felix.hostilehumans.behavior.HumanBehaviorControl",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/HumanBehaviorControl.java"
+  },
+  "HumanCameraView": {
+    "class": "dev.felix.hostilehumans.client.render.HumanCameraView",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanCameraView.java"
+  },
+  "HumanCombatAuthority": {
+    "class": "dev.felix.hostilehumans.behavior.combat.HumanCombatAuthority",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/HumanCombatAuthority.java"
+  },
+  "HumanCombatDirector": {
+    "class": "dev.felix.hostilehumans.behavior.combat.HumanCombatDirector",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/HumanCombatDirector.java"
+  },
+  "HumanCommandNetwork": {
+    "class": "dev.felix.hostilehumans.soldier.HumanCommandNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/HumanCommandNetwork.java"
+  },
+  "HumanDamageEvents": {
+    "class": "dev.felix.hostilehumans.damage.HumanDamageEvents",
+    "path": "src/main/java/dev/felix/hostilehumans/damage/HumanDamageEvents.java"
+  },
+  "HumanDamagePipeline": {
+    "class": "dev.felix.hostilehumans.damage.HumanDamagePipeline",
+    "path": "src/main/java/dev/felix/hostilehumans/damage/HumanDamagePipeline.java"
+  },
+  "HumanDamageScaling": {
+    "class": "dev.felix.hostilehumans.progression.HumanDamageScaling",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/HumanDamageScaling.java"
+  },
+  "HumanData": {
+    "class": "dev.felix.hostilehumans.entity.HumanData",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumanData.java"
+  },
+  "HumanEntity": {
+    "class": "dev.felix.hostilehumans.entity.HumanEntity",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumanEntity.java"
+  },
+  "HumanEquipmentDrops": {
+    "class": "dev.felix.hostilehumans.inventory.HumanEquipmentDrops",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/HumanEquipmentDrops.java"
+  },
+  "HumanEquipmentExchange": {
+    "class": "dev.felix.hostilehumans.inventory.HumanEquipmentExchange",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/HumanEquipmentExchange.java"
+  },
+  "HumanFactions": {
+    "class": "dev.felix.hostilehumans.faction.HumanFactions",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/HumanFactions.java"
+  },
+  "HumanFallPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.HumanFallPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/HumanFallPolicy.java"
+  },
+  "HumanFinisherSelection": {
+    "class": "dev.felix.hostilehumans.behavior.combat.HumanFinisherSelection",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/HumanFinisherSelection.java"
+  },
+  "HumanFloatGoal": {
+    "class": "dev.felix.hostilehumans.navigation.HumanFloatGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/HumanFloatGoal.java"
+  },
+  "HumanFood": {
+    "class": "dev.felix.hostilehumans.entity.HumanFood",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumanFood.java"
+  },
+  "HumanGoalExecutionBridge": {
+    "class": "dev.felix.hostilehumans.behavior.HumanGoalExecutionBridge",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/HumanGoalExecutionBridge.java"
+  },
+  "HumanGoalSelectorExecutionMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanGoalSelectorExecutionMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanGoalSelectorExecutionMixin.java"
+  },
+  "HumanGrowth": {
+    "class": "dev.felix.hostilehumans.progression.HumanGrowth",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/HumanGrowth.java"
+  },
+  "HumanGunAcceptance": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.HumanGunAcceptance",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/HumanGunAcceptance.java"
+  },
+  "HumanGunPresentation": {
+    "class": "dev.felix.hostilehumans.client.render.HumanGunPresentation",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanGunPresentation.java"
+  },
+  "HumanHelper": {
+    "class": "dev.felix.hostilehumans.entity.HumanHelper",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumanHelper.java"
+  },
+  "HumanInventoryContainer": {
+    "class": "dev.felix.hostilehumans.inventory.HumanInventoryContainer",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/HumanInventoryContainer.java"
+  },
+  "HumanInventoryCustody": {
+    "class": "dev.felix.hostilehumans.inventory.HumanInventoryCustody",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/HumanInventoryCustody.java"
+  },
+  "HumanInventoryMenu": {
+    "class": "dev.felix.hostilehumans.inventory.HumanInventoryMenu",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/HumanInventoryMenu.java"
+  },
+  "HumanInventoryScreen": {
+    "class": "dev.felix.hostilehumans.client.ui.HumanInventoryScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/HumanInventoryScreen.java"
+  },
+  "HumanInventorySession": {
+    "class": "dev.felix.hostilehumans.inventory.HumanInventorySession",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/HumanInventorySession.java"
+  },
+  "HumanLookAtPlayerGoal": {
+    "class": "dev.felix.hostilehumans.perception.HumanLookAtPlayerGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/HumanLookAtPlayerGoal.java"
+  },
+  "HumanLootManager": {
+    "class": "dev.felix.hostilehumans.inventory.HumanLootManager",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/HumanLootManager.java"
+  },
+  "HumanLootVision": {
+    "class": "dev.felix.hostilehumans.perception.HumanLootVision",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/HumanLootVision.java"
+  },
+  "HumanManagedLoadout": {
+    "class": "dev.felix.hostilehumans.inventory.HumanManagedLoadout",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/HumanManagedLoadout.java"
+  },
+  "HumanManagerEventHandler": {
+    "class": "dev.felix.hostilehumans.entity.HumanManagerEventHandler",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumanManagerEventHandler.java"
+  },
+  "HumanMeleeDamage": {
+    "class": "dev.felix.hostilehumans.damage.HumanMeleeDamage",
+    "path": "src/main/java/dev/felix/hostilehumans/damage/HumanMeleeDamage.java"
+  },
+  "HumanMobEntityData": {
+    "class": "dev.felix.hostilehumans.entity.HumanMobEntityData",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumanMobEntityData.java"
+  },
+  "HumanMonitorAiStepMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanMonitorAiStepMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanMonitorAiStepMixin.java"
+  },
+  "HumanMonitorAudio": {
+    "class": "dev.felix.hostilehumans.monitor.HumanMonitorAudio",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/HumanMonitorAudio.java"
+  },
+  "HumanMonitorClient": {
+    "class": "dev.felix.hostilehumans.monitor.client.HumanMonitorClient",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/HumanMonitorClient.java"
+  },
+  "HumanMonitorControl": {
+    "class": "dev.felix.hostilehumans.monitor.HumanMonitorControl",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/HumanMonitorControl.java"
+  },
+  "HumanMonitorInputMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanMonitorInputMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanMonitorInputMixin.java"
+  },
+  "HumanMonitorItem": {
+    "class": "dev.felix.hostilehumans.monitor.HumanMonitorItem",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/HumanMonitorItem.java"
+  },
+  "HumanMonitorMouseMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanMonitorMouseMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanMonitorMouseMixin.java"
+  },
+  "HumanMonitorNetwork": {
+    "class": "dev.felix.hostilehumans.monitor.HumanMonitorNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/HumanMonitorNetwork.java"
+  },
+  "HumanMonitorScreen": {
+    "class": "dev.felix.hostilehumans.monitor.client.HumanMonitorScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/HumanMonitorScreen.java"
+  },
+  "HumanMonitorService": {
+    "class": "dev.felix.hostilehumans.monitor.HumanMonitorService",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/HumanMonitorService.java"
+  },
+  "HumanMonitorSoundBroadcastMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanMonitorSoundBroadcastMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanMonitorSoundBroadcastMixin.java"
+  },
+  "HumanMovementInputAuthority": {
+    "class": "dev.felix.hostilehumans.behavior.HumanMovementInputAuthority",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/HumanMovementInputAuthority.java"
+  },
+  "HumanMovementModifiers": {
+    "class": "dev.felix.hostilehumans.navigation.HumanMovementModifiers",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/HumanMovementModifiers.java"
+  },
+  "HumanNavigation": {
+    "class": "dev.felix.hostilehumans.navigation.HumanNavigation",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/HumanNavigation.java"
+  },
+  "HumanNavigationOwnership": {
+    "class": "dev.felix.hostilehumans.navigation.HumanNavigationOwnership",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/HumanNavigationOwnership.java"
+  },
+  "HumanOwnerProtection": {
+    "class": "dev.felix.hostilehumans.damage.HumanOwnerProtection",
+    "path": "src/main/java/dev/felix/hostilehumans/damage/HumanOwnerProtection.java"
+  },
+  "HumanPathFollower": {
+    "class": "dev.felix.hostilehumans.navigation.HumanPathFollower",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/HumanPathFollower.java"
+  },
+  "HumanPerception": {
+    "class": "dev.felix.hostilehumans.perception.HumanPerception",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/HumanPerception.java"
+  },
+  "HumanPlayerModel": {
+    "class": "dev.felix.hostilehumans.client.render.HumanPlayerModel",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanPlayerModel.java"
+  },
+  "HumanProjectileCollisionMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanProjectileCollisionMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanProjectileCollisionMixin.java"
+  },
+  "HumanProjectileRelations": {
+    "class": "dev.felix.hostilehumans.damage.HumanProjectileRelations",
+    "path": "src/main/java/dev/felix/hostilehumans/damage/HumanProjectileRelations.java"
+  },
+  "HumanRecoveryEffectMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanRecoveryEffectMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanRecoveryEffectMixin.java"
+  },
+  "HumanRecoveryEffects": {
+    "class": "dev.felix.hostilehumans.behavior.combat.recovery.HumanRecoveryEffects",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/recovery/HumanRecoveryEffects.java"
+  },
+  "HumanRelations": {
+    "class": "dev.felix.hostilehumans.faction.HumanRelations",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/HumanRelations.java"
+  },
+  "HumanRelationshipPolicy": {
+    "class": "dev.felix.hostilehumans.faction.HumanRelationshipPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/HumanRelationshipPolicy.java"
+  },
+  "HumanRenderer": {
+    "class": "dev.felix.hostilehumans.client.render.HumanRenderer",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanRenderer.java"
+  },
+  "HumanReportPropagation": {
+    "class": "dev.felix.hostilehumans.perception.HumanReportPropagation",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/HumanReportPropagation.java"
+  },
+  "HumanRuntime": {
+    "class": "dev.felix.hostilehumans.bootstrap.HumanRuntime",
+    "path": "src/main/java/dev/felix/hostilehumans/bootstrap/HumanRuntime.java"
+  },
+  "HumanSafeJumpControl": {
+    "class": "dev.felix.hostilehumans.navigation.HumanSafeJumpControl",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/HumanSafeJumpControl.java"
+  },
+  "HumanSensoryEvents": {
+    "class": "dev.felix.hostilehumans.perception.HumanSensoryEvents",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/HumanSensoryEvents.java"
+  },
+  "HumanServerData": {
+    "class": "dev.felix.hostilehumans.entity.HumanServerData",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumanServerData.java"
+  },
+  "HumanServerDataCleanup": {
+    "class": "dev.felix.hostilehumans.entity.HumanServerDataCleanup",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumanServerDataCleanup.java"
+  },
+  "HumanShieldItemPropertyMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanShieldItemPropertyMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanShieldItemPropertyMixin.java"
+  },
+  "HumanShieldPresentation": {
+    "class": "dev.felix.hostilehumans.client.render.HumanShieldPresentation",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanShieldPresentation.java"
+  },
+  "HumanSignalItem": {
+    "class": "dev.felix.hostilehumans.soldier.HumanSignalItem",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/HumanSignalItem.java"
+  },
+  "HumanSpawnEquipment": {
+    "class": "dev.felix.hostilehumans.equipment.HumanSpawnEquipment",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/HumanSpawnEquipment.java"
+  },
+  "HumanSpectatorBobMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanSpectatorBobMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanSpectatorBobMixin.java"
+  },
+  "HumanSpectatorCamera": {
+    "class": "dev.felix.hostilehumans.client.render.HumanSpectatorCamera",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanSpectatorCamera.java"
+  },
+  "HumanSpectatorCameraMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanSpectatorCameraMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanSpectatorCameraMixin.java"
+  },
+  "HumanSpectatorGunView": {
+    "class": "dev.felix.hostilehumans.client.render.HumanSpectatorGunView",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanSpectatorGunView.java"
+  },
+  "HumanSpectatorMotion": {
+    "class": "dev.felix.hostilehumans.client.render.HumanSpectatorMotion",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanSpectatorMotion.java"
+  },
+  "HumanSpectatorPresentation": {
+    "class": "dev.felix.hostilehumans.client.render.HumanSpectatorPresentation",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanSpectatorPresentation.java"
+  },
+  "HumanSpectatorProjection": {
+    "class": "dev.felix.hostilehumans.client.render.HumanSpectatorProjection",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanSpectatorProjection.java"
+  },
+  "HumanSpectatorProjectionAccess": {
+    "class": "dev.felix.hostilehumans.mixin.HumanSpectatorProjectionAccess",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanSpectatorProjectionAccess.java"
+  },
+  "HumanSpectatorView": {
+    "class": "dev.felix.hostilehumans.client.render.HumanSpectatorView",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanSpectatorView.java"
+  },
+  "HumanTargetCoordinator": {
+    "class": "dev.felix.hostilehumans.behavior.combat.HumanTargetCoordinator",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/HumanTargetCoordinator.java"
+  },
+  "HumanTargetSharing": {
+    "class": "dev.felix.hostilehumans.perception.HumanTargetSharing",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/HumanTargetSharing.java"
+  },
+  "HumanTargeting": {
+    "class": "dev.felix.hostilehumans.behavior.combat.HumanTargeting",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/HumanTargeting.java"
+  },
+  "HumanTerrainSafety": {
+    "class": "dev.felix.hostilehumans.navigation.HumanTerrainSafety",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/HumanTerrainSafety.java"
+  },
+  "HumanThreatAssessment": {
+    "class": "dev.felix.hostilehumans.behavior.combat.HumanThreatAssessment",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/HumanThreatAssessment.java"
+  },
+  "HumanTier": {
+    "class": "dev.felix.hostilehumans.entity.HumanTier",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumanTier.java"
+  },
+  "HumanTotemRecoveryMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanTotemRecoveryMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanTotemRecoveryMixin.java"
+  },
+  "HumanTurnControl": {
+    "class": "dev.felix.hostilehumans.perception.HumanTurnControl",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/HumanTurnControl.java"
+  },
+  "HumanUtil": {
+    "class": "dev.felix.hostilehumans.entity.HumanUtil",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumanUtil.java"
+  },
+  "HumanWaterNavigation": {
+    "class": "dev.felix.hostilehumans.navigation.HumanWaterNavigation",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/HumanWaterNavigation.java"
+  },
+  "HumanWrappedGoalExecutionMixin": {
+    "class": "dev.felix.hostilehumans.mixin.HumanWrappedGoalExecutionMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/HumanWrappedGoalExecutionMixin.java"
+  },
+  "HumansClientData": {
+    "class": "dev.felix.hostilehumans.entity.HumansClientData",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumansClientData.java"
+  },
+  "HumansDataSync": {
+    "class": "dev.felix.hostilehumans.entity.HumansDataSync",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumansDataSync.java"
+  },
+  "HumansServerDataClientSync": {
+    "class": "dev.felix.hostilehumans.entity.HumansServerDataClientSync",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/HumansServerDataClientSync.java"
+  },
+  "IdentityBadgeItem": {
+    "class": "dev.felix.hostilehumans.faction.IdentityBadgeItem",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/IdentityBadgeItem.java"
+  },
+  "IdentityBandItem": {
+    "class": "dev.felix.hostilehumans.faction.IdentityBandItem",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/IdentityBandItem.java"
+  },
+  "IdentityBands": {
+    "class": "dev.felix.hostilehumans.faction.IdentityBands",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/IdentityBands.java"
+  },
+  "IdleRecoveryGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.recovery.IdleRecoveryGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/recovery/IdleRecoveryGoal.java"
+  },
+  "IdleSurvey": {
+    "class": "dev.felix.hostilehumans.perception.IdleSurvey",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/IdleSurvey.java"
+  },
+  "IncomingHitResponseGoal": {
+    "class": "dev.felix.hostilehumans.perception.IncomingHitResponseGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/IncomingHitResponseGoal.java"
+  },
+  "IncrementalBestSearch": {
+    "class": "dev.felix.hostilehumans.common.IncrementalBestSearch",
+    "path": "src/main/java/dev/felix/hostilehumans/common/IncrementalBestSearch.java"
+  },
+  "InputExecutionLease": {
+    "class": "dev.felix.hostilehumans.behavior.InputExecutionLease",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/InputExecutionLease.java"
+  },
+  "InputValue": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.InputValue",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/InputValue.java"
+  },
+  "InteractionSafetyPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.InteractionSafetyPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/InteractionSafetyPolicy.java"
+  },
+  "InventoryTotemProtection": {
+    "class": "dev.felix.hostilehumans.inventory.InventoryTotemProtection",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/InventoryTotemProtection.java"
+  },
+  "InventoryTransaction": {
+    "class": "dev.felix.hostilehumans.economy.InventoryTransaction",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/InventoryTransaction.java"
+  },
+  "InvestigateSoundGoal": {
+    "class": "dev.felix.hostilehumans.perception.InvestigateSoundGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/InvestigateSoundGoal.java"
+  },
+  "ItemStackWildArmorWearMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ItemStackWildArmorWearMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ItemStackWildArmorWearMixin.java"
+  },
+  "JegCompat": {
+    "class": "dev.felix.hostilehumans.compat.jeg.JegCompat",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/jeg/JegCompat.java"
+  },
+  "JegGunIdentity": {
+    "class": "dev.felix.hostilehumans.compat.jeg.JegGunIdentity",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/jeg/JegGunIdentity.java"
+  },
+  "JegGunTypes": {
+    "class": "dev.felix.hostilehumans.compat.jeg.JegGunTypes",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/jeg/JegGunTypes.java"
+  },
+  "JegHumanAiOwnershipMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegHumanAiOwnershipMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegHumanAiOwnershipMixin.java"
+  },
+  "JegHumanDamageMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegHumanDamageMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegHumanDamageMixin.java"
+  },
+  "JegIntegration": {
+    "class": "dev.felix.hostilehumans.compat.jeg.JegIntegration",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/jeg/JegIntegration.java"
+  },
+  "JegMonitorAimingInputMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegMonitorAimingInputMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegMonitorAimingInputMixin.java"
+  },
+  "JegMonitorInput": {
+    "class": "dev.felix.hostilehumans.compat.jeg.JegMonitorInput",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/jeg/JegMonitorInput.java"
+  },
+  "JegMonitorRecoilAdapter": {
+    "class": "dev.felix.hostilehumans.compat.jeg.JegMonitorRecoilAdapter",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/jeg/JegMonitorRecoilAdapter.java"
+  },
+  "JegMonitorReloadInputMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegMonitorReloadInputMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegMonitorReloadInputMixin.java"
+  },
+  "JegMonitorShootingInputMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegMonitorShootingInputMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegMonitorShootingInputMixin.java"
+  },
+  "JegMonitorShotMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegMonitorShotMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegMonitorShotMixin.java"
+  },
+  "JegMonitorWeapons": {
+    "class": "dev.felix.hostilehumans.compat.jeg.JegMonitorWeapons",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/jeg/JegMonitorWeapons.java"
+  },
+  "JegNativeGunGoalMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegNativeGunGoalMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegNativeGunGoalMixin.java"
+  },
+  "JegNativePose": {
+    "class": "dev.felix.hostilehumans.client.render.JegNativePose",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/JegNativePose.java"
+  },
+  "JegNpcAnimator": {
+    "class": "dev.felix.hostilehumans.client.render.JegNpcAnimator",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/JegNpcAnimator.java"
+  },
+  "JegNpcMuzzleFlashMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegNpcMuzzleFlashMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegNpcMuzzleFlashMixin.java"
+  },
+  "JegProjectileCollisionMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegProjectileCollisionMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegProjectileCollisionMixin.java"
+  },
+  "JegReloadPlan": {
+    "class": "dev.felix.hostilehumans.compat.jeg.JegReloadPlan",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/jeg/JegReloadPlan.java"
+  },
+  "JegSounds": {
+    "class": "dev.felix.hostilehumans.compat.jeg.JegSounds",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/jeg/JegSounds.java"
+  },
+  "JegSplashDamageAttributionMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegSplashDamageAttributionMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegSplashDamageAttributionMixin.java"
+  },
+  "JegThrowables": {
+    "class": "dev.felix.hostilehumans.compat.jeg.JegThrowables",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/jeg/JegThrowables.java"
+  },
+  "JegWaterAreaCollisionMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegWaterAreaCollisionMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegWaterAreaCollisionMixin.java"
+  },
+  "JegWaterBombOwnerMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegWaterBombOwnerMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegWaterBombOwnerMixin.java"
+  },
+  "JegWaterThrowOriginMixin": {
+    "class": "dev.felix.hostilehumans.mixin.JegWaterThrowOriginMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/JegWaterThrowOriginMixin.java"
+  },
+  "JumpAttackConfig": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.JumpAttackConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/JumpAttackConfig.java"
+  },
+  "LadderClimbGoal": {
+    "class": "dev.felix.hostilehumans.navigation.LadderClimbGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/LadderClimbGoal.java"
+  },
+  "LatestTickInput": {
+    "class": "dev.felix.hostilehumans.monitor.LatestTickInput",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/LatestTickInput.java"
+  },
+  "LavaEscapeGoal": {
+    "class": "dev.felix.hostilehumans.navigation.LavaEscapeGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/LavaEscapeGoal.java"
+  },
+  "LeaveWaterWhenIdleGoal": {
+    "class": "dev.felix.hostilehumans.navigation.LeaveWaterWhenIdleGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/LeaveWaterWhenIdleGoal.java"
+  },
+  "LivingEntityDamagePipelineMixin": {
+    "class": "dev.felix.hostilehumans.mixin.LivingEntityDamagePipelineMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/LivingEntityDamagePipelineMixin.java"
+  },
+  "LivingEntityGrowthDamageMixin": {
+    "class": "dev.felix.hostilehumans.mixin.LivingEntityGrowthDamageMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/LivingEntityGrowthDamageMixin.java"
+  },
+  "LivingEntityProjectileCooldownMixin": {
+    "class": "dev.felix.hostilehumans.mixin.LivingEntityProjectileCooldownMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/LivingEntityProjectileCooldownMixin.java"
+  },
+  "LocalPathFollowPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.LocalPathFollowPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/LocalPathFollowPolicy.java"
+  },
+  "LongRangeNavigation": {
+    "class": "dev.felix.hostilehumans.navigation.LongRangeNavigation",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/LongRangeNavigation.java"
+  },
+  "LootRetryPolicy": {
+    "class": "dev.felix.hostilehumans.inventory.LootRetryPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/LootRetryPolicy.java"
+  },
+  "LowHealthCombatConfig": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.LowHealthCombatConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/LowHealthCombatConfig.java"
+  },
+  "LowHealthCombatController": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.LowHealthCombatController",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/LowHealthCombatController.java"
+  },
+  "LowHealthCombatPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.LowHealthCombatPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/LowHealthCombatPolicy.java"
+  },
+  "MaidHumanRelationPolicy": {
+    "class": "dev.felix.hostilehumans.compat.maid.MaidHumanRelationPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/maid/MaidHumanRelationPolicy.java"
+  },
+  "MaidTargetRules": {
+    "class": "dev.felix.hostilehumans.compat.maid.MaidTargetRules",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/maid/MaidTargetRules.java"
+  },
+  "ManualArrowBallistics": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.ManualArrowBallistics",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/ManualArrowBallistics.java"
+  },
+  "MaxHealthCompatibilityPolicy": {
+    "class": "dev.felix.hostilehumans.progression.MaxHealthCompatibilityPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/MaxHealthCompatibilityPolicy.java"
+  },
+  "MedicalSupplies": {
+    "class": "dev.felix.hostilehumans.behavior.combat.recovery.MedicalSupplies",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/recovery/MedicalSupplies.java"
+  },
+  "MeleeActionControl": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.MeleeActionControl",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/MeleeActionControl.java"
+  },
+  "MeleeAttackGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.MeleeAttackGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/MeleeAttackGoal.java"
+  },
+  "MeleeAttackTiming": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.MeleeAttackTiming",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/MeleeAttackTiming.java"
+  },
+  "MeleeCombatRange": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.MeleeCombatRange",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/MeleeCombatRange.java"
+  },
+  "MeleeJumpPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.MeleeJumpPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/MeleeJumpPolicy.java"
+  },
+  "MeleePursuitProgress": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.MeleePursuitProgress",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/MeleePursuitProgress.java"
+  },
+  "MeleeSpacing": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.MeleeSpacing",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/MeleeSpacing.java"
+  },
+  "MeleeSpacingPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.MeleeSpacingPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/MeleeSpacingPolicy.java"
+  },
+  "MessageHumanData": {
+    "class": "dev.felix.hostilehumans.network.MessageHumanData",
+    "path": "src/main/java/dev/felix/hostilehumans/network/MessageHumanData.java"
+  },
+  "MessageHumansData": {
+    "class": "dev.felix.hostilehumans.network.MessageHumansData",
+    "path": "src/main/java/dev/felix/hostilehumans/network/MessageHumansData.java"
+  },
+  "ModEntityType": {
+    "class": "dev.felix.hostilehumans.bootstrap.ModEntityType",
+    "path": "src/main/java/dev/felix/hostilehumans/bootstrap/ModEntityType.java"
+  },
+  "ModItems": {
+    "class": "dev.felix.hostilehumans.bootstrap.ModItems",
+    "path": "src/main/java/dev/felix/hostilehumans/bootstrap/ModItems.java"
+  },
+  "ModSoundEvents": {
+    "class": "dev.felix.hostilehumans.audio.ModSoundEvents",
+    "path": "src/main/java/dev/felix/hostilehumans/audio/ModSoundEvents.java"
+  },
+  "MoneyMath": {
+    "class": "dev.felix.hostilehumans.economy.MoneyMath",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/MoneyMath.java"
+  },
+  "MoneyRate": {
+    "class": "dev.felix.hostilehumans.economy.MoneyRate",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/MoneyRate.java"
+  },
+  "MonitorAccessPolicy": {
+    "class": "dev.felix.hostilehumans.monitor.MonitorAccessPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/MonitorAccessPolicy.java"
+  },
+  "MonitorActionButton": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorActionButton",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorActionButton.java"
+  },
+  "MonitorArrowActions": {
+    "class": "dev.felix.hostilehumans.monitor.combat.MonitorArrowActions",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/combat/MonitorArrowActions.java"
+  },
+  "MonitorCombatInputGate": {
+    "class": "dev.felix.hostilehumans.monitor.combat.MonitorCombatInputGate",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/combat/MonitorCombatInputGate.java"
+  },
+  "MonitorCombatSession": {
+    "class": "dev.felix.hostilehumans.monitor.combat.MonitorCombatSession",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/combat/MonitorCombatSession.java"
+  },
+  "MonitorGunActions": {
+    "class": "dev.felix.hostilehumans.monitor.combat.MonitorGunActions",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/combat/MonitorGunActions.java"
+  },
+  "MonitorGunBackends": {
+    "class": "dev.felix.hostilehumans.monitor.combat.MonitorGunBackends",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/combat/MonitorGunBackends.java"
+  },
+  "MonitorGunHud": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorGunHud",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorGunHud.java"
+  },
+  "MonitorGunInput": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorGunInput",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorGunInput.java"
+  },
+  "MonitorGunRecoil": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorGunRecoil",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorGunRecoil.java"
+  },
+  "MonitorGunTrigger": {
+    "class": "dev.felix.hostilehumans.monitor.combat.MonitorGunTrigger",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/combat/MonitorGunTrigger.java"
+  },
+  "MonitorHitFeedback": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorHitFeedback",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorHitFeedback.java"
+  },
+  "MonitorHudLayout": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorHudLayout",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorHudLayout.java"
+  },
+  "MonitorIconFit": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorIconFit",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorIconFit.java"
+  },
+  "MonitorInputHistory": {
+    "class": "dev.felix.hostilehumans.monitor.MonitorInputHistory",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/MonitorInputHistory.java"
+  },
+  "MonitorLoadout": {
+    "class": "dev.felix.hostilehumans.monitor.combat.MonitorLoadout",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/combat/MonitorLoadout.java"
+  },
+  "MonitorLoadoutSnapshot": {
+    "class": "dev.felix.hostilehumans.monitor.MonitorLoadoutSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/MonitorLoadoutSnapshot.java"
+  },
+  "MonitorMotionSnapshot": {
+    "class": "dev.felix.hostilehumans.monitor.MonitorMotionSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/MonitorMotionSnapshot.java"
+  },
+  "MonitorMovementPrediction": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorMovementPrediction",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorMovementPrediction.java"
+  },
+  "MonitorPhysicalMotion": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorPhysicalMotion",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorPhysicalMotion.java"
+  },
+  "MonitorPhysicsSnapshot": {
+    "class": "dev.felix.hostilehumans.monitor.MonitorPhysicsSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/MonitorPhysicsSnapshot.java"
+  },
+  "MonitorPredictionBody": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorPredictionBody",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorPredictionBody.java"
+  },
+  "MonitorPredictionConstructionMixin": {
+    "class": "dev.felix.hostilehumans.mixin.MonitorPredictionConstructionMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/MonitorPredictionConstructionMixin.java"
+  },
+  "MonitorPredictionEntityAccess": {
+    "class": "dev.felix.hostilehumans.mixin.MonitorPredictionEntityAccess",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/MonitorPredictionEntityAccess.java"
+  },
+  "MonitorPredictionEnvironment": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorPredictionEnvironment",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorPredictionEnvironment.java"
+  },
+  "MonitorPredictionIntent": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorPredictionIntent",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorPredictionIntent.java"
+  },
+  "MonitorPresentationTrack": {
+    "class": "dev.felix.hostilehumans.monitor.client.MonitorPresentationTrack",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/MonitorPresentationTrack.java"
+  },
+  "MonitorRecoilNetwork": {
+    "class": "dev.felix.hostilehumans.monitor.MonitorRecoilNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/MonitorRecoilNetwork.java"
+  },
+  "MonitorRecoilSnapshot": {
+    "class": "dev.felix.hostilehumans.monitor.MonitorRecoilSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/MonitorRecoilSnapshot.java"
+  },
+  "MonitorRemoteChunkMapMixin": {
+    "class": "dev.felix.hostilehumans.mixin.MonitorRemoteChunkMapMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/MonitorRemoteChunkMapMixin.java"
+  },
+  "MonitorRemoteClientOptionsMixin": {
+    "class": "dev.felix.hostilehumans.mixin.MonitorRemoteClientOptionsMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/MonitorRemoteClientOptionsMixin.java"
+  },
+  "MonitorRemoteEntityTrackingMixin": {
+    "class": "dev.felix.hostilehumans.mixin.MonitorRemoteEntityTrackingMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/MonitorRemoteEntityTrackingMixin.java"
+  },
+  "MonitorRemoteView": {
+    "class": "dev.felix.hostilehumans.monitor.remote.MonitorRemoteView",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/remote/MonitorRemoteView.java"
+  },
+  "MonitorSequencedInput": {
+    "class": "dev.felix.hostilehumans.monitor.MonitorSequencedInput",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/MonitorSequencedInput.java"
+  },
+  "MonitorTargetBinding": {
+    "class": "dev.felix.hostilehumans.monitor.MonitorTargetBinding",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/MonitorTargetBinding.java"
+  },
+  "MonitorTravelSpeed": {
+    "class": "dev.felix.hostilehumans.monitor.MonitorTravelSpeed",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/MonitorTravelSpeed.java"
+  },
+  "MonitorWeaponSnapshot": {
+    "class": "dev.felix.hostilehumans.monitor.MonitorWeaponSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/MonitorWeaponSnapshot.java"
+  },
+  "MonsterMobsMixin": {
+    "class": "dev.felix.hostilehumans.mixin.MonsterMobsMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/MonsterMobsMixin.java"
+  },
+  "MovementContinuity": {
+    "class": "dev.felix.hostilehumans.navigation.MovementContinuity",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/MovementContinuity.java"
+  },
+  "MovementContinuityProgress": {
+    "class": "dev.felix.hostilehumans.navigation.MovementContinuityProgress",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/MovementContinuityProgress.java"
+  },
+  "MovementSpeedController": {
+    "class": "dev.felix.hostilehumans.navigation.MovementSpeedController",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/MovementSpeedController.java"
+  },
+  "MovementSpeedLimitPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.MovementSpeedLimitPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/MovementSpeedLimitPolicy.java"
+  },
+  "NativeAimCompatibility": {
+    "class": "dev.felix.hostilehumans.compat.NativeAimCompatibility",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/NativeAimCompatibility.java"
+  },
+  "NativeAimTimeline": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeAimTimeline",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeAimTimeline.java"
+  },
+  "NativeAnimationWeight": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeAnimationWeight",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeAnimationWeight.java"
+  },
+  "NativeBoltPlan": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeBoltPlan",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeBoltPlan.java"
+  },
+  "NativeCrouchPlan": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeCrouchPlan",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeCrouchPlan.java"
+  },
+  "NativeFrameClock": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeFrameClock",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeFrameClock.java"
+  },
+  "NativeJumpSway": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeJumpSway",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeJumpSway.java"
+  },
+  "NativeMonitorGunCompatibility": {
+    "class": "dev.felix.hostilehumans.compat.NativeMonitorGunCompatibility",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/NativeMonitorGunCompatibility.java"
+  },
+  "NativeMovementPlan": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeMovementPlan",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeMovementPlan.java"
+  },
+  "NativeNpcRecoilTrack": {
+    "class": "dev.felix.hostilehumans.monitor.client.NativeNpcRecoilTrack",
+    "path": "src/main/java/dev/felix/hostilehumans/monitor/client/NativeNpcRecoilTrack.java"
+  },
+  "NativeRecoilCurve": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeRecoilCurve",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeRecoilCurve.java"
+  },
+  "NativeRecoilTrack": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeRecoilTrack",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeRecoilTrack.java"
+  },
+  "NativeReloadAudio": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeReloadAudio",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeReloadAudio.java"
+  },
+  "NativeReloadPlan": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeReloadPlan",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeReloadPlan.java"
+  },
+  "NativeShotTimeline": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.NativeShotTimeline",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/NativeShotTimeline.java"
+  },
+  "NaturalEquipmentGrowth": {
+    "class": "dev.felix.hostilehumans.equipment.NaturalEquipmentGrowth",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/NaturalEquipmentGrowth.java"
+  },
+  "NaturalHumanSpawnRules": {
+    "class": "dev.felix.hostilehumans.equipment.NaturalHumanSpawnRules",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/NaturalHumanSpawnRules.java"
+  },
+  "NaturalRoute": {
+    "class": "dev.felix.hostilehumans.soldier.NaturalRoute",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/NaturalRoute.java"
+  },
+  "NaturalSpawnProgression": {
+    "class": "dev.felix.hostilehumans.progression.NaturalSpawnProgression",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/NaturalSpawnProgression.java"
+  },
+  "NaturalState": {
+    "class": "dev.felix.hostilehumans.soldier.NaturalState",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/NaturalState.java"
+  },
+  "NaturalStateCommand": {
+    "class": "dev.felix.hostilehumans.soldier.NaturalStateCommand",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/NaturalStateCommand.java"
+  },
+  "NaturalStateToolItem": {
+    "class": "dev.felix.hostilehumans.soldier.NaturalStateToolItem",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/NaturalStateToolItem.java"
+  },
+  "NavigationDebugClient": {
+    "class": "dev.felix.hostilehumans.observer.client.NavigationDebugClient",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/client/NavigationDebugClient.java"
+  },
+  "NavigationDebugFrame": {
+    "class": "dev.felix.hostilehumans.observer.NavigationDebugFrame",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/NavigationDebugFrame.java"
+  },
+  "NavigationDebugFrameCodec": {
+    "class": "dev.felix.hostilehumans.observer.NavigationDebugFrameCodec",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/NavigationDebugFrameCodec.java"
+  },
+  "NavigationDebugNetwork": {
+    "class": "dev.felix.hostilehumans.observer.NavigationDebugNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/NavigationDebugNetwork.java"
+  },
+  "NavigationDebugService": {
+    "class": "dev.felix.hostilehumans.observer.NavigationDebugService",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/NavigationDebugService.java"
+  },
+  "NavigationDebugSnapshot": {
+    "class": "dev.felix.hostilehumans.observer.NavigationDebugSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/NavigationDebugSnapshot.java"
+  },
+  "NavigationDebugViewPolicy": {
+    "class": "dev.felix.hostilehumans.observer.NavigationDebugViewPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/NavigationDebugViewPolicy.java"
+  },
+  "NavigationLegendScreen": {
+    "class": "dev.felix.hostilehumans.observer.client.NavigationLegendScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/client/NavigationLegendScreen.java"
+  },
+  "NavigationObserverHelmet": {
+    "class": "dev.felix.hostilehumans.observer.NavigationObserverHelmet",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/NavigationObserverHelmet.java"
+  },
+  "NavigationObserverPreferences": {
+    "class": "dev.felix.hostilehumans.observer.NavigationObserverPreferences",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/NavigationObserverPreferences.java"
+  },
+  "NavigationObserverSelection": {
+    "class": "dev.felix.hostilehumans.observer.NavigationObserverSelection",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/NavigationObserverSelection.java"
+  },
+  "NavigationObserverState": {
+    "class": "dev.felix.hostilehumans.observer.NavigationObserverState",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/NavigationObserverState.java"
+  },
+  "NavigationSearchConfig": {
+    "class": "dev.felix.hostilehumans.navigation.NavigationSearchConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/NavigationSearchConfig.java"
+  },
+  "NavigationSupport": {
+    "class": "dev.felix.hostilehumans.navigation.NavigationSupport",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/NavigationSupport.java"
+  },
+  "NavigationTestItem": {
+    "class": "dev.felix.hostilehumans.observer.NavigationTestItem",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/NavigationTestItem.java"
+  },
+  "NearVisionPolicy": {
+    "class": "dev.felix.hostilehumans.perception.NearVisionPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/NearVisionPolicy.java"
+  },
+  "NearestAttackableTargetGoalCustom": {
+    "class": "dev.felix.hostilehumans.perception.NearestAttackableTargetGoalCustom",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/NearestAttackableTargetGoalCustom.java"
+  },
+  "NearestAttackableTargetGoalWithHumanLimiter": {
+    "class": "dev.felix.hostilehumans.perception.NearestAttackableTargetGoalWithHumanLimiter",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/NearestAttackableTargetGoalWithHumanLimiter.java"
+  },
+  "NegativeObservationSweep": {
+    "class": "dev.felix.hostilehumans.perception.NegativeObservationSweep",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/NegativeObservationSweep.java"
+  },
+  "NetworkHandler": {
+    "class": "dev.felix.hostilehumans.network.NetworkHandler",
+    "path": "src/main/java/dev/felix/hostilehumans/network/NetworkHandler.java"
+  },
+  "NpcDualWield": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.NpcDualWield",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/NpcDualWield.java"
+  },
+  "NpcMeleeWeaponContext": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.NpcMeleeWeaponContext",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/NpcMeleeWeaponContext.java"
+  },
+  "OffhandFoodUse": {
+    "class": "dev.felix.hostilehumans.behavior.combat.recovery.OffhandFoodUse",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/recovery/OffhandFoodUse.java"
+  },
+  "OfflineSoldierDeathReports": {
+    "class": "dev.felix.hostilehumans.soldier.OfflineSoldierDeathReports",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/OfflineSoldierDeathReports.java"
+  },
+  "OpenDoorsGoal": {
+    "class": "dev.felix.hostilehumans.navigation.OpenDoorsGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/OpenDoorsGoal.java"
+  },
+  "OpenFenceGoal": {
+    "class": "dev.felix.hostilehumans.navigation.OpenFenceGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/OpenFenceGoal.java"
+  },
+  "OpenTrapdoorGoal": {
+    "class": "dev.felix.hostilehumans.navigation.OpenTrapdoorGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/OpenTrapdoorGoal.java"
+  },
+  "OptionalMixinPlugin": {
+    "class": "dev.felix.hostilehumans.compat.OptionalMixinPlugin",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/OptionalMixinPlugin.java"
+  },
+  "OptionalPathBudget": {
+    "class": "dev.felix.hostilehumans.navigation.OptionalPathBudget",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/OptionalPathBudget.java"
+  },
+  "OrderConfiguration": {
+    "class": "dev.felix.hostilehumans.soldier.OrderConfiguration",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/OrderConfiguration.java"
+  },
+  "OrderDistances": {
+    "class": "dev.felix.hostilehumans.soldier.OrderDistances",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/OrderDistances.java"
+  },
+  "OwnerIndex": {
+    "class": "dev.felix.hostilehumans.soldier.OwnerIndex",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/OwnerIndex.java"
+  },
+  "OwnerOfflinePolicy": {
+    "class": "dev.felix.hostilehumans.soldier.OwnerOfflinePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/OwnerOfflinePolicy.java"
+  },
+  "PanelButton": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelButton",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelButton.java"
+  },
+  "PanelDisclosure": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelDisclosure",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelDisclosure.java"
+  },
+  "PanelEditBox": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelEditBox",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelEditBox.java"
+  },
+  "PanelGeometry": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelGeometry",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelGeometry.java"
+  },
+  "PanelHealth": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelHealth",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelHealth.java"
+  },
+  "PanelMeter": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelMeter",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelMeter.java"
+  },
+  "PanelPageSlider": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelPageSlider",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelPageSlider.java"
+  },
+  "PanelRosterRow": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelRosterRow",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelRosterRow.java"
+  },
+  "PanelScreen": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelScreen.java"
+  },
+  "PanelSessionView": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelSessionView",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelSessionView.java"
+  },
+  "PanelSlider": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelSlider",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelSlider.java"
+  },
+  "PanelText": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelText",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelText.java"
+  },
+  "ParleyFlagItem": {
+    "class": "dev.felix.hostilehumans.economy.ParleyFlagItem",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/ParleyFlagItem.java"
+  },
+  "PassageCodec": {
+    "class": "dev.felix.hostilehumans.faction.PassageCodec",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/PassageCodec.java"
+  },
+  "PassageLease": {
+    "class": "dev.felix.hostilehumans.navigation.PassageLease",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/PassageLease.java"
+  },
+  "PassagePermit": {
+    "class": "dev.felix.hostilehumans.faction.PassagePermit",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/PassagePermit.java"
+  },
+  "PassedWaypointPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.PassedWaypointPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/PassedWaypointPolicy.java"
+  },
+  "PatrolCommandBatonItem": {
+    "class": "dev.felix.hostilehumans.soldier.PatrolCommandBatonItem",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/PatrolCommandBatonItem.java"
+  },
+  "PatrolControlService": {
+    "class": "dev.felix.hostilehumans.soldier.PatrolControlService",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/PatrolControlService.java"
+  },
+  "PatrolDraftClient": {
+    "class": "dev.felix.hostilehumans.client.ui.PatrolDraftClient",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/PatrolDraftClient.java"
+  },
+  "PatrolEditorClient": {
+    "class": "dev.felix.hostilehumans.client.ui.PatrolEditorClient",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/PatrolEditorClient.java"
+  },
+  "PatrolRouteEditor": {
+    "class": "dev.felix.hostilehumans.soldier.PatrolRouteEditor",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/PatrolRouteEditor.java"
+  },
+  "PatrolRoutePolicy": {
+    "class": "dev.felix.hostilehumans.soldier.PatrolRoutePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/PatrolRoutePolicy.java"
+  },
+  "PatrolRoutes": {
+    "class": "dev.felix.hostilehumans.soldier.PatrolRoutes",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/PatrolRoutes.java"
+  },
+  "PatrolToolNetwork": {
+    "class": "dev.felix.hostilehumans.soldier.PatrolToolNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/PatrolToolNetwork.java"
+  },
+  "PatrolWaitScreen": {
+    "class": "dev.felix.hostilehumans.client.ui.PatrolWaitScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/PatrolWaitScreen.java"
+  },
+  "PeacefulHumanPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.PeacefulHumanPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/PeacefulHumanPolicy.java"
+  },
+  "PendingAction": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PendingAction",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PendingAction.java"
+  },
+  "PerceptionBudget": {
+    "class": "dev.felix.hostilehumans.perception.PerceptionBudget",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/PerceptionBudget.java"
+  },
+  "PerceptionConfig": {
+    "class": "dev.felix.hostilehumans.perception.PerceptionConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/PerceptionConfig.java"
+  },
+  "PerceptionCoordinationPolicy": {
+    "class": "dev.felix.hostilehumans.perception.PerceptionCoordinationPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/PerceptionCoordinationPolicy.java"
+  },
+  "PerceptionDebugCodec": {
+    "class": "dev.felix.hostilehumans.perception.PerceptionDebugCodec",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/PerceptionDebugCodec.java"
+  },
+  "PerceptionDebugSnapshot": {
+    "class": "dev.felix.hostilehumans.perception.PerceptionDebugSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/PerceptionDebugSnapshot.java"
+  },
+  "PerceptionDiscoveryPolicy": {
+    "class": "dev.felix.hostilehumans.perception.PerceptionDiscoveryPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/PerceptionDiscoveryPolicy.java"
+  },
+  "PerceptionInvestigationGoal": {
+    "class": "dev.felix.hostilehumans.perception.PerceptionInvestigationGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/PerceptionInvestigationGoal.java"
+  },
+  "PerceptionPolicy": {
+    "class": "dev.felix.hostilehumans.perception.PerceptionPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/PerceptionPolicy.java"
+  },
+  "PerceptionTargetGoal": {
+    "class": "dev.felix.hostilehumans.perception.PerceptionTargetGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/PerceptionTargetGoal.java"
+  },
+  "PickUpLoot": {
+    "class": "dev.felix.hostilehumans.inventory.PickUpLoot",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/PickUpLoot.java"
+  },
+  "PickupCombatWindow": {
+    "class": "dev.felix.hostilehumans.inventory.PickupCombatWindow",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/PickupCombatWindow.java"
+  },
+  "PickupRouteProgress": {
+    "class": "dev.felix.hostilehumans.inventory.PickupRouteProgress",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/PickupRouteProgress.java"
+  },
+  "PileFirstSelection": {
+    "class": "dev.felix.hostilehumans.inventory.PileFirstSelection",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/PileFirstSelection.java"
+  },
+  "PillagersGunAmmoMixin": {
+    "class": "dev.felix.hostilehumans.mixin.PillagersGunAmmoMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/PillagersGunAmmoMixin.java"
+  },
+  "PlayerAnimatorModelBridge": {
+    "class": "dev.felix.hostilehumans.client.render.PlayerAnimatorModelBridge",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/PlayerAnimatorModelBridge.java"
+  },
+  "PlayerDamagePipelineMixin": {
+    "class": "dev.felix.hostilehumans.mixin.PlayerDamagePipelineMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/PlayerDamagePipelineMixin.java"
+  },
+  "PlayerLikeMovementGoal": {
+    "class": "dev.felix.hostilehumans.navigation.PlayerLikeMovementGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/PlayerLikeMovementGoal.java"
+  },
+  "PlayerProgressionData": {
+    "class": "dev.felix.hostilehumans.progression.PlayerProgressionData",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/PlayerProgressionData.java"
+  },
+  "PolymorphConcurrencyMixin": {
+    "class": "dev.felix.hostilehumans.mixin.PolymorphConcurrencyMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/PolymorphConcurrencyMixin.java"
+  },
+  "PotionRangedAttackGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.throwable.PotionRangedAttackGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/throwable/PotionRangedAttackGoal.java"
+  },
+  "PotionRangedAttackMob": {
+    "class": "dev.felix.hostilehumans.entity.PotionRangedAttackMob",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/PotionRangedAttackMob.java"
+  },
+  "PotionRecoveryPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.recovery.PotionRecoveryPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/recovery/PotionRecoveryPolicy.java"
+  },
+  "PotionThrowing": {
+    "class": "dev.felix.hostilehumans.behavior.combat.throwable.PotionThrowing",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/throwable/PotionThrowing.java"
+  },
+  "PressureDefenseCycle": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.PressureDefenseCycle",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/PressureDefenseCycle.java"
+  },
+  "PressureGuardFacing": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.PressureGuardFacing",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/PressureGuardFacing.java"
+  },
+  "PressureReactionGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.PressureReactionGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/PressureReactionGoal.java"
+  },
+  "PressureThreatDirections": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.PressureThreatDirections",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/PressureThreatDirections.java"
+  },
+  "ProgressionClock": {
+    "class": "dev.felix.hostilehumans.progression.ProgressionClock",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/ProgressionClock.java"
+  },
+  "ProgressionCommands": {
+    "class": "dev.felix.hostilehumans.progression.ProgressionCommands",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/ProgressionCommands.java"
+  },
+  "ProjectileCooldownPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ProjectileCooldownPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ProjectileCooldownPolicy.java"
+  },
+  "ProjectileReactionGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ProjectileReactionGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ProjectileReactionGoal.java"
+  },
+  "ProjectileShieldPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ProjectileShieldPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ProjectileShieldPolicy.java"
+  },
+  "PursuitJumpAttack": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.PursuitJumpAttack",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/PursuitJumpAttack.java"
+  },
+  "PursuitNavigation": {
+    "class": "dev.felix.hostilehumans.navigation.PursuitNavigation",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/PursuitNavigation.java"
+  },
+  "PursuitRefreshPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.PursuitRefreshPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/PursuitRefreshPolicy.java"
+  },
+  "RandomStrollGoalFar": {
+    "class": "dev.felix.hostilehumans.navigation.RandomStrollGoalFar",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/RandomStrollGoalFar.java"
+  },
+  "RandomStrollGoalWithHome": {
+    "class": "dev.felix.hostilehumans.navigation.RandomStrollGoalWithHome",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/RandomStrollGoalWithHome.java"
+  },
+  "RangedAccuracy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedAccuracy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedAccuracy.java"
+  },
+  "RangedCombatProfile": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedCombatProfile",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedCombatProfile.java"
+  },
+  "RangedEngagement": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedEngagement",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedEngagement.java"
+  },
+  "RangedEngagementProgress": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedEngagementProgress",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedEngagementProgress.java"
+  },
+  "RangedFiringMemory": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedFiringMemory",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedFiringMemory.java"
+  },
+  "RangedFiringPosition": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedFiringPosition",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedFiringPosition.java"
+  },
+  "RangedHybridMeleeGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedHybridMeleeGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedHybridMeleeGoal.java"
+  },
+  "RangedMeleeCycle": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedMeleeCycle",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedMeleeCycle.java"
+  },
+  "RangedMovementDecision": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedMovementDecision",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedMovementDecision.java"
+  },
+  "RangedShotClearance": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedShotClearance",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedShotClearance.java"
+  },
+  "RangedStrafeSpeed": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedStrafeSpeed",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedStrafeSpeed.java"
+  },
+  "RangedTerrainCombat": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedTerrainCombat",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedTerrainCombat.java"
+  },
+  "RangedTerrainPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedTerrainPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedTerrainPolicy.java"
+  },
+  "RangedWeaponCustody": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedWeaponCustody",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedWeaponCustody.java"
+  },
+  "RangedWindowCandidates": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.RangedWindowCandidates",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/RangedWindowCandidates.java"
+  },
+  "RecentDamageTracker": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.RecentDamageTracker",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/RecentDamageTracker.java"
+  },
+  "RecognitionEvidence": {
+    "class": "dev.felix.hostilehumans.perception.RecognitionEvidence",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/RecognitionEvidence.java"
+  },
+  "RecoveryIntentPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.RecoveryIntentPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/RecoveryIntentPolicy.java"
+  },
+  "RecoverySelectionPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.recovery.RecoverySelectionPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/recovery/RecoverySelectionPolicy.java"
+  },
+  "RecoverySupplies": {
+    "class": "dev.felix.hostilehumans.behavior.combat.recovery.RecoverySupplies",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/recovery/RecoverySupplies.java"
+  },
+  "RecruitmentConfigClient": {
+    "class": "dev.felix.hostilehumans.soldier.RecruitmentConfigClient",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/RecruitmentConfigClient.java"
+  },
+  "RecruitmentConfigNetwork": {
+    "class": "dev.felix.hostilehumans.soldier.RecruitmentConfigNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/RecruitmentConfigNetwork.java"
+  },
+  "RecruitmentContractItem": {
+    "class": "dev.felix.hostilehumans.soldier.RecruitmentContractItem",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/RecruitmentContractItem.java"
+  },
+  "RecruitmentLedger": {
+    "class": "dev.felix.hostilehumans.soldier.RecruitmentLedger",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/RecruitmentLedger.java"
+  },
+  "RecruitmentPayment": {
+    "class": "dev.felix.hostilehumans.soldier.RecruitmentPayment",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/RecruitmentPayment.java"
+  },
+  "RecruitmentPolicy": {
+    "class": "dev.felix.hostilehumans.soldier.RecruitmentPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/RecruitmentPolicy.java"
+  },
+  "RecruitmentTermsCache": {
+    "class": "dev.felix.hostilehumans.soldier.RecruitmentTermsCache",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/RecruitmentTermsCache.java"
+  },
+  "RegionBox": {
+    "class": "dev.felix.hostilehumans.settlement.RegionBox",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/RegionBox.java"
+  },
+  "ReloadPaymentLedger": {
+    "class": "dev.felix.hostilehumans.behavior.combat.gun.ReloadPaymentLedger",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/ReloadPaymentLedger.java"
+  },
+  "RetreatEscapeProgress": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.RetreatEscapeProgress",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/RetreatEscapeProgress.java"
+  },
+  "RetreatLastStand": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.RetreatLastStand",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/RetreatLastStand.java"
+  },
+  "RetreatPathSafety": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.RetreatPathSafety",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/RetreatPathSafety.java"
+  },
+  "RetreatPathSafetyPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.RetreatPathSafetyPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/RetreatPathSafetyPolicy.java"
+  },
+  "RetreatRecoveryPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.RetreatRecoveryPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/RetreatRecoveryPolicy.java"
+  },
+  "RetreatRouteContinuity": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.RetreatRouteContinuity",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/RetreatRouteContinuity.java"
+  },
+  "RetreatShoreEscape": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.RetreatShoreEscape",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/RetreatShoreEscape.java"
+  },
+  "RosterPageCache": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.RosterPageCache",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/RosterPageCache.java"
+  },
+  "RouteExecutionLease": {
+    "class": "dev.felix.hostilehumans.navigation.RouteExecutionLease",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/RouteExecutionLease.java"
+  },
+  "RouteProgressPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.RouteProgressPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/RouteProgressPolicy.java"
+  },
+  "RouteSearchPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.RouteSearchPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/RouteSearchPolicy.java"
+  },
+  "RunFromTarget": {
+    "class": "dev.felix.hostilehumans.behavior.combat.retreat.RunFromTarget",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/retreat/RunFromTarget.java"
+  },
+  "SafePositions": {
+    "class": "dev.felix.hostilehumans.navigation.SafePositions",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/SafePositions.java"
+  },
+  "ScgunsChokeThrowOriginMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsChokeThrowOriginMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsChokeThrowOriginMixin.java"
+  },
+  "ScgunsChokeVictimFilterMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsChokeVictimFilterMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsChokeVictimFilterMixin.java"
+  },
+  "ScgunsCloudVictimFilterMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsCloudVictimFilterMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsCloudVictimFilterMixin.java"
+  },
+  "ScgunsCompat": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsCompat",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsCompat.java"
+  },
+  "ScgunsGasThrowOriginMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsGasThrowOriginMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsGasThrowOriginMixin.java"
+  },
+  "ScgunsGunIdentity": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsGunIdentity",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsGunIdentity.java"
+  },
+  "ScgunsHumanAimMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsHumanAimMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsHumanAimMixin.java"
+  },
+  "ScgunsHumanDifficultyMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsHumanDifficultyMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsHumanDifficultyMixin.java"
+  },
+  "ScgunsHumanShieldMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsHumanShieldMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsHumanShieldMixin.java"
+  },
+  "ScgunsIntegration": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsIntegration",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsIntegration.java"
+  },
+  "ScgunsMachineGunPose": {
+    "class": "dev.felix.hostilehumans.client.render.ScgunsMachineGunPose",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/ScgunsMachineGunPose.java"
+  },
+  "ScgunsMedical": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsMedical",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsMedical.java"
+  },
+  "ScgunsMedicalBridge": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsMedicalBridge",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsMedicalBridge.java"
+  },
+  "ScgunsMonitorAimingInputMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsMonitorAimingInputMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsMonitorAimingInputMixin.java"
+  },
+  "ScgunsMonitorHud": {
+    "class": "dev.felix.hostilehumans.client.ui.gun.ScgunsMonitorHud",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/gun/ScgunsMonitorHud.java"
+  },
+  "ScgunsMonitorHudMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsMonitorHudMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsMonitorHudMixin.java"
+  },
+  "ScgunsMonitorInput": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsMonitorInput",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsMonitorInput.java"
+  },
+  "ScgunsMonitorRecoilAdapter": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsMonitorRecoilAdapter",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsMonitorRecoilAdapter.java"
+  },
+  "ScgunsMonitorReloadInputMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsMonitorReloadInputMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsMonitorReloadInputMixin.java"
+  },
+  "ScgunsMonitorShootingInputMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsMonitorShootingInputMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsMonitorShootingInputMixin.java"
+  },
+  "ScgunsMonitorShotMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsMonitorShotMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsMonitorShotMixin.java"
+  },
+  "ScgunsMonitorWeapons": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsMonitorWeapons",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsMonitorWeapons.java"
+  },
+  "ScgunsNativePose": {
+    "class": "dev.felix.hostilehumans.client.render.ScgunsNativePose",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/ScgunsNativePose.java"
+  },
+  "ScgunsNpcAnimator": {
+    "class": "dev.felix.hostilehumans.client.render.ScgunsNpcAnimator",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/ScgunsNpcAnimator.java"
+  },
+  "ScgunsNpcMuzzleFlashMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsNpcMuzzleFlashMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsNpcMuzzleFlashMixin.java"
+  },
+  "ScgunsRaidBridge": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsRaidBridge",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsRaidBridge.java"
+  },
+  "ScgunsReloadPlan": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsReloadPlan",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsReloadPlan.java"
+  },
+  "ScgunsReloadTiming": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsReloadTiming",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsReloadTiming.java"
+  },
+  "ScgunsSettings": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsSettings",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsSettings.java"
+  },
+  "ScgunsSignalItem": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsSignalItem",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsSignalItem.java"
+  },
+  "ScgunsSounds": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsSounds",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsSounds.java"
+  },
+  "ScgunsSulfurheadDamageMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsSulfurheadDamageMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsSulfurheadDamageMixin.java"
+  },
+  "ScgunsSwarmThrowOriginMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ScgunsSwarmThrowOriginMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ScgunsSwarmThrowOriginMixin.java"
+  },
+  "ScgunsThrowableAdapter": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsThrowableAdapter",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsThrowableAdapter.java"
+  },
+  "ScgunsThrowableDamage": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsThrowableDamage",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsThrowableDamage.java"
+  },
+  "ScgunsThrowables": {
+    "class": "dev.felix.hostilehumans.compat.scguns.ScgunsThrowables",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/scguns/ScgunsThrowables.java"
+  },
+  "ScopedWorkBudget": {
+    "class": "dev.felix.hostilehumans.performance.ScopedWorkBudget",
+    "path": "src/main/java/dev/felix/hostilehumans/performance/ScopedWorkBudget.java"
+  },
+  "ServerSetup": {
+    "class": "dev.felix.hostilehumans.bootstrap.ServerSetup",
+    "path": "src/main/java/dev/felix/hostilehumans/bootstrap/ServerSetup.java"
+  },
+  "SettlementAccess": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementAccess",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementAccess.java"
+  },
+  "SettlementAuthoring": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementAuthoring",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementAuthoring.java"
+  },
+  "SettlementCodec": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementCodec",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementCodec.java"
+  },
+  "SettlementCommands": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementCommands",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementCommands.java"
+  },
+  "SettlementContent": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementContent",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementContent.java"
+  },
+  "SettlementControlBlock": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementControlBlock",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementControlBlock.java"
+  },
+  "SettlementFacility": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementFacility",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementFacility.java"
+  },
+  "SettlementGeneration": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementGeneration",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementGeneration.java"
+  },
+  "SettlementIndex": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementIndex",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementIndex.java"
+  },
+  "SettlementInformationBlock": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementInformationBlock",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementInformationBlock.java"
+  },
+  "SettlementInformationBlockEntity": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementInformationBlockEntity",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementInformationBlockEntity.java"
+  },
+  "SettlementInstance": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementInstance",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementInstance.java"
+  },
+  "SettlementLimits": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementLimits",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementLimits.java"
+  },
+  "SettlementModule": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementModule",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementModule.java"
+  },
+  "SettlementNetwork": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementNetwork.java"
+  },
+  "SettlementPages": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementPages",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementPages.java"
+  },
+  "SettlementPlacementIdentity": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementPlacementIdentity",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementPlacementIdentity.java"
+  },
+  "SettlementPosts": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementPosts",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementPosts.java"
+  },
+  "SettlementRegion": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementRegion",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementRegion.java"
+  },
+  "SettlementScreen": {
+    "class": "dev.felix.hostilehumans.settlement.client.SettlementScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/client/SettlementScreen.java"
+  },
+  "SettlementSelectionTool": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementSelectionTool",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementSelectionTool.java"
+  },
+  "SettlementStructureStartMixin": {
+    "class": "dev.felix.hostilehumans.mixin.SettlementStructureStartMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/SettlementStructureStartMixin.java"
+  },
+  "SettlementTemplate": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementTemplate",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementTemplate.java"
+  },
+  "SettlementTemplatePlacementMixin": {
+    "class": "dev.felix.hostilehumans.mixin.SettlementTemplatePlacementMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/SettlementTemplatePlacementMixin.java"
+  },
+  "ShieldAdvancePolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldAdvancePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ShieldAdvancePolicy.java"
+  },
+  "ShieldBlockPose": {
+    "class": "dev.felix.hostilehumans.client.render.ShieldBlockPose",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/ShieldBlockPose.java"
+  },
+  "ShieldDefenseController": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldDefenseController",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ShieldDefenseController.java"
+  },
+  "ShieldDefenseMovement": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldDefenseMovement",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ShieldDefenseMovement.java"
+  },
+  "ShieldDefensePolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldDefensePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ShieldDefensePolicy.java"
+  },
+  "ShieldDurability": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldDurability",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ShieldDurability.java"
+  },
+  "ShieldEnchantmentRoll": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldEnchantmentRoll",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ShieldEnchantmentRoll.java"
+  },
+  "ShieldPickupPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldPickupPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ShieldPickupPolicy.java"
+  },
+  "ShieldPressureConfig": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldPressureConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ShieldPressureConfig.java"
+  },
+  "ShieldProjectileBackend": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldProjectileBackend",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ShieldProjectileBackend.java"
+  },
+  "ShieldQualityPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldQualityPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ShieldQualityPolicy.java"
+  },
+  "ShoreProgressTracker": {
+    "class": "dev.felix.hostilehumans.navigation.ShoreProgressTracker",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/ShoreProgressTracker.java"
+  },
+  "ShoreSeekingPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.ShoreSeekingPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/ShoreSeekingPolicy.java"
+  },
+  "SignalPolicy": {
+    "class": "dev.felix.hostilehumans.soldier.SignalPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SignalPolicy.java"
+  },
+  "SoftSpeedLimit": {
+    "class": "dev.felix.hostilehumans.navigation.SoftSpeedLimit",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/SoftSpeedLimit.java"
+  },
+  "SoldierChatBudget": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierChatBudget",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierChatBudget.java"
+  },
+  "SoldierCombatMemory": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierCombatMemory",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierCombatMemory.java"
+  },
+  "SoldierCombatMode": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierCombatMode",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierCombatMode.java"
+  },
+  "SoldierCommandFeedback": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierCommandFeedback",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierCommandFeedback.java"
+  },
+  "SoldierCommandScreen": {
+    "class": "dev.felix.hostilehumans.client.ui.SoldierCommandScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/SoldierCommandScreen.java"
+  },
+  "SoldierDialogue": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierDialogue",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierDialogue.java"
+  },
+  "SoldierFollowNavigation": {
+    "class": "dev.felix.hostilehumans.navigation.SoldierFollowNavigation",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/SoldierFollowNavigation.java"
+  },
+  "SoldierMessageDispatcher": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierMessageDispatcher",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierMessageDispatcher.java"
+  },
+  "SoldierOrder": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierOrder",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierOrder.java"
+  },
+  "SoldierOrderGoal": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierOrderGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierOrderGoal.java"
+  },
+  "SoldierPickupPolicy": {
+    "class": "dev.felix.hostilehumans.inventory.SoldierPickupPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/SoldierPickupPolicy.java"
+  },
+  "SoldierRecallAnchor": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierRecallAnchor",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierRecallAnchor.java"
+  },
+  "SoldierRecallCharmItem": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierRecallCharmItem",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierRecallCharmItem.java"
+  },
+  "SoldierRecallProtection": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierRecallProtection",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierRecallProtection.java"
+  },
+  "SoldierRosterAudit": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierRosterAudit",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierRosterAudit.java"
+  },
+  "SoldierRosterItem": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierRosterItem",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierRosterItem.java"
+  },
+  "SoldierRosterNetwork": {
+    "class": "dev.felix.hostilehumans.soldier.SoldierRosterNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SoldierRosterNetwork.java"
+  },
+  "SoldierRosterScreen": {
+    "class": "dev.felix.hostilehumans.client.ui.SoldierRosterScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/SoldierRosterScreen.java"
+  },
+  "SoldierStuckRecovery": {
+    "class": "dev.felix.hostilehumans.navigation.SoldierStuckRecovery",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/SoldierStuckRecovery.java"
+  },
+  "SoundExclusionMemory": {
+    "class": "dev.felix.hostilehumans.perception.SoundExclusionMemory",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/SoundExclusionMemory.java"
+  },
+  "SoundInvestigationMemory": {
+    "class": "dev.felix.hostilehumans.perception.SoundInvestigationMemory",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/SoundInvestigationMemory.java"
+  },
+  "SpartanEquipmentCompat": {
+    "class": "dev.felix.hostilehumans.compat.spartan.SpartanEquipmentCompat",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/spartan/SpartanEquipmentCompat.java"
+  },
+  "SpartanRangedCompat": {
+    "class": "dev.felix.hostilehumans.compat.spartan.SpartanRangedCompat",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/spartan/SpartanRangedCompat.java"
+  },
+  "SpartanWeaponryItemRandomizerMixin": {
+    "class": "dev.felix.hostilehumans.mixin.SpartanWeaponryItemRandomizerMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/SpartanWeaponryItemRandomizerMixin.java"
+  },
+  "SpawnFoodConfig": {
+    "class": "dev.felix.hostilehumans.equipment.SpawnFoodConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/SpawnFoodConfig.java"
+  },
+  "SpawnHandler": {
+    "class": "dev.felix.hostilehumans.world.SpawnHandler",
+    "path": "src/main/java/dev/felix/hostilehumans/world/SpawnHandler.java"
+  },
+  "SpawnMeleeReservePolicy": {
+    "class": "dev.felix.hostilehumans.equipment.SpawnMeleeReservePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/SpawnMeleeReservePolicy.java"
+  },
+  "SpawnPotionConfig": {
+    "class": "dev.felix.hostilehumans.equipment.SpawnPotionConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/SpawnPotionConfig.java"
+  },
+  "SpawnSafety": {
+    "class": "dev.felix.hostilehumans.equipment.SpawnSafety",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/SpawnSafety.java"
+  },
+  "SpawnSupplyMigration": {
+    "class": "dev.felix.hostilehumans.equipment.SpawnSupplyMigration",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/SpawnSupplyMigration.java"
+  },
+  "SpawnTotemSupply": {
+    "class": "dev.felix.hostilehumans.equipment.SpawnTotemSupply",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/SpawnTotemSupply.java"
+  },
+  "SpawnWeaponCountPolicy": {
+    "class": "dev.felix.hostilehumans.equipment.SpawnWeaponCountPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/SpawnWeaponCountPolicy.java"
+  },
+  "SpawnerEntity": {
+    "class": "dev.felix.hostilehumans.world.SpawnerEntity",
+    "path": "src/main/java/dev/felix/hostilehumans/world/SpawnerEntity.java"
+  },
+  "SpawnerEntityRenderer": {
+    "class": "dev.felix.hostilehumans.client.render.SpawnerEntityRenderer",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/SpawnerEntityRenderer.java"
+  },
+  "SpecialtyAllocation": {
+    "class": "dev.felix.hostilehumans.progression.SpecialtyAllocation",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/SpecialtyAllocation.java"
+  },
+  "SpecialtyAttributes": {
+    "class": "dev.felix.hostilehumans.progression.SpecialtyAttributes",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/SpecialtyAttributes.java"
+  },
+  "SpecialtyBounds": {
+    "class": "dev.felix.hostilehumans.progression.SpecialtyBounds",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/SpecialtyBounds.java"
+  },
+  "SpecialtyBudgetSampler": {
+    "class": "dev.felix.hostilehumans.progression.SpecialtyBudgetSampler",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/SpecialtyBudgetSampler.java"
+  },
+  "SpecialtyConfig": {
+    "class": "dev.felix.hostilehumans.progression.SpecialtyConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/SpecialtyConfig.java"
+  },
+  "SpecialtyData": {
+    "class": "dev.felix.hostilehumans.progression.SpecialtyData",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/SpecialtyData.java"
+  },
+  "SpecialtyLabels": {
+    "class": "dev.felix.hostilehumans.progression.SpecialtyLabels",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/SpecialtyLabels.java"
+  },
+  "SpecialtyPolicy": {
+    "class": "dev.felix.hostilehumans.progression.SpecialtyPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/SpecialtyPolicy.java"
+  },
+  "SpecialtyTrainingBridge": {
+    "class": "dev.felix.hostilehumans.progression.SpecialtyTrainingBridge",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/SpecialtyTrainingBridge.java"
+  },
+  "SpectatorArmMask": {
+    "class": "dev.felix.hostilehumans.client.render.SpectatorArmMask",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/SpectatorArmMask.java"
+  },
+  "SpectatorAudioListener": {
+    "class": "dev.felix.hostilehumans.client.render.SpectatorAudioListener",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/SpectatorAudioListener.java"
+  },
+  "SpectatorGunSoundDistanceMixin": {
+    "class": "dev.felix.hostilehumans.mixin.SpectatorGunSoundDistanceMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/SpectatorGunSoundDistanceMixin.java"
+  },
+  "SpectatorMeleePresentation": {
+    "class": "dev.felix.hostilehumans.client.render.SpectatorMeleePresentation",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/SpectatorMeleePresentation.java"
+  },
+  "SpectatorMotionTrack": {
+    "class": "dev.felix.hostilehumans.client.render.SpectatorMotionTrack",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/SpectatorMotionTrack.java"
+  },
+  "SpectatorSkinTextures": {
+    "class": "dev.felix.hostilehumans.client.render.SpectatorSkinTextures",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/SpectatorSkinTextures.java"
+  },
+  "SpectatorSoundContract": {
+    "class": "dev.felix.hostilehumans.compat.SpectatorSoundContract",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/SpectatorSoundContract.java"
+  },
+  "SpectatorTaczAnimationSoundDistanceMixin": {
+    "class": "dev.felix.hostilehumans.mixin.SpectatorTaczAnimationSoundDistanceMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/SpectatorTaczAnimationSoundDistanceMixin.java"
+  },
+  "SplitConfigFiles": {
+    "class": "dev.felix.hostilehumans.config.SplitConfigFiles",
+    "path": "src/main/java/dev/felix/hostilehumans/config/SplitConfigFiles.java"
+  },
+  "SprintHopPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.SprintHopPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/SprintHopPolicy.java"
+  },
+  "SquadCommandNetwork": {
+    "class": "dev.felix.hostilehumans.soldier.SquadCommandNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SquadCommandNetwork.java"
+  },
+  "SquadCommandScreen": {
+    "class": "dev.felix.hostilehumans.client.ui.SquadCommandScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/SquadCommandScreen.java"
+  },
+  "SquadCommandTokenItem": {
+    "class": "dev.felix.hostilehumans.soldier.SquadCommandTokenItem",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SquadCommandTokenItem.java"
+  },
+  "SquadCommands": {
+    "class": "dev.felix.hostilehumans.soldier.SquadCommands",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SquadCommands.java"
+  },
+  "SquadData": {
+    "class": "dev.felix.hostilehumans.soldier.SquadData",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/SquadData.java"
+  },
+  "StandingAccess": {
+    "class": "dev.felix.hostilehumans.faction.StandingAccess",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/StandingAccess.java"
+  },
+  "StandingCommands": {
+    "class": "dev.felix.hostilehumans.faction.StandingCommands",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/StandingCommands.java"
+  },
+  "StandingEffects": {
+    "class": "dev.felix.hostilehumans.faction.StandingEffects",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/StandingEffects.java"
+  },
+  "StandingIncidents": {
+    "class": "dev.felix.hostilehumans.faction.StandingIncidents",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/StandingIncidents.java"
+  },
+  "StandingPolicy": {
+    "class": "dev.felix.hostilehumans.faction.StandingPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/StandingPolicy.java"
+  },
+  "StandingQuota": {
+    "class": "dev.felix.hostilehumans.faction.StandingQuota",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/StandingQuota.java"
+  },
+  "StandingReward": {
+    "class": "dev.felix.hostilehumans.faction.StandingReward",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/StandingReward.java"
+  },
+  "StaticCombatGoalHost": {
+    "class": "dev.felix.hostilehumans.behavior.StaticCombatGoalHost",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/StaticCombatGoalHost.java"
+  },
+  "SupplyInventoryPolicy": {
+    "class": "dev.felix.hostilehumans.inventory.SupplyInventoryPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/SupplyInventoryPolicy.java"
+  },
+  "TacticalSupplyDefaults": {
+    "class": "dev.felix.hostilehumans.equipment.TacticalSupplyDefaults",
+    "path": "src/main/java/dev/felix/hostilehumans/equipment/TacticalSupplyDefaults.java"
+  },
+  "TacticalThrowables": {
+    "class": "dev.felix.hostilehumans.behavior.combat.throwable.TacticalThrowables",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/throwable/TacticalThrowables.java"
+  },
+  "TaczAmmoMixinContract": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczAmmoMixinContract",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczAmmoMixinContract.java"
+  },
+  "TaczAnimationPolicy": {
+    "class": "dev.felix.hostilehumans.client.render.TaczAnimationPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/TaczAnimationPolicy.java"
+  },
+  "TaczGunItemIdentity": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczGunItemIdentity",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczGunItemIdentity.java"
+  },
+  "TaczGunMechanics": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczGunMechanics",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczGunMechanics.java"
+  },
+  "TaczHearingBridge": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczHearingBridge",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczHearingBridge.java"
+  },
+  "TaczHumanGunScriptMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczHumanGunScriptMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczHumanGunScriptMixin.java"
+  },
+  "TaczHumanProjectileCollisionMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczHumanProjectileCollisionMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczHumanProjectileCollisionMixin.java"
+  },
+  "TaczHumanReloadMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczHumanReloadMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczHumanReloadMixin.java"
+  },
+  "TaczHumanReloadTransactions": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczHumanReloadTransactions",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczHumanReloadTransactions.java"
+  },
+  "TaczHumanShootMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczHumanShootMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczHumanShootMixin.java"
+  },
+  "TaczIntegration": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczIntegration",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczIntegration.java"
+  },
+  "TaczMaidIntegration": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczMaidIntegration",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczMaidIntegration.java"
+  },
+  "TaczMonitorAimInputMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczMonitorAimInputMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczMonitorAimInputMixin.java"
+  },
+  "TaczMonitorAudio": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczMonitorAudio",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczMonitorAudio.java"
+  },
+  "TaczMonitorHud": {
+    "class": "dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/gun/TaczMonitorHud.java"
+  },
+  "TaczMonitorInput": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczMonitorInput",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczMonitorInput.java"
+  },
+  "TaczMonitorRecoil": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.TaczMonitorRecoil",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/TaczMonitorRecoil.java"
+  },
+  "TaczMonitorReloadInputMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczMonitorReloadInputMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczMonitorReloadInputMixin.java"
+  },
+  "TaczMonitorShootInputMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczMonitorShootInputMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczMonitorShootInputMixin.java"
+  },
+  "TaczMonitorShotSoundClient": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczMonitorShotSoundClient",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczMonitorShotSoundClient.java"
+  },
+  "TaczMonitorShotSoundMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczMonitorShotSoundMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczMonitorShotSoundMixin.java"
+  },
+  "TaczMonitorSoundBroadcastMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczMonitorSoundBroadcastMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczMonitorSoundBroadcastMixin.java"
+  },
+  "TaczMonitorSpread": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczMonitorSpread",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczMonitorSpread.java"
+  },
+  "TaczMonitorWeapons": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczMonitorWeapons",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczMonitorWeapons.java"
+  },
+  "TaczNativeAnimation": {
+    "class": "dev.felix.hostilehumans.client.render.TaczNativeAnimation",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/TaczNativeAnimation.java"
+  },
+  "TaczNativeOptics": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.TaczNativeOptics",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/TaczNativeOptics.java"
+  },
+  "TaczNativePresentation": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.TaczNativePresentation",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/TaczNativePresentation.java"
+  },
+  "TaczNpcAnimator": {
+    "class": "dev.felix.hostilehumans.client.render.TaczNpcAnimator",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/TaczNpcAnimator.java"
+  },
+  "TaczNpcAnimatorMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczNpcAnimatorMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczNpcAnimatorMixin.java"
+  },
+  "TaczNpcEffects": {
+    "class": "dev.felix.hostilehumans.client.render.TaczNpcEffects",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/TaczNpcEffects.java"
+  },
+  "TaczNpcMagazine": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczNpcMagazine",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczNpcMagazine.java"
+  },
+  "TaczNpcMuzzleFlashMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczNpcMuzzleFlashMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczNpcMuzzleFlashMixin.java"
+  },
+  "TaczOpticGraphicsState": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.TaczOpticGraphicsState",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/TaczOpticGraphicsState.java"
+  },
+  "TaczOpticRenderContext": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.TaczOpticRenderContext",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/TaczOpticRenderContext.java"
+  },
+  "TaczPresentationResources": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.TaczPresentationResources",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/TaczPresentationResources.java"
+  },
+  "TaczReloadPlayback": {
+    "class": "dev.felix.hostilehumans.client.render.TaczReloadPlayback",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/TaczReloadPlayback.java"
+  },
+  "TaczReloadSoundClient": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczReloadSoundClient",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczReloadSoundClient.java"
+  },
+  "TaczReloadVisualTimeline": {
+    "class": "dev.felix.hostilehumans.compat.tacz.TaczReloadVisualTimeline",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczReloadVisualTimeline.java"
+  },
+  "TaczScopeAimMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczScopeAimMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczScopeAimMixin.java"
+  },
+  "TaczScopeAttachmentIndexMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczScopeAttachmentIndexMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczScopeAttachmentIndexMixin.java"
+  },
+  "TaczScopeCameraMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczScopeCameraMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczScopeCameraMixin.java"
+  },
+  "TaczScopeRenderCompatibilityMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczScopeRenderCompatibilityMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczScopeRenderCompatibilityMixin.java"
+  },
+  "TaczSpectatorFirstPerson": {
+    "class": "dev.felix.hostilehumans.client.render.tacz.TaczSpectatorFirstPerson",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/tacz/TaczSpectatorFirstPerson.java"
+  },
+  "TargetPreservingConditionalGoal": {
+    "class": "dev.felix.hostilehumans.behavior.TargetPreservingConditionalGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/TargetPreservingConditionalGoal.java"
+  },
+  "TargetReportLedger": {
+    "class": "dev.felix.hostilehumans.perception.TargetReportLedger",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/TargetReportLedger.java"
+  },
+  "TaskLedger": {
+    "class": "dev.felix.hostilehumans.economy.TaskLedger",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/TaskLedger.java"
+  },
+  "TemplateTransform": {
+    "class": "dev.felix.hostilehumans.settlement.TemplateTransform",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/TemplateTransform.java"
+  },
+  "TemporarySupportFollowGoal": {
+    "class": "dev.felix.hostilehumans.soldier.TemporarySupportFollowGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/TemporarySupportFollowGoal.java"
+  },
+  "ThreatScorePolicy": {
+    "class": "dev.felix.hostilehumans.perception.ThreatScorePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/ThreatScorePolicy.java"
+  },
+  "ThrowableAreaEffectCloudMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ThrowableAreaEffectCloudMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ThrowableAreaEffectCloudMixin.java"
+  },
+  "ThrowableBallistics": {
+    "class": "dev.felix.hostilehumans.behavior.combat.throwable.ThrowableBallistics",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/throwable/ThrowableBallistics.java"
+  },
+  "ThrowableEffectContext": {
+    "class": "dev.felix.hostilehumans.behavior.combat.throwable.ThrowableEffectContext",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/throwable/ThrowableEffectContext.java"
+  },
+  "ThrowableSource": {
+    "class": "dev.felix.hostilehumans.behavior.combat.throwable.ThrowableSource",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/throwable/ThrowableSource.java"
+  },
+  "ThrowableSplashPotionMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ThrowableSplashPotionMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ThrowableSplashPotionMixin.java"
+  },
+  "ThrowableTransactions": {
+    "class": "dev.felix.hostilehumans.behavior.combat.throwable.ThrowableTransactions",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/throwable/ThrowableTransactions.java"
+  },
+  "ThrownTridentLifecycleMixin": {
+    "class": "dev.felix.hostilehumans.mixin.ThrownTridentLifecycleMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/ThrownTridentLifecycleMixin.java"
+  },
+  "TickRevisionMemo": {
+    "class": "dev.felix.hostilehumans.common.TickRevisionMemo",
+    "path": "src/main/java/dev/felix/hostilehumans/common/TickRevisionMemo.java"
+  },
+  "TickValueGate": {
+    "class": "dev.felix.hostilehumans.common.TickValueGate",
+    "path": "src/main/java/dev/felix/hostilehumans/common/TickValueGate.java"
+  },
+  "TierAttributes": {
+    "class": "dev.felix.hostilehumans.progression.TierAttributes",
+    "path": "src/main/java/dev/felix/hostilehumans/progression/TierAttributes.java"
+  },
+  "TierConfigProjection": {
+    "class": "dev.felix.hostilehumans.config.TierConfigProjection",
+    "path": "src/main/java/dev/felix/hostilehumans/config/TierConfigProjection.java"
+  },
+  "TierThreeHuman": {
+    "class": "dev.felix.hostilehumans.entity.TierThreeHuman",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/TierThreeHuman.java"
+  },
+  "TouhouMaidCompat": {
+    "class": "dev.felix.hostilehumans.compat.maid.TouhouMaidCompat",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/maid/TouhouMaidCompat.java"
+  },
+  "TouhouMaidGunHurtMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TouhouMaidGunHurtMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TouhouMaidGunHurtMixin.java"
+  },
+  "TouhouMaidHumanTargetMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TouhouMaidHumanTargetMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TouhouMaidHumanTargetMixin.java"
+  },
+  "TrainingCredit": {
+    "class": "dev.felix.hostilehumans.cultivation.TrainingCredit",
+    "path": "src/main/java/dev/felix/hostilehumans/cultivation/TrainingCredit.java"
+  },
+  "TrapdoorInteractGoal": {
+    "class": "dev.felix.hostilehumans.navigation.TrapdoorInteractGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/TrapdoorInteractGoal.java"
+  },
+  "TravelersBackpack": {
+    "class": "dev.felix.hostilehumans.compat.TravelersBackpack",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/TravelersBackpack.java"
+  },
+  "TridentCombatModifiers": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.TridentCombatModifiers",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/TridentCombatModifiers.java"
+  },
+  "TridentHybridGoal": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.TridentHybridGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/TridentHybridGoal.java"
+  },
+  "TridentMovementExecution": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.TridentMovementExecution",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/TridentMovementExecution.java"
+  },
+  "TurnGesture": {
+    "class": "dev.felix.hostilehumans.perception.TurnGesture",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/TurnGesture.java"
+  },
+  "TurnResponse": {
+    "class": "dev.felix.hostilehumans.perception.TurnResponse",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/TurnResponse.java"
+  },
+  "UiDraw": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.UiDraw",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/UiDraw.java"
+  },
+  "UiLayout": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.UiLayout",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/UiLayout.java"
+  },
+  "UiRect": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.UiRect",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/UiRect.java"
+  },
+  "UiTheme": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.UiTheme",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/UiTheme.java"
+  },
+  "UiThemes": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.UiThemes",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/UiThemes.java"
+  },
+  "UnifiedConfig": {
+    "class": "dev.felix.hostilehumans.config.UnifiedConfig",
+    "path": "src/main/java/dev/felix/hostilehumans/config/UnifiedConfig.java"
+  },
+  "UnifiedCreativeTab": {
+    "class": "dev.felix.hostilehumans.bootstrap.UnifiedCreativeTab",
+    "path": "src/main/java/dev/felix/hostilehumans/bootstrap/UnifiedCreativeTab.java"
+  },
+  "ValuableItemPickupGoal": {
+    "class": "dev.felix.hostilehumans.inventory.ValuableItemPickupGoal",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/ValuableItemPickupGoal.java"
+  },
+  "VanillaMeleeSweep": {
+    "class": "dev.felix.hostilehumans.behavior.combat.melee.VanillaMeleeSweep",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/melee/VanillaMeleeSweep.java"
+  },
+  "VanillaModePolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.VanillaModePolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/VanillaModePolicy.java"
+  },
+  "VanillaPotionStackSizeMixin": {
+    "class": "dev.felix.hostilehumans.mixin.VanillaPotionStackSizeMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/VanillaPotionStackSizeMixin.java"
+  },
+  "VanillaPotionStacks": {
+    "class": "dev.felix.hostilehumans.item.VanillaPotionStacks",
+    "path": "src/main/java/dev/felix/hostilehumans/item/VanillaPotionStacks.java"
+  },
+  "VisualOcclusionMemory": {
+    "class": "dev.felix.hostilehumans.perception.VisualOcclusionMemory",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/VisualOcclusionMemory.java"
+  },
+  "VolleyContinuation": {
+    "class": "dev.felix.hostilehumans.behavior.combat.ranged.VolleyContinuation",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/VolleyContinuation.java"
+  },
+  "WalletBalance": {
+    "class": "dev.felix.hostilehumans.economy.WalletBalance",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/WalletBalance.java"
+  },
+  "WalletClientKeys": {
+    "class": "dev.felix.hostilehumans.economy.client.WalletClientKeys",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/client/WalletClientKeys.java"
+  },
+  "WalletCodec": {
+    "class": "dev.felix.hostilehumans.economy.WalletCodec",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/WalletCodec.java"
+  },
+  "WalletInventory": {
+    "class": "dev.felix.hostilehumans.economy.WalletInventory",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/WalletInventory.java"
+  },
+  "WalletItem": {
+    "class": "dev.felix.hostilehumans.economy.WalletItem",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/WalletItem.java"
+  },
+  "WalletPayloadCodec": {
+    "class": "dev.felix.hostilehumans.economy.WalletPayloadCodec",
+    "path": "src/main/java/dev/felix/hostilehumans/economy/WalletPayloadCodec.java"
+  },
+  "WaterCombatNavigation": {
+    "class": "dev.felix.hostilehumans.navigation.WaterCombatNavigation",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/WaterCombatNavigation.java"
+  },
+  "WaterCombatPolicy": {
+    "class": "dev.felix.hostilehumans.navigation.WaterCombatPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/navigation/WaterCombatPolicy.java"
+  },
+  "WeaponTransitionPolicy": {
+    "class": "dev.felix.hostilehumans.behavior.combat.WeaponTransitionPolicy",
+    "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/WeaponTransitionPolicy.java"
+  },
+  "WildArmorWear": {
+    "class": "dev.felix.hostilehumans.inventory.WildArmorWear",
+    "path": "src/main/java/dev/felix/hostilehumans/inventory/WildArmorWear.java"
+  }
+}

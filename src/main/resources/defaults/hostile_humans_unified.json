@@ -1,4 +1,24 @@
 {
+  "faction_abilities": {
+    "_description": "可复用阵营被动能力；definitions定义能力，assignments按完整阵营ID分配；空数组禁用该阵营能力 / Reusable passive faction abilities",
+    "definitions": {
+      "dodge": {
+        "type": "dodge",
+        "chance_by_tier": {
+          "roamer": 0,
+          "tier1": 0.05,
+          "tier2": 0.1,
+          "tier3": 0.2
+        },
+        "sound_cooldown_ticks": 24
+      }
+    },
+    "assignments": {
+      "hostile_humans_unified:ashen": [
+        "dodge"
+      ]
+    }
+  },
   "schema_version": 2,
   "_说明_中文": "全局配置。修改后完整重启生效；只填写JSON配置值，以下_说明和_description字段仅供阅读。阶级独立属性、装备、AI、弹药与药水见roamer/tier1/tier2/tier3.json。",
   "_description_en": "Global configuration. Fully restart after editing. _说明 and _description fields are documentation only. Independent rank settings are in roamer/tier1/tier2/tier3.json.",
@@ -41,7 +61,7 @@
         "knockback_resistance": 0,
         "_说明_follow_range_中文": "目标探测属性，8–128格；不是雇佣跟随的启停距离。",
         "_description_follow_range_en": "Target detection attribute, 8–128 blocks; not the hired-follow start/stop distance.",
-        "follow_range": 40,
+        "follow_range": 80,
         "_说明_max_health_中文": "完整基础最大生命值，1–1024点；2点=1颗心。统一成长会乘阶段和经验百分比。",
         "_description_max_health_en": "Full base maximum health, 1–1024 points; 2 points = 1 heart. Unified growth applies stage and experience percentages.",
         "max_health": 40
@@ -181,7 +201,7 @@
         "variety_max": 7,
         "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
         "_description_enchanted_golden_apple_chance_en": "Existence chance only; count is sampled from enchanted_golden_apple_counts. Independent of food scaling.",
-        "enchanted_golden_apple_chance": 0.2,
+        "enchanted_golden_apple_chance": 0.02,
         "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
         "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
         "presets": [
@@ -393,11 +413,6 @@
             },
             {
               "item": "minecraft:splash_potion",
-              "potion": "minecraft:long_weakness",
-              "weight": 1
-            },
-            {
-              "item": "minecraft:splash_potion",
               "potion": "minecraft:strong_poison",
               "weight": 2
             },
@@ -455,9 +470,6 @@
         "_说明_early_enchantment_level_multiplier_中文": "成长起点附魔等级倍率，0–1，向下取整；0级移除。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
         "_description_early_enchantment_level_multiplier_en": "Initial enchantment level multiplier, 0–1, rounded down; level 0 is removed. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
         "early_enchantment_level_multiplier": 0.25,
-        "_说明_early_totem_keep_chance_中文": "成长起点保留已抽中不死图腾的概率，0–1。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
-        "_description_early_totem_keep_chance_en": "Initial chance to retain an already-rolled totem, 0–1. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
-        "early_totem_keep_chance": 0.0,
         "_说明_early_trident_keep_chance_中文": "成长起点保留已抽中三叉戟的概率，0–1。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
         "_description_early_trident_keep_chance_en": "Initial chance to retain an already-rolled trident, 0–1. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
         "early_trident_keep_chance": 0.0,
@@ -530,7 +542,7 @@
         "knockback_resistance": 0,
         "_说明_follow_range_中文": "目标探测属性，8–128格；不是雇佣跟随的启停距离。",
         "_description_follow_range_en": "Target detection attribute, 8–128 blocks; not the hired-follow start/stop distance.",
-        "follow_range": 40,
+        "follow_range": 80,
         "_说明_max_health_中文": "完整基础最大生命值，1–1024点；2点=1颗心。统一成长会乘阶段和经验百分比。",
         "_description_max_health_en": "Full base maximum health, 1–1024 points; 2 points = 1 heart. Unified growth applies stage and experience percentages.",
         "max_health": 40
@@ -670,7 +682,7 @@
         "variety_max": 7,
         "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
         "_description_enchanted_golden_apple_chance_en": "Existence chance only; count is sampled from enchanted_golden_apple_counts. Independent of food scaling.",
-        "enchanted_golden_apple_chance": 0.4,
+        "enchanted_golden_apple_chance": 0.1,
         "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
         "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
         "presets": [
@@ -883,11 +895,6 @@
             },
             {
               "item": "minecraft:splash_potion",
-              "potion": "minecraft:long_weakness",
-              "weight": 1
-            },
-            {
-              "item": "minecraft:splash_potion",
               "potion": "minecraft:strong_poison",
               "weight": 2
             },
@@ -945,9 +952,6 @@
         "_说明_early_enchantment_level_multiplier_中文": "成长起点附魔等级倍率，0–1，向下取整；0级移除。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
         "_description_early_enchantment_level_multiplier_en": "Initial enchantment level multiplier, 0–1, rounded down; level 0 is removed. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
         "early_enchantment_level_multiplier": 0.25,
-        "_说明_early_totem_keep_chance_中文": "成长起点保留已抽中不死图腾的概率，0–1。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
-        "_description_early_totem_keep_chance_en": "Initial chance to retain an already-rolled totem, 0–1. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
-        "early_totem_keep_chance": 0.0,
         "_说明_early_trident_keep_chance_中文": "成长起点保留已抽中三叉戟的概率，0–1。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
         "_description_early_trident_keep_chance_en": "Initial chance to retain an already-rolled trident, 0–1. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
         "early_trident_keep_chance": 0.0,
@@ -1023,7 +1027,7 @@
         "knockback_resistance": 0,
         "_说明_follow_range_中文": "目标探测属性，8–128格；不是雇佣跟随的启停距离。",
         "_description_follow_range_en": "Target detection attribute, 8–128 blocks; not the hired-follow start/stop distance.",
-        "follow_range": 40,
+        "follow_range": 80,
         "_说明_max_health_中文": "完整基础最大生命值，1–1024点；2点=1颗心。统一成长会乘阶段和经验百分比。",
         "_description_max_health_en": "Full base maximum health, 1–1024 points; 2 points = 1 heart. Unified growth applies stage and experience percentages.",
         "max_health": 60
@@ -1163,7 +1167,7 @@
         "variety_max": 7,
         "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
         "_description_enchanted_golden_apple_chance_en": "Existence chance only; count is sampled from enchanted_golden_apple_counts. Independent of food scaling.",
-        "enchanted_golden_apple_chance": 0.6,
+        "enchanted_golden_apple_chance": 0.25,
         "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
         "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
         "presets": [
@@ -1376,11 +1380,6 @@
             },
             {
               "item": "minecraft:splash_potion",
-              "potion": "minecraft:long_weakness",
-              "weight": 1
-            },
-            {
-              "item": "minecraft:splash_potion",
               "potion": "minecraft:strong_poison",
               "weight": 2
             },
@@ -1438,9 +1437,6 @@
         "_说明_early_enchantment_level_multiplier_中文": "成长起点附魔等级倍率，0–1，向下取整；0级移除。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
         "_description_early_enchantment_level_multiplier_en": "Initial enchantment level multiplier, 0–1, rounded down; level 0 is removed. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
         "early_enchantment_level_multiplier": 0.25,
-        "_说明_early_totem_keep_chance_中文": "成长起点保留已抽中不死图腾的概率，0–1。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
-        "_description_early_totem_keep_chance_en": "Initial chance to retain an already-rolled totem, 0–1. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
-        "early_totem_keep_chance": 0.0,
         "_说明_early_trident_keep_chance_中文": "成长起点保留已抽中三叉戟的概率，0–1。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
         "_description_early_trident_keep_chance_en": "Initial chance to retain an already-rolled trident, 0–1. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
         "early_trident_keep_chance": 0.0,
@@ -1518,7 +1514,7 @@
         "knockback_resistance": 0.15,
         "_说明_follow_range_中文": "目标探测属性，8–128格；不是雇佣跟随的启停距离。",
         "_description_follow_range_en": "Target detection attribute, 8–128 blocks; not the hired-follow start/stop distance.",
-        "follow_range": 48,
+        "follow_range": 96,
         "_说明_max_health_中文": "完整基础最大生命值，1–1024点；2点=1颗心。统一成长会乘阶段和经验百分比。",
         "_description_max_health_en": "Full base maximum health, 1–1024 points; 2 points = 1 heart. Unified growth applies stage and experience percentages.",
         "max_health": 80
@@ -1658,7 +1654,7 @@
         "variety_max": 7,
         "_说明_enchanted_golden_apple_chance_中文": "附魔金苹果生成概率，0至1；设0完全不发放，不影响敌对信标的掉落限制。",
         "_description_enchanted_golden_apple_chance_en": "Existence chance only; count is sampled from enchanted_golden_apple_counts. Independent of food scaling.",
-        "enchanted_golden_apple_chance": 1,
+        "enchanted_golden_apple_chance": 0.65,
         "_说明_presets_中文": "数量方案池：weight为相对正权重；count_min/max食物总数0至1920，golden_apple_min/max普通金苹果总数0至64。空方案池不发普通食物/普通金苹果；附魔金苹果另按概率控制。",
         "_description_presets_en": "Weighted quantity presets: total food counts 0-1920 and golden-apple counts 0-64. Empty presets grant neither ordinary food nor golden apples; enchanted apples have a separate chance.",
         "presets": [
@@ -1871,11 +1867,6 @@
             },
             {
               "item": "minecraft:splash_potion",
-              "potion": "minecraft:long_weakness",
-              "weight": 1
-            },
-            {
-              "item": "minecraft:splash_potion",
               "potion": "minecraft:strong_poison",
               "weight": 2
             },
@@ -1933,9 +1924,6 @@
         "_说明_early_enchantment_level_multiplier_中文": "成长起点附魔等级倍率，0–1，向下取整；0级移除。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
         "_description_early_enchantment_level_multiplier_en": "Initial enchantment level multiplier, 0–1, rounded down; level 0 is removed. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
         "early_enchantment_level_multiplier": 0.25,
-        "_说明_early_totem_keep_chance_中文": "成长起点保留已抽中不死图腾的概率，0–1。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
-        "_description_early_totem_keep_chance_en": "Initial chance to retain an already-rolled totem, 0–1. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
-        "early_totem_keep_chance": 0.0,
         "_说明_early_trident_keep_chance_中文": "成长起点保留已抽中三叉戟的概率，0–1。 随成长进度p线性提高至1：实际值=本值+(1-本值)×p。",
         "_description_early_trident_keep_chance_en": "Initial chance to retain an already-rolled trident, 0–1. Interpolates to 1 with progress p: effective=value+(1-value)*p.",
         "early_trident_keep_chance": 0.0,
@@ -2123,10 +2111,6 @@
           {
             "item": "minecraft:shield",
             "weight": 9
-          },
-          {
-            "item": "minecraft:totem_of_undying",
-            "weight": 1
           }
         ]
       },
@@ -2226,7 +2210,10 @@
       ],
       "automatic_scguns_armor": true,
       "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。",
-      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts."
+      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts.",
+      "_说明_totem_chance_中文": "出生独立抽取一枚不死图腾的概率，0至1；直接存入背包，不乘副手机会、阵营或成长倍率。空间不足不补发，不改变已有个体。",
+      "_description_totem_chance_en": "Independent birth chance for one backpack totem. No offhand, faction or growth multiplier; no retry if inventory is full; existing humans are unchanged.",
+      "totem_chance": 0.05
     },
     "tier1": {
       "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。 阵营概率/档位/附魔/补给按独立内置表；可用faction_overrides逐阵营覆盖。新gun_chance是唯一枪械概率；旧tacz.gun_chance仅首次显式迁移。",
@@ -2368,7 +2355,10 @@
       ],
       "automatic_scguns_armor": true,
       "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。",
-      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts."
+      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts.",
+      "_说明_totem_chance_中文": "出生独立抽取一枚不死图腾的概率，0至1；直接存入背包，不乘副手机会、阵营或成长倍率。空间不足不补发，不改变已有个体。",
+      "_description_totem_chance_en": "Independent birth chance for one backpack totem. No offhand, faction or growth multiplier; no retry if inventory is full; existing humans are unchanged.",
+      "totem_chance": 0.05
     },
     "tier2": {
       "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。 阵营概率/档位/附魔/补给按独立内置表；可用faction_overrides逐阵营覆盖。新gun_chance是唯一枪械概率；旧tacz.gun_chance仅首次显式迁移。",
@@ -2409,10 +2399,6 @@
           {
             "item": "minecraft:shield",
             "weight": 85
-          },
-          {
-            "item": "minecraft:totem_of_undying",
-            "weight": 15
           }
         ]
       },
@@ -2505,7 +2491,10 @@
       ],
       "automatic_scguns_armor": true,
       "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。",
-      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts."
+      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts.",
+      "_说明_totem_chance_中文": "出生独立抽取一枚不死图腾的概率，0至1；直接存入背包，不乘副手机会、阵营或成长倍率。空间不足不补发，不改变已有个体。",
+      "_description_totem_chance_en": "Independent birth chance for one backpack totem. No offhand, faction or growth multiplier; no retry if inventory is full; existing humans are unchanged.",
+      "totem_chance": 0.1
     },
     "tier3": {
       "_说明_中文": "本阶生成装备；池中使用注册物品ID与正权重，空池保持为空。 阵营概率/档位/附魔/补给按独立内置表；可用faction_overrides逐阵营覆盖。新gun_chance是唯一枪械概率；旧tacz.gun_chance仅首次显式迁移。",
@@ -2626,7 +2615,10 @@
       ],
       "automatic_scguns_armor": true,
       "_说明_automatic_scguns_armor_中文": "全局装备自动导入开启时，一次性追加本阶已注册普通护甲，含普通独立头盔组合；外骨骼套装、核心和扩展模块不自动导入。不覆盖自定义条目与权重，显式空池保持为空；已有导入记录后删除的条目不补回。玩家专属额外效果不移植。",
-      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts."
+      "_description_automatic_scguns_armor_en": "When global auto-import is enabled, add registered ordinary Scorched Guns armor and helmet combinations once. Excludes ExoSuit armor, cores and modules. Preserve custom entries, weights, empty pools and prior import receipts.",
+      "_说明_totem_chance_中文": "出生独立抽取一枚不死图腾的概率，0至1；直接存入背包，不乘副手机会、阵营或成长倍率。空间不足不补发，不改变已有个体。",
+      "_description_totem_chance_en": "Independent birth chance for one backpack totem. No offhand, faction or growth multiplier; no retry if inventory is full; existing humans are unchanged.",
+      "totem_chance": 0.2
     }
   },
   "spawning": {
@@ -3420,6 +3412,8 @@
     "_description_jeg_inventory_fed_capacity_en": "NPC-only virtual capacity for JEG inventory-fed ballistic guns: default 100, range 1-4096. One category-priced payment per empty reload; player capacity is unchanged."
   },
   "shield_pressure": {
+    "damage_reduction": 0.2,
+    "_description_damage_reduction": "实际高压举盾期间所有普通伤害结算剩余扣血的额外减免比例；护甲/抗性/吸收后乘算，不影响其他举盾或盔甲耐久 / Final health damage reduction during active pressure guard",
     "_说明_中文": "本能高压防御，只统计可盾防生物/弹体攻击的真实扣血。每次扣血立即更新指数衰减受伤DPS，默认平滑0.5秒，达到最大生命22%/秒即请求举盾；不等待窗口或命中次数。环境、绕盾、取消及零扣血不计。当前一瓶药先完成，保留枪械与导航。安静1秒或最长6秒结束，之后固定冷却3.5秒。",
     "_description_en": "Event-driven shieldable health-loss DPS. Exponential smoothing 10 ticks, threshold 22% maximum health per second. No hit-count or settlement wait. Finish the current potion; preserve firearm and navigation. End after 20 quiet ticks or 120 active ticks, then 70 ticks mandatory cooldown.",
     "enabled": true,
@@ -3614,6 +3608,7 @@
       "_description_maximum_targets_en": "Per-human perception record capacity; range 4–64."
     },
     "attention": {
+      "sound_glance_cooldown_ticks": 40,
       "idle_head_step": 4,
       "_说明_idle_head_step_中文": "自然环顾最大角速度，随扫描间隔进一步限制，范围1–15度/tick。",
       "_description_idle_head_step_en": "Maximum idle angular speed, additionally limited by scan interval; range 1–15 degrees/tick.",
@@ -3625,9 +3620,19 @@
       "_description_moving_head_angle_en": "Moving head angle relative to navigation body; range 10–90.",
       "hit_response_ticks": 20,
       "_说明_hit_response_ticks_中文": "真实受击自卫转向最长暂停，转到来向后提前恢复；范围2–80。",
-      "_description_hit_response_ticks_en": "Maximum real-hit reorientation pause, ends on alignment; range 2–80."
+      "_description_hit_response_ticks_en": "Maximum real-hit reorientation pause, ends on alignment; range 2–80.",
+      "_说明_survey_rear_chance_中文": "闲置一次张望加入后方候选的概率",
+      "_description_survey_rear_chance_en": "Chance to survey behind while idle",
+      "survey_rear_chance": 0.2,
+      "_说明_survey_distance_中文": "闲置开阔方向探测长度",
+      "_description_survey_distance_en": "Idle view clearance probe length",
+      "survey_distance": 8,
+      "_说明_survey_min_clearance_中文": "张望方向至少空出的距离",
+      "_description_survey_min_clearance_en": "Minimum useful idle view clearance",
+      "survey_min_clearance": 1.5
     },
     "selection": {
+      "weak_current_intrinsic": 32,
       "attribute_interval_ticks": 20,
       "_说明_attribute_interval_ticks_中文": "已确认目标属性刷新基准间隔；动态负载档位调整。范围1–200tick。",
       "_description_attribute_interval_ticks_en": "Confirmed attribute refresh base interval, scaled by activity load. Range 1–200 ticks.",
@@ -3668,6 +3673,9 @@
       "_description_unknown_notice_ticks_en": "Unknown incoming direction lifetime; range 20–1200."
     },
     "hearing": {
+      "bowshot_radius": 24,
+      "crossbowshot_radius": 28,
+      "projectile_shot_cooldown_ticks": 6,
       "background_step_radius": 3,
       "_说明_background_step_radius_中文": "普通未交战怪物脚步近场半径；需要无遮挡。范围0–8格。",
       "_description_background_step_radius_en": "Unengaged background footstep radius; unobstructed only. Range 0–8.",
@@ -3745,7 +3753,62 @@
       "_description_gunshot_radius_en": "Gunshot hearing radius; range 0–128.",
       "gunshot_cooldown_ticks": 10,
       "_说明_gunshot_cooldown_ticks_中文": "同射手枪声合并间隔；范围1–200。",
-      "_description_gunshot_cooldown_ticks_en": "Per-shooter gunshot coalescing interval; range 1–200."
+      "_description_gunshot_cooldown_ticks_en": "Per-shooter gunshot coalescing interval; range 1–200.",
+      "_说明_bowshot_radius_中文": "弓箭发射声半径",
+      "_description_bowshot_radius_en": "Bow launch hearing radius",
+      "_说明_crossbowshot_radius_中文": "弩箭发射声半径",
+      "_description_crossbowshot_radius_en": "Crossbow launch hearing radius",
+      "_说明_throw_radius_中文": "可听投掷动作",
+      "_description_throw_radius_en": "Audible projectile throw",
+      "throw_radius": 12,
+      "_说明_reload_radius_中文": "弩开始装填的近场声音",
+      "_description_reload_radius_en": "Nearby crossbow loading action",
+      "reload_radius": 8,
+      "_说明_impact_radius_中文": "弹射物撞击位置",
+      "_description_impact_radius_en": "Projectile impact position",
+      "impact_radius": 12,
+      "_说明_landing_radius_中文": "真实落地动静",
+      "_description_landing_radius_en": "Landing impact",
+      "landing_radius": 12,
+      "_说明_splash_radius_中文": "入水与桶装液体动静",
+      "_description_splash_radius_en": "Splash and bucket actions",
+      "splash_radius": 8,
+      "_说明_container_radius_中文": "打开关闭容器",
+      "_description_container_radius_en": "Container opening and closing",
+      "container_radius": 10,
+      "_说明_mechanism_radius_中文": "按钮拉杆绊线等操作",
+      "_description_mechanism_radius_en": "Mechanism activation and attachment",
+      "mechanism_radius": 12,
+      "_说明_eat_radius_中文": "进食声音",
+      "_description_eat_radius_en": "Eating action",
+      "eat_radius": 6,
+      "_说明_drink_radius_中文": "饮用声音",
+      "_description_drink_radius_en": "Drinking action",
+      "drink_radius": 6,
+      "_说明_equipment_radius_中文": "穿戴和剪切近场声音",
+      "_description_equipment_radius_en": "Equipping and shearing",
+      "equipment_radius": 4,
+      "_说明_fuse_radius_中文": "爆炸物引燃声音",
+      "_description_fuse_radius_en": "Fuse priming",
+      "fuse_radius": 24,
+      "_说明_death_radius_中文": "死亡动静",
+      "_description_death_radius_en": "Death action",
+      "death_radius": 16,
+      "_说明_roar_radius_中文": "明显咆哮",
+      "_description_roar_radius_en": "Roaring",
+      "roar_radius": 24,
+      "_说明_teleport_radius_中文": "传送发生点声音",
+      "_description_teleport_radius_en": "Teleport event position",
+      "teleport_radius": 20,
+      "_说明_instrument_radius_中文": "乐器唱片和音符盒",
+      "_description_instrument_radius_en": "Instrument, jukebox and note block",
+      "instrument_radius": 32,
+      "_说明_shriek_radius_中文": "尖啸警报",
+      "_description_shriek_radius_en": "Audible shriek",
+      "shriek_radius": 32,
+      "_说明_thunder_radius_中文": "附近雷击",
+      "_description_thunder_radius_en": "Nearby lightning strike",
+      "thunder_radius": 48
     },
     "investigation": {
       "radius": 6,
@@ -3889,6 +3952,14 @@
       "transition_ticks": 400,
       "_说明_transition_ticks_中文": "最近状态转换期限；范围20–2400。",
       "_description_transition_ticks_en": "Recent transition lifetime; range 20–2400."
+    },
+    "sharing": {
+      "_说明_wall_range_factor_中文": "同阵营通报隔墙后的单跳距离倍率",
+      "_description_wall_range_factor_en": "Obstructed same-faction report hop reach",
+      "wall_range_factor": 0.35,
+      "_说明_occlusion_cache_ticks_中文": "友军通报遮挡缓存，任一端移动半格即复核",
+      "_description_occlusion_cache_ticks_en": "Report occlusion cache; half-block movement revalidates",
+      "occlusion_cache_ticks": 10
     }
   },
   "factions": {
@@ -3910,9 +3981,15 @@
     "_说明_enabled_中文": "关闭后普通阵营对玩家基准100，暂停声望变更；自卫/雇主/信标保留。",
     "_description_enabled_en": "When disabled, use neutral 100 and suspend political changes; defense/owners/beacons remain.",
     "enabled": true,
-    "_说明_daily_gain_cap_中文": "每玩家每阵营每游戏日正收益上限，0～100。",
-    "_description_daily_gain_cap_en": "Positive gain limit per player/faction/game day, 0-100.",
-    "daily_gain_cap": 30
+    "_说明_daily_gain_cap_中文": "仅daily_gain_mode=fixed时生效，范围0～1000000；dynamic按事件开始时真实档位读取daily_gain_caps。",
+    "_description_daily_gain_cap_en": "Legacy fixed-mode only, 0-1000000. Dynamic mode uses the true standing at event start and daily_gain_caps.",
+    "daily_gain_cap": 30,
+    "daily_gain_mode": "dynamic",
+    "daily_gain_caps": {
+      "hostile": 150,
+      "cautious": 100,
+      "friendly": 60
+    }
   },
   "identity_band": {
     "_说明_中文": "单一最高有效绑带；不写回真实声望。所有时长以游戏tick计。",
@@ -4000,9 +4077,12 @@
     "_说明_budget_multiplier_中文": "头目新生预算=普通基础预算截断上限×本阶预算系数×本值，默认1.10；范围1.01～1.50。默认一/二/三阶1.54/1.694/1.848，高于同阶普通上限。旧budget与allocation_amplification不再读取。",
     "_description_budget_multiplier_en": "Boss birth budget = ordinary base-budget maximum * tier budget factor * this value (default 1.10, range 1.01-1.50). Legacy budget/amplification fields are ignored.",
     "budget_multiplier": 1.1,
-    "_说明_allocation_multiplier_max_中文": "头目专精分配的独立绝对上限，默认2.1（1.8～3）；不低于普通人类配置上限。穿甲仍最高0.45，有效攻速仍受specialty.attack_speed_max限制。自定义预算过大仍可能有余量。",
-    "_description_allocation_multiplier_max_en": "Boss-only allocation ceiling, default 2.1 (1.8-3), never below the ordinary ceiling. Penetration remains capped at 0.45 and effective melee speed retains its separate cap. Custom budgets can still be infeasible.",
-    "allocation_multiplier_max": 2.1
+    "_说明_allocation_multiplier_max_中文": "遗留兼容字段；新的出生、培养与面板有效边界由dimensions.json逐维absolute_min/absolute_max统一决定，不再使用这个统一头目绝对上限。",
+    "_description_allocation_multiplier_max_en": "Legacy compatibility field. New birth, training and reference bounds use per-dimension absolute_min/absolute_max in dimensions.json.",
+    "allocation_multiplier_max": 3.0,
+    "_说明_deviation_cap_中文": "头目相对偏差帽的兜底值。dimensions.json逐维boss_deviation_cap优先：当前普通维0.90、移速0.40、枪伤0.60、准度1.00；仍与逐维绝对边界相交，不重抽旧个体。",
+    "_description_deviation_cap_en": "Fallback boss deviation cap. Per-dimension boss_deviation_cap takes priority; current general/speed/gun/accuracy caps are .90/.40/.60/1.00. Saved allocations are retained.",
+    "deviation_cap": 0.9
   },
   "specialty": {
     "_说明_中文": "只在出生分配；旧实体原11维保留，补攻速1和穿甲0，不重抽已存结果。",
@@ -4036,24 +4116,24 @@
     "_说明_deviation_cap_中文": "未单独指定维度的个体倾斜偏差帽，默认0.45，即0.55～1.45；移速数据定义为0.20、枪伤0.30、准度0.50。最终分配还受预算归一和属性边界约束。",
     "_description_deviation_cap_en": "Default tilt cap 0.45, giving 0.55–1.45 before allocation; speed cap is 0.20, gun cap 0.30 and accuracy cap 0.50 in dimension definitions. Budget normalization and attribute bounds still apply.",
     "deviation_cap": 0.45,
-    "_说明_cap_budget_exponent_中文": "阵营相对边界随最终预算B按B的此指数扩展，默认0.6；当前偏差帽下内置四阵营可完整分配普通三阶最高1.68的预算，普通倍率绝对上限1.8与穿甲上限0.45仍保留。不是最终预算的硬截断值。",
-    "_description_cap_budget_exponent_en": "Scale faction bounds by B to this exponent, default 0.6. With the current deviation caps, built-in factions can fully allocate the ordinary tier-3 maximum budget 1.68; absolute bounds remain. This is not a hard budget clamp.",
+    "_说明_cap_budget_exponent_中文": "阵营相对边界随最终预算B按B的此指数扩展，默认0.6；当前成本、偏好与偏差帽下内置四阵营可完整分配到1.6；极端高预算可能保留余量，普通倍率绝对上限1.8与穿甲上限0.45仍保留。不是最终预算的硬截断值。",
+    "_description_cap_budget_exponent_en": "Scale faction bounds by B to this exponent, default 0.6. With current costs, preferences and deviation caps, built-in factions can fully allocate budgets through 1.6; extreme budgets may retain a residual. Absolute bounds remain. This is not a hard budget clamp.",
     "cap_budget_exponent": 0.6,
-    "_说明_multiplier_min_中文": "出生分配参数；细节见专精机制正文。",
-    "_description_multiplier_min_en": "Birth allocation parameter; see the specialty reference.",
+    "_说明_multiplier_min_中文": "遗留兼容字段；新专精分配下限由dimensions.json逐维absolute_min决定。未显式设置attack_speed_min时，旧攻速配置兼容仍可能读取此值。",
+    "_description_multiplier_min_en": "Legacy allocation field. Per-dimension absolute_min is authoritative; legacy attack_speed_min fallback can still read this value.",
     "multiplier_min": 0.5,
-    "_说明_multiplier_max_中文": "出生分配参数；细节见专精机制正文。",
-    "_description_multiplier_max_en": "Birth allocation parameter; see the specialty reference.",
+    "_说明_multiplier_max_中文": "遗留兼容字段；新专精分配不再使用统一乘数上限，由dimensions.json逐维absolute_max决定；未填绝对上限不等于没有相对偏差帽。",
+    "_description_multiplier_max_en": "Legacy compatibility field; new allocation ceilings come from dimensions.json absolute_max. Unset absolute ceilings retain their relative deviation limits.",
     "multiplier_max": 1.8,
     "penetration_seed": 0.01,
     "attack_speed_min": 0.5,
-    "attack_speed_max": 1.8,
+    "attack_speed_max": 3.0,
     "_说明_penetration_seed_中文": "穿甲零中心的正种子，默认0.01；作为同轮预算输入，不额外加伤。",
     "_description_penetration_seed_en": "Positive seed for a zero penetration center; default 0.01, included in the same allocation.",
     "_说明_attack_speed_min_中文": "近战攻速专精有效倍率下限，默认0.5；不影响枪械射速。",
     "_description_attack_speed_min_en": "Minimum effective melee attack speed multiplier, default 0.5; does not affect firearm rate.",
-    "_说明_attack_speed_max_中文": "近战攻速专精有效倍率上限，默认1.8；不影响枪械射速。",
-    "_description_attack_speed_max_en": "Maximum effective melee attack speed multiplier, default 1.8; does not affect firearm rate."
+    "_说明_attack_speed_max_中文": "近战攻速专精有效倍率上限，默认3.0；不影响枪械射速。",
+    "_description_attack_speed_max_en": "Maximum effective melee attack speed multiplier, default 3.0; does not affect firearm rate."
   },
   "orders": {
     "_说明_中文": "命令活动范围与作者路线；动作消费者共享同一几何规则。",
@@ -4088,13 +4168,13 @@
     "_说明_route_vertical_tolerance_中文": "路点脚部高度容差0.1～1。",
     "_description_route_vertical_tolerance_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
     "route_vertical_tolerance": 0.75,
-    "_说明_route_failure_backoff_ticks_中文": "全路线失败后等待20～1200tick。",
+    "_说明_route_failure_backoff_ticks_中文": "原模板全路线失败、或玩家指定路线单点失败后等待20～1200tick。",
     "_description_route_failure_backoff_ticks_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
     "route_failure_backoff_ticks": 100,
     "_说明_route_reach_distance_中文": "路点水平到达0.5～4格。",
     "_description_route_reach_distance_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
     "route_reach_distance": 1.5,
-    "_说明_route_timeout_中文": "单点实际执行时限20～1200tick。",
+    "_说明_route_timeout_中文": "20～1200tick；原模板单点总执行时限，玩家指定路线则为连续缺少实际路径进展的时限。",
     "_description_route_timeout_en": "Server-authoritative default; durations in game ticks and distances in blocks.",
     "route_timeout": 200,
     "_说明_route_max_points_中文": "路线点数2～256。",

@@ -1,12 +1,12 @@
 """Native SC shield preemption must yield to the single hurt call for human AP bullets."""
 import os
-from pathlib import Path
+from source_paths import SourcePath as Path
 import re
 import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 class ScgunsPiercingShieldContract(unittest.TestCase):
     def test_adapter_preserves_native_path_without_replaying_damage(self):

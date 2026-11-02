@@ -1,8 +1,8 @@
 """Recovery effect replacement boundaries; no transformed game runtime is started."""
 import json,unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 ROOT=Path(__file__).resolve().parents[3]
-PKG=ROOT/'src/main/java/club/someoneice/humangunner'
+PKG=ROOT/'src/main/java/dev/felix/hostilehumans'
 def source(name):return (PKG/(name+'.java')).read_text(encoding='utf-8')
 class RecoveryRebalance(unittest.TestCase):
  def test_replaces_native_pulse_for_humans_only(self):

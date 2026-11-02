@@ -1,11 +1,11 @@
 """Final-shot contracts and read-only native API checks, not gameplay tests."""
 import os
-from pathlib import Path
+from source_paths import SourcePath as Path
 import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 
 class GunFireAuthorizationContract(unittest.TestCase):

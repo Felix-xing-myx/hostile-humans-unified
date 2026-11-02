@@ -1,8 +1,8 @@
 """Static integration guards; policy execution and in-game acceptance are separate checks."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
-BASE = Path(__file__).resolve().parents[3] / "src/main/java/club/someoneice/humangunner"
+BASE = Path(__file__).resolve().parents[3] / "src/main/java/dev/felix/hostilehumans"
 
 
 def source(name):

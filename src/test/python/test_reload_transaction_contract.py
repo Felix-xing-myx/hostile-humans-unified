@@ -1,8 +1,8 @@
 """Source-level transaction boundaries only; Java state tests are not executed here."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
-CORE = Path(__file__).resolve().parents[3] / "src/main/java/club/someoneice/humangunner"
+CORE = Path(__file__).resolve().parents[3] / "src/main/java/dev/felix/hostilehumans"
 
 
 def source(name):

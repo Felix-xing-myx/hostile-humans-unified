@@ -1,8 +1,8 @@
 """Static handoff checks only; movement, shield timing and damage need game acceptance."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
-PKG = Path(__file__).resolve().parents[3] / 'src/main/java/club/someoneice/humangunner'
+PKG = Path(__file__).resolve().parents[3] / 'src/main/java/dev/felix/hostilehumans'
 
 
 class CloseRangedTacticsContract(unittest.TestCase):
@@ -56,7 +56,7 @@ class CloseRangedTacticsContract(unittest.TestCase):
     def test_switch_keeps_owned_weapon_and_native_animation(self):
         code = (PKG / 'CloseRangedTactics.java').read_text(encoding='utf-8')
         self.assertIn('CloseDefenseHold.shouldHold(human)', code)
-        self.assertIn('human.humanGunner$pendingMeleeTicks(target) < 0', code)
+        self.assertIn('human.hhu$pendingMeleeTicks(target) < 0', code)
         self.assertIn('shieldDefense().shouldSuppressRecovery()', code)
         self.assertIn('GunCustody.restorePrimaryGun(human,"close_gun_return")', code)
         self.assertNotIn('setItemSlot', code)
@@ -72,7 +72,7 @@ class CloseRangedTacticsContract(unittest.TestCase):
         damage = shield.split('public void recordPressureDamage(', 1)[1].split('public boolean shouldSuppressRecovery', 1)[0]
         self.assertIn('if (attacker instanceof LivingEntity living && isValidThreat(living)) CloseRangedTactics.damage(human, damage);', damage)
         self.assertIn('recoveryPressure.record(human.tickCount, damage, human.getMaxHealth(), rules)', damage)
-        human = (PKG.parents[2] / 'com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+        human = (PKG.parents[2] / 'dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
         self.assertIn('Math.max(0.0F, previousHealth - this.getHealth())', human)
         code = (PKG / 'CloseRangedTactics.java').read_text(encoding='utf-8')
         self.assertIn('state.hits.size() >= 64', code)

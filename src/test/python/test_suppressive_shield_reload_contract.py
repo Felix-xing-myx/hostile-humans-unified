@@ -1,17 +1,17 @@
 """Cross-module source contracts; these do not execute Minecraft or TaCZ."""
 import json
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / 'src/main/java/club/someoneice/humangunner'
+PKG = ROOT / 'src/main/java/dev/felix/hostilehumans'
 
 def source(name):
     return (PKG / name).read_text(encoding='utf-8')
 
 class SuppressiveShieldReloadContract(unittest.TestCase):
     def test_ranged_goals_respect_shield_lease_before_touching_use_state(self):
-        goals = ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal'
+        goals = ROOT / 'src/main/java/dev/felix/hostilehumans/entity/ai/goal'
         for name in ('CrossbowGoal', 'BowAttack'):
             shot = (goals / (name + '.java')).read_text(encoding='utf-8').split('private void tickShot(', 1)[1]
             self.assertLess(shot.index('reservesRangedUse()'), shot.index('startUsingItem('))
@@ -20,7 +20,7 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         self.assertIn('CrossbowItem.isCharged(heldCrossbow)', crossbow)
         self.assertLess(crossbow.index('this.mob.getUseItem() != heldCrossbow'), crossbow.index('this.crossbowState = CrossbowState.CHARGING'))
         shoot = source('HumanArrowCombat.java').split('public static boolean canShoot(', 1)[1].split('/** Read the projectile', 1)[0]
-        self.assertIn('!human.humanGunner$shieldDefense().reservesRangedUse()', shoot)
+        self.assertIn('!human.hhu$shieldDefense().reservesRangedUse()', shoot)
         self.assertIn('SpartanEquipmentCompat.isShield(human.getUseItem())', shoot)
 
     def test_short_projectile_guard_survives_block_activation_delay(self):
@@ -34,25 +34,25 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
     def test_pressure_handoff_acquires_authority_before_cancelling_attack(self):
         shield = source('ShieldDefenseController.java')
         raise_body = shield.split('private void raise(', 1)[1].split('private boolean ownsCurrentShield()', 1)[0]
-        self.assertLess(raise_body.index('actions.acquire(requested)'), raise_body.index('humanGunner$cancelMeleeAttackForDefense()'))
-        self.assertLess(raise_body.index('actions.acquire(requested)'), raise_body.index('humanGunner$startMovementShield(hand)'))
+        self.assertLess(raise_body.index('actions.acquire(requested)'), raise_body.index('hhu$cancelMeleeAttackForDefense()'))
+        self.assertLess(raise_body.index('actions.acquire(requested)'), raise_body.index('hhu$startMovementShield(hand)'))
         self.assertNotIn('GunCustody.beginCloseMeleeCounter', raise_body)
-        human = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
-        cancel = human.split('public void humanGunner$cancelMeleeAttackForDefense()', 1)[1].split('private void wearEquippedItem', 1)[0]
+        human = (ROOT / 'src/main/java/dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
+        cancel = human.split('public void hhu$cancelMeleeAttackForDefense()', 1)[1].split('private void wearEquippedItem', 1)[0]
         for expected in ('pendingBetterCombatTarget = null', 'pendingBetterCombatUpswingTicks = 0',
                          'setNpcBetterCombatAttackAnimation("")', 'swinging = false', 'MeleeActionControl.finish'):
             self.assertIn(expected, cancel)
-        self.assertIn('!humanGunner$shieldDefense().blocksMeleeAttack()', human)
+        self.assertIn('!hhu$shieldDefense().blocksMeleeAttack()', human)
 
     def test_old_melee_goal_cannot_lower_emergency_shield_to_attack(self):
-        goal = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal/MeleeAttackGoal.java').read_text(encoding='utf-8')
-        attack = goal.split('protected void checkAndPerformAttack(', 1)[1].split('public boolean humanGunner$tryImmediateCounterattack', 1)[0]
-        self.assertLess(attack.index('!human.humanGunner$canMeleeAttack()'), attack.index('this.mob.stopUsingItem()'))
-        counter = goal.split('public boolean humanGunner$tryImmediateCounterattack', 1)[1]
+        goal = (ROOT / 'src/main/java/dev/felix/hostilehumans/behavior/combat/melee/MeleeAttackGoal.java').read_text(encoding='utf-8')
+        attack = goal.split('protected void checkAndPerformAttack(', 1)[1].split('public boolean hhu$tryImmediateCounterattack', 1)[0]
+        self.assertLess(attack.index('!human.hhu$canMeleeAttack()'), attack.index('this.mob.stopUsingItem()'))
+        counter = goal.split('public boolean hhu$tryImmediateCounterattack', 1)[1]
         self.assertLess(counter.index('shouldSuppressRecovery()'), counter.index('this.mob.stopUsingItem()'))
 
     def test_client_consumes_old_attack_sequence_while_blocking(self):
-        renderer = ROOT / 'src/main/java/com/craftix/hostile_humans/client/renderer'
+        renderer = ROOT / 'src/main/java/dev/felix/hostilehumans/client/render'
         animation = (renderer / 'BetterCombatNpcAnimator.java').read_text(encoding='utf-8')
         guard = animation.split('// Shield-use updates', 1)[1].split('if (sequence != playback.sequence)', 1)[0]
         self.assertIn('HumanShieldPresentation.active(human)', guard)
@@ -70,7 +70,7 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         self.assertIn('shouldSuppressRecovery() && !isDrinkingPotion(human)', tick)
         self.assertIn('finishUse(human, session, done)', tick)
         self.assertIn('human.getOffhandItem() != session.actualItem()', tick)
-        human = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+        human = (ROOT / 'src/main/java/dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
         hurt = human.split('float previousHealth = this.getHealth();', 1)[1].split('return damaged;', 1)[0]
         self.assertLess(hurt.index('super.hurt('), hurt.index('recordPressureDamage('))
         self.assertIn('previousHealth - this.getHealth()', hurt)
@@ -173,7 +173,7 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         mixin = source('mixin/TaczHumanReloadMixin.java')
         self.assertIn('TaczAmmoMixinContract.TICK_RELOAD, at = @At("HEAD")', mixin)
         self.assertIn('prepareNativeTick(human, data)', mixin)
-        self.assertIn('if (humanGunner$reboundReload && shooter instanceof Human human', mixin)
+        self.assertIn('if (hhu$reboundReload && shooter instanceof Human human', mixin)
         self.assertIn('if (data.currentGunItem != null) data.currentGunItem = human::getMainHandItem;', reload)
 
     def test_guarded_crossbow_uses_existing_native_ammo_path(self):
@@ -206,7 +206,7 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         self.assertIn('if (shields.hasRangedCounterWindow()) return false', source('AdaptiveCombatGoal.java'))
 
     def test_weapon_goals_capture_before_stop_and_restore_after_start(self):
-        goals = ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal'
+        goals = ROOT / 'src/main/java/dev/felix/hostilehumans/entity/ai/goal'
         for name in ('BowAttack.java', 'CrossbowGoal.java'):
             text = (goals / name).read_text(encoding='utf-8')
             capture = text.index('pauseRangedUseForGuard()')
@@ -224,7 +224,7 @@ if __name__ == '__main__':
         self.assertIn('profile || failures < MAX_PROFILE_FAILURES ? WAIT : NATIVE',adapter)
         self.assertIn('if (read.available()) state.attributes = read.attributes()',adapter)
         self.assertIn('state.attributes = null;',adapter)
-        renderer=ROOT / 'src/main/java/com/craftix/hostile_humans/client/renderer'
+        renderer=ROOT / 'src/main/java/dev/felix/hostilehumans/client/render'
         animation=(renderer / 'BetterCombatNpcAnimator.java').read_text(encoding='utf-8')
         suppress=animation.split('static boolean shouldSuppressVanillaSwing',1)[1].split('/** True',1)[0]
         self.assertIn('!isApplicable(human) || resolveApi() == null',suppress)

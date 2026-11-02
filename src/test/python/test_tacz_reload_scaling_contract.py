@@ -1,12 +1,12 @@
 """Server timing and optional client playback boundaries; does not launch Minecraft."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import os
 import unittest
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[3]
-CORE = ROOT / "src/main/java/club/someoneice/humangunner"
-CLIENT = ROOT / "src/main/java/com/craftix/hostile_humans/client/renderer"
+CORE = ROOT / "src/main/java/dev/felix/hostilehumans"
+CLIENT = ROOT / "src/main/java/dev/felix/hostilehumans/client/render"
 
 
 class TaczReloadScalingContract(unittest.TestCase):
@@ -55,11 +55,11 @@ class TaczReloadScalingContract(unittest.TestCase):
                     self.assertIn(method, player)
 
     def test_synced_snapshot_is_transient_and_client_read_only(self):
-        source = (ROOT / "src/main/java/com/craftix/hostile_humans/entity/HumanMobEntityData.java").read_text(encoding="utf-8")
+        source = (ROOT / "src/main/java/dev/felix/hostilehumans/entity/HumanMobEntityData.java").read_text(encoding="utf-8")
         self.assertIn("EntityDataSerializers.COMPOUND_TAG", source)
         self.assertIn("if (!level().isClientSide) this.entityData.set(DATA_TACZ_RELOAD_VISUAL", source)
         self.assertEqual(source.count("entityData.define(DATA_TACZ_RELOAD_VISUAL"), 1)
-        self.assertIn('PROTOCOL_VERSION = "6"', (ROOT / "src/main/java/com/craftix/hostile_humans/network/NetworkHandler.java").read_text(encoding="utf-8"))
+        self.assertIn('PROTOCOL_VERSION = "6"', (ROOT / "src/main/java/dev/felix/hostilehumans/network/NetworkHandler.java").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

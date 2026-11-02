@@ -1,0 +1,1189 @@
+package dev.felix.hostilehumans.settlement.client;
+
+import dev.felix.hostilehumans.client.ui.framework.InputValue;
+import dev.felix.hostilehumans.client.ui.framework.PanelButton;
+import dev.felix.hostilehumans.client.ui.framework.PanelDisclosure;
+import dev.felix.hostilehumans.client.ui.framework.PanelGeometry;
+import dev.felix.hostilehumans.client.ui.framework.PanelScreen;
+import dev.felix.hostilehumans.client.ui.framework.PendingAction;
+import dev.felix.hostilehumans.client.ui.framework.UiLayout;
+import dev.felix.hostilehumans.settlement.SettlementNetwork;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.nbt.*;
+import net.minecraft.network.chat.Component;
+
+import java.util.*;
+
+/**
+ * Structured author forms and indexed read-only management; no world/entity queries on the client.
+ */
+public final class SettlementScreen extends PanelScreen {
+    private static final UUID NONE = new UUID(0, 0);
+    private static final LinkedHashSet<UUID> RETIRED = new LinkedHashSet<>();
+
+    private record Submission(
+            SettlementNetwork.Snapshot base, SettlementNetwork.Action action, CompoundTag data) {}
+
+    private final PendingAction<Submission> pending = new PendingAction<>();
+    private final Map<String, AbstractWidget> controls = new HashMap<>();
+    private SettlementNetwork.Snapshot snapshot, editBase;
+    private CompoundTag author;
+    private InputValue<String> template,
+            module,
+            faction,
+            regionId,
+            regionName,
+            facilityId,
+            facilityRegion,
+            displayName,
+            restoreModule;
+    private InputValue<Integer> tier, targetRevision;
+    private InputValue<UUID> target, postHuman;
+    private List<InputValue<Integer>> size,
+            offset,
+            pivot,
+            box = List.of(),
+            facilityPosition = List.of();
+    private String kind = "ROOT",
+            layer = "OUTER",
+            facilityType = "POST",
+            mirror = "NONE",
+            tab = "template",
+            expanded = "",
+            error = "",
+            confirmation = "";
+    private int regionIndex, boxIndex, facilityIndex, turns;
+    private boolean exclude, localChanged, serverClosed, transformDirty;
+    private long confirmUntil;
+
+    private SettlementScreen(SettlementNetwork.Snapshot snapshot) {
+        super(text(snapshot.author() ? "author_title" : "title"), PanelGeometry.Size.L);
+        this.snapshot = snapshot;
+        resetDraft(snapshot);
+    }
+
+    private static Component text(String key, Object... args) {
+        return Component.translatable("gui.hostile_humans_unified.settlement." + key, args);
+    }
+
+    public static void show(SettlementNetwork.Snapshot value) {
+        var mc = Minecraft.getInstance();
+        if (RETIRED.contains(value.token())) return;
+        if (mc.screen instanceof SettlementScreen s && s.snapshot.token().equals(value.token())) {
+            if (!value.valid()) {
+                s.pending.acknowledge(value.acknowledgedRequest());
+                s.serverClosed = true;
+                if (mc.player != null)
+                    mc.player.displayClientMessage(text("invalid", value.reason()), false);
+                s.onClose();
+                return;
+            }
+            s.accept(value);
+        } else if (value.valid() && value.acknowledgedRequest().equals(NONE))
+            mc.setScreen(new SettlementScreen(value));
+    }
+
+    private void accept(SettlementNetwork.Snapshot value) {
+        Submission request = pending.request();
+        boolean ack = pending.acknowledge(value.acknowledgedRequest());
+        snapshot = value;
+        if (ack && request != null) {
+            boolean explicitReload =
+                    request.action() == SettlementNetwork.Action.EXPORT_AUTHOR
+                            || request.action() == SettlementNetwork.Action.RESTORE_AUTHOR;
+            CompoundTag returned = value.data().getCompound("author").copy();
+            returned.remove("revision");
+            CompoundTag submitted = request.data().getCompound("author").copy();
+            submitted.remove("revision");
+            if (explicitReload && value.authorRevision() > request.base().authorRevision()
+                    || request.action() == SettlementNetwork.Action.SAVE_AUTHOR
+                            && returned.equals(submitted)) resetDraft(value);
+        } else if (!dirty() && value.authorRevision() != editBase.authorRevision())
+            resetDraft(value);
+        if (ack
+                && request != null
+                && (request.action() == SettlementNetwork.Action.UPDATE_INSTANCE
+                        || request.action() == SettlementNetwork.Action.IMPORT_NEW
+                        || request.action() == SettlementNetwork.Action.JOIN_INSTANCE)
+                && matchesTransform(value.data().getCompound("author_transform"), request.data()))
+            transformDirty = false;
+        if (!transformDirty) readTransform(value);
+        refresh();
+    }
+
+    private static boolean matchesTransform(CompoundTag actual, CompoundTag sent) {
+        return actual.contains("turns")
+                && sent.contains("turns")
+                && actual.getInt("turns") == sent.getInt("turns")
+                && actual.getString("mirror").equals(sent.getString("mirror"))
+                && Arrays.equals(actual.getIntArray("pivot"), sent.getIntArray("pivot"));
+    }
+
+    private void readTransform(SettlementNetwork.Snapshot value) {
+        CompoundTag transform = value.data().getCompound("author_transform");
+        if (value.instance().equals(NONE) && transform.isEmpty()) {
+            turns = 0;
+            mirror = "NONE";
+            pivot = coordinates(new int[] {0, 0, 0}, 3, 0, -30000000, 30000000);
+            return;
+        }
+        if (!transform.contains("turns")
+                || transform.getIntArray("pivot").length != 3
+                || !List.of("NONE", "LEFT_RIGHT", "FRONT_BACK")
+                        .contains(transform.getString("mirror"))) return;
+        int rotation = transform.getInt("turns");
+        if (rotation < 0 || rotation > 3) return;
+        turns = rotation;
+        mirror = transform.getString("mirror");
+        pivot = coordinates(transform.getIntArray("pivot"), 3, 0, -30000000, 30000000);
+    }
+
+    private static InputValue<String> string(String value, int max, boolean required) {
+        return InputValue.text(value, max, required);
+    }
+
+    private static List<InputValue<Integer>> coordinates(
+            int[] data, int count, int fallback, int min, int max) {
+        List<InputValue<Integer>> out = new ArrayList<>();
+        for (int i = 0; i < count; i++)
+            out.add(InputValue.integer(data.length == count ? data[i] : fallback, min, max));
+        return out;
+    }
+
+    private void resetDraft(SettlementNetwork.Snapshot value) {
+        boolean retainTransform =
+                transformDirty && editBase != null && editBase.token().equals(value.token());
+        editBase = value;
+        author = value.data().getCompound("author").copy();
+        localChanged = false;
+        error = "";
+        template = string(author.getString("template"), 256, true);
+        module = string(author.getString("module"), 64, true);
+        faction = string(author.getString("faction"), 256, true);
+        tier = InputValue.integer(author.getInt("tier"), 1, 3);
+        kind = author.getString("kind");
+        size = coordinates(author.getIntArray("size"), 3, 1, 1, 512);
+        offset = coordinates(author.getIntArray("origin_offset"), 3, 0, -30000000, 30000000);
+        if (!retainTransform) {
+            transformDirty = false;
+            readTransform(value);
+        }
+        if (pivot == null) pivot = coordinates(new int[] {0, 0, 0}, 3, 0, -30000000, 30000000);
+        target = InputValue.uuid(value.instance().equals(NONE) ? null : value.instance());
+        targetRevision = InputValue.integer(value.instanceRevision(), 0, Integer.MAX_VALUE);
+        displayName = string(value.data().getString("name"), 64, false);
+        restoreModule = string(value.data().getString("module"), 64, true);
+        postHuman = InputValue.uuid(null);
+        regionIndex = 0;
+        boxIndex = 0;
+        facilityIndex = 0;
+        loadRegion();
+        loadFacility();
+    }
+
+    private ListTag regions() {
+        return author.getList("regions", Tag.TAG_COMPOUND);
+    }
+
+    private ListTag facilities() {
+        return author.getList("facilities", Tag.TAG_COMPOUND);
+    }
+
+    private CompoundTag region() {
+        return regions().isEmpty()
+                ? null
+                : regions().getCompound(Math.min(regionIndex, regions().size() - 1));
+    }
+
+    private ListTag boxes() {
+        var region = region();
+        return region == null
+                ? new ListTag()
+                : region.getList(exclude ? "exclude" : "include", Tag.TAG_INT_ARRAY);
+    }
+
+    private void loadRegion() {
+        var row = region();
+        if (row == null) {
+            regionId = string("", 64, true);
+            regionName = string("", 96, false);
+            box = List.of();
+            return;
+        }
+        regionIndex = Math.min(regionIndex, regions().size() - 1);
+        regionId = string(row.getString("id"), 64, true);
+        regionName = string(row.getString("name"), 96, false);
+        layer = row.getString("layer");
+        boxIndex = 0;
+        loadBox();
+    }
+
+    private void loadBox() {
+        ListTag list = boxes();
+        if (list.isEmpty()) {
+            box = List.of();
+            return;
+        }
+        boxIndex = Math.max(0, Math.min(boxIndex, list.size() - 1));
+        box = coordinates(list.getIntArray(boxIndex), 6, 0, -30000000, 30000000);
+    }
+
+    private void loadFacility() {
+        if (facilities().isEmpty()) {
+            facilityId = string("", 64, true);
+            facilityRegion = string("", 64, true);
+            facilityPosition = List.of();
+            return;
+        }
+        facilityIndex = Math.max(0, Math.min(facilityIndex, facilities().size() - 1));
+        var row = facilities().getCompound(facilityIndex);
+        facilityId = string(row.getString("id"), 64, true);
+        facilityRegion = string(row.getString("region"), 64, true);
+        facilityType = row.getString("type");
+        facilityPosition = coordinates(row.getIntArray("position"), 3, 0, -30000000, 30000000);
+    }
+
+    private static boolean valid(List<? extends InputValue<?>> values) {
+        return values.stream().allMatch(InputValue::valid);
+    }
+
+    private static boolean changed(List<? extends InputValue<?>> values) {
+        return values.stream().anyMatch(InputValue::dirty);
+    }
+
+    private boolean dirty() {
+        return localChanged
+                || template.dirty()
+                || module.dirty()
+                || faction.dirty()
+                || tier.dirty()
+                || changed(size)
+                || changed(offset)
+                || regionId.dirty()
+                || regionName.dirty()
+                || changed(box)
+                || facilityId.dirty()
+                || facilityRegion.dirty()
+                || changed(facilityPosition);
+    }
+
+    private boolean knownSchema() {
+        return author.getInt("schema") == 1;
+    }
+
+    private boolean editable() {
+        return snapshot.author() && knownSchema() && !pending.busy();
+    }
+
+    private void refresh() {
+        String focus =
+                controls.entrySet().stream()
+                        .filter(e -> e.getValue() == getFocused())
+                        .map(Map.Entry::getKey)
+                        .findFirst()
+                        .orElse("");
+        rebuildWidgets();
+        AbstractWidget next = controls.get(focus);
+        if (next != null) {
+            setFocused(next);
+            next.setFocused(true);
+            revealFocus();
+        }
+    }
+
+    private UiLayout.Node muted(Component label) {
+        return text(label, () -> theme().muted());
+    }
+
+    private UiLayout.Node action(
+            String id, Component label, boolean active, boolean selected, Runnable callback) {
+        if (id.equals(confirmation) && System.currentTimeMillis() < confirmUntil)
+            label = text("confirm", label);
+        PanelButton b = body(new PanelButton(label, button -> callback.run(), this::theme));
+        b.active = active;
+        b.selected(selected);
+        controls.put(id, b);
+        return node(b);
+    }
+
+    private UiLayout.Node input(String key, InputValue<?> value) {
+        return field(text(key), value);
+    }
+
+    private UiLayout.Node coords(String prefix, List<InputValue<Integer>> values) {
+        List<UiLayout.Node> nodes = new ArrayList<>();
+        for (int i = 0; i < values.size(); i++) nodes.add(input(prefix + "." + i, values.get(i)));
+        return UiLayout.grid(3, 6, 80, nodes);
+    }
+
+    private UiLayout.Node choices(
+            String id,
+            List<String> values,
+            String current,
+            java.util.function.Consumer<String> setter) {
+        List<UiLayout.Node> nodes = new ArrayList<>();
+        for (String value : values)
+            nodes.add(
+                    action(
+                            id + "." + value,
+                            text(id + "." + value),
+                            editable(),
+                            value.equals(current),
+                            () -> {
+                                setter.accept(value);
+                                localChanged = true;
+                                refresh();
+                            }));
+        return UiLayout.grid(3, 4, 80, nodes);
+    }
+
+    private void confirm(String key, Runnable callback) {
+        if (key.equals(confirmation) && System.currentTimeMillis() < confirmUntil) {
+            confirmation = "";
+            confirmUntil = 0;
+            callback.run();
+        } else {
+            confirmation = key;
+            confirmUntil = System.currentTimeMillis() + 4000;
+            refresh();
+        }
+    }
+
+    private boolean fail(String reason) {
+        error = reason;
+        refresh();
+        return false;
+    }
+
+    private static int[] integers(List<InputValue<Integer>> values) {
+        int[] a = new int[values.size()];
+        for (int i = 0; i < a.length; i++) a[i] = values.get(i).value().orElseThrow();
+        return a;
+    }
+
+    private boolean applyBox() {
+        if (box.isEmpty()) return true;
+        if (!valid(box)) return fail("invalid_input");
+        int[] a = integers(box);
+        if (a[0] > a[3] || a[1] > a[4] || a[2] > a[5]) return fail("box_order");
+        ListTag list = boxes();
+        if (boxIndex < list.size()) {
+            if (changed(box)) {
+                list.set(boxIndex, new IntArrayTag(a));
+                localChanged = true;
+                box.forEach(InputValue::accepted);
+            }
+        }
+        return true;
+    }
+
+    private boolean applyRegion() {
+        if (region() == null) return true;
+        if (!regionId.valid() || !regionName.valid()) return fail("invalid_input");
+        if (!applyBox()) return false;
+        var row = region();
+        String prior = row.getString("id"), next = regionId.value().orElseThrow();
+        if (regionId.dirty() || regionName.dirty()) {
+            row.putString("id", next);
+            row.putString("name", regionName.value().orElseThrow());
+            for (Tag tag : facilities()) {
+                CompoundTag f = (CompoundTag) tag;
+                if (f.getString("region").equals(prior)) f.putString("region", next);
+            }
+            if (facilityRegion != null
+                    && !facilityRegion.dirty()
+                    && facilityRegion.value().orElse("").equals(prior))
+                facilityRegion = string(next, 64, true);
+            localChanged = true;
+            regionId.accepted();
+            regionName.accepted();
+        }
+        row.putString("layer", layer);
+        return true;
+    }
+
+    private boolean applyFacility() {
+        if (facilities().isEmpty()) return true;
+        if (!facilityId.valid() || !facilityRegion.valid() || !valid(facilityPosition))
+            return fail("invalid_input");
+        var row = facilities().getCompound(facilityIndex);
+        if (facilityId.dirty() || facilityRegion.dirty() || changed(facilityPosition)) {
+            row.putString("id", facilityId.value().orElseThrow());
+            row.putString("region", facilityRegion.value().orElseThrow());
+            row.putIntArray("position", integers(facilityPosition));
+            localChanged = true;
+            facilityId.accepted();
+            facilityRegion.accepted();
+            facilityPosition.forEach(InputValue::accepted);
+        }
+        row.putString("type", facilityType);
+        return true;
+    }
+
+    private CompoundTag gather() {
+        if (!knownSchema()
+                || !template.valid()
+                || !module.valid()
+                || !faction.valid()
+                || !tier.valid()
+                || !valid(size)
+                || !valid(offset)
+                || !applyRegion()
+                || !applyFacility()) return null;
+        CompoundTag payload = author.copy();
+        payload.putString("template", template.value().orElseThrow());
+        payload.putString("module", module.value().orElseThrow());
+        payload.putString("faction", faction.value().orElseThrow());
+        payload.putInt("tier", tier.value().orElseThrow());
+        payload.putString("kind", kind);
+        payload.putIntArray("size", integers(size));
+        payload.putIntArray("origin_offset", integers(offset));
+        return payload;
+    }
+
+    private void send(
+            SettlementNetwork.Snapshot base, SettlementNetwork.Action action, CompoundTag data) {
+        if (pending.busy()) return;
+        if ((action == SettlementNetwork.Action.IMPORT_NEW
+                        || action == SettlementNetwork.Action.JOIN_INSTANCE
+                        || action == SettlementNetwork.Action.UPDATE_INSTANCE
+                        || action == SettlementNetwork.Action.SELECTION_MODE)
+                && dirty()) {
+            fail("save_first");
+            return;
+        }
+        CompoundTag payload = data.copy();
+        UUID id = SettlementNetwork.request(base, action, payload);
+        pending.begin(id, new Submission(base, action, payload));
+        refresh();
+    }
+
+    @Override
+    protected boolean fieldsEnabled() {
+        return !pending.busy() && (!snapshot.author() || knownSchema());
+    }
+
+    @Override
+    protected void formChanged() {
+        if (changed(pivot)) transformDirty = true;
+        if (snapshot.author())
+            for (String key : List.of("import", "join", "update", "selection")) {
+                var button = controls.get(key);
+                if (button != null)
+                    button.active =
+                            editable()
+                                    && !dirty()
+                                    && (!key.equals("update") || !snapshot.instance().equals(NONE));
+            }
+        relayout();
+    }
+
+    @Override
+    protected String faction() {
+        return snapshot.data().getString("faction");
+    }
+
+    @Override
+    protected UiLayout.Node buildContent() {
+        controls.clear();
+        List<UiLayout.Node> root = new ArrayList<>();
+        root.add(muted(text("revisions", snapshot.authorRevision(), snapshot.instanceRevision())));
+        root.add(muted(Component.literal(snapshot.reason())));
+        if (pending.busy()) root.add(text(text("pending"), () -> theme().accent()));
+        if (!error.isEmpty()) root.add(text(text(error), () -> theme().danger()));
+        if (snapshot.author()) {
+            if (!knownSchema()) {
+                root.add(text(text("unknown_schema"), () -> theme().danger()));
+                return UiLayout.column(6, root);
+            }
+            if (snapshot.authorRevision() != editBase.authorRevision())
+                root.add(text(text("stale"), () -> theme().danger()));
+            List<UiLayout.Node> tabs = new ArrayList<>();
+            for (String page :
+                    List.of("template", "regions", "facilities", "transfer", "management"))
+                tabs.add(
+                        action(
+                                "tab." + page,
+                                text("tab." + page),
+                                !pending.busy(),
+                                tab.equals(page),
+                                () -> {
+                                    tab = page;
+                                    refresh();
+                                }));
+            root.add(UiLayout.grid(5, 4, 90, tabs));
+            root.add(
+                    switch (tab) {
+                        case "regions" -> regionEditor();
+                        case "facilities" -> facilityEditor();
+                        case "transfer" -> transfer();
+                        case "management" -> management();
+                        default -> identity();
+                    });
+        } else root.add(management());
+        return UiLayout.column(6, root);
+    }
+
+    private UiLayout.Node identity() {
+        List<UiLayout.Node> nodes = new ArrayList<>();
+        nodes.add(input("template_id", template));
+        nodes.add(input("module_id", module));
+        nodes.add(input("faction", faction));
+        nodes.add(input("tier", tier));
+        nodes.add(choices("kind", List.of("ROOT", "ATTACHMENT", "ORDINARY"), kind, v -> kind = v));
+        nodes.add(muted(text("size")));
+        nodes.add(coords("size", size));
+        nodes.add(muted(text("origin")));
+        nodes.add(coords("origin", offset));
+        return UiLayout.column(6, nodes);
+    }
+
+    private UiLayout.Node regionEditor() {
+        List<UiLayout.Node> list = new ArrayList<>();
+        for (int i = 0; i < regions().size(); i++) {
+            final int index = i;
+            var r = regions().getCompound(i);
+            list.add(
+                    action(
+                            "region." + i,
+                            Component.literal(r.getString("id") + " · " + r.getString("name")),
+                            editable(),
+                            regionIndex == i,
+                            () -> {
+                                if (applyRegion()) {
+                                    regionIndex = index;
+                                    loadRegion();
+                                    refresh();
+                                }
+                            }));
+        }
+        list.add(
+                action(
+                        "addRegion",
+                        text("add_region"),
+                        editable() && regions().size() < 64,
+                        false,
+                        () -> {
+                            if (!applyRegion()) return;
+                            CompoundTag r = new CompoundTag();
+                            r.putString("id", "region_" + regions().size());
+                            r.putString("name", "Region " + (regions().size() + 1));
+                            r.putString("layer", "OUTER");
+                            ListTag includes = new ListTag();
+                            includes.add(new IntArrayTag(new int[] {0, 0, 0, 0, 0, 0}));
+                            r.put("include", includes);
+                            r.put("exclude", new ListTag());
+                            ListTag all = regions();
+                            all.add(r);
+                            author.put("regions", all);
+                            regionIndex = all.size() - 1;
+                            localChanged = true;
+                            loadRegion();
+                            refresh();
+                        }));
+        List<UiLayout.Node> detail = new ArrayList<>();
+        if (region() == null) detail.add(muted(text("no_region")));
+        else {
+            detail.add(input("region_id", regionId));
+            detail.add(input("region_name", regionName));
+            detail.add(choices("layer", List.of("OUTER", "INNER"), layer, v -> layer = v));
+            detail.add(muted(text("coordinates_hint")));
+            detail.add(
+                    UiLayout.grid(
+                            2,
+                            6,
+                            List.of(
+                                    action(
+                                            "includes",
+                                            text("includes"),
+                                            editable(),
+                                            !exclude,
+                                            () -> {
+                                                if (applyBox()) {
+                                                    exclude = false;
+                                                    boxIndex = 0;
+                                                    loadBox();
+                                                    refresh();
+                                                }
+                                            }),
+                                    action(
+                                            "excludes",
+                                            text("excludes"),
+                                            editable(),
+                                            exclude,
+                                            () -> {
+                                                if (applyBox()) {
+                                                    exclude = true;
+                                                    boxIndex = 0;
+                                                    loadBox();
+                                                    refresh();
+                                                }
+                                            }))));
+            List<UiLayout.Node> boxList = new ArrayList<>();
+            for (int i = 0; i < boxes().size(); i++) {
+                final int index = i;
+                int[] a = boxes().getIntArray(i);
+                boxList.add(
+                        action(
+                                "box." + i,
+                                text("box", i + 1, Arrays.toString(a)),
+                                editable(),
+                                boxIndex == i,
+                                () -> {
+                                    if (applyBox()) {
+                                        boxIndex = index;
+                                        loadBox();
+                                        refresh();
+                                    }
+                                }));
+            }
+            detail.add(UiLayout.column(4, boxList));
+            if (!box.isEmpty()) detail.add(coords("box_coord", box));
+            detail.add(
+                    action(
+                            "addBox",
+                            text("add_box"),
+                            editable()
+                                    && region().getList("include", Tag.TAG_INT_ARRAY).size()
+                                                    + region().getList("exclude", Tag.TAG_INT_ARRAY)
+                                                            .size()
+                                            < 64,
+                            false,
+                            () -> {
+                                if (!applyBox()) return;
+                                ListTag all = boxes();
+                                all.add(new IntArrayTag(new int[] {0, 0, 0, 0, 0, 0}));
+                                region().put(exclude ? "exclude" : "include", all);
+                                boxIndex = all.size() - 1;
+                                localChanged = true;
+                                loadBox();
+                                refresh();
+                            }));
+            detail.add(
+                    action(
+                            "removeBox",
+                            text("remove_box"),
+                            editable() && !boxes().isEmpty() && (exclude || boxes().size() > 1),
+                            false,
+                            () -> {
+                                boxes().remove(boxIndex);
+                                boxIndex = 0;
+                                localChanged = true;
+                                loadBox();
+                                refresh();
+                            }));
+            detail.add(
+                    action(
+                            "applyRegion",
+                            text("apply_local"),
+                            editable(),
+                            false,
+                            () -> {
+                                if (applyRegion()) refresh();
+                            }));
+            detail.add(
+                    action(
+                            "removeRegion",
+                            text("remove_region"),
+                            editable(),
+                            false,
+                            () ->
+                                    confirm(
+                                            "removeRegion",
+                                            () -> {
+                                                String id = region().getString("id");
+                                                for (Tag tag : facilities())
+                                                    if (((CompoundTag) tag)
+                                                            .getString("region")
+                                                            .equals(id)) {
+                                                        fail("region_referenced");
+                                                        return;
+                                                    }
+                                                regions().remove(regionIndex);
+                                                regionIndex = 0;
+                                                localChanged = true;
+                                                loadRegion();
+                                                refresh();
+                                            })));
+            detail.add(
+                    action(
+                            "selection",
+                            text("world_selection"),
+                            editable() && !dirty(),
+                            false,
+                            () -> {
+                                CompoundTag payload = new CompoundTag();
+                                payload.putString("region", region().getString("id"));
+                                payload.putBoolean("exclude", exclude);
+                                send(snapshot, SettlementNetwork.Action.SELECTION_MODE, payload);
+                            }));
+        }
+        return UiLayout.row(12, List.of(UiLayout.column(6, list), UiLayout.column(6, detail)));
+    }
+
+    private UiLayout.Node facilityEditor() {
+        List<UiLayout.Node> list = new ArrayList<>();
+        for (int i = 0; i < facilities().size(); i++) {
+            final int index = i;
+            var f = facilities().getCompound(i);
+            list.add(
+                    action(
+                            "facility." + i,
+                            Component.literal(f.getString("id") + " · " + f.getString("type")),
+                            editable(),
+                            facilityIndex == i,
+                            () -> {
+                                if (applyFacility()) {
+                                    facilityIndex = index;
+                                    loadFacility();
+                                    refresh();
+                                }
+                            }));
+        }
+        list.add(
+                action(
+                        "addFacility",
+                        text("add_facility"),
+                        editable() && facilities().size() < 128 && region() != null,
+                        false,
+                        () -> {
+                            if (!applyFacility()) return;
+                            CompoundTag f = new CompoundTag();
+                            f.putString("id", "facility_" + facilities().size());
+                            f.putString("type", "POST");
+                            f.putString("region", region().getString("id"));
+                            f.putIntArray("position", new int[] {0, 0, 0});
+                            ListTag all = facilities();
+                            all.add(f);
+                            author.put("facilities", all);
+                            facilityIndex = all.size() - 1;
+                            localChanged = true;
+                            loadFacility();
+                            refresh();
+                        }));
+        List<UiLayout.Node> detail = new ArrayList<>();
+        if (facilities().isEmpty()) detail.add(muted(text("no_facility")));
+        else {
+            detail.add(input("facility_id", facilityId));
+            detail.add(input("facility_region", facilityRegion));
+            detail.add(
+                    choices(
+                            "facility_type",
+                            List.of("CONTROL", "ENTRANCE", "SUPPLY", "TRADER", "POST", "TRAINING"),
+                            facilityType,
+                            v -> facilityType = v));
+            detail.add(coords("position", facilityPosition));
+            detail.add(
+                    action(
+                            "applyFacility",
+                            text("apply_local"),
+                            editable(),
+                            false,
+                            () -> {
+                                if (applyFacility()) refresh();
+                            }));
+            detail.add(
+                    action(
+                            "removeFacility",
+                            text("remove_facility"),
+                            editable(),
+                            false,
+                            () ->
+                                    confirm(
+                                            "removeFacility",
+                                            () -> {
+                                                facilities().remove(facilityIndex);
+                                                facilityIndex = 0;
+                                                localChanged = true;
+                                                loadFacility();
+                                                refresh();
+                                            })));
+        }
+        return UiLayout.row(12, List.of(UiLayout.column(6, list), UiLayout.column(6, detail)));
+    }
+
+    private CompoundTag transformOptions() {
+        return transformOptions(true);
+    }
+
+    private CompoundTag transformOptions(boolean includeTransform) {
+        if (includeTransform && !valid(pivot)) return null;
+        CompoundTag p = new CompoundTag();
+        if (includeTransform) {
+            p.putInt("turns", turns);
+            p.putString("mirror", mirror);
+            p.putIntArray("pivot", integers(pivot));
+        }
+        p.putString("name", displayName.value().orElse(""));
+        return p;
+    }
+
+    private UiLayout.Node transfer() {
+        List<UiLayout.Node> nodes = new ArrayList<>();
+        nodes.add(muted(text("transfer_hint")));
+        nodes.add(input("instance_name", displayName));
+        nodes.add(
+                action(
+                        "rotation",
+                        text("rotation", turns * 90),
+                        editable(),
+                        false,
+                        () -> {
+                            turns = (turns + 1) % 4;
+                            transformDirty = true;
+                            refresh();
+                        }));
+        List<UiLayout.Node> mirrors = new ArrayList<>();
+        for (String value : List.of("NONE", "LEFT_RIGHT", "FRONT_BACK"))
+            mirrors.add(
+                    action(
+                            "mirror." + value,
+                            text("mirror." + value),
+                            editable(),
+                            mirror.equals(value),
+                            () -> {
+                                mirror = value;
+                                transformDirty = true;
+                                refresh();
+                            }));
+        nodes.add(UiLayout.grid(3, 4, 80, mirrors));
+        nodes.add(coords("pivot", pivot));
+        nodes.add(
+                action(
+                        "import",
+                        text("import_new"),
+                        editable() && !dirty(),
+                        false,
+                        () -> {
+                            var payload = transformOptions();
+                            if (payload != null)
+                                send(snapshot, SettlementNetwork.Action.IMPORT_NEW, payload);
+                            else fail("invalid_input");
+                        }));
+        nodes.add(input("target", target));
+        nodes.add(input("target_revision", targetRevision));
+        nodes.add(input("restore_module", restoreModule));
+        nodes.add(
+                action(
+                        "join",
+                        text("join"),
+                        editable() && !dirty(),
+                        false,
+                        () -> {
+                            var payload = transformOptions();
+                            if (payload == null || !target.valid() || !targetRevision.valid()) {
+                                fail("invalid_input");
+                                return;
+                            }
+                            payload.putUUID("target", target.value().orElseThrow());
+                            payload.putInt("target_revision", targetRevision.value().orElseThrow());
+                            send(snapshot, SettlementNetwork.Action.JOIN_INSTANCE, payload);
+                        }));
+        nodes.add(
+                action(
+                        "update",
+                        text("update"),
+                        editable() && !dirty() && !snapshot.instance().equals(NONE),
+                        false,
+                        () ->
+                                confirm(
+                                        "update",
+                                        () -> {
+                                            var payload = transformOptions(transformDirty);
+                                            if (payload != null)
+                                                send(
+                                                        snapshot,
+                                                        SettlementNetwork.Action.UPDATE_INSTANCE,
+                                                        payload);
+                                        })));
+        nodes.add(
+                action(
+                        "export",
+                        text("export"),
+                        editable() && !snapshot.instance().equals(NONE),
+                        false,
+                        () ->
+                                confirm(
+                                        "export",
+                                        () ->
+                                                send(
+                                                        snapshot,
+                                                        SettlementNetwork.Action.EXPORT_AUTHOR,
+                                                        new CompoundTag()))));
+        nodes.add(
+                action(
+                        "restore",
+                        text("restore"),
+                        editable(),
+                        false,
+                        () ->
+                                confirm(
+                                        "restore",
+                                        () -> {
+                                            if (!target.valid()
+                                                    || !targetRevision.valid()
+                                                    || !restoreModule.valid()) {
+                                                fail("invalid_input");
+                                                return;
+                                            }
+                                            CompoundTag payload = new CompoundTag();
+                                            payload.putUUID("target", target.value().orElseThrow());
+                                            payload.putInt(
+                                                    "target_revision",
+                                                    targetRevision.value().orElseThrow());
+                                            payload.putString(
+                                                    "module", restoreModule.value().orElseThrow());
+                                            send(
+                                                    snapshot,
+                                                    SettlementNetwork.Action.RESTORE_AUTHOR,
+                                                    payload);
+                                        })));
+        nodes.add(
+                action(
+                        "delete",
+                        text("delete"),
+                        editable() && !snapshot.instance().equals(NONE),
+                        false,
+                        () ->
+                                confirm(
+                                        "delete",
+                                        () ->
+                                                send(
+                                                        snapshot,
+                                                        SettlementNetwork.Action.DELETE_INSTANCE,
+                                                        new CompoundTag()))));
+        nodes.add(
+                action(
+                        "reload",
+                        text("reload_draft"),
+                        !pending.busy(),
+                        false,
+                        () ->
+                                confirm(
+                                        "reload",
+                                        () -> {
+                                            transformDirty = false;
+                                            resetDraft(snapshot);
+                                            refresh();
+                                        })));
+        return UiLayout.column(6, nodes);
+    }
+
+    private UiLayout.Node management() {
+        CompoundTag data = snapshot.data();
+        List<UiLayout.Node> nodes = new ArrayList<>();
+        nodes.add(text(Component.literal(data.getString("name")), () -> theme().accent()));
+        nodes.add(
+                muted(
+                        text(
+                                "identity",
+                                data.getString("faction"),
+                                data.getInt("tier"),
+                                snapshot.instance())));
+        nodes.add(muted(text("residents_unavailable")));
+        if (!snapshot.author()) {
+            nodes.add(input("instance_name", displayName));
+            nodes.add(
+                    action(
+                            "rename",
+                            text("rename"),
+                            !pending.busy(),
+                            false,
+                            () -> {
+                                if (!displayName.valid()
+                                        || displayName.value().orElse("").isBlank()) {
+                                    fail("invalid_input");
+                                    return;
+                                }
+                                CompoundTag payload = new CompoundTag();
+                                payload.putString("name", displayName.value().orElseThrow());
+                                send(snapshot, SettlementNetwork.Action.RENAME, payload);
+                            }));
+            nodes.add(muted(text("permission_hint")));
+            nodes.add(muted(text("choose_owned")));
+            ListTag owned = data.getList("owned_soldiers", Tag.TAG_COMPOUND);
+            List<UiLayout.Node> soldiers = new ArrayList<>();
+            for (int i = 0; i < Math.min(32, owned.size()); i++) {
+                var person = owned.getCompound(i);
+                if (!person.hasUUID("id")) continue;
+                UUID id = person.getUUID("id");
+                soldiers.add(
+                        action(
+                                "owned." + id,
+                                Component.literal(person.getString("name")),
+                                !pending.busy(),
+                                postHuman.value().filter(id::equals).isPresent(),
+                                () -> {
+                                    postHuman.set(id.toString());
+                                    refresh();
+                                }));
+            }
+            nodes.add(UiLayout.grid(2, 6, soldiers));
+            if (owned.isEmpty()) nodes.add(muted(text("no_owned")));
+            nodes.add(input("post_human", postHuman));
+        }
+        int modulePage = Math.max(0, data.getInt("module_page")),
+                modulePages = Math.max(1, data.getInt("module_pages"));
+        if (data.contains("module_pages")) {
+            nodes.add(
+                    muted(
+                            text(
+                                    "module_page",
+                                    modulePage + 1,
+                                    modulePages,
+                                    data.getInt("module_total"))));
+            UiLayout.Node previous =
+                    action(
+                            "modulePrevious",
+                            text("module_previous"),
+                            !pending.busy() && modulePage > 0,
+                            false,
+                            () -> {
+                                CompoundTag page = new CompoundTag();
+                                page.putInt("module_page", modulePage - 1);
+                                send(snapshot, SettlementNetwork.Action.REFRESH, page);
+                            });
+            UiLayout.Node next =
+                    action(
+                            "moduleNext",
+                            text("module_next"),
+                            !pending.busy() && modulePage + 1 < modulePages,
+                            false,
+                            () -> {
+                                CompoundTag page = new CompoundTag();
+                                page.putInt("module_page", modulePage + 1);
+                                send(snapshot, SettlementNetwork.Action.REFRESH, page);
+                            });
+            nodes.add(UiLayout.grid(2, 6, List.of(previous, next)));
+        }
+        ListTag modules = data.getList("modules", Tag.TAG_COMPOUND);
+        for (int m = 0; m < modules.size(); m++) {
+            var module = modules.getCompound(m);
+            String moduleKey = module.getString("key");
+            nodes.add(muted(text("module", moduleKey)));
+            ListTag regions = module.getList("regions", Tag.TAG_COMPOUND);
+            for (int i = 0; i < regions.size(); i++) {
+                var region = regions.getCompound(i);
+                String key = moduleKey + "/" + region.getString("id");
+                List<Component> lines = new ArrayList<>();
+                for (String type : List.of("include", "exclude")) {
+                    ListTag boxes = region.getList(type, Tag.TAG_INT_ARRAY);
+                    for (int b = 0; b < boxes.size(); b++)
+                        lines.add(text(type, Arrays.toString(boxes.getIntArray(b))));
+                }
+                PanelDisclosure row =
+                        body(
+                                new PanelDisclosure(
+                                        button -> {
+                                            expanded = expanded.equals(key) ? "" : key;
+                                            refresh();
+                                        },
+                                        this::theme));
+                row.update(
+                        Component.literal(region.getString("name")),
+                        text("layer." + region.getString("layer")),
+                        lines,
+                        expanded.equals(key),
+                        false,
+                        theme().text());
+                controls.put("view." + key, row);
+                nodes.add(node(row));
+            }
+            ListTag facilities = module.getList("facilities", Tag.TAG_COMPOUND);
+            for (int i = 0; i < facilities.size(); i++) {
+                var f = facilities.getCompound(i);
+                nodes.add(
+                        muted(
+                                text(
+                                        "facility_status",
+                                        f.getString("stable_id"),
+                                        f.getString("type"),
+                                        Arrays.toString(f.getIntArray("position")),
+                                        f.getString("status"),
+                                        f.getString("reason"))));
+                if (!snapshot.author() && f.getString("type").equals("POST"))
+                    nodes.add(
+                            action(
+                                    "assign." + f.getString("stable_id"),
+                                    text("assign_post"),
+                                    !pending.busy(),
+                                    false,
+                                    () -> {
+                                        if (!postHuman.valid()) {
+                                            fail("invalid_input");
+                                            return;
+                                        }
+                                        UUID id =
+                                                SettlementNetwork.assignPost(
+                                                        snapshot.instance(),
+                                                        f.getString("stable_id"),
+                                                        postHuman.value().orElseThrow(),
+                                                        snapshot.instanceRevision());
+                                        pending.begin(
+                                                id,
+                                                new Submission(
+                                                        snapshot,
+                                                        SettlementNetwork.Action.REFRESH,
+                                                        new CompoundTag()));
+                                        refresh();
+                                    }));
+            }
+        }
+        if (modules.isEmpty()) nodes.add(muted(text("no_modules")));
+        return UiLayout.column(6, nodes);
+    }
+
+    @Override
+    protected void buildFooter() {
+        footer(Component.translatable("gui.done"), b -> onClose());
+        if (snapshot.author())
+            footer(
+                                    text("save_author"),
+                                    b -> {
+                                        if (!editable()) return;
+                                        CompoundTag draft = gather();
+                                        if (draft == null) {
+                                            fail("invalid_input");
+                                            return;
+                                        }
+                                        CompoundTag payload = new CompoundTag();
+                                        payload.put("author", draft);
+                                        send(
+                                                editBase,
+                                                SettlementNetwork.Action.SAVE_AUTHOR,
+                                                payload);
+                                    })
+                            .active =
+                    editable();
+        footer(
+                                text("refresh"),
+                                b ->
+                                        send(
+                                                snapshot,
+                                                SettlementNetwork.Action.REFRESH,
+                                                new CompoundTag()))
+                        .active =
+                !pending.busy();
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if (confirmUntil > 0 && System.currentTimeMillis() >= confirmUntil) {
+            confirmUntil = 0;
+            confirmation = "";
+            refresh();
+        }
+    }
+
+    @Override
+    public void removed() {
+        RETIRED.add(snapshot.token());
+        while (RETIRED.size() > 32) RETIRED.remove(RETIRED.iterator().next());
+        if (!serverClosed && Minecraft.getInstance().getConnection() != null)
+            SettlementNetwork.request(snapshot, SettlementNetwork.Action.CLOSE, new CompoundTag());
+        super.removed();
+    }
+}

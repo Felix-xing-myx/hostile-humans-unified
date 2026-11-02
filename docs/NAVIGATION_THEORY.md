@@ -28,7 +28,7 @@
 | 默认基础范围40/40/40/48，增强半径18/尝试10、跟随倍率1.35 | `defaults/hostile_humans_unified.json`、`TierConfigProjection`、`TierAttributes`、`UnifiedConfig` |
 | 实时范围不只配置基础值 | `HumanRelations.tick`枪械/信标临时修饰，信标+88 |
 
-Java源码根：`src/main/java/`。公共辅助默认位于`club/someoneice/humangunner/`，纯策略位于`dev/felix/hostilehumans/core/`，实体/节点/交互位于`com/craftix/hostile_humans/`。
+Java源码根：`src/main/java/`。公共辅助默认位于`dev/felix/hostilehumans/`，纯策略位于`dev/felix/hostilehumans/common/`，实体/节点/交互位于`dev/felix/hostilehumans/`。
 
 ## 原版实现依据
 

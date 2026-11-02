@@ -1,0 +1,169 @@
+package dev.felix.hostilehumans.navigation;
+
+import dev.felix.hostilehumans.entity.Human;
+
+import dev.felix.hostilehumans.navigation.PassageLease;
+import dev.felix.hostilehumans.navigation.InteractionSafetyPolicy;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
+
+/** Small, deterministic helpers shared by normal pursuit and retreat movement. */
+public final class NavigationSupport {
+    private NavigationSupport() {
+    }
+
+    static boolean hasHopRunway(Human human) {
+        Path path=human.getNavigation().getPath();
+        if(path==null||path.isDone())return false;
+        int start=path.getNextNodeIndex(),count=Math.min(8,path.getNodeCount()-start);
+        double[][] nodes=new double[count][3];
+        for(int i=0;i<count;i++){
+            var node=path.getNode(start+i);
+            if(node.type!=net.minecraft.world.level.pathfinder.BlockPathTypes.WALKABLE)return false;
+            Vec3 point=path.getEntityPosAtNode(human,start+i);
+            nodes[i]=new double[]{point.x,point.y,point.z};
+        }
+        Vec3 motion=human.getDeltaMovement();
+        var boost=human.getEffect(net.minecraft.world.effect.MobEffects.JUMP);
+        double flight=12+(boost==null?0:3.0*(boost.getAmplifier()+1));
+        return dev.felix.hostilehumans.navigation.SprintHopPolicy.clearRunway(human.getX(),human.getY(),human.getZ(),
+                motion.x,motion.z,nodes,flight);
+    }
+
+    public static boolean openBlockingPassage(Human human) {
+        // At most seven positions: a small array avoids a hash table and one
+        // node allocation per position on every collision tick.
+        BlockPos[] candidates = new BlockPos[7];
+        int count = 0;
+        BlockPos feet = human.blockPosition();
+        count = addUnique(candidates, count, feet);
+        count = addUnique(candidates, count, feet.above());
+
+        Path path = human.getNavigation().getPath();
+        if (path != null && !path.isDone()) {
+            BlockPos next = path.getNextNodePos();
+            count = addUnique(candidates, count, next);
+            count = addUnique(candidates, count, next.above());
+            count = addUnique(candidates, count, next.below());
+        }
+
+        Vec3 motion = human.getDeltaMovement().multiply(1.0D, 0.0D, 1.0D);
+        if (motion.lengthSqr() > 0.0025D) {
+            Vec3 ahead = human.position().add(motion.normalize().scale(0.9D));
+            BlockPos forward = BlockPos.containing(ahead);
+            count = addUnique(candidates, count, forward);
+            count = addUnique(candidates, count, forward.above());
+        }
+
+        boolean opened = false;
+        for (int i = 0; i < count; i++) {
+            BlockPos pos = candidates[i];
+            if (!InteractionSafetyPolicy.nearPassage(human.distanceToSqr(pos.getX() + 0.5D,
+                    human.getY(), pos.getZ() + 0.5D))) continue;
+            if (!human.level().hasChunkAt(pos)) continue;
+            BlockState state = human.level().getBlockState(pos);
+            if (!state.hasProperty(BlockStateProperties.OPEN)
+                    || state.getValue(BlockStateProperties.OPEN)) {
+                continue;
+            }
+            if (state.getBlock() instanceof DoorBlock door && PassageLease.handOpenable(state)) {
+                door.setOpen(human, human.level(), state, pos, true);
+                PassageLease.opened(human, pos);
+                opened = true;
+            } else if (PassageLease.handOpenableTrapdoor(state)) {
+                human.level().setBlock(pos, state.setValue(BlockStateProperties.OPEN, true), 10);
+                PassageLease.opened(human, pos);
+                opened = true;
+            }
+        }
+        return opened;
+    }
+
+    private static int addUnique(BlockPos[] positions, int count, BlockPos position) {
+        for (int i = 0; i < count; i++) if (positions[i].equals(position)) return count;
+        positions[count] = position;
+        return count + 1;
+    }
+
+    static boolean hasOneBlockObstacleAhead(Human human, Vec3 pathDirection) {
+        Vec3 forward = pathDirection.multiply(1.0D, 0.0D, 1.0D);
+        if (forward.lengthSqr() < 0.01D) {
+            return false;
+        }
+        forward = forward.normalize();
+        int feetY = BlockPos.containing(human.getX(), human.getY() + 0.05D, human.getZ()).getY();
+        AABB mobBounds = human.getBoundingBox();
+        BlockPos previousObstacle = null;
+
+        // Probe ahead of the body, not at its leading collision edge. This gives
+        // the jump controller time to clear an ordinary one-block step before
+        // vanilla horizontal collision pins the entity against it.
+        for (int probeIndex = 0; probeIndex < 3; probeIndex++) {
+            double distance = 0.75D + probeIndex * 0.25D;
+            Vec3 probe = human.position().add(forward.scale(distance));
+            BlockPos obstacle = BlockPos.containing(probe.x, feetY, probe.z);
+            if (obstacle.equals(previousObstacle)) continue;
+            previousObstacle = obstacle;
+            if (!human.level().hasChunkAt(obstacle)) continue;
+            if (obstacle.getX() == human.blockPosition().getX()
+                    && obstacle.getZ() == human.blockPosition().getZ()) {
+                continue;
+            }
+
+            BlockState state = human.level().getBlockState(obstacle);
+            if (state.is(BlockTags.DOORS) || state.is(BlockTags.FENCES)
+                    || state.is(BlockTags.WALLS) || state.is(BlockTags.CLIMBABLE)) {
+                continue;
+            }
+            VoxelShape shape = state.getCollisionShape(human.level(), obstacle);
+            double obstacleHeight = shape.isEmpty() ? 0.0D : shape.max(Direction.Axis.Y);
+            if (obstacleHeight < 0.9D || obstacleHeight > 1.01D
+                    || !human.level().getBlockState(obstacle.above())
+                            .getCollisionShape(human.level(), obstacle.above()).isEmpty()
+                    || !human.level().getBlockState(obstacle.above(2))
+                            .getCollisionShape(human.level(), obstacle.above(2)).isEmpty()) {
+                continue;
+            }
+
+            AABB blockBounds = new AABB(obstacle);
+            double gapX = Math.max(0.0D, Math.max(
+                    blockBounds.minX - mobBounds.maxX, mobBounds.minX - blockBounds.maxX));
+            double gapZ = Math.max(0.0D, Math.max(
+                    blockBounds.minZ - mobBounds.maxZ, mobBounds.minZ - blockBounds.maxZ));
+            double horizontalGapSqr = gapX * gapX + gapZ * gapZ;
+            if (horizontalGapSqr > 1.5625D || horizontalGapSqr < 0.0025D) {
+                continue;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public static Vec3 horizontalDirection(Vec3 from, Vec3 to) {
+        Vec3 direction = to.subtract(from).multiply(1.0D, 0.0D, 1.0D);
+        return direction.lengthSqr() < 0.01D ? Vec3.ZERO : direction.normalize();
+    }
+
+    static boolean pathStartsGenerallyToward(Path path, Vec3 origin, Vec3 desiredDirection) {
+        if (path == null || path.isDone() || desiredDirection.lengthSqr() < 0.01D) {
+            return false;
+        }
+        int first = path.getNextNodeIndex();
+        int limit = Math.min(path.getNodeCount(), first + 4);
+        for (int i = first; i < limit; i++) {
+            Vec3 pathDirection = horizontalDirection(origin, Vec3.atCenterOf(path.getNodePos(i)));
+            if (pathDirection.lengthSqr() > 0.01D) {
+                return pathDirection.dot(desiredDirection) >= -0.10D;
+            }
+        }
+        return false;
+    }
+}

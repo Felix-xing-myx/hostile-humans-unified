@@ -1,9 +1,9 @@
 """First Aid integration source contracts; not Minecraft runtime tests."""
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 SETTINGS = (PKG / "FirstAidSettings.java").read_text(encoding="utf-8")
 COMPAT = (PKG / "FirstAidCompat.java").read_text(encoding="utf-8")
 BRIDGE = (PKG / "FirstAidApiBridge.java").read_text(encoding="utf-8")

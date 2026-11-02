@@ -1,8 +1,8 @@
 """Static menu and shield custody integration checks, not gameplay simulation."""
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 MENU = (PKG / "HumanInventoryMenu.java").read_text(encoding="utf-8")
 PICKUP = (PKG / "ShieldPickupPolicy.java").read_text(encoding="utf-8")
 LOOT = (PKG / "HumanLootManager.java").read_text(encoding="utf-8")

@@ -1,9 +1,9 @@
 """Static ammo-report integration checks; does not simulate gameplay."""
 import json
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 WARNING = (PKG / "HiredHumanAmmoWarning.java").read_text(encoding="utf-8")
 DIALOGUE = (PKG / "SoldierDialogue.java").read_text(encoding="utf-8")
 DISPATCH = (PKG / "SoldierMessageDispatcher.java").read_text(encoding="utf-8")

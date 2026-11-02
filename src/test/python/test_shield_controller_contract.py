@@ -1,23 +1,23 @@
 """Shield controller ownership and integration contracts; not gameplay tests."""
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 
 class ShieldControllerContract(unittest.TestCase):
     def test_goals_share_entity_controller(self):
         adaptive = (PKG / "AdaptiveCombatGoal.java").read_text(encoding="utf-8")
         guard = (PKG / "BodyguardMovementGoal.java").read_text(encoding="utf-8")
-        self.assertIn("this.shields = human.humanGunner$shieldDefense()", adaptive)
+        self.assertIn("this.shields = human.hhu$shieldDefense()", adaptive)
         for entry in ("wantsCombat", "beginCombat", "tickCombat", "endCombat"):
             self.assertIn("shields." + entry + "(", adaptive)
-        self.assertIn("humanGunner$shieldDefense().tickBodyguard(owner, threat)", guard)
-        self.assertIn("humanGunner$shieldDefense().endBodyguard()", guard)
+        self.assertIn("hhu$shieldDefense().tickBodyguard(owner, threat)", guard)
+        self.assertIn("hhu$shieldDefense().endBodyguard()", guard)
         for goal in (adaptive, guard):
-            self.assertNotIn("humanGunner$startMovementShield", goal)
-            self.assertNotIn("humanGunner$startProjectileShield", goal)
+            self.assertNotIn("hhu$startMovementShield", goal)
+            self.assertNotIn("hhu$startProjectileShield", goal)
             self.assertNotIn("arrowDefenseDecisions", goal)
 
     def test_release_checks_owner_and_actual_stack(self):
@@ -82,13 +82,13 @@ class ShieldControllerContract(unittest.TestCase):
         source = (PKG / "ShieldDefenseController.java").read_text(encoding="utf-8")
         for prohibited in ("extends Goal", "getNavigation()", "doHurtTarget(", "performRangedAttack(", "addCombatGoal("):
             self.assertNotIn(prohibited, source)
-        human = (ROOT / "src/main/java/com/craftix/hostile_humans/entity/entities/Human.java").read_text(encoding="utf-8")
-        self.assertEqual(human.count("new club.someoneice.humangunner.ShieldDefenseController(this)"), 1)
+        human = (ROOT / "src/main/java/dev/felix/hostilehumans/entity/Human.java").read_text(encoding="utf-8")
+        self.assertEqual(human.count("new dev.felix.hostilehumans.behavior.combat.defense.ShieldDefenseController(this)"), 1)
 
     def test_pressure_direction_survives_final_navigation_facing(self):
         attention = (PKG / "HumanAttention.java").read_text(encoding="utf-8")
         finish = attention.split("boolean action=", 1)[1]
-        self.assertLess(finish.index("if(action&&(request.pressure||human.humanGunner$shieldDefense().defenseOwnsFacing()))route=null"),
+        self.assertLess(finish.index("if(action&&(request.pressure||human.hhu$shieldDefense().defenseOwnsFacing()))route=null"),
                         finish.index("float body=route==null"))
         self.assertIn('40, "高压平滑盾面", true', attention)
         controller = (PKG / "ShieldDefenseController.java").read_text(encoding="utf-8")

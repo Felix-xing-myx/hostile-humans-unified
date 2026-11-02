@@ -1,16 +1,16 @@
 """Cross-mode tactical position boundaries; voxel gameplay is a separate acceptance step."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / 'src/main/java/club/someoneice/humangunner'
+PKG = ROOT / 'src/main/java/dev/felix/hostilehumans'
 
 
 class FiringFloorRetentionContract(unittest.TestCase):
     def test_all_ranged_modes_share_memory_before_general_terrain_planning(self):
         for path in (PKG / 'GunMovementExecution.java',
-                     ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal/BowMovementExecution.java',
-                     ROOT / 'src/main/java/com/craftix/hostile_humans/entity/ai/goal/CrossbowMovementExecution.java'):
+                     ROOT / 'src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/BowMovementExecution.java',
+                     ROOT / 'src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/CrossbowMovementExecution.java'):
             source = path.read_text(encoding='utf-8')
             self.assertIn('RangedFiringMemory.observe(', source)
             self.assertLess(source.index('RangedFiringMemory.recover('),
@@ -51,7 +51,10 @@ class FiringFloorRetentionContract(unittest.TestCase):
         self.assertIn('if(!travelling)', observe)
         self.assertIn('arrivedAtWindow(h.position(),s.feet,h.onGround())', observe)
         for file in ('GunMovementExecution.java',):
-            self.assertIn('RangedFiringMemory.selected(', (PKG / file).read_text(encoding='utf-8'))
+            self.assertIn('RangedFiringPosition.startAttackWindow(', (PKG / file).read_text(encoding='utf-8'))
+        entry = (PKG / 'RangedFiringPosition.java').read_text(encoding='utf-8').split('public static boolean startAttackWindow(', 1)[1].split('public static Path findVisiblePath', 1)[0]
+        self.assertLess(entry.index('RetreatPathSafety.tryMove'), entry.index('RangedFiringMemory.selected('))
+        self.assertIn('return false;', entry)
 
 
 if __name__ == '__main__':

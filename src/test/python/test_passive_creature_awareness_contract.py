@@ -1,8 +1,8 @@
 """Static filtering and real-defense handoff checks; live mob behavior is separate."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
-PKG = Path(__file__).resolve().parents[3] / "src/main/java/club/someoneice/humangunner"
+PKG = Path(__file__).resolve().parents[3] / "src/main/java/dev/felix/hostilehumans"
 
 class PassiveCreatureAwarenessContract(unittest.TestCase):
     def test_background_creatures_filtered_before_budget_and_alert(self):
@@ -30,7 +30,7 @@ class PassiveCreatureAwarenessContract(unittest.TestCase):
         self.assertLess(hurt.index("recordCreatureDefense"), hurt.index("!valid(h,attacker)"))
         response = source.split("private static boolean allowsCreatureResponse", 1)[1].split("private static void recordCreatureDefense", 1)[0]
         self.assertIn("PerceptionPolicy.defensiveCreature", response)
-        policy = (PKG.parents[2] / "dev/felix/hostilehumans/core/PerceptionPolicy.java").read_text(encoding="utf-8")
+        policy = (PKG.parents[2] / "dev/felix/hostilehumans/perception/PerceptionPolicy.java").read_text(encoding="utf-8")
         self.assertIn("defenseUntil>=0", policy)
         self.assertIn("now<defenseUntil", policy)
         record = source.split("private static void recordCreatureDefense", 1)[1].split("private static boolean allowsCreatureClue", 1)[0]

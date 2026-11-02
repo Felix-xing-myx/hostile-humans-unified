@@ -1,10 +1,10 @@
 """Source wiring checks only; not a Java, Mixin startup or gameplay test."""
 import json
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 
 ROOT = Path(__file__).resolve().parents[3]
-JAVA = ROOT / "src/main/java/club/someoneice/humangunner"
+JAVA = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 
 class ProjectileCooldownContractTest(unittest.TestCase):
@@ -38,7 +38,7 @@ class ProjectileCooldownContractTest(unittest.TestCase):
     def test_java_scope_and_real_bytecode_contract_is_registered(self):
         build = (ROOT / 'build.gradle').read_text(encoding='utf-8')
         self.assertIn("'ProjectileCooldownPolicyTest'", build)
-        regression = (ROOT / 'src/test/java/club/someoneice/humangunner/ProjectileCooldownPolicyTest.java').read_text(encoding='utf-8')
+        regression = (ROOT / 'src/test/java/dev/felix/hostilehumans/behavior/combat/ProjectileCooldownPolicyTest.java').read_text(encoding='utf-8')
         self.assertIn('queries == 1', regression)
         self.assertIn('"net/minecraft/world/entity/LivingEntity"', regression)
 

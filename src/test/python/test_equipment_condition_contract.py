@@ -1,10 +1,10 @@
 """Durability integration checks; Java item-level cases run only in an authorized build."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import json
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 
 class EquipmentConditionContract(unittest.TestCase):

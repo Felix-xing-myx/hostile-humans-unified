@@ -1,11 +1,11 @@
 """Read-only contracts for debug isolation, observer limits and server authority; not gameplay tests."""
 import json
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 JAVA = ROOT / "main/java"
-COMBAT = JAVA / "club/someoneice/humangunner"
+COMBAT = JAVA / "dev/felix/hostilehumans"
 
 
 def source(name):
@@ -16,7 +16,7 @@ class NavigationDebugContract(unittest.TestCase):
     def test_only_authorized_humans_and_one_controller(self):
         service = source("NavigationDebugService")
         for check in ["player.isCreative() || player.hasPermissions(2)", "instanceof Human human",
-                      "old.owner.equals(player.getUUID())", "human.isNoAi()", "HumanGunner.isManualInventoryOpen(human)"]:
+                      "old.owner.equals(player.getUUID())", "human.isNoAi()", "HumanRuntime.isManualInventoryOpen(human)"]:
             self.assertIn(check, service)
 
     def test_test_uses_real_navigation_and_shared_budget(self):
@@ -35,7 +35,13 @@ class NavigationDebugContract(unittest.TestCase):
         self.assertIn("RUNS.remove(human, expected)", service)
         self.assertIn("Run ending = activeRun; activeRun = null", service)
         self.assertIn("player.isShiftKeyDown()", source("NavigationTestItem"))
-        self.assertNotIn("getPersistentData()", service)
+        # Passive observation bookmarks persist; temporary movement leases never do.
+        state = source("NavigationObserverState")
+        for forbidden in ['"destination"', '"deadline"', '"owner"', '"Run"']:
+            self.assertNotIn(forbidden, state)
+        logout = service.split("public static void logout", 1)[1].split("@SubscribeEvent", 1)[0]
+        self.assertIn("detach(player)", logout)
+        self.assertNotIn("clear(player)", logout)
         self.assertIn("PlayerLoggedOutEvent", service)
 
     def test_observation_is_opt_in_bounded_and_never_runs_searches(self):
@@ -87,7 +93,10 @@ class NavigationDebugContract(unittest.TestCase):
         world = client.split("public static void world", 1)[1].split("private static void label", 1)[0]
         self.assertNotIn("new BufferBuilder", world)
         self.assertNotIn("MultiBufferSource.immediate", world)
-        self.assertEqual(client.count("new BufferBuilder("), 1)
+        storage=source("DebugWorldLines")
+        self.assertEqual(client.count("new BufferBuilder("), 0)
+        self.assertEqual(storage.count("new BufferBuilder("), 1)
+        self.assertIn("DebugWorldLines.buffers()", client)
         self.assertIn("NativeBuffers.BUFFERS", world)
         self.assertIn("buffers.endBatch(DebugLines.TYPE)", world)
         self.assertIn("finally", world)

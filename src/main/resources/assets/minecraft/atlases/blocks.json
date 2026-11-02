@@ -1,0 +1,8 @@
+{
+  "sources": [
+    {
+      "type": "minecraft:single",
+      "resource": "hostile_humans_unified:item/faction_wallet"
+    }
+  ]
+}

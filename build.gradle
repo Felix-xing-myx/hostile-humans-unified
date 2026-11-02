@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.13.38'
+version = '3.14.2'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -260,7 +260,7 @@ tasks.register('spectatorSoundContractTest', JavaExec) {
     dependsOn tasks.named('testClasses')
     classpath = sourceSets.test.runtimeClasspath
     mainClass = testEntrypoint('SpectatorSoundContractTest')
-    args taczApiJar.absolutePath, scgunsApiJar.absolutePath, jegApiJar.absolutePath
+    args ([taczApiJar.absolutePath, findProperty('taczRuntimeJar'), scgunsApiJar.absolutePath, jegApiJar.absolutePath].findAll { it != null }.unique())
 }
 tasks.named('check').configure { dependsOn tasks.named('spectatorSoundContractTest') }
 
@@ -305,7 +305,7 @@ tasks.register('sanitizeStructureWaystones', JavaExec) {
 }
 
 // New-version contracts; run with check/build, never just manual source inspection.
-["DamagePartitionTest", "DamagePipelineContractTest", "SpecialtyBudgetSamplerTest", "GunSpecializationTest", "RevisionCombatPolicyTest", "SpecialtyAllocationTest", "SpecialtyPersistenceTest", "SpecialtyDataTest", "AttributeDetailSnapshotTest", "AttributeDetailPolicyTest", "AttributeDetailGrowthViewTest", "FactionContentNbtTest", "FactionVisualProtocolTest", "FactionEquipmentConfigTest", "FactionEquipmentPolicyTest", "FiniteOrdersPolicyTest", "DefenseAttributePolicyTest", "DefenseAttributesTest", "EquipmentConfigMigrationTest", "ConfigPublicationTest"].each { testClass ->
+["DamagePartitionTest", "DamagePipelineContractTest", "SpecialtyBudgetSamplerTest", "GunSpecializationTest", "RevisionCombatPolicyTest", "SpecialtyAllocationTest", "SpecialtyBoundsTest", "SettlementGeometryTest", "SettlementPagesTest", "SettlementVanillaTransformTest", "StandingQuotaTest", "UiLayoutTest", "InputValueTest", "PendingActionTest", "PassagePermitTest", "WalletBalanceTest", "FacilityResourcesTest", "MoneyMathTest", "WalletPayloadCodecTest", "TaskLedgerTest", "EconomyRecoveryTest", "StandingRewardTest", "EconomyProtocolTest", "NativeNpcRecoilTrackTest", "CommandHealthSnapshotTest", "SettlementPlacementIdentityTest", "SettlementPersistenceTest", "SettlementNetworkCodecTest", "CultivationCoreTest", "CultivationPersistenceTest", "CultivationProtocolTest", "PerceptionDiscoveryPolicyTest", "GunOcclusionApproachTest", "PanelGeometryTest", "PanelSessionViewTest", "RosterPageCacheTest", "NativeShotRecoilClockTest", "MonitorTravelSpeedTest", "SpecialtyPersistenceTest", "SpecialtyDataTest", "AttributeDetailSnapshotTest", "AttributeDetailPolicyTest", "AttributeDetailGrowthViewTest", "FactionContentNbtTest", "FactionVisualProtocolTest", "FactionEquipmentConfigTest", "FactionEquipmentPolicyTest", "FiniteOrdersPolicyTest", "DefenseAttributePolicyTest", "DefenseAttributesTest", "EquipmentConfigMigrationTest", "ConfigPublicationTest"].each { testClass ->
     def testTask = 'vnext' + testClass
     tasks.register(testTask, JavaExec) {
         dependsOn tasks.named('testClasses')
@@ -439,3 +439,65 @@ tasks.register('taczOpticShaderStateTest', JavaExec) {
     doFirst { setArgs([sourceSets.main.output.classesDirs.singleFile.absolutePath, monitorMinecraftJar()]) }
 }
 tasks.named('check').configure { dependsOn tasks.named('taczOpticShaderStateTest') }
+
+// Execute actual dependency contracts without launching the game or copying runtime APIs into source.
+tasks.register('nativeRecoilApiContractTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = testEntrypoint('NativeRecoilApiContractTest')
+    doFirst {
+        def runtimeApi = file(findProperty('taczRuntimeJar') ?: taczApiJar)
+        def math = file("$buildDir/runtime-contracts/commons-math3.jar")
+        math.parentFile.mkdirs()
+        new java.util.zip.ZipFile(runtimeApi).withCloseable { zip ->
+            def nested = zip.entries().find { it.name.endsWith('.jar') && it.name.contains('commons-math3') }
+            if (nested == null) throw new GradleException('TaCZ native recoil math library not found: ' + runtimeApi)
+            zip.getInputStream(nested).withCloseable { input -> math.withOutputStream { output -> output << input } }
+        }
+        setArgs([runtimeApi.absolutePath, math.absolutePath])
+    }
+}
+tasks.named('check').configure { dependsOn tasks.named('nativeRecoilApiContractTest') }
+tasks.register('taczArcanaCollisionContractTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = testEntrypoint('TaczArcanaCollisionContractTest')
+    onlyIf { project.hasProperty('taczArcanaRuntimeJar') }
+    doFirst {
+        def runtimeApi = file(findProperty('taczRuntimeJar') ?: taczApiJar)
+        def arcana = file(findProperty('taczArcanaRuntimeJar'))
+        if (!arcana.isFile()) throw new GradleException('Missing actual TaCZ Arcana dependency: ' + arcana)
+        setArgs([runtimeApi.absolutePath, arcana.absolutePath])
+    }
+}
+tasks.named('check').configure { dependsOn tasks.named('taczArcanaCollisionContractTest') }
+
+tasks.register('taczDischargePresentationContractTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = testEntrypoint('TaczDischargePresentationContractTest')
+    doFirst { setArgs([file(findProperty('taczRuntimeJar') ?: taczApiJar).absolutePath, sourceSets.main.output.classesDirs.singleFile.absolutePath]) }
+}
+tasks.named('check').configure { dependsOn tasks.named('taczDischargePresentationContractTest') }
+
+tasks.register('nativeNpcRecoilContractTest', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = testEntrypoint('NativeNpcRecoilContractTest')
+    doFirst { setArgs([scgunsApiJar.absolutePath, jegApiJar.absolutePath, sourceSets.main.output.classesDirs.singleFile.absolutePath]) }
+}
+tasks.named('check').configure { dependsOn tasks.named('nativeNpcRecoilContractTest') }
+
+// Read production-name targets from the reobfuscated artifact, rather than the dev classpath.
+tasks.register('vanillaMixinArtifactTest', JavaExec) {
+    dependsOn tasks.named('testClasses'), tasks.named('reobfJar')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'dev.felix.hostilehumans.compat.VanillaMixinTargetsTest'
+    doFirst {
+        def nativeJar = file(findProperty('minecraftSrgJar') ?: new File(gradle.gradleUserHomeDir,
+            "caches/forge_gradle/minecraft_user_repo/net/minecraftforge/forge/${minecraft_version}-${forge_version}/forge-${minecraft_version}-${forge_version}-srg.jar"))
+        if (!nativeJar.isFile()) throw new GradleException('SRG Forge Minecraft JAR required; supply -PminecraftSrgJar=...')
+        setArgs([nativeJar.absolutePath, tasks.named('jar').get().archiveFile.get().asFile.absolutePath])
+    }
+}
+tasks.named('check').configure { dependsOn tasks.named('vanillaMixinArtifactTest') }

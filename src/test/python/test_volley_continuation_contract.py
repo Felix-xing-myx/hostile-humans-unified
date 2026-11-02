@@ -1,9 +1,9 @@
 """Continuation retention and shared transaction wiring, separate from Java/game acceptance."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-ARROWS = ROOT / 'src/main/java/club/someoneice/humangunner/HumanArrowCombat.java'
+ARROWS = ROOT / 'src/main/java/dev/felix/hostilehumans/behavior/combat/ranged/HumanArrowCombat.java'
 
 class VolleyContinuationContract(unittest.TestCase):
     def setUp(self):
@@ -29,7 +29,7 @@ class VolleyContinuationContract(unittest.TestCase):
             self.assertIn(condition, identity)
         for temporary in ('reservesRangedUse', 'HumanAttention.canAim', 'RecoverySupplies.hasActiveUse'):
             self.assertNotIn(temporary, identity)
-        release = self.code.split('boolean followup) {\n        return shotContextValid', 1)[1].split('private static int executeVolley', 1)[0]
+        release = self.code.split('private static boolean shotStillValid(Human human, LivingEntity target, ItemStack weapon, boolean followup)', 1)[1].split('private static int executeVolley', 1)[0]
         for safety in ('HumanAttention.canAim', 'reservesRangedUse', 'RecoverySupplies.hasActiveUse', 'target == human.getTarget()'):
             self.assertIn(safety, release)
 

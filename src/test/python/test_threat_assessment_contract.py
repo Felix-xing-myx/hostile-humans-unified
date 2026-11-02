@@ -1,7 +1,7 @@
 """Confirmed-identity and role handoff contracts; arithmetic Java tests require compilation separately."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
-PKG=Path(__file__).resolve().parents[3]/"src/main/java/club/someoneice/humangunner"
+PKG=Path(__file__).resolve().parents[3]/"src/main/java/dev/felix/hostilehumans"
 def source(name):return (PKG/(name+".java")).read_text(encoding="utf-8")
 class ThreatAssessmentContract(unittest.TestCase):
     def test_attributes_require_identity_and_remain_bounded(self):

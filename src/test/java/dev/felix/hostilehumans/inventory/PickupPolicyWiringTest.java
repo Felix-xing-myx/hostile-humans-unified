@@ -1,0 +1,159 @@
+package dev.felix.hostilehumans.inventory;
+
+import dev.felix.hostilehumans.testutil.ModuleTestSources;
+
+import dev.felix.hostilehumans.behavior.combat.recovery.RecoverySupplies;
+import dev.felix.hostilehumans.bootstrap.HumanRuntime;
+import dev.felix.hostilehumans.config.UnifiedConfig;
+import dev.felix.hostilehumans.faction.FactionRecruitment;
+import dev.felix.hostilehumans.inventory.CombatResupply;
+import dev.felix.hostilehumans.inventory.HumanLootManager;
+import dev.felix.hostilehumans.inventory.SoldierPickupPolicy;
+import dev.felix.hostilehumans.inventory.ValuableItemPickupGoal;
+import dev.felix.hostilehumans.soldier.OwnerOfflinePolicy;
+import dev.felix.hostilehumans.soldier.RecruitmentConfigClient;
+import dev.felix.hostilehumans.soldier.RecruitmentContractItem;
+import dev.felix.hostilehumans.soldier.RecruitmentPayment;
+import dev.felix.hostilehumans.soldier.SoldierCombatMode;
+import dev.felix.hostilehumans.soldier.SoldierOrder;
+import dev.felix.hostilehumans.soldier.SoldierOrderGoal;
+
+import java.util.List;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+
+/** Policy and compiled-entrypoint audit. Does not simulate a live world's pathfinding. */
+public final class PickupPolicyWiringTest {
+    private static int assertions;
+    private static final String POLICY = "dev/felix/hostilehumans/inventory/SoldierPickupPolicy";
+    private static final String LOOT = "dev/felix/hostilehumans/inventory/HumanLootManager";
+    private static final String GOAL = "dev/felix/hostilehumans/inventory/ValuableItemPickupGoal";
+    private static final String HUMAN = "dev/felix/hostilehumans/entity/Human";
+
+    public static void main(String[] args) throws Exception {
+        String resupply = "dev/felix/hostilehumans/inventory/CombatResupply";
+        for (var instruction : method(resupply, "tick").instructions) {
+            if (instruction instanceof MethodInsnNode call)
+                check(!List.of("getNavigation", "getMoveControl", "getLookControl", "setTarget", "stopUsingItem",
+                        "startUsingItem", "setItemSlot").contains(call.name), "resupply cannot own combat controls: " + call.name);
+        }
+        check(calls("dev/felix/hostilehumans/bootstrap/HumanRuntime", "onLivingTick", resupply, "tick"),
+                "one server tick entry runs emergency resupply");
+        check(calls(LOOT, "collectCombatSupply", POLICY, "canCombatResupplyNow")
+                && calls(LOOT, "collectCombatSupply", LOOT, "storeWithEviction")
+                && !callsName(LOOT, "collectCombatSupply", "setItemSlot"),
+                "supply commit rechecks permission and uses protected storage, never equipment exchange");
+        for (SoldierOrder order : SoldierOrder.values()) {
+            for (SoldierCombatMode mode : SoldierCombatMode.values()) {
+                check(!SoldierPickupPolicy.enabled(true, false), order + "/" + mode + " disabled means forbidden");
+                check(SoldierPickupPolicy.enabled(true, true), order + "/" + mode + " owner can enable pickup");
+            }
+        }
+        check(SoldierPickupPolicy.enabled(false, false) && SoldierPickupPolicy.enabled(false, true),
+                "wild humans retain autonomous loot permission");
+        Object pickup = new Object();
+        Object combat = new Object();
+        Object guard = new Object();
+        check(ValuableItemPickupGoal.ownsPath(pickup, pickup), "collector can release its own route");
+        check(!ValuableItemPickupGoal.ownsPath(combat, pickup), "collector cannot cancel a replacement combat route");
+        check(!ValuableItemPickupGoal.ownsPath(guard, pickup), "collector cannot cancel a replacement guard route");
+        check(!ValuableItemPickupGoal.ownsPath(null, null), "no path does not grant navigation ownership");
+        check(!ValuableItemPickupGoal.ownsPath(pickup, null), "never assigned a route means no ownership");
+
+        for (String method : List.of("tryCollectNearby", "collect", "isWorthCollecting"))
+            check(calls(LOOT, method, POLICY, "canCollectNow"), "manager entrypoint gated: " + method);
+        check(callIndex(LOOT, "collect", POLICY, "canCollectNow")
+                        < callIndex(LOOT, "collect", "net/minecraft/world/entity/item/ItemEntity", "getItem"),
+                "permission precedes ground-item/equipment/inventory mutation");
+        check(calls("dev/felix/hostilehumans/inventory/PickUpLoot", "tick", POLICY, "canCollectNow"),
+                "legacy proximity scanner cannot bypass the switch");
+        check(calls(HUMAN, "canPickUpLoot", POLICY, "canCollectNow"), "vanilla pickup permission gated");
+        check(calls(HUMAN, "pickUpItem", LOOT, "tryCollectNearby")
+                && !calls(HUMAN, "pickUpItem", "net/minecraft/world/entity/Mob", "pickUpItem"),
+                "vanilla collection routed through the shared transaction instead of super pickup");
+        for (String method : List.of("canUse", "canContinueToUse"))
+            check(calls(GOAL, method, POLICY, "canCollectNow"), "active search respects policy: " + method);
+        check(calls(GOAL, "tick", GOAL, "canContinueToUse"), "mid-tick permission changes rechecked before movement");
+        check(calls(GOAL, "stop", GOAL, "ownsPath"), "interruption releases only the collector's path");
+        check(calls(POLICY, "canCollectNow", HUMAN, "hhu$pickupCombatSettled"), "retarget gap gates idle collection");
+        check(calls(HUMAN, "setTarget", POLICY, "interruptForCombat"), "target acquisition releases pickup immediately");
+        check(calls(POLICY, "interruptForCombat", GOAL, "interruptForCombat"), "active and pending loot work discarded");
+        check(calls(GOAL, "start", GOAL, "canContinueToUse"), "selection-start gap rechecks combat permission");
+        check(!calls(POLICY, "set", "net/minecraft/world/entity/ai/navigation/PathNavigation", "stop"),
+                "switching pickup off never blindly cancels a combat route");
+        for (String method : List.of("canCollectNow", "isEnabled")) {
+            check(!callsOwner(POLICY, method, "dev/felix/hostilehumans/soldier/SoldierCombatMode"),
+                    "no combat mode is an exemption from pickup permission");
+        }
+        for (String method : List.of("getTarget", "isUsingItem", "isSleeping", "isInLava", "isOnFire", "isNoAi"))
+            check(callsName(POLICY, "canCollectNow", method), "idle/safety gate includes " + method);
+        check(calls(POLICY, "canCollectNow", "dev/felix/hostilehumans/soldier/SoldierOrder", "isReturningFromRetreat"),
+                "returning from retreat cannot race a new pickup route");
+        check(calls(POLICY, "canCollectNow", "dev/felix/hostilehumans/behavior/combat/recovery/RecoverySupplies", "hasHandCustody"),
+                "pickup cannot modify equipment during deferred recovery hand restoration");
+        check(calls(POLICY, "canCollectNow", "dev/felix/hostilehumans/bootstrap/HumanRuntime", "isManualInventoryOpen"),
+                "manual inventory editing excludes ground pickup");
+        check(!calls(POLICY, "canCollectNow", "dev/felix/hostilehumans/soldier/OwnerOfflinePolicy", "isOwnerOffline"),
+                "owner logout does not disable configured pickup");
+        check(calls(POLICY, "canCollectNow", "dev/felix/hostilehumans/soldier/SoldierOrder", "allowsLootPosition"),
+                "area boundary is enforced in all pickup entrypoints");
+        check(calls("dev/felix/hostilehumans/soldier/SoldierOrder", "tickMovement", POLICY, "canCollectNow"),
+                "follow/patrol/guard movement yields to an authorized active pickup");
+        check(calls("dev/felix/hostilehumans/soldier/SoldierOrderGoal", "tick",
+                "dev/felix/hostilehumans/soldier/SoldierOrder", "tickMovement"),
+                "MOVE goal reaches the pickup-aware movement entrypoint");
+        check(!callsOwner("dev/felix/hostilehumans/soldier/SoldierOrder", "tick",
+                "net/minecraft/world/entity/ai/navigation/PathNavigation"),
+                "lifecycle does not directly overwrite pickup navigation");
+        check(calls("dev/felix/hostilehumans/soldier/RecruitmentContractItem", "interactLivingEntity",
+                "dev/felix/hostilehumans/faction/FactionRecruitment", "hire")
+                && calls("dev/felix/hostilehumans/faction/FactionRecruitment", "hire",
+                "dev/felix/hostilehumans/faction/FactionRecruitment", "quote")
+                && calls("dev/felix/hostilehumans/faction/FactionRecruitment", "hire",
+                "dev/felix/hostilehumans/soldier/RecruitmentPayment", "pay"),
+                "actual hiring uses one faction quote and authoritative payment transaction");
+        check(!calls("dev/felix/hostilehumans/soldier/RecruitmentContractItem", "appendHoverText",
+                "dev/felix/hostilehumans/config/UnifiedConfig", "get")
+                && !calls("dev/felix/hostilehumans/soldier/RecruitmentContractItem", "appendHoverText",
+                "dev/felix/hostilehumans/soldier/RecruitmentConfigClient", "price"),
+                "generic reusable contract hover never advertises stale rank-only payment or client-local prices");
+        System.out.println("PickupPolicyWiringTest: " + assertions + " permission, navigation-ownership and entrypoint checks passed");
+    }
+
+    private static MethodNode method(String owner, String name) throws Exception {
+        ClassNode node = new ClassNode();
+        try (var stream = PickupPolicyWiringTest.class.getClassLoader().getResourceAsStream(dev.felix.hostilehumans.testutil.ModuleTestSources.owner(owner) + ".class")) {
+            if (stream == null) throw new AssertionError("Missing compiled class " + owner);
+            new ClassReader(stream).accept(node, 0);
+        }
+        return node.methods.stream().filter(m -> m.name.equals(name)).findFirst().orElseThrow();
+    }
+
+    private static int callIndex(String type, String method, String owner, String name) throws Exception {
+        int index = 0;
+        for (var instruction : method(type, method).instructions) {
+            if (instruction instanceof MethodInsnNode call && call.owner.equals(dev.felix.hostilehumans.testutil.ModuleTestSources.owner(owner)) && call.name.equals(name)) return index;
+            index++;
+        }
+        return Integer.MAX_VALUE;
+    }
+    private static boolean calls(String type, String method, String owner, String name) throws Exception {
+        return callIndex(type, method, owner, name) != Integer.MAX_VALUE;
+    }
+    private static boolean callsName(String type, String method, String name) throws Exception {
+        for (var instruction : method(type, method).instructions)
+            if (instruction instanceof MethodInsnNode call && call.name.equals(name)) return true;
+        return false;
+    }
+    private static boolean callsOwner(String type, String method, String owner) throws Exception {
+        for (var instruction : method(type, method).instructions)
+            if (instruction instanceof MethodInsnNode call && call.owner.equals(dev.felix.hostilehumans.testutil.ModuleTestSources.owner(owner))) return true;
+        return false;
+    }
+    private static void check(boolean value, String message) {
+        assertions++;
+        if (!value) throw new AssertionError(message);
+    }
+}

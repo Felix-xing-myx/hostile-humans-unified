@@ -450,7 +450,8 @@
         "spear"
       ],
       "_说明_melee_allowed_families_中文": "仅限制出生近战候选；未覆盖则继承内置值，解析后缺省表示不限制、空数组禁用；主手与各类备用共用，不影响后续拾取与玩家配装。",
-      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。",
+      "melee_one_handed_only": true
     },
     "roamer": {
       "doctrine_core_chance": 0,
@@ -750,7 +751,8 @@
         "spear"
       ],
       "_说明_melee_allowed_families_中文": "仅限制出生近战候选；未覆盖则继承内置值，解析后缺省表示不限制、空数组禁用；主手与各类备用共用，不影响后续拾取与玩家配装。",
-      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。",
+      "melee_one_handed_only": true
     },
     "roamer": {
       "doctrine_core_chance": 0,
@@ -1050,7 +1052,8 @@
         "spear"
       ],
       "_说明_melee_allowed_families_中文": "仅限制出生近战候选；未覆盖则继承内置值，解析后缺省表示不限制、空数组禁用；主手与各类备用共用，不影响后续拾取与玩家配装。",
-      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。"
+      "_说明_doctrine_core_chance_中文": "仅盾牌与非枪远程的核心家族概率；近战直接使用家族权重，不经过此抽签。",
+      "melee_one_handed_only": true
     },
     "roamer": {
       "doctrine_core_chance": 0,

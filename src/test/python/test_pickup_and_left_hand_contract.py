@@ -1,15 +1,15 @@
 """Static wiring checks; live left-handed TaCZ rendering still needs game acceptance."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
 JAVA = ROOT / 'src/main/java'
-PKG = JAVA / 'club/someoneice/humangunner'
+PKG = JAVA / 'dev/felix/hostilehumans'
 
 
 class PickupAndLeftHandContract(unittest.TestCase):
     def test_tacz_actual_main_hand_uses_supported_draw_context_and_restores_effect_scope(self):
-        source = (JAVA / 'com/craftix/hostile_humans/client/renderer/HumanAnimatedItemInHandLayer.java').read_text(encoding='utf-8')
+        source = (JAVA / 'dev/felix/hostilehumans/client/render/HumanAnimatedItemInHandLayer.java').read_text(encoding='utf-8')
         branch = source.split('if (GunSupport.isTaczGunItem(item) && arm == human.getMainArm())', 1)[1].split('} else {', 1)[0]
         self.assertIn('itemRenderer.renderItem(human, item, visualContext', branch)
         self.assertIn('visualArm == HumanoidArm.LEFT', branch)
@@ -20,7 +20,7 @@ class PickupAndLeftHandContract(unittest.TestCase):
         self.assertNotIn('setItemSlot', source)
 
     def test_both_firearms_share_right_hand_presentation_without_inventory_mutation(self):
-        base = JAVA / 'com/craftix/hostile_humans/client/renderer'
+        base = JAVA / 'dev/felix/hostilehumans/client/render'
         policy = (base / 'HumanGunPresentation.java').read_text(encoding='utf-8')
         self.assertIn('GunSupport.isGunItem(stack)', policy)
         identity = (PKG / 'GunSupport.java').read_text(encoding='utf-8')

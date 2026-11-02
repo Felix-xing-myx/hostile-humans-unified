@@ -1,0 +1,339 @@
+package dev.felix.hostilehumans.common;
+
+import dev.felix.hostilehumans.perception.NaturalTurnResponseTest;
+import dev.felix.hostilehumans.navigation.ShoreSeekingPolicy;
+
+import dev.felix.hostilehumans.inventory.LootRetryPolicy;
+import dev.felix.hostilehumans.inventory.PickupRouteProgress;
+import dev.felix.hostilehumans.inventory.PileFirstSelection;
+import dev.felix.hostilehumans.navigation.MovementContinuityProgress;
+import dev.felix.hostilehumans.navigation.RouteSearchPolicy;
+import dev.felix.hostilehumans.perception.AttentionFacingPolicy;
+import dev.felix.hostilehumans.perception.ThreatScorePolicy;
+import dev.felix.hostilehumans.performance.ActivityLoadPolicy;
+import dev.felix.hostilehumans.performance.BudgetedSearch;
+import dev.felix.hostilehumans.performance.FairWorkBudget;
+
+import net.minecraft.core.BlockPos;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
+
+/** Deterministic workload checks, not a claim about live server TPS. No game launch. */
+public final class PerformancePoliciesTest {
+    public static final class OptionalApiFixture {
+        public int range = 3;
+        public int attackRange() { return range; }
+        public Object failing() { throw new IllegalStateException("fixture failure"); }
+    }
+    private static int checks;
+    private static void check(boolean value, String message) {
+        checks++;
+        if (!value) throw new AssertionError(message);
+    }
+
+    public static void main(String[] args) {
+        checks+=NaturalTurnResponseTest.run();
+        check(AttentionFacingPolicy.surveyStep(4,90,30)<=1,"crowded slow scanning cannot sweep entire far field between samples");
+        double basicThreat=ThreatScorePolicy.intrinsic(20,0,3,false);
+        double farThreat=ThreatScorePolicy.score(basicThreat,30,0,20,false,6);
+        double nearThreat=ThreatScorePolicy.score(basicThreat,3,0,20,false,6);
+        check(ThreatScorePolicy.stronger(farThreat,nearThreat,.25,5), "confirmed nearby threat beats unpressuring distant enemy");
+        double factionThreat=ThreatScorePolicy.score(ThreatScorePolicy.intrinsic(20,8,6,true),16,0,20,false,6)
+                +ThreatScorePolicy.reportPriority(true,0,20);
+        double weakMob=ThreatScorePolicy.score(basicThreat,3,0,20,false,6);
+        check(ThreatScorePolicy.stronger(weakMob,factionThreat,.25,5),"reported faction combatant interrupts unpressuring weak-mob cleanup");
+        check(ThreatScorePolicy.reportPriority(true,10000,1)==80,"reported tactical priority is capped");
+        check(ThreatScorePolicy.reportPriority(false,Double.NaN,0)==0,"invalid pressure cannot manufacture danger");
+        double shooter=ThreatScorePolicy.score(basicThreat+8,30,10,20,true,6);
+        check(shooter>nearThreat, "recent damaging far shooter remains a serious threat");
+        check(!ThreatScorePolicy.stronger(40,44,.25,5), "similar scores cannot oscillate primary target");
+        check(Double.isFinite(ThreatScorePolicy.intrinsic(Double.NaN,Double.POSITIVE_INFINITY,Double.NaN,true)),
+                "invalid optional attributes cannot poison scoring");
+        check(ThreatScorePolicy.intrinsic(100000,100000,100000,true)<=80, "extreme attributes have bounded influence");
+        MovementContinuityProgress continuity = new MovementContinuityProgress();
+        check(!continuity.stalled(0, 0, 0, 0.1D, true), "continuity window starts without replanning");
+        for (int tick = 1; tick < 5; tick++)
+            check(!continuity.stalled(tick, 0, 0, 0.1D, true), "no expensive reaction before five ticks");
+        check(continuity.stalled(5, 0, 0, 0.1D, true), "stationary movement responds at five ticks");
+        MovementContinuityProgress slow = new MovementContinuityProgress();
+        for (int tick = 0; tick < 200; tick++)
+            check(!slow.stalled(tick, tick * 0.006D, 0, 0.02D, true),
+                    "shield/recovery slow movement is not mistaken for a stuck route");
+        MovementContinuityProgress idle = new MovementContinuityProgress();
+        for (int tick = 0; tick < 200; tick++)
+            check(!idle.stalled(tick, 0, 0, 0.1D, false), "intentional idle never requests recovery");
+        check(!idle.stalled(201, 0, 0, 0.1D, true), "new movement gets a fresh window");
+        check(!idle.stalled(0, 0, 0, 0.1D, true), "tick rollback resets progress safely");
+        Random columnRandom = new Random(7631);
+        for (int trial = 0; trial < 1000; trial++) {
+            double x = columnRandom.nextDouble() * 200 - 100;
+            double z = columnRandom.nextDouble() * 200 - 100;
+            double angle = columnRandom.nextDouble() * Math.PI * 2;
+            double dx = Math.cos(angle), dz = Math.sin(angle);
+            LinkedHashSet<BlockPos> oldColumns = new LinkedHashSet<>();
+            for (int forwardIndex = 0; forwardIndex < 3; forwardIndex++) {
+                double forward = .4 + forwardIndex * .35;
+                for (int sideIndex = -1; sideIndex <= 1; sideIndex++) {
+                    double side = sideIndex * .3;
+                    oldColumns.add(new BlockPos((int)Math.floor(x + dx * forward - dz * side), 0,
+                            (int)Math.floor(z + dz * forward + dx * side)));
+                }
+            }
+            BlockPos[] columns = dev.felix.hostilehumans.navigation.ShoreSeekingPolicy.forwardLandingColumns(x, z, dx, dz);
+            List<BlockPos> actual = Arrays.stream(columns).filter(Objects::nonNull).toList();
+            check(actual.equals(new ArrayList<>(oldColumns)), "shore columns retain every distinct old position and first-match order");
+            check(new HashSet<>(actual).size() == actual.size(), "shore collision probes do not repeat a column");
+            for (int i = actual.size(); i < columns.length; i++) check(columns[i] == null, "unused column slots form a trailing suffix");
+        }
+        check(Arrays.stream(dev.felix.hostilehumans.navigation.ShoreSeekingPolicy.forwardLandingColumns(.5, .5, 1, 0))
+                .filter(Objects::nonNull).count() == 2, "representative cardinal probe reduces nine repeated columns to two");
+        FairWorkBudget<Integer> shared = new FairWorkBudget<>(64, 4, 2);
+        int[] work = new int[200];
+        int[] lastGrant = new int[200];
+        Arrays.fill(lastGrant, -1);
+        for (int tick = 0; tick < 160; tick++) {
+            int totalGrant = 0;
+            for (int actor = 0; actor < work.length; actor++) {
+                if (work[actor] >= 24) continue;
+                int grant = shared.claim(tick, actor, Math.min(4, 24 - work[actor]));
+                check(grant >= 0 && grant <= 4, "shared budget limits each caller batch");
+                check(shared.claim(tick, actor, 4) == 0, "duplicate same-tick claim cannot spend twice");
+                totalGrant += grant;
+                if (grant > 0) {
+                    check(tick - lastGrant[actor] <= 15, "stable iteration order cannot starve late callers");
+                    lastGrant[actor] = tick;
+                }
+                work[actor] += grant;
+                if (work[actor] == 24) shared.cancel(actor);
+            }
+            check(totalGrant <= 64, "200 callers cannot exceed server-wide candidate budget");
+        }
+        for (int count : work) check(count == 24, "all callers eventually complete full search");
+        FairWorkBudget<String> lifecycle = new FairWorkBudget<>(4, 4, 2);
+        check(lifecycle.claim(0, "a", 4) == 4, "unused capacity is available immediately");
+        check(lifecycle.claim(0, "b", 4) == 0, "exhausted caller waits without work");
+        lifecycle.cancel("a");
+        check(lifecycle.claim(0, "a", 4) == 0, "cancel/restart cannot bypass per-tick limit");
+        check(lifecycle.claim(1, "a", 4) == 0, "older waiter is reserved before new arrival");
+        check(lifecycle.claim(1, "b", 4) == 4, "older waiter receives its turn");
+        lifecycle.cancel("b");
+        check(lifecycle.claim(8, "c", 4) == 4, "abandoned requests expire");
+        check(lifecycle.claim(0, "c", 4) == 4, "clock rewind resets reservations");
+        FairWorkBudget<Integer> normal = new FairWorkBudget<>(64, 4, 2);
+        FairWorkBudget<Integer> emergency = new FairWorkBudget<>(32, 4, 2);
+        for (int actor = 0; actor < 200; actor++) normal.claim(0, actor, 4);
+        check(emergency.claim(0, 1, 4) == 4, "offensive congestion cannot consume emergency quota");
+        try { shared.claim(161, 0, -1); throw new AssertionError("negative request accepted"); }
+        catch (IllegalArgumentException expected) { checks++; }
+        TickValueGate<String> notifications = new TickValueGate<>();
+        check(notifications.accept(0, "area-a"), "first tick-zero event accepted");
+        for (int repeat = 0; repeat < 1000; repeat++) {
+            check(!notifications.accept(0, "area-a"), "same-area burst coalesced");
+        }
+        check(notifications.accept(0, "area-b"), "movement in same tick immediately updates awareness");
+        check(notifications.accept(0, "area-a"), "returning to original area is a new event");
+        check(notifications.accept(1, "area-a"), "next tick cannot retain notification gate");
+        check(notifications.accept(0, "area-a"), "time rewind cannot retain notification gate");
+        TickRevisionMemo<Integer> memo = new TickRevisionMemo<>();
+        check(!memo.isCurrent(0, 0), "empty memo cannot masquerade as tick zero");
+        memo.remember(100, 2, -1);
+        check(memo.isCurrent(100, 2) && memo.value() == -1, "negative badge result also cached");
+        check(!memo.isCurrent(101, 2), "new tick invalidates Curios or direct stack changes");
+        check(!memo.isCurrent(100, 3), "inventory mutation invalidates same-tick memo");
+        check(!memo.isCurrent(99, 2), "clock rewind cannot use stale result");
+        memo.remember(100, 3, 4);
+        check(memo.isCurrent(100, 3) && memo.value() == 4, "updated badge wins immediately");
+
+        OptionalApiFixture fixture = new OptionalApiFixture();
+        for (int i = 0; i < 100; i++) {
+            fixture.range = i;
+            check(CachedReflection.call(fixture, "attackRange").equals(i), "cached method still reads live value");
+            check(CachedReflection.field(fixture, "range").equals(i), "cached field still reads live value");
+            check(CachedReflection.call(fixture, "missing") == null, "absent method safely cached");
+            check(CachedReflection.field(fixture, "missing") == null, "absent field safely cached");
+        }
+        check(CachedReflection.methodEntries(OptionalApiFixture.class) == 2
+                && CachedReflection.fieldEntries(OptionalApiFixture.class) == 2,
+                "repeated queries cannot grow the accessor cache");
+        check(CachedReflection.call(fixture, "failing") == null, "optional API invocation failure is isolated");
+        check(CachedReflection.call(null, "anything") == null, "missing optional object safe");
+
+        Set<BlockPos> visited = new HashSet<>();
+        BudgetedSearch<BlockPos> terrain = new BudgetedSearch<>(BlockPos.withinManhattan(BlockPos.ZERO, 10, 3, 10).iterator());
+        while (terrain.hasRemaining()) {
+            AtomicInteger probes = new AtomicInteger();
+            check(terrain.firstMatching(128, pos -> {
+                probes.incrementAndGet();
+                check(Math.abs(pos.getX()) <= 10 && Math.abs(pos.getY()) <= 3 && Math.abs(pos.getZ()) <= 10,
+                        "search stays inside original volume");
+                check(visited.add(pos.immutable()), "each terrain block checked only once");
+                return false;
+            }) == null, "empty volume returns no match");
+            check(probes.get() <= 128, "terrain batch budget enforced");
+        }
+        check(visited.size() == 21 * 7 * 21, "complete original volume covered, including corners");
+        BudgetedSearch<Integer> deferred = new BudgetedSearch<>(IntStream.range(0, 1000).boxed().iterator());
+        AtomicInteger tested = new AtomicInteger();
+        Integer found = null;
+        while (found == null && deferred.hasRemaining()) {
+            found = deferred.firstMatching(4, candidate -> { tested.incrementAndGet(); return candidate == 999; });
+        }
+        check(found != null && found == 999 && tested.get() == 1000, "late candidate is retained across frames");
+        check(!deferred.hasRemaining(), "last candidate consumes iterator");
+        BudgetedSearch<Integer> paused = new BudgetedSearch<>(List.of(1, 2).iterator());
+        check(paused.firstMatching(0, value -> true) == null && paused.hasRemaining(), "zero budget never consumes work");
+        try { paused.firstMatching(-1, value -> true); throw new AssertionError("negative budget accepted"); }
+        catch (IllegalArgumentException expected) { checks++; }
+
+        check(ActivityLoadPolicy.desired(16,16,64,128)==ActivityLoadPolicy.Mode.SPARSE
+                &&ActivityLoadPolicy.desired(64,16,64,128)==ActivityLoadPolicy.Mode.CROWDED
+                &&ActivityLoadPolicy.desired(128,16,64,128)==ActivityLoadPolicy.Mode.BATTLE,"population profile boundaries");
+        check(ActivityLoadPolicy.interval(10,.5,false)==5&&ActivityLoadPolicy.interval(4,3,true)==4,
+                "sparse attention improves while urgent cadence stays intact");
+        check(ActivityLoadPolicy.capacity(8,4,.25)==4&&ActivityLoadPolicy.capacity(32,4,.5)==16,
+                "adaptive throughput always admits its largest job");
+        FairWorkBudget<Integer> adaptive=new FairWorkBudget<>(8,4,40);
+        check(adaptive.claimFull(0,1,4)==4,"first active job consumes capacity");adaptive.cancel(1);
+        adaptive.setTickCapacity(4);
+        check(adaptive.claimFull(0,2,4)==4,"mid-tick downgrade does not rewrite an already begun tick");adaptive.cancel(2);
+        check(adaptive.claimFull(0,3,4)==0,"spent tick cannot gain capacity by profile changes");
+        check(adaptive.claimFull(1,3,4)==4,"older queued work survives next-tick downgrade");adaptive.cancel(3);
+        check(adaptive.claimFull(1,4,4)==0,"new tick respects reduced capacity");
+        adaptive.setTickCapacity(8);
+        check(adaptive.claimFull(1,5,4)==0,"mid-tick upgrade cannot refill consumed grants");
+        check(adaptive.claimFull(2,4,4)==4&&adaptive.claimFull(2,5,4)==4,"next-tick upgrade preserves waiting FIFO jobs");
+        check(RouteSearchPolicy.startStage(48,48,80)==0&&RouteSearchPolicy.startStage(49,48,80)==1
+                &&RouteSearchPolicy.startStage(81,48,80)==2,"skip only geometrically undersized stages");
+        check(RouteSearchPolicy.remoteCost(2048)==2&&RouteSearchPolicy.remoteCost(4096)==4
+                &&RouteSearchPolicy.remoteCost(4097)==5,"remote work reserves rounded-up potential visits");
+        check(!RouteSearchPolicy.retry(199,200,1200,false,true)
+                &&RouteSearchPolicy.retry(200,200,1200,false,true)
+                &&!RouteSearchPolicy.retry(1199,200,1200,false,false)
+                &&RouteSearchPolicy.retry(1200,200,1200,false,false),"failure cache rechecks changed scenes without blind repeated A-star");
+        check(RouteSearchPolicy.retry(1,200,1200,true,false)&&RouteSearchPolicy.retry(-1,200,1200,false,false),"movement and clock rollback release stale failure restrictions");
+        check(RouteSearchPolicy.failureDelay(4,200,1200)==1200,"failed route backoff stays bounded");
+        FairWorkBudget<Integer> remote = new FairWorkBudget<>(8,8,40);
+        Set<Integer> served = new HashSet<>();
+        for(int tick=0;tick<100;tick++) {
+            int units=0;
+            for(int actor=0;actor<100;actor++) {
+                if(served.contains(actor))continue;
+                int cost=actor%2==0?2:4;
+                int grant=remote.claimFull(tick,actor,cost);
+                if(grant==cost){units+=grant;served.add(actor);remote.cancel(actor);}
+            }
+            check(units<=8,"remote heterogeneous jobs cannot exceed server node-equivalent budget");
+        }
+        check(served.size()==100,"remote FIFO eventually serves both medium and long jobs");
+        Object lootRoute = new Object();
+        PickupRouteProgress detour = new PickupRouteProgress();detour.reset(0,0,0,0);
+        for(int tick=1;tick<=180;tick++)
+            check(!detour.stalled(tick,lootRoute,0,10-tick*.02,tick*.02,0,0,false),
+                    "detour away from item remains valid while approaching its next waypoint");
+        PickupRouteProgress budgetWait = new PickupRouteProgress();budgetWait.reset(0,0,0,0);
+        for(int tick=1;tick<=100;tick++)check(!budgetWait.stalled(tick,null,-1,10,0,0,0,true),"path-budget waiting never becomes stalled movement");
+        check(!budgetWait.stalled(159,lootRoute,0,10,0,0,0,false),"waiting time is excluded from the sixty-tick stall window");
+        check(budgetWait.stalled(160,lootRoute,0,10,0,0,0,false),"actual stillness eventually releases the target");
+        PickupRouteProgress synthetic = new PickupRouteProgress();synthetic.reset(0,0,0,0);
+        for(int tick=1;tick<60;tick++)synthetic.stalled(tick,lootRoute,tick,10,0,0,0,false);
+        check(synthetic.stalled(60,lootRoute,60,10,0,0,0,false),"synthetic node advances cannot hide zero physical movement");
+        PickupRouteProgress circles = new PickupRouteProgress();circles.reset(0,0,0,0);
+        for(int tick=1;tick<60;tick++)circles.stalled(tick,lootRoute,0,10,(tick%2)*.3,0,0,false);
+        check(circles.stalled(60,lootRoute,0,10,0,0,0,false),"moving in circles without route progress is still stalled");
+        check(LootRetryPolicy.blocked(199,1,true)&&!LootRetryPolicy.blocked(200,1,true),"local topology change retries only after the initial cooldown");
+        check(LootRetryPolicy.blocked(200,1,false)&&LootRetryPolicy.blocked(1199,1,false)
+                &&!LootRetryPolicy.blocked(1200,1,false),"unchanged unreachable loot is not blindly retried every ten seconds");
+        check(LootRetryPolicy.cooldown(1)==200&&LootRetryPolicy.cooldown(2)==400
+                &&LootRetryPolicy.cooldown(3)==800&&LootRetryPolicy.cooldown(4)==1200,"failure cooldown is bounded exponential backoff");
+        check(!LootRetryPolicy.blocked(-1,4,false),"tick rollback does not create permanent failure memory");
+        PileFirstSelection<Integer,Integer> deferredLoot = new PileFirstSelection<>(List.of(1,2).iterator(),false,
+                ()->List.<Integer>of().iterator(),v->v,v->true);
+        check(deferredLoot.advance(4,v->Double.NaN)==null&&!deferredLoot.isDone(),"unknown sight retains its exact candidate");
+        check(deferredLoot.advance(4,Integer::doubleValue)==2,"deferred item is retried rather than consumed or marked seen");
+        AtomicInteger deferredQueries = new AtomicInteger();
+        PileFirstSelection<Integer,Integer> deferredBroad = new PileFirstSelection<>(List.<Integer>of().iterator(),true,
+                ()->deferredQueries.getAndIncrement()==0?null:List.of(3).iterator(),v->v,v->true);
+        check(deferredBroad.advance(4,Integer::doubleValue)==null&&!deferredBroad.isDone()&&deferredBroad.isPileOnly(),"query budget wait does not falsely finish a pile search");
+        check(deferredBroad.advance(4,Integer::doubleValue)==3,"deferred broad query resumes successfully");
+        Random random = new Random(42);
+        AtomicInteger broadQueries = new AtomicInteger();
+        PileFirstSelection<Integer, Integer> committed = new PileFirstSelection<>(List.of(1, 2).iterator(), true,
+                () -> { broadQueries.incrementAndGet(); return List.of(100).iterator(); }, value -> value, value -> true);
+        Integer pileWinner = null;
+        while (!committed.isDone()) pileWinner = committed.advance(1, Integer::doubleValue);
+        check(pileWinner == 2 && broadQueries.get() == 0, "a viable committed pile wins before any remote pile query");
+        PileFirstSelection<Integer, Integer> corners = new PileFirstSelection<>(List.of(2).iterator(), true,
+                () -> List.of(2).iterator(), value -> value, value -> false);
+        Integer cornerWinner = null;
+        while (!corners.isDone()) cornerWinner = corners.advance(1, Integer::doubleValue);
+        check(cornerWinner == 2, "outside-sphere box corner remains eligible in broad stage");
+        PileFirstSelection<Integer, Integer> heap = new PileFirstSelection<>(IntStream.range(0, 32).boxed().iterator(), true,
+                () -> IntStream.range(0, 4096).boxed().iterator(), value -> value, value -> true);
+        Set<Integer> heapVisited = new HashSet<>();
+        Integer heapWinner = null;
+        while (!heap.isDone()) {
+            AtomicInteger scores = new AtomicInteger();
+            heapWinner = heap.advance(64, value -> {
+                scores.incrementAndGet();
+                if (value != 4095) check(heapVisited.add(value), "worthless candidate evaluated only once in one complete selection");
+                return value == 4095 ? 100.0D : Double.NEGATIVE_INFINITY;
+            });
+            check(scores.get() <= 65, "loot batch has at most 64 new scores plus one provisional revalidation");
+        }
+        check(heapWinner == 4095 && heapVisited.size() == 4095,
+                "large worthless heap cannot hide a useful late candidate or thrash the current selection");
+        PileFirstSelection<Integer, Integer> pausedPile = new PileFirstSelection<>(List.of(1).iterator(), false,
+                () -> { throw new AssertionError("unexpected broad query"); }, value -> value, value -> true);
+        check(pausedPile.advance(0, value -> { throw new AssertionError("zero budget evaluated item"); }) == null
+                && !pausedPile.isDone(), "paused selection preserves all candidates");
+        try { pausedPile.advance(-1, Integer::doubleValue); throw new AssertionError("negative loot budget accepted"); }
+        catch (IllegalArgumentException expected) { checks++; }
+        for (int trial = 0; trial < 200; trial++) {
+            List<Integer> candidates = new ArrayList<>();
+            for (int i = 0; i < 32; i++) candidates.add(random.nextInt(10000));
+            IncrementalBestSearch<Integer, Integer> search = new IncrementalBestSearch<>(candidates.iterator());
+            Integer selected = null;
+            int total = 0;
+            while (search.hasRemaining()) {
+                AtomicInteger probes = new AtomicInteger();
+                selected = search.advance(4, candidate -> { probes.incrementAndGet(); return candidate; }, Integer::doubleValue);
+                check(probes.get() <= 4, "best-route path probes bounded per frame");
+                total += probes.get();
+                check(selected != null, "partial search exposes a usable provisional route");
+            }
+            check(total == candidates.size(), "best-route search does not truncate late candidates");
+            check(Objects.equals(selected, candidates.stream().max(Integer::compareTo).orElse(null)),
+                    "incremental route selection matches exhaustive scoring");
+        }
+        IncrementalBestSearch<Integer, Integer> changing = new IncrementalBestSearch<>(List.of(9, 2).iterator());
+        check(changing.advance(1, value -> value, Integer::doubleValue) == 9, "initial provisional best");
+        check(changing.advance(1, value -> value, value -> value == 9 ? Double.NEGATIVE_INFINITY : value) == 2,
+                "invalid provisional route is removed when threat or movement changes");
+        IncrementalBestSearch<Integer, Integer> emptyResult = new IncrementalBestSearch<>(List.of(1, 2).iterator());
+        check(emptyResult.advance(0, value -> value, Integer::doubleValue) == null && emptyResult.hasRemaining(),
+                "zero best-search budget consumes nothing");
+        check(emptyResult.advance(2, value -> null, Integer::doubleValue) == null && !emptyResult.hasRemaining(),
+                "unreachable candidates exhaust without a false route");
+        try { emptyResult.advance(-1, value -> value, Integer::doubleValue); throw new AssertionError("negative budget accepted"); }
+        catch (IllegalArgumentException expected) { checks++; }
+        for (int trial = 0; trial < 200; trial++) {
+            List<Integer> distances = new ArrayList<>();
+            for (int i = 0; i < 64; i++) distances.add(random.nextInt(1000));
+            Set<Integer> reachable = new HashSet<>();
+            for (int value : distances) if (random.nextBoolean()) reachable.add(value);
+            Integer expected = distances.stream().filter(reachable::contains).min(Integer::compareTo).orElse(null);
+            distances.sort(Integer::compareTo);
+            BudgetedSearch<Integer> paths = new BudgetedSearch<>(distances.iterator());
+            Integer actual = null;
+            while (paths.hasRemaining() && actual == null) {
+                AtomicInteger pathProbes = new AtomicInteger();
+                actual = paths.firstMatching(4, candidate -> { pathProbes.incrementAndGet(); return reachable.contains(candidate); });
+                check(pathProbes.get() <= 4, "lava route batch budget enforced");
+            }
+            check(Objects.equals(expected, actual), "ranked incremental route agrees with exhaustive nearest result");
+        }
+        System.out.println("PerformancePoliciesTest: " + checks + " checks passed");
+        System.out.println("Policy checks: search batches capped at 128 probes and 4 candidates; not a live-game benchmark.");
+    }
+}

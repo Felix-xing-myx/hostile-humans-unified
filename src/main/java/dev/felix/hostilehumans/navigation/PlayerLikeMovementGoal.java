@@ -1,0 +1,271 @@
+package dev.felix.hostilehumans.navigation;
+
+import dev.felix.hostilehumans.entity.Human;
+
+import dev.felix.hostilehumans.behavior.combat.CombatAiConfig;
+import dev.felix.hostilehumans.behavior.combat.gun.GunAttackMovementState;
+import dev.felix.hostilehumans.behavior.combat.gun.GunSupport;
+import dev.felix.hostilehumans.behavior.combat.melee.MeleeActionControl;
+import dev.felix.hostilehumans.behavior.combat.melee.MeleeCombatRange;
+import dev.felix.hostilehumans.behavior.combat.melee.MeleeSpacing;
+import dev.felix.hostilehumans.behavior.combat.melee.PursuitJumpAttack;
+import dev.felix.hostilehumans.behavior.combat.recovery.RecoverySupplies;
+import dev.felix.hostilehumans.compat.spartan.SpartanEquipmentCompat;
+import dev.felix.hostilehumans.soldier.SoldierOrder;
+
+import dev.felix.hostilehumans.entity.HumanUtil;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.phys.Vec3;
+
+/**
+ * A flag-free terrain companion which can run beside the weapon goals. It may
+ * open a blocked passage, sprint along an existing melee pursuit path, or
+ * hop during distant pursuit and retreat. Near-target jump attacks belong to
+ * the melee goal. It does not create paths or hop while a gunner is aiming/firing.
+ */
+public final class PlayerLikeMovementGoal extends Goal {
+    private final Human human;
+    private dev.felix.hostilehumans.behavior.ActionCoordinator.Token modifierToken;
+    private final CombatAiConfig config;
+    private int nextTerrainJumpTick;
+    private int nextCombatJumpTick;
+
+    public PlayerLikeMovementGoal(Human human) {
+        this.human = human;
+        this.config = CombatAiConfig.forHuman(human);
+    }
+
+    @Override
+    public boolean canUse() {
+        return config.enabled()
+                && movementThreat() != null
+                && (!SoldierOrder.isHoldingPosition(human) || human.isFleeing);
+    }
+
+    @Override
+    public boolean canContinueToUse() {
+        return canUse();
+    }
+
+    @Override
+    public boolean requiresUpdateEveryTick() {
+        return true;
+    }
+
+    @Override
+    public void start() {
+        scheduleCombatJump();
+    }
+
+    @Override
+    public void stop() {
+        boolean owned = HumanMovementModifiers.clear(human, modifierToken, "ordinary movement helper stopped");
+        modifierToken = null;
+        if (!owned) return;
+        if (human.isFleeing) {
+            PursuitJumpAttack.cancel(human, "retreat movement");
+            MovementSpeedController.retreat(human, true);
+        } else if (human.getTarget() == null) {
+            MovementSpeedController.normal(human);
+        } else {
+            MovementSpeedController.combat(human, false);
+        }
+    }
+
+    @Override
+    public void tick() {
+        modifierToken = HumanMovementModifiers.execute(human, this::tickMovementModifier);
+    }
+    private void tickMovementModifier() {
+        MeleeActionControl.tick(human);
+        LivingEntity target = movementThreat();
+        if (target == null) {
+            return;
+        }
+        // AdaptiveCombatGoal owns the defensive stance. This flag-free helper
+        // must not restart navigation or a weapon switch while the shield is
+        // raised. A melee soldier may still sprint along its existing attack
+        // path so a block does not turn into a stationary hit-reaction loop.
+        if (!human.isFleeing && human.isUsingItem() && SpartanEquipmentCompat.isShield(human.getUseItem())) {
+            MovementSpeedController.combat(human, shouldSprintToMeleeTarget(target));
+            // Only a real rising waypoint permits a hop while guarding; never
+            // use the random combat-jump loop to escape a stationary block.
+            if (human.onGround() && !human.isInWater() && !human.isInLava()
+                    && human.tickCount >= nextTerrainJumpTick && pathSuggestsStepUp()) {
+                human.getJumpControl().jump();
+                nextTerrainJumpTick = human.tickCount + 7;
+            }
+            return;
+        }
+        boolean travelling = human.distanceToSqr(target) > 9.0D
+                || human.isFleeing
+                || human.horizontalCollision;
+        boolean retreatBackpedaling = human.getPersistentData().getBoolean("hostile_humans_unified:retreat_backpedaling");
+        if (human.isFleeing) {
+            PursuitJumpAttack.cancel(human, "retreat movement");
+            MovementSpeedController.retreat(human, travelling && !retreatBackpedaling);
+        } else {
+            // Sprint on every genuine melee approach path, including the last
+            // few blocks of a close fight. The old six-block distance gate
+            // disabled sprint exactly when a target was pressing the Human.
+            boolean pursuingTarget = !human.isUsingItem() && shouldSprintToMeleeTarget(target);
+            MovementSpeedController.combat(human, pursuingTarget);
+        }
+        if (retreatBackpedaling) {
+            return;
+        }
+        if (!travelling
+                || !human.onGround()
+                || human.isInWater()
+                || human.isInLava()
+                || human.isPassenger()
+                || PursuitJumpAttack.active(human)) {
+            return;
+        }
+
+        boolean gunAttackInProgress = GunAttackMovementState.isAttackActive(human);
+        boolean movingWithCombatIntent = isPursuing(target) || isRetreatingFrom(target);
+        if (!gunAttackInProgress && !human.isUsingItem()
+                && movingWithCombatIntent && human.tickCount >= nextTerrainJumpTick) {
+            nextTerrainJumpTick = human.tickCount + 3;
+            if (pathSuggestsStepUp()) {
+                human.getJumpControl().jump();
+                nextTerrainJumpTick = human.tickCount + 7;
+                scheduleCombatJump();
+                return;
+            }
+        }
+        if (gunAttackInProgress || human.isUsingItem()
+                || human.tickCount < nextCombatJumpTick) {
+            return;
+        }
+        // Movement hops remain available far away, independently of attack readiness.
+        // Inside the jump-attack approach band, only the melee goal schedules a combat hop.
+        boolean movementHop = isRetreatingFrom(target)
+                || (!RecoverySupplies.isEatingFood(human) && isDistantPursuit(target));
+        if (movementHop && human.isSprinting()
+                && !human.hhu$hasPendingMeleeAttack()
+                && human.getRandom().nextDouble() < config.combatJumpChance()
+                && NavigationSupport.hasHopRunway(human)) {
+            human.getJumpControl().jump();
+            scheduleCombatJump();
+        } else {
+            // Keep checking shortly after a turn or a temporary stop, rather
+            // than waiting out a full hop interval after movement resumes.
+            nextCombatJumpTick = human.tickCount + 4 + human.getRandom().nextInt(5);
+        }
+    }
+
+    private boolean isDistantPursuit(LivingEntity target) {
+        return isPursuing(target)
+                && !human.hhu$hasPendingMeleeAttack()
+                && !PursuitJumpAttack.active(human)
+                && human.distanceTo(target) > Math.max(3.0D, MeleeCombatRange.reach(human, target) + 1.25D);
+    }
+
+    private boolean pathSuggestsStepUp() {
+        Path path = human.getNavigation().getPath();
+        if (path == null || path.isDone()) {
+            return false;
+        }
+        BlockPos nextNode = path.getNextNodePos();
+        Vec3 next = Vec3.atCenterOf(nextNode);
+        Vec3 pathDirection = NavigationSupport.horizontalDirection(human.position(), next);
+        int feetY = Mth.floor(human.getY() + 0.1D);
+        double horizontalDistanceSqr = human.position().multiply(1.0D, 0.0D, 1.0D)
+                .distanceToSqr(next.multiply(1.0D, 0.0D, 1.0D));
+        boolean risingOneBlock = nextNode.getY() > feetY
+                && nextNode.getY() <= feetY + 1
+                && horizontalDistanceSqr <= 4.0D;
+        return risingOneBlock
+                || NavigationSupport.hasOneBlockObstacleAhead(human, pathDirection);
+    }
+
+    private boolean pathHeadsToward(LivingEntity target) {
+        Path path = human.getNavigation().getPath();
+        if (path == null || path.isDone()) {
+            return false;
+        }
+        Vec3 pathDirection = NavigationSupport.horizontalDirection(
+                human.position(), Vec3.atCenterOf(path.getNextNodePos())
+        );
+        Vec3 targetDirection = NavigationSupport.horizontalDirection(human.position(), target.position());
+        return pathDirection.lengthSqr() > 0.01D
+                && targetDirection.lengthSqr() > 0.01D
+                && pathDirection.dot(targetDirection) >= 0.60D;
+    }
+
+    private boolean shouldSprintToMeleeTarget(LivingEntity target) {
+        if (human.isFleeing
+                || SoldierOrder.isHoldingPosition(human)
+                || GunSupport.get().isGun(human.getMainHandItem())
+                || HumanUtil.isRangedWeapon(human.getMainHandItem())
+                || HumanUtil.isTrident(human.getMainHandItem())
+                || MeleeCombatRange.canStrike(human, target)&&!MeleeSpacing.needsChaseBuffer(human,target)) {
+            return false;
+        }
+        return pathHeadsToward(target);
+    }
+
+    private boolean movingToward(LivingEntity target) {
+        Vec3 movement = human.getDeltaMovement().multiply(1.0D, 0.0D, 1.0D);
+        Vec3 targetDirection = NavigationSupport.horizontalDirection(human.position(), target.position());
+        return movement.lengthSqr() > 0.0025D
+                && targetDirection.lengthSqr() > 0.01D
+                && movement.normalize().dot(targetDirection) >= 0.55D;
+    }
+
+    private boolean pathHeadsAwayFrom(LivingEntity target) {
+        Path path = human.getNavigation().getPath();
+        if (path == null || path.isDone()) {
+            return false;
+        }
+        Vec3 pathDirection = NavigationSupport.horizontalDirection(
+                human.position(), Vec3.atCenterOf(path.getNextNodePos())
+        );
+        Vec3 awayDirection = NavigationSupport.horizontalDirection(target.position(), human.position());
+        return pathDirection.lengthSqr() > 0.01D
+                && awayDirection.lengthSqr() > 0.01D
+                && pathDirection.dot(awayDirection) >= 0.80D;
+    }
+
+    private boolean movingAwayFrom(LivingEntity target) {
+        Vec3 movement = human.getDeltaMovement().multiply(1.0D, 0.0D, 1.0D);
+        Vec3 awayDirection = NavigationSupport.horizontalDirection(target.position(), human.position());
+        return movement.lengthSqr() > 0.0049D
+                && awayDirection.lengthSqr() > 0.01D
+                && movement.normalize().dot(awayDirection) >= 0.75D;
+    }
+
+    private boolean isPursuing(LivingEntity target) {
+        return !human.isFleeing
+                && pathHeadsToward(target)
+                && movingToward(target);
+    }
+
+    private boolean isRetreatingFrom(LivingEntity threat) {
+        return human.isFleeing
+                && pathHeadsAwayFrom(threat)
+                && movingAwayFrom(threat);
+    }
+
+    private LivingEntity movementThreat() {
+        if (human.isFleeing && human.toAvoid != null && human.toAvoid.isAlive()) {
+            return human.toAvoid;
+        }
+        LivingEntity target = human.getTarget();
+        return target != null && target.isAlive() ? target : null;
+    }
+
+    private void scheduleCombatJump() {
+        int minimum = config.combatJumpIntervalMin();
+        int maximum = Math.max(minimum, config.combatJumpIntervalMax());
+        nextCombatJumpTick = human.tickCount
+                + minimum + human.getRandom().nextInt(maximum - minimum + 1);
+    }
+
+}

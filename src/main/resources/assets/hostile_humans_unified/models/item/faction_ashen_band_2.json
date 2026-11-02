@@ -1,6 +1,14 @@
 {
-  "parent": "minecraft:item/generated",
+  "loader": "forge:separate_transforms",
   "textures": {
-    "layer0": "hostile_humans_unified:entity/faction_band/grade_2"
+    "particle": "hostile_humans_unified:item/faction_identity/ashen/band_2_material_cloth"
+  },
+  "base": {
+    "parent": "hostile_humans_unified:item/faction_identity/ashen/band_2_mesh"
+  },
+  "perspectives": {
+    "gui": {
+      "parent": "hostile_humans_unified:item/faction_identity/ashen/band_2_icon"
+    }
   }
 }

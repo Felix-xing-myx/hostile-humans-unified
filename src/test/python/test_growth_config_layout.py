@@ -1,10 +1,10 @@
 """Read-only storage and configuration ownership contracts, not runtime validation."""
 import json
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-JAVA = ROOT / 'src/main/java/club/someoneice/humangunner'
+JAVA = ROOT / 'src/main/java/dev/felix/hostilehumans'
 
 
 class GrowthConfigLayoutTest(unittest.TestCase):
@@ -16,7 +16,7 @@ class GrowthConfigLayoutTest(unittest.TestCase):
             profile = data['tiers'][rank]['growth_profile']
             for field in ('start_day', 'duration_days', 'progress_nodes', 'early_baseline_gear_chance',
                           'early_gun_chance_multiplier', 'early_enchantment_keep_chance',
-                          'early_trident_keep_chance', 'early_totem_keep_chance'):
+                          'early_trident_keep_chance'):
                 self.assertIn(field, profile)
         source = (JAVA / 'GrowthConfig.java').read_text(encoding='utf-8')
         self.assertIn('group(UnifiedConfig.object(tiers, rank), "growth_profile"', source)

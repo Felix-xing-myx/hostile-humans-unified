@@ -1,7 +1,7 @@
 """Defaults and installed-backend damage contracts; no compilation or game launch."""
 import json
 import os
-from pathlib import Path
+from source_paths import SourcePath as Path
 import subprocess
 import unittest
 

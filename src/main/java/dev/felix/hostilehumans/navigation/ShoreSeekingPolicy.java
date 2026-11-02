@@ -1,0 +1,169 @@
+package dev.felix.hostilehumans.navigation;
+
+import java.util.Map;
+import java.util.WeakHashMap;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+
+/** Pure decisions shared by water-exit assistance and combat movement. */
+public final class ShoreSeekingPolicy {
+    // Combat, water-loot pickup, and idle shore seeking must have distinct
+    // MOVE priorities; a same-priority goal cannot reliably preempt another.
+    public static final int COMBAT_GOAL_PRIORITY = -9;
+    public static final int WATER_LOOT_GOAL_PRIORITY = -8;
+    public static final int GOAL_PRIORITY = -7;
+    /** Hard budget for synchronous shoreline candidate inspection per search. */
+    public static final int MAX_SHORE_BLOCK_PROBES_PER_SEARCH = 64;
+    /** Two destinations per search; navigation may test ground and water for each. */
+    public static final int MAX_SHORE_PATH_PROBES_PER_SEARCH = 2;
+    /** Pathfinding runs on the server thread; stagger Humans as well as probes. */
+    public static final int MAX_SHORE_PATH_DISTANCE = 40;
+    private static final Map<Object, dev.felix.hostilehumans.performance.FairWorkBudget<java.util.UUID>> SHORE_BUDGETS = new WeakHashMap<>();
+    private static final float SUBMERGED_WATER_PATH_MALUS = 8.0F;
+    private static final float ACTIVE_SHORE_WATER_PATH_MALUS = 16.0F;
+    private static final float COMBAT_WATER_PATH_MALUS = 0.0F;
+    private static final int MAX_SAFE_SHORE_DETOUR_NODES = 6;
+    /** Feet remain about half a block below the surface while idling afloat. */
+    public static final double SURFACE_STANCE_DEPTH = 0.55D;
+
+    private ShoreSeekingPolicy() {
+    }
+
+    /** Unit horizontal direction; stable unique columns, followed by null slots. */
+    public static BlockPos[] forwardLandingColumns(double x, double z, double directionX, double directionZ) {
+        BlockPos[] columns = new BlockPos[9];
+        int size = 0;
+        for (int forwardIndex = 0; forwardIndex < 3; forwardIndex++) {
+            double forward = 0.4D + forwardIndex * 0.35D;
+            for (int sideIndex = -1; sideIndex <= 1; sideIndex++) {
+                double side = sideIndex * 0.3D;
+                int columnX = Mth.floor(x + directionX * forward - directionZ * side);
+                int columnZ = Mth.floor(z + directionZ * forward + directionX * side);
+                boolean duplicate = false;
+                for (int i = 0; i < size; i++) {
+                    if (columns[i].getX() == columnX && columns[i].getZ() == columnZ) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (!duplicate) columns[size++] = new BlockPos(columnX, 0, columnZ);
+            }
+        }
+        return columns;
+    }
+
+    public static boolean shouldAttemptShore(boolean serverSide, boolean effectiveAi,
+            boolean inWater, boolean inLava, boolean hasCombatTarget,
+            boolean fleeing, boolean pursuingWaterLoot) {
+        // Shore assistance is an idle fallback, never a competing combat goal.
+        return serverSide && effectiveAi && inWater && !inLava
+                && !hasCombatTarget && !fleeing && !pursuingWaterLoot;
+    }
+
+    public static boolean shouldSearchForShorePath(int currentTick, int nextSearchTick) {
+        return currentTick >= nextSearchTick;
+    }
+
+    public static boolean reserveShorePathSearch(Object server, int tick) {
+        return reserveShorePathSearch(server, tick, new java.util.UUID(0, 0));
+    }
+    public static boolean reserveShorePathSearch(Object server, int tick, java.util.UUID human) {
+        return SHORE_BUDGETS.computeIfAbsent(server,
+                ignored -> new dev.felix.hostilehumans.performance.FairWorkBudget<>(1, 1, 3))
+                .claim(tick, human, 1) == 1;
+    }
+    public static void cancelShorePathSearch(Object server, java.util.UUID human) {
+        var budget = SHORE_BUDGETS.get(server);
+        if (budget != null) budget.cancel(human);
+    }
+
+    /** The ranged goal yields movement to shore navigation but keeps aiming and attacking. */
+    public static boolean isShoreTransitionActive(boolean seekingShore, boolean transitionPending) {
+        return seekingShore || transitionPending;
+    }
+
+    /** Combat approach goals must not replace the active route to dry ground. */
+    public static boolean shouldMoveTowardCombatTarget(boolean seekingShore) {
+        return !seekingShore;
+    }
+
+    /** Keep a direct bank-steering fallback when navigation has no usable path. */
+    public static boolean shouldSteerTowardFallback(boolean seekingShore,
+            boolean hasDryDestination, boolean navigationDone) {
+        return seekingShore && hasDryDestination && navigationDone;
+    }
+
+    /** Surface followers keep the floating walking route across both banks. */
+    public static boolean shouldUseWaterNavigator(boolean effectiveAi, boolean inWater,
+            boolean surfaceFollowing, boolean seekingShore, boolean shorePathUsesWater) {
+        return effectiveAi && inWater && !surfaceFollowing && (!seekingShore || shorePathUsesWater);
+    }
+
+    public static boolean shouldRiseTowardSurface(boolean eyesInWater,
+            double feetToRealSurface) {
+        return eyesInWater || feetToRealSurface > SURFACE_STANCE_DEPTH;
+    }
+
+    public static double surfaceAscentLimit(double feetToRealSurface, double ordinaryLimit) {
+        return Math.min(ordinaryLimit,
+                Math.max(0.0D, (feetToRealSurface - SURFACE_STANCE_DEPTH) * 0.5D));
+    }
+
+    public static boolean isNearRealSurfaceForShorePop(double feetToRealSurface) {
+        return feetToRealSurface >= -0.1D && feetToRealSurface <= 1.25D;
+    }
+
+    /** One dry block above the water block, including partially filled flowing water. */
+    public static double oneBlockShoreLandingLimit(double actualSurfaceY) {
+        return Math.ceil(actualSurfaceY) + 1.0D;
+    }
+
+    public static boolean canExitToDryHeight(double actualSurfaceY, double landingFeetY) {
+        return Double.isFinite(actualSurfaceY) && Double.isFinite(landingFeetY)
+                && landingFeetY <= oneBlockShoreLandingLimit(actualSurfaceY);
+    }
+
+    public static boolean isSurfaceLootReachable(double surfaceY, double itemY) {
+        return surfaceY - itemY <= 1.5D;
+    }
+
+    public static boolean shouldContinueSeekingShore(boolean inWater, boolean inLava,
+            boolean hasCombatTarget, boolean fleeing, boolean pursuingWaterLoot) {
+        // Yield immediately if combat or retreat takes ownership of movement.
+        return inWater && !inLava && !hasCombatTarget && !fleeing && !pursuingWaterLoot;
+    }
+
+    public static float waterPathMalus(boolean inWater, boolean seekingShore,
+            boolean hasCombatTarget, boolean pursuingWaterLoot) {
+        // Combat paths must be able to choose a direct river crossing instead
+        // of being routed around the entire body of water. Idle paths still
+        // prefer land, and shore assistance strongly avoids looping in water.
+        if (hasCombatTarget || pursuingWaterLoot) {
+            return COMBAT_WATER_PATH_MALUS;
+        }
+        if (seekingShore) {
+            return ACTIVE_SHORE_WATER_PATH_MALUS;
+        }
+        if (!inWater) {
+            return -1.0F;
+        }
+        return SUBMERGED_WATER_PATH_MALUS;
+    }
+
+    public static boolean shouldPreferSaferShorePath(int shortestPathNodes,
+            int saferPathNodes, boolean increasesThreatDistance) {
+        return increasesThreatDistance
+                && saferPathNodes <= shortestPathNodes + MAX_SAFE_SHORE_DETOUR_NODES;
+    }
+
+    public static boolean shouldClearFleeingAfterCombatStop(boolean ownsFleeFlag) {
+        // Shore movement has its own state. It does not own the combat escape
+        // flag; leaving it set after its owner stops disables normal combat.
+        return ownsFleeFlag;
+    }
+
+    public static boolean shouldReturnToOwnerAfterCombatStop(boolean retreatEnded,
+            boolean shoreTransitionPending) {
+        return retreatEnded && !shoreTransitionPending;
+    }
+}

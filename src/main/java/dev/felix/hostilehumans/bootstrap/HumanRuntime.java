@@ -1,0 +1,1038 @@
+package dev.felix.hostilehumans.bootstrap;
+
+import dev.felix.hostilehumans.behavior.StaticCombatGoalHost;
+import dev.felix.hostilehumans.behavior.combat.AdaptiveCombatGoal;
+import dev.felix.hostilehumans.behavior.combat.defense.PressureReactionGoal;
+import dev.felix.hostilehumans.behavior.combat.defense.ProjectileReactionGoal;
+import dev.felix.hostilehumans.behavior.combat.recovery.CombatConsumableGoal;
+import dev.felix.hostilehumans.behavior.combat.recovery.CombatRecoveryGoal;
+import dev.felix.hostilehumans.behavior.combat.recovery.IdleRecoveryGoal;
+import dev.felix.hostilehumans.entity.FactionBossHuman;
+import dev.felix.hostilehumans.inventory.ValuableItemPickupGoal;
+import dev.felix.hostilehumans.navigation.LavaEscapeGoal;
+import dev.felix.hostilehumans.navigation.PlayerLikeMovementGoal;
+import dev.felix.hostilehumans.soldier.BodyguardMovementGoal;
+import dev.felix.hostilehumans.soldier.SoldierOrderGoal;
+import dev.felix.hostilehumans.soldier.TemporarySupportFollowGoal;
+import dev.felix.hostilehumans.entity.Human;
+import dev.felix.hostilehumans.entity.HumanData;
+
+import dev.felix.hostilehumans.behavior.HumanBehaviorControl;
+import dev.felix.hostilehumans.behavior.combat.CombatAiConfig;
+import dev.felix.hostilehumans.behavior.combat.HostileHumanTargeting;
+import dev.felix.hostilehumans.behavior.combat.HumanTargeting;
+import dev.felix.hostilehumans.behavior.combat.PeacefulHumanPolicy;
+import dev.felix.hostilehumans.behavior.combat.defense.GunMeleeProtection;
+import dev.felix.hostilehumans.behavior.combat.defense.GunnerShieldProtection;
+import dev.felix.hostilehumans.behavior.combat.defense.ShieldDefenseController;
+import dev.felix.hostilehumans.behavior.combat.defense.ShieldDurability;
+import dev.felix.hostilehumans.behavior.combat.gun.FirearmCompatConfig;
+import dev.felix.hostilehumans.behavior.combat.gun.GunCustody;
+import dev.felix.hostilehumans.behavior.combat.gun.GunSupport;
+import dev.felix.hostilehumans.behavior.combat.melee.NpcDualWield;
+import dev.felix.hostilehumans.behavior.combat.ranged.HumanArrowCombat;
+import dev.felix.hostilehumans.behavior.combat.ranged.RangedAccuracy;
+import dev.felix.hostilehumans.behavior.combat.ranged.RangedWeaponCustody;
+import dev.felix.hostilehumans.behavior.combat.recovery.RecoverySupplies;
+import dev.felix.hostilehumans.behavior.combat.throwable.TacticalThrowables;
+import dev.felix.hostilehumans.compat.firstaid.FirstAidCompat;
+import dev.felix.hostilehumans.compat.maid.TouhouMaidCompat;
+import dev.felix.hostilehumans.compat.scguns.ScgunsMedical;
+import dev.felix.hostilehumans.compat.spartan.SpartanEquipmentCompat;
+import dev.felix.hostilehumans.compat.spartan.SpartanRangedCompat;
+import dev.felix.hostilehumans.config.UnifiedConfig;
+import dev.felix.hostilehumans.damage.HumanOwnerProtection;
+import dev.felix.hostilehumans.damage.HumanProjectileRelations;
+import dev.felix.hostilehumans.equipment.EquipmentBreakSounds;
+import dev.felix.hostilehumans.equipment.HumanSpawnEquipment;
+import dev.felix.hostilehumans.equipment.NaturalHumanSpawnRules;
+import dev.felix.hostilehumans.faction.FactionAuthoringCommands;
+import dev.felix.hostilehumans.faction.FactionContent;
+import dev.felix.hostilehumans.faction.FactionDefinitions;
+import dev.felix.hostilehumans.faction.HumanFactions;
+import dev.felix.hostilehumans.faction.HumanRelations;
+import dev.felix.hostilehumans.faction.StandingCommands;
+import dev.felix.hostilehumans.faction.StandingEffects;
+import dev.felix.hostilehumans.faction.ability.FactionAbilities;
+import dev.felix.hostilehumans.faction.visual.FactionVisualNetwork;
+import dev.felix.hostilehumans.inventory.CombatResupply;
+import dev.felix.hostilehumans.inventory.HumanEquipmentDrops;
+import dev.felix.hostilehumans.inventory.HumanInventoryMenu;
+import dev.felix.hostilehumans.inventory.HumanInventorySession;
+import dev.felix.hostilehumans.inventory.HumanLootManager;
+import dev.felix.hostilehumans.inventory.HumanManagedLoadout;
+import dev.felix.hostilehumans.inventory.InventoryTotemProtection;
+import dev.felix.hostilehumans.monitor.HumanMonitorControl;
+import dev.felix.hostilehumans.monitor.HumanMonitorNetwork;
+import dev.felix.hostilehumans.navigation.MovementSpeedController;
+import dev.felix.hostilehumans.navigation.ShoreSeekingPolicy;
+import dev.felix.hostilehumans.navigation.SoldierFollowNavigation;
+import dev.felix.hostilehumans.navigation.SoldierStuckRecovery;
+import dev.felix.hostilehumans.observer.AttributeDetailNetwork;
+import dev.felix.hostilehumans.observer.NavigationDebugNetwork;
+import dev.felix.hostilehumans.observer.NavigationDebugService;
+import dev.felix.hostilehumans.perception.HumanAwareness;
+import dev.felix.hostilehumans.perception.HumanPerception;
+import dev.felix.hostilehumans.performance.AdaptiveActivityBudget;
+import dev.felix.hostilehumans.progression.GrowthCombat;
+import dev.felix.hostilehumans.progression.GrowthHealth;
+import dev.felix.hostilehumans.progression.HumanDamageScaling;
+import dev.felix.hostilehumans.progression.HumanGrowth;
+import dev.felix.hostilehumans.progression.PlayerProgressionData;
+import dev.felix.hostilehumans.progression.ProgressionCommands;
+import dev.felix.hostilehumans.progression.SpecialtyAttributes;
+import dev.felix.hostilehumans.progression.TierAttributes;
+import dev.felix.hostilehumans.soldier.HiredHumanHealthWarning;
+import dev.felix.hostilehumans.soldier.HiredHumanRecall;
+import dev.felix.hostilehumans.soldier.HumanCommandNetwork;
+import dev.felix.hostilehumans.soldier.NaturalState;
+import dev.felix.hostilehumans.soldier.NaturalStateCommand;
+import dev.felix.hostilehumans.soldier.OfflineSoldierDeathReports;
+import dev.felix.hostilehumans.soldier.OwnerOfflinePolicy;
+import dev.felix.hostilehumans.soldier.RecruitmentConfigNetwork;
+import dev.felix.hostilehumans.soldier.RecruitmentLedger;
+import dev.felix.hostilehumans.soldier.RecruitmentPolicy;
+import dev.felix.hostilehumans.soldier.SoldierCombatMode;
+import dev.felix.hostilehumans.soldier.SoldierDialogue;
+import dev.felix.hostilehumans.soldier.SoldierMessageDispatcher;
+import dev.felix.hostilehumans.soldier.SoldierOrder;
+import dev.felix.hostilehumans.soldier.SoldierRecallProtection;
+import dev.felix.hostilehumans.soldier.SoldierRosterAudit;
+import dev.felix.hostilehumans.soldier.SoldierRosterNetwork;
+import dev.felix.hostilehumans.soldier.SquadCommandNetwork;
+import dev.felix.hostilehumans.soldier.SquadData;
+
+
+import dev.felix.hostilehumans.bootstrap.ModEntityType;
+import com.mojang.logging.LogUtils;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.Pillager;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.projectile.ThrownTrident;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.world.item.TridentItem;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
+import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
+import net.minecraftforge.event.entity.SpawnPlacementRegisterEvent;
+import net.minecraftforge.event.entity.living.LivingDropsEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingChangeTargetEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
+import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.ModList;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import org.slf4j.Logger;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Collections;
+import java.util.Set;
+import java.util.UUID;
+import java.util.WeakHashMap;
+import java.util.Map;
+
+public final class HumanRuntime {
+    public static final String MOD_ID = dev.felix.hostilehumans.bootstrap.HostileHumansUnified.MOD_ID;
+    public static final Logger LOGGER = LogUtils.getLogger();
+    private static final String INCOMING_GUNFIRE_UNTIL = MOD_ID + ":incoming_gunfire_until";
+    private static final AtomicBoolean LOGGED_FIRST_ADAPTIVE_ARROW = new AtomicBoolean();
+    private static final Set<Human> COMBAT_AI_CONFIGURED = Collections.newSetFromMap(new WeakHashMap<>());
+    private static final Set<Human> SOLDIER_ORDERS_CONFIGURED = Collections.newSetFromMap(new WeakHashMap<>());
+    private static final Map<Human, Boolean> FRESH_HUMANS = new WeakHashMap<>();
+    private static final Set<Human> INITIALIZED_HUMANS = Collections.newSetFromMap(new WeakHashMap<>());
+    private static final double ARROW_AIR_DRAG = 0.99D;
+    // Use 0.06 gravity compensation when aiming; the projectiles' physical gravity remains 0.05.
+    private static final double ARROW_AIM_GRAVITY = 0.06D;
+    private static final double BALLISTIC_SEARCH_STEP = 0.25D;
+    private static final double BALLISTIC_MAX_TICKS = 60.0D;
+    public static final String ADAPTIVE_BALLISTICS_APPLIED =
+            MOD_ID + ":adaptive_ballistics_applied";
+    public static final String NPC_CROSSBOW_PROJECTILE =
+            MOD_ID + ":npc_crossbow_projectile";
+    private static final UUID COMBAT_MOVEMENT_MODIFIER_ID =
+            UUID.fromString("82624020-1000-4000-8000-000000000301");
+    private static final Set<String> PILLAGERS_GUN_FIREARMS = Set.of(
+            "pistol", "shotgun", "assault_rifle", "snipers_rifle", "bazooka"
+    );
+
+    private static void onEquipmentConfigReady(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
+        // Optional integrations can first read settings before items register.
+        // Repeat startup discovery after registries are ready, never per tick.
+        event.enqueueWork(() -> { UnifiedConfig.reloadForServer(); dev.felix.hostilehumans.economy.EconomyContent.commonSetup(); });
+    }
+
+    public HumanRuntime() {
+        IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
+        FactionContent.register(modBus);
+        dev.felix.hostilehumans.economy.EconomyContent.register(modBus);
+        dev.felix.hostilehumans.settlement.SettlementContent.register(modBus);
+        dev.felix.hostilehumans.cultivation.CultivationContent.register(modBus);
+        CultivationSettlementIntegration.install();
+        ContentRegistry.ITEMS.register(modBus);
+        ContentRegistry.MENUS.register(modBus);
+        HumanCommandNetwork.register();
+        dev.felix.hostilehumans.soldier.PatrolToolNetwork.register();
+        SoldierRosterNetwork.register();
+        RecruitmentConfigNetwork.register();
+        NavigationDebugNetwork.register();
+        HumanMonitorNetwork.register();
+        dev.felix.hostilehumans.monitor.MonitorRecoilNetwork.register();
+        SquadCommandNetwork.register();
+        FactionVisualNetwork.register();
+        AttributeDetailNetwork.register();
+        MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onServerStarting);
+        MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onServerStopped);
+        MinecraftForge.EVENT_BUS.addListener(RecruitmentConfigNetwork::onPlayerLogin);
+        modBus.addListener(HumanRuntime::onRegisterSpawnPlacements);
+        modBus.addListener(HumanRuntime::onEquipmentConfigReady);
+        if (ModList.get().isLoaded("touhou_little_maid")) {
+            TouhouMaidCompat.register();
+        }
+        GunSupport.get().registerEvents();
+        GunMeleeProtection.register();
+        MinecraftForge.EVENT_BUS.addListener(ShieldDurability::onTick);
+        MinecraftForge.EVENT_BUS.addListener(ShieldDurability::onLeave);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, ShieldDurability::onDeath);
+        MinecraftForge.EVENT_BUS.addListener(ShieldDurability::onStopping);
+        FirstAidCompat.register();
+        ScgunsMedical.register();
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanProjectileRelations::onProjectileExplosion);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanProjectileRelations::onProtectedPlayerAttack);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanOwnerProtection::onPlayerAttack);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanRuntime::onLivingChangeTarget);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanRuntime::onHumanFriendlyFire);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanRuntime::onLivingHurt);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOW, FactionAbilities::incoming);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, ShieldDefenseController::onShieldBlock);
+        // Apply final passive mitigation before our health-loss observers.
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GunnerShieldProtection::onDamage);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanRuntime::onSoldierDamage);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GrowthCombat::onDeath);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GrowthCombat::onLeave);
+        MinecraftForge.EVENT_BUS.addListener(GrowthCombat::onTick);
+        MinecraftForge.EVENT_BUS.addListener(GrowthCombat::onStopped);
+        MinecraftForge.EVENT_BUS.addListener(GrowthCombat::onPlayerClone);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanRuntime::onLivingDamage);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanRuntime::onLivingDeath);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, OfflineSoldierDeathReports::onDeath);
+        MinecraftForge.EVENT_BUS.addListener(OfflineSoldierDeathReports::onPlayerLogin);
+        MinecraftForge.EVENT_BUS.addListener(OfflineSoldierDeathReports::onServerStopped);
+        // Run after ordinary LivingTick listeners so late compatibility code
+        // cannot leave the persistent tier health roll replaced by an old base.
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanRuntime::onLivingTick);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanRuntime::onEquipmentChange);
+        MinecraftForge.EVENT_BUS.addListener(HumanRuntime::onEntityJoin);
+        // Canceling FinalizeSpawn skips initialization, not entity insertion.
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, true, NaturalHumanSpawnRules::trackNaturalMember);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, NaturalHumanSpawnRules::onNaturalMemberJoin);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onStarted);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onTick);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onLogin);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onDimensionChanged);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onRespawn);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onLogout);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onStopping);
+        MinecraftForge.EVENT_BUS.addListener(PlayerProgressionData::onStopped);
+        MinecraftForge.EVENT_BUS.addListener(SoldierMessageDispatcher::onTick);
+        MinecraftForge.EVENT_BUS.addListener(SoldierMessageDispatcher::onLogout);
+        MinecraftForge.EVENT_BUS.addListener(SoldierMessageDispatcher::onStopped);
+        MinecraftForge.EVENT_BUS.addListener(ProgressionCommands::register);
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.RegisterCommandsEvent event) ->
+                FactionAuthoringCommands.register(event.getDispatcher()));
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.RegisterCommandsEvent event) ->
+                NaturalStateCommand.register(event.getDispatcher()));
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.RegisterCommandsEvent event) ->
+                StandingCommands.register(event.getDispatcher()));
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.server.ServerStoppedEvent event) -> FactionDefinitions.reset());
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.AddReloadListenerEvent event) ->
+                event.addListener(FactionDefinitions.INSTANCE));
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanRuntime::onEntityLeave);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanRuntime::onLivingDrops);
+        MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onPlayerTick);
+        MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onServerTick);
+        MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onPlayerLogout);
+        MinecraftForge.EVENT_BUS.addListener(OwnerOfflinePolicy::onPlayerLogout);
+        MinecraftForge.EVENT_BUS.addListener(OwnerOfflinePolicy::onPlayerLogin);
+        MinecraftForge.EVENT_BUS.addListener(HiredHumanRecall::onServerStopped);
+        MinecraftForge.EVENT_BUS.addListener(PeacefulHumanPolicy::onServerTick);
+        MinecraftForge.EVENT_BUS.addListener(SoldierRosterAudit::onServerTick);
+        MinecraftForge.EVENT_BUS.addListener(SoldierRosterAudit::onServerStopped);
+        MinecraftForge.EVENT_BUS.addListener(SoldierRosterNetwork::onPlayerLogout);
+        MinecraftForge.EVENT_BUS.addListener(SoldierRosterNetwork::onServerStopped);
+        LOGGER.info("Hostile Humans Unified initialized; optional firearms {}", GunSupport.get().enabled() ? "enabled" : "disabled");
+    }
+
+    private static void onRegisterSpawnPlacements(SpawnPlacementRegisterEvent event) {
+        event.register(
+                ModEntityType.HUMAN1.get(),
+                SpawnPlacements.Type.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                NaturalHumanSpawnRules::checkSquadSpawn,
+                SpawnPlacementRegisterEvent.Operation.REPLACE
+        );
+        event.register(
+                ModEntityType.HUMAN2.get(),
+                SpawnPlacements.Type.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                NaturalHumanSpawnRules::checkSquadSpawn,
+                SpawnPlacementRegisterEvent.Operation.REPLACE
+        );
+        event.register(
+                ContentRegistry.TIER_THREE_HUMAN.get(),
+                SpawnPlacements.Type.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                NaturalHumanSpawnRules::checkSquadSpawn,
+                SpawnPlacementRegisterEvent.Operation.REPLACE
+        );
+    }
+
+    private static void onLivingTick(LivingEvent.LivingTickEvent event) {
+        if (event.getEntity() instanceof Human human && !human.level().isClientSide) {
+            AdaptiveActivityBudget.touch(human);
+            if (human.getTarget() != null && !HumanMonitorControl.controls(human) && !HumanTargeting.allowsWildHumanTarget(human, human.getTarget())) {
+                // Also retire stale targets assigned before this rule or by outside AI.
+                HumanBehaviorControl.interruptMovement(human, "external target rejected by current relationship");
+                human.setTarget(null);
+                human.getNavigation().stop();
+            }
+            OfflineSoldierDeathReports.tick(human);
+            if (!initializeHumanIfReady(human)) {
+                return;
+            }
+            if (!NavigationDebugService.controls(human) && !HumanMonitorControl.controls(human)
+                    && !dev.felix.hostilehumans.cultivation.CultivationService.holds(human)) {
+                OwnerOfflinePolicy.tick(human);
+                HumanRelations.tick(human);
+            }
+            HumanPerception.tick(human);
+            HumanGrowth.tick(human);
+            HiredHumanHealthWarning.tick(human);
+            if (human.getPersistentData().hasUUID(HumanRelations.TEMP_OWNER)) {
+                if (human.hasOwner()) {
+                    // Recruitment is authoritative even if a save/reload or
+                    // another event observes the entity between tame() and the
+                    // normal conversion cleanup.
+                    human.getPersistentData().remove(HumanRelations.TEMP_OWNER);
+                    human.getPersistentData().remove(HumanRelations.TEMP_UNTIL);
+                    human.getPersistentData().remove(HumanRelations.NO_DROPS);
+                } else {
+                    long until = human.getPersistentData().getLong(HumanRelations.TEMP_UNTIL);
+                    if (human.level().getGameTime() >= until) {
+                        human.discard();
+                        return;
+                    }
+
+                }
+            }
+            RecoverySupplies.tickEffects(human);
+            // Keep effects/lifetimes ticking; exclude order, rescue and combat writers only during a test.
+            if (NavigationDebugService.controls(human) || HumanMonitorControl.controls(human)
+                    || dev.felix.hostilehumans.cultivation.CultivationService.holds(human)) return;
+            // The menu is backed directly by HumanData/equipment. While it is
+            // open, no AI inventory writer may race the player's slot actions.
+            if (HumanInventorySession.isEditing(human)) {
+                return;
+            }
+            // Ownership can change while an already-running goal retains its target.
+            LivingEntity currentTarget = human.getTarget();
+            if (currentTarget != null && !canControlledHumanAttack(human, currentTarget)) {
+                human.setTarget(null);
+            }
+            EquipmentBreakSounds.tick(human);
+            SoldierOrder.tick(human);
+            SoldierStuckRecovery.tick(human);
+            // The external Hostile Humans index can lag an entity's owner
+            // after a transfer or reload. The entity NBT is authoritative;
+            // repair only mismatches and spread these checks across ticks.
+            if (human.hasOwner() && (human.tickCount + (human.getId() & 127)) % 100 == 0) {
+                dev.felix.hostilehumans.entity.HumanServerData data =
+                        dev.felix.hostilehumans.entity.HumanServerData.get();
+                if (data != null) {
+                    dev.felix.hostilehumans.entity.HumanData indexed =
+                            data.getHumanMob(human.getUUID());
+                    if (indexed == null || !human.getOwnerUUID().equals(indexed.getOwnerUUID())) {
+                        data.updateOrRegisterHumanMob(human);
+                    }
+                }
+            }
+            // Settle interrupted hand/inventory exchanges and reconcile a
+            // stored shield. TaCZ may keep MAIN_HAND in an item-use state, so
+            // custody tracks the exact recovery hand instead of treating any
+            // active use as a reason to postpone the check indefinitely.
+            RecoverySupplies.tickHandCustody(human);
+            human.hhu$shieldDefense().prepareHighPressureDefense();
+            SoldierDialogue.tick(human);
+            GunCustody.tick(human);
+            RangedWeaponCustody.tick(human);
+            CombatResupply.tick(human);
+            if ((human.tickCount + (human.getId() & 7)) % 8 == 0) {
+                RecoverySupplies.auditOwnedShields(human);
+                GunCustody.auditOwnedGuns(human);
+            }
+            if ((human.tickCount + Math.floorMod(human.getId(), 20)) % 20 == 0) {
+                HumanManagedLoadout.equipStoredMeleeIfMainHandEmpty(human);
+                HumanLootManager.optimizeOwnedEquipment(human);
+            }
+            NpcDualWield.tickDefaultLayout(human);
+            HumanArrowCombat.tickFollowup(human);
+            GunSupport.get().tickIdleReload(human);
+            TacticalThrowables.tick(human);
+            if (human.getTarget() instanceof Player player
+                    && HumanRelations.effectiveOwner(human) == null
+                    && StandingEffects.blocksInitiatedHostility(human, player)
+                    && !HumanRelations.isForcedHostileTo(human, player)) {
+                human.setTarget(null);
+                human.setLastHurtByMob(null);
+            }
+        }
+    }
+
+    public static void openHiredHumanUi(net.minecraft.server.level.ServerPlayer player, Human human) {
+        if (!HumanRelations.isOwnedBy(human, player)) return;
+        if (player.isShiftKeyDown()) {
+            HumanInventoryMenu.open(player, human);
+        } else {
+            HumanCommandNetwork.openFor(player, human);
+        }
+    }
+
+    private static void onEquipmentChange(LivingEquipmentChangeEvent event) {
+        if (event.getEntity() instanceof Human human && !human.level().isClientSide) {
+            RecoverySupplies.auditEquipmentChange(
+                    human, event.getSlot(), event.getFrom(), event.getTo()
+            );
+            GunCustody.auditEquipmentChange(
+                    human, event.getSlot(), event.getFrom(), event.getTo()
+            );
+            EquipmentBreakSounds.observeEquipmentChange(
+                    human, event.getSlot(), event.getFrom(), event.getTo()
+            );
+        }
+    }
+
+    private static void onEntityJoin(EntityJoinLevelEvent event) {
+        if (event.getLevel().isClientSide) {
+            return;
+        }
+        if (event.getEntity() instanceof net.minecraft.world.entity.Mob mob)
+            HostileHumanTargeting.onJoin(mob);
+        if (!event.loadedFromDisk() && event.getEntity() instanceof net.minecraft.world.entity.projectile.AbstractArrow arrow
+                && !(arrow instanceof ThrownTrident) && arrow.getOwner() instanceof LivingEntity shooter)
+            HumanAwareness.projectileShot(shooter, arrow.shotFromCrossbow());
+        // Internal launchers apply ballistics before insertion with their
+        // explicit target. This join hook is a fallback for externally-created
+        // Human tridents, whose separate trajectory is finalized on join.
+        if (event.getEntity() instanceof ThrownTrident arrow
+                && arrow.getOwner() instanceof Human shooter) {
+            applyTridentBallistics(shooter, arrow, shooter.getTarget());
+            return;
+        }
+        if (!(event.getEntity() instanceof Human human)) {
+            return;
+        }
+        HumanInventorySession.restoreAfterLoad(human);
+        if (!event.loadedFromDisk() && (human instanceof FactionBossHuman || HumanFactions.isBoss(human))
+                && !UnifiedConfig.get().featureEnabled("boss", true)) {
+            event.setCanceled(true);
+            return;
+        }
+        FRESH_HUMANS.put(human, !event.loadedFromDisk());
+        HumanFactions.initialize(human, event.loadedFromDisk());
+        FactionContent.onJoin(human, event.loadedFromDisk());
+        NaturalState.onJoin(human, event.loadedFromDisk());
+        HumanGrowth.onJoin(human, event.loadedFromDisk());
+        if (PeacefulHumanPolicy.onJoin(event, human)
+                && event.getLevel() instanceof ServerLevel level
+                && level.getServer().isSameThread()) initializeHumanIfReady(human);
+    }
+
+    private static void onEntityLeave(EntityLeaveLevelEvent event) {
+        if (event.getLevel().isClientSide || !(event.getEntity() instanceof Human human)) {
+            return;
+        }
+        Entity.RemovalReason reason = human.getRemovalReason();
+        HumanBehaviorControl.cancel(human, "entity left level");
+        SoldierFollowNavigation.clear(human);
+        if (reason == Entity.RemovalReason.KILLED) StandingEffects.confirmDeath(human);
+        StandingEffects.clear(human);
+        OfflineSoldierDeathReports.onEntityLeave(human);
+        if (reason != Entity.RemovalReason.KILLED && reason != Entity.RemovalReason.DISCARDED) {
+            // Chunk unload and dimension transfer must retain external inventory.
+            return;
+        }
+        MinecraftServer server = event.getLevel() instanceof ServerLevel level ? level.getServer() : null;
+        if (server == null) return;
+        if (human.hasOwner()) LOGGER.info("Hired soldier removed: id={}, owner={}, reason={}, dimension={}, position={}",
+                human.getUUID(), human.getOwnerUUID(), reason,
+                human.level().dimension().location(), human.blockPosition());
+        UUID id = human.getUUID();
+        Runnable cleanup = () -> {
+            RecruitmentLedger ledger = RecruitmentLedger.get(server);
+            ledger.dismiss(id);
+            ledger.finishDismissal(id);
+            SquadData.get(server).removeMember(id);
+            HiredHumanRecall.cancelPending(server, id);
+            dev.felix.hostilehumans.entity.HumanServerData serverData =
+                    dev.felix.hostilehumans.entity.HumanServerData.get();
+            if (serverData != null) serverData.hhu$removeHuman(id);
+        };
+        if (server.isSameThread()) cleanup.run();
+        else server.execute(cleanup);
+    }
+
+    static boolean initializeHumanIfReady(Human human) {
+        if (INITIALIZED_HUMANS.contains(human)) {
+            return true;
+        }
+        // Direct EntityType#create/add paths and a few compatibility spawners
+        // can publish the join event before Hostile Humans has registered its
+        // server-side HumanData. Defer all inventory/loadout work until that
+        // data is available; otherwise spawn reserves cannot be stored and
+        // recovery provisioning can be skipped.
+        if (human.getData() == null) {
+            return false;
+        }
+        HumanFactions.initialize(human, false);
+        HumanGrowth.state(human);
+        SpecialtyAttributes.initialize(human, FRESH_HUMANS.getOrDefault(human, false));
+        GrowthHealth.apply(human);
+        if (!HumanSpawnEquipment.completeIfReady(human)) return false;
+        TierAttributes.apply(human);
+        MovementSpeedController.normal(human);
+        configureFactionIdentity(human);
+        configureCombatAi(human);
+        configureSoldierOrders(human);
+        if (human.hasOwner()) SoldierOrder.initialize(human);
+        SoldierCombatMode.initialize(human);
+        ((StaticCombatGoalHost) human).hhu$installStaticCombatGoals();
+        INITIALIZED_HUMANS.add(human);
+        FRESH_HUMANS.remove(human);
+        return true;
+    }
+
+    /** Used by the base Human tick to preserve the server-side menu lock. */
+    public static boolean isManualInventoryOpen(Human human) {
+        return HumanInventorySession.isEditing(human);
+    }
+
+
+
+    static boolean isUnderRecentGunfire(Human human) {
+        int until = human.getPersistentData().getInt(INCOMING_GUNFIRE_UNTIL);
+        return until > 0 && until >= human.tickCount;
+    }
+
+    public static int recentGunfireUntil(Human human) {
+        return human.getPersistentData().getInt(INCOMING_GUNFIRE_UNTIL);
+    }
+
+
+
+
+    private static void onSoldierDamage(net.minecraftforge.event.entity.living.LivingDamageEvent event) {
+        if (!event.getEntity().level().isClientSide && event.getAmount() > 0
+                && event.getSource().getEntity() instanceof Human human && human.hasOwner()) {
+            human.soldierCombatMemory.hit(event.getEntity().getUUID(), human.level().getGameTime());
+        }
+    }
+
+    private static void onLivingChangeTarget(LivingChangeTargetEvent event) {
+        if (event.getEntity() instanceof Human attacker) {
+            if (event.getNewTarget() != null && (HumanRelations.allied(attacker, event.getNewTarget())
+                    || !dev.felix.hostilehumans.behavior.combat.HumanCombatAuthority.ownsTarget(attacker, event.getNewTarget())
+                        && (!HumanTargeting.allowsWildHumanTarget(attacker, event.getNewTarget())
+                            || !SoldierOrder.allowsTarget(attacker, event.getNewTarget())))) {
+                event.setNewTarget(null);
+            }
+        }
+    }
+
+    /**
+     * Cancels every direct and owner-attributed indirect hit between allied
+     * tiered humans before ordinary damage modifiers observe it. Vanilla bows,
+     * crossbows, Spartan arrows/bolts and thrown tridents all expose their Human
+     * owner through DamageSource#getEntity. Roamers deliberately never satisfy
+     * areSameFaction, so their existing infighting remains fully enabled.
+     */
+    private static void onHumanFriendlyFire(LivingHurtEvent event) {
+        // A projectile launched just before the difficulty change may still
+        // land after Peaceful begins. Retained soldiers must not deal damage.
+        if (event.getSource().getEntity() instanceof Human attacker
+                && attacker.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) {
+            event.setCanceled(true);
+            return;
+        }
+        if (event.getSource().getEntity() instanceof Human attacker
+                && event.getEntity() instanceof Human defender
+                && shouldBlockHumanDamage(attacker, defender)) {
+            event.setCanceled(true);
+        }
+    }
+
+    private static void onLivingHurt(LivingHurtEvent event) {
+        if (event.getEntity() instanceof Human defender && event.getAmount() > 0.0F)
+            defender.hhu$shieldDefense().observeAttack(event.getSource(), false);
+        Entity attacker = event.getSource().getEntity();
+        Entity directEntity = event.getSource().getDirectEntity();
+        if (event.getEntity() instanceof Player protectedPlayer && attacker instanceof LivingEntity livingAttacker) {
+            HumanRelations.defend(protectedPlayer, livingAttacker);
+        }
+        if (attacker instanceof Player attackingPlayer) {
+            HumanRelations.followOwnerAssault(attackingPlayer, event.getEntity());
+        }
+        if (event.getEntity() instanceof Human damagedHuman) {
+            event.setAmount(HumanDamageScaling.incoming(damagedHuman, event.getAmount()));
+        }
+        if (attacker instanceof Human humanAttacker) {
+            if (event.getEntity() instanceof Player player
+                    && HumanRelations.allied(humanAttacker, player)) {
+                event.setCanceled(true);
+                return;
+            }
+            event.setAmount(HumanDamageScaling.outgoing(humanAttacker, event.getSource(), event.getAmount()));
+            return;
+        }
+
+        if (!(attacker instanceof Pillager) || directEntity == null) {
+            return;
+        }
+        ResourceLocation directType = BuiltInRegistries.ENTITY_TYPE.getKey(directEntity.getType());
+        if (directType.getNamespace().equals("pillagers_gun")) {
+            event.setAmount(event.getAmount()
+                    * (float) FirearmCompatConfig.get().pillagerGunDamageMultiplier());
+        }
+    }
+
+    private static void onLivingDamage(LivingDamageEvent event) {
+        // Final health-bound damage: armour, resistance and absorption have already settled.
+        // Applies once to every source type; never fabricates a second hurt or changes shield wear.
+        if (event.getEntity() instanceof Human defender && !defender.level().isClientSide && event.getAmount() > 0)
+            event.setAmount(event.getAmount() * (float) defender.hhu$shieldDefense().pressureDamageMultiplier());
+        if (event.getAmount() > 0.0F && event.getSource().getEntity() instanceof Human attacker) {
+            SoldierCombatMode.refreshAuthorizedFight(attacker, event.getEntity());
+        }
+        if (event.getAmount() > 0.0F && event.getEntity() instanceof Player owner
+                && event.getSource().getEntity() instanceof LivingEntity attacker) {
+            HumanRelations.defendAfterDamage(owner, attacker);
+        }
+        if (event.getEntity() instanceof Human human
+                && !human.level().isClientSide
+                && event.getAmount() > 0.0F) {
+            // Actual health loss is observed by HumanDamageEvents at the shared health-write boundary.
+            if (event.getSource().getEntity() instanceof Player player
+                    && HumanRelations.isOwnedBy(human, player)
+                    && RecruitmentPolicy.betrayed(human.getHealth() - event.getAmount(), human.getMaxHealth())) {
+                RecruitmentLedger.get(player.getServer()).dismiss(human.getUUID());
+                SquadData.get(player.getServer()).removeMember(human.getUUID());
+                human.setOwnerUUID(null);
+                human.setTame(false);
+
+                HumanPerception.ownerClue(human,player);
+                player.displayClientMessage(Component.translatable("message.hostile_humans_unified.dismissed"), true);
+            }
+        }
+    }
+
+    private static void onLivingDeath(LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof Human human) || human.level().isClientSide) {
+            return;
+        }
+        if (SoldierRecallProtection.tryProtect(human, event.getSource())) {
+            event.setCanceled(true);
+            return;
+        }
+        boolean noDrops = !human.hasOwner()
+                && human.getPersistentData().getBoolean(HumanRelations.NO_DROPS);
+        if (!noDrops
+                && !event.getSource().is(net.minecraft.tags.DamageTypeTags.BYPASSES_INVULNERABILITY)
+                && InventoryTotemProtection.tryUseInventoryTotem(human, event.getSource())) {
+            // LivingDeathEvent is posted before LivingEntity performs its death
+            // transition. Restoring health and cancelling here provides the same
+            // survival boundary without injecting into an obfuscated vanilla method.
+            event.setCanceled(true);
+            return;
+        }
+        HumanBehaviorControl.cancel(human, "confirmed death");
+        StandingEffects.death(human, event.getSource());
+        MinecraftServer server = human.getServer();
+        if (server != null) {
+            RecruitmentLedger.get(server).dismiss(human.getUUID());
+            SquadData.get(server).removeMember(human.getUUID());
+        }
+        if (noDrops) {
+            return;
+        }
+        // Hostile Humans clears equipment inside dropCustomDeathLoot before
+        // LivingDropsEvent. Capture every owned stack while the slots and
+        // external backpack are still authoritative.
+        HumanEquipmentDrops.captureBeforeDeath(human);
+    }
+
+    private static void onLivingDrops(LivingDropsEvent event) {
+        if (!(event.getEntity() instanceof Mob)) {
+            return;
+        }
+
+        double chance = FirearmCompatConfig.get().gunDropChance();
+        if (event.getEntity() instanceof Human human) {
+            if (!human.hasOwner() && human.getPersistentData().getBoolean(HumanRelations.NO_DROPS)) {
+                event.getDrops().clear();
+                return;
+            }
+            HumanEquipmentDrops.rebuildOwnedDrops(human, event.getDrops(), chance);
+            return;
+        }
+        // Preserve the existing 1% Pillagers Gun compatibility rule.
+        boolean keepOneGun = event.getEntity().getRandom().nextDouble() < chance;
+        boolean[] alreadyKept = {false};
+        event.getDrops().removeIf(drop -> {
+            if (!isDroppedGun(drop.getItem())) {
+                return false;
+            }
+            if (!keepOneGun || alreadyKept[0]) {
+                return true;
+            }
+            alreadyKept[0] = true;
+            return false;
+        });
+    }
+
+
+    public static void applyFirstTickArrowBallistics(Human shooter, AbstractArrow projectile) {
+        // Fallback for projectiles created by launchers that cannot pass their
+        // selected target directly into the launch-time hook.
+        applyFirstTickArrowBallistics(shooter, projectile, shooter.getTarget());
+    }
+
+    /**
+     * Applies launch-time ballistics using the target supplied by the firing
+     * routine. Do not re-read Human#getTarget here: goal state can change or be
+     * cleared between selecting a target and constructing its projectile.
+     */
+    public static void applyFirstTickArrowBallistics(
+            Human shooter, AbstractArrow projectile,
+            net.minecraft.world.entity.LivingEntity target
+    ) {
+        if (projectile instanceof ThrownTrident) {
+            return;
+        }
+        applyProjectileBallistics(shooter, projectile, target);
+    }
+
+    /** A delayed shot is a new launch: native payload survives, old velocity does not.
+     * Ordinary first-tick hooks still remain idempotent, and already flying arrows cannot be retargeted.
+     */
+    public static boolean reaimArrowBallistics(Human shooter, AbstractArrow projectile,
+                                       net.minecraft.world.entity.LivingEntity target) {
+        if (shooter.level().isClientSide || projectile.isAddedToWorld() || projectile instanceof ThrownTrident
+                || projectile.level() != shooter.level() || target == null || !target.isAlive()
+                || target.isRemoved() || target.level() != shooter.level()) return false;
+        // Reuse the same torso aim, current motion lead, gravity/drag solver,
+        // bolt speed and independent tier spread as the first shot.
+        improveHumanProjectile(shooter, projectile, target);
+        Vec3 velocity = projectile.getDeltaMovement();
+        if (!Double.isFinite(velocity.x) || !Double.isFinite(velocity.y) || !Double.isFinite(velocity.z)
+                || velocity.lengthSqr() < 1.0e-12) return false;
+        projectile.getPersistentData().putBoolean(ADAPTIVE_BALLISTICS_APPLIED, true);
+        return true;
+    }
+
+    /** Applies the trident-specific trajectory using the attack's actual target. */
+    public static void applyTridentBallistics(
+            Human shooter, ThrownTrident projectile,
+            net.minecraft.world.entity.LivingEntity target
+    ) {
+        applyProjectileBallistics(shooter, projectile, target);
+    }
+
+    private static void applyProjectileBallistics(
+            Human shooter, AbstractArrow projectile,
+            net.minecraft.world.entity.LivingEntity target
+    ) {
+        if (projectile.getPersistentData().getBoolean(ADAPTIVE_BALLISTICS_APPLIED)) {
+            return;
+        }
+        projectile.getPersistentData().putBoolean(ADAPTIVE_BALLISTICS_APPLIED, true);
+        improveHumanProjectile(shooter, projectile, target);
+    }
+
+    private static void improveHumanProjectile(
+            Human shooter, AbstractArrow projectile,
+            net.minecraft.world.entity.LivingEntity target
+    ) {
+        if (target == null || !target.isAlive()
+                || (target instanceof Human other && areCombatAllies(shooter, other))) {
+            return;
+        }
+        boolean trident = projectile instanceof ThrownTrident;
+        boolean spartanBolt = projectile.getPersistentData().getBoolean(SpartanRangedCompat.NPC_BOLT);
+        float velocity = trident ? 2.9F : spartanBolt ? 3.15F : 2.7F;
+        boolean crossbow = !trident && (spartanBolt
+                || projectile.getPersistentData().getBoolean(NPC_CROSSBOW_PROJECTILE)
+                || shooter.getMainHandItem().getItem() instanceof CrossbowItem
+                || (!(shooter.getMainHandItem().getItem() instanceof BowItem)
+                && shooter.getOffhandItem().getItem() instanceof CrossbowItem));
+        double spreadDegrees = RangedAccuracy.projectileSpreadDegrees(shooter, crossbow, trident);
+        Vec3 origin = projectile.position();
+        // Aim high through the upper torso. The stronger gravity bias adds the
+        // requested long-range clearance on top of this 85%-height target point.
+        Vec3 targetPoint = target.position().add(0.0D, target.getBbHeight() * 0.85D, 0.0D);
+        if (!trident) {
+            Vec3 ballisticDirection = solveArrowBallistics(
+                    origin, targetPoint, target.getDeltaMovement(), velocity
+            );
+            double horizontalDistance = Math.hypot(
+                    targetPoint.x - origin.x, targetPoint.z - origin.z
+            );
+            double launchAngle = Math.toDegrees(Math.atan2(
+                    ballisticDirection.y,
+                    Math.hypot(ballisticDirection.x, ballisticDirection.z)
+            ));
+            Vec3 shotDirection = RangedAccuracy.applyAngularSpread(
+                    ballisticDirection, spreadDegrees, shooter.getRandom());
+            projectile.shoot(shotDirection.x, shotDirection.y, shotDirection.z, velocity, 0.0F);
+            // Required by the first-tick compatibility fallback: if an
+            // external launcher already spawned the arrow, force an immediate
+            // motion packet instead of letting the client keep spawn velocity.
+            projectile.hasImpulse = true;
+            projectile.getPersistentData().putDouble(
+                    MOD_ID + ":adaptive_ballistics_distance", horizontalDistance
+            );
+            projectile.getPersistentData().putDouble(
+                    MOD_ID + ":adaptive_ballistics_angle", launchAngle
+            );
+            if (LOGGED_FIRST_ADAPTIVE_ARROW.compareAndSet(false, true)) {
+                LOGGER.info(
+                        "Adaptive arrow ballistics applied on first projectile tick: projectile={}, distance={}, angle={}, speed={}",
+                        BuiltInRegistries.ENTITY_TYPE.getKey(projectile.getType()),
+                        String.format(java.util.Locale.ROOT, "%.2f", horizontalDistance),
+                        String.format(java.util.Locale.ROOT, "%.2f", launchAngle),
+                        velocity
+                );
+            }
+            return;
+        }
+
+        double travelTicks = Mth.clamp(origin.distanceTo(targetPoint) / velocity, 0.0D, 12.0D);
+        Vec3 aim = targetPoint.add(target.getDeltaMovement().scale(travelTicks));
+        Vec3 delta = aim.subtract(origin);
+        // Tridents used to aim at the eyes and then add 0.14 blocks of lift per
+        // horizontal block, which sent medium-range throws roughly one block
+        // above the victim. Compensate expected gravity over flight time instead.
+        double arc = 0.025D * travelTicks * travelTicks;
+        Vec3 shotDirection = RangedAccuracy.applyAngularSpread(
+                new Vec3(delta.x, delta.y + arc, delta.z), spreadDegrees, shooter.getRandom());
+        projectile.shoot(shotDirection.x, shotDirection.y, shotDirection.z, velocity, 0.0F);
+        projectile.hasImpulse = true;
+    }
+
+    /**
+     * Solves the low ballistic arc used by AbstractArrow. Unlike the former
+     * horizontal-distance multiplier, this accounts for 0.99 air drag and
+     * applies the configured 0.06 aim compensation for vanilla's 0.05 gravity.
+     */
+    public static Vec3 solveArrowBallistics(
+            Vec3 origin, Vec3 targetPoint, Vec3 targetMotion, double launchSpeed
+    ) {
+        Vec3 boundedMotion = new Vec3(
+                targetMotion.x,
+                Mth.clamp(targetMotion.y, -0.15D, 0.15D),
+                targetMotion.z
+        );
+        double speedSquared = launchSpeed * launchSpeed;
+        double previousTicks = 0.05D;
+        Vec3 best = requiredArrowVelocity(
+                origin, targetPoint, boundedMotion, previousTicks
+        );
+        double bestError = Math.abs(best.lengthSqr() - speedSquared);
+
+        for (double ticks = BALLISTIC_SEARCH_STEP;
+                ticks <= BALLISTIC_MAX_TICKS;
+                ticks += BALLISTIC_SEARCH_STEP) {
+            Vec3 required = requiredArrowVelocity(origin, targetPoint, boundedMotion, ticks);
+            double requiredSquared = required.lengthSqr();
+            double error = Math.abs(requiredSquared - speedSquared);
+            if (error < bestError) {
+                best = required;
+                bestError = error;
+            }
+            if (requiredSquared <= speedSquared) {
+                // The first feasible crossing is the low arc. Refine it so
+                // shoot() normalizing the direction does not materially alter
+                // the predicted flight time.
+                double low = previousTicks;
+                double high = ticks;
+                for (int iteration = 0; iteration < 12; iteration++) {
+                    double middle = (low + high) * 0.5D;
+                    Vec3 middleRequired = requiredArrowVelocity(
+                            origin, targetPoint, boundedMotion, middle
+                    );
+                    if (middleRequired.lengthSqr() > speedSquared) {
+                        low = middle;
+                    } else {
+                        high = middle;
+                    }
+                }
+                return requiredArrowVelocity(origin, targetPoint, boundedMotion, high);
+            }
+            previousTicks = ticks;
+        }
+
+        // A target outside the physical low-arc envelope should still receive
+        // the closest possible shot instead of falling back to a flat vector.
+        return best;
+    }
+
+    private static Vec3 requiredArrowVelocity(
+            Vec3 origin, Vec3 targetPoint, Vec3 targetMotion, double ticks
+    ) {
+        double dragDisplacement = (1.0D - Math.pow(ARROW_AIR_DRAG, ticks))
+                / (1.0D - ARROW_AIR_DRAG);
+        if (dragDisplacement < 1.0E-6D) {
+            return targetPoint.subtract(origin);
+        }
+        Vec3 predictedTarget = targetPoint.add(targetMotion.scale(ticks));
+        Vec3 displacement = predictedTarget.subtract(origin);
+        double gravityDrop = ARROW_AIM_GRAVITY / (1.0D - ARROW_AIR_DRAG)
+                * (ticks - dragDisplacement);
+        return new Vec3(
+                displacement.x / dragDisplacement,
+                (displacement.y + gravityDrop) / dragDisplacement,
+                displacement.z / dragDisplacement
+        );
+    }
+
+
+    public static boolean isRangedWeapon(ItemStack stack) {
+        return !stack.isEmpty()
+                && (GunSupport.get().isGun(stack)
+                || stack.getItem() instanceof ProjectileWeaponItem
+                || stack.getItem() instanceof TridentItem
+                || SpartanEquipmentCompat.isSpartanRangedWeapon(stack));
+    }
+
+    private static void configureFactionIdentity(Human human) {
+        HumanFactions.refreshTeam(human);
+    }
+
+    private static void configureCombatAi(Human human) {
+        CombatAiConfig config = CombatAiConfig.forHuman(human);
+        if (!config.enabled() || !COMBAT_AI_CONFIGURED.add(human)) {
+            return;
+        }
+
+        RecoverySupplies.provisionInitialKit(human, config);
+
+        if (human.getNavigation() instanceof GroundPathNavigation navigation) {
+            navigation.setCanOpenDoors(true);
+        }
+
+        AttributeInstance movement = human.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (movement != null) {
+            movement.removeModifier(COMBAT_MOVEMENT_MODIFIER_ID);
+        }
+        MovementSpeedController.normal(human);
+
+        // Survival must be able to pre-empt the hired-order idle MOVE lock
+        // (priority -6), even when that order briefly clears the attack target.
+        human.addCombatGoal(ShoreSeekingPolicy.COMBAT_GOAL_PRIORITY,
+                new AdaptiveCombatGoal(human));
+        human.addCombatGoal(ShoreSeekingPolicy.COMBAT_GOAL_PRIORITY, new PressureReactionGoal(human));
+        human.addCombatGoal(ShoreSeekingPolicy.COMBAT_GOAL_PRIORITY, new ProjectileReactionGoal(human));
+        human.addCombatGoal(-3, new PlayerLikeMovementGoal(human));
+        human.addCombatGoal(-3, new CombatConsumableGoal(human));
+        human.addCombatGoal(-2, new CombatRecoveryGoal(human));
+        human.addCombatGoal(-2, new IdleRecoveryGoal(human));
+        // Item search must briefly outrank the hired-order idle movement lock;
+        // its own predicate keeps it disabled unless the owner opted in.
+        // Valuable water loot may preempt idle shore seeking (-7), but yields
+        // as soon as combat or retreat acquires a target.
+        human.addCombatGoal(ShoreSeekingPolicy.WATER_LOOT_GOAL_PRIORITY,
+                new ValuableItemPickupGoal(human));
+        // Emergency lava escape must override combat and all hired movement orders.
+        human.addCombatGoal(-12, new LavaEscapeGoal(human));
+    }
+
+    private static void configureSoldierOrders(Human human) {
+        if (!SOLDIER_ORDERS_CONFIGURED.add(human)) return;
+        human.addCombatGoal(-6, new SoldierOrderGoal(human));
+        human.addCombatGoal(-6, new TemporarySupportFollowGoal(human));
+        // Guard retention and bodyguard priority are consumed by the shared target coordinator.
+
+        human.addCombatGoal(-5, new BodyguardMovementGoal(human));
+    }
+
+
+    public static boolean canHumanAttackHuman(Human attacker, Human target) {
+        return attacker != target && target.isAlive() && HumanRelations.humanHostile(attacker, target);
+    }
+
+    public static boolean areSameFaction(Human first, Human second) {
+        return HumanFactions.same(first, second);
+    }
+
+    public static boolean areCombatAllies(Human first, Human second) {
+        return shouldBlockHumanDamage(first, second);
+    }
+
+    /** Used by the base entity's attack gates without exposing relationship internals. */
+    public static boolean canControlledHumanAttack(Human attacker, LivingEntity target) {
+        if (!SoldierCombatMode.hasCombatController(attacker)) return true;
+        if (target instanceof Player || (target instanceof Human other
+                && SoldierCombatMode.hasCombatController(other))) {
+            return !HumanRelations.allied(attacker, target);
+        }
+        return true;
+    }
+
+    /** A wild human, including a beacon wave, can answer a same-tier attacker. */
+    public static boolean canWildHumanRetaliateAgainst(Human wild, LivingEntity attacker) {
+        return HumanRelations.isRecentHumanAttacker(wild, attacker);
+    }
+
+    public static boolean shouldBlockHumanDamage(Human attacker, Human defender) {
+        return HumanRelations.allied(attacker, defender);
+    }
+
+
+    private static boolean isDroppedGun(ItemStack stack) {
+        if (stack.isEmpty()) {
+            return false;
+        }
+        if (GunSupport.get().isGun(stack)) {
+            return true;
+        }
+        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        return itemId.getNamespace().equals("pillagers_gun")
+                && PILLAGERS_GUN_FIREARMS.contains(itemId.getPath());
+    }
+}

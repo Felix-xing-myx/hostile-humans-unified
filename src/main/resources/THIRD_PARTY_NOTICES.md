@@ -25,3 +25,16 @@ The original local framework modules
 GPL-2.0-only. The full license is in the repository root `LICENSE`. Third-party
 copyright and license notices remain applicable to their respective source
 and assets. Source lineage and input hashes are recorded in provenance.json.
+
+
+## Dodge sound assets
+
+`assets/hostile_humans_unified/sounds/ability/dodge_soft_ring.ogg` and
+`dodge_soft_low.ogg` are modified from **Anime style sword.wav** by
+**ethanchase7744**: https://freesound.org/people/ethanchase7744/sounds/440576/ .
+Source license: **CC0 1.0 Universal**, https://creativecommons.org/publicdomain/zero/1.0/ .
+Source used: Freesound public HQ MP3 preview, not the original WAV.
+Modifications: remove the leading impact, reduce pitch and high frequencies,
+soften attack/decay, then pitch-preserving time compression to 0.55 seconds.
+Final assets are mono 44.1 kHz Ogg Vorbis; runtime playback pitch stays at 1.0.
+These CC0 assets retain their own license independently of the source code.

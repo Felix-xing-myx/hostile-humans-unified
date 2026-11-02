@@ -1,10 +1,10 @@
 """Integration contracts only; native Unbreaking/axe behavior requires game acceptance."""
 import json
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / 'src/main/java/club/someoneice/humangunner'
+PKG = ROOT / 'src/main/java/dev/felix/hostilehumans'
 
 
 class ShieldDurabilityContract(unittest.TestCase):
@@ -39,12 +39,12 @@ class ShieldDurabilityContract(unittest.TestCase):
         self.assertLess(source.index('pending.removeIf'), source.index('applyWear(human, entry)'))
 
     def test_debts_flush_before_equipment_transfer_and_save(self):
-        human = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+        human = (ROOT / 'src/main/java/dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
         self.assertIn('if (this.getItemBySlot(slot) != stack) ShieldDurability.flush(this);', human)
         self.assertIn('ShieldDurability.flush(this);\n        super.addAdditionalSaveData(compound);', human)
         session = (PKG / 'HumanInventorySession.java').read_text(encoding='utf-8')
         self.assertLess(session.index('ShieldDurability.flush(human)'), session.index('human.stopUsingItem()'))
-        main = (PKG / 'HumanGunner.java').read_text(encoding='utf-8')
+        main = (PKG / 'HumanRuntime.java').read_text(encoding='utf-8')
         for hook in ('onTick', 'onLeave', 'onDeath', 'onStopping'):
             self.assertIn('ShieldDurability::' + hook, main)
         shield = (PKG / 'ShieldDurability.java').read_text(encoding='utf-8')
@@ -58,11 +58,11 @@ class ShieldDurabilityContract(unittest.TestCase):
                         tacz.index('gunSetting("shield_damage_multiplier"'))
 
     def test_axe_disable_applies_to_active_shields_without_truncating_cooldown(self):
-        source = (ROOT / 'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+        source = (ROOT / 'src/main/java/dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
         self.assertIn('canDisableShield(this.getUseItem(), this, entityIn)', source)
         self.assertIn('this.shieldCoolDown = Math.max(this.shieldCoolDown, 100)', source)
         # High pressure may keep the real gun and raise a shield; ordinary gun use still blocks it.
-        self.assertIn('holdingGun && !humanGunner$shieldDefense().shouldSuppressRecovery() || this.shieldCoolDown > 0', source)
+        self.assertIn('holdingGun && !hhu$shieldDefense().shouldSuppressRecovery() || this.shieldCoolDown > 0', source)
         self.assertIn('this.shieldCoolDown = Math.max(this.shieldCoolDown, 8)', source)
         passive = (PKG / 'GunnerShieldProtection.java').read_text(encoding='utf-8')
         self.assertNotIn('shieldCoolDown', passive)

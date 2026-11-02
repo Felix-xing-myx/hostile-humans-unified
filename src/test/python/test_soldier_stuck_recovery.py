@@ -1,9 +1,9 @@
 """Source integration contracts; terrain and teleport behavior require in-game tests."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-JAVA = ROOT / 'src/main/java/club/someoneice/humangunner'
+JAVA = ROOT / 'src/main/java/dev/felix/hostilehumans'
 
 
 def read(name):
@@ -12,7 +12,7 @@ def read(name):
 
 class SoldierStuckRecoveryTest(unittest.TestCase):
     def test_monitor_runs_outside_idle_goal(self):
-        self.assertIn('SoldierStuckRecovery.tick(human)', read('HumanGunner.java'))
+        self.assertIn('SoldierStuckRecovery.tick(human)', read('HumanRuntime.java'))
         source = read('SoldierStuckRecovery.java')
         self.assertNotIn('getTarget() == null', source)
         self.assertNotIn('setFlags', source)

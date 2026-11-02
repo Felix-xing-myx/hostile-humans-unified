@@ -1,9 +1,9 @@
 """Movement handoff contracts; actual combat/path geometry needs game acceptance."""
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 
 ROOT = Path(__file__).resolve().parents[3] / 'src/main/java'
-PKG = ROOT / 'club/someoneice/humangunner'
+PKG = ROOT / 'dev/felix/hostilehumans'
 
 
 class RangedMeleeContinuityContract(unittest.TestCase):
@@ -15,7 +15,7 @@ class RangedMeleeContinuityContract(unittest.TestCase):
         self.assertNotIn('doHurtTarget(', source)
         self.assertNotIn('attackCooldown', source)
         self.assertNotIn('getPosAway', source)
-        native = (ROOT / 'com/craftix/hostile_humans/entity/ai/goal/MeleeAttackGoal.java').read_text(encoding='utf-8')
+        native = (ROOT / 'dev/felix/hostilehumans/behavior/combat/melee/MeleeAttackGoal.java').read_text(encoding='utf-8')
         self.assertIn('this.tickAttackOnly(livingEntity);', native)
         self.assertIn('protected final void tickAttackOnly', native)
 
@@ -41,4 +41,4 @@ class RangedMeleeContinuityContract(unittest.TestCase):
         self.assertIn('RangedWeaponCustody.restorePreferred(human, "close_defense_separated")', source)
         self.assertIn('if (!RangedWeaponCustody.isActive(human)) return;', source)
         self.assertIn('human.getSensing().hasLineOfSight(target)', source)
-        self.assertIn('!human.humanGunner$hasPendingMeleeAttack() && !human.swinging', source)
+        self.assertIn('!human.hhu$hasPendingMeleeAttack() && !human.swinging', source)

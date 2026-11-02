@@ -1,5 +1,5 @@
 {
-  "package": "com.craftix.hostile_humans.mixin",
+  "package": "dev.felix.hostilehumans.mixin",
   "minVersion": "0.6",
   "required": true,
   "compatibilityLevel": "JAVA_17",

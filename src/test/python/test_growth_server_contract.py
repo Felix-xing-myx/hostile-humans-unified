@@ -2,10 +2,10 @@
 import json
 import re
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 
 ROOT = Path(__file__).resolve().parents[3]
-JAVA = ROOT / "src/main/java/club/someoneice/humangunner"
+JAVA = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 
 def read(name):
@@ -89,7 +89,7 @@ class GrowthServerContractTest(unittest.TestCase):
         self.assertNotIn("stageAt", tick)
 
     def test_only_server_ticks_and_existing_nonfirearm_branches_scale(self):
-        source = read("HumanGunner.java")
+        source = read("HumanRuntime.java")
         self.assertIn("human && !human.level().isClientSide", source)
         self.assertEqual(source.count("HumanDamageScaling.outgoing("), 1)
         hurt = read("HumanDamageScaling.java")
@@ -140,7 +140,7 @@ class GrowthServerContractTest(unittest.TestCase):
         clone = combat.split("static void onPlayerClone", 1)[1].split("static void settle", 1)[0]
         self.assertIn("event.isWasDeath()", clone)
         self.assertIn("CONFIRMED.add(event.getOriginal())", clone)
-        self.assertIn("GrowthCombat::onPlayerClone", read("HumanGunner.java"))
+        self.assertIn("GrowthCombat::onPlayerClone", read("HumanRuntime.java"))
         self.assertIn("target instanceof net.minecraft.server.level.ServerPlayer", combat)
 
     def test_disable_invalidates_unfinished_fights_without_destroying_earned_rewards(self):
@@ -173,7 +173,7 @@ class GrowthServerContractTest(unittest.TestCase):
         tacz = read("TaczIntegration.java")
         self.assert_shared_firearm_scaling('TaczIntegration.java')
         self.assertNotIn("HumanGrowth.multiplier", tacz)
-        self.assertNotIn("gunDamageMultiplier", read("HumanGunner.java"))
+        self.assertNotIn("gunDamageMultiplier", read("HumanRuntime.java"))
         self.assertIn("HumanGrowth.gunSpreadMultiplier(human)", read("RangedAccuracy.java"))
         for goal in ("GunnerGoal.java", "AdaptiveCombatGoal.java"):
             self.assertIn("RangedAccuracy.gunSpreadDegrees", read(goal))

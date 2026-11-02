@@ -1,0 +1,73 @@
+package dev.felix.hostilehumans.bootstrap;
+
+import dev.felix.hostilehumans.bootstrap.ContentRegistry;
+import dev.felix.hostilehumans.bootstrap.HostileHumansUnified;
+import java.util.LinkedHashSet;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.RegistryObject;
+
+/** One creative tab owned by the single unified mod ID. */
+public final class UnifiedCreativeTab {
+    public static final DeferredRegister<CreativeModeTab> TABS =
+            DeferredRegister.create(Registries.CREATIVE_MODE_TAB, HostileHumansUnified.MOD_ID);
+
+    public static final RegistryObject<CreativeModeTab> UNIFIED = TABS.register("unified", () ->
+            CreativeModeTab.builder()
+                    .title(Component.translatable("itemGroup.hostile_humans_unified"))
+                    .icon(() -> new ItemStack(ContentRegistry.SOLDIER_ROSTER.get()))
+                    .displayItems((parameters, output) -> {
+                        var items = new LinkedHashSet<RegistryObject<Item>>();
+                        // Keep related items together, in tier order from roamer to tier III.
+                        items.add(ModItems.ROAMER_SPAWN_EGG);
+                        items.addAll(ContentRegistry.FACTION_SPAWN_EGGS);
+                        items.addAll(ContentRegistry.BOSS_SPAWN_EGGS);
+
+                        items.add(ContentRegistry.ROAMER_IDENTITY_BADGE);
+                        items.add(ContentRegistry.TIER_ONE_IDENTITY_BADGE);
+                        items.add(ContentRegistry.TIER_TWO_IDENTITY_BADGE);
+                        items.add(ContentRegistry.TIER_THREE_IDENTITY_BADGE);
+                        items.add(ContentRegistry.ULTIMATE_IDENTITY_BADGE);
+
+                        items.add(ContentRegistry.ROAMER_CONTRACT);
+                        items.add(ContentRegistry.TIER_ONE_CONTRACT);
+                        items.add(ContentRegistry.TIER_TWO_CONTRACT);
+                        items.add(ContentRegistry.TIER_THREE_CONTRACT);
+
+                        items.add(ContentRegistry.ROAMER_SIGNAL_FLARE);
+                        items.add(ContentRegistry.TIER_ONE_SIGNAL_FLARE);
+                        items.add(ContentRegistry.TIER_TWO_SIGNAL_FLARE);
+                        items.add(ContentRegistry.TIER_THREE_SIGNAL_FLARE);
+
+                        items.add(ContentRegistry.ROAMER_HOSTILE_BEACON);
+                        items.add(ContentRegistry.TIER_ONE_HOSTILE_BEACON);
+                        items.add(ContentRegistry.TIER_TWO_HOSTILE_BEACON);
+                        items.add(ContentRegistry.TIER_THREE_HOSTILE_BEACON);
+
+                        items.add(ContentRegistry.SOLDIER_ROSTER);
+                        // Preserve discoverability if more items are registered later.
+                        items.addAll(ModItems.ITEMS.getEntries());
+                        items.addAll(ContentRegistry.ITEMS.getEntries());
+                        items.addAll(dev.felix.hostilehumans.economy.EconomyContent.ITEMS.getEntries());
+                        items.addAll(dev.felix.hostilehumans.settlement.SettlementContent.ITEMS.getEntries());
+                        dev.felix.hostilehumans.cultivation.CultivationContent.creativeItems().forEach(output::accept);
+                        for (RegistryObject<Item> item : items) {
+                            // Old IDs remain usable in saves and commands; this tab presents the faction variants.
+                            if(item==ModItems.HUMAN1_SPAWN_EGG||item==ModItems.HUMAN2_SPAWN_EGG||item==ModItems.HUMAN3_SPAWN_EGG)continue;
+                            if (item == ContentRegistry.HUMAN_MAGAZINE
+                                    && !net.minecraftforge.fml.ModList.get().isLoaded("tacz")
+                                    && !net.minecraftforge.fml.ModList.get().isLoaded("scguns")) continue;
+                            if (item == ContentRegistry.SCGUNS_SIGNAL_FLARE
+                                    && !net.minecraftforge.fml.ModList.get().isLoaded("scguns")) continue;
+                            output.accept(item.get());
+                        }
+                    })
+                    .build());
+
+    private UnifiedCreativeTab() {
+    }
+}

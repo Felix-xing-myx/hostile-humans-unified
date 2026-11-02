@@ -1,0 +1,72 @@
+package dev.felix.hostilehumans.common;
+
+import dev.felix.hostilehumans.behavior.combat.gun.GunSupport;
+import dev.felix.hostilehumans.compat.firstaid.FirstAidApiBridge;
+import dev.felix.hostilehumans.compat.jeg.JegGunIdentity;
+import dev.felix.hostilehumans.compat.jeg.JegIntegration;
+import dev.felix.hostilehumans.compat.jeg.JegReloadPlan;
+import dev.felix.hostilehumans.compat.jeg.JegSounds;
+import dev.felix.hostilehumans.compat.jeg.JegThrowables;
+import dev.felix.hostilehumans.compat.maid.MaidTargetRules;
+import dev.felix.hostilehumans.compat.maid.TouhouMaidCompat;
+import dev.felix.hostilehumans.compat.scguns.ScgunsGunIdentity;
+import dev.felix.hostilehumans.compat.scguns.ScgunsIntegration;
+import dev.felix.hostilehumans.compat.scguns.ScgunsMedicalBridge;
+import dev.felix.hostilehumans.compat.scguns.ScgunsRaidBridge;
+import dev.felix.hostilehumans.compat.scguns.ScgunsReloadTiming;
+import dev.felix.hostilehumans.compat.scguns.ScgunsSounds;
+import dev.felix.hostilehumans.compat.scguns.ScgunsThrowableAdapter;
+import dev.felix.hostilehumans.compat.scguns.ScgunsThrowableDamage;
+import dev.felix.hostilehumans.compat.tacz.TaczGunItemIdentity;
+import dev.felix.hostilehumans.compat.tacz.TaczGunMechanics;
+import dev.felix.hostilehumans.compat.tacz.TaczHumanReloadTransactions;
+import dev.felix.hostilehumans.compat.tacz.TaczIntegration;
+import dev.felix.hostilehumans.compat.tacz.TaczMaidIntegration;
+import dev.felix.hostilehumans.compat.tacz.TaczNpcMagazine;
+import dev.felix.hostilehumans.compat.tacz.TaczReloadSoundClient;
+import dev.felix.hostilehumans.faction.visual.CuriosBandAccess;
+
+import java.nio.file.*;
+import java.util.List;
+
+/** Real JVM linking test on Forge/Minecraft libraries, with all gameplay dependencies absent.
+ * No launcher, registry bootstrap, client, world, server or network is started. */
+public final class OptionalRuntimeTest {
+    public static void main(String[] args) throws Exception {
+        ClassLoader loader = OptionalRuntimeTest.class.getClassLoader();
+        for (String type : List.of("com.tacz.guns.api.item.IGun",
+                "com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid",
+                "top.theillusivec4.curios.api.CuriosApi",
+                "ichttt.mods.firstaid.api.healing.ItemHealing", "top.ribs.scguns.item.GunItem")) {
+            try { Class.forName(type, false, loader); throw new AssertionError("Optional dependency leaked onto test classpath: " + type); }
+            catch (ClassNotFoundException expected) { }
+        }
+        int loaded = 0;
+        Path root = Path.of(args[0]);
+        try (var paths = Files.walk(root)) {
+            for (Path file : paths.filter(p -> p.toString().endsWith(".class")).sorted().toList()) {
+                String name = root.relativize(file).toString().replace('\\', '.').replace('/', '.').replaceAll("\\.class$", "");
+                // These adapters are deliberately loadable only with their dependency installed.
+                if (name.matches(".*\\.(JegIntegration|JegMonitorRecoilAdapter|JegReloadPlan|JegSounds|JegNativePose|JegGunIdentity|JegNpcMuzzleFlashMixin|FirstAidApiBridge|TaczMonitorHud|TaczMonitorRecoil|TaczHearingBridge|TaczNpcEffects|TaczNativePresentation|TaczPresentationResources|NativeReloadAudio|NativeAnimationWeight|TaczMonitorAudio|TaczMonitorShotSoundClient|TaczMonitorShotSoundMixin|TaczMonitorWeapons|TaczNativeOptics|TaczScopeAimMixin|TaczGunMechanics|TaczNpcMagazine|ScgunsIntegration|ScgunsMonitorRecoilAdapter|ScgunsSounds|ScgunsReloadTiming|ScgunsNativePose|ScgunsMachineGunPose|ScgunsMedicalBridge|ScgunsGunIdentity|ScgunsRaidBridge|ScgunsThrowableAdapter|ScgunsThrowableDamage|JegThrowables|TaczIntegration|TaczGunItemIdentity|TaczHumanReloadTransactions|TaczHumanReloadMixin|TaczHumanShootMixin|TaczReloadSoundClient|TaczMaidIntegration|TouhouMaidCompat|MaidTargetRules|TravelersBackpack|HumanBackpackLayer|CuriosWalletAccess|CuriosBandAccess)(\\$.*)?")) continue;
+                try {
+                    Class<?> type = Class.forName(name, false, loader);
+                    type.getDeclaredFields();
+                    type.getDeclaredMethods();
+                    type.getDeclaredConstructors();
+                } catch (LinkageError error) {
+                    throw new AssertionError("Core optional-linkage failure in " + name, error);
+                }
+                loaded++;
+            }
+        }
+        GunSupport vanilla = new GunSupport() {};
+        if (vanilla.enabled() || vanilla.isGun(null) || !vanilla.catalog().isEmpty() || vanilla.isBullet(null))
+            throw new AssertionError("Vanilla adapter must not activate firearms");
+        vanilla.control(null).aim(false);
+        vanilla.control(null).draw();
+        vanilla.control(null).clearSprintLock();
+        vanilla.control(null).shoot(null, null, 0, 0);
+        vanilla.registerEvents();
+        System.out.println("OptionalRuntimeTest: linked " + loaded + " core classes without TaCZ, Curios, Maid First Aid Scorched Guns or JEG; vanilla adapter passed");
+    }
+}

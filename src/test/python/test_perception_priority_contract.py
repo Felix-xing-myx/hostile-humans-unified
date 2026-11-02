@@ -1,7 +1,7 @@
 """Work ownership/knowledge contracts. Java and live scene acceptance remain separate."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
-PKG=Path(__file__).resolve().parents[3]/"src/main/java/club/someoneice/humangunner"
+PKG=Path(__file__).resolve().parents[3]/"src/main/java/dev/felix/hostilehumans"
 def source(name):return (PKG/(name+".java")).read_text(encoding="utf-8")
 class PerceptionPriorityContract(unittest.TestCase):
     def test_geometry_and_pending_work_precede_fast_reservation(self):
@@ -29,15 +29,19 @@ class PerceptionPriorityContract(unittest.TestCase):
             self.assertIn(condition,cache)
     def test_natural_rotation_cannot_override_actual_action_or_stable_observation(self):
         attention=source("HumanAttention")
-        self.assertIn("request.priority>=0||!combat&&!urgent&&observation==null",attention)
-        self.assertIn("priorPose=stable&&!action&&!urgent",attention)
+        self.assertIn("boolean accepted=",attention)
+        self.assertIn("boolean action=accepted&&request.priority>=0",attention)
+        self.assertIn("!soundGlance||request.pressure||human.hhu$hasPendingMeleeAttack()",attention)
+        self.assertIn("HumanTurnControl.apply(human,body,head,pitch,limit,profile,speed)",attention)
         self.assertIn("AttentionFacingPolicy.surveyStep",attention)
         self.assertIn("navigationYaw(human)",attention)
     def test_sound_glance_does_not_select_or_navigate(self):
         code=source("HumanPerception")
         glance=code.split("private static void reactToClue",1)[1].split("private static boolean finite",1)[0]
-        self.assertIn("clue.priority<3",glance)
-        self.assertIn("HumanThreatAssessment.lowFar",glance)
+        self.assertIn("HumanThreatAssessment.maySoundGlance(h,clue.position,clue.priority)",glance)
+        policy=source("HumanThreatAssessment")
+        self.assertIn("priority < 3",policy)
+        self.assertIn("weakCurrent(h,h.getTarget())",policy)
         self.assertIn("attention.sound_glance_ticks",glance)
         self.assertNotIn("setTarget",glance)
         self.assertNotIn("moveTo",glance)

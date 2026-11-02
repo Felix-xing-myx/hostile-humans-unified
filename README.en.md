@@ -1,5 +1,7 @@
 # Hostile Humans Unified
 
+A Patrol Command Baton lets stationed humans follow ordered waypoints, ping-pong routes or simple closed loops, with individual wait times and a home center that moves on arrival. Survival players can edit their own hired soldiers; creative players can edit any stationed human and use a dedicated controller for unowned humans. See the [route guide](docs/PATROL_ROUTES.md).
+
 Optional First Aid integration: humans can use plaster (default 20 total HP), bandage (default 40 total HP), and morphine (default Resistance I for 90 seconds). Effects and pickup quality are configurable in global `first_aid`. Medical supplies follow First Aid's public application and healing timing API and share a full-course cooldown. Morphine is not reused during its cooldown or an existing Resistance effect. Supply these through pickup or soldier inventory; default spawn kits are unchanged. Player body-part treatment remains First Aid's own behavior.
 
 [简体中文](README.md) | [English](README.en.md)
@@ -7,6 +9,8 @@ Optional First Aid integration: humans can use plaster (default 20 total HP), ba
 Derived from [Hostile Humans](https://www.curseforge.com/minecraft/mc-mods/hostile-humans), this mod brings together content from **Human Gunner** and adds original gameplay. It is a standalone Forge mod; the original Hostile Humans and Human Gunner JARs are not required. The mod enhances hostile humans' attributes, combat, and survival mechanics, and is suited to modded worlds and modpacks. GPT assisted with modifications and builds.
 
 ## Gameplay
+
+The mod provides shared native panels, structure-region authoring, three-seat cultivation, faction wallets and a minimal passage/task framework. Formal economy tables remain disabled until balanced; only an explicit creative test session uses test prices. Wallet storage remains independently available, and its configurable key is unbound by default. Cultivation materials have no formal recipes or drops yet.
 
 The mod adds Roamers and Tier I, II, and III humans, each with distinct attributes, equipment, and combat capabilities. Identity badges and faction relationships determine how humans treat players: as enemies, neutrals, or people to protect.
 

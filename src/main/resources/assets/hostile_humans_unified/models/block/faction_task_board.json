@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "hostile_humans_unified:block/faction_task_board_top",
+    "bottom": "hostile_humans_unified:block/faction_task_board_bottom",
+    "side": "hostile_humans_unified:block/faction_task_board_side"
+  }
+}

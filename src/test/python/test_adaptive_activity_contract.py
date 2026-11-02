@@ -1,12 +1,12 @@
 """Population census and budget-switch authority contracts; not runtime load benchmarks."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import json,unittest
 ROOT=Path(__file__).resolve().parents[3]
-PKG=ROOT/"src/main/java/club/someoneice/humangunner"
+PKG=ROOT/"src/main/java/dev/felix/hostilehumans"
 def source(name):return (PKG/(name+".java")).read_text(encoding="utf-8")
 class AdaptiveActivityContract(unittest.TestCase):
     def test_heartbeat_precedes_early_returns_and_diagnostics_do_not_sample(self):
-        tick=source("HumanGunner").split("private static void onLivingTick",1)[1]
+        tick=source("HumanRuntime").split("private static void onLivingTick",1)[1]
         self.assertLess(tick.index("AdaptiveActivityBudget.touch(human)"),tick.index("initializeHumanIfReady"))
         module=source("AdaptiveActivityBudget")
         self.assertIn("Map<UUID,Integer> present",module)
@@ -14,7 +14,7 @@ class AdaptiveActivityContract(unittest.TestCase):
         diagnostic=module.split("public static String describe",1)[1]
         self.assertNotIn("touch(",diagnostic)
     def test_mode_changes_preserve_native_budget_state(self):
-        fair=(ROOT/"src/main/java/dev/felix/hostilehumans/core/FairWorkBudget.java").read_text(encoding="utf-8")
+        fair=(ROOT/"src/main/java/dev/felix/hostilehumans/performance/FairWorkBudget.java").read_text(encoding="utf-8")
         setter=fair.split("public void setTickCapacity",1)[1].split("public int claim",1)[0]
         self.assertNotIn("clear()",setter)
         self.assertNotIn("remaining =",setter)

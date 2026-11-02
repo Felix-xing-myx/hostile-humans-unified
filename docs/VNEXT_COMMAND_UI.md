@@ -8,7 +8,7 @@
 - 旧 `HumanCommandNetwork.register()` 现在公开，协议从7升8；`SoldierRosterNetwork` 从6升7。客户端与服务端必须同版本。
 - 注册 `SquadCommandTokenItem(new Item.Properties())`，ID `hostile_humans_unified:squad_command_token`；注册 `NaturalStateToolItem`，ID `hostile_humans_unified:natural_state_tool`。两个构造器公开且限制堆叠1。
 - 把两物品加入创造模式标签；不加配方、不在雇佣时发放。模型已分别引用原版 name_tag/stick，语言提供名称及操作提示。
-- 本阶段不编辑 HumanGunner、注册表、配置或实体生命周期。既有 GrowthCombat 调用 HumanCommandNetwork.tickServer，其内部转调小队刷新。既有名册退出/停服钩子同步清理单兵与小队会话。
+- 本阶段不编辑 HumanRuntime、注册表、配置或实体生命周期。既有 GrowthCombat 调用 HumanCommandNetwork.tickServer，其内部转调小队刷新。既有名册退出/停服钩子同步清理单兵与小队会话。
 
 集成必须同时提供主控接口：`HumanFactions.id(Human)`、`AttributeDetailNetwork.requestOwned(int entityId,UUID humanId)`、`SquadCommands.reanchor(ServerPlayer,UUID token,int number):Result`，以及 `SoldierOrder.apply` 中 null order 表示不修改的修正。UI分支不创建替代类或复制这些机制。
 

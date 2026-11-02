@@ -1,0 +1,217 @@
+package dev.felix.hostilehumans.behavior.combat.defense;
+
+import dev.felix.hostilehumans.testutil.ModuleTestSources;
+
+import dev.felix.hostilehumans.behavior.combat.defense.ShieldDurability;
+import dev.felix.hostilehumans.behavior.combat.melee.MeleeCombatRange;
+import dev.felix.hostilehumans.behavior.combat.melee.MeleeSpacing;
+import dev.felix.hostilehumans.bootstrap.HumanRuntime;
+import dev.felix.hostilehumans.config.UnifiedConfig;
+import dev.felix.hostilehumans.equipment.FirearmSpawnEquipment;
+import dev.felix.hostilehumans.equipment.GuaranteedShieldLoadout;
+import dev.felix.hostilehumans.equipment.HumanSpawnEquipment;
+import dev.felix.hostilehumans.inventory.HumanInventoryCustody;
+
+import dev.felix.hostilehumans.entity.HumanData;
+import dev.felix.hostilehumans.entity.HumanHelper;
+import net.minecraft.SharedConstants;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.server.Bootstrap;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodInsnNode;
+import java.util.List;
+import java.util.Random;
+import java.util.UUID;
+import java.util.zip.ZipFile;
+
+/** Real inventory/codec and packaged-entrypoint checks; never starts a world or game. */
+public final class MaintenanceRefactorTest {
+    private static int checks;
+    public static void main(String[] args) throws Exception {
+        SharedConstants.tryDetectVersion();
+        var flag = Bootstrap.class.getDeclaredField("isBootstrapped");
+        flag.setAccessible(true);
+        flag.setBoolean(null, true);
+        BuiltInRegistries.bootStrap();
+        check(ShieldDurability.wearCost(0, 500) == 0 && ShieldDurability.wearCost(-1, 500) == 0
+                && ShieldDurability.wearCost(Float.NaN, 500) == 0
+                && ShieldDurability.wearCost(Float.POSITIVE_INFINITY, 500) == 0, "invalid hits cannot wear shields");
+        check(ShieldDurability.wearCost(1, 500) == 2 && ShieldDurability.wearCost(2, 500) == 4
+                && ShieldDurability.wearCost(3, 500) == 6 && ShieldDurability.wearCost(10, 500) == 18
+                && ShieldDurability.wearCost(1.9f, 500) == 4, "shield wear floors after multiplying damage");
+        check(ShieldDurability.wearCost(Float.MAX_VALUE, 500) == Integer.MAX_VALUE, "large wear cannot overflow");
+        check(ShieldDurability.wearCost(8 * 4.0, 500) == 57,
+                "all shotgun pellets count; flat cost occurs once per batch");
+        check(ShieldDurability.wearCost(0.4 + 0.4, 500) == 2,
+                "fractional hits sum before flooring");
+        check(ShieldDurability.wearCost(70 + 30, 500) == ShieldDurability.wearCost(100, 500),
+                "AP and normal components retain the same total durability cost");
+        check(ShieldDurability.wearCost(20, 2000) == 81, "hybrid damage and 0.15 percent maximum wear");
+        check(ShieldDurability.wearCost(32, 336) == 49
+                && ShieldDurability.wearCost(32, 1000) == 81
+                && ShieldDurability.wearCost(32, 2500) == 153, "same hit scales with actual maximum durability");
+        check(ShieldDurability.wearCost(8 * 4.0, 2500) == 153
+                && ShieldDurability.wearCost(32, 2500) < 8 * ShieldDurability.wearCost(4, 2500),
+                "pellet batch preserves damage and charges fixed base only once");
+        check(ShieldDurability.wearCost(1, 0) == 0 && ShieldDurability.wearCost(1, -1) == 0,
+                "invalid maximum durability cannot wear a shield");
+        Random random = new Random(3855);
+        for (int trial = 0; trial < 500; trial++) {
+            CompoundTag record = new CompoundTag();
+            record.putUUID("UUID", new UUID(0, trial));
+            HumanData data = new HumanData(record);
+            int total = 0;
+            int capacity = 0;
+            List<ItemStack> before = new java.util.ArrayList<>();
+            for (int slot = 0; slot < 30; slot++) {
+                int n = random.nextInt(65);
+                ItemStack stack = n == 0 ? ItemStack.EMPTY : new ItemStack(Items.COBBLESTONE, n);
+                if (n > 0 && slot % 3 == 0) stack.getOrCreateTag().putInt("variant", 1);
+                data.setInventoryItem(slot, stack);
+                before.add(stack.copy());
+                total += n;
+                if (stack.isEmpty()) capacity += 64;
+                else if (!stack.hasTag()) capacity += 64 - n;
+            }
+            ItemStack incoming = new ItemStack(Items.COBBLESTONE, 1 + random.nextInt(1024));
+            int supplied = incoming.getCount();
+            boolean accepted = HumanInventoryCustody.storePickupTransactionally(data, incoming);
+            check(accepted == (capacity >= supplied), "full backpack capacity and NBT-aware merging");
+            check(incoming.getCount() == supplied, "pickup source is owned by caller, never partly consumed");
+            int after = 0;
+            for (int slot = 0; slot < 30; slot++) {
+                after += data.getInventoryItem(slot).getCount();
+                if (!accepted) check(ItemStack.matches(before.get(slot), data.getInventoryItem(slot)),
+                        "failed insertion leaves every slot unchanged");
+            }
+            check(after == total + (accepted ? supplied : 0), "item conservation");
+        }
+        for (String key : List.of("Armor", "Hand", "Inventory")) {
+            int size = key.equals("Armor") ? 4 : key.equals("Hand") ? 2 : 30;
+            NonNullList<ItemStack> slots = NonNullList.withSize(size, ItemStack.EMPTY);
+            ItemStack named = new ItemStack(Items.DIAMOND_SWORD);
+            named.setDamageValue(9);
+            named.getOrCreateTag().putString("test", "preserve NBT");
+            slots.set(size - 1, named);
+            CompoundTag saved = new CompoundTag();
+            save(key, saved, slots);
+            NonNullList<ItemStack> restored = NonNullList.withSize(size, ItemStack.EMPTY);
+            load(key, saved, restored);
+            check(ItemStack.matches(named, restored.get(size - 1)), "last slot survives codec: " + key);
+            for (int slot = 0; slot < size; slot++) slots.set(slot, ItemStack.EMPTY);
+            save(key, saved, slots);
+            check(!saved.contains(key), "reused tag removes stale nonempty list: " + key);
+            load(key, saved, restored);
+            check(restored.stream().allMatch(ItemStack::isEmpty), "removed gear cannot resurrect: " + key);
+            CompoundTag bad = new ItemStack(Items.DIRT).save(new CompoundTag());
+            bad.putByte("Slot", (byte) 255);
+            ListTag list = new ListTag();
+            list.add(bad);
+            saved.put(key, list);
+            load(key, saved, restored);
+            check(restored.stream().allMatch(ItemStack::isEmpty), "out-of-bounds unsigned slot ignored: " + key);
+        }
+        var config = new UnifiedConfig(new com.google.gson.JsonObject());
+        int[] start = {3, 5, 10, 20}, finish = {53, 55, 60, 70};
+        int rank = 0;
+        for (String key : List.of("roamer", "tier1", "tier2", "tier3")) {
+            var profile = config.equipmentGrowth().tiers().get(key);
+            check(profile.startDay() == start[rank] && profile.fullQualityDay() == finish[rank],
+                    "configured growth dates: " + key);
+            check(profile.progress(Long.MIN_VALUE) == 0 && profile.progress(Long.MAX_VALUE) == 1,
+                    "growth date bounds");
+            double previous = 0;
+            for (int day = 1; day <= finish[rank] + 10; day++) {
+                double value = profile.grow(profile.earlyGunChanceMultiplier(), day);
+                check(value >= previous && value >= 0 && value <= 1, "growth is monotonic and bounded");
+                previous = value;
+            }
+            check(profile.grow(0.25, finish[rank]) == 1, "baseline reached exactly on full-quality day");
+            rank++;
+        }
+        String human = "dev/felix/hostilehumans/entity/Human";
+        String gunner = "dev/felix/hostilehumans/bootstrap/HumanRuntime";
+        check(calls(human, "equipWeapon", "swapRequestedSlot"), "equipment exchange uses formal inventory module");
+        check(calls("dev/felix/hostilehumans/behavior/combat/melee/MeleeSpacing", "control", "canStrike")
+                        && calls("dev/felix/hostilehumans/behavior/combat/melee/MeleeSpacing", "tryStep", "strafeMelee"),
+                "spacing requires a hittable target and an explicit melee movement request");
+        check(calls("dev/felix/hostilehumans/behavior/combat/melee/MeleeAttackGoal", "canStrike", "canStrike")
+                        && calls("dev/felix/hostilehumans/behavior/combat/melee/MeleeCombatRange", "canStrike", "canReachTarget")
+                        && calls("dev/felix/hostilehumans/behavior/combat/melee/MeleeCombatRange", "canReachTarget", "canStrike"),
+                "pursuit/spacing and Better Combat share actual attack geometry");
+        check(calls("dev/felix/hostilehumans/inventory/HumanInventoryCustody", "stowOrDrop",
+                "storePickupTransactionally"), "stowing cannot partly commit before a canceled world drop");
+        check(calls("dev/felix/hostilehumans/equipment/FirearmSpawnEquipment", "equip", "insertInventory")
+                        && calls("dev/felix/hostilehumans/equipment/GuaranteedShieldLoadout", "applyOnce", "insertInventory"),
+                "additional firearms and shields preserve existing equipment through custody");
+        check(calls("dev/felix/hostilehumans/equipment/GuaranteedShieldLoadout", "applyOnce", "shield")
+                        && calls("dev/felix/hostilehumans/equipment/HumanSpawnEquipment", "completeIfReady", "generateReserves"),
+                "shield pools and bounded spawn reserves use the authoritative generation module");
+        check(calls(human, "hurtCurrentlyUsedShield", "damageShield"), "vanilla blocks use shared shield policy");
+        check(!calls(gunner, "initializeHumanIfReady", "ensureMeleeFallback")
+                        && !calls(gunner, "onLivingTick", "ensureMeleeFallback"),
+                "loaded/active soldiers never manufacture replacement melee weapons");
+        check(calls("dev/felix/hostilehumans/equipment/HumanSpawnEquipment", "completeIfReady", "ensureMeleeFallback"),
+                "melee reserves are generated only by spawn completion");
+        try (ZipFile jar = new ZipFile(args[0])) {
+            for (String removed : List.of(
+                    "dev/felix/hostilehumans/patch/HostileHumansEquipmentPatch.class",
+                    "dev/felix/hostilehumans/entity/HumanInventoryGenerator.class",
+                    "dev/felix/hostilehumans/entity/ai/goal/FindWaterOnFireGoal.class",
+                    "dev/felix/hostilehumans/entity/ai/goal/TridentAttackGoal.class",
+                    "dev/felix/hostilehumans/entity/ai/goal/HumanGoal.class",
+                    "dev/felix/hostilehumans/entity/ai/goal/LookForChestGoal.class",
+                    "dev/felix/hostilehumans/entity/ai/control/HumanEntityWalkControl.class",
+                    "dev/felix/hostilehumans/entity/loadout/HumanLoadoutManager.class",
+                    "dev/felix/hostilehumans/TierThreeLoadout.class",
+                    "dev/felix/hostilehumans/RangedSpawnChance.class",
+                    "data/curios/slots/identity_badge.json",
+                    "data/hostile_humans_unified/curios/slots/identity_badge.json",
+                    "data/hostile_humans_unified/curios/entities/identity_badge_players.json",
+                    "data/hostile_humans_unified/human_loadouts/roamer.json"))
+                check(jar.getEntry(removed) == null, "obsolete artifact absent: " + removed);
+            for (String present : List.of("dev/felix/hostilehumans/equipment/HumanSpawnEquipment.class",
+                    "dev/felix/hostilehumans/inventory/HumanInventoryCustody.class",
+                    "dev/felix/hostilehumans/behavior/combat/defense/ShieldDurability.class",
+                    "data/hostile_humans_unified/curios/slots/identity_band.json",
+                    "data/hostile_humans_unified/curios/entities/identity_band_players.json"))
+                check(jar.getEntry(present) != null, "maintained module/resource packaged: " + present);
+        }
+        System.out.println("MaintenanceRefactorTest: " + checks + " inventory, codec, growth and architecture checks passed");
+    }
+    private static void save(String key, CompoundTag tag, NonNullList<ItemStack> items) {
+        switch (key) {
+            case "Armor" -> HumanHelper.saveArmorItems(tag, items);
+            case "Hand" -> HumanHelper.saveHandItems(tag, items);
+            default -> HumanHelper.saveInventoryItems(tag, items);
+        }
+    }
+    private static void load(String key, CompoundTag tag, NonNullList<ItemStack> items) {
+        switch (key) {
+            case "Armor" -> HumanHelper.loadArmorItems(tag, items);
+            case "Hand" -> HumanHelper.loadHandItems(tag, items);
+            default -> HumanHelper.loadInventoryItems(tag, items);
+        }
+    }
+    private static boolean calls(String owner, String name, String called) throws Exception {
+        ClassNode node = new ClassNode();
+        try (var stream = MaintenanceRefactorTest.class.getClassLoader().getResourceAsStream(dev.felix.hostilehumans.testutil.ModuleTestSources.owner(owner) + ".class")) {
+            if (stream == null) throw new AssertionError("Missing class: " + owner);
+            new ClassReader(stream).accept(node, 0);
+        }
+        for (var method : node.methods) if (method.name.equals(name))
+            for (var instruction : method.instructions)
+                if (instruction instanceof MethodInsnNode call && call.name.equals(called)) return true;
+        return false;
+    }
+    private static void check(boolean value, String message) {
+        checks++;
+        if (!value) throw new AssertionError(message);
+    }
+}

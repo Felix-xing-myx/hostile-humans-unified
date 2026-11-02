@@ -1,6 +1,6 @@
 """Check method declarations as well as call owners; neither compilation nor a call-owner test binds @Shadow."""
 import os
-from pathlib import Path
+from source_paths import SourcePath as Path
 import sys
 import unittest
 import zipfile
@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tools"))
 from verify_package import ClassFile
 
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 class DamageMixinOwnership(unittest.TestCase):
     def test_player_calls_inherited_armor_without_a_player_shadow(self):

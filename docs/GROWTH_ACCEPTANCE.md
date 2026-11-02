@@ -6,7 +6,7 @@
 |---|---|---|
 | 全局开关统一属性、培养、装备、UI | GrowthConfig、HumanGrowth.multiplier/fullHealth、GrowthRewards、NaturalEquipmentGrowth、GrowthSnapshot/SoldierCommandScreen | 静态接入已核对；待运行开关关闭及重开、当前生命不增加、既有装备不替换 |
 | 0～5级离散成长；经验逐百分点变化 | GrowthProgression.advance、HumanGrowth.award、GrowthHealth.apply | Java 阈值/余数/连升/封顶回归已编译执行并通过 |
-| 生命40/60/80/100，成长后乘经验；枪械独立经验修正 | 默认配置、Tier.maxHealth、HumanGrowth.fullHealth、HumanGunner.onLivingHurt 三个非枪械分支 | 源码契约通过；待实际伤害、外部属性修正和原版模式验收 |
+| 生命40/60/80/100，成长后乘经验；枪械独立经验修正 | 默认配置、Tier.maxHealth、HumanGrowth.fullHealth、HumanRuntime.onLivingHurt 三个非枪械分支 | 源码契约通过；待实际伤害、外部属性修正和原版模式验收 |
 | 服务器重载同步生命与原版近战规则 | HumanGrowth.tick、TierAttributes.applyCombatBase | 源码契约通过；待已有士兵切换原版模式及配置重载验收 |
 | 统一个人在线时间和四阶曲线 | PlayerProgressionData.timeNear、GrowthConfig.stageAt、EquipmentGrowthPolicy.Profile.progress、出生状态 NBT | 不新增时钟；待多玩家、无有效玩家、离线/睡觉/时间指令及不同生成方式验收 |
 | 野生状态固定；正式雇佣培养 | HumanGrowth.state/markBirth/award、GrowthCombat.formal、RecruitmentLedger | 静态接入已核对；待野生击杀不成长、临时支援不成长、解雇重雇保留状态 |
@@ -31,7 +31,7 @@
 
 - **结算边界是每个真正死亡的目标，不是一次进入/退出战斗。** `GrowthCombat`在目标上按士兵UUID保存有效生命损失贡献；`settle`确认死亡后逐名结算。目标活着、卸载、逃离、死亡被取消均不因“脱战”支付奖励。无需最后一击；多名士兵各算各自贡献。
 - 默认每名士兵对每个死亡目标：`min(4, floor(有效伤害/10)*0.25) + (有效伤害严格大于300 ? 4 : 0)`。300正好只得4，超过才得8；同一奖励同时进入阶段和经验进度。仅正式归属且记录有效的士兵可领取，临时援军不培养。
-- 生命和非枪械近战/箭矢/投戟输出乘阶段×经验；枪械阶段不参与伤害，经验用独立附加散布和枪伤曲线。当前伤害分支已抽到`HumanDamageScaling`，旧表的`HumanGunner.onLivingHurt`是调用链入口引用。
+- 生命和非枪械近战/箭矢/投戟输出乘阶段×经验；枪械阶段不参与伤害，经验用独立附加散布和枪伤曲线。当前伤害分支已抽到`HumanDamageScaling`，旧表的`HumanRuntime.onLivingHurt`是调用链入口引用。
 - 当前五文件归属：`global.json`持有共用`growth`、`vanilla_mode`、全局生成/弹药/AI开关；四阶文件各持有`growth_profile`、`attributes`、`damage_multipliers`、`spawning.first_spawn_day`、`food`、`potions`、`ammunition`、`ai`细项、`equipment_loadout`和本阶枪械参数。已无独立`equipment_growth.enabled`配置；关闭统一成长用`global.growth.enabled=false`。
 - 游戏修改配置按完整重启流程操作。文中`configurationReloaded`描述源码中服务端配置重载回调，不据此承诺一个未提供的玩家热重载指令。
 - 下方构建、同步、测试数量和哈希是原日期历史证据，2026-10-11文档核对未再次构建、投放或启动游戏；原有游戏验收边界继续有效。

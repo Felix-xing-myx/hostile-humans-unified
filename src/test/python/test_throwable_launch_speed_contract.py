@@ -1,12 +1,12 @@
 """Fixed-speed solver integration; numerical JVM cases live in CombatPressurePolicyTest."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 import os
 import subprocess
 import json
 
 ROOT = Path(__file__).resolve().parents[3]
-JAVA = ROOT / "src/main/java/club/someoneice/humangunner"
+JAVA = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 
 class ThrowableLaunchSpeedContract(unittest.TestCase):
@@ -26,7 +26,7 @@ class ThrowableLaunchSpeedContract(unittest.TestCase):
         self.assertNotIn("top.ribs", source)
 
     def test_numerical_cases_check_speed_and_actual_discrete_endpoint(self):
-        source = (ROOT / "src/test/java/club/someoneice/humangunner/CombatPressurePolicyTest.java").read_text(encoding="utf-8")
+        source = (ROOT / "src/test/java/dev/felix/hostilehumans/behavior/combat/defense/CombatPressurePolicyTest.java").read_text(encoding="utf-8")
         self.assertIn("checkThrowableSpeed();", source)
         self.assertIn("Math.abs(actual - speed) < 1.0E-8", source)
         self.assertIn("vy = vy * ThrowableBallistics.DRAG - gravity", source)

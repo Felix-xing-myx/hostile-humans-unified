@@ -1,17 +1,17 @@
 """Read-only wiring guards; Java scenario tests and live-world movement are separate checks."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 JAVA = Path(__file__).resolve().parents[2] / "main/java"
-CORE = JAVA / "dev/felix/hostilehumans/core"
-COMBAT = JAVA / "club/someoneice/humangunner"
-ENTITY = JAVA / "com/craftix/hostile_humans/entity"
+CORE = JAVA / "dev/felix/hostilehumans/common"
+COMBAT = JAVA / "dev/felix/hostilehumans"
+ENTITY = JAVA / "dev/felix/hostilehumans/entity"
 
 
 class NavigationHandoffContract(unittest.TestCase):
     def test_target_handoff_uses_the_authoritative_assignment(self):
         code = (ENTITY / "entities/Human.java").read_text(encoding="utf-8")
-        setter = code.split("public void setTarget(", 1)[1].split("public boolean humanGunner$pickupCombatSettled", 1)[0]
+        setter = code.split("public void setTarget(", 1)[1].split("public boolean hhu$pickupCombatSettled", 1)[0]
         self.assertLess(setter.index("super.setTarget(livingEntity)"), setter.index("LivingEntity assigned = getTarget()"))
         self.assertIn("previous != assigned", setter)
         self.assertIn("SoldierPickupPolicy.interruptForCombat(this)", setter)
@@ -20,7 +20,7 @@ class NavigationHandoffContract(unittest.TestCase):
     def test_idle_gap_and_start_race_share_existing_policy(self):
         policy = (COMBAT / "SoldierPickupPolicy.java").read_text(encoding="utf-8")
         goal = (COMBAT / "ValuableItemPickupGoal.java").read_text(encoding="utf-8")
-        self.assertIn("!human.humanGunner$pickupCombatSettled()", policy)
+        self.assertIn("!human.hhu$pickupCombatSettled()", policy)
         self.assertIn("pickup.interruptForCombat();", policy)
         self.assertIn("wrapped.stop();", policy)
         start = goal.split("public void start()", 1)[1].split("public void tick()", 1)[0]

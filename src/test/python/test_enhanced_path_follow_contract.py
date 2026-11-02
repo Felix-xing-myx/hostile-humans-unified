@@ -1,15 +1,15 @@
 """Execution-only navigation boundaries. Not a world collision or game acceptance test."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 
 ROOT=Path(__file__).resolve().parents[3]
 JAVA=ROOT/'src/main/java'
-PKG=JAVA/'club/someoneice/humangunner'
+PKG=JAVA/'dev/felix/hostilehumans'
 
 
 class EnhancedPathFollowContract(unittest.TestCase):
     def test_native_arrival_and_stuck_detection_remain_before_shortcut(self):
-        nav=(JAVA/'com/craftix/hostile_humans/entity/ai/HumanNavigation.java').read_text(encoding='utf-8')
+        nav=(JAVA/'dev/felix/hostilehumans/navigation/HumanNavigation.java').read_text(encoding='utf-8')
         follow=nav.split('@Override protected void followThePath()',1)[1].split('/** An airborne',1)[0]
         self.assertLess(follow.index('super.followThePath()'),follow.index('HumanPathFollower.follow'))
         tick=nav.split('@Override public void tick()',1)[1].split('@Override protected void followThePath',1)[0]

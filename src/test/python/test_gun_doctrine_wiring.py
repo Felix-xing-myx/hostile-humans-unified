@@ -1,11 +1,11 @@
 """Source and arithmetic audit only; does not compile Java or launch Minecraft."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import math
 import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-CORE = ROOT / "src/main/java/club/someoneice/humangunner"
+CORE = ROOT / "src/main/java/dev/felix/hostilehumans"
 
 
 class GunDoctrineWiring(unittest.TestCase):

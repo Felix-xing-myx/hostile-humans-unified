@@ -1,12 +1,12 @@
 """Shot/movement wiring and native origin contracts; not in-game trajectory tests."""
 import os
-from pathlib import Path
+from source_paths import SourcePath as Path
 import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-PKG = ROOT / "src/main/java/club/someoneice/humangunner"
-GOALS = ROOT / "src/main/java/com/craftix/hostile_humans/entity/ai/goal"
+PKG = ROOT / "src/main/java/dev/felix/hostilehumans"
+GOALS = ROOT / "src/main/java/dev/felix/hostilehumans/entity/ai/goal"
 
 
 class RangedShotClearanceContract(unittest.TestCase):
@@ -26,7 +26,7 @@ class RangedShotClearanceContract(unittest.TestCase):
 
     def test_prediction_reuses_solver_without_mutating_combat_or_random(self):
         code = (PKG / "RangedShotClearance.java").read_text(encoding="utf-8")
-        self.assertIn("HumanGunner.solveArrowBallistics(", code)
+        self.assertIn("HumanRuntime.solveArrowBallistics(", code)
         self.assertIn("sample.tick() == human.tickCount", code)
         self.assertIn("sample.weapon() == weapon", code)
         self.assertIn("ClipContext.Block.COLLIDER", code)

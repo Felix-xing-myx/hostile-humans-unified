@@ -131,9 +131,9 @@ def audit(artifact, original, addon, minecraft, jdk, compat_mods=None):
         defaults = json.loads(package.read("defaults/hostile_humans_unified.json"))
         assert list(defaults)[-1] == "tacz", "TaCZ config must be last"
         assert set(defaults["tiers"]) == {"roamer", "tier1", "tier2", "tier3"}
-        for key in ("com/craftix/hostile_humans/entity/entities/Human",
-                    "club/someoneice/humangunner/HumanGunner",
-                    "dev/felix/hostilehumans/core/OwnerIndex"):
+        for key in ("dev/felix/hostilehumans/entity/Human",
+                    "dev/felix/hostilehumans/bootstrap/HumanRuntime",
+                    "dev/felix/hostilehumans/soldier/OwnerIndex"):
             assert key in classes
         forbidden = ("HumanMixin", "HumanServerDataMixin", "SpawnHandlerMixin",
                      "HumanCombatCompatMix", "WalkNodeMix", "ThrownTridentMix", "LocateMixin")
@@ -200,7 +200,7 @@ def audit(artifact, original, addon, minecraft, jdk, compat_mods=None):
             assert not any(t in classes for t in targets), f"internal overwrite remains: {path}"
             mappings = {}
             refmap_name = "hostile_humans_unified.refmap.json"
-            if path.startswith("com/craftix/"):
+            if not re.search(r"remap\s*=\s*false", declaration):
                 mappings = json.loads(package.read(refmap_name))["mappings"].get(path, {})
             for target in targets:
                 target_class = lookup(target)
@@ -226,7 +226,7 @@ def audit(artifact, original, addon, minecraft, jdk, compat_mods=None):
         unresolved_external_parents = 0
         for cls in classes.values():
             for kind, owner, name, desc in cls.references():
-                if owner.startswith(("com/craftix/hostile_humans/", "club/someoneice/humangunner/",
+                if owner.startswith(("dev/felix/hostilehumans/", "dev/felix/hostilehumans/",
                                      "dev/felix/hostilehumans/")):
                     assert owner in classes, f"missing own class: {owner}"
                     resolved = has_member(owner, (name, desc), kind == 9)

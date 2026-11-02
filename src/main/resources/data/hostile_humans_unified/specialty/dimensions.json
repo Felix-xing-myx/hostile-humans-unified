@@ -1,44 +1,96 @@
 {
   "health": {
-    "cost": 1.2
+    "cost": 1.2,
+    "breakthrough_deviation_cap": 0.55,
+    "boss_deviation_cap": 0.9,
+    "absolute_min": 0.5,
+    "absolute_max": null
   },
   "armor": {
-    "cost": 1.4
+    "cost": 1.1,
+    "breakthrough_deviation_cap": 0.55,
+    "boss_deviation_cap": 0.9,
+    "absolute_min": 0.5,
+    "absolute_max": null
   },
   "toughness": {
-    "cost": 1
+    "cost": 0.5,
+    "breakthrough_deviation_cap": 0.55,
+    "boss_deviation_cap": 0.9,
+    "absolute_min": 0.5,
+    "absolute_max": null
   },
   "knockback_resistance": {
-    "cost": 0.7
+    "cost": 0.4,
+    "breakthrough_deviation_cap": 0.55,
+    "boss_deviation_cap": 0.9,
+    "absolute_min": 0.5,
+    "absolute_max": null
   },
   "speed": {
     "deviation_cap": 0.2,
-    "cost": 1.1
+    "cost": 1.2,
+    "breakthrough_deviation_cap": 0.3,
+    "boss_deviation_cap": 0.4,
+    "absolute_min": 0.5,
+    "absolute_max": 1.8
   },
   "detection": {
-    "cost": 0.4
+    "cost": 0.4,
+    "breakthrough_deviation_cap": 0.55,
+    "boss_deviation_cap": 0.9,
+    "absolute_min": 0.5,
+    "absolute_max": null
   },
   "melee": {
-    "cost": 1.25
+    "cost": 1.25,
+    "breakthrough_deviation_cap": 0.55,
+    "boss_deviation_cap": 0.9,
+    "absolute_min": 0.5,
+    "absolute_max": null
   },
   "gun": {
     "cost": 1.45,
-    "deviation_cap": 0.3
+    "deviation_cap": 0.3,
+    "breakthrough_deviation_cap": 0.4,
+    "boss_deviation_cap": 0.6,
+    "absolute_min": 0.5,
+    "absolute_max": null
   },
   "projectile": {
-    "cost": 1.0
+    "cost": 1.0,
+    "breakthrough_deviation_cap": 0.55,
+    "boss_deviation_cap": 0.9,
+    "absolute_min": 0.5,
+    "absolute_max": null
   },
   "accuracy": {
     "cost": 0.6,
-    "deviation_cap": 0.5
+    "deviation_cap": 0.5,
+    "breakthrough_deviation_cap": 0.6,
+    "boss_deviation_cap": 1.0,
+    "absolute_min": 0.5,
+    "absolute_max": null
   },
   "regeneration": {
-    "cost": 1.0
+    "cost": 1.1,
+    "breakthrough_deviation_cap": 0.55,
+    "boss_deviation_cap": 0.9,
+    "absolute_min": 0.5,
+    "absolute_max": null
   },
   "attack_speed": {
-    "cost": 1.2
+    "cost": 1.1,
+    "breakthrough_deviation_cap": 0.55,
+    "boss_deviation_cap": 0.9,
+    "absolute_min": 0.5,
+    "absolute_max": null
   },
   "armor_penetration": {
-    "cost": 1.2
+    "cost": 1.2,
+    "breakthrough_deviation_cap": 0.55,
+    "boss_deviation_cap": 0.9,
+    "absolute_min": 0.0,
+    "absolute_max": 0.45
   }
 }

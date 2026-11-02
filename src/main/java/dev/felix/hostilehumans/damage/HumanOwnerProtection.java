@@ -1,0 +1,32 @@
+package dev.felix.hostilehumans.damage;
+
+import dev.felix.hostilehumans.entity.Human;
+
+import dev.felix.hostilehumans.faction.HumanRelations;
+
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
+
+/** Owner-to-soldier protection is independent of soldier-to-player PvP permissions. */
+public final class HumanOwnerProtection {
+    private HumanOwnerProtection() {}
+
+    public static boolean protects(Entity target, Entity attacker) {
+        return target instanceof Human human && attacker instanceof Player player
+                && player.getUUID().equals(HumanRelations.effectiveOwner(human));
+    }
+
+    public static boolean blocksDamage(Human target, DamageSource source) {
+        if (protects(target, source.getEntity())) return true;
+        // Some indirect damage sources omit the causing entity but retain the projectile.
+        return source.getDirectEntity() instanceof Projectile projectile
+                && protects(target, projectile.getOwner());
+    }
+
+    public static void onPlayerAttack(AttackEntityEvent event) {
+        if (protects(event.getTarget(), event.getEntity())) event.setCanceled(true);
+    }
+}

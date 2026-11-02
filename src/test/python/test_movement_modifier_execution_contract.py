@@ -1,8 +1,8 @@
 """Ordinary mobility uses modifier authority, never a replacement route or attack scheduler."""
-from pathlib import Path
+from source_paths import SourcePath as Path
 import unittest
 ROOT=Path(__file__).resolve().parents[3]
-PKG=ROOT/'src/main/java/club/someoneice/humangunner'
+PKG=ROOT/'src/main/java/dev/felix/hostilehumans'
 def source(name):return (PKG/(name+'.java')).read_text(encoding='utf-8')
 class MovementModifierExecutionContract(unittest.TestCase):
     def test_flag_free_helper_executes_under_modifier_authority(self):
@@ -31,12 +31,12 @@ class MovementModifierExecutionContract(unittest.TestCase):
     def test_cancel_retires_modifiers_and_pending_jump_without_erasing_physics(self):
         root=source('HumanBehaviorControl')
         self.assertIn('HumanMovementModifiers.cancel(human, reason)',root)
-        human=(ROOT/'src/main/java/com/craftix/hostile_humans/entity/entities/Human.java').read_text(encoding='utf-8')
+        human=(ROOT/'src/main/java/dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
         self.assertIn('HumanSafeJumpControl control) control.cancelPending()',human)
-        cleanup=human.split('public void humanGunner$cancelMovementExecution()',1)[1].split('/** A current melee',1)[0]
+        cleanup=human.split('public void hhu$cancelMovementExecution()',1)[1].split('/** A current melee',1)[0]
         self.assertNotIn('setDeltaMovement',cleanup)
     def test_navigation_speed_changes_require_real_movement_source(self):
         for name in ['HumanNavigation','HumanWaterNavigation']:
-            code=(ROOT/'src/main/java/com/craftix/hostile_humans/entity/ai'/(name+'.java')).read_text(encoding='utf-8')
+            code=(ROOT/'src/main/java/dev/felix/hostilehumans/entity/ai'/(name+'.java')).read_text(encoding='utf-8')
             method=code.split('public void setSpeedModifier(',1)[1].split('@Override public void tick()',1)[0]
             self.assertLess(method.index('writeToken(human) == null'),method.index('super.setSpeedModifier(speed)'))

@@ -1,6 +1,6 @@
 # 举盾防御维护入口
 
-`ShieldDefenseController`是每个人类共用的举盾策略入口，由`Human.humanGunner$shieldDefense()`延迟创建。不新增Goal、世界扫描任务或静态实体缓存。
+`ShieldDefenseController`是每个人类共用的举盾策略入口，由`Human.hhu$shieldDefense()`延迟创建。不新增Goal、世界扫描任务或静态实体缓存。
 
 当前源码默认：真正举盾挡住TaCZ子弹时，`tacz.shield_damage_multiplier=0.4`，保留40%伤害、减伤60%。它不改变主手持枪＋副手盾的20%被动减伤；两者的装备条件不同。本次仅更新默认资源与缺项回退，已有显式配置不自动改写；2026-10-11本项待构建、待同步、待游戏验收。
 
@@ -8,7 +8,7 @@
 
 - AdaptiveCombatGoal：调用findIncomingArrow/wantsCombat、beginCombat/tickCombat/maintainCombat/endCombat。保留阶段调度、地形导航和实际反击。
 - BodyguardMovementGoal：调用tickBodyguard/endBodyguard，保留不赋予攻击目标的贴身挡护与站位导航。
-- HumanGunner：使用Forge ShieldBlockEvent及已有LivingHurtEvent向控制模块提供格挡/受击反馈，不修改事件伤害或取消状态。
+- HumanRuntime：使用Forge ShieldBlockEvent及已有LivingHurtEvent向控制模块提供格挡/受击反馈，不修改事件伤害或取消状态。
 - TaCZ：近战/弓弩主动盾沿用减伤与耐久入口；主手持枪时禁止主动格挡，改用独立副手盾被动减伤。
 - RecoverySupplies：仅归还和选用盾，不再提交独立重举请求。恢复托管结束且有手持盾时，由统一战斗入口重新判断当前威胁。普通食物/金苹果由OffhandFoodUse独立推进，不占主手原生使用状态；临时副手食物仍会腾开真实副手盾，药水和医疗品继续使用原生恢复会话。
 - Human：保留原生使用物品、移动惩罚、破盾冷却、朝向与同步。收盾核验来源以及正在使用的实际ItemStack。

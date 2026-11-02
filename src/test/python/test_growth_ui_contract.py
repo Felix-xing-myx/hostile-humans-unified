@@ -2,11 +2,29 @@
 import json
 import re
 import unittest
-from pathlib import Path
+from source_paths import SourcePath as Path
 ROOT=Path(__file__).resolve().parents[3]
-JAVA=ROOT/'src/main/java/club/someoneice/humangunner'
+JAVA=ROOT/'src/main/java/dev/felix/hostilehumans'
 def source(name):return (JAVA/(name+'.java')).read_text(encoding='utf-8-sig')
 NETWORK=source('HumanCommandNetwork');SCREEN=source('SoldierCommandScreen');PANEL=source('CommandPanelScreen');SNAPSHOT=source('GrowthSnapshot')
+def compact(code):
+ return re.sub(r"\s+", "", code)
+
+def java_block(code, marker):
+ """Read the real balanced Java body, ignoring braces in strings/comments."""
+ pattern=r"\s*".join(re.escape(token) for token in re.findall(r"\w+|[^\w\s]",marker))
+ match=re.search(pattern,code)
+ if match is None:raise AssertionError("Missing Java contract marker: "+marker)
+ start=code.index("{",match.end());depth=0
+ tokens=re.finditer(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|//[^\n]*|/\*.*?\*/|[{}]',code[start:],re.S)
+ for token in tokens:
+  value=token.group()
+  if value=="{":depth+=1
+  elif value=="}":
+   depth-=1
+   if depth==0:return code[start:start+token.end()]
+ raise AssertionError("Unclosed Java block: "+marker)
+
 class GrowthUiContractTest(unittest.TestCase):
  def test_snapshot_wire_order_and_client_safe_dependencies(self):
   expected=['Boolean']+['VarInt']*5+['Double']*4
@@ -34,16 +52,31 @@ class GrowthUiContractTest(unittest.TestCase):
   self.assertIn('s.token().equals(p.token)',NETWORK)
   self.assertIn('HumanCommandNetwork.closeScreen(sessionToken)',SCREEN)
  def test_disabled_growth_hides_block_and_layout_space(self):
-  block=PANEL.split('private int growth(',1)[1].split('private static String amount',1)[0]
-  self.assertIn('if(growth==null||!growth.enabled())return y',block)
-  self.assertLess(block.index('return y;'),block.index('growth.level()'))
-  self.assertIn('cy=growth(g,x+12,cy,inner)',PANEL)
-  self.assertIn('CommandPanelLayout.twoColumns(inner)',PANEL)
-  self.assertIn('for(var c:controls)',PANEL)
+  build=java_block(PANEL,'protected UiLayout.Node buildContent(')
+  block=java_block(build,'if(growth!=null&&growth.enabled())')
+  self.assertIn('new PanelMeter(',block)
+  self.assertEqual(block.count('new PanelMeter('),2)
+  self.assertEqual(build.count('new PanelMeter('),2)
+  self.assertTrue(compact(build[build.index(block)+len(block):]).startswith('nodes.add(UiLayout.row('))
+  # Disabled/null growth contributes no leaf, placeholder or fixed spacer to the tree.
+  outside=build.replace(block,'',1)
+  for value in ('growth.level()', 'growth.stageProgress()', 'growth.experiencePercent()', 'new PanelMeter('):self.assertNotIn(value,outside)
+  self.assertIn('returnUiLayout.column(9,nodes)',compact(build))
+  layout=compact(java_block(source('UiLayout'),'public static Node column('))
+  self.assertIn('for(Noden:children)h+=n.measure(w)',layout)
+  self.assertIn('Math.max(0,children.size()-1)*gap',layout)
+  self.assertIn('n.place(newUiRect(b.x(),y,b.width(),h))',layout)
  def test_experience_meters_are_read_only(self):
-  meter=PANEL.split('private int growth(',1)[1].split('private static String amount',1)[0]
-  for forbidden in ('dragging','submit(','sendToServer','setProgress'):self.assertNotIn(forbidden,meter)
-  for key in ('stageProgress()','stageRequired()','experienceProgress()','experienceRequired()'):self.assertIn(key,PANEL)
+  block=java_block(PANEL,'if(growth!=null&&growth.enabled())')
+  for forbidden in ('dragging','submit(','sendToServer','setProgress'):self.assertNotIn(forbidden,block)
+  for key in ('stageProgress()','stageRequired()','experienceProgress()','experienceRequired()'):self.assertIn(key,block)
+  self.assertIn('growth.experiencePercent()-growth.experienceMinPercent()',compact(block))
+  self.assertIn('growth.experienceCapPercent()-growth.experienceMinPercent()',compact(block))
+  meter=source('PanelMeter')
+  self.assertIn('extends AbstractWidget',meter);self.assertIn('active=false',compact(meter))
+  for forbidden in ('OnPress','submit(','sendToServer','mouseClicked','mouseDragged','mouseReleased'):self.assertNotIn(forbidden,meter)
+  paint=compact(java_block(meter,'protected void renderWidget('))
+  self.assertIn('UiDraw.meter(',paint);self.assertIn('value.getAsDouble(),maximum.getAsDouble()',paint)
  def test_every_edit_including_dismiss_requires_session(self):
   request=NETWORK.split('private record Request',1)[1].split('private record Close',1)[0]
   for guard in ('s.token().equals(p.token)','s.entityId()!=p.entityId','s.human().equals(p.human)','CommandRateLimit.allow(player)','humanForSession(player,s)'):self.assertIn(guard,request)

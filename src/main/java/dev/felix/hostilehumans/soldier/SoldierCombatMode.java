@@ -1,0 +1,242 @@
+package dev.felix.hostilehumans.soldier;
+
+import dev.felix.hostilehumans.entity.Human;
+
+import dev.felix.hostilehumans.behavior.HumanBehaviorControl;
+import dev.felix.hostilehumans.behavior.combat.GuardCombatState;
+import dev.felix.hostilehumans.faction.HumanRelations;
+import dev.felix.hostilehumans.perception.HumanPerception;
+
+import net.minecraft.world.entity.LivingEntity;
+
+import java.util.UUID;
+
+/** Persistent combat policy for a hired human, independent of movement orders. */
+public enum SoldierCombatMode {
+    ACTIVE,
+    PASSIVE_PROTECTION,
+    SELF_DEFENSE,
+    AUTHORIZED;
+
+    private enum Cause {
+        SELF,
+        OWNER_DEFENSE,
+        OWNER_ASSAULT
+    }
+
+    static final String MODE = "hostile_humans_unified:soldier_combat_mode";
+    private static final String AUTHORIZED_TARGET = "hostile_humans_unified:authorized_combat_target";
+    private static final String AUTHORIZED_CAUSE = "hostile_humans_unified:authorized_combat_cause";
+    private static final String AUTHORIZED_UNTIL = "hostile_humans_unified:authorized_combat_until";
+    private static final int MAX_AUTHORIZED_TARGETS = 8;
+    private static final long AUTHORIZATION_TICKS = 200L;
+
+    public record OriginAuthorization(UUID target, long until, String cause) { }
+    /** The existing eight command facts and their original deadlines, never an alliance list. */
+    public record OriginPermissions(SoldierCombatMode mode, java.util.List<OriginAuthorization> entries) {
+        public OriginPermissions { entries = java.util.List.copyOf(entries).stream().limit(MAX_AUTHORIZED_TARGETS).toList(); }
+        public boolean permits(UUID target, long now) {
+            for (var entry : entries) if (entry.target().equals(target) && now <= entry.until())
+                return SoldierCombatMode.permits(mode, entry.cause());
+            return false;
+        }
+        public net.minecraft.nbt.CompoundTag save() {
+            var tag = new net.minecraft.nbt.CompoundTag();
+            tag.putString("mode", mode.name());
+            var list = new net.minecraft.nbt.ListTag();
+            for (var entry : entries) {
+                var row = new net.minecraft.nbt.CompoundTag(); row.putUUID("target", entry.target());
+                row.putLong("until", entry.until()); row.putString("cause", entry.cause()); list.add(row);
+            }
+            tag.put("commands", list); return tag;
+        }
+        public static OriginPermissions load(net.minecraft.nbt.CompoundTag tag) {
+            SoldierCombatMode mode;
+            try { mode = valueOf(tag.getString("mode")); }
+            catch (IllegalArgumentException exception) { return new OriginPermissions(SELF_DEFENSE, java.util.List.of()); }
+            var rows = tag.getList("commands", 10);
+            var entries = new java.util.ArrayList<OriginAuthorization>();
+            for (int i = 0; i < Math.min(MAX_AUTHORIZED_TARGETS, rows.size()); i++) {
+                var row = rows.getCompound(i);
+                if (row.hasUUID("target")) entries.add(new OriginAuthorization(row.getUUID("target"), row.getLong("until"), row.getString("cause")));
+            }
+            return new OriginPermissions(mode, entries);
+        }
+    }
+    public static OriginPermissions originPermissions(Human human) {
+        var entries = new java.util.ArrayList<OriginAuthorization>();
+        for (int i = 0; i < MAX_AUTHORIZED_TARGETS; i++) {
+            String key = slotKey(AUTHORIZED_TARGET, i);
+            if (human.getPersistentData().hasUUID(key)) entries.add(new OriginAuthorization(
+                    human.getPersistentData().getUUID(key), human.getPersistentData().getLong(slotKey(AUTHORIZED_UNTIL, i)),
+                    human.getPersistentData().getString(slotKey(AUTHORIZED_CAUSE, i))));
+        }
+        return new OriginPermissions(get(human), entries);
+    }
+
+    public static SoldierCombatMode get(Human human) {
+        String value = human.getPersistentData().getString(MODE);
+        try {
+            return value.isEmpty() ? ACTIVE : valueOf(value);
+        } catch (IllegalArgumentException ignored) {
+            return ACTIVE;
+        }
+    }
+
+    public static void initialize(Human human) {
+        if (hasCombatController(human) && !human.getPersistentData().contains(MODE)) {
+            human.getPersistentData().putString(MODE, ACTIVE.name());
+        }
+    }
+
+    public static void set(Human human, SoldierCombatMode mode) {
+        if (!human.hasOwner()) return;
+        java.util.Objects.requireNonNull(mode, "combat mode");
+        HumanBehaviorControl.interruptMovement(human, "soldier combat permission changed");
+        BodyguardProtection.clear(human);
+        human.getPersistentData().putString(MODE, mode.name());
+        clearAuthorization(human);
+        human.setTarget(null);
+        human.setLastHurtByMob(null);
+    }
+
+    public static void clear(Human human) {
+        human.getPersistentData().remove(MODE);
+        clearAuthorization(human);
+        human.forgetSoldierTarget();
+    }
+
+    public static boolean allowsAutonomousTargeting(Human human) {
+        return !hasCombatController(human) || autonomous(get(human));
+    }
+
+    public static boolean autonomous(SoldierCombatMode mode) { return mode == ACTIVE; }
+
+    /** Keep an already permitted fight alive; never grant a new target by NPC damage. */
+    public static void refreshAuthorizedFight(Human human, LivingEntity target) {
+        if (!HumanPerception.canTarget(human,target)) return;
+        if (get(human) != AUTHORIZED || !isExplicitlyAuthorizedAgainst(human, target)) return;
+        long now = human.level().getGameTime();
+        for (int slot = 0; slot < MAX_AUTHORIZED_TARGETS; slot++) {
+            String key = slotKey(AUTHORIZED_TARGET, slot);
+            if (human.getPersistentData().hasUUID(key) && target.getUUID().equals(human.getPersistentData().getUUID(key))) {
+                human.getPersistentData().putLong(slotKey(AUTHORIZED_UNTIL, slot), now + AUTHORIZATION_TICKS);
+                return;
+            }
+        }
+    }
+
+    public static boolean authorizeSelfDefense(Human human, LivingEntity attacker) {
+        return authorize(human, attacker, Cause.SELF);
+    }
+
+    public static boolean authorizeOwnerDefense(Human human, LivingEntity attacker) {
+        return authorize(human, attacker, Cause.OWNER_DEFENSE);
+    }
+
+    public static boolean authorizeOwnerAssault(Human human, LivingEntity target) {
+        return authorize(human, target, Cause.OWNER_ASSAULT);
+    }
+
+    public static boolean allowsTarget(Human human, LivingEntity target) {
+        if (target == null) return false;
+        if (BodyguardProtection.protectingFromExplosion(human, target)) return true;
+        if (!hasCombatController(human) || get(human) == ACTIVE) return true;
+        return isExplicitlyAuthorizedAgainst(human, target);
+    }
+
+    public static boolean isExplicitlyAuthorizedAgainst(Human human, LivingEntity target) {
+        if (target == null || !hasCombatController(human)) return false;
+        long now = human.level().getGameTime();
+        for (int slot = 0; slot < MAX_AUTHORIZED_TARGETS; slot++) {
+            String targetKey = slotKey(AUTHORIZED_TARGET, slot);
+            if (!human.getPersistentData().hasUUID(targetKey)
+                    || !target.getUUID().equals(human.getPersistentData().getUUID(targetKey))
+                    || now > human.getPersistentData().getLong(slotKey(AUTHORIZED_UNTIL, slot))) continue;
+            return permits(get(human), readCause(human, slot));
+        }
+        return false;
+    }
+
+    public static boolean hasCombatController(Human human) {
+        return HumanRelations.effectiveOwner(human) != null;
+    }
+
+    public static boolean permits(SoldierCombatMode mode, String cause) {
+        try {
+            return permits(mode, Cause.valueOf(cause));
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean authorize(Human human, LivingEntity target, Cause cause) {
+        if (target == null || !target.isAlive()) return false;
+        if (!hasCombatController(human)) return true;
+        if (!permits(get(human), cause)) return false;
+        long now = human.level().getGameTime();
+        UUID[] targets = new UUID[MAX_AUTHORIZED_TARGETS];
+        long[] expiries = new long[MAX_AUTHORIZED_TARGETS];
+        for (int slot = 0; slot < MAX_AUTHORIZED_TARGETS; slot++) {
+            String targetKey = slotKey(AUTHORIZED_TARGET, slot);
+            if (human.getPersistentData().hasUUID(targetKey)) {
+                targets[slot] = human.getPersistentData().getUUID(targetKey);
+            }
+            expiries[slot] = human.getPersistentData().getLong(slotKey(AUTHORIZED_UNTIL, slot));
+        }
+        int selected = selectAuthorizationSlot(target.getUUID(), targets, expiries, now);
+        human.getPersistentData().putUUID(slotKey(AUTHORIZED_TARGET, selected), target.getUUID());
+        human.getPersistentData().putString(slotKey(AUTHORIZED_CAUSE, selected), cause.name());
+        long duration = cause == Cause.SELF && human.hasOwner() && SoldierOrder.isGarrison(human)
+                ? GuardCombatState.EXCURSION_TICKS : AUTHORIZATION_TICKS;
+        human.getPersistentData().putLong(slotKey(AUTHORIZED_UNTIL, selected), now + duration);
+        human.soldierCombatMemory.threatened(target.getUUID(), now);
+        return true;
+    }
+
+    public static int selectAuthorizationSlot(UUID requested, UUID[] targets, long[] expiries, long now) {
+        int selected = 0;
+        long earliestExpiry = Long.MAX_VALUE;
+        for (int slot = 0; slot < targets.length; slot++) {
+            if (requested.equals(targets[slot])) return slot;
+            if (targets[slot] == null || expiries[slot] < now) return slot;
+            if (expiries[slot] < earliestExpiry) {
+                earliestExpiry = expiries[slot];
+                selected = slot;
+            }
+        }
+        return selected;
+    }
+
+    private static boolean permits(SoldierCombatMode mode, Cause cause) {
+        if (cause == null) return false;
+        return switch (mode) {
+            case ACTIVE, AUTHORIZED -> true;
+            case PASSIVE_PROTECTION -> cause == Cause.SELF || cause == Cause.OWNER_DEFENSE;
+            case SELF_DEFENSE -> cause == Cause.SELF;
+        };
+    }
+
+    private static Cause readCause(Human human, int slot) {
+        try {
+            return Cause.valueOf(human.getPersistentData().getString(slotKey(AUTHORIZED_CAUSE, slot)));
+        } catch (IllegalArgumentException ignored) {
+            return null; // Malformed saved authorization must not grant a new-mode target.
+        }
+    }
+
+    private static void clearAuthorization(Human human) {
+        human.getPersistentData().remove(AUTHORIZED_TARGET);
+        human.getPersistentData().remove(AUTHORIZED_CAUSE);
+        human.getPersistentData().remove(AUTHORIZED_UNTIL);
+        for (int slot = 0; slot < MAX_AUTHORIZED_TARGETS; slot++) {
+            human.getPersistentData().remove(slotKey(AUTHORIZED_TARGET, slot));
+            human.getPersistentData().remove(slotKey(AUTHORIZED_CAUSE, slot));
+            human.getPersistentData().remove(slotKey(AUTHORIZED_UNTIL, slot));
+        }
+    }
+
+    private static String slotKey(String base, int slot) {
+        return base + "_" + slot;
+    }
+}

@@ -1,5 +1,7 @@
 # 行为模块维护入口
 
+完整源码目录与逐模块文件清单见 [源码模块与修改地图](SOURCE_MODULES.md)；本页继续描述行为接口，不替代文件归属清单。
+
 本记录覆盖本轮审查的恢复、武器分类、伤害、举盾、成长、装备生成和导航主调用链。接口统一的是规则与状态归属，不把不同职责集中成一个全能控制器；表中的入口是维护入口，不代表新增Java interface类型。
 
 | 职责 | 维护入口 | 调用约束 |
@@ -213,7 +215,7 @@ TaCZ近距离紧急开火准备曾把meleePrepTickCount清为0，但原生Living
 
 未来枪械联动应接入GunSupport的物理身份边界，不能仅依赖可开关的射击后端；若上游新增独立攻击入口或自定义直接近战伤害类型，仍应核对其公开取消接口和伤害分类，不能保证任意未知模组都自动覆盖。
 
-主控/root顺序编辑main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加全部既有未提交修改，未建立并行编辑。修改TaczGunMechanics、TaczGunItemIdentity、HumanGunner；新增GunMeleeProtection，补GunCombatPolicyTest字节码回归和4项Python契约。182项Python静态/API检查通过（包括只读核对原生零计数触发路径和公开事件可取消）；Java回归尚未编译运行。未构建、同步、启动游戏、提交或推送；当前安装仍是21:35测试JAR，之前投掷初速度和换弹缩放修正也仍待构建。
+主控/root顺序编辑main主工作树；基线e18ee5ba488d84cbf2324b80bacba5bb5b6c897d加全部既有未提交修改，未建立并行编辑。修改TaczGunMechanics、TaczGunItemIdentity、HumanRuntime；新增GunMeleeProtection，补GunCombatPolicyTest字节码回归和4项Python契约。182项Python静态/API检查通过（包括只读核对原生零计数触发路径和公开事件可取消）；Java回归尚未编译运行。未构建、同步、启动游戏、提交或推送；当前安装仍是21:35测试JAR，之前投掷初速度和换弹缩放修正也仍待构建。
 
 待游戏验收：TaCZ贴身连续开枪不额外平A或枪托击退；焦燃同场景；两种联动分别关闭时主手枪仍不能近战；Better Combat安装/缺席；普通子弹与爆炸伤害保持；切近战后正常反击、切回继续装填；单装/双装/皆不装可选枪械模组。
 
