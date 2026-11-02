@@ -6,7 +6,6 @@ import com.tacz.guns.network.message.ServerMessageSound;
 import com.tacz.guns.sound.SoundManager;
 import dev.felix.hostilehumans.client.render.HumanCameraView;
 import dev.felix.hostilehumans.entity.Human;
-import dev.felix.hostilehumans.monitor.client.HumanMonitorClient;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 
@@ -14,12 +13,12 @@ import net.minecraft.resources.ResourceLocation;
 public final class TaczMonitorShotSoundClient {
     private TaczMonitorShotSoundClient() {}
 
-    /** True only when this exact native shot message was played and its 3P copy must be consumed. */
+    /** True only when this observed subject's native shot message was played and its 3P copy must be consumed. */
     public static boolean play(ServerMessageSound message) {
         Minecraft client = Minecraft.getInstance();
         if (client.level == null || client.player == null || message == null
                 || !(client.getCameraEntity() instanceof Human human)
-                || !HumanCameraView.attached(human) || !HumanMonitorClient.takingOver(human)
+                || !HumanCameraView.attached(human)
                 || !client.options.getCameraType().isFirstPerson() || !human.isAlive()
                 || human.isRemoved() || human.isSilent() || human.level() != client.level
                 || message.getEntityId() != human.getId()) return false;

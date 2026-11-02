@@ -20,6 +20,27 @@ public final class RevisionCombatPolicyTest {
         near(GunTrackingPolicy.flightTicks(1000,0,0,0,0,0,1,0),20,"lead horizon bounded");
         near(GunTrackingPolicy.flightTicks(10,0,0,0,0,0,0,0),0,"unknown speed must not predict");
         near(GunTrackingPolicy.flightTicks(Double.NaN,0,0,0,0,0,3,0),0,"invalid physics rejected");
+        near(GunTrackingPolicy.stepDrop(1, .98, .15), 0, "first native tick has no gravity drop");
+        near(GunTrackingPolicy.stepDrop(2, 1, .15), .15, "gravity applied after native movement");
+        near(GunTrackingPolicy.stepTravel(3.5, 1), 3.5, "drag-free fractional travel");
+        for (double distance : new double[]{10, 40, 60}) {
+            double flight = GunTrackingPolicy.stepFlightTicks(distance, -1.2, 0, 0, 0, 0, 12.25, .15, .98);
+            double drop = GunTrackingPolicy.stepDrop(flight, .98, .15);
+            double travel = GunTrackingPolicy.stepTravel(flight, .98);
+            double dy = -1.2 + drop;
+            double norm = Math.sqrt(distance * distance + dy * dy);
+            // Simulate actual TaCZ tick ordering independently, including fractional final travel.
+            double px = 0, py = 0, vx = 12.25 * distance / norm, vy = 12.25 * dy / norm;
+            double remaining = flight;
+            while (remaining > 0) {
+                double dt = Math.min(1, remaining);
+                px += vx * dt; py += vy * dt;
+                vx *= .98; vy = vy * .98 - .15;
+                remaining -= dt;
+            }
+            check(Math.abs(px - distance) < .001 && Math.abs(py + 1.2) < .001,
+                    "native discrete trajectory hits low stationary target at " + distance);
+        }
         check(FinisherPolicy.score(200,20,10)>FinisherPolicy.score(20,2,10),"high maximum health wins at equal fraction");
         check(FinisherPolicy.score(200,10,10)>FinisherPolicy.score(200,40,10),"lower current health wins");
         check(FinisherPolicy.score(100,35,5)>0&&FinisherPolicy.score(100,36,5)==0,"35 percent eligibility boundary");

@@ -40,12 +40,17 @@ public final class RangedShotClearance {
         if (speed <= 0) return aim;
         Vec3 motion = GunTargetMotion.velocity(target);
         double gravity = GunSupport.get().projectileGravity(weapon);
-        double ticks = gunFlightTicks(origin, aim, motion, speed, gravity);
-        return aim.add(motion.scale(ticks)).add(0, 0.5D * gravity * ticks * ticks, 0);
+        double drag = GunSupport.get().projectileStepDrag(weapon);
+        double ticks = gunFlightTicks(origin, aim, motion, speed, gravity, drag);
+        double drop = Double.isFinite(drag) ? GunTrackingPolicy.stepDrop(ticks, drag, gravity)
+                : 0.5D * gravity * ticks * ticks;
+        return aim.add(motion.scale(ticks)).add(0, drop, 0);
     }
 
-    private static double gunFlightTicks(Vec3 origin, Vec3 aim, Vec3 motion, double speed, double gravity) {
+    private static double gunFlightTicks(Vec3 origin, Vec3 aim, Vec3 motion, double speed, double gravity, double drag) {
         Vec3 delta = aim.subtract(origin);
+        if (Double.isFinite(drag)) return GunTrackingPolicy.stepFlightTicks(delta.x, delta.y, delta.z,
+                motion.x, motion.y, motion.z, speed, gravity, drag);
         return GunTrackingPolicy.flightTicks(delta.x, delta.y, delta.z,
                 motion.x, motion.y, motion.z, speed, gravity);
     }
@@ -94,11 +99,13 @@ public final class RangedShotClearance {
             double aimingSpeed = GunSupport.get().projectileSpeed(weapon);
             Vec3 motion = GunTargetMotion.velocity(target);
             double ticks = aimingSpeed > 0 ? gunFlightTicks(origin, aim, motion, aimingSpeed,
-                    GunSupport.get().projectileGravity(weapon)) : 0;
+                    GunSupport.get().projectileGravity(weapon), GunSupport.get().projectileStepDrag(weapon)) : 0;
             Vec3 predicted = aim.add(motion.scale(ticks));
             double gravity = GunSupport.get().clearanceProjectileGravity(weapon);
             Vec3 direction = gunAim(origin, weapon, target).subtract(origin);
-            return clearArc(human, origin, direction.normalize().scale(speed), predicted, 1, gravity);
+            double drag = GunSupport.get().projectileStepDrag(weapon);
+            return clearArc(human, origin, direction.normalize().scale(speed), predicted,
+                    Double.isFinite(drag) ? drag : 1, gravity);
         }
         // AbstractArrow(owner) starts 0.1 blocks below the eyes. Spartan's
         // supported bolts use the same owner constructor and shared ballistics.

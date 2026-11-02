@@ -132,6 +132,7 @@ public final class TaczArcanaCollisionContractTest {
                 }
             }
         }
+        verifySoundBroadcastOrdering(nested);
         check(redirects == 2, "ordinary and piercing queries both composed");
         check(returnHook, "Arcana getHitResult return-time proximity compensation is preserved");
         System.out.println(
@@ -139,6 +140,52 @@ public final class TaczArcanaCollisionContractTest {
                         + checks
                         + " actual-JAR bytecode checks passed; full Mixin startup remains"
                         + " separate");
+    }
+
+    /** A cancellable upstream HEAD must not bypass the monitor audience supplement. */
+    private static void verifySoundBroadcastOrdering(byte[] nested) throws Exception {
+        ClassNode upstream = null;
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(nested))) {
+            for (var entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry())
+                if (entry.getName().equals("group/taczexpands/common/mixin/MixinSoundManager.class")) {
+                    upstream = read(zip.readAllBytes());
+                    break;
+                }
+        }
+        check(upstream != null, "actual Arcana sound replacement exists");
+        boolean cancelsAtHead = false;
+        for (MethodNode method : upstream.methods) for (AnnotationNode annotation : annotations(method)) {
+            if (!annotation.desc.endsWith("/Inject;") || !Boolean.TRUE.equals(value(annotation, "cancellable"))) continue;
+            Object atValue = value(annotation, "at");
+            List<?> ats = atValue instanceof List<?> list ? list : List.of(atValue);
+            for (Object at : ats) if (at instanceof AnnotationNode a && "HEAD".equals(value(a, "value")))
+                cancelsAtHead |= java.util.stream.StreamSupport.stream(method.instructions.spliterator(), false)
+                        .anyMatch(i -> i instanceof MethodInsnNode call && call.name.equals("cancel")
+                                && call.owner.equals("org/spongepowered/asm/mixin/injection/callback/CallbackInfo"));
+        }
+        check(cancelsAtHead, "fixture reproduces a real cancelling HEAD, bypassing native TAIL");
+        ClassNode own;
+        try (var stream = TaczArcanaCollisionContractTest.class.getClassLoader().getResourceAsStream(
+                "dev/felix/hostilehumans/mixin/TaczMonitorSoundBroadcastMixin.class")) {
+            check(stream != null, "compiled monitor sound mixin exists");
+            own = read(stream.readAllBytes());
+        }
+        AnnotationNode ownMixin = own.invisibleAnnotations.stream()
+                .filter(a -> a.desc.endsWith("/Mixin;")).findFirst().orElseThrow();
+        AnnotationNode upstreamMixin = upstream.invisibleAnnotations.stream()
+                .filter(a -> a.desc.endsWith("/Mixin;")).findFirst().orElseThrow();
+        int upstreamPriority = value(upstreamMixin, "priority") instanceof Integer i ? i : 1000;
+        check(value(ownMixin, "priority") instanceof Integer priority && priority > upstreamPriority,
+                "monitor supplements before actual upstream cancellation");
+        boolean head = false;
+        for (MethodNode method : own.methods) for (AnnotationNode annotation : annotations(method)) {
+            if (!annotation.desc.endsWith("/Inject;")) continue;
+            check(!Boolean.TRUE.equals(value(annotation, "cancellable")), "monitor never cancels native broadcast");
+            Object atValue = value(annotation, "at");
+            List<?> ats = atValue instanceof List<?> list ? list : List.of(atValue);
+            for (Object at : ats) if (at instanceof AnnotationNode a) head |= "HEAD".equals(value(a, "value"));
+        }
+        check(head, "monitor does not depend on cancelled return path");
     }
 
     private static ClassNode read(byte[] bytes) {

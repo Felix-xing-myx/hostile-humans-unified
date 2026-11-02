@@ -11,9 +11,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Pseudo
-@Mixin(targets = "com.tacz.guns.sound.SoundManager", remap = false)
+// Run before ordinary cancellable HEAD replacements (e.g. sound-display adapters).
+// TAIL never executes when one of those handlers cancels the native method.
+@Mixin(targets = "com.tacz.guns.sound.SoundManager", remap = false, priority = 1200)
 public abstract class TaczMonitorSoundBroadcastMixin {
-    @Inject(method = OptionalMixinPlugin.TACZ_SOUND_NEARBY, at = @At("TAIL"), remap = false)
+    @Inject(method = OptionalMixinPlugin.TACZ_SOUND_NEARBY, at = @At("HEAD"), remap = false)
     private static void hostileHumans$monitorSound(LivingEntity shooter, int distance, ResourceLocation gun,
             ResourceLocation display, String name, float volume, float pitch, CallbackInfo callback) {
         TaczMonitorAudio.supplement(shooter, distance, gun, display, name, volume, pitch);

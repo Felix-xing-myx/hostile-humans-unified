@@ -118,6 +118,12 @@ public final class TaczIntegration implements GunSupport {
         return gun == null ? 0 : TimelessAPI.getCommonGunIndex(gun.getGunId(stack))
                 .map(index -> index.getBulletData().getSpeed() / 20.0D).orElse(0.0D);
     }
+    public double projectileStepDrag(ItemStack stack) {
+        IGun gun = IGun.getIGunOrNull(stack);
+        return gun == null ? Double.NaN : TimelessAPI.getCommonGunIndex(gun.getGunId(stack))
+                .map(index -> Math.max(0.0D, Math.min(1.0D, 1.0D - index.getBulletData().getFriction())))
+                .orElse(Double.NaN);
+    }
     public double projectileGravity(ItemStack stack) {
         IGun gun = IGun.getIGunOrNull(stack);
         return gun == null ? 0 : TimelessAPI.getCommonGunIndex(gun.getGunId(stack))

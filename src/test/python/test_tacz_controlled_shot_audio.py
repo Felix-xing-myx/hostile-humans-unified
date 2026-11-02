@@ -8,9 +8,9 @@ def source(name):
     return (JAVA / (name + '.java')).read_text(encoding='utf-8')
 
 class ControlledShotAudio(unittest.TestCase):
-    def test_only_live_controlled_camera_subject_is_replaced(self):
+    def test_only_live_observed_camera_subject_is_replaced(self):
         s = source('TaczMonitorShotSoundClient')
-        for guard in ['HumanCameraView.attached(human)', 'HumanMonitorClient.takingOver(human)',
+        for guard in ['HumanCameraView.attached(human)',
                       'message.getEntityId() != human.getId()', 'isFirstPerson()', 'human.isSilent()',
                       'human.isRemoved()', 'human.level() != client.level']:
             self.assertIn(guard, s)
@@ -20,6 +20,7 @@ class ControlledShotAudio(unittest.TestCase):
                       'message.getPitch()', 'message.getDistance()', 'SoundManager.SILENCE_3P_SOUND',
                       'SoundManager.SILENCE_SOUND', 'display.getSounds(firstPerson)']:
             self.assertIn(field, s)
+        self.assertNotIn("takingOver(", s)
         for wrong_source in ['getMainHandItem()', 'GunShootEvent', 'GunFireEvent', 'queueWeaponInput', 'sendToServer']:
             self.assertNotIn(wrong_source, s)
     def test_success_consumes_one_message_and_missing_sound_retains_native(self):

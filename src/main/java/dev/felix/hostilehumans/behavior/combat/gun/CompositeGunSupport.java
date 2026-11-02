@@ -52,6 +52,7 @@ final class CompositeGunSupport implements GunSupport {
     }
     public double maximumProjectileReach(ItemStack stack) { return forWeapon(stack).maximumProjectileReach(stack); }
     public double projectileSpeed(ItemStack stack) { return forWeapon(stack).projectileSpeed(stack); }
+    public double projectileStepDrag(ItemStack stack) { return forWeapon(stack).projectileStepDrag(stack); }
     public double projectileGravity(ItemStack stack) { return forWeapon(stack).projectileGravity(stack); }
     public double clearanceProjectileSpeed(ItemStack stack) { return forWeapon(stack).clearanceProjectileSpeed(stack); }
     public double clearanceProjectileGravity(ItemStack stack) { return forWeapon(stack).clearanceProjectileGravity(stack); }

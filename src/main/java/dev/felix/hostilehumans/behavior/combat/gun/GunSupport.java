@@ -86,6 +86,8 @@ public interface GunSupport {
     default double maximumProjectileReach(ItemStack weapon) { return Double.POSITIVE_INFINITY; }
     default double projectileSpeed(ItemStack weapon) { return 0; }
     default double projectileGravity(ItemStack weapon) { return 0; }
+    /** Finite velocity retention opts into move-then-drag-then-gravity tick physics. */
+    default double projectileStepDrag(ItemStack weapon) { return Double.NaN; }
     /** Physics for obstruction prediction; independent of who owns aiming/leading. */
     default double clearanceProjectileSpeed(ItemStack weapon) { return projectileSpeed(weapon); }
     default double clearanceProjectileGravity(ItemStack weapon) { return projectileGravity(weapon); }
