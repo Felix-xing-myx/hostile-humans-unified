@@ -38,7 +38,7 @@
 - 面板：S 400×420、S+ 420×520、M 600×480、L 720×540（`PanelGeometry.Size`）。
 - 水平边距：左 12、右 14；标题带 28；过滤带 top 32、高 24；内容区下边距 40；操作台高 20、距底 10。
 - 控件：按钮高 20、左右内边距 7；所有控件 1px 描边。
-- 血条：tick 宽 1px（头部长条 2px），格内间距 1px（2px），格间 3px（4px），高 8px（9px）。
+- 血条：每大格 8 根细刻度（`PanelGeometry.TICKS_PER_CELL`），tick 宽 1px（头部 2px），刻度间 1px，格间 3px（4px），高 8px（9px）。整条恒等于该单位的最大生命，因此满血一定画满；大格只是视觉分组，不再代表固定 25 点。名单行内血条固定占 112px 列，所有行左端对齐。
 - 分段进度条：高 4px，填充每 8px 断开 1px。
 - 滑轨：轨道 3px，滑块 6×9。
 
@@ -73,6 +73,7 @@
 
 ## 七、迁移状态
 
-- 已迁移：单兵命令（`CommandPanelScreen` + `SoldierCommandScreen`）、小队命令（`SquadCommandScreen`，继承单兵底座）、对讲机（`SoldierRosterScreen`）。
-- 未迁移（仍用旧骨架，自动获得新外壳与控件配色，但内容布局未按参考重排）：巡逻等待、属性详情、导航图例、经济（钱包/兑换/任务/贡献箱）、培养、据点、背包容器页、监视器 HUD。
+- 已迁移：单兵命令（`CommandPanelScreen` + `SoldierCommandScreen`）、小队命令（`SquadCommandScreen`，继承单兵底座）、对讲机（`SoldierRosterScreen`）、属性详情、巡逻等待、导航图例、经济（页签改到过滤带）、据点（页签改到过滤带）、背包容器页（三块分区 + 24px 槽位，槽位位置由界面层指派，菜单与校验不动）、监视器 HUD（360×62 半透明板 + 3px 阵营饰条）。
+- 仅继承外壳、未逐项重排：培养页（单流程表单，没有页签结构，暂未改布局）。
+- 新增公共件：`PanelKeyValue`（只读标签/数值行）、`PanelGroup`（分组底带）、`PanelCheck`（勾选行）、`PanelButton.compact()`（标签尺寸控件）、`PanelDisclosure` 改为参考行样式（左标签、右数值、展开明细）。
 - 尚无客户端界面的参考页：人类对话（`SoldierDialogue` 只有文本派发，没有客户端界面与网络协议；实现需要新增协议，超出界面任务范围，待主控决定）。

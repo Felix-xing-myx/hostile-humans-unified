@@ -3995,3 +3995,20 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控；交付1787ac5，基线53fa094d318598cbc51967616a2aa4afe4bb2ef0；独立工作树worktrees/ui-frame-release-3.14.3，分支release/ui-frame-3.14.3。范围：交付公共组件兼容性、透明绘制、几何/焦点与版本日志；服务端行为保持原职责。
 - 初审发现UiRect缺少已被调用的双参数inset，普通单栏revealFocus误用双栏滚动偏移，零宽split越界；已集中修复。GuiGraphics普通纹理blit不自行启用混合，透明纹理各入口显式启用标准混合并在finally恢复颜色/关闭混合。
 - 旧构建工作树与归属清单保留，本轮建立新基线工作树，不重置旧WIP。前端未迁移页面见docs/UI_FRAME.md；本轮Java/自动回归及部署结果由统一发行状态登记。游戏内视觉、命中与实际枪声仍待用户验收。
+
+
+## 3.14.3 构建同步
+- 主控；基线d955b87207e9496aa18bf31cc0137bb8412561df；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-frame-release-3.14.3，分支release/local-build；范围：前端公共组件与单兵小队对讲机布局集成，透明绘制及几何修复，接管TaCZ原生枪声适配。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.3。
+
+- 3.14.3完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致c77092c8dd46c82ce77d8398edfd4554401e3eb16bb1647cd64a271c7c23c131；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.14.3-20261102-205649。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.3.
+- 第二轮（2026-11-02，实机截图反馈）：用户构建后给出游戏内截图，确认上一轮已编译运行。修复三项实机缺陷——过滤带按钮无文字（`PanelButton` 只在 `measureHeight` 里折行，过滤带控件未测量，改为渲染时惰性折行）；名单行血条左右不齐（改为固定 112px 列 + 固定左端）；血条按 25 点大格取整导致非 25 倍数满血画不满（整条改为按实际最大值比例填充，每大格 8 根细刻度）。随后迁移属性详情、巡逻等待、导航图例、背包容器页、监视器 HUD，经济与据点页签移入过滤带。新增 `PanelKeyValue`、`PanelCheck`、`PanelGroup`、`PanelButton.compact()`。仍未编译（环境限制同上一轮），游戏内效果待用户构建后核对。
+
+
+## 远程监控TaCZ枪声广播遗漏与瞄准偏高核查
+- 主控；基线da7cd7635947974a773fd887dda44fc6026dc471；独立worktrees/monitor-distant-audio，fix/monitor-distant-audio。范围：TaCZ监控原生声音入口与相关合同；主仓库前端WIP保留，不修改UI文件。
+- 实例debug.log确认客户端距离Mixin正常加载；实际Arcana嵌套MixinSoundManager在sendSoundToNearby的HEAD取消原方法并自行广播，导致原HHU TAIL补发不可达。其原生广播仍使用真实玩家实体距离，故远程监控漏收。改为优先级1200的非取消HEAD补发，保留公共监控会话/观察位置/原受众去重，不更改普通玩家广播。该通用入口先于默认优先级1000的可取消替换；不针对版本文件名或扩展混淆方法接入。
+- 被观察人类自己的第一人称枪声适配由仅接管放宽为有效附身/监控，仍限定同一相机实体与真实消息，成功播放才消费，缺资源走原流程。补发沿传入gun/display，第三方在取消处理内部另改display的自定义皮肤声音仍是后续兼容边界。
+- 瞄准核查：GunAimPoint选眼高与碰撞箱70%高度的较低值；RangedShotClearance统一叠加目标速度预测与弹道下坠补偿，GunnerGoal传同一瞄准角给显示及开火。史莱姆跳跃时的垂直线性预测可能抬高预瞄；用户补充八一式、40格外、准星和实弹均偏高。实际枪包speed245/秒、gravity0.15/tick²、friction0.02，原连续公式与实际先移动再减速下落不符，至少多补偿约0.2格。TaCZ经GunSupport.projectileStepDrag显式接入离散截距与下坠；Composite统一转发，瞄准/射界共用，其他后端保留现有公式。20tick上限、最多20段夹根+16次二分，不增加实体扫描/寻路/世界射线。新增纯数学和真实tick模拟用例。跳跃仍用现有短时速度预测，未在本轮假设未知落地点或声称解决所有跳跃预测误差。
+- 静态Python532项通过（16项按既有条件跳过），20组独立离散运动公式对照通过；新增Java实际Arcana取消边界和离散弹道用例尚未编译执行。本轮尚无新的构建指令，仅执行源码/只读实际JAR/静态检查；不运行Gradle，不部署、不启动游戏或推送。真实远程试听与弹道验收待测试。
+
+- 本地提交3fd0f7c已快进接回主仓库；共享WORKSTREAMS仅追加本条，保留前端会话现有修改。Git索引锁自行释放后完成合并，未删除锁文件。

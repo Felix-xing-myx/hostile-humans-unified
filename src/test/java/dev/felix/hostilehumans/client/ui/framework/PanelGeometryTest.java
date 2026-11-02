@@ -9,9 +9,17 @@ public final class PanelGeometryTest {
         check(PanelGeometry.clampScroll(999, 300, 100) == 200, "clamp after resize");
         check(PanelGeometry.reveal(0, 250, 275, 100) == 175, "keyboard reveals row");
         check(PanelGeometry.reveal(0, 250, 500, 100) == 250, "large disclosure reveals heading");
+        int ticks = PanelGeometry.healthTicks(300);
         double filled = 0;
-        for (int i = 0; i < 40; i++) filled += PanelGeometry.healthTick(250, 300, i);
-        check(Math.abs(filled / 40 - 250.0 / 300) < 1e-12, "250/300 does not paint full");
+        for (int i = 0; i < ticks; i++) filled += PanelGeometry.healthTick(250, 300, i);
+        check(Math.abs(filled / ticks - 250.0 / 300) < 1e-12, "250/300 does not paint full");
+        // An odd maximum must still fill the whole bar, which the fixed 25 point cell broke.
+        int odd = PanelGeometry.healthTicks(111);
+        double full = 0;
+        for (int i = 0; i < odd; i++) full += PanelGeometry.healthTick(111, 111, i);
+        check(Math.abs(full - odd) < 1e-12, "full health paints every tick at any maximum");
+        check(odd == 40 && PanelGeometry.healthCells(111) == 5, "111 health uses five cells");
+        check(PanelGeometry.TICKS_PER_CELL == 8, "eight fine ticks per cell");
         check(PanelGeometry.healthCells(10000) == 8, "long life has bounded ticks");
         check(PanelGeometry.healthTick(Double.NaN, 300, 0) == 0, "invalid health safe");
         check(PanelGeometry.healthTick(0, 300, 0) == 0, "dead health empty");

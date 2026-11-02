@@ -67,6 +67,11 @@ public final class AttributeDetailScreen extends PanelScreen {
         return snapshot.faction();
     }
 
+    @Override
+    protected Component headerStatus() {
+        return text(snapshot.boss() ? "boss" : "ordinary");
+    }
+
     public void update(AttributeDetailSnapshot next) {
         if (!next.target().equals(snapshot.target())
                 || next.entityId() != snapshot.entityId()
@@ -123,10 +128,10 @@ public final class AttributeDetailScreen extends PanelScreen {
         List<UiLayout.Node> content = new ArrayList<>();
         identity = body(new PanelText(Component.empty(), () -> theme().accent()));
         content.add(node(identity));
-        budget = body(new PanelText(Component.empty(), () -> theme().text()));
-        content.add(node(budget));
-        health = body(new PanelHealth());
+        health = body(new PanelHealth().heading(true));
         content.add(UiLayout.leaf(health::measureHeight, health::place));
+        budget = body(new PanelText(Component.empty(), () -> theme().muted()));
+        content.add(node(budget));
         sample = body(new PanelText(Component.empty(), () -> theme().muted()));
         content.add(node(sample));
         if (snapshot.labels().isEmpty())
@@ -146,7 +151,8 @@ public final class AttributeDetailScreen extends PanelScreen {
                                                             : selected;
                                             refresh();
                                         },
-                                        this::theme));
+                                        this::theme)
+                                .compact(true));
                 labels.add(button);
                 tags.add(node(button));
             }
@@ -177,8 +183,7 @@ public final class AttributeDetailScreen extends PanelScreen {
     }
 
     private void bind() {
-        identity.setMessage(
-                text("header", snapshot.name(), snapshot.boss() ? text("boss") : text("ordinary")));
+        identity.setMessage(Component.literal(snapshot.name()));
         budget.setMessage(
                 text(
                         "health_budget",

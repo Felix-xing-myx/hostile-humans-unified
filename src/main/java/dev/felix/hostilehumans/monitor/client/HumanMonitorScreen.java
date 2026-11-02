@@ -3,6 +3,7 @@ package dev.felix.hostilehumans.monitor.client;
 import dev.felix.hostilehumans.entity.Human;
 
 import dev.felix.hostilehumans.bootstrap.HumanRuntime;
+import dev.felix.hostilehumans.client.ui.framework.UiColor;
 import dev.felix.hostilehumans.client.ui.framework.UiDraw;
 import dev.felix.hostilehumans.client.ui.framework.UiThemes;
 import dev.felix.hostilehumans.faction.HumanFactions;
@@ -44,14 +45,15 @@ public final class HumanMonitorScreen {
                 ?HumanFactions.id(human):"";
         var theme=UiThemes.faction(faction);int accent=theme.accent();
         // Compact HUD composes the common primitives; the full-screen frame's header/footer spacing is not reused.
+        // Reference HUD: translucent slab, hairline edge and a 3px faction spine.
         UiDraw.roundRect(g,x-2,y-2,width+4,66,3,0x9505090D);
-        UiDraw.roundRect(g,x,y,width,62,3,theme.bottom());
-        UiDraw.outline(g,x,y,width,62,theme.edge());
-        UiDraw.ruleFade(g,x+2,y+1,width-4,accent);
-        g.drawString(font,font.plainSubstrByWidth(state.name(),Math.max(24,width-100)),x+10,y+7,theme.text(),false);
+        UiDraw.roundRect(g,x,y,width,62,3,0xD9191D25);
+        UiDraw.outline(g,x,y,width,62,0xFF465562);
+        UiDraw.rect(g,x,y+1,3,60,UiColor.alpha(accent,.85F));
+        g.drawString(font,font.plainSubstrByWidth(state.name(),Math.max(24,width-100)),x+10,y+6,0xFFEAF1F4,false);
         var status=text(state.takeover()?"manual":"observing");
-        g.drawString(font,status,x+width-8-font.width(status),y+7,state.takeover()?0xFFFFCE78:0xFF77D5A1,false);
-        int barWidth=Math.min(116,Math.max(24,width-120)), bx=x+20, by=y+23;
+        g.drawString(font,status,x+width-8-font.width(status),y+6,state.takeover()?0xFFFFCE78:0xFF77D5A1,false);
+        int barWidth=Math.min(116,Math.max(24,width-120)), bx=x+20, by=y+21;
         UiDraw.health(g,bx,by,state.health(),state.maximumHealth(),false,barWidth);
         UiDraw.meter(g,bx,by-5,barWidth,3,state.pendingFood(),state.maximumHealth(),0xFFE5BC69);
         String hp=String.format(Locale.ROOT,"%.1f / %.1f  +%.1f",state.health(),state.maximumHealth(),state.pendingFood());
@@ -71,8 +73,8 @@ public final class HumanMonitorScreen {
                 slots[2].getTranslatedKeyMessage(),exit).getString();
         if (state.takeover()) second = text("keyline.combat",client.options.keySwapOffhand.getTranslatedKeyMessage(),
                 HumanMonitorClient.Keys.SUPPLY.getTranslatedKeyMessage(),exit).getString();
-        g.drawString(font,font.plainSubstrByWidth(first,width-18),x+10,y+37,theme.text(),false);
-        g.drawString(font,font.plainSubstrByWidth(second,width-18),x+10,y+50,theme.muted(),false);
+        g.drawString(font,font.plainSubstrByWidth(first,width-18),x+10,y+35,0xFFD6DFE4,false);
+        g.drawString(font,font.plainSubstrByWidth(second,width-18),x+10,y+47,0xFF97ABB7,false);
         MonitorGunHud.render(g);
         var view = HumanMonitorClient.loadout();
         if (state.takeover() && view != null) {

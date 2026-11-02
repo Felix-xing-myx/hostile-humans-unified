@@ -359,7 +359,10 @@ public final class UiDraw {
         outline(g, x, y, w, h, UiColor.alpha(0xFFFFFFFF, .09F));
     }
 
-    /** Cell based health bar; one tick is 5 health, one cell is five ticks. */
+    /**
+     * Cell based health bar. Every cell holds {@link PanelGeometry#TICKS_PER_CELL} fine ticks and
+     * the bar is proportional to the actual maximum, so full health always paints full.
+     */
     public static void health(
             GuiGraphics g,
             int x,
@@ -369,34 +372,30 @@ public final class UiDraw {
             boolean heading,
             int fixedWidth) {
         int cells = PanelGeometry.healthCells(maximum),
-                count = cells * 5,
+                perCell = PanelGeometry.TICKS_PER_CELL,
+                count = cells * perCell,
                 h = heading ? 9 : 8,
                 gap = heading ? 4 : 3,
                 tick = heading ? 2 : 1,
-                inner = heading ? 2 : 1;
+                inner = 1,
+                cell = tick * perCell + inner * (perCell - 1),
+                natural = cells * cell + (cells - 1) * gap;
         double ratio = maximum > 0 ? current / maximum : 0;
         int color = healthColor(ratio);
-        int natural = cells * tick * 5 + (cells - 1) * gap + cells * inner * 4;
         for (int i = 0; i < count; i++) {
-            int start = i / 5 * (tick * 5 + inner * 4 + gap) + (i % 5) * (tick + inner);
+            int start = i / perCell * (cell + gap) + (i % perCell) * (tick + inner);
             int left =
                     fixedWidth > 0
                             ? x + (int) Math.floor(start * (double) fixedWidth / natural)
                             : x + start;
             int right =
                     fixedWidth > 0
-                            ? x
-                                    + (int)
-                                            Math.floor(
-                                                    (start + tick)
-                                                            * (double) fixedWidth
-                                                            / natural)
+                            ? x + (int) Math.floor((start + tick) * (double) fixedWidth / natural)
                             : left + tick;
             int width = Math.max(1, right - left);
             rect(g, left, y, width, h, 0xFF21303A);
             double fill = PanelGeometry.healthTick(current, maximum, i);
-            if (fill > 0)
-                rect(g, left, y, Math.max(1, (int) Math.round(width * fill)), h, color);
+            if (fill > 0) rect(g, left, y, Math.max(1, (int) Math.round(width * fill)), h, color);
         }
     }
 

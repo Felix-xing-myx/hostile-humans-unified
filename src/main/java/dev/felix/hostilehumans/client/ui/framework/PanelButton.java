@@ -19,7 +19,7 @@ public class PanelButton extends Button {
     private List<FormattedCharSequence> lines = List.of();
     private Component measuredMessage;
     private int measuredWidth = -1;
-    private boolean selected, danger;
+    private boolean selected, danger, compact;
 
     public PanelButton(Component message, OnPress press, Supplier<UiTheme> theme) {
         super(0, 0, 1, HEIGHT, message, press, DEFAULT_NARRATION);
@@ -38,6 +38,20 @@ public class PanelButton extends Button {
     public PanelButton danger(boolean value) {
         danger = value;
         return this;
+    }
+
+    /** Tag sized control: 16px tall, tighter padding. */
+    public PanelButton compact(boolean value) {
+        compact = value;
+        return this;
+    }
+
+    protected int height() {
+        return compact ? 16 : HEIGHT;
+    }
+
+    protected int padding() {
+        return compact ? 5 : PADDING;
     }
 
     public void viewport(Supplier<UiRect> value) {
@@ -59,12 +73,20 @@ public class PanelButton extends Button {
     }
 
     public int measureHeight(int width) {
+        wrap(width);
+        return Math.max(height(), lines.size() * 10 + 6);
+    }
+
+    /** Cached wrap; render calls it too so a widget placed without measuring still shows text. */
+    private void wrap(int width) {
         if (width != measuredWidth || !getMessage().equals(measuredMessage)) {
             measuredWidth = width;
             measuredMessage = getMessage();
-            lines = Minecraft.getInstance().font.split(getMessage(), Math.max(1, width - 2 * PADDING));
+            lines =
+                    Minecraft.getInstance()
+                            .font
+                            .split(getMessage(), Math.max(1, width - 2 * padding()));
         }
-        return Math.max(HEIGHT, lines.size() * 10 + 6);
     }
 
     public void place(UiRect b) {
@@ -92,6 +114,7 @@ public class PanelButton extends Button {
 
     @Override
     protected void renderWidget(GuiGraphics g, int mx, int my, float partial) {
+        wrap(width);
         UiTheme t = theme.get();
         UiDraw.control(
                 g,
@@ -109,7 +132,7 @@ public class PanelButton extends Button {
         int color = !active ? t.disabled() : danger ? t.danger() : selected ? t.accent() : t.text();
         int y = getY() + (height - lines.size() * 10) / 2;
         for (var line : lines) {
-            g.drawString(Minecraft.getInstance().font, line, getX() + PADDING, y, color, false);
+            g.drawString(Minecraft.getInstance().font, line, getX() + padding(), y, color, false);
             y += 10;
         }
     }

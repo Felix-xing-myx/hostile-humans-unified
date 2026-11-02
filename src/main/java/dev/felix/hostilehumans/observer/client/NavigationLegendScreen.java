@@ -57,14 +57,11 @@ public final class NavigationLegendScreen extends PanelScreen {
     }
 
     @Override
-    protected UiLayout.Node buildContent() {
-        controls.clear();
-        if (displayRows.isEmpty()) displayRows = rows();
-        List<UiLayout.Node> content = new ArrayList<>(), tabs = new ArrayList<>();
+    protected void buildBand() {
         for (int i = 0; i < PAGES.length; i++) {
             final int index = i;
             PanelButton b =
-                    body(
+                    band(
                             new PanelButton(
                                     label("page." + PAGES[i]),
                                     button -> {
@@ -75,31 +72,36 @@ public final class NavigationLegendScreen extends PanelScreen {
                                     this::theme));
             b.selected(page == i);
             controls.put("tab." + i, b);
-            tabs.add(node(b));
         }
-        content.add(UiLayout.grid(7, 4, 55, tabs));
-        List<UiLayout.Node> layers = new ArrayList<>();
+    }
+
+    @Override
+    protected UiLayout.Node buildContent() {
+        controls.clear();
+        if (displayRows.isEmpty()) displayRows = rows();
+        List<UiLayout.Node> content = new ArrayList<>(), layers = new ArrayList<>();
         for (int i = 0; i < 4; i++) {
             final int index = i;
             PanelButton b =
                     body(
                             new PanelButton(
-                                    layerLabel(i),
-                                    button -> {
-                                        NavigationDebugClient.cycleLayer(index);
-                                        refreshRows(false);
-                                    },
-                                    this::theme));
+                                            layerLabel(i),
+                                            button -> {
+                                                NavigationDebugClient.cycleLayer(index);
+                                                refreshRows(false);
+                                            },
+                                            this::theme)
+                                    .compact(true));
             controls.put("layer." + i, b);
             layers.add(node(b));
         }
-        content.add(UiLayout.grid(4, 4, 100, layers));
+        content.add(UiLayout.grid(4, 4, 90, layers));
         for (Row row : displayRows)
             content.add(
                     text(
                             row.text(),
-                            () -> row.color() >= 0 ? 0xFF000000 | row.color() : theme().text()));
-        return UiLayout.column(7, content);
+                            () -> row.color() >= 0 ? 0xFF000000 | row.color() : theme().muted()));
+        return UiLayout.column(3, content);
     }
 
     @Override

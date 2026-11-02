@@ -485,6 +485,28 @@ public final class SettlementScreen extends PanelScreen {
         return snapshot.data().getString("faction");
     }
 
+    private static final List<String> PAGES =
+            List.of("template", "regions", "facilities", "transfer", "management");
+
+    @Override
+    protected void buildBand() {
+        if (!snapshot.author() || !knownSchema()) return;
+        for (String page : PAGES) {
+            PanelButton button =
+                    band(
+                            new PanelButton(
+                                    text("tab." + page),
+                                    b -> {
+                                        tab = page;
+                                        refresh();
+                                    },
+                                    this::theme));
+            button.selected(tab.equals(page));
+            button.active = !pending.busy();
+            controls.put("tab." + page, button);
+        }
+    }
+
     @Override
     protected UiLayout.Node buildContent() {
         controls.clear();
@@ -500,20 +522,6 @@ public final class SettlementScreen extends PanelScreen {
             }
             if (snapshot.authorRevision() != editBase.authorRevision())
                 root.add(text(text("stale"), () -> theme().danger()));
-            List<UiLayout.Node> tabs = new ArrayList<>();
-            for (String page :
-                    List.of("template", "regions", "facilities", "transfer", "management"))
-                tabs.add(
-                        action(
-                                "tab." + page,
-                                text("tab." + page),
-                                !pending.busy(),
-                                tab.equals(page),
-                                () -> {
-                                    tab = page;
-                                    refresh();
-                                }));
-            root.add(UiLayout.grid(5, 4, 90, tabs));
             root.add(
                     switch (tab) {
                         case "regions" -> regionEditor();

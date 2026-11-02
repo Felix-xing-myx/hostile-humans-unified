@@ -1,9 +1,14 @@
 package dev.felix.hostilehumans.client.ui;
 
 import dev.felix.hostilehumans.client.ui.framework.PanelButton;
+import dev.felix.hostilehumans.client.ui.framework.PanelCheck;
 import dev.felix.hostilehumans.client.ui.framework.PanelGeometry;
+import dev.felix.hostilehumans.client.ui.framework.PanelGroup;
+import dev.felix.hostilehumans.client.ui.framework.PanelKeyValue;
 import dev.felix.hostilehumans.client.ui.framework.PanelScreen;
+import dev.felix.hostilehumans.client.ui.framework.PanelSlider;
 import dev.felix.hostilehumans.client.ui.framework.UiLayout;
+import dev.felix.hostilehumans.client.ui.framework.UiThemes;
 import dev.felix.hostilehumans.soldier.PatrolToolNetwork;
 
 import net.minecraft.client.Minecraft;
@@ -55,15 +60,27 @@ public final class PatrolWaitScreen extends PanelScreen {
 
     private int rowsPerPage() {
         return Math.max(
-                1, (frame.height() - (controller() ? 220 : 110)) / (controller() ? 90 : 60));
+                1, (frame.height() - (controller() ? 250 : 110)) / (controller() ? 76 : 56));
     }
 
     private int pages() {
         return Math.max(1, (state.rows().size() + rowsPerPage() - 1) / rowsPerPage());
     }
 
+    @Override
+    protected Component headerStatus() {
+        return controller() ? text("controller_badge") : Component.literal((page + 1) + " / " + pages());
+    }
+
     private UiLayout.Node action(Component label, boolean enabled, Runnable request) {
         PanelButton button = body(new PanelButton(label, b -> request.run(), this::theme));
+        button.active = enabled;
+        return node(button);
+    }
+
+    private UiLayout.Node small(String id, Component label, boolean enabled, Runnable request) {
+        PanelButton button =
+                body(new PanelButton(label, b -> request.run(), this::theme).compact(true));
         button.active = enabled;
         return node(button);
     }
@@ -79,40 +96,6 @@ public final class PatrolWaitScreen extends PanelScreen {
         content.add(text(Component.literal(state.name()), () -> theme().accent()));
         if (controller()) {
             var c = state.control();
-            List<UiLayout.Node> modes = new ArrayList<>();
-            for (int mode = 0; mode < 3; mode++) {
-                final int selected = mode;
-                modes.add(
-                        action(
-                                text("mode." + mode),
-                                !pending && c.mode() != mode,
-                                () -> changeMode(selected)));
-            }
-            content.add(UiLayout.grid(3, 6, modes));
-            content.add(
-                    action(
-                            text(c.chase() ? "chase_on" : "chase_off"),
-                            !pending && editable(),
-                            () -> {
-                                if (pending) return;
-                                pending = true;
-                                PatrolToolNetwork.controllerChase(state, !state.control().chase());
-                                rebuildWidgets();
-                            }));
-            content.add(muted(text("radius", c.radius())));
-            content.add(
-                    UiLayout.grid(
-                            2,
-                            6,
-                            List.of(
-                                    action(
-                                            Component.literal("−"),
-                                            !pending && editable() && c.radius() > 8,
-                                            () -> radius(-8)),
-                                    action(
-                                            Component.literal("+"),
-                                            !pending && editable() && c.radius() < 96,
-                                            () -> radius(8)))));
             String key = "patrol_wait.phase." + c.phase();
             Component phase = I18n.exists(key) ? Component.translatable(key) : text("phase.idle");
             content.add(
@@ -123,62 +106,96 @@ public final class PatrolWaitScreen extends PanelScreen {
                                     .append(phase)
                                     .append(" · ")
                                     .append(text("pattern." + c.pattern()))));
+            List<UiLayout.Node> modes = new ArrayList<>();
+            for (int mode = 0; mode < 3; mode++) {
+                final int selected = mode;
+                PanelButton button =
+                        body(
+                                new PanelButton(
+                                        text("mode." + mode), b -> changeMode(selected), this::theme));
+                button.active = !pending && c.mode() != mode;
+                button.selected(c.mode() == mode);
+                modes.add(node(button));
+            }
+            content.add(UiLayout.grid(3, 4, 96, modes));
+            PanelCheck chase =
+                    body(
+                            new PanelCheck(
+                                    text(c.chase() ? "chase_on" : "chase_off"),
+                                    c.chase(),
+                                    b -> {
+                                        if (pending) return;
+                                        pending = true;
+                                        PatrolToolNetwork.controllerChase(state, !state.control().chase());
+                                        rebuildWidgets();
+                                    },
+                                    this::theme));
+            chase.active = !pending && editable();
+            content.add(node(chase));
+            PanelSlider radius =
+                    body(
+                            new PanelSlider(
+                                    c.radius(),
+                                    v -> text("radius_label"),
+                                    v -> radiusTo(v),
+                                    this::theme)
+                                    .value(v -> text("radius_value", v)));
+            radius.active = !pending && editable();
+            content.add(node(radius));
         }
         if (state.rows().isEmpty()) content.add(muted(text("empty")));
+        content.add(node(body(new PanelGroup(text("waypoints"), UiThemes.MARKER_MOVE, this::theme))));
         for (int row = 0;
                 row < rowsPerPage() && page * rowsPerPage() + row < state.rows().size();
                 row++) {
             int index = page * rowsPerPage() + row;
             var point = state.rows().get(index);
             var pos = point.position();
-            content.add(
-                    text(
-                            Component.literal(
-                                    "#"
-                                            + (index + 1)
-                                            + "  "
-                                            + pos.getX()
-                                            + ", "
-                                            + pos.getY()
-                                            + ", "
-                                            + pos.getZ()),
-                            () ->
-                                    controller() && state.control().point() == index
-                                            ? theme().accent()
-                                            : theme().text()));
-            content.add(
-                    muted(
-                            text(
-                                    "seconds",
-                                    String.format(Locale.ROOT, "%.2f", point.ticks() / 20.0))));
+            final int at = index;
+            Component position =
+                    Component.literal(
+                            "#" + (index + 1) + "  " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ());
+            Component seconds =
+                    text("seconds", String.format(Locale.ROOT, "%.2f", point.ticks() / 20.0));
+            PanelKeyValue line =
+                    body(
+                            new PanelKeyValue(
+                                    () -> position,
+                                    () -> seconds,
+                                    () ->
+                                            controller() && state.control().point() == at
+                                                    ? theme().accent()
+                                                    : theme().text(),
+                                    this::theme));
+            content.add(node(line));
             List<UiLayout.Node> buttons = new ArrayList<>();
             if (controller()) {
+                buttons.add(small("up" + index, Component.literal("↑"), !pending && editable() && index > 0, () -> edit(at, 0)));
                 buttons.add(
-                        action(
-                                Component.literal("↑"),
-                                !pending && editable() && index > 0,
-                                () -> edit(index, 0)));
-                buttons.add(
-                        action(
+                        small(
+                                "down" + index,
                                 Component.literal("↓"),
                                 !pending && editable() && index + 1 < state.rows().size(),
-                                () -> edit(index, 1)));
+                                () -> edit(at, 1)));
                 buttons.add(
-                        action(
+                        small(
+                                "remove" + index,
                                 text("remove"),
                                 !pending && editable() && state.rows().size() > 2,
-                                () -> edit(index, 2)));
+                                () -> edit(at, 2)));
             }
             buttons.add(
-                    action(
+                    small(
+                            "minus" + index,
                             Component.literal("−"),
                             !pending && editable() && point.ticks() > 0,
-                            () -> step(index, -20)));
+                            () -> step(at, -20)));
             buttons.add(
-                    action(
+                    small(
+                            "plus" + index,
                             Component.literal("+"),
                             !pending && editable() && point.ticks() < 1200,
-                            () -> step(index, 20)));
+                            () -> step(at, 20)));
             content.add(UiLayout.grid(5, 4, 40, buttons));
         }
         content.add(
@@ -208,6 +225,7 @@ public final class PatrolWaitScreen extends PanelScreen {
                                 })
                         .active =
                 page + 1 < pages();
+        footerSpacer();
         footer(text("close"), b -> onClose());
     }
 
@@ -218,10 +236,12 @@ public final class PatrolWaitScreen extends PanelScreen {
         rebuildWidgets();
     }
 
-    private void radius(int delta) {
+    /** Slider commit; the server still owns the accepted radius. */
+    private void radiusTo(int value) {
         if (pending || !editable()) return;
+        if (state.control() != null && value == state.control().radius()) return;
         pending = true;
-        PatrolToolNetwork.controllerRadius(state, state.control().radius() + delta);
+        PatrolToolNetwork.controllerRadius(state, value);
         rebuildWidgets();
     }
 
@@ -255,7 +275,8 @@ public final class PatrolWaitScreen extends PanelScreen {
 
     @Override
     public void removed() {
-        if (Minecraft.getInstance().getConnection() != null) PatrolToolNetwork.close(state.token());
+        if (Minecraft.getInstance().getConnection() != null)
+            PatrolToolNetwork.close(state.token());
         super.removed();
     }
 }

@@ -252,6 +252,20 @@ public final class EconomyScreen extends PanelScreen {
                                     row.loose(),
                                     row.total())));
         content.add(UiLayout.grid(2, 6, funds));
+        List<String> tabs = tabIds();
+        if (!tabs.contains(tab)) tab = tabs.get(0);
+        content.add(
+                switch (tab) {
+                    case "offers" -> offers();
+                    case "tasks" -> tasks();
+                    case "permit" -> broker();
+                    default -> wallets();
+                });
+        return UiLayout.column(6, content);
+    }
+
+    /** Visible tabs for the current snapshot; the band renders this and the body switches on it. */
+    private List<String> tabIds() {
         List<String> tabs = new ArrayList<>();
         tabs.add("wallets");
         if (!snapshot.offers().isEmpty()
@@ -262,28 +276,25 @@ public final class EconomyScreen extends PanelScreen {
         if (snapshot.permit().known()
                 || snapshot.page() == EconomyView.Page.BROKER
                 || snapshot.page() == EconomyView.Page.TEST) tabs.add("permit");
-        if (!tabs.contains(tab)) tab = tabs.get(0);
-        List<UiLayout.Node> tabButtons = new ArrayList<>();
-        for (String page : tabs)
-            tabButtons.add(
-                    action(
-                            "tab." + page,
-                            text("tab." + page),
-                            !pending.busy(),
-                            tab.equals(page),
-                            () -> {
-                                tab = page;
-                                refresh();
-                            }));
-        content.add(UiLayout.grid(4, 4, 75, tabButtons));
-        content.add(
-                switch (tab) {
-                    case "offers" -> offers();
-                    case "tasks" -> tasks();
-                    case "permit" -> broker();
-                    default -> wallets();
-                });
-        return UiLayout.column(6, content);
+        return tabs;
+    }
+
+    @Override
+    protected void buildBand() {
+        for (String page : tabIds()) {
+            PanelButton button =
+                    band(
+                            new PanelButton(
+                                    text("tab." + page),
+                                    b -> {
+                                        tab = page;
+                                        refresh();
+                                    },
+                                    this::theme));
+            button.selected(tab.equals(page));
+            button.active = !pending.busy();
+            controls.put("tab." + page, button);
+        }
     }
 
     private UiLayout.Node wallets() {

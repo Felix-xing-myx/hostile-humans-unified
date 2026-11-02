@@ -2067,6 +2067,10 @@
     "class": "dev.felix.hostilehumans.client.ui.framework.PanelHealth",
     "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelHealth.java"
   },
+  "PanelKeyValue": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelKeyValue",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelKeyValue.java"
+  },
   "PanelMeter": {
     "class": "dev.felix.hostilehumans.client.ui.framework.PanelMeter",
     "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelMeter.java"

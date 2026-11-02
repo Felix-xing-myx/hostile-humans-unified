@@ -21,7 +21,7 @@
 | `client/render` | 实体模型、动画与第一人称呈现 | 37 |
 | `client/render/tacz` | 可选TaCZ原生第一人称模型、只读骨骼采样与共用换弹片段/声音计划；不操作玩家或服务端弹药 | 19 |
 | `client/ui` | 共用界面样式及指挥/背包界面 | 10 |
-| `client/ui/framework` | 统一客户端主题、原生控件树、布局、绘图与会话适配 | 23 |
+| `client/ui/framework` | 统一客户端主题、原生控件树、布局、绘图与会话适配 | 24 |
 | `client/ui/gun` | 可选枪械监视HUD的原生资源与命中反馈适配，不借用真实玩家物品或上游全局HUD状态 | 2 |
 | `common` | 无游戏依赖的通用集合/缓存 | 6 |
 | `compat` | 可选联动的安全检测和公共桥 | 7 |
@@ -150,7 +150,7 @@
 
 ### client.ui.framework
 
-`InputValue`、`PanelButton`、`PanelCheck`、`PanelDisclosure`、`PanelEditBox`、`PanelGeometry`、`PanelGroup`、`PanelHealth`、`PanelMeter`、`PanelPageSlider`、`PanelRosterRow`、`PanelScreen`、`PanelSessionView`、`PanelSlider`、`PanelText`、`PendingAction`、`RosterPageCache`、`UiColor`、`UiDraw`、`UiLayout`、`UiRect`、`UiTheme`、`UiThemes`
+`InputValue`、`PanelButton`、`PanelCheck`、`PanelDisclosure`、`PanelEditBox`、`PanelGeometry`、`PanelGroup`、`PanelHealth`、`PanelKeyValue`、`PanelMeter`、`PanelPageSlider`、`PanelRosterRow`、`PanelScreen`、`PanelSessionView`、`PanelSlider`、`PanelText`、`PendingAction`、`RosterPageCache`、`UiColor`、`UiDraw`、`UiLayout`、`UiRect`、`UiTheme`、`UiThemes`
 
 ### client.ui.gun
 

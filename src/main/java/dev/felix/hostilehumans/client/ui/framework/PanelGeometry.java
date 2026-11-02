@@ -72,16 +72,26 @@ public final class PanelGeometry {
         return scroll;
     }
 
+    /** Fine ticks per big cell; the cell is a visual grouping, not a fixed amount. */
+    public static final int TICKS_PER_CELL = 8;
+
     public static int healthCells(double maximum) {
         return Math.min(8, Math.max(1, (int) Math.ceil(Math.max(0, maximum) / 25)));
     }
 
+    public static int healthTicks(double maximum) {
+        return healthCells(maximum) * TICKS_PER_CELL;
+    }
+
+    /**
+     * Proportional fill: the whole bar always represents exactly {@code maximum}, so a full health
+     * human paints a full bar whatever the maximum is. Rounding a cell to a fixed 25 points used to
+     * leave the last ticks empty at full health.
+     */
     public static double healthTick(double current, double maximum, int index) {
         if (!Double.isFinite(maximum) || maximum <= 0 || !Double.isFinite(current)) return 0;
-        int count = healthCells(maximum) * 5;
-        double capacity = maximum > 200 ? maximum : Math.max(maximum, healthCells(maximum) * 25);
-        return Math.max(
-                0,
-                Math.min(1, Math.max(0, Math.min(maximum, current)) / (capacity / count) - index));
+        int count = healthTicks(maximum);
+        double filled = Math.max(0, Math.min(maximum, current)) / maximum * count;
+        return Math.max(0, Math.min(1, filled - index));
     }
 }

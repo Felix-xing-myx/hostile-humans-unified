@@ -69,14 +69,13 @@ public final class PanelRosterRow extends PanelButton {
         int x = getX() + 10, y = getY() + 5;
         UiDraw.rect(g, x, y + 4, 4, 4, dot);
         g.drawString(font, clippedName, x + 8, y, current ? t.text() : t.disabled(), false);
-        int numberX = getX() + width - 6 - font.width(healthText);
-        if (current && health >= 0) {
-            int barWidth = Math.min(HEALTH, Math.max(0, numberX - 6 - (x + 8 + NAME + 6)));
-            if (barWidth > 12)
-                UiDraw.health(
-                        g, numberX - 6 - barWidth, y + 1, health, maximum, false, 0);
-        }
-        g.drawString(font, healthText, numberX, y + 1, t.muted(), false);
+        // Fixed columns: the ticks and the number keep the same left edge on every row.
+        int numberRight = getX() + width - 6, numberLeft = numberRight - NUMBER;
+        int barX = x + 8 + NAME + 6;
+        int barWidth = Math.min(HEALTH, Math.max(0, numberLeft - 6 - barX));
+        if (current && health >= 0 && barWidth > 12)
+            UiDraw.health(g, barX, y + 1, health, maximum, false, barWidth);
+        g.drawString(font, healthText, numberRight - font.width(healthText), y + 1, t.muted(), false);
         g.drawString(font, clippedMetadata, x, y + 13, t.disabled(), false);
     }
 }
