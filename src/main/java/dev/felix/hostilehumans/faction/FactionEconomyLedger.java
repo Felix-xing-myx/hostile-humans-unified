@@ -240,10 +240,19 @@ public final class FactionEconomyLedger {
             return false;
         }
         if (receipt == null) return true;
+        if (!receipt.hasUUID("transaction")) {
+            block(player, data, "latest journal receipt has no valid transaction ID");
+            return false;
+        }
         String state = receipt.getString("state");
         UUID id = receipt.getUUID("transaction");
-        var current = InventoryTransaction.fromJournal(player, receipt);
-        String hash = current.beforeFingerprint();
+        String hash;
+        try {
+            hash = InventoryTransaction.fromJournal(player, receipt).beforeFingerprint();
+        } catch (IllegalArgumentException malformed) {
+            block(player, data, "journal inventory references are invalid");
+            return false;
+        }
         boolean politics =
                 data.player(player.getUUID()).equals(receipt.getCompound("politics_before"))
                         || data.player(player.getUUID())
