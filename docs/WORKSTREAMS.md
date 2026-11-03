@@ -4137,3 +4137,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查感知预算，基线 4435e01，主控沿用 audit/module-architecture。修改 ScopedWorkBudget 与 ScopedWorkBudgetTest，公开接口不变。Python 检查通过，Java 回归待构建授权。
 
 - 架构审查动作权限，基线 2804801，主控沿用 audit/module-architecture。ActionCoordinator 热路径避免重复到期扫描及临时清单，公共接口和玩法不变。Java 验证待授权。
+
+- 架构审查恢复与枪械取消，基线 08f9181，主控沿用 audit/module-architecture。修改 GunCustody 批量撤销的异常隔离，公共接口不变；Java 与游戏验证待执行。

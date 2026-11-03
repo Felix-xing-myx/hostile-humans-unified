@@ -216,10 +216,25 @@ public final class GunCustody {
         actual.add(human.getOffhandItem());
         if (human.getData() != null) for (int i = 0; i < human.getData().getInventoryItemsSize(); i++)
             actual.add(human.getData().getInventoryItem(i));
-        for (ItemStack stack : actual) if (GunSupport.get().isGun(stack)) GunSupport.get().cancelReload(human, stack);
-        clearLease(human);
-        CloseRangedTactics.clear(human);
-        CloseDefenseHold.clear(human);
+        RuntimeException failure = null;
+        try {
+            var guns = GunSupport.get();
+            for (ItemStack stack : actual) {
+                if (stack.isEmpty()) continue;
+                try {
+                    if (guns.isGun(stack)) guns.cancelReload(human, stack);
+                } catch (RuntimeException exception) {
+                    // One optional backend must not strand the other real weapons.
+                    if (failure == null) failure = exception;
+                    else if (failure != exception) failure.addSuppressed(exception);
+                }
+            }
+        } finally {
+            clearLease(human);
+            CloseRangedTactics.clear(human);
+            CloseDefenseHold.clear(human);
+        }
+        if (failure != null) throw failure;
     }
 
     public static void adoptManualLoadout(Human human) {
