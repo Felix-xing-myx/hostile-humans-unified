@@ -128,7 +128,9 @@ final class FactionStandingData extends SavedData {
 
     void journal(UUID player,UUID transaction,CompoundTag receipt){
         var receipts=journals.computeIfAbsent(player,k->new LinkedHashMap<>());
-        if(!receipts.containsKey(transaction)&&receipts.size()>=1024){UUID first=receipts.keySet().iterator().next();String state=receipts.get(first).getString("state");if(state.equals("PREPARED")||state.equals("REPAIR_REQUIRED"))throw new IllegalStateException("unresolved transaction journal capacity");for(Tag old:receipts.get(first).getList("slots",Tag.TAG_COMPOUND)){String oldKey=((CompoundTag)old).getString("slot");if(oldKey.startsWith("external:"))try{UUID source=UUID.fromString(oldKey.substring(9));var indexed=externalReceipts.get(source);if(indexed!=null&&indexed.getUUID("transaction").equals(first))externalReceipts.remove(source);}catch(IllegalArgumentException ignored){}}receipts.remove(first);}
+        if (!receipts.containsKey(transaction) && receipts.size() >= 1024) {
+            evictOldestReceipt(receipts);
+        }
         receipts.put(transaction,receipt.copy());journalSequence=Math.max(journalSequence,receipt.getLong("sequence"));
         for(Tag row:receipt.getList("slots",Tag.TAG_COMPOUND)){String key=((CompoundTag)row).getString("slot");if(!key.startsWith("external:"))continue;
             try{UUID entity=UUID.fromString(key.substring(9));var indexed=externalReceipts.get(entity);
@@ -145,6 +147,30 @@ final class FactionStandingData extends SavedData {
             }catch(IllegalArgumentException ignored){}
         }setDirty();
     }
+    private void evictOldestReceipt(Map<UUID, CompoundTag> receipts) {
+        var oldest = receipts.entrySet().stream()
+                .min(Comparator.comparingLong(entry -> entry.getValue().getLong("sequence")))
+                .orElseThrow();
+        UUID transaction = oldest.getKey();
+        var receipt = oldest.getValue();
+        String state = receipt.getString("state");
+        if (state.equals("PREPARED") || state.equals("REPAIR_REQUIRED"))
+            throw new IllegalStateException("unresolved transaction journal capacity");
+        for (Tag row : receipt.getList("slots", Tag.TAG_COMPOUND)) {
+            String key = ((CompoundTag) row).getString("slot");
+            if (!key.startsWith("external:")) continue;
+            try {
+                UUID source = UUID.fromString(key.substring(9));
+                var indexed = externalReceipts.get(source);
+                if (indexed != null && indexed.hasUUID("transaction") && indexed.getUUID("transaction").equals(transaction))
+                    externalReceipts.remove(source);
+            } catch (IllegalArgumentException ignored) {
+                // A malformed slot cannot identify an indexed entity.
+            }
+        }
+        receipts.remove(transaction);
+    }
+
     static FactionStandingData load(CompoundTag root){
         var result=new FactionStandingData();result.journalSequence=Math.max(0,root.getLong("economy_sequence"));result.rootExtras=root.copy();result.rootExtras.remove("players");result.rootExtras.remove("economy_journals");result.rootExtras.remove("quarantined_players");
         if(root.contains("players")&&!root.contains("players",Tag.TAG_LIST)||root.contains("economy_journals")&&!root.contains("economy_journals",Tag.TAG_LIST)){result.unknownRoot=root.copy();return result;}
