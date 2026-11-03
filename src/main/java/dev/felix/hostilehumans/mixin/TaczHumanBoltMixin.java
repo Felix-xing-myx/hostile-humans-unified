@@ -9,6 +9,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Coerce;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Pseudo
@@ -18,7 +19,7 @@ public abstract class TaczHumanBoltMixin {
 
     @Redirect(method = "lambda$bolt$0", at = @At(value = "INVOKE", target =
             "Lcom/tacz/guns/api/item/gun/AbstractGunItem;useInventoryAmmo(Lnet/minecraft/world/item/ItemStack;)Z"), require = 1)
-    private boolean hhu$checkVirtualMagazine(AbstractGunItem gun, ItemStack stack) {
-        return !(shooter instanceof Human) && gun.useInventoryAmmo(stack);
+    private boolean hhu$checkVirtualMagazine(@Coerce Object gun, ItemStack stack) {
+        return !(shooter instanceof Human) && ((AbstractGunItem) gun).useInventoryAmmo(stack);
     }
 }

@@ -18,7 +18,7 @@ public final class HumanMonitorProtocolTest {
                 check(!buffer.isReadable(), "packet consumed completely");
             } finally { buffer.release(); }
         }
-        for (int action = 0; action <= 6; action++) {
+        for (int action = 0; action <= 7; action++) {
             var request = new HumanMonitorNetwork.Request(token, action, true, 2);
             var buffer = new FriendlyByteBuf(Unpooled.buffer());
             try {
@@ -27,7 +27,7 @@ public final class HumanMonitorProtocolTest {
                 check(request.equals(HumanMonitorNetwork.Request.decode(buffer)), "operation round trip");
             } finally { buffer.release(); }
         }
-        for (int[] values : new int[][]{{-1, 0}, {7, 0}, {0, -1}, {0, 4}}) {
+        for (int[] values : new int[][]{{-1, 0}, {8, 0}, {0, -1}, {0, 4}}) {
             var buffer = new FriendlyByteBuf(Unpooled.buffer());
             try {
                 buffer.writeUUID(token); buffer.writeVarInt(values[0]); buffer.writeBoolean(false); buffer.writeVarInt(values[1]);

@@ -64,9 +64,12 @@ public final class HumanAmmoConfigSwitchTest {
         check(calls(RELOAD, "startHuman", "dev/felix/hostilehumans/behavior/combat/gun/GunReloadPolicy", "reloadThresholdSatisfied"),
                 "start retains combat-empty and idle-below25-percent thresholds");
         check(anyCalls(RELOAD, AMMO, "canReload")
-                        && anyCalls(RELOAD, "dev/felix/hostilehumans/behavior/combat/gun/GunReloadAuthority$Capture", "pay")
+                        && anyCalls(RELOAD, "dev/felix/hostilehumans/behavior/combat/gun/GunReloadAuthority$Capture", "payOnCompletion")
                         && calls("dev/felix/hostilehumans/behavior/combat/gun/GunReloadAuthority$Capture", "pay", AMMO, "canReload"),
                 "transaction callbacks use the same gate for authorization and payment");
+        check(calls("dev/felix/hostilehumans/behavior/combat/gun/GunReloadAuthority$Capture", "payOnCompletion",
+                "dev/felix/hostilehumans/behavior/combat/gun/GunReloadAuthority$Capture", "pay"),
+                "completion revalidates and pays the captured magazine cost");
         check(!calls("dev/felix/hostilehumans/compat/tacz/TaczIntegration", "hasLoadedAmmo", CONFIG, "ammoConsumptionEnabled"),
                 "gun loaded-round queries remain physical even in free mode");
         check(calls(SPAWN, "applyOnce", CONFIG, "ammoReserve"), "initial reserves use per-tier configuration");
