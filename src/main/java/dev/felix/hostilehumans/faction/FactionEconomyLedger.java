@@ -226,19 +226,14 @@ public final class FactionEconomyLedger {
 
     public static boolean recover(ServerPlayer player) {
         var data = FactionStandingData.get(player.getServer());
-        var receipt = data.latestJournal(player.getUUID());
         boolean hasStamp = player.getPersistentData().hasUUID(STAMP);
         UUID stamp = hasStamp ? player.getPersistentData().getUUID(STAMP) : null;
-        var stamped = hasStamp ? data.journal(player.getUUID(), stamp) : null;
-        boolean recognized =
-                !hasStamp
-                        || stamped != null
-                                && (stamped.getString("state").equals("COMMITTED")
-                                        || stamped.getString("state").equals("PREPARED"));
+        boolean recognized = !hasStamp || data.recognizesJournalStamp(player.getUUID(), stamp);
         if (!recognized) {
             block(player, data, "player references transaction absent or invalid in world journal");
             return false;
         }
+        var receipt = data.latestJournal(player.getUUID());
         if (receipt == null) return true;
         if (!receipt.hasUUID("transaction")) {
             block(player, data, "latest journal receipt has no valid transaction ID");

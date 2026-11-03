@@ -100,9 +100,27 @@ final class FactionStandingData extends SavedData {
         players.put(id,values);passage.put(id,passes);factionExtras.put(id,extras);playerExtras.put(id,source.copy());
         if(source.contains("economy",Tag.TAG_COMPOUND))economy.put(id,source.getCompound("economy").copy());else economy.remove(id);setDirty();
     }
-    boolean journaled(UUID player,UUID transaction){return journals.getOrDefault(player,new LinkedHashMap<>()).containsKey(transaction);}
-    CompoundTag journal(UUID player,UUID transaction){var value=journals.getOrDefault(player,new LinkedHashMap<>()).get(transaction);return value==null?null:value.copy();}
-    CompoundTag latestJournal(UUID player){CompoundTag result=null;for(var value:journals.getOrDefault(player,new LinkedHashMap<>()).values())result=value;return result==null?null:result.copy();}
+    boolean journaled(UUID player, UUID transaction) {
+        var receipts = journals.get(player);
+        return receipts != null && receipts.containsKey(transaction);
+    }
+
+    boolean recognizesJournalStamp(UUID player, UUID transaction) {
+        var receipts = journals.get(player);
+        var receipt = receipts == null ? null : receipts.get(transaction);
+        if (receipt == null) return false;
+        String state = receipt.getString("state");
+        return state.equals("COMMITTED") || state.equals("PREPARED");
+    }
+
+    CompoundTag latestJournal(UUID player) {
+        var receipts = journals.get(player);
+        if (receipts == null) return null;
+        CompoundTag result = null;
+        for (var receipt : receipts.values()) result = receipt;
+        return result == null ? null : result.copy();
+    }
+
     void journal(UUID player,UUID transaction,CompoundTag receipt){
         var receipts=journals.computeIfAbsent(player,k->new LinkedHashMap<>());
         if(!receipts.containsKey(transaction)&&receipts.size()>=1024){UUID first=receipts.keySet().iterator().next();String state=receipts.get(first).getString("state");if(state.equals("PREPARED")||state.equals("REPAIR_REQUIRED"))throw new IllegalStateException("unresolved transaction journal capacity");for(Tag old:receipts.get(first).getList("slots",Tag.TAG_COMPOUND)){String oldKey=((CompoundTag)old).getString("slot");if(oldKey.startsWith("external:"))try{UUID source=UUID.fromString(oldKey.substring(9));var indexed=externalReceipts.get(source);if(indexed!=null&&indexed.getUUID("transaction").equals(first))externalReceipts.remove(source);}catch(IllegalArgumentException ignored){}}receipts.remove(first);}
