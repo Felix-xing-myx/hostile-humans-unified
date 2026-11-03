@@ -1,5 +1,6 @@
 package dev.felix.hostilehumans.monitor.client;
 
+import dev.felix.hostilehumans.inventory.HumanInventoryMenu;
 import dev.felix.hostilehumans.observer.client.NavigationLegendScreen;
 import dev.felix.hostilehumans.entity.Human;
 
@@ -129,7 +130,9 @@ public final class HumanMonitorClient {
         resetControlState();
         NavigationDebugClient.accept(NavigationDebugFrame.EMPTY);
         if (client.player != null) {
-            if (client.player.containerMenu != client.player.inventoryMenu) client.player.closeContainer();
+            if (client.player.containerMenu instanceof HumanInventoryMenu menu && menu.monitored()) {
+                client.player.closeContainer();
+            }
             client.setCameraEntity(previousCamera != null && previousCamera.level() == client.level
                     && !previousCamera.isRemoved() ? previousCamera : client.player);
         }
