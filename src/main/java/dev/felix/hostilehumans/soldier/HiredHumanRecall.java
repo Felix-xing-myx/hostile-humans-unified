@@ -96,6 +96,18 @@ public final class HiredHumanRecall {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         Map<UUID, PlayerLocation> locations = PLAYER_LOCATIONS.get(player.server);
         if (locations != null) locations.remove(player.getUUID());
+        RecallState pending = PENDING_RECALLS.get(player.server);
+        if (pending == null) return;
+        UUID owner = player.getUUID();
+        pending.queued.values().removeIf(request -> request.owner().equals(owner));
+        var active = pending.active.values().iterator();
+        while (active.hasNext()) {
+            PendingRecall request = active.next();
+            if (!request.owner().equals(owner)) continue;
+            active.remove();
+            releaseTicket(player.server.getLevel(request.dimension()), request);
+        }
+        if (pending.isEmpty()) PENDING_RECALLS.remove(player.server, pending);
     }
 
     public static void onServerStopped(ServerStoppedEvent event) {

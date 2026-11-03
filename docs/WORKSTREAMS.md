@@ -4155,3 +4155,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查可选注入，基线 f3bb7a2，主控沿用 audit/module-architecture。OptionalMixinPlugin 与 ScgunsHumanShieldMixin 对齐匹配范围和数量，Java、缺依赖及变体启动待验证。
 
 - 架构审查配置迁移，基线 54a5d76，主控沿用 audit/module-architecture。SplitConfigFiles 与 GrowthProfileFiles 共用原始字节解析，新增快照读取重载。Python 检查通过，Java 回归待执行。
+
+- 架构审查雇佣召回，基线 928f57d，主控沿用 audit/module-architecture。HiredHumanRecall 在断线时清理该玩家的待召回队列和票据，公共接口不变。
