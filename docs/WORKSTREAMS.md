@@ -4215,3 +4215,17 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 3.15.1 构建同步
 - 主控；基线78b887478566785941d773c187cfefd526f68a57；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：架构审查、据点框选、团战寻路及 TaCZ 虚拟弹匣。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.1。
+
+
+## 3.15.2 构建同步
+- 主控；基线2a199716abffd9920f88d82ca4545de5e7b96211；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：TaCZ HUD and reviewed backend。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.2。
+
+
+## 3.15.2 构建同步
+- 主控；基线d133fdb5eee11f0e014a6141934c29332fc85b2b；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：Latest TaCZ HUD with missing import fixed and reviewed backend。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.2-retry。
+
+
+## 3.15.2 构建同步
+- 主控；基线fcf371db9bd08c96c0085706609001b82a1d470f；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：Latest frontend and backend with verified regression wiring。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.2-final。
+
+- 3.15.2完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致89e9bd2a935d50537b786b307a3bc12574997a5f5b2bebe356386891cda2f502；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.2-20261104-020513。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.2-final.
