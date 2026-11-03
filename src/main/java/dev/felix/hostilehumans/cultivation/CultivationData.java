@@ -83,6 +83,11 @@ final class CultivationData extends SavedData {
                 && (list.isEmpty() || list.getElementType() == Tag.TAG_COMPOUND);
     }
 
+    private static boolean nonnegativeInteger(CompoundTag tag, String key) {
+        byte type = tag.getTagType(key);
+        return type >= Tag.TAG_BYTE && type <= Tag.TAG_LONG && tag.getLong(key) >= 0;
+    }
+
     private CultivationData retainReadOnly(CompoundTag original, String reason) {
         future = original.copy();
         com.mojang.logging.LogUtils.getLogger().warn("Retaining cultivation journal: {}", reason);
@@ -124,32 +129,32 @@ final class CultivationData extends SavedData {
         for (Tag raw : t.getList("quarantined", Tag.TAG_COMPOUND)) d.quarantined.add(raw.copy());
         for (Tag raw : t.getList("accounts", Tag.TAG_COMPOUND)) {
             var a = (CompoundTag) raw;
-            if (!a.hasUUID("owner")) continue;
+            if (!a.hasUUID("owner") || !nonnegativeInteger(a, "available") || !nonnegativeInteger(a, "reserved"))
+                return d.retainReadOnly(t, "invalid account identity or balance");
             var account = new Account();
             account.available = a.getLong("available");
             account.reserved = a.getLong("reserved");
-            if (account.available < 0 || account.reserved < 0) {
-                d.quarantined.add(a.copy());
-                continue;
-            }
             for (Tag s : a.getList("stock", Tag.TAG_COMPOUND)) {
                 var v = (CompoundTag) s;
-                if (v.hasUUID("facility") && v.getLong("count") >= 0)
-                    if (account.stock.putIfAbsent(v.getUUID("facility"), v.getLong("count")) != null)
-                        return d.retainReadOnly(t, "duplicate facility stock for " + a.getUUID("owner"));
+                if (!v.hasUUID("facility") || !nonnegativeInteger(v, "count"))
+                    return d.retainReadOnly(t, "invalid facility stock for " + a.getUUID("owner"));
+                if (account.stock.putIfAbsent(v.getUUID("facility"), v.getLong("count")) != null)
+                    return d.retainReadOnly(t, "duplicate facility stock for " + a.getUUID("owner"));
             }
             if (d.accounts.putIfAbsent(a.getUUID("owner"), account) != null)
                 return d.retainReadOnly(t, "duplicate account for " + a.getUUID("owner"));
         }
         for (Tag raw : t.getList("transactions", Tag.TAG_COMPOUND)) {
             var x = (CompoundTag) raw;
-            if (x.hasUUID("id") && x.hasUUID("owner")
-                    && d.transactions.putIfAbsent(x.getUUID("id"), x.getUUID("owner")) != null)
+            if (!x.hasUUID("id") || !x.hasUUID("owner"))
+                return d.retainReadOnly(t, "invalid transaction identity");
+            if (d.transactions.putIfAbsent(x.getUUID("id"), x.getUUID("owner")) != null)
                 return d.retainReadOnly(t, "duplicate transaction " + x.getUUID("id"));
         }
         for (Tag raw : t.getList("retired", Tag.TAG_COMPOUND)) {
             var x = (CompoundTag) raw;
-            if (x.hasUUID("id")) d.retired.add(x.getUUID("id"));
+            if (!x.hasUUID("id")) return d.retainReadOnly(t, "invalid retired facility identity");
+            d.retired.add(x.getUUID("id"));
         }
         return d;
     }
