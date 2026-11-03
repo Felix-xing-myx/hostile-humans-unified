@@ -96,6 +96,21 @@ public final class EconomyRecoveryTest {
                                 "COMMITTED", true, true, false, true, true, true, false, true, true)
                         == REPLAY_COMMITTED,
                 "fully verified old inventory can replay once");
+        require(
+                EconomyRecovery.decide(
+                                "COMMITTED", true, true, false, false, true, true, false, true, true)
+                        == REPAIR,
+                "matching inventory with an older recognized stamp cannot skip the predecessor");
+        require(
+                EconomyRecovery.decide(
+                                "PREPARED", false, true, false, false, true, false, true, true, true)
+                        == REPAIR,
+                "matching after inventory cannot complete when the expected predecessor is absent");
+        require(
+                EconomyRecovery.decide(
+                                "PREPARED", false, true, false, false, false, false, true, true, true)
+                        == COMPLETE_PREPARED,
+                "the first transaction can recover without a predecessor");
         System.out.println(
                 "EconomyRecoveryTest: "
                         + checks

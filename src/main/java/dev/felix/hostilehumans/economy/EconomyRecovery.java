@@ -28,17 +28,19 @@ public final class EconomyRecovery {
             boolean politicsBefore) {
         if (stampPresent && !stampRecognized) return Decision.REPAIR;
         if (state.equals("NONE")) return stampPresent ? Decision.REPAIR : Decision.ACCEPT;
+        boolean predecessorMatches = previousPresent ? stampPresent && stampPrevious : !stampPresent;
         if (state.equals("ABORTED"))
-            return before && (!stampPresent && !previousPresent || stampPresent && stampPrevious)
+            return before && predecessorMatches
                     ? Decision.ACCEPT
                     : Decision.REPAIR;
         if (state.equals("COMMITTED")) {
             if (stampThis) return Decision.ACCEPT;
-            return before ? Decision.REPLAY_COMMITTED : Decision.REPAIR;
+            return before && predecessorMatches ? Decision.REPLAY_COMMITTED : Decision.REPAIR;
         }
         if (state.equals("PREPARED")) {
             if (stampThis)
                 return after && politicsCompatible ? Decision.COMPLETE_PREPARED : Decision.REPAIR;
+            if (!predecessorMatches) return Decision.REPAIR;
             if (before) return politicsBefore ? Decision.ABORT_PREPARED : Decision.REPAIR;
             return after && politicsCompatible ? Decision.COMPLETE_PREPARED : Decision.REPAIR;
         }
