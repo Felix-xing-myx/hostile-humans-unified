@@ -58,9 +58,15 @@ public final class PatrolRoutes {
         if(operation==2){if(list.size()<=2)return false;list.remove(index);positions.remove(index);}
         else {int next=index+(operation==0?-1:1);if(next<0||next>=list.size())return false;
             Tag a=list.get(index),b=list.get(next);list.set(index,b);list.set(next,a);java.util.Collections.swap(positions,index,next);}
-        boolean loop="loop".equals(definition.mode());
-        if(loop){var blocks=new java.util.ArrayList<>(positions.stream().map(BlockPos::containing).toList());blocks.add(blocks.get(0));
-            loop=PatrolRoutePolicy.closed(blocks);author.putString("route_mode",loop?"loop":"ping_pong");}
+        var blocks = new java.util.ArrayList<>(positions.stream().map(BlockPos::containing).toList());
+        // Editing must preserve the same minimum route geometry as initial authoring.
+        if (blocks.stream().distinct().count() < 2) return false;
+        boolean loop = "loop".equals(definition.mode());
+        if (loop) {
+            blocks.add(blocks.get(0));
+            loop = PatrolRoutePolicy.closed(blocks);
+            author.putString("route_mode", loop ? "loop" : "ping_pong");
+        }
         for(int i=1;i<positions.size();i++)if(positions.get(i-1).distanceToSqr(positions.get(i))>PatrolRoutePolicy.MAX_LEG*PatrolRoutePolicy.MAX_LEG)return false;
         if(loop&&positions.get(0).distanceToSqr(positions.get(positions.size()-1))>PatrolRoutePolicy.MAX_LEG*PatrolRoutePolicy.MAX_LEG)return false;
         author.putInt("route_revision",expectedRevision+1);replace(h,c,author,positions.get(0));return true;
