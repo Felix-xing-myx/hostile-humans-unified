@@ -1,5 +1,6 @@
 package dev.felix.hostilehumans.mixin;
 
+import dev.felix.hostilehumans.compat.OptionalMixinPlugin;
 import dev.felix.hostilehumans.client.render.TaczNpcEffects;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -14,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Pseudo
 @Mixin(targets = "com.tacz.guns.client.model.functional.MuzzleFlashRender", remap = false)
 public abstract class TaczNpcMuzzleFlashMixin {
-    @Inject(method = "render", at = @At("HEAD"), remap = false)
+    @Inject(method = OptionalMixinPlugin.TACZ_NPC_FLASH, at = @At("HEAD"), remap = false)
     private void hostileHumans$renderNpcMuzzle(PoseStack poses, VertexConsumer consumer,
             ItemDisplayContext context, int light, int overlay, CallbackInfo callback) {
         TaczNpcEffects.renderMuzzle(poses, context);

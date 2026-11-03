@@ -1,5 +1,6 @@
 package dev.felix.hostilehumans.mixin;
 
+import dev.felix.hostilehumans.compat.OptionalMixinPlugin;
 import dev.felix.hostilehumans.entity.Human;
 
 import dev.felix.hostilehumans.client.render.ScgunsNpcAnimator;
@@ -14,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Pseudo
 @Mixin(targets = "top.ribs.scguns.client.handler.EntityMuzzleFlashHandler", remap = false)
 public abstract class ScgunsNpcMuzzleFlashMixin {
-    @Inject(method = "onRenderLivingPost", at = @At("HEAD"), cancellable = true, remap = false)
+    @Inject(method = OptionalMixinPlugin.SCGUNS_NPC_FLASH, at = @At("HEAD"), cancellable = true, remap = false)
     private void hostileHumans$useAttachedMuzzleFlash(RenderLivingEvent.Post<?, ?> event, CallbackInfo callback) {
         if (event.getEntity() instanceof Human human && ScgunsNpcAnimator.consumeAttachedRender(human))
             callback.cancel();
