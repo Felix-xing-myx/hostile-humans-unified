@@ -8,6 +8,8 @@ import dev.felix.hostilehumans.faction.FactionDefinitions;
 import dev.felix.hostilehumans.faction.HumanFactions;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -44,16 +46,19 @@ public final class FactionSpawnEggItem extends ForgeSpawnEggItem {
         CompoundTag forge = entity.getCompound("ForgeData").copy();
         forge.putString(HumanFactions.FACTION, faction);
         forge.putBoolean(HumanFactions.BOSS, boss);
-        forge.putBoolean(FactionContent.AUTHORED_EQUIPMENT, original.contains("HandItems") || original.contains("ArmorItems"));
+        forge.putBoolean(FactionContent.AUTHORED_EQUIPMENT, equipmentList(original.get("HandItems")) || equipmentList(original.get("ArmorItems")));
         if (spawner) {
             forge.putBoolean(FactionContent.SPAWNER_BIRTH, true);
-            forge.putBoolean(FactionContent.AUTHORED_EQUIPMENT, original.contains("HandItems") || original.contains("ArmorItems"));
         } else {
             forge.remove(FactionContent.SPAWNER_BIRTH);
         }
         entity.put("ForgeData", forge);
         return entity;
     }
+    private static boolean equipmentList(Tag tag) {
+        return tag instanceof ListTag list && (list.isEmpty() || list.getElementType() == Tag.TAG_COMPOUND);
+    }
+
     private CompoundTag identity(ItemStack stack, boolean spawner) {
         String type=net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(humanType.get()).toString();
         CompoundTag entity=identityTag(stack.getTagElement("EntityTag")==null?new CompoundTag():stack.getTagElement("EntityTag"),type,faction,boss,spawner);

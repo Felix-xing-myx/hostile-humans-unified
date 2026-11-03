@@ -47,6 +47,17 @@ public final class FactionContentNbtTest {
         check(fixed.getCompound("ForgeData").getString("author:custom").equals("preserve"),"other ForgeData retained");
         var direct=FactionSpawnEggItem.identityTag(fixed,"hostile_humans_unified:human_tier2","hostile_humans_unified:azure",false,false);
         check(!direct.getCompound("ForgeData").contains(FactionContent.SPAWNER_BIRTH),"ordinary egg has no spawner lease");
+        CompoundTag malformed = new CompoundTag();
+        malformed.putString("HandItems", "invalid");
+        var generated = FactionSpawnEggItem.identityTag(malformed, "hostile_humans_unified:human_tier2",
+                "hostile_humans_unified:azure", false, true);
+        check(!generated.getCompound("ForgeData").getBoolean(FactionContent.AUTHORED_EQUIPMENT),
+                "malformed hand tag must not suppress automatic equipment");
+        malformed.put("ArmorItems", new ListTag());
+        var explicitlyEmpty = FactionSpawnEggItem.identityTag(malformed, "hostile_humans_unified:human_tier2",
+                "hostile_humans_unified:azure", false, true);
+        check(explicitlyEmpty.getCompound("ForgeData").getBoolean(FactionContent.AUTHORED_EQUIPMENT),
+                "an intentional empty equipment list still suppresses automatic equipment");
         CompoundTag spawner=new CompoundTag();spawner.putShort("Delay",(short)123);spawner.putShort("SpawnCount",(short)2);spawner.putShort("SpawnRange",(short)9);
         CompoundTag data=new CompoundTag(), rules=new CompoundTag();rules.putString("author_rule","keep");data.put("custom_spawn_rules",rules);spawner.put("SpawnData",data);spawner.put("SpawnPotentials",new ListTag());
         var saved=spawner.copy();var replaced=FactionSpawnEggItem.spawnerTag(spawner,fixed);
