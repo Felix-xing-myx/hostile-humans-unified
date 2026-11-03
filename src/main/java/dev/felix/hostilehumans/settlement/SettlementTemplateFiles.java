@@ -153,6 +153,7 @@ final class SettlementTemplateFiles {
             data.remove("palettes");
         }
         sanitize(data, size, rotation, mirror);
+        if (entities) validateEntityPositions(data, size);
         SettlementHumanTemplates.prepareFile(data, null, null);
         var copy = manager.readStructure(data);
         var ghosts = previewBlocks(level, data, origin, settings);
@@ -169,6 +170,24 @@ final class SettlementTemplateFiles {
         return "Preview " + id + ": /hh settlement template confirm replaces blocks inside the box; "
                 + "/hh settlement template cancel aborts. Preview expires after " + previewTicks / 20 + " seconds."
                 + (ghosts.isEmpty() ? " Bounds only: model preview is empty or exceeds 4096 blocks." : "");
+    }
+
+    private static void validateEntityPositions(CompoundTag data, TemplateTransform.Cell size) {
+        var entries = data.getList("entities", Tag.TAG_COMPOUND);
+        for (int i = 0; i < entries.size(); i++) {
+            var entry = entries.getCompound(i);
+            var position = entry.getList("pos", Tag.TAG_DOUBLE);
+            if (position.size() != 3 || entry.getList("blockPos", Tag.TAG_INT).size() != 3
+                    || !insideTemplate(position.getDouble(0), size.x())
+                    || !insideTemplate(position.getDouble(1), size.y())
+                    || !insideTemplate(position.getDouble(2), size.z())) {
+                throw new IllegalArgumentException("template entity " + i + " has an invalid local position");
+            }
+        }
+    }
+
+    private static boolean insideTemplate(double coordinate, int size) {
+        return coordinate >= 0 && coordinate < size;
     }
 
     private static int entityEntries(CompoundTag data) {
