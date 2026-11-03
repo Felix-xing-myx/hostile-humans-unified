@@ -4147,3 +4147,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查经济库存事务，基线 b21cdc2，主控沿用 audit/module-architecture。修改 InventoryTransaction 的失败回滚，协议及账本结构不变；Curios 异常写入实机验证待执行。
 
 - 架构审查经济重启恢复，基线 15173ef，主控沿用 audit/module-architecture。EconomyRecovery 和 Java 回归增加前序凭证判断，沿用既有回执字段。Java 回归及混合存档验证待执行。
+
+- 架构审查客户端渲染，基线 30c6913，主控独占 HumanRenderer 接入，沿用 audit/module-architecture 工作树。减少手臂姿态热路径的重复判断，接口和玩法不变。Java 与帧时间验证待执行。

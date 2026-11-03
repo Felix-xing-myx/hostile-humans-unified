@@ -179,10 +179,13 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         if (detail == HumanRenderDetail.Level.FULL) ScgunsNpcAnimator.beginRender(human);
         PlayerModel<Human> playerModel = this.model;
         playerModel.crouching = human.isCrouching();
-        HumanoidModel.ArmPose mainPose = detail == HumanRenderDetail.Level.DISTANT
-                ? HumanoidModel.ArmPose.EMPTY : getArmPose(human, InteractionHand.MAIN_HAND);
-        HumanoidModel.ArmPose offPose = detail == HumanRenderDetail.Level.DISTANT
-                ? HumanoidModel.ArmPose.EMPTY : getArmPose(human, InteractionHand.OFF_HAND);
+        HumanoidModel.ArmPose mainPose = HumanoidModel.ArmPose.EMPTY;
+        HumanoidModel.ArmPose offPose = HumanoidModel.ArmPose.EMPTY;
+        if (detail != HumanRenderDetail.Level.DISTANT) {
+            InteractionHand shieldHand = HumanShieldPresentation.activeHand(human);
+            mainPose = getArmPose(human, InteractionHand.MAIN_HAND, shieldHand);
+            offPose = getArmPose(human, InteractionHand.OFF_HAND, shieldHand);
+        }
         if (mainPose.isTwoHanded() && offPose != HumanoidModel.ArmPose.BLOCK) {
             offPose = human.getOffhandItem().isEmpty()
                     ? HumanoidModel.ArmPose.EMPTY : HumanoidModel.ArmPose.ITEM;
@@ -205,10 +208,9 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
                 Mth.rotLerp(partialTick, human.yRotO, human.getYRot()), partialTick, poses, buffers, light));
     }
 
-    private static HumanoidModel.ArmPose getArmPose(Human human, InteractionHand hand) {
+    private static HumanoidModel.ArmPose getArmPose(Human human, InteractionHand hand, InteractionHand shieldHand) {
         ItemStack stack = human.getItemInHand(hand);
         if (stack.isEmpty()) return HumanoidModel.ArmPose.EMPTY;
-        InteractionHand shieldHand = HumanShieldPresentation.activeHand(human);
         if (shieldHand != null) return hand == shieldHand ? HumanoidModel.ArmPose.BLOCK : HumanoidModel.ArmPose.ITEM;
         if (dev.felix.hostilehumans.compat.spartan.SpartanEquipmentCompat.isShield(stack)) return HumanoidModel.ArmPose.ITEM;
         if (human.isUsingItem() && human.getUsedItemHand() == hand
@@ -224,16 +226,11 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
             if (use == UseAnim.TOOT_HORN) return HumanoidModel.ArmPose.TOOT_HORN;
             if (use == UseAnim.BRUSH) return HumanoidModel.ArmPose.BRUSH;
         }
-        if (hand == InteractionHand.MAIN_HAND
-                && dev.felix.hostilehumans.behavior.combat.gun.GunSupport.get().isGun(stack)) {
-            // TaCZ's legacy two-handed biped pose is disabled for Humans. The
-            // NPC Player Animator adapter owns its motion when assets exist;
-            // use the neutral item pose rather than reintroducing the old pose
-            // as a fallback when a gun has no third-person animation asset.
-            return HumanoidModel.ArmPose.ITEM;
-        }
-        if (stack.getItem() instanceof CrossbowItem && CrossbowItem.isCharged(stack)
-                && !human.swinging) {
+        // Guns normally use the neutral item pose. Only ask the adapter here
+        // if this item would otherwise receive the native charged-crossbow pose.
+        if (stack.getItem() instanceof CrossbowItem && CrossbowItem.isCharged(stack) && !human.swinging
+                && (hand != InteractionHand.MAIN_HAND
+                    || !dev.felix.hostilehumans.behavior.combat.gun.GunSupport.get().isGun(stack))) {
             return HumanoidModel.ArmPose.CROSSBOW_HOLD;
         }
         return HumanoidModel.ArmPose.ITEM;
