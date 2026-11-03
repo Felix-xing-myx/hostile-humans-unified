@@ -4,6 +4,7 @@ import dev.felix.hostilehumans.entity.Human;
 import dev.felix.hostilehumans.behavior.combat.gun.GunSupport;
 import dev.felix.hostilehumans.monitor.MonitorWeaponSnapshot;
 import dev.felix.hostilehumans.client.ui.framework.UiDraw;
+import dev.felix.hostilehumans.client.ui.framework.UiTheme;
 import dev.felix.hostilehumans.client.ui.framework.UiThemes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
