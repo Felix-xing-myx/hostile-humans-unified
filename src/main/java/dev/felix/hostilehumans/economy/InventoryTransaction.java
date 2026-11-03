@@ -82,7 +82,9 @@ public final class InventoryTransaction {
     }
 
     public static ListTag validatedJournalRows(CompoundTag journal) {
-        var rows = journal.getList("slots", Tag.TAG_COMPOUND);
+        if (!(journal.get("slots") instanceof ListTag rows)
+                || (!rows.isEmpty() && rows.getElementType() != Tag.TAG_COMPOUND))
+            throw new IllegalArgumentException("Invalid journal slot list");
         if (rows.size() > 105) throw new IllegalArgumentException("Too many journal slots");
         Set<String> seen = new HashSet<>();
         for (Tag tag : rows) {
@@ -90,8 +92,15 @@ public final class InventoryTransaction {
             String key = row.getString("slot");
             if (key.isEmpty() || !seen.add(key))
                 throw new IllegalArgumentException("Missing or duplicate journal slot");
+            if (!validStackSnapshot(row, "before") || !validStackSnapshot(row, "after"))
+                throw new IllegalArgumentException("Invalid journal item snapshot for " + key);
         }
         return rows;
+    }
+
+    private static boolean validStackSnapshot(CompoundTag row, String key) {
+        if (!(row.get(key) instanceof CompoundTag stack)) return false;
+        return stack.contains("id", Tag.TAG_STRING) && stack.contains("Count", Tag.TAG_BYTE);
     }
 
     public String beforeFingerprint() {
