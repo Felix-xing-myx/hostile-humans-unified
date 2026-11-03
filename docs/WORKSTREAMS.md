@@ -4095,3 +4095,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控，基线 c5709bc9b34ab8d4f3e1b91a5cbf716dc6a70526，工作树 frontline-vision，分支 feat/frontline-vision。
 - 范围：快速视觉采样、识别完成入口、既有身体补查清理、友军通报候选和正式知识库。沿用前线判定和原战斗动作权限。
 - Python 核查通过 516 项、跳过 16 项，差异空白检查通过。未编译、未同步、未游戏内性能与行为验收。
+
+
+## 3.15.0 构建同步
+- 主控；基线48eacf52f2dfc5897d9258b93383c97b88d9c153；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：模板人类、放置微调与团战预算优化。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.0。
+
+- 3.15.0完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致ccbba0d6d14b8045b6af787286f2f6c2e4843814e56c7e2a85ba4bc4bdd61d25；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.0-20261104-001106。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.0.
