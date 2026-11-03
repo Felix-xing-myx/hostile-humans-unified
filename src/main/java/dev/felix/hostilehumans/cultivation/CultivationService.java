@@ -320,7 +320,12 @@ public final class CultivationService {
         var data = CultivationData.get(server);
         long now = CultivationRuntime.time(server);
         int processed = 0;
-        for (var r : List.copyOf(data.records.values())) {
+        var records = List.copyOf(data.records.values());
+        if (records.isEmpty()) return;
+        int start = Math.floorMod(data.settlementCursor, records.size());
+        for (int offset = 0; offset < records.size(); offset++) {
+            int index = (start + offset) % records.size();
+            var r = records.get(index);
             // Exactly one already-confirmed period per record; no while-loop can catch up arbitrary
             // new periods.
             Human h = loaded(server, r.soldier);
@@ -333,7 +338,9 @@ public final class CultivationService {
                 }
             }
             if (r.pending() && h != null && r.appliedRevision != r.profile.revision()) {
-                if (processed++ >= 64) continue;
+                if (processed >= 64) continue;
+                processed++;
+                data.settlementCursor = index + 1;
                 try {
                     applyPending(server, r, h, data);
                     nextAutomatic(server, r, h);
@@ -363,7 +370,9 @@ public final class CultivationService {
                 r.cycle = accrued;
                 data.setDirty();
             }
-            if (r.cycle.status() != CultivationCycle.Status.READY || processed++ >= 64) continue;
+            if (r.cycle.status() != CultivationCycle.Status.READY || processed >= 64) continue;
+            processed++;
+            data.settlementCursor = index + 1;
             try {
                 var result = r.cycle.result();
                 var account = data.account(r.owner);

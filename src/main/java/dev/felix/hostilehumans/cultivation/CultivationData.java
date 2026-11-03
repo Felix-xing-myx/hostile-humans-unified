@@ -26,6 +26,7 @@ final class CultivationData extends SavedData {
 
     long runtimeMillis, revision;
     final Map<UUID, CultivationRecord> records = new LinkedHashMap<>();
+    int settlementCursor; // Runtime rotation only; saved record order is unchanged.
     final Map<UUID, Account> accounts = new HashMap<>();
     final LinkedHashMap<UUID, UUID> transactions = new LinkedHashMap<>();
     final Set<UUID> retired = new HashSet<>();
