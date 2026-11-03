@@ -229,6 +229,20 @@ public final class CultivationFacade {
                             ? "Training operation rejected"
                             : failure.getMessage();
         }
+        if (reason.isEmpty()) {
+            switch (request.action()) {
+                case DEPOSIT, WITHDRAW, USE_POTENTIAL, EXPAND_PRIMARY -> {
+                    try {
+                        p.containerMenu.broadcastChanges();
+                    } catch (RuntimeException notificationFailure) {
+                        com.mojang.logging.LogUtils.getLogger().warn(
+                                "Committed cultivation request {} could not refresh inventory",
+                                request.requestId(), notificationFailure);
+                    }
+                }
+                default -> { }
+            }
+        }
         if (!reason.isEmpty())
             p.displayClientMessage(net.minecraft.network.chat.Component.literal(reason), true);
         reply(p, s, reason, request.requestId());
@@ -312,7 +326,6 @@ public final class CultivationFacade {
         if (credit != null) data.account(p.getUUID()).put(s.facility.id(), credit);
         if (item != null) removeItems(p, item, 1);
         data.changed();
-        if (item != null) p.containerMenu.broadcastChanges();
     }
 
     private static void requireItems(
@@ -349,7 +362,6 @@ public final class CultivationFacade {
         a.put(b.reference().id(), credited);
         b.finishIntake();
         d.changed();
-        p.containerMenu.broadcastChanges();
     }
 
     private static void withdraw(ServerPlayer p, Session s, int count) {
@@ -362,7 +374,6 @@ public final class CultivationFacade {
         a.put(s.facility.id(), after);
         d.changed();
         if (!p.getInventory().add(stack)) p.drop(stack, false);
-        p.containerMenu.broadcastChanges();
     }
 
     private static String shortName(String n) {
