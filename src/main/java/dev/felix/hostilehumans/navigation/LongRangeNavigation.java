@@ -80,7 +80,7 @@ public final class LongRangeNavigation {
         int tick = human.tickCount;
         Actor actor = ACTORS.computeIfAbsent(human,k -> new Actor());
         State s = actor.lanes.computeIfAbsent(purpose,k -> new State());actor.latest = s;
-        int signature = signature(human);
+        int signature = signature(human, accuracy);
         boolean changedLimits = !c.sameSearchLimits(s.searchSettings);
         if (changedLimits) {
             s.searchSettings = c;
@@ -115,8 +115,8 @@ public final class LongRangeNavigation {
             s.stage = initialStage(human, goal, c);
             s.nextTick = tick;
         }
-        Failure failure = nearbyFailure(s,goal);
-        if (failure != null && failure.signature == signature) {
+        Failure failure = cachedFailure(s, goal, accuracy, signature);
+        if (failure != null) {
             int elapsed = tick-failure.tick;
             boolean moved = failure.origin.distanceToSqr(human.position()) > 16;
             int delay = RouteSearchPolicy.failureDelay(failure.attempts,c.failureTicks(),c.maximumFailureTicks());
@@ -149,7 +149,7 @@ public final class LongRangeNavigation {
         Path path = nav.createBoundedPath(goal,accuracy,range,nodes);s.expanded = nav.expandedNodes();
         if (valid(human,path,purpose)) {
             s.route = path;s.nextTick = tick+c.validationTicks();s.result = "完整";
-            s.failures.entrySet().removeIf(e -> e.getKey().distSqr(goal) <= 4);
+            s.failures.entrySet().removeIf(e -> matchesFailureGoal(e.getKey(), goal, accuracy) && e.getValue().signature == signature);
             return new Result(Status.READY,path);
         }
         // A complete route rejected by safety/command policy must not trigger more expensive searches.
@@ -157,10 +157,10 @@ public final class LongRangeNavigation {
             s.stage = stage+1;s.nextTick = tick+1;
             return pending(s,tick,"扩大搜索");
         }
-        int attempts = failure == null || failure.signature != signature
+        int attempts = failure == null
                 || failure.origin.distanceToSqr(human.position()) > 16 ? 1 : Math.min(7,failure.attempts+1);
         BlockPos probe = path != null && path.getEndNode() != null ? path.getEndNode().asBlockPos() : goal;
-        s.failures.entrySet().removeIf(e -> e.getKey().distSqr(goal) <= 4);
+        s.failures.entrySet().removeIf(e -> matchesFailureGoal(e.getKey(), goal, accuracy) && e.getValue().signature == signature);
         while(s.failures.size()>=c.cacheEntries())s.failures.remove(s.failures.keySet().iterator().next());
         s.failures.put(goal.immutable(),new Failure(human.position(),probe.immutable(),tick,attempts,
                 scene(human,goal,human.position(),probe),signature,path!=null&&path.canReach()));
@@ -176,15 +176,26 @@ public final class LongRangeNavigation {
     private static Result pending(State s,int tick,String reason) {
         if(s.queuedAt<0)s.queuedAt=tick;s.result=reason;return PENDING;
     }
-    private static Failure nearbyFailure(State s,BlockPos goal) {
-        Failure exact=s.failures.get(goal);if(exact!=null)return exact;
-        for(var entry:s.failures.entrySet())if(entry.getKey().distSqr(goal)<=4)return entry.getValue();
+    private static Failure cachedFailure(State state, BlockPos goal, int accuracy, int signature) {
+        Failure exact = state.failures.get(goal);
+        if (exact != null && exact.signature == signature) return exact;
+        if (accuracy == 0) return null;
+        for (var entry : state.failures.entrySet()) {
+            if (entry.getValue().signature == signature && matchesFailureGoal(entry.getKey(), goal, accuracy)) {
+                return entry.getValue();
+            }
+        }
         return null;
     }
-    private static int signature(Human h) {
+
+    private static boolean matchesFailureGoal(BlockPos cached, BlockPos goal, int accuracy) {
+        return accuracy == 0 ? cached.equals(goal) : cached.distSqr(goal) <= 4;
+    }
+
+    private static int signature(Human h, int accuracy) {
         // Real command changes cancel all lanes through SoldierOrder; health changes invalidate reuse immediately.
         return Objects.hash(OrderDistances.signature(h),h.getOwnerUUID(),h.getMaxFallDistance(),h.isFleeing,
-                h.getNavigation().canFloat());
+                h.getNavigation().canFloat(), accuracy);
     }
     private static boolean valid(Human h,Path path,Purpose purpose) {
         if(path==null||!path.canReach()||path.isDone()||!HumanTerrainSafety.safePath(h,path))return false;
