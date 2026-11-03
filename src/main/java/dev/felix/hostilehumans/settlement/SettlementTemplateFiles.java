@@ -157,7 +157,7 @@ final class SettlementTemplateFiles {
             data.remove("palettes");
         }
         sanitize(data, size, rotation, mirror);
-        if (entities) validateEntityPositions(data, size);
+        if (entities) validateEntityPositions(data, size, origin, settings, bounds);
         SettlementHumanTemplates.prepareFile(data, null, null);
         var copy = manager.readStructure(data);
         var ghosts = previewBlocks(level, data, origin, settings);
@@ -176,11 +176,19 @@ final class SettlementTemplateFiles {
                 + (ghosts.isEmpty() ? " Bounds only: model preview is empty or exceeds 4096 blocks." : "");
     }
 
-    private static void validateEntityPositions(CompoundTag data, TemplateTransform.Cell size) {
+    private static void validateEntityPositions(CompoundTag data, TemplateTransform.Cell size,
+            BlockPos origin, StructurePlaceSettings settings, RegionBox bounds) {
         var entries = data.getList("entities", Tag.TAG_COMPOUND);
         for (int i = 0; i < entries.size(); i++) {
-            if (!validEntityPosition(entries.getCompound(i), size))
+            var entry = entries.getCompound(i);
+            if (!validEntityPosition(entry, size))
                 throw new IllegalArgumentException("template entity " + i + " has an invalid local position");
+            var pos = entry.getList("pos", Tag.TAG_DOUBLE);
+            Vec3 local = new Vec3(pos.getDouble(0), pos.getDouble(1), pos.getDouble(2));
+            BlockPos destination = BlockPos.containing(
+                    StructureTemplate.transformedVec3d(settings, local).add(Vec3.atLowerCornerOf(origin)));
+            if (!bounds.contains(destination.getX(), destination.getY(), destination.getZ()))
+                throw new IllegalArgumentException("template entity " + i + " would spawn outside the placement bounds");
         }
     }
 
