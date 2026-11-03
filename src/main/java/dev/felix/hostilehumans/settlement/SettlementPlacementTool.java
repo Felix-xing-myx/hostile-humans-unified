@@ -19,36 +19,33 @@ public final class SettlementPlacementTool extends Item {
     @Override public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext context) {
         if (!(context.getPlayer() instanceof ServerPlayer player)) return InteractionResult.SUCCESS;
         if (!SettlementAccess.author(player)) return InteractionResult.FAIL;
-        if (player.isShiftKeyDown() && SettlementTemplateFiles.hasPreview(player)) confirm(player);
-        else if (!player.isShiftKeyDown() && SettlementWandPlacement.armed(player)) {
+        if (SettlementWandPlacement.openAdjustment(player)) return InteractionResult.CONSUME;
+        if (player.isShiftKeyDown()) SettlementWandPlacement.open(player);
+        else if (SettlementWandPlacement.armed(player)) {
             try {
                 SettlementWandPlacement.preview(player, context.getClickedPos().relative(context.getClickedFace()));
             } catch (IllegalArgumentException bad) {
                 player.sendSystemMessage(Component.literal(bad.getMessage()));
             }
-        } else if (player.isShiftKeyDown()) SettlementWandPlacement.open(player);
+        } else chooseFirst(player);
         return InteractionResult.CONSUME;
     }
 
     @Override public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if (player instanceof ServerPlayer server) {
-            if (server.isShiftKeyDown()) {
-                if (SettlementTemplateFiles.hasPreview(server)) confirm(server);
-                else SettlementWandPlacement.open(server);
-            } else {
-                SettlementWandPlacement.cancel(server);
-                SettlementTemplateFiles.cancel(server);
+            if (!SettlementAccess.author(server)) return InteractionResultHolder.fail(player.getItemInHand(hand));
+            if (!SettlementWandPlacement.openAdjustment(server)) {
+                if (server.isShiftKeyDown()) SettlementWandPlacement.open(server);
+                else if (!SettlementWandPlacement.armed(server)) chooseFirst(server);
+                else server.displayClientMessage(Component.translatable(
+                        "item.hostile_humans_unified.settlement_selection_tool.pick_placement"), true);
             }
         }
         return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
     }
 
-    private static void confirm(ServerPlayer player) {
-        try {
-            player.sendSystemMessage(Component.literal(SettlementTemplateFiles.confirm(player)));
-            SettlementWandPlacement.cancel(player);
-        } catch (IllegalArgumentException bad) {
-            player.sendSystemMessage(Component.literal(bad.getMessage()));
-        }
+    private static void chooseFirst(ServerPlayer player) {
+        player.displayClientMessage(Component.translatable(
+                "gui.hostile_humans_unified.settlement.wand_choose_first"), true);
     }
 }

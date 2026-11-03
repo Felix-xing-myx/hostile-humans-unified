@@ -100,6 +100,8 @@ final class SettlementTemplateFiles {
         template.setAuthor(player.getGameProfile().getName());
         var data = template.save(new CompoundTag());
         sanitize(data, size, Rotation.NONE, Mirror.NONE);
+        SettlementHumanTemplates.prepareFile(data, new Vec3(bounds.minX(), bounds.minY(), bounds.minZ()),
+                level.dimension().location());
         try {
             Files.createDirectories(path.getParent());
             var staging = Files.createTempFile(path.getParent(), ".hhu-template-", ".tmp");
@@ -125,8 +127,12 @@ final class SettlementTemplateFiles {
 
     static String preview(ServerPlayer player, ResourceLocation id, BlockPos corner,
             Rotation rotation, Mirror mirror, boolean entities) {
+        return preview(player, id, corner, rotation, mirror, entities, PREVIEW_TICKS);
+    }
+
+    static String preview(ServerPlayer player, ResourceLocation id, BlockPos corner,
+            Rotation rotation, Mirror mirror, boolean entities, int previewTicks) {
         if (!player.canUseGameMasterBlocks()) throw new IllegalArgumentException("creative operator required");
-        cancel(player);
         var level = player.serverLevel();
         var manager = level.getStructureManager();
         var original = manager.get(id).orElseThrow(() -> new IllegalArgumentException("template not found: " + id));
@@ -141,6 +147,7 @@ final class SettlementTemplateFiles {
         checkDestination(player, corner, bounds);
         var data = original.save(new CompoundTag());
         sanitize(data, size, rotation, mirror);
+        SettlementHumanTemplates.prepareFile(data, null, null);
         // Pin the same palette for preview and confirmed placement.
         var palettes = data.getList("palettes", Tag.TAG_LIST);
         if (!palettes.isEmpty()) {
@@ -151,7 +158,7 @@ final class SettlementTemplateFiles {
         var ghosts = previewBlocks(level, data, origin, settings);
         int count = entityEntries(data);
         PENDING.put(player, new Placement(level, id, origin, settings, copy, bounds, count,
-                level.getGameTime() + PREVIEW_TICKS));
+                level.getGameTime() + previewTicks));
         player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                 entities ? "gui.hostile_humans_unified.settlement.preview_entity_count"
                         : "gui.hostile_humans_unified.settlement.preview_entities_off", count));
@@ -160,7 +167,7 @@ final class SettlementTemplateFiles {
                         Math.min(id.toString().length(), 192)))), null, null, false, ghosts, "place", id.toString().substring(0,
                         Math.min(id.toString().length(), 256))));
         return "Preview " + id + ": /hh settlement template confirm replaces blocks inside the box; "
-                + "/hh settlement template cancel aborts. Preview expires after 30 seconds."
+                + "/hh settlement template cancel aborts. Preview expires after " + previewTicks / 20 + " seconds."
                 + (ghosts.isEmpty() ? " Bounds only: model preview is empty or exceeds 4096 blocks." : "");
     }
 
@@ -200,7 +207,6 @@ final class SettlementTemplateFiles {
 
     static String confirm(ServerPlayer player) {
         var pending = PENDING.get(player);
-        cancel(player);
         if (!player.canUseGameMasterBlocks() || pending == null || pending.level() != player.serverLevel()
                 || pending.expires() <= pending.level().getGameTime())
             throw new IllegalArgumentException("no valid template placement preview");
@@ -214,10 +220,18 @@ final class SettlementTemplateFiles {
         if (!pending.template().placeInWorld(pending.level(), pending.origin(), pending.origin(),
                 pending.settings(), pending.level().getRandom(), Block.UPDATE_ALL))
             throw new IllegalArgumentException("template placement failed");
+        cancel(player);
         if (!pending.settings().isIgnoreEntities())
             player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                     "gui.hostile_humans_unified.settlement.placement_entity_count", pending.entityEntries()));
         return "placed " + pending.id() + "; open its information block to register the new site";
+    }
+
+    static void keepPreview(ServerPlayer player, int ticks) {
+        var current = PENDING.get(player);
+        if (current != null && current.expires() > current.level().getGameTime())
+            PENDING.put(player, new Placement(current.level(), current.id(), current.origin(), current.settings(),
+                    current.template(), current.bounds(), current.entityEntries(), current.level().getGameTime() + ticks));
     }
 
     static boolean hasPreview(ServerPlayer player) {

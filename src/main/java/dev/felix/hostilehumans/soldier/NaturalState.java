@@ -87,6 +87,36 @@ public final class NaturalState {
     }
     static boolean validRotation(int rotation) { return rotation == 0 || rotation == 90 || rotation == 180 || rotation == 270; }
     static boolean validMirror(String mirror) { return "none".equals(mirror) || "left_right".equals(mirror) || "front_back".equals(mirror); }
+    /** Convert a saved garrison order into owner-independent template behavior. */
+    public static ControllerData structureBehavior(CompoundTag data) {
+        if (data.contains(STATE, Tag.TAG_COMPOUND))
+            return new ControllerData(true, data.getCompound(STATE).copy(), data.getCompound(ORIGIN).copy(),
+                    new CompoundTag());
+        SoldierOrder order;
+        try { order = SoldierOrder.logical(SoldierOrder.valueOf(data.getString(SoldierOrder.ORDER))); }
+        catch (IllegalArgumentException invalid) { return new ControllerData(false, new CompoundTag(), new CompoundTag(), new CompoundTag()); }
+        if (order != SoldierOrder.GARRISON || !data.contains(SoldierOrder.ANCHOR, Tag.TAG_LONG))
+            return new ControllerData(false, new CompoundTag(), new CompoundTag(), new CompoundTag());
+        var author = data.getCompound(GarrisonSettings.PLAYER).copy();
+        var home = data.getCompound(PatrolRoutes.PLAYER_CENTER).copy();
+        var anchor = net.minecraft.core.BlockPos.of(data.getLong(SoldierOrder.ANCHOR));
+        if (!home.contains("x", Tag.TAG_ANY_NUMERIC)
+                || !home.getString("dimension").equals(data.getString(SoldierOrder.ANCHOR_DIMENSION))
+                || !net.minecraft.core.BlockPos.containing(home.getDouble("x"), home.getDouble("y"), home.getDouble("z")).equals(anchor)) {
+            home.putDouble("x", anchor.getX() + .5);
+            home.putDouble("y", anchor.getY());
+            home.putDouble("z", anchor.getZ() + .5);
+        }
+        home.putString("dimension", data.getString(SoldierOrder.ANCHOR_DIMENSION));
+        home.putDouble("right_x", 1);
+        home.putDouble("right_z", 0);
+        home.putDouble("forward_x", 0);
+        home.putDouble("forward_z", 1);
+        home.putInt("placement_rotation", 0);
+        home.putString("placement_mirror", "none");
+        return new ControllerData(true, author, home, new CompoundTag());
+    }
+
     /** Future exporter contract: pass ForgeData COPY, never ordinary save data. */
     public static CompoundTag authorOnly(CompoundTag instanceData) {
         CompoundTag result = new CompoundTag();

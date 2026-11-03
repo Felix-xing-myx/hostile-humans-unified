@@ -17,6 +17,18 @@ import java.util.List;
 
 @Mixin(StructureTemplate.class)
 public abstract class SettlementTemplatePlacementMixin {
+    @Inject(method = "processEntityInfos", at = @At("RETURN"), cancellable = true, remap = false, require = 1)
+    private static void hhu$transformResidentAnchors(StructureTemplate template,
+            net.minecraft.world.level.LevelAccessor level, BlockPos origin, StructurePlaceSettings settings,
+            List<StructureTemplate.StructureEntityInfo> original,
+            CallbackInfoReturnable<List<StructureTemplate.StructureEntityInfo>> cir) {
+        if (!(level instanceof ServerLevelAccessor server)) return;
+        var processed = cir.getReturnValue();
+        var residents = dev.felix.hostilehumans.settlement.SettlementHumanTemplates.place(
+                processed, origin, settings, server.getLevel().dimension().location());
+        if (residents != processed) cir.setReturnValue(residents);
+    }
+
     @Inject(method = "placeInWorld", at = @At("HEAD"), require = 1)
     private void hhu$beginPlacement(
             ServerLevelAccessor level,

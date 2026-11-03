@@ -59,10 +59,12 @@ public final class SettlementPreviewClient {
     @SubscribeEvent
     public static void cancelCorner(net.minecraftforge.client.event.InputEvent.InteractionKeyMappingTriggered event) {
         var player = Minecraft.getInstance().player;
-        if (!event.isAttack() || player == null || !player.isCreative() && !player.hasPermissions(2)
-                || !(player.getMainHandItem().getItem() instanceof SettlementSelectionTool)) return;
+        if (!event.isAttack() || player == null || !player.isCreative() && !player.hasPermissions(2)) return;
+        var item = player.getMainHandItem().getItem();
+        boolean cancelPlacement = item instanceof SettlementPlacementTool && !placement.dimension().isEmpty();
+        if (!(item instanceof SettlementSelectionTool) && !cancelPlacement) return;
         var request = new net.minecraft.nbt.CompoundTag();
-        request.putBoolean("cancel", true);
+        request.putBoolean(cancelPlacement ? "cancelPlacement" : "cancel", true);
         SettlementNetwork.configureSelector(request);
         event.setCanceled(true);
         event.setSwingHand(false);

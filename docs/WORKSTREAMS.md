@@ -4071,3 +4071,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控；基线c4ea53213ae330cd0ddf41fad0eff6c648100627；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3149，分支release/local-build；范围：监控武器栏排布、框选器配置、建筑模板实体往返。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.9。
 
 - 3.14.9完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致3fbed9db1bb217c2102ef8fecc01ed54e99f707f9771d3a67d9f603d2706ed4a；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.14.9-20261103-230634。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.9.
+
+### 模板人类样板与放置微调
+
+- 主控，基线 8e7d77e2d9f137882f5644fdd2c9eb71c9255f2b，工作树 template-placement-authoring，分支 feat/template-placement-authoring。
+- 模板文件、Forge 实体放置入口、人类出生与自然驻守／巡逻接口、放置棒会话及界面。新增样板局部锚点格式；据点网络协议升至 11。
+- Python 核查通过 516 项、跳过 16 项；核对 Forge processEntityInfos 方法签名。未编译、未同步、未做游戏内验收。

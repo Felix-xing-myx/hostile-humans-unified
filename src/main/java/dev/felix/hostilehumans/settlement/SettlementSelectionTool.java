@@ -180,6 +180,13 @@ public final class SettlementSelectionTool extends Item {
     }
 
     static void configure(ServerPlayer player, net.minecraft.nbt.CompoundTag data) {
+        if (data.getBoolean("cancelPlacement")) {
+            if (SettlementAccess.author(player) && SettlementWandPlacement.holding(player)) {
+                SettlementWandPlacement.cancel(player);
+                SettlementTemplateFiles.cancel(player);
+            }
+            return;
+        }
         if (!holding(player)) return;
         var binding = BINDINGS.get(player);
         if (!active(player, binding)) return;

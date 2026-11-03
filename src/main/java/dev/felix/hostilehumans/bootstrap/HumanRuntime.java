@@ -468,6 +468,8 @@ public final class HumanRuntime {
         FRESH_HUMANS.put(human, !event.loadedFromDisk());
         HumanFactions.initialize(human, event.loadedFromDisk());
         FactionContent.onJoin(human, event.loadedFromDisk());
+        if (event.getLevel() instanceof ServerLevel templateLevel)
+            dev.felix.hostilehumans.settlement.SettlementHumanTemplates.onJoin(human, templateLevel, event.loadedFromDisk());
         NaturalState.onJoin(human, event.loadedFromDisk());
         HumanGrowth.onJoin(human, event.loadedFromDisk());
         if (PeacefulHumanPolicy.onJoin(event, human)
