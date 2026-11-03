@@ -29,7 +29,11 @@ final class MonitorMovementPrediction {
     }
     private void disable(Throwable failure) {
         if (disabled) return;
-        disabled = true; history.clear(); body = null; authority = null; presentation.clear();
+        disabled = true;
+        history.clear();
+        body = null;
+        authority = null;
+        clearPresentation();
         reason = MonitorPredictionEnvironment.Reason.COMPATIBILITY_FAILURE;
         LOGGER.warn("Human monitor prediction disabled for this control generation after a compatibility failure; "
                 + "server control and the authoritative camera remain active", failure);
@@ -73,8 +77,17 @@ final class MonitorMovementPrediction {
     }
     void suspend() {
         if (disabled) return;
-        history.discard(); resumeAfter = lastInput; inputEnabled = false; awaitingAuthority = true;
+        history.discard();
+        resumeAfter = lastInput;
+        inputEnabled = false;
+        awaitingAuthority = true;
+        clearPresentation();
         reason = MonitorPredictionEnvironment.Reason.INACTIVE_INPUT;
+    }
+
+    private void clearPresentation() {
+        usingPrediction = false;
+        presentation.clear();
     }
 
     void input(Human human, HumanMonitorNetwork.Control input, boolean enabled) {
