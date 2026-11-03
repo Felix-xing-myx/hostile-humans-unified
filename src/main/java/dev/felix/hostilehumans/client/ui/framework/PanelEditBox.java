@@ -15,7 +15,8 @@ public final class PanelEditBox extends EditBox {
     private BooleanSupplier valid = () -> true;
 
     public PanelEditBox(Font font, Component label, Supplier<UiTheme> theme) {
-        super(font, 0, 0, 1, 20, label);
+        // A 1px wide editor scrolls its own text out of view when the value is set before placing.
+        super(font, 0, 0, 120, 20, label);
         this.theme = theme;
         setBordered(false);
         setMaxLength(64);
@@ -44,6 +45,12 @@ public final class PanelEditBox extends EditBox {
         setWidth(Math.max(1, b.width() - 12));
         // The native editor scissors to its own height; 8px cut the bottom row of every glyph.
         setHeight(Math.max(12, b.height() - 8));
+        // Resizing does not recompute the scroll window, and setValue() leaves the caret at the end.
+        // An unfocused box therefore showed an empty slice until it was clicked. Show the start.
+        if (!isFocused()) {
+            setCursorPosition(0);
+            setHighlightPos(0);
+        }
     }
 
     @Override

@@ -127,3 +127,12 @@
 - **输入框字形被裁**：`PanelEditBox.place()` 内框高度 `height-12`(8px) → `max(12, height-8)`，外框仍占满 20px 槽位；原生 scissor 不再削掉字底。
 - **底部割裂**：`UiDraw.actionBar` 去掉 5px 实心黑框，改成 14px 竖向渐变遮罩（`UiDraw.SCRIM`）；填充改半透明（`actionBar()` α .86）；`fade` 高度 12→20、末端 1.0→.85；`PanelScreen` 在操作台画完后按面板原点**补一遍 `grain()`**（新增带 origin 的重载），噪点在底部保持同相位连续。
 - **预设表单**：`PanelScreen.field(label, draft, presets, presetLabel)` 在输入框下加一排预设块，点击直接写入同一个 `InputValue`（仍走 `setValue` → 走 responder → 走原有校验与提交）。`UiThemes.factions()` 只读暴露 `theme.json` 里的四个阵营 id；据点表单的"阵营资源 ID"已接入，标签取 `command.faction_name.*` 的本地化名，未知 id 回退到路径名。协议、快照与校验未变。
+### 8.5 输入框"看不到数值"的真正原因（2026-11-03，实机截图确认）
+
+实机截图里据点作者编辑器的四个文本框全是空的，但阵营那一排预设块显示"靛磐"已选中——说明值在、只是没画出来。
+
+根因在 `PanelEditBox` 的构造宽度与赋值顺序：`super(font, 0, 0, **1**, 20, label)` 先用 1px 宽创建，随后 `PanelScreen.field()` 立刻 `setValue()`。原版 `EditBox.setValue()` 会把光标移到末尾并调用 `updateTextPosition()`，而它按 `getInnerWidth()` = `width - 8` = **-7** 计算滚动窗口，`displayPos` 被推到文本之后；此后 `setWidth()` 只是普通 setter，**不会重算滚动窗口**。于是未聚焦的输入框只画出一段空切片，点一下（按鼠标位置重设光标）才把窗口拉回来——和现象完全一致。
+
+修法（已实施）：构造宽度改成 120；`place()` 在改完宽高后，若未聚焦则 `setCursorPosition(0)` + `setHighlightPos(0)`，让窗口回到开头。聚焦时不碰光标，打字时的重排不会跳动。回填值走 `setValue` 仍会先跳到末尾，但紧随的重排会把它拉回开头。
+
+上一节 8.1 的禁用态对比度是同一屏里的另一个问题（选项块"看着像没字"），两者都已修；本节的才是"数值看不见"的直接原因。
