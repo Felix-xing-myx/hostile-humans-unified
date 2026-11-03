@@ -83,7 +83,7 @@ def slab(d, ox, oy, name, amount, reserve, mode_label, capacity):
     d.rectangle([(x + 4) * S, (y + 36) * S, (x + PW - 4) * S, (y + 37) * S], fill=rgba(EDGE, 1))
     # caption row: native mode art (18x12 box here), then the name
     # TaCZ draws its own 18x10 fire-mode art here; the placeholder only marks the slot.
-    mode_w = 18
+    mode_w = 22  # TaczMonitorHud.MODE_WIDTH
     d.text(((x + 3) * S, (y + 39) * S), mode_label, font=ImageFont.truetype(
         "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .5)), fill=rgba(TEXT, 1))
     name_x = x + 3 + mode_w + 4

@@ -61,19 +61,33 @@ public final class TaczMonitorHud {
             return new Size(39,13); // actual native HUD aspect, never stretch a missing pack resource
         }
     }
+    /** Largest width the fire-mode art may occupy in the caption row. */
+    public static final int MODE_WIDTH = 22;
+
     /**
-     * Draws the native fire-mode art at its own pixel size, vertically centred in {@code rowHeight};
-     * returns the width used, or 0 when the pack has no such texture.
+     * Draws the native fire-mode art fitted into {@code MODE_WIDTH x rowHeight}; returns the width
+     * used, or 0 when the pack has no such texture.
+     *
+     * <p>Two previous bugs lived here: the blit declared a hard-coded 18x10 as the <em>texture</em>
+     * size, which made Minecraft squeeze whatever art the pack ships into that window (the smeared
+     * glyph), and drawing it at its own size instead put a large sheet across the whole slab. The
+     * UVs now use the real size and the scale is snapped to a whole ratio inside the row box, so it
+     * can never overflow.
      */
     public static int mode(GuiGraphics g,String mode,int x,int y,int rowHeight) {
         String suffix=switch(mode){case "AUTO"->"auto";case "BURST"->"burst";default->"semi";};
         var texture=new ResourceLocation("tacz","textures/hud/fire_mode_"+suffix+".png");
         Size size=SIZES.computeIfAbsent(texture,TaczMonitorHud::textureSize);
-        if(size.width()<=0||size.height()<=0)return 0;
-        // 1:1 at the texture's own size. Blitting an assumed 18x10 window over pack art that is a
-        // different size both cropped it and resampled the glyph into a smear.
-        g.blit(texture,x,y+(rowHeight-size.height())/2,0,0,size.width(),size.height(),size.width(),size.height());
-        return size.width();
+        if(size.width()<=0||size.height()<=0||rowHeight<=0)return 0;
+        var fit=dev.felix.hostilehumans.monitor.client.MonitorIconFit.containSnapped(
+                size.width(),size.height(),MODE_WIDTH,rowHeight);
+        g.pose().pushPose();
+        try {
+            g.pose().translate(x+fit.x(),y+fit.y(),0);
+            g.pose().scale(fit.scale(),fit.scale(),1);
+            g.blit(texture,0,0,0,0,size.width(),size.height(),size.width(),size.height());
+        } finally { g.pose().popPose(); }
+        return Math.min(MODE_WIDTH,Math.round(size.width()*fit.scale()));
     }
     private static boolean observing(LivingEntity attacker) {return attacker!=null && attacker==MonitorGunHud.viewed();}
     private static void hurt(EntityHurtByGunEvent.Post event) {
