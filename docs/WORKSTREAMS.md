@@ -4229,3 +4229,8 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控；基线fcf371db9bd08c96c0085706609001b82a1d470f；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：Latest frontend and backend with verified regression wiring。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.2-final。
 
 - 3.15.2完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致89e9bd2a935d50537b786b307a3bc12574997a5f5b2bebe356386891cda2f502；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.2-20261104-020513。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.2-final.
+
+## 发布流程增量验证
+- 主控；基线 ecf186f6c799ff0f6848f8aa613e6ff4e6c6e446；worktrees/module-architecture，audit/module-architecture。独占 build.gradle，维护目录同步调整 release.py、回归入口与发布指南。
+- 以 Gradle 输入和成功产物追踪十项联动检查；原生后坐力曲线使用隔离类路径，其余保留完整运行类路径。支持 --full-validation，记录复用任务。发布入口处理 Windows 中文路径并复用未变化文件。
+- Python CLI、临时盘符和增量镜像检查通过，PowerShell 语法检查通过。未运行 Gradle，实际任务复用和耗时待下次构建验证。

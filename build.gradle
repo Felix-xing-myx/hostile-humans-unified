@@ -392,6 +392,35 @@ tasks.register('monitorPredictionArtifactTest', JavaExec) {
 }
 tasks.named('check').configure { dependsOn tasks.named('monitorPredictionArtifactTest') }
 
+// Keep successful contract checks incremental on the warm builder. Gradle
+// also fingerprints JavaExec's classpath and launcher. External JARs used
+// through arguments must be declared separately.
+def incrementalContract = { task, dependencyInputs ->
+    task.inputs.files(dependencyInputs).withPathSensitivity(PathSensitivity.NONE)
+    def receipt = layout.buildDirectory.file("verified-contracts/${task.name}.ok")
+    task.outputs.file(receipt)
+    task.outputs.upToDateWhen { !providers.gradleProperty('hhuFullValidation').isPresent() }
+    task.doFirst { java.nio.file.Files.deleteIfExists(receipt.get().asFile.toPath()) }
+    task.doLast {
+        def result = receipt.get().asFile
+        result.parentFile.mkdirs()
+        result.text = 'passed\n'
+    }
+}
+
+def installedTacz = file(findProperty('taczRuntimeJar') ?: taczApiJar)
+def installedArcana = findProperty('taczArcanaRuntimeJar')
+def recoilContractClasses = tasks.register('stageNativeRecoilContractClasses', Sync) {
+    dependsOn tasks.named('testClasses')
+    from(sourceSets.main.output.classesDirs) {
+        include 'dev/felix/hostilehumans/client/render/tacz/NativeRecoilCurve*.class'
+    }
+    from(sourceSets.test.output.classesDirs) {
+        include 'dev/felix/hostilehumans/client/render/tacz/NativeRecoilApiContractTest*.class'
+    }
+    into layout.buildDirectory.dir('runtime-contracts/recoil-classes')
+}
+
 // Verify native presentation against the selected compile API AND the actual deployment dependency.
 // The local release helper supplies taczRuntimeJar after discovering modId=tacz in the target instance.
 tasks.register('taczNativeRuntimeLinkageTest', JavaExec) {
@@ -487,6 +516,28 @@ tasks.register('nativeNpcRecoilContractTest', JavaExec) {
     doFirst { setArgs([scgunsApiJar.absolutePath, jegApiJar.absolutePath, sourceSets.main.output.classesDirs.singleFile.absolutePath]) }
 }
 tasks.named('check').configure { dependsOn tasks.named('nativeNpcRecoilContractTest') }
+
+// These checks include HHU classes, so shared code changes can invalidate
+// them. The isolated recoil check only sees its two own classes and TaCZ.
+tasks.named('nativeRecoilApiContractTest', JavaExec).configure { task ->
+    task.classpath = files(recoilContractClasses)
+    incrementalContract(task, [installedTacz])
+}
+[
+    taczAmmoMixinContractTest: [taczApiJar],
+    spectatorSoundContractTest: [taczApiJar, installedTacz, scgunsApiJar, jegApiJar],
+    taczNativeRuntimeLinkageTest: [taczApiJar, installedTacz],
+    taczNativeMaterialBaselineTest: [taczApiJar],
+    taczNativeMaterialInstalledTest: [installedTacz],
+    taczOpticNativeContractTest: [taczApiJar, installedTacz],
+    taczArcanaCollisionContractTest: [installedTacz] + (installedArcana ? [file(installedArcana)] : []),
+    taczDischargePresentationContractTest: [installedTacz],
+    nativeNpcRecoilContractTest: [scgunsApiJar, jegApiJar],
+].each { taskName, dependencyInputs ->
+    tasks.named(taskName, JavaExec).configure { task ->
+        incrementalContract(task, dependencyInputs)
+    }
+}
 
 // Read production-name targets from the reobfuscated artifact, rather than the dev classpath.
 tasks.register('vanillaMixinArtifactTest', JavaExec) {
