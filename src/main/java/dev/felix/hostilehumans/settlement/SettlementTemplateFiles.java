@@ -230,10 +230,11 @@ final class SettlementTemplateFiles {
         var min = new BlockPos(bounds.minX(), bounds.minY(), bounds.minZ());
         checkDestination(player, min, bounds);
         checkExistingInformationBlocks(pending.level(), bounds);
+        // Placement can mutate the world before it fails. Never retry the same preview.
+        cancel(player);
         if (!pending.template().placeInWorld(pending.level(), pending.origin(), pending.origin(),
                 pending.settings(), pending.level().getRandom(), Block.UPDATE_ALL))
-            throw new IllegalArgumentException("template placement failed");
-        cancel(player);
+            throw new IllegalArgumentException("template placement failed; create a new preview before retrying");
         if (!pending.settings().isIgnoreEntities())
             player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                     "gui.hostile_humans_unified.settlement.placement_entity_count", pending.entityEntries()));
