@@ -216,14 +216,27 @@ public final class HumanMonitorService {
         if (!weapon.equals(session.weapon)) { session.weapon = weapon; HumanMonitorNetwork.sendWeapon(player, weapon); }
     }
     static void close(ServerPlayer player) {
-        dev.felix.hostilehumans.monitor.remote.MonitorRemoteView.stop(player);
         Session session = SESSIONS.remove(player);
-        if (session == null) return;
-        HumanMonitorControl.release(player, session.token);
-        NavigationDebugNetwork.send(player, NavigationDebugFrame.EMPTY);
-        if (player.containerMenu instanceof HumanInventoryMenu menu && menu.monitored()) player.closeContainer();
-        HumanMonitorNetwork.send(player, new HumanMonitorNetwork.State(session.token, session.target, session.entityId,
-                0, 1, "", false, 0, false, false, false));
+        if (session == null) {
+            dev.felix.hostilehumans.monitor.remote.MonitorRemoteView.stop(player);
+            return;
+        }
+        Runnable[] cleanup = {
+                () -> dev.felix.hostilehumans.monitor.remote.MonitorRemoteView.stop(player),
+                () -> HumanMonitorControl.release(player, session.token),
+                () -> {
+                    if (player.containerMenu instanceof HumanInventoryMenu menu && menu.monitored()) player.closeContainer();
+                },
+                () -> NavigationDebugNetwork.send(player, NavigationDebugFrame.EMPTY),
+                () -> HumanMonitorNetwork.send(player, new HumanMonitorNetwork.State(session.token, session.target, session.entityId,
+                        0, 1, "", false, 0, false, false, false))
+        };
+        for (Runnable step : cleanup) {
+            try { step.run(); }
+            catch (RuntimeException failure) {
+                dev.felix.hostilehumans.bootstrap.HumanRuntime.LOGGER.warn("Failed to close part of monitor session {}", session.token, failure);
+            }
+        }
     }
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player) || !SESSIONS.containsKey(player)) return;

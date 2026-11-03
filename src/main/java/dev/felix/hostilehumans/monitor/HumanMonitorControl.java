@@ -113,11 +113,13 @@ public final class HumanMonitorControl {
             finally {
                 dev.felix.hostilehumans.behavior.combat.HumanCombatAuthority.release(human, entry.getValue().combat);
                 LEASES.remove(human);
+                human.xxa = human.zza = 0;
+                human.setJumping(false);
+                human.setSprinting(false);
+                human.setShiftKeyDown(false);
+                HumanTurnControl.clear(human);
+                human.getNavigation().stop();
             }
-            human.getNavigation().stop();
-            human.xxa = human.zza = 0; human.setJumping(false);
-            human.setSprinting(false); human.setShiftKeyDown(false);
-            HumanTurnControl.clear(human);
         }
     }
     static void input(ServerPlayer player, HumanMonitorNetwork.Control input) {
