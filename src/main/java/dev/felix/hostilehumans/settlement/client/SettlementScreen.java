@@ -61,14 +61,28 @@ public final class SettlementScreen extends PanelScreen {
     private InputValue<String> placementTemplate;
     private record TemplateChoice(String id, boolean world) {}
     private List<TemplateChoice> placementChoices = List.of();
-    private boolean templateListLoaded;
+    private boolean templateListLoaded, templateListRequested, templatePickerOpen = true;
+    private int transferTicks;
+    private record AuthorView(String tab, String templateId, boolean entities) {}
+    private static final java.util.Map<net.minecraft.client.multiplayer.ClientLevel,
+            java.util.LinkedHashMap<net.minecraft.core.BlockPos, AuthorView>> AUTHOR_VIEWS =
+            new java.util.WeakHashMap<>();
+    private final net.minecraft.client.multiplayer.ClientLevel authorLevel;
     private boolean exclude, localChanged, serverClosed, transformDirty, templateEntities, currentRegionOnly, advancedAuthor;
     private long confirmUntil;
 
     private SettlementScreen(SettlementNetwork.Snapshot snapshot) {
         super(text(snapshot.author() ? "author_title" : "title"), PanelGeometry.Size.L);
         this.snapshot = snapshot;
+        authorLevel = Minecraft.getInstance().level;
         resetDraft(snapshot);
+        var views = AUTHOR_VIEWS.get(authorLevel);
+        var previous = snapshot.author() && views != null ? views.get(snapshot.anchor()) : null;
+        if (previous != null) {
+            tab = previous.tab();
+            placementTemplate = string(previous.templateId(), 256, true);
+            templateEntities = previous.entities();
+        }
     }
 
     private static Component text(String key, Object... args) {
@@ -543,6 +557,7 @@ public final class SettlementScreen extends PanelScreen {
                                     text("tab." + page),
                                     b -> {
                                         tab = page;
+                                        transferTicks = 0;
                                         refresh();
                                     },
                                     this::theme));
@@ -966,22 +981,35 @@ public final class SettlementScreen extends PanelScreen {
     private UiLayout.Node transfer() {
         List<UiLayout.Node> nodes = new ArrayList<>();
         addFileSaveControls(nodes);
-        if (placementTemplate == null) placementTemplate = string(template.text(), 256, true);
+        if (placementTemplate == null) placementTemplate = string("", 256, true);
+        nodes.add(heading(text("template_picker")));
         nodes.add(input("placement_template", placementTemplate));
-        nodes.add(action("list_templates", text("list_templates"), editable(), false,
-                () -> send(snapshot, SettlementNetwork.Action.LIST_TEMPLATES, new CompoundTag())));
-        if (templateListLoaded && placementChoices.isEmpty()) nodes.add(muted(text("templates_empty")));
-        for (var choice : placementChoices) {
-            String id = choice.id();
-            nodes.add(action("template_choice." + id, Component.literal(id).append(" · ")
-                            .append(text(choice.world() ? "template_world" : "template_pack")), editable(),
-                    id.equals(placementTemplate.text()), () -> { placementTemplate.set(id); refresh(); }));
-            if (id.equals(placementTemplate.text()) && choice.world()) {
-                var resource = new net.minecraft.resources.ResourceLocation(id);
-                nodes.add(muted(Component.literal("generated/" + resource.getNamespace()
-                        + "/structures/" + resource.getPath() + ".nbt")));
+        nodes.add(action("toggle_templates", text(templatePickerOpen ? "hide_templates" : "show_templates"),
+                editable(), templatePickerOpen, () -> { templatePickerOpen = !templatePickerOpen; refresh(); }));
+        if (templatePickerOpen) {
+            nodes.add(action("list_templates", text("refresh_templates"), editable(), false, () -> {
+                templateListRequested = true;
+                send(snapshot, SettlementNetwork.Action.LIST_TEMPLATES, new CompoundTag());
+            }));
+            if (templateListLoaded && placementChoices.isEmpty()) nodes.add(muted(text("templates_empty")));
+            for (var choice : placementChoices) {
+                String id = choice.id();
+                nodes.add(action("template_choice." + id, Component.literal(id).append(" · ")
+                                .append(text(choice.world() ? "template_world" : "template_pack")), editable(),
+                        id.equals(placementTemplate.text()), () -> {
+                            placementTemplate.set(id);
+                            templatePickerOpen = false;
+                            refresh();
+                        }));
             }
         }
+        placementChoices.stream().filter(choice -> choice.id().equals(placementTemplate.text()) && choice.world())
+                .findFirst().ifPresent(choice -> {
+                    var resource = new net.minecraft.resources.ResourceLocation(choice.id());
+                    nodes.add(muted(Component.literal("generated/" + resource.getNamespace()
+                            + "/structures/" + resource.getPath() + ".nbt")));
+                });
+        nodes.add(muted(text(dirty() ? "save_first" : "place_wand_help")));
         nodes.add(action("place_template", text("place_template"), editable() && !dirty(), false,
                 () -> {
                     if (placementTemplate.valid()) beginWorldEdit("PLACE", placementTemplate.text());
@@ -1338,6 +1366,11 @@ public final class SettlementScreen extends PanelScreen {
     @Override
     public void tick() {
         super.tick();
+        if (snapshot.author() && tab.equals("transfer") && templatePickerOpen
+                && !templateListRequested && !pending.busy() && ++transferTicks >= 5) {
+            templateListRequested = true;
+            send(snapshot, SettlementNetwork.Action.LIST_TEMPLATES, new CompoundTag());
+        }
         if (++keepAliveTicks >= 300) {
             keepAliveTicks = 0;
             SettlementNetwork.request(snapshot, SettlementNetwork.Action.KEEP_ALIVE, new CompoundTag());
@@ -1351,6 +1384,13 @@ public final class SettlementScreen extends PanelScreen {
 
     @Override
     public void removed() {
+        if (snapshot.author() && authorLevel != null) {
+            var views = AUTHOR_VIEWS.computeIfAbsent(authorLevel, ignored -> new java.util.LinkedHashMap<>());
+            views.remove(snapshot.anchor());
+            views.put(snapshot.anchor(), new AuthorView(tab,
+                    placementTemplate == null ? "" : placementTemplate.text(), templateEntities));
+            while (views.size() > 64) views.remove(views.keySet().iterator().next());
+        }
         RETIRED.add(snapshot.token());
         while (RETIRED.size() > 32) RETIRED.remove(RETIRED.iterator().next());
         if (!serverClosed && Minecraft.getInstance().getConnection() != null)

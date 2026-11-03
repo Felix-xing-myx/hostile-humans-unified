@@ -1,4 +1,9 @@
 {
+  "gui.hostile_humans_unified.settlement.template_picker": "Saved template to place",
+  "gui.hostile_humans_unified.settlement.hide_templates": "Collapse template list",
+  "gui.hostile_humans_unified.settlement.show_templates": "Choose from template list",
+  "gui.hostile_humans_unified.settlement.refresh_templates": "Refresh available templates",
+  "gui.hostile_humans_unified.settlement.place_wand_help": "Put the Building Wand in your hotbar first. Starting this action switches it to template placement. The preview appears after you click a destination face.",
   "gui.hostile_humans_unified.settlement.create_outer_help": "Add a region, select Outer, then use the wand to mark an include box. Drafts may be empty; exporting or registering a settlement requires a defined outer region.",
   "gui.hostile_humans_unified.settlement.region_remove_facilities": "Move or remove these facilities before deleting this region: %s",
   "gui.hostile_humans_unified.settlement.region_remove_last_outer": "A settlement root requires an outer region. Replace this area or add another outer region first. For a small house, choose Ordinary Building.",

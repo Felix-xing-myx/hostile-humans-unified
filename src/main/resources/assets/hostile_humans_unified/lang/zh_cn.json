@@ -1,4 +1,9 @@
 {
+  "gui.hostile_humans_unified.settlement.template_picker": "选择已保存的模板",
+  "gui.hostile_humans_unified.settlement.hide_templates": "收起模板列表",
+  "gui.hostile_humans_unified.settlement.show_templates": "从模板列表选择",
+  "gui.hostile_humans_unified.settlement.refresh_templates": "刷新模板列表",
+  "gui.hostile_humans_unified.settlement.place_wand_help": "先把建筑棒放进快捷栏。点下方按钮会把建筑棒切换到模板放置模式；持棒右键目标表面后才显示预览。",
   "gui.hostile_humans_unified.settlement.create_outer_help": "先点「新增区域」，选择外圈，再用建筑棒框一个包含范围。草稿可留空，正式保存模板或登记据点时必须定义外圈。",
   "gui.hostile_humans_unified.settlement.region_remove_facilities": "先改绑或移除这些设施，再删除本区域：%s",
   "gui.hostile_humans_unified.settlement.region_remove_last_outer": "正式据点主体需要至少一个外圈。可直接重选这个外圈，或先添加另一个外圈。普通小屋可先改为「普通建筑」。",

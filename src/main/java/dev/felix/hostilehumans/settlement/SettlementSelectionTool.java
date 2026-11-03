@@ -54,9 +54,13 @@ public final class SettlementSelectionTool extends Item {
         var author = SettlementCodec.template(info.author());
         if (mode == Mode.BOUNDS && new ResourceLocation(author.template()).getPath().equals("untitled"))
             return "template name required before selection";
-        if (mode == Mode.PLACE && (!player.canUseGameMasterBlocks()
-                || ResourceLocation.tryParse(region) == null))
-            return "template placement requires a valid ID and creative operator permission";
+        if (mode == Mode.PLACE) {
+            var id = ResourceLocation.tryParse(region);
+            if (!player.canUseGameMasterBlocks() || id == null || region.isBlank())
+                return "template placement requires a valid ID and creative operator permission";
+            if (player.serverLevel().getStructureManager().get(id).isEmpty())
+                return "template not found: " + id;
+        }
         var binding = new Binding(player.level().dimension().location(), position.immutable(),
                 info, region, exclude, currentOnly, boxIndex, mode, revision, null, null);
         SettlementTemplateFiles.cancel(player);
@@ -80,6 +84,11 @@ public final class SettlementSelectionTool extends Item {
     }
 
     private static void publish(ServerPlayer player, Binding binding) {
+        if (binding.mode() == Mode.PLACE) {
+            SettlementNetwork.preview(player, new SettlementPreview(binding.dimension().toString(),
+                    List.of(), null, null, true, List.of(), "place", binding.region()));
+            return;
+        }
         var info = binding.carrier();
         var author = SettlementCodec.template(info.author());
         var transform = SettlementAuthoring.currentTransform(player, info);
@@ -116,11 +125,18 @@ public final class SettlementSelectionTool extends Item {
 
     static void tick(ServerPlayer player) {
         var binding = BINDINGS.get(player);
-        if (binding != null && boundInformation(player, binding.information()) == null) clear(player);
+        if (binding != null && !validBinding(player, binding)) clear(player);
+    }
+
+    private static boolean validBinding(ServerPlayer player, Binding binding) {
+        if (binding.mode() == Mode.PLACE)
+            return SettlementAccess.author(player) && player.canUseGameMasterBlocks()
+                    && binding.dimension().equals(player.level().dimension().location());
+        return boundInformation(player, binding.information()) != null;
     }
 
     private static boolean active(ServerPlayer player, Binding binding) {
-        if (binding != null && boundInformation(player, binding.information()) != null) return true;
+        if (binding != null && validBinding(player, binding)) return true;
         BINDINGS.remove(player);
         SettlementNetwork.preview(player, SettlementPreview.EMPTY);
         tell(player, "bind_first");
@@ -139,6 +155,7 @@ public final class SettlementSelectionTool extends Item {
         var binding = BINDINGS.get(player);
         if (SettlementTemplateFiles.hasPreview(player)) {
             if (player.isShiftKeyDown()) finishPlacement(player);
+            else tell(player, "confirm_placement");
             return InteractionResult.CONSUME;
         }
         BlockPos point = context.getClickedPos().immutable();
@@ -148,7 +165,8 @@ public final class SettlementSelectionTool extends Item {
             SettlementNetwork.openAuthor(player, point);
             return InteractionResult.CONSUME;
         }
-        if (player.isShiftKeyDown() && binding != null) return confirm(player, binding);
+        if (player.isShiftKeyDown() && binding != null && binding.mode() != Mode.PLACE)
+            return confirm(player, binding);
         if (!active(player, binding)) return InteractionResult.FAIL;
         if (binding.mode() == Mode.VIEW) {
             tell(player, "bind_first");
@@ -197,7 +215,7 @@ public final class SettlementSelectionTool extends Item {
                 return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
             }
             var binding = BINDINGS.get(server);
-            if (binding != null && server.isShiftKeyDown()) confirm(server, binding);
+            if (binding != null && binding.mode() != Mode.PLACE && server.isShiftKeyDown()) confirm(server, binding);
             else {
                 BINDINGS.remove(server);
                 SettlementNetwork.preview(server, SettlementPreview.EMPTY);
