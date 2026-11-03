@@ -202,21 +202,21 @@ public final class HumanTargetSharing {
     }
     private static double rank(Lease lease) { return lease.window.frozenAt<0?rank(lease.report):Double.NEGATIVE_INFINITY; }
     private static double rank(Report report) { return report.threat().intrinsic()+report.threat().priority(); }
-    private static boolean hasRecipient(Human sender,List<Human> nearby,Report report) {
-        for(Human receiver:nearby)if(peers(sender,receiver)&&!seen(receiver,report.evidence().target()))return true;
+    private static boolean hasRecipient(Human sender, List<Human> nearby, UUID target) {
+        for (Human receiver : nearby) if (!seen(receiver, target) && peers(sender, receiver)) return true;
         return false;
     }
     private static Report outgoing(Human sender,List<Human> nearby,long now) {
         Report best=OUTBOX.get(sender);
         if(best!=null&&(now>=best.created()+LOCK_TICKS||!sender.getUUID().equals(best.origin())
                 ||!HumanPerception.personalDynamic(sender,resolve(sender,best.evidence().target()))))best=null;
-        if(best!=null&&!hasRecipient(sender,nearby,best))best=null;
+        if(best!=null&&!hasRecipient(sender,nearby,best.evidence().target()))best=null;
         var inbox=INBOX.get(sender);
         if(inbox!=null)for(Lease lease:inbox.values()){
             LivingEntity target=resolve(sender,lease.target);
             if(target==null||lease.window.frozenAt>=0||now>=lease.window.until
                     ||best!=null&&rank(lease.report)<=rank(best)
-                    ||!hasRecipient(sender,nearby,lease.report)
+                    ||!hasRecipient(sender,nearby,lease.target)
                     ||!receiverContext(sender,lease)||!HumanPerception.sharingAllowed(sender,target))continue;
             refresh(sender,lease,target,now);
             if(lease.window.frozenAt<0&&lease.linkReady)
@@ -224,12 +224,12 @@ public final class HumanTargetSharing {
                         lease.report.created(),lease.positionAt,lease.report.threat());
         }
         Evidence evidence=HumanPerception.sharingEvidence(sender);
-        if(evidence!=null&&evidence.confirmed()){
+        if(evidence!=null&&evidence.confirmed()&&hasRecipient(sender,nearby,evidence.target())){
             LivingEntity target=resolve(sender,evidence.target());
             if(target!=null){
                 Report personal=new Report(sender.getUUID(),evidence,now,now,
                         new Threat(HumanThreatAssessment.intrinsic(sender,target),HumanThreatAssessment.priority(sender,target)));
-                if(hasRecipient(sender,nearby,personal)&&(best==null||rank(personal)>rank(best))&&admit(sender,personal,now)){
+                if((best==null||rank(personal)>rank(best))&&admit(sender,personal,now)){
                     OUTBOX.put(sender,personal);best=personal;
                 }
             }
@@ -259,12 +259,12 @@ public final class HumanTargetSharing {
         if(evidence==null)return;
         if(report==null&&(sender.getPersistentData().getInt(CLUE_SEND)>0
                 ||evidence.target()!=null&&seen(sender,evidence.target())))return;
+        LivingEntity target = resolve(sender, evidence.target());
         int delivered=0, linkChecks=0;
         for(Human receiver:nearby){
             if(delivered >= (reduced ? 1 : MAX_RECEIVERS) || reduced && linkChecks >= FRONTLINE_LINK_CHECKS) break;
-            if(!peers(sender,receiver))continue;
             if (report != null && seen(receiver,evidence.target())) continue;
-            LivingEntity target=resolve(receiver,evidence.target());
+            if(!peers(sender,receiver))continue;
             if(target!=null&&!HumanPerception.sharingAllowed(receiver,target))continue;
             if(report!=null){
                 if(target==null||now>=report.created()+LOCK_TICKS)continue;

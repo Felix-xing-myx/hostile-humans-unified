@@ -4169,3 +4169,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查自然战场选位，基线 8853d6c，主控沿用 audit/module-architecture。SpawnerEntity 的两项位置检查补齐已加载判定并清理旧反编译变量。
 
 - 架构审查阵营刷怪笼，基线 2a68f1e，主控沿用 audit/module-architecture。修改 FactionSpawnEggItem 与其 NBT 回归。
+
+- 架构审查友军报告传播，基线 ba52a2f，主控沿用 audit/module-architecture。修改 HumanTargetSharing 的去重顺序及单次投递读取，公共接口不变。
