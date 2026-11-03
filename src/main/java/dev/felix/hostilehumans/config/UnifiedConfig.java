@@ -275,7 +275,8 @@ public final class UnifiedConfig {
             instance = new UnifiedConfig(SplitConfigFiles.loadStrict(FMLPaths.CONFIGDIR.get()));
         } catch (RuntimeException invalid) {
             com.mojang.logging.LogUtils.getLogger().error("Keeping previous complete human configuration after reload failure", invalid);
-            if (instance == null) instance = load(FMLPaths.CONFIGDIR.get());
+            if (instance != null) return instance;
+            instance = load(FMLPaths.CONFIGDIR.get());
         }
         GrowthRewards.configurationReloaded(instance.growth().enabled());
         return instance;
