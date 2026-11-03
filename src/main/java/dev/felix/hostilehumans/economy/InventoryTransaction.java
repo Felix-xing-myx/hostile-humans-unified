@@ -1,6 +1,8 @@
 package dev.felix.hostilehumans.economy;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.*;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
@@ -100,7 +102,9 @@ public final class InventoryTransaction {
 
     private static boolean validStackSnapshot(CompoundTag row, String key) {
         if (!(row.get(key) instanceof CompoundTag stack)) return false;
-        return stack.contains("id", Tag.TAG_STRING) && stack.contains("Count", Tag.TAG_BYTE);
+        if (!stack.contains("id", Tag.TAG_STRING) || !stack.contains("Count", Tag.TAG_BYTE)) return false;
+        ResourceLocation itemId = ResourceLocation.tryParse(stack.getString("id"));
+        return itemId != null && BuiltInRegistries.ITEM.containsKey(itemId);
     }
 
     public String beforeFingerprint() {
