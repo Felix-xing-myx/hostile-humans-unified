@@ -4163,3 +4163,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查长距离导航，基线 dfefeb5，主控沿用 audit/module-architecture。LongRangeNavigation 区分用途等待权与实体总预算，公共接口不变。
 
 - 架构审查掉落物占位，基线 a6b2029，主控沿用 audit/module-architecture。ValuableItemPickupGoal 对齐候选、实际执行与释放生命周期，公共接口不变。
+
+- 架构审查预算诊断界面，基线 bd3c3aa，主控沿用 audit/module-architecture。GlobalBudgetScreen 增量更新显示文本，网络协议与公共布局接口不变。
