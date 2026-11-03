@@ -4201,3 +4201,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 复核 F8 导航预算统计，基线 595222e。FairWorkBudget 区分已领用和未领用预约，补充 Java 断言，尚未编译。
 
 - 复核活动档位生命周期，基线 e792bae。主控独占 HumanRuntime 注册入口和 AdaptiveActivityBudget，改为服务端 tick 末集中采样。
+
+- 复核档位与配额接口，基线 9776ac0。OptionalPathBudget 合并重复发放流程，统一诊断和发放的额度来源。

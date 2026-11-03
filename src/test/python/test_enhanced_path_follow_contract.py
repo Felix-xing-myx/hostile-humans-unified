@@ -47,7 +47,7 @@ class EnhancedPathFollowContract(unittest.TestCase):
         budget=(PKG/'OptionalPathBudget.java').read_text(encoding='utf-8')
         self.assertIn('if(kind==Kind.PATH_FOLLOW)return pools.follow()',budget)
         self.assertIn('new FairWorkBudget<>(16,2,8)',budget)
-        self.assertIn('AdaptiveActivityBudget.navigationCapacity(human,16,2)',budget)
+        self.assertIn('AdaptiveActivityBudget.navigationCapacity(server,16,2)',budget)
 
 
 if __name__=='__main__': unittest.main()

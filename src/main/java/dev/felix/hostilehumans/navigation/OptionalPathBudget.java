@@ -22,40 +22,44 @@ public final class OptionalPathBudget {
     private static final Map<MinecraftServer, Pools> SERVERS = new WeakHashMap<>();
 
     public static int claim(Human human, Kind kind, int maximum) {
-        MinecraftServer server = human.level().getServer();
-        if (server == null || human.level().isClientSide) return 0;
-        Pools pools = SERVERS.computeIfAbsent(server, ignored -> new Pools(
-                new FairWorkBudget<>(64, 4, 2), new FairWorkBudget<>(32, 4, 2),
-                new FairWorkBudget<>(8, 1, 3),new FairWorkBudget<>(16,2,8)));
-        pools.combat().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,64,4));
-        pools.follow().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,16,2));
-        int granted = pool(pools, kind).claim(server.getTickCount(), new Key(human.getUUID(), kind), maximum, BudgetDemandOrder.faction(human));
-        NavigationDebugService.budget(human, kind.name(), maximum, granted);
-        return granted;
+        return claim(human, kind, maximum, false);
     }
 
     public static int claimFull(Human human, Kind kind, int maximum) {
+        return claim(human, kind, maximum, true);
+    }
+
+    private static int claim(Human human, Kind kind, int maximum, boolean full) {
         MinecraftServer server = human.level().getServer();
         if (server == null || human.level().isClientSide) return 0;
         Pools pools = SERVERS.computeIfAbsent(server, ignored -> new Pools(
                 new FairWorkBudget<>(64, 4, 2), new FairWorkBudget<>(32, 4, 2),
                 new FairWorkBudget<>(8, 1, 3),new FairWorkBudget<>(16,2,8)));
-        pools.combat().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,64,4));
-        pools.follow().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,16,2));
-        int granted = pool(pools, kind).claimFull(server.getTickCount(), new Key(human.getUUID(), kind), maximum, BudgetDemandOrder.faction(human));
+        var budget = pool(pools, kind);
+        if (budget == pools.combat() || budget == pools.follow())
+            budget.setTickCapacity(capacity(server, kind));
+        int tick = server.getTickCount();
+        Key key = new Key(human.getUUID(), kind);
+        String faction = BudgetDemandOrder.faction(human);
+        int granted = full ? budget.claimFull(tick, key, maximum, faction)
+                : budget.claim(tick, key, maximum, faction);
         NavigationDebugService.budget(human, kind.name(), maximum, granted);
         return granted;
     }
 
     public static String usage(MinecraftServer server, Kind kind) {
         var pools = SERVERS.get(server);
-        int cap = switch (kind) {
+        int cap = capacity(server, kind);
+        return pools == null ? "0 / " + cap : pool(pools,kind).usage(server.getTickCount(),cap);
+    }
+
+    private static int capacity(MinecraftServer server, Kind kind) {
+        return switch (kind) {
             case PATH_FOLLOW -> AdaptiveActivityBudget.navigationCapacity(server,16,2);
             case CONTINUITY -> 8;
             case RETREAT, LAVA, EXPLOSION -> 32;
             default -> AdaptiveActivityBudget.navigationCapacity(server,64,4);
         };
-        return pools == null ? "0 / " + cap : pool(pools,kind).usage(server.getTickCount(),cap);
     }
 
     public static void cancel(Human human, Kind kind) {

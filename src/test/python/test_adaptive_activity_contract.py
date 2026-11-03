@@ -19,9 +19,12 @@ class AdaptiveActivityContract(unittest.TestCase):
         self.assertNotIn("clear()",setter)
         self.assertNotIn("remaining =",setter)
         self.assertIn("remaining = nextTickCapacity",fair)
-        for name in ("BasicNavigationBudget","OptionalPathBudget","LongRangeNavigation"):
+        for name in ("BasicNavigationBudget","LongRangeNavigation"):
             self.assertIn("setTickCapacity(AdaptiveActivityBudget.navigationCapacity",source(name))
-        self.assertNotIn("pools.emergency().setTickCapacity",source("OptionalPathBudget"))
+        optional = source("OptionalPathBudget")
+        self.assertIn("if (budget == pools.combat() || budget == pools.follow())", optional)
+        self.assertIn("budget.setTickCapacity(capacity(server, kind))", optional)
+        self.assertNotIn("pools.emergency().setTickCapacity", optional)
         self.assertNotIn("pools.continuity().setTickCapacity",source("OptionalPathBudget"))
     def test_shared_config_and_no_entity_retention(self):
         data=json.loads((ROOT/"src/main/resources/defaults/hostile_humans_unified.json").read_text(encoding="utf-8"))["activity_budget"]
