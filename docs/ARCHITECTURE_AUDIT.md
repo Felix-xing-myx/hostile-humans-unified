@@ -54,3 +54,7 @@
 
 - 按 [Forge SimpleImpl](https://docs.minecraftforge.net/en/1.20.x/networking/simpleimpl/#handling-packets) 核对服务端主线程、消息方向和客户端坐标的已加载区块检查。已确认作者编辑器、模板放置和选区绑定使用服务端权限。补齐框选棒直接点击的区块检查。
 - 属性详情的客户端打开请求改为在实体查找前限流，实体 ID 与 UUID 匹配后再走共用权限和快照入口。监控控制包已有有限浮点、世代和序号校验，其他联动和注入仍待核查。
+
+## 可选联动注入
+
+- 对照 [Mixin Redirect 规范](https://javadoc.io/static/net.fabricmc/sponge-mixin/0.15.0%2Bmixin.0.8.7/org/spongepowered/asm/mixin/injection/Redirect.html#allow())。焦燃盾牌拦截允许恰好一处注入，但原门控只确认至少一处。现在门控与注入共享完整方法描述符，只有调用点恰好一处才启用，否则保留焦燃原生拦截。其他可选注入的变体覆盖仍待核对。

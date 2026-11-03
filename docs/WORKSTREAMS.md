@@ -4151,3 +4151,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查客户端渲染，基线 30c6913，主控独占 HumanRenderer 接入，沿用 audit/module-architecture 工作树。减少手臂姿态热路径的重复判断，接口和玩法不变。Java 与帧时间验证待执行。
 
 - 架构审查网络入口，基线 d721994，主控沿用 audit/module-architecture。修改 AttributeDetailNetwork 和 SettlementSelectionTool，协议不变。Java 和联机验证待执行。
+
+- 架构审查可选注入，基线 f3bb7a2，主控沿用 audit/module-architecture。OptionalMixinPlugin 与 ScgunsHumanShieldMixin 对齐匹配范围和数量，Java、缺依赖及变体启动待验证。

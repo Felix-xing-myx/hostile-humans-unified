@@ -1,6 +1,7 @@
 package dev.felix.hostilehumans.mixin;
 
 import dev.felix.hostilehumans.entity.Human;
+import dev.felix.hostilehumans.compat.OptionalMixinPlugin;
 
 import dev.felix.hostilehumans.progression.EffectiveAttributes;
 import dev.felix.hostilehumans.behavior.combat.gun.GunSupport;
@@ -22,7 +23,7 @@ public abstract class ScgunsHumanShieldMixin {
     @Shadow public abstract LivingEntity getShooter();
     @Shadow public abstract ItemStack getWeapon();
 
-    @Redirect(method = "onHitEntity", at = @At(value = "INVOKE",
+    @Redirect(method = OptionalMixinPlugin.SCGUNS_HUMAN_SHIELD, at = @At(value = "INVOKE",
             target = "Ltop/ribs/scguns/entity/projectile/ProjectileEntity$ProjectileHelper;handleShieldHit(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;F)Z"),
             remap = false, require = 1, allow = 1)
     private boolean hostileHumansUnified$preservePiercingPart(Entity victim, Entity projectile, float amount) {

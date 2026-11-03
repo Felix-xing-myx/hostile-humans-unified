@@ -161,13 +161,15 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
                 && (method.access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE)) == 0);
     }
     private static boolean supportsScgunsShield(ClassNode target) {
-        return target.methods.stream().filter(m -> (m.name + m.desc).equals(SCGUNS_HUMAN_SHIELD))
-                .anyMatch(m -> java.util.stream.StreamSupport.stream(m.instructions.spliterator(), false)
-                        .anyMatch(i -> i instanceof org.objectweb.asm.tree.MethodInsnNode call
-                                && call.getOpcode() == Opcodes.INVOKESTATIC
-                                && call.owner.equals("top/ribs/scguns/entity/projectile/ProjectileEntity$ProjectileHelper")
-                                && call.name.equals("handleShieldHit")
-                                && call.desc.equals("(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;F)Z")));
+        return target.methods.stream()
+                .filter(method -> (method.name + method.desc).equals(SCGUNS_HUMAN_SHIELD))
+                .flatMap(method -> java.util.stream.StreamSupport.stream(method.instructions.spliterator(), false))
+                .filter(instruction -> instruction instanceof org.objectweb.asm.tree.MethodInsnNode call
+                        && call.getOpcode() == Opcodes.INVOKESTATIC
+                        && call.owner.equals("top/ribs/scguns/entity/projectile/ProjectileEntity$ProjectileHelper")
+                        && call.name.equals("handleShieldHit")
+                        && call.desc.equals("(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;F)Z"))
+                .count() == 1;
     }
     @Override public void onLoad(String mixinPackage) { }
     @Override public String getRefMapperConfig() { return null; }
