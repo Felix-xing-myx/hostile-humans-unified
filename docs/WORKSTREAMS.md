@@ -4149,3 +4149,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查经济重启恢复，基线 15173ef，主控沿用 audit/module-architecture。EconomyRecovery 和 Java 回归增加前序凭证判断，沿用既有回执字段。Java 回归及混合存档验证待执行。
 
 - 架构审查客户端渲染，基线 30c6913，主控独占 HumanRenderer 接入，沿用 audit/module-architecture 工作树。减少手臂姿态热路径的重复判断，接口和玩法不变。Java 与帧时间验证待执行。
+
+- 架构审查网络入口，基线 d721994，主控沿用 audit/module-architecture。修改 AttributeDetailNetwork 和 SettlementSelectionTool，协议不变。Java 和联机验证待执行。

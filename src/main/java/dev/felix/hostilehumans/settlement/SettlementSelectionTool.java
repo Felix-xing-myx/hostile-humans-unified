@@ -310,6 +310,7 @@ public final class SettlementSelectionTool extends Item {
         if (!SettlementAccess.author(player)) return InteractionResult.FAIL;
         var binding = BINDINGS.get(player);
         BlockPos point = context.getClickedPos().immutable();
+        if (!player.serverLevel().hasChunkAt(point)) return InteractionResult.FAIL;
         if (player.isShiftKeyDown()) {
             if (player.serverLevel().getBlockEntity(point) instanceof SettlementInformationBlockEntity) {
                 SettlementAuthoring.initialize(player, point);

@@ -85,7 +85,9 @@ public final class AttributeDetailNetwork {
                 viewer.getMainHandItem().getItem() instanceof AttributeObserverItem||viewer.getOffhandItem().getItem() instanceof AttributeObserverItem,wildTool);
     }
     public static boolean openFor(ServerPlayer viewer, Human target, boolean wildTool) {
-        if(!rateOpen(viewer))return false;
+        return rateOpen(viewer) && openPermitted(viewer, target, wildTool);
+    }
+    private static boolean openPermitted(ServerPlayer viewer, Human target, boolean wildTool) {
         if(!permitted(viewer,target,wildTool)) {
             viewer.displayClientMessage(Component.translatable("attribute_detail.denied"),true); return false;
         }
@@ -127,9 +129,9 @@ public final class AttributeDetailNetwork {
         var context=supplier.get();ServerPlayer viewer=context.getSender();context.enqueueWork(()->{
             if(viewer==null||!AttributeDetailPolicy.nextSequence(LAST_SEQUENCE.getOrDefault(viewer,0L),packet.sequence()))return;
             LAST_SEQUENCE.put(viewer,packet.sequence());
+            if (!rateOpen(viewer)) return;
             var entity=viewer.serverLevel().getEntity(packet.entityId());
-            if(entity instanceof Human human&&human.getUUID().equals(packet.target()))openFor(viewer,human,packet.wildTool());
-            else rateOpen(viewer);
+            if(entity instanceof Human human&&human.getUUID().equals(packet.target()))openPermitted(viewer,human,packet.wildTool());
         });context.setPacketHandled(true);
     }
     private static void heartbeat(Heartbeat packet,Supplier<NetworkEvent.Context> supplier) {
