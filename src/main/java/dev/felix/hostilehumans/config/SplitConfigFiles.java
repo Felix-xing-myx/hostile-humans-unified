@@ -227,8 +227,13 @@ public final class SplitConfigFiles {
 
     /** Parse the exact snapshot used by migration backups and write-current comparisons. */
     public static JsonObject read(Path path, int version, byte[] snapshot) throws IOException {
-        String json = StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(snapshot)).toString();
-        JsonElement parsed = JsonParser.parseString(json);
+        JsonElement parsed;
+        try {
+            String json = StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(snapshot)).toString();
+            parsed = JsonParser.parseString(json);
+        } catch (java.nio.charset.CharacterCodingException | JsonParseException error) {
+            throw new IOException("Cannot parse configuration " + path, error);
+        }
         if (!parsed.isJsonObject()) throw new IOException("Configuration root must be an object: " + path);
         JsonObject data = parsed.getAsJsonObject();
         JsonElement schema = data.get("schema_version");
@@ -259,6 +264,13 @@ public final class SplitConfigFiles {
             // A move with no REPLACE_EXISTING must fail if another process creates the
             // target. Do not use ATOMIC_MOVE: its replacement behavior is provider-specific.
             Files.move(temporary, path);
-        } finally { Files.deleteIfExists(temporary); }
+        } catch (IOException | RuntimeException | Error failure) {
+            try {
+                Files.deleteIfExists(temporary);
+            } catch (IOException | RuntimeException cleanup) {
+                failure.addSuppressed(cleanup);
+            }
+            throw failure;
+        }
     }
 }
