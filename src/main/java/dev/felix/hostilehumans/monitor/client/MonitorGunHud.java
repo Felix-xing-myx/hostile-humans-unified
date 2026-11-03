@@ -50,6 +50,34 @@ public final class MonitorGunHud {
         return cut + ellipsis;
     }
 
+    /**
+     * Rounds-per-trigger pictogram: one to three right chevrons drawn from 1px strips, the same
+     * "speed" language as a fast-forward mark. One for single, two for burst, three for automatic.
+     * Pack art is deliberately not used - the native fire-mode texture could not be shown crisply at
+     * this size, and blocks on their own read as placeholders rather than as an indicator.
+     */
+    private static int modeIcon(GuiGraphics g,String mode,int x,int y,int rowHeight,UiTheme theme) {
+        String kind=mode==null?"":mode.toUpperCase(Locale.ROOT);
+        int arrows=switch(kind) {
+            case "AUTO" -> 3;
+            case "BURST" -> 2;
+            case "SEMI", "SINGLE" -> 1;
+            default -> 0;
+        };
+        if(arrows==0)return 0;
+        int height=7, stroke=2, gap=arrows>=3?1:2, chevronW=height/2+stroke;
+        int width=arrows*chevronW+(arrows-1)*gap;
+        int top=y+Math.max(0,(rowHeight-height)/2);
+        for(int arrow=0;arrow<arrows;arrow++) {
+            int originX=x+arrow*(chevronW+gap);
+            for(int row=0;row<height;row++) {
+                int offset=height/2-Math.abs(row-height/2);
+                UiDraw.rect(g,originX+offset,top+row,stroke,1,theme.text());
+            }
+        }
+        return width;
+    }
+
     /** Keeps the tail of a right aligned label so a clipped "弹匣 120" still shows the count. */
     private static String clipTail(net.minecraft.client.gui.Font font, String text, int room) {
         String out = text;
@@ -123,9 +151,12 @@ public final class MonitorGunHud {
         UiDraw.ruleFade(g,x+4,y+36,pw-8,theme.edge());
         // Caption row: fire mode, then the gun name across the rest of the width.
         String mode=value.reloading()?Component.translatable("human_monitor.gun.reloading").getString():data.energy()?"FE":data.mode();
+        // Prefer the pack's own mark; the chevron pictogram is only a fallback when it is missing.
         int modeWidth=0;
-        if(data.backend().equals("tacz") && !value.reloading())
+        if(!value.reloading() && data.backend().equals("tacz"))
             modeWidth=dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.mode(g,data.mode(),x+3,y+37,12);
+        if(modeWidth<=0 && !value.reloading())
+            modeWidth=modeIcon(g,data.mode(),x+3,y+37,12,theme);
         if(modeWidth<=0) {
             String shown=font.plainSubstrByWidth(mode,26);
             g.drawString(font,shown,x+3,y+39,theme.text(),false);
