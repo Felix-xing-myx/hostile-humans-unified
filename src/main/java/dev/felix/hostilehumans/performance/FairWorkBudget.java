@@ -79,10 +79,13 @@ public final class FairWorkBudget<K> {
 
     public void cancel(K key) {
         waiting.remove(key);
-        // A positive entry is still reserved; a claimed grant has already been replaced by zero.
-        // Keep the marker so cancel/restart cannot bypass the per-tick batch cap.
-        Integer reserved = grants.put(key, 0);
-        if (reserved != null) remaining += reserved;
+        // A positive entry is still reserved. A zero entry marks a claim
+        // already settled this tick and must survive a task handoff.
+        Integer reserved = grants.get(key);
+        if (reserved != null && reserved > 0) {
+            grants.remove(key);
+            remaining += reserved;
+        }
     }
 
     public String usage(long currentTick, int idleCapacity) {

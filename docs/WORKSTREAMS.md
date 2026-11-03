@@ -4195,3 +4195,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查小队批量命令，基线 0d276b7。SquadCommands 对齐面板可用性与执行权限，接口不变。
 
 - 累计复核投掷提交，基线 436ddfc。PotionThrowing 统一成功冷却的提交顺序，数值不变。
+
+- 复核导航预约交接，基线 2af4ed8。FairWorkBudget 区分未执行预约与已执行标记，补充 Java 回归，尚未编译。

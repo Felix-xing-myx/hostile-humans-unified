@@ -127,11 +127,17 @@ public final class PerformancePoliciesTest {
         reclaim.cancel("cancelled");
         reclaim.cancel("busy");
         reclaim.cancel("busy");
-        check(reclaim.claimFull(1, "busy", 4) == 0, "cancelled actor cannot reenter this tick");
         check(reclaim.claimFull(1, "other", 4) == 4, "only unclaimed capacity is returned once");
         reclaim.cancel("other");
         check(reclaim.claimFull(1, "late", 1) == 0, "executed work cannot be refunded");
 
+        FairWorkBudget<String> handoff = new FairWorkBudget<>(4, 4, 2);
+        check(handoff.claimFull(0, "actor", 3) == 3, "schedule an older request");
+        check(handoff.claimFull(1, "other", 1) == 1, "leave the old request reserved");
+        handoff.cancel("actor");
+        check(handoff.claimFull(1, "actor", 3) == 3, "new task can use spare capacity after an unused reservation");
+        handoff.cancel("actor");
+        check(handoff.claimFull(1, "actor", 1) == 0, "new task cannot claim again after executing");
         FairWorkBudget<String> resize = new FairWorkBudget<>(4, 4, 2);
         check(resize.claimFull(0, "resize", 4) == 4, "reserve previous demand");
         check(resize.claimFull(1, "resize", 1) == 1, "consume the current smaller batch");
