@@ -335,6 +335,7 @@ public final class CultivationService {
                 try {
                     applyPending(server, r, h);
                     r.appliedRevision = r.profile.revision();
+                    data.setDirty();
                     nextAutomatic(server, r, h);
                 } catch (RuntimeException invalid) {
                     r.reason = invalid.getMessage();
@@ -362,17 +363,18 @@ public final class CultivationService {
             if (r.cycle.status() != CultivationCycle.Status.READY || processed++ >= 64) continue;
             try {
                 var result = r.cycle.result();
+                var account = data.account(r.owner);
+                var paid = account.at(r.facility.id()).settle(r.cycle.candidate().materialMicro());
+                var completed = r.cycle.complete(now);
                 if (h != null) {
                     CultivationPlanner.validateCurrent(
                             result, SpecialtyTrainingBridge.policy(h, result.breakthrough()));
                     SpecialtyTrainingBridge.apply(h, r.profile, result);
                 }
-                var account = data.account(r.owner);
-                var paid = account.at(r.facility.id()).settle(r.cycle.candidate().materialMicro());
                 r.previous = r.profile;
                 r.profile = result;
                 r.appliedRevision = h == null ? -1 : result.revision();
-                r.cycle = r.cycle.complete(now);
+                r.cycle = completed;
                 r.seat = -1;
                 account.put(r.facility.id(), paid);
                 data.changed();

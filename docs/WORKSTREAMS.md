@@ -4157,3 +4157,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查配置迁移，基线 54a5d76，主控沿用 audit/module-architecture。SplitConfigFiles 与 GrowthProfileFiles 共用原始字节解析，新增快照读取重载。Python 检查通过，Java 回归待执行。
 
 - 架构审查雇佣召回，基线 928f57d，主控沿用 audit/module-architecture。HiredHumanRecall 在断线时清理该玩家的待召回队列和票据，公共接口不变。
+
+- 架构审查培养结算，基线 752016d，主控沿用 audit/module-architecture。修改 CultivationService，客户端协议、费用和档案字段不变。
