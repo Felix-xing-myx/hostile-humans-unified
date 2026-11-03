@@ -12,19 +12,20 @@ import dev.felix.hostilehumans.monitor.HumanMonitorControl;
 import dev.felix.hostilehumans.soldier.SoldierRecallProtection;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.Map;
 import java.util.WeakHashMap;
 
 /** Server-only edit lock preventing combat AI from moving stacks under an open menu. */
 public final class HumanInventorySession {
-    private record State(ServerPlayer editor, boolean previousNoAi, int menuId, long openedAt) {}
+    private record State(ServerPlayer editor, boolean previousNoAi, Object token, long openedAt) {}
     private static final Map<Human, State> OPEN = new WeakHashMap<>();
     private static final String PREVIOUS_AI = HumanRuntime.MOD_ID + ":inventory_previous_no_ai";
 
     private HumanInventorySession() {}
 
-    static synchronized boolean begin(Human human, ServerPlayer editor, int menuId) {
+    static synchronized boolean begin(Human human, ServerPlayer editor, Object token) {
         if (HumanMonitorControl.controls(human) && !HumanMonitorControl.pausedForInventory(human, editor)
                 || SoldierRecallProtection.pendingRescue(human) || isEditing(human)) return false;
         HumanBehaviorControl.cancel(human, "human inventory editing");
@@ -37,7 +38,7 @@ public final class HumanInventorySession {
         GunCustody.prepareForManualInventory(human);
         RangedWeaponCustody.prepareForManualInventory(human);
         human.getPersistentData().putBoolean(PREVIOUS_AI, human.isNoAi());
-        OPEN.put(human, new State(editor, human.isNoAi(), menuId,
+        OPEN.put(human, new State(editor, human.isNoAi(), token,
                 human.level().getGameTime()));
         human.setTarget(null);
         human.getNavigation().stop();
@@ -45,9 +46,14 @@ public final class HumanInventorySession {
         return true;
     }
 
-    static synchronized void end(Human human, int menuId) {
+    static synchronized boolean owns(Human human, Player player, Object token) {
         State state = OPEN.get(human);
-        if (state == null || state.menuId() != menuId) return;
+        return state != null && state.editor() == player && state.token() == token;
+    }
+
+    static synchronized void end(Human human, Object token) {
+        State state = OPEN.get(human);
+        if (state == null || state.token() != token) return;
         OPEN.remove(human);
         // Restoration is unconditional; even unload/death and optional item failures cannot retain the lock's NoAI.
         try {
@@ -65,9 +71,9 @@ public final class HumanInventorySession {
     public static synchronized void interruptForRelocation(Human human) {
         State state = OPEN.get(human);
         if (state == null) return;
-        if (state.editor().containerMenu instanceof HumanInventoryMenu menu && menu.containerId == state.menuId())
+        if (state.editor().containerMenu instanceof HumanInventoryMenu menu && menu.holdsEditToken(state.token()))
             state.editor().closeContainer();
-        else end(human, state.menuId());
+        else end(human, state.token());
     }
 
     /** An autosave taken during editing must not make its temporary NoAI flag permanent. */
@@ -86,8 +92,8 @@ public final class HumanInventorySession {
         // disconnected player or an interrupted container-close packet.
         if (human.level().getGameTime() - state.openedAt() > 2
                 && (!(state.editor().containerMenu instanceof HumanInventoryMenu menu)
-                || menu.containerId != state.menuId())) {
-            end(human, state.menuId());
+                || !menu.holdsEditToken(state.token()))) {
+            end(human, state.token());
             return false;
         }
         return true;

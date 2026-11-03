@@ -31,6 +31,7 @@ public final class HumanInventoryMenu extends AbstractContainerMenu {
     static final int HUMAN_SLOT_COUNT = HumanInventoryContainer.TOTAL_SIZE;
     private final Container humanInventory;
     private final Human human;
+    private final Object editToken = new Object();
     private final boolean editLock;
     private final boolean monitorAccess;
     private final boolean internalOnly;
@@ -84,7 +85,7 @@ public final class HumanInventoryMenu extends AbstractContainerMenu {
         this.human = human;
         this.humanInventory = container;
         this.editLock = human == null || HumanInventorySession.begin(
-                human, (ServerPlayer) playerInventory.player, id);
+                human, (ServerPlayer) playerInventory.player, editToken);
         checkContainerSize(container, HumanInventoryContainer.TOTAL_SIZE);
 
         for (int row = 0; row < 3; row++) {
@@ -208,16 +209,21 @@ public final class HumanInventoryMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return editLock && (internalOnly || !monitorAccess || player.isCreative()) && (human == null || (monitorAccess
+        return editLock && (internalOnly || !monitorAccess || player.isCreative()) && (human == null || (HumanInventorySession.owns(human, player, editToken) && (monitorAccess
                 ? player instanceof ServerPlayer server && HumanMonitorService.canAccess(server, human)
-                : humanInventory.stillValid(player)));
+                : humanInventory.stillValid(player))));
+    }
+
+    boolean holdsEditToken(Object token) {
+        return editToken == token;
     }
 
     @Override
     public void removed(Player player) {
-        super.removed(player);
-        if (human != null && editLock) {
-            HumanInventorySession.end(human, containerId);
+        try {
+            super.removed(player);
+        } finally {
+            if (human != null && editLock) HumanInventorySession.end(human, editToken);
         }
     }
 }
