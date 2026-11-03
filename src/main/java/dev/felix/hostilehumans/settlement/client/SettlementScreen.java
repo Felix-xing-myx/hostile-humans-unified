@@ -681,12 +681,14 @@ public final class SettlementScreen extends PanelScreen {
                         () -> {
                             if (!applyRegion()) return;
                             CompoundTag r = new CompoundTag();
-                            r.putString("id", "region_" + regions().size());
-                            r.putString("name", "Region " + (regions().size() + 1));
+                            int number = regions().size();
+                            var existingIds = regions().stream().map(CompoundTag.class::cast)
+                                    .map(region -> region.getString("id")).collect(java.util.stream.Collectors.toSet());
+                            while (existingIds.contains("region_" + number)) number++;
+                            r.putString("id", "region_" + number);
+                            r.putString("name", "Region " + (number + 1));
                             r.putString("layer", "OUTER");
-                            ListTag includes = new ListTag();
-                            includes.add(new IntArrayTag(new int[] {0, 0, 0, 0, 0, 0}));
-                            r.put("include", includes);
+                            r.put("include", new ListTag());
                             r.put("exclude", new ListTag());
                             ListTag all = regions();
                             all.add(r);
@@ -697,7 +699,7 @@ public final class SettlementScreen extends PanelScreen {
                             refresh();
                         }));
         List<UiLayout.Node> detail = new ArrayList<>();
-        if (region() == null) detail.add(muted(text("no_region")));
+        if (region() == null) detail.add(muted(text("create_outer_help")));
         else {
             detail.add(input("region_id", regionId));
             detail.add(input("region_name", regionName));
@@ -812,15 +814,10 @@ public final class SettlementScreen extends PanelScreen {
                 if (facility.getString("region").equals(selectedId))
                     references.add(facility.getString("id"));
             }
-            boolean lastOuter = kind.equals("ROOT")
-                    && region().getString("layer").equals("OUTER")
-                    && regions().stream().map(CompoundTag.class::cast)
-                            .filter(r -> r.getString("layer").equals("OUTER")).count() == 1;
             if (!references.isEmpty())
                 detail.add(muted(text("region_remove_facilities", String.join(", ", references))));
-            if (lastOuter) detail.add(muted(text("region_remove_last_outer")));
             detail.add(action(removeId, text("remove_region"),
-                    editable() && references.isEmpty() && !lastOuter, false,
+                    editable() && references.isEmpty(), false,
                     () -> confirm(removeId, () -> {
                         regions().remove(regionIndex);
                         regionIndex = 0;

@@ -27,6 +27,7 @@ public final class SettlementModule {
                 || author == null
                 || transform == null
                 || informationBlock == null) throw new IllegalArgumentException("module placement");
+        author.validateForPublication();
         this.key = key;
         this.author = author;
         this.transform = transform;

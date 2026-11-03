@@ -88,9 +88,6 @@ public record SettlementTemplate(
                                 || envelope.sizeY() > extent
                                 || envelope.sizeZ() > extent))
             throw new IllegalArgumentException("template total box/extent limit");
-        if (kind == Kind.ROOT
-                && regions.stream().noneMatch(r -> r.layer() == SettlementRegion.Layer.OUTER))
-            throw new IllegalArgumentException("protected root needs outer region");
         if (tier == 1 && regions.stream().anyMatch(r -> r.layer() == SettlementRegion.Layer.INNER))
             throw new IllegalArgumentException("tier one has no inner region");
         var facilityIds = new HashSet<String>();
@@ -121,6 +118,15 @@ public record SettlementTemplate(
         if (ix < 0 || iy < 0 || iz < 0 || ix >= size.x() || iy >= size.y() || iz >= size.z())
             throw new IllegalArgumentException(
                     "information block must lie inside template export size");
+    }
+
+    void validateForPublication() {
+        if (kind == Kind.ROOT && regions.stream().noneMatch(
+                region -> region.layer() == SettlementRegion.Layer.OUTER && !region.includes().isEmpty()))
+            throw new IllegalArgumentException("define an outer region with a capture box before publishing the settlement");
+        for (var region : regions)
+            if (region.includes().isEmpty())
+                throw new IllegalArgumentException("add an include box or remove the empty region: " + region.id());
     }
 
     public int boxCount() {

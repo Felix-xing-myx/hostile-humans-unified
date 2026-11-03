@@ -62,13 +62,7 @@ public final class SettlementAuthoring {
                         1,
                         new TemplateTransform.Cell(16, 16, 16),
                         new TemplateTransform.Cell(0, 0, 0),
-                        List.of(
-                                new SettlementRegion(
-                                        "outer",
-                                        "Outer",
-                                        SettlementRegion.Layer.OUTER,
-                                        List.of(new RegionBox(0, 0, 0, 15, 15, 15)),
-                                        List.of())),
+                        List.of(),
                         List.of());
         info.author(SettlementCodec.template(value));
     }

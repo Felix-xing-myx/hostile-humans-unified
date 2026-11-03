@@ -79,6 +79,7 @@ final class SettlementTemplateFiles {
         if (info == null || info.revision() != revision) return "author unavailable or stale";
         var level = player.serverLevel();
         var author = SettlementCodec.template(info.author());
+        author.validateForPublication();
         var transform = SettlementAuthoring.currentTransform(player, info);
         if (transform.clockwiseQuarterTurns() != 0 || transform.mirror() != TemplateTransform.Mirror.NONE)
             return "export from an unrotated author copy";
@@ -246,6 +247,7 @@ final class SettlementTemplateFiles {
             if (!tag.getString("id").equals("hostile_humans_unified:settlement_information")) continue;
             carriers++;
             var author = SettlementCodec.template(tag.getCompound(SettlementInformationBlockEntity.AUTHOR));
+            author.validateForPublication();
             var source = new TemplateTransform.Cell(coordinates.getInt(0), coordinates.getInt(1), coordinates.getInt(2));
             var offset = author.originOffset();
             if (offset.x() != -source.x() || offset.y() != -source.y() || offset.z() != -source.z())

@@ -21,7 +21,7 @@ public record SettlementRegion(
                 || layer == null) throw new IllegalArgumentException("region identity");
         includes = List.copyOf(includes);
         excludes = List.copyOf(excludes);
-        if (includes.isEmpty() || includes.size() + excludes.size() > 64)
+        if (includes.size() + excludes.size() > 64)
             throw new IllegalArgumentException("region boxes");
     }
 
