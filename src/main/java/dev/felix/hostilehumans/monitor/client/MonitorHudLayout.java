@@ -12,7 +12,7 @@ public record MonitorHudLayout(int commandX, int commandY, int commandWidth, int
     public static final int WEAPON_WIDTH = 128, WEAPON_HEIGHT = 46;
     public static final int COMMAND_HEIGHT = 62, COMMAND_BOTTOM = 72;
     /** Box the gun art is fitted into inside the slab. */
-    public static final int ART_WIDTH = 40, ART_HEIGHT = 20;
+    public static final int ART_WIDTH = 54, ART_HEIGHT = 28;
 
     public static MonitorHudLayout of(int width, int height, boolean weapon) {
         int w = Math.max(80, Math.min(360, width - 16));

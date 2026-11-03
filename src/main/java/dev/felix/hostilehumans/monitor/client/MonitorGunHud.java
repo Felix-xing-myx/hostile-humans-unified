@@ -36,6 +36,13 @@ public final class MonitorGunHud {
     public static boolean visible() {
         Human h=viewed();return h!=null && GunSupport.isGunItem(h.getMainHandItem());
     }
+    /** Keeps the tail of a right aligned label so a clipped "弹匣 120" still shows the count. */
+    private static String clipTail(net.minecraft.client.gui.Font font, String text, int room) {
+        String out = text;
+        while (out.length() > 1 && font.width(out) > room) out = out.substring(1);
+        return out;
+    }
+
     public static void render(GuiGraphics g) {
         Human human=viewed(); if(human==null)return;
         var client=Minecraft.getInstance(); var font=client.font;
@@ -68,35 +75,47 @@ public final class MonitorGunHud {
         UiDraw.ruleFade(g,x+3,y+1,pw-6,theme.accent());
         try {
             switch(data.backend()) {
-                case "tacz" -> dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.icon(g,held,x+2,y+12,data.loaded()==0);
-                case "scguns" -> dev.felix.hostilehumans.client.ui.gun.ScgunsMonitorHud.icon(g,held,x+2,y+14);
-                default -> { if(!jeg)g.renderItem(held,x+2,y+14); }
+                case "tacz" -> dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.icon(g,held,x+2,y+2,data.loaded()==0);
+                case "scguns" -> dev.felix.hostilehumans.client.ui.gun.ScgunsMonitorHud.icon(g,held,x+2,y+9);
+                default -> { if(!jeg)g.renderItem(held,x+2,y+9); }
             }
         } catch(RuntimeException|LinkageError failure) {
             dev.felix.hostilehumans.client.render.ClientAnimationCompatibility.warnOnce("monitor weapon HUD "+data.backend(),"Using generic weapon icon",failure);
-            g.drawString(font,"?",x+2,y+14,0xFFB4C3CC,false);
+            g.drawString(font,"?",x+2,y+9,0xFFB4C3CC,false);
         }
         boolean percent=false;
         if(data.backend().equals("tacz"))try {percent=dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.percentage(held);}
         catch(RuntimeException|LinkageError ignored) { }
         String amount=percent?String.format(Locale.ROOT,"%.0f%%",data.capacity()==0?0:100D*data.loaded()/data.capacity())
                 :String.format(Locale.ROOT,jeg?"%03d":"%02d",data.loaded());
-        int amountX=x+(jeg?6:48);
-        float scale=Math.min(2F,34F/Math.max(1,font.width(amount)));
-        g.pose().pushPose();try {g.pose().translate(amountX,y+13,0);g.pose().scale(scale,scale,1);g.drawString(font,amount,0,0,data.loaded()==0?theme.danger():theme.text(),false);}
+        // Right column: the big count sits above the reserve, both flush with the panel edge.
+        float scale=Math.min(2F,44F/Math.max(1,font.width(amount)));
+        int amountWidth=Math.min(44,Math.round(font.width(amount)*scale));
+        g.pose().pushPose();try {g.pose().translate(x+pw-4-amountWidth,y+2,0);g.pose().scale(scale,scale,1);g.drawString(font,amount,0,0,data.loaded()==0?theme.danger():theme.text(),false);}
         finally{g.pose().popPose();}
         String reserve=Component.translatable("human_monitor.gun.magazines",value.infinite()?"∞":value.magazines()).getString();
-        g.drawString(font,font.plainSubstrByWidth(reserve,26),x+pw-4-font.width(font.plainSubstrByWidth(reserve,26)),y+16,theme.muted(),false);
+        String reserveText=clipTail(font,reserve,pw-8);
+        g.drawString(font,reserveText,x+pw-4-font.width(reserveText),y+21,theme.muted(),false);
         String mode=value.reloading()?Component.translatable("human_monitor.gun.reloading").getString():data.energy()?"FE":data.mode();
-        UiDraw.ruleFade(g,x+4,y+33,pw-8,theme.edge());
-        if(data.backend().equals("tacz") && !value.reloading())dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.mode(g,data.mode(),x+4,y+35);
-        else g.drawString(font,font.plainSubstrByWidth(mode,52),x+4,y+35,theme.text(),false);
-        if(!data.backend().equals("tacz")){
-            String capacity="/ "+data.capacity();
-            g.drawString(font,capacity,x+pw-4-font.width(capacity),y+35,theme.muted(),false);
+        UiDraw.ruleFade(g,x+4,y+31,pw-8,theme.edge());
+        // Bottom row: fire mode, then the gun name as a caption, then the magazine capacity.
+        int modeWidth=18;
+        if(data.backend().equals("tacz") && !value.reloading())
+            dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.mode(g,data.mode(),x+3,y+33);
+        else {
+            String shown=font.plainSubstrByWidth(mode,modeWidth);
+            g.drawString(font,shown,x+3,y+33,theme.text(),false);
+            modeWidth=Math.max(modeWidth,font.width(shown));
         }
-        String name=held.getHoverName().getString();
-        g.drawString(font,font.plainSubstrByWidth(name,pw-8),x+4,y+2,theme.text(),false);
+        String capacity=data.backend().equals("tacz")?"":"/ "+data.capacity();
+        int capacityWidth=capacity.isEmpty()?0:font.width(capacity);
+        if(!capacity.isEmpty())g.drawString(font,capacity,x+pw-4-capacityWidth,y+33,theme.muted(),false);
+        // The name is a caption, not a heading: drawn at 0.85 so the ammo count stays the hero.
+        int nameX=x+3+modeWidth+4;
+        int nameRoom=Math.max(20,x+pw-4-capacityWidth-3-nameX);
+        String name=font.plainSubstrByWidth(held.getHoverName().getString(),(int)(nameRoom/.85F));
+        g.pose().pushPose();try {g.pose().translate(nameX,y+34,0);g.pose().scale(.85F,.85F,1);g.drawString(font,name,0,0,theme.muted(),false);}
+        finally{g.pose().popPose();}
         }finally{g.pose().popPose();}
     }
 }
