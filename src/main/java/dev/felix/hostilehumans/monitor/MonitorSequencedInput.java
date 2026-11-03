@@ -10,9 +10,9 @@ public final class MonitorSequencedInput<T> {
         if (sequence < 0 || sequence <= received) return false;
         received = sequence; pending.offer(new Intent<>(sequence, input), tick); return true;
     }
-    public T drain() {
+    public T drain(long tick) {
         var intent = pending.drain();
-        if (intent == null) return null;
+        if (intent == null || !pending.fresh(tick)) return null;
         acknowledged = intent.sequence(); return intent.input();
     }
     public long acknowledged() { return acknowledged; }

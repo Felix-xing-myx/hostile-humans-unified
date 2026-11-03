@@ -54,5 +54,5 @@ class MonitorShieldCoordination(unittest.TestCase):
   self.assertIn("lease.inputs.offer",handler)
   self.assertNotIn("lease.forward =",handler)
   self.assertNotIn("lease.accepted ==",control)
-  self.assertIn("consumeInput(lease)",control.split("public static void beforeTravel",1)[1])
+  self.assertIn("consumeInput(lease, tick)",control.split("public static void beforeTravel",1)[1])
 if __name__=="__main__":unittest.main()

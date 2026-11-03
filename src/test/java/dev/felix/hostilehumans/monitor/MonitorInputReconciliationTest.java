@@ -11,9 +11,9 @@ public final class MonitorInputReconciliationTest {
         client.add(1, 1); predicted += 1; server.offer(1, 1, 10);
         client.add(2, -1); predicted -= 1; server.offer(2, -1, 10);
         check(server.acknowledged() == -1, "Receiving multiple packets must not acknowledge simulation");
-        authoritative += server.drain();
+        authoritative += server.drain(10);
         check(server.acknowledged() == 2 && authoritative == -1, "Coalescing applies latest intent exactly once");
-        check(server.drain() == null && server.acknowledged() == 2, "A held tick does not invent another input acknowledgement");
+        check(server.drain(10) == null && server.acknowledged() == 2, "A held tick does not invent another input acknowledgement");
         client.add(3, 1); predicted += 1;
         client.acknowledge(server.acknowledged());
         predicted = authoritative;
@@ -24,7 +24,11 @@ public final class MonitorInputReconciliationTest {
         client.acknowledge(1);
         check(client.size() == 1, "Late ack cannot retire a newer input");
         check(server.offer(3, 1, 17), "New intent resumes after expiry");
-        check(server.drain() == 1 && server.acknowledged() == 3, "Resume acknowledgement follows actual drain");
+        check(server.drain(17) == 1 && server.acknowledged() == 3, "Resume acknowledgement follows actual drain");
+        check(server.offer(4, 1000, 18), "Queue input while simulation is paused");
+        check(server.drain(24) == null && server.acknowledged() == 3,
+                "Expired input must not change the pose or acknowledge a simulated step");
+        check(server.drain(24) == null, "Expired intent is discarded");
         client.acknowledge(3);
         check(client.replay().isEmpty(), "All-acknowledged history is a valid empty replay");
         for (int i = 4; i < 13; i++) client.add(i, 1);

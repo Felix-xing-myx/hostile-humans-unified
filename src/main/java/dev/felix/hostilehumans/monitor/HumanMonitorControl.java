@@ -159,8 +159,8 @@ public final class HumanMonitorControl {
         lease.sentLoadout = null;
         return lease.combat.loadout().toggleOffhand() == dev.felix.hostilehumans.inventory.HumanEquipmentExchange.Result.SUCCESS;
     }
-    private static void consumeInput(Lease lease) {
-        HumanMonitorNetwork.Control input = lease.inputs.drain();
+    private static void consumeInput(Lease lease, long tick) {
+        HumanMonitorNetwork.Control input = lease.inputs.drain(tick);
         if (input == null) return;
         lease.forward = input.forward(); lease.sideways = input.sideways();
         lease.yaw = Mth.wrapDegrees(input.yaw()); lease.pitch = Mth.clamp(input.pitch(), -90, 90);
@@ -181,8 +181,9 @@ public final class HumanMonitorControl {
                 && !HumanInventorySession.isEditing(human) && !SoldierRecallProtection.pendingRescue(human)
                 && !human.isPassenger() && !human.isSleeping();
         if (!live) { release(lease.player, lease.token); return; }
-        consumeInput(lease);
-        boolean fresh = lease.active && lease.inputs.fresh(human.level().getGameTime());
+        long tick = human.level().getGameTime();
+        consumeInput(lease, tick);
+        boolean fresh = lease.active && lease.inputs.fresh(tick);
         float factor = lease.sneak ? .3F : 1;
         human.setSprinting(fresh && lease.sprint && lease.forward > 0 && !lease.sneak && !lease.attack && !lease.use);
         human.setShiftKeyDown(fresh && lease.sneak);
