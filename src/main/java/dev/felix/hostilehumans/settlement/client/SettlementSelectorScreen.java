@@ -66,7 +66,7 @@ public final class SettlementSelectorScreen extends PanelScreen {
             for (int i = 0; i < regions.size(); i++) {
                 var row = regions.getCompound(i);
                 String id = row.getString("id");
-                nodes.add(option(text("layer." + row.getString("layer")).append(" ? ")
+                nodes.add(option(text("layer." + row.getString("layer")).copy().append(" ? ")
                                 .append(row.getString("name")).append(" [" + id + "]"),
                         region.equals(id), () -> { region = id; rebuildWidgets(); }));
             }

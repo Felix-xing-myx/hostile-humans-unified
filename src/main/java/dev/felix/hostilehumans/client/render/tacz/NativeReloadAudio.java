@@ -83,7 +83,7 @@ public final class NativeReloadAudio {
                 if (clip != null && clip.isJsonObject()) readCues(cues, clip.getAsJsonObject(), 0);
             }
             if (cues.isEmpty()) {
-                var sound = display.getSounds(SoundManager.BOLT_SOUND);
+                var sound = display.getSounds().get(SoundManager.BOLT_SOUND);
                 if (hasSoundResource(sound)) cues.add(new Cue(0, sound));
             }
             cues.sort(Comparator.comparingDouble(Cue::time));
