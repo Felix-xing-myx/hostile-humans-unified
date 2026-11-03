@@ -51,9 +51,12 @@ public final class SettlementContent {
             ITEMS.register(
                     "settlement_information",
                     () -> new BlockItem(INFORMATION.get(), new Item.Properties()));
+    public static final RegistryObject<Item> PLACEMENT_TOOL =
+            ITEMS.register("settlement_selection_tool",
+                    () -> new SettlementPlacementTool(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> SELECTION_TOOL =
             ITEMS.register(
-                    "settlement_selection_tool",
+                    "settlement_region_tool",
                     () -> new SettlementSelectionTool(new Item.Properties().stacksTo(1)));
     public static final Map<String, RegistryObject<SettlementControlBlock>> CONTROLS = controls();
 

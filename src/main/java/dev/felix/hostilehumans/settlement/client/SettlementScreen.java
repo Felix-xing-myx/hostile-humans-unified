@@ -699,6 +699,13 @@ public final class SettlementScreen extends PanelScreen {
         List<UiLayout.Node> detail = new ArrayList<>();
         if (region() == null) detail.add(muted(text("create_outer_help")));
         else {
+            detail.add(
+                    action(
+                            "selection",
+                            text("world_selection"),
+                            editable(),
+                            false,
+                            () -> beginWorldEdit("ADD", region().getString("id"))));
             detail.add(input("region_id", regionId));
             detail.add(input("region_name", regionName));
             if (layer.equals("OUTER") && !kind.equals("ORDINARY"))
@@ -823,13 +830,6 @@ public final class SettlementScreen extends PanelScreen {
                         loadRegion();
                         refresh();
                     })));
-            detail.add(
-                    action(
-                            "selection",
-                            text("world_selection"),
-                            editable(),
-                            false,
-                            () -> beginWorldEdit("ADD", region().getString("id"))));
             detail.add(action("region_preview_scope", text(currentRegionOnly ? "preview_current" : "preview_all"),
                     editable(), currentRegionOnly, () -> { currentRegionOnly = !currentRegionOnly; refresh(); }));
             detail.add(action("region_preview_depth", text(SettlementPreviewClient.throughWalls

@@ -145,12 +145,12 @@ final class SettlementTemplateFiles {
         }
         var copy = manager.readStructure(data);
         var ghosts = previewBlocks(level, data, origin, settings);
-        SettlementSelectionTool.clear(player);
         PENDING.put(player, new Placement(level, id, origin, settings, copy, bounds,
                 level.getGameTime() + PREVIEW_TICKS));
         SettlementNetwork.preview(player, new SettlementPreview(level.dimension().location().toString(),
                 List.of(new SettlementPreview.Box(bounds, 0xffffff, id.toString().substring(0,
-                        Math.min(id.toString().length(), 192)))), null, null, false, ghosts));
+                        Math.min(id.toString().length(), 192)))), null, null, false, ghosts, "place", id.toString().substring(0,
+                        Math.min(id.toString().length(), 256))));
         return "Preview " + id + ": /hh settlement template confirm replaces blocks inside the box; "
                 + "/hh settlement template cancel aborts. Preview expires after 30 seconds."
                 + (ghosts.isEmpty() ? " Bounds only: model preview is empty or exceeds 4096 blocks." : "");
@@ -210,7 +210,7 @@ final class SettlementTemplateFiles {
     }
 
     static void cancel(ServerPlayer player) {
-        if (PENDING.remove(player) != null) SettlementNetwork.preview(player, SettlementPreview.EMPTY);
+        if (PENDING.remove(player) != null) SettlementNetwork.preview(player, SettlementPreview.EMPTY_PLACEMENT);
     }
 
     static void tick(ServerPlayer player) {

@@ -5,6 +5,8 @@ import dev.felix.hostilehumans.client.render.DebugWorldLines;
 import dev.felix.hostilehumans.settlement.RegionBox;
 import dev.felix.hostilehumans.settlement.SettlementPreview;
 import dev.felix.hostilehumans.settlement.SettlementSelectionTool;
+import dev.felix.hostilehumans.settlement.SettlementPlacementTool;
+import dev.felix.hostilehumans.settlement.SettlementNetwork;
 import dev.felix.hostilehumans.settlement.TemplateTransform.Cell;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -21,23 +23,27 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = HumanRuntime.MOD_ID, value = Dist.CLIENT)
 public final class SettlementPreviewClient {
     static boolean throughWalls = true;
-    private static SettlementPreview preview = SettlementPreview.EMPTY;
+    private static SettlementPreview selection = SettlementPreview.EMPTY;
+    private static SettlementPreview placement = SettlementPreview.EMPTY_PLACEMENT;
 
     private SettlementPreviewClient() {}
 
     public static void accept(SettlementPreview value) {
-        preview = value;
+        if (value.task().equals("place")) placement = value;
+        else selection = value;
     }
 
     @SubscribeEvent
     public static void logout(ClientPlayerNetworkEvent.LoggingOut event) {
         accept(SettlementPreview.EMPTY);
+        accept(SettlementPreview.EMPTY_PLACEMENT);
     }
 
     @SubscribeEvent
     public static void tooltip(net.minecraftforge.event.entity.player.ItemTooltipEvent event) {
         var client = Minecraft.getInstance();
-        if (!(event.getItemStack().getItem() instanceof SettlementSelectionTool) || client.level == null
+        var preview = event.getItemStack().getItem() instanceof SettlementPlacementTool ? placement : selection;
+        if (!isPreviewTool(preview, event.getItemStack()) || client.level == null
                 || preview.task().isEmpty()
                 || !preview.dimension().equals(client.level.dimension().location().toString())) return;
         event.getToolTip().add(net.minecraft.network.chat.Component.translatable(
@@ -45,15 +51,35 @@ public final class SettlementPreviewClient {
                 .append(preview.region().isEmpty() ? "" : " · " + preview.region()));
     }
 
+    private static boolean isPreviewTool(SettlementPreview preview, net.minecraft.world.item.ItemStack stack) {
+        return preview.task().equals("place") ? stack.getItem() instanceof SettlementPlacementTool
+                : stack.getItem() instanceof SettlementSelectionTool;
+    }
+
+    @SubscribeEvent
+    public static void cancelCorner(net.minecraftforge.client.event.InputEvent.InteractionKeyMappingTriggered event) {
+        var player = Minecraft.getInstance().player;
+        if (!event.isAttack() || player == null || !player.isCreative() && !player.hasPermissions(2)
+                || !(player.getMainHandItem().getItem() instanceof SettlementSelectionTool)) return;
+        var request = new net.minecraft.nbt.CompoundTag();
+        request.putBoolean("cancel", true);
+        SettlementNetwork.configureSelector(request);
+        event.setCanceled(true);
+        event.setSwingHand(false);
+    }
+
     @SubscribeEvent
     public static void render(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
         var mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null || mc.options.hideGui
-                || !preview.dimension().equals(mc.level.dimension().location().toString())
+        if (mc.player == null || mc.level == null || mc.options.hideGui) return;
+        var mainHand = mc.player.getMainHandItem();
+        var preview = isPreviewTool(selection, mainHand)
+                || !isPreviewTool(placement, mainHand) && isPreviewTool(selection, mc.player.getOffhandItem())
+                ? selection : placement;
+        if (!preview.dimension().equals(mc.level.dimension().location().toString())
                 || preview.toolOnly()
-                        && !(mc.player.getMainHandItem().getItem() instanceof SettlementSelectionTool
-                        || mc.player.getOffhandItem().getItem() instanceof SettlementSelectionTool)) return;
+                        && !(isPreviewTool(preview, mc.player.getMainHandItem()) || isPreviewTool(preview, mc.player.getOffhandItem()))) return;
 
         Vec3 camera = event.getCamera().getPosition();
         var poses = event.getPoseStack();

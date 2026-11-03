@@ -16,7 +16,9 @@ class PatrolAuthoringContract(unittest.TestCase):
         for item in ("patrol_command_baton", "creative_soldier_controller"):
             self.assertEqual(registry.count('ITEMS.register("' + item + '"'), 1)
             model = ROOT / "src/main/resources/assets/hostile_humans_unified/models/item" / (item + ".json")
-            self.assertTrue(json.loads(model.read_text(encoding="utf-8"))["textures"]["layer0"].startswith("minecraft:item/"))
+            self.assertEqual(json.loads(model.read_text(encoding="utf-8"))["textures"]["layer0"],
+                             "hostile_humans_unified:item/" + item)
+            self.assertTrue((model.parents[2] / "textures/item" / (item + ".png")).is_file())
         recipe = json.loads((ROOT / "src/main/resources/data/hostile_humans_unified/recipes/patrol_command_baton.json").read_text(encoding="utf-8"))
         self.assertEqual(recipe["result"]["item"], "hostile_humans_unified:patrol_command_baton")
         self.assertFalse((ROOT / "src/main/resources/data/hostile_humans_unified/recipes/creative_soldier_controller.json").exists())

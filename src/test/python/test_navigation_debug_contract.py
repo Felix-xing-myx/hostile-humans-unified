@@ -122,7 +122,8 @@ class NavigationDebugContract(unittest.TestCase):
         self.assertEqual({k for k in zh if k.startswith("navigation_debug.")}, {k for k in en if k.startswith("navigation_debug.")})
         for item in ["navigation_test_pointer", "navigation_observer_helmet"]:
             model = json.loads((assets / "models/item" / (item + ".json")).read_text(encoding="utf-8"))
-            self.assertTrue(model["textures"]["layer0"].startswith("minecraft:item/"))
+            self.assertEqual(model["textures"]["layer0"], "hostile_humans_unified:item/" + item)
+            self.assertTrue((assets / "textures/item" / (item + ".png")).is_file())
             self.assertIn("item.hostile_humans_unified." + item, zh)
 
 

@@ -1103,6 +1103,7 @@
         "SettlementNetwork",
         "SettlementPages",
         "SettlementPlacementIdentity",
+        "SettlementPlacementTool",
         "SettlementPosts",
         "SettlementPreview",
         "SettlementRegion",
@@ -1120,6 +1121,7 @@
         "SettlementGhostRenderer",
         "SettlementPreviewClient",
         "SettlementScreen",
+        "SettlementSelectorScreen",
         "SettlementWandScreen"
       ]
     },

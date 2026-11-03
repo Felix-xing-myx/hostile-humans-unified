@@ -60,7 +60,7 @@ public final class SettlementWandPlacement {
     }
 
     static boolean holding(ServerPlayer player) {
-        var tool = SettlementContent.SELECTION_TOOL.get();
+        var tool = SettlementContent.PLACEMENT_TOOL.get();
         return player.getMainHandItem().is(tool) || player.getOffhandItem().is(tool);
     }
 
@@ -92,7 +92,6 @@ public final class SettlementWandPlacement {
             SettlementNetwork.wandView(player, new View(request.token(), false, "wand_missing", new ListTag()));
             return;
         }
-        SettlementSelectionTool.clear(player);
         SettlementTemplateFiles.cancel(player);
         SESSIONS.put(player, new Session(request.token(), session.level(),
                 session.level().getGameTime() + SESSION_TICKS, request));
@@ -139,7 +138,7 @@ public final class SettlementWandPlacement {
         var old = SESSIONS.remove(player);
         if (old != null && old.placement() != null) {
             SettlementTemplateFiles.cancel(player);
-            SettlementNetwork.preview(player, SettlementPreview.EMPTY);
+            SettlementNetwork.preview(player, SettlementPreview.EMPTY_PLACEMENT);
         }
     }
 }

@@ -56,8 +56,8 @@
 | `perception` | 视觉、声音、识别与目标记忆 | 39 |
 | `performance` | 共享配额与活动分档 | 7 |
 | `progression` | 成长、专精、经验与属性 | 27 |
-| `settlement` | 据点区域几何、模板变换与维度实例索引 | 26 |
-| `settlement/client` | 据点结构作者表单、管理与岗位指派 | 4 |
+| `settlement` | 据点区域几何、模板变换与维度实例索引 | 27 |
+| `settlement/client` | 据点结构作者表单、管理与岗位指派 | 5 |
 | `soldier` | 雇佣、小队、命令、召回和对白 | 57 |
 | `world` | 自然出生和生成实体 | 3 |
 
@@ -290,11 +290,11 @@
 
 ### settlement
 
-`RegionBox`、`SettlementAccess`、`SettlementAuthoring`、`SettlementCodec`、`SettlementCommands`、`SettlementContent`、`SettlementControlBlock`、`SettlementFacility`、`SettlementGeneration`、`SettlementIndex`、`SettlementInformationBlock`、`SettlementInformationBlockEntity`、`SettlementInstance`、`SettlementLimits`、`SettlementModule`、`SettlementNetwork`、`SettlementPages`、`SettlementPlacementIdentity`、`SettlementPosts`、`SettlementPreview`、`SettlementRegion`、`SettlementSelectionTool`、`SettlementTemplate`、`SettlementTemplateFiles`、`SettlementWandPlacement`、`TemplateTransform`
+`RegionBox`、`SettlementAccess`、`SettlementAuthoring`、`SettlementCodec`、`SettlementCommands`、`SettlementContent`、`SettlementControlBlock`、`SettlementFacility`、`SettlementGeneration`、`SettlementIndex`、`SettlementInformationBlock`、`SettlementInformationBlockEntity`、`SettlementInstance`、`SettlementLimits`、`SettlementModule`、`SettlementNetwork`、`SettlementPages`、`SettlementPlacementIdentity`、`SettlementPlacementTool`、`SettlementPosts`、`SettlementPreview`、`SettlementRegion`、`SettlementSelectionTool`、`SettlementTemplate`、`SettlementTemplateFiles`、`SettlementWandPlacement`、`TemplateTransform`
 
 ### settlement.client
 
-`SettlementGhostRenderer`、`SettlementPreviewClient`、`SettlementScreen`、`SettlementWandScreen`
+`SettlementGhostRenderer`、`SettlementPreviewClient`、`SettlementScreen`、`SettlementSelectorScreen`、`SettlementWandScreen`
 
 ### soldier
 

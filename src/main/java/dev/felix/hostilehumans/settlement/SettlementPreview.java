@@ -9,6 +9,9 @@ public record SettlementPreview(String dimension, List<Box> boxes, BlockPos firs
     private static final int MAX_BOXES = 1153;
     public static final SettlementPreview EMPTY = new SettlementPreview("", List.of(), null, null, true);
 
+    public static final SettlementPreview EMPTY_PLACEMENT =
+            new SettlementPreview("", List.of(), null, null, true, List.of(), "place", "");
+
     static final int MAX_GHOSTS = 4096;
 
     public record Ghost(BlockPos position, int state) {}

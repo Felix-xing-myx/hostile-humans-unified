@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 public final class SettlementNetwork {
     private static final UUID NONE = new UUID(0, 0);
     private static final int NBT_LIMIT = 1048576;
-    private static final String VERSION = "7";
+    private static final String VERSION = "8";
     private static final int SESSION_TICKS = 1200;
     public static final String SELECTION_READY = "selection mode updated";
 
@@ -125,6 +125,22 @@ public final class SettlementNetwork {
 
     private static volatile Consumer<SettlementWandPlacement.View> wandReceiver = value -> {};
 
+    private record SelectorRequest(CompoundTag data) {}
+    private record SelectorView(CompoundTag data) {}
+    private static Consumer<CompoundTag> selectorReceiver = data -> {};
+
+    public static void clientSelectorReceiver(Consumer<CompoundTag> receiver) {
+        selectorReceiver = java.util.Objects.requireNonNull(receiver);
+    }
+
+    public static void configureSelector(CompoundTag data) {
+        Connection.CHANNEL.sendToServer(new SelectorRequest(data));
+    }
+
+    static void selectorView(ServerPlayer player, CompoundTag data) {
+        Connection.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SelectorView(data));
+    }
+
     public static void clientWandReceiver(Consumer<SettlementWandPlacement.View> callback) {
         wandReceiver = java.util.Objects.requireNonNull(callback);
     }
@@ -215,6 +231,23 @@ public final class SettlementNetwork {
                 (view, supplier) -> {
                     var context = supplier.get();
                     context.enqueueWork(() -> wandReceiver.accept(view));
+                    context.setPacketHandled(true);
+                }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        Connection.CHANNEL.registerMessage(6, SelectorRequest.class,
+                (request, buffer) -> buffer.writeNbt(request.data()), buffer -> new SelectorRequest(payload(buffer)),
+                (request, supplier) -> {
+                    var context = supplier.get();
+                    context.enqueueWork(() -> {
+                        var player = context.getSender();
+                        if (player != null && throttle(player)) SettlementSelectionTool.configure(player, request.data());
+                    });
+                    context.setPacketHandled(true);
+                }, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        Connection.CHANNEL.registerMessage(7, SelectorView.class,
+                (view, buffer) -> buffer.writeNbt(view.data()), buffer -> new SelectorView(payload(buffer)),
+                (view, supplier) -> {
+                    var context = supplier.get();
+                    context.enqueueWork(() -> selectorReceiver.accept(view.data()));
                     context.setPacketHandled(true);
                 }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }

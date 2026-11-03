@@ -25,9 +25,9 @@ public final class SettlementSelectionTool extends Item {
 
     private record Binding(ResourceLocation dimension, BlockPos information,
             SettlementInformationBlockEntity carrier, String region, boolean exclude, boolean currentOnly, int boxIndex, Mode mode,
-            int revision, BlockPos first, BlockPos second) {
+            int revision, int visible, BlockPos first, BlockPos second) {
         Binding corners(BlockPos a, BlockPos b) {
-            return new Binding(dimension, information, carrier, region, exclude, currentOnly, boxIndex, mode, revision, a, b);
+            return new Binding(dimension, information, carrier, region, exclude, currentOnly, boxIndex, mode, revision, visible, a, b);
         }
     }
 
@@ -55,9 +55,7 @@ public final class SettlementSelectionTool extends Item {
         if (mode == Mode.BOUNDS && new ResourceLocation(author.template()).getPath().equals("untitled"))
             return "template name required before selection";
         var binding = new Binding(player.level().dimension().location(), position.immutable(),
-                info, region, exclude, currentOnly, boxIndex, mode, revision, null, null);
-        SettlementWandPlacement.cancel(player);
-        SettlementTemplateFiles.cancel(player);
+                info, region, exclude, currentOnly, boxIndex, mode, revision, visibility(player, info), null, null);
         publish(player, binding);
         BINDINGS.put(player, binding);
         tell(player, "bound_mode", Component.translatable(
@@ -82,17 +80,18 @@ public final class SettlementSelectionTool extends Item {
         var transform = SettlementAuthoring.currentTransform(player, info);
         var boxes = new ArrayList<SettlementPreview.Box>();
         var size = author.size();
-        boxes.add(new SettlementPreview.Box(new RegionBox(0, 0, 0,
+        if ((binding.visible() & 1) != 0) boxes.add(new SettlementPreview.Box(new RegionBox(0, 0, 0,
                 size.x() - 1, size.y() - 1, size.z() - 1).transform(transform), 0xffffff, "NBT"));
         for (var region : author.regions()) {
             if (binding.currentOnly() && !binding.region().isEmpty() && !region.id().equals(binding.region())) continue;
             int color = region.layer() == SettlementRegion.Layer.INNER ? 0x37d5ff : 0xffbd57;
-            for (var box : region.includes())
-                boxes.add(new SettlementPreview.Box(box.transform(transform), color, region.name()));
-            for (var box : region.excludes())
-                boxes.add(new SettlementPreview.Box(box.transform(transform), 0xff5362, "− " + region.name()));
+            if ((binding.visible() & (region.layer() == SettlementRegion.Layer.INNER ? 4 : 2)) != 0)
+                for (var box : region.includes())
+                boxes.add(new SettlementPreview.Box(box.transform(transform), color, region.name() + " [" + region.id() + "]"));
+            if ((binding.visible() & 8) != 0) for (var box : region.excludes())
+                boxes.add(new SettlementPreview.Box(box.transform(transform), 0xff5362, "− " + region.name() + " [" + region.id() + "]"));
         }
-        for (var facility : author.facilities()) {
+        if ((binding.visible() & 16) != 0) for (var facility : author.facilities()) {
             if (binding.currentOnly() && !binding.region().isEmpty() && !facility.region().equals(binding.region())) continue;
             var p = transform.apply(facility.position());
             boxes.add(new SettlementPreview.Box(RegionBox.between(p, p), 0xb78cff, facility.type().name()));
@@ -100,6 +99,80 @@ public final class SettlementSelectionTool extends Item {
         SettlementNetwork.preview(player, new SettlementPreview(binding.dimension().toString(),
                 boxes, binding.first(), binding.second(), true, List.of(),
                 binding.mode().name().toLowerCase(java.util.Locale.ROOT), binding.region()));
+    }
+
+    private static int visibility(ServerPlayer player, SettlementInformationBlockEntity info) {
+        var prior = BINDINGS.get(player);
+        return prior != null && prior.carrier() == info ? prior.visible() : 31;
+    }
+
+    private static boolean holding(ServerPlayer player) {
+        var item = SettlementContent.SELECTION_TOOL.get();
+        return player.getMainHandItem().is(item) || player.getOffhandItem().is(item);
+    }
+
+    private static void openPanel(ServerPlayer player) {
+        var binding = BINDINGS.get(player);
+        if (!active(player, binding)) return;
+        var data = new net.minecraft.nbt.CompoundTag();
+        data.putLong("anchor", binding.information().asLong());
+        data.putInt("revision", binding.revision());
+        data.putString("template", SettlementCodec.template(binding.carrier().author()).template());
+        data.putString("mode", binding.mode().name());
+        data.putString("region", binding.region());
+        data.putBoolean("exclude", binding.exclude());
+        data.putInt("visible", binding.visible());
+        var regions = new net.minecraft.nbt.ListTag();
+        for (var region : SettlementCodec.template(binding.carrier().author()).regions()) {
+            var row = new net.minecraft.nbt.CompoundTag();
+            row.putString("id", region.id());
+            row.putString("name", region.name());
+            row.putString("layer", region.layer().name());
+            regions.add(row);
+        }
+        data.put("regions", regions);
+        SettlementNetwork.selectorView(player, data);
+    }
+
+    static void configure(ServerPlayer player, net.minecraft.nbt.CompoundTag data) {
+        if (!holding(player)) return;
+        var binding = BINDINGS.get(player);
+        if (!active(player, binding)) return;
+        if (data.getBoolean("cancel")) {
+            var next = binding.corners(null, null);
+            BINDINGS.put(player, next);
+            publish(player, next);
+            tell(player, "cancelled");
+            return;
+        }
+        if (!data.contains("anchor", net.minecraft.nbt.Tag.TAG_LONG)
+                || data.getLong("anchor") != binding.information().asLong()
+                || data.getInt("revision") != binding.revision()) return;
+        Mode mode;
+        try { mode = Mode.valueOf(data.getString("mode")); }
+        catch (IllegalArgumentException bad) { return; }
+        String region = data.getString("region");
+        var author = SettlementCodec.template(binding.carrier().author());
+        if (mode == Mode.BOUNDS && new ResourceLocation(author.template()).getPath().equals("untitled")) {
+            tell(player, "name_first");
+            return;
+        }
+        if ((mode == Mode.ADD || mode == Mode.REPLACE)
+                && author.regions().stream().noneMatch(r -> r.id().equals(region))) {
+            tell(player, "region_first");
+            return;
+        }
+        if (mode == Mode.EDIT || mode == Mode.MOVE_FACILITY || region.length() > 64) return;
+        boolean exclude = data.getBoolean("exclude");
+        boolean sameSelection = mode == binding.mode() && region.equals(binding.region()) && exclude == binding.exclude();
+        var next = new Binding(binding.dimension(), binding.information(), binding.carrier(), region,
+                exclude, false, -1, mode, binding.revision(), data.getInt("visible") & 31,
+                sameSelection ? binding.first() : null, sameSelection ? binding.second() : null);
+        publish(player, next);
+        BINDINGS.put(player, next);
+        tell(player, "bound_mode", Component.translatable(
+                "item.hostile_humans_unified.settlement_selection_tool.mode." + mode.name().toLowerCase(java.util.Locale.ROOT)),
+                region.isEmpty() ? "" : " · " + region);
     }
 
     private static void tell(ServerPlayer player, String key, Object... args) {
@@ -113,7 +186,21 @@ public final class SettlementSelectionTool extends Item {
 
     static void tick(ServerPlayer player) {
         var binding = BINDINGS.get(player);
-        if (binding != null && !validBinding(player, binding)) clear(player);
+        if (binding == null || validBinding(player, binding)) return;
+        if (SettlementAccess.author(player) && binding.dimension().equals(player.level().dimension().location())
+                && player.serverLevel().hasChunkAt(binding.information())
+                && player.serverLevel().getBlockEntity(binding.information()) == binding.carrier()) {
+            var next = new Binding(binding.dimension(), binding.information(), binding.carrier(), "", false,
+                    false, -1, Mode.VIEW, binding.carrier().revision(), binding.visible(), null, null);
+            try {
+                publish(player, next);
+                BINDINGS.put(player, next);
+                return;
+            } catch (IllegalArgumentException invalid) {
+                // Unknown or invalid draft cannot be drawn safely.
+            }
+        }
+        clear(player);
     }
 
     private static boolean validBinding(ServerPlayer player, Binding binding) {
@@ -139,26 +226,14 @@ public final class SettlementSelectionTool extends Item {
         if (!SettlementAccess.author(player)) return InteractionResult.FAIL;
         var binding = BINDINGS.get(player);
         BlockPos point = context.getClickedPos().immutable();
-        if (SettlementWandPlacement.armed(player) || SettlementTemplateFiles.hasPreview(player)) {
-            if (player.isShiftKeyDown() && SettlementTemplateFiles.hasPreview(player)) finishPlacement(player);
-            else if (!player.isShiftKeyDown() && SettlementWandPlacement.armed(player)) {
-                try {
-                    SettlementWandPlacement.preview(player, point.relative(context.getClickedFace()));
-                    tell(player, "confirm_placement");
-                } catch (IllegalArgumentException bad) {
-                    player.sendSystemMessage(Component.literal(bad.getMessage()));
-                }
-            } else tell(player, "pick_placement");
+        if (player.isShiftKeyDown()) {
+            if (player.serverLevel().getBlockEntity(point) instanceof SettlementInformationBlockEntity) {
+                SettlementAuthoring.initialize(player, point);
+                var info = SettlementAuthoring.information(player, point);
+                if (info != null) mode(player, point, "", false, false, -1, Mode.VIEW, info.revision());
+            } else openPanel(player);
             return InteractionResult.CONSUME;
         }
-        if (player.serverLevel().getBlockEntity(point) instanceof SettlementInformationBlockEntity
-                && (player.isShiftKeyDown() || binding == null || binding.mode() != Mode.BOUNDS)) {
-            SettlementAuthoring.initialize(player, point);
-            SettlementNetwork.openAuthor(player, point);
-            return InteractionResult.CONSUME;
-        }
-        if (player.isShiftKeyDown() && binding != null)
-            return confirm(player, binding);
         if (!active(player, binding)) return InteractionResult.FAIL;
         if (binding.mode() == Mode.VIEW) {
             tell(player, "bind_first");
@@ -170,7 +245,8 @@ public final class SettlementSelectionTool extends Item {
                         binding.region(), binding.mode() == Mode.MOVE_FACILITY ? binding.boxIndex() : -1);
                 finish(player, binding, result);
             } else {
-                Binding next = binding.first() == null || binding.second() != null
+                if (binding.second() != null) return confirm(player, binding);
+                Binding next = binding.first() == null
                         ? binding.corners(point, null) : binding.corners(binding.first(), point);
                 BINDINGS.put(player, next);
                 publish(player, next);
@@ -191,35 +267,11 @@ public final class SettlementSelectionTool extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         var stack = player.getItemInHand(hand);
         if (player instanceof ServerPlayer server) {
-            if (SettlementTemplateFiles.hasPreview(server) || SettlementWandPlacement.armed(server)) {
-                if (server.isShiftKeyDown() && SettlementTemplateFiles.hasPreview(server)) finishPlacement(server);
-                else if (server.isShiftKeyDown()) tell(server, "pick_placement");
-                else {
-                    SettlementWandPlacement.cancel(server);
-                    SettlementTemplateFiles.cancel(server);
-                    tell(server, "cancelled");
-                }
-                return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
-            }
             var binding = BINDINGS.get(server);
-            if (server.isShiftKeyDown()) {
-                if (binding != null && binding.first() != null) confirm(server, binding);
-                else SettlementWandPlacement.open(server);
-            } else {
-                clear(server);
-                tell(server, "cancelled");
-            }
+            if (server.isShiftKeyDown()) openPanel(server);
+            else if (binding != null && binding.second() != null) confirm(server, binding);
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
-    }
-
-    private static void finishPlacement(ServerPlayer player) {
-        try {
-            player.sendSystemMessage(Component.literal(SettlementTemplateFiles.confirm(player)));
-            SettlementWandPlacement.cancel(player);
-        } catch (IllegalArgumentException bad) {
-            player.sendSystemMessage(Component.literal(bad.getMessage()));
-        }
     }
 
     private static InteractionResult confirm(ServerPlayer player, Binding binding) {
@@ -250,7 +302,7 @@ public final class SettlementSelectionTool extends Item {
         Mode mode = binding.mode() == Mode.ADD || binding.mode() == Mode.FACILITY
                 ? binding.mode() : Mode.VIEW;
         var next = new Binding(binding.dimension(), binding.information(), info, binding.region(),
-                binding.exclude(), binding.currentOnly(), binding.boxIndex(), mode, info.revision(), null, null);
+                binding.exclude(), binding.currentOnly(), binding.boxIndex(), mode, info.revision(), binding.visible(), null, null);
         BINDINGS.put(player, next);
         publish(player, next);
         tell(player, "saved");
