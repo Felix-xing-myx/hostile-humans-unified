@@ -82,17 +82,20 @@ def slab(d, ox, oy, name, amount, reserve, mode_label, capacity):
     # hairline
     d.rectangle([(x + 4) * S, (y + 36) * S, (x + PW - 4) * S, (y + 37) * S], fill=rgba(EDGE, 1))
     # caption row: native mode art (18x12 box here), then the name
-    # Rounds-per-trigger pictogram, same primitives as MonitorGunHud.modeIcon().
+    # Rounds-per-trigger chevrons, same primitives as MonitorGunHud.modeIcon().
     kind = mode_label.upper()
-    blocks = 6 if kind == "AUTO" else 3 if kind == "BURST" else 1
-    bw = 5 if blocks == 1 else 3 if blocks == 3 else 2
-    gap = 0 if blocks == 1 else 2 if blocks == 3 else 1
-    bh = 6
-    top = y + 37 + max(0, (12 - bh) // 2)
-    for i in range(blocks):
-        left = x + 3 + i * (bw + gap)
-        d.rectangle([left * S, top * S, (left + bw) * S - 1, (top + bh) * S - 1], fill=rgba(TEXT, 1))
-    mode_w = blocks * bw + (blocks - 1) * gap
+    arrows = 3 if kind == "AUTO" else 2 if kind == "BURST" else 1
+    height, stroke = 7, 2
+    gap = 1 if arrows >= 3 else 2
+    chev_w = height // 2 + stroke
+    top = y + 37 + max(0, (12 - height) // 2)
+    for a in range(arrows):
+        ox = x + 3 + a * (chev_w + gap)
+        for row in range(height):
+            off = height // 2 - abs(row - height // 2)
+            d.rectangle([(ox + off) * S, (top + row) * S,
+                         (ox + off + stroke) * S - 1, (top + row) * S + S - 1], fill=rgba(TEXT, 1))
+    mode_w = arrows * chev_w + (arrows - 1) * gap
     name_x = x + 3 + mode_w + 4
     room = max(20, col_right - name_x)
     small = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .85))

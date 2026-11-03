@@ -51,23 +51,30 @@ public final class MonitorGunHud {
     }
 
     /**
-     * Rounds-per-trigger pictogram drawn from primitives: one block for single shot, three for
-     * burst, a dense run for automatic. Pack art is deliberately not used - the native fire-mode
-     * texture is not the 18x10 window it was assumed to be and could not be shown crisply.
+     * Rounds-per-trigger pictogram: one to three right chevrons drawn from 1px strips, the same
+     * "speed" language as a fast-forward mark. One for single, two for burst, three for automatic.
+     * Pack art is deliberately not used - the native fire-mode texture could not be shown crisply at
+     * this size, and blocks on their own read as placeholders rather than as an indicator.
      */
     private static int modeIcon(GuiGraphics g,String mode,int x,int y,int rowHeight,UiTheme theme) {
         String kind=mode==null?"":mode.toUpperCase(Locale.ROOT);
-        int blocks=switch(kind) {
-            case "AUTO" -> 6;
-            case "BURST" -> 3;
+        int arrows=switch(kind) {
+            case "AUTO" -> 3;
+            case "BURST" -> 2;
             case "SEMI", "SINGLE" -> 1;
             default -> 0;
         };
-        if(blocks==0)return 0;
-        int blockWidth=blocks==1?5:blocks==3?3:2, gap=blocks==1?0:blocks==3?2:1, height=6;
-        int width=blocks*blockWidth+(blocks-1)*gap;
+        if(arrows==0)return 0;
+        int height=7, stroke=2, gap=arrows>=3?1:2, chevronW=height/2+stroke;
+        int width=arrows*chevronW+(arrows-1)*gap;
         int top=y+Math.max(0,(rowHeight-height)/2);
-        for(int i=0;i<blocks;i++)UiDraw.rect(g,x+i*(blockWidth+gap),top,blockWidth,height,theme.text());
+        for(int arrow=0;arrow<arrows;arrow++) {
+            int originX=x+arrow*(chevronW+gap);
+            for(int row=0;row<height;row++) {
+                int offset=height/2-Math.abs(row-height/2);
+                UiDraw.rect(g,originX+offset,top+row,stroke,1,theme.text());
+            }
+        }
         return width;
     }
 
