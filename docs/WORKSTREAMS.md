@@ -4161,3 +4161,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查培养结算，基线 752016d，主控沿用 audit/module-architecture。修改 CultivationService，客户端协议、费用和档案字段不变。
 
 - 架构审查长距离导航，基线 dfefeb5，主控沿用 audit/module-architecture。LongRangeNavigation 区分用途等待权与实体总预算，公共接口不变。
+
+- 架构审查掉落物占位，基线 a6b2029，主控沿用 audit/module-architecture。ValuableItemPickupGoal 对齐候选、实际执行与释放生命周期，公共接口不变。

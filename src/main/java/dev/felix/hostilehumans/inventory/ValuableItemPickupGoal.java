@@ -83,13 +83,14 @@ public final class ValuableItemPickupGoal extends Goal {
         nextSearchTick = human.tickCount + 10 + human.getRandom().nextInt(10);
         targetItem = chooseTarget();
         knownItemPosition = targetItem == null ? null : HumanLootVision.lastSeen(human, targetItem);
-        return targetItem != null;
+        return targetItem != null && knownItemPosition != null;
     }
 
     @Override
     public boolean canContinueToUse() {
         return targetItem != null
                 && SoldierPickupPolicy.canCollectNow(human)
+                && targetItem.level() == human.level()
                 && targetItem.isAlive()
                 && !targetItem.hasPickUpDelay()
                 && !targetItem.getItem().isEmpty()
@@ -105,7 +106,6 @@ public final class ValuableItemPickupGoal extends Goal {
     @Override
     public void start() {
         if (!canContinueToUse()) { SoldierPickupPolicy.interruptForCombat(human); return; }
-        human.setActivelyCollectingLoot(true);
         beginTarget();
     }
 
@@ -231,7 +231,7 @@ public final class ValuableItemPickupGoal extends Goal {
             return null;
         }
         pendingSearch = null;
-        if (chosen != null && (HumanLootVision.lastSeen(human, chosen) == null || !claim(chosen, human))) {
+        if (chosen != null && HumanLootVision.lastSeen(human, chosen) == null) {
             chosen = null;
         }
         if (chosen == null) {
@@ -276,11 +276,13 @@ public final class ValuableItemPickupGoal extends Goal {
     private void beginTarget() {
         if (targetItem == null) return;
         knownItemPosition = HumanLootVision.lastSeen(human, targetItem);
-        if (knownItemPosition == null) {
-            releaseClaim(targetItem, human);
+        if (knownItemPosition == null || !claim(targetItem, human)) {
             targetItem = null;
+            knownItemPosition = null;
+            human.setActivelyCollectingLoot(false);
             return;
         }
+        human.setActivelyCollectingLoot(true);
         progress.reset(human.tickCount, human.getX(), human.getY(), human.getZ());
         arrivedAt = -1;
         waitingForPath = directWaterFallback = false;
@@ -312,6 +314,10 @@ public final class ValuableItemPickupGoal extends Goal {
         releaseClaim(targetItem, human);
         targetItem = chooseTarget();
         if (targetItem != null) beginTarget();
+        else {
+            knownItemPosition = null;
+            human.setActivelyCollectingLoot(false);
+        }
     }
 
     private void moveToItem() {
