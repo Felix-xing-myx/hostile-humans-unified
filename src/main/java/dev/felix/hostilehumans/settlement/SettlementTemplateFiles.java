@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.WeakHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
@@ -31,7 +33,7 @@ final class SettlementTemplateFiles {
     private static final int PREVIEW_TICKS = 600;
     private static final Map<ServerPlayer, Placement> PENDING = new WeakHashMap<>();
 
-    private record Placement(ServerLevel level, ResourceLocation id, BlockPos origin,
+    private record Placement(ServerLevel level, UUID wandToken, ResourceLocation id, BlockPos origin,
             StructurePlaceSettings settings, StructureTemplate template, RegionBox bounds, int entityEntries, long expires) {}
 
     private SettlementTemplateFiles() {}
@@ -131,11 +133,11 @@ final class SettlementTemplateFiles {
 
     static String preview(ServerPlayer player, ResourceLocation id, BlockPos corner,
             Rotation rotation, Mirror mirror, boolean entities) {
-        return preview(player, id, corner, rotation, mirror, entities, PREVIEW_TICKS);
+        return preview(player, id, corner, rotation, mirror, entities, PREVIEW_TICKS, null);
     }
 
     static String preview(ServerPlayer player, ResourceLocation id, BlockPos corner,
-            Rotation rotation, Mirror mirror, boolean entities, int previewTicks) {
+            Rotation rotation, Mirror mirror, boolean entities, int previewTicks, UUID wandToken) {
         if (!player.canUseGameMasterBlocks()) throw new IllegalArgumentException("creative operator required");
         var level = player.serverLevel();
         var manager = level.getStructureManager();
@@ -162,7 +164,7 @@ final class SettlementTemplateFiles {
         var copy = manager.readStructure(data);
         var ghosts = previewBlocks(level, data, origin, settings);
         int count = entityEntries(data);
-        PENDING.put(player, new Placement(level, id, origin, settings, copy, bounds, count,
+        PENDING.put(player, new Placement(level, wandToken, id, origin, settings, copy, bounds, count,
                 level.getGameTime() + previewTicks));
         player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                 entities ? "gui.hostile_humans_unified.settlement.preview_entity_count"
@@ -255,7 +257,11 @@ final class SettlementTemplateFiles {
     }
 
     static String confirm(ServerPlayer player) {
-        var pending = currentPreview(player);
+        return confirm(player, null);
+    }
+
+    static String confirm(ServerPlayer player, UUID wandToken) {
+        var pending = ownedPreview(player, wandToken);
         if (pending == null)
             throw new IllegalArgumentException("no valid template placement preview");
         var bounds = pending.bounds();
@@ -273,15 +279,32 @@ final class SettlementTemplateFiles {
         return "placed " + pending.id() + "; open its information block to register the new site";
     }
 
-    static void keepPreview(ServerPlayer player, int ticks) {
-        var current = currentPreview(player);
+    static void keepPreview(ServerPlayer player, int ticks, UUID wandToken) {
+        var current = ownedPreview(player, wandToken);
         if (current != null)
-            PENDING.put(player, new Placement(current.level(), current.id(), current.origin(), current.settings(),
+            PENDING.put(player, new Placement(current.level(), current.wandToken(), current.id(), current.origin(), current.settings(),
                     current.template(), current.bounds(), current.entityEntries(), current.level().getGameTime() + ticks));
     }
 
-    static boolean hasPreview(ServerPlayer player) {
-        return currentPreview(player) != null;
+    static boolean hasPreview(ServerPlayer player, UUID wandToken) {
+        return ownedPreview(player, wandToken) != null;
+    }
+
+    private static Placement ownedPreview(ServerPlayer player, UUID wandToken) {
+        var pending = currentPreview(player);
+        return pending != null && Objects.equals(pending.wandToken(), wandToken) ? pending : null;
+    }
+
+    static void cancelCommand(ServerPlayer player) {
+        if (ownedPreview(player, null) != null) cancel(player);
+    }
+
+    static void cancelWand(ServerPlayer player, UUID wandToken) {
+        var pending = PENDING.get(player);
+        if (pending == null || wandToken.equals(pending.wandToken())) {
+            PENDING.remove(player);
+            SettlementNetwork.preview(player, SettlementPreview.EMPTY_PLACEMENT);
+        }
     }
 
     static void cancel(ServerPlayer player) {

@@ -155,13 +155,13 @@ public final class SettlementWandPlacement {
             default -> Rotation.NONE;
         };
         SettlementTemplateFiles.preview(player, new ResourceLocation(request.id()),
-                corner, rotation, request.mirror(), request.entities(), SESSION_TICKS);
+                corner, rotation, request.mirror(), request.entities(), SESSION_TICKS, request.token());
     }
 
     static boolean openAdjustment(ServerPlayer player) {
         var session = current(player);
-        if (session == null || session.corner() == null || !SettlementTemplateFiles.hasPreview(player)) return false;
-        SettlementTemplateFiles.keepPreview(player, SESSION_TICKS);
+        if (session == null || session.corner() == null || !SettlementTemplateFiles.hasPreview(player, session.token())) return false;
+        SettlementTemplateFiles.keepPreview(player, SESSION_TICKS, session.token());
         SESSIONS.put(player, new Session(session.token(), session.level(),
                 session.level().getGameTime() + SESSION_TICKS, session.placement(), session.corner()));
         var selected = session.placement();
@@ -174,7 +174,7 @@ public final class SettlementWandPlacement {
     private static void adjust(ServerPlayer player, Session session, Request request) {
         if (session == null || session.corner() == null || !session.token().equals(request.token())
                 || !holding(player) || !request.id().equals(session.placement().id())
-                || request.turns() < 0 || request.turns() > 3 || !SettlementTemplateFiles.hasPreview(player)) {
+                || request.turns() < 0 || request.turns() > 3 || !SettlementTemplateFiles.hasPreview(player, session.token())) {
             SettlementNetwork.wandView(player, new View(request.token(), false, "wand_session_expired", new ListTag()));
             return;
         }
@@ -184,11 +184,11 @@ public final class SettlementWandPlacement {
             var selected = new Request(session.token(), request.id(), request.turns(), request.mirror(),
                     session.placement().entities());
             if (changed) preview(player, selected, request.corner());
-            else SettlementTemplateFiles.keepPreview(player, SESSION_TICKS);
+            else SettlementTemplateFiles.keepPreview(player, SESSION_TICKS, session.token());
             SESSIONS.put(player, new Session(session.token(), session.level(),
                     session.level().getGameTime() + SESSION_TICKS, selected, request.corner()));
             if (request.confirm()) {
-                String message = SettlementTemplateFiles.confirm(player);
+                String message = SettlementTemplateFiles.confirm(player, session.token());
                 player.sendSystemMessage(net.minecraft.network.chat.Component.literal(message));
                 cancel(player);
             }
@@ -202,8 +202,7 @@ public final class SettlementWandPlacement {
     static void cancel(ServerPlayer player) {
         var old = SESSIONS.remove(player);
         if (old != null && old.placement() != null) {
-            SettlementTemplateFiles.cancel(player);
-            SettlementNetwork.preview(player, SettlementPreview.EMPTY_PLACEMENT);
+            SettlementTemplateFiles.cancelWand(player, old.token());
         }
     }
 }

@@ -45,7 +45,7 @@ public final class SettlementCommands {
                     return report(c, () -> SettlementTemplateFiles.confirm(player));
                 }))
                 .then(Commands.literal("cancel").executes(c -> {
-                    SettlementTemplateFiles.cancel(c.getSource().getPlayerOrException());
+                    SettlementTemplateFiles.cancelCommand(c.getSource().getPlayerOrException());
                     c.getSource().sendSuccess(() -> Component.literal("Template preview cleared."), false);
                     return 1;
                 }));
