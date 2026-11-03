@@ -36,6 +36,20 @@ public final class MonitorGunHud {
     public static boolean visible() {
         Human h=viewed();return h!=null && GunSupport.isGunItem(h.getMainHandItem());
     }
+    /**
+     * Truncates with an ellipsis instead of a hard chop, so a long gun name reads as shortened
+     * rather than broken. Falls back to a plain cut when even the ellipsis would not fit.
+     */
+    private static String fitWithEllipsis(net.minecraft.client.gui.Font font, String text, int room) {
+        if (room <= 0) return "";
+        if (font.width(text) <= room) return text;
+        String ellipsis = "…";
+        int limit = room - font.width(ellipsis);
+        if (limit <= 0) return font.plainSubstrByWidth(text, room);
+        String cut = font.plainSubstrByWidth(text, limit);
+        return cut + ellipsis;
+    }
+
     /** Keeps the tail of a right aligned label so a clipped "弹匣 120" still shows the count. */
     private static String clipTail(net.minecraft.client.gui.Font font, String text, int room) {
         String out = text;
@@ -117,7 +131,7 @@ public final class MonitorGunHud {
         int reserveWidth=font.width(reserveText);
         g.drawString(font,reserveText,x+pw-4-reserveWidth,y+34,theme.muted(),false);
         int nameRoom=Math.max(20,x+pw-4-reserveWidth-3-nameX);
-        String name=font.plainSubstrByWidth(held.getHoverName().getString(),(int)(nameRoom/.85F));
+        String name=fitWithEllipsis(font,held.getHoverName().getString(),(int)(nameRoom/.85F));
         g.pose().pushPose();try {g.pose().translate(nameX,y+35,0);g.pose().scale(.85F,.85F,1);g.drawString(font,name,0,0,theme.muted(),false);}
         finally{g.pose().popPose();}
         }finally{g.pose().popPose();}

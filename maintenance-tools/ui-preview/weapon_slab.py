@@ -29,6 +29,19 @@ def clip_tail(text, limit):
         out = out[1:]
     return out
 
+def fit_ellipsis(text, limit):
+    if width(text) <= limit:
+        return text
+    ell = 9
+    cut, used = "", 0
+    for c in text:
+        a = adv(c)
+        if used + a > limit - ell:
+            break
+        cut += c
+        used += a
+    return cut + "…" if limit > ell else clip(text, limit)
+
 def clip(text, limit):
     out, used = "", 0
     for c in text:
@@ -78,14 +91,15 @@ def slab(d, ox, oy, name, amount, reserve, mode_label, capacity):
     d.text(((x + PW - 4) * S - reserve_w * S, (y + 34) * S), shown_reserve, font=FONT, fill=rgba(MUTED, 1))
     room = max(20, x + PW - 4 - reserve_w - 3 - name_x)
     small = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .85))
-    d.text((name_x * S, (y + 35) * S), clip(name, int(room / .85)), font=small, fill=rgba(MUTED, 1))
+    d.text((name_x * S, (y + 35) * S), fit_ellipsis(name, int(room / .85)), font=small, fill=rgba(MUTED, 1))
 
-img = Image.new("RGB", (300 * S, 196 * S), (15, 20, 23))
+img = Image.new("RGB", (300 * S, 252 * S), (15, 20, 23))
 d = ImageDraw.Draw(img, "RGBA")
 d.text((10 * S, 4 * S), "枪械板 128x46（按 Java 常数量出的实况）", font=ImageFont.truetype(
     "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 8 * S), fill=rgba(MUTED, 1))
 slab(d, 20, 20, "AK-47 突击步枪", "30", "弹匣 3", "AUTO", "/ 30")
 slab(d, 20, 76, "M4 卡宾枪（长名字）", "100%", "弹匣 12", "BURST", "")
 slab(d, 20, 132, "M249 班用机枪", "07", "弹匣 120", "AUTO", "/ 150")
+slab(d, 20, 188, "M4A1 卡宾枪（消音器改装型）", "30", "弹匣 3", "AUTO", "/ 30")
 img.save(os.path.join(OUT, "weapon-slab.png"))
 print("ok")
