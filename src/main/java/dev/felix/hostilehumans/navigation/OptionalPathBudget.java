@@ -2,6 +2,7 @@ package dev.felix.hostilehumans.navigation;
 
 import dev.felix.hostilehumans.entity.Human;
 import dev.felix.hostilehumans.performance.FairWorkBudget;
+import dev.felix.hostilehumans.performance.BudgetDemandOrder;
 
 import dev.felix.hostilehumans.observer.NavigationDebugService;
 import dev.felix.hostilehumans.performance.AdaptiveActivityBudget;
@@ -28,7 +29,7 @@ public final class OptionalPathBudget {
                 new FairWorkBudget<>(8, 1, 3),new FairWorkBudget<>(16,2,8)));
         pools.combat().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,64,4));
         pools.follow().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,16,2));
-        int granted = pool(pools, kind).claim(server.getTickCount(), new Key(human.getUUID(), kind), maximum);
+        int granted = pool(pools, kind).claim(server.getTickCount(), new Key(human.getUUID(), kind), maximum, BudgetDemandOrder.faction(human));
         NavigationDebugService.budget(human, kind.name(), maximum, granted);
         return granted;
     }
@@ -41,7 +42,7 @@ public final class OptionalPathBudget {
                 new FairWorkBudget<>(8, 1, 3),new FairWorkBudget<>(16,2,8)));
         pools.combat().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,64,4));
         pools.follow().setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,16,2));
-        int granted = pool(pools, kind).claimFull(server.getTickCount(), new Key(human.getUUID(), kind), maximum);
+        int granted = pool(pools, kind).claimFull(server.getTickCount(), new Key(human.getUUID(), kind), maximum, BudgetDemandOrder.faction(human));
         NavigationDebugService.budget(human, kind.name(), maximum, granted);
         return granted;
     }

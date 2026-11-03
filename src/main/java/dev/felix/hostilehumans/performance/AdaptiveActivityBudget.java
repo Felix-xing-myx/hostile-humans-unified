@@ -43,13 +43,13 @@ public final class AdaptiveActivityBudget {
         return ActivityLoadPolicy.interval(base,factor,urgent);
     }
     public static int probes(Human h,int base) {
-        return switch(mode(h)){case SPARSE->Math.min(16,base*c().sparseProbes());case BATTLE->1;case CROWDED->Math.min(2,base);default->base;};
+        return switch(mode(h)){case SPARSE->Math.min(16,base*c().sparseProbes());case BATTLE->Math.min(2,base);case CROWDED->Math.min(3,base);default->base;};
     }
     public static int bodyRays(Human h,int base) {
         return switch(mode(h)){case CROWDED->Math.min(base,c().crowdedBodyRays());case BATTLE->Math.min(base,c().battleBodyRays());default->base;};
     }
     public static int candidates(Human h,int base) {
-        return switch(mode(h)){case CROWDED->Math.min(base,12);case BATTLE->Math.min(base,8);default->base;};
+        return switch(mode(h)){case CROWDED->Math.min(base,16);case BATTLE->Math.min(base,12);default->base;};
     }
     public static int sources(Human h) {
         return switch(mode(h)){case SPARSE->Math.min(64,c().normalSources()*2);case CROWDED->c().crowdedSources();case BATTLE->c().battleSources();default->c().normalSources();};

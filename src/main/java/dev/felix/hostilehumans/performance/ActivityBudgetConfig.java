@@ -16,10 +16,10 @@ public record ActivityBudgetConfig(boolean enabled,int sampleTicks,int staleTick
         return new ActivityBudgetConfig(UnifiedConfig.bool(data,"enabled",true),sample,
                 Math.max(sample*2,i(data,"stale_ticks",60,2,600)),i(data,"downgrade_ticks",100,20,1200),
                 sparse,crowded,Math.max(crowded+1,i(data,"battle_humans",128,3,1024)),
-                n(data,"sparse_interval_factor",.5,.25,1),n(data,"crowded_interval_factor",2,1,4),n(data,"battle_interval_factor",3,1,8),
+                n(data,"sparse_interval_factor",.5,.25,1),n(data,"crowded_interval_factor",1.5,1,4),n(data,"battle_interval_factor",2,1,8),
                 i(data,"sparse_probe_multiplier",2,1,4),i(data,"crowded_body_rays",5,1,27),i(data,"battle_body_rays",3,1,27),
                 i(data,"normal_source_samples",16,1,64),i(data,"crowded_source_samples",8,1,64),i(data,"battle_source_samples",4,1,64),
-                n(data,"crowded_navigation_factor",.5,.1,1),n(data,"battle_navigation_factor",.25,.1,1));
+                n(data,"crowded_navigation_factor",0.625,.1,1),n(data,"battle_navigation_factor",0.375,.1,1));
     }
     private static int i(JsonObject d,String k,int fallback,int min,int max){return (int)n(d,k,fallback,min,max);}
     private static double n(JsonObject d,String k,double fallback,double min,double max){return UnifiedConfig.number(d,k,fallback,min,max);}

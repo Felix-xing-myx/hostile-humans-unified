@@ -41,9 +41,26 @@ public final class PerceptionBudget {
         int total=c.integer("budgets."+kind+"_per_server"), local=c.integer("budgets."+kind+"_per_level");
         String lane=kind+":"+dim; Key key=new Key(actor.getUUID(),lane+work);
         int batchLimit=kind.equals("rays")?32:16;
-        ScopedWorkBudget<Key,String> q=s.queues.computeIfAbsent(kind,k->new ScopedWorkBudget<>(total,local,Math.min(batchLimit,Math.min(total,local)),40));
+        // Keep ambient queries, loot and sound probes from filling the visual queue.
+        boolean auxiliary = kind.equals("rays") && !work.isEmpty() && !work.startsWith(":body:");
+        String auxiliaryServer = "rays:aux", auxiliaryLevel = lane + ":aux";
+        // Auxiliary rays still spend the same hard global and dimension caps.
+        if (auxiliary && (s.used.getOrDefault(auxiliaryServer, 0) + amount > Math.max(1, total / 4)
+                || s.used.getOrDefault(auxiliaryLevel, 0) + amount > Math.max(1, local / 4))) return false;
+        ScopedWorkBudget<Key,String> q=s.queues.get(kind);
+        if (q == null) {
+            q = new ScopedWorkBudget<>(total,local,Math.min(batchLimit,Math.min(total,local)),40);
+            s.queues.put(kind,q);
+        }
         if(amount>local || amount>total)return false;
-        if(q.claimFull(tick,key,dim,amount)!=amount)return false;
+        if(q.claimFull(tick,key,dim,amount,dev.felix.hostilehumans.performance.BudgetDemandOrder.faction(actor))!=amount) {
+            if (auxiliary) q.cancel(key);
+            return false;
+        }
+        if (auxiliary) {
+            s.used.merge(auxiliaryServer, amount, Integer::sum);
+            s.used.merge(auxiliaryLevel, amount, Integer::sum);
+        }
         q.cancel(key); // Demand driven: consumed work must not reserve unused capacity next tick.
         s.used.merge(lane,amount,Integer::sum);s.used.merge(kind,amount,Integer::sum); return true;
     }

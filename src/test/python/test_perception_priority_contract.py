@@ -4,10 +4,12 @@ import unittest
 PKG=Path(__file__).resolve().parents[3]/"src/main/java/dev/felix/hostilehumans"
 def source(name):return (PKG/(name+".java")).read_text(encoding="utf-8")
 class PerceptionPriorityContract(unittest.TestCase):
-    def test_geometry_and_pending_work_precede_fast_reservation(self):
+    def test_geometry_precedes_fast_reservation_and_body_work_follows(self):
         code=source("HumanPerception")
         scan=code.split("if(now<s.nextScan)",1)[1].split("private static int resumeBodies",1)[0]
-        self.assertLess(scan.index("resumeBodies(h,s"),scan.index("if(checks.isEmpty())"))
+        grant = scan.index('PerceptionBudget.claim(h,"rays",rays)')
+        self.assertNotIn("resumeBodies(h,s", scan[:scan.index("if(checks.isEmpty())")])
+        self.assertIn("resumeBodies(h,s", scan[grant:])
         self.assertLess(scan.index("eligibleVisual(h,s"),scan.index('PerceptionBudget.claim(h,"rays",rays)'))
         self.assertLess(scan.index("if(checks.isEmpty())"),scan.index('PerceptionBudget.claim(h,"rays",rays)'))
         self.assertIn("rays=checks.size()",scan)

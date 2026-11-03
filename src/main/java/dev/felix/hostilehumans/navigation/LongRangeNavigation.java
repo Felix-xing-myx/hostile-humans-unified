@@ -3,6 +3,7 @@ package dev.felix.hostilehumans.navigation;
 import dev.felix.hostilehumans.navigation.HumanNavigation;
 import dev.felix.hostilehumans.entity.Human;
 import dev.felix.hostilehumans.performance.FairWorkBudget;
+import dev.felix.hostilehumans.performance.BudgetDemandOrder;
 
 import dev.felix.hostilehumans.config.UnifiedConfig;
 import dev.felix.hostilehumans.performance.AdaptiveActivityBudget;
@@ -99,7 +100,7 @@ public final class LongRangeNavigation {
             }
             pool.queue.setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,c.remoteUnits(),RouteSearchPolicy.remoteCost(c.longNodes())));
             int cost = RouteSearchPolicy.remoteCost(nodes);
-            if (pool.queue.claimFull(server.getTickCount(),human.getUUID(),cost) != cost) return pending(s,tick,"远程配额等待");
+            if (pool.queue.claimFull(server.getTickCount(),human.getUUID(),cost,BudgetDemandOrder.faction(human)) != cost) return pending(s,tick,"远程配额等待");
             pool.queue.cancel(human.getUUID()); // No speculative reservation after consumed work.
         }
         s.queriedTick = tick;s.queuedAt = -1;s.searches++;s.goal=goal.immutable();s.lastRange=range;s.lastNodes=nodes;

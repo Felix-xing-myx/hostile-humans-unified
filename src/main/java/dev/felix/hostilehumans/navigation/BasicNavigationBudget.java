@@ -2,6 +2,7 @@ package dev.felix.hostilehumans.navigation;
 
 import dev.felix.hostilehumans.entity.Human;
 import dev.felix.hostilehumans.performance.FairWorkBudget;
+import dev.felix.hostilehumans.performance.BudgetDemandOrder;
 
 import dev.felix.hostilehumans.observer.NavigationDebugService;
 import dev.felix.hostilehumans.performance.AdaptiveActivityBudget;
@@ -21,7 +22,7 @@ public final class BasicNavigationBudget {
         if (server == null || human.level().isClientSide) return false;
         FairWorkBudget<UUID> budget=SERVERS.computeIfAbsent(server, ignored -> new FairWorkBudget<>(32, 4, 40));
         budget.setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,32,4));
-        int granted=budget.claimFull(server.getTickCount(),human.getUUID(),searches);
+        int granted=budget.claimFull(server.getTickCount(),human.getUUID(),searches,BudgetDemandOrder.faction(human));
         NavigationDebugService.budget(human, "basic", searches, granted);
         return granted == searches;
     }

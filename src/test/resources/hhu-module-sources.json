@@ -175,6 +175,10 @@
     "class": "dev.felix.hostilehumans.economy.BrokerIndex",
     "path": "src/main/java/dev/felix/hostilehumans/economy/BrokerIndex.java"
   },
+  "BudgetDemandOrder": {
+    "class": "dev.felix.hostilehumans.performance.BudgetDemandOrder",
+    "path": "src/main/java/dev/felix/hostilehumans/performance/BudgetDemandOrder.java"
+  },
   "BudgetedSearch": {
     "class": "dev.felix.hostilehumans.performance.BudgetedSearch",
     "path": "src/main/java/dev/felix/hostilehumans/performance/BudgetedSearch.java"

@@ -458,14 +458,14 @@ public final class HumanPerception {
         int probeLimit=urgentScan?c().integer("budgets.rays_per_human"):AdaptiveActivityBudget.probes(h,c().integer("budgets.rays_per_human"));
         int rays=Math.min(probeLimit,Math.min(c().integer("budgets.rays_per_level"),c().integer("budgets.rays_per_server")));
         s.geometrySkipped=0;s.occlusionSkipped=0;
-        int resumed=resumeBodies(h,s,level,now,interval,rays);
         List<LivingEntity> checks=new ArrayList<>();
         LivingEntity main=h.getTarget();
         int candidateCursorBefore=s.candidateCursor, recognitionCursorBefore=s.recognitionCursor;
         long visualRound=Math.floorDiv(now,Math.max(1,interval));
         // In crowded battles, old recognitions otherwise consume every single-ray round.
         // Discovery still pays for actual geometry/LOS and never marks a target by proximity.
-        if(PerceptionDiscoveryPolicy.reserveDiscovery(visualRound,rays,urgentScan)){
+        if (PerceptionDiscoveryPolicy.reserveDiscovery(visualRound,rays,urgentScan)
+                || !urgentScan && rays >= 2 && main == null && recognizing(s) == 0) {
             LivingEntity nearestUnknown=null;
             for(UUID id:s.candidates){
                 if(!(level.getEntity(id) instanceof LivingEntity e))continue;
@@ -491,6 +491,7 @@ public final class HumanPerception {
             if(level.getEntity(id) instanceof LivingEntity e&&!checks.contains(e)&&eligibleVisual(h,s,e,now))checks.add(e);
         }
         if(checks.isEmpty()){
+            resumeBodies(h,s,level,now,interval,probeLimit);
             PerceptionBudget.cancel(h,"rays","");
             s.nextScan=now+interval;s.scanStatus="本轮无可见几何候选或处于遮挡退避";describe(h,s);return;
         }
@@ -499,14 +500,15 @@ public final class HumanPerception {
             // A rejected reservation did not execute these candidates. Do not skip them.
             s.candidateCursor=candidateCursorBefore;s.recognitionCursor=recognitionCursorBefore;
             s.scanStatus="等待视觉检测配额";s.reason=s.scanStatus;
-            // Deferred body work was independently serviced before fast candidate reservation.
-            if(resumed>0)s.nextScan=now+interval;
+            // Body reservations already admitted for this tick may still be usable.
+            resumeBodies(h,s,level,now,interval,probeLimit);
             describe(h,s);return;
         }
         s.scanStatus="已执行服务器视觉采样";s.scanAt=now;
         s.nextScan=now+interval;
         s.scanStatus=checks.isEmpty()?"本轮无符合敌对许可的视觉候选":"已执行服务器视觉采样："+Math.min(rays,checks.size())+"个候选";
         int evidenceInterval=dev.felix.hostilehumans.perception.PerceptionCoordinationPolicy.evidenceInterval(PerceptionDiscoveryPolicy.evidenceInterval(interval,rays),(int)recognizing(s),rays,canTarget(h,main));
+        resumeBodies(h,s,level,now,interval,probeLimit);
         for(LivingEntity e:checks.subList(0,Math.min(rays,checks.size())))check(h,s,e,now,evidenceInterval,true);
         if(s.focus==null)startNext(h,s,now);
         describe(h,s);

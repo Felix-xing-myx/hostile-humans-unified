@@ -4077,3 +4077,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控，基线 8e7d77e2d9f137882f5644fdd2c9eb71c9255f2b，工作树 template-placement-authoring，分支 feat/template-placement-authoring。
 - 模板文件、Forge 实体放置入口、人类出生与自然驻守／巡逻接口、放置棒会话及界面。新增样板局部锚点格式；据点网络协议升至 11。
 - Python 核查通过 516 项、跳过 16 项；核对 Forge processEntityInfos 方法签名。未编译、未同步、未做游戏内验收。
+
+### 群战感知与寻路配额轮转
+
+- 主控，基线 398110b19bde876a8edbffdbdd582505ca7339ac，工作树 crowd-budget，分支 fix/crowd-budget。
+- 范围为感知队列、共享公平预算、普通／远距／可选寻路和默认配置。继续使用既有额度申请接口，跨阵营只改变积压预约顺序，保留全服和维度硬限制。
+- Python 核查 516 项通过、16 项跳过，默认附录通过检查。阵营轮转新增 Java 回归，未运行 Java 编译、游戏内团战与性能验收或实例同步。

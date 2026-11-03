@@ -54,7 +54,7 @@
 | `observer` | 诊断快照、观察名单与网络 | 17 |
 | `observer/client` | 观察详情、图层与属性界面 | 3 |
 | `perception` | 视觉、声音、识别与目标记忆 | 39 |
-| `performance` | 共享配额与活动分档 | 7 |
+| `performance` | 共享配额与活动分档 | 8 |
 | `progression` | 成长、专精、经验与属性 | 27 |
 | `settlement` | 据点区域几何、模板变换与维度实例索引 | 28 |
 | `settlement/client` | 据点结构作者表单、管理与岗位指派 | 5 |
@@ -282,7 +282,7 @@
 
 ### performance
 
-`ActivityBudgetConfig`、`ActivityLoadPolicy`、`AdaptiveActivityBudget`、`BudgetedSearch`、`BudgetedUpdates`、`FairWorkBudget`、`ScopedWorkBudget`
+`ActivityBudgetConfig`、`ActivityLoadPolicy`、`AdaptiveActivityBudget`、`BudgetDemandOrder`、`BudgetedSearch`、`BudgetedUpdates`、`FairWorkBudget`、`ScopedWorkBudget`
 
 ### progression
 

@@ -1,13 +1,12 @@
 package dev.felix.hostilehumans.performance;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 /** Tick-local grants with FIFO rotation. Waiting is not failure and consumes no work. */
 public final class FairWorkBudget<K> {
-    private record Request(long tick, int maximum, boolean full) {}
+    private record Request(long tick, int maximum, boolean full, String group) {}
     private final int perTick;
     private final int perRequest;
     private final int staleTicks;
@@ -15,6 +14,7 @@ public final class FairWorkBudget<K> {
     private final Map<K, Integer> grants = new HashMap<>();
     private long tick = Long.MIN_VALUE;
     private int remaining;
+    private String lastGroup;
     private int nextTickCapacity;
 
     public FairWorkBudget(int perTick, int perRequest, int staleTicks) {
@@ -32,14 +32,21 @@ public final class FairWorkBudget<K> {
     }
 
     public int claim(long currentTick, K key, int maximum) {
-        return claim(currentTick, key, maximum, false);
+        return claim(currentTick, key, maximum, false, "");
+    }
+    public int claim(long currentTick, K key, int maximum, String group) {
+        return claim(currentTick, key, maximum, false, group);
     }
     /** A multi-search operation cannot consume a partial grant and starve at the queue tail. */
     public int claimFull(long currentTick, K key, int maximum) {
-        if (maximum > perRequest || maximum > perTick) throw new IllegalArgumentException("batch exceeds budget limit");
-        return claim(currentTick, key, maximum, true);
+        return claimFull(currentTick, key, maximum, "");
     }
-    private int claim(long currentTick, K key, int maximum, boolean full) {
+
+    public int claimFull(long currentTick, K key, int maximum, String group) {
+        if (maximum > perRequest || maximum > perTick) throw new IllegalArgumentException("batch exceeds budget limit");
+        return claim(currentTick, key, maximum, true, group);
+    }
+    private int claim(long currentTick, K key, int maximum, boolean full, String group) {
         if (maximum < 0) throw new IllegalArgumentException("negative request");
         beginTick(currentTick);
         if (maximum == 0) return 0;
@@ -49,10 +56,10 @@ public final class FairWorkBudget<K> {
             grants.put(key, 0);
             // Rotate behind callers that are still waiting. Completion/stop
             // cancels this reservation; forgotten requests expire promptly.
-            waiting.put(key, new Request(currentTick, maximum, full));
+            waiting.put(key, new Request(currentTick, maximum, full, group));
             return full && reserved < maximum ? 0 : Math.min(maximum, reserved);
         }
-        waiting.put(key, new Request(currentTick, maximum, full));
+        waiting.put(key, new Request(currentTick, maximum, full, group));
         // beginTick reserves older requests first. Any remaining capacity is
         // available to new arrivals; served callers in waiting are next-round
         // reservations, not blockers for this tick's spare capacity.
@@ -62,7 +69,7 @@ public final class FairWorkBudget<K> {
         grants.put(key, 0);
         // Keep this caller at the tail for the next tick's round.
         waiting.remove(key);
-        waiting.put(key, new Request(currentTick, maximum, full));
+        waiting.put(key, new Request(currentTick, maximum, full, group));
         return granted;
     }
 
@@ -80,14 +87,14 @@ public final class FairWorkBudget<K> {
         remaining = nextTickCapacity;
         grants.clear();
         waiting.entrySet().removeIf(entry -> currentTick - entry.getValue().tick() > staleTicks);
-        Iterator<Map.Entry<K, Request>> iterator = waiting.entrySet().iterator();
-        while (remaining > 0 && iterator.hasNext()) {
-            Map.Entry<K, Request> entry = iterator.next();
+        for (var entry : BudgetDemandOrder.interleave(waiting, Request::group, lastGroup)) {
+            if (remaining == 0) break;
             int grant = Math.min(remaining, Math.min(perRequest, entry.getValue().maximum()));
             if (entry.getValue().full() && grant < entry.getValue().maximum()) continue;
             remaining -= grant;
             grants.put(entry.getKey(), grant);
-            iterator.remove();
+            lastGroup = entry.getValue().group();
+            waiting.remove(entry.getKey());
         }
     }
 }

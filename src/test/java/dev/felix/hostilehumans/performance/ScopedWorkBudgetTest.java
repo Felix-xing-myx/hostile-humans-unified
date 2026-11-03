@@ -10,6 +10,7 @@ public final class ScopedWorkBudgetTest {
         cancellation();
         expiryAndRollback();
         changedRequest();
+        factionRotation();
         System.out.println("PASS: atomic scope/server budgets, 1000-tick fairness, cancellation, expiry and rollback");
     }
     private static void fairness(int dimensions) {
@@ -83,6 +84,25 @@ public final class ScopedWorkBudgetTest {
         check(b.claimFull(2, "b", "z", 2) == 2, "older unserved full batch runs atomically");
         check(b.claimFull(3, "a", "y", 1) == 1, "new scope request runs after older full batch");
     }
+    private static void factionRotation() {
+        var perception = new ScopedWorkBudget<Integer, String>(1, 1, 1, 40);
+        var navigation = new FairWorkBudget<Integer>(1, 1, 40);
+        int bluePerception = 0, blueNavigation = 0;
+        for (int tick = 0; tick < 100; tick++) {
+            int totalPerception = 0, totalNavigation = 0;
+            for (int actor = 0; actor < 25; actor++) {
+                String faction = actor == 24 ? "blue" : "red";
+                int visual = perception.claimFull(tick, actor, "arena", 1, faction);
+                int route = navigation.claimFull(tick, actor, 1, faction);
+                totalPerception += visual;
+                totalNavigation += route;
+                if (actor == 24) { bluePerception += visual; blueNavigation += route; }
+            }
+            check(totalPerception == 1 && totalNavigation == 1, "round-robin still uses the hard budget exactly once");
+        }
+        check(bluePerception >= 48 && blueNavigation >= 48, "a long red queue must not starve the blue faction");
+    }
+
     private static void check(boolean condition, String message) {
         if (!condition) throw new AssertionError(message);
     }
