@@ -21,7 +21,7 @@ import java.util.WeakHashMap;
 
 /** Authoritative corners live in a revision-bound server session. */
 public final class SettlementSelectionTool extends Item {
-    enum Mode { ADD, REPLACE, EDIT, BOUNDS, FACILITY, MOVE_FACILITY, VIEW }
+    enum Mode { ADD, REPLACE, EDIT, BOUNDS, FACILITY, MOVE_FACILITY, VIEW, NEW_OUTER, NEW_INNER }
 
     private record Binding(ResourceLocation dimension, BlockPos information,
             SettlementInformationBlockEntity carrier, String region, boolean exclude, boolean currentOnly, int boxIndex, Mode mode,
@@ -83,15 +83,23 @@ public final class SettlementSelectionTool extends Item {
         if ((binding.visible() & 1) != 0) boxes.add(new SettlementPreview.Box(new RegionBox(0, 0, 0,
                 size.x() - 1, size.y() - 1, size.z() - 1).transform(transform), 0xffffff, "NBT"));
         for (var region : author.regions()) {
+            if (!SettlementAuthoring.allowsLayer(author, region.layer())) continue;
             if (binding.currentOnly() && !binding.region().isEmpty() && !region.id().equals(binding.region())) continue;
             int color = region.layer() == SettlementRegion.Layer.INNER ? 0x37d5ff : 0xffbd57;
-            if ((binding.visible() & (region.layer() == SettlementRegion.Layer.INNER ? 4 : 2)) != 0)
-                for (var box : region.includes())
-                boxes.add(new SettlementPreview.Box(box.transform(transform), color, region.name() + " [" + region.id() + "]"));
-            if ((binding.visible() & 8) != 0) for (var box : region.excludes())
-                boxes.add(new SettlementPreview.Box(box.transform(transform), 0xff5362, "− " + region.name() + " [" + region.id() + "]"));
+            String label = region.name() + " [" + region.id() + "]";
+            if ((binding.visible() & (region.layer() == SettlementRegion.Layer.INNER ? 4 : 2)) != 0) {
+                for (int i = 0; i < region.includes().size(); i++)
+                    boxes.add(new SettlementPreview.Box(region.includes().get(i).transform(transform),
+                            color, label + " #" + (i + 1)));
+            }
+            if ((binding.visible() & 8) != 0) {
+                for (int i = 0; i < region.excludes().size(); i++)
+                    boxes.add(new SettlementPreview.Box(region.excludes().get(i).transform(transform),
+                            0xff5362, "− " + label + " #" + (i + 1)));
+            }
         }
         if ((binding.visible() & 16) != 0) for (var facility : author.facilities()) {
+            if (!SettlementAuthoring.allowsFacility(author, facility.type())) continue;
             if (binding.currentOnly() && !binding.region().isEmpty() && !facility.region().equals(binding.region())) continue;
             var p = transform.apply(facility.position());
             boxes.add(new SettlementPreview.Box(RegionBox.between(p, p), 0xb78cff, facility.type().name()));
@@ -117,7 +125,13 @@ public final class SettlementSelectionTool extends Item {
         var data = new net.minecraft.nbt.CompoundTag();
         data.putLong("anchor", binding.information().asLong());
         data.putInt("revision", binding.revision());
-        data.putString("template", SettlementCodec.template(binding.carrier().author()).template());
+        var author = SettlementCodec.template(binding.carrier().author());
+        data.putString("template", author.template());
+        data.putString("kind", author.kind().name());
+        data.putInt("tier", author.tier());
+        data.putBoolean("ready", named(author));
+        data.putBoolean("outer", SettlementAuthoring.allowsLayer(author, SettlementRegion.Layer.OUTER));
+        data.putBoolean("inner", SettlementAuthoring.allowsLayer(author, SettlementRegion.Layer.INNER));
         data.putString("mode", binding.mode().name());
         data.putString("region", binding.region());
         data.putBoolean("exclude", binding.exclude());
@@ -128,10 +142,41 @@ public final class SettlementSelectionTool extends Item {
             row.putString("id", region.id());
             row.putString("name", region.name());
             row.putString("layer", region.layer().name());
+            row.putInt("includes", region.includes().size());
+            row.putInt("excludes", region.excludes().size());
             regions.add(row);
         }
         data.put("regions", regions);
+        var facilities = new net.minecraft.nbt.ListTag();
+        for (var facility : author.facilities()) {
+            var row = new net.minecraft.nbt.CompoundTag();
+            row.putString("id", facility.id());
+            row.putString("type", facility.type().name());
+            row.putString("region", facility.region());
+            var point = SettlementAuthoring.currentTransform(player, binding.carrier()).apply(facility.position());
+            row.putString("position", point.x() + ", " + point.y() + ", " + point.z());
+            facilities.add(row);
+        }
+        data.put("facilities", facilities);
+        var allowed = new net.minecraft.nbt.ListTag();
+        for (var type : SettlementFacility.Type.values())
+            if (SettlementAuthoring.allowsFacility(author, type)
+                    && type != SettlementFacility.Type.ENTRANCE && type != SettlementFacility.Type.POST)
+                allowed.add(net.minecraft.nbt.StringTag.valueOf(type.name()));
+        data.put("allowedFacilities", allowed);
         SettlementNetwork.selectorView(player, data);
+    }
+
+    private static boolean named(SettlementTemplate author) {
+        return !new ResourceLocation(author.template()).getPath().equals("untitled");
+    }
+
+    private static SettlementRegion.Layer newLayer(Mode mode) {
+        return switch (mode) {
+            case NEW_OUTER -> SettlementRegion.Layer.OUTER;
+            case NEW_INNER -> SettlementRegion.Layer.INNER;
+            default -> null;
+        };
     }
 
     static void configure(ServerPlayer player, net.minecraft.nbt.CompoundTag data) {
@@ -148,25 +193,53 @@ public final class SettlementSelectionTool extends Item {
         if (!data.contains("anchor", net.minecraft.nbt.Tag.TAG_LONG)
                 || data.getLong("anchor") != binding.information().asLong()
                 || data.getInt("revision") != binding.revision()) return;
+        if (data.getBoolean("visibilityOnly")) {
+            var next = new Binding(binding.dimension(), binding.information(), binding.carrier(),
+                    binding.region(), binding.exclude(), binding.currentOnly(), binding.boxIndex(), binding.mode(),
+                    binding.revision(), data.getInt("visible") & 31, binding.first(), binding.second());
+            BINDINGS.put(player, next);
+            publish(player, next);
+            return;
+        }
         Mode mode;
         try { mode = Mode.valueOf(data.getString("mode")); }
         catch (IllegalArgumentException bad) { return; }
         String region = data.getString("region");
         var author = SettlementCodec.template(binding.carrier().author());
-        if (mode == Mode.BOUNDS && new ResourceLocation(author.template()).getPath().equals("untitled")) {
+        if (mode != Mode.VIEW && !named(author)) {
             tell(player, "name_first");
             return;
         }
-        if ((mode == Mode.ADD || mode == Mode.REPLACE)
-                && author.regions().stream().noneMatch(r -> r.id().equals(region))) {
+        if (data.getBoolean("remove")) {
+            if (!named(author) || region.length() > 64 || data.getString("facility").length() > 64) return;
+            try {
+                var editing = new Binding(binding.dimension(), binding.information(), binding.carrier(), region,
+                        false, false, -1, Mode.VIEW, binding.revision(), data.getInt("visible") & 31, null, null);
+                finish(player, editing, SettlementAuthoring.removeSelection(binding.carrier(), region,
+                        data.getString("facility"), data.getBoolean("exclude"), data.getInt("box")));
+            } catch (IllegalArgumentException bad) {
+                player.displayClientMessage(Component.literal(bad.getMessage()), true);
+            }
+            openPanel(player);
+            return;
+        }
+        var layer = newLayer(mode);
+        if (layer != null && !SettlementAuthoring.allowsLayer(author, layer)
+                || mode == Mode.FACILITY && !SettlementAuthoring.allowsFacility(author, SettlementFacility.Type.CONTROL))
+            return;
+        if ((mode == Mode.ADD || mode == Mode.REPLACE || mode == Mode.EDIT)
+                && author.regions().stream().noneMatch(r -> r.id().equals(region) && SettlementAuthoring.allowsLayer(author, r.layer()))) {
             tell(player, "region_first");
             return;
         }
-        if (mode == Mode.EDIT || mode == Mode.MOVE_FACILITY || region.length() > 64) return;
+        if (mode == Mode.MOVE_FACILITY || region.length() > 64) return;
+        int box = mode == Mode.EDIT ? data.getInt("box") : -1;
+        if (mode == Mode.EDIT && (box < 0 || author.regions().stream().noneMatch(r -> r.id().equals(region)
+                && box < (data.getBoolean("exclude") ? r.excludes() : r.includes()).size()))) return;
         boolean exclude = data.getBoolean("exclude");
-        boolean sameSelection = mode == binding.mode() && region.equals(binding.region()) && exclude == binding.exclude();
+        boolean sameSelection = mode == binding.mode() && region.equals(binding.region()) && exclude == binding.exclude() && box == binding.boxIndex();
         var next = new Binding(binding.dimension(), binding.information(), binding.carrier(), region,
-                exclude, false, -1, mode, binding.revision(), data.getInt("visible") & 31,
+                exclude, false, box, mode, binding.revision(), data.getInt("visible") & 31,
                 sameSelection ? binding.first() : null, sameSelection ? binding.second() : null);
         publish(player, next);
         BINDINGS.put(player, next);
@@ -236,7 +309,7 @@ public final class SettlementSelectionTool extends Item {
         }
         if (!active(player, binding)) return InteractionResult.FAIL;
         if (binding.mode() == Mode.VIEW) {
-            tell(player, "bind_first");
+            tell(player, "choose_mode");
             return InteractionResult.CONSUME;
         }
         try {
@@ -285,7 +358,7 @@ public final class SettlementSelectionTool extends Item {
                     ? SettlementAuthoring.setBounds(player, binding.carrier(), binding.first(), binding.second())
                     : SettlementAuthoring.addBox(player, binding.information(), binding.region(),
                             binding.exclude(), binding.mode() == Mode.REPLACE,
-                            binding.mode() == Mode.EDIT ? binding.boxIndex() : -1, binding.first(), binding.second());
+                            binding.mode() == Mode.EDIT ? binding.boxIndex() : -1, binding.first(), binding.second(), newLayer(binding.mode()));
             finish(player, binding, result);
         } catch (IllegalArgumentException bad) {
             player.displayClientMessage(Component.literal(bad.getMessage()), true);

@@ -4053,3 +4053,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控；基线37f63e37c4178198130d3ec3a9f68707760a2f5f；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3148，分支release/local-build；范围：监控武器栏、建筑工具拆分、TaCZ 与食物回血修复。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.8。
 
 - 3.14.8完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致822cb1fe7af62a6dfa128fcf557ee5a36a419248b87f911285d0b7bc0d1b242a；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.14.8-20261103-221104。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.8.
+
+### 框选器直接编辑据点区域与设施
+
+- 主控。基线 $base；工作树 selector-authoring，分支 fix/selector-authoring。
+- 范围为框选器面板、区域及设施保存、双语提示和作者验收文档。共享模板校验仍负责坐标和设施归属；监控及放置棒未介入。据点协议升至 9。
+- Python 核查 516 项通过、16 项跳过。未编译、未构建、未同步、未做游戏内验收。

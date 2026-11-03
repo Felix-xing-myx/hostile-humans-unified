@@ -345,6 +345,50 @@ public final class SettlementAuthoring {
         return new TemplateTransform.Cell(point.getX(), point.getY(), point.getZ());
     }
 
+    static boolean allowsLayer(SettlementTemplate author, SettlementRegion.Layer layer) {
+        return author.kind() != SettlementTemplate.Kind.ORDINARY
+                && (layer == SettlementRegion.Layer.OUTER || author.tier() >= 2);
+    }
+
+    static boolean allowsFacility(SettlementTemplate author, SettlementFacility.Type type) {
+        return author.kind() != SettlementTemplate.Kind.ORDINARY
+                && (type != SettlementFacility.Type.TRAINING || author.tier() >= 2);
+    }
+
+    static String removeSelection(SettlementInformationBlockEntity info, String regionId,
+            String facilityId, boolean exclude, int boxIndex) {
+        var author = SettlementCodec.template(info.author());
+        var regions = new ArrayList<>(author.regions());
+        var facilities = new ArrayList<>(author.facilities());
+        if (!facilityId.isEmpty()) {
+            if (!facilities.removeIf(f -> f.id().equals(facilityId))) return "selected facility missing";
+        } else {
+            var region = regions.stream().filter(r -> r.id().equals(regionId)).findFirst().orElse(null);
+            if (region == null) return "selected region missing";
+            if (boxIndex < 0) {
+                if (facilities.stream().anyMatch(f -> f.region().equals(regionId)))
+                    return "remove or move the facilities in this region first";
+                regions.remove(region);
+            } else {
+                var includes = new ArrayList<>(region.includes());
+                var excludes = new ArrayList<>(region.excludes());
+                var boxes = exclude ? excludes : includes;
+                if (boxIndex >= boxes.size()) return "selected box missing";
+                boxes.remove(boxIndex);
+                regions.set(regions.indexOf(region), new SettlementRegion(region.id(), region.name(),
+                        region.layer(), includes, excludes));
+            }
+        }
+        return saveGeometry(info, author, regions, facilities);
+    }
+
+    private static String saveGeometry(SettlementInformationBlockEntity info, SettlementTemplate author,
+            List<SettlementRegion> regions, List<SettlementFacility> facilities) {
+        var updated = new SettlementTemplate(author.template(), author.module(), author.kind(), author.faction(),
+                author.tier(), author.revision(), author.size(), author.originOffset(), regions, facilities);
+        return commit(info, info.revision(), SettlementCodec.template(updated));
+    }
+
     static String useBoundsAsOuter(ServerPlayer player, BlockPos position, int revision, String regionId) {
         var info = information(player, position);
         if (info == null || info.revision() != revision) return "author unavailable or stale";
@@ -416,6 +460,7 @@ public final class SettlementAuthoring {
         } else {
             throw new IllegalArgumentException("select a control, supply, trader or training block");
         }
+        if (!allowsFacility(author, type)) throw new IllegalArgumentException("facility unavailable for this building type or tier");
         if (selected != null && selected.type() != type)
             throw new IllegalArgumentException("selected block does not match this facility type");
         var local = currentTransform(player, info).unapply(cell(point));
@@ -427,10 +472,10 @@ public final class SettlementAuthoring {
                     default -> true;
                 }).toList();
         var region = candidates.stream().filter(r -> r.id().equals(preferredRegion)).findFirst()
-                .orElse(candidates.size() == 1 ? candidates.get(0) : null);
+                .orElse(preferredRegion.isEmpty() && candidates.size() == 1 ? candidates.get(0) : null);
         if (region == null) throw new IllegalArgumentException(candidates.isEmpty()
                 ? "no eligible region at this block"
-                : "select the intended region first: " + candidates.stream().map(SettlementRegion::id).toList());
+                : "choose an eligible region: " + candidates.stream().map(SettlementRegion::id).toList());
         var facilities = new ArrayList<>(author.facilities());
         var existing = facilities.stream().filter(f -> f.type() == type
                 && (type == SettlementFacility.Type.CONTROL || f.position().equals(local))).findFirst();
@@ -443,10 +488,11 @@ public final class SettlementAuthoring {
                 () -> "facility_" + UUID.randomUUID().toString().replace("-", ""));
         existing.ifPresent(facilities::remove);
         facilities.add(new SettlementFacility(id, type, region.id(), local));
-        var updated = new SettlementTemplate(author.template(), author.module(), author.kind(),
-                author.faction(), author.tier(), author.revision(), author.size(), author.originOffset(),
-                author.regions(), facilities);
-        return commit(info, info.revision(), SettlementCodec.template(updated));
+        return saveGeometry(info, author, author.regions(), facilities);
+    }
+
+    private static boolean hasRegion(List<SettlementRegion> regions, String id) {
+        return regions.stream().anyMatch(r -> r.id().equals(id));
     }
 
     public static String addBox(
@@ -458,6 +504,11 @@ public final class SettlementAuthoring {
             int boxIndex,
             BlockPos a,
             BlockPos b) {
+        return addBox(player, position, regionId, exclude, replace, boxIndex, a, b, null);
+    }
+
+    static String addBox(ServerPlayer player, BlockPos position, String regionId, boolean exclude,
+            boolean replace, int boxIndex, BlockPos a, BlockPos b, SettlementRegion.Layer newLayer) {
         var info = SettlementSelectionTool.boundInformation(player, position);
         if (info == null) return "author unavailable";
         try {
@@ -478,8 +529,18 @@ public final class SettlementAuthoring {
                     at = i;
                     break;
                 }
+            if (newLayer != null) {
+                if (!allowsLayer(author, newLayer)) return "region unavailable for this building type or tier";
+                String prefix = newLayer.name().toLowerCase(java.util.Locale.ROOT);
+                int number = 1;
+                while (hasRegion(regions, prefix + "_" + number)) number++;
+                String id = prefix + "_" + number;
+                regions.add(new SettlementRegion(id, id, newLayer, List.of(box), List.of()));
+                return saveGeometry(info, author, regions, author.facilities());
+            }
             if (at < 0) return "selected region missing";
             var r = regions.get(at);
+            if (!allowsLayer(author, r.layer())) return "region unavailable for this building type or tier";
             var includes = new ArrayList<>(r.includes());
             var excludes = new ArrayList<>(r.excludes());
             var target = exclude ? excludes : includes;
@@ -491,19 +552,7 @@ public final class SettlementAuthoring {
                 target.add(box);
             }
             regions.set(at, new SettlementRegion(r.id(), r.name(), r.layer(), includes, excludes));
-            var updated =
-                    new SettlementTemplate(
-                            author.template(),
-                            author.module(),
-                            author.kind(),
-                            author.faction(),
-                            author.tier(),
-                            author.revision(),
-                            author.size(),
-                            author.originOffset(),
-                            regions,
-                            author.facilities());
-            return commit(info, info.revision(), SettlementCodec.template(updated));
+            return saveGeometry(info, author, regions, author.facilities());
         } catch (RuntimeException bad) {
             return "rejected: " + bad.getMessage();
         }
