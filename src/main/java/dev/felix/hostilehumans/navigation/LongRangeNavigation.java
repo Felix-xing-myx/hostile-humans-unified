@@ -115,6 +115,18 @@ public final class LongRangeNavigation {
             s.stage = initialStage(human, goal, c);
             s.nextTick = tick;
         }
+        if (tick < s.nextTick || s.queriedTick == tick) return pending(s,tick,"分档等待");
+        if (!human.level().hasChunkAt(goal) || human.level().isOutsideBuildHeight(goal)
+                || !human.level().getWorldBorder().isWithinBounds(goal)) {
+            cancelQueue(human, actor, purpose);
+            s.queuedAt = -1;
+            s.result = "目标未加载或越界";
+            return FAILED;
+        }
+        if (!nav.canRunBoundedSearch()) {
+            cancelQueue(human, actor, purpose);
+            return pending(s,tick,"等待落地或浮水");
+        }
         Failure failure = cachedFailure(s, goal, accuracy, signature);
         boolean changedScene = false;
         if (failure != null) {
@@ -129,10 +141,6 @@ public final class LongRangeNavigation {
                 cancelQueue(human, actor, purpose);s.queuedAt=-1;s.result = "失败缓存";return failure.restricted?new Result(Status.RESTRICTED,null):FAILED;
             }
         }
-        if (tick < s.nextTick || s.queriedTick == tick) return pending(s,tick,"分档等待");
-        if (!human.level().hasChunkAt(goal) || human.level().isOutsideBuildHeight(goal)
-                || !human.level().getWorldBorder().isWithinBounds(goal)) { s.result = "目标未加载或越界";s.queuedAt=-1;cancelQueue(human, actor, purpose);return FAILED; }
-        if(!nav.canRunBoundedSearch())return pending(s,tick,"等待落地或浮水");
         int stage = c.enabled() ? s.stage : 0;
         int range = c.range(stage), nodes = c.nodes(stage);
         if (stage == 0) {
