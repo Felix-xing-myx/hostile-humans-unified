@@ -42,7 +42,9 @@ public final class SplitConfigFiles {
     private static JsonObject load(Path configDirectory, JsonObject defaults,
                            java.util.function.BiPredicate<String, JsonObject> integrations, boolean strict) {
         Path directory = configDirectory.resolve(DIRECTORY);
-        GrowthProfileFiles.relocate(directory, defaults);
+        if (!GrowthProfileFiles.relocate(directory, defaults) && strict) {
+            throw new IllegalStateException("Growth profile migration did not complete in " + directory);
+        }
         JsonObject result = loadFile(directory.resolve("global.json"), TierConfigProjection.global(defaults),
                 false, integrations, strict);
         // Discard recognized per-tier values accidentally left in a global file. This
