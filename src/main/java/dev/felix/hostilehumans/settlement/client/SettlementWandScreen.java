@@ -48,7 +48,7 @@ public final class SettlementWandScreen extends PanelScreen {
             if (update.armed()) screen.onClose();
             else {
                 screen.error = update.reason();
-                screen.refresh();
+                screen.rebuildWidgets();
             }
         } else if (!update.armed() && update.reason().isEmpty()) {
             mc.setScreen(new SettlementWandScreen(update, mc.level));
@@ -75,7 +75,7 @@ public final class SettlementWandScreen extends PanelScreen {
         if (!error.isEmpty()) nodes.add(text(text(error), () -> theme().danger()));
         nodes.add(field(text("placement_template"), template));
         nodes.add(button(text(listOpen ? "hide_templates" : "show_templates"), listOpen,
-                () -> { listOpen = !listOpen; refresh(); }));
+                () -> { listOpen = !listOpen; rebuildWidgets(); }));
         if (listOpen) {
             if (view.choices().isEmpty()) nodes.add(note(text("templates_empty")));
             for (int i = 0; i < view.choices().size(); i++) {
@@ -83,7 +83,7 @@ public final class SettlementWandScreen extends PanelScreen {
                 String id = row.getString("id");
                 nodes.add(button(Component.literal(id).append(" ? ")
                                 .append(text(row.getBoolean("world") ? "template_world" : "template_pack")),
-                        id.equals(template.text()), () -> { template.set(id); listOpen = false; refresh(); }));
+                        id.equals(template.text()), () -> { template.set(id); listOpen = false; rebuildWidgets(); }));
             }
         }
         for (int i = 0; i < view.choices().size(); i++) {
@@ -94,14 +94,14 @@ public final class SettlementWandScreen extends PanelScreen {
                     + "/structures/" + id.getPath() + ".nbt")));
             break;
         }
-        nodes.add(button(text("rotation", turns * 90), false, () -> { turns = (turns + 1) % 4; refresh(); }));
+        nodes.add(button(text("rotation", turns * 90), false, () -> { turns = (turns + 1) % 4; rebuildWidgets(); }));
         List<UiLayout.Node> mirrors = new ArrayList<>();
         for (var option : Mirror.values())
             mirrors.add(button(text("mirror." + option.name()), option == mirror,
-                    () -> { mirror = option; refresh(); }));
+                    () -> { mirror = option; rebuildWidgets(); }));
         nodes.add(UiLayout.grid(3, 4, 40, mirrors));
         nodes.add(button(text(entities ? "template_entities_on" : "template_entities_off"),
-                entities, () -> { entities = !entities; refresh(); }));
+                entities, () -> { entities = !entities; rebuildWidgets(); }));
         return UiLayout.column(6, nodes);
     }
 
@@ -110,7 +110,7 @@ public final class SettlementWandScreen extends PanelScreen {
         footer(text("place_template"), ignored -> {
             if (!template.valid() || template.text().isBlank() || ResourceLocation.tryParse(template.text()) == null) {
                 error = "invalid_input";
-                refresh();
+                rebuildWidgets();
                 return;
             }
             SettlementNetwork.armWand(new SettlementWandPlacement.Request(
