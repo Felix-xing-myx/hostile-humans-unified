@@ -54,4 +54,4 @@ class PerceptionPriorityContract(unittest.TestCase):
         self.assertIn("!role&&!HumanPerception.selectionAllowed(h,desired)",code)
         perception=source("HumanPerception")
         self.assertIn("TargetCap cached=state.targetCaps.get",perception)
-        self.assertIn("if(!selectionAllowed(h,e))continue",perception)
+        self.assertIn("if (selectionAllowed(h, entry.target())) return entry.target();",perception)

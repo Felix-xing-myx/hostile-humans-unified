@@ -4171,3 +4171,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查阵营刷怪笼，基线 2a68f1e，主控沿用 audit/module-architecture。修改 FactionSpawnEggItem 与其 NBT 回归。
 
 - 架构审查友军报告传播，基线 ba52a2f，主控沿用 audit/module-architecture。修改 HumanTargetSharing 的去重顺序及单次投递读取，公共接口不变。
+
+- 架构审查群战目标排序，基线 03e1ccc，主控沿用 audit/module-architecture。HumanPerception 预计算排序键，目标资格接口与数值不变。

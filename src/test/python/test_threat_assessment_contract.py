@@ -22,7 +22,7 @@ class ThreatAssessmentContract(unittest.TestCase):
         self.assertIn("if(h.isFleeing&&current==null)return null",coordinator)
     def test_scoring_preserves_player_crowd_gate(self):
         candidate=source("HumanPerception").split("public static LivingEntity candidate",1)[1].split("private static boolean isSelfAttacker",1)[0]
-        self.assertIn("HumanThreatAssessment.score(h,e)",candidate)
+        self.assertIn("HumanThreatAssessment.score(h, target)",candidate)
         self.assertIn("playerLimit(h,player)",candidate)
 
     def test_relay_keeps_original_authority_and_only_mints_from_personal_evidence(self):

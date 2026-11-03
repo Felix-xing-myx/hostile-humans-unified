@@ -808,14 +808,31 @@ public final class HumanPerception {
         List<LivingEntity> known=new ArrayList<>();
         for(Track t:s.tracks.values())if(t.marked&&now(h)<t.liveUntil&&level.getEntity(t.id) instanceof LivingEntity e&&valid(h,e))known.add(e);
         for(LivingEntity e:HumanTargetSharing.targets(h))if(!known.contains(e))known.add(e);
-        known.sort(Comparator.<LivingEntity, Boolean>comparing(e -> !HumanThreatAssessment.priorityInterrupt(h,current,e))
-                .thenComparing(Comparator.<LivingEntity>comparingDouble(e->HumanThreatAssessment.score(h,e)).reversed())
-                .thenComparingDouble(h::distanceToSqr).thenComparing(Entity::getUUID));
-        for(LivingEntity e:known){
-            if(!selectionAllowed(h,e))continue;
-            return e;
-        }return null;
+        if (known.isEmpty()) return null;
+        if (known.size() == 1) {
+            LivingEntity only = known.get(0);
+            return selectionAllowed(h, only) ? only : null;
+        }
+        List<RankedTarget> ranked = new ArrayList<>(known.size());
+        for (LivingEntity target : known) {
+            ranked.add(new RankedTarget(target, HumanThreatAssessment.priorityInterrupt(h, current, target),
+                    HumanThreatAssessment.score(h, target), h.distanceToSqr(target)));
+        }
+        ranked.sort(TARGET_ORDER);
+        for (RankedTarget entry : ranked) {
+            if (selectionAllowed(h, entry.target())) return entry.target();
+        }
+        return null;
     }
+
+    private record RankedTarget(LivingEntity target, boolean interrupt, double threat, double distanceSquared) {}
+
+    private static final Comparator<RankedTarget> TARGET_ORDER = Comparator
+            .comparing(RankedTarget::interrupt).reversed()
+            .thenComparing(Comparator.comparingDouble(RankedTarget::threat).reversed())
+            .thenComparingDouble(RankedTarget::distanceSquared)
+            .thenComparing(entry -> entry.target().getUUID());
+
     /** All normal proposals share player crowd admission; identity remains a separate permission. */
     public static boolean selectionAllowed(Human h,LivingEntity e){
         if(!canTarget(h,e))return false;
