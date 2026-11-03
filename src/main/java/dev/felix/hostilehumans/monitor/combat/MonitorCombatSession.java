@@ -138,7 +138,19 @@ public final class MonitorCombatSession implements dev.felix.hostilehumans.behav
         human.setTarget(null);
     }
     public void close() {
-        suspend();
-        HumanBehaviorControl.cancel(human, "monitor combat session closed");
+        Throwable failure = null;
+        try {
+            suspend();
+        } catch (RuntimeException | Error exception) {
+            failure = exception;
+            throw exception;
+        } finally {
+            try {
+                HumanBehaviorControl.cancel(human, "monitor combat session closed");
+            } catch (RuntimeException | Error cleanup) {
+                if (failure == null) throw cleanup;
+                if (cleanup != failure) failure.addSuppressed(cleanup);
+            }
+        }
     }
 }
