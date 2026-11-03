@@ -34,6 +34,7 @@ public final class LongRangeNavigation {
     private static final class State {
         BlockPos goal;
         Path route;
+        NavigationSearchConfig searchSettings;
         int stage, lastRange, lastNodes, nextTick, queriedTick = Integer.MIN_VALUE, queuedAt = -1, expanded, searches, reuses, signature;
         String result = "new";
         final LinkedHashMap<BlockPos,Failure> failures = new LinkedHashMap<>();
@@ -80,7 +81,15 @@ public final class LongRangeNavigation {
         Actor actor = ACTORS.computeIfAbsent(human,k -> new Actor());
         State s = actor.lanes.computeIfAbsent(purpose,k -> new State());actor.latest = s;
         int signature = signature(human);
-        boolean newRequest=s.goal==null||s.signature!=signature||tick<s.queriedTick;
+        boolean changedLimits = !c.sameSearchLimits(s.searchSettings);
+        if (changedLimits) {
+            s.searchSettings = c;
+            s.failures.clear();
+            // Keep following an installed route. Only unfinished searches restart at the appropriate tier.
+            if (s.route == null) cancelQueue(human, actor, purpose);
+        }
+        boolean newRequest=s.goal==null||s.signature!=signature||tick<s.queriedTick
+                || changedLimits && s.route == null;
         boolean changedGoal=newRequest||s.goal.distSqr(goal)>c.retargetDistance()*c.retargetDistance();
         if (changedGoal) {
             boolean wasPending=!newRequest&&s.queuedAt>=0;

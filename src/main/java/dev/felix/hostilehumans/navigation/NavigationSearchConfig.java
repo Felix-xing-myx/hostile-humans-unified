@@ -27,6 +27,12 @@ public record NavigationSearchConfig(boolean enabled, int normalRange, int exten
     private static int integer(JsonObject data, String key, int fallback, int min, int max) {
         return (int)UnifiedConfig.number(data, key, fallback, min, max);
     }
+    boolean sameSearchLimits(NavigationSearchConfig other) {
+        return other != null && enabled == other.enabled
+                && normalRange == other.normalRange && extendedRange == other.extendedRange && longRange == other.longRange
+                && normalNodes == other.normalNodes && extendedNodes == other.extendedNodes && longNodes == other.longNodes;
+    }
+
     public int range(int stage) { return stage == 0 ? normalRange : stage == 1 ? extendedRange : longRange; }
     public int nodes(int stage) { return stage == 0 ? normalNodes : stage == 1 ? extendedNodes : longNodes; }
 }
