@@ -53,8 +53,12 @@ public final class FacilityResourcesTest {
                                         + ".png")) {
                     if (input == null) throw new AssertionError("Missing model texture " + texture);
                     var image = ImageIO.read(input);
-                    if (image == null || image.getWidth() != 32 || image.getHeight() != 32)
-                        throw new AssertionError("Initial32px texture: " + texture);
+                    int size = switch (texture.getPath()) {
+                        case "item/settlement_selection_tool", "item/settlement_region_tool" -> 16;
+                        default -> 32;
+                    };
+                    if (image == null || image.getWidth() != size || image.getHeight() != size)
+                        throw new AssertionError("Expected " + size + "px texture: " + texture);
                 }
             }
         models++;
