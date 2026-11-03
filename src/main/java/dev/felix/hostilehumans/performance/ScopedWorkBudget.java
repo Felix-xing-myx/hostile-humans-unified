@@ -59,8 +59,10 @@ public final class ScopedWorkBudget<K, S> {
     /** Drops deferred work and returns only capacity that has not been claimed. */
     public void cancel(K key) {
         waiting.remove(key);
-        Grant<S> grant = grants.put(key, new Grant<>(null, 0));
-        if (grant != null) release(grant.scope(), grant.amount());
+        grants.computeIfPresent(key, (ignored, grant) -> {
+            release(grant.scope(), grant.amount());
+            return new Grant<>(grant.scope(), 0);
+        });
     }
 
     private void release(S scope, int amount) {

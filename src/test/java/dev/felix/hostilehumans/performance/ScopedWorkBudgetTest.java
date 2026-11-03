@@ -8,6 +8,7 @@ public final class ScopedWorkBudgetTest {
         for (int dimensions = 2; dimensions <= 4; dimensions++) fairness(dimensions);
         batchesAndLimits();
         cancellation();
+        cancellationWithoutGrant();
         expiryAndRollback();
         changedRequest();
         reducedRequest();
@@ -71,6 +72,16 @@ public final class ScopedWorkBudgetTest {
         check(b.claimFull(1, "e", "z", 1) == 0, "consumed capacity is not returned");
         check(b.claimFull(2, "c", "z", 1) == 1, "oldest uncancelled caller eventually runs");
     }
+    private static void cancellationWithoutGrant() {
+        var budget = new ScopedWorkBudget<String, String>(3, 1, 1, 40);
+        check(budget.claimFull(0, "a", "x", 1) == 1, "initialize tick and use scope x");
+        budget.cancel("new");
+        check(budget.claimFull(0, "new", "y", 1) == 1, "cancelling an absent key created no grant");
+        check(budget.claimFull(0, "waiting", "x", 1) == 0, "scope x is full");
+        budget.cancel("waiting");
+        check(budget.claimFull(0, "waiting", "z", 1) == 1, "cancelled wait did not use a grant");
+    }
+
     private static void expiryAndRollback() {
         ScopedWorkBudget<String, String> b = new ScopedWorkBudget<>(1, 1, 1, 1);
         b.claimFull(0, "a", "x", 1);
