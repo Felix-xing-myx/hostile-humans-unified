@@ -4123,3 +4123,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控，基线 a6c89b3e1ddfce9776e95d8bd26273f276ff03bb，工作树 human-render-lod，分支 perf/human-render-lod。
 - 范围为人类渲染器、模型、手持物与客户端分档。近景和附身保持原有完整呈现，裁剪仅作用于本渲染器的已知图层。
 - 核对 Forge HumanoidMobRenderer 已注册头饰与鞘翅，移除重复层。Python 核查通过 516 项，跳过 16 项。未编译、未同步、未实测帧时间。
+
+- 闲置清扫掉落物分流（基线 `717b40b`，分支 `fix/loot-reservation`，工作树 `worktrees/loot-reservation`）。占位接入主动拾取 Goal，候选、战斗补给与实际拾取权限仍沿用各自入口。

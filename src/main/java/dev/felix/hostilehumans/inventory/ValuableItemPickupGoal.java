@@ -25,11 +25,16 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.WeakHashMap;
 
 /** Collects worthwhile loot while idle without interrupting combat behavior. */
 public final class ValuableItemPickupGoal extends Goal {
     private static final int MAX_SCREENED_ITEMS = 32;
     private static final int SCREENED_COOLDOWN_TICKS = 120;
+    private static final int CLAIM_TICKS = 40;
+    // A claim steers idle AI only. Weak keys let removed drops disappear without a cleanup scan.
+    private static final Map<ItemEntity, LootClaim> CLAIMS = new WeakHashMap<>();
+
     private final Human human;
     private final Map<UUID, ScreenedItem> screenedItems = new LinkedHashMap<>();
     private final Map<UUID, FailedItem> failedItems = new LinkedHashMap<>();
@@ -78,7 +83,7 @@ public final class ValuableItemPickupGoal extends Goal {
         nextSearchTick = human.tickCount + 10 + human.getRandom().nextInt(10);
         targetItem = chooseTarget();
         knownItemPosition = targetItem == null ? null : HumanLootVision.lastSeen(human, targetItem);
-        return targetItem != null && knownItemPosition != null;
+        return targetItem != null;
     }
 
     @Override
@@ -108,6 +113,10 @@ public final class ValuableItemPickupGoal extends Goal {
     public void tick() {
         if (!canContinueToUse()) {
             stop();
+            return;
+        }
+        if (!claim(targetItem, human)) {
+            advanceTarget();
             return;
         }
         HumanLootVision.Sight sight = HumanLootVision.inspect(human, targetItem);
@@ -171,6 +180,7 @@ public final class ValuableItemPickupGoal extends Goal {
         boolean ownedMovement = ownsPath(human.getNavigation().getPath(), ownedPath)
                 || MovementContinuity.ownsRoute(human, ownedPath)
                 || human.isPursuingWaterLoot() && human.getNavigation().isDone();
+        releaseClaim(targetItem, human);
         targetItem = null;
         // A normal target completion can leave an unfinished decision. It
         // owns no navigation or water movement; combat interrupts discard it.
@@ -214,13 +224,16 @@ public final class ValuableItemPickupGoal extends Goal {
             pendingSearch = new HumanLootManager.NearbySearch(human, 12.0D, pileCenter);
         }
         ItemEntity chosen = pendingSearch.advance(64,
-                item -> isScreened(item) || isFailed(item) || !SoldierOrder.allowsLootPosition(human, item.getX(), item.getZ()),
+                item -> claimedByOther(item, human) || isScreened(item) || isFailed(item) || !SoldierOrder.allowsLootPosition(human, item.getX(), item.getZ()),
                 item -> rememberScreened(item, SCREENED_COOLDOWN_TICKS));
         if (!pendingSearch.isDone()) {
             nextSearchTick = human.tickCount + 1;
             return null;
         }
         pendingSearch = null;
+        if (chosen != null && (HumanLootVision.lastSeen(human, chosen) == null || !claim(chosen, human))) {
+            chosen = null;
+        }
         if (chosen == null) {
             pileCenter = null;
         } else if (pileCenter == null || chosen.position().distanceToSqr(pileCenter) > 16.0D) {
@@ -230,6 +243,32 @@ public final class ValuableItemPickupGoal extends Goal {
         return chosen;
     }
 
+    private static synchronized boolean claimedByOther(ItemEntity item, Human human) {
+        LootClaim claim = CLAIMS.get(item);
+        return claim != null && claim.untilTick() > item.level().getGameTime()
+                && !claim.owner().equals(human.getUUID());
+    }
+
+    private static synchronized boolean claim(ItemEntity item, Human human) {
+        LootClaim claim = CLAIMS.get(item);
+        long now = item.level().getGameTime();
+        UUID owner = human.getUUID();
+        if (claim != null && claim.untilTick() > now) {
+            if (!claim.owner().equals(owner)) return false;
+            if (claim.untilTick() - now > CLAIM_TICKS / 2) return true;
+        }
+        CLAIMS.put(item, new LootClaim(owner, now + CLAIM_TICKS));
+        return true;
+    }
+
+    private static synchronized void releaseClaim(ItemEntity item, Human human) {
+        if (item == null) return;
+        LootClaim claim = CLAIMS.get(item);
+        if (claim != null && claim.owner().equals(human.getUUID())) CLAIMS.remove(item);
+    }
+
+    private record LootClaim(UUID owner, long untilTick) {}
+
     static boolean ownsPath(Object current, Object assigned) {
         return assigned != null && current == assigned;
     }
@@ -237,7 +276,11 @@ public final class ValuableItemPickupGoal extends Goal {
     private void beginTarget() {
         if (targetItem == null) return;
         knownItemPosition = HumanLootVision.lastSeen(human, targetItem);
-        if (knownItemPosition == null) { targetItem = null; return; }
+        if (knownItemPosition == null) {
+            releaseClaim(targetItem, human);
+            targetItem = null;
+            return;
+        }
         progress.reset(human.tickCount, human.getX(), human.getY(), human.getZ());
         arrivedAt = -1;
         waitingForPath = directWaterFallback = false;
@@ -266,6 +309,7 @@ public final class ValuableItemPickupGoal extends Goal {
         releasePickupRoute();
         human.setPursuingWaterLoot(false);
         waitingForPath = false;
+        releaseClaim(targetItem, human);
         targetItem = chooseTarget();
         if (targetItem != null) beginTarget();
     }
