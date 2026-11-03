@@ -161,9 +161,12 @@ public final class SplitConfigFiles {
             byte[] output = format(arranged).getBytes(StandardCharsets.UTF_8);
             // Refresh help/ownership and expose new feature sections; other missing values
             // remain in memory and explicit pools stay authoritative.
-            if ((imported || !Arrays.equals(original, output)) && !writeCurrent(path, original, arranged))
+            if ((imported || !Arrays.equals(original, output)) && !writeCurrent(path, original, arranged)) {
+                if (strict) throw new IOException("Configuration changed or could not be saved: " + path);
                 data = read(path, 2);
-            else data = arranged;
+            } else {
+                data = arranged;
+            }
             if(rank) SpawnSupplyMigration.migrateRank(data);
             TierConfigProjection.fill(data, defaults, "");
             describe(data, rank);
