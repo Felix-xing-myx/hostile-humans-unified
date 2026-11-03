@@ -63,16 +63,28 @@ public final class FactionDefinitions extends SimplePreparableReloadListener<Fac
         if (raw == null || raw.isBlank()) return null;
         return ResourceLocation.tryParse(raw.contains(":") ? raw : HumanRuntime.MOD_ID + ":" + raw);
     }
-    public static Definition find(String raw) { ResourceLocation key = id(raw); return key == null ? null : current.definitions().get(key); }
-    static boolean enemies(String first, String second) {
-        Definition a = find(first), b = find(second);
-        return a != null && b != null && !a.id().equals(b.id())
-                && (a.enemies().contains(b.id()) || b.enemies().contains(a.id()));
+    public static Definition find(String raw) { return find(current, raw); }
+
+    private static Definition find(Revision revision, String raw) {
+        ResourceLocation key = id(raw);
+        return key == null ? null : revision.definitions().get(key);
     }
+
+    static boolean enemies(String first, String second) {
+        Revision revision = current;
+        return areEnemies(find(revision, first), find(revision, second));
+    }
+
+    static boolean areEnemies(Definition first, Definition second) {
+        return first != null && second != null && !first.id().equals(second.id())
+                && (first.enemies().contains(second.id()) || second.enemies().contains(first.id()));
+    }
+
     static boolean allies(String first, String second) {
-        Definition a = find(first), b = find(second);
+        Revision revision = current;
+        Definition a = find(revision, first), b = find(revision, second);
         return a != null && b != null && (a.id().equals(b.id())
-                || (!enemies(first, second) && (a.allies().contains(b.id()) || b.allies().contains(a.id()))));
+                || (!areEnemies(a, b) && (a.allies().contains(b.id()) || b.allies().contains(a.id()))));
     }
     @Override protected void apply(Prepared prepared, ResourceManager manager,
                                    ProfilerFiller profiler) {

@@ -131,10 +131,10 @@ public final class HumanFactions {
         var definitions = FactionDefinitions.current().definitions().values().stream()
                 .filter(d -> d.weight() > 0).sorted(java.util.Comparator.comparing(d -> d.id().toString())).toList();
         var firsts = definitions.stream().filter(a -> definitions.stream()
-                .anyMatch(b -> FactionDefinitions.enemies(a.id().toString(), b.id().toString()))).toList();
+                .anyMatch(b -> FactionDefinitions.areEnemies(a, b))).toList();
         if (firsts.isEmpty()) return new String[0];
         FactionDefinitions.Definition first = weighted(firsts, random);
-        var seconds = definitions.stream().filter(b -> FactionDefinitions.enemies(first.id().toString(), b.id().toString())).toList();
+        var seconds = definitions.stream().filter(b -> FactionDefinitions.areEnemies(first, b)).toList();
         return new String[]{first.id().toString(), weighted(seconds, random).id().toString()};
     }
     private static FactionDefinitions.Definition weighted(java.util.List<FactionDefinitions.Definition> eligible,
