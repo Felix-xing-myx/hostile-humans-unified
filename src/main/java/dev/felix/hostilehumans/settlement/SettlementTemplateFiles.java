@@ -32,7 +32,7 @@ final class SettlementTemplateFiles {
     private static final Map<ServerPlayer, Placement> PENDING = new WeakHashMap<>();
 
     private record Placement(ServerLevel level, ResourceLocation id, BlockPos origin,
-            StructurePlaceSettings settings, StructureTemplate template, RegionBox bounds, long expires) {}
+            StructurePlaceSettings settings, StructureTemplate template, RegionBox bounds, int entityEntries, long expires) {}
 
     private SettlementTemplateFiles() {}
 
@@ -112,6 +112,10 @@ final class SettlementTemplateFiles {
                 Files.deleteIfExists(staging);
             }
             manager.remove(id);
+            int count = entityEntries(data);
+            player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                    entities ? "gui.hostile_humans_unified.settlement.export_entity_count"
+                            : "gui.hostile_humans_unified.settlement.export_entities_skipped", id.toString(), count));
             return "saved template " + id;
         } catch (IOException error) {
             dev.felix.hostilehumans.bootstrap.HumanRuntime.LOGGER.warn("Could not save settlement template {}", id, error);
@@ -145,8 +149,12 @@ final class SettlementTemplateFiles {
         }
         var copy = manager.readStructure(data);
         var ghosts = previewBlocks(level, data, origin, settings);
-        PENDING.put(player, new Placement(level, id, origin, settings, copy, bounds,
+        int count = entityEntries(data);
+        PENDING.put(player, new Placement(level, id, origin, settings, copy, bounds, count,
                 level.getGameTime() + PREVIEW_TICKS));
+        player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                entities ? "gui.hostile_humans_unified.settlement.preview_entity_count"
+                        : "gui.hostile_humans_unified.settlement.preview_entities_off", count));
         SettlementNetwork.preview(player, new SettlementPreview(level.dimension().location().toString(),
                 List.of(new SettlementPreview.Box(bounds, 0xffffff, id.toString().substring(0,
                         Math.min(id.toString().length(), 192)))), null, null, false, ghosts, "place", id.toString().substring(0,
@@ -154,6 +162,10 @@ final class SettlementTemplateFiles {
         return "Preview " + id + ": /hh settlement template confirm replaces blocks inside the box; "
                 + "/hh settlement template cancel aborts. Preview expires after 30 seconds."
                 + (ghosts.isEmpty() ? " Bounds only: model preview is empty or exceeds 4096 blocks." : "");
+    }
+
+    private static int entityEntries(CompoundTag data) {
+        return data.getList("entities", Tag.TAG_COMPOUND).size();
     }
 
     private static List<SettlementPreview.Ghost> previewBlocks(ServerLevel level, CompoundTag data,
@@ -202,6 +214,9 @@ final class SettlementTemplateFiles {
         if (!pending.template().placeInWorld(pending.level(), pending.origin(), pending.origin(),
                 pending.settings(), pending.level().getRandom(), Block.UPDATE_ALL))
             throw new IllegalArgumentException("template placement failed");
+        if (!pending.settings().isIgnoreEntities())
+            player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                    "gui.hostile_humans_unified.settlement.placement_entity_count", pending.entityEntries()));
         return "placed " + pending.id() + "; open its information block to register the new site";
     }
 

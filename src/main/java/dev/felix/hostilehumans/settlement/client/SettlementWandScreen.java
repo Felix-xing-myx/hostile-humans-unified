@@ -33,7 +33,7 @@ public final class SettlementWandScreen extends PanelScreen {
         super(text("wand_title"), PanelGeometry.Size.L);
         this.view = view;
         this.level = level;
-        var saved = LAST.getOrDefault(level, new Options("", 0, Mirror.NONE, false));
+        var saved = LAST.getOrDefault(level, new Options("", 0, Mirror.NONE, true));
         template = InputValue.text(saved.id(), 256, true);
         turns = saved.turns();
         mirror = saved.mirror();
@@ -100,8 +100,9 @@ public final class SettlementWandScreen extends PanelScreen {
             mirrors.add(button(text("mirror." + option.name()), option == mirror,
                     () -> { mirror = option; rebuildWidgets(); }));
         nodes.add(UiLayout.grid(3, 4, 40, mirrors));
-        nodes.add(button(text(entities ? "template_entities_on" : "template_entities_off"),
+        nodes.add(button(text(entities ? "place_entities_on" : "place_entities_off"),
                 entities, () -> { entities = !entities; rebuildWidgets(); }));
+        nodes.add(note(text("place_entities_help")));
         return UiLayout.column(6, nodes);
     }
 

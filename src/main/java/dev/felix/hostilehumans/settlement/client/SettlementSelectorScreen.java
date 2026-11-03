@@ -157,6 +157,12 @@ public final class SettlementSelectorScreen extends PanelScreen {
     @Override protected void buildFooter() {
         footer(Component.translatable("gui.cancel"), ignored -> onClose());
         if (binding.getBoolean("ready"))
+            footer(text("selector_open_export"), ignored -> {
+                var data = request("VIEW", "", false, -1);
+                data.putBoolean("openExport", true);
+                SettlementNetwork.configureSelector(data);
+            });
+        if (binding.getBoolean("ready"))
             footer(text("selector_apply"), ignored -> {
                 var data = request("VIEW", "", false, -1);
                 data.putBoolean("visibilityOnly", true);

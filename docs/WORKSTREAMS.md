@@ -4059,3 +4059,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控。基线 $base；工作树 selector-authoring，分支 fix/selector-authoring。
 - 范围为框选器面板、区域及设施保存、双语提示和作者验收文档。共享模板校验仍负责坐标和设施归属；监控及放置棒未介入。据点协议升至 9。
 - Python 核查 516 项通过、16 项跳过。未编译、未构建、未同步、未做游戏内验收。
+
+### 建筑模板实体往返与导出入口
+
+- 主控，基线 c54b6d2e76687afa44f5dc4b4b1dcc37fb98136c，工作树 template-entity-roundtrip，分支 fix/template-entity-roundtrip。
+- 范围为模板文件、放置棒及命令、框选器导出入口和双语提示。沿用原版实体保存、坐标变换和放置接口。据点协议升至 10。
+- Python 核查 516 项通过、16 项跳过。核对原版结构类的实体 NBT 写入、读取、UUID 清除和乘客放置入口。未编译、未同步、未游戏验收。

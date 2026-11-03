@@ -193,6 +193,10 @@ public final class SettlementSelectionTool extends Item {
         if (!data.contains("anchor", net.minecraft.nbt.Tag.TAG_LONG)
                 || data.getLong("anchor") != binding.information().asLong()
                 || data.getInt("revision") != binding.revision()) return;
+        if (data.getBoolean("openExport")) {
+            SettlementNetwork.openAuthor(player, binding.information(), SettlementNetwork.AUTHOR_FILE_TAB);
+            return;
+        }
         if (data.getBoolean("visibilityOnly")) {
             var next = new Binding(binding.dimension(), binding.information(), binding.carrier(),
                     binding.region(), binding.exclude(), binding.currentOnly(), binding.boxIndex(), binding.mode(),

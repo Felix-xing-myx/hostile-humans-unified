@@ -33,10 +33,10 @@ public final class SettlementCommands {
                 .then(Commands.literal("preview")
                         .then(Commands.argument("id", ResourceLocationArgument.id())
                                 .then(Commands.argument("corner", BlockPosArgument.blockPos())
-                                        .executes(c -> preview(c, 0, Mirror.NONE, false))
+                                        .executes(c -> preview(c, 0, Mirror.NONE, true))
                                         .then(Commands.argument("turns", IntegerArgumentType.integer(0, 3))
                                                 .executes(c -> preview(c, IntegerArgumentType.getInteger(c, "turns"),
-                                                        Mirror.NONE, false))
+                                                        Mirror.NONE, true))
                                                 .then(placementVariant("none", Mirror.NONE))
                                                 .then(placementVariant("left_right", Mirror.LEFT_RIGHT))
                                                 .then(placementVariant("front_back", Mirror.FRONT_BACK))))))
@@ -53,7 +53,7 @@ public final class SettlementCommands {
 
     private static LiteralArgumentBuilder<CommandSourceStack> placementVariant(String name, Mirror mirror) {
         return Commands.literal(name)
-                .executes(c -> preview(c, IntegerArgumentType.getInteger(c, "turns"), mirror, false))
+                .executes(c -> preview(c, IntegerArgumentType.getInteger(c, "turns"), mirror, true))
                 .then(Commands.argument("entities", BoolArgumentType.bool())
                         .executes(c -> preview(c, IntegerArgumentType.getInteger(c, "turns"), mirror,
                                 BoolArgumentType.getBool(c, "entities"))));

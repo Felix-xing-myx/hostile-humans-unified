@@ -77,6 +77,7 @@ public final class SettlementScreen extends PanelScreen {
             tab = previous.tab();
             templateEntities = previous.entities();
         }
+        if (snapshot.author() && snapshot.reason().equals(SettlementNetwork.AUTHOR_FILE_TAB)) tab = "transfer";
     }
 
     private static Component text(String key, Object... args) {
@@ -555,7 +556,7 @@ public final class SettlementScreen extends PanelScreen {
         controls.clear();
         List<UiLayout.Node> root = new ArrayList<>();
         root.add(muted(text("revisions", snapshot.authorRevision(), snapshot.instanceRevision())));
-        root.add(muted(snapshot.reason().equals("settlement selection tool required")
+        if (!snapshot.reason().equals(SettlementNetwork.AUTHOR_FILE_TAB)) root.add(muted(snapshot.reason().equals("settlement selection tool required")
                 ? text("need_selection_tool") : Component.literal(snapshot.reason())));
         if (pending.busy()) root.add(text(text("pending"), () -> theme().accent()));
         if (!error.isEmpty()) root.add(text(text(error), () -> theme().danger()));
@@ -953,7 +954,9 @@ public final class SettlementScreen extends PanelScreen {
     }
 
     private void addFileSaveControls(List<UiLayout.Node> nodes) {
-        nodes.add(action("template_entities", text(templateEntities ? "template_entities_on" : "template_entities_off"),
+        if (dirty()) nodes.add(muted(text("export_save_draft_first")));
+        nodes.add(muted(text("export_entities_help")));
+        nodes.add(action("template_entities", text(templateEntities ? "export_entities_on" : "export_entities_off"),
                 editable(), templateEntities, () -> { templateEntities = !templateEntities; refresh(); }));
         nodes.add(action("save_template_file", text("save_template_file"), editable() && !dirty(), false,
                 () -> saveTemplateFile(false)));

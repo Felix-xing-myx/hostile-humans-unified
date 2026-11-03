@@ -22,7 +22,8 @@ import java.util.function.Supplier;
 public final class SettlementNetwork {
     private static final UUID NONE = new UUID(0, 0);
     private static final int NBT_LIMIT = 1048576;
-    private static final String VERSION = "9";
+    private static final String VERSION = "10";
+    public static final String AUTHOR_FILE_TAB = "author file tab";
     private static final int SESSION_TICKS = 1200;
     public static final String SELECTION_READY = "selection mode updated";
 
@@ -253,6 +254,10 @@ public final class SettlementNetwork {
     }
 
     public static void openAuthor(ServerPlayer player, BlockPos anchor) {
+        openAuthor(player, anchor, "author editor");
+    }
+
+    static void openAuthor(ServerPlayer player, BlockPos anchor, String initialView) {
         var info = SettlementAuthoring.information(player, anchor);
         if (info == null) {
             tell(player, "Author permission, distance or loaded information block required.");
@@ -270,7 +275,7 @@ public final class SettlementNetwork {
         SESSIONS.put(player, s);
         MODULE_PAGES.remove(player);
         REQUEST_IDS.remove(player);
-        send(player, s, "author editor");
+        send(player, s, initialView);
     }
 
     private static String controlId(ServerPlayer player, UUID id, BlockPos position) {
