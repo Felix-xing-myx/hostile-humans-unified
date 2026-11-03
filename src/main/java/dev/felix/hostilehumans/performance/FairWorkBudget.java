@@ -90,8 +90,9 @@ public final class FairWorkBudget<K> {
 
     public String usage(long currentTick, int idleCapacity) {
         if (tick < currentTick - 1 || tick > currentTick) return "0 / " + idleCapacity + " · 等待 " + waiting.size();
-        return executed + " / " + activeCapacity + " · 预约或已用 " + (activeCapacity - remaining)
-                + " · 排队 " + waiting.size();
+        int reserved = activeCapacity - remaining - executed;
+        return executed + " / " + activeCapacity + " · 未领用预约 " + reserved
+                + " · 待轮转 " + waiting.size();
     }
 
     private void beginTick(long currentTick) {

@@ -134,7 +134,9 @@ public final class PerformancePoliciesTest {
         FairWorkBudget<String> handoff = new FairWorkBudget<>(4, 4, 2);
         check(handoff.claimFull(0, "actor", 3) == 3, "schedule an older request");
         check(handoff.claimFull(1, "other", 1) == 1, "leave the old request reserved");
+        check(handoff.usage(1, 4).contains("未领用预约 3"), "diagnostics distinguish reservation from claimed work");
         handoff.cancel("actor");
+        check(handoff.usage(1, 4).contains("未领用预约 0"), "released capacity is no longer reported as reserved");
         check(handoff.claimFull(1, "actor", 3) == 3, "new task can use spare capacity after an unused reservation");
         handoff.cancel("actor");
         check(handoff.claimFull(1, "actor", 1) == 0, "new task cannot claim again after executing");

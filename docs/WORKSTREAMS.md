@@ -4197,3 +4197,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 累计复核投掷提交，基线 436ddfc。PotionThrowing 统一成功冷却的提交顺序，数值不变。
 
 - 复核导航预约交接，基线 2af4ed8。FairWorkBudget 区分未执行预约与已执行标记，补充 Java 回归，尚未编译。
+
+- 复核 F8 导航预算统计，基线 595222e。FairWorkBudget 区分已领用和未领用预约，补充 Java 断言，尚未编译。
