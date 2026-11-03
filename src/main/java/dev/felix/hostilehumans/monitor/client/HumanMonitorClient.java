@@ -50,6 +50,7 @@ public final class HumanMonitorClient {
     private static float controlYaw, controlPitch;
     private static long nextInputSequence;
     private static boolean queuedAttack, queuedUse, queuedReload;
+    private static boolean pauseInputSent;
     private static final MonitorMovementPrediction PREDICTION = new MonitorMovementPrediction();
     public static String predictionStatus() { return PREDICTION.reason(); }
     public static net.minecraft.world.phys.Vec3 predictedEye(Human human, float partialTick) {
@@ -98,7 +99,7 @@ public final class HumanMonitorClient {
         }
         if (state == null || !state.token().equals(snapshot.token()) || state.generation() != snapshot.generation()
                 || state.takeover() != snapshot.takeover()) {
-            PREDICTION.clear(); nextInputSequence = 0; MonitorGunHud.clear();
+            PREDICTION.clear(); nextInputSequence = 0; pauseInputSent = false; MonitorGunHud.clear();
             dev.felix.hostilehumans.client.render.tacz.TaczSpectatorFirstPerson.clear();
             loadout = null; pendingSelection = null;
         }
@@ -115,7 +116,7 @@ public final class HumanMonitorClient {
         if (notifyServer && client.getConnection() != null) request(1, false, 0);
         CLOSED.add(state.token());
         while (CLOSED.size() > 16) CLOSED.remove(CLOSED.iterator().next());
-        state = null; PREDICTION.clear(); nextInputSequence = 0; MonitorGunHud.clear();
+        state = null; PREDICTION.clear(); nextInputSequence = 0; pauseInputSent = false; MonitorGunHud.clear();
         dev.felix.hostilehumans.client.render.tacz.TaczSpectatorFirstPerson.clear();
         loadout = null; pendingSelection = null;
         queuedAttack = queuedUse = queuedReload = false;
@@ -140,10 +141,12 @@ public final class HumanMonitorClient {
     @SubscribeEvent public static void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END || state == null) return;
         var client = Minecraft.getInstance();
-        if (client.isPaused()) receivedAt = System.nanoTime();
+        boolean paused = client.isPaused();
+        if (paused) receivedAt = System.nanoTime();
+        else pauseInputSent = false;
         if (client.player == null || client.level == null || client.level != initialLevel || client.getConnection() == null
                 || client.player.isSpectator() || System.nanoTime() - receivedAt > 5_000_000_000L) { close(true); return; }
-        if (!client.isPaused() && ++heartbeat >= 20) { heartbeat = 0; request(0, false, 0); }
+        if (!paused && ++heartbeat >= 20) { heartbeat = 0; request(0, false, 0); }
         var entity = client.level.getEntity(state.entityId());
         if (!(entity instanceof Human human) || !viewing(human)) {
             if (++unresolvedTicks > 200) close(true);
@@ -155,8 +158,8 @@ public final class HumanMonitorClient {
         client.options.setCameraType(CameraType.FIRST_PERSON);
         // No persistent Screen: native chat, commands, pause and nested menus remain usable.
         if (state.takeover()) {
-            if (client.isPaused()) { PREDICTION.suspend(); queuedAttack = queuedUse = queuedReload = false; return; }
-            boolean input = client.screen == null && client.isWindowActive() && !client.isPaused();
+            if (paused && pauseInputSent) return;
+            boolean input = !paused && client.screen == null && client.isWindowActive();
             float forward = input ? axis(client.options.keyUp.isDown(), client.options.keyDown.isDown()) : 0;
             float sideways = input ? axis(client.options.keyLeft.isDown(), client.options.keyRight.isDown()) : 0;
             var weapon = human.getMainHandItem();
@@ -168,14 +171,19 @@ public final class HumanMonitorClient {
                     || human.getMainHandItem().getItem() instanceof net.minecraft.world.item.CrossbowItem;
             boolean offhandConsumable = human.getOffhandItem().isEdible() || human.getOffhandItem().is(net.minecraft.world.item.Items.POTION);
             boolean supply = input && (Keys.SUPPLY.isDown() || !ranged && offhandConsumable && use);
-            MonitorGunRecoil.update(human,state.token(),state.generation());
+            if (!paused) MonitorGunRecoil.update(human,state.token(),state.generation());
             var command = new HumanMonitorNetwork.Control(state.token(), forward, sideways,
                     controlYaw, controlPitch, input && client.options.keyJump.isDown(),
                     input && client.options.keySprint.isDown(), input && client.options.keyShift.isDown(),
                     state.generation(), ++nextInputSequence, input, attack, use, reload, supply);
             queuedAttack = queuedUse = queuedReload = false;
             HumanMonitorNetwork.control(command);
-            PREDICTION.input(human, command, input);
+            if (paused) {
+                pauseInputSent = true;
+                PREDICTION.suspend();
+            } else {
+                PREDICTION.input(human, command, input);
+            }
         }
     }
     private static float axis(boolean positive, boolean negative) { return (positive ? 1 : 0) - (negative ? 1 : 0); }
@@ -200,7 +208,7 @@ public final class HumanMonitorClient {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void cameraAngles(net.minecraftforge.client.event.ViewportEvent.ComputeCameraAngles event) {
         if (event.getCamera().getEntity() instanceof Human human && takingOver(human)) {
-            MonitorGunRecoil.update(human,state.token(),state.generation());
+            if (!paused) MonitorGunRecoil.update(human,state.token(),state.generation());
             event.setYaw(controlYaw); event.setPitch(controlPitch);
         }
     }
