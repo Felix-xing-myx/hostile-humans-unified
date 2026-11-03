@@ -1,4 +1,6 @@
 {
+  "gui.hostile_humans_unified.settlement.region_remove_facilities": "先改绑或移除这些设施，再删除本区域：%s",
+  "gui.hostile_humans_unified.settlement.region_remove_last_outer": "正式据点主体需要至少一个外圈。可直接重选这个外圈，或先添加另一个外圈。普通小屋可先改为「普通建筑」。",
   "item.hostile_humans_unified.settlement_selection_tool.bound_mode": "建筑棒已绑定：%s%s。请手持建筑棒右键目标。",
   "item.hostile_humans_unified.settlement_selection_tool.mode.bounds": "建筑保存范围",
   "item.hostile_humans_unified.settlement_selection_tool.mode.add": "追加辖区框",

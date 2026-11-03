@@ -804,30 +804,30 @@ public final class SettlementScreen extends PanelScreen {
                             () -> {
                                 if (applyRegion()) refresh();
                             }));
-            detail.add(
-                    action(
-                            "removeRegion",
-                            text("remove_region"),
-                            editable(),
-                            false,
-                            () ->
-                                    confirm(
-                                            "removeRegion",
-                                            () -> {
-                                                String id = region().getString("id");
-                                                for (Tag tag : facilities())
-                                                    if (((CompoundTag) tag)
-                                                            .getString("region")
-                                                            .equals(id)) {
-                                                        fail("region_referenced");
-                                                        return;
-                                                    }
-                                                regions().remove(regionIndex);
-                                                regionIndex = 0;
-                                                localChanged = true;
-                                                loadRegion();
-                                                refresh();
-                                            })));
+            String selectedId = region().getString("id");
+            String removeId = "removeRegion." + selectedId;
+            var references = new ArrayList<String>();
+            for (Tag tag : facilities()) {
+                var facility = (CompoundTag) tag;
+                if (facility.getString("region").equals(selectedId))
+                    references.add(facility.getString("id"));
+            }
+            boolean lastOuter = kind.equals("ROOT")
+                    && region().getString("layer").equals("OUTER")
+                    && regions().stream().map(CompoundTag.class::cast)
+                            .filter(r -> r.getString("layer").equals("OUTER")).count() == 1;
+            if (!references.isEmpty())
+                detail.add(muted(text("region_remove_facilities", String.join(", ", references))));
+            if (lastOuter) detail.add(muted(text("region_remove_last_outer")));
+            detail.add(action(removeId, text("remove_region"),
+                    editable() && references.isEmpty() && !lastOuter, false,
+                    () -> confirm(removeId, () -> {
+                        regions().remove(regionIndex);
+                        regionIndex = 0;
+                        localChanged = true;
+                        loadRegion();
+                        refresh();
+                    })));
             detail.add(
                     action(
                             "selection",

@@ -1,4 +1,6 @@
 {
+  "gui.hostile_humans_unified.settlement.region_remove_facilities": "Move or remove these facilities before deleting this region: %s",
+  "gui.hostile_humans_unified.settlement.region_remove_last_outer": "A settlement root requires an outer region. Replace this area or add another outer region first. For a small house, choose Ordinary Building.",
   "item.hostile_humans_unified.settlement_selection_tool.bound_mode": "Wand bound: %s%s. Hold the wand and right-click the target.",
   "item.hostile_humans_unified.settlement_selection_tool.mode.bounds": "Building capture bounds",
   "item.hostile_humans_unified.settlement_selection_tool.mode.add": "Add region box",
