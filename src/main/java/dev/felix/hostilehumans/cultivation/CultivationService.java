@@ -147,7 +147,9 @@ public final class CultivationService {
                 && record.cycle.status() != CultivationCycle.Status.CANCELLED
                 && record.cycle.status() != CultivationCycle.Status.COMPLETED)
             throw new IllegalStateException("A paid period already exists");
-        if (record.pending()) applyPending(server, record, human);
+        if (record.pending() && record.appliedRevision != record.profile.revision()) {
+            applyPending(server, record, human, data);
+        }
         var profile = SpecialtyTrainingBridge.read(human);
         var candidates =
                 CultivationPlanner.preview(
@@ -333,9 +335,7 @@ public final class CultivationService {
             if (r.pending() && h != null && r.appliedRevision != r.profile.revision()) {
                 if (processed++ >= 64) continue;
                 try {
-                    applyPending(server, r, h);
-                    r.appliedRevision = r.profile.revision();
-                    data.setDirty();
+                    applyPending(server, r, h, data);
                     nextAutomatic(server, r, h);
                 } catch (RuntimeException invalid) {
                     r.reason = invalid.getMessage();
@@ -385,13 +385,15 @@ public final class CultivationService {
         }
     }
 
-    private static void applyPending(MinecraftServer server, CultivationRecord r, Human h) {
+    private static void applyPending(MinecraftServer server, CultivationRecord r, Human h, CultivationData data) {
         own(server, r.owner, h);
         var access = permission(server, r.owner, r.facility, h, false);
         if (!access.allowed())
             throw new IllegalStateException(
                     "Committed result awaiting valid identity/facility: " + access.reason());
         SpecialtyTrainingBridge.apply(h, r.previous, r.profile);
+        r.appliedRevision = r.profile.revision();
+        data.setDirty();
         // Keep the completed journal for repeat-application deduplication; no second mutable entity
         // allocation lives here.
     }
