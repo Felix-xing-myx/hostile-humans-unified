@@ -35,6 +35,10 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
     public static final String SCGUNS_HUMAN_SHIELD =
             "onHitEntity(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/world/phys/Vec3;Z)V";
 
+    public static final String JEG_NPC_FLASH =
+            "renderWeapon(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IF)Z";
+    public static final String JEG_FLASH_SHOOTING_CALL = "Lttv/migami/jeg/client/handler/ShootingHandler;isShooting()Z";
+
     @Override public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
         if (mixinClassName.endsWith("ScgunsMonitorShotMixin") || mixinClassName.endsWith("JegMonitorShotMixin"))
             return monitorShotMixin(targetClassName, mixinClassName.endsWith("ScgunsMonitorShotMixin"));
@@ -51,8 +55,7 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
         else if (mixinClassName.endsWith(".ScgunsSulfurheadDamageMixin")) contract = SCGUNS_SULFURHEAD_DAMAGE;
         else if (mixinClassName.endsWith(".ScgunsHumanAimMixin")) contract = SCGUNS_HUMAN_AIM;
         else if (mixinClassName.endsWith(".ScgunsHumanShieldMixin")) contract = SCGUNS_HUMAN_SHIELD;
-        else if (mixinClassName.endsWith(".JegNpcMuzzleFlashMixin")) contract =
-                "renderWeapon(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IF)Z";
+        else if (mixinClassName.endsWith(".JegNpcMuzzleFlashMixin")) contract = JEG_NPC_FLASH;
         else return true;
         if (contract.equals(SCGUNS_HUMAN_AIM)) NativeAimCompatibility.scgunsSharedPrediction(false);
         try {
@@ -66,6 +69,10 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
                 boolean supported = SpectatorSoundContract.supports(target, contract.equals("spectator-animation-distance"));
                 if (!supported) LOGGER.warn("Skipping spectator sound compatibility {}: upstream distance calculation changed; native sound retained", targetClassName);
                 return supported;
+            }
+            if (contract.equals(JEG_NPC_FLASH) && !supportsJegFlash(target)) {
+                LOGGER.warn("Retaining native JEG muzzle flash: its shooting check changed");
+                return false;
             }
             if (contract.equals(SCGUNS_HUMAN_SHIELD) && !supportsScgunsShield(target)) {
                 LOGGER.warn("Retaining native Scguns shield interception: its call site changed");
@@ -164,6 +171,16 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
                 && ((method.access & Opcodes.ACC_STATIC) != 0) == isStatic
                 && (method.access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE)) == 0);
     }
+    private static boolean supportsJegFlash(ClassNode target) {
+        return target.methods.stream()
+                .filter(method -> (method.name + method.desc).equals(JEG_NPC_FLASH))
+                .flatMap(method -> java.util.stream.StreamSupport.stream(method.instructions.spliterator(), false))
+                .filter(instruction -> instruction instanceof org.objectweb.asm.tree.MethodInsnNode call
+                        && call.getOpcode() == Opcodes.INVOKEVIRTUAL
+                        && ("L" + call.owner + ";" + call.name + call.desc).equals(JEG_FLASH_SHOOTING_CALL))
+                .count() == 1;
+    }
+
     private static boolean supportsScgunsShield(ClassNode target) {
         return target.methods.stream()
                 .filter(method -> (method.name + method.desc).equals(SCGUNS_HUMAN_SHIELD))
