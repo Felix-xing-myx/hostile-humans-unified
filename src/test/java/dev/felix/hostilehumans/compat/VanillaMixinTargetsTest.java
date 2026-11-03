@@ -95,7 +95,7 @@ public final class VanillaMixinTargetsTest {
                 }
             }
         }
-        if (settlementHandlers != 10) throw new AssertionError("All five settlement handlers must resolve in default and searge contexts");
+        if (settlementHandlers != 12) throw new AssertionError("All six settlement handlers must resolve in default and searge contexts");
         System.out.println("VanillaMixinTargetsTest: " + checked + " packaged vanilla handler/context targets passed; full game startup remains separate");
     }
 }
