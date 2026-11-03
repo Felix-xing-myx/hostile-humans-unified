@@ -29,12 +29,14 @@ public final class TaczArcanaCollisionContractTest {
     public static void main(String[] args) throws Exception {
         if (args.length != 2)
             throw new IllegalArgumentException("TaCZ jar and Arcana jar required");
-        ClassNode nativeUtil;
+        ClassNode nativeUtil, nativeSound, nativePacket;
         try (ZipFile jar = new ZipFile(args[0])) {
             nativeUtil =
                     read(
                             jar.getInputStream(jar.getEntry("com/tacz/guns/util/EntityUtil.class"))
                                     .readAllBytes());
+            nativeSound = read(jar.getInputStream(jar.getEntry("com/tacz/guns/sound/SoundManager.class")).readAllBytes());
+            nativePacket = read(jar.getInputStream(jar.getEntry("com/tacz/guns/network/message/ServerMessageSound.class")).readAllBytes());
         }
         byte[] nested;
         try (ZipFile jar = new ZipFile(args[1])) {
@@ -132,7 +134,7 @@ public final class TaczArcanaCollisionContractTest {
                 }
             }
         }
-        verifySoundBroadcastOrdering(nested);
+        verifySoundPacketBoundary(nested, nativeSound, nativePacket);
         check(redirects == 2, "ordinary and piercing queries both composed");
         check(returnHook, "Arcana getHitResult return-time proximity compensation is preserved");
         System.out.println(
@@ -143,7 +145,7 @@ public final class TaczArcanaCollisionContractTest {
     }
 
     /** A cancellable upstream HEAD must not bypass the monitor audience supplement. */
-    private static void verifySoundBroadcastOrdering(byte[] nested) throws Exception {
+    private static void verifySoundPacketBoundary(byte[] nested, ClassNode nativeSound, ClassNode nativePacket) throws Exception {
         ClassNode upstream = null;
         try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(nested))) {
             for (var entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry())
@@ -172,20 +174,31 @@ public final class TaczArcanaCollisionContractTest {
         }
         AnnotationNode ownMixin = own.invisibleAnnotations.stream()
                 .filter(a -> a.desc.endsWith("/Mixin;")).findFirst().orElseThrow();
-        AnnotationNode upstreamMixin = upstream.invisibleAnnotations.stream()
-                .filter(a -> a.desc.endsWith("/Mixin;")).findFirst().orElseThrow();
-        int upstreamPriority = value(upstreamMixin, "priority") instanceof Integer i ? i : 1000;
-        check(value(ownMixin, "priority") instanceof Integer priority && priority > upstreamPriority,
-                "monitor supplements before actual upstream cancellation");
-        boolean head = false;
+        String packet = "com/tacz/guns/network/message/ServerMessageSound";
+        String constructor = dev.felix.hostilehumans.compat.OptionalMixinPlugin.TACZ_SOUND_PACKET;
+        check(dev.felix.hostilehumans.compat.OptionalMixinPlugin.hasMethod(nativePacket, constructor, false),
+                "actual TaCZ packet exposes the guarded constructor");
+        for (ClassNode producer : List.of(nativeSound, upstream)) {
+            check(producer.methods.stream()
+                            .flatMap(m -> java.util.stream.StreamSupport.stream(m.instructions.spliterator(), false))
+                            .anyMatch(i -> i instanceof MethodInsnNode call && call.owner.equals(packet)
+                                    && (call.name + call.desc).equals(constructor)),
+                    producer.name + " constructs the same native sound packet");
+        }
+        check(value(ownMixin, "targets") instanceof List<?> targets
+                        && targets.contains(packet.replace('/', '.')),
+                "monitor targets packet construction rather than the replaced broadcast");
+        boolean afterConstruction = false;
         for (MethodNode method : own.methods) for (AnnotationNode annotation : annotations(method)) {
             if (!annotation.desc.endsWith("/Inject;")) continue;
-            check(!Boolean.TRUE.equals(value(annotation, "cancellable")), "monitor never cancels native broadcast");
+            check(!Boolean.TRUE.equals(value(annotation, "cancellable")), "monitor never cancels native playback");
+            if (!(value(annotation, "method") instanceof List<?> methods) || !methods.contains(constructor)) continue;
             Object atValue = value(annotation, "at");
             List<?> ats = atValue instanceof List<?> list ? list : List.of(atValue);
-            for (Object at : ats) if (at instanceof AnnotationNode a) head |= "HEAD".equals(value(a, "value"));
+            for (Object at : ats) if (at instanceof AnnotationNode a)
+                afterConstruction |= "RETURN".equals(value(a, "value"));
         }
-        check(head, "monitor does not depend on cancelled return path");
+        check(afterConstruction, "supplement reuses the initialized packet");
     }
 
     private static ClassNode read(byte[] bytes) {

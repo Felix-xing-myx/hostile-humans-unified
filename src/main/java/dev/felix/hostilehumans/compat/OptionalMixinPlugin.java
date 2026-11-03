@@ -26,8 +26,8 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
             "onRenderLivingPost(Lnet/minecraftforge/client/event/RenderLivingEvent$Post;)V";
     public static final String TACZ_NPC_FLASH =
             "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;Lnet/minecraft/world/item/ItemDisplayContext;II)V";
-    public static final String TACZ_SOUND_NEARBY =
-            "sendSoundToNearby(Lnet/minecraft/world/entity/LivingEntity;ILnet/minecraft/resources/ResourceLocation;Lnet/minecraft/resources/ResourceLocation;Ljava/lang/String;FF)V";
+    public static final String TACZ_SOUND_PACKET =
+            "<init>(ILnet/minecraft/resources/ResourceLocation;Lnet/minecraft/resources/ResourceLocation;Ljava/lang/String;FFI)V";
     public static final String SCGUNS_SULFURHEAD_DAMAGE =
             "m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z";
     public static final String SCGUNS_HUMAN_AIM =
@@ -40,7 +40,7 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
             return monitorShotMixin(targetClassName, mixinClassName.endsWith("ScgunsMonitorShotMixin"));
         if (mixinClassName.contains(".TaczScope")) return opticMixin(targetClassName, mixinClassName);
         String contract;
-        if (mixinClassName.endsWith(".TaczMonitorSoundBroadcastMixin")) contract = TACZ_SOUND_NEARBY;
+        if (mixinClassName.endsWith(".TaczMonitorSoundBroadcastMixin")) contract = TACZ_SOUND_PACKET;
         else if (mixinClassName.endsWith(".TaczMonitorShotSoundMixin")) contract = "spectator-shot-playback";
         else if (mixinClassName.endsWith(".SpectatorGunSoundDistanceMixin")) contract = "spectator-gun-distance";
         else if (mixinClassName.endsWith(".SpectatorTaczAnimationSoundDistanceMixin")) contract = "spectator-animation-distance";
@@ -76,7 +76,7 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
                 LOGGER.warn("Skipping Sulfurhead damage compatibility: superclass changed to {}", target.superName);
                 return false;
             }
-            if (hasMethod(target, contract, contract.equals(SPARTAN_RANDOMIZER) || contract.equals(SCGUNS_HUMAN_AIM) || contract.equals(TACZ_SOUND_NEARBY))) {
+            if (hasMethod(target, contract, contract.equals(SPARTAN_RANDOMIZER) || contract.equals(SCGUNS_HUMAN_AIM))) {
                 if (contract.equals(SCGUNS_HUMAN_AIM)) NativeAimCompatibility.scgunsSharedPrediction(true);
                 return true;
             }

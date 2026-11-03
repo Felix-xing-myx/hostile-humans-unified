@@ -1,9 +1,8 @@
 package dev.felix.hostilehumans.mixin;
 
+import com.tacz.guns.network.message.ServerMessageSound;
 import dev.felix.hostilehumans.compat.OptionalMixinPlugin;
 import dev.felix.hostilehumans.compat.tacz.TaczMonitorAudio;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
@@ -11,13 +10,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Pseudo
-// Run before ordinary cancellable HEAD replacements (e.g. sound-display adapters).
-// TAIL never executes when one of those handlers cancels the native method.
-@Mixin(targets = "com.tacz.guns.sound.SoundManager", remap = false, priority = 1200)
+@Mixin(targets = "com.tacz.guns.network.message.ServerMessageSound", remap = false)
 public abstract class TaczMonitorSoundBroadcastMixin {
-    @Inject(method = OptionalMixinPlugin.TACZ_SOUND_NEARBY, at = @At("HEAD"), remap = false)
-    private static void hostileHumans$monitorSound(LivingEntity shooter, int distance, ResourceLocation gun,
-            ResourceLocation display, String name, float volume, float pitch, CallbackInfo callback) {
-        TaczMonitorAudio.supplement(shooter, distance, gun, display, name, volume, pitch);
+    // Native TaCZ and its Arcana replacement both construct this completed payload.
+    @Inject(method = OptionalMixinPlugin.TACZ_SOUND_PACKET, at = @At("RETURN"), remap = false)
+    private void hostileHumans$monitorSound(CallbackInfo callback) {
+        TaczMonitorAudio.supplement((ServerMessageSound) (Object) this);
     }
 }
