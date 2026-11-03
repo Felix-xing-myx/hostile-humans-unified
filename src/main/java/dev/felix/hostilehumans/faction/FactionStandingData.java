@@ -179,9 +179,12 @@ final class FactionStandingData extends SavedData {
         var seen=new HashMap<UUID,CompoundTag>();
         for(Tag row:root.getList("players",Tag.TAG_COMPOUND)){var p=(CompoundTag)row;try{if(!p.hasUUID("uuid"))throw new IllegalArgumentException("missing player UUID");UUID id=p.getUUID("uuid");if(seen.containsKey(id)){if(!result.unknownPlayers.contains(id))result.quarantinedPlayers.add(seen.get(id).copy());throw new IllegalArgumentException("duplicate player UUID");}seen.put(id,p.copy());result.player(id,p);}catch(RuntimeException invalid){result.quarantinedPlayers.add(p.copy());if(p.hasUUID("uuid"))result.unknownPlayers.add(p.getUUID("uuid"));}}
         for(Tag row:root.getList("quarantined_players",Tag.TAG_COMPOUND)){var p=(CompoundTag)row;result.quarantinedPlayers.add(p.copy());if(p.hasUUID("uuid"))result.unknownPlayers.add(p.getUUID("uuid"));}
+        int journalIndex = 0;
         for (Tag row : root.getList("economy_journals", Tag.TAG_COMPOUND)) {
             var receipt = (CompoundTag) row;
             if (receipt.getInt("schema") != 1 || !receipt.hasUUID("player") || !receipt.hasUUID("transaction")) {
+                com.mojang.logging.LogUtils.getLogger().warn(
+                        "Retaining unreadable faction ledger: invalid economy receipt at index {}", journalIndex);
                 result.unknownRoot = root.copy();
                 return result;
             }
@@ -189,10 +192,14 @@ final class FactionStandingData extends SavedData {
             UUID transaction = receipt.getUUID("transaction");
             var history = result.journals.get(player);
             if (history != null && (history.containsKey(transaction) || history.size() >= MAX_RECEIPTS_PER_PLAYER)) {
+                String reason = history.containsKey(transaction) ? "duplicate transaction" : "history limit exceeded";
+                com.mojang.logging.LogUtils.getLogger().warn(
+                        "Retaining unreadable faction ledger: {} for player {} at receipt {}", reason, player, journalIndex);
                 result.unknownRoot = root.copy();
                 return result;
             }
             result.journal(player, transaction, receipt);
+            journalIndex++;
         }
         return result;
     }
