@@ -94,7 +94,7 @@ public final class LongRangeNavigation {
         if (changedGoal) {
             boolean wasPending=!newRequest&&s.queuedAt>=0;
             s.goal=goal.immutable();
-            int initial=c.enabled()?RouteSearchPolicy.startStage(Math.hypot(human.getX()-goal.getX(),human.getZ()-goal.getZ()),c.normalRange(),c.extendedRange()):0;
+            int initial = initialStage(human, goal, c);
             s.stage=wasPending?Math.max(s.stage,initial):initial;s.route=null;s.nextTick=tick;
             if(!wasPending)s.queuedAt=-1;
             s.signature=signature;
@@ -107,10 +107,14 @@ public final class LongRangeNavigation {
                 s.route = current;s.reuses++;s.result = "复用";
                 return new Result(Status.READY,current);
             }
-            s.route = null; // Caller still owns the installed path; this query never stops it.
         }
-        // A completed, exhausted or externally replaced route starts a new bounded attempt, not a stale Path reuse.
-        if (s.route != null) { s.route = null;s.stage = 0;s.nextTick = tick; }
+        // Replan from the current distance when the old route is exhausted,
+        // invalid or replaced. The caller still owns the installed path.
+        if (s.route != null) {
+            s.route = null;
+            s.stage = initialStage(human, goal, c);
+            s.nextTick = tick;
+        }
         Failure failure = nearbyFailure(s,goal);
         if (failure != null && failure.signature == signature) {
             int elapsed = tick-failure.tick;
@@ -163,6 +167,12 @@ public final class LongRangeNavigation {
         s.nextTick=tick+1;s.result=path!=null&&path.canReach()?"安全或命令拒绝":"未找到完整路";
         cancelQueue(human, actor, purpose);return path!=null&&path.canReach()?new Result(Status.RESTRICTED,null):FAILED;
     }
+    private static int initialStage(Human human, BlockPos goal, NavigationSearchConfig settings) {
+        if (!settings.enabled()) return 0;
+        double distance = Math.hypot(human.getX() - goal.getX(), human.getZ() - goal.getZ());
+        return RouteSearchPolicy.startStage(distance, settings.normalRange(), settings.extendedRange());
+    }
+
     private static Result pending(State s,int tick,String reason) {
         if(s.queuedAt<0)s.queuedAt=tick;s.result=reason;return PENDING;
     }
