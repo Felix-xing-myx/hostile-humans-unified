@@ -51,8 +51,12 @@ final class CultivationData extends SavedData {
         return accounts.computeIfAbsent(owner, k -> new Account());
     }
 
+    boolean readOnly() {
+        return future != null;
+    }
+
     void writable() {
-        if (future != null)
+        if (readOnly())
             throw new IllegalStateException(
                     "Unknown cultivation journal schema retained; writing disabled");
     }

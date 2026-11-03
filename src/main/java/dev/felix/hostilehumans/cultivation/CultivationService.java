@@ -443,6 +443,7 @@ public final class CultivationService {
     public static void removeFacility(CultivationTrainingBlockEntity b) {
         if (!(b.getLevel() instanceof ServerLevel level)) return;
         var data = CultivationData.get(level.getServer());
+        if (data.readOnly()) return;
         var f = b.reference();
         if (!data.retired.add(f.id())) return;
         for (var r : data.records.values())

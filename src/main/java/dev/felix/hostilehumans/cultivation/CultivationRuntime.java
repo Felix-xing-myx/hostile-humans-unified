@@ -78,6 +78,7 @@ public final class CultivationRuntime {
     public static void tick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         var server = event.getServer();
+        if (CultivationData.get(server).readOnly()) return;
         advance(server);
         CultivationService.tick(server);
         CultivationFacade.tick(server);
