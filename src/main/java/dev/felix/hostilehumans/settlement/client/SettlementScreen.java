@@ -5,6 +5,7 @@ import dev.felix.hostilehumans.client.ui.framework.PanelButton;
 import dev.felix.hostilehumans.client.ui.framework.UiThemes;
 import dev.felix.hostilehumans.client.ui.framework.PanelDisclosure;
 import dev.felix.hostilehumans.client.ui.framework.PanelGeometry;
+import dev.felix.hostilehumans.client.ui.framework.PanelGroup;
 import dev.felix.hostilehumans.client.ui.framework.PanelScreen;
 import dev.felix.hostilehumans.client.ui.framework.PendingAction;
 import dev.felix.hostilehumans.client.ui.framework.UiLayout;
@@ -310,6 +311,11 @@ public final class SettlementScreen extends PanelScreen {
         }
     }
 
+    /** Section band inside the author form, matching the grouped layout of the command panels. */
+    private UiLayout.Node heading(Component title) {
+        return node(body(new PanelGroup(title, UiThemes.MARKER_RANGE, this::theme)));
+    }
+
     private UiLayout.Node muted(Component label) {
         return text(label, () -> theme().muted());
     }
@@ -345,19 +351,26 @@ public final class SettlementScreen extends PanelScreen {
             String current,
             java.util.function.Consumer<String> setter) {
         List<UiLayout.Node> nodes = new ArrayList<>();
-        for (String value : values)
-            nodes.add(
-                    action(
-                            id + "." + value,
-                            text(id + "." + value),
-                            editable(),
-                            value.equals(current),
-                            () -> {
-                                setter.accept(value);
-                                localChanged = true;
-                                refresh();
-                            }));
-        return UiLayout.grid(3, 4, 80, nodes);
+        for (String value : values) {
+            // Compact chips: the same visual as the faction presets, and far shorter than a
+            // three column grid in a form that now carries a help line per field.
+            PanelButton chip =
+                    body(
+                            new PanelButton(
+                                    text(id + "." + value),
+                                    b -> {
+                                        setter.accept(value);
+                                        localChanged = true;
+                                        refresh();
+                                    },
+                                    this::theme)
+                                    .compact(true));
+            chip.active = editable();
+            chip.selected(value.equals(current));
+            controls.put(id + "." + value, chip);
+            nodes.add(node(chip));
+        }
+        return UiLayout.grid(values.size(), 4, 40, nodes);
     }
 
     private void confirm(String key, Runnable callback) {
@@ -602,9 +615,9 @@ public final class SettlementScreen extends PanelScreen {
                 () -> { advancedAuthor = !advancedAuthor; refresh(); }));
         if (advancedAuthor) {
             nodes.add(input("module_id", module));
-            nodes.add(muted(text("size")));
+            nodes.add(heading(text("size")));
             nodes.add(coords("size", size));
-            nodes.add(muted(text("origin")));
+            nodes.add(heading(text("origin")));
             nodes.add(coords("origin", offset));
         }
         return UiLayout.column(6, nodes);
