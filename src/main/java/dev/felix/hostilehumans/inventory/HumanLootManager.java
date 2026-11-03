@@ -355,8 +355,7 @@ public final class HumanLootManager {
     }
 
     static boolean collect(Human human, ItemEntity entity) {
-        if (!SoldierPickupPolicy.canCollectNow(human) || !entity.isAlive() || entity.hasPickUpDelay()
-                || !SoldierOrder.allowsLootPosition(human, entity.getX(), entity.getZ())) return false;
+        if (!isEligibleForPickup(human, entity)) return false;
         if (HumanLootVision.inspect(human, entity) != HumanLootVision.Sight.VISIBLE) return false;
         ItemStack ground = entity.getItem();
         if (ground.isEmpty() || !SoldierPickupPolicy.canCollectItem(human, ground)

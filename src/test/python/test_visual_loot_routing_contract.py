@@ -22,6 +22,7 @@ class VisualLootRoutingContract(unittest.TestCase):
         self.assertIn("return Double.NaN",nearby)
         collect=manager.split("static boolean collect(Human human, ItemEntity entity)",1)[1].split("ItemStack ground",1)[0]
         self.assertIn("HumanLootVision.Sight.VISIBLE",collect)
+        self.assertLess(collect.index("isEligibleForPickup"), collect.index("HumanLootVision.inspect"))
         vision=(PKG/"HumanLootVision.java").read_text(encoding="utf-8")
         for guard in ("withinLootVision",'PerceptionBudget.claim(h,"rays"',"ClipContext.Block.COLLIDER","RAYS_PER_HUMAN_TICK = 4"):
             self.assertIn(guard,vision)
