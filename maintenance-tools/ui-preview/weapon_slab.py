@@ -82,10 +82,17 @@ def slab(d, ox, oy, name, amount, reserve, mode_label, capacity):
     # hairline
     d.rectangle([(x + 4) * S, (y + 36) * S, (x + PW - 4) * S, (y + 37) * S], fill=rgba(EDGE, 1))
     # caption row: native mode art (18x12 box here), then the name
-    # TaCZ draws its own 18x10 fire-mode art here; the placeholder only marks the slot.
-    mode_w = 22  # TaczMonitorHud.MODE_WIDTH
-    d.text(((x + 3) * S, (y + 39) * S), mode_label, font=ImageFont.truetype(
-        "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .5)), fill=rgba(TEXT, 1))
+    # Rounds-per-trigger pictogram, same primitives as MonitorGunHud.modeIcon().
+    kind = mode_label.upper()
+    blocks = 6 if kind == "AUTO" else 3 if kind == "BURST" else 1
+    bw = 5 if blocks == 1 else 3 if blocks == 3 else 2
+    gap = 0 if blocks == 1 else 2 if blocks == 3 else 1
+    bh = 6
+    top = y + 37 + max(0, (12 - bh) // 2)
+    for i in range(blocks):
+        left = x + 3 + i * (bw + gap)
+        d.rectangle([left * S, top * S, (left + bw) * S - 1, (top + bh) * S - 1], fill=rgba(TEXT, 1))
+    mode_w = blocks * bw + (blocks - 1) * gap
     name_x = x + 3 + mode_w + 4
     room = max(20, col_right - name_x)
     small = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .85))
@@ -100,9 +107,9 @@ ann = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc",
 note = lambda ty, text: d.text((158 * S, ty * S), text, font=ann, fill=rgba(ACCENT, 1))
 note(26, "上带：枪图 54x30 ｜ 18 / 30 ｜ 弹匣(右下)")
 note(52, "灰线 y36")
-note(62, "下带：AUTO + 名称（整行）")
+note(62, "下带：射击模式图标 + 名称（整行）")
 slab(d, 20, 78, "M4 卡宾枪（长名字）", "100%", "弹匣 12", "BURST", "")
-slab(d, 20, 138, "M249 班用机枪", "07", "弹匣 120", "AUTO", "/ 150")
+slab(d, 20, 138, "M249 班用机枪", "07", "弹匣 120", "SEMI", "/ 150")
 slab(d, 20, 198, "M4A1 卡宾枪（消音器改装型）", "30", "弹匣 3", "AUTO", "/ 30")
 img.save(os.path.join(OUT, "weapon-slab-128x52.png"))
 print("ok")

@@ -50,6 +50,27 @@ public final class MonitorGunHud {
         return cut + ellipsis;
     }
 
+    /**
+     * Rounds-per-trigger pictogram drawn from primitives: one block for single shot, three for
+     * burst, a dense run for automatic. Pack art is deliberately not used - the native fire-mode
+     * texture is not the 18x10 window it was assumed to be and could not be shown crisply.
+     */
+    private static int modeIcon(GuiGraphics g,String mode,int x,int y,int rowHeight,UiTheme theme) {
+        String kind=mode==null?"":mode.toUpperCase(Locale.ROOT);
+        int blocks=switch(kind) {
+            case "AUTO" -> 6;
+            case "BURST" -> 3;
+            case "SEMI", "SINGLE" -> 1;
+            default -> 0;
+        };
+        if(blocks==0)return 0;
+        int blockWidth=blocks==1?5:blocks==3?3:2, gap=blocks==1?0:blocks==3?2:1, height=6;
+        int width=blocks*blockWidth+(blocks-1)*gap;
+        int top=y+Math.max(0,(rowHeight-height)/2);
+        for(int i=0;i<blocks;i++)UiDraw.rect(g,x+i*(blockWidth+gap),top,blockWidth,height,theme.text());
+        return width;
+    }
+
     /** Keeps the tail of a right aligned label so a clipped "弹匣 120" still shows the count. */
     private static String clipTail(net.minecraft.client.gui.Font font, String text, int room) {
         String out = text;
@@ -123,9 +144,7 @@ public final class MonitorGunHud {
         UiDraw.ruleFade(g,x+4,y+36,pw-8,theme.edge());
         // Caption row: fire mode, then the gun name across the rest of the width.
         String mode=value.reloading()?Component.translatable("human_monitor.gun.reloading").getString():data.energy()?"FE":data.mode();
-        int modeWidth=0;
-        if(data.backend().equals("tacz") && !value.reloading())
-            modeWidth=dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.mode(g,data.mode(),x+3,y+37,12);
+        int modeWidth=value.reloading()?0:modeIcon(g,data.mode(),x+3,y+37,12,theme);
         if(modeWidth<=0) {
             String shown=font.plainSubstrByWidth(mode,26);
             g.drawString(font,shown,x+3,y+39,theme.text(),false);
