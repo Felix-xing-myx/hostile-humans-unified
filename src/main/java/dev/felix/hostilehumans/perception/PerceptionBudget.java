@@ -10,10 +10,29 @@ import net.minecraft.server.MinecraftServer;
 public final class PerceptionBudget {
     private static final Map<MinecraftServer,State> SERVERS=new WeakHashMap<>();
     private record Key(UUID id,String lane) {}
+    private record Limits(int total, int local) {
+        static Limits read(PerceptionConfig config, String kind) {
+            return new Limits(config.integer("budgets."+kind+"_per_server"),
+                    config.integer("budgets."+kind+"_per_level"));
+        }
+    }
     private static final class State {
         final Map<String,ScopedWorkBudget<Key,String>> queues=new HashMap<>();
         final Map<String,Integer> used=new HashMap<>();
+        PerceptionConfig config;
         long tick=-1;
+
+        void beginTick(long now) {
+            if (tick == now) return;
+            PerceptionConfig next = PerceptionConfig.get();
+            if (config != null && config != next) {
+                // A changed pool starts fresh. Unchanged pools keep their deferred demand.
+                queues.keySet().removeIf(kind -> !Limits.read(config, kind).equals(Limits.read(next, kind)));
+            }
+            config = next;
+            tick = now;
+            used.clear();
+        }
     }
     private PerceptionBudget() {}
     public static boolean claim(Entity actor,String kind,int amount) {
@@ -36,11 +55,13 @@ public final class PerceptionBudget {
     public static boolean claim(Entity actor,String kind,int amount,String work) {
         MinecraftServer server=actor.level().getServer(); if(server==null || amount<1)return false;
         State s=SERVERS.computeIfAbsent(server,k->new State()); long tick=server.getTickCount();
-        if(s.tick!=tick){s.tick=tick;s.used.clear();}
-        PerceptionConfig c=PerceptionConfig.get(); String dim=actor.level().dimension().location().toString();
-        int total=c.integer("budgets."+kind+"_per_server"), local=c.integer("budgets."+kind+"_per_level");
+        s.beginTick(tick);
+        String dim=actor.level().dimension().location().toString();
+        Limits limits = Limits.read(s.config, kind);
+        int total = limits.total(), local = limits.local();
         String lane=kind+":"+dim; Key key=new Key(actor.getUUID(),lane+work);
         int batchLimit=kind.equals("rays")?32:16;
+        if (amount > Math.min(batchLimit, Math.min(total, local))) return false;
         // Keep ambient queries, loot and sound probes from filling the visual queue.
         boolean auxiliary = kind.equals("rays") && !work.isEmpty() && !work.startsWith(":body:");
         String auxiliaryServer = "rays:aux", auxiliaryLevel = lane + ":aux";
@@ -52,7 +73,6 @@ public final class PerceptionBudget {
             q = new ScopedWorkBudget<>(total,local,Math.min(batchLimit,Math.min(total,local)),40);
             s.queues.put(kind,q);
         }
-        if(amount>local || amount>total)return false;
         if(q.claimFull(tick,key,dim,amount,dev.felix.hostilehumans.performance.BudgetDemandOrder.faction(actor))!=amount) {
             if (auxiliary) q.cancel(key);
             return false;
@@ -74,8 +94,9 @@ public final class PerceptionBudget {
     }
     public static String usage(MinecraftServer server,String dimension,String kind) {
         State s=SERVERS.get(server);
-        String lane=kind+":"+dimension; PerceptionConfig c=PerceptionConfig.get();
+        String lane=kind+":"+dimension;
         boolean fresh=s!=null && server!=null && s.tick>=server.getTickCount()-1L && s.tick<=server.getTickCount();
+        PerceptionConfig c = fresh ? s.config : PerceptionConfig.get();
         return (fresh?s.used.getOrDefault(lane,0):0)+"/"+c.integer("budgets."+kind+"_per_level")+
                 " · 全服 "+(fresh?s.used.getOrDefault(kind,0):0)+"/"+c.integer("budgets."+kind+"_per_server");
     }
