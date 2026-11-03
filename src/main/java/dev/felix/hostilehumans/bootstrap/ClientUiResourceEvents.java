@@ -30,6 +30,8 @@ public final class ClientUiResourceEvents {
                             dev.felix.hostilehumans.economy.client.EconomyScreen::show);
                     dev.felix.hostilehumans.settlement.SettlementNetwork.clientReceiver(
                             dev.felix.hostilehumans.settlement.client.SettlementScreen::show);
+                    dev.felix.hostilehumans.settlement.SettlementNetwork.clientPreviewReceiver(
+                            dev.felix.hostilehumans.settlement.client.SettlementPreviewClient::accept);
                 });
     }
 

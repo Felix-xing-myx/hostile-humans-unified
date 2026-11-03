@@ -22,7 +22,8 @@ import java.util.function.Supplier;
 public final class SettlementNetwork {
     private static final UUID NONE = new UUID(0, 0);
     private static final int NBT_LIMIT = 1048576;
-    private static final String VERSION = "2";
+    private static final String VERSION = "3";
+    public static final String SELECTION_READY = "selection mode updated";
 
     private static final class Connection {
         static final SimpleChannel CHANNEL =
@@ -44,7 +45,8 @@ public final class SettlementNetwork {
         RENAME,
         SELECTION_MODE,
         CLOSE,
-        RESTORE_AUTHOR
+        RESTORE_AUTHOR,
+        SAVE_TEMPLATE_FILE
     }
 
     public record Snapshot(
@@ -116,8 +118,18 @@ public final class SettlementNetwork {
 
     private SettlementNetwork() {}
 
+    private static volatile Consumer<SettlementPreview> previewReceiver = value -> {};
+
+    public static void clientPreviewReceiver(Consumer<SettlementPreview> callback) {
+        previewReceiver = java.util.Objects.requireNonNull(callback);
+    }
+
     public static void clientReceiver(Consumer<Snapshot> callback) {
         receiver = java.util.Objects.requireNonNull(callback);
+    }
+
+    public static void preview(ServerPlayer player, SettlementPreview value) {
+        Connection.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), value);
     }
 
     public static UUID request(Snapshot snapshot, Action action, CompoundTag data) {
@@ -165,6 +177,12 @@ public final class SettlementNetwork {
                 SettlementNetwork::decodePost,
                 SettlementNetwork::handlePost,
                 Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        Connection.CHANNEL.registerMessage(3, SettlementPreview.class, SettlementPreview::encode,
+                SettlementPreview::decode, (value, supplier) -> {
+                    var context = supplier.get();
+                    context.enqueueWork(() -> previewReceiver.accept(value));
+                    context.setPacketHandled(true);
+                }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
 
     public static void openAuthor(ServerPlayer player, BlockPos anchor) {
@@ -413,6 +431,8 @@ public final class SettlementNetwork {
         if (event.phase != net.minecraftforge.event.TickEvent.Phase.END
                 || !(event.player instanceof ServerPlayer player)
                 || player.tickCount % 20 != 0) return;
+        SettlementTemplateFiles.tick(player);
+        SettlementSelectionTool.tick(player);
         var session = SESSIONS.get(player);
         if (session != null && !valid(player, session))
             send(player, session, "permission, distance or session changed");
@@ -568,7 +588,17 @@ public final class SettlementNetwork {
                                                         player,
                                                         at,
                                                         data.getString("region"),
-                                                        data.getBoolean("exclude"));
+                                                        data.getBoolean("exclude"),
+                                                        data.getBoolean("current_only"),
+                                                        data.getInt("box_index"),
+                                                        data.contains("mode")
+                                                                ? SettlementSelectionTool.Mode.valueOf(data.getString("mode"))
+                                                                : SettlementSelectionTool.Mode.ADD,
+                                                        request.authorRevision());
+                                        case SAVE_TEMPLATE_FILE ->
+                                                SettlementTemplateFiles.save(player, at,
+                                                        request.authorRevision(), data.getBoolean("entities"),
+                                                        data.getBoolean("overwrite"));
                                         default -> "unsupported operation";
                                     };
                         }

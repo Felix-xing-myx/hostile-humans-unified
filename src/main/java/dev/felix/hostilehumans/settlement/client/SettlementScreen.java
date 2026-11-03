@@ -55,7 +55,7 @@ public final class SettlementScreen extends PanelScreen {
             error = "",
             confirmation = "";
     private int regionIndex, boxIndex, facilityIndex, turns;
-    private boolean exclude, localChanged, serverClosed, transformDirty;
+    private boolean exclude, localChanged, serverClosed, transformDirty, templateEntities, currentRegionOnly;
     private long confirmUntil;
 
     private SettlementScreen(SettlementNetwork.Snapshot snapshot) {
@@ -110,6 +110,11 @@ public final class SettlementScreen extends PanelScreen {
                 && matchesTransform(value.data().getCompound("author_transform"), request.data()))
             transformDirty = false;
         if (!transformDirty) readTransform(value);
+        if (ack && request != null && request.action() == SettlementNetwork.Action.SELECTION_MODE
+                && value.reason().equals(SettlementNetwork.SELECTION_READY)) {
+            onClose();
+            return;
+        }
         refresh();
     }
 
@@ -534,8 +539,28 @@ public final class SettlementScreen extends PanelScreen {
         return UiLayout.column(6, root);
     }
 
+    private void beginWorldEdit(String mode, String regionId) {
+        var payload = new CompoundTag();
+        payload.putString("mode", mode);
+        payload.putString("region", regionId);
+        payload.putBoolean("exclude", exclude);
+        payload.putBoolean("current_only", currentRegionOnly);
+        payload.putInt("box_index", mode.equals("MOVE_FACILITY") ? facilityIndex : boxIndex);
+        send(snapshot, SettlementNetwork.Action.SELECTION_MODE, payload);
+    }
+
+    private void saveTemplateFile(boolean overwrite) {
+        var payload = new CompoundTag();
+        payload.putBoolean("entities", templateEntities);
+        payload.putBoolean("overwrite", overwrite);
+        send(snapshot, SettlementNetwork.Action.SAVE_TEMPLATE_FILE, payload);
+    }
+
     private UiLayout.Node identity() {
         List<UiLayout.Node> nodes = new ArrayList<>();
+        nodes.add(muted(text("author_steps")));
+        nodes.add(action("capture_bounds", text("capture_bounds"), editable() && !dirty(), false,
+                () -> beginWorldEdit("BOUNDS", "")));
         nodes.add(input("template_id", template));
         nodes.add(input("module_id", module));
         nodes.add(input("faction", faction));
@@ -721,18 +746,30 @@ public final class SettlementScreen extends PanelScreen {
                             text("world_selection"),
                             editable() && !dirty(),
                             false,
-                            () -> {
-                                CompoundTag payload = new CompoundTag();
-                                payload.putString("region", region().getString("id"));
-                                payload.putBoolean("exclude", exclude);
-                                send(snapshot, SettlementNetwork.Action.SELECTION_MODE, payload);
-                            }));
+                            () -> beginWorldEdit("ADD", region().getString("id"))));
+            detail.add(action("region_preview_scope", text(currentRegionOnly ? "preview_current" : "preview_all"),
+                    editable(), currentRegionOnly, () -> { currentRegionOnly = !currentRegionOnly; refresh(); }));
+            detail.add(action("region_preview_depth", text(SettlementPreviewClient.throughWalls
+                            ? "preview_through" : "preview_depth"),
+                    editable(), SettlementPreviewClient.throughWalls,
+                    () -> { SettlementPreviewClient.throughWalls = !SettlementPreviewClient.throughWalls; refresh(); }));
+            detail.add(action("replace_world_selection", text("replace_world_selection"),
+                    editable() && !dirty(), false,
+                    () -> beginWorldEdit("REPLACE", region().getString("id"))));
+            detail.add(action("edit_world_box", text("edit_world_box"),
+                    editable() && !dirty() && boxIndex < boxes().size(), false,
+                    () -> beginWorldEdit("EDIT", region().getString("id"))));
+            detail.add(action("bind_world_facility", text("bind_world_facility"),
+                    editable() && !dirty(), false,
+                    () -> beginWorldEdit("FACILITY", region().getString("id"))));
         }
         return UiLayout.row(12, List.of(UiLayout.column(6, list), UiLayout.column(6, detail)));
     }
 
     private UiLayout.Node facilityEditor() {
         List<UiLayout.Node> list = new ArrayList<>();
+        list.add(action("pick_facility", text("pick_facility"), editable() && !dirty(), false,
+                () -> beginWorldEdit("FACILITY", "")));
         for (int i = 0; i < facilities().size(); i++) {
             final int index = i;
             var f = facilities().getCompound(i);
@@ -783,6 +820,8 @@ public final class SettlementScreen extends PanelScreen {
                             facilityType,
                             v -> facilityType = v));
             detail.add(coords("position", facilityPosition));
+            detail.add(action("move_facility", text("move_facility"), editable() && !dirty(), false,
+                    () -> beginWorldEdit("MOVE_FACILITY", facilities().getCompound(facilityIndex).getString("region"))));
             detail.add(
                     action(
                             "applyFacility",
@@ -831,6 +870,13 @@ public final class SettlementScreen extends PanelScreen {
     private UiLayout.Node transfer() {
         List<UiLayout.Node> nodes = new ArrayList<>();
         nodes.add(muted(text("transfer_hint")));
+        nodes.add(action("template_entities", text(templateEntities ? "template_entities_on" : "template_entities_off"),
+                editable(), templateEntities, () -> { templateEntities = !templateEntities; refresh(); }));
+        nodes.add(action("save_template_file", text("save_template_file"), editable() && !dirty(), false,
+                () -> saveTemplateFile(false)));
+        nodes.add(action("replace_template_file", text("replace_template_file"), editable() && !dirty(), false,
+                () -> confirm("replace_template_file", () -> saveTemplateFile(true))));
+        nodes.add(muted(text("load_template_hint")));
         nodes.add(input("instance_name", displayName));
         nodes.add(
                 action(

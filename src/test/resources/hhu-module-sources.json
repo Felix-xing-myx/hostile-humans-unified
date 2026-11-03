@@ -2703,6 +2703,14 @@
     "class": "dev.felix.hostilehumans.settlement.SettlementPosts",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementPosts.java"
   },
+  "SettlementPreview": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementPreview",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementPreview.java"
+  },
+  "SettlementPreviewClient": {
+    "class": "dev.felix.hostilehumans.settlement.client.SettlementPreviewClient",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/client/SettlementPreviewClient.java"
+  },
   "SettlementRegion": {
     "class": "dev.felix.hostilehumans.settlement.SettlementRegion",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementRegion.java"
@@ -2722,6 +2730,10 @@
   "SettlementTemplate": {
     "class": "dev.felix.hostilehumans.settlement.SettlementTemplate",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementTemplate.java"
+  },
+  "SettlementTemplateFiles": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementTemplateFiles",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementTemplateFiles.java"
   },
   "SettlementTemplatePlacementMixin": {
     "class": "dev.felix.hostilehumans.mixin.SettlementTemplatePlacementMixin",

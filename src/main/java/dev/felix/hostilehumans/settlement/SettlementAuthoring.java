@@ -347,11 +347,99 @@ public final class SettlementAuthoring {
                 author, info.getBlockPos(), SettlementCodec.transform(module.transform()));
     }
 
+    static TemplateTransform.Cell cell(BlockPos point) {
+        return new TemplateTransform.Cell(point.getX(), point.getY(), point.getZ());
+    }
+
+    static String setBounds(ServerPlayer player, SettlementInformationBlockEntity info,
+            BlockPos a, BlockPos b) {
+        var author = SettlementCodec.template(info.author());
+        var placement = currentTransform(player, info);
+        if (placement.clockwiseQuarterTurns() != 0 || placement.mirror() != TemplateTransform.Mirror.NONE)
+            throw new IllegalArgumentException("use an unrotated author copy to change capture bounds");
+        var box = RegionBox.between(cell(a), cell(b));
+        var origin = new BlockPos(box.minX(), box.minY(), box.minZ());
+        var carrier = info.getBlockPos();
+        if (!box.contains(carrier.getX(), carrier.getY(), carrier.getZ()))
+            throw new IllegalArgumentException("capture bounds must include the information block");
+        var size = new TemplateTransform.Cell((int) box.sizeX(), (int) box.sizeY(), (int) box.sizeZ());
+        SettlementTemplateFiles.checkSize(size);
+        var shift = new TemplateTransform(
+                new TemplateTransform.Cell(placement.origin().x() - origin.getX(),
+                        placement.origin().y() - origin.getY(), placement.origin().z() - origin.getZ()),
+                cell(BlockPos.ZERO), TemplateTransform.Mirror.NONE, 0);
+        var updated = new SettlementTemplate(author.template(), author.module(), author.kind(),
+                author.faction(), author.tier(), author.revision(), size, cell(origin.subtract(carrier)),
+                author.regions().stream().map(r -> r.transform(shift)).toList(),
+                author.facilities().stream().map(f -> f.transform(shift)).toList());
+        return commit(info, info.revision(), SettlementCodec.template(updated));
+    }
+
+    static String bindFacility(ServerPlayer player, SettlementInformationBlockEntity info,
+            BlockPos point, String preferredRegion, int facilityIndex) {
+        var author = SettlementCodec.template(info.author());
+        if (facilityIndex >= author.facilities().size())
+            throw new IllegalArgumentException("selected facility missing");
+        var selected = facilityIndex < 0 ? null : author.facilities().get(facilityIndex);
+        var block = player.serverLevel().getBlockState(point).getBlock();
+        SettlementFacility.Type type;
+        if (block instanceof SettlementControlBlock control) {
+            type = SettlementFacility.Type.CONTROL;
+            var faction = author.faction();
+            if (!faction.equals(dev.felix.hostilehumans.bootstrap.HumanRuntime.MOD_ID + ":" + control.faction()))
+                throw new IllegalArgumentException("control block faction does not match the template");
+        } else if (block == dev.felix.hostilehumans.faction.FactionContent.TRIBUTE_CHEST.get()) {
+            type = SettlementFacility.Type.SUPPLY;
+        } else if (block == dev.felix.hostilehumans.economy.EconomyContent.TRADER.get()) {
+            type = SettlementFacility.Type.TRADER;
+        } else if (block == dev.felix.hostilehumans.cultivation.CultivationContent.TRAINING_BLOCK.get()) {
+            type = SettlementFacility.Type.TRAINING;
+        } else if (selected != null && (selected.type() == SettlementFacility.Type.ENTRANCE
+                || selected.type() == SettlementFacility.Type.POST)) {
+            type = selected.type();
+        } else {
+            throw new IllegalArgumentException("select a control, supply, trader or training block");
+        }
+        if (selected != null && selected.type() != type)
+            throw new IllegalArgumentException("selected block does not match this facility type");
+        var local = currentTransform(player, info).unapply(cell(point));
+        var candidates = author.regions().stream()
+                .filter(r -> r.contains(local.x() + .5, local.y(), local.z() + .5))
+                .filter(r -> switch (type) {
+                    case SUPPLY, TRADER -> r.layer() == SettlementRegion.Layer.OUTER;
+                    case TRAINING -> r.layer() == SettlementRegion.Layer.INNER && author.tier() >= 2;
+                    default -> true;
+                }).toList();
+        var region = candidates.stream().filter(r -> r.id().equals(preferredRegion)).findFirst()
+                .orElse(candidates.size() == 1 ? candidates.get(0) : null);
+        if (region == null) throw new IllegalArgumentException(candidates.isEmpty()
+                ? "no eligible region at this block"
+                : "select the intended region first: " + candidates.stream().map(SettlementRegion::id).toList());
+        var facilities = new ArrayList<>(author.facilities());
+        var existing = facilities.stream().filter(f -> f.type() == type
+                && (type == SettlementFacility.Type.CONTROL || f.position().equals(local))).findFirst();
+        if (selected != null) {
+            if (existing.isPresent() && !existing.get().id().equals(selected.id()))
+                throw new IllegalArgumentException("another facility already uses this position");
+            existing = java.util.Optional.of(selected);
+        }
+        String id = existing.map(SettlementFacility::id).orElseGet(
+                () -> "facility_" + UUID.randomUUID().toString().replace("-", ""));
+        existing.ifPresent(facilities::remove);
+        facilities.add(new SettlementFacility(id, type, region.id(), local));
+        var updated = new SettlementTemplate(author.template(), author.module(), author.kind(),
+                author.faction(), author.tier(), author.revision(), author.size(), author.originOffset(),
+                author.regions(), facilities);
+        return commit(info, info.revision(), SettlementCodec.template(updated));
+    }
+
     public static String addBox(
             ServerPlayer player,
             BlockPos position,
             String regionId,
             boolean exclude,
+            boolean replace,
+            int boxIndex,
             BlockPos a,
             BlockPos b) {
         var info = SettlementSelectionTool.boundInformation(player, position);
@@ -378,7 +466,14 @@ public final class SettlementAuthoring {
             var r = regions.get(at);
             var includes = new ArrayList<>(r.includes());
             var excludes = new ArrayList<>(r.excludes());
-            (exclude ? excludes : includes).add(box);
+            var target = exclude ? excludes : includes;
+            if (boxIndex >= 0) {
+                if (boxIndex >= target.size()) return "selected box missing";
+                target.set(boxIndex, box);
+            } else {
+                if (replace) target.clear();
+                target.add(box);
+            }
             regions.set(at, new SettlementRegion(r.id(), r.name(), r.layer(), includes, excludes));
             var updated =
                     new SettlementTemplate(
