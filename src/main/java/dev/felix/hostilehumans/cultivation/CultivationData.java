@@ -68,10 +68,15 @@ final class CultivationData extends SavedData {
     }
 
     boolean seen(UUID tx, UUID owner) {
-        return owner.equals(transactions.get(tx));
+        UUID recordedOwner = transactions.get(tx);
+        if (recordedOwner == null) return false;
+        if (!recordedOwner.equals(owner)) throw new IllegalStateException("Training request ID already in use");
+        return true;
     }
 
     void remember(UUID tx, UUID owner) {
+        writable();
+        if (seen(tx, owner)) return;
         transactions.put(tx, owner);
         while (transactions.size() > 1024)
             transactions.remove(transactions.keySet().iterator().next());
