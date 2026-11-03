@@ -63,7 +63,8 @@ public final class SplitConfigFiles {
 
     private static JsonObject loadFile(Path path, JsonObject defaults, boolean rank,
                                        java.util.function.BiPredicate<String, JsonObject> integrations, boolean strict) {
-        if (Files.exists(path)) return existing(path, defaults, rank, integrations, strict);
+        // An indeterminate existence check can mean access denied, not a missing file.
+        if (!Files.notExists(path)) return existing(path, defaults, rank, integrations, strict);
         JsonObject data = defaults.deepCopy();
         if (rank) EquipmentConfigMigration.migrate(data, rankName(path));
         TierConfigProjection.fill(data, defaults, "");
@@ -78,6 +79,7 @@ public final class SplitConfigFiles {
                 // Re-read the winner, including its version and payment failure handling.
                 return existing(path, defaults, rank, integrations, strict);
             } catch (IOException error) {
+                if (strict) throw new IllegalStateException("Cannot create configuration file " + path, error);
                 LogUtils.getLogger().error("Cannot create human configuration {}; using in-memory settings", path, error);
             }
         }
