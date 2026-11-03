@@ -35,7 +35,7 @@ class LongRangeNavigationContract(unittest.TestCase):
     def test_remote_cost_and_failure_cache_are_bounded(self):
         planner=source("LongRangeNavigation")
         self.assertIn("RouteSearchPolicy.remoteCost(nodes)",planner)
-        self.assertIn("claimFull(server.getTickCount(),human.getUUID(),cost)",planner)
+        self.assertIn("claimFull(server.getTickCount(),human.getUUID(),cost,BudgetDemandOrder.faction(human))",planner)
         self.assertIn("s.queriedTick == tick",planner)
         self.assertIn("s.failures.size()>=c.cacheEntries()",planner)
         self.assertIn("RouteSearchPolicy.retry",planner)

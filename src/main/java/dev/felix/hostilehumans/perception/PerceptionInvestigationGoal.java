@@ -34,7 +34,7 @@ public class PerceptionInvestigationGoal extends Goal {
     @Override public boolean requiresUpdateEveryTick(){return true;}
     @Override public void start(){clue=HumanPerception.bestClue(h);origin=h.position();started=HumanPerception.now(h);nextAttempt=started;points=clue==null?0:clue.searchedPoints;arrivedAt=-1;ownPath=null;worked=clue==null?0:clue.searchedTicks;beganWork=false;planning=false;lastTick=started;}
     @Override public boolean canContinueToUse(){
-        if(!canUse()||clue==null||clue.completed>=0)return false;long now=HumanPerception.now(h);
+        if(!canUse()||clue==null||clue.completed>=0||!HumanPerception.detailAllowsClue(h,clue))return false;long now=HumanPerception.now(h);
         if(now>=clue.until||worked>=c().integer("investigation.duration_ticks")||clue.attempts>=c().integer("investigation.maximum_retries"))return false;
         var best=HumanPerception.bestClue(h);
         return best==clue||now-started<c().integer("investigation.hold_ticks")||best!=null&&best.priority<clue.priority;

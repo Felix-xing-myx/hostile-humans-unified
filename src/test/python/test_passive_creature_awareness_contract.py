@@ -17,7 +17,7 @@ class PassiveCreatureAwarenessContract(unittest.TestCase):
         emit = awareness.split("private static void emit", 1)[1].split("private static void enqueue", 1)[0]
         self.assertLess(emit.index("passiveCreature(actor)"), emit.index("enqueue("))
         perception = (PKG / "HumanPerception.java").read_text(encoding="utf-8")
-        self.assertIn("if(HumanAwareness.movementCandidate(h,e))sounds.offer(e)", perception)
+        self.assertIn("if ((!reduced || BattlePerceptionDetail.closeHuman(h,e)) && HumanAwareness.movementCandidate(h,e)) sounds.offer(e)", perception)
         notice = perception.split("public static void notice", 1)[1].split("public static void ownerClue", 1)[0]
         self.assertLess(notice.index("allowsCreatureClue"), notice.index("alert(h,s"))
         self.assertIn("if(invalid)clue.completed=now", perception)

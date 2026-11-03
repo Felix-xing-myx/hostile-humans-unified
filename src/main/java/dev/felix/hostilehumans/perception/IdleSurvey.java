@@ -16,6 +16,7 @@ final class IdleSurvey {
     private static final Map<Human,State> STATES=new WeakHashMap<>();
     private static final class State {
         long next,until;
+        boolean reduced;
         Vec3 origin,point,best;
         float[] yaws;
         int index;
@@ -33,7 +34,23 @@ final class IdleSurvey {
         String dimension=h.level().dimension().location().toString();
         if(!dimension.equals(s.dimension)){s.dimension=dimension;s.origin=null;s.yaws=null;s.point=null;s.next=now;}
         if(s.origin!=null && s.origin.distanceToSqr(eye)>1){s.origin=eye;s.yaws=null;s.point=null;s.next=now+20;}
+        boolean reduced = BattlePerceptionDetail.reduced(h);
+        if (s.reduced != reduced) {
+            s.reduced = reduced;
+            s.yaws = null;
+            s.point = null;
+            s.next = now;
+        }
         if(s.point!=null && now<s.until)return s.point;
+        if (reduced) {
+            if (now < s.next) return null;
+            float yaw = h.yBodyRot + (h.getRandom().nextFloat() - .5F) * 100;
+            s.origin = eye;
+            s.point = eye.add(Vec3.directionFromRotation(0, yaw).scale(4));
+            s.until = now + 30;
+            s.next = s.until + 80 + h.getRandom().nextInt(81);
+            return s.point;
+        }
         s.point=null;
         if(s.yaws==null) {
             if(now<s.next)return null;

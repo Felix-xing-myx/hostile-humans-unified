@@ -32,7 +32,7 @@ class HearingRelevanceContract(unittest.TestCase):
     def test_filter_and_fair_priority_apply_before_bounded_retention(self):
         scan=source("HumanPerception")
         self.assertIn("new BoundedSelection<>(cap*4,HumanAwareness.movementOrder(h))",scan)
-        self.assertIn("if(HumanAwareness.movementCandidate(h,e))sounds.offer(e)",scan)
+        self.assertIn("if ((!reduced || BattlePerceptionDetail.closeHuman(h,e)) && HumanAwareness.movementCandidate(h,e)) sounds.offer(e)",scan)
         awareness=source("HumanAwareness")
         eligibility=awareness.split("static boolean movementCandidate",1)[1].split("static Comparator",1)[0]
         self.assertIn('hearing.background_vertical',eligibility)

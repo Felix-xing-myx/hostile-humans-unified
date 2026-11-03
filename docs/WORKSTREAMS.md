@@ -4083,3 +4083,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控，基线 398110b19bde876a8edbffdbdd582505ca7339ac，工作树 crowd-budget，分支 fix/crowd-budget。
 - 范围为感知队列、共享公平预算、普通／远距／可选寻路和默认配置。继续使用既有额度申请接口，跨阵营只改变积压预约顺序，保留全服和维度硬限制。
 - Python 核查 516 项通过、16 项跳过，默认附录通过检查。阵营轮转新增 Java 回归，未运行 Java 编译、游戏内团战与性能验收或实例同步。
+
+### 极端团战前线感知精简
+
+- 主控，基线 6d05b7b51d8d147b2102d09cd6bb479e0753d281，工作树 battle-ai-detail，分支 feat/battle-ai-detail。
+- 范围：局部前线判定、环境声分流、已有调查任务收尾、闲置扫视和只读诊断。感知采样复用现有邻域查询；战斗动作仲裁继续由现有中枢负责。
+- Python 核查通过 516 项、跳过 16 项。未编译、未构建同步、未进行游戏内或性能验收。

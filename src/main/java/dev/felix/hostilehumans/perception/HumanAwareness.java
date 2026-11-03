@@ -111,6 +111,7 @@ public final class HumanAwareness {
             while(n.index<n.receivers.size()){
                 Entity found=level.getEntity(n.receivers.get(n.index));if(!(found instanceof Human h)){n.index++;continue;}
                 Entity actor=n.source==null?null:level.getEntity(n.source);
+                if (!BattlePerceptionDetail.acceptsClue(h, n.kind, actor)) { n.index++; continue; }
                 boolean step=n.kind.equals("walk")||n.kind.equals("run")||n.kind.equals("swim");
                 if(passiveCreature(actor)||h==actor||step&&(actor instanceof LivingEntity e&&HumanRelations.allied(h,e))
                         ||n.kind.equals("aid")&&(!(actor instanceof Human ally)||!HumanRelations.allied(h,ally))){n.index++;continue;}
@@ -145,7 +146,7 @@ public final class HumanAwareness {
         List<LivingEntity> ordered=new ArrayList<>(nearby);
         ordered.sort(movementOrder(listener));
         for(LivingEntity actor:ordered){
-            if(!movementCandidate(listener,actor))continue;
+            if (!BattlePerceptionDetail.acceptsMovement(listener,actor) || !movementCandidate(listener,actor)) continue;
             if(actor.isSilent()||actor.isShiftKeyDown()||actor instanceof Player p&&(p.isCreative()||p.isSpectator())){
                 MOVEMENT.put(actor,new Movement(now,actor.position(),0,actor.onGround()));continue;
             }

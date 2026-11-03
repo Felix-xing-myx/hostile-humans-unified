@@ -272,6 +272,7 @@ public final class HumanPerception {
         State s=STATES.get(h);
         return s!=null && now(h)<s.soundGlanceUntil && s.soundGlancePoint!=null
                 && !s.focusHurt && now(h)>=s.directionProtectedUntil
+                && (s.glancedClue == null || detailAllowsClue(h,s.glancedClue))
                 && HumanThreatAssessment.maySoundGlance(h,s.soundGlancePoint.subtract(0,h.getEyeHeight(),0),3);
     }
     public static void hurt(Human h,DamageSource source,float actual){
@@ -426,8 +427,11 @@ public final class HumanPerception {
         int baseInterval=c().integer(h.isAlert||s.focus!=null||recognizing(s)>0||h.getTarget()!=null?"budgets.active_interval_ticks":"budgets.idle_interval_ticks");
         int interval=AdaptiveActivityBudget.interval(h,baseInterval,s.focusHurt||now<s.directionProtectedUntil);
         if(now>=s.nextCandidates && PerceptionBudget.claim(h,"queries",1,":candidates")){
-            double movementRadius=HumanAwareness.movementRadius();
+            boolean measureBattle = BattlePerceptionDetail.measure(h);
+            boolean reduced = BattlePerceptionDetail.reduced(h);
+            double movementRadius = reduced ? BattlePerceptionDetail.LOCAL_RADIUS : HumanAwareness.movementRadius();
             double r=Math.max(HumanTargetSharing.range(h),Math.max(range(h),movementRadius));
+            if (measureBattle) r = Math.max(r, BattlePerceptionDetail.LOCAL_RADIUS);
             int cap=AdaptiveActivityBudget.candidates(h,c().integer("budgets.candidates"));long epoch=now/Math.max(1,interval);
             Comparator<LivingEntity> nearest=Comparator.comparingDouble(h::distanceToSqr);
             Comparator<LivingEntity> rotating=Comparator.comparingLong(e->candidateRank(e.getUUID(),epoch));
@@ -436,16 +440,25 @@ public final class HumanPerception {
             Comparator<Human> friendOrder=Comparator.<Human>comparingDouble(h::distanceToSqr).thenComparing(Entity::getUUID);
             BoundedSelection<Human> friends=new BoundedSelection<>(cap,friendOrder);
             BoundedSelection<LivingEntity> sounds=new BoundedSelection<>(cap*4,HumanAwareness.movementOrder(h));
+            int[] localHumans = measureBattle ? new int[2] : null; // All nearby humans and the hostile subset, excluding self.
             // Stream the loaded spatial section: unrelated entities cannot hide later enemies.
             level.getEntities().get(net.minecraft.world.level.entity.EntityTypeTest.forClass(LivingEntity.class),
                     h.getBoundingBox().inflate(r), e->{
                         if(e!=h&&e.isAlive()){
                             if(e instanceof Human friendly&&HumanTargetSharing.peers(h,friendly))friends.offer(friendly);
-                            if(enemy(h,e)){close.offer(e);discovery.offer(e);}
-                            if(HumanAwareness.movementCandidate(h,e))sounds.offer(e);
+                            boolean hostile = enemy(h,e);
+                            if (hostile) { close.offer(e); discovery.offer(e); }
+                            if (measureBattle && e instanceof Human
+                                    && (localHumans[0] < 7 || localHumans[1] < 2)
+                                    && h.distanceToSqr(e) <= BattlePerceptionDetail.LOCAL_RADIUS_SQUARED) {
+                                localHumans[0]++;
+                                if (hostile) localHumans[1]++;
+                            }
+                            if ((!reduced || BattlePerceptionDetail.closeHuman(h,e)) && HumanAwareness.movementCandidate(h,e)) sounds.offer(e);
                         }
                         return net.minecraft.util.AbortableIterationConsumer.Continuation.CONTINUE;
                     });
+            if (measureBattle) BattlePerceptionDetail.sample(h, now, localHumans[0], localHumans[1]);
             HumanTargetSharing.broadcast(h,friends.values());
             HumanAwareness.sampleMovement(h,sounds.values());
             LinkedHashSet<UUID> chosen=new LinkedHashSet<>();
@@ -763,8 +776,14 @@ public final class HumanPerception {
     private static Clue bestClue(Human h,java.util.function.Predicate<Clue> eligible){
         State s=STATES.get(h);if(s==null)return null;long now=now(h);
         return s.clues.stream().filter(a->now<a.until&&a.completed<0&&!SoundInvestigationMemory.blocked(h,a.kind,a.position)
-                &&allowsCreatureClue(h,a.kind,a.source)&&eligible.test(a)).findFirst().orElse(null);
+                &&detailAllowsClue(h,a)&&allowsCreatureClue(h,a.kind,a.source)&&eligible.test(a)).findFirst().orElse(null);
     }
+    static boolean detailAllowsClue(Human h, Clue clue) {
+        if (!BattlePerceptionDetail.reduced(h)) return true;
+        Entity source = clue.source != null && h.level() instanceof ServerLevel level ? level.getEntity(clue.source) : null;
+        return BattlePerceptionDetail.acceptsClue(h, clue.kind, source);
+    }
+
     private static boolean usefulCombatClue(Human h,State s,Clue clue){
         if(!dev.felix.hostilehumans.perception.SoundExclusionMemory.sound(clue.kind))return false;
         if(clue.source!=null){
@@ -835,6 +854,7 @@ public final class HumanPerception {
         row(rows,"clues","最近听觉分级",s.soundPolicy);
         row(rows,"actions","阵营被动能力",FactionAbilities.describe(h));
         row(rows,"budget","动态活动档位",AdaptiveActivityBudget.describe(h));
+        row(rows,"budget","感知细节",BattlePerceptionDetail.reduced(h) ? "团战前线：精简环境侦查" : "完整");
         row(rows,"overview","警觉剩余",remaining(s.alertUntil,now));row(rows,"actions","观察请求",s.lookOwner);
         row(rows,"actions","实际朝向归属",HumanMonitorControl.controls(h)?"接管玩家视角":HumanAttention.owner(h));
         row(rows,"targets","主攻击目标",h.getTarget()==null?"无":bounded(h.getTarget().getName().getString(),64));
