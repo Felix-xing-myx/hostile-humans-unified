@@ -56,6 +56,7 @@ public final class SettlementScreen extends PanelScreen {
             error = "",
             confirmation = "";
     private int regionIndex, boxIndex, facilityIndex, turns;
+    private int keepAliveTicks;
     private boolean exclude, localChanged, serverClosed, transformDirty, templateEntities, currentRegionOnly;
     private long confirmUntil;
 
@@ -1236,6 +1237,10 @@ public final class SettlementScreen extends PanelScreen {
     @Override
     public void tick() {
         super.tick();
+        if (++keepAliveTicks >= 300) {
+            keepAliveTicks = 0;
+            SettlementNetwork.request(snapshot, SettlementNetwork.Action.KEEP_ALIVE, new CompoundTag());
+        }
         if (confirmUntil > 0 && System.currentTimeMillis() >= confirmUntil) {
             confirmUntil = 0;
             confirmation = "";

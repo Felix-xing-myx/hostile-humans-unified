@@ -22,7 +22,8 @@ import java.util.function.Supplier;
 public final class SettlementNetwork {
     private static final UUID NONE = new UUID(0, 0);
     private static final int NBT_LIMIT = 1048576;
-    private static final String VERSION = "3";
+    private static final String VERSION = "4";
+    private static final int SESSION_TICKS = 1200;
     public static final String SELECTION_READY = "selection mode updated";
 
     private static final class Connection {
@@ -46,7 +47,8 @@ public final class SettlementNetwork {
         SELECTION_MODE,
         CLOSE,
         RESTORE_AUTHOR,
-        SAVE_TEMPLATE_FILE
+        SAVE_TEMPLATE_FILE,
+        KEEP_ALIVE
     }
 
     public record Snapshot(
@@ -199,7 +201,7 @@ public final class SettlementNetwork {
                         player.level().dimension().location(),
                         info.instance(),
                         true,
-                        player.level().getGameTime() + 1200);
+                        player.level().getGameTime() + SESSION_TICKS);
         SESSIONS.put(player, s);
         MODULE_PAGES.remove(player);
         REQUEST_IDS.remove(player);
@@ -271,7 +273,7 @@ public final class SettlementNetwork {
                         player.level().dimension().location(),
                         id,
                         false,
-                        player.level().getGameTime() + 1200);
+                        player.level().getGameTime() + SESSION_TICKS);
         SESSIONS.put(player, session);
         MODULE_PAGES.remove(player);
         REQUEST_IDS.remove(player);
@@ -282,6 +284,11 @@ public final class SettlementNetwork {
         return p.isAlive()
                 && !p.isSpectator()
                 && p.distanceToSqr(at.getX() + .5, at.getY() + .5, at.getZ() + .5) <= 64;
+    }
+
+    private static Session renew(Session session, long now) {
+        return new Session(session.token(), session.anchor(), session.dimension(),
+                session.instance(), session.author(), now + SESSION_TICKS);
     }
 
     private static boolean valid(ServerPlayer player, Session session) {
@@ -446,6 +453,7 @@ public final class SettlementNetwork {
                     if (player == null) return;
                     var session = SESSIONS.get(player);
                     if (session == null || !session.token().equals(request.token())) {
+                        if (request.action() == Action.KEEP_ALIVE) return;
                         reject(
                                 player,
                                 request.token(),
@@ -462,6 +470,12 @@ public final class SettlementNetwork {
                         send(player, session, "permission or session changed", request.requestId());
                         return;
                     }
+                    if (request.action() == Action.KEEP_ALIVE) {
+                        long now = player.level().getGameTime();
+                        if (session.expires() - now <= SESSION_TICKS * 3 / 4)
+                            SESSIONS.put(player, renew(session, now));
+                        return;
+                    }
                     if (!throttle(player)) {
                         reject(
                                 player,
@@ -470,14 +484,7 @@ public final class SettlementNetwork {
                                 "request rate limited; reopen panel");
                         return;
                     }
-                    session =
-                            new Session(
-                                    session.token(),
-                                    session.anchor(),
-                                    session.dimension(),
-                                    session.instance(),
-                                    session.author(),
-                                    player.level().getGameTime() + 1200);
+                    session = renew(session, player.level().getGameTime());
                     SESSIONS.put(player, session);
                     var seen = REQUEST_IDS.computeIfAbsent(player, k -> new LinkedHashSet<>());
                     if (!seen.add(request.requestId())) {
