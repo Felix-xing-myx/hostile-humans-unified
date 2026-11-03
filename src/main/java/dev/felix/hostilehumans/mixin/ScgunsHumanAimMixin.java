@@ -1,5 +1,6 @@
 package dev.felix.hostilehumans.mixin;
 
+import dev.felix.hostilehumans.compat.OptionalMixinPlugin;
 import dev.felix.hostilehumans.entity.Human;
 
 import net.minecraft.world.entity.LivingEntity;
@@ -14,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Pseudo
 @Mixin(targets = "top.ribs.scguns.entity.ai.AIGunEvent", remap = false)
 public abstract class ScgunsHumanAimMixin {
-    @Inject(method = "getLeadingDirection", at = @At("HEAD"), cancellable = true,
+    @Inject(method = OptionalMixinPlugin.SCGUNS_HUMAN_AIM, at = @At("HEAD"), cancellable = true,
             remap = false, require = 1, allow = 1)
     private static void hostileHumansUnified$singleIntercept(LivingEntity shooter, LivingEntity target,
             double speed, CallbackInfoReturnable<Vec3> cir) {
