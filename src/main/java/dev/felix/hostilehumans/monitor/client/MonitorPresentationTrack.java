@@ -25,7 +25,10 @@ final class MonitorPresentationTrack {
         current = next;
         // A new physics tick starts at the previous displayed endpoint. Decay across the
         // rendered tick instead of subtracting half the offset at its first frame.
-        previousCorrection = correction; correction = correction.scale(.5);
+        previousCorrection = correction;
+        // Larger corrections converge without pulling the view a whole block in one tick.
+        double length = correction.length();
+        correction = correction.scale(length <= .3 ? .5 : 1 - .15 / length);
     }
     Vec3 at(float partialTick) {
         float fraction = Math.max(0, Math.min(1, partialTick));

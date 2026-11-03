@@ -53,10 +53,10 @@ public final class HumanMonitorClient {
     private static final MonitorMovementPrediction PREDICTION = new MonitorMovementPrediction();
     public static String predictionStatus() { return PREDICTION.reason(); }
     public static net.minecraft.world.phys.Vec3 predictedEye(Human human, float partialTick) {
-        return takingOver(human) ? PREDICTION.eyePosition(partialTick) : null;
+        return takingOver(human) ? PREDICTION.eyePosition(human, partialTick) : null;
     }
     public static Boolean predictedOnGround(Human human, float partialTick) {
-        return takingOver(human) ? PREDICTION.onGround(partialTick) : null;
+        return takingOver(human) ? PREDICTION.onGround() : null;
     }
     public static void acceptMotion(dev.felix.hostilehumans.monitor.MonitorMotionSnapshot motion) {
         var client = Minecraft.getInstance();
@@ -175,7 +175,7 @@ public final class HumanMonitorClient {
                     state.generation(), ++nextInputSequence, input, attack, use, reload, supply);
             queuedAttack = queuedUse = queuedReload = false;
             HumanMonitorNetwork.control(command);
-            PREDICTION.input(command, input);
+            PREDICTION.input(human, command, input);
         }
     }
     private static float axis(boolean positive, boolean negative) { return (positive ? 1 : 0) - (negative ? 1 : 0); }

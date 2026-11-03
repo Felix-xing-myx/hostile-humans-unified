@@ -70,14 +70,16 @@ public final class HumanTargetCoordinator {
             if(desired==null||now>=state.nextReview){
                 state.nextReview=now+AdaptiveActivityBudget.interval(h,PerceptionConfig.get().integer("budgets.active_interval_ticks"),urgent);
                 LivingEntity known=HumanPerception.candidate(h);
-                if(best==null||known!=null&&HumanThreatAssessment.score(h,known)>HumanThreatAssessment.score(h,best))best=known;
+                if (best == null || known != null && (HumanThreatAssessment.priorityInterrupt(h, desired, known)
+                        || HumanThreatAssessment.score(h,known)>HumanThreatAssessment.score(h,best))) best=known;
             }
             if (!urgent && desired != null && best != null && best != desired && RangedEngagement.temporarilyDeferred(h, best))
                 best = desired;
             LivingEntity locked=null;
             if(state.locked!=null&&now<state.lockUntil&&h.level() instanceof net.minecraft.server.level.ServerLevel level
                     &&level.getEntity(state.locked) instanceof LivingEntity found&&HumanPerception.selectionAllowed(h,found))locked=found;
-            if(locked!=null&&best!=null&&best!=locked&&(HumanThreatAssessment.nearOverride(h,locked,best)
+            if(locked!=null&&best!=null&&best!=locked&&(HumanThreatAssessment.priorityInterrupt(h,locked,best)
+                    ||HumanThreatAssessment.nearOverride(h,locked,best)
                     ||urgent&&HumanThreatAssessment.shouldSwitch(h,locked,best))){
                 unlock(h);locked=null;why="威胁评分打破远敌或压力偏好";
             }
@@ -92,7 +94,12 @@ public final class HumanTargetCoordinator {
             if(locked!=null){desired=locked;best=locked;why="多来源压力集中处理";}
             else {state.locked=null;state.lockUntil=-1;}
             if(desired==null){desired=best;why="已确认记忆按威胁分接替";}
-            else if(best!=null&&best!=desired&&HumanThreatAssessment.shouldSwitch(h,desired,best)){
+            else if (HumanThreatAssessment.priorityInterrupt(h, desired, best)) {
+                desired=best;why="已确认的高威胁优先于弱敌";
+            }
+            else if(best!=null&&best!=desired
+                    && (urgent || !HumanThreatAssessment.priorityInterrupt(h,best,desired))
+                    && HumanThreatAssessment.shouldSwitch(h,desired,best)){
                 boolean close=HumanThreatAssessment.nearOverride(h,desired,best);
                 if(dev.felix.hostilehumans.perception.PerceptionCoordinationPolicy.switchAllowed(now,state.changed,
                         PerceptionConfig.get().integer("selection.minimum_hold_ticks"),close,urgent)){
@@ -102,7 +109,8 @@ public final class HumanTargetCoordinator {
             // Optional opportunity ranking is subordinate to pressure locks and all existing permissions.
             if(locked==null&&reviewDue){
                 LivingEntity finisher=HumanFinisherSelection.candidate(h,desired,urgent);
-                if(finisher!=null && (urgent || !RangedEngagement.temporarilyDeferred(h, finisher))){
+                if(finisher!=null && !HumanThreatAssessment.priorityInterrupt(h, finisher, desired)
+                        && (urgent || !RangedEngagement.temporarilyDeferred(h, finisher))){
                     desired=finisher;harvesting=true;why="已确认残血收割机会（防御与命令优先）";
                 }
             }

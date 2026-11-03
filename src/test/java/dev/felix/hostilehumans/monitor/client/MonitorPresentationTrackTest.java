@@ -46,6 +46,11 @@ public final class MonitorPresentationTrackTest {
         }
         same(track.at(0), track.at(-1), "negative partial tick clamps to the first endpoint");
         same(track.at(1), track.at(2), "oversized partial tick clamps to the last endpoint");
+        track.reconcile(Vec3.ZERO, false);
+        track.reconcile(new Vec3(1.5, 0, 0), true);
+        track.advance(new Vec3(1.5, 0, 0));
+        same(Vec3.ZERO, track.at(0), "larger speed corrections preserve the last camera endpoint");
+        same(new Vec3(.15, 0, 0), track.at(1), "larger corrections decay by at most 0.15 blocks per tick");
         track.reconcile(new Vec3(100, 80, -20), false);
         for (float partial : partials) same(new Vec3(100, 80, -20), track.at(partial), "discontinuity snaps without crossing intervening walls");
         track.clear();

@@ -41,7 +41,7 @@ public final class HumanThreatAssessment {
     }
     private static double readIntrinsic(LivingEntity target) {
         var attack=target.getAttribute(Attributes.ATTACK_DAMAGE);
-        return ThreatScorePolicy.intrinsic(target.getHealth(),target.getArmorValue(),
+        return ThreatScorePolicy.intrinsic(target.getMaxHealth(),target.getArmorValue(),
                 attack==null?0:attack.getValue(),CombatWeaponPolicy.isRangedThreat(target));
     }
     public static double score(Human h,LivingEntity target){
@@ -77,6 +77,30 @@ public final class HumanThreatAssessment {
                 && intrinsic(h,target) < c().number("selection.weak_current_intrinsic")
                 && RecentDamageTracker.recentDamageFrom(h,target,40) < h.getMaxHealth() * .1;
     }
+    public static boolean priorityInterrupt(Human h, LivingEntity current, LivingEntity challenger) {
+        return HumanPerception.canTarget(h, challenger) && priorityInterrupt(h, current, challenger, false);
+    }
+
+    /** Call only with a verified visible enemy. This comparison never grants attack permission. */
+    public static boolean visiblePriorityInterrupt(Human h, LivingEntity current, LivingEntity challenger) {
+        return priorityInterrupt(h, current, challenger, true);
+    }
+
+    private static boolean priorityInterrupt(Human h, LivingEntity current, LivingEntity challenger,
+            boolean visible) {
+        if (current == challenger || !weakCurrent(h, current)) return false;
+        double tactical = priority(h, challenger);
+        if (tactical >= 60) return true;
+        double weak = intrinsic(h, current);
+        double threat = visible ? readIntrinsic(challenger) : intrinsic(h, challenger);
+        if (threat < Math.max(weak * 1.75, weak + 12)) return false;
+        double challengerScore = visible ? ThreatScorePolicy.score(threat, h.distanceTo(challenger),
+                RecentDamageTracker.recentDamageFrom(h, challenger, 80), h.getMaxHealth(),
+                challenger instanceof Mob mob && mob.getTarget() == h,
+                c().number("selection.near_radius")) + tactical : score(h, challenger);
+        return challengerScore >= score(h, current) * .55;
+    }
+
     public static boolean maySoundGlance(Human h, net.minecraft.world.phys.Vec3 point, int priority) {
         if (priority < 3 || h.isFleeing || h.hhu$hasPendingMeleeAttack()
                 || h.hhu$shieldDefense().defenseOwnsFacing() || h.isUsingItem()) return false;

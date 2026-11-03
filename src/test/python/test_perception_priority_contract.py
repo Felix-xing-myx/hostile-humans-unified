@@ -31,7 +31,7 @@ class PerceptionPriorityContract(unittest.TestCase):
         attention=source("HumanAttention")
         self.assertIn("boolean accepted=",attention)
         self.assertIn("boolean action=accepted&&request.priority>=0",attention)
-        self.assertIn("!soundGlance||request.pressure||human.hhu$hasPendingMeleeAttack()",attention)
+        self.assertIn("!glance||request.pressure||human.hhu$hasPendingMeleeAttack()",attention)
         self.assertIn("HumanTurnControl.apply(human,body,head,pitch,limit,profile,speed)",attention)
         self.assertIn("AttentionFacingPolicy.surveyStep",attention)
         self.assertIn("navigationYaw(human)",attention)

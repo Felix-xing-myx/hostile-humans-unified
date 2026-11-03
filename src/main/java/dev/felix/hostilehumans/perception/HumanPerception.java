@@ -74,8 +74,8 @@ public final class HumanPerception {
         final LinkedHashMap<UUID,NegativeObservationSweep> bodySweeps=new LinkedHashMap<>();
         final LinkedHashSet<UUID> pendingBodies=new LinkedHashSet<>();
         long reactionHandled=Long.MIN_VALUE;
-        long alertUntil=-1, tick=-1, nextScan, focusStarted, focusLastVisible=-1, directionStarted;
-        UUID focus; Vec3 look; boolean focusHurt, unfamiliarFocus;
+        long alertUntil=-1, tick=-1, nextScan, focusStarted, focusLastVisible=-1, directionStarted, nextPriorityFocus;
+        UUID focus; Vec3 look; boolean focusHurt, unfamiliarFocus, priorityFocus;
         int candidateCursor,recognitionCursor,bodyResumeCursor; List<UUID> candidates=List.of(); long nextCandidates;
         String decision="闲置观察",reason="等待视觉或声音证据",lookOwner="自然观察";
         String scanStatus="尚未执行视觉检测";long scanAt=-1;
@@ -198,7 +198,16 @@ public final class HumanPerception {
         return s.focus!=null||now<s.directionProtectedUntil;
     }
     public static boolean allowCombatLook(Human h,LivingEntity target){
-        return !NavigationDebugService.controls(h)&&canTarget(h,target);
+        return !NavigationDebugService.controls(h)&&canTarget(h,target)&&!priorityGlance(h);
+    }
+    private static boolean priorityGlance(Human h) {
+        State s = STATES.get(h);
+        return s != null && s.priorityFocus && s.look != null && canTarget(h,h.getTarget())
+                && mayInspectPriority(h);
+    }
+    private static boolean mayInspectPriority(Human h) {
+        return h.hurtTime == 0 && !h.isFleeing && !h.hhu$hasPendingMeleeAttack()
+                && !h.hhu$shieldDefense().defenseOwnsFacing() && !h.isUsingItem();
     }
     public static Vec3 incomingReactionPoint(Human h){
         State s=STATES.get(h);if(s==null)return null;
@@ -215,7 +224,9 @@ public final class HumanPerception {
         State s=STATES.get(h);
         boolean urgent=s!=null&&(s.focusHurt||now(h)<s.directionProtectedUntil)&&(!canTarget(h,h.getTarget())||h.distanceToSqr(h.getTarget())>36);
         boolean sound=!urgent&&soundGlanceActive(h);
-        HumanAttention.finish(h,sound?s.soundGlancePoint:s==null?null:s.look,urgent,sound);
+        boolean priority = !urgent && priorityGlance(h);
+        HumanAttention.finish(h, sound && !priority ? s.soundGlancePoint : s == null ? null : s.look,
+                urgent, sound && !priority, priority);
     }
     private static void alert(Human h,State s,String reason){
         s.alertUntil=now(h)+c().integer("observation.alert_ticks");h.isAlert=true;
@@ -334,7 +345,7 @@ public final class HumanPerception {
         }
         Track t=new Track(id);s.tracks.put(id,t);return t;
     }
-    private static void release(State s,String reason){s.focus=null;s.look=null;s.unfamiliarFocus=false;s.focusHurt=false;
+    private static void release(State s,String reason){s.focus=null;s.look=null;s.unfamiliarFocus=false;s.focusHurt=false;s.priorityFocus=false;
         s.directionProtectedUntil=-1;s.reason=reason;s.lookOwner="自然观察";}
     public static void tick(Human h){
         if(h.level().isClientSide||!(h.level() instanceof ServerLevel level))return;
@@ -395,7 +406,7 @@ public final class HumanPerception {
         if(s.focus!=null){
             Entity e=level.getEntity(s.focus);Track t=s.tracks.get(s.focus);
             boolean lost=t!=null&&t.evidence.interrupted(now,c().integer("recognition.break_ticks"));
-            boolean timeout=now-s.focusStarted>=(s.focusLastVisible<0?c().integer("observation.direction_ticks"):c().integer("observation.focus_ticks"));
+            boolean timeout=now-s.focusStarted>=(s.priorityFocus?40:s.focusLastVisible<0?c().integer("observation.direction_ticks"):c().integer("observation.focus_ticks"));
             if(!(e instanceof LivingEntity living)||!observable(h,living)||!allowsCreatureResponse(h,living)||lost||timeout){
                 if(s.focusHurt&&s.look!=null){
                     Vec3 direction=s.look.subtract(h.getEyePosition()).multiply(1,0,1).normalize();
@@ -466,7 +477,7 @@ public final class HumanPerception {
             if(nearestUnknown!=null)checks.add(nearestUnknown);
         }
         // Reserve a periodic refresh, not every slot: two recognitions still run in alternating rounds.
-        if(checks.size()<rays&&s.focusHurt&&s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity hitFocus&&eligibleVisual(h,s,hitFocus,now))checks.add(hitFocus);
+        if(checks.size()<rays&&(s.focusHurt||s.priorityFocus)&&s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity hitFocus&&eligibleVisual(h,s,hitFocus,now))checks.add(hitFocus);
         if(checks.size()<rays&&!checks.contains(main)&&canTarget(h,main)&&eligibleVisual(h,s,main,now)&&PerceptionDiscoveryPolicy.maintainMain(visualRound,rays))checks.add(main);
         List<Track> identifying=s.tracks.values().stream().filter(t->t.evidence.active()).toList();
         for(int i=0;i<identifying.size()&&checks.size()<rays;i++){
@@ -658,16 +669,25 @@ public final class HumanPerception {
         boolean live=t.marked&&PerceptionPolicy.live(now,t.liveUntil);
         if(live){t.visual=now;t.liveUntil=now+c().integer("memory.dynamic_ticks");t.familiarUntil=now+c().integer("memory.familiar_ticks");t.refresh="目视";
             s.alertUntil=now+c().integer("observation.alert_ticks");}
+        boolean priority = !live && !s.focusHurt && !s.priorityFocus && now >= s.directionProtectedUntil
+                && now >= s.nextPriorityFocus && now >= t.lookAfter && mayInspectPriority(h)
+                && HumanThreatAssessment.visiblePriorityInterrupt(h,h.getTarget(),e);
         if(!live&&!t.evidence.active()&&recognizing(s)>=RecognitionEvidence.MAX_CONCURRENT){
             // Only actual visible evidence may interrupt a distant recognition. Never a radius scan alone.
             Track pause=null;
             for(Track other:s.tracks.values())if(other.evidence.active()&&other.position!=null
-                    &&PerceptionDiscoveryPolicy.preemptsRecognition(distance,h.position().distanceTo(other.position),
-                    c().number("selection.near_radius"),s.focusHurt&&Objects.equals(other.id,s.focus))
+                    && !(Objects.equals(other.id,s.focus) && (s.focusHurt || s.priorityFocus))
+                    &&(priority || PerceptionDiscoveryPolicy.preemptsRecognition(distance,h.position().distanceTo(other.position),
+                    c().number("selection.near_radius"),false))
                     &&(pause==null||h.position().distanceToSqr(other.position)>h.position().distanceToSqr(pause.position)))pause=other;
             if(pause!=null){pause.evidence.pause();if(Objects.equals(pause.id,s.focus))release(s,"已目视近场来源优先识别");}
         }
         if(!live&&!t.evidence.active()&&recognizing(s)<RecognitionEvidence.MAX_CONCURRENT)t.evidence.resume(now);
+        if (priority && t.evidence.active()) {
+            if (s.focus != null) release(s,"可见高威胁优先识别");
+            s.focus=e.getUUID(); s.priorityFocus=true; s.nextPriorityFocus=now+70; s.unfamiliarFocus=!familiar;
+            s.focusStarted=now; s.focusLastVisible=now; s.lookOwner="高威胁短时观察";
+        }
         if(s.focus==null&&now>=t.lookAfter&&!live&&t.evidence.active()){
             s.focus=e.getUUID();s.unfamiliarFocus=!familiar;s.focusHurt=false;s.focusStarted=now;s.focusLastVisible=now;s.lookOwner="视觉识别主观察";
         }
@@ -710,7 +730,8 @@ public final class HumanPerception {
         List<LivingEntity> known=new ArrayList<>();
         for(Track t:s.tracks.values())if(t.marked&&now(h)<t.liveUntil&&level.getEntity(t.id) instanceof LivingEntity e&&valid(h,e))known.add(e);
         for(LivingEntity e:HumanTargetSharing.targets(h))if(!known.contains(e))known.add(e);
-        known.sort(Comparator.<LivingEntity>comparingDouble(e->HumanThreatAssessment.score(h,e)).reversed()
+        known.sort(Comparator.<LivingEntity, Boolean>comparing(e -> !HumanThreatAssessment.priorityInterrupt(h,current,e))
+                .thenComparing(Comparator.<LivingEntity>comparingDouble(e->HumanThreatAssessment.score(h,e)).reversed())
                 .thenComparingDouble(h::distanceToSqr).thenComparing(Entity::getUUID));
         for(LivingEntity e:known){
             if(!selectionAllowed(h,e))continue;

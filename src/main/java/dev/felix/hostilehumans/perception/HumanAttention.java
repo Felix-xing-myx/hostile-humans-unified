@@ -92,6 +92,7 @@ public final class HumanAttention {
                 && target.level() == human.level() && aim.weapon.get() == human.getMainHandItem()
                 && !human.getMainHandItem().isEmpty()
                 && actions == aim.actions && (actions == null || actions.session() == aim.session)
+                && HumanPerception.allowCombatLook(human, target)
                 && !HumanPerception.soundGlanceActive(human)
                 && !human.hhu$hasPendingMeleeAttack()
                 && !human.hhu$shieldDefense().defenseOwnsFacing()
@@ -154,8 +155,12 @@ public final class HumanAttention {
                 AdaptiveActivityBudget.interval(human,PerceptionConfig.get().integer("budgets.idle_interval_ticks"),false));
     }
     public static void finish(Human human,Vec3 observation,boolean urgent,boolean soundGlance) {
+        finish(human, observation, urgent, soundGlance, false);
+    }
+    public static void finish(Human human, Vec3 observation, boolean urgent, boolean soundGlance, boolean priorityGlance) {
         if(human.level().isClientSide||human.isNoAi()||human.isSleeping()){HumanTurnControl.clear(human);return;}
-        if (applyGunAim(human)) {
+        boolean glance = soundGlance || priorityGlance;
+        if (!priorityGlance && applyGunAim(human)) {
             OWNERS.put(human, "枪械瞄准朝向");
             remember(human);
             return;
@@ -164,11 +169,11 @@ public final class HumanAttention {
         Float route=navigationYaw(human);
         LivingEntity target=human.getTarget();
         boolean combat=HumanPerception.canTarget(human,target);
-        Vec3 point=combat&&!urgent&&!soundGlance?target.getEyePosition():observation;
-        String owner=soundGlance?"重要声音有限回看":combat&&!urgent?"主目标观察":"辅助观察请求";
+        Vec3 point=combat&&!urgent&&!glance?target.getEyePosition():observation;
+        String owner=priorityGlance?"高威胁短时观察":soundGlance?"重要声音有限回看":combat&&!urgent?"主目标观察":"辅助观察请求";
         Request request=REQUESTS.get(human);
         boolean accepted=request!=null&&request.tick==human.tickCount
-                &&(request.priority>=0&&(!soundGlance||request.pressure||human.hhu$hasPendingMeleeAttack()
+                &&(request.priority>=0&&(!glance||request.pressure||human.hhu$hasPendingMeleeAttack()
                 ||human.hhu$shieldDefense().defenseOwnsFacing())||!combat&&!urgent&&observation==null);
         if(accepted){point=request.point;owner=request.owner;}
         else REQUESTS.remove(human);
