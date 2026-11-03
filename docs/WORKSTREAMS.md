@@ -4106,3 +4106,8 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 - 主控，基线 61adf0ba38893f2be5b609d1360a93b68d6ef05c，工作树 frontline-decision，分支 perf/frontline-decision。范围为感知调度、主目标复评及友军报告。沿用原动作权限、预算与报告期限。
 - Python 核查通过 516 项、跳过 16 项。未编译、未同步、未实测 MSPT。
+
+### 友军报告读路径与团战联络降频
+
+- 主控，基线 3ca844d0e00abd306c826b9ee2cc7cc087b461f5，工作树 ally-relay，分支 perf/ally-relay。修改报告租约复核和逐跳遮挡缓存，沿用既有许可、期限和去重接口。
+- Python 核查通过 516 项，跳过 16 项。未编译、未同步、未进行群战性能测量。

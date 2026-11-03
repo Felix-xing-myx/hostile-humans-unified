@@ -21,8 +21,12 @@ final class HumanReportPropagation {
         var cache=CACHE.computeIfAbsent(sender,k->new LinkedHashMap<>());
         Probe p=cache.get(receiver.getUUID());
         String dimension=sender.level().dimension().location().toString();
-        if(p==null || !dimension.equals(p.dimension) || now<p.tick || now-p.tick>=c.integer("sharing.occlusion_cache_ticks")
-                ||p.from.distanceToSqr(from)>.25 ||p.to.distanceToSqr(to)>.25) {
+        boolean reduced = BattlePerceptionDetail.measure(sender);
+        int ttl = c.integer("sharing.occlusion_cache_ticks");
+        if (reduced) ttl = Math.max(ttl, 16);
+        double movedSquared = reduced ? 4 : .25;
+        if(p==null || !dimension.equals(p.dimension) || now<p.tick || now-p.tick>=ttl
+                ||p.from.distanceToSqr(from)>movedSquared ||p.to.distanceToSqr(to)>movedSquared) {
             if(!PerceptionBudget.claim(sender,"rays",1,":report:"+receiver.getUUID()))return null;
             var hit=sender.level().clip(new ClipContext(from,to,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,sender));
             p=new Probe(now,from,to,hit.getType()==HitResult.Type.MISS,dimension);

@@ -23,7 +23,9 @@ public final class HumanTargetSharing {
     static final int RELAY_INTERVAL = 20;
     private static final int FRONTLINE_INTERVAL = 40;
     private static final int FRONTLINE_NEIGHBORS = 4;
-    private static final int FRONTLINE_LINK_CHECKS = 2;
+    private static final int FRONTLINE_LINK_CHECKS = 1;
+    private static final int LINK_REFRESH_TICKS = 4;
+    private static final int FRONTLINE_LINK_REFRESH_TICKS = 12;
     static final double BASE_RANGE = 16;
     private static final String SEND = "hostile_humans_unified:share_send_remaining";
     private static final String CLUE_SEND = "hostile_humans_unified:share_clue_send_remaining";
@@ -43,6 +45,7 @@ public final class HumanTargetSharing {
         final Report report;
         Vec3 position;long positionAt;
         boolean linkReady=true;
+        long nextRefresh = Long.MIN_VALUE;
         Lease(Human from, Human to, Report report) {
             this.report=report;Evidence evidence=report.evidence();
             sender=from.getUUID();target=evidence.target();owner=HumanRelations.effectiveOwner(from);
@@ -97,6 +100,8 @@ public final class HumanTargetSharing {
         long now=HumanPerception.now(receiver);
         for(var iterator=inbox.values().iterator();iterator.hasNext();){
             Lease lease=iterator.next();
+            if (!lease.window.retained(now)) { iterator.remove(); continue; }
+            if (!refreshDue(lease, now)) continue;
             LivingEntity target=resolve(receiver,lease.target);
             if(target==null||!receiverContext(receiver,lease)||!HumanPerception.sharingAllowed(receiver,target)){iterator.remove();continue;}
             refresh(receiver,lease,target,now);
@@ -114,8 +119,18 @@ public final class HumanTargetSharing {
         return id!=null&&human.level() instanceof ServerLevel level&&level.getEntity(id) instanceof LivingEntity living
                 &&living.isAlive()&&!living.isRemoved()?living:null;
     }
+    private static boolean refreshDue(Lease lease, long now) {
+        return lease.window.frozenAt < 0 && (now >= lease.nextRefresh || now >= lease.window.until);
+    }
+
     private static void refresh(Human receiver,Lease lease,LivingEntity target,long now){
-        if(lease.window.frozenAt>=0)return; // A failed link cannot thaw itself.
+        if (!refreshDue(lease, now)) return;
+        boolean reduced = BattlePerceptionDetail.measure(receiver);
+        lease.nextRefresh = now + (reduced ? FRONTLINE_LINK_REFRESH_TICKS : LINK_REFRESH_TICKS);
+        if (now >= lease.window.until) {
+            freeze(receiver, lease, now);
+            return;
+        }
         LivingEntity entity=resolve(receiver,lease.sender);
         boolean legal=entity instanceof Human sender&&peers(sender,receiver)
                 &&Objects.equals(lease.owner,HumanRelations.effectiveOwner(sender))
@@ -127,7 +142,7 @@ public final class HumanTargetSharing {
             Boolean audible=HumanReportPropagation.link(sender,receiver);
             lease.linkReady=Boolean.TRUE.equals(audible);
             if(audible==null){
-                if(now>=lease.window.until)lease.window.update(now,false);
+                lease.nextRefresh = now + LINK_REFRESH_TICKS;
                 return; // No fresh coordinates or relay authority while geometry is waiting.
             }
             legal=audible;
@@ -139,6 +154,14 @@ public final class HumanTargetSharing {
             }
             return;
         }
+        reportLastPosition(receiver, lease, now);
+    }
+    private static void freeze(Human receiver, Lease lease, long now) {
+        lease.linkReady = false;
+        lease.window.update(now, false);
+        reportLastPosition(receiver, lease, now);
+    }
+    private static void reportLastPosition(Human receiver, Lease lease, long now) {
         if(lease.window.retained(now))HumanPerception.notice(receiver,"shared",lease.position,lease.target,
                 (int)Math.max(0,lease.window.frozenAt+LAST_TICKS-now));
     }
@@ -150,9 +173,9 @@ public final class HumanTargetSharing {
         return lease==null||lease.positionAt<=personalPositionAt?null:lease.position;
     }
     private static Lease lease(Human receiver,LivingEntity target){
-        if(target==null||!HumanPerception.sharingAllowed(receiver,target))return null;
+        if(target==null)return null;
         var inbox=INBOX.get(receiver);Lease lease=inbox==null?null:inbox.get(target.getUUID());
-        if(lease==null)return null;
+        if(lease==null||!HumanPerception.sharingAllowed(receiver,target))return null;
         if(!receiverContext(receiver,lease)){inbox.remove(target.getUUID());return null;}
         long now=HumanPerception.now(receiver);refresh(receiver,lease,target,now);
         return !lease.window.retained(now)?null:lease;
@@ -191,10 +214,12 @@ public final class HumanTargetSharing {
         var inbox=INBOX.get(sender);
         if(inbox!=null)for(Lease lease:inbox.values()){
             LivingEntity target=resolve(sender,lease.target);
-            if(target==null||!receiverContext(sender,lease)||!HumanPerception.sharingAllowed(sender,target))continue;
+            if(target==null||lease.window.frozenAt>=0||now>=lease.window.until
+                    ||best!=null&&rank(lease.report)<=rank(best)
+                    ||!hasRecipient(sender,nearby,lease.report)
+                    ||!receiverContext(sender,lease)||!HumanPerception.sharingAllowed(sender,target))continue;
             refresh(sender,lease,target,now);
-            if(lease.window.frozenAt<0&&lease.linkReady&&hasRecipient(sender,nearby,lease.report)
-                    &&(best==null||rank(lease.report)>rank(best)))
+            if(lease.window.frozenAt<0&&lease.linkReady)
                 best=new Report(lease.report.origin(),new Evidence(lease.target,lease.position,true),
                         lease.report.created(),lease.positionAt,lease.report.threat());
         }
