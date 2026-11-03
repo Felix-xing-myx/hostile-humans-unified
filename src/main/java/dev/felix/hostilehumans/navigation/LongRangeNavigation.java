@@ -29,6 +29,7 @@ public final class LongRangeNavigation {
     private static final class Actor {
         final EnumMap<Purpose,State> lanes = new EnumMap<>(Purpose.class);
         State latest;
+        Purpose remoteWaiter;
     }
     private static final class State {
         BlockPos goal;
@@ -87,16 +88,17 @@ public final class LongRangeNavigation {
             int delay = RouteSearchPolicy.failureDelay(failure.attempts,c.failureTicks(),c.maximumFailureTicks());
             boolean changed = elapsed >= delay && scene(human,goal,failure.origin,failure.probe) != failure.scene;
             if (!RouteSearchPolicy.retry(elapsed,delay,c.maximumFailureTicks(),moved,changed)) {
-                cancelQueue(human);s.queuedAt=-1;s.result = "失败缓存";return failure.restricted?new Result(Status.RESTRICTED,null):FAILED;
+                cancelQueue(human, actor, purpose);s.queuedAt=-1;s.result = "失败缓存";return failure.restricted?new Result(Status.RESTRICTED,null):FAILED;
             }
         }
         if (tick < s.nextTick || s.queriedTick == tick) return pending(s,tick,"分档等待");
         if (!human.level().hasChunkAt(goal) || human.level().isOutsideBuildHeight(goal)
-                || !human.level().getWorldBorder().isWithinBounds(goal)) { s.result = "目标未加载或越界";s.queuedAt=-1;cancelQueue(human);return FAILED; }
+                || !human.level().getWorldBorder().isWithinBounds(goal)) { s.result = "目标未加载或越界";s.queuedAt=-1;cancelQueue(human, actor, purpose);return FAILED; }
         if(!nav.canRunBoundedSearch())return pending(s,tick,"等待落地或浮水");
         int stage = c.enabled() ? s.stage : 0;
         int range = c.range(stage), nodes = c.nodes(stage);
         if (stage == 0) {
+            cancelQueue(human, actor, purpose);
             if (!BasicNavigationBudget.tryAcquire(human,1)) return pending(s,tick,"普通配额等待");
             BasicNavigationBudget.cancel(human);
         } else {
@@ -107,7 +109,11 @@ public final class LongRangeNavigation {
             }
             pool.queue.setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,c.remoteUnits(),RouteSearchPolicy.remoteCost(c.longNodes())));
             int cost = RouteSearchPolicy.remoteCost(nodes);
-            if (pool.queue.claimFull(server.getTickCount(),human.getUUID(),cost,BudgetDemandOrder.faction(human)) != cost) return pending(s,tick,"远程配额等待");
+            if (pool.queue.claimFull(server.getTickCount(),human.getUUID(),cost,BudgetDemandOrder.faction(human)) != cost) {
+                actor.remoteWaiter = purpose;
+                return pending(s,tick,"远程配额等待");
+            }
+            actor.remoteWaiter = null;
             pool.queue.cancel(human.getUUID()); // No speculative reservation after consumed work.
         }
         s.queriedTick = tick;s.queuedAt = -1;s.searches++;s.goal=goal.immutable();s.lastRange=range;s.lastNodes=nodes;
@@ -130,7 +136,7 @@ public final class LongRangeNavigation {
         s.failures.put(goal.immutable(),new Failure(human.position(),probe.immutable(),tick,attempts,
                 scene(human,goal,human.position(),probe),signature,path!=null&&path.canReach()));
         s.nextTick=tick+1;s.result=path!=null&&path.canReach()?"安全或命令拒绝":"未找到完整路";
-        cancelQueue(human);return path!=null&&path.canReach()?new Result(Status.RESTRICTED,null):FAILED;
+        cancelQueue(human, actor, purpose);return path!=null&&path.canReach()?new Result(Status.RESTRICTED,null):FAILED;
     }
     private static Result pending(State s,int tick,String reason) {
         if(s.queuedAt<0)s.queuedAt=tick;s.result=reason;return PENDING;
@@ -166,9 +172,17 @@ public final class LongRangeNavigation {
     private static void cancelQueue(Human h) {
         Pool pool=POOLS.get(h.level().getServer());if(pool!=null)pool.queue.cancel(h.getUUID());
     }
-    public static void cancel(Human h,Purpose purpose) {
-        Actor actor=ACTORS.get(h);if(actor!=null){State state=actor.lanes.remove(purpose);if(actor.latest==state)actor.latest=null;}
-        cancelQueue(h);
+    private static void cancelQueue(Human human, Actor actor, Purpose purpose) {
+        if (actor.remoteWaiter != purpose) return;
+        actor.remoteWaiter = null;
+        cancelQueue(human);
+    }
+    public static void cancel(Human human, Purpose purpose) {
+        Actor actor = ACTORS.get(human);
+        if (actor == null) return;
+        State state = actor.lanes.remove(purpose);
+        if (actor.latest == state) actor.latest = null;
+        cancelQueue(human, actor, purpose);
     }
     public static void accepted(Human h,Purpose purpose) {
         Actor actor=ACTORS.get(h);State s=actor==null?null:actor.lanes.get(purpose);
