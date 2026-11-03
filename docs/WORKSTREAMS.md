@@ -4207,3 +4207,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 复核共享预算轮转，基线 cb7d958。BudgetDemandOrder、FairWorkBudget 和 ScopedWorkBudget 统一按需遍历发放顺序，已登记 Java 公平性回归待执行。
 
 - 累计联动证据复核，基线 dfba6c2。修正 test_vnext_perception_compatibility 在独立工作树的临时目录和中文 JAR 路径问题。Python 含已安装依赖检查 532 项全通过，未执行编译、构建或游戏启动。
+
+- 架构审查远程寻路重载，基线 dff25bd，主控沿用 worktrees/module-architecture 与 audit/module-architecture。LongRangeNavigation 每服务器 tick 固定搜索配置，仅在 tick 切换且总额度变化时更换队列。Python 核查通过 516 项，跳过 16 项。未编译、构建或实测。

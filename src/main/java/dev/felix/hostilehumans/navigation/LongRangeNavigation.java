@@ -39,10 +39,27 @@ public final class LongRangeNavigation {
         final LinkedHashMap<BlockPos,Failure> failures = new LinkedHashMap<>();
     }
     private record Failure(Vec3 origin, BlockPos probe, int tick, int attempts, int scene, int signature, boolean restricted) {}
-    private record Pool(int units, FairWorkBudget<UUID> queue) {}
+    private static final class Pool {
+        private int tick;
+        private NavigationSearchConfig settings;
+        private FairWorkBudget<UUID> queue;
+
+        NavigationSearchConfig settingsFor(int now) {
+            if (settings == null || now != tick) {
+                NavigationSearchConfig next = config();
+                if (settings == null || next.remoteUnits() != settings.remoteUnits()) {
+                    int units = next.remoteUnits();
+                    queue = new FairWorkBudget<>(units, units, 40);
+                }
+                settings = next;
+                tick = now;
+            }
+            return settings;
+        }
+    }
     public static String usage(MinecraftServer server) {
         var pool = POOLS.get(server);
-        var settings = config();
+        var settings = pool != null && pool.tick == server.getTickCount() ? pool.settings : config();
         int cap = AdaptiveActivityBudget.navigationCapacity(server, settings.remoteUnits(),
                 RouteSearchPolicy.remoteCost(settings.longNodes()));
         return pool == null ? "0 / " + cap : pool.queue.usage(server.getTickCount(),cap);
@@ -55,7 +72,11 @@ public final class LongRangeNavigation {
     public static Result search(Human human, BlockPos goal, Purpose purpose, int accuracy) {
         if (!(human.getNavigation() instanceof HumanNavigation nav)) return new Result(Status.UNSUPPORTED,null);
         if (human.level().isClientSide || !human.isAlive() || human.isNoAi() || goal == null) return FAILED;
-        var c = config();int tick = human.tickCount;
+        MinecraftServer server = human.level().getServer();
+        if (server == null) return FAILED;
+        Pool pool = POOLS.computeIfAbsent(server, ignored -> new Pool());
+        var c = pool.settingsFor(server.getTickCount());
+        int tick = human.tickCount;
         Actor actor = ACTORS.computeIfAbsent(human,k -> new Actor());
         State s = actor.lanes.computeIfAbsent(purpose,k -> new State());actor.latest = s;
         int signature = signature(human);
@@ -102,16 +123,6 @@ public final class LongRangeNavigation {
             if (!BasicNavigationBudget.tryAcquire(human,1)) return pending(s,tick,"普通配额等待");
             BasicNavigationBudget.cancel(human);
         } else {
-            MinecraftServer server = human.level().getServer();if(server==null)return FAILED;
-            Pool pool = POOLS.get(server);
-            if (pool == null || pool.units != c.remoteUnits()) {
-                // Individual search cost is derived from the current node limit.
-                // Keep the queue's hard limit tied to the pool size so reloading
-                // only the node limit cannot invalidate a legitimate request.
-                int units = c.remoteUnits();
-                pool = new Pool(units, new FairWorkBudget<>(units, units, 40));
-                POOLS.put(server, pool);
-            }
             pool.queue.setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,c.remoteUnits(),RouteSearchPolicy.remoteCost(c.longNodes())));
             int cost = RouteSearchPolicy.remoteCost(nodes);
             if (pool.queue.claimFull(server.getTickCount(),human.getUUID(),cost,BudgetDemandOrder.faction(human)) != cost) {
