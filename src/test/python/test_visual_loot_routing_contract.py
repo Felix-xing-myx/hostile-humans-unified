@@ -18,7 +18,7 @@ class VisualLootRoutingContract(unittest.TestCase):
     def test_visual_evidence_precedes_selection_and_all_collection(self):
         manager=(PKG/"HumanLootManager.java").read_text(encoding="utf-8")
         nearby=manager.split("ItemEntity advance(int budget",1)[1].split("private Iterator",1)[0]
-        self.assertLess(nearby.index("HumanLootVision.inspect"),nearby.index("score(item, capacity)"))
+        self.assertLess(nearby.index("HumanLootVision.inspect"),nearby.index("benefit(human, item.getItem(), capacity)"))
         self.assertIn("return Double.NaN",nearby)
         collect=manager.split("static boolean collect(Human human, ItemEntity entity)",1)[1].split("ItemStack ground",1)[0]
         self.assertIn("HumanLootVision.Sight.VISIBLE",collect)

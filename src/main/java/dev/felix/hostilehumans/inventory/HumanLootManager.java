@@ -270,16 +270,16 @@ public final class HumanLootManager {
             HumanData current = human.getData();
             StorageSummary capacity = current == null ? null : new StorageSummary(human, current);
             return selection.advance(budget, item -> {
-                if (!item.isAlive() || item.getItem().isEmpty() || item.level() != human.level()
-                        || !item.getBoundingBox().intersects(searchArea) || skip.test(item)) return Double.NEGATIVE_INFINITY;
+                if (!eligible(item) || skip.test(item)) return Double.NEGATIVE_INFINITY;
                 HumanLootVision.Sight sight = HumanLootVision.inspect(human, item);
                 if (sight == HumanLootVision.Sight.DEFERRED) return Double.NaN;
                 if (sight != HumanLootVision.Sight.VISIBLE) return Double.NEGATIVE_INFINITY;
-                double candidateScore = score(item, capacity);
-                if (candidateScore == Double.NEGATIVE_INFINITY) {
-                    if (item.isAlive() && !item.getItem().isEmpty()) reject.accept(item);
+                double value = benefit(human, item.getItem(), capacity);
+                if (value <= 0.0D) {
+                    reject.accept(item);
+                    return Double.NEGATIVE_INFINITY;
                 }
-                return candidateScore;
+                return value * 0.25D - human.distanceTo(item) * 2.0D;
             });
         }
 
@@ -289,16 +289,12 @@ public final class HumanLootManager {
                     item -> item.isAlive() && !item.getItem().isEmpty()).iterator();
         }
 
-        private double score(ItemEntity item, StorageSummary capacity) {
-            if (item == null || item.hasPickUpDelay() || !SoldierPickupPolicy.canCollectNow(human)
-                    || !item.isAlive() || item.getItem().isEmpty()
-                    || item.level() != human.level() || !item.getBoundingBox().intersects(searchArea)
-                    || human.distanceToSqr(item) > (radius + 4.0D) * (radius + 4.0D)
-                    || (selection.isPileOnly() && item.position().distanceToSqr(selectionCenter) > selectionRadiusSqr)
-                    || !isReachableWithoutDiving(item)) return Double.NEGATIVE_INFINITY;
-            double value = benefit(human, item.getItem(), capacity);
-            return value <= 0.0D ? Double.NEGATIVE_INFINITY
-                    : value * 0.25D - human.distanceTo(item) * 2.0D;
+        private boolean eligible(ItemEntity item) {
+            return item.isAlive() && !item.getItem().isEmpty() && !item.hasPickUpDelay()
+                    && item.level() == human.level() && item.getBoundingBox().intersects(searchArea)
+                    && human.distanceToSqr(item) <= (radius + 4.0D) * (radius + 4.0D)
+                    && (!selection.isPileOnly() || item.position().distanceToSqr(selectionCenter) <= selectionRadiusSqr)
+                    && SoldierPickupPolicy.canCollectNow(human) && isReachableWithoutDiving(item);
         }
     }
 
