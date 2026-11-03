@@ -4019,3 +4019,20 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 只读原版Slot类确认x/y为final；使用现有AT集中开放坐标修改，界面仅移动原有槽位，不改菜单校验/索引/物品交换。小于560逻辑像素高采用横排装备紧凑布局，适配常见GUI缩放，原生物品仍16像素。
 - 闪避修改definitions.dodge.chance_by_tier为0.10/0.18/0.28；头目沿TierAttributes.key与普通同阶一致。用户明确选择保留实例全部配置、自行重生成；本轮不改实例global.json，重生成前闪避仍为旧值。
 - 先前TaCZ远程监控广播及离散弹道修改一同进入本次构建，新增实际扩展取消边界与离散模拟用例由本轮执行。旧构建树WIP保留，新构建树显式登记。Git旧HEAD.lock备份后移除，验证暂存树与main树一致且工作内容无差异，完成先前失败的分支切换，再快进前端提交；未丢弃修改。
+
+
+## 3.14.4 构建同步
+- 主控；基线4c29919242a63dd4cb7e640a1d94aa90d30385eb；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-dodge-release-3.14.4，分支release/local-build；范围：前端第二轮页面审查、背包缩放与槽位修复、灰鸦闪避10/18/28、远程监控枪声与TaCZ离散弹道。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.4。
+
+- 3.14.4完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致b84d3ae42760f9b52b70a02eac1e60f64a231dfbb64e1574141728d86184b39f；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.14.4-20261102-215256。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.4.
+
+## 2026-11-03 — 据点作者工具可见性与创作流程
+- 主控 /root；基线 4c29919242a63dd4cb7e640a1d94aa90d30385eb；独立工作树 worktrees/settlement-author-visibility，分支 fix/settlement-author-visibility。
+- 范围为 SettlementInformationBlock 与 CHANGELOG，移除 INVISIBLE 覆盖，复用既有模型与注册，保留碰撞、光照和权限。提交 d8723d7 已本地快进整合。静态差异及资源引用核对，未编译或部署。
+- Obsidian 现有工具说明同步可见性；新方案记录分区预览、设施点选及模板文件与据点索引的独立操作。其余交互进入后续实施。
+
+## 2026-11-03 — 据点作者流程、设施点选与模板文件
+- 主控 /root；基线 d8723d7b7954db4c5a785c4e01155ad431d92028；独立工作树 worktrees/settlement-author-workflow，分支 feature/settlement-author-workflow。
+- 范围为 settlement 作者服务、分区会话、预览协议和客户端、现有作者面板、命令、本地化与模块索引；主控接公共 ClientUiResourceEvents。保持 SettlementIndex 及正式业务权限为权威。
+- 交付 ca685ae，已快进整合 main。作者点选、确认与修订控制复用现有作者数据。标准 NBT 保存剥离载体实例引用，加载按原版变换并要求预览确认；正式登记另行提交。
+- Python 回归 532 项（16 跳过）、27 份据点 Java 源码语法解析、12 种旋转镜像坐标静态核对与本地化检查已执行。未执行 Gradle、Java 编译、同步或进游戏。知识库与 docs/SETTLEMENT_AUTHOR_TEST.md 更新。
