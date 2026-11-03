@@ -4065,3 +4065,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控，基线 c54b6d2e76687afa44f5dc4b4b1dcc37fb98136c，工作树 template-entity-roundtrip，分支 fix/template-entity-roundtrip。
 - 范围为模板文件、放置棒及命令、框选器导出入口和双语提示。沿用原版实体保存、坐标变换和放置接口。据点协议升至 10。
 - Python 核查 516 项通过、16 项跳过。核对原版结构类的实体 NBT 写入、读取、UUID 清除和乘客放置入口。未编译、未同步、未游戏验收。
+
+
+## 3.14.9 构建同步
+- 主控；基线c4ea53213ae330cd0ddf41fad0eff6c648100627；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3149，分支release/local-build；范围：监控武器栏排布、框选器配置、建筑模板实体往返。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.9。
+
+- 3.14.9完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致3fbed9db1bb217c2102ef8fecc01ed54e99f707f9771d3a67d9f603d2706ed4a；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.14.9-20261103-230634。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.9.
