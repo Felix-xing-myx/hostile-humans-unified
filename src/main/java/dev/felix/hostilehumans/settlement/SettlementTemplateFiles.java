@@ -59,17 +59,22 @@ final class SettlementTemplateFiles {
     static ListTag list(ServerLevel level) {
         var manager = level.getStructureManager();
         var result = new ListTag();
+        record CatalogEntry(String id, boolean world) {}
         try (var templates = manager.listTemplates()) {
-            templates.distinct().filter(id -> id.toString().length() <= 256).map(id -> {
-                var row = new CompoundTag();
-                row.putString("id", id.toString());
-                row.putBoolean("world", Files.isRegularFile(manager.getPathToGeneratedStructure(id, ".nbt")));
-                return row;
-            }).filter(row -> row.getBoolean("world")
-                    || row.getString("id").startsWith("hostile_humans_unified:"))
-                    .sorted(java.util.Comparator.<CompoundTag, Boolean>comparing(row -> !row.getBoolean("world"))
-                            .thenComparing(row -> row.getString("id")))
-                    .limit(32).forEach(result::add);
+            templates.distinct()
+                    .filter(id -> id.toString().length() <= 256)
+                    .map(id -> new CatalogEntry(id.toString(),
+                            Files.isRegularFile(manager.getPathToGeneratedStructure(id, ".nbt"))))
+                    .filter(entry -> entry.world() || entry.id().startsWith("hostile_humans_unified:"))
+                    .sorted(java.util.Comparator.comparing(CatalogEntry::world).reversed()
+                            .thenComparing(CatalogEntry::id))
+                    .limit(32)
+                    .forEach(entry -> {
+                        var row = new CompoundTag();
+                        row.putString("id", entry.id());
+                        row.putBoolean("world", entry.world());
+                        result.add(row);
+                    });
         }
         return result;
     }
