@@ -256,10 +256,13 @@ public final class FactionEconomyLedger {
             block(player, data, "journal inventory references are invalid");
             return false;
         }
-        boolean politics =
-                data.player(player.getUUID()).equals(receipt.getCompound("politics_before"))
-                        || data.player(player.getUUID())
-                                .equals(receipt.getCompound("politics_after"));
+        boolean politicsBefore = false;
+        boolean politicsCompatible = false;
+        if (state.equals("PREPARED")) {
+            var currentPolitics = data.player(player.getUUID());
+            politicsBefore = currentPolitics.equals(receipt.getCompound("politics_before"));
+            politicsCompatible = politicsBefore || currentPolitics.equals(receipt.getCompound("politics_after"));
+        }
         var decision =
                 dev.felix.hostilehumans.economy.EconomyRecovery.decide(
                         state,
@@ -272,9 +275,8 @@ public final class FactionEconomyLedger {
                         receipt.hasUUID("previous_stamp"),
                         hash.equals(receipt.getString("before_hash")),
                         hash.equals(receipt.getString("after_hash")),
-                        politics,
-                        data.player(player.getUUID())
-                                .equals(receipt.getCompound("politics_before")));
+                        politicsCompatible,
+                        politicsBefore);
         switch (decision) {
             case ACCEPT -> {
                 return true;
