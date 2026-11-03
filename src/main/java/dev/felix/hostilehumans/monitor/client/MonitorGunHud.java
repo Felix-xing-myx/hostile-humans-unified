@@ -88,33 +88,37 @@ public final class MonitorGunHud {
         catch(RuntimeException|LinkageError ignored) { }
         String amount=percent?String.format(Locale.ROOT,"%.0f%%",data.capacity()==0?0:100D*data.loaded()/data.capacity())
                 :String.format(Locale.ROOT,jeg?"%03d":"%02d",data.loaded());
-        // Right column: the big count sits above the reserve, both flush with the panel edge.
-        float scale=Math.min(2F,44F/Math.max(1,font.width(amount)));
-        int amountWidth=Math.min(44,Math.round(font.width(amount)*scale));
-        g.pose().pushPose();try {g.pose().translate(x+pw-4-amountWidth,y+2,0);g.pose().scale(scale,scale,1);g.drawString(font,amount,0,0,data.loaded()==0?theme.danger():theme.text(),false);}
+        // Ammo and capacity read as one pair ("30 / 30") and sit centred in the band above the
+        // hairline, so no text can touch the divider.
+        String capacity=percent?"":"/ "+data.capacity();
+        float scale=Math.min(2F,40F/Math.max(1,font.width(amount)));
+        int amountWidth=Math.min(40,Math.round(font.width(amount)*scale));
+        int capacityWidth=capacity.isEmpty()?0:font.width(capacity);
+        int pairWidth=amountWidth+(capacityWidth>0?3+capacityWidth:0);
+        int pairX=Math.max(x+58,x+pw-4-pairWidth);
+        g.pose().pushPose();try {g.pose().translate(pairX,y+6,0);g.pose().scale(scale,scale,1);g.drawString(font,amount,0,0,data.loaded()==0?theme.danger():theme.text(),false);}
         finally{g.pose().popPose();}
-        String reserve=Component.translatable("human_monitor.gun.magazines",value.infinite()?"∞":value.magazines()).getString();
-        String reserveText=clipTail(font,reserve,pw-8);
-        g.drawString(font,reserveText,x+pw-4-font.width(reserveText),y+21,theme.muted(),false);
+        if(capacityWidth>0)g.drawString(font,capacity,pairX+amountWidth+3,y+15,theme.muted(),false);
+        UiDraw.ruleFade(g,x+4,y+32,pw-8,theme.edge());
+        // Caption row: fire mode, then the gun name, then the reserve magazines on the right.
         String mode=value.reloading()?Component.translatable("human_monitor.gun.reloading").getString():data.energy()?"FE":data.mode();
-        UiDraw.ruleFade(g,x+4,y+31,pw-8,theme.edge());
-        // Bottom row: fire mode, then the gun name as a caption, then the magazine capacity.
         int modeWidth=18;
         if(data.backend().equals("tacz") && !value.reloading())
-            dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.mode(g,data.mode(),x+3,y+33);
+            dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.mode(g,data.mode(),x+3,y+34);
         else {
             String shown=font.plainSubstrByWidth(mode,modeWidth);
-            g.drawString(font,shown,x+3,y+33,theme.text(),false);
+            g.drawString(font,shown,x+3,y+34,theme.text(),false);
             modeWidth=Math.max(modeWidth,font.width(shown));
         }
-        String capacity=data.backend().equals("tacz")?"":"/ "+data.capacity();
-        int capacityWidth=capacity.isEmpty()?0:font.width(capacity);
-        if(!capacity.isEmpty())g.drawString(font,capacity,x+pw-4-capacityWidth,y+33,theme.muted(),false);
-        // The name is a caption, not a heading: drawn at 0.85 so the ammo count stays the hero.
         int nameX=x+3+modeWidth+4;
-        int nameRoom=Math.max(20,x+pw-4-capacityWidth-3-nameX);
+        String reserve=Component.translatable("human_monitor.gun.magazines",value.infinite()?"∞":value.magazines()).getString();
+        int reserveMax=Math.max(20,(x+pw-4)-(nameX+40)-2);
+        String reserveText=clipTail(font,reserve,reserveMax);
+        int reserveWidth=font.width(reserveText);
+        g.drawString(font,reserveText,x+pw-4-reserveWidth,y+34,theme.muted(),false);
+        int nameRoom=Math.max(20,x+pw-4-reserveWidth-3-nameX);
         String name=font.plainSubstrByWidth(held.getHoverName().getString(),(int)(nameRoom/.85F));
-        g.pose().pushPose();try {g.pose().translate(nameX,y+34,0);g.pose().scale(.85F,.85F,1);g.drawString(font,name,0,0,theme.muted(),false);}
+        g.pose().pushPose();try {g.pose().translate(nameX,y+35,0);g.pose().scale(.85F,.85F,1);g.drawString(font,name,0,0,theme.muted(),false);}
         finally{g.pose().popPose();}
         }finally{g.pose().popPose();}
     }
