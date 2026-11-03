@@ -287,6 +287,13 @@ public final class PerformancePoliciesTest {
         Integer pileWinner = null;
         while (!committed.isDone()) pileWinner = committed.advance(1, Integer::doubleValue);
         check(pileWinner == 2 && broadQueries.get() == 0, "a viable committed pile wins before any remote pile query");
+        var contested = new PileFirstSelection<>(List.of(1, 2).iterator(), true,
+                () -> { throw new AssertionError("remaining pile candidate should avoid a broad query"); },
+                value -> value, value -> true);
+        check(contested.advance(2, Integer::doubleValue) == null, "first batch ranks two candidates");
+        check(contested.advance(2, value -> value == 2 ? Double.NEGATIVE_INFINITY : value) == null
+                && !contested.isDone(), "lost winner promotes its backup");
+        check(contested.advance(2, Integer::doubleValue) == 1, "backup survives another soldier claiming the winner");
         PileFirstSelection<Integer, Integer> corners = new PileFirstSelection<>(List.of(2).iterator(), true,
                 () -> List.of(2).iterator(), value -> value, value -> false);
         Integer cornerWinner = null;

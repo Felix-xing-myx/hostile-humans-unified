@@ -18,6 +18,8 @@ public final class PileFirstSelection<T, K> {
     private boolean done;
     private T best;
     private T deferred;
+    private T fallback;
+    private double fallbackScore = Double.NEGATIVE_INFINITY;
 
     public PileFirstSelection(Iterator<T> initial, boolean pileOnly, Supplier<Iterator<T>> broad,
                               Function<T, K> key, Predicate<T> inPile) {
@@ -37,7 +39,12 @@ public final class PileFirstSelection<T, K> {
         if (budget == 0) return null;
         double bestScore = best == null ? Double.NEGATIVE_INFINITY : score.applyAsDouble(best);
         if (Double.isNaN(bestScore)) return null; // Unknown/deferred work must retain its candidate.
-        if (bestScore == Double.NEGATIVE_INFINITY) best = null;
+        if (bestScore == Double.NEGATIVE_INFINITY) {
+            best = fallback;
+            fallback = null;
+            fallbackScore = Double.NEGATIVE_INFINITY;
+            if (best != null) return null; // Revalidate the promoted candidate in the next batch.
+        }
         int examined = 0;
         while (examined < budget) {
             if (deferred == null && !remaining.hasNext()) {
@@ -62,8 +69,15 @@ public final class PileFirstSelection<T, K> {
             if (Double.isNaN(candidateScore)) { deferred = item; return null; }
             seen.add(key.apply(item));
             if (candidateScore > bestScore) {
+                if (bestScore > fallbackScore) {
+                    fallback = best;
+                    fallbackScore = bestScore;
+                }
                 best = item;
                 bestScore = candidateScore;
+            } else if (candidateScore > fallbackScore) {
+                fallback = item;
+                fallbackScore = candidateScore;
             }
         }
         return done ? best : null;
