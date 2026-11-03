@@ -419,7 +419,9 @@ public final class UnifiedConfig {
     }
     public static double number(JsonObject data, String key, double fallback, double min, double max) {
         try {
-            double value = data.has(key) ? data.get(key).getAsDouble() : fallback;
+            JsonElement setting = data.get(key);
+            if (setting == null || !setting.isJsonPrimitive()) return fallback;
+            double value = setting.getAsDouble();
             return Double.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
         } catch (RuntimeException ignored) { return fallback; }
     }

@@ -233,7 +233,7 @@ public final class SplitConfigFiles {
         JsonObject data = parsed.getAsJsonObject();
         JsonElement schema = data.get("schema_version");
         if (schema == null || !schema.isJsonPrimitive() || !schema.getAsJsonPrimitive().isNumber()
-                || !schema.getAsBigDecimal().equals(java.math.BigDecimal.valueOf(version)))
+                || schema.getAsBigDecimal().compareTo(java.math.BigDecimal.valueOf(version)) != 0)
             throw new IOException("Unsupported config schema; input left unchanged: " + path);
         return data;
     }
