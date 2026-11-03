@@ -42,9 +42,15 @@ public final class ActionCoordinator {
     private boolean admissionsClosed;
 
     public void advance(long tick) {
+        if (tick == now) return;
         now = tick;
-        for (Action action : new ArrayList<>(actions.values()))
-            if (tick >= expires(action)) end(action, Status.FAILED, action.leaseTicks > 0 ? "execution lease heartbeat expired" : "action timeout");
+        var iterator = actions.values().iterator();
+        while (iterator.hasNext()) {
+            Action action = iterator.next();
+            if (tick < expires(action)) continue;
+            iterator.remove();
+            close(action, Status.FAILED, action.leaseTicks > 0 ? "execution lease heartbeat expired" : "action timeout");
+        }
     }
 
     /** Repeated evaluation keeps the original token and deadline, rather than restarting an action. */
@@ -98,15 +104,18 @@ public final class ActionCoordinator {
         Action action = current(token);
         if (action == null) return false;
         if (action.status == Status.RUNNING) return true;
-        List<Action> displaced = new ArrayList<>();
+        List<Action> displaced = null;
         for (Resource resource : action.resources) {
             Action owner = owners.get(resource);
             if (owner == null || owner == action) continue;
             if (!owner.interruptible || owner.priority >= action.priority) return false;
+            if (displaced == null) displaced = new ArrayList<>();
             if (!displaced.contains(owner)) displaced.add(owner);
         }
         // No ownership changes happen before every requested resource passes validation.
-        for (Action owner : displaced) end(owner, Status.CANCELLED, "preempted by " + token.action());
+        if (displaced != null) {
+            for (Action owner : displaced) end(owner, Status.CANCELLED, "preempted by " + token.action());
+        }
         for (Resource resource : action.resources) owners.put(resource, action);
         action.status = Status.RUNNING;
         return true;
@@ -140,7 +149,8 @@ public final class ActionCoordinator {
     }
 
     public void cancelSession(String reason) {
-        for (Action action : new ArrayList<>(actions.values())) end(action, Status.CANCELLED, reason);
+        for (Action action : actions.values()) close(action, Status.CANCELLED, reason);
+        actions.clear();
         session = GENERATIONS.incrementAndGet();
     }
 
@@ -163,7 +173,12 @@ public final class ActionCoordinator {
         for (Resource resource : action.resources) owners.remove(resource, action);
     }
     private void end(Action action, Status status, String reason) {
-        release(action); actions.remove(action.token.action(), action); action.status = status;
+        actions.remove(action.token.action(), action);
+        close(action, status, reason);
+    }
+    private void close(Action action, Status status, String reason) {
+        release(action);
+        action.status = status;
         history.addLast(new Feedback(action.token, status, reason == null ? "" : reason));
         while (history.size() > HISTORY_LIMIT) history.removeFirst();
     }

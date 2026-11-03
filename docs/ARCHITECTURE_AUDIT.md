@@ -5,7 +5,7 @@
 | 范围 | 核对入口与不变量 | 状态 |
 |---|---|---|
 | 听觉与群战感知 | HumanPerception → HumanAwareness → HearingRelevance → 线索；预算不足延后，声音不直接赋予仇恨 | 听觉入队与脚步排序已修。导航预算归还已修，感知双层额度归还已修，目标识别待深入 |
-| 战斗、伤害与阵营能力 | HumanBehaviorControl → ActionCoordinator → 各武器/恢复/撤退执行；取消须归还移动、手部和朝向控制权 | 待深入 |
+| 战斗、伤害与阵营能力 | HumanBehaviorControl → ActionCoordinator → 各武器/恢复/撤退执行；取消须归还移动、手部和朝向控制权 | 已查动作权限表的超时、抢占、会话取消；各执行模块的物理状态收尾待深入 |
 | 导航、拾取与装备 | HumanNavigationOwnership、路径预算、掉落占位与背包交换；失败与延期区分，资源只能结算一次 | 待深入 |
 | 客户端渲染、UI、观察和监控 | HumanRenderer、PanelScreen、HumanMonitorService、MonitorRemoteView；客户端呈现与服务器权限分离，结束清理输入、声音、票据 | 待深入 |
 | 可选模组、Mixin 与网络 | 逐项核查加载门槛、收发线程、消息权限、版本适配及缺依赖回退 | 待深入 |
@@ -21,3 +21,8 @@
 - [Linux 调度带宽回收](https://docs.kernel.org/6.13/scheduler/sched-deadline.html)区分实际执行和可回收的预算。HHU 在 FairWorkBudget 内退回明确取消或实际未使用的预约余额。既有阵营轮转、每 tick 上限和已执行计数保留。未调用取消的离场请求仍依赖既有过期机制。
 
 - 感知队列核对了维度与全服原子预约，以及饱和维度不会阻塞其他维度。沿用导航轮的预算回收原则，取消、缩小和无效预约均按原维度归还未使用余额，同时归还全服额度。需求所属阵营与批次规则沿用现有调度。
+
+## 战斗动作权限
+
+- HumanBehaviorControl 在多个同 tick 入口推进时钟。ActionCoordinator 每个时钟值只执行一次到期扫描，直接通过迭代器移除到期动作。正常取得空闲资源时无需创建抢占清单。
+- 抢占仍先验证整组资源，失败时保留所有旧所有者。会话关闭先禁止准入，再执行实际移动、枪械、恢复等清理，最终取消旧令牌。权限回收与物理动作收尾是两层职责。
