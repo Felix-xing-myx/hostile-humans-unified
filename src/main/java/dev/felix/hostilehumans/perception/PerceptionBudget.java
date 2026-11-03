@@ -11,6 +11,10 @@ public final class PerceptionBudget {
     private static final Map<MinecraftServer,State> SERVERS=new WeakHashMap<>();
     private record Key(UUID id,String lane) {}
     private record Limits(int total, int local) {
+        int maxBatch(String kind) {
+            return Math.min(kind.equals("rays") ? 32 : 16, Math.min(total, local));
+        }
+
         static Limits read(PerceptionConfig config, String kind) {
             return new Limits(config.integer("budgets."+kind+"_per_server"),
                     config.integer("budgets."+kind+"_per_level"));
@@ -35,6 +39,19 @@ public final class PerceptionBudget {
         }
     }
     private PerceptionBudget() {}
+    static int maxRayBatch(Entity actor) {
+        MinecraftServer server = actor.level().getServer();
+        if (server == null) return 0;
+        State state = currentState(server);
+        return Limits.read(state.config, "rays").maxBatch("rays");
+    }
+
+    private static State currentState(MinecraftServer server) {
+        State state = SERVERS.computeIfAbsent(server, key -> new State());
+        state.beginTick(server.getTickCount());
+        return state;
+    }
+
     public static boolean claim(Entity actor,String kind,int amount) {
         return claim(actor,kind,amount,"");
     }
@@ -54,14 +71,13 @@ public final class PerceptionBudget {
     }
     public static boolean claim(Entity actor,String kind,int amount,String work) {
         MinecraftServer server=actor.level().getServer(); if(server==null || amount<1)return false;
-        State s=SERVERS.computeIfAbsent(server,k->new State()); long tick=server.getTickCount();
-        s.beginTick(tick);
+        State s = currentState(server);
         String dim=actor.level().dimension().location().toString();
         Limits limits = Limits.read(s.config, kind);
         int total = limits.total(), local = limits.local();
         String lane=kind+":"+dim; Key key=new Key(actor.getUUID(),lane+work);
-        int batchLimit=kind.equals("rays")?32:16;
-        if (amount > Math.min(batchLimit, Math.min(total, local))) return false;
+        int batchLimit = limits.maxBatch(kind);
+        if (amount > batchLimit) return false;
         // Keep ambient queries, loot and sound probes from filling the visual queue.
         boolean auxiliary = kind.equals("rays") && !work.isEmpty() && !work.startsWith(":body:");
         String auxiliaryServer = "rays:aux", auxiliaryLevel = lane + ":aux";
@@ -70,10 +86,10 @@ public final class PerceptionBudget {
                 || s.used.getOrDefault(auxiliaryLevel, 0) + amount > Math.max(1, local / 4))) return false;
         ScopedWorkBudget<Key,String> q=s.queues.get(kind);
         if (q == null) {
-            q = new ScopedWorkBudget<>(total,local,Math.min(batchLimit,Math.min(total,local)),40);
+            q = new ScopedWorkBudget<>(total,local,batchLimit,40);
             s.queues.put(kind,q);
         }
-        if(q.claimFull(tick,key,dim,amount,dev.felix.hostilehumans.performance.BudgetDemandOrder.faction(actor))!=amount) {
+        if(q.claimFull(s.tick,key,dim,amount,dev.felix.hostilehumans.performance.BudgetDemandOrder.faction(actor))!=amount) {
             if (auxiliary) q.cancel(key);
             return false;
         }

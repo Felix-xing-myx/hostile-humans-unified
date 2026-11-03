@@ -476,7 +476,7 @@ public final class HumanPerception {
         }
         if(now<s.nextScan){describe(h,s);return;}
         int probeLimit=urgentScan?c().integer("budgets.rays_per_human"):AdaptiveActivityBudget.probes(h,c().integer("budgets.rays_per_human"));
-        int rays=Math.min(probeLimit,Math.min(c().integer("budgets.rays_per_level"),c().integer("budgets.rays_per_server")));
+        int rays=Math.min(probeLimit, PerceptionBudget.maxRayBatch(h));
         s.geometrySkipped=0;s.occlusionSkipped=0;
         List<LivingEntity> checks=new ArrayList<>();
         LivingEntity main=h.getTarget();
@@ -666,8 +666,7 @@ public final class HumanPerception {
         }
         boolean hitProbe=s.focusHurt&&e.getUUID().equals(s.focus)||now<s.directionProtectedUntil;
         int bodyLimit=hitProbe?c().integer("budgets.body_rays_per_target"):AdaptiveActivityBudget.bodyRays(h,c().integer("budgets.body_rays_per_target"));
-        int count=Math.min(samples.size(),Math.min(bodyLimit,
-                Math.min(c().integer("budgets.rays_per_level"),c().integer("budgets.rays_per_server"))));
+        int count=Math.min(samples.size(), Math.min(bodyLimit, PerceptionBudget.maxRayBatch(h)));
         if(!PerceptionBudget.claimBodyRays(h,e.getUUID(),count)){
             s.pendingBodies.add(e.getUUID());
             while(s.pendingBodies.size()>c().integer("budgets.candidates")+c().integer("memory.maximum_targets")){
