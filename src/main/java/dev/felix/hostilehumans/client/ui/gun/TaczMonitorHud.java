@@ -61,9 +61,19 @@ public final class TaczMonitorHud {
             return new Size(39,13); // actual native HUD aspect, never stretch a missing pack resource
         }
     }
-    public static void mode(GuiGraphics g,String mode,int x,int y) {
+    /**
+     * Draws the native fire-mode art at its own pixel size, vertically centred in {@code rowHeight};
+     * returns the width used, or 0 when the pack has no such texture.
+     */
+    public static int mode(GuiGraphics g,String mode,int x,int y,int rowHeight) {
         String suffix=switch(mode){case "AUTO"->"auto";case "BURST"->"burst";default->"semi";};
-        g.blit(new ResourceLocation("tacz","textures/hud/fire_mode_"+suffix+".png"),x,y,0,0,18,10,18,10);
+        var texture=new ResourceLocation("tacz","textures/hud/fire_mode_"+suffix+".png");
+        Size size=SIZES.computeIfAbsent(texture,TaczMonitorHud::textureSize);
+        if(size.width()<=0||size.height()<=0)return 0;
+        // 1:1 at the texture's own size. Blitting an assumed 18x10 window over pack art that is a
+        // different size both cropped it and resampled the glyph into a smear.
+        g.blit(texture,x,y+(rowHeight-size.height())/2,0,0,size.width(),size.height(),size.width(),size.height());
+        return size.width();
     }
     private static boolean observing(LivingEntity attacker) {return attacker!=null && attacker==MonitorGunHud.viewed();}
     private static void hurt(EntityHurtByGunEvent.Post event) {
