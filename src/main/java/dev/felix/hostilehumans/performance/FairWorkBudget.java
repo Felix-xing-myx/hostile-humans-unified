@@ -104,8 +104,9 @@ public final class FairWorkBudget<K> {
         executed = 0;
         grants.clear();
         waiting.entrySet().removeIf(entry -> currentTick - entry.getValue().tick() > staleTicks);
-        for (var entry : BudgetDemandOrder.interleave(waiting, Request::group, lastGroup)) {
-            if (remaining == 0) break;
+        var demand = BudgetDemandOrder.interleave(waiting, Request::group, lastGroup);
+        while (remaining > 0 && demand.hasNext()) {
+            var entry = demand.next();
             int grant = Math.min(remaining, Math.min(perRequest, entry.getValue().maximum()));
             if (entry.getValue().full() && grant < entry.getValue().maximum()) continue;
             remaining -= grant;

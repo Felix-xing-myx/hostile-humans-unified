@@ -91,8 +91,9 @@ public final class ScopedWorkBudget<K, S> {
         waiting.putAll(rotated);
         grants.clear();
         waiting.entrySet().removeIf(e -> currentTick - e.getValue().tick() > staleTicks);
-        for (var entry : BudgetDemandOrder.interleave(waiting, Request::group, lastGroup)) {
-            if (remaining == 0) break;
+        var demand = BudgetDemandOrder.interleave(waiting, Request::group, lastGroup);
+        while (remaining > 0 && demand.hasNext()) {
+            var entry = demand.next();
             Request<S> request = entry.getValue();
             // A saturated dimension must not block eligible dimensions behind it.
             if (!fits(request.scope(), request.amount())) continue;

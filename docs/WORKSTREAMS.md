@@ -4203,3 +4203,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 复核活动档位生命周期，基线 e792bae。主控独占 HumanRuntime 注册入口和 AdaptiveActivityBudget，改为服务端 tick 末集中采样。
 
 - 复核档位与配额接口，基线 9776ac0。OptionalPathBudget 合并重复发放流程，统一诊断和发放的额度来源。
+
+- 复核共享预算轮转，基线 cb7d958。BudgetDemandOrder、FairWorkBudget 和 ScopedWorkBudget 统一按需遍历发放顺序，已登记 Java 公平性回归待执行。
