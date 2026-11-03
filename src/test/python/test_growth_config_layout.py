@@ -30,9 +30,9 @@ class GrowthConfigLayoutTest(unittest.TestCase):
         move = (JAVA / 'GrowthProfileFiles.java').read_text(encoding='utf-8')
         self.assertLess(move.index('SplitConfigFiles.writeCurrent(file.path()'), move.index('profiles.remove(rank)'))
         self.assertIn('if (!profile.has(entry.getKey()))', move)
-        self.assertIn('SplitConfigFiles.read(path, 2, bytes)', move)
-        self.assertIn('SplitConfigFiles.read(globalPath, 2, original)', move)
-        self.assertIn('JsonObject data = read(path, 2, original)', loader)
+        self.assertIn('SplitConfigFiles.read(path, SplitConfigFiles.SCHEMA_VERSION, bytes)', move)
+        self.assertIn('SplitConfigFiles.read(globalPath, SplitConfigFiles.SCHEMA_VERSION, original)', move)
+        self.assertIn('JsonObject data = read(path, SCHEMA_VERSION, original)', loader)
 
     def test_all_save_paths_share_readable_strict_json_formatter(self):
         source = (JAVA / 'SplitConfigFiles.java').read_text(encoding='utf-8')

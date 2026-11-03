@@ -12,7 +12,7 @@ public final class TierConfigProjection {
 
     public static JsonObject global(JsonObject root) {
         JsonObject result = root.deepCopy();
-        result.addProperty("schema_version", 2);
+        result.addProperty("schema_version", SplitConfigFiles.SCHEMA_VERSION);
         // Keep group-level notes and unknown ranks/options, including custom guidance.
         for (String group : List.of("tiers", "equipment_loadouts", "tier_ai", "_tier_file_metadata")) removeRanks(result, group);
         JsonObject ai = object(result, "ai");
@@ -55,7 +55,7 @@ public final class TierConfigProjection {
                 if (guidance != null && !damage.getAsJsonObject().has(key)) damage.getAsJsonObject().add(key, guidance);
             }
         }
-        result.addProperty("schema_version", 2);
+        result.addProperty("schema_version", SplitConfigFiles.SCHEMA_VERSION);
         copyAt(root, "equipment_loadouts." + rank, result, "equipment_loadout");
         if (result.has("equipment_loadout") && result.get("equipment_loadout").isJsonObject())
             copyGuidance(object(root, "equipment_loadouts"), result.getAsJsonObject("equipment_loadout"));

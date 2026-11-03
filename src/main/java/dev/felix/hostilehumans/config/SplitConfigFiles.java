@@ -17,6 +17,7 @@ import java.util.*;
 /** Startup-only five-file storage boundary; existing v2 files always own their settings. */
 public final class SplitConfigFiles {
     public static final String DIRECTORY = "hostile_humans_unified";
+    public static final int SCHEMA_VERSION = 2;
     static final List<String> FILES = List.of("global.json", "roamer.json", "tier1.json", "tier2.json", "tier3.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().serializeNulls().create();
     private SplitConfigFiles() { }
@@ -59,7 +60,7 @@ public final class SplitConfigFiles {
                     true, permittedIntegrations, strict);
             TierConfigProjection.applyTier(result, rank, data);
         }
-        result.addProperty("schema_version", 2);
+        result.addProperty("schema_version", SCHEMA_VERSION);
         return result;
     }
 
@@ -92,7 +93,7 @@ public final class SplitConfigFiles {
                                        java.util.function.BiPredicate<String, JsonObject> integrations, boolean strict) {
         try {
             byte[] original = Files.readAllBytes(path);
-            JsonObject data = read(path, 2, original);
+            JsonObject data = read(path, SCHEMA_VERSION, original);
             boolean migrated = rank && (SpawnSupplyMigration.migrateRank(data)
                     | EquipmentConfigMigration.migrate(data, rankName(path)));
             if (migrated) Files.write(path.resolveSibling(path.getFileName() + ".before-faction-equipment-" + System.nanoTime() + ".bak"),
@@ -165,7 +166,7 @@ public final class SplitConfigFiles {
             // remain in memory and explicit pools stay authoritative.
             if ((imported || !Arrays.equals(original, output)) && !writeCurrent(path, original, arranged)) {
                 if (strict) throw new IOException("Configuration changed or could not be saved: " + path);
-                data = read(path, 2);
+                data = read(path, SCHEMA_VERSION);
             } else {
                 data = arranged;
             }
