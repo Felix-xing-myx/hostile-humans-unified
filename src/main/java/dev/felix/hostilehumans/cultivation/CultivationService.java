@@ -326,6 +326,9 @@ public final class CultivationService {
         for (int offset = 0; offset < records.size(); offset++) {
             int index = (start + offset) % records.size();
             var r = records.get(index);
+            if (r.cycle == null || r.cycle.status() == CultivationCycle.Status.CANCELLED) continue;
+            boolean needsDelivery = r.pending() && r.appliedRevision != r.profile.revision();
+            if (r.pending() && (!needsDelivery || processed >= 64)) continue;
             // Exactly one already-confirmed period per record; no while-loop can catch up arbitrary
             // new periods.
             Human h = loaded(server, r.soldier);
@@ -337,8 +340,7 @@ public final class CultivationService {
                     continue;
                 }
             }
-            if (r.pending() && h != null && r.appliedRevision != r.profile.revision()) {
-                if (processed >= 64) continue;
+            if (needsDelivery && h != null) {
                 processed++;
                 data.settlementCursor = index + 1;
                 try {
