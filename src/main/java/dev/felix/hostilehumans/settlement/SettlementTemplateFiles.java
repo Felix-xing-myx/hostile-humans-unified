@@ -146,14 +146,14 @@ final class SettlementTemplateFiles {
         var bounds = new RegionBox(box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY(), box.maxZ());
         checkDestination(player, corner, bounds);
         var data = original.save(new CompoundTag());
-        sanitize(data, size, rotation, mirror);
-        SettlementHumanTemplates.prepareFile(data, null, null);
         // Pin the same palette for preview and confirmed placement.
         var palettes = data.getList("palettes", Tag.TAG_LIST);
         if (!palettes.isEmpty()) {
             data.put("palette", palettes.getList(0).copy());
             data.remove("palettes");
         }
+        sanitize(data, size, rotation, mirror);
+        SettlementHumanTemplates.prepareFile(data, null, null);
         var copy = manager.readStructure(data);
         var ghosts = previewBlocks(level, data, origin, settings);
         int count = entityEntries(data);
@@ -279,6 +279,8 @@ final class SettlementTemplateFiles {
                 zero, orientation.mirror(), orientation.clockwiseQuarterTurns());
         var dimensions = new TemplateTransform.Cell((int) oriented.sizeX(), (int) oriented.sizeY(), (int) oriented.sizeZ());
         var blocks = data.getList("blocks", Tag.TAG_COMPOUND);
+        var palette = data.getList("palette", Tag.TAG_COMPOUND);
+        String informationId = "hostile_humans_unified:settlement_information";
         int carriers = 0;
         for (int i = 0; i < blocks.size(); i++) {
             var block = blocks.getCompound(i);
@@ -287,7 +289,14 @@ final class SettlementTemplateFiles {
             if (coordinates.size() != 3 || !localBounds.contains(
                     coordinates.getInt(0), coordinates.getInt(1), coordinates.getInt(2)))
                 throw new IllegalArgumentException("template has a block outside its declared size");
-            if (!tag.getString("id").equals("hostile_humans_unified:settlement_information")) continue;
+            int state = block.getInt("state");
+            if (!block.contains("state", Tag.TAG_INT) || state < 0 || state >= palette.size())
+                throw new IllegalArgumentException("template has a block state outside its palette");
+            boolean informationBlock = informationId.equals(palette.getCompound(state).getString("Name"));
+            boolean informationData = informationId.equals(tag.getString("id"));
+            if (informationBlock != informationData)
+                throw new IllegalArgumentException("information block and its author data do not match");
+            if (!informationBlock) continue;
             carriers++;
             var author = SettlementCodec.template(tag.getCompound(SettlementInformationBlockEntity.AUTHOR));
             author.validateForPublication();
