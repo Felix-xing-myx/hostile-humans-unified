@@ -84,9 +84,11 @@ public final class SettlementWandPlacement {
             return;
         }
         var level = player.serverLevel();
+        var choices = SettlementTemplateFiles.list(level);
+        cancel(player);
         var token = UUID.randomUUID();
         SESSIONS.put(player, new Session(token, level, level.getGameTime() + SESSION_TICKS, null, null));
-        SettlementNetwork.wandView(player, new View(token, false, "", SettlementTemplateFiles.list(level)));
+        SettlementNetwork.wandView(player, new View(token, false, "", choices));
     }
 
     static void arm(ServerPlayer player, Request request) {
