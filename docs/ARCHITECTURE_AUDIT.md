@@ -1,6 +1,6 @@
 # 架构审查记录
 
-以 [源码模块地图](SOURCE_MODULES.md) 为入口。本表记录截至 6d871d7 的累计源码审查，覆盖范围以具体调用链为准。
+以 [源码模块地图](SOURCE_MODULES.md) 为入口。本表记录截至 a576a84 的累计源码审查，覆盖范围以具体调用链为准。
 
 | 范围 | 源码已核查或修正 | 仍需核查或实测 |
 |---|---|---|
@@ -14,7 +14,7 @@
 
 ## 验证证据
 
-- 累计差异可用 `git diff --check 1c99399..main` 核对。已使用测试实例实际安装的 TaCZ 1.1.8-hotfix2、焦燃 0.5.5、JEG 0.14.5、Arcana 1.1.4 及现有 Forge 映射 JAR 重跑 Python 检查，532 项全部通过。源码契约只核对接入点和形态，JAR 检查确认依赖侧的字节码、接口或资源。
+- 在 a576a84 验证累计差异 `git diff --check 1c99399..HEAD`，并执行 `python -m unittest discover -s src/test/python -q`，532 项通过，无跳过。TaCZ 编译 API 字节码检查使用 1.1.8-hotfix，测试实例运行侧检查使用 1.1.8-hotfix2。其余字节码检查读取测试实例联动 JAR 与 Forge 映射 JAR。源码契约只核对接入点和形态，字节码检查只覆盖断言涉及的依赖方法或资源。
 - 构建授权后，导航与感知优先核对 `performancePoliciesTest`、`behaviorScopedWorkBudgetTest` 和 `perceptionPolicyTest`。动作、配置、存档使用 `behaviorActionCoordinatorTest`、`behaviorGrowthConfigTest`、`vnextEconomyRecoveryTest`、`vnextFactionContentNbtTest`。这些入口已在 build.gradle 登记，尚未执行本轮累计改动的 Java 验证。
 - 游戏内验证分别覆盖群战性能、联动缺席/存在、存档恢复和两人同时操作。每个场景需要独立证据，不能由编译或 Python 检查代替。
 
