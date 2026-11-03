@@ -120,6 +120,22 @@ public final class PerformancePoliciesTest {
         lifecycle.cancel("b");
         check(lifecycle.claim(8, "c", 4) == 4, "abandoned requests expire");
         check(lifecycle.claim(0, "c", 4) == 4, "clock rewind resets reservations");
+        FairWorkBudget<String> reclaim = new FairWorkBudget<>(4, 4, 2);
+        check(reclaim.claimFull(0, "busy", 4) == 4, "initial tick fills");
+        check(reclaim.claimFull(0, "cancelled", 3) == 0, "cancelled actor enters queue");
+        check(reclaim.claimFull(1, "other", 4) == 0, "older reservations own the tick");
+        reclaim.cancel("cancelled");
+        reclaim.cancel("busy");
+        reclaim.cancel("busy");
+        check(reclaim.claimFull(1, "busy", 4) == 0, "cancelled actor cannot reenter this tick");
+        check(reclaim.claimFull(1, "other", 4) == 4, "only unclaimed capacity is returned once");
+        reclaim.cancel("other");
+        check(reclaim.claimFull(1, "late", 1) == 0, "executed work cannot be refunded");
+
+        FairWorkBudget<String> resize = new FairWorkBudget<>(4, 4, 2);
+        check(resize.claimFull(0, "resize", 4) == 4, "reserve previous demand");
+        check(resize.claimFull(1, "resize", 1) == 1, "consume the current smaller batch");
+        check(resize.claimFull(1, "next", 3) == 3, "unused reservation is immediately reusable");
         FairWorkBudget<Integer> normal = new FairWorkBudget<>(64, 4, 2);
         FairWorkBudget<Integer> emergency = new FairWorkBudget<>(32, 4, 2);
         for (int actor = 0; actor < 200; actor++) normal.claim(0, actor, 4);

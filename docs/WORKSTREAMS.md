@@ -4131,3 +4131,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 状态为进行中。基线 1c993993a31af1dfb11e88e18b887a3c29a8acc5。主控负责 worktrees/module-architecture，分支 audit/module-architecture。
 - 首轮范围为 perception/HumanAwareness、听觉回归契约、更新日志与对应知识库。没有共享实体、配置或渲染文件修改，公开入口无新增。依据和覆盖状态见 [架构审查记录](ARCHITECTURE_AUDIT.md)。
 - 静态与 Python 检查完成后整合。Java 编译与游戏内性能对照待验证。
+
+- 架构审查续轮，基线 f1a7819，主控沿用 audit/module-architecture 工作树。修改 FairWorkBudget 的预约归还及 PerformancePoliciesTest，调用接口不变。Java 回归待构建授权。

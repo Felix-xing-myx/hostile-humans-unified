@@ -58,6 +58,7 @@ public final class FairWorkBudget<K> {
             // cancels this reservation; forgotten requests expire promptly.
             waiting.put(key, new Request(currentTick, maximum, full, group));
             int used = full && reserved < maximum ? 0 : Math.min(maximum, reserved);
+            remaining += reserved - used;
             executed += used;
             return used;
         }
@@ -78,9 +79,10 @@ public final class FairWorkBudget<K> {
 
     public void cancel(K key) {
         waiting.remove(key);
-        // Never refund a reservation: callers may already have executed it.
-        // Keep a consumed marker so cancel/restart cannot bypass the batch cap.
-        grants.put(key, 0);
+        // A positive entry is still reserved; a claimed grant has already been replaced by zero.
+        // Keep the marker so cancel/restart cannot bypass the per-tick batch cap.
+        Integer reserved = grants.put(key, 0);
+        if (reserved != null) remaining += reserved;
     }
 
     public String usage(long currentTick, int idleCapacity) {
