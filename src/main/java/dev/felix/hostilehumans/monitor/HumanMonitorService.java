@@ -104,8 +104,13 @@ public final class HumanMonitorService {
         close(player);
         Session session = new Session(player, human);
         SESSIONS.put(player, session);
-        if (!dev.felix.hostilehumans.monitor.remote.MonitorRemoteView.start(player, human)) { close(player); return; }
-        publish(player, session, human);
+        try {
+            if (!dev.felix.hostilehumans.monitor.remote.MonitorRemoteView.start(player, human)) { close(player); return; }
+            publish(player, session, human);
+        } catch (RuntimeException | Error failure) {
+            closeAfterFailure(player, failure);
+            throw failure;
+        }
     }
     public static void openOwned(ServerPlayer player, UUID target) {
         if (!dev.felix.hostilehumans.soldier.RecruitmentLedger.get(player.server).isOwnedRecord(target, player.getUUID())) return;
@@ -240,11 +245,24 @@ public final class HumanMonitorService {
             }
         }
     }
+    private static void closeAfterFailure(ServerPlayer player, Throwable failure) {
+        try {
+            close(player);
+        } catch (RuntimeException | Error cleanup) {
+            if (cleanup != failure) failure.addSuppressed(cleanup);
+        }
+    }
+
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player) || !SESSIONS.containsKey(player)) return;
         Human human = target(player);
-        if (human == null || !dev.felix.hostilehumans.monitor.remote.MonitorRemoteView.tick(player, human)) close(player);
-        else if (player.tickCount % 5 == 0) publish(player, SESSIONS.get(player), human);
+        try {
+            if (human == null || !dev.felix.hostilehumans.monitor.remote.MonitorRemoteView.tick(player, human)) close(player);
+            else if (player.tickCount % 5 == 0) publish(player, SESSIONS.get(player), human);
+        } catch (RuntimeException | Error failure) {
+            closeAfterFailure(player, failure);
+            throw failure;
+        }
     }
     /** All world/entity actions have completed; observing and takeover share this authoritative boundary. */
     @SubscribeEvent public static void telemetry(TickEvent.ServerTickEvent event) {
