@@ -80,7 +80,7 @@ def grain(c, x, y, w, h, ox=None, oy=None):
             if tw <= 0 or th <= 0: continue
             region = tile.crop((sx, sy, sx + tw, sy + th)).copy()
             region.putalpha(region.getchannel("A").point(lambda v: int(v * .30)))
-            c.img.paste(region, (x + max(0, tx) + sx, y + max(0, ty) + sy), region)
+            c.img.paste(region, (x + max(0, tx), y + max(0, ty)), region)
 
 FONT = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 9 * S)
 
