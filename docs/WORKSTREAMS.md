@@ -4117,3 +4117,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控，基线 e668b7c428ae56d8516270426bd80122e2f1a878，工作树 global-budget-panel，分支 feat/global-budget-panel。
 - 观察网络协议升至 10。全局面板按需读取服务器感知及导航计数，保留创造模式或管理员权限；旧客户端显示偏好文件兼容。个体图例通过全局页底部进入。
 - Python 核查通过 516 项，跳过 16 项。未编译、未同步、未进行游戏内界面验收。
+
+### 人类群体客户端渲染分档
+
+- 主控，基线 a6c89b3e1ddfce9776e95d8bd26273f276ff03bb，工作树 human-render-lod，分支 perf/human-render-lod。
+- 范围为人类渲染器、模型、手持物与客户端分档。近景和附身保持原有完整呈现，裁剪仅作用于本渲染器的已知图层。
+- 核对 Forge HumanoidMobRenderer 已注册头饰与鞘翅，移除重复层。Python 核查通过 516 项，跳过 16 项。未编译、未同步、未实测帧时间。

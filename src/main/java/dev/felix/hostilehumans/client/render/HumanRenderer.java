@@ -12,7 +12,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
-import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.ArrowLayer;
 import net.minecraft.client.renderer.entity.layers.BeeStingerLayer;
 import net.minecraft.client.renderer.entity.layers.CustomHeadLayer;
@@ -45,6 +44,7 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     private static final float BOSS_MODEL_SCALE = 1.15F;
     private final boolean armsOnly;
     private HumanRenderer spectatorArms;
+    private HumanRenderDetail.Level detail = HumanRenderDetail.Level.FULL;
 
     public HumanRenderer(EntityRendererProvider.Context context) {
         this(context, false);
@@ -73,16 +73,33 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
                 new HumanoidModel<>(context.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)),
                 context.getModelManager()));
         this.addLayer((RenderLayer)new ArrowLayer(context, (LivingEntityRenderer)this));
-        this.addLayer((RenderLayer)new CustomHeadLayer((RenderLayerParent)this, context.getModelSet(), context.getItemInHandRenderer()));
-        this.addLayer((RenderLayer)new ElytraLayer((RenderLayerParent)this, context.getModelSet()));
         this.addLayer((RenderLayer)new BeeStingerLayer((LivingEntityRenderer)this));
         this.addLayer(new dev.felix.hostilehumans.faction.visual.FactionVisualLayer<>(this, false, false));
+        // Wrap only layers owned by this renderer. Other mods may add their own layers.
+        this.layers.replaceAll(layer -> {
+            boolean decorative = layer instanceof ArrowLayer || layer instanceof BeeStingerLayer
+                    || layer instanceof dev.felix.hostilehumans.faction.visual.FactionVisualLayer;
+            boolean equipment = layer instanceof ItemInHandLayer || layer instanceof HumanoidArmorLayer
+                    || layer instanceof CustomHeadLayer || layer instanceof ElytraLayer;
+            if (!decorative && !equipment) return layer;
+            return new RenderLayer<Human, PlayerModel<Human>>(this) {
+                @Override public void render(PoseStack pose, MultiBufferSource buffers, int light, Human human,
+                        float limb, float amount, float partial, float age, float yaw, float pitch) {
+                    if (detail == HumanRenderDetail.Level.DISTANT
+                            || decorative && detail != HumanRenderDetail.Level.FULL) return;
+                    layer.render(pose, buffers, light, human, limb, amount, partial, age, yaw, pitch);
+                }
+            };
+        });
         // Legacy Traveler's Backpack render layer is suspended together with equipment generation.
     }
 
     @Nullable
     protected RenderType getRenderType(Human p_115322_, boolean p_115323_, boolean p_115324_, boolean p_115325_) {
-        return RenderType.entityTranslucent(getTextureLocation(p_115322_));
+        if (detail == HumanRenderDetail.Level.FULL)
+            return RenderType.entityTranslucent(getTextureLocation(p_115322_));
+        if (p_115323_ && !p_115325_) return RenderType.entityCutoutNoCull(getTextureLocation(p_115322_));
+        return super.getRenderType(p_115322_,p_115323_,p_115324_,p_115325_);
     }
 
     public Vec3 getRenderOffset(Human p_117785_, float p_117786_) {
@@ -134,7 +151,7 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         // Turn the model as one player-like unit: shoulders, torso, legs,
         // armor and held items share the same smoothly interpolated yaw.
         p_117803_.mulPose(Axis.YP.rotationDegrees(-stanceYaw));
-        BetterCombatNpcAnimator.applyBodyTransform(p_117802_, p_117803_, p_117806_,
+        if (detail == HumanRenderDetail.Level.FULL) BetterCombatNpcAnimator.applyBodyTransform(p_117802_, p_117803_, p_117806_,
                 armsOnly ? SpectatorMeleePresentation.bodyMotionWeight(p_117802_) : 1);
     }
 
@@ -145,11 +162,27 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     }
 
     public void render(Human human, float pEntityYaw, float pPartialTicks, @NotNull PoseStack pMatrixStack, @NotNull MultiBufferSource pBuffer, int pPackedLight) {
-        ScgunsNpcAnimator.beginRender(human);
+        var previous = detail;
+        detail = HumanRenderDetail.select(human,armsOnly);
+        var playerModel = (HumanPlayerModel) this.model;
+        playerModel.detail(detail);
+        try {
+            renderHuman(human,pEntityYaw,pPartialTicks,pMatrixStack,pBuffer,pPackedLight);
+        } finally {
+            detail = previous;
+            playerModel.detail(previous);
+        }
+    }
+
+    private void renderHuman(Human human, float pEntityYaw, float pPartialTicks, PoseStack pMatrixStack,
+            MultiBufferSource pBuffer, int pPackedLight) {
+        if (detail == HumanRenderDetail.Level.FULL) ScgunsNpcAnimator.beginRender(human);
         PlayerModel<Human> playerModel = this.model;
         playerModel.crouching = human.isCrouching();
-        HumanoidModel.ArmPose mainPose = getArmPose(human, InteractionHand.MAIN_HAND);
-        HumanoidModel.ArmPose offPose = getArmPose(human, InteractionHand.OFF_HAND);
+        HumanoidModel.ArmPose mainPose = detail == HumanRenderDetail.Level.DISTANT
+                ? HumanoidModel.ArmPose.EMPTY : getArmPose(human, InteractionHand.MAIN_HAND);
+        HumanoidModel.ArmPose offPose = detail == HumanRenderDetail.Level.DISTANT
+                ? HumanoidModel.ArmPose.EMPTY : getArmPose(human, InteractionHand.OFF_HAND);
         if (mainPose.isTwoHanded() && offPose != HumanoidModel.ArmPose.BLOCK) {
             offPose = human.getOffhandItem().isEmpty()
                     ? HumanoidModel.ArmPose.EMPTY : HumanoidModel.ArmPose.ITEM;

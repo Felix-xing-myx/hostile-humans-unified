@@ -1239,6 +1239,10 @@
     "class": "dev.felix.hostilehumans.faction.HumanRelationshipPolicy",
     "path": "src/main/java/dev/felix/hostilehumans/faction/HumanRelationshipPolicy.java"
   },
+  "HumanRenderDetail": {
+    "class": "dev.felix.hostilehumans.client.render.HumanRenderDetail",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanRenderDetail.java"
+  },
   "HumanRenderer": {
     "class": "dev.felix.hostilehumans.client.render.HumanRenderer",
     "path": "src/main/java/dev/felix/hostilehumans/client/render/HumanRenderer.java"

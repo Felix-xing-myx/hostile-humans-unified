@@ -264,6 +264,7 @@
         "HumanCameraView",
         "HumanGunPresentation",
         "HumanPlayerModel",
+        "HumanRenderDetail",
         "HumanRenderer",
         "HumanShieldPresentation",
         "HumanSpectatorCamera",

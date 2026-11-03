@@ -18,7 +18,7 @@
 | `behavior/combat/throwable` | 真实投掷物事务与投掷策略 | 7 |
 | `bootstrap` | 统一启动与注册 | 11 |
 | `client` | 客户端会话与注册 | 2 |
-| `client/render` | 实体模型、动画与第一人称呈现 | 37 |
+| `client/render` | 实体模型、动画与第一人称呈现 | 38 |
 | `client/render/tacz` | 可选TaCZ原生第一人称模型、只读骨骼采样与共用换弹片段/声音计划；不操作玩家或服务端弹药 | 19 |
 | `client/ui` | 共用界面样式及指挥/背包界面 | 10 |
 | `client/ui/framework` | 统一客户端主题、原生控件树、布局、绘图与会话适配 | 24 |
@@ -138,7 +138,7 @@
 
 ### client.render
 
-`BackShieldPose`、`BetterCombatNpcAnimator`、`ClientAnimationCompatibility`、`ClientRenderer`、`DebugWorldLines`、`EmfAnimationCompat`、`HumanAnimatedItemInHandLayer`、`HumanBackpackLayer`、`HumanCameraView`、`HumanGunPresentation`、`HumanPlayerModel`、`HumanRenderer`、`HumanShieldPresentation`、`HumanSpectatorCamera`、`HumanSpectatorGunView`、`HumanSpectatorMotion`、`HumanSpectatorPresentation`、`HumanSpectatorProjection`、`HumanSpectatorView`、`JegNativePose`、`JegNpcAnimator`、`PlayerAnimatorModelBridge`、`ScgunsMachineGunPose`、`ScgunsNativePose`、`ScgunsNpcAnimator`、`ShieldBlockPose`、`SpawnerEntityRenderer`、`SpectatorArmMask`、`SpectatorAudioListener`、`SpectatorMeleePresentation`、`SpectatorMotionTrack`、`SpectatorSkinTextures`、`TaczAnimationPolicy`、`TaczNativeAnimation`、`TaczNpcAnimator`、`TaczNpcEffects`、`TaczReloadPlayback`
+`BackShieldPose`、`BetterCombatNpcAnimator`、`ClientAnimationCompatibility`、`ClientRenderer`、`DebugWorldLines`、`EmfAnimationCompat`、`HumanAnimatedItemInHandLayer`、`HumanBackpackLayer`、`HumanCameraView`、`HumanGunPresentation`、`HumanPlayerModel`、`HumanRenderDetail`、`HumanRenderer`、`HumanShieldPresentation`、`HumanSpectatorCamera`、`HumanSpectatorGunView`、`HumanSpectatorMotion`、`HumanSpectatorPresentation`、`HumanSpectatorProjection`、`HumanSpectatorView`、`JegNativePose`、`JegNpcAnimator`、`PlayerAnimatorModelBridge`、`ScgunsMachineGunPose`、`ScgunsNativePose`、`ScgunsNpcAnimator`、`ShieldBlockPose`、`SpawnerEntityRenderer`、`SpectatorArmMask`、`SpectatorAudioListener`、`SpectatorMeleePresentation`、`SpectatorMotionTrack`、`SpectatorSkinTextures`、`TaczAnimationPolicy`、`TaczNativeAnimation`、`TaczNpcAnimator`、`TaczNpcEffects`、`TaczReloadPlayback`
 
 ### client.render.tacz
 
