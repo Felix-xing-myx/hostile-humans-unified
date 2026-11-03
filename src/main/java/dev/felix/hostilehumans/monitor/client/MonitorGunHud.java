@@ -102,37 +102,39 @@ public final class MonitorGunHud {
         catch(RuntimeException|LinkageError ignored) { }
         String amount=percent?String.format(Locale.ROOT,"%.0f%%",data.capacity()==0?0:100D*data.loaded()/data.capacity())
                 :String.format(Locale.ROOT,jeg?"%03d":"%02d",data.loaded());
-        // Ammo and capacity read as one pair ("30 / 30") and sit centred in the band above the
-        // hairline, so no text can touch the divider.
+        // Right column: "18 / 30" on the first line, the reserve magazines on the second. Both
+        // start right after the gun art instead of floating at the far edge.
         String capacity=percent?"":"/ "+data.capacity();
-        float scale=Math.min(2F,40F/Math.max(1,font.width(amount)));
-        int amountWidth=Math.min(40,Math.round(font.width(amount)*scale));
         int capacityWidth=capacity.isEmpty()?0:font.width(capacity);
-        int pairWidth=amountWidth+(capacityWidth>0?3+capacityWidth:0);
-        int pairX=Math.max(x+58,x+pw-4-pairWidth);
-        g.pose().pushPose();try {g.pose().translate(pairX,y+6,0);g.pose().scale(scale,scale,1);g.drawString(font,amount,0,0,data.loaded()==0?theme.danger():theme.text(),false);}
+        int columnX=x+58, columnRight=x+pw-4;
+        int amountMax=Math.max(24,columnRight-columnX-(capacityWidth>0?capacityWidth+3:0));
+        float scale=Math.min(2F,amountMax/(float)Math.max(1,font.width(amount)));
+        int amountWidth=Math.min(amountMax,Math.round(font.width(amount)*scale));
+        g.pose().pushPose();try {g.pose().translate(columnX,y+4,0);g.pose().scale(scale,scale,1);g.drawString(font,amount,0,0,data.loaded()==0?theme.danger():theme.text(),false);}
         finally{g.pose().popPose();}
-        if(capacityWidth>0)g.drawString(font,capacity,pairX+amountWidth+3,y+15,theme.muted(),false);
-        UiDraw.ruleFade(g,x+4,y+32,pw-8,theme.edge());
-        // Caption row: fire mode, then the gun name, then the reserve magazines on the right.
+        if(capacityWidth>0)g.drawString(font,capacity,columnX+amountWidth+3,y+13,theme.muted(),false);
+        String reserve=Component.translatable("human_monitor.gun.magazines",value.infinite()?"∞":value.magazines()).getString();
+        // Reserve sits in the bottom-right corner of the upper band, a step smaller than the rest.
+        float reserveScale=.85F;
+        String reserveText=clipTail(font,reserve,(int)((columnRight-columnX)/reserveScale));
+        int reserveWidth=Math.round(font.width(reserveText)*reserveScale);
+        g.pose().pushPose();try {g.pose().translate(columnRight-reserveWidth,y+24,0);g.pose().scale(reserveScale,reserveScale,1);g.drawString(font,reserveText,0,0,theme.muted(),false);}
+        finally{g.pose().popPose();}
+        UiDraw.ruleFade(g,x+4,y+36,pw-8,theme.edge());
+        // Caption row: fire mode, then the gun name across the rest of the width.
         String mode=value.reloading()?Component.translatable("human_monitor.gun.reloading").getString():data.energy()?"FE":data.mode();
-        int modeWidth=18;
+        int modeWidth=0;
         if(data.backend().equals("tacz") && !value.reloading())
-            dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.mode(g,data.mode(),x+3,y+34);
-        else {
-            String shown=font.plainSubstrByWidth(mode,modeWidth);
-            g.drawString(font,shown,x+3,y+34,theme.text(),false);
-            modeWidth=Math.max(modeWidth,font.width(shown));
+            modeWidth=dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.mode(g,data.mode(),x+3,y+37,12);
+        if(modeWidth<=0) {
+            String shown=font.plainSubstrByWidth(mode,26);
+            g.drawString(font,shown,x+3,y+39,theme.text(),false);
+            modeWidth=Math.max(18,font.width(shown));
         }
         int nameX=x+3+modeWidth+4;
-        String reserve=Component.translatable("human_monitor.gun.magazines",value.infinite()?"∞":value.magazines()).getString();
-        int reserveMax=Math.max(20,(x+pw-4)-(nameX+40)-2);
-        String reserveText=clipTail(font,reserve,reserveMax);
-        int reserveWidth=font.width(reserveText);
-        g.drawString(font,reserveText,x+pw-4-reserveWidth,y+34,theme.muted(),false);
-        int nameRoom=Math.max(20,x+pw-4-reserveWidth-3-nameX);
+        int nameRoom=Math.max(20,columnRight-nameX);
         String name=fitWithEllipsis(font,held.getHoverName().getString(),(int)(nameRoom/.85F));
-        g.pose().pushPose();try {g.pose().translate(nameX,y+35,0);g.pose().scale(.85F,.85F,1);g.drawString(font,name,0,0,theme.muted(),false);}
+        g.pose().pushPose();try {g.pose().translate(nameX,y+39,0);g.pose().scale(.85F,.85F,1);g.drawString(font,name,0,0,theme.muted(),false);}
         finally{g.pose().popPose();}
         }finally{g.pose().popPose();}
     }

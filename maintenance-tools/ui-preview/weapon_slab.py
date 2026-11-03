@@ -10,7 +10,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(HERE))
 OUT = os.path.join(REPO, "docs/images/ui-preview")
 S = 4
-PW, PH = 128, 46
+PW, PH = 128, 52
 FONT = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 9 * S)
 
 TEXT, MUTED, EDGE, BOTTOM, ACCENT, DANGER = 0xE6EBEF, 0x929FA9, 0x41525F, 0x090F13, 0xF2C66D, 0xE49B92
@@ -64,42 +64,45 @@ def slab(d, ox, oy, name, amount, reserve, mode_label, capacity):
         x0 = (PW - 6) * i // 6
         d.rectangle([(x + 3 + x0) * S, y * S, (x + 3 + x0 + (PW - 6) // 6) * S, (y + 1) * S],
                     fill=rgba(ACCENT, 1 - i / 6))
-    # gun art 54x28
-    d.rectangle([(x + 2) * S, (y + 2) * S, (x + 56) * S, (y + 30) * S], outline=rgba(EDGE, .8))
-    d.text(((x + 18) * S, (y + 10) * S), "枪械图", font=FONT, fill=rgba(MUTED, 1))
-    # ammo + capacity pair, right aligned
-    sc = min(2.0, 40 / max(1, width(amount)))
-    amount_w = min(40, round(width(amount) * sc))
-    cap_w = width(capacity) if capacity else 0
-    pair_w = amount_w + (3 + cap_w if cap_w else 0)
-    pair_x = max(x + 58, x + PW - 4 - pair_w)
+    # gun art 54x30
+    d.rectangle([(x + 2) * S, (y + 4) * S, (x + 56) * S, (y + 34) * S], outline=rgba(EDGE, .8))
+    d.text(((x + 16) * S, (y + 13) * S), "枪械图", font=FONT, fill=rgba(MUTED, 1))
+    # column: ammo + capacity, then reserve
+    col = x + 58
+    col_right = x + PW - 4
+    sc = min(2.0, max(24, col_right - col - (width(capacity) + 3 if capacity else 0)) / max(1, width(amount)))
+    amount_w = round(width(amount) * sc)
     big = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * sc))
-    d.text((pair_x * S, (y + 6) * S), amount, font=big, fill=rgba(TEXT, 1))
-    if cap_w:
-        d.text(((pair_x + amount_w + 3) * S, (y + 15) * S), capacity, font=FONT, fill=rgba(MUTED, 1))
+    d.text((col * S, (y + 4) * S), amount, font=big, fill=rgba(TEXT, 1))
+    if capacity:
+        d.text(((col + amount_w + 3) * S, (y + 13) * S), capacity, font=FONT, fill=rgba(MUTED, 1))
+    small_res = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .85))
+    shown_reserve = clip_tail(reserve, int((col_right - col) / .85))
+    d.text(((col_right) * S - int(width(shown_reserve) * .85) * S, (y + 24) * S), shown_reserve, font=small_res, fill=rgba(MUTED, 1))
     # hairline
-    d.rectangle([(x + 4) * S, (y + 32) * S, (x + PW - 4) * S, (y + 33) * S], fill=rgba(EDGE, 1))
-    # caption row
+    d.rectangle([(x + 4) * S, (y + 36) * S, (x + PW - 4) * S, (y + 37) * S], fill=rgba(EDGE, 1))
+    # caption row: native mode art (18x12 box here), then the name
+    # TaCZ draws its own 18x10 fire-mode art here; the placeholder only marks the slot.
     mode_w = 18
-    d.rectangle([(x + 3) * S, (y + 34) * S, (x + 3 + mode_w) * S, (y + 44) * S], outline=rgba(EDGE, .9))
-    d.text(((x + 4) * S, (y + 35) * S), mode_label, font=ImageFont.truetype(
-        "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .55)), fill=rgba(TEXT, 1))
+    d.text(((x + 3) * S, (y + 39) * S), mode_label, font=ImageFont.truetype(
+        "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .5)), fill=rgba(TEXT, 1))
     name_x = x + 3 + mode_w + 4
-    reserve_max = max(20, (x + PW - 4) - (name_x + 40) - 2)
-    shown_reserve = clip_tail(reserve, reserve_max)
-    reserve_w = width(shown_reserve)
-    d.text(((x + PW - 4) * S - reserve_w * S, (y + 34) * S), shown_reserve, font=FONT, fill=rgba(MUTED, 1))
-    room = max(20, x + PW - 4 - reserve_w - 3 - name_x)
+    room = max(20, col_right - name_x)
     small = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .85))
-    d.text((name_x * S, (y + 35) * S), fit_ellipsis(name, int(room / .85)), font=small, fill=rgba(MUTED, 1))
+    d.text((name_x * S, (y + 39) * S), fit_ellipsis(name, int(room / .85)), font=small, fill=rgba(MUTED, 1))
 
-img = Image.new("RGB", (300 * S, 252 * S), (15, 20, 23))
+img = Image.new("RGB", (330 * S, 262 * S), (15, 20, 23))
 d = ImageDraw.Draw(img, "RGBA")
-d.text((10 * S, 4 * S), "枪械板 128x46（按 Java 常数量出的实况）", font=ImageFont.truetype(
+d.text((10 * S, 4 * S), "枪械板 128x52 · 第三版：弹匣已移入上带（按 Java 常数量出的实况）", font=ImageFont.truetype(
     "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 8 * S), fill=rgba(MUTED, 1))
-slab(d, 20, 20, "AK-47 突击步枪", "30", "弹匣 3", "AUTO", "/ 30")
-slab(d, 20, 76, "M4 卡宾枪（长名字）", "100%", "弹匣 12", "BURST", "")
-slab(d, 20, 132, "M249 班用机枪", "07", "弹匣 120", "AUTO", "/ 150")
-slab(d, 20, 188, "M4A1 卡宾枪（消音器改装型）", "30", "弹匣 3", "AUTO", "/ 30")
-img.save(os.path.join(OUT, "weapon-slab.png"))
+slab(d, 20, 18, "AK-47 突击步枪", "30", "弹匣 3", "AUTO", "/ 30")
+ann = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 8 * S)
+note = lambda ty, text: d.text((158 * S, ty * S), text, font=ann, fill=rgba(ACCENT, 1))
+note(26, "上带：枪图 54x30 ｜ 18 / 30 ｜ 弹匣(右下)")
+note(52, "灰线 y36")
+note(62, "下带：AUTO + 名称（整行）")
+slab(d, 20, 78, "M4 卡宾枪（长名字）", "100%", "弹匣 12", "BURST", "")
+slab(d, 20, 138, "M249 班用机枪", "07", "弹匣 120", "AUTO", "/ 150")
+slab(d, 20, 198, "M4A1 卡宾枪（消音器改装型）", "30", "弹匣 3", "AUTO", "/ 30")
+img.save(os.path.join(OUT, "weapon-slab-128x52.png"))
 print("ok")
