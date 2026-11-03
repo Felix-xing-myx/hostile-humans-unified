@@ -6,7 +6,7 @@ import net.minecraft.network.FriendlyByteBuf;
 
 public record SettlementPreview(String dimension, List<Box> boxes, BlockPos first, BlockPos second,
         boolean toolOnly, List<Ghost> ghosts, String task, String region) {
-    private static final int MAX_BOXES = 1153;
+    private static final int MAX_BOXES = 1154;
     public static final SettlementPreview EMPTY = new SettlementPreview("", List.of(), null, null, true);
 
     public static final SettlementPreview EMPTY_PLACEMENT =

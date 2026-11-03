@@ -3485,7 +3485,7 @@
     "crowded_navigation_factor": 0.625,
     "_description_crowded_navigation_factor_en": "Crowded deferrable navigation factor",
     "_说明_crowded_navigation_factor_中文": "拥挤可延后导航吞吐倍率",
-    "battle_navigation_factor": 0.375,
+    "battle_navigation_factor": 0.75,
     "_description_battle_navigation_factor_en": "Battle deferrable navigation factor",
     "_说明_battle_navigation_factor_中文": "团战可延后导航吞吐倍率"
   },

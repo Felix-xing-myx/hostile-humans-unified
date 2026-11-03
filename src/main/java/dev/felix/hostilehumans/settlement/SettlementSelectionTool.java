@@ -56,6 +56,7 @@ public final class SettlementSelectionTool extends Item {
             return "template name required before selection";
         var binding = new Binding(player.level().dimension().location(), position.immutable(),
                 info, region, exclude, currentOnly, boxIndex, mode, revision, visibility(player, info), null, null);
+        info.setChanged(); // Persist the carrier identity before its chunk can unload.
         publish(player, binding);
         BINDINGS.put(player, binding);
         tell(player, "bound_mode", Component.translatable(
@@ -79,6 +80,8 @@ public final class SettlementSelectionTool extends Item {
         var author = SettlementCodec.template(info.author());
         var transform = SettlementAuthoring.currentTransform(player, info);
         var boxes = new ArrayList<SettlementPreview.Box>();
+        var carrier = SettlementAuthoring.cell(binding.information());
+        boxes.add(new SettlementPreview.Box(RegionBox.between(carrier, carrier), 0x6affaa, ""));
         var size = author.size();
         if ((binding.visible() & 1) != 0) boxes.add(new SettlementPreview.Box(new RegionBox(0, 0, 0,
                 size.x() - 1, size.y() - 1, size.z() - 1).transform(transform), 0xffffff, "NBT"));
@@ -271,11 +274,21 @@ public final class SettlementSelectionTool extends Item {
     static void tick(ServerPlayer player) {
         var binding = BINDINGS.get(player);
         if (binding == null || validBinding(player, binding)) return;
-        if (SettlementAccess.author(player) && binding.dimension().equals(player.level().dimension().location())
-                && player.serverLevel().hasChunkAt(binding.information())
-                && player.serverLevel().getBlockEntity(binding.information()) == binding.carrier()) {
-            var next = new Binding(binding.dimension(), binding.information(), binding.carrier(), "", false,
-                    false, -1, Mode.VIEW, binding.carrier().revision(), binding.visible(), null, null);
+        if (!SettlementAccess.author(player)) {
+            clear(player);
+            return;
+        }
+        if (!binding.dimension().equals(player.level().dimension().location())
+                || !player.serverLevel().hasChunkAt(binding.information())) return;
+        if (player.serverLevel().getBlockEntity(binding.information()) instanceof SettlementInformationBlockEntity info
+                && info.selectionIdentity().equals(binding.carrier().selectionIdentity())) {
+            boolean unchanged = info.revision() == binding.revision();
+            var next = unchanged
+                    ? new Binding(binding.dimension(), binding.information(), info, binding.region(), binding.exclude(),
+                            binding.currentOnly(), binding.boxIndex(), binding.mode(), binding.revision(),
+                            binding.visible(), binding.first(), binding.second())
+                    : new Binding(binding.dimension(), binding.information(), info, "", false,
+                            false, -1, Mode.VIEW, info.revision(), binding.visible(), null, null);
             try {
                 publish(player, next);
                 BINDINGS.put(player, next);
@@ -293,8 +306,11 @@ public final class SettlementSelectionTool extends Item {
 
     private static boolean active(ServerPlayer player, Binding binding) {
         if (binding != null && validBinding(player, binding)) return true;
-        BINDINGS.remove(player);
-        SettlementNetwork.preview(player, SettlementPreview.EMPTY);
+        if (binding != null) {
+            player.displayClientMessage(Component.translatable(
+                    "item.hostile_humans_unified.settlement_selection_tool.carrier_unavailable"), true);
+            return false;
+        }
         tell(player, "bind_first");
         return false;
     }

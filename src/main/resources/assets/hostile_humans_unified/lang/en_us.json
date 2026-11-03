@@ -77,6 +77,7 @@
   "gui.hostile_humans_unified.settlement.preview_depth": "Preview: blocked by walls",
   "item.hostile_humans_unified.settlement_selection_tool.pick": "Hold the selection tool and right-click the facility block.",
   "item.hostile_humans_unified.settlement_selection_tool.first_corner": "Hold the selection tool and right-click the first block corner.",
+  "item.hostile_humans_unified.settlement_selection_tool.carrier_unavailable": "The bound information block is unavailable. Return to its dimension and load its chunk.",
   "item.hostile_humans_unified.settlement_selection_tool.bind_first": "Sneak + right-click the information block with the selector to bind it.",
   "item.hostile_humans_unified.settlement_selection_tool.second_corner": "Choose the second block corner.",
   "item.hostile_humans_unified.settlement_selection_tool.confirm": "%s × %s × %s. Right-click again to save; left-click to cancel.",

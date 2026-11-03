@@ -12,6 +12,7 @@ public final class SettlementInformationBlockEntity extends BlockEntity {
     public static final String AUTHOR = "settlement_author";
     private CompoundTag author = new CompoundTag();
     private UUID instance;
+    private UUID selectionIdentity = UUID.randomUUID();
     private String module = "";
 
     public SettlementInformationBlockEntity(BlockPos position, BlockState state) {
@@ -25,6 +26,8 @@ public final class SettlementInformationBlockEntity extends BlockEntity {
     public int revision() {
         return author.getInt("revision");
     }
+
+    UUID selectionIdentity() { return selectionIdentity; }
 
     public UUID instance() {
         return instance;
@@ -49,6 +52,7 @@ public final class SettlementInformationBlockEntity extends BlockEntity {
     public void load(CompoundTag tag) {
         super.load(tag);
         author = tag.getCompound(AUTHOR).copy();
+        if (tag.hasUUID("selection_identity")) selectionIdentity = tag.getUUID("selection_identity");
         instance = tag.hasUUID("settlement_instance") ? tag.getUUID("settlement_instance") : null;
         module = tag.getString("settlement_module");
     }
@@ -57,6 +61,7 @@ public final class SettlementInformationBlockEntity extends BlockEntity {
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.put(AUTHOR, author.copy());
+        tag.putUUID("selection_identity", selectionIdentity);
         if (instance != null) tag.putUUID("settlement_instance", instance);
         tag.putString("settlement_module", module);
     }

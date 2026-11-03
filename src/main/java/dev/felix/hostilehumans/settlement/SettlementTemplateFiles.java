@@ -379,6 +379,7 @@ final class SettlementTemplateFiles {
                     author.regions().stream().map(r -> r.transform(shift)).toList(),
                     author.facilities().stream().map(f -> f.transform(shift)).toList());
             tag.put(SettlementInformationBlockEntity.AUTHOR, SettlementCodec.template(normalized));
+            tag.remove("selection_identity");
             tag.remove("settlement_instance");
             tag.remove("settlement_module");
         }

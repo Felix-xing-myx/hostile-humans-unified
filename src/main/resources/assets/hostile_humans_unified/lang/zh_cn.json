@@ -77,6 +77,7 @@
   "gui.hostile_humans_unified.settlement.preview_depth": "预览：受墙体遮挡",
   "item.hostile_humans_unified.settlement_selection_tool.pick": "手持分区工具右键功能方块。",
   "item.hostile_humans_unified.settlement_selection_tool.first_corner": "手持分区工具右键第一个方块角点。",
+  "item.hostile_humans_unified.settlement_selection_tool.carrier_unavailable": "绑定的信息方块当前不可用。请回到对应维度并让区块加载。",
   "item.hostile_humans_unified.settlement_selection_tool.bind_first": "请手持建筑框选器，潜行右键信息方块绑定。",
   "item.hostile_humans_unified.settlement_selection_tool.second_corner": "请选择第二个方块角点。",
   "item.hostile_humans_unified.settlement_selection_tool.confirm": "%s × %s × %s。再右键一次保存，左键取消。",

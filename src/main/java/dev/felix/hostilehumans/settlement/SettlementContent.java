@@ -35,7 +35,6 @@ public final class SettlementContent {
                     () ->
                             new SettlementInformationBlock(
                                     BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
-                                            .noCollission()
                                             .noOcclusion()
                                             .strength(-1, 3600000)));
     public static final RegistryObject<BlockEntityType<SettlementInformationBlockEntity>>
