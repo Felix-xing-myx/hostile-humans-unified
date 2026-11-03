@@ -226,6 +226,7 @@ public final class FactionEconomyLedger {
 
     public static boolean recover(ServerPlayer player) {
         var data = FactionStandingData.get(player.getServer());
+        if (!data.known(player.getUUID())) return false;
         boolean hasStamp = player.getPersistentData().hasUUID(STAMP);
         UUID stamp = hasStamp ? player.getPersistentData().getUUID(STAMP) : null;
         boolean recognized = !hasStamp || data.recognizesJournalStamp(player.getUUID(), stamp);
@@ -306,9 +307,11 @@ public final class FactionEconomyLedger {
      */
     public static int external(net.minecraft.world.entity.item.ItemEntity entity) {
         if (!(entity.level() instanceof net.minecraft.server.level.ServerLevel level)) return 0;
-        var receipt = FactionStandingData.get(level.getServer()).external(entity.getUUID());
+        var data = FactionStandingData.get(level.getServer());
+        var receipt = data.external(entity.getUUID());
         if (receipt == null) return 0;
-        if (!receipt.hasUUID("transaction")) return -1;
+        if (!receipt.hasUUID("player") || !data.known(receipt.getUUID("player"))
+                || !receipt.hasUUID("transaction")) return -1;
         UUID id = receipt.getUUID("transaction");
         String state = receipt.getString("state");
         if (state.equals("ABORTED")

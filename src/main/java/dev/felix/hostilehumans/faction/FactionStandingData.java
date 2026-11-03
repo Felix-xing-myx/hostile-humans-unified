@@ -17,6 +17,7 @@ final class FactionStandingData extends SavedData {
     private final Map<UUID,Map<String,CompoundTag>> factionExtras=new HashMap<>();
     private final Map<UUID,LinkedHashMap<UUID,CompoundTag>> journals=new HashMap<>();
     private final Map<UUID,CompoundTag> externalReceipts=new HashMap<>();
+    private static final int MAX_RECEIPTS_PER_PLAYER = 1024;
     private long journalSequence;
     long nextSequence(){journalSequence=Math.incrementExact(journalSequence);return journalSequence;}
     CompoundTag external(UUID entity){var receipt=externalReceipts.get(entity);return receipt==null?null:receipt.copy();}
@@ -128,7 +129,7 @@ final class FactionStandingData extends SavedData {
 
     void journal(UUID player,UUID transaction,CompoundTag receipt){
         var receipts=journals.computeIfAbsent(player,k->new LinkedHashMap<>());
-        if (!receipts.containsKey(transaction) && receipts.size() >= 1024) {
+        if (!receipts.containsKey(transaction) && receipts.size() >= MAX_RECEIPTS_PER_PLAYER) {
             evictOldestReceipt(receipts);
         }
         receipts.put(transaction,receipt.copy());journalSequence=Math.max(journalSequence,receipt.getLong("sequence"));
@@ -178,7 +179,21 @@ final class FactionStandingData extends SavedData {
         var seen=new HashMap<UUID,CompoundTag>();
         for(Tag row:root.getList("players",Tag.TAG_COMPOUND)){var p=(CompoundTag)row;try{if(!p.hasUUID("uuid"))throw new IllegalArgumentException("missing player UUID");UUID id=p.getUUID("uuid");if(seen.containsKey(id)){if(!result.unknownPlayers.contains(id))result.quarantinedPlayers.add(seen.get(id).copy());throw new IllegalArgumentException("duplicate player UUID");}seen.put(id,p.copy());result.player(id,p);}catch(RuntimeException invalid){result.quarantinedPlayers.add(p.copy());if(p.hasUUID("uuid"))result.unknownPlayers.add(p.getUUID("uuid"));}}
         for(Tag row:root.getList("quarantined_players",Tag.TAG_COMPOUND)){var p=(CompoundTag)row;result.quarantinedPlayers.add(p.copy());if(p.hasUUID("uuid"))result.unknownPlayers.add(p.getUUID("uuid"));}
-        for(Tag row:root.getList("economy_journals",Tag.TAG_COMPOUND)){var t=(CompoundTag)row;if(t.getInt("schema")==1&&t.hasUUID("player")&&t.hasUUID("transaction")&&!result.journaled(t.getUUID("player"),t.getUUID("transaction")))result.journal(t.getUUID("player"),t.getUUID("transaction"),t);else{result.unknownRoot=root.copy();return result;}}
+        for (Tag row : root.getList("economy_journals", Tag.TAG_COMPOUND)) {
+            var receipt = (CompoundTag) row;
+            if (receipt.getInt("schema") != 1 || !receipt.hasUUID("player") || !receipt.hasUUID("transaction")) {
+                result.unknownRoot = root.copy();
+                return result;
+            }
+            UUID player = receipt.getUUID("player");
+            UUID transaction = receipt.getUUID("transaction");
+            var history = result.journals.get(player);
+            if (history != null && (history.containsKey(transaction) || history.size() >= MAX_RECEIPTS_PER_PLAYER)) {
+                result.unknownRoot = root.copy();
+                return result;
+            }
+            result.journal(player, transaction, receipt);
+        }
         return result;
     }
     @Override public CompoundTag save(CompoundTag root){
