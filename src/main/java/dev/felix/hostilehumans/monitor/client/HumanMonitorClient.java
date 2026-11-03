@@ -218,7 +218,7 @@ public final class HumanMonitorClient {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void cameraAngles(net.minecraftforge.client.event.ViewportEvent.ComputeCameraAngles event) {
         if (event.getCamera().getEntity() instanceof Human human && takingOver(human)) {
-            if (!paused) MonitorGunRecoil.update(human,state.token(),state.generation());
+            if (!Minecraft.getInstance().isPaused()) MonitorGunRecoil.update(human,state.token(),state.generation());
             event.setYaw(controlYaw); event.setPitch(controlPitch);
         }
     }

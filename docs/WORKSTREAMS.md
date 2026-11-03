@@ -4211,3 +4211,7 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查远程寻路重载，基线 dff25bd，主控沿用 worktrees/module-architecture 与 audit/module-architecture。LongRangeNavigation 每服务器 tick 固定搜索配置，仅在 tick 切换且总额度变化时更换队列。Python 核查通过 516 项，跳过 16 项。未编译、构建或实测。
 
 - 据点框选、团战寻路与 TaCZ 背包供弹，基线 854f5f9，主控独占现有 module-architecture 工作树。核查实例 3.15.0 已含远程区块跟踪；TaCZ hotfix/hotfix2 的 reduceAmmoOnce 均有两处原生扣弹入口。未编译、构建或同步。
+
+
+## 3.15.1 构建同步
+- 主控；基线78b887478566785941d773c187cfefd526f68a57；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：架构审查、据点框选、团战寻路及 TaCZ 虚拟弹匣。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.1。
