@@ -4143,3 +4143,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查监控退出，基线 1a2423f，主控沿用 audit/module-architecture。修改 HumanMonitorService 与 HumanMonitorControl 的退出异常隔离，协议不变。Java 与游戏内验证待执行。
 
 - 架构审查建筑模板，基线 a370831，主控沿用 audit/module-architecture。核对导出原子替换，修改 SettlementTemplateFiles 的放置前保护检查，接口不变。Java 与游戏内验证待执行。
+
+- 架构审查经济库存事务，基线 b21cdc2，主控沿用 audit/module-architecture。修改 InventoryTransaction 的失败回滚，协议及账本结构不变；Curios 异常写入实机验证待执行。

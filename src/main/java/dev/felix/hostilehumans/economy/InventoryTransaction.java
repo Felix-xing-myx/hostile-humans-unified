@@ -29,6 +29,7 @@ public final class InventoryTransaction {
     private final List<State> states;
     private final ServerPlayer player;
     private boolean committed;
+    private final Deque<State> writes = new ArrayDeque<>();
 
     public InventoryTransaction(ServerPlayer player) {
         this.player = player;
@@ -386,29 +387,50 @@ public final class InventoryTransaction {
     }
 
     public boolean publish() {
-        if (!player.getServer().isSameThread() || !matches()) return false;
+        if (committed || !player.getServer().isSameThread() || !matches()) return false;
         committed = true;
         try {
-            for (var s : states)
-                if (!ItemStack.matches(s.before, s.after)) s.slot.write().accept(s.after.copy());
+            for (var s : states) {
+                if (ItemStack.matches(s.before, s.after)) continue;
+                // A setter can mutate the slot before reporting failure.
+                writes.addLast(s);
+                s.slot.write().accept(s.after.copy());
+            }
             if (!states.stream().allMatch(s -> ItemStack.matches(s.after, s.slot.read().get())))
                 throw new IllegalStateException(
                         "slot setter did not publish exact planned inventory");
-            committed = true;
             player.getInventory().setChanged();
             player.containerMenu.broadcastChanges();
             return true;
         } catch (RuntimeException failed) {
-            rollback();
+            try {
+                rollback();
+            } catch (RuntimeException unresolved) {
+                if (failed != unresolved) failed.addSuppressed(unresolved);
+            }
             throw failed;
         }
     }
 
     public void rollback() {
-        for (var s : states)
-            if (!ItemStack.matches(s.before, s.after)) s.slot.write().accept(s.before.copy());
-        committed = false;
+        RuntimeException failure = null;
+        var reverse = writes.descendingIterator();
+        while (reverse.hasNext()) {
+            State state = reverse.next();
+            try {
+                if (!ItemStack.matches(state.before, state.slot.read().get()))
+                    state.slot.write().accept(state.before.copy());
+                if (!ItemStack.matches(state.before, state.slot.read().get()))
+                    throw new IllegalStateException("could not restore economic slot " + state.slot.key());
+                reverse.remove();
+            } catch (RuntimeException unresolved) {
+                if (failure == null) failure = unresolved;
+                else if (failure != unresolved) failure.addSuppressed(unresolved);
+            }
+        }
+        committed = !writes.isEmpty();
         player.getInventory().setChanged();
+        if (failure != null) throw failure;
     }
 
     public boolean committed() {
