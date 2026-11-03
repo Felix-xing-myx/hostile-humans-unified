@@ -36,8 +36,7 @@ public final class PotionThrowing {
         if (!ThrowableTransactions.available(human, target) || !inRange(human, target)
                 || RecoverySupplies.findSplashDebuffSlot(human) < 0
                 || human.getRandom().nextFloat() >= .55F) return;
-        if (launchDebuff(human, target))
-            human.getPersistentData().putLong(READY, now + human.getRandom().nextInt(120, 201));
+        launchDebuff(human, target, now);
     }
 
     /** Authoritative replacement for the legacy Human hand-potion entrypoint. */
@@ -46,11 +45,9 @@ public final class PotionThrowing {
         long now = human.level().getGameTime();
         if (now < human.getPersistentData().getLong(READY)) return false;
         human.getPersistentData().putLong(READY, now + 40);
-        boolean thrown = launchDebuff(human, target);
-        if (thrown) human.getPersistentData().putLong(READY, now + human.getRandom().nextInt(120, 201));
-        return thrown;
+        return launchDebuff(human, target, now);
     }
-    private static boolean launchDebuff(Human human, LivingEntity target) {
+    private static boolean launchDebuff(Human human, LivingEntity target, long now) {
         if (human.getTarget() != target || !ThrowableTransactions.available(human, target) || !inRange(human, target)
                 || !noAllyNearTarget(human, target)) return false;
         int slot = RecoverySupplies.findSplashDebuffSlot(human);
@@ -62,10 +59,13 @@ public final class PotionThrowing {
                     projectile.setItem(one);
                     return prepareShot(projectile, target) ? projectile : null;
                 });
-        if (thrown) human.level().playSound(null, human.getX(), human.getY(), human.getZ(),
+        if (!thrown) return false;
+        float pitch = .9F + human.getRandom().nextFloat() * .2F;
+        human.getPersistentData().putLong(READY, now + human.getRandom().nextInt(120, 201));
+        human.level().playSound(null, human.getX(), human.getY(), human.getZ(),
                 net.minecraft.sounds.SoundEvents.SPLASH_POTION_THROW, net.minecraft.sounds.SoundSource.HOSTILE,
-                .8F, .9F + human.getRandom().nextFloat() * .2F);
-        return thrown;
+                .8F, pitch);
+        return true;
     }
     private static boolean noAllyNearTarget(Human human, LivingEntity target) {
         return human.level().getEntitiesOfClass(Human.class, target.getBoundingBox().inflate(3),

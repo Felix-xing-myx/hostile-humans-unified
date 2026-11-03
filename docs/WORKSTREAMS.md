@@ -4193,3 +4193,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查阵营关系读取，基线 65c64b7，主控沿用 audit/module-architecture。FactionDefinitions 与 HumanFactions 共用定义级敌对判定。
 
 - 架构审查小队批量命令，基线 0d276b7。SquadCommands 对齐面板可用性与执行权限，接口不变。
+
+- 累计复核投掷提交，基线 436ddfc。PotionThrowing 统一成功冷却的提交顺序，数值不变。
