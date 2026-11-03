@@ -21,7 +21,7 @@ public final class GrowthProfileFiles {
         if (!Files.isRegularFile(globalPath)) return;
         try {
             byte[] original = Files.readAllBytes(globalPath);
-            JsonObject global = SplitConfigFiles.read(globalPath, 2);
+            JsonObject global = SplitConfigFiles.read(globalPath, 2, original);
             JsonObject growth = UnifiedConfig.object(global, "growth");
             JsonObject profiles = UnifiedConfig.object(growth, "profiles");
             Map<String, RankFile> writes = new LinkedHashMap<>();
@@ -32,7 +32,7 @@ public final class GrowthProfileFiles {
                 Path path = directory.resolve(rank + ".json");
                 boolean exists = Files.exists(path);
                 byte[] bytes = exists ? Files.readAllBytes(path) : null;
-                JsonObject data = exists ? SplitConfigFiles.read(path, 2) : TierConfigProjection.tier(defaults, rank);
+                JsonObject data = exists ? SplitConfigFiles.read(path, 2, bytes) : TierConfigProjection.tier(defaults, rank);
                 if (!exists) data.remove("growth_profile");
                 if (data.has("growth_profile") && !data.get("growth_profile").isJsonObject())
                     throw new IllegalArgumentException("Invalid destination growth_profile in " + path);

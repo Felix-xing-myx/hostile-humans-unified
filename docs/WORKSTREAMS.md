@@ -4153,3 +4153,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查网络入口，基线 d721994，主控沿用 audit/module-architecture。修改 AttributeDetailNetwork 和 SettlementSelectionTool，协议不变。Java 和联机验证待执行。
 
 - 架构审查可选注入，基线 f3bb7a2，主控沿用 audit/module-architecture。OptionalMixinPlugin 与 ScgunsHumanShieldMixin 对齐匹配范围和数量，Java、缺依赖及变体启动待验证。
+
+- 架构审查配置迁移，基线 54a5d76，主控沿用 audit/module-architecture。SplitConfigFiles 与 GrowthProfileFiles 共用原始字节解析，新增快照读取重载。Python 检查通过，Java 回归待执行。

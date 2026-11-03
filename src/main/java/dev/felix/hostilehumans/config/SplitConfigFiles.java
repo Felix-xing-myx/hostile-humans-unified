@@ -88,10 +88,11 @@ public final class SplitConfigFiles {
                                        java.util.function.BiPredicate<String, JsonObject> integrations, boolean strict) {
         try {
             byte[] original = Files.readAllBytes(path);
-            JsonObject data = read(path, 2);
+            JsonObject data = read(path, 2, original);
             boolean migrated = rank && (SpawnSupplyMigration.migrateRank(data)
                     | EquipmentConfigMigration.migrate(data, rankName(path)));
-            if (migrated) Files.copy(path, path.resolveSibling(path.getFileName() + ".before-faction-equipment-" + System.nanoTime() + ".bak"));
+            if (migrated) Files.write(path.resolveSibling(path.getFileName() + ".before-faction-equipment-" + System.nanoTime() + ".bak"),
+                    original, java.nio.file.StandardOpenOption.CREATE_NEW, java.nio.file.StandardOpenOption.WRITE);
             boolean imported = rank && integrations.test(rankName(path), data);
             // Split direct arrow damage into independent bow/crossbow controls; preserve explicit new values.
             if (rank) {
@@ -214,16 +215,20 @@ public final class SplitConfigFiles {
     }
 
     public static JsonObject read(Path path, int version) throws IOException {
-        try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-            JsonElement parsed = JsonParser.parseReader(reader);
-            if (!parsed.isJsonObject()) throw new IOException("Configuration root must be an object: " + path);
-            JsonObject data = parsed.getAsJsonObject();
-            JsonElement schema = data.get("schema_version");
-            if (schema == null || !schema.isJsonPrimitive() || !schema.getAsJsonPrimitive().isNumber()
-                    || !schema.getAsBigDecimal().equals(java.math.BigDecimal.valueOf(version)))
-                throw new IOException("Unsupported config schema; input left unchanged: " + path);
-            return data;
-        }
+        return read(path, version, Files.readAllBytes(path));
+    }
+
+    /** Parse the exact snapshot used by migration backups and write-current comparisons. */
+    public static JsonObject read(Path path, int version, byte[] snapshot) throws IOException {
+        String json = StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(snapshot)).toString();
+        JsonElement parsed = JsonParser.parseString(json);
+        if (!parsed.isJsonObject()) throw new IOException("Configuration root must be an object: " + path);
+        JsonObject data = parsed.getAsJsonObject();
+        JsonElement schema = data.get("schema_version");
+        if (schema == null || !schema.isJsonPrimitive() || !schema.getAsJsonPrimitive().isNumber()
+                || !schema.getAsBigDecimal().equals(java.math.BigDecimal.valueOf(version)))
+            throw new IOException("Unsupported config schema; input left unchanged: " + path);
+        return data;
     }
 
     /** Strict JSON with a blank line between described controls; no editor-specific syntax. */

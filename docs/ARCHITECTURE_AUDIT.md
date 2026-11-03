@@ -58,3 +58,7 @@
 ## 可选联动注入
 
 - 对照 [Mixin Redirect 规范](https://javadoc.io/static/net.fabricmc/sponge-mixin/0.15.0%2Bmixin.0.8.7/org/spongepowered/asm/mixin/injection/Redirect.html#allow())。焦燃盾牌拦截允许恰好一处注入，但原门控只确认至少一处。现在门控与注入共享完整方法描述符，只有调用点恰好一处才启用，否则保留焦燃原生拦截。其他可选注入的变体覆盖仍待核对。
+
+## 配置迁移
+
+- 分阶配置布局刷新与成长迁移从同一字节快照解析、备份和校验，避免两次读文件得到不同版本。[Git 条件更新](https://git-scm.com/docs/git-update-ref)展示了同类前置校验和写锁的组合。这里保留现有外部编辑器兼容性，文件最后一次比较到移动之间仍有竞争窗口，跨多个配置文件也不保证原子性。
