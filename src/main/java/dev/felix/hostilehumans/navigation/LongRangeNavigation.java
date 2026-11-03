@@ -105,7 +105,12 @@ public final class LongRangeNavigation {
             MinecraftServer server = human.level().getServer();if(server==null)return FAILED;
             Pool pool = POOLS.get(server);
             if (pool == null || pool.units != c.remoteUnits()) {
-                pool = new Pool(c.remoteUnits(),new FairWorkBudget<>(c.remoteUnits(),RouteSearchPolicy.remoteCost(c.longNodes()),40));POOLS.put(server,pool);
+                // Individual search cost is derived from the current node limit.
+                // Keep the queue's hard limit tied to the pool size so reloading
+                // only the node limit cannot invalidate a legitimate request.
+                int units = c.remoteUnits();
+                pool = new Pool(units, new FairWorkBudget<>(units, units, 40));
+                POOLS.put(server, pool);
             }
             pool.queue.setTickCapacity(AdaptiveActivityBudget.navigationCapacity(human,c.remoteUnits(),RouteSearchPolicy.remoteCost(c.longNodes())));
             int cost = RouteSearchPolicy.remoteCost(nodes);
