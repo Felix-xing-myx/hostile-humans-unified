@@ -36,6 +36,12 @@ public final class MonitorInputReconciliationTest {
         client.clear();
         for (int i = 0; i < 33; i++) client.add(i, 1);
         check(client.size() == 32 && client.replay() == null, "Overflow is bounded and cannot replay a silently truncated timeline");
+        client.clear();
+        for (int i = 1; i <= 33; i++) client.add(i, i);
+        client.acknowledge(31);
+        var recovered = client.replay();
+        check(recovered != null && recovered.size() == 2 && recovered.get(0).sequence() == 32,
+                "A snapshot covering dropped history restores safe replay of the remaining tail");
         client.clear(); client.add(1, 1);
         try { client.add(1, -1); throw new AssertionError("Duplicate client sequence accepted"); }
         catch (IllegalArgumentException expected) { }

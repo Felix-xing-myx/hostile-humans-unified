@@ -9,13 +9,14 @@ public final class MonitorInputHistory<T> {
     public record Entry<T>(long sequence, T input) {}
     private final ArrayDeque<Entry<T>> entries = new ArrayDeque<>();
     private long lastSequence = -1, acknowledged = -1;
-    private boolean overflow;
+    private long droppedThrough = -1;
 
     public void add(long sequence, T input) {
         if (sequence <= lastSequence) throw new IllegalArgumentException("Non-monotonic monitor input");
+        var entry = new Entry<>(sequence, java.util.Objects.requireNonNull(input));
         lastSequence = sequence;
-        if (entries.size() == CAPACITY) { entries.removeFirst(); overflow = true; }
-        entries.addLast(new Entry<>(sequence, java.util.Objects.requireNonNull(input)));
+        if (entries.size() == CAPACITY) droppedThrough = entries.removeFirst().sequence();
+        entries.addLast(entry);
     }
     public void acknowledge(long sequence) {
         if (sequence < acknowledged) return;
@@ -24,10 +25,10 @@ public final class MonitorInputHistory<T> {
     }
     /** Empty means a valid empty replay; null means a discontinuity requiring an authoritative reset. */
     public List<Entry<T>> replay() {
-        if (overflow || entries.size() > MAX_REPLAY) { discard(); return null; }
+        if (droppedThrough > acknowledged || entries.size() > MAX_REPLAY) { discard(); return null; }
         return List.copyOf(entries);
     }
-    public void discard() { entries.clear(); overflow = false; }
+    public void discard() { entries.clear(); droppedThrough = -1; }
     public void clear() { discard(); lastSequence = acknowledged = -1; }
     public int size() { return entries.size(); }
 }
