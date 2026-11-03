@@ -4047,3 +4047,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 - 主控在独立工作树 retain-food-healing、分支 fix/retain-food-healing 修改 RecoverySupplies 与说明，沿用既有持久化字段，无新接口。基线 fe49f49（完整 SHA 见本提交父提交）。
 - Python 核查通过 516 项，跳过 16 项。Java 编译、实例同步和游戏内验收待执行。
+
+
+## 3.14.8 构建同步
+- 主控；基线37f63e37c4178198130d3ec3a9f68707760a2f5f；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3148，分支release/local-build；范围：监控武器栏、建筑工具拆分、TaCZ 与食物回血修复。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.8。
+
+- 3.14.8完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致822cb1fe7af62a6dfa128fcf557ee5a36a419248b87f911285d0b7bc0d1b242a；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.14.8-20261103-221104。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.14.8.
