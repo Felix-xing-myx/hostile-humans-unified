@@ -10,6 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.Tag;
@@ -51,6 +52,24 @@ final class SettlementTemplateFiles {
             for (int z = bounds.minZ() >> 4; z <= bounds.maxZ() >> 4; z++)
                 if (!level.hasChunkAt(new BlockPos(x << 4, bounds.minY(), z << 4)))
                     throw new IllegalArgumentException("all template chunks must already be loaded");
+    }
+
+    static ListTag list(ServerLevel level) {
+        var manager = level.getStructureManager();
+        var result = new ListTag();
+        try (var templates = manager.listTemplates()) {
+            templates.distinct().filter(id -> id.toString().length() <= 256).map(id -> {
+                var row = new CompoundTag();
+                row.putString("id", id.toString());
+                row.putBoolean("world", Files.isRegularFile(manager.getPathToGeneratedStructure(id, ".nbt")));
+                return row;
+            }).filter(row -> row.getBoolean("world")
+                    || row.getString("id").startsWith("hostile_humans_unified:"))
+                    .sorted(java.util.Comparator.<CompoundTag, Boolean>comparing(row -> !row.getBoolean("world"))
+                            .thenComparing(row -> row.getString("id")))
+                    .limit(32).forEach(result::add);
+        }
+        return result;
     }
 
     static String save(ServerPlayer player, BlockPos position, int revision, boolean entities,

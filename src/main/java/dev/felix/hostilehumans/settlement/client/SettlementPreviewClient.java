@@ -35,6 +35,17 @@ public final class SettlementPreviewClient {
     }
 
     @SubscribeEvent
+    public static void tooltip(net.minecraftforge.event.entity.player.ItemTooltipEvent event) {
+        var client = Minecraft.getInstance();
+        if (!(event.getItemStack().getItem() instanceof SettlementSelectionTool) || client.level == null
+                || preview.task().isEmpty()
+                || !preview.dimension().equals(client.level.dimension().location().toString())) return;
+        event.getToolTip().add(net.minecraft.network.chat.Component.translatable(
+                "item.hostile_humans_unified.settlement_selection_tool.mode." + preview.task())
+                .append(preview.region().isEmpty() ? "" : " · " + preview.region()));
+    }
+
+    @SubscribeEvent
     public static void render(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
         var mc = Minecraft.getInstance();

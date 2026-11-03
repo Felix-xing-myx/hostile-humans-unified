@@ -59,7 +59,9 @@ public final class SettlementScreen extends PanelScreen {
     private int regionIndex, boxIndex, facilityIndex, turns;
     private int keepAliveTicks;
     private InputValue<String> placementTemplate;
-    private List<String> placementChoices = List.of();
+    private record TemplateChoice(String id, boolean world) {}
+    private List<TemplateChoice> placementChoices = List.of();
+    private boolean templateListLoaded;
     private boolean exclude, localChanged, serverClosed, transformDirty, templateEntities, currentRegionOnly, advancedAuthor;
     private long confirmUntil;
 
@@ -95,10 +97,14 @@ public final class SettlementScreen extends PanelScreen {
         boolean ack = pending.acknowledge(value.acknowledgedRequest());
         snapshot = value;
         if (value.data().contains("template_choices", Tag.TAG_LIST)) {
-            var choices = value.data().getList("template_choices", Tag.TAG_STRING);
-            var ids = new ArrayList<String>();
-            for (int i = 0; i < choices.size(); i++) ids.add(choices.getString(i));
-            placementChoices = List.copyOf(ids);
+            var choices = value.data().getList("template_choices", Tag.TAG_COMPOUND);
+            var rows = new ArrayList<TemplateChoice>();
+            for (int i = 0; i < choices.size(); i++) {
+                var row = choices.getCompound(i);
+                rows.add(new TemplateChoice(row.getString("id"), row.getBoolean("world")));
+            }
+            placementChoices = List.copyOf(rows);
+            templateListLoaded = true;
         }
         if (ack && request != null) {
             boolean explicitReload =
@@ -109,8 +115,11 @@ public final class SettlementScreen extends PanelScreen {
             CompoundTag submitted = request.data().getCompound("author").copy();
             submitted.remove("revision");
             if (explicitReload && value.authorRevision() > request.base().authorRevision()
-                    || request.action() == SettlementNetwork.Action.SAVE_AUTHOR
+                    || (request.action() == SettlementNetwork.Action.SAVE_AUTHOR
+                            || request.action() == SettlementNetwork.Action.SELECTION_MODE)
+                            && request.data().contains("author", Tag.TAG_COMPOUND)
                             && returned.equals(submitted)
+                            && value.authorRevision() > request.base().authorRevision()
                     || request.action() == SettlementNetwork.Action.BOUNDS_AS_OUTER
                             && value.authorRevision() > request.base().authorRevision()) resetDraft(value);
         } else if (!dirty() && value.authorRevision() != editBase.authorRevision())
@@ -482,8 +491,7 @@ public final class SettlementScreen extends PanelScreen {
         if (pending.busy()) return;
         if ((action == SettlementNetwork.Action.IMPORT_NEW
                         || action == SettlementNetwork.Action.JOIN_INSTANCE
-                        || action == SettlementNetwork.Action.UPDATE_INSTANCE
-                        || action == SettlementNetwork.Action.SELECTION_MODE)
+                        || action == SettlementNetwork.Action.UPDATE_INSTANCE)
                 && dirty()) {
             fail("save_first");
             return;
@@ -503,7 +511,7 @@ public final class SettlementScreen extends PanelScreen {
     protected void formChanged() {
         if (changed(pivot)) transformDirty = true;
         if (snapshot.author())
-            for (String key : List.of("import", "join", "update", "selection", "capture_bounds", "save_template_file",
+            for (String key : List.of("import", "join", "update", "save_template_file",
                     "replace_template_file", "bounds_as_outer", "pick_facility", "place_template")) {
                 var button = controls.get(key);
                 if (button != null)
@@ -512,6 +520,8 @@ public final class SettlementScreen extends PanelScreen {
                                     && !dirty()
                                     && (!key.equals("update") || !snapshot.instance().equals(NONE));
             }
+        var capture = controls.get("capture_bounds");
+        if (capture != null) capture.active = editable() && namedTemplate();
         relayout();
     }
 
@@ -547,7 +557,8 @@ public final class SettlementScreen extends PanelScreen {
         controls.clear();
         List<UiLayout.Node> root = new ArrayList<>();
         root.add(muted(text("revisions", snapshot.authorRevision(), snapshot.instanceRevision())));
-        root.add(muted(Component.literal(snapshot.reason())));
+        root.add(muted(snapshot.reason().equals("settlement selection tool required")
+                ? text("need_selection_tool") : Component.literal(snapshot.reason())));
         if (pending.busy()) root.add(text(text("pending"), () -> theme().accent()));
         if (!error.isEmpty()) root.add(text(text(error), () -> theme().danger()));
         if (snapshot.author()) {
@@ -569,14 +580,31 @@ public final class SettlementScreen extends PanelScreen {
         return UiLayout.column(6, root);
     }
 
+    private boolean namedTemplate() {
+        var id = net.minecraft.resources.ResourceLocation.tryParse(template.text());
+        return template.valid() && id != null && !id.getPath().equals("untitled");
+    }
+
     private void beginWorldEdit(String mode, String regionId) {
+        if (mode.equals("BOUNDS") && !namedTemplate()) { fail("name_before_bounds"); return; }
         var payload = new CompoundTag();
         payload.putString("mode", mode);
         payload.putString("region", regionId);
         payload.putBoolean("exclude", mode.equals("PLACE") ? templateEntities : exclude);
         payload.putBoolean("current_only", currentRegionOnly);
         payload.putInt("box_index", mode.equals("MOVE_FACILITY") ? facilityIndex : boxIndex);
-        send(snapshot, SettlementNetwork.Action.SELECTION_MODE, payload);
+        var base = snapshot;
+        if (dirty() && !mode.equals("PLACE")) {
+            var draft = gather();
+            if (draft == null) { fail("invalid_input"); return; }
+            if (!regionId.isEmpty() && !mode.equals("MOVE_FACILITY") && region() != null)
+                payload.putString("region", region().getString("id"));
+            if (mode.equals("MOVE_FACILITY") && facilityIndex < facilities().size())
+                payload.putString("region", facilities().getCompound(facilityIndex).getString("region"));
+            payload.put("author", draft);
+            base = editBase;
+        }
+        send(base, SettlementNetwork.Action.SELECTION_MODE, payload);
     }
 
     private void saveTemplateFile(boolean overwrite) {
@@ -601,7 +629,8 @@ public final class SettlementScreen extends PanelScreen {
         nodes.add(choices("kind", List.of("ORDINARY", "ROOT", "ATTACHMENT"), kind, v -> kind = v));
         nodes.add(muted(text("help.kind." + kind)));
         nodes.add(input("template_id", template));
-        nodes.add(action("capture_bounds", text("capture_bounds"), editable() && !dirty(), false,
+        nodes.add(muted(text("bind_bounds_help")));
+        nodes.add(action("capture_bounds", text("capture_bounds"), editable() && namedTemplate(), false,
                 () -> beginWorldEdit("BOUNDS", "")));
         if (!kind.equals("ORDINARY")) {
             nodes.add(field(text("faction"), faction, UiThemes.factions(), SettlementScreen::factionLabel));
@@ -625,6 +654,7 @@ public final class SettlementScreen extends PanelScreen {
 
     private UiLayout.Node regionEditor() {
         List<UiLayout.Node> list = new ArrayList<>();
+        list.add(muted(text("region_tool_help")));
         for (int i = 0; i < regions().size(); i++) {
             final int index = i;
             var r = regions().getCompound(i);
@@ -802,7 +832,7 @@ public final class SettlementScreen extends PanelScreen {
                     action(
                             "selection",
                             text("world_selection"),
-                            editable() && !dirty(),
+                            editable(),
                             false,
                             () -> beginWorldEdit("ADD", region().getString("id"))));
             detail.add(action("region_preview_scope", text(currentRegionOnly ? "preview_current" : "preview_all"),
@@ -812,13 +842,13 @@ public final class SettlementScreen extends PanelScreen {
                     editable(), SettlementPreviewClient.throughWalls,
                     () -> { SettlementPreviewClient.throughWalls = !SettlementPreviewClient.throughWalls; refresh(); }));
             detail.add(action("replace_world_selection", text("replace_world_selection"),
-                    editable() && !dirty(), false,
+                    editable(), false,
                     () -> beginWorldEdit("REPLACE", region().getString("id"))));
             detail.add(action("edit_world_box", text("edit_world_box"),
-                    editable() && !dirty() && boxIndex < boxes().size(), false,
+                    editable() && boxIndex < boxes().size(), false,
                     () -> beginWorldEdit("EDIT", region().getString("id"))));
             detail.add(action("bind_world_facility", text("bind_world_facility"),
-                    editable() && !dirty(), false,
+                    editable(), false,
                     () -> beginWorldEdit("FACILITY", region().getString("id"))));
         }
         return UiLayout.row(12, List.of(UiLayout.column(6, list), UiLayout.column(6, detail)));
@@ -826,7 +856,8 @@ public final class SettlementScreen extends PanelScreen {
 
     private UiLayout.Node facilityEditor() {
         List<UiLayout.Node> list = new ArrayList<>();
-        list.add(action("pick_facility", text("pick_facility"), editable() && !dirty(), false,
+        list.add(muted(text("facility_tool_help")));
+        list.add(action("pick_facility", text("pick_facility"), editable(), false,
                 () -> beginWorldEdit("FACILITY", "")));
         for (int i = 0; i < facilities().size(); i++) {
             final int index = i;
@@ -879,7 +910,7 @@ public final class SettlementScreen extends PanelScreen {
                             facilityType,
                             v -> facilityType = v));
             detail.add(coords("position", facilityPosition));
-            detail.add(action("move_facility", text("move_facility"), editable() && !dirty(), false,
+            detail.add(action("move_facility", text("move_facility"), editable(), false,
                     () -> beginWorldEdit("MOVE_FACILITY", facilities().getCompound(facilityIndex).getString("region"))));
             detail.add(
                     action(
@@ -942,9 +973,18 @@ public final class SettlementScreen extends PanelScreen {
         nodes.add(input("placement_template", placementTemplate));
         nodes.add(action("list_templates", text("list_templates"), editable(), false,
                 () -> send(snapshot, SettlementNetwork.Action.LIST_TEMPLATES, new CompoundTag())));
-        for (String id : placementChoices)
-            nodes.add(action("template_choice." + id, Component.literal(id), editable(),
+        if (templateListLoaded && placementChoices.isEmpty()) nodes.add(muted(text("templates_empty")));
+        for (var choice : placementChoices) {
+            String id = choice.id();
+            nodes.add(action("template_choice." + id, Component.literal(id).append(" · ")
+                            .append(text(choice.world() ? "template_world" : "template_pack")), editable(),
                     id.equals(placementTemplate.text()), () -> { placementTemplate.set(id); refresh(); }));
+            if (id.equals(placementTemplate.text()) && choice.world()) {
+                var resource = new net.minecraft.resources.ResourceLocation(id);
+                nodes.add(muted(Component.literal("generated/" + resource.getNamespace()
+                        + "/structures/" + resource.getPath() + ".nbt")));
+            }
+        }
         nodes.add(action("place_template", text("place_template"), editable() && !dirty(), false,
                 () -> {
                     if (placementTemplate.valid()) beginWorldEdit("PLACE", placementTemplate.text());

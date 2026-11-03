@@ -31,6 +31,15 @@ public final class SettlementSelectionTool extends Item {
         }
     }
 
+    static final String NEED_TOOL = "settlement selection tool required";
+
+    static boolean hasTool(ServerPlayer player) {
+        var inventory = player.getInventory();
+        for (int i = 0; i < inventory.getContainerSize(); i++)
+            if (inventory.getItem(i).is(SettlementContent.SELECTION_TOOL.get())) return true;
+        return false;
+    }
+
     private static final Map<ServerPlayer, Binding> BINDINGS = new WeakHashMap<>();
 
     public SettlementSelectionTool(Properties properties) {
@@ -41,6 +50,10 @@ public final class SettlementSelectionTool extends Item {
             boolean currentOnly, int boxIndex, Mode mode, int revision) {
         var info = SettlementAuthoring.information(player, position);
         if (info == null || info.revision() != revision) return "author unavailable or stale";
+        if (region.length() > 256) return "selection identifier too long";
+        var author = SettlementCodec.template(info.author());
+        if (mode == Mode.BOUNDS && new ResourceLocation(author.template()).getPath().equals("untitled"))
+            return "template name required before selection";
         if (mode == Mode.PLACE && (!player.canUseGameMasterBlocks()
                 || ResourceLocation.tryParse(region) == null))
             return "template placement requires a valid ID and creative operator permission";
@@ -50,7 +63,9 @@ public final class SettlementSelectionTool extends Item {
         publish(player, binding);
         BINDINGS.put(player, binding);
         if (mode == Mode.PLACE) tell(player, "pick_placement");
-        else tell(player, (mode == Mode.FACILITY || mode == Mode.MOVE_FACILITY) ? "pick" : "first_corner");
+        else tell(player, "bound_mode", Component.translatable(
+                "item.hostile_humans_unified.settlement_selection_tool.mode." + mode.name().toLowerCase(java.util.Locale.ROOT)),
+                region.isEmpty() ? "" : " · " + region);
         return SettlementNetwork.SELECTION_READY;
     }
 
@@ -86,7 +101,8 @@ public final class SettlementSelectionTool extends Item {
             boxes.add(new SettlementPreview.Box(RegionBox.between(p, p), 0xb78cff, facility.type().name()));
         }
         SettlementNetwork.preview(player, new SettlementPreview(binding.dimension().toString(),
-                boxes, binding.first(), binding.second(), true));
+                boxes, binding.first(), binding.second(), true, List.of(),
+                binding.mode().name().toLowerCase(java.util.Locale.ROOT), binding.region()));
     }
 
     private static void tell(ServerPlayer player, String key, Object... args) {
@@ -125,14 +141,14 @@ public final class SettlementSelectionTool extends Item {
             if (player.isShiftKeyDown()) finishPlacement(player);
             return InteractionResult.CONSUME;
         }
-        if (player.isShiftKeyDown() && binding != null) return confirm(player, binding);
         BlockPos point = context.getClickedPos().immutable();
         if (player.serverLevel().getBlockEntity(point) instanceof SettlementInformationBlockEntity
-                && (binding == null || binding.mode() != Mode.BOUNDS)) {
+                && (player.isShiftKeyDown() || binding == null || binding.mode() != Mode.BOUNDS)) {
             SettlementAuthoring.initialize(player, point);
             SettlementNetwork.openAuthor(player, point);
             return InteractionResult.CONSUME;
         }
+        if (player.isShiftKeyDown() && binding != null) return confirm(player, binding);
         if (!active(player, binding)) return InteractionResult.FAIL;
         if (binding.mode() == Mode.VIEW) {
             tell(player, "bind_first");

@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 public final class SettlementNetwork {
     private static final UUID NONE = new UUID(0, 0);
     private static final int NBT_LIMIT = 1048576;
-    private static final String VERSION = "5";
+    private static final String VERSION = "6";
     private static final int SESSION_TICKS = 1200;
     public static final String SELECTION_READY = "selection mode updated";
 
@@ -409,6 +409,8 @@ public final class SettlementNetwork {
         if (info != null) {
             data.put("author", info.author());
             data.putString("module", info.module());
+            if (listTemplates && player.canUseGameMasterBlocks())
+                data.put("template_choices", SettlementTemplateFiles.list(player.serverLevel()));
             try {
                 data.put(
                         "author_transform",
@@ -597,19 +599,32 @@ public final class SettlementNetwork {
                                                                 data.getString("module"),
                                                                 data.getInt("target_revision"))
                                                         : "target instance required";
-                                        case SELECTION_MODE ->
-                                                SettlementSelectionTool.mode(
+                                        case SELECTION_MODE -> {
+                                            var mode = data.contains("mode")
+                                                    ? SettlementSelectionTool.Mode.valueOf(data.getString("mode"))
+                                                    : SettlementSelectionTool.Mode.ADD;
+                                            if (!SettlementSelectionTool.hasTool(player))
+                                                yield SettlementSelectionTool.NEED_TOOL;
+                                            int revision = request.authorRevision();
+                                            if (data.contains("author", Tag.TAG_COMPOUND)) {
+                                                var saved = SettlementAuthoring.save(player, at, revision, data.getCompound("author"));
+                                                var info = SettlementAuthoring.information(player, at);
+                                                if (info == null || info.revision() != (long) revision + 1
+                                                        || !saved.startsWith("saved author revision ")) yield saved;
+                                                revision = info.revision();
+                                            }
+                                            yield SettlementSelectionTool.mode(
                                                         player,
                                                         at,
                                                         data.getString("region"),
                                                         data.getBoolean("exclude"),
                                                         data.getBoolean("current_only"),
                                                         data.getInt("box_index"),
-                                                        data.contains("mode")
-                                                                ? SettlementSelectionTool.Mode.valueOf(data.getString("mode"))
-                                                                : SettlementSelectionTool.Mode.ADD,
-                                                        request.authorRevision());
-                                        case LIST_TEMPLATES -> "template choices refreshed";
+                                                        mode,
+                                                        revision);
+                                        }
+                                        case LIST_TEMPLATES -> player.canUseGameMasterBlocks()
+                                                ? "template choices refreshed" : "creative operator required";
                                         case BOUNDS_AS_OUTER ->
                                                 SettlementAuthoring.useBoundsAsOuter(player, at,
                                                         request.authorRevision(), data.getString("region"));
