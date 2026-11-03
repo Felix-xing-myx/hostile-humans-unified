@@ -255,8 +255,8 @@ public final class HumanMonitorService {
 
     @SubscribeEvent public static void tick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || !(event.player instanceof ServerPlayer player) || !SESSIONS.containsKey(player)) return;
-        Human human = target(player);
         try {
+            Human human = target(player);
             if (human == null || !dev.felix.hostilehumans.monitor.remote.MonitorRemoteView.tick(player, human)) close(player);
             else if (player.tickCount % 5 == 0) publish(player, SESSIONS.get(player), human);
         } catch (RuntimeException | Error failure) {
@@ -266,10 +266,19 @@ public final class HumanMonitorService {
     }
     /** All world/entity actions have completed; observing and takeover share this authoritative boundary. */
     @SubscribeEvent public static void telemetry(TickEvent.ServerTickEvent event) {
-        if(event.phase!=TickEvent.Phase.END)return;
-        for(var entry:List.copyOf(SESSIONS.entrySet())) {
-            Human human=target(entry.getKey());
-            if(human!=null)publishWeapon(entry.getKey(),entry.getValue(),human);
+        if (event.phase != TickEvent.Phase.END) return;
+        for (var entry : List.copyOf(SESSIONS.entrySet())) {
+            ServerPlayer player = entry.getKey();
+            Session session = entry.getValue();
+            if (player.server != event.getServer() || SESSIONS.get(player) != session) continue;
+            try {
+                Human human = target(player);
+                if (human == null) close(player);
+                else publishWeapon(player, session, human);
+            } catch (RuntimeException | Error failure) {
+                closeAfterFailure(player, failure);
+                throw failure;
+            }
         }
     }
     @SubscribeEvent public static void leaving(EntityLeaveLevelEvent event) {
