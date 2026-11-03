@@ -139,9 +139,13 @@ public final class SettlementWandPlacement {
     static void preview(ServerPlayer player, BlockPos corner) {
         var session = current(player);
         if (session == null || session.placement() == null) return;
-        var request = session.placement();
+        var selected = session.placement();
+        // A fresh world click starts a new preview. In-flight requests from
+        // the previous adjustment panel must not modify or confirm it.
+        var token = UUID.randomUUID();
+        var request = new Request(token, selected.id(), selected.turns(), selected.mirror(), selected.entities());
         preview(player, request, corner);
-        SESSIONS.put(player, new Session(session.token(), session.level(),
+        SESSIONS.put(player, new Session(token, session.level(),
                 session.level().getGameTime() + SESSION_TICKS, request, corner.immutable()));
         player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
                 "gui.hostile_humans_unified.settlement.wand_preview_ready"), true);
