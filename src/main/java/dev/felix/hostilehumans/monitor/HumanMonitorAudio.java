@@ -41,11 +41,12 @@ public final class HumanMonitorAudio {
         if (!Double.isFinite(radius) || radius <= 0 || !Double.isFinite(x)
                 || !Double.isFinite(y) || !Double.isFinite(z)) return;
         double squared = radius * radius;
-        HumanMonitorService.forEachTarget((player, human) -> {
-            if (player.server != server || player == excluded || player.level().dimension() != dimension) return;
-            // Match vanilla PlayerList.broadcast's strict spherical boundary exactly.
-            if (alreadyReceived.test(player)) return;
-            if (human.getEyePosition().distanceToSqr(x, y, z) < squared) send.accept(player);
-        });
+        HumanMonitorService.forEachTarget(
+                player -> player.server == server && player != excluded && player.level().dimension() == dimension,
+                (player, human) -> {
+                    // Match vanilla PlayerList.broadcast's strict spherical boundary exactly.
+                    if (human.getEyePosition().distanceToSqr(x, y, z) < squared
+                            && !alreadyReceived.test(player)) send.accept(player);
+                });
     }
 }

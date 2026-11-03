@@ -54,8 +54,10 @@ public final class HumanMonitorService {
                 && MonitorAccessPolicy.allows(player, human) ? human : null;
     }
     /** Validated live viewing leases only; never accepts a client-supplied audio position. */
-    static void forEachTarget(java.util.function.BiConsumer<ServerPlayer, Human> consumer) {
+    static void forEachTarget(java.util.function.Predicate<ServerPlayer> filter,
+            java.util.function.BiConsumer<ServerPlayer, Human> consumer) {
         for (ServerPlayer player : List.copyOf(SESSIONS.keySet())) {
+            if (!filter.test(player)) continue;
             Human human = target(player);
             if (human != null) consumer.accept(player, human);
         }

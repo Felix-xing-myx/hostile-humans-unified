@@ -8,15 +8,15 @@ class MonitorAudioContract(unittest.TestCase):
     def test_audio_requires_valid_server_lease(self):
         service = source("HumanMonitorService")
         audience = service.split("static void forEachTarget", 1)[1].split("static boolean active", 1)[0]
-        self.assertIn("Human human = target(player)", audience)
+        self.assertLess(audience.index("!filter.test(player)"), audience.index("Human human = target(player)"))
         self.assertIn("if (human != null)", audience)
         audio = source("HumanMonitorAudio")
-        for guard in ("player.server != server", "player == excluded", "player.level().dimension() != dimension", "Double.isFinite(radius)"):
+        for guard in ("player.server == server", "player != excluded", "player.level().dimension() == dimension", "Double.isFinite(radius)"):
             self.assertIn(guard, audio)
     def test_native_and_monitor_spheres_do_not_duplicate(self):
         audio = source("HumanMonitorAudio")
         self.assertIn("player.distanceToSqr(x, y, z) < radius * radius", audio)
-        self.assertLess(audio.index("alreadyReceived.test(player)"), audio.index("human.getEyePosition().distanceToSqr(x, y, z) < squared"))
+        self.assertLess(audio.index("human.getEyePosition().distanceToSqr(x, y, z) < squared"), audio.index("alreadyReceived.test(player)"))
         self.assertNotIn("playSound(", audio)
         self.assertNotIn(".broadcast(", audio)
     def test_mixin_only_supplements_supported_sound_packets(self):
