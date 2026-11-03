@@ -4187,3 +4187,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查投掷事务，基线 bfe5f33，主控沿用 audit/module-architecture。ThrowableTransactions 对齐入场异常、扣除和冷却结果，公共接口不变。
 
 - 架构审查巡逻编辑，基线 4306a11，主控沿用 audit/module-architecture。PatrolRoutes 补齐修改后至少两格的校验。
+
+- 架构审查阵营重载，基线 3be789b，主控沿用 audit/module-architecture。FactionDefinitions 封装装备 JSON，数据格式及公共签名不变。

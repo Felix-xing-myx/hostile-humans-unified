@@ -26,7 +26,13 @@ public final class FactionDefinitions extends SimplePreparableReloadListener<Fac
                       Set<ResourceLocation> enemies, Set<ResourceLocation> allies, List<Double> preference,
                       List<Double> bossPreference, String bandStyle, String aggression,
                       ResourceLocation hireItem, List<Integer> hireCosts, List<Integer> hireStanding, double friendlyDiscount, double allyDiscount, JsonObject equipment,
-                      Map<String, Double> gunSpecialization) {}
+                      Map<String, Double> gunSpecialization) {
+        public Definition {
+            equipment = equipment.deepCopy();
+        }
+
+        @Override public JsonObject equipment() { return equipment.deepCopy(); }
+    }
     public record Revision(long number, Map<ResourceLocation, Definition> definitions, SpecialtyData.Definitions specialty) {}
     record Prepared(Map<ResourceLocation, JsonElement> factions, Map<ResourceLocation, JsonElement> specialty) {}
     private static volatile Revision current = new Revision(0, builtins(), SpecialtyData.get());
@@ -83,10 +89,10 @@ public final class FactionDefinitions extends SimplePreparableReloadListener<Fac
             }
             SpecialtyData.Definitions specialty = SpecialtyData.parse(prepared.specialty());
             var equipment = FactionEquipmentConfig.prepare(UnifiedConfig.get().equipmentSource(), equipmentDefaults(next));
-            // All modules validate first; publication occurs synchronously on the server reload thread.
+            Revision revision = new Revision(current.number() + 1, Map.copyOf(next), specialty);
+            // Build both validated snapshots before publishing on the server reload thread.
             FactionEquipmentConfig.publish(equipment);
-            // Readers of both identities and allocation data observe this single publication.
-            current = new Revision(current.number() + 1, Map.copyOf(next), specialty);
+            current = revision;
         } catch (RuntimeException invalid) {
             LogUtils.getLogger().error("Keeping previous faction revision: {}", invalid.getMessage());
         }
@@ -96,7 +102,7 @@ public final class FactionDefinitions extends SimplePreparableReloadListener<Fac
         Map<String, JsonObject> result = new LinkedHashMap<>();
         for (Definition d : definitions.values()) {
             String key = d.id().getNamespace().equals(HumanRuntime.MOD_ID) ? d.id().getPath() : d.id().toString();
-            result.put(key, d.equipment().deepCopy());
+            result.put(key, d.equipment());
         }
         return Map.copyOf(result);
     }
