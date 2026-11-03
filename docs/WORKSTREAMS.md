@@ -4173,3 +4173,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查友军报告传播，基线 ba52a2f，主控沿用 audit/module-architecture。修改 HumanTargetSharing 的去重顺序及单次投递读取，公共接口不变。
 
 - 架构审查群战目标排序，基线 03e1ccc，主控沿用 audit/module-architecture。HumanPerception 预计算排序键，目标资格接口与数值不变。
+
+- 架构审查伤害回执，基线 7ad505b，主控沿用 audit/module-architecture。GrowthCombat 收紧回执寿命，伤害与奖励计算接口不变。

@@ -69,6 +69,9 @@ public final class GrowthCombat {
         if (stack == null || stack.isEmpty()) { HITS.remove(); return; }
         Hit hit = stack.pop();
         if (hit.target != target) { stack.clear(); HITS.remove(); return; }
+        // A completed outer frame must not survive into settlement callbacks.
+        // Keep a nonempty stack available only to the still-running parent hit.
+        if (stack.isEmpty()) HITS.remove();
         double loss = hit.receipt.ownLoss(target.getHealth());
         // Reentrant damage to the same entity belongs to the nested source, not both sources.
         for (Hit parent : stack) {
@@ -80,7 +83,6 @@ public final class GrowthCombat {
         if (hit.soldier != null && formal(hit.soldier) && hit.owner.equals(hit.soldier.getOwnerUUID()))
             record(target, hit.soldier, loss);
         if (target.getRemovalReason() == Entity.RemovalReason.KILLED) settle(target);
-        if (stack.isEmpty()) HITS.remove();
     }
 
     /** Observe individual health writes so a totem or instant healing inside hurt cannot erase real damage. */
