@@ -18,11 +18,6 @@ public final class SettlementInformationBlock extends Block implements EntityBlo
     }
 
     @Override
-    public net.minecraft.world.level.block.RenderShape getRenderShape(BlockState state) {
-        return net.minecraft.world.level.block.RenderShape.INVISIBLE;
-    }
-
-    @Override
     public int getLightBlock(
             BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos position) {
         return 0;
