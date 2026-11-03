@@ -93,7 +93,7 @@ class TaczNativeFirstPersonTest(unittest.TestCase):
         for field in ('PhaseStartWork', 'PhaseEndWork', 'PhaseIndex', 'PhaseSuppliedStart'):
             self.assertIn(field, resources)
         audio = (PACKAGE / 'NativeReloadAudio.java').read_text(encoding='utf-8')
-        self.assertLess(audio.index('pending.oneShot = sound'), audio.index('FILES.computeIfAbsent'))
+        self.assertLess(audio.index('pending.oneShot = sound'), audio.index('animations(pending.animation)'))
         self.assertIn('if (!cues.isEmpty()) pending.oneShot = null', audio)
         self.assertIn('TaczPresentationResources.phase(timeline)', audio)
         self.assertIn('phasePresentationStart(phase)', audio)

@@ -74,7 +74,11 @@ class ReloadTransactionContract(unittest.TestCase):
         begin = code.split("public static boolean start", 1)[1].split("public static ReloadState tick", 1)[0]
         self.assertLess(begin.index("GunReloadAuthority.capture"), begin.index("PAYMENTS.begin"))
         self.assertIn("validStart,", begin)
-        self.assertIn("authority.pay(validStart)", begin)
+        self.assertNotIn("authority.pay", begin)
+        self.assertIn("HumanAmmo.canReload(human, weapon)", begin)
+        tick = code.split("public static ReloadState tick", 1)[1].split("private static boolean validCycle", 1)[0]
+        self.assertEqual(tick.count("clock.authority.payOnCompletion("), 2)
+        self.assertIn("gun.setCurrentAmmoCount(weapon, previousRounds)", tick)
         self.assertIn("if(nativeInvoked[0] && validStart.getAsBoolean())", begin)
         self.assertIn("CLOCKS.put(data,clock)", begin)
         clock = code.split("private static final class Clock", 1)[1].split("private TaczHumanReloadTransactions", 1)[0]

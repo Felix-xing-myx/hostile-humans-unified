@@ -142,6 +142,14 @@ public final class HumanMonitorControl {
         lease.combat.suspend();
         return lease.combat.loadout().select(weapon, revision) == dev.felix.hostilehumans.inventory.HumanEquipmentExchange.Result.SUCCESS;
     }
+    static void cycleFireMode(ServerPlayer player, UUID token, Human human) {
+        Lease lease = LEASES.get(human);
+        if (lease == null || !ownedBy(human, player, token) || lease.inventoryPaused
+                || HumanInventorySession.isEditing(human)) return;
+        if (dev.felix.hostilehumans.behavior.combat.gun.GunSupport.isTaczGunItem(human.getMainHandItem()))
+            dev.felix.hostilehumans.compat.tacz.TaczMonitorWeapons.cycleFireMode(human);
+    }
+
     static boolean toggleOffhand(ServerPlayer player, UUID token, Human human) {
         Lease lease = LEASES.get(human);
         if (lease == null || !ownedBy(human, player, token) || lease.inventoryPaused || HumanInventorySession.isEditing(human)) return false;

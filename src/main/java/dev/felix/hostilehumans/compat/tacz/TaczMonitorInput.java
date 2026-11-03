@@ -1,6 +1,7 @@
 package dev.felix.hostilehumans.compat.tacz;
 
 import com.tacz.guns.client.input.AimKey;
+import com.tacz.guns.client.input.FireSelectKey;
 import com.tacz.guns.client.input.ReloadKey;
 import com.tacz.guns.client.input.ShootKey;
 import dev.felix.hostilehumans.behavior.combat.gun.GunSupport;
@@ -22,16 +23,18 @@ public final class TaczMonitorInput {
         MinecraftForge.EVENT_BUS.addListener(TaczMonitorInput::mouse);
     }
     private static boolean accepts() {
-        return Minecraft.getInstance().getCameraEntity() instanceof Human human && HumanMonitorClient.takingOver(human)
+        return Minecraft.getInstance().screen == null && Minecraft.getInstance().getCameraEntity() instanceof Human human && HumanMonitorClient.takingOver(human)
                 && GunSupport.isTaczGunItem(human.getMainHandItem());
     }
     private static void key(InputEvent.Key event) {
         if (!accepts() || event.getAction() != GLFW.GLFW_PRESS) return;
+        if (FireSelectKey.FIRE_SELECT_KEY.matches(event.getKey(), event.getScanCode())) HumanMonitorClient.request(7, true, 0);
         HumanMonitorClient.queueWeaponInput(ShootKey.SHOOT_KEY.matches(event.getKey(), event.getScanCode()),
                 AimKey.AIM_KEY.matches(event.getKey(), event.getScanCode()), ReloadKey.RELOAD_KEY.matches(event.getKey(), event.getScanCode()));
     }
     private static void mouse(InputEvent.MouseButton.Post event) {
         if (!accepts() || event.getAction() != GLFW.GLFW_PRESS) return;
+        if (FireSelectKey.FIRE_SELECT_KEY.matchesMouse(event.getButton())) HumanMonitorClient.request(7, true, 0);
         HumanMonitorClient.queueWeaponInput(ShootKey.SHOOT_KEY.matchesMouse(event.getButton()),
                 AimKey.AIM_KEY.matchesMouse(event.getButton()), ReloadKey.RELOAD_KEY.matchesMouse(event.getButton()));
     }

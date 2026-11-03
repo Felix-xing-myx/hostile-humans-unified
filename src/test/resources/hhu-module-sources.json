@@ -3115,6 +3115,10 @@
     "class": "dev.felix.hostilehumans.compat.tacz.TaczHearingBridge",
     "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczHearingBridge.java"
   },
+  "TaczHumanBoltMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczHumanBoltMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczHumanBoltMixin.java"
+  },
   "TaczHumanGunScriptMixin": {
     "class": "dev.felix.hostilehumans.mixin.TaczHumanGunScriptMixin",
     "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczHumanGunScriptMixin.java"
@@ -3150,6 +3154,10 @@
   "TaczMonitorAudio": {
     "class": "dev.felix.hostilehumans.compat.tacz.TaczMonitorAudio",
     "path": "src/main/java/dev/felix/hostilehumans/compat/tacz/TaczMonitorAudio.java"
+  },
+  "TaczMonitorFireSelectInputMixin": {
+    "class": "dev.felix.hostilehumans.mixin.TaczMonitorFireSelectInputMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/TaczMonitorFireSelectInputMixin.java"
   },
   "TaczMonitorHud": {
     "class": "dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud",

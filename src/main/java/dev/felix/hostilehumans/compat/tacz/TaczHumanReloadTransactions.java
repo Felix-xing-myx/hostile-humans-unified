@@ -47,7 +47,12 @@ public final class TaczHumanReloadTransactions {
         long sampledTick, phaseRemainingMillis = -1;
         String phase = "starting";
         final int initialRounds;
-        Clock(Human human, GunReloadAuthority.Capture authority, ShooterDataHolder holder) {
+        final int originalRounds;
+        final boolean originalChamber;
+        int pendingRounds;
+        boolean pendingChamber;
+        final GunReloadAuthority.Capture authority;
+        Clock(Human human, GunReloadAuthority.Capture authority, ShooterDataHolder holder, int loaded, boolean chambered) {
             weapon=authority.handle;session=authority.session;inventory=authority.inventory;
             gameTick=human.level().getGameTime();wallMillis=System.currentTimeMillis();
             startedTick=sampledTick=gameTick;
@@ -55,8 +60,12 @@ public final class TaczHumanReloadTransactions {
             this.holder=new java.lang.ref.WeakReference<>(holder);
             actual=new java.lang.ref.WeakReference<>(authority.weapon);
             var gun = com.tacz.guns.api.item.IGun.getIGunOrNull(authority.weapon);
-            initialRounds = gun == null ? 0 : gun.getCurrentAmmoCount(authority.weapon)
-                    + (gun.hasBulletInBarrel(authority.weapon) ? 1 : 0);
+            this.authority = authority;
+            originalRounds = loaded;
+            originalChamber = chambered;
+            initialRounds = loaded + (chambered ? 1 : 0);
+            pendingRounds = gun == null ? loaded : gun.getCurrentAmmoCount(authority.weapon);
+            pendingChamber = gun == null ? chambered : gun.hasBulletInBarrel(authority.weapon);
         }
     }
     private TaczHumanReloadTransactions() {}
@@ -118,7 +127,7 @@ public final class TaczHumanReloadTransactions {
                         nativeInvoked[0]=true;
                         return inventoryFeed || gun.startReload(data, weapon, human);
                     },
-                    () -> authority.pay(validStart),
+                    () -> true,
                     () -> {
                         // A failed callback must not restore snapshots over an
                         // owner edit, transferred gun, replacement inventory or session.
@@ -134,7 +143,9 @@ public final class TaczHumanReloadTransactions {
         if (!started) return false;
         if (inventoryFeed) INVENTORY_FEED_END.put(data,(long)feedDelay);
         GUN_IDS.put(data,gunId);
-        Clock clock=new Clock(human,authority,data);
+        Clock clock=new Clock(human,authority,data,loaded,chambered);
+        gun.setCurrentAmmoCount(weapon, loaded);
+        gun.setBulletInBarrel(weapon, chambered);
         CLOCKS.put(data,clock);
         OBSERVATIONS.put(human,new java.lang.ref.WeakReference<>(clock));
         {
@@ -200,28 +211,60 @@ public final class TaczHumanReloadTransactions {
                     // external commit is never retried using the same payment.
                     completed = PAYMENTS.complete(data,weapon,human.level().getGameTime(),
                             () -> validBinding(human,data,weapon,clock),
-                            () -> TaczNpcMagazine.fill(weapon,index));
+                            () -> {
+                                if (clock.authority.payOnCompletion(() -> validBinding(human,data,weapon,clock)))
+                                    TaczNpcMagazine.fill(weapon,index);
+                            });
+                    completed = completed && clock.authority.paymentCommitted();
                 }
                 finish(human,data,completed);
                 return state;
             }
-            ReloadState state=gun.tickReload(data,weapon,shooter);
+            int previousRounds = gun.getCurrentAmmoCount(weapon);
+            boolean previousChamber = gun.hasBulletInBarrel(weapon);
+            ReloadState state;
+            try {
+                gun.setCurrentAmmoCount(weapon, clock.pendingRounds);
+                gun.setBulletInBarrel(weapon, clock.pendingChamber);
+                state = gun.tickReload(data, weapon, shooter);
+                clock.pendingRounds = gun.getCurrentAmmoCount(weapon);
+                clock.pendingChamber = gun.hasBulletInBarrel(weapon);
+            } finally {
+                if (clock.authority.validIdentity(false) && sameGun(data, weapon)) {
+                    gun.setCurrentAmmoCount(weapon, previousRounds);
+                    gun.setBulletInBarrel(weapon, previousChamber);
+                }
+            }
             if(!validCycle(human,data,weapon,clock)) { finish(human,data);return new ReloadState(); }
             recordProgress(clock,state);
             if(state.getStateType().isReloading())
                 updateVisual(human,weapon,state.getCountDown(),state.getStateType().isReloadFinishing());
             if(human.getData()!=null&&weapon!=human.getMainHandItem()) human.getData().markInventoryDirty();
-            if(!state.getStateType().isReloading()) finish(human,data,true);
+            if (!state.getStateType().isReloading()) {
+                boolean fed = clock.pendingRounds + (clock.pendingChamber ? 1 : 0) > clock.initialRounds;
+                boolean completed = fed && PAYMENTS.complete(data, weapon, human.level().getGameTime(),
+                        () -> validBinding(human, data, weapon, clock), () -> {
+                            if (clock.authority.payOnCompletion(() -> validBinding(human, data, weapon, clock))) {
+                                gun.setCurrentAmmoCount(weapon, clock.pendingRounds);
+                                gun.setBulletInBarrel(weapon, clock.pendingChamber);
+                            }
+                        });
+                finish(human, data, completed && clock.authority.paymentCommitted());
+            }
             return state;
         } catch(RuntimeException|LinkageError failure) {
             finish(human,data);
-            HumanRuntime.LOGGER.warn("TaCZ NPC reload tick failed; paid transaction cancelled without a snapshot restore",failure);
+            HumanRuntime.LOGGER.warn("TaCZ NPC reload tick failed; reload transaction cancelled",failure);
             return new ReloadState();
         } finally { TICKING.remove(data); }
     }
 
     private static boolean validCycle(Human human,ShooterDataHolder data,ItemStack weapon,Clock clock) {
-        return PAYMENTS.authorized(data,weapon,human.level().getGameTime())&&validBinding(human,data,weapon,clock);
+        if (!PAYMENTS.authorized(data,weapon,human.level().getGameTime()) || !validBinding(human,data,weapon,clock))
+            return false;
+        var gun = com.tacz.guns.api.item.IGun.getIGunOrNull(weapon);
+        return gun != null && gun.getCurrentAmmoCount(weapon) == clock.originalRounds
+                && gun.hasBulletInBarrel(weapon) == clock.originalChamber;
     }
 
     private static boolean validBinding(Human human,ShooterDataHolder data,ItemStack weapon,Clock clock) {
@@ -285,8 +328,8 @@ public final class TaczHumanReloadTransactions {
         ItemStack weapon = clock.actual.get();
         var gun = weapon == null ? null : com.tacz.guns.api.item.IGun.getIGunOrNull(weapon);
         if (human != null && gun != null && state.getStateType().isReloading()) {
-            int supplied = Math.max(0, gun.getCurrentAmmoCount(weapon)
-                    + (gun.hasBulletInBarrel(weapon) ? 1 : 0) - clock.initialRounds);
+            int supplied = Math.max(0, clock.pendingRounds
+                    + (clock.pendingChamber ? 1 : 0) - clock.initialRounds);
             TaczReloadVisualTimeline.phase(human, state.getStateType().name(),
                     state.getStateType().isReloadFinishing(), clock.work, state.getCountDown(), supplied);
         }

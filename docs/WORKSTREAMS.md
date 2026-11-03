@@ -4036,3 +4036,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 范围为 settlement 作者服务、分区会话、预览协议和客户端、现有作者面板、命令、本地化与模块索引；主控接公共 ClientUiResourceEvents。保持 SettlementIndex 及正式业务权限为权威。
 - 交付 ca685ae，已快进整合 main。作者点选、确认与修订控制复用现有作者数据。标准 NBT 保存剥离载体实例引用，加载按原版变换并要求预览确认；正式登记另行提交。
 - Python 回归 532 项（16 跳过）、27 份据点 Java 源码语法解析、12 种旋转镜像坐标静态核对与本地化检查已执行。未执行 Gradle、Java 编译、同步或进游戏。知识库与 docs/SETTLEMENT_AUTHOR_TEST.md 更新。
+
+### TaCZ 拉栓声音、虚拟供弹与接管射击模式
+
+- 负责人：主控。基线：`fcbdd82d52860200b94d2cbbeb6a905c1456b9a9`。独立分支 `fix/tacz-action-lifecycle`，工作树 `worktrees/tacz-action-lifecycle`。
+- 范围：TaCZ 动作音轨、枪内弹量、换弹完成支付、监控会话输入和相应文档。监控协议升至 7。前端分支与界面样式由现有负责人继续维护。
+- 验证：532 项 Python 核查，16 项跳过。核对编译 API 与测试实例 TaCZ JAR 的三个新增注入目标，扫描内置枪包的拉栓音轨。Java 编译、游戏内验证和实例同步待执行。

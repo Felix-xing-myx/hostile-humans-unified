@@ -39,6 +39,10 @@ public final class TaczReloadSoundClient {
     static void register() {
         TaczMonitorInput.register();
         MinecraftForge.EVENT_BUS.addListener(TaczReloadSoundClient::onReload);
+        MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.event.entity.living.LivingEvent.LivingTickEvent event) -> {
+            if (event.getEntity() instanceof Human human)
+                dev.felix.hostilehumans.client.render.tacz.NativeReloadAudio.tickBolt(human);
+        });
         MinecraftForge.EVENT_BUS.addListener(TaczReloadSoundClient::onClientTick);
         MinecraftForge.EVENT_BUS.addListener((net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) -> reset());
         ClientAnimationCompatibility.registerReloadSoundReset(TaczReloadSoundClient::reset);

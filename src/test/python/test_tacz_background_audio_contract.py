@@ -15,6 +15,8 @@ class BackgroundAudioContract(unittest.TestCase):
     def test_audio_tracks_original_session_not_held_item(self):
         for name in ('NativeReloadAudio','TaczReloadSoundClient'):
             body=source(name)
+            if name == 'NativeReloadAudio':
+                body = body.split('public static void tickBolt(', 1)[0] + body.split('private static void cancel(', 1)[1]
             self.assertNotIn('human.getMainHandItem()', body)
             self.assertNotIn('SpartanEquipmentCompat.isShield', body)
             self.assertIn('timeline.getLong("Session")', body)

@@ -169,7 +169,7 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         self.assertIn('session=authority.session', reload)
         self.assertIn('GunCombatProfile.reloadWork(human,weapon)', reload)
         self.assertIn('sameGun(data,weapon)', reload)
-        self.assertEqual(reload.count('authority.pay(validStart)'), 1)
+        self.assertEqual(reload.count('authority.payOnCompletion('), 2)
         mixin = source('mixin/TaczHumanReloadMixin.java')
         self.assertIn('TaczAmmoMixinContract.TICK_RELOAD, at = @At("HEAD")', mixin)
         self.assertIn('prepareNativeTick(human, data)', mixin)

@@ -58,12 +58,12 @@ public final class TaczIntegration implements GunSupport {
     public dev.felix.hostilehumans.behavior.combat.gun.GunHudData hud(ItemStack stack) {
         IGun gun = IGun.getIGunOrNull(stack);
         if (gun == null) return dev.felix.hostilehumans.behavior.combat.gun.GunHudData.EMPTY;
-        var data = TimelessAPI.getCommonGunIndex(gun.getGunId(stack)).map(index -> index.getGunData()).orElse(null);
-        if (data == null) return dev.felix.hostilehumans.behavior.combat.gun.GunHudData.EMPTY;
-        int chamber = data.getBolt() != com.tacz.guns.resource.pojo.data.gun.Bolt.OPEN_BOLT && gun.hasBulletInBarrel(stack) ? 1 : 0;
+        var index = TimelessAPI.getCommonGunIndex(gun.getGunId(stack)).orElse(null);
+        if (index == null) return dev.felix.hostilehumans.behavior.combat.gun.GunHudData.EMPTY;
+        int chamber = index.getGunData().getBolt() != com.tacz.guns.resource.pojo.data.gun.Bolt.OPEN_BOLT && gun.hasBulletInBarrel(stack) ? 1 : 0;
         return new dev.felix.hostilehumans.behavior.combat.gun.GunHudData("tacz", gun.getGunId(stack),
                 Math.max(0, gun.getCurrentAmmoCount(stack)) + chamber,
-                Math.max(0, com.tacz.guns.util.AttachmentDataUtils.getAmmoCountWithAttachment(stack, data)),
+                TaczNpcMagazine.capacity(stack, index),
                 gun.getFireMode(stack).name(), false);
     }
     public boolean hasLoadedAmmo(ItemStack stack) {

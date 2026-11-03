@@ -47,8 +47,10 @@ public final class GunReloadAuthority {
                     && (!held || human.getMainHandItem() == weapon);
         }
 
-        public boolean validSource() {
-            if (!validIdentity(true) || inventory.getInventoryItemsSize() != sources.size()) return false;
+        public boolean validSource() { return validSource(true); }
+
+        private boolean validSource(boolean held) {
+            if (!validIdentity(held) || inventory.getInventoryItemsSize() != sources.size()) return false;
             for (int slot = 0; slot < sources.size(); slot++) {
                 Source expected = sources.get(slot);
                 ItemStack actual = inventory.getInventoryItem(slot);
@@ -106,8 +108,16 @@ public final class GunReloadAuthority {
                         paid ? "reload magazines committed" : "reload payment invalidated");
             }
         }
+        public boolean payOnCompletion(java.util.function.BooleanSupplier permitted) {
+            if (!validIdentity(false) || !permitted.getAsBoolean()) return false;
+            paid = new Capture(human, weapon, handle).pay(permitted);
+            return paid;
+        }
+
+        public boolean paymentCommitted() { return paid; }
+
         private boolean allowed(java.util.function.BooleanSupplier permitted) {
-            return permitted.getAsBoolean() && validSource() && permitted.getAsBoolean();
+            return permitted.getAsBoolean() && validSource(false) && permitted.getAsBoolean();
         }
 
     }

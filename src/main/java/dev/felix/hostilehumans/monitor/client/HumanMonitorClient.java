@@ -106,7 +106,7 @@ public final class HumanMonitorClient {
         dev.felix.hostilehumans.client.render.tacz.TaczSpectatorFirstPerson.activate();
         Keys.migrateLegacyTakeover();
     }
-    static void request(int action, boolean enabled, int mode) {
+    public static void request(int action, boolean enabled, int mode) {
         if (state != null) HumanMonitorNetwork.request(state.token(), action, enabled, mode);
     }
     static void close(boolean notifyServer) {

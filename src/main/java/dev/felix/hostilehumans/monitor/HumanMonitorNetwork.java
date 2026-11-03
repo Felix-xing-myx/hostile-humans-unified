@@ -28,7 +28,7 @@ public final class HumanMonitorNetwork {
     }
     private static final class Connection {
         static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-                new ResourceLocation(HumanRuntime.MOD_ID, "human_monitor"), () -> "6", "6"::equals, "6"::equals);
+                new ResourceLocation(HumanRuntime.MOD_ID, "human_monitor"), () -> "7", "7"::equals, "7"::equals);
     }
     private HumanMonitorNetwork() {}
     public static void register() {
@@ -97,7 +97,7 @@ public final class HumanMonitorNetwork {
         }
         static Request decode(FriendlyByteBuf in) {
             var request = new Request(in.readUUID(), in.readVarInt(), in.readBoolean(), in.readVarInt());
-            if (request.action < 0 || request.action > 6 || request.mode < 0 || request.mode > 3 || in.isReadable())
+            if (request.action < 0 || request.action > 7 || request.mode < 0 || request.mode > 3 || in.isReadable())
                 throw new IllegalArgumentException("Invalid monitor operation");
             return request;
         }

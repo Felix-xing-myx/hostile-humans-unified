@@ -146,6 +146,7 @@ public final class HumanMonitorService {
                 if (enabled) HumanMonitorControl.begin(player, token, human);
                 else HumanMonitorControl.release(player, token);
             }
+            case 7 -> HumanMonitorControl.cycleFireMode(player, token, human);
             case 6 -> {
                 if (!HumanMonitorControl.toggleOffhand(player, token, human)) failedEquipment(player);
             }

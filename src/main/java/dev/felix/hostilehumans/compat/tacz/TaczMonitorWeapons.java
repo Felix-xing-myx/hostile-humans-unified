@@ -26,6 +26,13 @@ public final class TaczMonitorWeapons implements MonitorGunActions {
         this.human = human; this.session = session; this.weapon = human.getMainHandItem();
         operator = IGunOperator.fromLivingEntity(human);
     }
+    public static void cycleFireMode(Human human) {
+        var operator = IGunOperator.fromLivingEntity(human);
+        var data = operator.getDataHolder();
+        if (data.currentGunItem != null && data.currentGunItem.get() == human.getMainHandItem()
+                && !TaczHumanReloadTransactions.isPaidReloading(human, data)) operator.fireSelect();
+    }
+
     @Override public void tick(boolean attack, boolean aim, boolean reload) {
         IGun gun = IGun.getIGunOrNull(weapon);
         if (gun == null || weapon != human.getMainHandItem()) { cancel(); return; }

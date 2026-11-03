@@ -25,6 +25,7 @@ import net.minecraft.world.item.ItemStack;
 /** Invoked only by TaczReloadSoundClient: a shared plan, never an additional event/audio owner. */
 public final class NativeReloadAudio {
     private static final Map<ResourceLocation, JsonObject> FILES = new HashMap<>();
+    private static final Map<Human, BoltAudio> BOLTS = new java.util.WeakHashMap<>();
     private static final List<Pending> PENDING = new ArrayList<>();
     private NativeReloadAudio() {}
 
@@ -44,8 +45,77 @@ public final class NativeReloadAudio {
     }
     public static void reset() {
         for (var pending : PENDING) stop(pending);
-        PENDING.clear(); FILES.clear();
+        PENDING.clear(); BOLTS.clear(); FILES.clear();
     }
+    public static void tickBolt(Human human) {
+        if (!human.level().isClientSide || !human.isAlive()) return;
+        ItemStack weapon = human.getMainHandItem();
+        IGun gun = IGun.getIGunOrNull(weapon);
+        if (gun == null) { BOLTS.remove(human); return; }
+        boolean active = com.tacz.guns.api.entity.IGunOperator.fromLivingEntity(human).getSynIsBolting();
+        BoltAudio audio = BOLTS.get(human);
+        var gunId = gun.getGunId(weapon);
+        if (audio != null && !audio.gunId.equals(gunId)) {
+            BOLTS.remove(human);
+            audio = null;
+        }
+        if (audio == null && active) {
+            audio = new BoltAudio(gunId, human.level().getGameTime(), boltCues(weapon));
+            BOLTS.put(human, audio);
+        }
+        if (audio == null) return;
+        double elapsed = (human.level().getGameTime() - audio.start) / 20D;
+        while (audio.next < audio.cues.size() && audio.cues.get(audio.next).time <= elapsed + .025) {
+            ClientAnimationCompatibility.playTaczReloadSound(human, audio.cues.get(audio.next++).sound,
+                    1F, 1F, GunConfig.DEFAULT_GUN_OTHER_SOUND_DISTANCE.get());
+        }
+        if (!active && audio.next == audio.cues.size()) BOLTS.remove(human);
+    }
+
+    private static List<Cue> boltCues(ItemStack weapon) {
+        try {
+            var display = TaczPresentationResources.display(weapon);
+            if (display == null) return List.of();
+            var animation = display.getAnimationLocation();
+            List<Cue> cues = new ArrayList<>();
+            if (animation != null) {
+                var clip = animations(animation).get("bolt");
+                if (clip != null && clip.isJsonObject()) readCues(cues, clip.getAsJsonObject(), 0);
+            }
+            if (cues.isEmpty()) {
+                var sound = display.getSounds(SoundManager.BOLT_SOUND);
+                if (hasSoundResource(sound)) cues.add(new Cue(0, sound));
+            }
+            cues.sort(Comparator.comparingDouble(Cue::time));
+            return List.copyOf(cues);
+        } catch (RuntimeException | LinkageError failure) {
+            ClientAnimationCompatibility.warnOnce("TaCZ bolt audio", "Cannot resolve authored bolt cues", failure);
+            return List.of();
+        }
+    }
+
+    private static JsonObject animations(ResourceLocation id) {
+        if (FILES.size() >= 256 && !FILES.containsKey(id)) FILES.clear();
+        return FILES.computeIfAbsent(id, NativeReloadAudio::readAnimations);
+    }
+
+    private static void readCues(List<Cue> cues, JsonObject clip, double offset) {
+        if (!clip.has("sound_effects") || !clip.get("sound_effects").isJsonObject()) return;
+        for (var entry : clip.getAsJsonObject("sound_effects").entrySet()) {
+            double time;
+            try { time = offset + Double.parseDouble(entry.getKey()); }
+            catch (NumberFormatException ignored) { continue; }
+            addEffect(cues, time, entry.getValue());
+        }
+    }
+
+    private static void addEffect(List<Cue> cues, double time, JsonElement effect) {
+        if (effect == null) return;
+        if (effect.isJsonObject()) addEffect(cues, time, effect.getAsJsonObject().get("effect"));
+        else if (effect.isJsonArray()) for (var value : effect.getAsJsonArray()) addEffect(cues, time, value);
+        else addCue(cues, time, effect);
+    }
+
     private static void cancel(Human human) {
         PENDING.removeIf(pending -> { if (pending.human != human) return false; stop(pending); return true; });
     }
@@ -118,8 +188,7 @@ public final class NativeReloadAudio {
                         ? SoundManager.RELOAD_EMPTY_SOUND : SoundManager.RELOAD_TACTICAL_SOUND);
                 if (hasSoundResource(sound)) pending.oneShot = sound;
             }
-            if (FILES.size() >= 256 && !FILES.containsKey(pending.animation)) FILES.clear();
-            JsonObject animations = FILES.computeIfAbsent(pending.animation, NativeReloadAudio::readAnimations);
+            JsonObject animations = animations(pending.animation);
             Map<String, Double> lengths = new HashMap<>();
             for (var entry : animations.entrySet()) if (entry.getValue().isJsonObject()) {
                 var clip = entry.getValue().getAsJsonObject();
@@ -135,17 +204,7 @@ public final class NativeReloadAudio {
                 List<Cue> cues = new ArrayList<>();
                 for (var segment : plan.segments()) {
                     var clip = animations.getAsJsonObject(segment.animation());
-                    if (clip == null || !clip.has("sound_effects")) continue;
-                    for (var entry : clip.getAsJsonObject("sound_effects").entrySet()) {
-                        double time;
-                        try { time = segment.start() + Double.parseDouble(entry.getKey()); }
-                        catch (NumberFormatException ignored) { continue; }
-                        JsonElement effect = entry.getValue();
-                        if (effect.isJsonObject()) effect = effect.getAsJsonObject().get("effect");
-                        if (effect == null) continue;
-                        if (effect.isJsonArray()) for (var value : effect.getAsJsonArray()) addCue(cues, time, value);
-                        else addCue(cues, time, effect);
-                    }
+                    if (clip != null) readCues(cues, clip, segment.start());
                 }
                 cues.sort(Comparator.comparingDouble(Cue::time));
                 pending.plan = plan; pending.cues = List.copyOf(cues);
@@ -189,6 +248,18 @@ public final class NativeReloadAudio {
         pending.sounds.clear();
     }
     private record Cue(double time, ResourceLocation sound) {}
+    private static final class BoltAudio {
+        final ResourceLocation gunId;
+        final long start;
+        final List<Cue> cues;
+        int next;
+
+        BoltAudio(ResourceLocation gunId, long start, List<Cue> cues) {
+            this.gunId = gunId;
+            this.start = start;
+            this.cues = cues;
+        }
+    }
     private static final class Pending {
         final Human human;
         final ResourceLocation gunId, animation;
