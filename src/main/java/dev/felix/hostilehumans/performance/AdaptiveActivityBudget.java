@@ -8,6 +8,7 @@ import dev.felix.hostilehumans.performance.ActivityLoadPolicy;
 import dev.felix.hostilehumans.performance.ActivityLoadPolicy.Mode;
 import java.util.*;
 import net.minecraft.server.MinecraftServer;
+import net.minecraftforge.event.TickEvent;
 
 /** Heartbeat census, not a world scan. Values retain no entity, level or server references. */
 public final class AdaptiveActivityBudget {
@@ -21,10 +22,25 @@ public final class AdaptiveActivityBudget {
     private static ActivityBudgetConfig c(){return UnifiedConfig.get().activityBudget();}
     public static void touch(Human h) {
         MinecraftServer server=h.level().getServer();if(server==null||h.level().isClientSide)return;
-        State s=SERVERS.computeIfAbsent(server,k->new State());int tick=server.getTickCount();var c=c();
+        State s=SERVERS.computeIfAbsent(server,k->new State());int tick=server.getTickCount();
         if(tick<s.sampled){s.present.clear();s.sampled=Integer.MIN_VALUE;s.mode=Mode.SPARSE;s.lower=null;s.lowerSince=-1;}
         if(h.isAlive()&&!h.isRemoved())s.present.put(h.getUUID(),tick);else s.present.remove(h.getUUID());
-        if(s.sampled!=Integer.MIN_VALUE&&tick-s.sampled<c.sampleTicks())return;
+    }
+
+    public static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        MinecraftServer server = event.getServer();
+        State s = SERVERS.get(server);
+        if (s == null) return;
+        int tick = server.getTickCount();
+        var c = c();
+        if (s.sampled != Integer.MIN_VALUE && tick >= s.sampled && tick - s.sampled < c.sampleTicks()) return;
+        if (tick < s.sampled) {
+            s.present.clear();
+            s.mode = Mode.SPARSE;
+            s.lower = null;
+            s.lowerSince = -1;
+        }
         s.sampled=tick;s.present.values().removeIf(last->tick-last>c.staleTicks());s.count=s.present.size();
         Mode desired=ActivityLoadPolicy.desired(s.count,c.sparseHumans(),c.crowdedHumans(),c.battleHumans());
         if(desired.ordinal()>s.mode.ordinal()){s.mode=desired;s.lower=null;s.lowerSince=-1;}

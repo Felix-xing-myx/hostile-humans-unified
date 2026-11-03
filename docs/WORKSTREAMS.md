@@ -4199,3 +4199,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 复核导航预约交接，基线 2af4ed8。FairWorkBudget 区分未执行预约与已执行标记，补充 Java 回归，尚未编译。
 
 - 复核 F8 导航预算统计，基线 595222e。FairWorkBudget 区分已领用和未领用预约，补充 Java 断言，尚未编译。
+
+- 复核活动档位生命周期，基线 e792bae。主控独占 HumanRuntime 注册入口和 AdaptiveActivityBudget，改为服务端 tick 末集中采样。

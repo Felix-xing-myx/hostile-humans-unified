@@ -239,6 +239,7 @@ public final class HumanRuntime {
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GrowthCombat::onDeath);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GrowthCombat::onLeave);
         MinecraftForge.EVENT_BUS.addListener(GrowthCombat::onTick);
+        MinecraftForge.EVENT_BUS.addListener(AdaptiveActivityBudget::onServerTick);
         MinecraftForge.EVENT_BUS.addListener(GrowthCombat::onStopped);
         MinecraftForge.EVENT_BUS.addListener(GrowthCombat::onPlayerClone);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanRuntime::onLivingDamage);
