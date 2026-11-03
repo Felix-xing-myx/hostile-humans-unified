@@ -43,9 +43,9 @@ public final class ScopedWorkBudget<K, S> {
             if (grant.amount() == 0) return 0;
             grants.put(key, new Grant<>(scope, 0));
             waiting.put(key, new Request<>(currentTick, scope, amount, group));
-            // Scope changes and enlarged requests cannot spend a previous reservation.
-            // The old reservation is never refunded, preventing capacity reuse.
-            return Objects.equals(grant.scope(), scope) && grant.amount() >= amount ? amount : 0;
+            int used = Objects.equals(grant.scope(), scope) && grant.amount() >= amount ? amount : 0;
+            release(grant.scope(), grant.amount() - used);
+            return used;
         }
         waiting.put(key, new Request<>(currentTick, scope, amount, group));
         if (!fits(scope, amount)) return 0;
@@ -56,10 +56,17 @@ public final class ScopedWorkBudget<K, S> {
         return amount;
     }
 
-    /** Drops deferred work but never refunds a reservation or consumed batch. */
+    /** Drops deferred work and returns only capacity that has not been claimed. */
     public void cancel(K key) {
         waiting.remove(key);
-        grants.put(key, new Grant<>(null, 0));
+        Grant<S> grant = grants.put(key, new Grant<>(null, 0));
+        if (grant != null) release(grant.scope(), grant.amount());
+    }
+
+    private void release(S scope, int amount) {
+        if (amount == 0) return;
+        remaining += amount;
+        scopeUsed.computeIfPresent(scope, (ignored, used) -> used == amount ? null : used - amount);
     }
 
     private boolean fits(S scope, int amount) {

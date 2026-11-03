@@ -4133,3 +4133,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 静态与 Python 检查完成后整合。Java 编译与游戏内性能对照待验证。
 
 - 架构审查续轮，基线 f1a7819，主控沿用 audit/module-architecture 工作树。修改 FairWorkBudget 的预约归还及 PerformancePoliciesTest，调用接口不变。Java 回归待构建授权。
+
+- 架构审查感知预算，基线 4435e01，主控沿用 audit/module-architecture。修改 ScopedWorkBudget 与 ScopedWorkBudgetTest，公开接口不变。Python 检查通过，Java 回归待构建授权。

@@ -10,6 +10,7 @@ public final class ScopedWorkBudgetTest {
         cancellation();
         expiryAndRollback();
         changedRequest();
+        reducedRequest();
         factionRotation();
         System.out.println("PASS: atomic scope/server budgets, 1000-tick fairness, cancellation, expiry and rollback");
     }
@@ -63,7 +64,11 @@ public final class ScopedWorkBudgetTest {
         check(b.claimFull(0, "b", "y", 1) == 0, "queue second caller");
         check(b.claimFull(1, "c", "z", 1) == 0, "older b reserved tick capacity");
         b.cancel("b");
-        check(b.claimFull(1, "d", "z", 1) == 0, "cancel reserved batch never refunds");
+        b.cancel("b");
+        check(b.claimFull(1, "b", "y", 1) == 0, "cancelled key cannot reclaim the reservation");
+        check(b.claimFull(1, "d", "y", 1) == 1, "unused scope and global capacity are returned");
+        b.cancel("d");
+        check(b.claimFull(1, "e", "z", 1) == 0, "consumed capacity is not returned");
         check(b.claimFull(2, "c", "z", 1) == 1, "oldest uncancelled caller eventually runs");
     }
     private static void expiryAndRollback() {
@@ -79,10 +84,18 @@ public final class ScopedWorkBudgetTest {
         ScopedWorkBudget<String, String> b = new ScopedWorkBudget<>(2, 2, 2, 40);
         check(b.claimFull(0, "a", "x", 1) == 1, "scope x initial grant");
         check(b.claimFull(1, "a", "y", 1) == 0, "scope x reservation cannot be spent in y");
-        check(b.claimFull(1, "b", "z", 2) == 0, "changed scope does not refund old reservation");
-        check(b.claimFull(2, "a", "y", 1) == 0, "unserved full batch keeps priority over changed reservation");
-        check(b.claimFull(2, "b", "z", 2) == 2, "older unserved full batch runs atomically");
-        check(b.claimFull(3, "a", "y", 1) == 1, "new scope request runs after older full batch");
+        check(b.claimFull(1, "b", "x", 2) == 2, "both budgets recover the old scope reservation");
+        b.cancel("b");
+        check(b.claimFull(2, "a", "y", 1) == 1, "changed request retries in its new scope next tick");
+    }
+    private static void reducedRequest() {
+        var budget = new ScopedWorkBudget<String, String>(4, 3, 3, 40);
+        check(budget.claimFull(0, "a", "x", 3) == 3, "request three for next tick");
+        check(budget.claimFull(1, "a", "x", 1) == 1, "consume one of the three reserved units");
+        check(budget.claimFull(1, "b", "x", 2) == 2, "reuse the released scope capacity");
+        check(budget.claimFull(1, "c", "x", 1) == 0, "scope cap remains in force");
+        check(budget.claimFull(1, "d", "y", 1) == 1, "other scope can use the last global unit");
+        check(budget.claimFull(1, "e", "y", 1) == 0, "global cap remains in force");
     }
     private static void factionRotation() {
         var perception = new ScopedWorkBudget<Integer, String>(1, 1, 1, 40);

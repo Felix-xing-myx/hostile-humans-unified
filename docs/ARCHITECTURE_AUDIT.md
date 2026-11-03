@@ -4,7 +4,7 @@
 
 | 范围 | 核对入口与不变量 | 状态 |
 |---|---|---|
-| 听觉与群战感知 | HumanPerception → HumanAwareness → HearingRelevance → 线索；预算不足延后，声音不直接赋予仇恨 | 听觉入队与脚步排序已修。导航预算归还已修，感知配额与目标识别待深入 |
+| 听觉与群战感知 | HumanPerception → HumanAwareness → HearingRelevance → 线索；预算不足延后，声音不直接赋予仇恨 | 听觉入队与脚步排序已修。导航预算归还已修，感知双层额度归还已修，目标识别待深入 |
 | 战斗、伤害与阵营能力 | HumanBehaviorControl → ActionCoordinator → 各武器/恢复/撤退执行；取消须归还移动、手部和朝向控制权 | 待深入 |
 | 导航、拾取与装备 | HumanNavigationOwnership、路径预算、掉落占位与背包交换；失败与延期区分，资源只能结算一次 | 待深入 |
 | 客户端渲染、UI、观察和监控 | HumanRenderer、PanelScreen、HumanMonitorService、MonitorRemoteView；客户端呈现与服务器权限分离，结束清理输入、声音、票据 | 待深入 |
@@ -19,3 +19,5 @@
 - [Valve Source NPC 小队策略槽](https://github.com/ValveSoftware/source-sdk-2013/blob/master/src/game/server/ai_basenpc.cpp)通过释放可占用槽位协调共享目标。HHU 已有拾取目标占位，战斗中能否借鉴需先区分开火资格、选敌及移动位置争用。
 
 - [Linux 调度带宽回收](https://docs.kernel.org/6.13/scheduler/sched-deadline.html)区分实际执行和可回收的预算。HHU 在 FairWorkBudget 内退回明确取消或实际未使用的预约余额。既有阵营轮转、每 tick 上限和已执行计数保留。未调用取消的离场请求仍依赖既有过期机制。
+
+- 感知队列核对了维度与全服原子预约，以及饱和维度不会阻塞其他维度。沿用导航轮的预算回收原则，取消、缩小和无效预约均按原维度归还未使用余额，同时归还全服额度。需求所属阵营与批次规则沿用现有调度。
