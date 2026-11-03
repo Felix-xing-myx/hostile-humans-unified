@@ -78,11 +78,30 @@ final class CultivationData extends SavedData {
         changed();
     }
 
+    private static boolean validCompoundList(CompoundTag tag, String key) {
+        return !tag.contains(key) || tag.get(key) instanceof ListTag list
+                && (list.isEmpty() || list.getElementType() == Tag.TAG_COMPOUND);
+    }
+
     private static CultivationData load(CompoundTag t) {
         var d = new CultivationData();
         if (t.getInt("schema") != 1) {
             d.future = t.copy();
             return d;
+        }
+        for (String key : java.util.List.of("records", "quarantined", "accounts", "transactions", "retired")) {
+            if (!validCompoundList(t, key)) {
+                d.future = t.copy();
+                com.mojang.logging.LogUtils.getLogger().warn("Retaining cultivation journal with invalid list {}", key);
+                return d;
+            }
+        }
+        for (Tag row : t.getList("accounts", Tag.TAG_COMPOUND)) {
+            if (!validCompoundList((CompoundTag) row, "stock")) {
+                d.future = t.copy();
+                com.mojang.logging.LogUtils.getLogger().warn("Retaining cultivation journal with invalid facility stock list");
+                return d;
+            }
         }
         d.runtimeMillis = Math.max(0, t.getLong("runtime"));
         d.revision = Math.max(0, t.getLong("revision"));
