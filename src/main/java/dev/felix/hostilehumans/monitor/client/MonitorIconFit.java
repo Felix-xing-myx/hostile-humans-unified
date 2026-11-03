@@ -7,7 +7,8 @@ public record MonitorIconFit(float x, float y, float scale) {
             throw new IllegalArgumentException("Invalid image geometry");
         float scale = Math.min((float) boxWidth / width, (float) boxHeight / height);
         return new MonitorIconFit(
-                (boxWidth - width * scale) / 2, (boxHeight - height * scale) / 2, scale);
+                Math.max(0F, (boxWidth - width * scale) / 2F),
+                Math.max(0F, (boxHeight - height * scale) / 2F), scale);
     }
 
     /**
@@ -21,6 +22,7 @@ public record MonitorIconFit(float x, float y, float scale) {
                         ? Math.max(1F, (float) Math.floor(raw.scale()))
                         : 1F / (float) Math.max(1, (int) Math.ceil(1F / raw.scale()));
         return new MonitorIconFit(
-                (boxWidth - width * scale) / 2F, (boxHeight - height * scale) / 2F, scale);
+                Math.max(0F, (boxWidth - width * scale) / 2F),
+                Math.max(0F, (boxHeight - height * scale) / 2F), scale);
     }
 }

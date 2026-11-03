@@ -2,6 +2,9 @@ package dev.felix.hostilehumans.monitor.client;
 
 public final class MonitorHudPresentationTest {
     private static void check(boolean b){if(!b)throw new AssertionError();}
+    private static void check(boolean condition, String message) {
+        if (!condition) throw new AssertionError(message);
+    }
     public static void main(String[] args){
         for(int w:new int[]{320,427,620,640,960})for(int h:new int[]{240,360,540}) {
             var layout=MonitorHudLayout.of(w,h,true);
