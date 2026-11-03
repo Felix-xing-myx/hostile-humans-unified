@@ -56,6 +56,11 @@ public final class GrowthRewards extends SavedData {
         setDirty();
     }
 
+    static void discardForDeath(Human human, MinecraftServer server) {
+        GrowthRewards store = get(server);
+        if (store.pending.remove(human.getUUID()) != null) store.setDirty();
+    }
+
     static boolean claim(Human human) {
         MinecraftServer server = human.getServer();
         if (server == null) return false;

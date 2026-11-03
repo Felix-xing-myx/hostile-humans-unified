@@ -15,6 +15,7 @@ import java.util.Deque;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -156,10 +157,11 @@ public final class GrowthCombat {
     }
 
     public static void onLeave(EntityLeaveLevelEvent event) {
-        if (event.getLevel().isClientSide || !(event.getEntity() instanceof LivingEntity target)) return;
-        if (target.getRemovalReason() == Entity.RemovalReason.KILLED && target.getPersistentData().getBoolean(DEATH))
-            CONFIRMED.add(target);
-        else if (target.getRemovalReason() == Entity.RemovalReason.DISCARDED) {
+        if (!(event.getLevel() instanceof ServerLevel level) || !(event.getEntity() instanceof LivingEntity target)) return;
+        if (target.getRemovalReason() == Entity.RemovalReason.KILLED) {
+            if (target instanceof Human human) GrowthRewards.discardForDeath(human, level.getServer());
+            if (target.getPersistentData().getBoolean(DEATH)) CONFIRMED.add(target);
+        } else if (target.getRemovalReason() == Entity.RemovalReason.DISCARDED) {
             // Forge respawn discards the old player before PlayerEvent.Clone.
             if (target instanceof net.minecraft.server.level.ServerPlayer && target.getPersistentData().getBoolean(DEATH)) return;
             target.getPersistentData().remove(DEATH);
