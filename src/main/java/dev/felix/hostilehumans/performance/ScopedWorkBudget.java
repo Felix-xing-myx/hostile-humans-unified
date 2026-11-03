@@ -50,6 +50,7 @@ public final class ScopedWorkBudget<K, S> {
         waiting.put(key, new Request<>(currentTick, scope, amount, group));
         if (!fits(scope, amount)) return 0;
         reserve(scope, amount);
+        lastGroup = group;
         grants.put(key, new Grant<>(scope, 0));
         waiting.remove(key);
         waiting.put(key, new Request<>(currentTick, scope, amount, group));
@@ -80,7 +81,10 @@ public final class ScopedWorkBudget<K, S> {
     }
     private void beginTick(long currentTick) {
         if (tick == currentTick) return;
-        if (currentTick < tick) waiting.clear();
+        if (currentTick < tick) {
+            waiting.clear();
+            lastGroup = null;
+        }
         tick = currentTick;
         remaining = totalPerTick;
         scopeUsed.clear();

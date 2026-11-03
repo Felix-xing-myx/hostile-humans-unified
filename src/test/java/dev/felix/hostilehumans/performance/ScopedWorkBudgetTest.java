@@ -12,6 +12,7 @@ public final class ScopedWorkBudgetTest {
         expiryAndRollback();
         changedRequest();
         reducedRequest();
+        rotationAfterDirectGrant();
         factionRotation();
         System.out.println("PASS: atomic scope/server budgets, 1000-tick fairness, cancellation, expiry and rollback");
     }
@@ -108,6 +109,21 @@ public final class ScopedWorkBudgetTest {
         check(budget.claimFull(1, "d", "y", 1) == 1, "other scope can use the last global unit");
         check(budget.claimFull(1, "e", "y", 1) == 0, "global cap remains in force");
     }
+    private static void rotationAfterDirectGrant() {
+        var perception = new ScopedWorkBudget<Integer, String>(1, 1, 1, 40);
+        var navigation = new FairWorkBudget<Integer>(1, 1, 40);
+        check(perception.claimFull(0, 0, "arena", 1, "red") == 1, "red uses spare perception capacity");
+        check(navigation.claimFull(0, 0, 1, "red") == 1, "red uses spare navigation capacity");
+        perception.claimFull(0, 1, "arena", 1, "red");
+        navigation.claimFull(0, 1, 1, "red");
+        perception.claimFull(0, 2, "arena", 1, "blue");
+        navigation.claimFull(0, 2, 1, "blue");
+        check(perception.claimFull(1, 1, "arena", 1, "red") == 0, "blue gets the next perception turn");
+        check(navigation.claimFull(1, 1, 1, "red") == 0, "blue gets the next navigation turn");
+        check(perception.claimFull(1, 2, "arena", 1, "blue") == 1, "blue claims its perception reservation");
+        check(navigation.claimFull(1, 2, 1, "blue") == 1, "blue claims its navigation reservation");
+    }
+
     private static void factionRotation() {
         var perception = new ScopedWorkBudget<Integer, String>(1, 1, 1, 40);
         var navigation = new FairWorkBudget<Integer>(1, 1, 40);

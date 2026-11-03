@@ -70,6 +70,7 @@ public final class FairWorkBudget<K> {
         int granted = Math.min(remaining, Math.min(perRequest, maximum));
         remaining -= granted;
         executed += granted;
+        lastGroup = group;
         grants.put(key, 0);
         // Keep this caller at the tail for the next tick's round.
         waiting.remove(key);
@@ -97,7 +98,10 @@ public final class FairWorkBudget<K> {
 
     private void beginTick(long currentTick) {
         if (tick == currentTick) return;
-        if (currentTick < tick) waiting.clear();
+        if (currentTick < tick) {
+            waiting.clear();
+            lastGroup = null;
+        }
         tick = currentTick;
         remaining = nextTickCapacity;
         activeCapacity = remaining;
