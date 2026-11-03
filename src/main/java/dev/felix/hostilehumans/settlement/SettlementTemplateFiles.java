@@ -255,9 +255,8 @@ final class SettlementTemplateFiles {
     }
 
     static String confirm(ServerPlayer player) {
-        var pending = PENDING.get(player);
-        if (!player.canUseGameMasterBlocks() || pending == null || pending.level() != player.serverLevel()
-                || pending.expires() <= pending.level().getGameTime())
+        var pending = currentPreview(player);
+        if (pending == null)
             throw new IllegalArgumentException("no valid template placement preview");
         var bounds = pending.bounds();
         var min = new BlockPos(bounds.minX(), bounds.minY(), bounds.minZ());
@@ -275,14 +274,14 @@ final class SettlementTemplateFiles {
     }
 
     static void keepPreview(ServerPlayer player, int ticks) {
-        var current = PENDING.get(player);
-        if (current != null && current.expires() > current.level().getGameTime())
+        var current = currentPreview(player);
+        if (current != null)
             PENDING.put(player, new Placement(current.level(), current.id(), current.origin(), current.settings(),
                     current.template(), current.bounds(), current.entityEntries(), current.level().getGameTime() + ticks));
     }
 
     static boolean hasPreview(ServerPlayer player) {
-        return PENDING.containsKey(player);
+        return currentPreview(player) != null;
     }
 
     static void cancel(ServerPlayer player) {
@@ -290,9 +289,17 @@ final class SettlementTemplateFiles {
     }
 
     static void tick(ServerPlayer player) {
+        currentPreview(player);
+    }
+
+    private static Placement currentPreview(ServerPlayer player) {
         var pending = PENDING.get(player);
         if (pending != null && (pending.level() != player.serverLevel() || !player.canUseGameMasterBlocks()
-                || pending.expires() <= pending.level().getGameTime())) cancel(player);
+                || pending.expires() <= pending.level().getGameTime())) {
+            cancel(player);
+            return null;
+        }
+        return pending;
     }
 
     /** Clean copied carriers and normalize authored geometry to the placed structure's minimum corner. */
