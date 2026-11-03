@@ -220,8 +220,10 @@ public final class HumanEquipmentExchange {
             if (!permit.resources().containsAll(needed)) return Result.CHANGED;
         }
         ItemStack[] stage = actual.clone();
+        boolean[] attempted = new boolean[actual.length];
         try {
             for (int i : changed) {
+                attempted[i] = true;
                 stage[i] = ItemStack.EMPTY;
                 write(human, places.get(i), ItemStack.EMPTY);
                 if (!permit.actions().running(permit.token()) || !layoutReferencesMatch(human, places, stage)) throw new LayoutChanged();
@@ -234,14 +236,14 @@ public final class HumanEquipmentExchange {
         } catch (RuntimeException exception) {
             // Clear only our own attempted writes first; restore original real references once.
             // External replacement/consumption remains authoritative, never copied back from NBT.
-            for (int i : changed) if (read(human, places.get(i)) == stage[i]) {
+            for (int i : changed) if (attempted[i] && !stage[i].isEmpty() && read(human, places.get(i)) == stage[i]) {
                 try { write(human, places.get(i), ItemStack.EMPTY); }
-                catch (RuntimeException failure) { exception.addSuppressed(failure); }
+                catch (RuntimeException failure) { if (failure != exception) exception.addSuppressed(failure); }
             }
-            for (int i : changed) if (!actual[i].isEmpty() && read(human, places.get(i)).isEmpty()
+            for (int i : changed) if (attempted[i] && !actual[i].isEmpty() && read(human, places.get(i)).isEmpty()
                     && !referencePresent(human, places, actual[i])) {
                 try { write(human, places.get(i), actual[i]); }
-                catch (RuntimeException failure) { exception.addSuppressed(failure); }
+                catch (RuntimeException failure) { if (failure != exception) exception.addSuppressed(failure); }
             }
             if (exception instanceof LayoutChanged && exception.getSuppressed().length == 0) return Result.CHANGED;
             throw exception;

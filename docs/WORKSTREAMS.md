@@ -4179,3 +4179,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查战斗经验投递，基线 897389f，主控沿用 audit/module-architecture。GrowthCombat 和 GrowthRewards 增加死亡移除时的未领条目清理，保存格式不变。
 
 - 架构审查监控声音，基线 585cdd7，主控沿用 audit/module-architecture。HumanMonitorAudio 与 HumanMonitorService 调整同维度收件筛选顺序，协议不变。
+
+- 架构审查真实装备交换，基线 422a238，主控沿用 audit/module-architecture。HumanEquipmentExchange 限制失败回滚范围，公共接口不变。
