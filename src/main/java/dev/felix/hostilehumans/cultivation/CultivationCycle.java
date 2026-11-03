@@ -86,8 +86,8 @@ public record CultivationCycle(
     }
 
     public CultivationCycle accrue(long clock) {
-        if (status != Status.ACTIVE) return this;
-        long next = Math.min(candidate.durationMillis(), elapsed + Math.max(0, clock - checkpoint));
+        if (status != Status.ACTIVE || clock <= checkpoint) return this;
+        long next = elapsed + Math.min(candidate.durationMillis() - elapsed, clock - checkpoint);
         return new CultivationCycle(
                 id,
                 before,
@@ -96,7 +96,7 @@ public record CultivationCycle(
                 success,
                 next >= candidate.durationMillis() ? Status.READY : Status.ACTIVE,
                 next,
-                Math.max(checkpoint, clock),
+                clock,
                 automatic,
                 reason);
     }

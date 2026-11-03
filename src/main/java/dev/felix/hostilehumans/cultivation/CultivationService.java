@@ -358,8 +358,11 @@ public final class CultivationService {
                     continue;
                 }
             }
-            r.cycle = r.cycle.accrue(now);
-            data.setDirty();
+            var accrued = r.cycle.accrue(now);
+            if (accrued != r.cycle) {
+                r.cycle = accrued;
+                data.setDirty();
+            }
             if (r.cycle.status() != CultivationCycle.Status.READY || processed++ >= 64) continue;
             try {
                 var result = r.cycle.result();
