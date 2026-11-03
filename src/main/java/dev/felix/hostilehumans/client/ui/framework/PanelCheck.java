@@ -38,7 +38,7 @@ public final class PanelCheck extends PanelButton {
                 getMessage(),
                 getX() + 20,
                 getY() + (height - 8) / 2,
-                !active ? t.disabled() : t.text(),
+                !active ? t.disabledText() : t.text(),
                 false);
     }
 }

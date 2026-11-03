@@ -214,6 +214,66 @@ public abstract class PanelScreen extends Screen {
         return UiLayout.column(2, List.of(node(caption), node(input)));
     }
 
+    /**
+     * Text draft with a row of preset values underneath. The presets only write the same draft the
+     * editor writes, so the submitted string, its validation and the server contract are unchanged.
+     */
+    protected UiLayout.Node field(
+            Component label,
+            InputValue<String> draft,
+            java.util.List<String> presets,
+            java.util.function.Function<String, Component> presetLabel) {
+        if (presets.isEmpty() || !fieldsEnabled()) return field(label, draft);
+        PanelText caption =
+                body(
+                        new PanelText(
+                                label, () -> draft.valid() ? theme().muted() : theme().danger()));
+        PanelEditBox input =
+                inputs.computeIfAbsent(draft, key -> new PanelEditBox(font, label, this::theme));
+        usedInputs.add(draft);
+        body(input);
+        input.setMaxLength(draft.maximumLength());
+        if (!input.getValue().equals(draft.text())) input.setValue(draft.text());
+        input.active = true;
+        input.validation(draft::valid);
+        List<PanelButton> chips = new ArrayList<>();
+        List<UiLayout.Node> chipNodes = new ArrayList<>();
+        for (String preset : presets) {
+            PanelButton chip =
+                    body(
+                            new PanelButton(
+                                    presetLabel.apply(preset),
+                                    b -> input.setValue(preset),
+                                    this::theme)
+                                    .compact(true));
+            chips.add(chip);
+            chipNodes.add(node(chip));
+        }
+        Runnable sync =
+                () -> {
+                    for (int i = 0; i < chips.size(); i++)
+                        chips.get(i).selected(presets.get(i).equals(draft.text()));
+                };
+        input.setResponder(
+                value -> {
+                    draft.set(value);
+                    caption.setMessage(
+                            draft.valid()
+                                    ? label
+                                    : label.copy()
+                                            .append(" · ")
+                                            .append(
+                                                    Component.translatable(
+                                                            "gui.hostile_humans_unified.input.invalid")));
+                    sync.run();
+                    formChanged();
+                });
+        sync.run();
+        return UiLayout.column(
+                2,
+                List.of(node(caption), node(input), UiLayout.grid(presets.size(), 4, 40, chipNodes)));
+    }
+
     protected UiLayout.Node text(Component message, java.util.function.IntSupplier color) {
         return node(body(new PanelText(message, color)));
     }
@@ -529,9 +589,18 @@ public abstract class PanelScreen extends Screen {
             drawBody(g, t, mx, my, partial, columns[1], rightHeight, scrollRight, -1);
         } else drawBody(g, t, mx, my, partial, bodyRect, contentHeight, scroll, -1);
 
-        UiDraw.fade(g, bodyRect.x(), bodyRect.bottom() - 12, bodyRect.width(), 12, t);
+        UiDraw.fade(g, bodyRect.x(), bodyRect.bottom() - 20, bodyRect.width(), 20, t);
         UiDraw.actionBar(
                 g, actionRect.x(), actionRect.y(), actionRect.width(), actionRect.height(), t);
+        // Put the grain back over the footer chrome so the texture never stops at a hard edge.
+        UiDraw.grain(
+                g,
+                actionRect.x(),
+                actionRect.y() - UiDraw.SCRIM,
+                actionRect.width(),
+                actionRect.height() + UiDraw.SCRIM,
+                frame.x(),
+                frame.y());
         for (PanelButton b : footer) b.render(g, mx, my, partial);
     }
 

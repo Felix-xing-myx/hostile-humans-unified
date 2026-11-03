@@ -129,7 +129,8 @@ public class PanelButton extends Button {
                 danger,
                 isFocused(),
                 sheen());
-        int color = !active ? t.disabled() : danger ? t.danger() : selected ? t.accent() : t.text();
+        int color =
+                !active ? t.disabledText() : danger ? t.danger() : selected ? t.accent() : t.text();
         int y = getY() + (height - lines.size() * 10) / 2;
         for (var line : lines) {
             g.drawString(Minecraft.getInstance().font, line, getX() + padding(), y, color, false);

@@ -40,9 +40,10 @@ public final class PanelEditBox extends EditBox {
 
     public void place(UiRect b) {
         setX(b.x() + 6);
-        setY(b.y() + 6);
+        setY(b.y() + 4);
         setWidth(Math.max(1, b.width() - 12));
-        setHeight(Math.max(1, b.height() - 12));
+        // The native editor scissors to its own height; 8px cut the bottom row of every glyph.
+        setHeight(Math.max(12, b.height() - 8));
     }
 
     @Override
@@ -58,9 +59,9 @@ public final class PanelEditBox extends EditBox {
         UiDraw.control(
                 g,
                 getX() - 6,
-                getY() - 6,
+                getY() - 4,
                 width + 12,
-                height + 12,
+                height + 8,
                 t,
                 false,
                 true,

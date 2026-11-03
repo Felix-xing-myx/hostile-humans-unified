@@ -2,6 +2,7 @@ package dev.felix.hostilehumans.settlement.client;
 
 import dev.felix.hostilehumans.client.ui.framework.InputValue;
 import dev.felix.hostilehumans.client.ui.framework.PanelButton;
+import dev.felix.hostilehumans.client.ui.framework.UiThemes;
 import dev.felix.hostilehumans.client.ui.framework.PanelDisclosure;
 import dev.felix.hostilehumans.client.ui.framework.PanelGeometry;
 import dev.felix.hostilehumans.client.ui.framework.PanelScreen;
@@ -556,6 +557,16 @@ public final class SettlementScreen extends PanelScreen {
         send(snapshot, SettlementNetwork.Action.SAVE_TEMPLATE_FILE, payload);
     }
 
+    /** Localised faction name for a preset chip; unknown ids fall back to their path. */
+    private static Component factionLabel(String id) {
+        int colon = id.indexOf(':');
+        String path = colon < 0 ? id : id.substring(colon + 1);
+        String key = "screen.hostile_humans_unified.command.faction_name." + path;
+        return net.minecraft.client.resources.language.I18n.exists(key)
+                ? Component.translatable(key)
+                : Component.literal(path);
+    }
+
     private UiLayout.Node identity() {
         List<UiLayout.Node> nodes = new ArrayList<>();
         nodes.add(muted(text("author_steps")));
@@ -563,7 +574,7 @@ public final class SettlementScreen extends PanelScreen {
                 () -> beginWorldEdit("BOUNDS", "")));
         nodes.add(input("template_id", template));
         nodes.add(input("module_id", module));
-        nodes.add(input("faction", faction));
+        nodes.add(field(text("faction"), faction, UiThemes.factions(), SettlementScreen::factionLabel));
         nodes.add(input("tier", tier));
         nodes.add(choices("kind", List.of("ROOT", "ATTACHMENT", "ORDINARY"), kind, v -> kind = v));
         nodes.add(muted(text("size")));

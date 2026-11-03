@@ -131,12 +131,18 @@ public record UiTheme(
         return UiColor.mix(inset, danger, .42F);
     }
 
+    /** Readable but plainly inert: a 2.2% face made the label look absent, not disabled. */
     public int disabledFace() {
-        return UiColor.mix(inset, 0xFFFFFFFF, .022F);
+        return UiColor.mix(inset, 0xFFFFFFFF, .05F);
     }
 
     public int disabledEdge() {
-        return UiColor.mix(inset, 0xFFFFFFFF, .05F);
+        return UiColor.mix(inset, 0xFFFFFFFF, .10F);
+    }
+
+    /** Disabled label colour; keeps ~5:1 on the disabled face instead of 3.4:1. */
+    public int disabledText() {
+        return UiColor.mix(disabled, muted, .55F);
     }
 
     // ---- structure ------------------------------------------------------------
@@ -161,12 +167,9 @@ public record UiTheme(
         return UiColor.mix(top, 0xFFFFFFFF, .035F);
     }
 
+    /** Translucent so the panel grain keeps showing through the action bar. */
     public int actionBar() {
-        return UiColor.mix(bottom, 0x00000000, .34F);
-    }
-
-    public int actionBarHalo() {
-        return UiColor.alpha(0xFF000000, .34F);
+        return UiColor.alpha(UiColor.mix(bottom, 0x00000000, .45F), .86F);
     }
 
     public int bodyShadow() {

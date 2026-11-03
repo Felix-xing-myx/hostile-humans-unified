@@ -143,22 +143,36 @@ public final class UiDraw {
 
     /** 64px tile of the pack grain. Stretched blits were the source of the white speckle. */
     public static void grain(GuiGraphics g, int x, int y, int width, int height) {
+        grain(g, x, y, width, height, x, y);
+    }
+
+    /**
+     * Grain clipped to a sub-rectangle but tiled from {@code originX/originY}, so chrome drawn over
+     * the panel (action bar, scrim) keeps the same 64px phase as the panel behind it.
+     */
+    public static void grain(
+            GuiGraphics g, int x, int y, int width, int height, int originX, int originY) {
         if (!UiThemes.surfaceAvailable() || width <= 0 || height <= 0) return;
+        int phaseX = Math.floorMod(x - originX, GRAIN), phaseY = Math.floorMod(y - originY, GRAIN);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         g.setColor(1F, 1F, 1F, .30F);
+        g.enableScissor(x, y, x + width, y + height);
         try {
-            for (int ty = 0; ty < height; ty += GRAIN)
-                for (int tx = 0; tx < width; tx += GRAIN) {
-                    int w = Math.min(GRAIN, width - tx), h = Math.min(GRAIN, height - ty);
+            for (int ty = -phaseY; ty < height; ty += GRAIN)
+                for (int tx = -phaseX; tx < width; tx += GRAIN) {
+                    int sx = Math.max(0, -tx), sy = Math.max(0, -ty);
+                    int w = Math.min(GRAIN - sx, width - Math.max(0, tx));
+                    int h = Math.min(GRAIN - sy, height - Math.max(0, ty));
+                    if (w <= 0 || h <= 0) continue;
                     g.blit(
                             GRAIN_TEXTURE,
-                            x + tx,
-                            y + ty,
+                            x + Math.max(0, tx) + sx,
+                            y + Math.max(0, ty) + sy,
                             w,
                             h,
-                            0F,
-                            0F,
+                            (float) sx,
+                            (float) sy,
                             w,
                             h,
                             GRAIN,
@@ -166,6 +180,7 @@ public final class UiDraw {
                 }
         } finally {
             g.setColor(1F, 1F, 1F, 1F);
+            g.disableScissor();
             RenderSystem.disableBlend();
         }
     }
@@ -192,19 +207,33 @@ public final class UiDraw {
         outline(g, x, y, width, height, t.bodyEdge());
     }
 
-    /** Footer action bar with its 5px shadow halo and inner top highlight. */
+    /** Height of the soft scrim the action bar fades out of. */
+    public static final int SCRIM = 14;
+
+    /**
+     * Footer action bar. A hard 5px ring used to read as a black slab glued onto the textured
+     * panel; the bar now fades out of a gradient scrim and keeps a translucent fill so the grain
+     * underneath stays continuous.
+     */
     public static void actionBar(GuiGraphics g, int x, int y, int width, int height, UiTheme t) {
         if (width <= 0 || height <= 0) return;
-        rect(g, x - 5, y - 5, width + 10, height + 10, t.actionBarHalo());
+        for (int i = 0; i < SCRIM; i++)
+            rect(
+                    g,
+                    x,
+                    y - SCRIM + i,
+                    width,
+                    1,
+                    UiColor.alpha(0xFF000000, .34F * (i + 1) / SCRIM));
         rect(g, x, y, width, height, t.actionBar());
-        rect(g, x, y, width, 1, UiColor.alpha(0xFFFFFFFF, .06F));
+        rect(g, x, y, width, 1, UiColor.alpha(0xFFFFFFFF, .05F));
     }
 
     public static int healthColor(double ratio) {
         return ratio > .5 ? 0xFF7FC08C : ratio >= .2 ? 0xFFDBB25F : 0xFFDC7F6F;
     }
 
-    /** Bottom fade above the action bar; keeps long lists visually clipped. */
+    /** Bottom fade above the action bar; ends at 85% so it never becomes a flat dead band. */
     public static void fade(GuiGraphics g, int x, int y, int width, int height, UiTheme t) {
         if (width <= 0 || height <= 0) return;
         for (int i = 0; i < height; i++)
@@ -214,7 +243,7 @@ public final class UiDraw {
                     y + i,
                     width,
                     1,
-                    UiColor.alpha(t.inset(), (i + 1) / (float) height));
+                    UiColor.alpha(t.inset(), .85F * (i + 1) / height));
     }
 
     // ---- rows and groups ------------------------------------------------------

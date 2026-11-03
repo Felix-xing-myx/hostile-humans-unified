@@ -8,7 +8,10 @@ import net.minecraft.resources.ResourceLocation;
 
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -165,6 +168,14 @@ public final class UiThemes {
 
     public static ResourceLocation marker(String name) {
         return new ResourceLocation("hostile_humans_unified", "textures/gui/icon/" + name + ".png");
+    }
+
+    /** Faction ids the pack knows about; sorted so a preset row never reshuffles. */
+    public static List<String> factions() {
+        if (!loaded) reload();
+        List<String> ids = new ArrayList<>(themes.keySet());
+        Collections.sort(ids);
+        return List.copyOf(ids);
     }
 
     public static UiTheme colored(int accent) {

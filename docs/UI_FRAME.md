@@ -78,3 +78,52 @@
 - 注意工作目录：main 已在本会话期间前进（主控合入第一轮并修了 `UiRect.inset(h,v)`、`split` 空体保护、单栏 `revealFocus` 偏移、贴图混合状态、滑块渲染可见性）。第二轮提交 `71e5264` 基于 `da7cd76`，未回退这些修复。
 - 新增公共件：`PanelKeyValue`（只读标签/数值行）、`PanelGroup`（分组底带）、`PanelCheck`（勾选行）、`PanelButton.compact()`（标签尺寸控件）、`PanelDisclosure` 改为参考行样式（左标签、右数值、展开明细）。
 - 尚无客户端界面的参考页：人类对话（`SoldierDialogue` 只有文本派发，没有客户端界面与网络协议；实现需要新增协议，超出界面任务范围，待主控决定）。
+
+## 八、问题分析与改法（2026-11-03 分析；同日已按下列方案修复，见 8.4）
+
+下列两张图是按 `UiDraw` / `PanelScreen` / `PanelEditBox` 的实际取色与几何**逐条重放**出来的诊断图（脚本重写，不是游戏截图），用来对齐讨论位置；它们能反映颜色与间距，但字体度量按 9px 中文字形近似。生成脚本在 `maintenance-tools/ui-preview/`，改完绘制层后可以重跑对比。
+
+![对讲机骨架](images/ui-preview/roster-chrome.png)
+![据点表单禁用态](images/ui-preview/settlement-form.png)
+
+### 8.1 据点信息方块：选项文字"看不见"
+
+渲染路径：`SettlementScreen.buildContent()` → `identity()` → `input("faction", …)` 走 `PanelScreen.field()`；选项行走 `action(...)` → `PanelButton`。三个候选原因，按可能性排序：
+
+1. **选中/可编辑态的对比度不足（最可能）**。`action()` 里 `b.active = editable()`，而 `editable()` = 作者 && 已知结构 && 无待确认。一旦不满足，`UiDraw.control` 走 `disabledFace()` = `mix(inset, 白, .022)`（几乎等于内容区底色 #0B141A），文字走 `t.disabled()` #5F707C，实测对比度约 3.4:1，在噪点底上读不出来；点中之后文字转成 `accent()` 才"突然出现"。判别：同一屏里如果别的行（如"模块类型"可编辑分支）文字清楚，就是这条。
+   改法：`disabledFace()` 改成 `mix(inset, 白, .05)` 并给 1px `disabledEdge()` 描边；禁用文字改用 `muted()` 的 70% 而不是 `disabled()`；另外把"不可编辑"和"未选中"分开——未选中但可编辑时文字用 `text()`（现在是这样），不可编辑时至少保留 `muted()` 级可读性。
+
+2. **构建早于文字惰性折行修复**。`PanelButton` / `PanelText` 的文本只在被测量时折行；3.14.3（`71e5264` 之前）任何没经过 `measureHeight` 的按钮都会整块空白。判别：如果那一屏所有按钮都没字，而不只是禁用项，就是这条。3.14.4 之后应已消失。
+
+3. **`PanelEditBox` 内框只有 8px 高**。`place()` 把 20px 槽位缩成 `height-12`，原版 `EditBox` 的 scissor 按自身高度裁剪，9px 字形会被切掉 1 行（不明量级，但会显得"字被削顶"）。改法：内框高度取 `max(12, b.height - 10)`，或干脆保留 20px 高度、只把描边画在外面。
+
+确认方式：截一张该方块打开后的画面（含阵营那一行和下面的选项行）。若是第 1 条，图上会看到"灰底上极暗的字"；若是第 2 条，则整块空白。
+
+### 8.2 底部操作台和背景噪点"割裂"
+
+三处硬边叠在一起：
+
+- `UiDraw.actionBar` 的 5px 外圈是 `alpha(黑, .34)` 的**实心矩形**，在渐变频点上直接压出一个硬边黑框；
+- 操作台填充 `actionBar()` = `mix(bottom, 黑, .34)` 是**不透明**色，把 64px 噪点整块切断；
+- `UiDraw.fade` 从透明渐变到 `t.inset()` 的**完全不透明**，于是内容区底部出现一条 12px 的"死平"色带。
+
+改法（三条都很小）：
+1. 去掉 5px halo，换成 10~12px 的竖向渐变遮罩（透明 → 黑 .34），让它融进面板渐变；
+2. 操作台填充改成半透明（α≈.72）或 `mix(bottom, accent, .04)` 再压一层 12% 黑，让底下的噪点透出来；
+3. `fade` 别收到 1.0，收到 .85 即可，并把起点从 12px 抬高到 20px；
+4. 统一做法：在 `actionBar` 与 `fade` 画完之后**补一遍 `grain()`**（只覆盖底部条带），噪点在所有装饰上保持连续——参考页里噪点层本来就在控件之下、背景之上。
+
+### 8.3 预设表单（阵营等）
+
+现状：`identity()` 把阵营做成自由文本 `input("faction", faction)`，玩家要手打 `hostile_humans_unified:crimson`。
+
+建议：加一个 `PanelChoice` 小控件（当前值 + 一排候选块 + "自定义"）。候选来自 `gui/theme.json` 的 `factions` 键——`UiThemes` 已经解析过这份数据，只需补一个只读访问器 `UiThemes.factions()`，属于界面内接口，不动协议。选中后仍然往同一个 `InputValue<String>` 里写、提交同一个字符串，服务端校验与快照格式都不变；自定义仍可手输。真正由服务端下发"本据点允许哪些阵营"属于协议扩展，需要主控决定，本轮不做。
+
+同一屏其余适合改成预设/步进的字段：`tier`（整数档位）、`size`/`origin` 的六个数（步进 + 直接读数）、`kind`（已有 `choices`，可复用成同样的视觉）。
+
+### 8.4 本轮已实施（2026-11-03）
+
+- **禁用态可读性**：`UiTheme.disabledFace()` .022 → .05 白，`disabledEdge()` .05 → .10，新增 `disabledText()`（`disabled` 与 `muted` 各半，禁用面约 5:1）。`PanelButton` / `PanelCheck` 的禁用标签改用 `disabledText()`。据点表单里"选不了"的选项现在读得出来，但仍明显是灰的。
+- **输入框字形被裁**：`PanelEditBox.place()` 内框高度 `height-12`(8px) → `max(12, height-8)`，外框仍占满 20px 槽位；原生 scissor 不再削掉字底。
+- **底部割裂**：`UiDraw.actionBar` 去掉 5px 实心黑框，改成 14px 竖向渐变遮罩（`UiDraw.SCRIM`）；填充改半透明（`actionBar()` α .86）；`fade` 高度 12→20、末端 1.0→.85；`PanelScreen` 在操作台画完后按面板原点**补一遍 `grain()`**（新增带 origin 的重载），噪点在底部保持同相位连续。
+- **预设表单**：`PanelScreen.field(label, draft, presets, presetLabel)` 在输入框下加一排预设块，点击直接写入同一个 `InputValue`（仍走 `setValue` → 走 responder → 走原有校验与提交）。`UiThemes.factions()` 只读暴露 `theme.json` 里的四个阵营 id；据点表单的"阵营资源 ID"已接入，标签取 `command.faction_name.*` 的本地化名，未知 id 回退到路径名。协议、快照与校验未变。
