@@ -1,6 +1,6 @@
 # 架构审查记录
 
-以 [源码模块地图](SOURCE_MODULES.md) 为入口。本表记录截至 57af6ab 的累计源码审查，覆盖范围以具体调用链为准。
+以 [源码模块地图](SOURCE_MODULES.md) 为入口。本表记录截至 b0f1446 的累计源码审查，覆盖范围以具体调用链为准。
 
 | 范围 | 源码已核查或修正 | 仍需核查或实测 |
 |---|---|---|
@@ -14,7 +14,7 @@
 
 ## 验证证据
 
-- 在 57af6ab 验证累计差异 `git diff --check 1c99399..HEAD`，并执行 `python -m unittest discover -s src/test/python -q`，532 项通过，无跳过。TaCZ 编译 API 字节码检查使用 1.1.8-hotfix，测试实例运行侧检查使用 1.1.8-hotfix2。其余字节码检查读取测试实例联动 JAR 与 Forge 映射 JAR。源码契约只核对接入点和形态，字节码检查只覆盖断言涉及的依赖方法或资源。
+- 在 b0f1446 验证累计差异 `git diff --check 1c99399..HEAD`，并执行 `python -m unittest discover -s src/test/python -q`，532 项通过，无跳过。TaCZ 编译 API 字节码检查使用 1.1.8-hotfix，测试实例运行侧检查使用 1.1.8-hotfix2。其余字节码检查读取测试实例联动 JAR 与 Forge 映射 JAR。源码契约只核对接入点和形态，字节码检查只覆盖断言涉及的依赖方法或资源。
 - 构建授权后，导航与感知优先核对 `performancePoliciesTest`、`behaviorScopedWorkBudgetTest` 和 `perceptionPolicyTest`。动作、配置、存档使用 `behaviorActionCoordinatorTest`、`behaviorGrowthConfigTest`、`vnextEconomyRecoveryTest`、`vnextFactionContentNbtTest`。这些入口已在 build.gradle 登记，尚未执行本轮累计改动的 Java 验证。
 - 游戏内验证分别覆盖群战性能、联动缺席/存在、存档恢复和两人同时操作。每个场景需要独立证据，不能由编译或 Python 检查代替。
 
@@ -155,3 +155,5 @@
 | 战后清扫 | 多个士兵和多件掉落物同时出现时，主动拾取目标能分流。首选被占用时可重新核对备选，临时不可拾取状态不进入价值筛除缓存。 |
 | 接管与监视 | 暂停、断线、切代或背包切换后，旧输入不会继续执行。目标失效时释放远程跟踪和接管，普通容器保持打开。 |
 | 配置与据点 | 模拟不可写、迁移中断和并发编辑，确认运行配置可保留且迁移可重试。交替使用命令和放置棒，验证旧预览无法提交新预览。旋转、镜像及跨区块放置同时核对实体和驻守点。 |
+
+收尾复核集中在必需与可选注入的启动边界、战斗中枢取消动作时的权限回收、监视权限及背包归属，以及经济与培养账本的隔离和恢复。培养补发由统一入口确认，结算额度按记录轮转，无法安全解析的账本保留原数据。培养请求先记录完成，再发布背包刷新。现有 Python 结果覆盖源码契约及指定依赖字节码。Java 回归、启动、多人接管、群战帧时间和存档故障注入仍待实机验收。
