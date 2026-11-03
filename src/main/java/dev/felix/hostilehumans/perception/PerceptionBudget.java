@@ -70,9 +70,12 @@ public final class PerceptionBudget {
         queue.cancel(new Key(actor.getUUID(),kind+":"+actor.level().dimension().location()+work));
     }
     public static String usage(Entity actor,String kind) {
-        State s=SERVERS.get(actor.level().getServer());
-        String lane=kind+":"+actor.level().dimension().location(); PerceptionConfig c=PerceptionConfig.get();
-        boolean fresh=s!=null && actor.level().getServer()!=null && s.tick==actor.level().getServer().getTickCount();
+        return usage(actor.level().getServer(),actor.level().dimension().location().toString(),kind);
+    }
+    public static String usage(MinecraftServer server,String dimension,String kind) {
+        State s=SERVERS.get(server);
+        String lane=kind+":"+dimension; PerceptionConfig c=PerceptionConfig.get();
+        boolean fresh=s!=null && server!=null && s.tick>=server.getTickCount()-1L && s.tick<=server.getTickCount();
         return (fresh?s.used.getOrDefault(lane,0):0)+"/"+c.integer("budgets."+kind+"_per_level")+
                 " · 全服 "+(fresh?s.used.getOrDefault(kind,0):0)+"/"+c.integer("budgets."+kind+"_per_server");
     }

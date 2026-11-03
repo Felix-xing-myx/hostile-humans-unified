@@ -763,6 +763,14 @@
     "class": "dev.felix.hostilehumans.soldier.GarrisonSettings",
     "path": "src/main/java/dev/felix/hostilehumans/soldier/GarrisonSettings.java"
   },
+  "GlobalBudgetScreen": {
+    "class": "dev.felix.hostilehumans.observer.client.GlobalBudgetScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/client/GlobalBudgetScreen.java"
+  },
+  "GlobalBudgetSnapshot": {
+    "class": "dev.felix.hostilehumans.observer.GlobalBudgetSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/observer/GlobalBudgetSnapshot.java"
+  },
   "GrowthCombat": {
     "class": "dev.felix.hostilehumans.progression.GrowthCombat",
     "path": "src/main/java/dev/felix/hostilehumans/progression/GrowthCombat.java"

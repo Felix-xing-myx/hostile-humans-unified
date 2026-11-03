@@ -39,6 +39,13 @@ public final class LongRangeNavigation {
     }
     private record Failure(Vec3 origin, BlockPos probe, int tick, int attempts, int scene, int signature, boolean restricted) {}
     private record Pool(int units, FairWorkBudget<UUID> queue) {}
+    public static String usage(MinecraftServer server) {
+        var pool = POOLS.get(server);
+        var settings = config();
+        int cap = AdaptiveActivityBudget.navigationCapacity(server, settings.remoteUnits(),
+                RouteSearchPolicy.remoteCost(settings.longNodes()));
+        return pool == null ? "0 / " + cap : pool.queue.usage(server.getTickCount(),cap);
+    }
     private static final Map<Human,Actor> ACTORS = new WeakHashMap<>();
     private static final Map<MinecraftServer,Pool> POOLS = new WeakHashMap<>();
     private LongRangeNavigation() {}

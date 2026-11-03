@@ -51,8 +51,8 @@
 | `monitor/remote` | 远程监控视点、区块与实体追踪票据生命周期 | 1 |
 | `navigation` | 搜索、路径跟随、安全、移动与导航预算 | 52 |
 | `network` | 共用实体数据网络 | 3 |
-| `observer` | 诊断快照、观察名单与网络 | 17 |
-| `observer/client` | 观察详情、图层与属性界面 | 3 |
+| `observer` | 诊断快照、观察名单与网络 | 18 |
+| `observer/client` | 观察详情、图层与属性界面 | 4 |
 | `perception` | 视觉、声音、识别与目标记忆 | 40 |
 | `performance` | 共享配额与活动分档 | 8 |
 | `progression` | 成长、专精、经验与属性 | 27 |
@@ -270,11 +270,11 @@
 
 ### observer
 
-`AttributeDetailClient`、`AttributeDetailNetwork`、`AttributeDetailPolicy`、`AttributeDetailSnapshot`、`AttributeObserverItem`、`AttributeReference`、`NavigationDebugFrame`、`NavigationDebugFrameCodec`、`NavigationDebugNetwork`、`NavigationDebugService`、`NavigationDebugSnapshot`、`NavigationDebugViewPolicy`、`NavigationObserverHelmet`、`NavigationObserverPreferences`、`NavigationObserverSelection`、`NavigationObserverState`、`NavigationTestItem`
+`AttributeDetailClient`、`AttributeDetailNetwork`、`AttributeDetailPolicy`、`AttributeDetailSnapshot`、`AttributeObserverItem`、`AttributeReference`、`GlobalBudgetSnapshot`、`NavigationDebugFrame`、`NavigationDebugFrameCodec`、`NavigationDebugNetwork`、`NavigationDebugService`、`NavigationDebugSnapshot`、`NavigationDebugViewPolicy`、`NavigationObserverHelmet`、`NavigationObserverPreferences`、`NavigationObserverSelection`、`NavigationObserverState`、`NavigationTestItem`
 
 ### observer.client
 
-`AttributeDetailScreen`、`NavigationDebugClient`、`NavigationLegendScreen`
+`AttributeDetailScreen`、`GlobalBudgetScreen`、`NavigationDebugClient`、`NavigationLegendScreen`
 
 ### perception
 

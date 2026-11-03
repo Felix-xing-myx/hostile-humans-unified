@@ -970,6 +970,7 @@
         "AttributeDetailSnapshot",
         "AttributeObserverItem",
         "AttributeReference",
+        "GlobalBudgetSnapshot",
         "NavigationDebugFrame",
         "NavigationDebugFrameCodec",
         "NavigationDebugNetwork",
@@ -988,6 +989,7 @@
       "source_root": "src/main/java/dev/felix/hostilehumans/observer/client",
       "classes": [
         "AttributeDetailScreen",
+        "GlobalBudgetScreen",
         "NavigationDebugClient",
         "NavigationLegendScreen"
       ]

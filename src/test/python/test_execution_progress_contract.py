@@ -45,4 +45,4 @@ class ExecutionProgressContract(unittest.TestCase):
             self.assertIn('p.' + field + '()', codec)
         self.assertIn('in.readDouble(), in.readDouble(), in.readDouble()', codec)
         self.assertIn('Double.isFinite(value)', source('ActionProgressSnapshot'))
-        self.assertIn('() -> "9", "9"::equals, "9"::equals', source('NavigationDebugNetwork'))
+        self.assertIn('() -> "10", "10"::equals, "10"::equals', source('NavigationDebugNetwork'))

@@ -7,11 +7,12 @@ import java.util.List;
 
 /** Local display preferences only. No entity identity, server authority or gameplay configuration. */
 public final class NavigationObserverPreferences {
-    public record Settings(List<Integer> layers, int page) {
+    public record Settings(List<Integer> layers, int page, int globalPage) {
+        public Settings(List<Integer> layers, int page) { this(layers, page, 0); }
         public Settings {
             layers = List.copyOf(layers);
             if (layers.size() != 4 || layers.stream().anyMatch(value -> value < 0 || value > 2)
-                    || page < 0 || page >= 7) throw new IllegalArgumentException("Invalid observer display preferences");
+                    || page < 0 || page >= 7 || globalPage < 0 || globalPage >= 3) throw new IllegalArgumentException("Invalid observer display preferences");
         }
     }
     static final Settings DEFAULTS = new Settings(List.of(2, 1, 1, 1), 0);
@@ -25,7 +26,7 @@ public final class NavigationObserverPreferences {
             var layers = json.getAsJsonArray("layers");
             if (layers.size() != 4) throw new IllegalArgumentException("Expected four display layers");
             return new Settings(java.util.stream.StreamSupport.stream(layers.spliterator(), false)
-                    .map(NavigationObserverPreferences::integer).toList(), integer(json.get("page")));
+                    .map(NavigationObserverPreferences::integer).toList(), integer(json.get("page")), json.has("globalPage") ? integer(json.get("globalPage")) : 0);
         } catch (RuntimeException malformed) {
             throw new IOException("Invalid observer display preferences: " + path, malformed);
         }
@@ -45,6 +46,7 @@ public final class NavigationObserverPreferences {
         settings.layers().forEach(layers::add);
         json.add("layers", layers);
         json.addProperty("page", settings.page());
+        json.addProperty("globalPage", settings.globalPage());
         Path target = path.toAbsolutePath();
         Files.createDirectories(target.getParent());
         Path temporary = Files.createTempFile(target.getParent(), "observer-", ".tmp");

@@ -13,7 +13,7 @@ public final class FairWorkBudget<K> {
     private final LinkedHashMap<K, Request> waiting = new LinkedHashMap<>();
     private final Map<K, Integer> grants = new HashMap<>();
     private long tick = Long.MIN_VALUE;
-    private int remaining;
+    private int remaining, activeCapacity, executed;
     private String lastGroup;
     private int nextTickCapacity;
 
@@ -57,7 +57,9 @@ public final class FairWorkBudget<K> {
             // Rotate behind callers that are still waiting. Completion/stop
             // cancels this reservation; forgotten requests expire promptly.
             waiting.put(key, new Request(currentTick, maximum, full, group));
-            return full && reserved < maximum ? 0 : Math.min(maximum, reserved);
+            int used = full && reserved < maximum ? 0 : Math.min(maximum, reserved);
+            executed += used;
+            return used;
         }
         waiting.put(key, new Request(currentTick, maximum, full, group));
         // beginTick reserves older requests first. Any remaining capacity is
@@ -66,6 +68,7 @@ public final class FairWorkBudget<K> {
         if (remaining == 0 || full && remaining < maximum) return 0;
         int granted = Math.min(remaining, Math.min(perRequest, maximum));
         remaining -= granted;
+        executed += granted;
         grants.put(key, 0);
         // Keep this caller at the tail for the next tick's round.
         waiting.remove(key);
@@ -80,11 +83,19 @@ public final class FairWorkBudget<K> {
         grants.put(key, 0);
     }
 
+    public String usage(long currentTick, int idleCapacity) {
+        if (tick < currentTick - 1 || tick > currentTick) return "0 / " + idleCapacity + " · 等待 " + waiting.size();
+        return executed + " / " + activeCapacity + " · 预约或已用 " + (activeCapacity - remaining)
+                + " · 排队 " + waiting.size();
+    }
+
     private void beginTick(long currentTick) {
         if (tick == currentTick) return;
         if (currentTick < tick) waiting.clear();
         tick = currentTick;
         remaining = nextTickCapacity;
+        activeCapacity = remaining;
+        executed = 0;
         grants.clear();
         waiting.entrySet().removeIf(entry -> currentTick - entry.getValue().tick() > staleTicks);
         for (var entry : BudgetDemandOrder.interleave(waiting, Request::group, lastGroup)) {

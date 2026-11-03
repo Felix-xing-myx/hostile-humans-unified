@@ -26,6 +26,12 @@ public final class BasicNavigationBudget {
         NavigationDebugService.budget(human, "basic", searches, granted);
         return granted == searches;
     }
+    public static String usage(MinecraftServer server) {
+        var budget = SERVERS.get(server);
+        int cap = AdaptiveActivityBudget.navigationCapacity(server,32,4);
+        return budget == null ? "0 / " + cap : budget.usage(server.getTickCount(),cap);
+    }
+
     public static void cancel(Human human) {
         FairWorkBudget<UUID> budget = SERVERS.get(human.level().getServer());
         if (budget != null) budget.cancel(human.getUUID());

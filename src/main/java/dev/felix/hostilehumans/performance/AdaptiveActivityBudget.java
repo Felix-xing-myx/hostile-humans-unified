@@ -34,9 +34,10 @@ public final class AdaptiveActivityBudget {
             if(tick-s.lowerSince>=c.downgradeTicks()){s.mode=desired;s.lower=null;s.lowerSince=-1;}
         }
     }
-    public static Mode mode(Human h) {
+    public static Mode mode(Human h) { return mode(h.level().getServer()); }
+    public static Mode mode(MinecraftServer server) {
         if(!c().enabled())return Mode.NORMAL;
-        State s=SERVERS.get(h.level().getServer());return s==null?Mode.SPARSE:s.mode;
+        State s=SERVERS.get(server);return s==null?Mode.SPARSE:s.mode;
     }
     public static int interval(Human h,int base,boolean urgent) {
         var c=c();double factor=switch(mode(h)){case SPARSE->c.sparseInterval();case CROWDED->c.crowdedInterval();case BATTLE->c.battleInterval();default->1;};
@@ -55,10 +56,16 @@ public final class AdaptiveActivityBudget {
         return switch(mode(h)){case SPARSE->Math.min(64,c().normalSources()*2);case CROWDED->c().crowdedSources();case BATTLE->c().battleSources();default->c().normalSources();};
     }
     public static int navigationCapacity(Human h,int maximum,int minimumJob) {
-        double factor=switch(mode(h)){case CROWDED->c().crowdedNavigation();case BATTLE->c().battleNavigation();default->1;};
+        return navigationCapacity(h.level().getServer(),maximum,minimumJob);
+    }
+    public static int navigationCapacity(MinecraftServer server,int maximum,int minimumJob) {
+        double factor=switch(mode(server)){case CROWDED->c().crowdedNavigation();case BATTLE->c().battleNavigation();default->1;};
         return ActivityLoadPolicy.capacity(maximum,minimumJob,factor);
     }
     public static String describe(Human h) {
-        State s=SERVERS.get(h.level().getServer());return mode(h).name()+" · 心跳人类"+(s==null?0:s.count);
+        return describe(h.level().getServer());
+    }
+    public static String describe(MinecraftServer server) {
+        State s=SERVERS.get(server);return mode(server).name()+" · 心跳人类"+(s==null?0:s.count);
     }
 }

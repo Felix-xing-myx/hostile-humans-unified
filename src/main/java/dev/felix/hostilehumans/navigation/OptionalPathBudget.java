@@ -47,6 +47,17 @@ public final class OptionalPathBudget {
         return granted;
     }
 
+    public static String usage(MinecraftServer server, Kind kind) {
+        var pools = SERVERS.get(server);
+        int cap = switch (kind) {
+            case PATH_FOLLOW -> AdaptiveActivityBudget.navigationCapacity(server,16,2);
+            case CONTINUITY -> 8;
+            case RETREAT, LAVA, EXPLOSION -> 32;
+            default -> AdaptiveActivityBudget.navigationCapacity(server,64,4);
+        };
+        return pools == null ? "0 / " + cap : pool(pools,kind).usage(server.getTickCount(),cap);
+    }
+
     public static void cancel(Human human, Kind kind) {
         Pools pools = SERVERS.get(human.level().getServer());
         if (pools != null) pool(pools, kind).cancel(new Key(human.getUUID(), kind));

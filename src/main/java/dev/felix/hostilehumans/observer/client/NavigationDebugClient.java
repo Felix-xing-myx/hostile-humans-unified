@@ -42,7 +42,7 @@ public final class NavigationDebugClient {
     // 0 hidden, 1 diagnostic focus, 2 all observed members. Local UI only.
     static final int[] LAYERS = {2, 1, 1, 1};
     private static boolean preferencesLoaded;
-    private static int detailPage;
+    private static int detailPage, globalPage;
     private static java.nio.file.Path preferencesPath() {
         return net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get()
                 .resolve(SplitConfigFiles.DIRECTORY).resolve("observer-client.json");
@@ -54,10 +54,13 @@ public final class NavigationDebugClient {
             var settings = NavigationObserverPreferences.load(preferencesPath());
             for (int i = 0; i < LAYERS.length; i++) LAYERS[i] = settings.layers().get(i);
             detailPage = settings.page();
+            globalPage = settings.globalPage();
         } catch (java.io.IOException failed) {
             HumanRuntime.LOGGER.warn("Cannot load observer display preferences; using defaults", failed);
         }
     }
+    static int globalPage() { loadPreferences(); return globalPage; }
+    static void globalPage(int value) { globalPage = value; savePreferences(); }
     static int detailPage() { loadPreferences(); return detailPage; }
     static void detailPage(int value) { detailPage = value; savePreferences(); }
     static void cycleLayer(int index) {
@@ -68,7 +71,7 @@ public final class NavigationDebugClient {
     private static void savePreferences() {
         try {
             NavigationObserverPreferences.save(preferencesPath(), new NavigationObserverPreferences.Settings(
-                    java.util.Arrays.stream(LAYERS).boxed().toList(), detailPage));
+                    java.util.Arrays.stream(LAYERS).boxed().toList(), detailPage, globalPage));
         } catch (java.io.IOException failed) {
             HumanRuntime.LOGGER.warn("Cannot save observer display preferences", failed);
         }
@@ -95,7 +98,7 @@ public final class NavigationDebugClient {
         loadPreferences();
         var mc = Minecraft.getInstance();
         while (Keys.LEGEND.consumeClick()) {
-            if (mc.player != null && mc.screen == null) mc.setScreen(new NavigationLegendScreen());
+            if (mc.player != null && mc.screen == null) mc.setScreen(new GlobalBudgetScreen());
         }
     }
     public static void accept(NavigationDebugFrame value) {
