@@ -16,11 +16,14 @@ class HearingRelevanceContract(unittest.TestCase):
         self.assertNotIn("getAttributeValue",code)
     def test_pending_hearing_does_not_advance_or_repeat_finished_ray(self):
         code=source("HumanAwareness")
-        delivery=code.split("var relevance=",1)[1].split("q.removeFirst()",1)[0]
+        delivery=code.split("var relevance=",1)[1].split("q.remove(n)",1)[0]
         self.assertLess(delivery.index("relevance.deferred())return"),delivery.index("n.index++"))
         self.assertIn("n.evaluatedIndex=n.index",delivery)
         self.assertIn("n.evaluatedIndex==n.index?n.evaluated",code)
-        self.assertIn("q.peekLast().importance<importance",code)
+        self.assertIn("priority < notice.importance", code)
+        self.assertIn("lanes.get(priority).pollLast()", code)
+        self.assertIn("lanes.get(notice.importance).addLast(notice)", code)
+        self.assertIn("lanes.get(priority).peekFirst()", code)
         self.assertNotIn("level.getEntity(n.source).position()",code)
     def test_ignored_sounds_cannot_refresh_alert(self):
         code=source("HumanPerception")
@@ -37,10 +40,11 @@ class HearingRelevanceContract(unittest.TestCase):
         eligibility=awareness.split("static boolean movementCandidate",1)[1].split("static Comparator",1)[0]
         self.assertIn('hearing.background_vertical',eligibility)
         self.assertIn('hearing.background_step_radius',eligibility)
-        order=awareness.split("static Comparator<LivingEntity> movementOrder",1)[1].split("public static void sampleMovement",1)[0]
+        order=awareness.split("static Comparator<LivingEntity> movementOrder",1)[1].split("static void sampleMovement",1)[0]
         self.assertLess(order.index("importance"),order.index("previous.tick"))
         self.assertLess(order.index("previous.tick"),order.index("thenComparingDouble"))
-        self.assertIn("ordered.sort(movementOrder(listener))",awareness)
+        self.assertIn("HumanAwareness.sampleMovement(h,sounds.values())", scan)
+        self.assertNotIn("ordered.sort", awareness)
     def test_lower_priority_cannot_extend_higher_priority_lifetime(self):
         notice=source("HumanPerception").split("static void notice(Human h,String kind,Vec3 position,UUID source,int ttl,int priority)",1)[1].split("public static void ownerClue",1)[0]
         guard="priority<match.priority&&now<match.until)return"

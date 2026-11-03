@@ -10,7 +10,7 @@ class PassiveCreatureAwarenessContract(unittest.TestCase):
         classify = awareness.split("public static boolean passiveCreature", 1)[1].split("public static void investigate", 1)[0]
         for item in ("LivingEntity", "Player", "Human", "monster.Enemy", "MobCategory.MONSTER"):
             self.assertIn(item, classify)
-        sample = awareness.split("public static void sampleMovement", 1)[1]
+        sample = awareness.split("static void sampleMovement", 1)[1]
         candidate = awareness.split("static boolean movementCandidate", 1)[1].split("static Comparator", 1)[0]
         self.assertIn("passiveCreature(actor)", candidate)
         self.assertLess(sample.index("!movementCandidate(listener,actor)"), sample.index('PerceptionBudget.claim(actor,"sources"'))

@@ -15,7 +15,7 @@ import net.minecraft.world.phys.*;
 /** Bounded server event adapter. Sound is a point-in-time clue, never a combat target. */
 public final class HumanAwareness {
     private static final Map<Entity,Map<String,Long>> RECENT=new WeakHashMap<>();
-    private static final Map<ServerLevel,ArrayDeque<Notice>> QUEUES=new WeakHashMap<>();
+    private static final Map<ServerLevel,NoticeQueue> QUEUES=new WeakHashMap<>();
     private static final Map<LivingEntity,Movement> MOVEMENT=new WeakHashMap<>();
     private static final Map<ServerLevel,java.util.LinkedHashMap<String,Long>> WORLD_RECENT=new WeakHashMap<>();
     private static final Map<ServerLevel,Counter> DELIVERY_QUERIES=new WeakHashMap<>();
@@ -29,6 +29,40 @@ public final class HumanAwareness {
         boolean urgent(){return importance>=3;}
         Notice(String kind,UUID source,Vec3 position,double radius,long now,int ttl,int importance){this.kind=kind;this.source=source;
             this.position=position;this.radius=radius;this.until=now+ttl;this.queued=now;this.importance=importance;}
+    }
+    /** Fixed hearing priorities. Equal-priority notices remain in arrival order. */
+    private static final class NoticeQueue {
+        private static final int CAPACITY = 512;
+        private final List<ArrayDeque<Notice>> lanes = List.of(
+                new ArrayDeque<>(), new ArrayDeque<>(), new ArrayDeque<>(), new ArrayDeque<>(), new ArrayDeque<>());
+        private int size;
+
+        void offer(Notice notice) {
+            if (size == CAPACITY) {
+                for (int priority = 0; priority < notice.importance; priority++) {
+                    if (lanes.get(priority).pollLast() != null) {
+                        size--;
+                        break;
+                    }
+                }
+                if (size == CAPACITY) return;
+            }
+            lanes.get(notice.importance).addLast(notice);
+            size++;
+        }
+
+        Notice peek() {
+            for (int priority = lanes.size() - 1; priority >= 0; priority--) {
+                Notice notice = lanes.get(priority).peekFirst();
+                if (notice != null) return notice;
+            }
+            return null;
+        }
+
+        void remove(Notice notice) {
+            lanes.get(notice.importance).removeFirst();
+            size--;
+        }
     }
     private HumanAwareness(){}
     private static PerceptionConfig c(){return PerceptionConfig.get();}
@@ -81,20 +115,21 @@ public final class HumanAwareness {
         enqueue(level,kind,actor.getUUID(),point,radius,ttl,HearingRelevance.importance(actor,kind));
     }
     private static void enqueue(ServerLevel level,String kind,UUID source,Vec3 point,double radius,int ttl,int importance){
-        if(radius<=0)return;ArrayDeque<Notice> q=QUEUES.computeIfAbsent(level,k->new ArrayDeque<>());
-        long now=level.getServer().overworld().getGameTime();
-        if(q.size()>=512){if(q.peekLast().importance>=importance)return;q.removeLast();}
-        Notice notice=new Notice(kind,source,point,radius,now,ttl,importance);
-        // Priority first, FIFO among equals; interrupted notices keep their receiver cursor.
-        ArrayDeque<Notice> tail=new ArrayDeque<>();
-        while(!q.isEmpty()&&q.peekLast().importance<importance)tail.addFirst(q.removeLast());
-        q.addLast(notice);q.addAll(tail);
+        if (radius <= 0) return;
+        long now = level.getServer().overworld().getGameTime();
+        QUEUES.computeIfAbsent(level, ignored -> new NoticeQueue())
+                .offer(new Notice(kind, source, point, radius, now, ttl, importance));
     }
-    public static void flush(Human worker){
-        if(!(worker.level() instanceof ServerLevel level))return;ArrayDeque<Notice> q=QUEUES.get(level);if(q==null)return;
-        long now=HumanPerception.now(worker);int processed=0;
-        while(!q.isEmpty()&&processed++<4){Notice n=q.peekFirst();
-            if(now>=n.until||!n.urgent()&&now-n.queued>c().integer("budgets.notice_queue_ticks")){q.removeFirst();continue;}
+
+    public static void flush(Human worker) {
+        if (!(worker.level() instanceof ServerLevel level)) return;
+        NoticeQueue q = QUEUES.get(level);
+        if (q == null) return;
+        long now = HumanPerception.now(worker);
+        for (int processed = 0; processed < 4; processed++) {
+            Notice n = q.peek();
+            if (n == null) return;
+            if(now>=n.until||!n.urgent()&&now-n.queued>c().integer("budgets.notice_queue_ticks")){q.remove(n);continue;}
             if(n.receivers==null){
                 Counter local=DELIVERY_QUERIES.computeIfAbsent(level,k->new Counter());local.at(now);
                 Counter global=SERVER_DELIVERY_QUERIES.computeIfAbsent(level.getServer(),k->new Counter());global.at(now);
@@ -108,9 +143,9 @@ public final class HumanAwareness {
                         h->h.isAlive()&&h.position().distanceToSqr(n.position)<=n.radius*n.radius,list,512);
                 n.receivers=list.stream().map(Entity::getUUID).toList();
             }
+            Entity actor = n.source == null ? null : level.getEntity(n.source);
             while(n.index<n.receivers.size()){
                 Entity found=level.getEntity(n.receivers.get(n.index));if(!(found instanceof Human h)){n.index++;continue;}
-                Entity actor=n.source==null?null:level.getEntity(n.source);
                 if (!BattlePerceptionDetail.acceptsClue(h, n.kind, actor)) { n.index++; continue; }
                 boolean step=n.kind.equals("walk")||n.kind.equals("run")||n.kind.equals("swim");
                 if(passiveCreature(actor)||h==actor||step&&(actor instanceof LivingEntity e&&HumanRelations.allied(h,e))
@@ -124,7 +159,7 @@ public final class HumanAwareness {
                 if(!PerceptionBudget.claim(h,"notices",1))return;
                 HumanPerception.notice(h,n.kind,n.position,n.source,(int)(n.until-now),relevance.importance());n.index++;
             }
-            q.removeFirst();
+            q.remove(n);
         }
     }
     /** Filter before bounded selection; distant background mobs never occupy sound slots. */
@@ -141,10 +176,9 @@ public final class HumanAwareness {
                 .thenComparingLong(e->{Movement previous=MOVEMENT.get(e);return previous==null?Long.MIN_VALUE:previous.tick;})
                 .thenComparingDouble(listener::distanceToSqr).thenComparing(Entity::getUUID);
     }
-    public static void sampleMovement(Human listener,List<LivingEntity> nearby){
+    /** Candidates arrive in movementOrder from the bounded perception scan. */
+    static void sampleMovement(Human listener, List<LivingEntity> ordered){
         long now=HumanPerception.now(listener);int sampled=0;
-        List<LivingEntity> ordered=new ArrayList<>(nearby);
-        ordered.sort(movementOrder(listener));
         for(LivingEntity actor:ordered){
             if (!BattlePerceptionDetail.acceptsMovement(listener,actor) || !movementCandidate(listener,actor)) continue;
             if(actor.isSilent()||actor.isShiftKeyDown()||actor instanceof Player p&&(p.isCreative()||p.isSpectator())){

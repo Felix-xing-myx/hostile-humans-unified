@@ -4125,3 +4125,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 核对 Forge HumanoidMobRenderer 已注册头饰与鞘翅，移除重复层。Python 核查通过 516 项，跳过 16 项。未编译、未同步、未实测帧时间。
 
 - 闲置清扫掉落物分流（基线 `717b40b`，分支 `fix/loot-reservation`，工作树 `worktrees/loot-reservation`）。占位接入主动拾取 Goal，候选、战斗补给与实际拾取权限仍沿用各自入口。
+
+### 全模块架构与规范审查
+
+- 状态为进行中。基线 1c993993a31af1dfb11e88e18b887a3c29a8acc5。主控负责 worktrees/module-architecture，分支 audit/module-architecture。
+- 首轮范围为 perception/HumanAwareness、听觉回归契约、更新日志与对应知识库。没有共享实体、配置或渲染文件修改，公开入口无新增。依据和覆盖状态见 [架构审查记录](ARCHITECTURE_AUDIT.md)。
+- 静态与 Python 检查完成后整合。Java 编译与游戏内性能对照待验证。
