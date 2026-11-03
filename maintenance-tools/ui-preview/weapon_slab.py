@@ -76,8 +76,9 @@ def slab(d, ox, oy, name, amount, reserve, mode_label, capacity):
     d.text((col * S, (y + 4) * S), amount, font=big, fill=rgba(TEXT, 1))
     if capacity:
         d.text(((col + amount_w + 3) * S, (y + 13) * S), capacity, font=FONT, fill=rgba(MUTED, 1))
-    shown_reserve = clip_tail(reserve, col_right - col)
-    d.text((col * S, (y + 24) * S), shown_reserve, font=FONT, fill=rgba(MUTED, 1))
+    small_res = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .85))
+    shown_reserve = clip_tail(reserve, int((col_right - col) / .85))
+    d.text(((col_right) * S - int(width(shown_reserve) * .85) * S, (y + 24) * S), shown_reserve, font=small_res, fill=rgba(MUTED, 1))
     # hairline
     d.rectangle([(x + 4) * S, (y + 36) * S, (x + PW - 4) * S, (y + 37) * S], fill=rgba(EDGE, 1))
     # caption row: native mode art (18x12 box here), then the name
@@ -97,7 +98,7 @@ d.text((10 * S, 4 * S), "枪械板 128x52 · 第三版：弹匣已移入上带�
 slab(d, 20, 18, "AK-47 突击步枪", "30", "弹匣 3", "AUTO", "/ 30")
 ann = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 8 * S)
 note = lambda ty, text: d.text((158 * S, ty * S), text, font=ann, fill=rgba(ACCENT, 1))
-note(26, "上带：枪图 54x30 ｜ 18 / 30 ｜ 弹匣 3")
+note(26, "上带：枪图 54x30 ｜ 18 / 30 ｜ 弹匣(右下)")
 note(52, "灰线 y36")
 note(62, "下带：AUTO + 名称（整行）")
 slab(d, 20, 78, "M4 卡宾枪（长名字）", "100%", "弹匣 12", "BURST", "")

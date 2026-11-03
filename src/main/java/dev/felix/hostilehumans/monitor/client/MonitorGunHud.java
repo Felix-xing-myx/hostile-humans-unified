@@ -114,8 +114,12 @@ public final class MonitorGunHud {
         finally{g.pose().popPose();}
         if(capacityWidth>0)g.drawString(font,capacity,columnX+amountWidth+3,y+13,theme.muted(),false);
         String reserve=Component.translatable("human_monitor.gun.magazines",value.infinite()?"∞":value.magazines()).getString();
-        String reserveText=clipTail(font,reserve,columnRight-columnX);
-        g.drawString(font,reserveText,columnX,y+24,theme.muted(),false);
+        // Reserve sits in the bottom-right corner of the upper band, a step smaller than the rest.
+        float reserveScale=.85F;
+        String reserveText=clipTail(font,reserve,(int)((columnRight-columnX)/reserveScale));
+        int reserveWidth=Math.round(font.width(reserveText)*reserveScale);
+        g.pose().pushPose();try {g.pose().translate(columnRight-reserveWidth,y+24,0);g.pose().scale(reserveScale,reserveScale,1);g.drawString(font,reserveText,0,0,theme.muted(),false);}
+        finally{g.pose().popPose();}
         UiDraw.ruleFade(g,x+4,y+36,pw-8,theme.edge());
         // Caption row: fire mode, then the gun name across the rest of the width.
         String mode=value.reloading()?Component.translatable("human_monitor.gun.reloading").getString():data.energy()?"FE":data.mode();
