@@ -1,12 +1,12 @@
 package dev.felix.hostilehumans.world;
 
 import dev.felix.hostilehumans.entity.Human;
+import dev.felix.hostilehumans.equipment.NaturalHumanSpawnRules;
 
 import dev.felix.hostilehumans.config.Config;
 import dev.felix.hostilehumans.entity.HumanUtil;
 import dev.felix.hostilehumans.bootstrap.ModEntityType;
 import java.util.ArrayList;
-import java.util.Iterator;
 import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -18,9 +18,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnPlacements;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.NaturalSpawner;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -39,21 +37,21 @@ extends Mob {
     }
 
     private boolean spawn(ServerLevel level) {
-        if (!dev.felix.hostilehumans.equipment.NaturalHumanSpawnRules.beginBattle(level, blockPosition())) return false;
+        if (!NaturalHumanSpawnRules.beginBattle(level, blockPosition())) return false;
         try { return spawnBattle(level); }
-        finally { dev.felix.hostilehumans.equipment.NaturalHumanSpawnRules.endBattle(level); }
+        finally { NaturalHumanSpawnRules.endBattle(level); }
     }
     private static void addMember(ArrayList<LivingEntity> members, LivingEntity member) {
         if (member == null) return;
         members.add(member);
-        dev.felix.hostilehumans.equipment.NaturalHumanSpawnRules.battleMemberAdded((ServerLevel)member.level());
+        NaturalHumanSpawnRules.battleMemberAdded((ServerLevel)member.level());
     }
     private boolean spawnBattle(ServerLevel level) {
-        boolean tier1Allowed = dev.felix.hostilehumans.equipment.NaturalHumanSpawnRules.isTierUnlocked(level, blockPosition(), 1);
-        boolean tier2Allowed = dev.felix.hostilehumans.equipment.NaturalHumanSpawnRules.isTierUnlocked(level, blockPosition(), 2);
+        boolean tier1Allowed = NaturalHumanSpawnRules.isTierUnlocked(level, blockPosition(), 1);
+        boolean tier2Allowed = NaturalHumanSpawnRules.isTierUnlocked(level, blockPosition(), 2);
         if (!tier1Allowed && !tier2Allowed) return false;
         BlockPos blockpos = this.blockPosition();
-        if (this.hasEnoughSpace((BlockGetter)level, blockpos) && Config.eventType() != SpawnType.Disabled) {
+        if (hasEnoughSpace(level, blockpos) && Config.eventType() != SpawnType.Disabled) {
             if (level.getBiome(blockpos).is(Biomes.THE_VOID)) {
                 return false;
             }
@@ -68,7 +66,7 @@ extends Mob {
             boolean bannerRight = false;
             ArrayList<LivingEntity> spawnedEntities = new ArrayList<>();
             for (int j = 0; j < totalAmount; ++j) {
-                BlockPos pos = this.findSpawnPositionNear((LevelReader)level, blockpos, 4);
+                BlockPos pos = findSpawnPositionNear(level, blockpos, 4);
                 if (pos == null) continue;
                 if (isPillagers && currentTeam) {
                     if (this.random.nextBoolean()) {
@@ -119,25 +117,23 @@ extends Mob {
     }
 
     @Nullable
-    private BlockPos findSpawnPositionNear(LevelReader levelReader, BlockPos blockPos, int radius) {
-        BlockPos outPos = null;
-        for (int i = 0; i < 10; ++i) {
-            int k;
-            int l;
-            int j = blockPos.getX() + this.random.nextInt(radius * 2) - radius;
-            BlockPos blockpos1 = new BlockPos(j, l = levelReader.getHeight(Heightmap.Types.WORLD_SURFACE, j, k = blockPos.getZ() + this.random.nextInt(radius * 2) - radius), k);
-            if (!NaturalSpawner.isSpawnPositionOk((SpawnPlacements.Type)SpawnPlacements.Type.ON_GROUND, (LevelReader)levelReader, (BlockPos)blockpos1, (EntityType)EntityType.WANDERING_TRADER)) continue;
-            outPos = blockpos1;
-            break;
+    private BlockPos findSpawnPositionNear(ServerLevel level, BlockPos center, int radius) {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            int x = center.getX() + random.nextInt(radius * 2) - radius;
+            int z = center.getZ() + random.nextInt(radius * 2) - radius;
+            if (!level.hasChunkAt(new BlockPos(x, center.getY(), z))) continue;
+            int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+            BlockPos candidate = new BlockPos(x, y, z);
+            if (NaturalSpawner.isSpawnPositionOk(SpawnPlacements.Type.ON_GROUND, level, candidate, EntityType.WANDERING_TRADER)
+                    && NaturalHumanSpawnRules.isSafePosition(level, candidate)) return candidate;
         }
-        return outPos != null && levelReader instanceof net.minecraft.world.level.ServerLevelAccessor server
-                && dev.felix.hostilehumans.equipment.NaturalHumanSpawnRules.isSafePosition(server, outPos) ? outPos : null;
+        return null;
     }
 
-    private boolean hasEnoughSpace(BlockGetter p_35926_, BlockPos p_35927_) {
-        for (BlockPos blockpos : BlockPos.betweenClosed((BlockPos)p_35927_, (BlockPos)p_35927_.offset(1, 2, 1))) {
-            if (p_35926_.getBlockState(blockpos).getCollisionShape(p_35926_, blockpos).isEmpty()) continue;
-            return false;
+    private boolean hasEnoughSpace(ServerLevel level, BlockPos origin) {
+        for (BlockPos position : BlockPos.betweenClosed(origin, origin.offset(1, 2, 1))) {
+            if (!level.hasChunkAt(position) || !level.getBlockState(position).getCollisionShape(level, position).isEmpty())
+                return false;
         }
         return true;
     }

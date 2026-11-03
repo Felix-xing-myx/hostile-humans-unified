@@ -4165,3 +4165,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查掉落物占位，基线 a6b2029，主控沿用 audit/module-architecture。ValuableItemPickupGoal 对齐候选、实际执行与释放生命周期，公共接口不变。
 
 - 架构审查预算诊断界面，基线 bd3c3aa，主控沿用 audit/module-architecture。GlobalBudgetScreen 增量更新显示文本，网络协议与公共布局接口不变。
+
+- 架构审查自然战场选位，基线 8853d6c，主控沿用 audit/module-architecture。SpawnerEntity 的两项位置检查补齐已加载判定并清理旧反编译变量。
