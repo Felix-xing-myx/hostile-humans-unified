@@ -151,7 +151,12 @@ public final class MonitorGunHud {
         UiDraw.ruleFade(g,x+4,y+36,pw-8,theme.edge());
         // Caption row: fire mode, then the gun name across the rest of the width.
         String mode=value.reloading()?Component.translatable("human_monitor.gun.reloading").getString():data.energy()?"FE":data.mode();
-        int modeWidth=value.reloading()?0:modeIcon(g,data.mode(),x+3,y+37,12,theme);
+        // Prefer the pack's own mark; the chevron pictogram is only a fallback when it is missing.
+        int modeWidth=0;
+        if(!value.reloading() && data.backend().equals("tacz"))
+            modeWidth=dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.mode(g,data.mode(),x+3,y+37,12);
+        if(modeWidth<=0 && !value.reloading())
+            modeWidth=modeIcon(g,data.mode(),x+3,y+37,12,theme);
         if(modeWidth<=0) {
             String shown=font.plainSubstrByWidth(mode,26);
             g.drawString(font,shown,x+3,y+39,theme.text(),false);

@@ -61,6 +61,46 @@ public final class TaczMonitorHud {
             return new Size(39,13); // actual native HUD aspect, never stretch a missing pack resource
         }
     }
+    /** Largest width the fire-mode art may occupy in the caption row. */
+    public static final int MODE_WIDTH = 22;
+    private static final java.util.Set<ResourceLocation> SMOOTH = new java.util.HashSet<>();
+
+    /**
+     * Draws the pack's own fire-mode art fitted into {@code MODE_WIDTH x rowHeight}; returns the
+     * width used, or 0 when the texture is unavailable so the caller can fall back.
+     *
+     * <p>Both earlier attempts were wrong for the same reason - the texture is larger than the
+     * 18x10 window it was assumed to be. Declaring 18x10 as the texture size made Minecraft
+     * normalise the UVs against it (the whole image squeezed flat), and drawing at the texture's own
+     * size spilled it across the slab. Now the UVs use the real size, the drawn size is contained in
+     * the row, and the texture is switched to linear filtering once so a large glyph downsamples
+     * smoothly instead of dropping pixels.
+     */
+    public static int mode(GuiGraphics g,String mode,int x,int y,int rowHeight) {
+        String suffix=switch(mode){case "AUTO"->"auto";case "BURST"->"burst";default->"semi";};
+        var texture=new ResourceLocation("tacz","textures/hud/fire_mode_"+suffix+".png");
+        Size size=SIZES.computeIfAbsent(texture,TaczMonitorHud::textureSize);
+        if(size.width()<=0||size.height()<=0||rowHeight<=0)return 0;
+        smooth(texture);
+        var fit=dev.felix.hostilehumans.monitor.client.MonitorIconFit.contain(
+                size.width(),size.height(),MODE_WIDTH,rowHeight);
+        g.pose().pushPose();
+        try {
+            g.pose().translate(x+fit.x(),y+fit.y(),0);
+            g.pose().scale(fit.scale(),fit.scale(),1);
+            g.blit(texture,0,0,0,0,size.width(),size.height(),size.width(),size.height());
+        } finally { g.pose().popPose(); }
+        return Math.min(MODE_WIDTH,Math.round(size.width()*fit.scale()));
+    }
+
+    /** Large pack art is downscaled here; linear filtering keeps it smooth instead of chunky. */
+    private static void smooth(ResourceLocation texture) {
+        if(!SMOOTH.add(texture))return;
+        try {
+            Minecraft.getInstance().getTextureManager().getTexture(texture).setFilter(true,false);
+        } catch(RuntimeException|LinkageError ignored) { }
+    }
+
     private static boolean observing(LivingEntity attacker) {return attacker!=null && attacker==MonitorGunHud.viewed();}
     private static void hurt(EntityHurtByGunEvent.Post event) {
         if(event.getLogicalSide().isClient() && observing(event.getAttacker()))feedback(event.getGunDisplayId(),event.getGunId(),event.isHeadShot(),false);
