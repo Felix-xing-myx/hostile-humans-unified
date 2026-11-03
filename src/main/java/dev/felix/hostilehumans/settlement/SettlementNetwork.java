@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 public final class SettlementNetwork {
     private static final UUID NONE = new UUID(0, 0);
     private static final int NBT_LIMIT = 1048576;
-    private static final String VERSION = "6";
+    private static final String VERSION = "7";
     private static final int SESSION_TICKS = 1200;
     public static final String SELECTION_READY = "selection mode updated";
 
@@ -49,8 +49,7 @@ public final class SettlementNetwork {
         RESTORE_AUTHOR,
         SAVE_TEMPLATE_FILE,
         KEEP_ALIVE,
-        BOUNDS_AS_OUTER,
-        LIST_TEMPLATES
+        BOUNDS_AS_OUTER
     }
 
     public record Snapshot(
@@ -124,6 +123,20 @@ public final class SettlementNetwork {
 
     private static volatile Consumer<SettlementPreview> previewReceiver = value -> {};
 
+    private static volatile Consumer<SettlementWandPlacement.View> wandReceiver = value -> {};
+
+    public static void clientWandReceiver(Consumer<SettlementWandPlacement.View> callback) {
+        wandReceiver = java.util.Objects.requireNonNull(callback);
+    }
+
+    public static void armWand(SettlementWandPlacement.Request request) {
+        Connection.CHANNEL.sendToServer(request);
+    }
+
+    static void wandView(ServerPlayer player, SettlementWandPlacement.View view) {
+        Connection.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), view);
+    }
+
     public static void clientPreviewReceiver(Consumer<SettlementPreview> callback) {
         previewReceiver = java.util.Objects.requireNonNull(callback);
     }
@@ -185,6 +198,23 @@ public final class SettlementNetwork {
                 SettlementPreview::decode, (value, supplier) -> {
                     var context = supplier.get();
                     context.enqueueWork(() -> previewReceiver.accept(value));
+                    context.setPacketHandled(true);
+                }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        Connection.CHANNEL.registerMessage(4, SettlementWandPlacement.Request.class,
+                SettlementWandPlacement.Request::encode, SettlementWandPlacement.Request::decode,
+                (request, supplier) -> {
+                    var context = supplier.get();
+                    context.enqueueWork(() -> {
+                        var player = context.getSender();
+                        if (player != null && throttle(player)) SettlementWandPlacement.arm(player, request);
+                    });
+                    context.setPacketHandled(true);
+                }, Optional.of(NetworkDirection.PLAY_TO_SERVER));
+        Connection.CHANNEL.registerMessage(5, SettlementWandPlacement.View.class,
+                SettlementWandPlacement.View::encode, SettlementWandPlacement.View::decode,
+                (view, supplier) -> {
+                    var context = supplier.get();
+                    context.enqueueWork(() -> wandReceiver.accept(view));
                     context.setPacketHandled(true);
                 }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
     }
@@ -379,11 +409,6 @@ public final class SettlementNetwork {
 
     private static void send(
             ServerPlayer player, Session session, String reason, UUID acknowledged) {
-        send(player, session, reason, acknowledged, false);
-    }
-
-    private static void send(ServerPlayer player, Session session, String reason, UUID acknowledged,
-            boolean listTemplates) {
         if (!valid(player, session)) {
             SESSIONS.remove(player);
             Connection.CHANNEL.send(
@@ -409,8 +434,6 @@ public final class SettlementNetwork {
         if (info != null) {
             data.put("author", info.author());
             data.putString("module", info.module());
-            if (listTemplates && player.canUseGameMasterBlocks())
-                data.put("template_choices", SettlementTemplateFiles.list(player.serverLevel()));
             try {
                 data.put(
                         "author_transform",
@@ -449,6 +472,7 @@ public final class SettlementNetwork {
                 || player.tickCount % 20 != 0) return;
         SettlementTemplateFiles.tick(player);
         SettlementSelectionTool.tick(player);
+        SettlementWandPlacement.tick(player);
         var session = SESSIONS.get(player);
         if (session != null && !valid(player, session))
             send(player, session, "permission, distance or session changed");
@@ -623,8 +647,6 @@ public final class SettlementNetwork {
                                                         mode,
                                                         revision);
                                         }
-                                        case LIST_TEMPLATES -> player.canUseGameMasterBlocks()
-                                                ? "template choices refreshed" : "creative operator required";
                                         case BOUNDS_AS_OUTER ->
                                                 SettlementAuthoring.useBoundsAsOuter(player, at,
                                                         request.authorRevision(), data.getString("region"));
@@ -638,8 +660,7 @@ public final class SettlementNetwork {
                     } catch (RuntimeException invalid) {
                         reason = "rejected: " + invalid.getMessage();
                     }
-                    send(player, session, reason, request.requestId(),
-                            request.action() == Action.LIST_TEMPLATES);
+                    send(player, session, reason, request.requestId());
                 });
         context.setPacketHandled(true);
     }

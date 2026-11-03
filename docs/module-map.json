@@ -1109,6 +1109,7 @@
         "SettlementSelectionTool",
         "SettlementTemplate",
         "SettlementTemplateFiles",
+        "SettlementWandPlacement",
         "TemplateTransform"
       ]
     },
@@ -1118,7 +1119,8 @@
       "classes": [
         "SettlementGhostRenderer",
         "SettlementPreviewClient",
-        "SettlementScreen"
+        "SettlementScreen",
+        "SettlementWandScreen"
       ]
     },
     "soldier": {

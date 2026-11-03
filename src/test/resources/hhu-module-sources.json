@@ -2743,6 +2743,14 @@
     "class": "dev.felix.hostilehumans.mixin.SettlementTemplatePlacementMixin",
     "path": "src/main/java/dev/felix/hostilehumans/mixin/SettlementTemplatePlacementMixin.java"
   },
+  "SettlementWandPlacement": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementWandPlacement",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementWandPlacement.java"
+  },
+  "SettlementWandScreen": {
+    "class": "dev.felix.hostilehumans.settlement.client.SettlementWandScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/client/SettlementWandScreen.java"
+  },
   "ShieldAdvancePolicy": {
     "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldAdvancePolicy",
     "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/defense/ShieldAdvancePolicy.java"

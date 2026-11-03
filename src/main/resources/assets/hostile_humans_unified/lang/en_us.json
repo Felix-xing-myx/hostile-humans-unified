@@ -1,4 +1,9 @@
 {
+  "gui.hostile_humans_unified.settlement.wand_title": "Building Wand · Place template",
+  "gui.hostile_humans_unified.settlement.wand_permission": "Template placement requires a Building Wand and creative operator permissions.",
+  "gui.hostile_humans_unified.settlement.wand_workflow": "Choose a template and placement settings. Then hold the wand and right-click a destination face. Right-click again to move the preview, sneak + right-click to place, or right-click air to cancel.",
+  "gui.hostile_humans_unified.settlement.wand_missing": "Template not found. Check the ID and reopen the wand panel to refresh the list.",
+  "gui.hostile_humans_unified.settlement.wand_session_expired": "Hold the wand and reopen the placement panel.",
   "gui.hostile_humans_unified.settlement.template_picker": "Saved template to place",
   "gui.hostile_humans_unified.settlement.hide_templates": "Collapse template list",
   "gui.hostile_humans_unified.settlement.show_templates": "Choose from template list",
@@ -867,7 +872,7 @@
   "gui.hostile_humans_unified.settlement.tab.template": "Template",
   "gui.hostile_humans_unified.settlement.tab.regions": "Regions",
   "gui.hostile_humans_unified.settlement.tab.facilities": "Facilities",
-  "gui.hostile_humans_unified.settlement.tab.transfer": "Import / Export",
+  "gui.hostile_humans_unified.settlement.tab.transfer": "Save & Register",
   "gui.hostile_humans_unified.settlement.tab.management": "Indexed view",
   "gui.hostile_humans_unified.settlement.kind.ROOT": "Protected root",
   "gui.hostile_humans_unified.settlement.kind.ATTACHMENT": "Attachment",

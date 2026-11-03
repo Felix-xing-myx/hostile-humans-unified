@@ -21,7 +21,7 @@ import java.util.WeakHashMap;
 
 /** Authoritative corners live in a revision-bound server session. */
 public final class SettlementSelectionTool extends Item {
-    enum Mode { ADD, REPLACE, EDIT, BOUNDS, FACILITY, MOVE_FACILITY, PLACE, VIEW }
+    enum Mode { ADD, REPLACE, EDIT, BOUNDS, FACILITY, MOVE_FACILITY, VIEW }
 
     private record Binding(ResourceLocation dimension, BlockPos information,
             SettlementInformationBlockEntity carrier, String region, boolean exclude, boolean currentOnly, int boxIndex, Mode mode,
@@ -54,20 +54,13 @@ public final class SettlementSelectionTool extends Item {
         var author = SettlementCodec.template(info.author());
         if (mode == Mode.BOUNDS && new ResourceLocation(author.template()).getPath().equals("untitled"))
             return "template name required before selection";
-        if (mode == Mode.PLACE) {
-            var id = ResourceLocation.tryParse(region);
-            if (!player.canUseGameMasterBlocks() || id == null || region.isBlank())
-                return "template placement requires a valid ID and creative operator permission";
-            if (player.serverLevel().getStructureManager().get(id).isEmpty())
-                return "template not found: " + id;
-        }
         var binding = new Binding(player.level().dimension().location(), position.immutable(),
                 info, region, exclude, currentOnly, boxIndex, mode, revision, null, null);
+        SettlementWandPlacement.cancel(player);
         SettlementTemplateFiles.cancel(player);
         publish(player, binding);
         BINDINGS.put(player, binding);
-        if (mode == Mode.PLACE) tell(player, "pick_placement");
-        else tell(player, "bound_mode", Component.translatable(
+        tell(player, "bound_mode", Component.translatable(
                 "item.hostile_humans_unified.settlement_selection_tool.mode." + mode.name().toLowerCase(java.util.Locale.ROOT)),
                 region.isEmpty() ? "" : " · " + region);
         return SettlementNetwork.SELECTION_READY;
@@ -84,11 +77,6 @@ public final class SettlementSelectionTool extends Item {
     }
 
     private static void publish(ServerPlayer player, Binding binding) {
-        if (binding.mode() == Mode.PLACE) {
-            SettlementNetwork.preview(player, new SettlementPreview(binding.dimension().toString(),
-                    List.of(), null, null, true, List.of(), "place", binding.region()));
-            return;
-        }
         var info = binding.carrier();
         var author = SettlementCodec.template(info.author());
         var transform = SettlementAuthoring.currentTransform(player, info);
@@ -129,9 +117,6 @@ public final class SettlementSelectionTool extends Item {
     }
 
     private static boolean validBinding(ServerPlayer player, Binding binding) {
-        if (binding.mode() == Mode.PLACE)
-            return SettlementAccess.author(player) && player.canUseGameMasterBlocks()
-                    && binding.dimension().equals(player.level().dimension().location());
         return boundInformation(player, binding.information()) != null;
     }
 
@@ -153,19 +138,26 @@ public final class SettlementSelectionTool extends Item {
         if (!(context.getPlayer() instanceof ServerPlayer player)) return InteractionResult.SUCCESS;
         if (!SettlementAccess.author(player)) return InteractionResult.FAIL;
         var binding = BINDINGS.get(player);
-        if (SettlementTemplateFiles.hasPreview(player)) {
-            if (player.isShiftKeyDown()) finishPlacement(player);
-            else tell(player, "confirm_placement");
+        BlockPos point = context.getClickedPos().immutable();
+        if (SettlementWandPlacement.armed(player) || SettlementTemplateFiles.hasPreview(player)) {
+            if (player.isShiftKeyDown() && SettlementTemplateFiles.hasPreview(player)) finishPlacement(player);
+            else if (!player.isShiftKeyDown() && SettlementWandPlacement.armed(player)) {
+                try {
+                    SettlementWandPlacement.preview(player, point.relative(context.getClickedFace()));
+                    tell(player, "confirm_placement");
+                } catch (IllegalArgumentException bad) {
+                    player.sendSystemMessage(Component.literal(bad.getMessage()));
+                }
+            } else tell(player, "pick_placement");
             return InteractionResult.CONSUME;
         }
-        BlockPos point = context.getClickedPos().immutable();
         if (player.serverLevel().getBlockEntity(point) instanceof SettlementInformationBlockEntity
                 && (player.isShiftKeyDown() || binding == null || binding.mode() != Mode.BOUNDS)) {
             SettlementAuthoring.initialize(player, point);
             SettlementNetwork.openAuthor(player, point);
             return InteractionResult.CONSUME;
         }
-        if (player.isShiftKeyDown() && binding != null && binding.mode() != Mode.PLACE)
+        if (player.isShiftKeyDown() && binding != null)
             return confirm(player, binding);
         if (!active(player, binding)) return InteractionResult.FAIL;
         if (binding.mode() == Mode.VIEW) {
@@ -173,14 +165,7 @@ public final class SettlementSelectionTool extends Item {
             return InteractionResult.CONSUME;
         }
         try {
-            if (binding.mode() == Mode.PLACE) {
-                var corner = point.relative(context.getClickedFace());
-                var result = SettlementTemplateFiles.preview(player, new ResourceLocation(binding.region()), corner,
-                        net.minecraft.world.level.block.Rotation.NONE, net.minecraft.world.level.block.Mirror.NONE,
-                        binding.exclude());
-                player.sendSystemMessage(Component.literal(result));
-                tell(player, "confirm_placement");
-            } else if (binding.mode() == Mode.FACILITY || binding.mode() == Mode.MOVE_FACILITY) {
+            if (binding.mode() == Mode.FACILITY || binding.mode() == Mode.MOVE_FACILITY) {
                 String result = SettlementAuthoring.bindFacility(player, binding.carrier(), point,
                         binding.region(), binding.mode() == Mode.MOVE_FACILITY ? binding.boxIndex() : -1);
                 finish(player, binding, result);
@@ -206,19 +191,22 @@ public final class SettlementSelectionTool extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         var stack = player.getItemInHand(hand);
         if (player instanceof ServerPlayer server) {
-            if (SettlementTemplateFiles.hasPreview(server)) {
-                if (server.isShiftKeyDown()) finishPlacement(server);
+            if (SettlementTemplateFiles.hasPreview(server) || SettlementWandPlacement.armed(server)) {
+                if (server.isShiftKeyDown() && SettlementTemplateFiles.hasPreview(server)) finishPlacement(server);
+                else if (server.isShiftKeyDown()) tell(server, "pick_placement");
                 else {
+                    SettlementWandPlacement.cancel(server);
                     SettlementTemplateFiles.cancel(server);
                     tell(server, "cancelled");
                 }
                 return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
             }
             var binding = BINDINGS.get(server);
-            if (binding != null && binding.mode() != Mode.PLACE && server.isShiftKeyDown()) confirm(server, binding);
-            else {
-                BINDINGS.remove(server);
-                SettlementNetwork.preview(server, SettlementPreview.EMPTY);
+            if (server.isShiftKeyDown()) {
+                if (binding != null && binding.first() != null) confirm(server, binding);
+                else SettlementWandPlacement.open(server);
+            } else {
+                clear(server);
                 tell(server, "cancelled");
             }
         }
@@ -228,6 +216,7 @@ public final class SettlementSelectionTool extends Item {
     private static void finishPlacement(ServerPlayer player) {
         try {
             player.sendSystemMessage(Component.literal(SettlementTemplateFiles.confirm(player)));
+            SettlementWandPlacement.cancel(player);
         } catch (IllegalArgumentException bad) {
             player.sendSystemMessage(Component.literal(bad.getMessage()));
         }

@@ -1,4 +1,9 @@
 {
+  "gui.hostile_humans_unified.settlement.wand_title": "建筑棒 · 放置模板",
+  "gui.hostile_humans_unified.settlement.wand_permission": "需要手持建筑棒，并拥有创造模式和操作员权限。",
+  "gui.hostile_humans_unified.settlement.wand_workflow": "选模板和放置参数。回到世界后手持建筑棒右键目标表面；再次右键可换位置，潜行右键放置，普通右键空气取消。",
+  "gui.hostile_humans_unified.settlement.wand_missing": "未找到模板。请核对 ID，或重新打开建筑棒面板刷新列表。",
+  "gui.hostile_humans_unified.settlement.wand_session_expired": "请手持建筑棒并重新打开模板放置面板。",
   "gui.hostile_humans_unified.settlement.template_picker": "选择已保存的模板",
   "gui.hostile_humans_unified.settlement.hide_templates": "收起模板列表",
   "gui.hostile_humans_unified.settlement.show_templates": "从模板列表选择",
@@ -867,7 +872,7 @@
   "gui.hostile_humans_unified.settlement.tab.template": "模板",
   "gui.hostile_humans_unified.settlement.tab.regions": "区域",
   "gui.hostile_humans_unified.settlement.tab.facilities": "设施",
-  "gui.hostile_humans_unified.settlement.tab.transfer": "导入 / 导出",
+  "gui.hostile_humans_unified.settlement.tab.transfer": "保存与登记",
   "gui.hostile_humans_unified.settlement.tab.management": "正式管理",
   "gui.hostile_humans_unified.settlement.kind.ROOT": "正式据点主体",
   "gui.hostile_humans_unified.settlement.kind.ATTACHMENT": "据点扩展建筑",
