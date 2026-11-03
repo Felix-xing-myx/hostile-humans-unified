@@ -4042,3 +4042,8 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 负责人：主控。基线：`fcbdd82d52860200b94d2cbbeb6a905c1456b9a9`。独立分支 `fix/tacz-action-lifecycle`，工作树 `worktrees/tacz-action-lifecycle`。
 - 范围：TaCZ 动作音轨、枪内弹量、换弹完成支付、监控会话输入和相应文档。监控协议升至 7。前端分支与界面样式由现有负责人继续维护。
 - 验证：532 项 Python 核查，16 项跳过。核对编译 API 与测试实例 TaCZ JAR 的三个新增注入目标，扫描内置枪包的拉栓音轨。Java 编译、游戏内验证和实例同步待执行。
+
+### 满血保留食物回血缓存
+
+- 主控在独立工作树 retain-food-healing、分支 fix/retain-food-healing 修改 RecoverySupplies 与说明，沿用既有持久化字段，无新接口。基线 fe49f49（完整 SHA 见本提交父提交）。
+- Python 核查通过 516 项，跳过 16 项。Java 编译、实例同步和游戏内验收待执行。

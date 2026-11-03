@@ -905,12 +905,9 @@ public final class RecoverySupplies {
             human.getPersistentData().remove(NEXT_HEAL_TICK);
             return;
         }
-        if (human.getHealth() >= human.getMaxHealth()) {
-            human.getPersistentData().remove(PENDING_HEAL);
-            human.getPersistentData().remove(NEXT_HEAL_TICK);
-            human.getPersistentData().remove(FOOD_HEAL_DELAY);
-            return;
-        }
+        float healthBefore = human.getHealth();
+        float missingHealth = human.getMaxHealth() - healthBefore;
+        if (missingHealth <= 0.0F) return;
         // Entity.tickCount resets on load. Persist a remaining delay instead of
         // a deadline in that transient clock; old saved courses resume in one interval.
         if (!human.getPersistentData().contains(FOOD_HEAL_DELAY)) {
@@ -923,9 +920,10 @@ public final class RecoverySupplies {
             human.getPersistentData().putInt(FOOD_HEAL_DELAY, remaining);
             return;
         }
-        float step = Math.min(1.0F, pending);
+        float step = Math.min(Math.min(1.0F, pending), missingHealth);
         human.heal(step);
-        pending -= step;
+        float restored = Math.max(0.0F, human.getHealth() - healthBefore);
+        pending -= Math.min(step, restored);
         if (pending <= 0.0F) {
             human.getPersistentData().remove(PENDING_HEAL);
             human.getPersistentData().remove(NEXT_HEAL_TICK);
