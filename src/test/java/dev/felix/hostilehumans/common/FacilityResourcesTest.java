@@ -114,11 +114,11 @@ public final class FacilityResourcesTest {
                 if (!text.has(key)) throw new AssertionError("Missing " + locale + " label " + key);
             }
         }
-        if (blocks.size() != 12 || items.size() != 30 || models != 42)
+        if (blocks.size() != 12 || items.size() != 31 || models != 43)
             throw new AssertionError(
                     "Registry/model coverage " + blocks.size() + "/" + items.size() + "/" + models);
         System.out.println(
-                "FacilityResourcesTest:42 actual-ID native models,54 texture references and"
+                "FacilityResourcesTest: 43 actual-ID native models, texture references and"
                     + " bilingual labels passed; visual acceptance remains separate");
     }
 }
