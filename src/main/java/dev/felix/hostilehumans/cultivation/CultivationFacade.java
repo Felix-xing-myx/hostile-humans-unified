@@ -483,7 +483,7 @@ public final class CultivationFacade {
         if (reason.length() > 256) reason = reason.substring(0, 256);
         try {
             var d = CultivationData.get(p.server);
-            var a = d.account(p.getUUID()).at(s.facility.id());
+            var a = d.creditSnapshot(p.getUUID(), s.facility.id());
             var ids = new LinkedHashMap<UUID, Human>();
             var f = s.facility;
             for (Human h :

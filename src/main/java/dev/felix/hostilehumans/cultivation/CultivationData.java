@@ -51,6 +51,12 @@ final class CultivationData extends SavedData {
         return accounts.computeIfAbsent(owner, k -> new Account());
     }
 
+    TrainingCredit creditSnapshot(UUID owner, UUID facility) {
+        writable();
+        Account account = accounts.get(owner);
+        return account == null ? new TrainingCredit(0, 0, 0) : account.at(facility);
+    }
+
     boolean readOnly() {
         return future != null;
     }
