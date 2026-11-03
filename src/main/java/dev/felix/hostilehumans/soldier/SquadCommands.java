@@ -50,15 +50,19 @@ public final class SquadCommands {
         if(!valid(player,token,number))return null;
         SquadData data=SquadData.get(player.server);data.validate(player.server,player.getUUID());SquadData.Squad squad=data.squad(player.getUUID(),number);
         List<Member> members=new ArrayList<>();Map<SoldierOrder,Integer> modes=new EnumMap<>(SoldierOrder.class);int available=0;
+        UUID owner = player.getUUID();
+        RecruitmentLedger ledger = RecruitmentLedger.get(player.server);
         for(UUID id:squad.members()) {
-            Human live=findLoaded(player.server,id);boolean can=live!=null&&live.isAlive()&&live.hasOwner()&&player.getUUID().equals(live.getOwnerUUID());
+            Human live = findLoaded(player.server, id);
+            boolean can = live != null && live.isAlive() && !live.isRemoved() && live.hasOwner()
+                    && owner.equals(live.getOwnerUUID()) && ledger.isOwnedRecord(id, owner);
             SoldierOrder order=can?SoldierOrder.get(live):null;if(can){available++;modes.merge(order,1,Integer::sum);}
             members.add(new Member(id,live!=null,can,order));
         }
         return new Snapshot(token,number,squad.name(),members.size(),available,members.size()-available,List.copyOf(members),Map.copyOf(modes));
     }
     public static Result apply(ServerPlayer player,UUID token,int number,Update update) {
-        if(!CommandView.valid(update)||!valid(player,token,number))
+        if(!CommandView.valid(update))
             return new Result(false,0,0,0,0,List.of());
         return applyLoaded(player, token, number, human -> {
             CommandView.apply(human,update);
@@ -71,13 +75,15 @@ public final class SquadCommands {
     private static Result applyLoaded(ServerPlayer player, UUID token, int number, java.util.function.Consumer<Human> operation) {
         if(!valid(player,token,number)) return new Result(false,0,0,0,0,List.of());
         SquadData data=SquadData.get(player.server);
-        List<UUID> ids=List.copyOf(data.squad(player.getUUID(),number).members()),failed=new ArrayList<>();
+        UUID owner = player.getUUID();
+        RecruitmentLedger ledger = RecruitmentLedger.get(player.server);
+        List<UUID> ids=List.copyOf(data.squad(owner,number).members()),failed=new ArrayList<>();
         int applied=0,unloaded=0,unauthorized=0,invalid=0;
         for(UUID id:ids) {
-            if(!RecruitmentLedger.get(player.server).isOwnedRecord(id,player.getUUID())){unauthorized++;failed.add(id);continue;}
+            if(!ledger.isOwnedRecord(id,owner)){unauthorized++;failed.add(id);continue;}
             Human human=findLoaded(player.server,id);if(human==null){unloaded++;continue;}
-            if(!human.isAlive()){invalid++;failed.add(id);continue;}
-            if(!human.hasOwner()||!player.getUUID().equals(human.getOwnerUUID())){unauthorized++;failed.add(id);continue;}
+            if(!human.isAlive()||human.isRemoved()){invalid++;failed.add(id);continue;}
+            if(!human.hasOwner()||!owner.equals(human.getOwnerUUID())){unauthorized++;failed.add(id);continue;}
             operation.accept(human);
             applied++;
         }
