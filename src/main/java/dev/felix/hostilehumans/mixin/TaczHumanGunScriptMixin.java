@@ -18,11 +18,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class TaczHumanGunScriptMixin {
     @Shadow private LivingEntity shooter;
     @Shadow private net.minecraft.world.item.ItemStack itemStack;
-    @Shadow private com.tacz.guns.api.item.gun.AbstractGunItem abstractGunItem;
 
     @Inject(method = "consumeAmmoFromPlayer(I)I", at = @At("HEAD"), cancellable = true, require = 1)
     private void hhu$consumeVirtualReserve(int requested, CallbackInfoReturnable<Integer> cir) {
-        if (!(shooter instanceof Human human) || human.level().isClientSide || abstractGunItem == null
+        if (!(shooter instanceof Human human) || human.level().isClientSide || !(itemStack.getItem() instanceof com.tacz.guns.api.item.gun.AbstractGunItem abstractGunItem)
                 || !abstractGunItem.useInventoryAmmo(itemStack)) return;
         int available = Math.max(0, abstractGunItem.getCurrentAmmoCount(itemStack));
         int used = Math.min(Math.max(0, requested), available);
