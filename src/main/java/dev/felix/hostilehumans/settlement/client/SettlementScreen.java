@@ -57,7 +57,9 @@ public final class SettlementScreen extends PanelScreen {
             confirmation = "";
     private int regionIndex, boxIndex, facilityIndex, turns;
     private int keepAliveTicks;
-    private boolean exclude, localChanged, serverClosed, transformDirty, templateEntities, currentRegionOnly;
+    private InputValue<String> placementTemplate;
+    private List<String> placementChoices = List.of();
+    private boolean exclude, localChanged, serverClosed, transformDirty, templateEntities, currentRegionOnly, advancedAuthor;
     private long confirmUntil;
 
     private SettlementScreen(SettlementNetwork.Snapshot snapshot) {
@@ -91,6 +93,12 @@ public final class SettlementScreen extends PanelScreen {
         Submission request = pending.request();
         boolean ack = pending.acknowledge(value.acknowledgedRequest());
         snapshot = value;
+        if (value.data().contains("template_choices", Tag.TAG_LIST)) {
+            var choices = value.data().getList("template_choices", Tag.TAG_STRING);
+            var ids = new ArrayList<String>();
+            for (int i = 0; i < choices.size(); i++) ids.add(choices.getString(i));
+            placementChoices = List.copyOf(ids);
+        }
         if (ack && request != null) {
             boolean explicitReload =
                     request.action() == SettlementNetwork.Action.EXPORT_AUTHOR
@@ -101,7 +109,9 @@ public final class SettlementScreen extends PanelScreen {
             submitted.remove("revision");
             if (explicitReload && value.authorRevision() > request.base().authorRevision()
                     || request.action() == SettlementNetwork.Action.SAVE_AUTHOR
-                            && returned.equals(submitted)) resetDraft(value);
+                            && returned.equals(submitted)
+                    || request.action() == SettlementNetwork.Action.BOUNDS_AS_OUTER
+                            && value.authorRevision() > request.base().authorRevision()) resetDraft(value);
         } else if (!dirty() && value.authorRevision() != editBase.authorRevision())
             resetDraft(value);
         if (ack
@@ -316,7 +326,11 @@ public final class SettlementScreen extends PanelScreen {
     }
 
     private UiLayout.Node input(String key, InputValue<?> value) {
-        return field(text(key), value);
+        var control = field(text(key), value);
+        var help = text("help." + key);
+        return net.minecraft.client.resources.language.I18n.exists(
+                        "gui.hostile_humans_unified.settlement.help." + key)
+                ? UiLayout.column(2, List.of(control, muted(help))) : control;
     }
 
     private UiLayout.Node coords(String prefix, List<InputValue<Integer>> values) {
@@ -476,7 +490,8 @@ public final class SettlementScreen extends PanelScreen {
     protected void formChanged() {
         if (changed(pivot)) transformDirty = true;
         if (snapshot.author())
-            for (String key : List.of("import", "join", "update", "selection")) {
+            for (String key : List.of("import", "join", "update", "selection", "capture_bounds", "save_template_file",
+                    "replace_template_file", "bounds_as_outer", "pick_facility", "place_template")) {
                 var button = controls.get(key);
                 if (button != null)
                     button.active =
@@ -545,7 +560,7 @@ public final class SettlementScreen extends PanelScreen {
         var payload = new CompoundTag();
         payload.putString("mode", mode);
         payload.putString("region", regionId);
-        payload.putBoolean("exclude", exclude);
+        payload.putBoolean("exclude", mode.equals("PLACE") ? templateEntities : exclude);
         payload.putBoolean("current_only", currentRegionOnly);
         payload.putInt("box_index", mode.equals("MOVE_FACILITY") ? facilityIndex : boxIndex);
         send(snapshot, SettlementNetwork.Action.SELECTION_MODE, payload);
@@ -570,18 +585,28 @@ public final class SettlementScreen extends PanelScreen {
 
     private UiLayout.Node identity() {
         List<UiLayout.Node> nodes = new ArrayList<>();
-        nodes.add(muted(text("author_steps")));
+        nodes.add(choices("kind", List.of("ORDINARY", "ROOT", "ATTACHMENT"), kind, v -> kind = v));
+        nodes.add(muted(text("help.kind." + kind)));
+        nodes.add(input("template_id", template));
         nodes.add(action("capture_bounds", text("capture_bounds"), editable() && !dirty(), false,
                 () -> beginWorldEdit("BOUNDS", "")));
-        nodes.add(input("template_id", template));
-        nodes.add(input("module_id", module));
-        nodes.add(field(text("faction"), faction, UiThemes.factions(), SettlementScreen::factionLabel));
-        nodes.add(input("tier", tier));
-        nodes.add(choices("kind", List.of("ROOT", "ATTACHMENT", "ORDINARY"), kind, v -> kind = v));
-        nodes.add(muted(text("size")));
-        nodes.add(coords("size", size));
-        nodes.add(muted(text("origin")));
-        nodes.add(coords("origin", offset));
+        if (!kind.equals("ORDINARY")) {
+            nodes.add(field(text("faction"), faction, UiThemes.factions(), SettlementScreen::factionLabel));
+            nodes.add(muted(text("help.faction")));
+            nodes.add(muted(text("help.tier")));
+            nodes.add(choices("tier_choice", List.of("1", "2", "3"), tier.text(), tier::set));
+        } else {
+            addFileSaveControls(nodes);
+        }
+        nodes.add(action("advanced_author", text("advanced_author"), editable(), advancedAuthor,
+                () -> { advancedAuthor = !advancedAuthor; refresh(); }));
+        if (advancedAuthor) {
+            nodes.add(input("module_id", module));
+            nodes.add(muted(text("size")));
+            nodes.add(coords("size", size));
+            nodes.add(muted(text("origin")));
+            nodes.add(coords("origin", offset));
+        }
         return UiLayout.column(6, nodes);
     }
 
@@ -633,6 +658,14 @@ public final class SettlementScreen extends PanelScreen {
         else {
             detail.add(input("region_id", regionId));
             detail.add(input("region_name", regionName));
+            if (layer.equals("OUTER") && !kind.equals("ORDINARY"))
+                detail.add(action("bounds_as_outer", text("bounds_as_outer"), editable() && !dirty(), false,
+                        () -> confirm("bounds_as_outer", () -> {
+                            var data = new CompoundTag();
+                            data.putString("region", region().getString("id"));
+                            send(snapshot, SettlementNetwork.Action.BOUNDS_AS_OUTER, data);
+                        })));
+            detail.add(muted(text("help.layer")));
             detail.add(choices("layer", List.of("OUTER", "INNER"), layer, v -> layer = v));
             detail.add(muted(text("coordinates_hint")));
             detail.add(
@@ -825,6 +858,7 @@ public final class SettlementScreen extends PanelScreen {
         else {
             detail.add(input("facility_id", facilityId));
             detail.add(input("facility_region", facilityRegion));
+            detail.add(muted(text("help.facility." + facilityType)));
             detail.add(
                     choices(
                             "facility_type",
@@ -879,16 +913,33 @@ public final class SettlementScreen extends PanelScreen {
         return p;
     }
 
-    private UiLayout.Node transfer() {
-        List<UiLayout.Node> nodes = new ArrayList<>();
-        nodes.add(muted(text("transfer_hint")));
+    private void addFileSaveControls(List<UiLayout.Node> nodes) {
         nodes.add(action("template_entities", text(templateEntities ? "template_entities_on" : "template_entities_off"),
                 editable(), templateEntities, () -> { templateEntities = !templateEntities; refresh(); }));
         nodes.add(action("save_template_file", text("save_template_file"), editable() && !dirty(), false,
                 () -> saveTemplateFile(false)));
         nodes.add(action("replace_template_file", text("replace_template_file"), editable() && !dirty(), false,
                 () -> confirm("replace_template_file", () -> saveTemplateFile(true))));
+    }
+
+    private UiLayout.Node transfer() {
+        List<UiLayout.Node> nodes = new ArrayList<>();
+        addFileSaveControls(nodes);
+        if (placementTemplate == null) placementTemplate = string(template.text(), 256, true);
+        nodes.add(input("placement_template", placementTemplate));
+        nodes.add(action("list_templates", text("list_templates"), editable(), false,
+                () -> send(snapshot, SettlementNetwork.Action.LIST_TEMPLATES, new CompoundTag())));
+        for (String id : placementChoices)
+            nodes.add(action("template_choice." + id, Component.literal(id), editable(),
+                    id.equals(placementTemplate.text()), () -> { placementTemplate.set(id); refresh(); }));
+        nodes.add(action("place_template", text("place_template"), editable() && !dirty(), false,
+                () -> {
+                    if (placementTemplate.valid()) beginWorldEdit("PLACE", placementTemplate.text());
+                    else fail("invalid_input");
+                }));
         nodes.add(muted(text("load_template_hint")));
+        if (kind.equals("ORDINARY") && snapshot.instance().equals(NONE)) return UiLayout.column(6, nodes);
+        nodes.add(muted(text("transfer_hint")));
         nodes.add(input("instance_name", displayName));
         nodes.add(
                 action(

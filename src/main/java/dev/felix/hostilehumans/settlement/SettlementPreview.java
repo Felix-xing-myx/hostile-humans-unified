@@ -5,9 +5,18 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 
 public record SettlementPreview(String dimension, List<Box> boxes, BlockPos first, BlockPos second,
-        boolean toolOnly) {
+        boolean toolOnly, List<Ghost> ghosts) {
     private static final int MAX_BOXES = 1153;
     public static final SettlementPreview EMPTY = new SettlementPreview("", List.of(), null, null, true);
+
+    static final int MAX_GHOSTS = 4096;
+
+    public record Ghost(BlockPos position, int state) {}
+
+    public SettlementPreview(String dimension, List<Box> boxes, BlockPos first, BlockPos second,
+            boolean toolOnly) {
+        this(dimension, boxes, first, second, toolOnly, List.of());
+    }
 
     public record Box(RegionBox bounds, int rgb, String label) {
         public Box(RegionBox bounds, int rgb) {
@@ -17,6 +26,8 @@ public record SettlementPreview(String dimension, List<Box> boxes, BlockPos firs
 
     public SettlementPreview {
         boxes = List.copyOf(boxes);
+        ghosts = List.copyOf(ghosts);
+        if (ghosts.size() > MAX_GHOSTS) throw new IllegalArgumentException("preview model limit");
         if (boxes.size() > MAX_BOXES) throw new IllegalArgumentException("preview box limit");
     }
 
@@ -33,6 +44,11 @@ public record SettlementPreview(String dimension, List<Box> boxes, BlockPos firs
             out.writeInt(box.rgb());
             out.writeUtf(box.label(), 192);
         }
+        out.writeVarInt(preview.ghosts().size());
+        for (var ghost : preview.ghosts()) {
+            out.writeBlockPos(ghost.position());
+            out.writeVarInt(ghost.state());
+        }
     }
 
     static SettlementPreview decode(FriendlyByteBuf in) {
@@ -48,6 +64,11 @@ public record SettlementPreview(String dimension, List<Box> boxes, BlockPos firs
             var b = SettlementAuthoring.cell(in.readBlockPos());
             boxes.add(new Box(RegionBox.between(a, b), in.readInt(), in.readUtf(192)));
         }
-        return new SettlementPreview(dimension, boxes, first, second, toolOnly);
+        int ghostCount = in.readVarInt();
+        if (ghostCount < 0 || ghostCount > MAX_GHOSTS) throw new IllegalArgumentException("preview model limit");
+        var ghosts = new java.util.ArrayList<Ghost>(ghostCount);
+        for (int i = 0; i < ghostCount; i++)
+            ghosts.add(new Ghost(in.readBlockPos(), in.readVarInt()));
+        return new SettlementPreview(dimension, boxes, first, second, toolOnly, ghosts);
     }
 }

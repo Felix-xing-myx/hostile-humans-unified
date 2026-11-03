@@ -2663,6 +2663,10 @@
     "class": "dev.felix.hostilehumans.settlement.SettlementGeneration",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementGeneration.java"
   },
+  "SettlementGhostRenderer": {
+    "class": "dev.felix.hostilehumans.settlement.client.SettlementGhostRenderer",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/client/SettlementGhostRenderer.java"
+  },
   "SettlementIndex": {
     "class": "dev.felix.hostilehumans.settlement.SettlementIndex",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementIndex.java"

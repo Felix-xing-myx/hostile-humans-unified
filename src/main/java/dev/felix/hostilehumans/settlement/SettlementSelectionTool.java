@@ -21,7 +21,7 @@ import java.util.WeakHashMap;
 
 /** Authoritative corners live in a revision-bound server session. */
 public final class SettlementSelectionTool extends Item {
-    enum Mode { ADD, REPLACE, EDIT, BOUNDS, FACILITY, MOVE_FACILITY, VIEW }
+    enum Mode { ADD, REPLACE, EDIT, BOUNDS, FACILITY, MOVE_FACILITY, PLACE, VIEW }
 
     private record Binding(ResourceLocation dimension, BlockPos information,
             SettlementInformationBlockEntity carrier, String region, boolean exclude, boolean currentOnly, int boxIndex, Mode mode,
@@ -41,12 +41,16 @@ public final class SettlementSelectionTool extends Item {
             boolean currentOnly, int boxIndex, Mode mode, int revision) {
         var info = SettlementAuthoring.information(player, position);
         if (info == null || info.revision() != revision) return "author unavailable or stale";
+        if (mode == Mode.PLACE && (!player.canUseGameMasterBlocks()
+                || ResourceLocation.tryParse(region) == null))
+            return "template placement requires a valid ID and creative operator permission";
         var binding = new Binding(player.level().dimension().location(), position.immutable(),
                 info, region, exclude, currentOnly, boxIndex, mode, revision, null, null);
         SettlementTemplateFiles.cancel(player);
         publish(player, binding);
         BINDINGS.put(player, binding);
-        tell(player, (mode == Mode.FACILITY || mode == Mode.MOVE_FACILITY) ? "pick" : "first_corner");
+        if (mode == Mode.PLACE) tell(player, "pick_placement");
+        else tell(player, (mode == Mode.FACILITY || mode == Mode.MOVE_FACILITY) ? "pick" : "first_corner");
         return SettlementNetwork.SELECTION_READY;
     }
 
@@ -117,6 +121,10 @@ public final class SettlementSelectionTool extends Item {
         if (!(context.getPlayer() instanceof ServerPlayer player)) return InteractionResult.SUCCESS;
         if (!SettlementAccess.author(player)) return InteractionResult.FAIL;
         var binding = BINDINGS.get(player);
+        if (SettlementTemplateFiles.hasPreview(player)) {
+            if (player.isShiftKeyDown()) finishPlacement(player);
+            return InteractionResult.CONSUME;
+        }
         if (player.isShiftKeyDown() && binding != null) return confirm(player, binding);
         BlockPos point = context.getClickedPos().immutable();
         if (player.serverLevel().getBlockEntity(point) instanceof SettlementInformationBlockEntity
@@ -131,7 +139,14 @@ public final class SettlementSelectionTool extends Item {
             return InteractionResult.CONSUME;
         }
         try {
-            if (binding.mode() == Mode.FACILITY || binding.mode() == Mode.MOVE_FACILITY) {
+            if (binding.mode() == Mode.PLACE) {
+                var corner = point.relative(context.getClickedFace());
+                var result = SettlementTemplateFiles.preview(player, new ResourceLocation(binding.region()), corner,
+                        net.minecraft.world.level.block.Rotation.NONE, net.minecraft.world.level.block.Mirror.NONE,
+                        binding.exclude());
+                player.sendSystemMessage(Component.literal(result));
+                tell(player, "confirm_placement");
+            } else if (binding.mode() == Mode.FACILITY || binding.mode() == Mode.MOVE_FACILITY) {
                 String result = SettlementAuthoring.bindFacility(player, binding.carrier(), point,
                         binding.region(), binding.mode() == Mode.MOVE_FACILITY ? binding.boxIndex() : -1);
                 finish(player, binding, result);
@@ -157,6 +172,14 @@ public final class SettlementSelectionTool extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         var stack = player.getItemInHand(hand);
         if (player instanceof ServerPlayer server) {
+            if (SettlementTemplateFiles.hasPreview(server)) {
+                if (server.isShiftKeyDown()) finishPlacement(server);
+                else {
+                    SettlementTemplateFiles.cancel(server);
+                    tell(server, "cancelled");
+                }
+                return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+            }
             var binding = BINDINGS.get(server);
             if (binding != null && server.isShiftKeyDown()) confirm(server, binding);
             else {
@@ -166,6 +189,14 @@ public final class SettlementSelectionTool extends Item {
             }
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+    }
+
+    private static void finishPlacement(ServerPlayer player) {
+        try {
+            player.sendSystemMessage(Component.literal(SettlementTemplateFiles.confirm(player)));
+        } catch (IllegalArgumentException bad) {
+            player.sendSystemMessage(Component.literal(bad.getMessage()));
+        }
     }
 
     private static InteractionResult confirm(ServerPlayer player, Binding binding) {

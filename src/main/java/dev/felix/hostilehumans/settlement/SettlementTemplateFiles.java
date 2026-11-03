@@ -10,6 +10,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -101,7 +103,6 @@ final class SettlementTemplateFiles {
             Rotation rotation, Mirror mirror, boolean entities) {
         if (!player.canUseGameMasterBlocks()) throw new IllegalArgumentException("creative operator required");
         cancel(player);
-        SettlementSelectionTool.clear(player);
         var level = player.serverLevel();
         var manager = level.getStructureManager();
         var original = manager.get(id).orElseThrow(() -> new IllegalArgumentException("template not found: " + id));
@@ -116,13 +117,47 @@ final class SettlementTemplateFiles {
         checkDestination(player, corner, bounds);
         var data = original.save(new CompoundTag());
         sanitize(data, size, rotation, mirror);
+        // Pin the same palette for preview and confirmed placement.
+        var palettes = data.getList("palettes", Tag.TAG_LIST);
+        if (!palettes.isEmpty()) {
+            data.put("palette", palettes.getList(0).copy());
+            data.remove("palettes");
+        }
         var copy = manager.readStructure(data);
+        var ghosts = previewBlocks(level, data, origin, settings);
+        SettlementSelectionTool.clear(player);
         PENDING.put(player, new Placement(level, id, origin, settings, copy, bounds,
                 level.getGameTime() + PREVIEW_TICKS));
         SettlementNetwork.preview(player, new SettlementPreview(level.dimension().location().toString(),
-                List.of(new SettlementPreview.Box(bounds, 0xffffff)), null, null, false));
+                List.of(new SettlementPreview.Box(bounds, 0xffffff, id.toString().substring(0,
+                        Math.min(id.toString().length(), 192)))), null, null, false, ghosts));
         return "Preview " + id + ": /hh settlement template confirm replaces blocks inside the box; "
-                + "/hh settlement template cancel aborts. Preview expires after 30 seconds.";
+                + "/hh settlement template cancel aborts. Preview expires after 30 seconds."
+                + (ghosts.isEmpty() ? " Bounds only: model preview is empty or exceeds 4096 blocks." : "");
+    }
+
+    private static List<SettlementPreview.Ghost> previewBlocks(ServerLevel level, CompoundTag data,
+            BlockPos origin, StructurePlaceSettings settings) {
+        var registry = level.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
+        var palette = data.getList("palette", Tag.TAG_COMPOUND).stream()
+                .map(tag -> NbtUtils.readBlockState(registry, (CompoundTag) tag))
+                .map(state -> state.mirror(settings.getMirror()).rotate(settings.getRotation()))
+                .toList();
+        var blocks = data.getList("blocks", Tag.TAG_COMPOUND);
+        var ghosts = new java.util.ArrayList<SettlementPreview.Ghost>();
+        for (int i = 0; i < blocks.size(); i++) {
+            var entry = blocks.getCompound(i);
+            int stateId = entry.getInt("state");
+            if (stateId < 0 || stateId >= palette.size()) continue;
+            var state = palette.get(stateId);
+            if (state.getRenderShape() != net.minecraft.world.level.block.RenderShape.MODEL) continue;
+            if (ghosts.size() == SettlementPreview.MAX_GHOSTS) return List.of();
+            var pos = entry.getList("pos", Tag.TAG_INT);
+            var local = new BlockPos(pos.getInt(0), pos.getInt(1), pos.getInt(2));
+            ghosts.add(new SettlementPreview.Ghost(
+                    StructureTemplate.calculateRelativePosition(settings, local).offset(origin), Block.getId(state)));
+        }
+        return ghosts;
     }
 
     private static void checkDestination(ServerPlayer player, BlockPos corner, RegionBox bounds) {
@@ -148,6 +183,10 @@ final class SettlementTemplateFiles {
                 pending.settings(), pending.level().getRandom(), Block.UPDATE_ALL))
             throw new IllegalArgumentException("template placement failed");
         return "placed " + pending.id() + "; open its information block to register the new site";
+    }
+
+    static boolean hasPreview(ServerPlayer player) {
+        return PENDING.containsKey(player);
     }
 
     static void cancel(ServerPlayer player) {

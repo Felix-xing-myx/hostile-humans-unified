@@ -57,7 +57,7 @@
 | `performance` | 共享配额与活动分档 | 7 |
 | `progression` | 成长、专精、经验与属性 | 27 |
 | `settlement` | 据点区域几何、模板变换与维度实例索引 | 25 |
-| `settlement/client` | 据点结构作者表单、管理与岗位指派 | 2 |
+| `settlement/client` | 据点结构作者表单、管理与岗位指派 | 3 |
 | `soldier` | 雇佣、小队、命令、召回和对白 | 57 |
 | `world` | 自然出生和生成实体 | 3 |
 
@@ -294,7 +294,7 @@
 
 ### settlement.client
 
-`SettlementPreviewClient`、`SettlementScreen`
+`SettlementGhostRenderer`、`SettlementPreviewClient`、`SettlementScreen`
 
 ### soldier
 

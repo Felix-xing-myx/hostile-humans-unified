@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 public final class SettlementNetwork {
     private static final UUID NONE = new UUID(0, 0);
     private static final int NBT_LIMIT = 1048576;
-    private static final String VERSION = "4";
+    private static final String VERSION = "5";
     private static final int SESSION_TICKS = 1200;
     public static final String SELECTION_READY = "selection mode updated";
 
@@ -48,7 +48,9 @@ public final class SettlementNetwork {
         CLOSE,
         RESTORE_AUTHOR,
         SAVE_TEMPLATE_FILE,
-        KEEP_ALIVE
+        KEEP_ALIVE,
+        BOUNDS_AS_OUTER,
+        LIST_TEMPLATES
     }
 
     public record Snapshot(
@@ -377,6 +379,11 @@ public final class SettlementNetwork {
 
     private static void send(
             ServerPlayer player, Session session, String reason, UUID acknowledged) {
+        send(player, session, reason, acknowledged, false);
+    }
+
+    private static void send(ServerPlayer player, Session session, String reason, UUID acknowledged,
+            boolean listTemplates) {
         if (!valid(player, session)) {
             SESSIONS.remove(player);
             Connection.CHANNEL.send(
@@ -602,6 +609,10 @@ public final class SettlementNetwork {
                                                                 ? SettlementSelectionTool.Mode.valueOf(data.getString("mode"))
                                                                 : SettlementSelectionTool.Mode.ADD,
                                                         request.authorRevision());
+                                        case LIST_TEMPLATES -> "template choices refreshed";
+                                        case BOUNDS_AS_OUTER ->
+                                                SettlementAuthoring.useBoundsAsOuter(player, at,
+                                                        request.authorRevision(), data.getString("region"));
                                         case SAVE_TEMPLATE_FILE ->
                                                 SettlementTemplateFiles.save(player, at,
                                                         request.authorRevision(), data.getBoolean("entities"),
@@ -612,7 +623,8 @@ public final class SettlementNetwork {
                     } catch (RuntimeException invalid) {
                         reason = "rejected: " + invalid.getMessage();
                     }
-                    send(player, session, reason, request.requestId());
+                    send(player, session, reason, request.requestId(),
+                            request.action() == Action.LIST_TEMPLATES);
                 });
         context.setPacketHandled(true);
     }

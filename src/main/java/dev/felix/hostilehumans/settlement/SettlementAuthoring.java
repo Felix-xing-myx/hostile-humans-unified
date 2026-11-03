@@ -351,6 +351,28 @@ public final class SettlementAuthoring {
         return new TemplateTransform.Cell(point.getX(), point.getY(), point.getZ());
     }
 
+    static String useBoundsAsOuter(ServerPlayer player, BlockPos position, int revision, String regionId) {
+        var info = information(player, position);
+        if (info == null || info.revision() != revision) return "author unavailable or stale";
+        var author = SettlementCodec.template(info.author());
+        if (author.kind() == SettlementTemplate.Kind.ORDINARY)
+            return "ordinary buildings do not need an outer region";
+        var regions = new ArrayList<>(author.regions());
+        var size = author.size();
+        var bounds = new RegionBox(0, 0, 0, size.x() - 1, size.y() - 1, size.z() - 1);
+        for (int i = 0; i < regions.size(); i++) {
+            var region = regions.get(i);
+            if (!region.id().equals(regionId) || region.layer() != SettlementRegion.Layer.OUTER) continue;
+            regions.set(i, new SettlementRegion(region.id(), region.name(), region.layer(),
+                    List.of(bounds), region.excludes()));
+            var updated = new SettlementTemplate(author.template(), author.module(), author.kind(),
+                    author.faction(), author.tier(), author.revision(), size, author.originOffset(),
+                    regions, author.facilities());
+            return commit(info, revision, SettlementCodec.template(updated));
+        }
+        return "select an existing outer region";
+    }
+
     static String setBounds(ServerPlayer player, SettlementInformationBlockEntity info,
             BlockPos a, BlockPos b) {
         var author = SettlementCodec.template(info.author());
