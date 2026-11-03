@@ -11,7 +11,13 @@ PKG=ROOT/'src/main/java/dev/felix/hostilehumans'
 def code(name): return (PKG/(name+'.java')).read_text(encoding='utf-8')
 def disassemble(jar,clazz,verbose=False):
     javap=os.environ.get('HHU_JAVAP','javap')
-    return subprocess.run([javap,'-p','-v' if verbose else '-c','-classpath',str(jar),clazz],check=True,capture_output=True,text=True).stdout
+    with zipfile.ZipFile(jar) as archive, tempfile.TemporaryDirectory(prefix='hhu-class-audit-') as work:
+        class_file = Path(work) / 'Target.class'
+        class_file.write_bytes(archive.read(clazz.replace('.', '/') + '.class'))
+        return subprocess.run(
+            [javap, '-p', '-v' if verbose else '-c', str(class_file)],
+            check=True, capture_output=True, text=True,
+        ).stdout
 
 class VnextPerceptionCompatibility(unittest.TestCase):
     def test_discovery_still_requires_los_before_urgent_recognition_admission(self):
@@ -54,7 +60,7 @@ class VnextPerceptionCompatibility(unittest.TestCase):
 
     @unittest.skipUnless(os.environ.get('HHU_ARCANA_JAR'),'set HHU_ARCANA_JAR for installed Arcana audit')
     def test_installed_arcana_redirect_keeps_proximity_fuze(self):
-        with zipfile.ZipFile(os.environ['HHU_ARCANA_JAR']) as outer, tempfile.TemporaryDirectory(dir=ROOT/'build/task-evidence') as work:
+        with zipfile.ZipFile(os.environ['HHU_ARCANA_JAR']) as outer, tempfile.TemporaryDirectory(prefix='hhu-arcana-audit-') as work:
             nested=Path(work)/'arcana.jar';nested.write_bytes(outer.read('META-INF/mod.jar'))
             s=disassemble(nested,'group.taczexpands.server.mixin.MixinEntityUtil',True)
         self.assertIn('org.spongepowered.asm.mixin.injection.Redirect',s)

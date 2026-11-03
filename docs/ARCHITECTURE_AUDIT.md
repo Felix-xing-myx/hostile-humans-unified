@@ -14,7 +14,7 @@
 
 ## 验证证据
 
-- 累计差异可用 `git diff --check 1c99399..main` 核对。Python 规则和源码契约通过 516 项，另有 16 项跳过。源码契约只核对接入点和形态。
+- 累计差异可用 `git diff --check 1c99399..main` 核对。已使用测试实例实际安装的 TaCZ 1.1.8-hotfix2、焦燃 0.5.5、JEG 0.14.5、Arcana 1.1.4 及现有 Forge 映射 JAR 重跑 Python 检查，532 项全部通过。源码契约只核对接入点和形态，JAR 检查确认依赖侧的字节码、接口或资源。
 - 构建授权后，导航与感知优先核对 `performancePoliciesTest`、`behaviorScopedWorkBudgetTest` 和 `perceptionPolicyTest`。动作、配置、存档使用 `behaviorActionCoordinatorTest`、`behaviorGrowthConfigTest`、`vnextEconomyRecoveryTest`、`vnextFactionContentNbtTest`。这些入口已在 build.gradle 登记，尚未执行本轮累计改动的 Java 验证。
 - 游戏内验证分别覆盖群战性能、联动缺席/存在、存档恢复和两人同时操作。每个场景需要独立证据，不能由编译或 Python 检查代替。
 
