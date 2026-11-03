@@ -208,10 +208,15 @@ public final class HumanTargetSharing {
         }
         return best;
     }
+    static boolean readyToBroadcast(Human sender) {
+        return sender.getPersistentData().getInt(SEND) <= 0 && available(sender);
+    }
+
     /** Invoked only with the existing budgeted candidate query's bounded nearest friendly list. */
     static void broadcast(Human sender,List<Human> nearby){
-        if(sender.getPersistentData().getInt(SEND)>0||!available(sender))return;
+        if (!readyToBroadcast(sender)) return;
         long now=HumanPerception.now(sender);Report report=outgoing(sender,nearby,now);
+        if (report == null && BattlePerceptionDetail.reduced(sender)) return;
         Evidence evidence=report==null?HumanPerception.sharingEvidence(sender):report.evidence();
         if(evidence==null)return;
         if(report==null&&(sender.getPersistentData().getInt(CLUE_SEND)>0

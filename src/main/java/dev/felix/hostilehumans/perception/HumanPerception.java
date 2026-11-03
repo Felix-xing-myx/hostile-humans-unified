@@ -426,9 +426,9 @@ public final class HumanPerception {
         if (!HumanMonitorControl.controls(h)) reactToClue(h,s,now);
         int baseInterval=c().integer(h.isAlert||s.focus!=null||recognizing(s)>0||h.getTarget()!=null?"budgets.active_interval_ticks":"budgets.idle_interval_ticks");
         int interval=AdaptiveActivityBudget.interval(h,baseInterval,s.focusHurt||now<s.directionProtectedUntil);
+        boolean reduced = BattlePerceptionDetail.reduced(h);
         if(now>=s.nextCandidates && PerceptionBudget.claim(h,"queries",1,":candidates")){
             boolean measureBattle = BattlePerceptionDetail.measure(h);
-            boolean reduced = BattlePerceptionDetail.reduced(h);
             double movementRadius = reduced ? BattlePerceptionDetail.LOCAL_RADIUS : HumanAwareness.movementRadius();
             double r=Math.max(HumanTargetSharing.range(h),Math.max(range(h),movementRadius));
             if (measureBattle) r = Math.max(r, BattlePerceptionDetail.LOCAL_RADIUS);
@@ -437,6 +437,7 @@ public final class HumanPerception {
             Comparator<LivingEntity> rotating=Comparator.comparingLong(e->candidateRank(e.getUUID(),epoch));
             BoundedSelection<LivingEntity> close=new BoundedSelection<>((cap+1)/2,nearest);
             BoundedSelection<LivingEntity> discovery=new BoundedSelection<>(cap,rotating);
+            boolean collectPeers = HumanTargetSharing.readyToBroadcast(h);
             Comparator<Human> friendOrder=Comparator.<Human>comparingDouble(h::distanceToSqr).thenComparing(Entity::getUUID);
             BoundedSelection<Human> friends=new BoundedSelection<>(cap,friendOrder);
             BoundedSelection<LivingEntity> sounds=new BoundedSelection<>(cap*4,HumanAwareness.movementOrder(h));
@@ -445,7 +446,7 @@ public final class HumanPerception {
             level.getEntities().get(net.minecraft.world.level.entity.EntityTypeTest.forClass(LivingEntity.class),
                     h.getBoundingBox().inflate(r), e->{
                         if(e!=h&&e.isAlive()){
-                            if(e instanceof Human friendly&&HumanTargetSharing.peers(h,friendly))friends.offer(friendly);
+                            if(collectPeers&&e instanceof Human friendly&&HumanTargetSharing.peers(h,friendly))friends.offer(friendly);
                             boolean hostile = enemy(h,e);
                             if (hostile) { close.offer(e); discovery.offer(e); }
                             if (measureBattle && e instanceof Human
@@ -459,7 +460,7 @@ public final class HumanPerception {
                         return net.minecraft.util.AbortableIterationConsumer.Continuation.CONTINUE;
                     });
             if (measureBattle) BattlePerceptionDetail.sample(h, now, localHumans[0], localHumans[1]);
-            HumanTargetSharing.broadcast(h,friends.values());
+            if (collectPeers) HumanTargetSharing.broadcast(h,friends.values());
             HumanAwareness.sampleMovement(h,sounds.values());
             LinkedHashSet<UUID> chosen=new LinkedHashSet<>();
             for(LivingEntity e:close.values())chosen.add(e.getUUID());
@@ -478,7 +479,8 @@ public final class HumanPerception {
         // In crowded battles, old recognitions otherwise consume every single-ray round.
         // Discovery still pays for actual geometry/LOS and never marks a target by proximity.
         if (PerceptionDiscoveryPolicy.reserveDiscovery(visualRound,rays,urgentScan)
-                || !urgentScan && rays >= 2 && main == null && recognizing(s) == 0) {
+                || !urgentScan && rays >= 2 && (main == null && recognizing(s) == 0
+                        || reduced && Math.floorMod(visualRound, 2) == 1)) {
             LivingEntity nearestUnknown=null;
             for(UUID id:s.candidates){
                 if(!(level.getEntity(id) instanceof LivingEntity e))continue;
@@ -530,7 +532,11 @@ public final class HumanPerception {
         int resumed=0;List<UUID> bodies=List.copyOf(s.pendingBodies);
         for(int i=0;i<bodies.size()&&resumed<Math.max(1,limit);i++){
             UUID id=bodies.get(Math.floorMod(s.bodyResumeCursor++,bodies.size()));
-            if(level.getEntity(id) instanceof LivingEntity e&&eligibleVisual(h,s,e,now)){
+            if(level.getEntity(id) instanceof LivingEntity e && simplifiedVision(h,s,e,now)) {
+                s.pendingBodies.remove(id);
+                s.bodySweeps.remove(id);
+                PerceptionBudget.cancelBodyRays(h,id);
+            } else if(level.getEntity(id) instanceof LivingEntity e&&eligibleVisual(h,s,e,now)){
                 check(h,s,e,now,interval,false);resumed++;
             }else{s.pendingBodies.remove(id);PerceptionBudget.cancelBodyRays(h,id);}
         }
@@ -540,6 +546,7 @@ public final class HumanPerception {
         if(!enemy(h,e))return false;
         Track t=s.tracks.get(e.getUUID());if(t!=null&&t.checked==now)return false;
         boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
+        if (simplifiedVision(h,s,e,now)) return frontlinePoint(h,e,familiar,now) != null;
         var box=e.getBoundingBox();double visibility=e.getVisibilityPercent(h);long mask=0;int index=0;
         List<Vec3> eligibleSamples=new ArrayList<>();
         for(var sample:BodyVisibilitySamples.of(box.minX,box.minY,box.minZ,box.maxX,box.maxY,box.maxZ)){
@@ -570,6 +577,24 @@ public final class HumanPerception {
         }
         return true;
     }
+    private static boolean simplifiedVision(Human h, State s, LivingEntity target, long now) {
+        return BattlePerceptionDetail.reduced(h) && now >= s.directionProtectedUntil
+                && !(s.focusHurt && Objects.equals(s.focus,target.getUUID()));
+    }
+
+    /** Use one of two coarse aim points and never claim a body sweep for this sample. */
+    private static Vec3 frontlinePoint(Human h, LivingEntity target, boolean familiar, long now) {
+        var eye = target.getEyePosition();
+        var center = target.getBoundingBox().getCenter();
+        int period = AdaptiveActivityBudget.interval(h,c().integer("budgets.active_interval_ticks"),false);
+        boolean preferCenter = (Math.floorDiv(now, period) & 1L) == 0;
+        var primary = preferCenter ? center : eye;
+        var secondary = preferCenter ? eye : center;
+        double visibility = target.getVisibilityPercent(h);
+        if (withinVision(h,primary,familiar,visibility)) return primary;
+        return withinVision(h,secondary,familiar,visibility) ? secondary : null;
+    }
+
     private static long candidateRank(UUID id,long epoch){
         long v=id.getMostSignificantBits()^id.getLeastSignificantBits()^(epoch*0x9e3779b97f4a7c15L);
         v=(v^(v>>>30))*0xbf58476d1ce4e5b9L;v=(v^(v>>>27))*0x94d049bb133111ebL;
@@ -592,12 +617,16 @@ public final class HumanPerception {
         return distance<1.e-4||Vec3.directionFromRotation(h.getXRot(),h.getYHeadRot()).normalize().dot(delta.scale(1/distance))>Math.cos(halfAngle(distance,familiar));
     }
     private static boolean clearVisualRay(Human h,State s,LivingEntity target,Vec3 point,long now){
+        return clearVisualRay(h,s,target,point,now,true);
+    }
+
+    private static boolean clearVisualRay(Human h,State s,LivingEntity target,Vec3 point,long now,boolean cacheBlocked){
         Vec3 eye=h.getEyePosition(),towardEye=eye.subtract(point);
         // Surface samples can lie exactly on the floor/adjacent wall. Test the approach side of the surface.
         Vec3 end=towardEye.lengthSqr()>1.e-8?point.add(towardEye.normalize().scale(1.e-4)):point;
         BlockHitResult hit=h.level().clip(new ClipContext(eye,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,h));
         boolean clear=hit.getType()==HitResult.Type.MISS;
-        if(!clear)VisualOcclusionMemory.blockedRay(h,target,hit,point);
+        if(!clear&&cacheBlocked)VisualOcclusionMemory.blockedRay(h,target,hit,point);
         s.rays.addLast(new Ray(h.getEyePosition(),clear?point:hit.getLocation(),clear,now));
         while(s.rays.size()>8)s.rays.removeFirst();
         return clear;
@@ -669,7 +698,15 @@ public final class HumanPerception {
     }
     private static void check(Human h,State s,LivingEntity e,long now,int interval,boolean fast){
         if(!enemy(h,e))return;Track t=s.tracks.get(e.getUUID());boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
-        VisualProbe probe=bodyVisibility(h,s,e,t,familiar,now,fast);
+        boolean simple = simplifiedVision(h,s,e,now);
+        VisualProbe probe;
+        if (simple) {
+            if (!fast) return;
+            Vec3 point = frontlinePoint(h,e,familiar,now);
+            boolean clear = point != null && clearVisualRay(h,s,e,point,now,false);
+            probe = new VisualProbe(clear ? point : null, true,
+                    clear ? "团战快速目视" : "团战采样点未见");
+        } else probe=bodyVisibility(h,s,e,t,familiar,now,fast);
         if(probe.visiblePoint==null){
             if(t!=null){t.denied=probe.reason;if(probe.complete){t.visible=false;t.evidence.miss(now);}}
             if(!probe.complete){s.scanStatus=probe.reason;s.reason=probe.reason;}
@@ -687,6 +724,10 @@ public final class HumanPerception {
         boolean priority = !live && !s.focusHurt && !s.priorityFocus && now >= s.directionProtectedUntil
                 && now >= s.nextPriorityFocus && now >= t.lookAfter && mayInspectPriority(h)
                 && HumanThreatAssessment.visiblePriorityInterrupt(h,h.getTarget(),e);
+        if (!live && simple && distance <= BattlePerceptionDetail.QUICK_RECOGNITION_RANGE) {
+            confirmSight(h,s,t,now,"团战近距离目视确认");
+            return;
+        }
         if(!live&&!t.evidence.active()&&recognizing(s)>=RecognitionEvidence.MAX_CONCURRENT){
             // Only actual visible evidence may interrupt a distant recognition. Never a radius scan alone.
             Track pause=null;
@@ -714,11 +755,9 @@ public final class HumanPerception {
                     PerceptionPolicy.recognition(distance,h.isAlert,familiar,c().number("recognition.base_ticks"),c().number("recognition.ticks_per_block"),
                         c().integer("recognition.maximum_ticks"),c().integer("recognition.minimum_ticks"),c().number("recognition.alert_factor"),
                         c().number("recognition.familiar_factor"),c().number("recognition.combined_factor"));
-            if(t.evidence.visible(now,interval,required,c().integer("recognition.break_ticks"))){
-                t.evidence.finish();t.marked=true;t.visual=now;t.liveUntil=now+c().integer("memory.dynamic_ticks");
-                t.familiarUntil=now+c().integer("memory.familiar_ticks");t.refresh="首次目视确认";
-                alert(h,s,"目视确认："+t.name);if(Objects.equals(s.focus,e.getUUID()))release(s,"识别完成");
-            }
+            if (simple) required = Math.max(2, (required + 1) / 2);
+            if(t.evidence.visible(now,interval,required,c().integer("recognition.break_ticks")))
+                confirmSight(h,s,t,now,"首次目视确认");
             s.nextScan=Math.min(s.nextScan,now+AdaptiveActivityBudget.interval(h,c().integer("budgets.active_interval_ticks"),s.focusHurt||now<s.directionProtectedUntil));
         }else if(live&&Objects.equals(s.focus,e.getUUID()))release(s,"已标记来源已回看");
         if(s.focus==null){
@@ -728,6 +767,17 @@ public final class HumanPerception {
             }
         }
     }
+    private static void confirmSight(Human h, State s, Track track, long now, String reason) {
+        track.evidence.finish();
+        track.marked = true;
+        track.visual = now;
+        track.liveUntil = now + c().integer("memory.dynamic_ticks");
+        track.familiarUntil = now + c().integer("memory.familiar_ticks");
+        track.refresh = reason;
+        alert(h,s,"目视确认："+track.name);
+        if (Objects.equals(s.focus,track.id)) release(s,"识别完成");
+    }
+
     private static void describe(Human h,State s){
         if(HumanMonitorControl.controls(h)){
             s.decision="玩家接管";s.reason="视觉识别与记忆持续更新；不自主移动、转向或攻击";return;
@@ -854,7 +904,7 @@ public final class HumanPerception {
         row(rows,"clues","最近听觉分级",s.soundPolicy);
         row(rows,"actions","阵营被动能力",FactionAbilities.describe(h));
         row(rows,"budget","动态活动档位",AdaptiveActivityBudget.describe(h));
-        row(rows,"budget","感知细节",BattlePerceptionDetail.reduced(h) ? "团战前线：精简环境侦查" : "完整");
+        row(rows,"budget","感知细节",BattlePerceptionDetail.reduced(h) ? "团战前线：精简视觉与环境侦查" : "完整");
         row(rows,"overview","警觉剩余",remaining(s.alertUntil,now));row(rows,"actions","观察请求",s.lookOwner);
         row(rows,"actions","实际朝向归属",HumanMonitorControl.controls(h)?"接管玩家视角":HumanAttention.owner(h));
         row(rows,"targets","主攻击目标",h.getTarget()==null?"无":bounded(h.getTarget().getName().getString(),64));

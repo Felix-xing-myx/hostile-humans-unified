@@ -13,6 +13,7 @@ import net.minecraft.world.level.Level;
 /** Chooses perception detail from the existing neighborhood query and server load tier. */
 final class BattlePerceptionDetail {
     static final double LOCAL_RADIUS = 24;
+    static final double QUICK_RECOGNITION_RANGE = 12;
     static final double LOCAL_RADIUS_SQUARED = LOCAL_RADIUS * LOCAL_RADIUS;
     private static final double STEP_RADIUS_SQUARED = 6 * 6;
     private static final int LOCAL_SAMPLE_TTL = 40;

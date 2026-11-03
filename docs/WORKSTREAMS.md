@@ -4089,3 +4089,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控，基线 6d05b7b51d8d147b2102d09cd6bb479e0753d281，工作树 battle-ai-detail，分支 feat/battle-ai-detail。
 - 范围：局部前线判定、环境声分流、已有调查任务收尾、闲置扫视和只读诊断。感知采样复用现有邻域查询；战斗动作仲裁继续由现有中枢负责。
 - Python 核查通过 516 项、跳过 16 项。未编译、未构建同步、未进行游戏内或性能验收。
+
+### 团战前线第二阶段视觉精简
+
+- 主控，基线 c5709bc9b34ab8d4f3e1b91a5cbf716dc6a70526，工作树 frontline-vision，分支 feat/frontline-vision。
+- 范围：快速视觉采样、识别完成入口、既有身体补查清理、友军通报候选和正式知识库。沿用前线判定和原战斗动作权限。
+- Python 核查通过 516 项、跳过 16 项，差异空白检查通过。未编译、未同步、未游戏内性能与行为验收。
