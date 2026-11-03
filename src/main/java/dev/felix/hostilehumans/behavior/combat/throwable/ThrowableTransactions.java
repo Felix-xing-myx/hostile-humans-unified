@@ -4,6 +4,7 @@ import dev.felix.hostilehumans.entity.HumanData;
 import dev.felix.hostilehumans.entity.Human;
 
 import dev.felix.hostilehumans.behavior.HumanBehaviorControl;
+import dev.felix.hostilehumans.bootstrap.HumanRuntime;
 import dev.felix.hostilehumans.behavior.combat.recovery.RecoverySupplies;
 import dev.felix.hostilehumans.faction.HumanRelations;
 import dev.felix.hostilehumans.inventory.HumanInventorySession;
@@ -76,7 +77,7 @@ public final class ThrowableTransactions {
                 if (actions.running(token) && human.getTarget() == selected && available(human, target)
                         && human.getData() == data && slot < data.getInventoryItemsSize() && data.getInventoryItem(slot) == remainder
                         && ItemStack.matches(remainder, expectedRemainder) && inventory.matchesExcept(data, slot))
-                    submitted = human.level().addFreshEntity(projectile);
+                    submitted = publish(human, projectile);
             } finally {
                 // A removed projectile may already have detonated inside a synchronous join hook.
                 // Its effects are irreversible; never refund and manufacture a second usable item.
@@ -100,6 +101,18 @@ public final class ThrowableTransactions {
             } finally { ACTIVE.remove(human); }
         }
     }
+    private static boolean publish(Human human, Projectile projectile) {
+        try {
+            return human.level().addFreshEntity(projectile);
+        } catch (RuntimeException failure) {
+            if (!projectile.isAddedToWorld() && !projectile.isRemoved()) throw failure;
+            // The native callback already exposed the projectile. Report success so
+            // the caller settles cooldown alongside the irrevocable inventory debit.
+            HumanRuntime.LOGGER.warn("Throw publication callback failed after projectile commit for {}", human.getUUID(), failure);
+            return true;
+        }
+    }
+
     private record Inventory(java.util.List<ItemStack> references, java.util.List<ItemStack> expected) {
         static Inventory capture(HumanData data) {
             var references = new java.util.ArrayList<ItemStack>();

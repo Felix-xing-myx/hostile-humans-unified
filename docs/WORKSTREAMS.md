@@ -4183,3 +4183,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查真实装备交换，基线 422a238，主控沿用 audit/module-architecture。HumanEquipmentExchange 限制失败回滚范围，公共接口不变。
 
 - 架构审查背包编辑会话，基线 d4009e2，主控沿用 audit/module-architecture。HumanInventoryMenu 与 HumanInventorySession 改用本地唯一令牌，网络容器编号及协议不变。
+
+- 架构审查投掷事务，基线 bfe5f33，主控沿用 audit/module-architecture。ThrowableTransactions 对齐入场异常、扣除和冷却结果，公共接口不变。
