@@ -205,6 +205,22 @@ final class SettlementTemplateFiles {
         checkArea(player.serverLevel(), bounds);
     }
 
+    private static void checkExistingInformationBlocks(ServerLevel level, RegionBox bounds) {
+        var chunks = level.getChunkSource();
+        for (int x = bounds.minX() >> 4; x <= bounds.maxX() >> 4; x++) {
+            for (int z = bounds.minZ() >> 4; z <= bounds.maxZ() >> 4; z++) {
+                var chunk = chunks.getChunkNow(x, z);
+                if (chunk == null) throw new IllegalArgumentException("all template chunks must already be loaded");
+                // The chunk index includes positions with pending block-entity data.
+                for (BlockPos position : chunk.getBlockEntitiesPos()) {
+                    if (bounds.contains(position.getX(), position.getY(), position.getZ())
+                            && level.getBlockEntity(position) instanceof SettlementInformationBlockEntity)
+                        throw new IllegalArgumentException("destination contains an existing information block");
+                }
+            }
+        }
+    }
+
     static String confirm(ServerPlayer player) {
         var pending = PENDING.get(player);
         if (!player.canUseGameMasterBlocks() || pending == null || pending.level() != player.serverLevel()
@@ -212,11 +228,8 @@ final class SettlementTemplateFiles {
             throw new IllegalArgumentException("no valid template placement preview");
         var bounds = pending.bounds();
         var min = new BlockPos(bounds.minX(), bounds.minY(), bounds.minZ());
-        var max = new BlockPos(bounds.maxX(), bounds.maxY(), bounds.maxZ());
         checkDestination(player, min, bounds);
-        for (var position : BlockPos.betweenClosed(min, max))
-            if (pending.level().getBlockEntity(position) instanceof SettlementInformationBlockEntity)
-                throw new IllegalArgumentException("destination contains an existing information block");
+        checkExistingInformationBlocks(pending.level(), bounds);
         if (!pending.template().placeInWorld(pending.level(), pending.origin(), pending.origin(),
                 pending.settings(), pending.level().getRandom(), Block.UPDATE_ALL))
             throw new IllegalArgumentException("template placement failed");

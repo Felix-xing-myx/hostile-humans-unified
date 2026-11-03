@@ -4141,3 +4141,5 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 架构审查恢复与枪械取消，基线 08f9181，主控沿用 audit/module-architecture。修改 GunCustody 批量撤销的异常隔离，公共接口不变；Java 与游戏验证待执行。
 
 - 架构审查监控退出，基线 1a2423f，主控沿用 audit/module-architecture。修改 HumanMonitorService 与 HumanMonitorControl 的退出异常隔离，协议不变。Java 与游戏内验证待执行。
+
+- 架构审查建筑模板，基线 a370831，主控沿用 audit/module-architecture。核对导出原子替换，修改 SettlementTemplateFiles 的放置前保护检查，接口不变。Java 与游戏内验证待执行。
