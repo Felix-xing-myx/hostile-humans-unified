@@ -39,7 +39,7 @@ public final class LongRangeNavigation {
         String result = "new";
         final LinkedHashMap<BlockPos,Failure> failures = new LinkedHashMap<>();
     }
-    private record Failure(Vec3 origin, BlockPos probe, int tick, int attempts, int scene, int signature, boolean restricted) {}
+    private record Failure(BlockPos goal, Vec3 origin, BlockPos probe, int tick, int attempts, int scene, int signature, boolean restricted) {}
     private static final class Pool {
         private int tick;
         private NavigationSearchConfig settings;
@@ -116,12 +116,16 @@ public final class LongRangeNavigation {
             s.nextTick = tick;
         }
         Failure failure = cachedFailure(s, goal, accuracy, signature);
+        boolean changedScene = false;
         if (failure != null) {
             int elapsed = tick-failure.tick;
             boolean moved = failure.origin.distanceToSqr(human.position()) > 16;
             int delay = RouteSearchPolicy.failureDelay(failure.attempts,c.failureTicks(),c.maximumFailureTicks());
-            boolean changed = elapsed >= delay && scene(human,goal,failure.origin,failure.probe) != failure.scene;
-            if (!RouteSearchPolicy.retry(elapsed,delay,c.maximumFailureTicks(),moved,changed)) {
+            // A different investigation destination must not look like a block edit.
+            // Compare the same cells used to build the cached fingerprint.
+            changedScene = !moved && elapsed >= delay
+                    && scene(human, failure.goal, failure.origin, failure.probe) != failure.scene;
+            if (!RouteSearchPolicy.retry(elapsed,delay,c.maximumFailureTicks(),moved,changedScene)) {
                 cancelQueue(human, actor, purpose);s.queuedAt=-1;s.result = "失败缓存";return failure.restricted?new Result(Status.RESTRICTED,null):FAILED;
             }
         }
@@ -157,12 +161,12 @@ public final class LongRangeNavigation {
             s.stage = stage+1;s.nextTick = tick+1;
             return pending(s,tick,"扩大搜索");
         }
-        int attempts = failure == null
+        int attempts = failure == null || changedScene
                 || failure.origin.distanceToSqr(human.position()) > 16 ? 1 : Math.min(7,failure.attempts+1);
         BlockPos probe = path != null && path.getEndNode() != null ? path.getEndNode().asBlockPos() : goal;
         s.failures.entrySet().removeIf(e -> matchesFailureGoal(e.getKey(), goal, accuracy) && e.getValue().signature == signature);
         while(s.failures.size()>=c.cacheEntries())s.failures.remove(s.failures.keySet().iterator().next());
-        s.failures.put(goal.immutable(),new Failure(human.position(),probe.immutable(),tick,attempts,
+        s.failures.put(goal.immutable(),new Failure(goal.immutable(),human.position(),probe.immutable(),tick,attempts,
                 scene(human,goal,human.position(),probe),signature,path!=null&&path.canReach()));
         s.nextTick=tick+1;s.result=path!=null&&path.canReach()?"安全或命令拒绝":"未找到完整路";
         cancelQueue(human, actor, purpose);return path!=null&&path.canReach()?new Result(Status.RESTRICTED,null):FAILED;
