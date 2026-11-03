@@ -129,7 +129,9 @@ public final class ValuableItemPickupGoal extends Goal {
         if (sight == HumanLootVision.Sight.VISIBLE && human.tickCount >= nextValidationTick) {
             nextValidationTick = human.tickCount + 20;
             if (!HumanLootManager.isWorthCollecting(human, targetItem)) {
-                rememberScreened(targetItem, SCREENED_COOLDOWN_TICKS);
+                if (HumanLootManager.isEligibleForPickup(human, targetItem)) {
+                    rememberScreened(targetItem, SCREENED_COOLDOWN_TICKS);
+                }
                 advanceTarget();
                 return;
             }
@@ -138,7 +140,9 @@ public final class ValuableItemPickupGoal extends Goal {
         HumanAttention.observeLoot(human, knownItemPosition.add(0,.15D,0));
         if (sight == HumanLootVision.Sight.VISIBLE && human.distanceToSqr(targetItem) <= 2.25D) {
             if (!HumanLootManager.collect(human, targetItem)) {
-                rememberScreened(targetItem, SCREENED_COOLDOWN_TICKS);
+                if (HumanLootManager.isEligibleForPickup(human, targetItem)) {
+                    rememberScreened(targetItem, SCREENED_COOLDOWN_TICKS);
+                }
             }
             failedItems.remove(targetItem.getUUID());
             advanceTarget();
@@ -224,7 +228,7 @@ public final class ValuableItemPickupGoal extends Goal {
             pendingSearch = new HumanLootManager.NearbySearch(human, 12.0D, pileCenter);
         }
         ItemEntity chosen = pendingSearch.advance(64,
-                item -> claimedByOther(item, human) || isScreened(item) || isFailed(item) || !SoldierOrder.allowsLootPosition(human, item.getX(), item.getZ()),
+                item -> claimedByOther(item, human) || isScreened(item) || isFailed(item),
                 item -> rememberScreened(item, SCREENED_COOLDOWN_TICKS));
         if (!pendingSearch.isDone()) {
             nextSearchTick = human.tickCount + 1;

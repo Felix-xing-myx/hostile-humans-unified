@@ -290,20 +290,22 @@ public final class HumanLootManager {
         }
 
         private boolean eligible(ItemEntity item) {
-            return item.isAlive() && !item.getItem().isEmpty() && !item.hasPickUpDelay()
-                    && item.level() == human.level() && item.getBoundingBox().intersects(searchArea)
+            return isEligibleForPickup(human, item) && item.getBoundingBox().intersects(searchArea)
                     && human.distanceToSqr(item) <= (radius + 4.0D) * (radius + 4.0D)
-                    && (!selection.isPileOnly() || item.position().distanceToSqr(selectionCenter) <= selectionRadiusSqr)
-                    && SoldierPickupPolicy.canCollectNow(human) && isReachableWithoutDiving(item);
+                    && (!selection.isPileOnly() || item.position().distanceToSqr(selectionCenter) <= selectionRadiusSqr);
         }
     }
 
     static boolean isWorthCollecting(Human human, ItemEntity item) {
-        return SoldierPickupPolicy.canCollectNow(human) && item.isAlive() && !item.getItem().isEmpty()
+        return isEligibleForPickup(human, item) && benefit(human, item.getItem()) > 0.0D;
+    }
+
+    static boolean isEligibleForPickup(Human human, ItemEntity item) {
+        return item.level() == human.level() && SoldierPickupPolicy.canCollectNow(human)
+                && item.isAlive() && !item.getItem().isEmpty()
                 && !item.hasPickUpDelay()
                 && SoldierOrder.allowsLootPosition(human, item.getX(), item.getZ())
-                && isReachableWithoutDiving(item)
-                && benefit(human, item.getItem()) > 0.0D;
+                && isReachableWithoutDiving(item);
     }
 
     /** Keep the legacy nearby pickup ability on the same value policy as active searching. */
