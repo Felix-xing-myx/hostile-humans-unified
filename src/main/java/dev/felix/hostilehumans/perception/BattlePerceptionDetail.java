@@ -39,6 +39,22 @@ final class BattlePerceptionDetail {
                 && HumanPerception.now(h) < sample.expires();
     }
 
+    static boolean stableEngagement(Human h) {
+        var target = h.getTarget();
+        return reduced(h) && !h.isFleeing && target != null && target.isAlive()
+                && h.distanceToSqr(target) <= LOCAL_RADIUS_SQUARED
+                && HumanPerception.recentlySaw(h, target.getUUID());
+    }
+
+    static long nextNeighborhood(long now, Human h, int base, boolean stable) {
+        if (!stable) return now + base;
+        // A stable fighter refreshes its surrounding candidates once per 24 ticks.
+        // Stagger by UUID so a synchronized wave does not query in one tick.
+        int period = Math.max(base, 24);
+        long phase = Math.floorMod(h.getUUID().hashCode(), period);
+        return now + 1 + Math.floorMod(phase - now - 1, period);
+    }
+
     static boolean acceptsMovement(Human h, Entity source) {
         return !reduced(h) || closeHuman(h, source);
     }

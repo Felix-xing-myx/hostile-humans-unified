@@ -21,6 +21,9 @@ import net.minecraft.world.phys.Vec3;
 public final class HumanTargetSharing {
     static final int COOLDOWN = 200, LOCK_TICKS = 120, LAST_TICKS = 600, MAX_RECEIVERS = 3;
     static final int RELAY_INTERVAL = 20;
+    private static final int FRONTLINE_INTERVAL = 40;
+    private static final int FRONTLINE_NEIGHBORS = 4;
+    private static final int FRONTLINE_LINK_CHECKS = 2;
     static final double BASE_RANGE = 16;
     private static final String SEND = "hostile_humans_unified:share_send_remaining";
     private static final String CLUE_SEND = "hostile_humans_unified:share_clue_send_remaining";
@@ -86,7 +89,7 @@ public final class HumanTargetSharing {
         for(String key:List.of(SEND,RECEIVE,CLUE_SEND)){
             if(key.equals(RECEIVE)&&Objects.equals(RECEIVED_AT.get(receiver),HumanPerception.now(receiver)))continue;
             int remaining=receiver.getPersistentData().getInt(key);
-            if(key.equals(SEND))remaining=Math.min(RELAY_INTERVAL,remaining);
+            if(key.equals(SEND))remaining=Math.min(BattlePerceptionDetail.measure(receiver) ? FRONTLINE_INTERVAL : RELAY_INTERVAL,remaining);
             if(remaining>0)receiver.getPersistentData().putInt(key,nextCooldown(remaining));
         }
         if(!available(receiver)){clear(receiver);return;}
@@ -208,6 +211,10 @@ public final class HumanTargetSharing {
         }
         return best;
     }
+    static int peerLimit(Human sender, int maximum) {
+        return BattlePerceptionDetail.reduced(sender) ? Math.min(maximum, FRONTLINE_NEIGHBORS) : maximum;
+    }
+
     static boolean readyToBroadcast(Human sender) {
         return sender.getPersistentData().getInt(SEND) <= 0 && available(sender);
     }
@@ -215,41 +222,50 @@ public final class HumanTargetSharing {
     /** Invoked only with the existing budgeted candidate query's bounded nearest friendly list. */
     static void broadcast(Human sender,List<Human> nearby){
         if (!readyToBroadcast(sender)) return;
+        boolean reduced = BattlePerceptionDetail.reduced(sender)
+                || BattlePerceptionDetail.measure(sender) && nearby.size() >= FRONTLINE_NEIGHBORS;
+        if (reduced && nearby.size() > FRONTLINE_NEIGHBORS)
+            nearby = nearby.subList(0, FRONTLINE_NEIGHBORS);
+        if (reduced) sender.getPersistentData().putInt(SEND, FRONTLINE_INTERVAL);
+        if (nearby.isEmpty()) return;
         long now=HumanPerception.now(sender);Report report=outgoing(sender,nearby,now);
-        if (report == null && BattlePerceptionDetail.reduced(sender)) return;
+        if (report == null && reduced) return;
         Evidence evidence=report==null?HumanPerception.sharingEvidence(sender):report.evidence();
         if(evidence==null)return;
         if(report==null&&(sender.getPersistentData().getInt(CLUE_SEND)>0
                 ||evidence.target()!=null&&seen(sender,evidence.target())))return;
-        int delivered=0;
+        int delivered=0, linkChecks=0;
         for(Human receiver:nearby){
-            if(delivered>=MAX_RECEIVERS)break;
+            if(delivered >= (reduced ? 1 : MAX_RECEIVERS) || reduced && linkChecks >= FRONTLINE_LINK_CHECKS) break;
             if(!peers(sender,receiver))continue;
-            if(!Boolean.TRUE.equals(HumanReportPropagation.link(sender,receiver)))continue;
+            if (report != null && seen(receiver,evidence.target())) continue;
             LivingEntity target=resolve(receiver,evidence.target());
             if(target!=null&&!HumanPerception.sharingAllowed(receiver,target))continue;
             if(report!=null){
                 if(target==null||now>=report.created()+LOCK_TICKS)continue;
-                var inbox=INBOX.computeIfAbsent(receiver,k->new LinkedHashMap<>());
+                var inbox=INBOX.get(receiver);
                 Lease weakest=null;
-                if(inbox.size()>=8&&!inbox.containsKey(evidence.target())){
+                if(inbox!=null&&inbox.size()>=8&&!inbox.containsKey(evidence.target())){
                     for(Lease entry:inbox.values())
                         if(weakest==null||rank(entry)<rank(weakest))weakest=entry;
                     if(weakest!=null&&rank(report)<=rank(weakest))continue;
                 }
-                if(!admit(receiver,report,now))continue;
+                linkChecks++;
+                if(!Boolean.TRUE.equals(HumanReportPropagation.link(sender,receiver)) || !admit(receiver,report,now))continue;
+                if (inbox == null) inbox = INBOX.computeIfAbsent(receiver,k->new LinkedHashMap<>());
                 if(weakest!=null)inbox.remove(weakest.target);
                 inbox.put(evidence.target(),new Lease(sender,receiver,report));
             }else{
                 // Unconfirmed directions never propagate or grant attack permission.
                 if(evidence.confirmed()||receiver.getPersistentData().getInt(RECEIVE)>0)continue;
+                if(!Boolean.TRUE.equals(HumanReportPropagation.link(sender,receiver)))continue;
                 receiver.getPersistentData().putInt(RECEIVE,COOLDOWN);RECEIVED_AT.put(receiver,now);
                 HumanPerception.notice(receiver,"shared",evidence.position(),evidence.target(),LAST_TICKS);
             }
             delivered++;
         }
         // Polling is bounded even when every neighbour already knows this target.
-        sender.getPersistentData().putInt(SEND,RELAY_INTERVAL);
+        sender.getPersistentData().putInt(SEND,reduced ? FRONTLINE_INTERVAL : RELAY_INTERVAL);
         if(report==null&&delivered>0)sender.getPersistentData().putInt(CLUE_SEND,COOLDOWN);
     }
 }

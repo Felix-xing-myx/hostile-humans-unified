@@ -21,7 +21,8 @@ import net.minecraft.world.entity.LivingEntity;
 /** Sole normal target-selection boundary; cancellation still belongs to commands/safety. */
 public final class HumanTargetCoordinator {
     private static final Map<Human,State> STATES=new WeakHashMap<>();
-    private static final class State { UUID selected,locked;long lockUntil=-1,changed=-1,nextReview;String reason="尚未选敌"; }
+    private static final class State {
+        boolean steady; UUID selected,locked;long lockUntil=-1,changed=-1,nextReview;String reason="尚未选敌"; }
     private HumanTargetCoordinator() {}
     public static void lock(Human h,LivingEntity target,long until){State s=STATES.computeIfAbsent(h,k->new State());s.locked=target.getUUID();s.lockUntil=until;}
     public static void unlock(Human h){State s=STATES.get(h);if(s!=null){s.locked=null;s.lockUntil=-1;}}
@@ -54,6 +55,9 @@ public final class HumanTargetCoordinator {
         State state=STATES.computeIfAbsent(h,k->new State());long now=HumanPerception.now(h);
         LivingEntity current=h.getTarget();
         HumanFinisherSelection.observe(h,current);
+        boolean steady = !urgent && HumanPerception.steadyFrontline(h);
+        if (state.steady && !steady) state.nextReview = now;
+        state.steady = steady;
         boolean reviewDue=now>=state.nextReview,harvesting=false;
         if(!Objects.equals(state.selected,current==null?null:current.getUUID())){state.selected=current==null?null:current.getUUID();state.changed=now;}
         LivingEntity desired=HumanPerception.canTarget(h,current)?current:null;
@@ -69,6 +73,7 @@ public final class HumanTargetCoordinator {
             LivingEntity best=proposal;
             if(desired==null||now>=state.nextReview){
                 state.nextReview=now+AdaptiveActivityBudget.interval(h,PerceptionConfig.get().integer("budgets.active_interval_ticks"),urgent);
+                if (steady) state.nextReview = Math.max(state.nextReview, now + 16);
                 LivingEntity known=HumanPerception.candidate(h);
                 if (best == null || known != null && (HumanThreatAssessment.priorityInterrupt(h, desired, known)
                         || HumanThreatAssessment.score(h,known)>HumanThreatAssessment.score(h,best))) best=known;
@@ -107,7 +112,7 @@ public final class HumanTargetCoordinator {
                 }
             }
             // Optional opportunity ranking is subordinate to pressure locks and all existing permissions.
-            if(locked==null&&reviewDue){
+            if(locked==null&&reviewDue&&!steady){
                 LivingEntity finisher=HumanFinisherSelection.candidate(h,desired,urgent);
                 if(finisher!=null && !HumanThreatAssessment.priorityInterrupt(h, finisher, desired)
                         && (urgent || !RangedEngagement.temporarilyDeferred(h, finisher))){

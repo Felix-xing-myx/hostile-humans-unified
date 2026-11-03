@@ -76,7 +76,7 @@ public final class HumanPerception {
         long reactionHandled=Long.MIN_VALUE;
         long alertUntil=-1, tick=-1, nextScan, focusStarted, focusLastVisible=-1, directionStarted, nextPriorityFocus;
         UUID focus; Vec3 look; boolean focusHurt, unfamiliarFocus, priorityFocus;
-        int candidateCursor,recognitionCursor,bodyResumeCursor; List<UUID> candidates=List.of(); long nextCandidates;
+        int candidateCursor,recognitionCursor,bodyResumeCursor; List<UUID> candidates=List.of(); long nextCandidates; boolean stableNeighborhood;
         String decision="闲置观察",reason="等待视觉或声音证据",lookOwner="自然观察";
         String scanStatus="尚未执行视觉检测";long scanAt=-1;
         String soundPolicy="暂无声音输入";int geometrySkipped,occlusionSkipped;long soundGlanceUntil;
@@ -427,6 +427,13 @@ public final class HumanPerception {
         int baseInterval=c().integer(h.isAlert||s.focus!=null||recognizing(s)>0||h.getTarget()!=null?"budgets.active_interval_ticks":"budgets.idle_interval_ticks");
         int interval=AdaptiveActivityBudget.interval(h,baseInterval,s.focusHurt||now<s.directionProtectedUntil);
         boolean reduced = BattlePerceptionDetail.reduced(h);
+        boolean urgentScan=s.focusHurt||now<s.directionProtectedUntil;
+        boolean stable = !urgentScan && BattlePerceptionDetail.stableEngagement(h);
+        if (s.stableNeighborhood && !stable) {
+            s.nextCandidates = Math.min(s.nextCandidates, now);
+            s.nextScan = Math.min(s.nextScan, now);
+        }
+        s.stableNeighborhood = stable;
         if(now>=s.nextCandidates && PerceptionBudget.claim(h,"queries",1,":candidates")){
             boolean measureBattle = BattlePerceptionDetail.measure(h);
             double movementRadius = reduced ? BattlePerceptionDetail.LOCAL_RADIUS : HumanAwareness.movementRadius();
@@ -439,7 +446,7 @@ public final class HumanPerception {
             BoundedSelection<LivingEntity> discovery=new BoundedSelection<>(cap,rotating);
             boolean collectPeers = HumanTargetSharing.readyToBroadcast(h);
             Comparator<Human> friendOrder=Comparator.<Human>comparingDouble(h::distanceToSqr).thenComparing(Entity::getUUID);
-            BoundedSelection<Human> friends=new BoundedSelection<>(cap,friendOrder);
+            BoundedSelection<Human> friends=new BoundedSelection<>(HumanTargetSharing.peerLimit(h,cap),friendOrder);
             BoundedSelection<LivingEntity> sounds=new BoundedSelection<>(cap*4,HumanAwareness.movementOrder(h));
             int[] localHumans = measureBattle ? new int[2] : null; // All nearby humans and the hostile subset, excluding self.
             // Stream the loaded spatial section: unrelated entities cannot hide later enemies.
@@ -465,10 +472,9 @@ public final class HumanPerception {
             LinkedHashSet<UUID> chosen=new LinkedHashSet<>();
             for(LivingEntity e:close.values())chosen.add(e.getUUID());
             for(LivingEntity e:discovery.values())if(chosen.size()<cap)chosen.add(e.getUUID());
-            s.candidates=List.copyOf(chosen);s.nextCandidates=now+interval;
+            s.candidates=List.copyOf(chosen);s.nextCandidates=BattlePerceptionDetail.nextNeighborhood(now,h,interval,stable);
         }
         if(now<s.nextScan){describe(h,s);return;}
-        boolean urgentScan=s.focusHurt||now<s.directionProtectedUntil;
         int probeLimit=urgentScan?c().integer("budgets.rays_per_human"):AdaptiveActivityBudget.probes(h,c().integer("budgets.rays_per_human"));
         int rays=Math.min(probeLimit,Math.min(c().integer("budgets.rays_per_level"),c().integer("budgets.rays_per_server")));
         s.geometrySkipped=0;s.occlusionSkipped=0;
@@ -520,7 +526,7 @@ public final class HumanPerception {
             describe(h,s);return;
         }
         s.scanStatus="已执行服务器视觉采样";s.scanAt=now;
-        s.nextScan=now+interval;
+        s.nextScan=now+(stable && recognizing(s)==0 ? Math.max(interval, 12) : interval);
         s.scanStatus=checks.isEmpty()?"本轮无符合敌对许可的视觉候选":"已执行服务器视觉采样："+Math.min(rays,checks.size())+"个候选";
         int evidenceInterval=dev.felix.hostilehumans.perception.PerceptionCoordinationPolicy.evidenceInterval(PerceptionDiscoveryPolicy.evidenceInterval(interval,rays),(int)recognizing(s),rays,canTarget(h,main));
         resumeBodies(h,s,level,now,interval,probeLimit);
@@ -789,6 +795,13 @@ public final class HumanPerception {
         else if(bestClue(h)!=null){s.decision="调查线索";}
         else{s.decision=h.isAlert?"警觉环顾":"闲置观察";}
     }
+    /** Optional tactical reviews can slow down without changing target authorization. */
+    public static boolean steadyFrontline(Human h) {
+        State s = STATES.get(h);
+        return s != null && !s.focusHurt && now(h) >= s.directionProtectedUntil
+                && BattlePerceptionDetail.stableEngagement(h);
+    }
+
     public static LivingEntity candidate(Human h){
         if(!(h.level() instanceof ServerLevel level))return null;State s=STATES.get(h);if(s==null)return null;
         LivingEntity current=h.getTarget();
