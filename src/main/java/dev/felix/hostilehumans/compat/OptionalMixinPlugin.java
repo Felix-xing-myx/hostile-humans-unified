@@ -87,8 +87,7 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
         } catch (ClassNotFoundException absentMod) {
             return false;
         } catch (IOException error) {
-            // Do not conceal unreadable bytecode as an absent/compatible dependency.
-            throw new IllegalStateException("Cannot inspect optional compatibility target " + targetClassName, error);
+            return skipUnreadableTarget(targetClassName, error);
         }
     }
     private static boolean monitorShotMixin(String targetClassName, boolean scguns) {
@@ -98,7 +97,7 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
             if (!supported) LOGGER.warn("Disabling optional manual gun fire: native NPC seam changed in {}", targetClassName);
             return supported;
         } catch (ClassNotFoundException absent) { return false; }
-        catch (IOException error) { throw new IllegalStateException("Cannot inspect manual gun compatibility " + targetClassName, error); }
+        catch (IOException error) { return skipUnreadableTarget(targetClassName, error); }
         finally {
             if (scguns) NativeMonitorGunCompatibility.scguns(supported);
             else NativeMonitorGunCompatibility.jeg(supported);
@@ -143,7 +142,12 @@ public final class OptionalMixinPlugin implements IMixinConfigPlugin {
             if (!supported) LOGGER.warn("Skipping optional NPC optic bridge {}: upstream seam changed", mixin);
             return supported;
         } catch (ClassNotFoundException absent) { return false; }
-        catch (IOException error) { throw new IllegalStateException("Cannot inspect optic compatibility target " + targetClassName, error); }
+        catch (IOException error) { return skipUnreadableTarget(targetClassName, error); }
+    }
+
+    private static boolean skipUnreadableTarget(String targetClassName, IOException error) {
+        LOGGER.warn("Skipping optional compatibility for {}: target bytecode could not be inspected", targetClassName, error);
+        return false;
     }
 
     /** The one-argument service API selects the loader-supported transformation
