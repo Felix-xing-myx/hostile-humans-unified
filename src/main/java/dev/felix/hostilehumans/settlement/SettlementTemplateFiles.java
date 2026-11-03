@@ -100,6 +100,10 @@ final class SettlementTemplateFiles {
         template.setAuthor(player.getGameProfile().getName());
         var data = template.save(new CompoundTag());
         sanitize(data, size, Rotation.NONE, Mirror.NONE);
+        // Vanilla selects intersecting hitboxes. Export only entities whose
+        // actual positions belong to the author's selected volume.
+        data.getList("entities", Tag.TAG_COMPOUND)
+                .removeIf(entry -> !validEntityPosition((CompoundTag) entry, size));
         SettlementHumanTemplates.prepareFile(data, new Vec3(bounds.minX(), bounds.minY(), bounds.minZ()),
                 level.dimension().location());
         try {
@@ -175,15 +179,17 @@ final class SettlementTemplateFiles {
     private static void validateEntityPositions(CompoundTag data, TemplateTransform.Cell size) {
         var entries = data.getList("entities", Tag.TAG_COMPOUND);
         for (int i = 0; i < entries.size(); i++) {
-            var entry = entries.getCompound(i);
-            var position = entry.getList("pos", Tag.TAG_DOUBLE);
-            if (position.size() != 3 || entry.getList("blockPos", Tag.TAG_INT).size() != 3
-                    || !insideTemplate(position.getDouble(0), size.x())
-                    || !insideTemplate(position.getDouble(1), size.y())
-                    || !insideTemplate(position.getDouble(2), size.z())) {
+            if (!validEntityPosition(entries.getCompound(i), size))
                 throw new IllegalArgumentException("template entity " + i + " has an invalid local position");
-            }
         }
+    }
+
+    private static boolean validEntityPosition(CompoundTag entry, TemplateTransform.Cell size) {
+        var position = entry.getList("pos", Tag.TAG_DOUBLE);
+        return position.size() == 3 && entry.getList("blockPos", Tag.TAG_INT).size() == 3
+                && insideTemplate(position.getDouble(0), size.x())
+                && insideTemplate(position.getDouble(1), size.y())
+                && insideTemplate(position.getDouble(2), size.z());
     }
 
     private static boolean insideTemplate(double coordinate, int size) {
