@@ -99,14 +99,23 @@ public final class HumanMonitorClient {
         }
         if (state == null || !state.token().equals(snapshot.token()) || state.generation() != snapshot.generation()
                 || state.takeover() != snapshot.takeover()) {
-            PREDICTION.clear(); nextInputSequence = 0; pauseInputSent = false; MonitorGunHud.clear();
-            dev.felix.hostilehumans.client.render.tacz.TaczSpectatorFirstPerson.clear();
-            loadout = null; pendingSelection = null;
+            resetControlState();
         }
         state = snapshot; receivedAt = System.nanoTime(); MonitorGunHud.activate();
         dev.felix.hostilehumans.client.render.tacz.TaczSpectatorFirstPerson.activate();
         Keys.migrateLegacyTakeover();
     }
+    private static void resetControlState() {
+        PREDICTION.clear();
+        nextInputSequence = 0;
+        pauseInputSent = false;
+        queuedAttack = queuedUse = queuedReload = false;
+        MonitorGunHud.clear();
+        dev.felix.hostilehumans.client.render.tacz.TaczSpectatorFirstPerson.clear();
+        loadout = null;
+        pendingSelection = null;
+    }
+
     public static void request(int action, boolean enabled, int mode) {
         if (state != null) HumanMonitorNetwork.request(state.token(), action, enabled, mode);
     }
@@ -116,10 +125,8 @@ public final class HumanMonitorClient {
         if (notifyServer && client.getConnection() != null) request(1, false, 0);
         CLOSED.add(state.token());
         while (CLOSED.size() > 16) CLOSED.remove(CLOSED.iterator().next());
-        state = null; PREDICTION.clear(); nextInputSequence = 0; pauseInputSent = false; MonitorGunHud.clear();
-        dev.felix.hostilehumans.client.render.tacz.TaczSpectatorFirstPerson.clear();
-        loadout = null; pendingSelection = null;
-        queuedAttack = queuedUse = queuedReload = false;
+        state = null;
+        resetControlState();
         NavigationDebugClient.accept(NavigationDebugFrame.EMPTY);
         if (client.player != null) {
             if (client.player.containerMenu != client.player.inventoryMenu) client.player.closeContainer();
