@@ -83,6 +83,12 @@ final class CultivationData extends SavedData {
                 && (list.isEmpty() || list.getElementType() == Tag.TAG_COMPOUND);
     }
 
+    private CultivationData retainReadOnly(CompoundTag original, String reason) {
+        future = original.copy();
+        com.mojang.logging.LogUtils.getLogger().warn("Retaining cultivation journal: {}", reason);
+        return this;
+    }
+
     private static CultivationData load(CompoundTag t) {
         var d = new CultivationData();
         if (t.getInt("schema") != 1) {
@@ -129,14 +135,17 @@ final class CultivationData extends SavedData {
             for (Tag s : a.getList("stock", Tag.TAG_COMPOUND)) {
                 var v = (CompoundTag) s;
                 if (v.hasUUID("facility") && v.getLong("count") >= 0)
-                    account.stock.put(v.getUUID("facility"), v.getLong("count"));
+                    if (account.stock.putIfAbsent(v.getUUID("facility"), v.getLong("count")) != null)
+                        return d.retainReadOnly(t, "duplicate facility stock for " + a.getUUID("owner"));
             }
-            d.accounts.put(a.getUUID("owner"), account);
+            if (d.accounts.putIfAbsent(a.getUUID("owner"), account) != null)
+                return d.retainReadOnly(t, "duplicate account for " + a.getUUID("owner"));
         }
         for (Tag raw : t.getList("transactions", Tag.TAG_COMPOUND)) {
             var x = (CompoundTag) raw;
-            if (x.hasUUID("id") && x.hasUUID("owner"))
-                d.transactions.put(x.getUUID("id"), x.getUUID("owner"));
+            if (x.hasUUID("id") && x.hasUUID("owner")
+                    && d.transactions.putIfAbsent(x.getUUID("id"), x.getUUID("owner")) != null)
+                return d.retainReadOnly(t, "duplicate transaction " + x.getUUID("id"));
         }
         for (Tag raw : t.getList("retired", Tag.TAG_COMPOUND)) {
             var x = (CompoundTag) raw;
