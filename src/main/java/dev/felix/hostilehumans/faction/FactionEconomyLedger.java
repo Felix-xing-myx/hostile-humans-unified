@@ -246,6 +246,9 @@ public final class FactionEconomyLedger {
         }
         String state = receipt.getString("state");
         UUID id = receipt.getUUID("transaction");
+        // A recognized stamp for the latest committed receipt is conclusive.
+        // Historical item snapshots are only needed when recovery may replay them.
+        if (state.equals("COMMITTED") && id.equals(stamp)) return true;
         String hash;
         try {
             hash = InventoryTransaction.fromJournal(player, receipt).beforeFingerprint();
