@@ -42,7 +42,9 @@ public final class TaczMonitorHud {
         if(texture==null)texture=display.getHUDTexture();
         if(texture!=null) {
             Size size=SIZES.computeIfAbsent(texture,TaczMonitorHud::textureSize);
-            var fit=dev.felix.hostilehumans.monitor.client.MonitorIconFit.contain(size.width(),size.height(),76,34);
+            var fit=dev.felix.hostilehumans.monitor.client.MonitorIconFit.containSnapped(size.width(),size.height(),
+                    dev.felix.hostilehumans.monitor.client.MonitorHudLayout.ART_WIDTH,
+                    dev.felix.hostilehumans.monitor.client.MonitorHudLayout.ART_HEIGHT);
             g.pose().pushPose();
             try {
                 g.pose().translate(x+fit.x(),y+fit.y(),0);

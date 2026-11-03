@@ -1,14 +1,25 @@
 package dev.felix.hostilehumans.monitor.client;
 
-/** Stable centered controls; the gun owns a separate right-hand row above the controls. */
+/**
+ * Stable centred controls with the weapon slab pinned to the bottom-right corner.
+ *
+ * <p>The slab has its own small native size, so it never has to be pose-scaled (which used to blur
+ * its icons) and it no longer has to float above the command slab to avoid covering it. On windows
+ * too narrow for both, it falls back to sitting directly above the command slab.
+ */
 public record MonitorHudLayout(int commandX, int commandY, int commandWidth, int weaponX, int weaponY, float weaponScale) {
-    public static final int WEAPON_WIDTH = 180, WEAPON_HEIGHT = 64;
+    /** Native drawing size of the weapon slab; the panel is never scaled. */
+    public static final int WEAPON_WIDTH = 128, WEAPON_HEIGHT = 46;
+    public static final int COMMAND_HEIGHT = 62, COMMAND_BOTTOM = 72;
+    /** Box the gun art is fitted into inside the slab. */
+    public static final int ART_WIDTH = 40, ART_HEIGHT = 20;
+
     public static MonitorHudLayout of(int width, int height, boolean weapon) {
-        int w=Math.max(80,Math.min(360,width-16));
-        int x=Math.max(4,(width-w)/2),y=Math.max(33,height-72);
-        float scale=Math.max(.35F,Math.min(1F,(width-12F)/WEAPON_WIDTH));
-        int ww=Math.round(WEAPON_WIDTH*scale),wh=Math.round(WEAPON_HEIGHT*scale);
-        int wx=Math.max(4,width-ww-6),wy=Math.max(4,y-29-wh-8);
-        return new MonitorHudLayout(x,y,w,wx,wy,scale);
+        int w = Math.max(80, Math.min(360, width - 16));
+        int x = Math.max(4, (width - w) / 2), y = Math.max(33, height - COMMAND_BOTTOM);
+        int wx = Math.max(4, width - WEAPON_WIDTH - 6), wy = Math.max(4, height - WEAPON_HEIGHT - 6);
+        // Bottom-right by default; dodge upwards only when the two slabs would actually collide.
+        if (wx < x + w + 4 && wy + WEAPON_HEIGHT > y - 4) wy = Math.max(4, y - 8 - WEAPON_HEIGHT);
+        return new MonitorHudLayout(x, y, w, wx, wy, 1F);
     }
 }

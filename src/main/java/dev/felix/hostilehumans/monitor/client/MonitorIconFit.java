@@ -9,4 +9,18 @@ public record MonitorIconFit(float x, float y, float scale) {
         return new MonitorIconFit(
                 (boxWidth - width * scale) / 2, (boxHeight - height * scale) / 2, scale);
     }
+
+    /**
+     * Contain geometry snapped to a whole number (or a whole divisor) so pack art keeps square
+     * pixels. An arbitrary 0.297 scale resampled the HUD texture unevenly and read as blur.
+     */
+    public static MonitorIconFit containSnapped(int width, int height, int boxWidth, int boxHeight) {
+        MonitorIconFit raw = contain(width, height, boxWidth, boxHeight);
+        float scale =
+                raw.scale() >= 1F
+                        ? Math.max(1F, (float) Math.floor(raw.scale()))
+                        : 1F / (float) Math.max(1, (int) Math.ceil(1F / raw.scale()));
+        return new MonitorIconFit(
+                (boxWidth - width * scale) / 2F, (boxHeight - height * scale) / 2F, scale);
+    }
 }
