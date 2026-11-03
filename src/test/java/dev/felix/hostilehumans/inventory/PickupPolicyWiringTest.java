@@ -62,9 +62,11 @@ public final class PickupPolicyWiringTest {
         check(!ValuableItemPickupGoal.ownsPath(null, null), "no path does not grant navigation ownership");
         check(!ValuableItemPickupGoal.ownsPath(pickup, null), "never assigned a route means no ownership");
 
-        for (String method : List.of("tryCollectNearby", "collect", "isWorthCollecting"))
+        for (String method : List.of("tryCollectNearby", "isEligibleForPickup"))
             check(calls(LOOT, method, POLICY, "canCollectNow"), "manager entrypoint gated: " + method);
-        check(callIndex(LOOT, "collect", POLICY, "canCollectNow")
+        check(calls(LOOT, "collect", LOOT, "isEligibleForPickup")
+                && calls(LOOT, "isWorthCollecting", LOOT, "isEligibleForPickup")
+                && callIndex(LOOT, "collect", LOOT, "isEligibleForPickup")
                         < callIndex(LOOT, "collect", "net/minecraft/world/entity/item/ItemEntity", "getItem"),
                 "permission precedes ground-item/equipment/inventory mutation");
         check(calls("dev/felix/hostilehumans/inventory/PickUpLoot", "tick", POLICY, "canCollectNow"),

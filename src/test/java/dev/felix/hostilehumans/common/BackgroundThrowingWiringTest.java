@@ -30,7 +30,8 @@ public final class BackgroundThrowingWiringTest {
                     && field.owner.equals(dev.felix.hostilehumans.testutil.ModuleTestSources.owner("dev/felix/hostilehumans/behavior/ActionCoordinator$Resource")))
                 check(field.name.equals("INVENTORY"), "throw only reserves inventory: " + field.name);
         }
-        check(calls(transaction, "submit", "split") && calls(transaction, "submit", "addFreshEntity"), "one real item before publication");
+        check(calls(transaction, "submit", "split") && calls(transaction, "submit", "publish")
+                && calls(transaction, "publish", "addFreshEntity"), "one real item before publication");
         check(calls(transaction, "submit", "capture") && calls(transaction, "submit", "running"), "origin and session retained");
         for (String guard : List.of("canTarget", "allowsTarget", "isEditing", "isAlive", "isRemoved"))
             check(calls(transaction, "available", guard), "invalid prelaunch state rejected: " + guard);
