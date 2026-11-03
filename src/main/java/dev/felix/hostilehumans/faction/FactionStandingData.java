@@ -117,7 +117,12 @@ final class FactionStandingData extends SavedData {
         var receipts = journals.get(player);
         if (receipts == null) return null;
         CompoundTag result = null;
-        for (var receipt : receipts.values()) result = receipt;
+        // NBT list order can differ from transaction order after a restore.
+        for (var receipt : receipts.values()) {
+            if (result == null || receipt.getLong("sequence") >= result.getLong("sequence")) {
+                result = receipt;
+            }
+        }
         return result == null ? null : result.copy();
     }
 
