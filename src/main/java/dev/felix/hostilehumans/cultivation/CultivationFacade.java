@@ -312,6 +312,7 @@ public final class CultivationFacade {
         if (credit != null) data.account(p.getUUID()).put(s.facility.id(), credit);
         if (item != null) removeItems(p, item, 1);
         data.changed();
+        if (item != null) p.containerMenu.broadcastChanges();
     }
 
     private static void requireItems(
@@ -334,7 +335,6 @@ public final class CultivationFacade {
             }
         }
         p.getInventory().setChanged();
-        p.containerMenu.broadcastChanges();
     }
 
     private static void deposit(ServerPlayer p, CultivationTrainingBlockEntity b, int count) {
@@ -349,6 +349,7 @@ public final class CultivationFacade {
         a.put(b.reference().id(), credited);
         b.finishIntake();
         d.changed();
+        p.containerMenu.broadcastChanges();
     }
 
     private static void withdraw(ServerPlayer p, Session s, int count) {
