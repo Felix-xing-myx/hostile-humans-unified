@@ -308,6 +308,7 @@ public final class FactionEconomyLedger {
         if (!(entity.level() instanceof net.minecraft.server.level.ServerLevel level)) return 0;
         var receipt = FactionStandingData.get(level.getServer()).external(entity.getUUID());
         if (receipt == null) return 0;
+        if (!receipt.hasUUID("transaction")) return -1;
         UUID id = receipt.getUUID("transaction");
         String state = receipt.getString("state");
         if (state.equals("ABORTED")
@@ -316,9 +317,16 @@ public final class FactionEconomyLedger {
                                 .getUUID(InventoryTransaction.PICKUP_STAMP)
                                 .equals(id)) return 0;
         if (!state.equals("COMMITTED")) return -1;
-        for (Tag tag : receipt.getList("slots", Tag.TAG_COMPOUND)) {
+        net.minecraft.nbt.ListTag rows;
+        try {
+            rows = InventoryTransaction.validatedJournalRows(receipt);
+        } catch (IllegalArgumentException malformed) {
+            return -1;
+        }
+        String slotKey = "external:" + entity.getUUID();
+        for (Tag tag : rows) {
             var row = (CompoundTag) tag;
-            if (!row.getString("slot").equals("external:" + entity.getUUID())) continue;
+            if (!row.getString("slot").equals(slotKey)) continue;
             var before = net.minecraft.world.item.ItemStack.of(row.getCompound("before"));
             var after = net.minecraft.world.item.ItemStack.of(row.getCompound("after"));
             if (net.minecraft.world.item.ItemStack.matches(entity.getItem(), before)) {

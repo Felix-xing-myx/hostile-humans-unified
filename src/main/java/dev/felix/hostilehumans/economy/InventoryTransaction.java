@@ -65,15 +65,11 @@ public final class InventoryTransaction {
     }
 
     public static InventoryTransaction fromJournal(ServerPlayer player, CompoundTag journal) {
-        var rows = journal.getList("slots", Tag.TAG_COMPOUND);
-        if (rows.size() > 105) throw new IllegalArgumentException("Too many journal slots");
-        Set<String> seen = new HashSet<>();
+        var rows = validatedJournalRows(journal);
         var result = new InventoryTransaction(player);
         for (Tag tag : rows) {
             var row = (CompoundTag) tag;
             String key = row.getString("slot");
-            if (key.isEmpty() || !seen.add(key))
-                throw new IllegalArgumentException("Missing or duplicate journal slot");
             if (!key.startsWith("external:")) continue;
             var entity = player.serverLevel().getEntity(UUID.fromString(key.substring(9)));
             if (entity instanceof net.minecraft.world.entity.item.ItemEntity item)
@@ -83,6 +79,19 @@ public final class InventoryTransaction {
                                         key, false, item::getItem, item::setItem)));
         }
         return result;
+    }
+
+    public static ListTag validatedJournalRows(CompoundTag journal) {
+        var rows = journal.getList("slots", Tag.TAG_COMPOUND);
+        if (rows.size() > 105) throw new IllegalArgumentException("Too many journal slots");
+        Set<String> seen = new HashSet<>();
+        for (Tag tag : rows) {
+            var row = (CompoundTag) tag;
+            String key = row.getString("slot");
+            if (key.isEmpty() || !seen.add(key))
+                throw new IllegalArgumentException("Missing or duplicate journal slot");
+        }
+        return rows;
     }
 
     public String beforeFingerprint() {
