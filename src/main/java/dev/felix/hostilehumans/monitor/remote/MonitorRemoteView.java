@@ -64,14 +64,7 @@ public final class MonitorRemoteView {
         View view = new View(player, human);
         acquire(view.body);
         VIEWS.put(player, view);
-        try { view.level.getChunkSource().move(player); }
-        catch (RuntimeException | Error failure) {
-            VIEWS.remove(player);
-            try { view.level.getChunkSource().move(player); }
-            catch (RuntimeException | Error cleanup) { failure.addSuppressed(cleanup); }
-            finally { release(view.body); }
-            throw failure;
-        }
+        refreshTracking(player, view);
         return true;
     }
 
@@ -87,9 +80,22 @@ public final class MonitorRemoteView {
         if (bodyChanged) { acquire(body); release(view.body); view.body = body; }
         Vec3 previous = view.position;
         view.position = human.position();
+        if (bodyChanged || !previous.equals(view.position)) refreshTracking(player, view);
         view.renewed = view.level.getGameTime();
-        if (bodyChanged || !previous.equals(view.position)) view.level.getChunkSource().move(player);
         return true;
+    }
+
+    private static void refreshTracking(ServerPlayer player, View view) {
+        try {
+            view.level.getChunkSource().move(player);
+        } catch (RuntimeException | Error failure) {
+            try {
+                stop(player);
+            } catch (RuntimeException | Error cleanup) {
+                if (cleanup != failure) failure.addSuppressed(cleanup);
+            }
+            throw failure;
+        }
     }
 
     /** Restore native tracking while the physical-body support is still held, then release our last support. */
