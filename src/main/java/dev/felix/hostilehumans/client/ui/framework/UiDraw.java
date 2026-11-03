@@ -167,8 +167,8 @@ public final class UiDraw {
                     if (w <= 0 || h <= 0) continue;
                     g.blit(
                             GRAIN_TEXTURE,
-                            x + Math.max(0, tx) + sx,
-                            y + Math.max(0, ty) + sy,
+                            x + Math.max(0, tx),
+                            y + Math.max(0, ty),
                             w,
                             h,
                             (float) sx,
