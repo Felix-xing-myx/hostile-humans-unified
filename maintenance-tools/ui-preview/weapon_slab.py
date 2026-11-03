@@ -90,13 +90,18 @@ def slab(d, ox, oy, name, amount, reserve, mode_label, capacity):
     small = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .85))
     d.text((name_x * S, (y + 39) * S), fit_ellipsis(name, int(room / .85)), font=small, fill=rgba(MUTED, 1))
 
-img = Image.new("RGB", (300 * S, 262 * S), (15, 20, 23))
+img = Image.new("RGB", (330 * S, 262 * S), (15, 20, 23))
 d = ImageDraw.Draw(img, "RGBA")
-d.text((10 * S, 4 * S), "枪械板 128x52（按 Java 常数量出的实况）", font=ImageFont.truetype(
+d.text((10 * S, 4 * S), "枪械板 128x52 · 第三版：弹匣已移入上带（按 Java 常数量出的实况）", font=ImageFont.truetype(
     "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 8 * S), fill=rgba(MUTED, 1))
 slab(d, 20, 18, "AK-47 突击步枪", "30", "弹匣 3", "AUTO", "/ 30")
+ann = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 8 * S)
+note = lambda ty, text: d.text((158 * S, ty * S), text, font=ann, fill=rgba(ACCENT, 1))
+note(26, "上带：枪图 54x30 ｜ 18 / 30 ｜ 弹匣 3")
+note(52, "灰线 y36")
+note(62, "下带：AUTO + 名称（整行）")
 slab(d, 20, 78, "M4 卡宾枪（长名字）", "100%", "弹匣 12", "BURST", "")
 slab(d, 20, 138, "M249 班用机枪", "07", "弹匣 120", "AUTO", "/ 150")
 slab(d, 20, 198, "M4A1 卡宾枪（消音器改装型）", "30", "弹匣 3", "AUTO", "/ 30")
-img.save(os.path.join(OUT, "weapon-slab.png"))
+img.save(os.path.join(OUT, "weapon-slab-128x52.png"))
 print("ok")
