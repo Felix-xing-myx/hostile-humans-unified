@@ -665,8 +665,11 @@ public final class SettlementNetwork {
                                             var mode = data.contains("mode")
                                                     ? SettlementSelectionTool.Mode.valueOf(data.getString("mode"))
                                                     : SettlementSelectionTool.Mode.ADD;
-                                            if (!SettlementSelectionTool.hasTool(player))
-                                                yield SettlementSelectionTool.NEED_TOOL;
+                                            boolean facility = mode == SettlementSelectionTool.Mode.FACILITY
+                                                    || mode == SettlementSelectionTool.Mode.MOVE_FACILITY;
+                                            if (facility ? !SettlementFacilityBindingTool.hasTool(player)
+                                                    : !SettlementSelectionTool.hasTool(player))
+                                                yield facility ? "settlement facility binding tool required" : SettlementSelectionTool.NEED_TOOL;
                                             int revision = request.authorRevision();
                                             if (data.contains("author", Tag.TAG_COMPOUND)) {
                                                 var saved = SettlementAuthoring.save(player, at, revision, data.getCompound("author"));
@@ -675,6 +678,10 @@ public final class SettlementNetwork {
                                                         || !saved.startsWith("saved author revision ")) yield saved;
                                                 revision = info.revision();
                                             }
+                                            if (facility) yield SettlementFacilityBindingTool.bind(player, at,
+                                                    data.getString("region"),
+                                                    mode == SettlementSelectionTool.Mode.MOVE_FACILITY ? data.getInt("box_index") : -1,
+                                                    revision);
                                             yield SettlementSelectionTool.mode(
                                                         player,
                                                         at,

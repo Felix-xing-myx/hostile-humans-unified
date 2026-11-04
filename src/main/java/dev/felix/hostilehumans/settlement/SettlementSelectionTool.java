@@ -48,6 +48,7 @@ public final class SettlementSelectionTool extends Item {
 
     static String mode(ServerPlayer player, BlockPos position, String region, boolean exclude,
             boolean currentOnly, int boxIndex, Mode mode, int revision) {
+        if (mode == Mode.FACILITY || mode == Mode.MOVE_FACILITY) return "use the facility binding tool";
         var info = SettlementAuthoring.information(player, position);
         if (info == null || info.revision() != revision) return "author unavailable or stale";
         if (region.length() > 256) return "selection identifier too long";
@@ -238,15 +239,13 @@ public final class SettlementSelectionTool extends Item {
             return;
         }
         var layer = newLayer(mode);
-        if (layer != null && !SettlementAuthoring.allowsLayer(author, layer)
-                || mode == Mode.FACILITY && !SettlementAuthoring.allowsFacility(author, SettlementFacility.Type.CONTROL))
-            return;
+        if (layer != null && !SettlementAuthoring.allowsLayer(author, layer)) return;
         if ((mode == Mode.ADD || mode == Mode.REPLACE || mode == Mode.EDIT)
                 && author.regions().stream().noneMatch(r -> r.id().equals(region) && SettlementAuthoring.allowsLayer(author, r.layer()))) {
             tell(player, "region_first");
             return;
         }
-        if (mode == Mode.MOVE_FACILITY || region.length() > 64) return;
+        if (mode == Mode.FACILITY || mode == Mode.MOVE_FACILITY || region.length() > 64) return;
         int box = mode == Mode.EDIT ? data.getInt("box") : -1;
         if (mode == Mode.EDIT && (box < 0 || author.regions().stream().noneMatch(r -> r.id().equals(region)
                 && box < (data.getBoolean("exclude") ? r.excludes() : r.includes()).size()))) return;
@@ -341,22 +340,16 @@ public final class SettlementSelectionTool extends Item {
             return InteractionResult.CONSUME;
         }
         try {
-            if (binding.mode() == Mode.FACILITY || binding.mode() == Mode.MOVE_FACILITY) {
-                String result = SettlementAuthoring.bindFacility(player, binding.carrier(), point,
-                        binding.region(), binding.mode() == Mode.MOVE_FACILITY ? binding.boxIndex() : -1);
-                finish(player, binding, result);
-            } else {
-                if (binding.second() != null) return confirm(player, binding);
-                Binding next = binding.first() == null
-                        ? binding.corners(point, null) : binding.corners(binding.first(), point);
-                BINDINGS.put(player, next);
-                publish(player, next);
-                if (next.second() == null) tell(player, "second_corner");
-                else {
-                    var box = RegionBox.between(SettlementAuthoring.cell(next.first()),
-                            SettlementAuthoring.cell(next.second()));
-                    tell(player, "confirm", box.sizeX(), box.sizeY(), box.sizeZ());
-                }
+            if (binding.second() != null) return confirm(player, binding);
+            Binding next = binding.first() == null
+                    ? binding.corners(point, null) : binding.corners(binding.first(), point);
+            BINDINGS.put(player, next);
+            publish(player, next);
+            if (next.second() == null) tell(player, "second_corner");
+            else {
+                var box = RegionBox.between(SettlementAuthoring.cell(next.first()),
+                        SettlementAuthoring.cell(next.second()));
+                tell(player, "confirm", box.sizeX(), box.sizeY(), box.sizeZ());
             }
         } catch (IllegalArgumentException bad) {
             player.displayClientMessage(Component.literal(bad.getMessage()), true);
@@ -400,7 +393,7 @@ public final class SettlementSelectionTool extends Item {
             return;
         }
         var info = binding.carrier();
-        Mode mode = binding.mode() == Mode.ADD || binding.mode() == Mode.FACILITY
+        Mode mode = binding.mode() == Mode.ADD
                 ? binding.mode() : Mode.VIEW;
         var next = new Binding(binding.dimension(), binding.information(), info, binding.region(),
                 binding.exclude(), binding.currentOnly(), binding.boxIndex(), mode, info.revision(), binding.visible(), null, null);

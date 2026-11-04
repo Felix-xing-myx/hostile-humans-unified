@@ -2699,6 +2699,10 @@
     "class": "dev.felix.hostilehumans.settlement.SettlementFacility",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementFacility.java"
   },
+  "SettlementFacilityBindingTool": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementFacilityBindingTool",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementFacilityBindingTool.java"
+  },
   "SettlementGeneration": {
     "class": "dev.felix.hostilehumans.settlement.SettlementGeneration",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementGeneration.java"

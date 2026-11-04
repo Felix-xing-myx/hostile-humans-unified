@@ -557,7 +557,9 @@ public final class SettlementScreen extends PanelScreen {
         List<UiLayout.Node> root = new ArrayList<>();
         root.add(muted(text("revisions", snapshot.authorRevision(), snapshot.instanceRevision())));
         if (!snapshot.reason().equals(SettlementNetwork.AUTHOR_FILE_TAB)) root.add(muted(snapshot.reason().equals("settlement selection tool required")
-                ? text("need_selection_tool") : Component.literal(snapshot.reason())));
+                ? text("need_selection_tool")
+                : snapshot.reason().equals("settlement facility binding tool required")
+                        ? text("need_facility_tool") : Component.literal(snapshot.reason())));
         if (pending.busy()) root.add(text(text("pending"), () -> theme().accent()));
         if (!error.isEmpty()) root.add(text(text(error), () -> theme().danger()));
         if (snapshot.author()) {

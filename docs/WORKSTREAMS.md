@@ -4271,3 +4271,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 同轮复用视觉身体采样
 - 主控，基线 e4e3d77，module-architecture 工作树。候选几何与补查共用同轮身体采样和遮挡证明点；身体或已见采样点变化时重算。同轮已确认目标不重复进行快速射线。Python 检查 532 项（16 跳过），未构建或复测。
+
+## 设施绑定棒与玩家入口
+- 主控，基线 9834ef9，module-architecture 工作树。独立工具在 Forge 方块交互前消费绑定动作，贡献箱事件为作者工具放行。沿用作者修订和正式索引登记，登记后以设施原界面和权限处理。Python 检查 532 项（16 跳过），未执行 Gradle 或实机。

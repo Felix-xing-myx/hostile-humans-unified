@@ -154,8 +154,9 @@ public final class EconomyEvents {
                 || !event.getLevel()
                         .getBlockState(event.getPos())
                         .is(FactionContent.TRIBUTE_CHEST.get())) return;
-        if (p.getMainHandItem().getItem()
-                        instanceof dev.felix.hostilehumans.settlement.SettlementSelectionTool
+        if ((p.getMainHandItem().getItem()
+                        instanceof dev.felix.hostilehumans.settlement.SettlementFacilityBindingTool
+                || p.getMainHandItem().getItem() instanceof dev.felix.hostilehumans.settlement.SettlementSelectionTool)
                 && dev.felix.hostilehumans.settlement.SettlementAccess.author(p)) return;
         EconomyNetwork.openFacility(p, event.getPos(), EconomyView.Page.SUPPLY);
         event.setCanceled(true);

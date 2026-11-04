@@ -105,7 +105,6 @@ public final class SettlementSelectorScreen extends PanelScreen {
             var allowed = binding.getList("allowedFacilities", Tag.TAG_STRING);
             for (int i = 0; i < allowed.size(); i++)
                 nodes.add(text(text("help.facility." + allowed.getString(i)), () -> theme().muted()));
-            nodes.add(action("selector_bind_facility", "FACILITY", region, false, -1));
         }
         var facilities = binding.getList("facilities", Tag.TAG_COMPOUND);
         for (int i = 0; i < facilities.size(); i++) {
