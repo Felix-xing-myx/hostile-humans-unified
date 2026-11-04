@@ -218,7 +218,8 @@ public final class AdaptiveCombatGoal extends Goal {
 
         // Survival and fresh shield reactions above retain priority. Ordinary tactical
         // repositioning must not replace a terrain route owned by the weapon controller.
-        if (CombatTerrainNavigation.hasWork(human, currentThreat)) return false;
+        if (CombatTerrainNavigation.hasWork(human, currentThreat)
+                || usesWeaponLedFrontline(currentThreat)) return false;
         updateStationaryState();
         // A gunner holding its configured firing band is expected to pause
         // between lateral relocations. Do not let this higher-priority MOVE
@@ -264,6 +265,13 @@ public final class AdaptiveCombatGoal extends Goal {
         return false;
     }
 
+    private boolean usesWeaponLedFrontline(LivingEntity currentThreat) {
+        return currentThreat == human.getTarget() && currentThreat != null
+                && !BodyguardProtection.isBodyguard(human)
+                && HumanPerception.steadyFrontline(human)
+                && !dev.felix.hostilehumans.behavior.combat.ranged.RangedEngagement.temporarilyDeferred(human, currentThreat);
+    }
+
     private boolean shouldEnterRetreat(LivingEntity currentThreat) {
         return RetreatRecoveryPolicy.shouldForceRetreat(human);
     }
@@ -284,7 +292,7 @@ public final class AdaptiveCombatGoal extends Goal {
         // injured fighter in that phase instead of allowing ordinary retreat.
         if (phase == Phase.DEFEND && shouldEnterRetreat(threat)) return false;
         if ((phase == Phase.FLANK || phase == Phase.PRESSURE || phase == Phase.UNSTUCK)
-                && CombatTerrainNavigation.hasWork(human, threat)) return false;
+                && (CombatTerrainNavigation.hasWork(human, threat) || usesWeaponLedFrontline(threat))) return false;
         if ((!HumanPerception.canTarget(human,threat)
                 && !(phase == Phase.DEFEND && (shields.awaitingProjectile() || shields.wantsHighPressureGuard())))
                 || phaseTicks <= 0) {
@@ -803,6 +811,11 @@ public final class AdaptiveCombatGoal extends Goal {
     private boolean urgentTargetSuggestion;
     private LivingEntity resolveThreat() {
         urgentTargetSuggestion=false;
+        LivingEntity current = human.getTarget();
+        boolean newHit = human.getLastHurtByMob() != null
+                && human.getLastHurtByMobTimestamp() != lastProcessedHurtTimestamp;
+        if (!newHit && usesWeaponLedFrontline(current) && !human.isFleeing
+                && HumanPerception.canTarget(human, current)) return current;
         LivingEntity suggested=proposeThreat();
         LivingEntity assigned=HumanTargetCoordinator.select(human,suggested,"现有战术压力建议",urgentTargetSuggestion);
         // Survival direction is local knowledge, not permission to reacquire during escape.

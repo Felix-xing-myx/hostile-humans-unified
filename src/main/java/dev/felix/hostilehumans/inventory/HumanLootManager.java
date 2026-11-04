@@ -204,8 +204,14 @@ public final class HumanLootManager {
     public static ItemStack bestOwnedShield(Human human) {
         ItemStack best = SpartanEquipmentCompat.isShield(human.getOffhandItem())
                 ? human.getOffhandItem() : ItemStack.EMPTY;
-        for (ItemStack stack : ownedEquipment(human))
-            if (SpartanEquipmentCompat.betterShield(stack, best)) best = stack;
+        ItemStack main = human.getMainHandItem();
+        if (SpartanEquipmentCompat.betterShield(main, best)) best = main;
+        HumanData data = human.getData();
+        if (data != null) for (int slot = 0; slot < data.getInventoryItemsSize(); slot++) {
+            ItemStack stack = data.getInventoryItem(slot);
+            if (SpartanEquipmentCompat.betterShield(stack, best)
+                    && !HumanInventoryCustody.isReservedForRecovery(human, slot)) best = stack;
+        }
         return best;
     }
 

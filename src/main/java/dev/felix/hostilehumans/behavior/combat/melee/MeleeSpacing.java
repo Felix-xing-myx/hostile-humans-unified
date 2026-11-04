@@ -18,6 +18,10 @@ public final class MeleeSpacing {
 
     /** Returns true when ordinary pursuit should yield to melee spacing. */
     public static boolean control(Human human, LivingEntity target) {
+        return control(human, target, false, null);
+    }
+
+    static boolean control(Human human, LivingEntity target, boolean frontline, Boolean inStrikeRange) {
         if (human.isFleeing || SoldierOrder.isHoldingPosition(human)
                 || human.isInWater() || human.isInLava()
                 || (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem()))
@@ -25,14 +29,18 @@ public final class MeleeSpacing {
 
         double reach = MeleeCombatRange.reach(human, target);
         double distance = human.distanceTo(target);
-        double preferred = preferredDistance(human,target);
-        double tooClose = dev.felix.hostilehumans.behavior.combat.melee.MeleeSpacingPolicy.tooClose(reach,
-                BetterCombatMeleeCombat.hasWeaponProfile(human));
+        boolean betterCombat = BetterCombatMeleeCombat.hasWeaponProfile(human);
+        double preferred = preferredDistance(human, target, reach, betterCombat);
         if (distance > preferred) return false;
         // A visible target on another step may be outside the actual oriented
         // weapon hitbox. Never stop pursuit merely because its feet are near.
-        if (!MeleeCombatRange.canStrike(human, target)) return false;
-        if (distance >= tooClose) {
+        if (!(inStrikeRange == null ? MeleeCombatRange.canStrike(human, target) : inStrikeRange)) return false;
+        if (frontline) {
+            // Keep the pursuit buffer and real hitbox, but skip backsteps and lateral collision probes.
+            human.getNavigation().stop();
+            return true;
+        }
+        if (distance >= MeleeSpacingPolicy.tooClose(reach, betterCombat)) {
             int sinceHit = human.tickCount - human.getLastHurtByMobTimestamp();
             if (human.getLastHurtByMob() != null && sinceHit >= 0 && sinceHit <= 10) {
                 // Being inside a valid hit band is not a reason to freeze
@@ -77,8 +85,11 @@ public final class MeleeSpacing {
     public static double preferredDistance(Human human,LivingEntity target) {
         if(target==null)return 0;
         double reach=MeleeCombatRange.reach(human,target);
-        if(!BetterCombatMeleeCombat.hasWeaponProfile(human))
-            return dev.felix.hostilehumans.behavior.combat.melee.MeleeSpacingPolicy.preferred(reach, false);
+        return preferredDistance(human, target, reach, BetterCombatMeleeCombat.hasWeaponProfile(human));
+    }
+
+    private static double preferredDistance(Human human, LivingEntity target, double reach, boolean betterCombat) {
+        if (!betterCombat) return MeleeSpacingPolicy.preferred(reach, false);
         Vec3 away=target.position().subtract(human.position()).multiply(1,0,1);
         if(away.lengthSqr()<1.e-6)return dev.felix.hostilehumans.behavior.combat.melee.MeleeSpacingPolicy.preferred(reach, true);
         away=away.normalize();
@@ -91,8 +102,9 @@ public final class MeleeSpacing {
     /** Shared by spacing, pursuit refresh and sprint; a hit at this instant is not enough reserve. */
     public static boolean needsChaseBuffer(Human human,LivingEntity target) {
         if(target==null||!BetterCombatMeleeCombat.hasWeaponProfile(human))return false;
-        double normal=dev.felix.hostilehumans.behavior.combat.melee.MeleeSpacingPolicy.preferred(MeleeCombatRange.reach(human,target),true);
-        double preferred=preferredDistance(human,target);
+        double reach = MeleeCombatRange.reach(human, target);
+        double normal = MeleeSpacingPolicy.preferred(reach, true);
+        double preferred = preferredDistance(human, target, reach, true);
         return preferred<normal-1.e-6&&human.distanceTo(target)>preferred;
     }
 

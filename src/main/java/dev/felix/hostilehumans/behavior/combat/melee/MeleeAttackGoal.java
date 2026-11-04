@@ -200,15 +200,19 @@ extends Goal {
                 this.tickAttackOnly(livingEntity);
                 return;
             }
-            if (this.mob instanceof Human human)
-                dev.felix.hostilehumans.behavior.combat.melee.PursuitJumpAttack.tryStart(human, livingEntity, this.ticksUntilNextAttack);
+            boolean frontline = this.mob instanceof Human human
+                    && dev.felix.hostilehumans.perception.HumanPerception.steadyFrontline(human);
+            if (!frontline && this.mob instanceof Human human)
+                PursuitJumpAttack.tryStart(human, livingEntity, this.ticksUntilNextAttack);
+            // Movement probes share one hitbox result; a committed swing checks again at its own gate.
+            boolean inStrikeRange = !holdingPosition && canStrike(livingEntity);
             boolean spacing = !holdingPosition && this.mob instanceof Human human
                     && !dev.felix.hostilehumans.behavior.combat.melee.PursuitJumpAttack.active(human)
                     && !dev.felix.hostilehumans.navigation.CombatTerrainNavigation.hasWork(human, livingEntity)
-                    && MeleeSpacing.control(human, livingEntity);
+                    && MeleeSpacing.control(human, livingEntity, frontline, inStrikeRange);
             boolean stalled = pursuitProgress.stalled(this.mob.tickCount, livingEntity.getId(),
                     this.mob.getX(), this.mob.getY(), this.mob.getZ(),
-                    !holdingPosition && !spacing && !canStrike(livingEntity)
+                    !holdingPosition && !spacing && !inStrikeRange
                             && !this.mob.isUsingItem());
             if (stalled) {
                 recoverPursuit(livingEntity);
@@ -218,11 +222,11 @@ extends Goal {
                 this.ticksUntilNextPathRecalculation = 8;
             }
             if (this.mob instanceof Human human) {
-                if (!holdingPosition && !spacing
+                if ((!frontline || !stalled) && !holdingPosition && !spacing
                         && (this.followingTargetEvenIfNotSeen || this.mob.getSensing().hasLineOfSight(livingEntity))
                         && (this.mob.tickCount >= recoveryRouteUntilTick
                         || livingEntity.getId() != recoveryTargetId || this.mob.getNavigation().isDone()))
-                    dev.felix.hostilehumans.navigation.PursuitNavigation.update(human, livingEntity, this.speedModifier);
+                    dev.felix.hostilehumans.navigation.PursuitNavigation.update(human, livingEntity, this.speedModifier, inStrikeRange);
             } else if (!holdingPosition && !spacing
                     && (this.followingTargetEvenIfNotSeen || this.mob.getSensing().hasLineOfSight((Entity)livingEntity))
                     && this.ticksUntilNextPathRecalculation <= 0
@@ -269,7 +273,7 @@ extends Goal {
         if (this.mob instanceof Human human && (human.isFleeing || !human.hhu$canMeleeAttack())) return;
         if (this.mob instanceof Human human && (human.hhu$hasPendingMeleeAttack()
                 || dev.felix.hostilehumans.behavior.combat.melee.PursuitJumpAttack.awaitingAttackWindow(human))) return;
-        if (canStrike(livingEntity) && this.ticksUntilNextAttack <= 0) {
+        if (this.ticksUntilNextAttack <= 0 && canStrike(livingEntity)) {
             HumanEntity humanEntity;
             if (this.mob.isBlocking()) {
                 this.mob.stopUsingItem();

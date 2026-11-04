@@ -42,8 +42,14 @@ public enum SoldierOrder {
     private static final String RETURNING_FROM_RETREAT = "hostile_humans_unified:returning_from_retreat";
     private static final String RETURN_RETRY = "hostile_humans_unified:order_return_retry_at";
     public static SoldierOrder raw(Human h) {
-        try { return valueOf(h.getPersistentData().getString(ORDER)); }
-        catch (IllegalArgumentException ignored) { return FOLLOW; }
+        return switch (h.getPersistentData().getString(ORDER)) {
+            case "HOLD_POSITION" -> HOLD_POSITION;
+            case "GUARD" -> GUARD;
+            case "PATROL" -> PATROL;
+            case "BODYGUARD" -> BODYGUARD;
+            case "GARRISON" -> GARRISON;
+            default -> FOLLOW;
+        };
     }
     public static SoldierOrder logical(SoldierOrder order) {
         return order == HOLD_POSITION || order == GUARD || order == PATROL ? GARRISON : order;

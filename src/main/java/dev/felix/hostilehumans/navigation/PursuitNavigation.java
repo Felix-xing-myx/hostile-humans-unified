@@ -27,6 +27,11 @@ public final class PursuitNavigation {
     private PursuitNavigation() {}
 
     public static boolean update(Human human, LivingEntity target, double speed) {
+        return update(human, target, speed, null);
+    }
+
+    /** Optional current-tick movement probe from the melee goal. Attack execution revalidates independently. */
+    public static boolean update(Human human, LivingEntity target, double speed, Boolean inStrikeRange) {
         if (WaterCombatNavigation.isMeleePursuit(human, target) && !SoldierOrder.isHoldingPosition(human)) {
             human.approachCombatTargetInWater(target, MeleeCombatRange.reach(human, target), speed);
             if (human.hasWaterCombatMovementInput()) return true;
@@ -45,7 +50,7 @@ public final class PursuitNavigation {
             state.sampled = target.position();
             STATES.put(human, state);
         }
-        boolean canStrike=MeleeCombatRange.canStrike(human, target);
+        boolean canStrike = inStrikeRange == null ? MeleeCombatRange.canStrike(human, target) : inStrikeRange;
         if (canStrike) {
             CombatTerrainNavigation.clear(human);
             if(!MeleeSpacing.needsChaseBuffer(human,target))return false;

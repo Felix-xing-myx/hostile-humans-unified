@@ -49,19 +49,29 @@ public final class HumanTargetCoordinator {
         state.changed=HumanPerception.now(h);state.reason="明确的撤退反击请求";
         return h.getTarget();
     }
+    /** A newly confirmed priority threat can bring the next ordinary review forward. */
+    public static void requestReview(Human human) {
+        State state = STATES.get(human);
+        if (state != null) state.nextReview = HumanPerception.now(human);
+    }
+
     public static LivingEntity select(Human h,LivingEntity proposal,String why){return select(h,proposal,why,false);}
     public static LivingEntity select(Human h,LivingEntity proposal,String why,boolean urgent){
         if(suspended(h))return h.getTarget();
         State state=STATES.computeIfAbsent(h,k->new State());long now=HumanPerception.now(h);
         LivingEntity current=h.getTarget();
-        HumanFinisherSelection.observe(h,current);
-        boolean steady = !urgent && HumanPerception.steadyFrontline(h);
+        boolean role = BodyguardProtection.isBodyguard(h) && BodyguardProtection.owner(h) != null && !h.isFleeing;
+        boolean steady = !role && !urgent && HumanPerception.steadyFrontline(h)
+                && !RangedEngagement.temporarilyDeferred(h, current);
         if (state.steady && !steady) state.nextReview = now;
         state.steady = steady;
+        if (steady && (proposal == null || proposal == current) && now < state.nextReview
+                && state.locked == null && Objects.equals(state.selected, current.getUUID())
+                && HumanPerception.canTarget(h, current)) return current;
+        HumanFinisherSelection.observe(h,current);
         boolean reviewDue=now>=state.nextReview,harvesting=false;
         if(!Objects.equals(state.selected,current==null?null:current.getUUID())){state.selected=current==null?null:current.getUUID();state.changed=now;}
         LivingEntity desired=HumanPerception.canTarget(h,current)?current:null;
-        boolean role=BodyguardProtection.isBodyguard(h)&&BodyguardProtection.owner(h)!=null&&!h.isFleeing;
         if(role){BodyguardProtection.update(h);desired=BodyguardProtection.attack(h);why="贴身保护优先级";}
         else if(!h.isFleeing){
             LivingEntity retaliation=HumanFinisherSelection.defensiveTarget(h);

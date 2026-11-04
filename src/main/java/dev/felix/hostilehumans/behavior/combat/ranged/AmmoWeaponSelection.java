@@ -49,39 +49,48 @@ public final class AmmoWeaponSelection {
     }
 
     public static int rank(Human human, ItemStack stack, boolean arrows) {
-        int fallback = rank(GunSupport.get().isGun(stack), usableGun(human, stack),
-                RangedWeaponCustody.isBowOrCrossbow(stack), arrows,
-                HumanLootManager.isDedicatedMeleeWeapon(stack) || stack.getItem() instanceof TridentItem);
+        return rank(human, stack, arrows, CombatPreference.get(human));
+    }
+
+    private static int rank(Human human, ItemStack stack, boolean arrows, CombatPreference preference) {
+        if (stack.isEmpty()) return 0;
+        boolean gun = GunSupport.get().isGun(stack);
+        boolean bow = !gun && RangedWeaponCustody.isBowOrCrossbow(stack);
+        boolean melee = !gun && !bow && HumanLootManager.isDedicatedMeleeWeapon(stack);
+        int fallback = rank(gun, gun && usableGun(human, stack), bow, arrows,
+                melee || stack.getItem() instanceof TridentItem);
         if (fallback == 0) return 0;
-        boolean preferred = switch (CombatPreference.get(human)) {
+        boolean preferred = switch (preference) {
             case DEFAULT -> false;
-            case GUN -> GunSupport.get().isGun(stack);
+            case GUN -> gun;
             case BOW -> RangedWeaponCustody.isBowWeapon(stack);
             case CROSSBOW -> RangedWeaponCustody.isCrossbowWeapon(stack);
             case TRIDENT -> stack.getItem() instanceof TridentItem;
-            case MELEE -> HumanLootManager.isDedicatedMeleeWeapon(stack);
+            case MELEE -> melee;
         };
         return preferred ? fallback + 8 : fallback;
     }
 
     public static boolean mayRestore(Human human, ItemStack candidate) {
         boolean arrows = HumanAmmo.hasArrows(human);
-        int candidateRank = rank(human, candidate, arrows);
-        return candidateRank > 0 && candidateRank >= rank(human, human.getMainHandItem(), arrows);
+        CombatPreference preference = CombatPreference.get(human);
+        int candidateRank = rank(human, candidate, arrows, preference);
+        return candidateRank > 0 && candidateRank >= rank(human, human.getMainHandItem(), arrows, preference);
     }
     static boolean gunHasPriority(Human human) {
-        boolean arrows = HumanAmmo.hasArrows(human);
-        int gun = 0, best = 0;
-        java.util.List<ItemStack> actual = new java.util.ArrayList<>();
-        actual.add(human.getMainHandItem()); actual.add(human.getOffhandItem());
+        // A usable gun outranks all ordinary alternatives. Only a chosen non-gun preference can beat it.
+        if (!hasUsableGun(human)) return false;
+        CombatPreference preference = CombatPreference.get(human);
+        if (preference == CombatPreference.DEFAULT || preference == CombatPreference.GUN) return true;
+        boolean arrows = (preference == CombatPreference.BOW || preference == CombatPreference.CROSSBOW)
+                && HumanAmmo.hasArrows(human);
+        if (rank(human, human.getMainHandItem(), arrows, preference) > 3
+                || rank(human, human.getOffhandItem(), arrows, preference) > 3) return false;
         HumanData data = human.getData();
-        if (data != null) for (int i = 0; i < data.getInventoryItemsSize(); i++) actual.add(data.getInventoryItem(i));
-        for (ItemStack stack : actual) {
-            int value = rank(human, stack, arrows);
-            best = Math.max(best, value);
-            if (GunSupport.get().isGun(stack)) gun = Math.max(gun, value);
+        if (data != null) for (int slot = 0; slot < data.getInventoryItemsSize(); slot++) {
+            if (rank(human, data.getInventoryItem(slot), arrows, preference) > 3) return false;
         }
-        return gun > 0 && gun >= best;
+        return true;
     }
     public static void preferenceChanged(Human human) {
         HumanBehaviorControl.cancel(human, "combat preference changed");
@@ -103,15 +112,20 @@ public final class AmmoWeaponSelection {
         boolean exhausted = isExhausted(human, current);
         boolean closeLease = GunCustody.isActive(human) || RangedWeaponCustody.isActive(human)
                 || RetreatLastStand.permitsMelee(human);
-        if (exhausted || !closeLease) {
+        // Stable frontline keeps using its current weapon between reviews. Exhaustion, empty hands
+        // and the existing active custody/reload rules still take effect without waiting.
+        boolean review = current.isEmpty() || !dev.felix.hostilehumans.perception.HumanPerception.steadyFrontline(human)
+                || Math.floorMod(human.tickCount + (human.getId() & 7), 8) == 0;
+        if (exhausted || !closeLease && review) {
             boolean arrows = HumanAmmo.hasArrows(human);
-            int currentRank = rank(human, current, arrows);
+            CombatPreference preference = CombatPreference.get(human);
+            int currentRank = rank(human, current, arrows, preference);
             int bestRank = currentRank;
             double bestScore = HumanLootManager.mainHandWeaponScore(current);
             int bestSlot = -1;
             boolean useOffhand = false;
             ItemStack offhand = human.getOffhandItem();
-            int offRank = rank(human, offhand, arrows);
+            int offRank = rank(human, offhand, arrows, preference);
             // Only promote ranged off-hand items; off-hand tools are explicit loadout choices.
             if (offRank >= 2 && offRank > bestRank) {
                 bestRank = offRank;
@@ -121,8 +135,9 @@ public final class AmmoWeaponSelection {
             for (int slot = 0; slot < data.getInventoryItemsSize(); slot++) {
                 if (HumanInventoryCustody.isReservedForRecovery(data, slot)) continue;
                 ItemStack candidate = data.getInventoryItem(slot);
-                int candidateRank = rank(human, candidate, arrows);
+                int candidateRank = rank(human, candidate, arrows, preference);
                 if (candidateRank == 0 || candidateRank < bestRank) continue;
+                if (candidateRank == bestRank && bestSlot < 0 && !useOffhand) continue;
                 double score = HumanLootManager.mainHandWeaponScore(candidate);
                 if (candidateRank > bestRank || ((bestSlot >= 0 || useOffhand) && candidateRank == bestRank
                         && score > bestScore + 1.5D)) {

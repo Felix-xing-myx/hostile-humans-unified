@@ -85,21 +85,19 @@ public final class HumanCombatDirector {
         }
         State state = STATES.computeIfAbsent(human, ignored -> new State());
         LivingEntity target = human.getTarget();
-        if (!HumanPerception.canTarget(human, target) || human.isFleeing
-                || GunSupport.isGunItem(human.getMainHandItem())
+        var strategy = strategies(human);
+        boolean gun = GunSupport.isGunItem(human.getMainHandItem());
+        boolean targetAllowed = HumanPerception.canTarget(human, target);
+        if (!targetAllowed || human.isFleeing || gun
                 || !(SpartanEquipmentCompat.isShield(human.getMainHandItem())
                     || SpartanEquipmentCompat.isShield(human.getOffhandItem())))
             shields.clearAttackObligation();
         // Existing recognized-memory facts are shared; defense cannot grant new offensive knowledge.
-        List<LivingEntity> known = strategies(human).allowsOrdinaryShield() ? HumanPerception.knownDynamicTargets(human).stream()
-                .filter(entity -> HumanPerception.canTarget(human, entity)).limit(64).toList() : List.of();
-        List<LivingEntity> near = known.stream().filter(entity -> {
-            var offset = entity.position().subtract(human.position());
-            return offset.horizontalDistanceSqr() <= 16 && Math.abs(offset.y) <= 3;
-        }).toList();
         var heldShield = HumanLootManager.bestOwnedShield(human);
         boolean shield = !heldShield.isEmpty();
-        if (shield && strategies(human).allowsOrdinaryShield() && !GunSupport.isGunItem(human.getMainHandItem()) && human.shieldCoolDown <= 0
+        boolean ordinaryShield = shield && strategy.allowsOrdinaryShield() && !gun;
+        List<LivingEntity> near = ordinaryShield ? nearbyDefenseTargets(human, target, targetAllowed) : List.of();
+        if (ordinaryShield && human.shieldCoolDown <= 0
                 && !RecoverySupplies.hasActiveUse(human)
                 && human.tickCount >= state.nextProjectiles
                 && PerceptionBudget.claim(human, "queries", 1, ":defense_projectiles")) {
@@ -113,15 +111,42 @@ public final class HumanCombatDirector {
         List<Projectile> projectiles = state.lastProjectiles != Integer.MIN_VALUE
                 && human.tickCount - state.lastProjectiles <= 6 ? state.projectiles : List.of();
         shields.observeDefenseSnapshot(near, projectiles);
-        var capability = EquipmentArchetypes.describe(human, heldShield);
-        boolean advance = shield && strategies(human).shieldAdvance(capability.core(), capability.enabled())
-                && human.onGround()
+        boolean advance = false;
+        if (shield && strategy.shieldAdvance() && targetAllowed && !human.isFleeing && human.onGround()
                 && HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())
-                && HumanPerception.canTarget(human,target)
                 && human.distanceToSqr(target) > MeleeCombatRange.reachSqr(human,target)
-                && !SoldierOrder.isHoldingPosition(human) && !human.isFleeing;
+                && !SoldierOrder.isHoldingPosition(human)) {
+            var capability = EquipmentArchetypes.describe(human, heldShield);
+            advance = strategy.shieldAdvance(capability.core(), capability.enabled());
+        }
         shields.tickAdvance(advance, 1);
     }
+    private static List<LivingEntity> nearbyDefenseTargets(Human human, LivingEntity target, boolean targetAllowed) {
+        if (HumanPerception.steadyFrontline(human)) {
+            // Actual damage directions and incoming projectiles retain separate safety inputs.
+            LivingEntity attacker = human.getLastHurtByMob();
+            boolean nearTarget = targetAllowed && isNear(human, target);
+            boolean nearAttacker = attacker != null && attacker != target
+                    && human.tickCount - human.getLastHurtByMobTimestamp() <= 20
+                    && isNear(human, attacker) && HumanPerception.canTarget(human, attacker);
+            if (nearAttacker) return nearTarget ? List.of(target, attacker) : List.of(attacker);
+            return nearTarget ? List.of(target) : List.of();
+        }
+        List<LivingEntity> nearby = new java.util.ArrayList<>();
+        int admitted = 0;
+        for (LivingEntity entity : HumanPerception.knownDynamicTargets(human)) {
+            if (!(entity == target ? targetAllowed : HumanPerception.canTarget(human, entity))) continue;
+            if (isNear(human, entity)) nearby.add(entity);
+            if (++admitted >= 64) break;
+        }
+        return nearby;
+    }
+
+    private static boolean isNear(Human human, LivingEntity entity) {
+        double x = entity.getX() - human.getX(), z = entity.getZ() - human.getZ();
+        return x * x + z * z <= 16 && Math.abs(entity.getY() - human.getY()) <= 3;
+    }
+
     public static void afterTick(Human human) {
         if (human.level().isClientSide) return;
         var shield = human.hhu$shieldDefense();

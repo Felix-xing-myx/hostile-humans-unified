@@ -140,6 +140,9 @@ public final class BetterCombatMeleeCombat {
         Vec3 aimed = MeleeCombatRange.aimPoint(origin, target.getBoundingBox()).subtract(origin);
         // Reach/spacing asks whether we can face and hit, not whether a previous
         // navigation/look tick already happened to face this elevation.
+        // The profile clamps its range to 16 blocks. Reject distant movement probes before resolving the combo.
+        if (closestDelta(target.getBoundingBox().inflate(target.getPickRadius()), origin).lengthSqr() > 16.0D * 16.0D)
+            return false;
         return canBeHit(human, target, profile(human),
                 aimed.lengthSqr() > 1.0E-8D ? aimed.normalize() : human.getViewVector(1.0F));
     }
@@ -278,7 +281,7 @@ public final class BetterCombatMeleeCombat {
         if (configuredRange > 0.0D) defaultRange = Math.min(configuredRange, 16.0D);
         Object attacks = call(attributes, "attacks");
         if (attacks != null && attacks.getClass().isArray() && Array.getLength(attacks) > 0) {
-            Object selected = selectAttack(human, attributes, attacks);
+            Object selected = selectAttack(human, attributes, attacks, cooldown);
             if (selected == null) return new Profile(defaultRange, shape, 0, angleDegrees, cooldown, "", .5F);
             if (selected != null) {
                 animationName = resolveAnimationName(call(selected, "animation"), twoHanded);
@@ -325,11 +328,11 @@ public final class BetterCombatMeleeCombat {
         return MeleeJumpPolicy.cooldown(speed, multiplier, (int)number(field(config, "attack_interval_cap"), 2));
     }
 
-    private static Object selectAttack(Human human, Object attributes, Object attacks) {
+    private static Object selectAttack(Human human, Object attributes, Object attacks, int cooldown) {
         ComboState state = comboState(human);
         double comboReset = Math.max(1.0D, number(field(getConfig(), "combo_reset_rate"), 2.0D));
         if (state.lastAttackTick > 0
-                && human.tickCount - state.lastAttackTick > attackCooldown(human) * comboReset) {
+                && human.tickCount - state.lastAttackTick > cooldown * comboReset) {
             state.index = 0;
         }
 
@@ -400,17 +403,18 @@ public final class BetterCombatMeleeCombat {
     }
 
     private static boolean canBeHit(Human human, LivingEntity target, Profile profile, Vec3 view) {
-        if (!target.isAlive() || !human.canAttack(target)
-                || (!booleanValue(field(getConfig(), "allow_attacking_thru_walls"), false)
-                && !human.hasLineOfSight(target))) return false;
+        if (!target.isAlive() || !human.canAttack(target)) return false;
         if (target instanceof Human other && HumanRelations.allied(human, other)) return false;
 
         Vec3 origin = MeleeCombatRange.attackOrigin(human);
+        AABB box = target.getBoundingBox().inflate(target.getPickRadius());
+        double range = profile.range();
+        Vec3 closestDelta = closestDelta(box, origin);
+        if (closestDelta.lengthSqr() > range * range) return false;
         Vec3 forward = view.normalize();
         Vec3 right = forward.cross(new Vec3(0.0D, 1.0D, 0.0D)).normalize();
         if (right.lengthSqr() < 1.0E-6D) right = new Vec3(1.0D, 0.0D, 0.0D);
         Vec3 up = right.cross(forward).normalize();
-        AABB box = target.getBoundingBox().inflate(target.getPickRadius());
         Vec3 center = box.getCenter();
         Vec3 delta = center.subtract(origin);
         double depth = delta.dot(forward);
@@ -422,16 +426,6 @@ public final class BetterCombatMeleeCombat {
         double depthRadius = Math.abs(forward.x) * hx + Math.abs(forward.y) * hy + Math.abs(forward.z) * hz;
         double sideRadius = Math.abs(right.x) * hx + Math.abs(right.y) * hy + Math.abs(right.z) * hz;
         double upRadius = Math.abs(up.x) * hx + Math.abs(up.y) * hy + Math.abs(up.z) * hz;
-        double range = profile.range();
-
-        Vec3 closestPoint = new Vec3(
-                Math.max(box.minX, Math.min(box.maxX, origin.x)),
-                Math.max(box.minY, Math.min(box.maxY, origin.y)),
-                Math.max(box.minZ, Math.min(box.maxZ, origin.z)));
-        Vec3 closestDelta = closestPoint.subtract(origin);
-        if (closestDelta.lengthSqr() > range * range) {
-            return false;
-        }
         if (profile.angleDegrees() > 0.0D && profile.angleDegrees() < 360.0D
                 && !insideAttackAngle(delta, forward, profile.angleDegrees())
                 && !insideAttackAngle(closestDelta, forward, profile.angleDegrees())) return false;
@@ -452,7 +446,16 @@ public final class BetterCombatMeleeCombat {
         double maxDepth = range + depthRadius;
         return depth >= minDepth && depth <= maxDepth
                 && Math.abs(lateral) <= sideHalf + sideRadius
-                && Math.abs(vertical) <= verticalHalf + upRadius;
+                && Math.abs(vertical) <= verticalHalf + upRadius
+                && (booleanValue(field(getConfig(), "allow_attacking_thru_walls"), false)
+                    || human.hasLineOfSight(target));
+    }
+
+    private static Vec3 closestDelta(AABB box, Vec3 origin) {
+        return new Vec3(
+                Math.max(box.minX, Math.min(box.maxX, origin.x)) - origin.x,
+                Math.max(box.minY, Math.min(box.maxY, origin.y)) - origin.y,
+                Math.max(box.minZ, Math.min(box.maxZ, origin.z)) - origin.z);
     }
 
     private static boolean insideAttackAngle(Vec3 delta, Vec3 forward, double angleDegrees) {

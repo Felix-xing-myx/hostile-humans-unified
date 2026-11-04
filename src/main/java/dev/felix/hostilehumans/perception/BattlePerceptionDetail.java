@@ -14,9 +14,10 @@ import net.minecraft.world.level.Level;
 /** Chooses perception detail from the existing neighborhood query and server load tier. */
 final class BattlePerceptionDetail {
     static final double LOCAL_RADIUS = 24;
-    static final double QUICK_RECOGNITION_RANGE = 12;
     static final double LOCAL_RADIUS_SQUARED = LOCAL_RADIUS * LOCAL_RADIUS;
     private static final double STEP_RADIUS_SQUARED = 6 * 6;
+    static final int FRONTLINE_VISUAL_PERIOD = 8;
+    static final int ENTRY_NEIGHBORS = 7, EXIT_NEIGHBORS = 5, HOSTILE_NEIGHBORS = 2;
     private static final int LOCAL_SAMPLE_TTL = 40;
     private static final Map<Human, Sample> FRONTLINES = new WeakHashMap<>();
 
@@ -40,14 +41,16 @@ final class BattlePerceptionDetail {
     }
 
     static void sample(Human h, long now, int humans, int enemies) {
-        if (humans >= 7 && enemies >= 2)
+        int minimum = reduced(h) ? EXIT_NEIGHBORS : ENTRY_NEIGHBORS;
+        if (humans >= minimum && enemies >= HOSTILE_NEIGHBORS)
             FRONTLINES.put(h, new Sample(h.level().dimension(), now + LOCAL_SAMPLE_TTL));
         else FRONTLINES.remove(h);
     }
 
     static boolean reduced(Human h) {
         var sample = FRONTLINES.get(h);
-        return sample != null && enabled(h) && sample.dimension().equals(h.level().dimension())
+        return sample != null && enabled(h) && !h.isNoAi() && !h.isSleeping()
+                && sample.dimension().equals(h.level().dimension())
                 && HumanPerception.now(h) < sample.expires();
     }
 
@@ -55,7 +58,7 @@ final class BattlePerceptionDetail {
         var target = h.getTarget();
         return reduced(h) && !h.isFleeing && target != null && target.isAlive()
                 && h.distanceToSqr(target) <= LOCAL_RADIUS_SQUARED
-                && HumanPerception.recentlySaw(h, target.getUUID());
+                && HumanPerception.recentConfirmedSight(h, target);
     }
 
     static long nextNeighborhood(long now, Human h, int base, boolean stable) {
@@ -63,7 +66,11 @@ final class BattlePerceptionDetail {
         // A stable fighter refreshes its surrounding candidates once per 24 ticks.
         // Stagger by UUID so a synchronized wave does not query in one tick.
         int period = Math.max(base, 24);
-        long phase = Math.floorMod(h.getUUID().hashCode(), period);
+        return nextPhase(now, h, period);
+    }
+
+    static long nextPhase(long now, Human h, int period) {
+        int phase = Math.floorMod(h.getUUID().hashCode(), period);
         return now + 1 + Math.floorMod(phase - now - 1, period);
     }
 
