@@ -513,6 +513,10 @@ public final class SettlementNetwork {
                 : session.author() ? view(player, instance) : SettlementMapSnapshot.capture(player, instance);
         if (info != null) {
             data.put("author", info.author());
+            var factions = new ListTag();
+            dev.felix.hostilehumans.faction.FactionDefinitions.current().definitions().keySet()
+                    .stream().sorted().forEach(id -> factions.add(net.minecraft.nbt.StringTag.valueOf(id.toString())));
+            data.put("faction_ids", factions);
             var groups = new ListTag();
             SettlementBuildingCatalog.entries(player.getServer()).entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())

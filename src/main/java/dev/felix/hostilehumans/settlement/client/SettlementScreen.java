@@ -712,16 +712,6 @@ public final class SettlementScreen extends PanelScreen {
         send(snapshot, SettlementNetwork.Action.SAVE_TEMPLATE_FILE, payload);
     }
 
-    /** Localised faction name for a preset chip; unknown ids fall back to their path. */
-    private static Component factionLabel(String id) {
-        int colon = id.indexOf(':');
-        String path = colon < 0 ? id : id.substring(colon + 1);
-        String key = "screen.hostile_humans_unified.command.faction_name." + path;
-        return net.minecraft.client.resources.language.I18n.exists(key)
-                ? Component.translatable(key)
-                : Component.literal(path);
-    }
-
     private UiLayout.Node identity() {
         List<UiLayout.Node> nodes = new ArrayList<>();
         nodes.add(choices("kind", List.of("ORDINARY", "ROOT", "ATTACHMENT", "BROKER_STATION"), kind, v -> kind = v));
@@ -731,7 +721,9 @@ public final class SettlementScreen extends PanelScreen {
         nodes.add(action("capture_bounds", text("capture_bounds"), editable() && namedTemplate(), false,
                 () -> beginWorldEdit("BOUNDS", "")));
         if (!kind.equals("ORDINARY")) {
-            nodes.add(field(text("faction"), faction, UiThemes.factions(), SettlementScreen::factionLabel));
+            var registeredFactions = snapshot.data().getList("faction_ids", Tag.TAG_STRING)
+                    .stream().map(Tag::getAsString).toList();
+            nodes.add(field(text("faction"), faction, registeredFactions, UiThemes::factionName));
             nodes.add(muted(text("help.faction")));
             nodes.add(muted(text("help.tier")));
             nodes.add(choices("tier_choice", List.of("1", "2", "3"), tier.text(), tier::set));
@@ -744,7 +736,7 @@ public final class SettlementScreen extends PanelScreen {
             for (var currency : dev.felix.hostilehumans.economy.Currency.values()) {
                 String id = currency.faction();
                 boolean selected = factions.stream().anyMatch(value -> value.getAsString().equals(id));
-                nodes.add(action("broker_faction." + id, factionLabel(id), editable(), selected, () -> {
+                nodes.add(action("broker_faction." + id, UiThemes.factionName(id), editable(), selected, () -> {
                     var chosen = new java.util.TreeSet<String>();
                     factions.forEach(value -> chosen.add(value.getAsString()));
                     if (selected) chosen.remove(id);

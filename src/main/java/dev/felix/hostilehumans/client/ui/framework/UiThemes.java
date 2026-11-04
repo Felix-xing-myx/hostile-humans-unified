@@ -30,14 +30,10 @@ public final class UiThemes {
             MARKER_RANGE = marker("range"),
             MARKER_FIGHT = marker("fight"),
             MARKER_PREFER = marker("prefer");
-    private static final String[] FACTION_IDS = {"crimson", "azure", "verdant", "ashen"};
-    private static final int[] FACTION_COLORS = {
-        0xFFDC8A76, 0xFF80B3DD, 0xFF91C99D, 0xFFC0B3CF
-    };
-
     private static UiTheme base = UiTheme.DEFAULT;
     private static Map<String, UiTheme> themes = Map.of();
     private static Map<String, ResourceLocation> emblems = Map.of();
+    private static Map<String, String> names = Map.of();
     private static UiTheme[] colors = {UiTheme.DEFAULT};
     private static boolean loaded, surfaceAvailable, animation = true;
 
@@ -57,8 +53,19 @@ public final class UiThemes {
         Map<String, Integer> factionColors = new HashMap<>();
         Map<String, Float> factionTints = new HashMap<>();
         Map<String, ResourceLocation> icons = new HashMap<>();
-        for (int i = 0; i < FACTION_IDS.length; i++)
-            factionColors.put("hostile_humans_unified:" + FACTION_IDS[i], FACTION_COLORS[i]);
+        Map<String, String> nameKeys = new HashMap<>();
+        resources.listResources("gui/factions", id -> id.getPath().endsWith(".json"))
+                .forEach((path, resource) -> {
+                    String local = path.getPath().substring("gui/factions/".length(),
+                            path.getPath().length() - ".json".length());
+                    var id = new ResourceLocation(path.getNamespace(), local);
+                    try (var reader = resource.openAsReader()) {
+                        readFaction(id.toString(), JsonParser.parseReader(reader).getAsJsonObject(),
+                                factionColors, factionTints, icons, nameKeys);
+                    } catch (Exception ignored) {
+                        // An invalid faction resource falls back to the common theme.
+                    }
+                });
         try {
             var resource = resources.getResource(PALETTE);
             if (resource.isPresent())
@@ -83,20 +90,12 @@ public final class UiThemes {
                     if (json.has("emblems"))
                         for (var entry : json.getAsJsonObject("emblems").entrySet())
                             add(icons, entry.getKey(), entry.getValue().getAsString());
+                    // Keep existing resource-pack overrides valid.
                     if (json.has("factions"))
-                        for (var entry : json.getAsJsonObject("factions").entrySet()) {
-                            JsonObject faction = entry.getValue().getAsJsonObject();
-                            try {
-                                factionColors.put(
-                                        entry.getKey(), parse(faction.get("accent").getAsString()));
-                            } catch (RuntimeException ignored) {
-                            }
-                            if (faction.has("headTint"))
-                                factionTints.put(
-                                        entry.getKey(), faction.get("headTint").getAsFloat());
-                            if (faction.has("emblem"))
-                                add(icons, entry.getKey(), faction.get("emblem").getAsString());
-                        }
+                        for (var entry : json.getAsJsonObject("factions").entrySet())
+                            if (entry.getValue().isJsonObject())
+                                readFaction(entry.getKey(), entry.getValue().getAsJsonObject(),
+                                        factionColors, factionTints, icons, nameKeys);
                 }
         } catch (Exception ignored) {
             base = UiTheme.DEFAULT;
@@ -111,6 +110,7 @@ public final class UiThemes {
         }
         themes = Map.copyOf(parsed);
         emblems = Map.copyOf(icons);
+        names = Map.copyOf(nameKeys);
         UiTheme[] palette = new UiTheme[parsed.size() + 2];
         palette[0] = base;
         palette[1] = base.withAccent(0xFF93BAC8);
@@ -118,6 +118,16 @@ public final class UiThemes {
         for (UiTheme theme : parsed.values()) palette[i++] = theme;
         colors = palette;
         loaded = true;
+    }
+
+    private static void readFaction(String id, JsonObject data, Map<String, Integer> accents,
+            Map<String, Float> tints, Map<String, ResourceLocation> icons, Map<String, String> names) {
+        accents.put(id, color(data, "accent", accents.getOrDefault(id, UiTheme.DEFAULT.accent())));
+        if (data.has("headTint")) tints.put(id, number(data, "headTint", .09F));
+        if (data.has("emblem") && data.get("emblem").isJsonPrimitive())
+            add(icons, id, data.get("emblem").getAsString());
+        if (data.has("nameKey") && data.get("nameKey").isJsonPrimitive())
+            names.put(id, data.get("nameKey").getAsString());
     }
 
     private static void add(Map<String, ResourceLocation> icons, String key, String path) {
@@ -185,10 +195,11 @@ public final class UiThemes {
     }
 
     public static net.minecraft.network.chat.Component factionName(String faction) {
-        var id = ResourceLocation.tryParse(faction);
-        if (id == null) return net.minecraft.network.chat.Component.literal(faction);
-        return net.minecraft.network.chat.Component.translatableWithFallback(
-                "screen.hostile_humans_unified.command.faction_name." + id.getPath(), faction);
+        if (!loaded) reload();
+        String key = names.get(faction);
+        return key == null || !net.minecraft.client.resources.language.I18n.exists(key)
+                ? net.minecraft.network.chat.Component.literal(faction)
+                : net.minecraft.network.chat.Component.translatable(key);
     }
 
     public static UiTheme faction(String faction) {

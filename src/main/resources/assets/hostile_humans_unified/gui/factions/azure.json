@@ -1,0 +1,6 @@
+{
+  "accent": "#80B3DD",
+  "headTint": 0.085,
+  "emblem": "hostile_humans_unified:textures/gui/icon/azure.png",
+  "nameKey": "screen.hostile_humans_unified.command.faction_name.azure"
+}

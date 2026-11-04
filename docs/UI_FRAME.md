@@ -29,7 +29,7 @@
 | 分段进度条（高 4，每 8px 一条 1px 分隔） | `UiDraw.meter(segmented)` / `PanelMeter` | 单兵命令、小队命令、对讲机 |
 | 细胞血条（8 tick/格，上限8格，按实际生命比例填充及换色） | `UiDraw.health` / `PanelHealth` | 单兵命令、小队命令、对讲机 |
 | 名单行（状态点、姓名列、血条列、数值列、第二行元数据、选中/离线态） | `PanelRosterRow` | 对讲机 |
-| 阵营主题：强调色 + 徽记 + 顶栏晕染比例 | `UiTheme` / `UiThemes` / `gui/theme.json` | 全部面板页 |
+| 阵营主题：强调色 + 徽记 + 顶栏晕染比例 | `UiTheme` / `UiThemes` / `gui/factions/<id>.json` | 全部面板页 |
 | 低强度噪点（64px 平铺） | `UiDraw.grain` | 全部面板页 |
 | 阵营水印 | `UiDraw.watermark` | 全部面板页 |
 
@@ -117,7 +117,7 @@
 
 现状：`identity()` 把阵营做成自由文本 `input("faction", faction)`，玩家要手打 `hostile_humans_unified:crimson`。
 
-建议：加一个 `PanelChoice` 小控件（当前值 + 一排候选块 + "自定义"）。候选来自 `gui/theme.json` 的 `factions` 键——`UiThemes` 已经解析过这份数据，只需补一个只读访问器 `UiThemes.factions()`，属于界面内接口，不动协议。选中后仍然往同一个 `InputValue<String>` 里写、提交同一个字符串，服务端校验与快照格式都不变；自定义仍可手输。真正由服务端下发"本据点允许哪些阵营"属于协议扩展，需要主控决定，本轮不做。
+据点阵营预设使用服务端已加载的阵营定义 ID，客户端通过 `UiThemes.factionName` 显示名称。输入框仍可手填，提交时由服务端校验。
 
 同一屏其余适合改成预设/步进的字段：`tier`（整数档位）、`size`/`origin` 的六个数（步进 + 直接读数）、`kind`（已有 `choices`，可复用成同样的视觉）。
 
@@ -126,7 +126,7 @@
 - **禁用态可读性**：`UiTheme.disabledFace()` .022 → .05 白，`disabledEdge()` .05 → .10，新增 `disabledText()`（`disabled` 与 `muted` 各半，禁用面约 5:1）。`PanelButton` / `PanelCheck` 的禁用标签改用 `disabledText()`。据点表单里"选不了"的选项现在读得出来，但仍明显是灰的。
 - **输入框字形被裁**：`PanelEditBox.place()` 内框高度 `height-12`(8px) → `max(12, height-8)`，外框仍占满 20px 槽位；原生 scissor 不再削掉字底。
 - **底部割裂**：`UiDraw.actionBar` 去掉 5px 实心黑框，改成 14px 竖向渐变遮罩（`UiDraw.SCRIM`）；填充改半透明（`actionBar()` α .86）；`fade` 高度 12→20、末端 1.0→.85；`PanelScreen` 在操作台画完后按面板原点**补一遍 `grain()`**（新增带 origin 的重载），噪点在底部保持同相位连续。
-- **预设表单**：`PanelScreen.field(label, draft, presets, presetLabel)` 在输入框下加一排预设块，点击直接写入同一个 `InputValue`（仍走 `setValue` → 走 responder → 走原有校验与提交）。`UiThemes.factions()` 只读暴露 `theme.json` 里的四个阵营 id；据点表单的"阵营资源 ID"已接入，标签取 `command.faction_name.*` 的本地化名，未知 id 回退到路径名。协议、快照与校验未变。
+- **预设表单**：`PanelScreen.field(label, draft, presets, presetLabel)` 在输入框下加一排预设块，点击直接写入同一个 `InputValue`（仍走 `setValue` → 走 responder → 走原有校验与提交）。阵营预设取服务端定义，显示名由资源中的 `nameKey` 决定，缺失时显示完整 ID。
 ### 8.5 输入框"看不到数值"的真正原因（2026-11-03，实机截图确认）
 
 实机截图里据点作者编辑器的四个文本框全是空的，但阵营那一排预设块显示"靛磐"已选中——说明值在、只是没画出来。
