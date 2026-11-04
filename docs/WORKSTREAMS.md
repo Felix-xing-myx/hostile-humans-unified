@@ -4255,3 +4255,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 等待视觉额度与群体拾取简化
 - 主控，基线 e87173a，module-architecture 工作树。已排队视觉工作先检查可执行性再重复筛选。闲置拾取借用现有候选查询，在 12 格内有 4 名友军时按中心单点、每人每 tick 两条射线处理。
+
+## 远距离盔甲与团战性能采样
+- 主控，基线 ccc8be7，module-architecture 工作树。盔甲层与绑带同样随可见人体绘制。F8 低频抽样分别记录邻域、视觉判定和发送轮询耗时。Python 检查 532 项，跳过 16 项；未运行 Gradle、同步或实机对照。

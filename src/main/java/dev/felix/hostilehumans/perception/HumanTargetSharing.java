@@ -248,6 +248,16 @@ public final class HumanTargetSharing {
 
     /** Invoked only with the existing budgeted candidate query's bounded nearest friendly list. */
     static void broadcast(Human sender,List<Human> nearby){
+        long sample = BattlePerceptionMetrics.startSample(sender);
+        try {
+            sendReports(sender, nearby);
+        } finally {
+            BattlePerceptionMetrics.finishSample(sender, sample,
+                    BattlePerceptionMetrics.Work.REPORT_SAMPLES, BattlePerceptionMetrics.Work.REPORT_NS);
+        }
+    }
+
+    private static void sendReports(Human sender,List<Human> nearby){
         if (!readyToBroadcast(sender)) return;
         boolean reduced = BattlePerceptionDetail.reduced(sender)
                 || BattlePerceptionDetail.measure(sender) && nearby.size() >= FRONTLINE_NEIGHBORS;

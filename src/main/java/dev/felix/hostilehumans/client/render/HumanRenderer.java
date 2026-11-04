@@ -78,7 +78,8 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         // Wrap only layers owned by this renderer. Other mods may add their own layers.
         this.layers.replaceAll(layer -> {
             boolean decorative = layer instanceof ArrowLayer || layer instanceof BeeStingerLayer;
-            boolean equipment = layer instanceof ItemInHandLayer || layer instanceof HumanoidArmorLayer
+            // Armor and faction bands follow the visible body at every detail level.
+            boolean equipment = layer instanceof ItemInHandLayer
                     || layer instanceof CustomHeadLayer || layer instanceof ElytraLayer;
             if (!decorative && !equipment) return layer;
             return new RenderLayer<Human, PlayerModel<Human>>(this) {

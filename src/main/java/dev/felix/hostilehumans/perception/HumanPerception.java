@@ -470,6 +470,7 @@ public final class HumanPerception {
             int[] localHumans = measureBattle ? new int[2] : null; // All nearby humans and the hostile subset, excluding self.
             int[] nearbyAllies = {0};
             // Stream the loaded spatial section: unrelated entities cannot hide later enemies.
+            long neighborhoodSample = BattlePerceptionMetrics.startSample(h);
             BattleNeighborhood.visit(level, h.getBoundingBox().inflate(r), measureBattle && !urgentScan, e->{
                         if(e!=h&&e.isAlive()){
                             if(collectPeers&&e instanceof Human friendly&&HumanTargetSharing.peers(h,friendly,shareRange))friends.offer(friendly);
@@ -489,6 +490,8 @@ public final class HumanPerception {
                             if ((!reduced || BattlePerceptionDetail.closeHuman(h,e)) && HumanAwareness.movementCandidate(h,e)) sounds.offer(e);
                         }
                     });
+            BattlePerceptionMetrics.finishSample(h, neighborhoodSample,
+                    BattlePerceptionMetrics.Work.NEIGHBORHOOD_SAMPLES, BattlePerceptionMetrics.Work.NEIGHBORHOOD_NS);
             if (sampleLootGroup) {
                 s.lootGroupDimension = level.dimension();
                 s.lootGroupUntil = nearbyAllies[0] >= 4 ? now + 40 : now;
@@ -766,6 +769,16 @@ public final class HumanPerception {
                 Math.max(0,Math.min(1,(point.z-box.minZ)/Math.max(1.e-8,box.getZsize()))));
     }
     private static void check(Human h,State s,LivingEntity e,long now,int interval,boolean fast){
+        long sample = BattlePerceptionMetrics.startSample(h);
+        try {
+            checkVisualEvidence(h,s,e,now,interval,fast);
+        } finally {
+            BattlePerceptionMetrics.finishSample(h, sample,
+                    BattlePerceptionMetrics.Work.VISION_SAMPLES, BattlePerceptionMetrics.Work.VISION_NS);
+        }
+    }
+
+    private static void checkVisualEvidence(Human h,State s,LivingEntity e,long now,int interval,boolean fast){
         if(!enemy(h,e))return;Track t=s.tracks.get(e.getUUID());boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
         boolean simple = simplifiedVision(h,s,e,now);
         VisualProbe probe;
