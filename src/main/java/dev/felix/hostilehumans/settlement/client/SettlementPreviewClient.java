@@ -2,6 +2,7 @@ package dev.felix.hostilehumans.settlement.client;
 
 import dev.felix.hostilehumans.bootstrap.HumanRuntime;
 import dev.felix.hostilehumans.client.render.DebugWorldLines;
+import dev.felix.hostilehumans.client.render.DebugWorldLines.AuthorStroke;
 import dev.felix.hostilehumans.settlement.RegionBox;
 import dev.felix.hostilehumans.settlement.SettlementPreview;
 import dev.felix.hostilehumans.settlement.SettlementSelectionTool;
@@ -87,42 +88,41 @@ public final class SettlementPreviewClient {
         var poses = event.getPoseStack();
         var buffers = DebugWorldLines.buffers();
         SettlementGhostRenderer.draw(mc, poses, camera, preview.ghosts());
-        var type = DebugWorldLines.author(throughWalls);
+        var layers = new java.util.EnumMap<AuthorStroke, java.util.List<Outline>>(AuthorStroke.class);
+        for (var entry : preview.boxes())
+            addOutline(layers, stroke(entry.rgb()), bounds(entry.bounds()), entry.rgb());
+
         RegionBox draftBounds = null;
-        poses.pushPose();
-        try {
+        BlockPos first = preview.first();
+        if (first != null) {
+            addOutline(layers, AuthorStroke.CORNER, new AABB(first), 0x00ff4d);
+            BlockPos second = preview.second();
+            if (second == null && mc.hitResult instanceof BlockHitResult hit
+                    && hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK)
+                second = hit.getBlockPos();
+            if (second != null) {
+                addOutline(layers, AuthorStroke.CORNER, new AABB(second), 0x4dffb3);
+                draftBounds = RegionBox.between(
+                        new Cell(first.getX(), first.getY(), first.getZ()),
+                        new Cell(second.getX(), second.getY(), second.getZ()));
+                addOutline(layers, AuthorStroke.SELECTION, bounds(draftBounds), 0x40ff73);
+            }
+        }
+        // Same geometric edge, separate color-only passes, widest first.
+        for (var layer : layers.entrySet()) {
+            var type = layer.getKey().renderType(throughWalls);
             var lines = buffers.getBuffer(type);
-            for (var entry : preview.boxes()) {
-                var box = entry.bounds();
-                AABB world = bounds(box).inflate(.004 * (1 + (entry.rgb() & 3)));
-                if (world.distanceToSqr(camera) > 192 * 192) continue;
-                int rgb = entry.rgb();
-                LevelRenderer.renderLineBox(poses, lines, world.move(-camera.x, -camera.y, -camera.z),
-                        ((rgb >> 16) & 255) / 255F, ((rgb >> 8) & 255) / 255F, (rgb & 255) / 255F, .9F);
-            }
-            BlockPos first = preview.first();
-            if (first != null) {
-                LevelRenderer.renderLineBox(poses, lines, new AABB(first).inflate(.04)
-                        .move(-camera.x, -camera.y, -camera.z), 0, 1, .3F, 1);
-                BlockPos second = preview.second();
-                if (second == null && mc.hitResult instanceof BlockHitResult hit
-                        && hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK)
-                    second = hit.getBlockPos();
-                if (second != null) {
-                    LevelRenderer.renderLineBox(poses, lines, new AABB(second).inflate(.04)
-                            .move(-camera.x, -camera.y, -camera.z), .3F, 1, .7F, 1);
-                    draftBounds = RegionBox.between(
-                            new Cell(first.getX(), first.getY(), first.getZ()),
-                            new Cell(second.getX(), second.getY(), second.getZ()));
-                    LevelRenderer.renderLineBox(poses, lines, bounds(draftBounds).inflate(.03)
-                            .move(-camera.x, -camera.y, -camera.z), .25F, 1, .45F, 1);
-                }
-            }
-        } finally {
             try {
-                buffers.endBatch(type);
+                for (var entry : layer.getValue()) {
+                    if (entry.box().distanceToSqr(camera) > 192 * 192) continue;
+                    int rgb = entry.rgb();
+                    LevelRenderer.renderLineBox(poses, lines,
+                            entry.box().move(-camera.x, -camera.y, -camera.z),
+                            ((rgb >> 16) & 255) / 255F, ((rgb >> 8) & 255) / 255F,
+                            (rgb & 255) / 255F, 1F);
+                }
             } finally {
-                poses.popPose();
+                buffers.endBatch(type);
             }
         }
         var font = mc.font;
@@ -160,6 +160,25 @@ public final class SettlementPreviewClient {
         } finally {
             if (labels > 0) buffers.endBatch();
         }
+    }
+
+    private record Outline(AABB box, int rgb) {}
+
+    private static void addOutline(java.util.EnumMap<AuthorStroke, java.util.List<Outline>> layers,
+            AuthorStroke stroke, AABB box, int rgb) {
+        layers.computeIfAbsent(stroke, ignored -> new java.util.ArrayList<>())
+                .add(new Outline(box.inflate(.01), rgb));
+    }
+
+    private static AuthorStroke stroke(int rgb) {
+        return switch (rgb) {
+            case 0xffffff -> AuthorStroke.CAPTURE;
+            case 0xffbd57 -> AuthorStroke.OUTER;
+            case 0x37d5ff -> AuthorStroke.INNER;
+            case 0xff5362 -> AuthorStroke.EXCLUSION;
+            case 0x6affaa -> AuthorStroke.SELECTION;
+            default -> AuthorStroke.FACILITY;
+        };
     }
 
     private static AABB bounds(RegionBox box) {

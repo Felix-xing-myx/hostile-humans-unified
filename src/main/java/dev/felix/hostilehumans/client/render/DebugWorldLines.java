@@ -15,20 +15,28 @@ public final class DebugWorldLines extends RenderType {
             .setShaderState(RENDERTYPE_LINES_SHADER).setLineState(new LineStateShard(OptionalDouble.of(2)))
             .setTransparencyState(TRANSLUCENT_TRANSPARENCY).setDepthTestState(NO_DEPTH_TEST)
             .setWriteMaskState(COLOR_WRITE).setCullState(NO_CULL).createCompositeState(false));
-    private static final RenderType AUTHOR_XRAY = author("hhu_author_xray", NO_DEPTH_TEST);
-    private static final RenderType AUTHOR_DEPTH = author("hhu_author_depth", LEQUAL_DEPTH_TEST);
+    public enum AuthorStroke {
+        CAPTURE(16), OUTER(11), INNER(8), EXCLUSION(6), FACILITY(4), SELECTION(3), CORNER(2);
 
-    private static RenderType author(String name, DepthTestStateShard depth) {
+        private final RenderType xray, depth;
+
+        AuthorStroke(int width) {
+            xray = author("hhu_author_xray_" + width, NO_DEPTH_TEST, width);
+            depth = author("hhu_author_depth_" + width, LEQUAL_DEPTH_TEST, width);
+        }
+
+        public RenderType renderType(boolean throughWalls) {
+            return throughWalls ? xray : depth;
+        }
+    }
+
+    private static RenderType author(String name, DepthTestStateShard depth, int width) {
         return create(name, DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES,
                 4096, false, false, CompositeState.builder()
                         .setShaderState(RENDERTYPE_LINES_SHADER)
-                        .setLineState(new LineStateShard(OptionalDouble.of(4)))
+                        .setLineState(new LineStateShard(OptionalDouble.of(width)))
                         .setTransparencyState(TRANSLUCENT_TRANSPARENCY).setDepthTestState(depth)
                         .setWriteMaskState(COLOR_WRITE).setCullState(NO_CULL).createCompositeState(false));
-    }
-
-    public static RenderType author(boolean throughWalls) {
-        return throughWalls ? AUTHOR_XRAY : AUTHOR_DEPTH;
     }
 
     private DebugWorldLines(){super("hhu_world_debug",DefaultVertexFormat.POSITION_COLOR_NORMAL,VertexFormat.Mode.LINES,256,false,false,()->{},()->{});}
