@@ -17,7 +17,8 @@ import net.minecraftforge.fml.loading.FMLPaths;
 /** Instance-scoped portable files shared by all worlds of the same game instance. */
 final class SettlementTemplateLibrary {
     static final long MAX_COMPRESSED_BYTES = 16L * 1024 * 1024;
-    private static final long MAX_NBT_BYTES = 128L * 1024 * 1024;
+    // NbtAccounter includes the overhead of each coordinate and compound, not just wire bytes.
+    private static final long MAX_NBT_BYTES = 1_536L * 1024 * 1024;
 
     private SettlementTemplateLibrary() {}
 

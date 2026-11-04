@@ -29,7 +29,11 @@ import net.minecraft.world.phys.Vec3;
 
 /** Vanilla template files; dimension-local settlement registration is a separate operation. */
 final class SettlementTemplateFiles {
-    private static final long MAX_VOLUME = 262_144;
+    private static final long LARGE_TEMPLATE_THRESHOLD = 262_144;
+    private static final Map<ServerPlayer, CaptureJob> CAPTURES = new WeakHashMap<>();
+    private record CaptureJob(ServerLevel level, BlockPos anchor, int revision, boolean entities,
+            boolean overwrite, ResourceLocation id, RegionBox bounds, TemplateTransform.Cell size,
+            SettlementTemplateCapture capture) {}
     private static final int PREVIEW_TICKS = 600;
     private static final Map<ServerPlayer, Placement> PENDING = new WeakHashMap<>();
 
@@ -41,11 +45,16 @@ final class SettlementTemplateFiles {
     static void checkSize(TemplateTransform.Cell size) {
         if (size.x() < 1 || size.y() < 1 || size.z() < 1
                 || size.x() > 512 || size.y() > 512 || size.z() > 512
-                || (long) size.x() * size.y() * size.z() > MAX_VOLUME)
-            throw new IllegalArgumentException("template limit: 512 per axis, 262144 cells total");
+                || volume(size) > SettlementLimits.value(SettlementLimits.TEMPLATE_VOLUME))
+            throw new IllegalArgumentException("template limit: 512 per axis, "
+                    + SettlementLimits.value(SettlementLimits.TEMPLATE_VOLUME) + " cells total");
     }
 
-    private static void checkArea(ServerLevel level, RegionBox bounds) {
+    private static long volume(TemplateTransform.Cell size) {
+        return (long) size.x() * size.y() * size.z();
+    }
+
+    static void checkArea(ServerLevel level, RegionBox bounds) {
         if (bounds.minY() < level.getMinBuildHeight() || bounds.maxY() >= level.getMaxBuildHeight()
                 || !level.getWorldBorder().isWithinBounds(new BlockPos(bounds.minX(), bounds.minY(), bounds.minZ()))
                 || !level.getWorldBorder().isWithinBounds(new BlockPos(bounds.maxX(), bounds.maxY(), bounds.maxZ())))
@@ -99,6 +108,7 @@ final class SettlementTemplateFiles {
     static String save(ServerPlayer player, BlockPos position, int revision, boolean entities,
             boolean overwrite) {
         if (!player.canUseGameMasterBlocks()) return "template files require creative mode and operator permission";
+        if (CAPTURES.containsKey(player)) return "a template capture is already in progress";
         var info = SettlementAuthoring.information(player, position);
         if (info == null || info.revision() != revision) return "author unavailable or stale";
         var level = player.serverLevel();
@@ -125,11 +135,23 @@ final class SettlementTemplateFiles {
                 || SettlementBuildingCatalog.entries(level.getServer()).containsKey(id)))
             return "template ID already exists; choose a new ID or explicitly replace the instance file";
         if (overwrite && !Files.isRegularFile(path)) return "only an existing instance file can be replaced";
+        if (volume(size) > LARGE_TEMPLATE_THRESHOLD) {
+            if (!CAPTURES.isEmpty()) return "another large template capture is in progress";
+            CAPTURES.put(player, new CaptureJob(level, position.immutable(), revision, entities, overwrite,
+                    id, bounds, size, new SettlementTemplateCapture(level, bounds, size, entities)));
+            return "large template capture started: " + id;
+        }
         var template = new StructureTemplate();
         template.fillFromWorld(level, new BlockPos(bounds.minX(), bounds.minY(), bounds.minZ()),
                 new Vec3i(size.x(), size.y(), size.z()), entities, Blocks.STRUCTURE_VOID);
         template.setAuthor(player.getGameProfile().getName());
-        var data = template.save(new CompoundTag());
+        return finishExport(player, id, bounds, size, entities, overwrite, template.save(new CompoundTag()));
+    }
+
+    private static String finishExport(ServerPlayer player, ResourceLocation id, RegionBox bounds,
+            TemplateTransform.Cell size, boolean entities, boolean overwrite, CompoundTag data) {
+        var path = SettlementTemplateLibrary.path(id);
+        var level = player.serverLevel();
         sanitize(data, size, Rotation.NONE, Mirror.NONE);
         // Vanilla selects intersecting hitboxes. Export only entities whose
         // actual positions belong to the author's selected volume.
@@ -138,6 +160,7 @@ final class SettlementTemplateFiles {
         SettlementHumanTemplates.prepareFile(data, new Vec3(bounds.minX(), bounds.minY(), bounds.minZ()),
                 level.dimension().location());
         try {
+            if (overwrite && !Files.isRegularFile(path)) return "instance template was removed during capture";
             Files.createDirectories(path.getParent());
             var staging = Files.createTempFile(path.getParent(), ".hhu-template-", ".tmp");
             try {
@@ -239,7 +262,7 @@ final class SettlementTemplateFiles {
         }
     }
 
-    private static boolean validEntityPosition(CompoundTag entry, TemplateTransform.Cell size) {
+    static boolean validEntityPosition(CompoundTag entry, TemplateTransform.Cell size) {
         var position = entry.getList("pos", Tag.TAG_DOUBLE);
         return position.size() == 3 && entry.getList("blockPos", Tag.TAG_INT).size() == 3
                 && insideTemplate(position.getDouble(0), size.x())
@@ -355,6 +378,41 @@ final class SettlementTemplateFiles {
 
     static void cancel(ServerPlayer player) {
         if (PENDING.remove(player) != null) SettlementNetwork.preview(player, SettlementPreview.EMPTY_PLACEMENT);
+    }
+
+    static void cancelCapture(ServerPlayer player) {
+        CAPTURES.remove(player);
+    }
+
+    static void tickCapture(ServerPlayer player) {
+        var job = CAPTURES.get(player);
+        if (job == null) return;
+        var info = SettlementAuthoring.information(player, job.anchor());
+        if (player.serverLevel() != job.level() || info == null || info.revision() != job.revision()) {
+            cancelCapture(player);
+            captureMessage(player, "capture_cancelled", job.id());
+            return;
+        }
+        try {
+            var capture = job.capture();
+            for (int i = 0; i < 4 && capture.completed() < capture.total(); i++) capture.captureTile();
+            if (capture.completed() == capture.total()) {
+                cancelCapture(player);
+                String result = finishExport(player, job.id(), job.bounds(), job.size(), job.entities(), job.overwrite(),
+                        capture.finish(player.getGameProfile().getName()));
+                captureMessage(player, "capture_result", result);
+            } else if (player.tickCount % 20 == 0) {
+                captureMessage(player, "capture_progress", job.id(), capture.completed(), capture.total());
+            }
+        } catch (RuntimeException invalid) {
+            cancelCapture(player);
+            captureMessage(player, "capture_failed", job.id(), invalid.getMessage());
+        }
+    }
+
+    private static void captureMessage(ServerPlayer player, String key, Object... args) {
+        player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
+                "gui.hostile_humans_unified.settlement." + key, args));
     }
 
     static void tick(ServerPlayer player) {

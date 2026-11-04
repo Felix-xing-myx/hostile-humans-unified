@@ -1,4 +1,8 @@
 {
+  "gui.hostile_humans_unified.settlement.capture_progress": "Capturing %s: %s / %s batches.",
+  "gui.hostile_humans_unified.settlement.capture_cancelled": "Capture cancelled for %s. No file published.",
+  "gui.hostile_humans_unified.settlement.capture_failed": "Capture failed for %s: %s",
+  "gui.hostile_humans_unified.settlement.capture_result": "Template capture result: %s",
   "gui.hostile_humans_unified.settlement.building_pack.help": "Save the draft and export its NBT first. The ZIP is written to the server instance's building_exports directory.",
   "gui.hostile_humans_unified.settlement.export_building_pack": "Export building pack",
   "gui.hostile_humans_unified.settlement.replace_building_pack": "Replace building pack (click again to confirm)",

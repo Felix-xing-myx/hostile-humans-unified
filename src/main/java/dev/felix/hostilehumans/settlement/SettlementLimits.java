@@ -13,7 +13,8 @@ public final class SettlementLimits {
             INSTANCE_BOXES,
             MODULES,
             INSTANCES,
-            QUERY_RESULTS;
+            QUERY_RESULTS,
+            TEMPLATE_VOLUME;
 
     static {
         var b = new ForgeConfigSpec.Builder();
@@ -26,6 +27,7 @@ public final class SettlementLimits {
         MODULES = b.defineInRange("modules_per_instance", 128, 1, 256);
         INSTANCES = b.defineInRange("instances_per_dimension", 8192, 1, 65536);
         QUERY_RESULTS = b.defineInRange("overlapping_query_results", 64, 1, 256);
+        TEMPLATE_VOLUME = b.defineInRange("template_volume", 1_048_576, 1, 4_194_304);
         SPEC = b.build();
     }
 

@@ -271,7 +271,10 @@ public final class SettlementNetwork {
                 }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
                 (net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) -> {
-                    if (event.getEntity() instanceof ServerPlayer player) SettlementTemplateTransfer.cancel(player);
+                    if (event.getEntity() instanceof ServerPlayer player) {
+                        SettlementTemplateTransfer.cancel(player);
+                        SettlementTemplateFiles.cancelCapture(player);
+                    }
                 });
     }
 
@@ -530,6 +533,7 @@ public final class SettlementNetwork {
         if (event.phase != net.minecraftforge.event.TickEvent.Phase.END
                 || !(event.player instanceof ServerPlayer player)) return;
         SettlementTemplateTransfer.tick(player);
+        SettlementTemplateFiles.tickCapture(player);
         if (player.tickCount % 20 != 0) return;
         SettlementTemplateFiles.tick(player);
         SettlementSelectionTool.tick(player);

@@ -1,4 +1,8 @@
 {
+  "gui.hostile_humans_unified.settlement.capture_progress": "模板 %s 正在采集，已完成 %s / %s 批。",
+  "gui.hostile_humans_unified.settlement.capture_cancelled": "模板 %s 采集中止，未发布文件。",
+  "gui.hostile_humans_unified.settlement.capture_failed": "模板 %s 采集失败：%s",
+  "gui.hostile_humans_unified.settlement.capture_result": "模板采集结果：%s",
   "gui.hostile_humans_unified.settlement.building_pack.help": "先保存当前草稿并导出 NBT，再导出 ZIP 分享包。文件写入服务器实例的 building_exports 目录。",
   "gui.hostile_humans_unified.settlement.export_building_pack": "导出建筑分享包",
   "gui.hostile_humans_unified.settlement.replace_building_pack": "覆盖建筑分享包（再次点击确认）",

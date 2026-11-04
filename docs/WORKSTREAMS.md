@@ -1,3 +1,7 @@
+## Large template capture
+
+Template volume is configurable and capture beyond the former ceiling uses bounded vanilla capture tiles with merged palettes and translated entity positions. Interrupted captures do not publish a file. The NBT reader accounts for the larger coordinate lists. Placement slicing and stress validation remain open.
+
 ## Building pack data publication
 
 A required server-data repository source publishes the compiled structure registry resources. Reopening the world loads configuration changes. Removing an ID from the enable list removes its selection entry while keeping the structure and template available to existing starts. The live world and dedicated-server path still need validation.
