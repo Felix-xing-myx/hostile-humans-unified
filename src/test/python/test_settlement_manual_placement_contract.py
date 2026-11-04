@@ -26,3 +26,14 @@ class SettlementManualPlacementContract(unittest.TestCase):
         authoring = (SETTLEMENT / "SettlementAuthoring.java").read_text(encoding="utf-8")
         self.assertIn("return registerRoot(player.serverLevel(), info, author,", authoring)
         self.assertIn("if (result.changed()) info.bind(id, key);", authoring)
+
+    def test_export_validates_resolved_patrol_points_before_publishing(self):
+        files = (SETTLEMENT / "SettlementTemplateFiles.java").read_text(encoding="utf-8")
+        self.assertLess(files.index("prepareFile(data, bounds"), files.index("Files.move(staging"))
+        self.assertIn("prepareFile(data, null, null)", files)
+        residents = (SETTLEMENT / "SettlementHumanTemplates.java").read_text(encoding="utf-8")
+        self.assertLess(residents.index("validatePatrol(state, home"), residents.index("localize(home, origin"))
+        self.assertIn("NaturalRoute.authorDefinition(state, home, dimension.toString())", residents)
+        self.assertIn("!bounds.contains(point.x, point.y, point.z)", residents)
+        self.assertIn('NaturalState.structureBehavior(original, saved.hasUUID("Owner"))', residents)
+        self.assertIn("HumanSpawnEquipment.generate(human, false)", residents)

@@ -61,16 +61,23 @@ public final class NaturalRoute {
         a.definitionDimension=dimension;a.cachedDefinition=d;return d;
     }
     private static Definition readDefinition(Human h,OrderDistances.Context c) {
-        return readDefinition(h,c,author(h,c),h.getPersistentData().getCompound(c.natural()?NaturalState.ORIGIN:GarrisonSettings.PLAYER));
+        return readDefinition(h.level().dimension().location().toString(), c, author(h,c),
+                h.getPersistentData().getCompound(c.natural()?NaturalState.ORIGIN:GarrisonSettings.PLAYER));
     }
     /** Read-only preview of active or temporarily suspended natural author data. */
     static Definition controllerDefinition(Human h,NaturalState.ControllerData view) {
-        var origin=view.origin();var pos=new Vec3(origin.getDouble("x"),origin.getDouble("y"),origin.getDouble("z"));
-        var settings=GarrisonSettings.read(view.author(),new GarrisonSettings(true,false,OrderDistances.defaults().garrisonRadius()));
-        var context=new OrderDistances.Context(true,true,true,pos,settings,"ready");
-        return readDefinition(h,context,view.author(),origin);
+        return authorDefinition(view.author(), view.origin(), h.level().dimension().location().toString());
     }
-    private static Definition readDefinition(Human h,OrderDistances.Context c,CompoundTag author,CompoundTag placementOrigin) {
+
+    /** Resolve the same world-space points as the patrol executor, without an entity or runtime state. */
+    public static Definition authorDefinition(CompoundTag author, CompoundTag origin, String dimension) {
+        var pos = new Vec3(origin.getDouble("x"), origin.getDouble("y"), origin.getDouble("z"));
+        var settings = GarrisonSettings.read(author, new GarrisonSettings(true, false, OrderDistances.defaults().garrisonRadius()));
+        var context = new OrderDistances.Context(true, true, true, pos, settings, "ready");
+        return readDefinition(dimension, context, author, origin);
+    }
+
+    private static Definition readDefinition(String dimension,OrderDistances.Context c,CompoundTag author,CompoundTag placementOrigin) {
         var list = author.getList("route", Tag.TAG_COMPOUND);
         if (!author.contains("route", Tag.TAG_LIST) || list.isEmpty() || list.size() > OrderDistances.defaults().routeMaxPoints())
             return invalid("invalid_route_size");
@@ -79,7 +86,7 @@ public final class NaturalRoute {
         boolean drawn = author.getBoolean(PatrolRoutes.AUTHORED);
         CompoundTag origin = drawn ? author.getCompound(PatrolRoutes.ORIGIN) : placementOrigin;
         Vec3 routeOrigin = drawn ? new Vec3(origin.getDouble("x"),origin.getDouble("y"),origin.getDouble("z")) : c.origin();
-        if(drawn && (!origin.getString("dimension").equals(h.level().dimension().location().toString())
+        if(drawn && (!origin.getString("dimension").equals(dimension)
                 ||!origin.contains("x",Tag.TAG_ANY_NUMERIC)||!origin.contains("y",Tag.TAG_ANY_NUMERIC)||!origin.contains("z",Tag.TAG_ANY_NUMERIC)))
             return invalid("invalid_drawn_route_origin");
         if (!origin.contains("placement_mirror", Tag.TAG_STRING) || !origin.contains("placement_rotation", Tag.TAG_ANY_NUMERIC)

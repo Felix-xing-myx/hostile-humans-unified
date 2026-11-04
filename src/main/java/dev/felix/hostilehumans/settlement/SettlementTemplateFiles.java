@@ -207,8 +207,7 @@ final class SettlementTemplateFiles {
         // actual positions belong to the author's selected volume.
         data.getList("entities", Tag.TAG_COMPOUND)
                 .removeIf(entry -> !validEntityPosition((CompoundTag) entry, size));
-        SettlementHumanTemplates.prepareFile(data, new Vec3(bounds.minX(), bounds.minY(), bounds.minZ()),
-                level.dimension().location());
+        SettlementHumanTemplates.prepareFile(data, bounds, level.dimension().location());
         try {
             if (overwrite && !Files.isRegularFile(path)) return "instance template was removed during capture";
             Files.createDirectories(path.getParent());

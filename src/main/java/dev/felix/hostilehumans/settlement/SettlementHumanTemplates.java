@@ -37,7 +37,9 @@ public final class SettlementHumanTemplates {
                 || FactionContent.BOSSES.stream().anyMatch(boss -> boss.type().get() == type)).isPresent();
     }
 
-    static void prepareFile(CompoundTag template, Vec3 captureOrigin, ResourceLocation dimension) {
+    static void prepareFile(CompoundTag template, RegionBox captureBounds, ResourceLocation dimension) {
+        Vec3 captureOrigin = captureBounds == null ? null
+                : new Vec3(captureBounds.minX(), captureBounds.minY(), captureBounds.minZ());
         var entries = template.getList("entities", Tag.TAG_COMPOUND);
         for (int i = 0; i < entries.size(); i++) {
             var entry = entries.getCompound(i);
@@ -60,10 +62,12 @@ public final class SettlementHumanTemplates {
             if (original.contains(HumanFactions.FACTION, Tag.TAG_STRING))
                 data.putString(HumanFactions.FACTION, original.getString(HumanFactions.FACTION));
             data.putBoolean(LOCAL, true);
-            var behavior = NaturalState.structureBehavior(original);
+            var behavior = NaturalState.structureBehavior(original, saved.hasUUID("Owner"));
             if (behavior.active()) {
                 var state = behavior.author();
                 var home = behavior.origin();
+                if (captureBounds != null && state.contains("route"))
+                    validatePatrol(state, home, dimension, captureBounds, i + 1);
                 if (localize(home, origin, dimension)) {
                     data.put(NaturalState.ORIGIN, home);
                     if (state.getBoolean(PatrolRoutes.AUTHORED)
@@ -81,15 +85,34 @@ public final class SettlementHumanTemplates {
         }
     }
 
+    private static void validatePatrol(CompoundTag state, CompoundTag home, ResourceLocation dimension,
+            RegionBox bounds, int entityNumber) {
+        String label = "template entity #" + entityNumber + " patrol";
+        if (!validAnchor(home, dimension))
+            throw new IllegalArgumentException(label + " has no valid garrison anchor in the capture dimension");
+        var route = NaturalRoute.authorDefinition(state, home, dimension.toString());
+        if (!route.valid()) throw new IllegalArgumentException(label + " is invalid: " + route.error());
+        for (int i = 0; i < route.points().size(); i++) {
+            Vec3 point = route.points().get(i).position();
+            if (!bounds.contains(point.x, point.y, point.z))
+                throw new IllegalArgumentException(label + " point #" + (i + 1) + " " + point
+                        + " is outside the white building capture box");
+        }
+    }
+
     private static boolean localize(CompoundTag anchor, Vec3 origin, ResourceLocation dimension) {
-        if (!anchor.contains("x", Tag.TAG_ANY_NUMERIC) || !anchor.contains("y", Tag.TAG_ANY_NUMERIC)
-                || !anchor.contains("z", Tag.TAG_ANY_NUMERIC)
-                || dimension != null && !anchor.getString("dimension").equals(dimension.toString())) return false;
+        if (!validAnchor(anchor, dimension)) return false;
         Vec3 local = position(anchor).subtract(origin);
         if (!Double.isFinite(local.x) || !Double.isFinite(local.y) || !Double.isFinite(local.z)) return false;
         putPosition(anchor, local);
         anchor.remove("dimension");
         return true;
+    }
+
+    private static boolean validAnchor(CompoundTag anchor, ResourceLocation dimension) {
+        for (String axis : List.of("x", "y", "z"))
+            if (!anchor.contains(axis, Tag.TAG_ANY_NUMERIC) || !Double.isFinite(anchor.getDouble(axis))) return false;
+        return dimension == null || anchor.getString("dimension").equals(dimension.toString());
     }
 
     public static List<StructureTemplate.StructureEntityInfo> place(

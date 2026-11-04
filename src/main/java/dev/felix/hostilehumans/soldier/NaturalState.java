@@ -88,14 +88,16 @@ public final class NaturalState {
     static boolean validRotation(int rotation) { return rotation == 0 || rotation == 90 || rotation == 180 || rotation == 270; }
     static boolean validMirror(String mirror) { return "none".equals(mirror) || "left_right".equals(mirror) || "front_back".equals(mirror); }
     /** Convert a saved garrison order into owner-independent template behavior. */
-    public static ControllerData structureBehavior(CompoundTag data) {
-        if (data.contains(STATE, Tag.TAG_COMPOUND))
+    public static ControllerData structureBehavior(CompoundTag data, boolean hired) {
+        String order = data.getString(SoldierOrder.ORDER);
+        boolean garrison = switch (order) {
+            case "HOLD_POSITION", "GUARD", "PATROL", "GARRISON" -> data.contains(SoldierOrder.ANCHOR, Tag.TAG_LONG);
+            default -> false;
+        };
+        if (data.contains(STATE, Tag.TAG_COMPOUND) && (!hired || !garrison))
             return new ControllerData(true, data.getCompound(STATE).copy(), data.getCompound(ORIGIN).copy(),
                     new CompoundTag());
-        SoldierOrder order;
-        try { order = SoldierOrder.logical(SoldierOrder.valueOf(data.getString(SoldierOrder.ORDER))); }
-        catch (IllegalArgumentException invalid) { return new ControllerData(false, new CompoundTag(), new CompoundTag(), new CompoundTag()); }
-        if (order != SoldierOrder.GARRISON || !data.contains(SoldierOrder.ANCHOR, Tag.TAG_LONG))
+        if (!garrison)
             return new ControllerData(false, new CompoundTag(), new CompoundTag(), new CompoundTag());
         var author = data.getCompound(GarrisonSettings.PLAYER).copy();
         var home = data.getCompound(PatrolRoutes.PLAYER_CENTER).copy();
