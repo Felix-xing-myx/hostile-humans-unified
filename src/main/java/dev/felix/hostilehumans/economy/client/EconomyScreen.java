@@ -249,9 +249,9 @@ public final class EconomyScreen extends PanelScreen {
                 && (snapshot.page() != EconomyView.Page.WALLET || tab.equals("wallets"))) {
             List<UiLayout.Node> funds = new ArrayList<>();
             for (var row : snapshot.funds()) {
-                var summary = text("funds", currency(row.currency()), row.wallets(), row.loose(), row.total());
                 funds.add(snapshot.page() == EconomyView.Page.WALLET
-                        ? factionBalance(row.currency(), summary) : muted(summary));
+                        ? factionBalance(row.currency(), text("funds_card", row.total(), row.wallets(), row.loose()))
+                        : muted(text("funds", currency(row.currency()), row.wallets(), row.loose(), row.total())));
             }
             if (!funds.isEmpty()) content.add(UiLayout.grid(2, 6, funds));
         }

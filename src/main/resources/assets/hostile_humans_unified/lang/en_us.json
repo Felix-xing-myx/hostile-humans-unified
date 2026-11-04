@@ -1248,5 +1248,6 @@
   "gui.hostile_humans_unified.cultivation.breakthrough_cost": "Spend one training supply or equivalent credit to unlock the next phase",
   "gui.hostile_humans_unified.cultivation.attributes": "Attributes and bounds",
   "gui.hostile_humans_unified.cultivation.allocation": "Primary stats and allocation",
-  "gui.hostile_humans_unified.cultivation.execution": "Run training"
+  "gui.hostile_humans_unified.cultivation.execution": "Run training",
+  "gui.hostile_humans_unified.economy.funds_card": "Total %s  ·  Wallets %s  ·  Loose %s"
 }

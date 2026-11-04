@@ -6,6 +6,7 @@ import dev.felix.hostilehumans.client.ui.framework.PanelDisclosure;
 import dev.felix.hostilehumans.client.ui.framework.PanelGeometry;
 import dev.felix.hostilehumans.client.ui.framework.PanelMeter;
 import dev.felix.hostilehumans.client.ui.framework.PanelGroup;
+import dev.felix.hostilehumans.client.ui.framework.PanelListRow;
 import dev.felix.hostilehumans.client.ui.framework.UiThemes;
 import dev.felix.hostilehumans.client.ui.framework.PanelScreen;
 import dev.felix.hostilehumans.client.ui.framework.PendingAction;
@@ -220,12 +221,18 @@ public final class CultivationScreen extends PanelScreen {
                 .filter(soldier -> factionFilter.isEmpty() || factionFilter.equals(soldier.faction()))
                 .toList();
         for (var soldier : rows) {
-            var caption = Component.empty().append(tierLabel(soldier.tier())).append(" · ")
-                    .append(soldier.name().isBlank() ? soldier.id().toString().substring(0, 8) : soldier.name());
-            var button = body(new PanelButton(caption, ignored -> {
-                select(soldier);
-                refresh();
-            }, () -> UiThemes.faction(soldier.faction())));
+            String name = soldier.name().isBlank()
+                    ? soldier.id().toString().substring(0, 8) : soldier.name();
+            var metadata = Component.empty().append(tierLabel(soldier.tier()));
+            if (!soldier.faction().isEmpty())
+                metadata.append(" · ")
+                        .append(UiThemes.factionName(soldier.faction()));
+            var button = body(new PanelListRow(name, metadata.getString(), "", 0, 0,
+                    UiThemes.faction(soldier.faction()).accent(),
+                    Component.literal(name).append(" · ").append(metadata), ignored -> {
+                        select(soldier);
+                        refresh();
+                    }, () -> UiThemes.faction(soldier.faction())));
             button.selected(soldier.id().equals(selected));
             button.active = !pending.busy();
             controls.put("soldier." + soldier.id(), button);
