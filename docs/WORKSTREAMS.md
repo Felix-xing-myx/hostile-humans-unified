@@ -1,3 +1,7 @@
+## Building pack archive
+
+Author sessions publish the saved NBT revision with a bounded ZIP manifest, checksum and generation definition. The same archive reader validates template size, identity and carrier layout. Server discovery and world-generation registration still need integration.
+
 ## Natural generation author draft
 
 The author tab persists a validated portable rule in the information block. Revision updates, geometry changes and normalized template export preserve it. Group publication, pack loading and world generation are separate work.

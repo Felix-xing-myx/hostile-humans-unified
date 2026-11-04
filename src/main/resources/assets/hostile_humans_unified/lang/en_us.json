@@ -1,4 +1,7 @@
 {
+  "gui.hostile_humans_unified.settlement.building_pack.help": "Save the draft and export its NBT first. The ZIP is written to the server instance's building_exports directory.",
+  "gui.hostile_humans_unified.settlement.export_building_pack": "Export building pack",
+  "gui.hostile_humans_unified.settlement.replace_building_pack": "Replace building pack (click again to confirm)",
   "gui.hostile_humans_unified.settlement.tab.generation": "World Generation",
   "gui.hostile_humans_unified.settlement.generation.help": "Save author rules here. Building packs manage group spacing. Editing a draft does not change world generation.",
   "gui.hostile_humans_unified.settlement.generation.enabled.false": "Manual only",

@@ -25,12 +25,16 @@ final class SettlementTemplateLibrary {
         return FMLPaths.CONFIGDIR.get().resolve("hostile_humans_unified").resolve("building_library");
     }
 
-    static Path path(ResourceLocation id) {
+    static void validateId(ResourceLocation id) {
         for (String segment : id.getPath().split("/", -1))
             if (segment.isEmpty() || segment.equals(".") || segment.equals(".."))
                 throw new IllegalArgumentException("invalid template path");
         if (id.getNamespace().equals(".") || id.getNamespace().equals(".."))
             throw new IllegalArgumentException("invalid template namespace");
+    }
+
+    static Path path(ResourceLocation id) {
+        validateId(id);
         Path root = root();
         Path file = root.resolve(id.getNamespace()).resolve("structures").resolve(id.getPath() + ".nbt");
         for (Path current = file; current != null && current.startsWith(root.getParent()); current = current.getParent())
@@ -60,7 +64,18 @@ final class SettlementTemplateLibrary {
 
     static CompoundTag read(Path file) throws IOException {
         if (Files.size(file) > MAX_COMPRESSED_BYTES) throw new IOException("template file too large");
-        try (var input = new DataInputStream(new BufferedInputStream(new GZIPInputStream(Files.newInputStream(file))))) {
+        try (var input = Files.newInputStream(file)) {
+            return readCompressed(input);
+        }
+    }
+
+    static CompoundTag read(byte[] bytes) throws IOException {
+        if (bytes.length > MAX_COMPRESSED_BYTES) throw new IOException("template file too large");
+        return readCompressed(new java.io.ByteArrayInputStream(bytes));
+    }
+
+    private static CompoundTag readCompressed(java.io.InputStream stream) throws IOException {
+        try (var input = new DataInputStream(new BufferedInputStream(new GZIPInputStream(stream)))) {
             return NbtIo.read(input, new NbtAccounter(MAX_NBT_BYTES));
         }
     }

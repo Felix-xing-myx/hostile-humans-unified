@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 public final class SettlementNetwork {
     private static final UUID NONE = new UUID(0, 0);
     private static final int NBT_LIMIT = 1048576;
-    private static final String VERSION = "12";
+    private static final String VERSION = "13";
     public static final String AUTHOR_FILE_TAB = "author file tab";
     private static final int SESSION_TICKS = 1200;
     public static final String SELECTION_READY = "selection mode updated";
@@ -50,7 +50,8 @@ public final class SettlementNetwork {
         RESTORE_AUTHOR,
         SAVE_TEMPLATE_FILE,
         KEEP_ALIVE,
-        BOUNDS_AS_OUTER
+        BOUNDS_AS_OUTER,
+        EXPORT_BUILDING_PACK
     }
 
     public record Snapshot(
@@ -717,6 +718,9 @@ public final class SettlementNetwork {
                                         case BOUNDS_AS_OUTER ->
                                                 SettlementAuthoring.useBoundsAsOuter(player, at,
                                                         request.authorRevision(), data.getString("region"));
+                                        case EXPORT_BUILDING_PACK ->
+                                                SettlementBuildingPack.export(player, at,
+                                                        request.authorRevision(), data.getBoolean("overwrite"));
                                         case SAVE_TEMPLATE_FILE ->
                                                 SettlementTemplateFiles.save(player, at,
                                                         request.authorRevision(), data.getBoolean("entities"),

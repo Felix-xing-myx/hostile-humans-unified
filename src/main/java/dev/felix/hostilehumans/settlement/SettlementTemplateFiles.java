@@ -358,8 +358,16 @@ final class SettlementTemplateFiles {
         return pending;
     }
 
+    static SettlementTemplate validatePackedTemplate(CompoundTag data) {
+        var size = data.getList("size", Tag.TAG_INT);
+        if (size.size() != 3) throw new IllegalArgumentException("missing template size");
+        var dimensions = new TemplateTransform.Cell(size.getInt(0), size.getInt(1), size.getInt(2));
+        checkSize(dimensions);
+        return sanitize(data, dimensions, Rotation.NONE, Mirror.NONE);
+    }
+
     /** Clean copied carriers and normalize authored geometry to the placed structure's minimum corner. */
-    private static void sanitize(CompoundTag data, TemplateTransform.Cell size,
+    private static SettlementTemplate sanitize(CompoundTag data, TemplateTransform.Cell size,
             Rotation rotation, Mirror mirror) {
         var localBounds = new RegionBox(0, 0, 0, size.x() - 1, size.y() - 1, size.z() - 1);
         var zero = SettlementAuthoring.cell(BlockPos.ZERO);
@@ -378,6 +386,7 @@ final class SettlementTemplateFiles {
         var palette = data.getList("palette", Tag.TAG_COMPOUND);
         String informationId = "hostile_humans_unified:settlement_information";
         int carriers = 0;
+        SettlementTemplate carrierAuthor = null;
         for (int i = 0; i < blocks.size(); i++) {
             var block = blocks.getCompound(i);
             var tag = block.getCompound("nbt");
@@ -406,11 +415,13 @@ final class SettlementTemplateFiles {
                     new TemplateTransform.Cell(-carrier.x(), -carrier.y(), -carrier.z()),
                     author.regions().stream().map(r -> r.transform(shift)).toList(),
                     author.facilities().stream().map(f -> f.transform(shift)).toList(), author.generation());
+            carrierAuthor = normalized;
             tag.put(SettlementInformationBlockEntity.AUTHOR, SettlementCodec.template(normalized));
             tag.remove("selection_identity");
             tag.remove("settlement_instance");
             tag.remove("settlement_module");
         }
         if (carriers != 1) throw new IllegalArgumentException("author templates require exactly one information block");
+        return carrierAuthor;
     }
 }

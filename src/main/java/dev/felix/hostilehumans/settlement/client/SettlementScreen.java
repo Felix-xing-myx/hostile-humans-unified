@@ -626,6 +626,11 @@ public final class SettlementScreen extends PanelScreen {
     private UiLayout.Node generationEditor() {
         List<UiLayout.Node> nodes = new ArrayList<>();
         nodes.add(muted(text("generation.help")));
+        nodes.add(muted(text("building_pack.help")));
+        nodes.add(action("export_building_pack", text("export_building_pack"), editable() && !dirty(), false,
+                () -> exportBuildingPack(false)));
+        nodes.add(action("replace_building_pack", text("replace_building_pack"), editable() && !dirty(), false,
+                () -> confirm("replace_building_pack", () -> exportBuildingPack(true))));
         nodes.add(choices("generation.enabled", List.of("false", "true"),
                 Boolean.toString(generation.getBoolean("enabled")),
                 value -> generation.putBoolean("enabled", Boolean.parseBoolean(value))));
@@ -669,6 +674,13 @@ public final class SettlementScreen extends PanelScreen {
             base = editBase;
         }
         send(base, SettlementNetwork.Action.SELECTION_MODE, payload);
+    }
+
+    private void exportBuildingPack(boolean overwrite) {
+        if (dirty()) { fail("save_first"); return; }
+        var payload = new CompoundTag();
+        payload.putBoolean("overwrite", overwrite);
+        send(snapshot, SettlementNetwork.Action.EXPORT_BUILDING_PACK, payload);
     }
 
     private void saveTemplateFile(boolean overwrite) {
