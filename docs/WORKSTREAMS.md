@@ -4300,3 +4300,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 委托板会话复核统一
 - 主控，基线 ec2cf57，module-architecture 工作树。委托板打开与后续会话复核均通过同一正式外圈解析，附中文权限及归属变化原因。测试实例仍为旧版 3.15.3。
+
+## 实例建筑库与建筑包第一阶段
+- 主控，基线 0b60339，module-architecture 工作树。新导出转入实例库，放置查找沿用旧存档和内置来源作为回退。26 个旧自然结构指向空群系标签，保留模板。Python 静态检查 532 项，跳过 16 项。多人传输、包导入和生成编辑、大结构仍待继续；完成全套后构建同步。

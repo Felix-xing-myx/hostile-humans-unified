@@ -1,4 +1,5 @@
 {
+  "gui.hostile_humans_unified.settlement.template_instance": "Instance library",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_changed": "The board now belongs to a different settlement. Close and reopen the board.",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_missing": "The task board at the original position was removed or replaced.",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_standing": "Tasks require standing of 50, or standing of at least -99 with a valid cautious permit.",

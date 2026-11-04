@@ -59,23 +59,33 @@ final class SettlementTemplateFiles {
     static ListTag list(ServerLevel level) {
         var manager = level.getStructureManager();
         var result = new ListTag();
-        record CatalogEntry(String id, boolean world) {}
+        var catalog = new java.util.TreeMap<ResourceLocation, String>();
         try (var templates = manager.listTemplates()) {
-            templates.distinct()
-                    .filter(id -> id.toString().length() <= 256)
-                    .map(id -> new CatalogEntry(id.toString(),
-                            Files.isRegularFile(manager.getPathToGeneratedStructure(id, ".nbt"))))
-                    .filter(entry -> entry.world() || entry.id().startsWith("hostile_humans_unified:"))
-                    .sorted(java.util.Comparator.comparing(CatalogEntry::world).reversed()
-                            .thenComparing(CatalogEntry::id))
-                    .limit(32)
-                    .forEach(entry -> {
-                        var row = new CompoundTag();
-                        row.putString("id", entry.id());
-                        row.putBoolean("world", entry.world());
-                        result.add(row);
-                    });
+            templates.distinct().filter(id -> id.toString().length() <= 256).forEach(id -> {
+                boolean world = Files.isRegularFile(manager.getPathToGeneratedStructure(id, ".nbt"));
+                if (world || id.getNamespace().equals("hostile_humans_unified"))
+                    catalog.put(id, world ? "world" : "pack");
+            });
         }
+        try {
+            for (var id : SettlementTemplateLibrary.list()) catalog.put(id, "instance");
+        } catch (IOException error) {
+            dev.felix.hostilehumans.bootstrap.HumanRuntime.LOGGER.warn("Could not read the settlement template library", error);
+        }
+        catalog.entrySet().stream()
+                .sorted(java.util.Comparator.comparingInt(entry -> switch (entry.getValue()) {
+                    case "instance" -> 0;
+                    case "world" -> 1;
+                    default -> 2;
+                }))
+                .limit(32)
+                .forEach(entry -> {
+                    var row = new CompoundTag();
+                    row.putString("id", entry.getKey().toString());
+                    row.putBoolean("world", !entry.getValue().equals("pack"));
+                    row.putString("source", entry.getValue());
+                    result.add(row);
+                });
         return result;
     }
 
@@ -103,10 +113,10 @@ final class SettlementTemplateFiles {
         var id = new ResourceLocation(author.template());
         if (id.getPath().equals("untitled")) return "set a template ID and save the author draft first";
         var manager = level.getStructureManager();
-        var path = manager.getPathToGeneratedStructure(id, ".nbt");
+        var path = SettlementTemplateLibrary.path(id);
         if (!overwrite && (Files.exists(path) || manager.get(id).isPresent()))
-            return "template ID already exists; choose a new ID or explicitly replace the world file";
-        if (overwrite && !Files.isRegularFile(path)) return "only an existing world file can be replaced";
+            return "template ID already exists; choose a new ID or explicitly replace the instance file";
+        if (overwrite && !Files.isRegularFile(path)) return "only an existing instance file can be replaced";
         var template = new StructureTemplate();
         template.fillFromWorld(level, new BlockPos(bounds.minX(), bounds.minY(), bounds.minZ()),
                 new Vec3i(size.x(), size.y(), size.z()), entities, Blocks.STRUCTURE_VOID);
@@ -124,13 +134,14 @@ final class SettlementTemplateFiles {
             var staging = Files.createTempFile(path.getParent(), ".hhu-template-", ".tmp");
             try {
                 NbtIo.writeCompressed(data, staging.toFile());
+                if (Files.size(staging) > SettlementTemplateLibrary.MAX_COMPRESSED_BYTES)
+                    return "template file too large";
                 if (overwrite)
                     Files.move(staging, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
                 else Files.move(staging, path);
             } finally {
                 Files.deleteIfExists(staging);
             }
-            manager.remove(id);
             int count = entityEntries(data);
             player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                     entities ? "gui.hostile_humans_unified.settlement.export_entity_count"
@@ -152,7 +163,15 @@ final class SettlementTemplateFiles {
         if (!player.canUseGameMasterBlocks()) throw new IllegalArgumentException("creative operator required");
         var level = player.serverLevel();
         var manager = level.getStructureManager();
-        var original = manager.get(id).orElseThrow(() -> new IllegalArgumentException("template not found: " + id));
+        var path = SettlementTemplateLibrary.path(id);
+        StructureTemplate original;
+        try {
+            original = Files.isRegularFile(path)
+                    ? manager.readStructure(SettlementTemplateLibrary.read(path))
+                    : manager.get(id).orElseThrow(() -> new IllegalArgumentException("template not found: " + id));
+        } catch (IOException error) {
+            throw new IllegalArgumentException("instance template could not be read: " + id, error);
+        }
         var size = new TemplateTransform.Cell(original.getSize().getX(),
                 original.getSize().getY(), original.getSize().getZ());
         checkSize(size);

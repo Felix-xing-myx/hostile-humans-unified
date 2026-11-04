@@ -93,7 +93,7 @@ public final class SettlementWandScreen extends PanelScreen {
                 var row = view.choices().getCompound(i);
                 String id = row.getString("id");
                 nodes.add(button(Component.literal(id).append(" ? ")
-                                .append(text(row.getBoolean("world") ? "template_world" : "template_pack")),
+                                .append(text(row.getString("source").equals("instance") ? "template_instance" : row.getBoolean("world") ? "template_world" : "template_pack")),
                         id.equals(template.text()), () -> { template.set(id); listOpen = false; rebuildWidgets(); }));
             }
         }
@@ -101,7 +101,9 @@ public final class SettlementWandScreen extends PanelScreen {
             var row = view.choices().getCompound(i);
             if (!row.getBoolean("world") || !row.getString("id").equals(template.text())) continue;
             var id = new ResourceLocation(template.text());
-            nodes.add(note(Component.literal("generated/" + id.getNamespace()
+            String root = row.getString("source").equals("instance")
+                    ? "config/hostile_humans_unified/building_library/" : "generated/";
+            nodes.add(note(Component.literal(root + id.getNamespace()
                     + "/structures/" + id.getPath() + ".nbt")));
             break;
         }

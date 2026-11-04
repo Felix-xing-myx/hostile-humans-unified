@@ -2799,6 +2799,10 @@
     "class": "dev.felix.hostilehumans.settlement.SettlementTemplateFiles",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementTemplateFiles.java"
   },
+  "SettlementTemplateLibrary": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementTemplateLibrary",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementTemplateLibrary.java"
+  },
   "SettlementTemplatePlacementMixin": {
     "class": "dev.felix.hostilehumans.mixin.SettlementTemplatePlacementMixin",
     "path": "src/main/java/dev/felix/hostilehumans/mixin/SettlementTemplatePlacementMixin.java"
