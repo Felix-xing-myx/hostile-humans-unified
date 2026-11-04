@@ -251,7 +251,8 @@ public final class EconomyScreen extends PanelScreen {
                                     row.wallets(),
                                     row.loose(),
                                     row.total())));
-        content.add(UiLayout.grid(2, 6, funds));
+        if (!funds.isEmpty() && snapshot.page() != EconomyView.Page.TASKS)
+            content.add(UiLayout.grid(2, 6, funds));
         List<String> tabs = tabIds();
         if (!tabs.contains(tab)) tab = tabs.get(0);
         content.add(
@@ -267,8 +268,10 @@ public final class EconomyScreen extends PanelScreen {
     /** Visible tabs for the current snapshot; the band renders this and the body switches on it. */
     private List<String> tabIds() {
         if (snapshot.page() == EconomyView.Page.TASKS) return List.of("tasks");
+        if (snapshot.page() == EconomyView.Page.BROKER) return List.of("permit");
         List<String> tabs = new ArrayList<>();
-        tabs.add("wallets");
+        if (snapshot.page() == EconomyView.Page.WALLET || snapshot.page() == EconomyView.Page.TEST)
+            tabs.add("wallets");
         if (!snapshot.offers().isEmpty()
                 || snapshot.page() == EconomyView.Page.TRADER
                 || snapshot.page() == EconomyView.Page.SUPPLY) tabs.add("offers");
@@ -547,6 +550,17 @@ public final class EconomyScreen extends PanelScreen {
 
     private UiLayout.Node tasks() {
         List<UiLayout.Node> nodes = new ArrayList<>(), filters = new ArrayList<>();
+        var factions = snapshot.metadata().getList("task_factions", net.minecraft.nbt.Tag.TAG_STRING);
+        if (factions.size() > 1) {
+            List<UiLayout.Node> selectors = new ArrayList<>();
+            for (var value : factions) Currency.faction(value.getAsString()).ifPresent(selected ->
+                    selectors.add(action("task_faction." + selected.key(), currency(selected),
+                            !pending.busy(), selected.faction().equals(snapshot.faction()),
+                            () -> send(EconomyView.Action.SELECT_TASK_FACTION, new EconomyView.Command(
+                                    EconomyView.NONE, "", selected, selected, Currency.Denomination.COPPER,
+                                    0, -1, 0, false)))));
+            nodes.add(UiLayout.grid(2, 4, selectors));
+        }
         for (String filter : List.of("all", "available", "deliver", "claim"))
             filters.add(
                     action(

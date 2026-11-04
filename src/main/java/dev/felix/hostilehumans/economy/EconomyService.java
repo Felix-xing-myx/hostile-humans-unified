@@ -25,11 +25,15 @@ public final class EconomyService implements EconomyNetwork.Backend {
             Currency currency,
             UUID instance,
             String facility,
-            boolean test) {}
+            boolean test, boolean station) {
+        Context withCurrency(Currency selected) {
+            return new Context(page, anchor, dimension, selected, instance, facility, test, station);
+        }
+    }
 
     private static final class Session {
         final UUID token = UUID.randomUUID();
-        final Context context;
+        Context context;
         final long expires;
         int revision;
         String stamp = "";
@@ -90,7 +94,17 @@ public final class EconomyService implements EconomyNetwork.Backend {
             var site = SettlementIndex.get(player.serverLevel()).taskBoardSite(c.anchor());
             if (!site.id().equals(c.instance()))
                 throw new IllegalArgumentException("task board settlement changed");
-            var score = StandingAccess.snapshot(player, site.faction());
+            var served = site.brokerFactions();
+            if (c.station() != !served.isEmpty()
+                    || !(c.station() ? served.contains(c.currency().faction()) : site.faction().equals(c.currency().faction())))
+                throw new IllegalArgumentException("task board faction access changed");
+            var score = StandingAccess.snapshot(player, c.currency().faction());
+            if (c.station()) {
+                if (!score.known() || !score.enabled())
+                    throw new IllegalArgumentException("faction standing unavailable");
+                // Political task eligibility is evaluated per task, including negative standing.
+                return;
+            }
             if (!score.known()
                     || !score.enabled()
                     || !(score.atLeast(50)
@@ -128,7 +142,7 @@ public final class EconomyService implements EconomyNetwork.Backend {
                     Currency.AZURE,
                     EconomyView.NONE,
                     "",
-                    false);
+                    false, false);
         if (page == EconomyView.Page.TEST || page == EconomyView.Page.BROKER) {
             var currency =
                     Currency.faction(faction)
@@ -141,13 +155,15 @@ public final class EconomyService implements EconomyNetwork.Backend {
                     currency,
                     EconomyView.NONE,
                     "",
-                    page == EconomyView.Page.TEST);
+                    page == EconomyView.Page.TEST, false);
         }
         var index = SettlementIndex.get(player.serverLevel());
         if (page == EconomyView.Page.TASKS) {
             var site = index.taskBoardSite(anchor);
+            var served = site.brokerFactions();
+            var factionId = served.isEmpty() ? site.faction() : served.get(0);
             return new Context(page, anchor.immutable(), player.level().dimension().location().toString(),
-                    Currency.faction(site.faction()).orElseThrow(), site.id(), "", false);
+                    Currency.faction(factionId).orElseThrow(), site.id(), "", false, !served.isEmpty());
         }
         var query = index.query(anchor.getX() + .5, anchor.getY(), anchor.getZ() + .5);
         if (query.unknown()) throw new IllegalArgumentException("unknown region");
@@ -178,7 +194,7 @@ public final class EconomyService implements EconomyNetwork.Backend {
                                         Currency.faction(site.faction()).orElseThrow(),
                                         site.id(),
                                         module.key() + "/" + facility.id(),
-                                        false);
+                                        false, false);
                     }
                 }
         }
@@ -254,7 +270,15 @@ public final class EconomyService implements EconomyNetwork.Backend {
                     request.requestId());
         String reason;
         try {
-            reason = execute(player, s, request);
+            if (request.action() == EconomyView.Action.SELECT_TASK_FACTION) {
+                if (s.context.page() != EconomyView.Page.TASKS || !s.context.station())
+                    throw new IllegalArgumentException("faction selection requires a broker station task board");
+                var selected = s.context.withCurrency(request.command().currency());
+                validate(player, selected);
+                s.context = selected;
+                s.quote = EconomyView.Command.empty();
+                reason = "task board faction selected";
+            } else reason = execute(player, s, request);
         } catch (RuntimeException rejected) {
             reason = rejected.getMessage();
         }
@@ -295,19 +319,17 @@ public final class EconomyService implements EconomyNetwork.Backend {
     }
 
     private static boolean taskLane(Context c, String kind) {
-        return c.test()
-                || c.page() == EconomyView.Page.BROKER
-                        && (kind.equals("INITIATION")
-                                || kind.equals("ATONEMENT_ONE")
-                                || kind.equals("ATONEMENT_TWO"))
-                || c.page() == EconomyView.Page.TASKS
-                        && (kind.equals("BASIC") || kind.equals("DAILY") || kind.equals("BOUNTY"));
+        if (c.test()) return true;
+        if (c.page() != EconomyView.Page.TASKS) return false;
+        return switch (kind) {
+            case "INITIATION", "ATONEMENT_ONE", "ATONEMENT_TWO" -> c.station();
+            case "BASIC", "DAILY", "BOUNTY" -> true;
+            default -> false;
+        };
     }
 
     private static boolean tasking(Context c) {
-        return c.test()
-                || c.page() == EconomyView.Page.BROKER
-                || c.page() == EconomyView.Page.TASKS;
+        return c.test() || c.page() == EconomyView.Page.TASKS;
     }
 
     private static List<EconomyView.OfferRow> offers(
@@ -435,6 +457,8 @@ public final class EconomyService implements EconomyNetwork.Backend {
         if (action == EconomyView.Action.DEPOSIT
                 || action == EconomyView.Action.WITHDRAW
                 || action == EconomyView.Action.AUTO_PICKUP) {
+            if (context.page() != EconomyView.Page.WALLET && !context.test())
+                throw new IllegalArgumentException("wallet operations require the player wallet panel");
             political = false;
             if (action == EconomyView.Action.DEPOSIT)
                 inventory.deposit(c.wallet(), c.currency(), c.denomination(), c.count());
@@ -443,6 +467,7 @@ public final class EconomyService implements EconomyNetwork.Backend {
             else inventory.autoPickup(c.wallet(), c.enabled());
             reason = "wallet transaction completed";
         } else if (action == EconomyView.Action.WHITE_FLAG) {
+            if (!brokerage(context)) throw new IllegalArgumentException("white flag requires a broker");
             FactionPassage.raiseHere(player, context.currency().faction());
             return "parley request evaluated; passage/contact only";
         } else if (action == EconomyView.Action.RETURN_PERMIT) {
@@ -584,6 +609,13 @@ public final class EconomyService implements EconomyNetwork.Backend {
         var score = StandingAccess.snapshot(player, currency.faction());
         var metadata = new CompoundTag();
         metadata.putLong("server_game_time", now(player));
+        if (s.context.station()) {
+            var factions = new net.minecraft.nbt.ListTag();
+            var site = SettlementIndex.get(player.serverLevel()).find(s.context.instance());
+            if (site != null)
+                site.brokerFactions().forEach(id -> factions.add(net.minecraft.nbt.StringTag.valueOf(id)));
+            metadata.put("task_factions", factions);
+        }
         metadata.putInt("true_standing", score.value());
         metadata.putInt("remaining_standing", draft.remaining(currency.faction()));
         metadata.putLong("table_revision", p.revision());
@@ -652,8 +684,9 @@ public final class EconomyService implements EconomyNetwork.Backend {
                         true,
                         s.context.test(),
                         EconomyNetwork.shortReason(reason),
-                        inventory.wallets(),
-                        funds,
+                        s.context.page() == EconomyView.Page.WALLET || s.context.test()
+                                ? inventory.wallets() : List.of(),
+                        s.context.page() == EconomyView.Page.TASKS ? List.of() : funds,
                         offers(player, s, draft, inventory, p),
                         tasking(s.context)
                                 ? EconomyTasks.rows(draft, currency, p, enabled).stream()
