@@ -44,7 +44,7 @@
 | `faction/visual` | 身份绑带外观数据、同步与呈现 | 7 |
 | `inventory` | 真实背包、交换、拾取与装备保护 | 21 |
 | `item` | 通用物品规则 | 1 |
-| `mixin` | 原版/可选模组注入接入；只转交所属功能模块 | 90 |
+| `mixin` | 原版/可选模组注入接入；只转交所属功能模块 | 91 |
 | `monitor` | 监控会话、接管与声音接收 | 17 |
 | `monitor/client` | 监控HUD、输入与摄像机 | 16 |
 | `monitor/combat` | 接管战斗意图、武器执行与输入寿命 | 7 |
@@ -56,8 +56,8 @@
 | `perception` | 视觉、声音、识别与目标记忆 | 42 |
 | `performance` | 共享配额与活动分档 | 8 |
 | `progression` | 成长、专精、经验与属性 | 27 |
-| `settlement` | 据点区域几何、模板变换与维度实例索引 | 30 |
-| `settlement/client` | 据点结构作者表单、管理与岗位指派 | 6 |
+| `settlement` | 据点区域几何、模板变换与维度实例索引 | 39 |
+| `settlement/client` | 据点结构作者表单、管理与岗位指派 | 7 |
 | `soldier` | 雇佣、小队、命令、召回和对白 | 57 |
 | `world` | 自然出生和生成实体 | 3 |
 
@@ -242,7 +242,7 @@
 
 ### mixin
 
-`AbstractArrowBallisticsMixin`、`BeardifierMix`、`BlockMixin`、`ChunkGeneratorMix`、`DamageSourceMix`、`DoorMixin`、`DroppedItemDistanceMixin`、`DroppedItemMergeQueryMixin`、`HumanGoalSelectorExecutionMixin`、`HumanMonitorAiStepMixin`、`HumanMonitorInputMixin`、`HumanMonitorMouseMixin`、`HumanMonitorSoundBroadcastMixin`、`HumanProjectileCollisionMixin`、`HumanRecoveryEffectMixin`、`HumanShieldItemPropertyMixin`、`HumanSpectatorBobMixin`、`HumanSpectatorCameraMixin`、`HumanSpectatorProjectionAccess`、`HumanTotemRecoveryMixin`、`HumanWrappedGoalExecutionMixin`、`ItemStackWildArmorWearMixin`、`JegHumanAiOwnershipMixin`、`JegHumanDamageMixin`、`JegMonitorAimingInputMixin`、`JegMonitorReloadInputMixin`、`JegMonitorShootingInputMixin`、`JegMonitorShotMixin`、`JegNativeGunGoalMixin`、`JegNpcMuzzleFlashMixin`、`JegProjectileCollisionMixin`、`JegSplashDamageAttributionMixin`、`JegWaterAreaCollisionMixin`、`JegWaterBombOwnerMixin`、`JegWaterThrowOriginMixin`、`LivingEntityDamagePipelineMixin`、`LivingEntityGrowthDamageMixin`、`LivingEntityProjectileCooldownMixin`、`MonitorPredictionConstructionMixin`、`MonitorPredictionEntityAccess`、`MonitorRemoteChunkMapMixin`、`MonitorRemoteClientOptionsMixin`、`MonitorRemoteEntityTrackingMixin`、`MonsterMobsMixin`、`PillagersGunAmmoMixin`、`PlayerDamagePipelineMixin`、`PolymorphConcurrencyMixin`、`ScgunsChokeThrowOriginMixin`、`ScgunsChokeVictimFilterMixin`、`ScgunsCloudVictimFilterMixin`、`ScgunsGasThrowOriginMixin`、`ScgunsHumanAimMixin`、`ScgunsHumanDifficultyMixin`、`ScgunsHumanShieldMixin`、`ScgunsMonitorAimingInputMixin`、`ScgunsMonitorHudMixin`、`ScgunsMonitorReloadInputMixin`、`ScgunsMonitorShootingInputMixin`、`ScgunsMonitorShotMixin`、`ScgunsNpcMuzzleFlashMixin`、`ScgunsSulfurheadDamageMixin`、`ScgunsSwarmThrowOriginMixin`、`SettlementStructureStartMixin`、`SettlementTemplatePlacementMixin`、`SpartanWeaponryItemRandomizerMixin`、`SpectatorGunSoundDistanceMixin`、`SpectatorTaczAnimationSoundDistanceMixin`、`TaczHumanBoltMixin`、`TaczHumanGunScriptMixin`、`TaczHumanProjectileCollisionMixin`、`TaczHumanReloadMixin`、`TaczHumanShootMixin`、`TaczMonitorAimInputMixin`、`TaczMonitorFireSelectInputMixin`、`TaczMonitorReloadInputMixin`、`TaczMonitorShootInputMixin`、`TaczMonitorShotSoundMixin`、`TaczMonitorSoundBroadcastMixin`、`TaczNpcAnimatorMixin`、`TaczNpcMuzzleFlashMixin`、`TaczScopeAimMixin`、`TaczScopeAttachmentIndexMixin`、`TaczScopeCameraMixin`、`TaczScopeRenderCompatibilityMixin`、`ThrowableAreaEffectCloudMixin`、`ThrowableSplashPotionMixin`、`ThrownTridentLifecycleMixin`、`TouhouMaidGunHurtMixin`、`TouhouMaidHumanTargetMixin`、`VanillaPotionStackSizeMixin`
+`AbstractArrowBallisticsMixin`、`BeardifierMix`、`BlockMixin`、`ChunkGeneratorMix`、`DamageSourceMix`、`DoorMixin`、`DroppedItemDistanceMixin`、`DroppedItemMergeQueryMixin`、`HumanGoalSelectorExecutionMixin`、`HumanMonitorAiStepMixin`、`HumanMonitorInputMixin`、`HumanMonitorMouseMixin`、`HumanMonitorSoundBroadcastMixin`、`HumanProjectileCollisionMixin`、`HumanRecoveryEffectMixin`、`HumanShieldItemPropertyMixin`、`HumanSpectatorBobMixin`、`HumanSpectatorCameraMixin`、`HumanSpectatorProjectionAccess`、`HumanTotemRecoveryMixin`、`HumanWrappedGoalExecutionMixin`、`ItemStackWildArmorWearMixin`、`JegHumanAiOwnershipMixin`、`JegHumanDamageMixin`、`JegMonitorAimingInputMixin`、`JegMonitorReloadInputMixin`、`JegMonitorShootingInputMixin`、`JegMonitorShotMixin`、`JegNativeGunGoalMixin`、`JegNpcMuzzleFlashMixin`、`JegProjectileCollisionMixin`、`JegSplashDamageAttributionMixin`、`JegWaterAreaCollisionMixin`、`JegWaterBombOwnerMixin`、`JegWaterThrowOriginMixin`、`LivingEntityDamagePipelineMixin`、`LivingEntityGrowthDamageMixin`、`LivingEntityProjectileCooldownMixin`、`MonitorPredictionConstructionMixin`、`MonitorPredictionEntityAccess`、`MonitorRemoteChunkMapMixin`、`MonitorRemoteClientOptionsMixin`、`MonitorRemoteEntityTrackingMixin`、`MonsterMobsMixin`、`PillagersGunAmmoMixin`、`PlayerDamagePipelineMixin`、`PolymorphConcurrencyMixin`、`ScgunsChokeThrowOriginMixin`、`ScgunsChokeVictimFilterMixin`、`ScgunsCloudVictimFilterMixin`、`ScgunsGasThrowOriginMixin`、`ScgunsHumanAimMixin`、`ScgunsHumanDifficultyMixin`、`ScgunsHumanShieldMixin`、`ScgunsMonitorAimingInputMixin`、`ScgunsMonitorHudMixin`、`ScgunsMonitorReloadInputMixin`、`ScgunsMonitorShootingInputMixin`、`ScgunsMonitorShotMixin`、`ScgunsNpcMuzzleFlashMixin`、`ScgunsSulfurheadDamageMixin`、`ScgunsSwarmThrowOriginMixin`、`SettlementStructureStartMixin`、`SettlementTemplatePlacementMixin`、`SpartanWeaponryItemRandomizerMixin`、`SpectatorGunSoundDistanceMixin`、`SpectatorTaczAnimationSoundDistanceMixin`、`StructureManagerLevelAccessor`、`TaczHumanBoltMixin`、`TaczHumanGunScriptMixin`、`TaczHumanProjectileCollisionMixin`、`TaczHumanReloadMixin`、`TaczHumanShootMixin`、`TaczMonitorAimInputMixin`、`TaczMonitorFireSelectInputMixin`、`TaczMonitorReloadInputMixin`、`TaczMonitorShootInputMixin`、`TaczMonitorShotSoundMixin`、`TaczMonitorSoundBroadcastMixin`、`TaczNpcAnimatorMixin`、`TaczNpcMuzzleFlashMixin`、`TaczScopeAimMixin`、`TaczScopeAttachmentIndexMixin`、`TaczScopeCameraMixin`、`TaczScopeRenderCompatibilityMixin`、`ThrowableAreaEffectCloudMixin`、`ThrowableSplashPotionMixin`、`ThrownTridentLifecycleMixin`、`TouhouMaidGunHurtMixin`、`TouhouMaidHumanTargetMixin`、`VanillaPotionStackSizeMixin`
 
 ### monitor
 
@@ -290,11 +290,11 @@
 
 ### settlement
 
-`RegionBox`、`SettlementAccess`、`SettlementAuthoring`、`SettlementCodec`、`SettlementCommands`、`SettlementContent`、`SettlementControlBlock`、`SettlementFacility`、`SettlementFacilityBindingTool`、`SettlementGeneration`、`SettlementHumanTemplates`、`SettlementIndex`、`SettlementInformationBlock`、`SettlementInformationBlockEntity`、`SettlementInstance`、`SettlementLimits`、`SettlementModule`、`SettlementNetwork`、`SettlementPages`、`SettlementPlacementIdentity`、`SettlementPlacementTool`、`SettlementPosts`、`SettlementPreview`、`SettlementRegion`、`SettlementSelectionTool`、`SettlementTemplate`、`SettlementTemplateFiles`、`SettlementTemplateLibrary`、`SettlementWandPlacement`、`TemplateTransform`
+`RegionBox`、`SettlementAccess`、`SettlementAuthoring`、`SettlementBuildingCatalog`、`SettlementBuildingPack`、`SettlementCodec`、`SettlementCommands`、`SettlementContent`、`SettlementControlBlock`、`SettlementFacility`、`SettlementFacilityBindingTool`、`SettlementGeneration`、`SettlementGenerationRules`、`SettlementHumanTemplates`、`SettlementIndex`、`SettlementInformationBlock`、`SettlementInformationBlockEntity`、`SettlementInstance`、`SettlementLimits`、`SettlementModule`、`SettlementNetwork`、`SettlementPackStructure`、`SettlementPages`、`SettlementPlacementIdentity`、`SettlementPlacementTool`、`SettlementPosts`、`SettlementPreview`、`SettlementRegion`、`SettlementSelectionTool`、`SettlementTemplate`、`SettlementTemplateCapture`、`SettlementTemplateFiles`、`SettlementTemplateLibrary`、`SettlementTemplatePlacement`、`SettlementTemplateTransfer`、`SettlementWandPlacement`、`SettlementWorldgenPack`、`SettlementWorldgenResources`、`TemplateTransform`
 
 ### settlement.client
 
-`SettlementFacilityHelp`、`SettlementGhostRenderer`、`SettlementPreviewClient`、`SettlementScreen`、`SettlementSelectorScreen`、`SettlementWandScreen`
+`SettlementFacilityHelp`、`SettlementGhostRenderer`、`SettlementPreviewClient`、`SettlementScreen`、`SettlementSelectorScreen`、`SettlementTemplateDownloadClient`、`SettlementWandScreen`
 
 ### soldier
 
