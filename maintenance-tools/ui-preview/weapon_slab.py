@@ -11,7 +11,7 @@ REPO = os.path.dirname(os.path.dirname(HERE))
 OUT = os.path.join(REPO, "docs/images/ui-preview")
 S = 4
 PW, PH = 128, 52
-FONT = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 9 * S)
+FONT = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 9 * S)
 
 TEXT, MUTED, EDGE, BOTTOM, ACCENT, DANGER = 0xE6EBEF, 0x929FA9, 0x41525F, 0x090F13, 0xF2C66D, 0xE49B92
 
@@ -72,11 +72,11 @@ def slab(d, ox, oy, name, amount, reserve, mode_label, capacity):
     col_right = x + PW - 4
     sc = min(2.0, max(24, col_right - col - (width(capacity) + 3 if capacity else 0)) / max(1, width(amount)))
     amount_w = round(width(amount) * sc)
-    big = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * sc))
+    big = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", int(9 * S * sc))
     d.text((col * S, (y + 4) * S), amount, font=big, fill=rgba(TEXT, 1))
     if capacity:
         d.text(((col + amount_w + 3) * S, (y + 13) * S), capacity, font=FONT, fill=rgba(MUTED, 1))
-    small_res = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .85))
+    small_res = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", int(9 * S * .85))
     shown_reserve = clip_tail(reserve, int((col_right - col) / .85))
     d.text(((col_right) * S - int(width(shown_reserve) * .85) * S, (y + 24) * S), shown_reserve, font=small_res, fill=rgba(MUTED, 1))
     # hairline
@@ -86,18 +86,18 @@ def slab(d, ox, oy, name, amount, reserve, mode_label, capacity):
     MODE_SLOT = 36
     mode_words = {"AUTO": "全自动", "SEMI": "单点", "BURST": "连发", "RELOAD": "装填中"}
     mode_text = mode_words.get(mode_label.upper(), mode_label)
-    d.text(((x + 3) * S, (y + 39) * S), clip(mode_text, MODE_SLOT), font=FONT, fill=rgba(TEXT, 1))
+    d.text(((x + 3) * S, (y + 39) * S), clip(mode_text, MODE_SLOT), font=FONT, fill=rgba(MUTED, 1))
     name_x = x + 3 + MODE_SLOT + 4
     room = max(20, col_right - name_x)
-    small = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .85))
+    small = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", int(9 * S * .85))
     d.text((name_x * S, (y + 39) * S), fit_ellipsis(name, int(room / .85)), font=small, fill=rgba(MUTED, 1))
 
 img = Image.new("RGB", (330 * S, 262 * S), (15, 20, 23))
 d = ImageDraw.Draw(img, "RGBA")
 d.text((10 * S, 4 * S), "枪械板 128x52 · 第三版：弹匣已移入上带（按 Java 常数量出的实况）", font=ImageFont.truetype(
-    "/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 8 * S), fill=rgba(MUTED, 1))
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 8 * S), fill=rgba(MUTED, 1))
 slab(d, 20, 18, "AK-47 突击步枪", "30", "弹匣 3", "AUTO", "/ 30")
-ann = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", 8 * S)
+ann = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 8 * S)
 note = lambda ty, text: d.text((158 * S, ty * S), text, font=ann, fill=rgba(ACCENT, 1))
 note(26, "上带：枪图 54x30 ｜ 18 / 30 ｜ 弹匣(右下)")
 note(52, "灰线 y36")
