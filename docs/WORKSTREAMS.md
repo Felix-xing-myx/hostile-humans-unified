@@ -1,3 +1,9 @@
+## Building pack registry resource compilation
+
+Approved pack entries compile into stable structure IDs, weighted random-spread structure sets, NBT and optional loot resources. The compiler rejects standalone attachment modules and bounds horizontal footprints to 112 blocks per axis. Publication awaits the native structure type and site checks.
+
+Forge 47.4.16 bytecode confirms that ChunkStatus calls ChunkGenerator.createStructures with a level-specific StructureManager. Structure.GenerationContext has no dimension key, and ChunkGeneratorStructureState filters structure sets by biomes before Structure.generate. The native adapter needs both the level context at structure-start creation and eligibility at structure-set scheduling.
+
 ## Installed building pack catalog
 
 Bundled and external archives share startup validation, duplicate and aggregate size limits. The placement wand reads the catalog, while an explicit enable list supplies the generation consumer. Legacy templates without author carriers can be placed manually.
