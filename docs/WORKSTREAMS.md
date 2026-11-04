@@ -1,3 +1,7 @@
+## Building library remote export
+
+Instance exports queue an immutable file snapshot for the exporting player. Packets are bounded, incoming bytes are hashed and checked before publication, and the download command retries a server copy without replacing an existing different client file. Dedicated multiplayer and LAN still need runtime acceptance.
+
 ## 3.14 本轮集成收尾
 
 基线 d3bee48078937cd4a097b951b6e7d86b4ea7574d，保留主仓库既有未提交迁移；所有开发使用隔离工作树，最终只以baseline SHA核对本轮delta。复用UI/监控与培养/分区与经济三代理，交付冻结波、原/新SHA及验证边界；主控接公共配置、注册、协议入口、行为让位、跨模块权限与文档。

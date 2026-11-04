@@ -142,6 +142,9 @@ final class SettlementTemplateFiles {
             } finally {
                 Files.deleteIfExists(staging);
             }
+            if (!player.getServer().isSingleplayerOwner(player.getGameProfile())) {
+                player.sendSystemMessage(SettlementTemplateTransfer.queue(player, id));
+            }
             int count = entityEntries(data);
             player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                     entities ? "gui.hostile_humans_unified.settlement.export_entity_count"

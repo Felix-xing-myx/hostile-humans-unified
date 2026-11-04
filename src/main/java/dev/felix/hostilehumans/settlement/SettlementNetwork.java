@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 public final class SettlementNetwork {
     private static final UUID NONE = new UUID(0, 0);
     private static final int NBT_LIMIT = 1048576;
-    private static final String VERSION = "11";
+    private static final String VERSION = "12";
     public static final String AUTHOR_FILE_TAB = "author file tab";
     private static final int SESSION_TICKS = 1200;
     public static final String SELECTION_READY = "selection mode updated";
@@ -129,6 +129,16 @@ public final class SettlementNetwork {
     private record SelectorRequest(CompoundTag data) {}
     private record SelectorView(CompoundTag data) {}
     private static Consumer<CompoundTag> selectorReceiver = data -> {};
+
+    private static volatile Consumer<SettlementTemplateTransfer.Chunk> templateReceiver = chunk -> {};
+
+    public static void clientTemplateReceiver(Consumer<SettlementTemplateTransfer.Chunk> callback) {
+        templateReceiver = callback;
+    }
+
+    static void sendTemplateChunk(ServerPlayer player, SettlementTemplateTransfer.Chunk chunk) {
+        Connection.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), chunk);
+    }
 
     public static void clientSelectorReceiver(Consumer<CompoundTag> receiver) {
         selectorReceiver = java.util.Objects.requireNonNull(receiver);
@@ -251,6 +261,17 @@ public final class SettlementNetwork {
                     context.enqueueWork(() -> selectorReceiver.accept(view.data()));
                     context.setPacketHandled(true);
                 }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        Connection.CHANNEL.registerMessage(8, SettlementTemplateTransfer.Chunk.class,
+                SettlementTemplateTransfer.Chunk::encode, SettlementTemplateTransfer.Chunk::decode,
+                (chunk, supplier) -> {
+                    var context = supplier.get();
+                    context.enqueueWork(() -> templateReceiver.accept(chunk));
+                    context.setPacketHandled(true);
+                }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) -> {
+                    if (event.getEntity() instanceof ServerPlayer player) SettlementTemplateTransfer.cancel(player);
+                });
     }
 
     public static void openAuthor(ServerPlayer player, BlockPos anchor) {
@@ -506,8 +527,9 @@ public final class SettlementNetwork {
 
     private static void playerTick(net.minecraftforge.event.TickEvent.PlayerTickEvent event) {
         if (event.phase != net.minecraftforge.event.TickEvent.Phase.END
-                || !(event.player instanceof ServerPlayer player)
-                || player.tickCount % 20 != 0) return;
+                || !(event.player instanceof ServerPlayer player)) return;
+        SettlementTemplateTransfer.tick(player);
+        if (player.tickCount % 20 != 0) return;
         SettlementTemplateFiles.tick(player);
         SettlementSelectionTool.tick(player);
         SettlementWandPlacement.tick(player);

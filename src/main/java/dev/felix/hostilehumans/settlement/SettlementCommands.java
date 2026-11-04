@@ -30,6 +30,13 @@ public final class SettlementCommands {
 
     private static LiteralArgumentBuilder<CommandSourceStack> templates() {
         return Commands.literal("template")
+                .then(Commands.literal("download")
+                        .then(Commands.argument("id", ResourceLocationArgument.id()).executes(c -> {
+                            var player = c.getSource().getPlayerOrException();
+                            player.sendSystemMessage(SettlementTemplateTransfer.queue(
+                                    player, ResourceLocationArgument.getId(c, "id")));
+                            return 1;
+                        })))
                 .then(Commands.literal("preview")
                         .then(Commands.argument("id", ResourceLocationArgument.id())
                                 .then(Commands.argument("corner", BlockPosArgument.blockPos())

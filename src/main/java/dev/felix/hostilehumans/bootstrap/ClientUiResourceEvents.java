@@ -34,6 +34,8 @@ public final class ClientUiResourceEvents {
                             dev.felix.hostilehumans.settlement.client.SettlementPreviewClient::accept);
                     dev.felix.hostilehumans.settlement.SettlementNetwork.clientWandReceiver(
                             dev.felix.hostilehumans.settlement.client.SettlementWandScreen::show);
+                    dev.felix.hostilehumans.settlement.SettlementNetwork.clientTemplateReceiver(
+                            dev.felix.hostilehumans.settlement.client.SettlementTemplateDownloadClient::accept);
                     dev.felix.hostilehumans.settlement.SettlementNetwork.clientSelectorReceiver(
                             dev.felix.hostilehumans.settlement.client.SettlementSelectorScreen::show);
                 });
