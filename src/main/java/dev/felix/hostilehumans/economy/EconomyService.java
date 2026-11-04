@@ -1,5 +1,6 @@
 package dev.felix.hostilehumans.economy;
 
+import dev.felix.hostilehumans.faction.FactionDefinitions;
 import dev.felix.hostilehumans.faction.FactionEconomyLedger;
 import dev.felix.hostilehumans.faction.FactionPassage;
 import dev.felix.hostilehumans.faction.StandingAccess;
@@ -615,15 +616,18 @@ public final class EconomyService implements EconomyNetwork.Backend {
         metadata.putLong("server_game_time", now(player));
         if (s.context.page() == EconomyView.Page.WALLET) {
             var standings = new net.minecraft.nbt.ListTag();
-            for (Currency faction : Currency.values()) {
-                var state = StandingAccess.snapshot(player, faction.faction());
+            var definitions = FactionDefinitions.current().definitions();
+            for (var id : definitions.keySet().stream().sorted().toList()) {
+                var definition = definitions.get(id);
+                var state = StandingAccess.snapshot(player, id.toString());
                 var row = new CompoundTag();
-                row.putString("faction", faction.faction());
+                row.putString("faction", id.toString());
+                row.putString("name", definition.name());
                 row.putBoolean("known", state.known());
                 row.putBoolean("enabled", state.enabled());
                 row.putInt("true", state.value());
                 if (state.known() && state.enabled())
-                    row.putInt("effective", StandingAccess.effective(player, faction.faction()));
+                    row.putInt("effective", StandingAccess.effective(player, id.toString()));
                 standings.add(row);
             }
             metadata.put("standing_overview", standings);
@@ -636,7 +640,7 @@ public final class EconomyService implements EconomyNetwork.Backend {
             metadata.put("task_factions", factions);
         }
         metadata.putInt("true_standing", score.value());
-        metadata.putInt("remaining_standing", draft.remaining(currency.faction()));
+        if (score.known()) metadata.putInt("remaining_standing", draft.remaining(currency.faction()));
         metadata.putLong("table_revision", p.revision());
         metadata.putInt("quote_count", Math.max(1, s.quote.count()));
         metadata.putLong("exchange_input_copper", s.quote.amount());

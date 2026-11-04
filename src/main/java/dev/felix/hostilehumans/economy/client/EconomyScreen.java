@@ -556,7 +556,8 @@ public final class EconomyScreen extends PanelScreen {
         for (var tag : snapshot.metadata().getList("standing_overview", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
             var row = (net.minecraft.nbt.CompoundTag) tag;
             var label = Currency.faction(row.getString("faction")).map(EconomyScreen::currency)
-                    .orElseGet(() -> Component.literal(row.getString("faction")));
+                    .orElseGet(() -> Component.literal(row.getString("name").isBlank()
+                            ? row.getString("faction") : row.getString("name")));
             rows.add(muted(row.getBoolean("known") ? row.getBoolean("enabled")
                     ? text("standing_overview", label, row.getInt("true"), row.getInt("effective"))
                     : text("standing_overview_disabled", label, row.getInt("true"))
