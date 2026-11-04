@@ -4395,3 +4395,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 控制台地图使用既有据点会话，仅向访问者发送已登记模块的三维白框内实体和世界坐标区域。作者编辑器继续使用独立管理页。
 - 训练窗口切换为独立双栏，名册读取招募台账，过滤字段及突破资格随培养协议 v3 同步。突破沿用阶段分界，消耗一份物资等价额度，服务端复核锁定状态。静态回归 522 项通过、16 项跳过。
 - 阵营名称、强调色、徽记和顶栏染色改由每阵营客户端资源读取。作者预设由服务端阵营定义下发，保持注册期实体、方块和货币边界。
+
+
+## 3.15.7 构建同步
+- 主控；基线a1d998818a4a71cfba80b1d198f4379ad2ed64ff；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：Settlement maps, creative access, training breakthroughs and faction wallet panels。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.7。
+
+- 3.15.7完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致4d6ee6abcc48937694914bd30c574241030efb9b6f28ef8070a3329801290ac0；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.7-20261104-214110。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.7.

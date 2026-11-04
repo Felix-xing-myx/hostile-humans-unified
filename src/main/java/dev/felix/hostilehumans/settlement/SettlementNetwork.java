@@ -519,7 +519,7 @@ public final class SettlementNetwork {
             data.put("author", info.author());
             var factions = new ListTag();
             dev.felix.hostilehumans.faction.FactionDefinitions.current().definitions().keySet()
-                    .stream().sorted().forEach(id -> factions.add(net.minecraft.nbt.StringTag.valueOf(id.toString())));
+                    .stream().sorted().forEach(factionId -> factions.add(net.minecraft.nbt.StringTag.valueOf(factionId.toString())));
             data.put("faction_ids", factions);
             var groups = new ListTag();
             SettlementBuildingCatalog.entries(player.getServer()).entrySet().stream()
