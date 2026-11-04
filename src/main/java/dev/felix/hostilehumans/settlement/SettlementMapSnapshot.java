@@ -17,10 +17,11 @@ final class SettlementMapSnapshot {
 
     private SettlementMapSnapshot() {}
 
-    static CompoundTag capture(ServerPlayer player, SettlementInstance instance) {
+    static CompoundTag capture(ServerPlayer player, SettlementInstance instance, boolean terrain) {
         var data = new CompoundTag();
         data.putString("name", instance.name());
         data.putString("faction", instance.faction());
+        var boxes = new ArrayList<RegionBox>();
         var bounds = new ListTag();
         var regions = new ListTag();
         var markers = new ListTag();
@@ -30,6 +31,7 @@ final class SettlementMapSnapshot {
             var size = module.author().size();
             var box = new RegionBox(0, 0, 0, size.x() - 1, size.y() - 1, size.z() - 1)
                     .transform(module.transform());
+            boxes.add(box);
             var outline = new CompoundTag();
             outline.putIntArray("box", coordinates(box));
             bounds.add(outline);
@@ -59,6 +61,7 @@ final class SettlementMapSnapshot {
                 markers.add(marker);
             }
         }
+        if (terrain) data.put("map_terrain", terrain(player.serverLevel(), boxes));
         data.put("map_bounds", bounds);
         data.put("map_regions", regions);
         data.put("map_markers", markers);
@@ -67,6 +70,40 @@ final class SettlementMapSnapshot {
         self.putFloat("yaw", player.getYRot());
         data.put("map_self", self);
         return data;
+    }
+
+    private static CompoundTag terrain(net.minecraft.server.level.ServerLevel level, ArrayList<RegionBox> boxes) {
+        var extent = boxes.stream().reduce(RegionBox::union).orElseThrow();
+        int stride = (int) Math.max(1L, (Math.max(extent.sizeX(), extent.sizeZ()) + 63) / 64);
+        int columns = (int) ((extent.sizeX() + stride - 1) / stride);
+        int rows = (int) ((extent.sizeZ() + stride - 1) / stride);
+        int[] tiles = new int[columns * rows];
+        var pos = new net.minecraft.core.BlockPos.MutableBlockPos();
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < columns; col++) {
+                int x = extent.minX() + col * stride;
+                int z = extent.minZ() + row * stride;
+                if (!level.hasChunkAt(pos.set(x, level.getMinBuildHeight(), z))) continue;
+                int surface = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, x, z) - 1;
+                int highest = Integer.MIN_VALUE;
+                for (var box : boxes) {
+                    if (x > box.maxX() || x < box.minX() || z > box.maxZ() || z < box.minZ()) continue;
+                    int bottom = Math.max(level.getMinBuildHeight(), Math.max(box.minY(), highest + 1));
+                    for (int y = Math.min(surface, box.maxY()); y >= bottom; y--) {
+                        var state = level.getBlockState(pos.set(x, y, z));
+                        if (state.isAir()) continue;
+                        highest = y;
+                        tiles[row * columns + col] = net.minecraft.world.level.block.Block.getId(state);
+                        break;
+                    }
+                }
+            }
+        }
+        var result = new CompoundTag();
+        result.putInt("stride", stride);
+        result.putInt("columns", columns);
+        result.putIntArray("tiles", tiles);
+        return result;
     }
 
     private static CompoundTag position(LivingEntity entity) {

@@ -905,6 +905,13 @@ public final class EconomyScreen extends PanelScreen {
             }
         }
         footer(Component.translatable("gui.done"), b -> onClose());
+        var player = Minecraft.getInstance().player;
+        if (snapshot.page() == EconomyView.Page.TASKS && player != null && player.isCreative()) {
+            footer(text("refresh_test_tasks"),
+                    b -> send(EconomyView.Action.REFRESH_TEST_TASKS, EconomyView.Command.empty()))
+                    .active = !pending.busy();
+            return;
+        }
         footer(text("refresh"), b -> send(EconomyView.Action.REFRESH, EconomyView.Command.empty()))
                         .active =
                 !pending.busy();

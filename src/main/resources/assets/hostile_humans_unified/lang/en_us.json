@@ -1249,5 +1249,6 @@
   "gui.hostile_humans_unified.cultivation.attributes": "Attributes and bounds",
   "gui.hostile_humans_unified.cultivation.allocation": "Primary stats and allocation",
   "gui.hostile_humans_unified.cultivation.execution": "Run training",
-  "gui.hostile_humans_unified.economy.funds_card": "Total %s  ·  Wallets %s  ·  Loose %s"
+  "gui.hostile_humans_unified.economy.funds_card": "Total %s  ·  Wallets %s  ·  Loose %s",
+  "gui.hostile_humans_unified.economy.refresh_test_tasks": "Load test commissions"
 }

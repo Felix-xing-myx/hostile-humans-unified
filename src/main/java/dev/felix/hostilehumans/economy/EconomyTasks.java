@@ -56,6 +56,7 @@ public final class EconomyTasks {
             EconomyPolicy.Task task,
             boolean accepted,
             boolean test) {
+        if (test && task.id().startsWith(EconomyTables.BOARD_TEST_PREFIX)) return true;
         int score = draft.standing(currency.faction());
         var history = history(draft, currency, test);
         return switch (task.kind()) {
@@ -93,6 +94,7 @@ public final class EconomyTasks {
             Currency currency,
             EconomyPolicy.Task task,
             boolean test) {
+        if (test && task.id().startsWith(EconomyTables.BOARD_TEST_PREFIX)) return 100;
         var h = history(draft, currency, test);
         long day = Math.max(h.getLong("reward_day"), Math.max(0, draft.now()) / 24000);
         int count = day == h.getLong("reward_day") ? h.getInt("repeat_" + task.kind().name()) : 0;
@@ -112,6 +114,8 @@ public final class EconomyTasks {
         for (String key : saved.getAllKeys().stream().sorted().toList()) {
             if (!key.startsWith(prefix)) continue;
             String id = key.substring(prefix.length());
+            if (test && id.startsWith(EconomyTables.BOARD_TEST_PREFIX) != (policy.revision() == -2))
+                continue;
             try {
                 var row = accepted(draft, currency, id, test);
                 var task = definition(row);
@@ -309,7 +313,8 @@ public final class EconomyTasks {
                 actual = draft.redemption(currency.faction(), 2, task.standingReward());
                 history(draft, currency, test).putBoolean("atonement_two", true);
             }
-            default -> actual = draft.gain(currency.faction(), nominal);
+            default -> actual = test && task.id().startsWith(EconomyTables.BOARD_TEST_PREFIX)
+                    ? 0 : draft.gain(currency.faction(), nominal);
         }
         long cash = Math.multiplyExact(task.copperReward(), multiplier) / 100;
         if (cash > 0) inventory.credit(currency, cash);
@@ -354,13 +359,13 @@ public final class EconomyTasks {
             boolean parley) {
         if (parley || owned || owner == null || !server.isSameThread()) return;
         var snapshot = StandingAccess.snapshot(server, owner, Currency.AZURE.faction());
-        if (!snapshot.enabled() || !snapshot.known()) return;
+        boolean formal = snapshot.enabled() && snapshot.known();
         try {
             var draft = FactionEconomyLedger.draft(server, owner);
             boolean changed = false;
             for (boolean test : new boolean[] {false, true}) {
                 var live = server.getPlayerList().getPlayer(owner);
-                if (test && (live == null || !live.isCreative())) continue;
+                if (test ? live == null || !live.isCreative() : !formal) continue;
                 for (Currency currency : Currency.values())
                     for (String key : List.copyOf(tasks(draft, test).getAllKeys()))
                         if (key.startsWith(currency.key() + "|")) {

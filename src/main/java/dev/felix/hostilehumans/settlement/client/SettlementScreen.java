@@ -112,6 +112,10 @@ public final class SettlementScreen extends PanelScreen {
     private void accept(SettlementNetwork.Snapshot value) {
         Submission request = pending.request();
         boolean ack = pending.acknowledge(value.acknowledgedRequest());
+        if (!value.author() && !value.data().contains("map_terrain")
+                && value.instanceRevision() == snapshot.instanceRevision()
+                && snapshot.data().contains("map_terrain"))
+            value.data().put("map_terrain", snapshot.data().getCompound("map_terrain"));
         snapshot = value;
         if (!value.author()) return;
         if (ack && request != null) {

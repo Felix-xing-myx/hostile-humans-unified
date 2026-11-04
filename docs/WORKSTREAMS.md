@@ -4401,3 +4401,7 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控；基线a1d998818a4a71cfba80b1d198f4379ad2ed64ff；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：Settlement maps, creative access, training breakthroughs and faction wallet panels。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.7。
 
 - 3.15.7完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致4d6ee6abcc48937694914bd30c574241030efb9b6f28ef8070a3329801290ac0；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.7-20261104-214110。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.7.
+
+## 控制台地表与创造委托测试
+
+- 主控，基线 0521839，工作树 settlement-service-panels。地表由服务器采样、客户端使用资源包模型纹理绘制。委托板接入独立测试池并复用实际交付、击杀和领奖入口。

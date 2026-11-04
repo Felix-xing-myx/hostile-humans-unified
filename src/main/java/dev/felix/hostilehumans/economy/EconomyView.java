@@ -40,7 +40,8 @@ public final class EconomyView {
         CLAIM_TASK,
         WHITE_FLAG,
         CLOSE,
-        SELECT_TASK_FACTION
+        SELECT_TASK_FACTION,
+        REFRESH_TEST_TASKS
     }
 
     public record Command(

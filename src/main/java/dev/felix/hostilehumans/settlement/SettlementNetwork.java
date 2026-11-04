@@ -392,7 +392,7 @@ public final class SettlementNetwork {
         SESSIONS.put(player, session);
         MODULE_PAGES.remove(player);
         REQUEST_IDS.remove(player);
-        send(player, session, "");
+        send(player, session, "control opened");
     }
 
     private static boolean near(ServerPlayer p, BlockPos at) {
@@ -514,7 +514,8 @@ public final class SettlementNetwork {
         UUID id = info == null ? session.instance() : info.instance();
         var instance = id == null ? null : SettlementIndex.get(player.serverLevel()).find(id);
         var data = instance == null ? new CompoundTag()
-                : session.author() ? view(player, instance) : SettlementMapSnapshot.capture(player, instance);
+                : session.author() ? view(player, instance) : SettlementMapSnapshot.capture(player, instance,
+                        !reason.isEmpty() || player.tickCount % 100 < 20);
         if (info != null) {
             data.put("author", info.author());
             var factions = new ListTag();

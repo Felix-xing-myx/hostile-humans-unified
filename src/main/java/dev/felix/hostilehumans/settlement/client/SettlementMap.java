@@ -45,6 +45,7 @@ final class SettlementMap {
         g.enableScissor(plot.x(), plot.y(), plot.right(), plot.bottom());
         Component tooltip = null;
         try {
+            drawTerrain(g, projection, data.getCompound("map_terrain"));
             var regions = data.getList("map_regions", Tag.TAG_COMPOUND);
             for (String layer : new String[] {"OUTER", "INNER"}) {
                 for (Tag entry : regions) {
@@ -102,6 +103,31 @@ final class SettlementMap {
         if (data.getBoolean("map_limited"))
             g.drawString(font, label("limited"), area.x() + 4, plot.bottom() + 28, OTHER, false);
         if (tooltip != null) g.renderTooltip(font, tooltip, mx, my);
+    }
+
+    private static void drawTerrain(GuiGraphics graphics, Projection projection, CompoundTag terrain) {
+        int columns = terrain.getInt("columns"), stride = terrain.getInt("stride");
+        if (columns <= 0 || stride <= 0) return;
+        var renderer = net.minecraft.client.Minecraft.getInstance().getBlockRenderer();
+        var sprites = new java.util.HashMap<Integer, net.minecraft.client.renderer.texture.TextureAtlasSprite>();
+        int[] tiles = terrain.getIntArray("tiles");
+        for (int i = 0; i < tiles.length; i++) {
+            if (tiles[i] == 0) continue;
+            int x = projection.extent().minX() + i % columns * stride;
+            int z = projection.extent().minZ() + i / columns * stride;
+            int left = projection.x(x), top = projection.y(z);
+            int right = projection.x(Math.min(x + (double) stride, projection.extent().maxX() + 1D));
+            int bottom = projection.y(Math.min(z + (double) stride, projection.extent().maxZ() + 1D));
+            if (right <= left || bottom <= top) continue;
+            var sprite = sprites.computeIfAbsent(tiles[i], id -> {
+                var state = net.minecraft.world.level.block.Block.stateById(id);
+                var model = renderer.getBlockModel(state);
+                var topFaces = model.getQuads(state, net.minecraft.core.Direction.UP,
+                        net.minecraft.util.RandomSource.create(0));
+                return topFaces.isEmpty() ? model.getParticleIcon() : topFaces.get(0).getSprite();
+            });
+            graphics.blit(left, top, 0, right - left, bottom - top, sprite);
+        }
     }
 
     private static void legend(GuiGraphics g, Font font, int x, int y, String[] keys, int[] colors) {

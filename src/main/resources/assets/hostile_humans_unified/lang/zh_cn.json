@@ -1249,5 +1249,6 @@
   "gui.hostile_humans_unified.cultivation.attributes": "属性与范围",
   "gui.hostile_humans_unified.cultivation.allocation": "主属性与分配",
   "gui.hostile_humans_unified.cultivation.execution": "执行训练",
-  "gui.hostile_humans_unified.economy.funds_card": "合计 %s  ·  钱包 %s  ·  随身 %s"
+  "gui.hostile_humans_unified.economy.funds_card": "合计 %s  ·  钱包 %s  ·  随身 %s",
+  "gui.hostile_humans_unified.economy.refresh_test_tasks": "刷新测试委托"
 }

@@ -207,6 +207,25 @@ public final class EconomyTables extends SimplePreparableReloadListener<JsonObje
                 "Validated formal economy");
     }
 
+    static final String BOARD_TEST_PREFIX = "hostile_humans_unified:test_board/";
+
+    static EconomyPolicy boardTest() {
+        return new EconomyPolicy(-2, true, Map.of(), 0, 0, 0, List.of(),
+                List.of(
+                        boardTask("bread", "提交 2 个面包 / Deliver 2 bread", "bread", 2),
+                        boardTask("iron", "提交 3 个铁锭 / Deliver 3 iron ingots", "iron_ingot", 3),
+                        new EconomyPolicy.Task(BOARD_TEST_PREFIX + "roamer",
+                                "击败 1 名流浪者 / Defeat 1 roamer", EconomyPolicy.TaskKind.BASIC,
+                                EconomyPolicy.Objective.KILL_ROAMER, null, "", 1, 0, 0, 1, 0, false)),
+                "Creative task board");
+    }
+
+    private static EconomyPolicy.Task boardTask(String id, String title, String item, int count) {
+        return new EconomyPolicy.Task(BOARD_TEST_PREFIX + id, title, EconomyPolicy.TaskKind.BASIC,
+                EconomyPolicy.Objective.DELIVERY, new ResourceLocation("minecraft", item),
+                "", count, 0, 0, 1, 0, false);
+    }
+
     public static EconomyPolicy test() {
         var rates = new EnumMap<Currency, MoneyRate>(Currency.class);
         rates.put(Currency.CRIMSON, new MoneyRate(3, 4));

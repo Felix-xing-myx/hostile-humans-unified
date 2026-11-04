@@ -57,7 +57,8 @@ public final class EconomyService implements EconomyNetwork.Backend {
     }
 
     private static EconomyPolicy policy(Context context) {
-        return context.test() ? EconomyTables.test() : EconomyTables.current();
+        if (!context.test()) return EconomyTables.current();
+        return context.page() == EconomyView.Page.TASKS ? EconomyTables.boardTest() : EconomyTables.test();
     }
 
     private static void validate(ServerPlayer player, Context c) {
@@ -66,7 +67,7 @@ public final class EconomyService implements EconomyNetwork.Backend {
         if (c.test()) {
             if (!player.isCreative())
                 throw new IllegalArgumentException("explicit creative test ended");
-            return;
+            if (c.page() == EconomyView.Page.TEST) return;
         }
         if (c.page() == EconomyView.Page.WALLET) return;
         if (!player.level().dimension().location().toString().equals(c.dimension())
@@ -267,7 +268,15 @@ public final class EconomyService implements EconomyNetwork.Backend {
                     request.requestId());
         String reason;
         try {
-            if (request.action() == EconomyView.Action.SELECT_TASK_FACTION) {
+            if (request.action() == EconomyView.Action.REFRESH_TEST_TASKS) {
+                if (!player.isCreative() || s.context.page() != EconomyView.Page.TASKS)
+                    throw new IllegalArgumentException("creative task board required");
+                var c = s.context;
+                s.context = new Context(c.page(), c.anchor(), c.dimension(), c.currency(),
+                        c.instance(), c.facility(), true, c.station());
+                s.quote = EconomyView.Command.empty();
+                reason = "";
+            } else if (request.action() == EconomyView.Action.SELECT_TASK_FACTION) {
                 if (s.context.page() != EconomyView.Page.TASKS || !s.context.station())
                     throw new IllegalArgumentException("faction selection requires a broker station task board");
                 var selected = s.context.withCurrency(request.command().currency());
@@ -304,15 +313,16 @@ public final class EconomyService implements EconomyNetwork.Backend {
 
     private static boolean economic(ServerPlayer player, Context c, EconomyPolicy p) {
         var score = StandingAccess.snapshot(player, c.currency().faction());
-        return p.enabled() && score.enabled() && score.known();
+        return p.enabled() && (c.test() && c.page() == EconomyView.Page.TASKS
+                || score.enabled() && score.known());
     }
 
     private static boolean trading(Context c) {
-        return c.test() || c.page() == EconomyView.Page.TRADER;
+        return c.page() == EconomyView.Page.TEST || c.page() == EconomyView.Page.TRADER;
     }
 
     private static boolean brokerage(Context c) {
-        return c.test() || c.page() == EconomyView.Page.BROKER;
+        return c.page() == EconomyView.Page.TEST || c.page() == EconomyView.Page.BROKER;
     }
 
     private static boolean taskLane(Context c, String kind) {
@@ -320,7 +330,7 @@ public final class EconomyService implements EconomyNetwork.Backend {
     }
 
     static boolean taskLane(EconomyView.Page page, boolean station, boolean test, String kind) {
-        if (test) return page == EconomyView.Page.TEST;
+        if (test && page == EconomyView.Page.TEST) return true;
         if (page != EconomyView.Page.TASKS) return false;
         return switch (kind) {
             case "INITIATION", "ATONEMENT_ONE", "ATONEMENT_TWO" -> station;
@@ -453,7 +463,11 @@ public final class EconomyService implements EconomyNetwork.Backend {
         var p = policy(context);
         var inventory = new InventoryTransaction(player);
         var draft = FactionEconomyLedger.draft(player);
-        boolean political = true;
+        boolean boardTest = context.test() && context.page() == EconomyView.Page.TASKS;
+        if (boardTest && action != EconomyView.Action.ACCEPT_TASK
+                && action != EconomyView.Action.DELIVER_TASK && action != EconomyView.Action.CLAIM_TASK)
+            throw new IllegalArgumentException("creative task board only supports task operations");
+        boolean political = !boardTest;
         String reason;
         if (action == EconomyView.Action.DEPOSIT
                 || action == EconomyView.Action.WITHDRAW
