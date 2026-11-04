@@ -77,6 +77,22 @@ public final class HumanThreatAssessment {
                 && intrinsic(h,target) < c().number("selection.weak_current_intrinsic")
                 && RecentDamageTracker.recentDamageFrom(h,target,40) < h.getMaxHealth() * .1;
     }
+    /** Incoming damage grants attention only; it carries no hidden position or attack permission. */
+    public static double impactObservation(Human human, LivingEntity attacker, float actual) {
+        LivingEntity current = human.getTarget();
+        if (!canPrioritizeImpact(human, attacker.getUUID())) return 0;
+        return ThreatScorePolicy.impactPriority(
+                Math.max(actual, RecentDamageTracker.recentDamageFrom(human, attacker, 80)),
+                RecentDamageTracker.recentDamageFrom(human, current, 80), human.getMaxHealth(),
+                attacker instanceof Human other && HumanFactions.enemies(human, other));
+    }
+
+    public static boolean canPrioritizeImpact(Human human, UUID source) {
+        LivingEntity current = human.getTarget();
+        return !HumanPerception.canTarget(human, current)
+                || !current.getUUID().equals(source) && weakCurrent(human, current);
+    }
+
     public static boolean priorityInterrupt(Human h, LivingEntity current, LivingEntity challenger) {
         return HumanPerception.canTarget(h, challenger) && priorityInterrupt(h, current, challenger, false);
     }
@@ -90,7 +106,7 @@ public final class HumanThreatAssessment {
             boolean visible) {
         if (current == challenger || !weakCurrent(h, current)) return false;
         double tactical = priority(h, challenger);
-        if (tactical >= 60) return true;
+        if (tactical >= 60 || impactObservation(h, challenger, 0) > 0) return true;
         double weak = intrinsic(h, current);
         double threat = visible ? readIntrinsic(challenger) : intrinsic(h, challenger);
         if (threat < Math.max(weak * 1.75, weak + 12)) return false;

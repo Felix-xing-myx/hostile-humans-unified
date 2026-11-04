@@ -59,7 +59,7 @@ public final class HumanPerception {
             this.kind=kind;this.source=source;this.created=now;this.until=until;this.position=position;this.priority=priority;
         }
     }
-    private record Observe(UUID source,Vec3 point,long until,boolean hurt,boolean familiar) {}
+    private record Observe(UUID source,Vec3 point,long until,boolean hurt,boolean familiar,double impactPriority) {}
     private record Transition(long tick,String text) {}
     private record Ray(Vec3 from,Vec3 to,boolean clear,long tick) {}
     private record TargetCap(long tick,boolean limited) {}
@@ -77,6 +77,7 @@ public final class HumanPerception {
         net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> lootGroupDimension;
         long lootGroupUntil, alertUntil=-1, tick=-1, nextScan, focusStarted, focusLastVisible=-1, directionStarted, nextPriorityFocus;
         UUID focus; Vec3 look; boolean focusHurt, unfamiliarFocus, priorityFocus;
+        double focusImpact;
         int candidateCursor,recognitionCursor,bodyResumeCursor,deferredVisualRays; List<UUID> candidates=List.of(); long nextCandidates; boolean reducedNeighborhood, stableNeighborhood;
         String decision="闲置观察",reason="等待视觉或声音证据",lookOwner="自然观察";
         String scanStatus="尚未执行视觉检测";long scanAt=-1;
@@ -224,17 +225,27 @@ public final class HumanPerception {
     }
     private static boolean priorityGlance(Human h) {
         State s = STATES.get(h);
-        return s != null && s.priorityFocus && s.look != null && canTarget(h,h.getTarget())
-                && mayInspectPriority(h);
+        return s != null && s.look != null && canTarget(h,h.getTarget())
+                && (s.priorityFocus && mayInspectPriority(h) || impactGlance(h));
     }
+    static boolean impactGlance(Human h) {
+        State s = STATES.get(h);
+        return s != null && s.focusHurt && s.focusImpact > 0 && mayObserveSafely(h)
+                && HumanThreatAssessment.canPrioritizeImpact(h, s.focus);
+    }
+
     private static boolean mayInspectPriority(Human h) {
-        return h.hurtTime == 0 && !h.isFleeing && !h.hhu$hasPendingMeleeAttack()
+        return h.hurtTime == 0 && mayObserveSafely(h);
+    }
+
+    private static boolean mayObserveSafely(Human h) {
+        return !h.isFleeing && !h.hhu$hasPendingMeleeAttack()
                 && !h.hhu$shieldDefense().defenseOwnsFacing() && !h.isUsingItem();
     }
     public static Vec3 incomingReactionPoint(Human h){
         State s=STATES.get(h);if(s==null)return null;
         if(now(h)<s.directionProtectedUntil)return s.look;
-        if(!s.focusHurt||s.focus==null||now(h)-s.focusStarted>=c().integer("observation.direction_ticks"))return null;
+        if(!s.focusHurt||s.focus==null||now(h)-s.focusStarted>=impactDirectionTicks(s))return null;
         Track t=s.tracks.get(s.focus);
         return t!=null&&t.marked&&now(h)<t.liveUntil?null:s.look;
     }
@@ -244,9 +255,11 @@ public final class HumanPerception {
     public static void finishLook(Human h){
         if (HumanMonitorControl.controls(h)) return;
         State s=STATES.get(h);
-        boolean urgent=s!=null&&(s.focusHurt||now(h)<s.directionProtectedUntil)&&(!canTarget(h,h.getTarget())||h.distanceToSqr(h.getTarget())>36);
+        boolean impact = impactGlance(h);
+        boolean urgent=s!=null&&(s.focusHurt||now(h)<s.directionProtectedUntil)
+                && (impact || !canTarget(h,h.getTarget()) || h.distanceToSqr(h.getTarget())>36);
         boolean sound=!urgent&&soundGlanceActive(h);
-        boolean priority = !urgent && priorityGlance(h);
+        boolean priority = impact || !urgent && priorityGlance(h);
         HumanAttention.finish(h, sound && !priority ? s.soundGlancePoint : s == null ? null : s.look,
                 urgent, sound && !priority, priority);
     }
@@ -332,22 +345,46 @@ public final class HumanPerception {
         }
         if(periodic || ((direction==null||direction.lengthSqr()<1.e-8)&&!(marked&&PerceptionPolicy.live(now,t.liveUntil))))return;
         Vec3 point=marked&&PerceptionPolicy.live(now,t.liveUntil)?attacker.getEyePosition():h.getEyePosition().add(direction.scale(12));
-        if(!s.glanceAt.containsKey(attacker.getUUID())||now-s.glanceAt.get(attacker.getUUID())>=c().integer("observation.look_cooldown_ticks")){
+        double impact = HumanThreatAssessment.impactObservation(h, attacker, actual);
+        UUID attackerId = attacker.getUUID();
+        if (attackerId.equals(s.focus) && s.focusHurt) {
+            if (impact > s.focusImpact) {
+                s.focusImpact = impact;
+                s.nextScan = Math.min(s.nextScan, now);
+            }
+            return;
+        }
+        Observe queued = s.pending.get(attackerId);
+        boolean escalated = impact > 0 && !attackerId.equals(s.focus)
+                && (queued == null ? s.focusImpact == 0 : queued.impactPriority == 0);
+        if(escalated || !s.glanceAt.containsKey(attackerId)
+                || now-s.glanceAt.get(attackerId)>=c().integer("observation.look_cooldown_ticks")){
             s.glanceAt.put(attacker.getUUID(),now);
-            s.pending.put(attacker.getUUID(),new Observe(attacker.getUUID(),point,
-                    now+(marked?c().integer("memory.dynamic_ticks"):c().integer("observation.unknown_notice_ticks")),true,marked));
+            s.pending.put(attackerId,new Observe(attackerId,point,
+                    now+(marked?c().integer("memory.dynamic_ticks"):c().integer("observation.unknown_notice_ticks")),
+                    true,marked,Math.max(impact,queued == null ? 0 : queued.impactPriority)));
             trimQueue(s);
-            if(s.focus!=null&&!s.focusHurt){release(s,"真实受击优先于普通观察");}
+            if(s.focus!=null&&(!s.focusHurt || impact > 0 && s.focusImpact == 0 && s.focusLastVisible < 0))
+                release(s,"高优先级受击方向");
             if(!attentionLocked(s,now))startNext(h,s,now);
         }
     }
     private static void trimQueue(State s){while(s.pending.size()>c().integer("observation.queue_size")){
-        UUID last=null;for(UUID id:s.pending.keySet())last=id;s.pending.remove(last);
+        Observe lowest = null;
+        for (Observe entry : s.pending.values())
+            if (lowest == null || entry.impactPriority <= lowest.impactPriority) lowest = entry;
+        s.pending.remove(lowest.source);
     }}
     private static void startNext(Human h,State s,long now){
         if(s.focus!=null||now<s.directionProtectedUntil)return;
-        var it=s.pending.values().iterator();while(it.hasNext()){
-            Observe o=it.next();it.remove();if(now>=o.until||!allowsCreatureClue(h,"hurt",o.source))continue;
+        s.pending.values().removeIf(o -> now>=o.until||!allowsCreatureClue(h,"hurt",o.source));
+        Observe o = null;
+        for (Observe entry : s.pending.values())
+            if (o == null || entry.impactPriority > o.impactPriority) o = entry;
+        if (o != null) {
+            s.pending.remove(o.source);
+            s.focusImpact = o.impactPriority;
+            if (s.focusImpact > 0) s.nextScan = Math.min(s.nextScan, now);
             s.focus=o.source;s.look=o.point;s.focusHurt=o.hurt;s.unfamiliarFocus=!o.familiar;
             s.focusStarted=now;s.focusLastVisible=-1;s.directionStarted=now;
             Track requested=s.tracks.get(o.source);
@@ -357,7 +394,8 @@ public final class HumanPerception {
                         &&(pause==null||other.position!=null&&pause.position!=null&&h.position().distanceToSqr(other.position)>h.position().distanceToSqr(pause.position)))pause=other;
                 if(pause!=null)pause.evidence.pause();
             }
-            s.lookOwner=o.familiar?"已标记来源回看":"首次识别";s.reason="观察来袭方向";break;
+            s.lookOwner=s.focusImpact>0?"高伤害来向":o.familiar?"已标记来源回看":"首次识别";
+            s.reason="观察来袭方向";
         }
     }
     private static Track track(State s,UUID id){
@@ -368,7 +406,11 @@ public final class HumanPerception {
         }
         Track t=new Track(id);s.tracks.put(id,t);return t;
     }
-    private static void release(State s,String reason){s.focus=null;s.look=null;s.unfamiliarFocus=false;s.focusHurt=false;s.priorityFocus=false;
+    private static int impactDirectionTicks(State s) {
+        return c().integer("observation.direction_ticks") + (s.focusImpact > 0 ? 20 : 0);
+    }
+
+    private static void release(State s,String reason){s.focusImpact=0;s.focus=null;s.look=null;s.unfamiliarFocus=false;s.focusHurt=false;s.priorityFocus=false;
         s.directionProtectedUntil=-1;s.reason=reason;s.lookOwner="自然观察";}
     public static void tick(Human h){
         if(h.level().isClientSide||!(h.level() instanceof ServerLevel level))return;
@@ -436,7 +478,7 @@ public final class HumanPerception {
         if(s.focus!=null){
             Entity e=level.getEntity(s.focus);Track t=s.tracks.get(s.focus);
             boolean lost=t!=null&&t.evidence.interrupted(now,c().integer("recognition.break_ticks"));
-            boolean timeout=now-s.focusStarted>=(s.priorityFocus?40:s.focusLastVisible<0?c().integer("observation.direction_ticks"):c().integer("observation.focus_ticks"));
+            boolean timeout=now-s.focusStarted>=(s.priorityFocus?40:s.focusLastVisible<0?impactDirectionTicks(s):c().integer("observation.focus_ticks")+(s.focusImpact>0?20:0));
             if(!(e instanceof LivingEntity living)||!observable(h,living)||!allowsCreatureResponse(h,living)||lost||timeout){
                 if(s.focusHurt&&s.look!=null){
                     Vec3 direction=s.look.subtract(h.getEyePosition()).multiply(1,0,1).normalize();
@@ -543,9 +585,12 @@ public final class HumanPerception {
         long visualRound=Math.floorDiv(now,Math.max(1,interval));
         // In crowded battles, old recognitions otherwise consume every single-ray round.
         // Discovery still pays for actual geometry/LOS and never marks a target by proximity.
-        if (PerceptionDiscoveryPolicy.reserveDiscovery(visualRound,rays,urgentScan)
+        if (s.focusImpact > 0 && s.focus != null && rays > 0
+                && level.getEntity(s.focus) instanceof LivingEntity impactSource
+                && eligibleVisual(h, s, impactSource, now, vision)) checks.add(impactSource);
+        if (checks.size() < rays && (PerceptionDiscoveryPolicy.reserveDiscovery(visualRound,rays,urgentScan)
                 || !urgentScan && rays >= 2 && (main == null && recognizing(s) == 0
-                        || s.reducedNeighborhood && Math.floorMod(visualRound, 2) == 1)) {
+                        || s.reducedNeighborhood && Math.floorMod(visualRound, 2) == 1))) {
             LivingEntity nearestUnknown=null;
             for(UUID id:s.candidates){
                 if(!(level.getEntity(id) instanceof LivingEntity e))continue;
@@ -554,10 +599,10 @@ public final class HumanPerception {
                 if(nearestUnknown!=null&&h.distanceToSqr(e)>=h.distanceToSqr(nearestUnknown))continue;
                 if(eligibleVisual(h,s,e,now,vision))nearestUnknown=e;
             }
-            if(nearestUnknown!=null)checks.add(nearestUnknown);
+            if(nearestUnknown!=null&&!checks.contains(nearestUnknown))checks.add(nearestUnknown);
         }
         // Reserve a periodic refresh, not every slot: two recognitions still run in alternating rounds.
-        if(checks.size()<rays&&(s.focusHurt||s.priorityFocus)&&s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity hitFocus&&eligibleVisual(h,s,hitFocus,now,vision))checks.add(hitFocus);
+        if(checks.size()<rays&&(s.focusHurt||s.priorityFocus)&&s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity hitFocus&&!checks.contains(hitFocus)&&eligibleVisual(h,s,hitFocus,now,vision))checks.add(hitFocus);
         if(checks.size()<rays&&!checks.contains(main)&&canTarget(h,main)&&eligibleVisual(h,s,main,now,vision)&&PerceptionDiscoveryPolicy.maintainMain(visualRound,rays))checks.add(main);
         List<Track> identifying=s.tracks.values().stream().filter(t->t.evidence.active()).toList();
         for(int i=0;i<identifying.size()&&checks.size()<rays;i++){
@@ -973,7 +1018,10 @@ public final class HumanPerception {
                 if(t.evidence.visible(now,interval,required,c().integer("recognition.break_ticks")))
                 confirmSight(h,s,t,now,"首次目视确认");
             s.nextScan=Math.min(s.nextScan,now+AdaptiveActivityBudget.interval(h,c().integer("budgets.active_interval_ticks"),s.focusHurt||now<s.directionProtectedUntil));
-        }else if(live&&Objects.equals(s.focus,e.getUUID()))release(s,"已标记来源已回看");
+        }else if(live&&Objects.equals(s.focus,e.getUUID())){
+            if (s.focusImpact > 0) HumanTargetCoordinator.requestReview(h);
+            release(s,"已标记来源已回看");
+        }
         if(s.focus==null){
             for(Track other:s.tracks.values())if(other.evidence.active()&&other.visible&&now>=other.lookAfter){
                 s.focus=other.id;s.look=other.eye;s.unfamiliarFocus=!(other.marked&&now<other.familiarUntil);s.focusHurt=false;
@@ -989,14 +1037,18 @@ public final class HumanPerception {
         track.familiarUntil = now + c().integer("memory.familiar_ticks");
         track.refresh = reason;
         alert(h,s,"目视确认："+track.name);
-        if (Objects.equals(s.focus,track.id)) release(s,"识别完成");
+        if (Objects.equals(s.focus,track.id)) {
+            if (s.focusImpact > 0) HumanTargetCoordinator.requestReview(h);
+            release(s,"识别完成");
+        }
     }
 
     private static void describe(Human h,State s){
         if(HumanMonitorControl.controls(h)){
             s.decision="玩家接管";s.reason="视觉识别与记忆持续更新；不自主移动、转向或攻击";return;
         }
-        if(now(h)<s.directionProtectedUntil){s.decision="回看来袭方向";}
+        if(impactGlance(h)){s.decision="观察高伤害来向";}
+        else if(now(h)<s.directionProtectedUntil){s.decision="回看来袭方向";}
         else if(h.getTarget()!=null){s.decision="处理已确认主目标";s.reason=HumanTargetCoordinator.reason(h);}
         else if(s.focus!=null){s.decision=s.unfamiliarFocus?"识别陌生目标":"回看已标记目标";}
         else if(h.isFleeing){s.decision="撤退与恢复";}

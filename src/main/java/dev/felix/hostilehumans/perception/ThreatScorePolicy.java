@@ -19,6 +19,17 @@ public final class ThreatScorePolicy {
     public static double reportPriority(boolean hostileHuman,double recentDamage,double ownHealth) {
         return (hostileHuman?60:0)+Math.min(20,bounded(recentDamage,10000)/Math.max(1,bounded(ownHealth,10000))*40);
     }
+    /** Damage sums reward both hard hits and repeated hits in the same observation window. */
+    public static double impactPriority(double damage, double currentDamage, double ownHealth,
+                                        boolean hostileHuman) {
+        double health = Math.max(1, bounded(ownHealth, 10000));
+        double received = bounded(damage, 10000);
+        double rival = bounded(currentDamage, 10000);
+        double threshold = Math.max(2, health * (hostileHuman ? .04 : .08));
+        return received >= threshold && received > rival * 1.5 + 1
+                ? Math.min(100, received / health * 100) : 0;
+    }
+
     public static boolean stronger(double current,double challenger,double ratio,double absolute){
         return Double.isFinite(challenger)&&challenger>Math.max(current*(1+ratio),current+absolute);
     }

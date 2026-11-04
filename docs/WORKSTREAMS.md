@@ -4422,3 +4422,7 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 ## 建筑选框叠绘
 
 - 主控，基线 d4b7531，沿用 settlement-service-panels 工作树。世界选框按类别使用 16、11、8、6、4、3、2 的线宽，各层由粗到细提交；保持深度和穿墙两种模式。静态回归 522 项通过、16 项跳过。
+
+## 高伤害来向观察
+
+- 主控，基线 939888f，沿用 settlement-service-panels。复用实际伤害窗口与观察队列，优先复核对低威胁交战者造成显著伤害的来向，确认后走主目标调度。
