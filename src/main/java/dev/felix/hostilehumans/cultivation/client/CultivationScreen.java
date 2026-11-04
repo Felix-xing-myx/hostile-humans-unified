@@ -5,6 +5,8 @@ import dev.felix.hostilehumans.client.ui.framework.PanelButton;
 import dev.felix.hostilehumans.client.ui.framework.PanelDisclosure;
 import dev.felix.hostilehumans.client.ui.framework.PanelGeometry;
 import dev.felix.hostilehumans.client.ui.framework.PanelMeter;
+import dev.felix.hostilehumans.client.ui.framework.PanelGroup;
+import dev.felix.hostilehumans.client.ui.framework.UiThemes;
 import dev.felix.hostilehumans.client.ui.framework.PanelScreen;
 import dev.felix.hostilehumans.client.ui.framework.PendingAction;
 import dev.felix.hostilehumans.client.ui.framework.UiLayout;
@@ -33,13 +35,13 @@ public final class CultivationScreen extends PanelScreen {
     private UUID previewTarget = NONE;
     private int candidate;
     private boolean automatic, primaryDirty;
-    private String expanded = "";
+    private String expanded = "", factionFilter = "";
+    private int tierFilter = -1;
     private long cancelUntil;
 
     private CultivationScreen(CultivationSnapshot snapshot) {
         super(text("title"), PanelGeometry.Size.L);
         this.snapshot = snapshot;
-        if (!snapshot.soldiers().isEmpty()) select(snapshot.soldiers().get(0));
     }
 
     private static Component text(String key, Object... args) {
@@ -64,7 +66,6 @@ public final class CultivationScreen extends PanelScreen {
         CultivationNetwork.Request ack = pending.request();
         boolean matched = pending.acknowledge(next.acknowledgedRequest());
         if (next.revision() >= snapshot.revision()) snapshot = next;
-        if (selected == null && !snapshot.soldiers().isEmpty()) select(snapshot.soldiers().get(0));
         var soldier = selected();
         if (matched && ack != null && ack.target().equals(selected)) {
             if (ack.action() == CultivationNetwork.Action.PREVIEW) {
@@ -189,9 +190,61 @@ public final class CultivationScreen extends PanelScreen {
     }
 
     @Override
-    protected UiLayout.Node buildContent() {
+    protected int splitWidth() {
+        return Math.max(1, frame.width() / 3);
+    }
+
+    @Override
+    protected void buildLeft(List<UiLayout.Node> list) {
         controls.clear();
-        List<UiLayout.Node> content = new ArrayList<>();
+        list.add(group("roster"));
+        var factions = new ArrayList<String>();
+        factions.add("");
+        snapshot.soldiers().stream().map(CultivationSnapshot.SoldierView::faction)
+                .filter(faction -> !faction.isEmpty()).distinct().sorted().forEach(factions::add);
+        var tiers = new ArrayList<Integer>();
+        tiers.add(-1);
+        snapshot.soldiers().stream().map(CultivationSnapshot.SoldierView::tier)
+                .distinct().sorted().forEach(tiers::add);
+        list.add(action("tier_filter", text("filter_tier", tierLabel(tierFilter)), true, false, () -> {
+            tierFilter = tiers.get((tiers.indexOf(tierFilter) + 1) % tiers.size());
+            refresh();
+        }));
+        list.add(action("faction_filter", text("filter_faction", factionFilter.isEmpty()
+                ? text("filter_all") : UiThemes.factionName(factionFilter)), true, false, () -> {
+            factionFilter = factions.get((factions.indexOf(factionFilter) + 1) % factions.size());
+            refresh();
+        }));
+        var rows = snapshot.soldiers().stream()
+                .filter(soldier -> tierFilter < 0 || tierFilter == soldier.tier())
+                .filter(soldier -> factionFilter.isEmpty() || factionFilter.equals(soldier.faction()))
+                .toList();
+        for (var soldier : rows) {
+            var caption = Component.empty().append(tierLabel(soldier.tier())).append(" · ")
+                    .append(soldier.name().isBlank() ? soldier.id().toString().substring(0, 8) : soldier.name());
+            var button = body(new PanelButton(caption, ignored -> {
+                select(soldier);
+                refresh();
+            }, () -> UiThemes.faction(soldier.faction())));
+            button.selected(soldier.id().equals(selected));
+            button.active = !pending.busy();
+            controls.put("soldier." + soldier.id(), button);
+            list.add(node(button));
+        }
+        if (rows.isEmpty()) list.add(muted(text("empty")));
+    }
+
+    private static Component tierLabel(int tier) {
+        return tier < 0 ? text("filter_all")
+                : Component.translatable("screen.hostile_humans_unified.roster.tier." + tier);
+    }
+
+    private UiLayout.Node group(String key) {
+        return node(body(new PanelGroup(text(key), null, this::theme)));
+    }
+
+    @Override
+    protected void buildRight(List<UiLayout.Node> content) {
         if (snapshot.testMode()) content.add(text(text("test_mode"), () -> theme().danger()));
         content.add(
                 muted(
@@ -207,6 +260,7 @@ public final class CultivationScreen extends PanelScreen {
                                         + snapshot.revision())));
         content.add(muted(Component.literal(snapshot.reason())));
         if (pending.busy()) content.add(text(text("pending"), () -> theme().accent()));
+        content.add(group("resources"));
         var account = snapshot.account();
         content.add(
                 muted(
@@ -231,38 +285,23 @@ public final class CultivationScreen extends PanelScreen {
                                         text("withdraw"),
                                         CultivationNetwork.Action.WITHDRAW,
                                         amount.valid()))));
-        List<UiLayout.Node> list = new ArrayList<>();
-        for (var seat : snapshot.seats())
-            list.add(
-                    muted(
-                            text(
-                                    "seat",
-                                    seat.index() + 1,
-                                    seat.soldier() == null
-                                            ? "—"
-                                            : seat.soldier().toString().substring(0, 8),
-                                    seat.status())));
-        for (var soldier : snapshot.soldiers())
-            list.add(
-                    action(
-                            "soldier." + soldier.id(),
-                            Component.literal(soldier.name()),
-                            true,
-                            soldier.id().equals(selected),
-                            () -> {
-                                select(soldier);
-                                refresh();
-                            }));
-        if (snapshot.soldiers().isEmpty()) list.add(muted(text("empty")));
-        content.add(UiLayout.row(12, List.of(UiLayout.column(6, list), detail())));
-        return UiLayout.column(6, content);
+        content.add(group("seats"));
+        for (var seat : snapshot.seats()) {
+            String name = seat.soldier() == null ? "—" : snapshot.soldiers().stream()
+                    .filter(soldier -> soldier.id().equals(seat.soldier()))
+                    .map(CultivationSnapshot.SoldierView::name).filter(value -> !value.isBlank())
+                    .findFirst().orElse(seat.soldier().toString().substring(0, 8));
+            content.add(muted(text("seat", seat.index() + 1, name, seat.status())));
+        }
+        content.add(detail());
     }
 
     private UiLayout.Node detail() {
         var soldier = selected();
-        if (soldier == null) return muted(text("empty"));
+        if (soldier == null) return muted(text("select_soldier"));
         List<UiLayout.Node> content = new ArrayList<>();
-        content.add(text(Component.literal(soldier.name()), () -> theme().accent()));
+        content.add(group("training"));
+        content.add(text(Component.literal(soldier.name()), () -> UiThemes.faction(soldier.faction()).accent()));
         content.add(
                 muted(
                         text(
@@ -324,6 +363,7 @@ public final class CultivationScreen extends PanelScreen {
                                 }
                             }));
         }
+        content.add(group("allocation"));
         content.add(muted(text("primary", primary.size(), soldier.expanded() ? 5 : 3)));
         List<UiLayout.Node> choices = new ArrayList<>();
         for (var dimension : SpecialtyAttributes.Dimension.values()) {
@@ -410,6 +450,7 @@ public final class CultivationScreen extends PanelScreen {
                                     chosen.durationMillis() / 1000,
                                     number(chosen.successBudget()),
                                     number(chosen.failureBudget()))));
+        content.add(group("execution"));
         content.add(
                 action(
                         "automatic",
@@ -444,12 +485,14 @@ public final class CultivationScreen extends PanelScreen {
                                         text("expand_primary"),
                                         CultivationNetwork.Action.EXPAND_PRIMARY,
                                         !soldier.expanded()))));
-        content.add(
-                request(
-                        "breakthrough",
-                        text("breakthrough"),
-                        CultivationNetwork.Action.CONFIRM_BREAKTHROUGH,
-                        !soldier.breakthrough()));
+        if (soldier.breakthroughReady()) {
+            content.add(group("breakthrough_node"));
+            content.add(muted(text("breakthrough_cost")));
+            content.add(request("breakthrough", text("breakthrough"),
+                    CultivationNetwork.Action.CONFIRM_BREAKTHROUGH,
+                    snapshot.account().stock() > 0 || snapshot.account().creditMicro() >= dev.felix.hostilehumans.cultivation.CultivationRules.UNIT));
+        }
+        content.add(group("attributes"));
         double[] values = soldier.values(), lower = soldier.lower(), upper = soldier.upper();
         double[] success = chosen == null ? null : chosen.successValues(),
                 failure = chosen == null ? null : chosen.failureValues();

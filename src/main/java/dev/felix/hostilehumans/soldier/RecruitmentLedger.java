@@ -152,6 +152,10 @@ public final class RecruitmentLedger extends SavedData {
         return List.copyOf(entries.keySet());
     }
 
+    public List<UUID> ownedIds(UUID owner) {
+        return roster(owner).all().stream().map(Soldier::id).toList();
+    }
+
     public boolean isOwnedRecord(UUID human, UUID owner) {
         Entry entry = entries.get(human);
         return entry != null && entry.owner.equals(owner);

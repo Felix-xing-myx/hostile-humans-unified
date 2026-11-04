@@ -21,16 +21,7 @@ public final class CommandPanelChrome {
     }
 
     static Component factionName(String faction) {
-        if (java.util.Set.of(
-                        "hostile_humans_unified:crimson",
-                        "hostile_humans_unified:azure",
-                        "hostile_humans_unified:verdant",
-                        "hostile_humans_unified:ashen")
-                .contains(faction))
-            return Component.translatable(
-                    "screen.hostile_humans_unified.command.faction_name."
-                            + faction.substring(faction.indexOf(':') + 1));
-        return Component.literal(faction);
+        return UiThemes.factionName(faction);
     }
 
     public static void frame(GuiGraphics g, int x, int y, int w, int h, int accent) {

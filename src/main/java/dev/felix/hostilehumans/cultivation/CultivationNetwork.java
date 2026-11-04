@@ -67,9 +67,9 @@ public final class CultivationNetwork {
         static final SimpleChannel CHANNEL =
                 NetworkRegistry.newSimpleChannel(
                         new ResourceLocation("hostile_humans_unified", "cultivation"),
-                        () -> "2",
-                        "2"::equals,
-                        "2"::equals);
+                        () -> "3",
+                        "3"::equals,
+                        "3"::equals);
     }
 
     private static Consumer<CultivationSnapshot> snapshots = ignored -> {};

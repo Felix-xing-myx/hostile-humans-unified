@@ -1235,5 +1235,18 @@
   "gui.hostile_humans_unified.settlement.map.friendly": "Same faction",
   "gui.hostile_humans_unified.settlement.map.other": "Other",
   "gui.hostile_humans_unified.settlement.map.self": "You",
-  "gui.hostile_humans_unified.settlement.map.limited": "Crowded: markers limited to 512"
+  "gui.hostile_humans_unified.settlement.map.limited": "Crowded: markers limited to 512",
+  "gui.hostile_humans_unified.cultivation.roster": "Hired soldiers",
+  "gui.hostile_humans_unified.cultivation.filter_tier": "Tier · %s",
+  "gui.hostile_humans_unified.cultivation.filter_faction": "Faction · %s",
+  "gui.hostile_humans_unified.cultivation.filter_all": "All",
+  "gui.hostile_humans_unified.cultivation.resources": "Training supplies",
+  "gui.hostile_humans_unified.cultivation.seats": "Training seats",
+  "gui.hostile_humans_unified.cultivation.select_soldier": "Select a soldier to view training details",
+  "gui.hostile_humans_unified.cultivation.training": "Soldier training",
+  "gui.hostile_humans_unified.cultivation.breakthrough_node": "Breakthrough",
+  "gui.hostile_humans_unified.cultivation.breakthrough_cost": "Spend one training supply or equivalent credit to unlock the next phase",
+  "gui.hostile_humans_unified.cultivation.attributes": "Attributes and bounds",
+  "gui.hostile_humans_unified.cultivation.allocation": "Primary stats and allocation",
+  "gui.hostile_humans_unified.cultivation.execution": "Run training"
 }

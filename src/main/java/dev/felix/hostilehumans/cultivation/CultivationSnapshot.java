@@ -26,7 +26,7 @@ public record CultivationSnapshot(
             throw new IllegalArgumentException("Missing training acknowledgement");
         seats = List.copyOf(seats);
         soldiers = List.copyOf(soldiers);
-        if (seats.size() > 3 || soldiers.size() > 32)
+        if (seats.size() > 3 || soldiers.size() > 128)
             throw new IllegalArgumentException("Oversized training view");
     }
 
@@ -88,6 +88,9 @@ public record CultivationSnapshot(
     public record SoldierView(
             UUID id,
             String name,
+            String faction,
+            int tier,
+            boolean breakthroughReady,
             long revision,
             double baseBudget,
             double budget,

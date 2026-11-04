@@ -1235,5 +1235,18 @@
   "gui.hostile_humans_unified.settlement.map.friendly": "同阵营",
   "gui.hostile_humans_unified.settlement.map.other": "其他实体",
   "gui.hostile_humans_unified.settlement.map.self": "自己",
-  "gui.hostile_humans_unified.settlement.map.limited": "实体较多，最多显示 512 个标记"
+  "gui.hostile_humans_unified.settlement.map.limited": "实体较多，最多显示 512 个标记",
+  "gui.hostile_humans_unified.cultivation.roster": "雇佣名册",
+  "gui.hostile_humans_unified.cultivation.filter_tier": "阶级 · %s",
+  "gui.hostile_humans_unified.cultivation.filter_faction": "阵营 · %s",
+  "gui.hostile_humans_unified.cultivation.filter_all": "全部",
+  "gui.hostile_humans_unified.cultivation.resources": "训练物资",
+  "gui.hostile_humans_unified.cultivation.seats": "训练席位",
+  "gui.hostile_humans_unified.cultivation.select_soldier": "选择左侧士兵查看训练详情",
+  "gui.hostile_humans_unified.cultivation.training": "士兵训练",
+  "gui.hostile_humans_unified.cultivation.breakthrough_node": "突破节点",
+  "gui.hostile_humans_unified.cultivation.breakthrough_cost": "消耗 1 份训练物资或等值余额，开启下一阶段",
+  "gui.hostile_humans_unified.cultivation.attributes": "属性与范围",
+  "gui.hostile_humans_unified.cultivation.allocation": "主属性与分配",
+  "gui.hostile_humans_unified.cultivation.execution": "执行训练"
 }

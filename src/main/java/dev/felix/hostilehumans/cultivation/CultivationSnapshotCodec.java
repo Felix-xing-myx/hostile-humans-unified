@@ -33,6 +33,9 @@ public final class CultivationSnapshotCodec {
         for (var v : s.soldiers()) {
             b.writeUUID(v.id());
             b.writeUtf(v.name(), 128);
+            b.writeUtf(v.faction(), 256);
+            b.writeVarInt(v.tier());
+            b.writeBoolean(v.breakthroughReady());
             b.writeVarLong(v.revision());
             b.writeDouble(v.baseBudget());
             b.writeDouble(v.budget());
@@ -93,9 +96,11 @@ public final class CultivationSnapshotCodec {
         for (int n = count(b, 3); n > 0; n--)
             seats.add(new CultivationSnapshot.SeatView(count(b, 2), uuid(b), b.readUtf(64)));
         List<CultivationSnapshot.SoldierView> soldiers = new ArrayList<>();
-        for (int n = count(b, 32); n > 0; n--) {
+        for (int n = count(b, 128); n > 0; n--) {
             UUID id = b.readUUID();
-            String name = b.readUtf(128);
+            String name = b.readUtf(128), faction = b.readUtf(256);
+            int tier = b.readVarInt();
+            boolean breakthroughReady = b.readBoolean();
             long revision = positive(b.readVarLong());
             double base = number(b), budget = number(b), potential = number(b), used = number(b);
             boolean breakthrough = b.readBoolean(), expanded = b.readBoolean();
@@ -134,6 +139,9 @@ public final class CultivationSnapshotCodec {
                     new CultivationSnapshot.SoldierView(
                             id,
                             name,
+                            faction,
+                            tier,
+                            breakthroughReady,
                             revision,
                             base,
                             budget,

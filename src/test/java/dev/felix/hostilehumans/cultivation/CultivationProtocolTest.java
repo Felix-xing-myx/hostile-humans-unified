@@ -25,6 +25,9 @@ public final class CultivationProtocolTest {
                 new CultivationSnapshot.SoldierView(
                         soldier,
                         "Soldier",
+                        "hostile_humans_unified:azure",
+                        2,
+                        true,
                         3,
                         1.1,
                         1.1,
@@ -67,6 +70,10 @@ public final class CultivationProtocolTest {
                     Arrays.equals(
                             read.soldiers().get(0).candidates().get(0).successValues(), values),
                     "All13 native values roundtrip");
+            var roster = read.soldiers().get(0);
+            check(roster.faction().equals("hostile_humans_unified:azure")
+                    && roster.tier() == 2 && roster.breakthroughReady(),
+                    "Faction, tier and breakthrough node roundtrip");
             b.clear();
             CultivationSnapshotCodec.write(original, b);
             b.writeByte(1);

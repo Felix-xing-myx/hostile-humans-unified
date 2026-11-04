@@ -256,9 +256,7 @@ public final class CultivationFacade {
     private static Human target(ServerPlayer p, Session s, UUID id) {
         Human h = p.serverLevel().getEntity(id) instanceof Human found ? found : null;
         CultivationService.own(p.server, p.getUUID(), h);
-        if (h.level() != p.level()
-                || h.distanceToSqr(s.facility.x() + .5, s.facility.y() + .5, s.facility.z() + .5)
-                        > 32 * 32) throw new IllegalStateException("Choose your nearby soldier");
+        if (!nearby(p, s, h)) throw new IllegalStateException("Choose your nearby soldier");
         return h;
     }
 
@@ -278,9 +276,7 @@ public final class CultivationFacade {
         access(p, s, h, true);
         var data = CultivationData.get(p.server);
         var r = CultivationService.ensure(data, h, p.getUUID(), s.facility);
-        if (r.cycle != null
-                && r.cycle.status() != CultivationCycle.Status.CANCELLED
-                && r.cycle.status() != CultivationCycle.Status.COMPLETED)
+        if (profileLocked(r))
             throw new IllegalStateException(
                     "Cancel or finish the locked period before changing training parameters");
         var before = SpecialtyTrainingBridge.read(h);
@@ -291,8 +287,10 @@ public final class CultivationFacade {
             case CONFIRM_BREAKTHROUGH -> {
                 if (before.breakthrough())
                     throw new IllegalStateException("Breakthrough already confirmed");
-                if (before.budget() + 2 < SpecialtyTrainingBridge.phaseBoundary(h))
+                if (!atBreakthroughBoundary(h, before))
                     throw new IllegalStateException("Reach the current phase boundary first");
+                credit = data.creditSnapshot(p.getUUID(), s.facility.id())
+                        .reserve(CultivationRules.UNIT).settle(CultivationRules.UNIT);
                 next = before.breakthrough(true);
             }
             case SET_PRIMARY -> {
@@ -397,9 +395,34 @@ public final class CultivationFacade {
                 c.upper());
     }
 
+    private static boolean profileLocked(CultivationRecord record) {
+        return record != null && record.cycle != null
+                && record.cycle.status() != CultivationCycle.Status.CANCELLED
+                && record.cycle.status() != CultivationCycle.Status.COMPLETED;
+    }
+
+    private static boolean atBreakthroughBoundary(Human human, CultivationProfile profile) {
+        return profile.budget() + 2 >= SpecialtyTrainingBridge.phaseBoundary(human);
+    }
+
+    private static boolean nearby(ServerPlayer player, Session session, Human h) {
+        return h != null && h.isAlive() && h.level() == player.level()
+                && h.distanceToSqr(session.facility.x() + .5, session.facility.y() + .5,
+                        session.facility.z() + .5) <= 32 * 32;
+    }
+
     private static CultivationSnapshot.SoldierView soldier(
             ServerPlayer player, Session session, UUID id, Human h, CultivationRecord record) {
+        var ledger = dev.felix.hostilehumans.soldier.RecruitmentLedger.get(player.server);
+        int tier = ledger.tier(id);
+        var saved = dev.felix.hostilehumans.entity.HumanServerData.get();
+        var stored = h == null && saved != null ? saved.getHumanMob(id) : null;
+        String faction = h != null ? h.hhu$getFaction() : stored == null ? ""
+                : stored.getPersistedCommandData().getString("hostile_humans_unified:faction");
+        String name = shortName(h != null ? h.getDisplayName().getString()
+                : stored != null ? stored.getName() : record != null ? record.name : "");
         try {
+            if (h == null && record == null) throw new IllegalStateException("Soldier unloaded");
             var p = h == null ? record.profile : SpecialtyTrainingBridge.read(h);
             String reason = "";
             double[] lower = p.values(), upper = p.values();
@@ -410,7 +433,7 @@ public final class CultivationFacade {
                     var bounds = policy.bounds(p.budget() / 1e6);
                     lower = bounds.lower();
                     upper = bounds.upper();
-                    if (id.equals(session.selected))
+                    if (id.equals(session.selected) && nearby(player, session, h))
                         candidates =
                                 CultivationPlanner.preview(
                                                 p,
@@ -439,7 +462,12 @@ public final class CultivationFacade {
             }
             return new CultivationSnapshot.SoldierView(
                     id,
-                    shortName(h == null ? record.name : h.getDisplayName().getString()),
+                    name,
+                    faction,
+                    tier,
+                    nearby(player, session, h) && !p.breakthrough()
+                            && !profileLocked(record)
+                            && atBreakthroughBoundary(h, p),
                     p.revision(),
                     p.baseBudget() / 1e6,
                     p.budget() / 1e6,
@@ -460,7 +488,10 @@ public final class CultivationFacade {
             double[] zero = new double[13];
             return new CultivationSnapshot.SoldierView(
                     id,
-                    shortName(h == null ? record.name : h.getDisplayName().getString()),
+                    name,
+                    faction,
+                    tier,
+                    false,
                     0,
                     0,
                     0,
@@ -484,25 +515,16 @@ public final class CultivationFacade {
         try {
             var d = CultivationData.get(p.server);
             var a = d.creditSnapshot(p.getUUID(), s.facility.id());
-            var ids = new LinkedHashMap<UUID, Human>();
+            var ledger = dev.felix.hostilehumans.soldier.RecruitmentLedger.get(p.server);
             var f = s.facility;
-            for (Human h :
-                    p.serverLevel()
-                            .getEntitiesOfClass(
-                                    Human.class,
-                                    new net.minecraft.world.phys.AABB(
-                                            f.x() - 32, f.y() - 16, f.z() - 32, f.x() + 33,
-                                            f.y() + 17, f.z() + 33),
-                                    h -> h.hasOwner() && p.getUUID().equals(h.getOwnerUUID())))
-                if (ids.size() < 32) ids.put(h.getUUID(), h);
-            for (var record : d.records.values())
-                if (record.owner.equals(p.getUUID())
-                        && record.facility.id().equals(f.id())
-                        && ids.size() < 32)
-                    ids.putIfAbsent(
-                            record.soldier, CultivationService.loaded(p.server, record.soldier));
             List<CultivationSnapshot.SoldierView> soldiers = new ArrayList<>();
-            ids.forEach((id, h) -> soldiers.add(soldier(p, s, id, h, d.records.get(id))));
+            for (UUID id : ledger.ownedIds(p.getUUID()).stream().limit(128).toList()) {
+                var h = CultivationService.loaded(p.server, id);
+                var record = d.records.get(id);
+                if (record != null && (!record.owner.equals(p.getUUID())
+                        || !record.facility.id().equals(f.id()))) record = null;
+                soldiers.add(soldier(p, s, id, h, record));
+            }
             List<CultivationSnapshot.SeatView> seats = new ArrayList<>();
             for (int i = 0; i < 3; i++) {
                 final int seat = i;

@@ -184,6 +184,13 @@ public final class UiThemes {
         return base;
     }
 
+    public static net.minecraft.network.chat.Component factionName(String faction) {
+        var id = ResourceLocation.tryParse(faction);
+        if (id == null) return net.minecraft.network.chat.Component.literal(faction);
+        return net.minecraft.network.chat.Component.translatableWithFallback(
+                "screen.hostile_humans_unified.command.faction_name." + id.getPath(), faction);
+    }
+
     public static UiTheme faction(String faction) {
         if (!loaded) reload();
         return themes.getOrDefault(faction, base);
