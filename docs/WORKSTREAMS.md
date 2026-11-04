@@ -4261,3 +4261,7 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 低于全服团战门槛的局部前线
 - 主控，基线 8ff502e，module-architecture 工作树。拥挤档及较低人口中已与人类交战的个体可借已有查询识别局部前线，12 候选／2 视觉射线限额按前线身份生效。全服寻路预算维持独立档位。
+
+## 3.15.2 服务端团战基线抽样
+- 主控，基线 18fe2e6，module-architecture 工作树。对运行中的约定测试实例执行 20 秒 JFR（维护目录 maintenance-tools/hhu-perf-baseline-20261104.jfr）。561 条 Server thread 执行样本中，感知 tick 243、视觉范围函数 203、感知配置读取 142、ItemEntity 51、友军共享 5、通报几何 0；计数可重叠，不代表独占 CPU 时间。
+- 感知配置发布时统一解析和钳制，热路径直接读不可变数值；同一身体采样的视角参数只读取一次。Python 检查 532 项，跳过 16 项。尚未运行 Gradle 或新版对照采样。

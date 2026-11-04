@@ -660,6 +660,7 @@ public final class HumanPerception {
         private final Vec3 eye, forward, horizontal;
         private final double x, y, z, maxRangeSquared, near, below, above, nearAngle;
         private final boolean familiar;
+        private final double angleMultiplier, angleCap, middle, far, nearFull, middleFull, farFull;
 
         VisionFrame(Human observer, double visibility, boolean familiar) {
             this.familiar = familiar;
@@ -670,10 +671,18 @@ public final class HumanPerception {
             x = observer.getX(); y = body.minY; z = observer.getZ();
             double maxRange = Math.max(2, range(observer) * visibility);
             maxRangeSquared = maxRange * maxRange;
-            near = c().number("vision.near_distance");
-            below = -c().number("vision.near_below_feet");
-            above = body.getYsize() + c().number("vision.near_above_head");
-            nearAngle = halfAngle(near, familiar);
+            var config = c();
+            near = config.number("vision.near_distance");
+            below = -config.number("vision.near_below_feet");
+            above = body.getYsize() + config.number("vision.near_above_head");
+            angleMultiplier = config.number("vision.familiar_angle_multiplier");
+            angleCap = config.number("vision.maximum_half_angle");
+            middle = config.number("vision.middle_distance");
+            far = config.number("vision.far_distance");
+            nearFull = config.number("vision.near_full_angle");
+            middleFull = config.number("vision.middle_full_angle");
+            farFull = config.number("vision.far_full_angle");
+            nearAngle = angleAt(near);
         }
 
         boolean contains(Vec3 point) {
@@ -685,7 +694,11 @@ public final class HumanPerception {
                 return NearVisionPolicy.inSector(horizontalX, horizontalZ, horizontal.x, horizontal.z, nearAngle);
             double distance = Math.sqrt(distanceSquared);
             return distance < 1.e-4 || (forward.x * dx + forward.y * dy + forward.z * dz) / distance
-                    > Math.cos(halfAngle(distance, familiar));
+                    > Math.cos(angleAt(distance));
+        }
+        private double angleAt(double distance) {
+            return PerceptionPolicy.halfAngle(distance, familiar, angleMultiplier, angleCap,
+                    near, middle, far, nearFull, middleFull, farFull);
         }
     }
 

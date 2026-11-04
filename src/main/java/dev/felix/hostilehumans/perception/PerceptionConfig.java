@@ -158,14 +158,25 @@ public final class PerceptionConfig {
     private static void add(Map<String,Setting> m,String key,double value,double min,double max,String description) {
         m.put(key,new Setting(value,min,max,description));
     }
-    private final JsonObject root;
-    public PerceptionConfig(JsonObject root) { this.root = root.deepCopy(); }
+    private final Map<String, Double> values;
+
+    public PerceptionConfig(JsonObject root) {
+        Map<String, Double> parsed = new LinkedHashMap<>();
+        SETTINGS.forEach((path, setting) -> {
+            int separator = path.indexOf('.');
+            JsonObject section = UnifiedConfig.object(root, path.substring(0, separator));
+            parsed.put(path, UnifiedConfig.number(section, path.substring(separator + 1),
+                    setting.fallback(), setting.min(), setting.max()));
+        });
+        values = Map.copyOf(parsed);
+    }
+
     public static PerceptionConfig get() { return UnifiedConfig.get().perception(); }
     public int integer(String path) { return (int)number(path); }
     public double number(String path) {
-        Setting s=SETTINGS.get(path); if(s==null) throw new IllegalArgumentException("Unknown perception setting "+path);
-        String[] keys=path.split("\\."); JsonObject section=UnifiedConfig.object(root,keys[0]);
-        return UnifiedConfig.number(section,keys[1],s.fallback(),s.min(),s.max());
+        Double value = values.get(path);
+        if (value == null) throw new IllegalArgumentException("Unknown perception setting " + path);
+        return value;
     }
     public static JsonObject defaults() {
         JsonObject result=new JsonObject();
