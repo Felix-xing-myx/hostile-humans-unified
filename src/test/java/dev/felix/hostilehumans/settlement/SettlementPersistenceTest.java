@@ -63,6 +63,89 @@ public final class SettlementPersistenceTest {
                 key, author(kind, faction, revision), transform(x), new BlockPos(x, 64, 100));
     }
 
+    private static void buildingPackRoundTrip(SettlementTemplate original) throws Exception {
+        var rules = new SettlementGenerationRules(true, "test:group", 3, "minecraft:overworld",
+                List.of("#minecraft:is_forest"), List.of("minecraft:dark_forest"),
+                SettlementGenerationRules.Placement.SURFACE, 48, 96, 4,
+                SettlementGenerationRules.Water.DRY, SettlementGenerationRules.Terrain.BEARD_THIN,
+                5, 24, 7);
+        var legacy = rules.write();
+        legacy.remove("spacing");
+        legacy.remove("separation");
+        check(SettlementGenerationRules.read(legacy).spacing() == 32, "legacy rule spacing default");
+        var author = new SettlementTemplate(original.template(), original.module(), original.kind(),
+                original.faction(), original.tier(), original.revision(), original.size(),
+                original.originOffset(), original.regions(), original.facilities(), rules);
+        check(SettlementCodec.template(SettlementCodec.template(author)).equals(author),
+                "authored generation rules round trip");
+        check(author.revision(8).generation().equals(rules), "author revision preserves generation");
+
+        var data = new CompoundTag();
+        var size = new ListTag();
+        for (int axis : new int[] {16, 16, 16}) size.add(IntTag.valueOf(axis));
+        data.put("size", size);
+        var palette = new ListTag();
+        var state = new CompoundTag();
+        state.putString("Name", "hostile_humans_unified:settlement_information");
+        palette.add(state);
+        data.put("palette", palette);
+        var coordinates = new ListTag();
+        for (int i = 0; i < 3; i++) coordinates.add(IntTag.valueOf(0));
+        var carrier = new CompoundTag();
+        carrier.putString("id", "hostile_humans_unified:settlement_information");
+        carrier.put(SettlementInformationBlockEntity.AUTHOR, SettlementCodec.template(author));
+        var block = new CompoundTag();
+        block.put("pos", coordinates);
+        block.putInt("state", 0);
+        block.put("nbt", carrier);
+        var blocks = new ListTag();
+        blocks.add(block);
+        data.put("blocks", blocks);
+
+        var compressed = new java.io.ByteArrayOutputStream();
+        NbtIo.writeCompressed(NbtUtils.addCurrentDataVersion(data), compressed);
+        byte[] template = compressed.toByteArray();
+        var digest = java.util.HexFormat.of().formatHex(
+                java.security.MessageDigest.getInstance("SHA-256").digest(template));
+        var manifest = new SettlementBuildingPack.Manifest(1, author.template(), digest);
+        var generation = new SettlementBuildingPack.Generation(1, rules,
+                new SettlementBuildingPack.Group(24, 7, 123));
+        var json = new com.google.gson.Gson();
+        var archive = new java.io.ByteArrayOutputStream();
+        try (var zip = new java.util.zip.ZipOutputStream(archive)) {
+            for (var file : java.util.Map.of(
+                    "manifest.json", json.toJson(manifest).getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    "generation.json", json.toJson(generation).getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    "structure.nbt", template).entrySet()) {
+                zip.putNextEntry(new java.util.zip.ZipEntry(file.getKey()));
+                zip.write(file.getValue());
+                zip.closeEntry();
+            }
+        }
+        var pack = SettlementBuildingPack.read(new java.io.ByteArrayInputStream(archive.toByteArray()));
+        check(pack.generation().equals(generation), "ZIP generation rules and group round trip");
+        check(java.util.Arrays.equals(template, pack.template()), "ZIP preserves exact NBT bytes");
+        var id = new net.minecraft.resources.ResourceLocation(author.template());
+        var catalog = java.util.Map.of(id, pack);
+        var enabled = SettlementWorldgenResources.compile(catalog, java.util.Set.of(id));
+        var disabled = SettlementWorldgenResources.compile(catalog, java.util.Set.of());
+        check(enabled.size() == 3 && disabled.size() == 2, "disabling only removes generation selection");
+        var path = "data/hostile_humans_unified/worldgen/structure_set/building_pack/test/group.json";
+        var set = com.google.gson.JsonParser.parseString(new String(enabled.get(path),
+                java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+        check(set.getAsJsonObject("placement").get("spacing").getAsInt() == 24,
+                "compiled structure set uses authored spacing");
+        check(set.getAsJsonArray("structures").get(0).getAsJsonObject().get("weight").getAsInt() == 3,
+                "compiled structure set uses authored weight");
+        SettlementTemplateFiles.checkSize(new TemplateTransform.Cell(128, 128, 64));
+        try {
+            SettlementTemplateFiles.checkSize(new TemplateTransform.Cell(128, 128, 65));
+            throw new AssertionError("configured default volume must reject oversized templates");
+        } catch (IllegalArgumentException expected) {
+            check(true, "oversized template rejected");
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         net.minecraft.SharedConstants.tryDetectVersion();
         var flag = net.minecraft.server.Bootstrap.class.getDeclaredField("isBootstrapped");
@@ -70,6 +153,7 @@ public final class SettlementPersistenceTest {
         flag.setBoolean(null, true);
         net.minecraft.core.registries.BuiltInRegistries.bootStrap();
         var a = author(SettlementTemplate.Kind.ROOT, "crimson", 1);
+        buildingPackRoundTrip(a);
         check(a.faction().equals("hostile_humans_unified:crimson"), "canonical faction ID");
         check(
                 SettlementCodec.template(SettlementCodec.template(a)).equals(a),
