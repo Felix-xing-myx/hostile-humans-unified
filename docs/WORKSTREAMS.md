@@ -4417,3 +4417,4 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 ## 对讲机名册主题与翻页
 
 - 主控，基线 1e52eb6。对讲机使用通用主题，左栏到达页边缘后继续滚轮切页，保留服务端分页及右栏独立滚动。静态回归 522 项通过、16 项跳过。
+- 玩家总览主题，基线 418d41b，主控沿用 settlement-service-panels。总览使用通用主题，阵营余额卡保留阵营主题。

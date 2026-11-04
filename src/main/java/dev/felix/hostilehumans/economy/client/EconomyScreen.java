@@ -121,7 +121,7 @@ public final class EconomyScreen extends PanelScreen {
 
     @Override
     protected String faction() {
-        return snapshot.faction();
+        return snapshot.page() == EconomyView.Page.WALLET ? "" : snapshot.faction();
     }
 
     @Override
