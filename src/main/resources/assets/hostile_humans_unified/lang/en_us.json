@@ -1,4 +1,9 @@
 {
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_changed": "The board now belongs to a different settlement. Close and reopen the board.",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_missing": "The task board at the original position was removed or replaced.",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_standing": "Tasks require standing of 50, or standing of at least -99 with a valid cautious permit.",
+  "item.hostile_humans_unified.settlement_facility_tool.region_permission": "You do not have access to this settlement region.",
+  "item.hostile_humans_unified.settlement_facility_tool.service_range": "The facility is out of interaction range or its chunk is unloaded.",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_draft": "The board is outside this draft module’s outer courtyard. Select the correct module and include the board’s height.",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_inner": "The task board is inside an inner region. Move it to a position covered only by the outer region.",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_overlap": "The task board overlaps another registered settlement. Adjust the regions or move the board.",

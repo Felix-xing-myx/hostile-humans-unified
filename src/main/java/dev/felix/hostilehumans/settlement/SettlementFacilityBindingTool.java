@@ -164,6 +164,11 @@ public final class SettlementFacilityBindingTool extends Item {
             case "task board has no registered outer courtyard" -> message("task_board_unregistered");
             case "task board inside inner courtyard" -> message("task_board_inner");
             case "task board overlaps settlements" -> message("task_board_overlap");
+            case "task board settlement changed" -> message("task_board_changed");
+            case "task board missing" -> message("task_board_missing");
+            case "tasks require true standing 50 or a valid cautious permit" -> message("task_board_standing");
+            case "protected region permission denied" -> message("region_permission");
+            case "service out of range or unloaded" -> message("service_range");
             case "unknown region", "unknown task board instance" -> message("task_board_unknown");
             case "no typed facility at this block", "facility not registered" -> message("unregistered");
             default -> Component.literal(reason);

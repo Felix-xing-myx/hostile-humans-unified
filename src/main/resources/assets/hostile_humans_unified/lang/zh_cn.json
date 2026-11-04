@@ -1,4 +1,9 @@
 {
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_changed": "委托板归属的据点已变化，请关闭并重新打开界面。",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_missing": "原位置的委托板已移除或被替换。",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_standing": "打开委托需要真实声望达到 50；声望至少为 -99 且持有有效的谨慎通行许可时也可以打开。",
+  "item.hostile_humans_unified.settlement_facility_tool.region_permission": "当前没有该据点区域的通行权限。",
+  "item.hostile_humans_unified.settlement_facility_tool.service_range": "设施已超出交互范围，或所在区块未加载。",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_draft": "委托板不在这个信息方块草稿的外圈内。请确认选中正确模块，外圈包含委托板所在高度。",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_inner": "委托板所在方块被内圈覆盖。请移到只属于外圈的位置。",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_overlap": "委托板所在位置与另一个正式据点重叠。请调整区域或移动委托板。",

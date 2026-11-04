@@ -4297,3 +4297,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 委托板发布与结构捕获一致性
 - 主控，基线 9c0be98，module-architecture 工作树。委托板从绑定棒校验并发布归属，正式玩家入口共用索引检查；结构导出拦截白框之外的显式设施。Python 检查 532 项，跳过 16 项；未运行 Gradle。
+
+## 委托板会话复核统一
+- 主控，基线 ec2cf57，module-architecture 工作树。委托板打开与后续会话复核均通过同一正式外圈解析，附中文权限及归属变化原因。测试实例仍为旧版 3.15.3。

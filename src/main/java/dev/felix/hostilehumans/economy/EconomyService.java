@@ -7,7 +7,6 @@ import dev.felix.hostilehumans.faction.StandingReward;
 import dev.felix.hostilehumans.settlement.SettlementAccess;
 import dev.felix.hostilehumans.settlement.SettlementFacility;
 import dev.felix.hostilehumans.settlement.SettlementIndex;
-import dev.felix.hostilehumans.settlement.SettlementRegion;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -88,20 +87,9 @@ public final class EconomyService implements EconomyNetwork.Backend {
         if (c.page() == EconomyView.Page.TASKS) {
             if (!player.serverLevel().getBlockState(c.anchor()).is(EconomyContent.TASK_BOARD.get()))
                 throw new IllegalArgumentException("task board missing");
-            var index = SettlementIndex.get(player.serverLevel());
-            var site = index.find(c.instance());
-            var region =
-                    index.query(c.anchor().getX() + .5, c.anchor().getY(), c.anchor().getZ() + .5);
-            if (site == null
-                    || site.incomplete()
-                    || region.unknown()
-                    || region.hits().isEmpty()
-                    || region.hits().stream()
-                            .anyMatch(
-                                    hit ->
-                                            !hit.instance().equals(c.instance())
-                                                    || hit.layer() != SettlementRegion.Layer.OUTER))
-                throw new IllegalArgumentException("task board requires one known outer courtyard");
+            var site = SettlementIndex.get(player.serverLevel()).taskBoardSite(c.anchor());
+            if (!site.id().equals(c.instance()))
+                throw new IllegalArgumentException("task board settlement changed");
             var score = StandingAccess.snapshot(player, site.faction());
             if (!score.known()
                     || !score.enabled()
