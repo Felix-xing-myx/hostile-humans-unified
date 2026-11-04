@@ -48,7 +48,7 @@ public final class HumanPerception {
         final RecognitionEvidence evidence=new RecognitionEvidence();
         BodyVisibilitySamples.Point bodySample;
         long lookAfter, frontlineProbe = Long.MIN_VALUE;
-        Vec3 position, eye; boolean visible;
+        Vec3 position, eye; boolean visible, preferFrontlineCenter;
         String refresh="", denied="";
         Track(UUID id){this.id=id;}
     }
@@ -77,7 +77,7 @@ public final class HumanPerception {
         net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> lootGroupDimension;
         long lootGroupUntil, alertUntil=-1, tick=-1, nextScan, focusStarted, focusLastVisible=-1, directionStarted, nextPriorityFocus;
         UUID focus; Vec3 look; boolean focusHurt, unfamiliarFocus, priorityFocus;
-        int candidateCursor,recognitionCursor,bodyResumeCursor,deferredVisualRays; List<UUID> candidates=List.of(); long nextCandidates; boolean stableNeighborhood;
+        int candidateCursor,recognitionCursor,bodyResumeCursor,deferredVisualRays; List<UUID> candidates=List.of(); long nextCandidates; boolean reducedNeighborhood, stableNeighborhood;
         String decision="闲置观察",reason="等待视觉或声音证据",lookOwner="自然观察";
         String scanStatus="尚未执行视觉检测";long scanAt=-1;
         String soundPolicy="暂无声音输入";int geometrySkipped,occlusionSkipped;long soundGlanceUntil;
@@ -455,15 +455,9 @@ public final class HumanPerception {
         if (!HumanMonitorControl.controls(h)) reactToClue(h,s,now);
         int baseInterval=c().integer(h.isAlert||s.focus!=null||recognizing(s)>0||h.getTarget()!=null?"budgets.active_interval_ticks":"budgets.idle_interval_ticks");
         int interval=AdaptiveActivityBudget.interval(h,baseInterval,s.focusHurt||now<s.directionProtectedUntil);
-        boolean reduced = BattlePerceptionDetail.reduced(h);
+        updateFrontlineSchedule(h, s, now);
+        boolean reduced = s.reducedNeighborhood;
         boolean urgentScan=s.focusHurt||now<s.directionProtectedUntil;
-        boolean stable = steadyFrontline(h);
-        if (s.stableNeighborhood != stable) {
-            if (!stable) s.nextCandidates = Math.min(s.nextCandidates, now);
-            s.nextScan = Math.min(s.nextScan, now);
-        }
-        if (stable) BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.STEADY_ACTOR_TICK, 1);
-        s.stableNeighborhood = stable;
         if(now>=s.nextCandidates && PerceptionBudget.claim(h,"queries",1,":candidates")){
             boolean measureBattle = BattlePerceptionDetail.measure(h);
             double movementRadius = reduced ? BattlePerceptionDetail.LOCAL_RADIUS : HumanAwareness.movementRadius();
@@ -519,17 +513,21 @@ public final class HumanPerception {
             LinkedHashSet<UUID> chosen=new LinkedHashSet<>();
             for(LivingEntity e:close.values())chosen.add(e.getUUID());
             for(LivingEntity e:discovery.values())if(chosen.size()<cap)chosen.add(e.getUUID());
-            s.candidates=List.copyOf(chosen);s.nextCandidates=BattlePerceptionDetail.nextNeighborhood(now,h,interval,stable);
+            s.candidates = List.copyOf(chosen);
+            s.nextCandidates = BattlePerceptionDetail.nextNeighborhood(now, h, interval, s.stableNeighborhood);
+            // A completed density sample can change the tier inside this tick.
+            updateFrontlineSchedule(h, s, now);
         }
+        if (s.stableNeighborhood) BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.STEADY_ACTOR_TICK, 1);
         if(now<s.nextScan){describe(h,s);return;}
-        if (stable) {
+        if (s.stableNeighborhood) {
             scanSteadyFrontline(h, s, level, now);
             describe(h, s);
             return;
         }
         int probeLimit=urgentScan?c().integer("budgets.rays_per_human"):AdaptiveActivityBudget.probes(h,c().integer("budgets.rays_per_human"));
-        int rays=Math.min(reduced && !urgentScan ? Math.min(probeLimit, 2) : probeLimit, PerceptionBudget.maxRayBatch(h));
-        if (reduced && !urgentScan && s.deferredVisualRays > 0
+        int rays=Math.min(s.reducedNeighborhood && !urgentScan ? Math.min(probeLimit, 2) : probeLimit, PerceptionBudget.maxRayBatch(h));
+        if (s.reducedNeighborhood && !urgentScan && s.deferredVisualRays > 0
                 && !PerceptionBudget.prepareVisualRetry(h, Math.min(rays, s.deferredVisualRays))) {
             BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.VISION_RETRY_SKIPPED, 1);
             if (!s.pendingBodies.isEmpty()) resumeBodies(h,s,level,now,interval,probeLimit,new VisionFrame(h));
@@ -547,7 +545,7 @@ public final class HumanPerception {
         // Discovery still pays for actual geometry/LOS and never marks a target by proximity.
         if (PerceptionDiscoveryPolicy.reserveDiscovery(visualRound,rays,urgentScan)
                 || !urgentScan && rays >= 2 && (main == null && recognizing(s) == 0
-                        || reduced && Math.floorMod(visualRound, 2) == 1)) {
+                        || s.reducedNeighborhood && Math.floorMod(visualRound, 2) == 1)) {
             LivingEntity nearestUnknown=null;
             for(UUID id:s.candidates){
                 if(!(level.getEntity(id) instanceof LivingEntity e))continue;
@@ -596,6 +594,26 @@ public final class HumanPerception {
         if(s.focus==null)startNext(h,s,now);
         describe(h,s);
     }
+    private static void updateFrontlineSchedule(Human h, State s, long now) {
+        boolean reduced = BattlePerceptionDetail.reduced(h);
+        boolean stable = steadyFrontline(h);
+        if (s.reducedNeighborhood == reduced && s.stableNeighborhood == stable) return;
+
+        if (s.reducedNeighborhood && !reduced || s.stableNeighborhood && !stable)
+            s.nextCandidates = Math.min(s.nextCandidates, now);
+        s.nextScan = Math.min(s.nextScan, now);
+        if (s.deferredVisualRays > 0) {
+            PerceptionBudget.cancel(h, "rays", "");
+            s.deferredVisualRays = 0;
+        }
+        if (stable) {
+            // Keep the incomplete sweeps, but release their unused budget reservations.
+            for (UUID id : s.pendingBodies) PerceptionBudget.cancelBodyRays(h, id);
+        }
+        s.reducedNeighborhood = reduced;
+        s.stableNeighborhood = stable;
+    }
+
     /** One coarse visual probe per slot. Alternate maintaining contact and discovering an alternative. */
     private static void scanSteadyFrontline(Human h, State s, ServerLevel level, long now) {
         int period = BattlePerceptionDetail.FRONTLINE_VISUAL_PERIOD;
@@ -614,6 +632,7 @@ public final class HumanPerception {
         for (int inspected = 0; candidate == null && inspected < s.candidates.size(); inspected++) {
             UUID id = s.candidates.get(Math.floorMod(s.candidateCursor++, s.candidates.size()));
             if (level.getEntity(id) instanceof LivingEntity other && other != current
+                    && simplifiedVision(h, s, other, now)
                     && eligibleVisual(h, s, other, now, vision)) candidate = other;
         }
         if (candidate == null && eligibleVisual(h, s, current, now, vision)) candidate = current;
@@ -653,7 +672,7 @@ public final class HumanPerception {
         boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
         if (simplifiedVision(h,s,e,now)) {
             if (t != null && t.frontlineProbe != Long.MIN_VALUE && now >= t.frontlineProbe && now - t.frontlineProbe < 8) return false;
-            return frontlinePoint(h,e,familiar,now,vision) != null;
+            return frontlinePoint(h, e, familiar, preferFrontlineCenter(t, now), vision) != null;
         }
         BodyGeometry geometry = vision.body(e, t, familiar, h);
         List<Vec3> eligibleSamples = geometry.proofSamples();
@@ -680,12 +699,16 @@ public final class HumanPerception {
                 && !(s.focusHurt && Objects.equals(s.focus,target.getUUID()));
     }
 
+    private static boolean preferFrontlineCenter(Track track, long now) {
+        return track != null && track.frontlineProbe != Long.MIN_VALUE
+                ? track.preferFrontlineCenter
+                : (Math.floorDiv(now, BattlePerceptionDetail.FRONTLINE_VISUAL_PERIOD) & 1L) == 0;
+    }
+
     /** Use one of two coarse aim points and never claim a body sweep for this sample. */
-    private static Vec3 frontlinePoint(Human h, LivingEntity target, boolean familiar, long now, VisionFrame vision) {
+    private static Vec3 frontlinePoint(Human h, LivingEntity target, boolean familiar, boolean preferCenter, VisionFrame vision) {
         var eye = target.getEyePosition();
         var center = target.getBoundingBox().getCenter();
-        int period = AdaptiveActivityBudget.interval(h,c().integer("budgets.active_interval_ticks"),false);
-        boolean preferCenter = (Math.floorDiv(now, period) & 1L) == 0;
         var primary = preferCenter ? center : eye;
         var secondary = preferCenter ? eye : center;
         double visibility = target.getVisibilityPercent(h);
@@ -881,10 +904,14 @@ public final class HumanPerception {
         if(!enemy(h,e))return;Track t=s.tracks.get(e.getUUID());if(t!=null&&t.checked==now)return;boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
         boolean simple = simplifiedVision(h,s,e,now);
         VisualProbe probe;
+        boolean preferCenter = simple && preferFrontlineCenter(t, now);
         if (simple) {
             if (!fast) return;
-            if (t != null) t.frontlineProbe = now;
-            Vec3 point = frontlinePoint(h,e,familiar,now,vision);
+            if (t != null) {
+                t.frontlineProbe = now;
+                t.preferFrontlineCenter = !preferCenter;
+            }
+            Vec3 point = frontlinePoint(h, e, familiar, preferCenter, vision);
             boolean clear = point != null && clearVisualRay(h,s,e,point,now,false);
             probe = new VisualProbe(clear ? point : null, true,
                     clear ? "团战快速目视" : "团战采样点未见");
@@ -900,7 +927,10 @@ public final class HumanPerception {
         t.visible=true;t.denied=probe.reason;t.name=bounded(e.getName().getString(),64);t.position=e.position();t.eye=probe.visiblePoint;t.positionAt=now;
         t.bodySample=fraction(e.getBoundingBox(),probe.visiblePoint);
         t.checked=now;
-        if (simple) t.frontlineProbe = now;
+        if (simple) {
+            t.frontlineProbe = now;
+            t.preferFrontlineCenter = !preferCenter;
+        }
         boolean live=t.marked&&PerceptionPolicy.live(now,t.liveUntil);
         if(live){t.visual=now;t.liveUntil=now+c().integer("memory.dynamic_ticks");t.familiarUntil=now+c().integer("memory.familiar_ticks");t.refresh="目视";
             s.alertUntil=now+c().integer("observation.alert_ticks");}

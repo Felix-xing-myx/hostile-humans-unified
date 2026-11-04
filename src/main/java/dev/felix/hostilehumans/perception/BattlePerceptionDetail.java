@@ -10,6 +10,7 @@ import java.util.WeakHashMap;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 /** Chooses perception detail from the existing neighborhood query and server load tier. */
 final class BattlePerceptionDetail {
@@ -19,9 +20,10 @@ final class BattlePerceptionDetail {
     static final int FRONTLINE_VISUAL_PERIOD = 8;
     static final int ENTRY_NEIGHBORS = 7, EXIT_NEIGHBORS = 5, HOSTILE_NEIGHBORS = 2;
     private static final int LOCAL_SAMPLE_TTL = 40;
+    private static final double SAMPLE_MOVEMENT_LIMIT_SQUARED = LOCAL_RADIUS_SQUARED / 4;
     private static final Map<Human, Sample> FRONTLINES = new WeakHashMap<>();
 
-    private record Sample(ResourceKey<Level> dimension, long expires) {}
+    private record Sample(ResourceKey<Level> dimension, Vec3 origin, long expires) {}
 
     private BattlePerceptionDetail() {}
 
@@ -43,7 +45,7 @@ final class BattlePerceptionDetail {
     static void sample(Human h, long now, int humans, int enemies) {
         int minimum = reduced(h) ? EXIT_NEIGHBORS : ENTRY_NEIGHBORS;
         if (humans >= minimum && enemies >= HOSTILE_NEIGHBORS)
-            FRONTLINES.put(h, new Sample(h.level().dimension(), now + LOCAL_SAMPLE_TTL));
+            FRONTLINES.put(h, new Sample(h.level().dimension(), h.position(), now + LOCAL_SAMPLE_TTL));
         else FRONTLINES.remove(h);
     }
 
@@ -51,12 +53,13 @@ final class BattlePerceptionDetail {
         var sample = FRONTLINES.get(h);
         return sample != null && enabled(h) && !h.isNoAi() && !h.isSleeping()
                 && sample.dimension().equals(h.level().dimension())
+                && h.position().distanceToSqr(sample.origin()) <= SAMPLE_MOVEMENT_LIMIT_SQUARED
                 && HumanPerception.now(h) < sample.expires();
     }
 
     static boolean stableEngagement(Human h) {
         var target = h.getTarget();
-        return reduced(h) && !h.isFleeing && target != null && target.isAlive()
+        return reduced(h) && !h.isFleeing && target != null && target.isAlive() && target.level() == h.level()
                 && h.distanceToSqr(target) <= LOCAL_RADIUS_SQUARED
                 && HumanPerception.recentConfirmedSight(h, target);
     }

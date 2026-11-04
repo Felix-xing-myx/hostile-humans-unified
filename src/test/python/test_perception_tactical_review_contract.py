@@ -61,6 +61,42 @@ class PerceptionTacticalContract(unittest.TestCase):
         human = (ROOT / 'src/main/java/dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
         self.assertNotIn('new RandomLookAroundGoal', human)
 
+    def test_frontline_resampling_updates_the_schedule_before_visual_work(self):
+        code = source('HumanPerception')
+        sample = code.index('BattlePerceptionDetail.sample(h, now')
+        schedule = code.index('updateFrontlineSchedule(h, s, now)', sample)
+        scan = code.index('scanSteadyFrontline(h, s, level, now)', schedule)
+        self.assertLess(sample, schedule)
+        self.assertLess(schedule, scan)
+        handoff = code.split('private static void updateFrontlineSchedule', 1)[1].split(
+            'private static void scanSteadyFrontline', 1)[0]
+        for check in ('s.reducedNeighborhood && !reduced', 's.stableNeighborhood && !stable',
+                      's.nextCandidates = Math.min', 's.nextScan = Math.min',
+                      'PerceptionBudget.cancel(h, "rays", "")', 'PerceptionBudget.cancelBodyRays(h, id)'):
+            self.assertIn(check, handoff)
+
+    def test_frontline_sample_cannot_follow_the_actor_to_a_different_fight(self):
+        detail = source('BattlePerceptionDetail')
+        self.assertIn('h.level().dimension(), h.position(), now + LOCAL_SAMPLE_TTL', detail)
+        self.assertIn('h.position().distanceToSqr(sample.origin()) <= SAMPLE_MOVEMENT_LIMIT_SQUARED', detail)
+        self.assertIn('now(h) < sample.expires()', detail)
+        perception = source('HumanPerception')
+        steady = perception.split('private static void scanSteadyFrontline', 1)[1].split(
+            'private static int resumeBodies', 1)[0]
+        self.assertIn('simplifiedVision(h, s, other, now)', steady)
+        self.assertNotIn('resumeBodies(', steady)
+
+    def test_frontline_aim_point_rotates_on_actual_samples(self):
+        code = source('HumanPerception')
+        check = code.split('private static void checkVisualEvidence', 1)[1].split(
+            'private static void confirmSight', 1)[0]
+        self.assertLess(check.index('preferFrontlineCenter(t, now)'), check.index('t.frontlineProbe = now'))
+        self.assertIn('t.preferFrontlineCenter = !preferCenter', check)
+        self.assertIn('frontlinePoint(h, e, familiar, preferCenter, vision)', check)
+        point = code.split('private static Vec3 frontlinePoint', 1)[1].split(
+            'private static long candidateRank', 1)[0]
+        self.assertNotIn('AdaptiveActivityBudget.interval', point)
+
     def test_report_budget_shortage_is_not_authority_and_ledger_is_after_link(self):
         code = source('HumanReportPropagation')
         self.assertLess(code.index('PerceptionBudget.claim'), code.index('.clip('))
