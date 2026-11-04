@@ -84,12 +84,12 @@ def slab(d, ox, oy, name, amount, reserve, mode_label, capacity):
     # caption row: native mode art (18x12 box here), then the name
     # Fire mode is a localised word in a fixed 36px slot; the name column never moves.
     MODE_SLOT = 36
+    small = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", int(9 * S * .85))
     mode_words = {"AUTO": "全自动", "SEMI": "单点", "BURST": "连发", "RELOAD": "装填中"}
     mode_text = mode_words.get(mode_label.upper(), mode_label)
-    d.text(((x + 3) * S, (y + 39) * S), clip(mode_text, MODE_SLOT), font=FONT, fill=rgba(MUTED, 1))
+    d.text(((x + 3) * S, (y + 39) * S), clip(mode_text, int(MODE_SLOT / .85)), font=small, fill=rgba(MUTED, 1))
     name_x = x + 3 + MODE_SLOT + 4
     room = max(20, col_right - name_x)
-    small = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", int(9 * S * .85))
     d.text((name_x * S, (y + 39) * S), fit_ellipsis(name, int(room / .85)), font=small, fill=rgba(MUTED, 1))
 
 img = Image.new("RGB", (330 * S, 262 * S), (15, 20, 23))

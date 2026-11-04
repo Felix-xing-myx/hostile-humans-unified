@@ -140,7 +140,10 @@ public final class MonitorGunHud {
         // never shifts when the mode changes or the weapon starts reloading.
         String mode=value.reloading()?Component.translatable("human_monitor.gun.reloading").getString()
                 :data.energy()?"FE":modeLabel(data.mode());
-        g.drawString(font,font.plainSubstrByWidth(mode,MODE_SLOT),x+3,y+39,theme.muted(),false);
+        // Same optical weight as the name: muted and drawn at 0.85, so the mode reads as a label.
+        g.pose().pushPose();try {g.pose().translate(x+3,y+39,0);g.pose().scale(.85F,.85F,1);
+            g.drawString(font,font.plainSubstrByWidth(mode,(int)(MODE_SLOT/.85F)),0,0,theme.muted(),false);}
+        finally{g.pose().popPose();}
         int nameX=x+3+MODE_SLOT+4;
         int nameRoom=Math.max(20,columnRight-nameX);
         String name=fitWithEllipsis(font,held.getHoverName().getString(),(int)(nameRoom/.85F));
