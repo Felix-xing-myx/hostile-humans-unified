@@ -4386,3 +4386,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控；基线e2f2125d64e69adfbf904b3782ff785f38254108；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：玩家总览与据点委托板共用分栏界面，包含本地 main 已合入的委托、建筑模板目录和团战调度优化。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.6。
 
 - 3.15.6完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致2c1ff7b989f08d3bc6d07620a59f42540e32e5a85be0cddd5811a59625b9e998；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.6-20261104-162818。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.6.
+
+## 据点设施与玩家面板
+
+- 基线 4c7dba7ee58399b550416c0abf2864ee18591a4a，主控工作树 worktrees/settlement-service-panels，分支 feature/settlement-service-panels。
+- 主控负责 settlement、cultivation、economy 和阵营界面资源的接入。已接入创造模式设施声望豁免、钱包阵营主题余额分区。控制台地图、训练选兵和突破节点、阵营资源入口仍在实施范围内。
+- 本阶段静态回归 522 项通过、16 项跳过。Java 编译与游戏验收尚未执行。

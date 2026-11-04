@@ -94,6 +94,7 @@ public final class EconomyService implements EconomyNetwork.Backend {
             if (c.station() != !served.isEmpty()
                     || !(c.station() ? served.contains(c.currency().faction()) : site.faction().equals(c.currency().faction())))
                 throw new IllegalArgumentException("task board faction access changed");
+            if (player.isCreative()) return;
             var score = StandingAccess.snapshot(player, c.currency().faction());
             if (c.station()) {
                 if (!score.known() || !score.enabled())

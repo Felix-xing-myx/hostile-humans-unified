@@ -92,6 +92,8 @@ public final class SettlementAccess {
             String faction,
             boolean inner,
             boolean service) {
+        var online = server.getPlayerList().getPlayer(player);
+        if (online != null && online.isCreative()) return true;
         var standing = StandingAccess.snapshot(server, player, faction);
         return standing.known()
                 && standing.enabled()
@@ -166,18 +168,20 @@ public final class SettlementAccess {
                                                                 == SettlementRegion.Layer.INNER)))
             return new Result(
                     Status.LOCKED, "training requires a tier-two-or-higher inner facility", found);
-        var standing = StandingAccess.snapshot(player, found.instance().faction());
-        if (!standing.known() || !standing.enabled())
-            return new Result(Status.LOCKED, "standing policy unavailable or disabled", found);
-        int threshold =
-                switch (operation) {
-                    case VIEW -> 150;
-                    case RENAME, TRAIN -> 250;
-                    case ENTER_INNER -> 50;
-                    default -> -500;
-                };
-        if (!standing.atLeast(threshold))
-            return new Result(Status.LOCKED, "standing threshold " + threshold, found);
+        if (!player.isCreative()) {
+            var standing = StandingAccess.snapshot(player, found.instance().faction());
+            if (!standing.known() || !standing.enabled())
+                return new Result(Status.LOCKED, "standing policy unavailable or disabled", found);
+            int threshold =
+                    switch (operation) {
+                        case VIEW -> 150;
+                        case RENAME, TRAIN -> 250;
+                        case ENTER_INNER -> 50;
+                        default -> -500;
+                    };
+            if (!standing.atLeast(threshold))
+                return new Result(Status.LOCKED, "standing threshold " + threshold, found);
+        }
         var p = found.facility().position();
         Result area = at(player, p.x() + .5, p.y(), p.z() + .5);
         if (!area.allowed()) return new Result(area.status(), area.reason(), found);

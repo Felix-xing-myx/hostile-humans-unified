@@ -88,7 +88,9 @@ public final class CultivationSettlementIntegration {
                                         return CultivationFacilityPolicy.Access.deny(
                                                 "Training requires a tier-two-or-higher inner"
                                                         + " anchor");
-                                    if (!StandingAccess.snapshot(server, investor, site.faction())
+                                    var online = server.getPlayerList().getPlayer(investor);
+                                    if ((online == null || !online.isCreative())
+                                            && !StandingAccess.snapshot(server, investor, site.faction())
                                             .atLeast(250))
                                         return CultivationFacilityPolicy.Access.deny(
                                                 "Training requires 250 real faction standing");

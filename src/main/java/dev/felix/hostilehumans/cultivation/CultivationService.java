@@ -38,7 +38,8 @@ public final class CultivationService {
 
     static CultivationFacilityPolicy.Access permission(
             MinecraftServer server, UUID owner, CultivationFacility f, Human human, boolean next) {
-        if (!f.testMode()
+        var online = server.getPlayerList().getPlayer(owner);
+        if (!f.testMode() && (online == null || !online.isCreative())
                 && !dev.felix.hostilehumans.config.UnifiedConfig.get()
                         .featureEnabled("standing", true))
             return CultivationFacilityPolicy.Access.deny(

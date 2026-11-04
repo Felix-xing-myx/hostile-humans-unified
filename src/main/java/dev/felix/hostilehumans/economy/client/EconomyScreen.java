@@ -3,11 +3,13 @@ package dev.felix.hostilehumans.economy.client;
 import dev.felix.hostilehumans.client.ui.framework.InputValue;
 import dev.felix.hostilehumans.client.ui.framework.PanelButton;
 import dev.felix.hostilehumans.client.ui.framework.PanelGeometry;
+import dev.felix.hostilehumans.client.ui.framework.PanelGroup;
 import dev.felix.hostilehumans.client.ui.framework.PanelListRow;
 import dev.felix.hostilehumans.client.ui.framework.PanelMeter;
 import dev.felix.hostilehumans.client.ui.framework.PanelScreen;
 import dev.felix.hostilehumans.client.ui.framework.PendingAction;
 import dev.felix.hostilehumans.client.ui.framework.UiLayout;
+import dev.felix.hostilehumans.client.ui.framework.UiThemes;
 import dev.felix.hostilehumans.economy.Currency;
 import dev.felix.hostilehumans.economy.EconomyNetwork;
 import dev.felix.hostilehumans.economy.EconomyView;
@@ -243,18 +245,16 @@ public final class EconomyScreen extends PanelScreen {
                                     "standing",
                                     metadata.getInt("true_standing"),
                                     metadata.getInt("remaining_standing"))));
-        List<UiLayout.Node> funds = new ArrayList<>();
-        for (var row : snapshot.funds())
-            funds.add(
-                    muted(
-                            text(
-                                    "funds",
-                                    currency(row.currency()),
-                                    row.wallets(),
-                                    row.loose(),
-                                    row.total())));
-        if (!funds.isEmpty() && snapshot.page() != EconomyView.Page.TASKS)
-            content.add(UiLayout.grid(2, 6, funds));
+        if (snapshot.page() != EconomyView.Page.TASKS
+                && (snapshot.page() != EconomyView.Page.WALLET || tab.equals("wallets"))) {
+            List<UiLayout.Node> funds = new ArrayList<>();
+            for (var row : snapshot.funds()) {
+                var summary = text("funds", currency(row.currency()), row.wallets(), row.loose(), row.total());
+                funds.add(snapshot.page() == EconomyView.Page.WALLET
+                        ? factionBalance(row.currency(), summary) : muted(summary));
+            }
+            if (!funds.isEmpty()) content.add(UiLayout.grid(2, 6, funds));
+        }
         List<String> tabs = tabIds();
         if (!tabs.contains(tab)) tab = tabs.get(0);
         content.add(
@@ -346,6 +346,14 @@ public final class EconomyScreen extends PanelScreen {
         controls.put(id, button);
     }
 
+    private UiLayout.Node factionBalance(Currency currency, Component balance) {
+        String faction = currency.faction();
+        var header = body(new PanelGroup(currency(currency), UiThemes.emblem(faction),
+                () -> UiThemes.faction(faction)));
+        return UiLayout.column(3, List.of(node(header),
+                text(balance, () -> UiThemes.faction(faction).text())));
+    }
+
     private UiLayout.Node wallets() {
         List<UiLayout.Node> list = new ArrayList<>();
         for (var row : snapshot.wallets())
@@ -372,15 +380,11 @@ public final class EconomyScreen extends PanelScreen {
             detail.add(muted(text("no_wallet")));
             return UiLayout.column(6, detail);
         }
+        List<UiLayout.Node> balances = new ArrayList<>();
         for (Currency value : Currency.values())
-            detail.add(
-                    muted(
-                            text(
-                                    "wallet_balance",
-                                    currency(value),
-                                    selected.known()
-                                            ? Long.toString(selected.amount(value))
-                                            : text("unknown").getString())));
+            balances.add(factionBalance(value, selected.known()
+                    ? Component.literal(Long.toString(selected.amount(value))) : text("unknown")));
+        detail.add(UiLayout.grid(2, 6, balances));
         detail.add(currencyChoice(false));
         List<UiLayout.Node> faces = new ArrayList<>();
         for (var face : Currency.Denomination.values())
