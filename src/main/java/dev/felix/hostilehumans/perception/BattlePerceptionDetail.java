@@ -1,5 +1,6 @@
 package dev.felix.hostilehumans.perception;
 
+import dev.felix.hostilehumans.config.UnifiedConfig;
 import dev.felix.hostilehumans.entity.Human;
 import dev.felix.hostilehumans.monitor.HumanMonitorControl;
 import dev.felix.hostilehumans.performance.ActivityLoadPolicy.Mode;
@@ -23,8 +24,19 @@ final class BattlePerceptionDetail {
 
     private BattlePerceptionDetail() {}
 
+    private static boolean enabled(Human h) {
+        return UnifiedConfig.get().activityBudget().enabled() && !HumanMonitorControl.controls(h);
+    }
+
     static boolean measure(Human h) {
-        return AdaptiveActivityBudget.mode(h) == Mode.BATTLE && !HumanMonitorControl.controls(h);
+        if (!enabled(h)) return false;
+        Mode load = AdaptiveActivityBudget.mode(h);
+        return load == Mode.BATTLE || load == Mode.CROWDED
+                || h.getTarget() instanceof Human || h.getLastHurtByMob() instanceof Human || reduced(h);
+    }
+
+    static boolean throttledSharing(Human h) {
+        return reduced(h) || enabled(h) && AdaptiveActivityBudget.mode(h) == Mode.BATTLE;
     }
 
     static void sample(Human h, long now, int humans, int enemies) {
@@ -35,7 +47,7 @@ final class BattlePerceptionDetail {
 
     static boolean reduced(Human h) {
         var sample = FRONTLINES.get(h);
-        return sample != null && measure(h) && sample.dimension().equals(h.level().dimension())
+        return sample != null && enabled(h) && sample.dimension().equals(h.level().dimension())
                 && HumanPerception.now(h) < sample.expires();
     }
 

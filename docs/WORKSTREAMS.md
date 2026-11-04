@@ -4258,3 +4258,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 远距离盔甲与团战性能采样
 - 主控，基线 ccc8be7，module-architecture 工作树。盔甲层与绑带同样随可见人体绘制。F8 低频抽样分别记录邻域、视觉判定和发送轮询耗时。Python 检查 532 项，跳过 16 项；未运行 Gradle、同步或实机对照。
+
+## 低于全服团战门槛的局部前线
+- 主控，基线 8ff502e，module-architecture 工作树。拥挤档及较低人口中已与人类交战的个体可借已有查询识别局部前线，12 候选／2 视觉射线限额按前线身份生效。全服寻路预算维持独立档位。

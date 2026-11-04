@@ -95,7 +95,7 @@ public final class HumanTargetSharing {
         for(String key:List.of(SEND,RECEIVE,CLUE_SEND)){
             if(key.equals(RECEIVE)&&Objects.equals(RECEIVED_AT.get(receiver),HumanPerception.now(receiver)))continue;
             int remaining=receiver.getPersistentData().getInt(key);
-            if(key.equals(SEND))remaining=Math.min(BattlePerceptionDetail.measure(receiver) ? FRONTLINE_INTERVAL : RELAY_INTERVAL,remaining);
+            if(key.equals(SEND))remaining=Math.min(BattlePerceptionDetail.throttledSharing(receiver) ? FRONTLINE_INTERVAL : RELAY_INTERVAL,remaining);
             if(remaining>0)receiver.getPersistentData().putInt(key,nextCooldown(remaining));
         }
         if(!available(receiver)){clear(receiver);return;}
@@ -128,7 +128,7 @@ public final class HumanTargetSharing {
 
     private static void refresh(Human receiver,Lease lease,LivingEntity target,long now){
         if (!refreshDue(lease, now)) return;
-        boolean reduced = BattlePerceptionDetail.measure(receiver);
+        boolean reduced = BattlePerceptionDetail.throttledSharing(receiver);
         lease.nextRefresh = now + (reduced ? FRONTLINE_LINK_REFRESH_TICKS : LINK_REFRESH_TICKS);
         if (now >= lease.window.until) {
             freeze(receiver, lease, now);
@@ -260,7 +260,7 @@ public final class HumanTargetSharing {
     private static void sendReports(Human sender,List<Human> nearby){
         if (!readyToBroadcast(sender)) return;
         boolean reduced = BattlePerceptionDetail.reduced(sender)
-                || BattlePerceptionDetail.measure(sender) && nearby.size() >= FRONTLINE_NEIGHBORS;
+                || BattlePerceptionDetail.throttledSharing(sender) && nearby.size() >= FRONTLINE_NEIGHBORS;
         if (reduced && nearby.size() > FRONTLINE_NEIGHBORS)
             nearby = nearby.subList(0, FRONTLINE_NEIGHBORS);
         if (reduced) sender.getPersistentData().putInt(SEND, FRONTLINE_INTERVAL);

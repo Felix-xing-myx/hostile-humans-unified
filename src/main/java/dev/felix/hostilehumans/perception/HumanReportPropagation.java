@@ -21,7 +21,7 @@ final class HumanReportPropagation {
         double distance = sender.distanceTo(receiver), range = HumanTargetSharing.range(sender);
         double wallFactor = c.number("sharing.wall_range_factor");
         if (!withinRange(distance, range, true, wallFactor)) return false;
-        boolean reduced = BattlePerceptionDetail.measure(sender);
+        boolean reduced = BattlePerceptionDetail.throttledSharing(sender);
         if (withinRange(distance, range, false, wallFactor)) {
             if (reduced && sender.level() instanceof ServerLevel level)
                 BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.REPORT_DIRECT, 1);

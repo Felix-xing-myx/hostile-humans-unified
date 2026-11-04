@@ -38,7 +38,7 @@ public final class BattlePerceptionMetrics {
         // Rotate sampled actors even when their work is scheduled at a fixed interval.
         long tick = human.level().getGameTime();
         return ((human.getId() + tick + (tick >>> 4)) & 15) == 0
-                && BattlePerceptionDetail.measure(human) ? System.nanoTime() : 0;
+                && BattlePerceptionDetail.throttledSharing(human) ? System.nanoTime() : 0;
     }
 
     static void finishSample(Human human, long start, Work count, Work nanos) {

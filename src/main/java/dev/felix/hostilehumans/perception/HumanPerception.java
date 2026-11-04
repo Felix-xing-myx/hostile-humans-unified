@@ -459,7 +459,9 @@ public final class HumanPerception {
             boolean sampleLootGroup = dev.felix.hostilehumans.inventory.SoldierPickupPolicy.canCollectNow(h);
             if (sampleLootGroup) r = Math.max(r, 12);
             if (measureBattle) r = Math.max(r, BattlePerceptionDetail.LOCAL_RADIUS);
-            int cap=AdaptiveActivityBudget.candidates(h,c().integer("budgets.candidates"));long epoch=now/Math.max(1,interval);
+            int cap=AdaptiveActivityBudget.candidates(h,c().integer("budgets.candidates"));
+            if (reduced && !urgentScan) cap = Math.min(cap, 12);
+            long epoch=now/Math.max(1,interval);
             Comparator<LivingEntity> nearest=Comparator.comparingDouble(h::distanceToSqr);
             Comparator<LivingEntity> rotating=Comparator.comparingLong(e->candidateRank(e.getUUID(),epoch));
             BoundedSelection<LivingEntity> close=new BoundedSelection<>((cap+1)/2,nearest);
@@ -506,7 +508,7 @@ public final class HumanPerception {
         }
         if(now<s.nextScan){describe(h,s);return;}
         int probeLimit=urgentScan?c().integer("budgets.rays_per_human"):AdaptiveActivityBudget.probes(h,c().integer("budgets.rays_per_human"));
-        int rays=Math.min(probeLimit, PerceptionBudget.maxRayBatch(h));
+        int rays=Math.min(reduced && !urgentScan ? Math.min(probeLimit, 2) : probeLimit, PerceptionBudget.maxRayBatch(h));
         if (reduced && !urgentScan && s.deferredVisualRays > 0
                 && !PerceptionBudget.prepareVisualRetry(h, Math.min(rays, s.deferredVisualRays))) {
             BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.VISION_RETRY_SKIPPED, 1);
