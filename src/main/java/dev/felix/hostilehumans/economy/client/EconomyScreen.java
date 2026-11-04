@@ -266,6 +266,7 @@ public final class EconomyScreen extends PanelScreen {
 
     /** Visible tabs for the current snapshot; the band renders this and the body switches on it. */
     private List<String> tabIds() {
+        if (snapshot.page() == EconomyView.Page.TASKS) return List.of("tasks");
         List<String> tabs = new ArrayList<>();
         tabs.add("wallets");
         if (!snapshot.offers().isEmpty()

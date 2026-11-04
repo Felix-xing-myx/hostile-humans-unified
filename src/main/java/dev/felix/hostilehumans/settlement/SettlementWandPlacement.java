@@ -107,8 +107,13 @@ public final class SettlementWandPlacement {
             SettlementNetwork.wandView(player, new View(request.token(), false, "invalid_input", new ListTag()));
             return;
         }
-        if (session.level().getStructureManager().get(id).isEmpty()) {
-            SettlementNetwork.wandView(player, new View(request.token(), false, "wand_missing", new ListTag()));
+        try {
+            if (SettlementTemplateFiles.resolve(session.level(), id) == null) {
+                SettlementNetwork.wandView(player, new View(request.token(), false, "wand_missing", new ListTag()));
+                return;
+            }
+        } catch (IllegalArgumentException invalid) {
+            SettlementNetwork.wandView(player, new View(request.token(), false, "invalid_input", new ListTag()));
             return;
         }
         SettlementTemplateFiles.cancel(player);

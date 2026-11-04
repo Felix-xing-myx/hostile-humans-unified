@@ -67,6 +67,34 @@ final class SettlementTemplateFiles {
                     throw new IllegalArgumentException("all template chunks must already be loaded");
     }
 
+    record TemplateSource(String name, java.nio.file.Path path, SettlementBuildingPack.Contents pack) {
+        boolean authorRequired() {
+            return name.equals("instance") || pack != null;
+        }
+
+        StructureTemplate read(ServerLevel level, ResourceLocation id) {
+            var manager = level.getStructureManager();
+            try {
+                if (path != null) return manager.readStructure(SettlementTemplateLibrary.read(path));
+                if (pack != null) return manager.readStructure(SettlementTemplateLibrary.read(pack.template()));
+                return manager.get(id).orElseThrow(() -> new IllegalArgumentException("template not found: " + id));
+            } catch (IOException error) {
+                throw new IllegalArgumentException("template could not be read: " + id, error);
+            }
+        }
+    }
+
+    static TemplateSource resolve(ServerLevel level, ResourceLocation id) {
+        var instance = SettlementTemplateLibrary.path(id);
+        if (Files.isRegularFile(instance)) return new TemplateSource("instance", instance, null);
+        var manager = level.getStructureManager();
+        var world = manager.getPathToGeneratedStructure(id, ".nbt");
+        if (Files.isRegularFile(world)) return new TemplateSource("world", world, null);
+        var pack = SettlementBuildingCatalog.entries(level.getServer()).get(id);
+        if (pack != null) return new TemplateSource("building_pack", null, pack);
+        return manager.get(id).isPresent() ? new TemplateSource("pack", null, null) : null;
+    }
+
     static ListTag list(ServerLevel level) {
         var manager = level.getStructureManager();
         var result = new ListTag();
@@ -199,19 +227,9 @@ final class SettlementTemplateFiles {
         if (!player.canUseGameMasterBlocks()) throw new IllegalArgumentException("creative operator required");
         var level = player.serverLevel();
         var manager = level.getStructureManager();
-        var path = SettlementTemplateLibrary.path(id);
-        var pack = SettlementBuildingCatalog.entries(level.getServer()).get(id);
-        boolean instanceFile = Files.isRegularFile(path);
-        boolean worldFile = Files.isRegularFile(manager.getPathToGeneratedStructure(id, ".nbt"));
-        boolean fromPack = !instanceFile && !worldFile && pack != null;
-        StructureTemplate original;
-        try {
-            if (instanceFile) original = manager.readStructure(SettlementTemplateLibrary.read(path));
-            else if (fromPack) original = manager.readStructure(SettlementTemplateLibrary.read(pack.template()));
-            else original = manager.get(id).orElseThrow(() -> new IllegalArgumentException("template not found: " + id));
-        } catch (IOException error) {
-            throw new IllegalArgumentException("instance template could not be read: " + id, error);
-        }
+        var source = resolve(level, id);
+        if (source == null) throw new IllegalArgumentException("template not found: " + id);
+        var original = source.read(level, id);
         var size = new TemplateTransform.Cell(original.getSize().getX(),
                 original.getSize().getY(), original.getSize().getZ());
         checkSize(size);
@@ -228,7 +246,7 @@ final class SettlementTemplateFiles {
             data.put("palette", palettes.getList(0).copy());
             data.remove("palettes");
         }
-        boolean authorCarrier = sanitize(data, size, rotation, mirror, instanceFile || fromPack) != null;
+        boolean authorCarrier = sanitize(data, size, rotation, mirror, source.authorRequired()) != null;
         if (entities) validateEntityPositions(data, size, origin, settings, bounds);
         SettlementHumanTemplates.prepareFile(data, null, null);
         boolean large = volume(size) > LARGE_TEMPLATE_THRESHOLD;
