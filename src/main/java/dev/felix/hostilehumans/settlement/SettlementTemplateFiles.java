@@ -85,6 +85,10 @@ final class SettlementTemplateFiles {
     }
 
     static TemplateSource resolve(ServerLevel level, ResourceLocation id) {
+        return resolve(level, id, false);
+    }
+
+    private static TemplateSource resolve(ServerLevel level, ResourceLocation id, boolean listedByManager) {
         var instance = SettlementTemplateLibrary.path(id);
         if (Files.isRegularFile(instance)) return new TemplateSource("instance", instance, null);
         var manager = level.getStructureManager();
@@ -92,7 +96,7 @@ final class SettlementTemplateFiles {
         if (Files.isRegularFile(world)) return new TemplateSource("world", world, null);
         var pack = SettlementBuildingCatalog.entries(level.getServer()).get(id);
         if (pack != null) return new TemplateSource("building_pack", null, pack);
-        return manager.get(id).isPresent() ? new TemplateSource("pack", null, null) : null;
+        return listedByManager || manager.get(id).isPresent() ? new TemplateSource("pack", null, null) : null;
     }
 
     record CatalogPage(ListTag rows, int page, int pages) {}
@@ -100,25 +104,34 @@ final class SettlementTemplateFiles {
     static CatalogPage list(ServerLevel level, String query, int requestedPage) {
         var manager = level.getStructureManager();
         var result = new ListTag();
-        var catalog = new java.util.TreeMap<ResourceLocation, String>();
-        var installed = SettlementBuildingCatalog.entries(level.getServer());
-        for (var id : installed.keySet()) catalog.put(id, "building_pack");
+        var candidates = new java.util.TreeSet<ResourceLocation>();
+        var listed = new java.util.HashSet<ResourceLocation>();
+        candidates.addAll(SettlementBuildingCatalog.entries(level.getServer()).keySet());
         try (var templates = manager.listTemplates()) {
-            templates.distinct().filter(id -> id.toString().length() <= 256).forEach(id -> {
-                if (id.getNamespace().equals("hostile_humans_unified") && id.getPath().startsWith("building_pack/")) return;
-                boolean world = Files.isRegularFile(manager.getPathToGeneratedStructure(id, ".nbt"));
-                if (world || id.getNamespace().equals("hostile_humans_unified"))
-                    if (world) catalog.put(id, "world");
-                    else catalog.putIfAbsent(id, "pack");
-            });
+            templates.filter(id -> id.toString().length() <= 256)
+                    .filter(id -> !id.getNamespace().equals("hostile_humans_unified")
+                            || !id.getPath().startsWith("building_pack/"))
+                    .forEach(listed::add);
         }
+        candidates.addAll(listed);
         try {
-            for (var id : SettlementTemplateLibrary.list()) catalog.put(id, "instance");
+            candidates.addAll(SettlementTemplateLibrary.list());
         } catch (IOException error) {
             dev.felix.hostilehumans.bootstrap.HumanRuntime.LOGGER.warn("Could not read the settlement template library", error);
         }
+        var catalog = new java.util.LinkedHashMap<ResourceLocation, String>();
+        for (var id : candidates) {
+            if (!id.toString().contains(query)) continue;
+            try {
+                var source = resolve(level, id, listed.contains(id));
+                if (source != null && (!source.name().equals("pack")
+                        || id.getNamespace().equals("hostile_humans_unified")))
+                    catalog.put(id, source.name());
+            } catch (IllegalArgumentException invalid) {
+                // Invalid names and symlinked author files cannot be offered by the catalog.
+            }
+        }
         var matches = catalog.entrySet().stream()
-                .filter(entry -> entry.getKey().toString().contains(query))
                 .sorted(java.util.Comparator.comparingInt(entry -> switch (entry.getValue()) {
                     case "instance" -> 0;
                     case "world" -> 1;
