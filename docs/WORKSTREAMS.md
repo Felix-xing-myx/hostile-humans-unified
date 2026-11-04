@@ -4392,3 +4392,4 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 基线 4c7dba7ee58399b550416c0abf2864ee18591a4a，主控工作树 worktrees/settlement-service-panels，分支 feature/settlement-service-panels。
 - 主控负责 settlement、cultivation、economy 和阵营界面资源的接入。已接入创造模式设施声望豁免、钱包阵营主题余额分区。控制台地图、训练选兵和突破节点、阵营资源入口仍在实施范围内。
 - 本阶段静态回归 522 项通过、16 项跳过。Java 编译与游戏验收尚未执行。
+- 控制台地图使用既有据点会话，仅向访问者发送已登记模块的三维白框内实体和世界坐标区域。作者编辑器继续使用独立管理页。

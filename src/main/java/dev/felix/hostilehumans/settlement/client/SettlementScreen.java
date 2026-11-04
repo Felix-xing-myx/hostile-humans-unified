@@ -113,6 +113,7 @@ public final class SettlementScreen extends PanelScreen {
         Submission request = pending.request();
         boolean ack = pending.acknowledge(value.acknowledgedRequest());
         snapshot = value;
+        if (!value.author()) return;
         if (ack && request != null) {
             boolean explicitReload =
                     request.action() == SettlementNetwork.Action.EXPORT_AUTHOR
@@ -582,6 +583,7 @@ public final class SettlementScreen extends PanelScreen {
     @Override
     protected UiLayout.Node buildContent() {
         controls.clear();
+        if (!snapshot.author()) return UiLayout.column(0, List.of());
         List<UiLayout.Node> root = new ArrayList<>();
         root.add(muted(text("revisions", snapshot.authorRevision(), snapshot.instanceRevision())));
         if (!snapshot.reason().equals(SettlementNetwork.AUTHOR_FILE_TAB)) root.add(muted(snapshot.reason().equals("settlement selection tool required")
@@ -606,7 +608,7 @@ public final class SettlementScreen extends PanelScreen {
                         case "management" -> management();
                         default -> identity();
                     });
-        } else root.add(management());
+        }
         return UiLayout.column(6, root);
     }
 
@@ -1400,6 +1402,7 @@ public final class SettlementScreen extends PanelScreen {
     @Override
     protected void buildFooter() {
         footer(Component.translatable("gui.done"), b -> onClose());
+        if (!snapshot.author()) return;
         if (snapshot.author())
             footer(
                                     text("save_author"),
@@ -1431,9 +1434,16 @@ public final class SettlementScreen extends PanelScreen {
     }
 
     @Override
+    public void render(net.minecraft.client.gui.GuiGraphics graphics, int mouseX, int mouseY, float partial) {
+        super.render(graphics, mouseX, mouseY, partial);
+        if (!snapshot.author())
+            SettlementMap.render(graphics, font, bodyRect, snapshot.data(), mouseX, mouseY);
+    }
+
+    @Override
     public void tick() {
         super.tick();
-        if (++keepAliveTicks >= 300) {
+        if (++keepAliveTicks >= (snapshot.author() ? 300 : 20)) {
             keepAliveTicks = 0;
             SettlementNetwork.request(snapshot, SettlementNetwork.Action.KEEP_ALIVE, new CompoundTag());
         }

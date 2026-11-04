@@ -1118,6 +1118,7 @@
         "SettlementInformationBlockEntity",
         "SettlementInstance",
         "SettlementLimits",
+        "SettlementMapSnapshot",
         "SettlementModule",
         "SettlementNetwork",
         "SettlementPackStructure",
@@ -1146,6 +1147,7 @@
       "classes": [
         "SettlementFacilityHelp",
         "SettlementGhostRenderer",
+        "SettlementMap",
         "SettlementPreviewClient",
         "SettlementScreen",
         "SettlementSelectorScreen",

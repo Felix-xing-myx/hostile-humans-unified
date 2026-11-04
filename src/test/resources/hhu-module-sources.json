@@ -2755,6 +2755,14 @@
     "class": "dev.felix.hostilehumans.settlement.SettlementLimits",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementLimits.java"
   },
+  "SettlementMap": {
+    "class": "dev.felix.hostilehumans.settlement.client.SettlementMap",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/client/SettlementMap.java"
+  },
+  "SettlementMapSnapshot": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementMapSnapshot",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementMapSnapshot.java"
+  },
   "SettlementModule": {
     "class": "dev.felix.hostilehumans.settlement.SettlementModule",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementModule.java"

@@ -388,7 +388,7 @@ public final class SettlementNetwork {
         SESSIONS.put(player, session);
         MODULE_PAGES.remove(player);
         REQUEST_IDS.remove(player);
-        send(player, session, "read-only management");
+        send(player, session, "");
     }
 
     private static boolean near(ServerPlayer p, BlockPos at) {
@@ -509,7 +509,8 @@ public final class SettlementNetwork {
                 session.author() ? SettlementAuthoring.information(player, session.anchor()) : null;
         UUID id = info == null ? session.instance() : info.instance();
         var instance = id == null ? null : SettlementIndex.get(player.serverLevel()).find(id);
-        var data = instance == null ? new CompoundTag() : view(player, instance);
+        var data = instance == null ? new CompoundTag()
+                : session.author() ? view(player, instance) : SettlementMapSnapshot.capture(player, instance);
         if (info != null) {
             data.put("author", info.author());
             var groups = new ListTag();
@@ -602,6 +603,8 @@ public final class SettlementNetwork {
                         long now = player.level().getGameTime();
                         if (session.expires() - now <= SESSION_TICKS * 3 / 4)
                             SESSIONS.put(player, renew(session, now));
+                        if (!session.author() && throttle(player))
+                            send(player, SESSIONS.get(player), "");
                         return;
                     }
                     if (!throttle(player)) {

@@ -1227,5 +1227,13 @@
   "gui.hostile_humans_unified.settlement.selector_show.facilities": "Facilities: %s",
   "item.hostile_humans_unified.settlement_selection_tool.name_first": "Name the building in the information block editor first.",
   "item.hostile_humans_unified.settlement_selection_tool.region_first": "Choose an existing region in the selector.",
-  "item.hostile_humans_unified.settlement_region_tool": "Building Region Selector"
+  "item.hostile_humans_unified.settlement_region_tool": "Building Region Selector",
+  "gui.hostile_humans_unified.settlement.map.capture": "Building",
+  "gui.hostile_humans_unified.settlement.map.outer": "Outer",
+  "gui.hostile_humans_unified.settlement.map.inner": "Inner",
+  "gui.hostile_humans_unified.settlement.map.excluded": "Excluded",
+  "gui.hostile_humans_unified.settlement.map.friendly": "Same faction",
+  "gui.hostile_humans_unified.settlement.map.other": "Other",
+  "gui.hostile_humans_unified.settlement.map.self": "You",
+  "gui.hostile_humans_unified.settlement.map.limited": "Crowded: markers limited to 512"
 }

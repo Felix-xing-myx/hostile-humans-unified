@@ -56,8 +56,8 @@
 | `perception` | 视觉、声音、识别与目标记忆 | 42 |
 | `performance` | 共享配额与活动分档 | 8 |
 | `progression` | 成长、专精、经验与属性 | 27 |
-| `settlement` | 据点区域几何、模板变换与维度实例索引 | 39 |
-| `settlement/client` | 据点结构作者表单、管理与岗位指派 | 7 |
+| `settlement` | 据点区域几何、模板变换与维度实例索引 | 40 |
+| `settlement/client` | 据点结构作者表单、管理与岗位指派 | 8 |
 | `soldier` | 雇佣、小队、命令、召回和对白 | 58 |
 | `world` | 自然出生和生成实体 | 3 |
 
@@ -290,11 +290,11 @@
 
 ### settlement
 
-`RegionBox`、`SettlementAccess`、`SettlementAuthoring`、`SettlementBuildingCatalog`、`SettlementBuildingPack`、`SettlementCodec`、`SettlementCommands`、`SettlementContent`、`SettlementControlBlock`、`SettlementFacility`、`SettlementFacilityBindingTool`、`SettlementGeneration`、`SettlementGenerationRules`、`SettlementHumanTemplates`、`SettlementIndex`、`SettlementInformationBlock`、`SettlementInformationBlockEntity`、`SettlementInstance`、`SettlementLimits`、`SettlementModule`、`SettlementNetwork`、`SettlementPackStructure`、`SettlementPages`、`SettlementPlacementIdentity`、`SettlementPlacementTool`、`SettlementPosts`、`SettlementPreview`、`SettlementRegion`、`SettlementSelectionTool`、`SettlementTemplate`、`SettlementTemplateCapture`、`SettlementTemplateFiles`、`SettlementTemplateLibrary`、`SettlementTemplatePlacement`、`SettlementTemplateTransfer`、`SettlementWandPlacement`、`SettlementWorldgenPack`、`SettlementWorldgenResources`、`TemplateTransform`
+`RegionBox`、`SettlementAccess`、`SettlementAuthoring`、`SettlementBuildingCatalog`、`SettlementBuildingPack`、`SettlementCodec`、`SettlementCommands`、`SettlementContent`、`SettlementControlBlock`、`SettlementFacility`、`SettlementFacilityBindingTool`、`SettlementGeneration`、`SettlementGenerationRules`、`SettlementHumanTemplates`、`SettlementIndex`、`SettlementInformationBlock`、`SettlementInformationBlockEntity`、`SettlementInstance`、`SettlementLimits`、`SettlementMapSnapshot`、`SettlementModule`、`SettlementNetwork`、`SettlementPackStructure`、`SettlementPages`、`SettlementPlacementIdentity`、`SettlementPlacementTool`、`SettlementPosts`、`SettlementPreview`、`SettlementRegion`、`SettlementSelectionTool`、`SettlementTemplate`、`SettlementTemplateCapture`、`SettlementTemplateFiles`、`SettlementTemplateLibrary`、`SettlementTemplatePlacement`、`SettlementTemplateTransfer`、`SettlementWandPlacement`、`SettlementWorldgenPack`、`SettlementWorldgenResources`、`TemplateTransform`
 
 ### settlement.client
 
-`SettlementFacilityHelp`、`SettlementGhostRenderer`、`SettlementPreviewClient`、`SettlementScreen`、`SettlementSelectorScreen`、`SettlementTemplateDownloadClient`、`SettlementWandScreen`
+`SettlementFacilityHelp`、`SettlementGhostRenderer`、`SettlementMap`、`SettlementPreviewClient`、`SettlementScreen`、`SettlementSelectorScreen`、`SettlementTemplateDownloadClient`、`SettlementWandScreen`
 
 ### soldier
 

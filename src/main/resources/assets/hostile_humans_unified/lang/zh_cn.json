@@ -1227,5 +1227,13 @@
   "gui.hostile_humans_unified.settlement.selector_show.facilities": "设施锚点：%s",
   "item.hostile_humans_unified.settlement_selection_tool.name_first": "请先在信息方块编辑器命名建筑。",
   "item.hostile_humans_unified.settlement_selection_tool.region_first": "请在框选器中选择一个已有区域。",
-  "item.hostile_humans_unified.settlement_region_tool": "建筑框选器"
+  "item.hostile_humans_unified.settlement_region_tool": "建筑框选器",
+  "gui.hostile_humans_unified.settlement.map.capture": "建筑白框",
+  "gui.hostile_humans_unified.settlement.map.outer": "外圈",
+  "gui.hostile_humans_unified.settlement.map.inner": "内圈",
+  "gui.hostile_humans_unified.settlement.map.excluded": "扣除区",
+  "gui.hostile_humans_unified.settlement.map.friendly": "同阵营",
+  "gui.hostile_humans_unified.settlement.map.other": "其他实体",
+  "gui.hostile_humans_unified.settlement.map.self": "自己",
+  "gui.hostile_humans_unified.settlement.map.limited": "实体较多，最多显示 512 个标记"
 }
