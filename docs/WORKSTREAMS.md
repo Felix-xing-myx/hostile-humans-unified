@@ -1,3 +1,7 @@
+## Building pack data publication
+
+A required server-data repository source publishes the compiled structure registry resources. Reopening the world loads configuration changes. Removing an ID from the enable list removes its selection entry while keeping the structure and template available to existing starts. The live world and dedicated-server path still need validation.
+
 ## Native building-pack structure and site checks
 
 The custom type constructs a persisted vanilla template piece and uses the installed biome registry for candidate scheduling. A scoped adapter supplies the actual dimension for site checks and bypasses the legacy fixed-height gate only for this type. Generated data still needs to be exposed by a server data-pack source.

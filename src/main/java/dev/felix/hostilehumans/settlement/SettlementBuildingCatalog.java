@@ -33,15 +33,22 @@ public final class SettlementBuildingCatalog {
     private record Snapshot(MinecraftServer owner, Map<ResourceLocation, SettlementBuildingPack.Contents> entries,
             Set<ResourceLocation> enabled) {}
 
+    record Catalog(Map<ResourceLocation, SettlementBuildingPack.Contents> entries, Set<ResourceLocation> enabled) {}
+
     private SettlementBuildingCatalog() {}
 
     @SubscribeEvent
     public static void starting(ServerAboutToStartEvent event) {
+        var catalog = load();
+        snapshot = new Snapshot(event.getServer(), catalog.entries(), catalog.enabled());
+    }
+
+    static Catalog load() {
         var loader = new Loader();
         loader.readBundled();
         Path directory = SettlementBuildingPack.installedDirectory();
         loader.readExternal(directory);
-        snapshot = new Snapshot(event.getServer(), Map.copyOf(loader.entries), loader.enabled(directory));
+        return new Catalog(Map.copyOf(loader.entries), loader.enabled(directory));
     }
 
     @SubscribeEvent
@@ -143,6 +150,13 @@ public final class SettlementBuildingCatalog {
                     var pack = id == null ? null : entries.get(id);
                     if (pack == null || !pack.generation().rules().enabled()) {
                         HumanRuntime.LOGGER.warn("Building pack generation is unavailable for {}", name);
+                        continue;
+                    }
+                    var author = pack.author();
+                    if (author.kind() == SettlementTemplate.Kind.ATTACHMENT
+                            || author.size().x() > SettlementWorldgenResources.MAX_HORIZONTAL_SIDE
+                            || author.size().z() > SettlementWorldgenResources.MAX_HORIZONTAL_SIDE) {
+                        HumanRuntime.LOGGER.warn("Building pack {} can only be placed manually", id);
                         continue;
                     }
                     String group = pack.generation().rules().group();

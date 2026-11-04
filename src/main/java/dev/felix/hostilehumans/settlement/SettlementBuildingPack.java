@@ -57,7 +57,7 @@ final class SettlementBuildingPack {
         }
     }
 
-    record Contents(Manifest manifest, Generation generation, byte[] template, Map<ResourceLocation, JsonObject> loot) {}
+    record Contents(Manifest manifest, Generation generation, byte[] template, Map<ResourceLocation, JsonObject> loot, SettlementTemplate author) {}
 
     private SettlementBuildingPack() {}
 
@@ -145,7 +145,7 @@ final class SettlementBuildingPack {
         var author = SettlementTemplateFiles.validatePackedTemplate(SettlementTemplateLibrary.read(template));
         if (!author.template().equals(manifest.template()))
             throw new IOException("building pack template ID mismatch");
-        return new Contents(manifest, generation, template, Map.copyOf(loot));
+        return new Contents(manifest, generation, template, Map.copyOf(loot), author);
     }
 
     private static ResourceLocation lootId(String name) throws IOException {

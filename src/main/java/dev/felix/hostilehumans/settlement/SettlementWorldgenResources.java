@@ -26,15 +26,23 @@ final class SettlementWorldgenResources {
         var files = new TreeMap<String, byte[]>();
         var groups = new TreeMap<String, GroupKey>();
         var lootIds = new HashSet<ResourceLocation>();
-        for (var id : new java.util.TreeSet<>(approved)) {
+        for (var id : new java.util.TreeSet<>(catalog.keySet())) {
             var pack = catalog.get(id);
-            if (pack == null || !pack.generation().rules().enabled()) continue;
             var generation = pack.generation();
-            var author = validateExtent(pack);
-            if (author.kind() == SettlementTemplate.Kind.ATTACHMENT)
-                throw new IllegalArgumentException("standalone world generation requires a root or ordinary building: " + id);
+            var author = pack.author();
+            if (author.kind() == SettlementTemplate.Kind.ATTACHMENT
+                    || author.size().x() > MAX_HORIZONTAL_SIDE || author.size().z() > MAX_HORIZONTAL_SIDE) {
+                if (approved.contains(id)) HumanRuntime.LOGGER.warn("Building pack {} can only be placed manually", id);
+                continue;
+            }
             String path = "building_pack/" + id.getNamespace() + "/" + id.getPath();
             String generatedId = NAMESPACE + ":" + path;
+            // Keep the structure and template registrable after disabling new starts.
+            files.put(resource(NAMESPACE, "structures", path, ".nbt"), pack.template());
+            putJson(files, resource(NAMESPACE, "worldgen/structure", path, ".json"),
+                    structure(generatedId, generation.rules()));
+            addLoot(files, lootIds, pack.loot());
+            if (!approved.contains(id) || !generation.rules().enabled()) continue;
             var group = groups.computeIfAbsent(generation.rules().group(), key ->
                     new GroupKey(key, generation.group(), new JsonArray()));
             if (!group.placement().equals(generation.group()))
@@ -44,10 +52,6 @@ final class SettlementWorldgenResources {
             entry.addProperty("structure", generatedId);
             entry.addProperty("weight", generation.rules().weight());
             group.entries().add(entry);
-            files.put(resource(NAMESPACE, "structures", path, ".nbt"), pack.template().clone());
-            putJson(files, resource(NAMESPACE, "worldgen/structure", path, ".json"),
-                    structure(generatedId, generation.rules()));
-            addLoot(files, lootIds, pack.loot());
         }
         for (var group : groups.values()) {
             var id = new ResourceLocation(group.id());
@@ -63,21 +67,6 @@ final class SettlementWorldgenResources {
                     "building_pack/" + id.getNamespace() + "/" + id.getPath(), ".json"), set);
         }
         return Map.copyOf(files);
-    }
-
-    private static SettlementTemplate validateExtent(SettlementBuildingPack.Contents pack) {
-        try {
-            var author = SettlementTemplateFiles.validatePackedTemplate(SettlementTemplateLibrary.read(pack.template()));
-            var size = author.size();
-            // Vanilla creates references only within eight chunks of the start. Allow one
-            // extra chunk of rounding for an origin that is not on a chunk boundary.
-            int maxSide = MAX_HORIZONTAL_SIDE;
-            if (size.x() > maxSide || size.z() > maxSide)
-                throw new IllegalArgumentException("world generation footprint exceeds " + maxSide + " blocks per horizontal axis");
-            return author;
-        } catch (java.io.IOException invalid) {
-            throw new IllegalArgumentException("unreadable world generation template", invalid);
-        }
     }
 
     private static JsonObject structure(String id, SettlementGenerationRules rules) {
@@ -98,7 +87,10 @@ final class SettlementWorldgenResources {
             Map<ResourceLocation, JsonObject> loot) {
         for (var entry : loot.entrySet()) {
             var id = entry.getKey();
-            if (!ids.add(id)) throw new IllegalArgumentException("duplicate building pack loot table " + id);
+            if (!ids.add(id)) {
+                HumanRuntime.LOGGER.warn("Ignoring duplicate building pack loot table {}", id);
+                continue;
+            }
             putJson(files, resource(id.getNamespace(), "loot_tables", id.getPath(), ".json"), entry.getValue());
         }
     }

@@ -64,6 +64,7 @@ final class SettlementTemplateFiles {
         for (var id : installed.keySet()) catalog.put(id, "building_pack");
         try (var templates = manager.listTemplates()) {
             templates.distinct().filter(id -> id.toString().length() <= 256).forEach(id -> {
+                if (id.getNamespace().equals("hostile_humans_unified") && id.getPath().startsWith("building_pack/")) return;
                 boolean world = Files.isRegularFile(manager.getPathToGeneratedStructure(id, ".nbt"));
                 if (world || id.getNamespace().equals("hostile_humans_unified"))
                     if (world) catalog.put(id, "world");
