@@ -9,6 +9,7 @@
     "HumanMonitorSoundBroadcastMixin",
     "TaczMonitorSoundBroadcastMixin",
     "VanillaPotionStackSizeMixin",
+    "DroppedItemMergeQueryMixin",
     "ItemStackWildArmorWearMixin",
     "HumanGoalSelectorExecutionMixin",
     "HumanWrappedGoalExecutionMixin",
@@ -57,7 +58,7 @@
     "SettlementTemplatePlacementMixin"
   ],
   "client": [
-    "DroppedItemRenderAmountMixin",
+    "DroppedItemDistanceMixin",
     "MonitorPredictionEntityAccess",
     "MonitorPredictionConstructionMixin",
     "HumanMonitorInputMixin",

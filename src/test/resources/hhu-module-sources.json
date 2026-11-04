@@ -511,9 +511,13 @@
     "class": "dev.felix.hostilehumans.mixin.DoorMixin",
     "path": "src/main/java/dev/felix/hostilehumans/mixin/DoorMixin.java"
   },
-  "DroppedItemRenderAmountMixin": {
-    "class": "dev.felix.hostilehumans.mixin.DroppedItemRenderAmountMixin",
-    "path": "src/main/java/dev/felix/hostilehumans/mixin/DroppedItemRenderAmountMixin.java"
+  "DroppedItemDistanceMixin": {
+    "class": "dev.felix.hostilehumans.mixin.DroppedItemDistanceMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/DroppedItemDistanceMixin.java"
+  },
+  "DroppedItemMergeQueryMixin": {
+    "class": "dev.felix.hostilehumans.mixin.DroppedItemMergeQueryMixin",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/DroppedItemMergeQueryMixin.java"
   },
   "DroppedItemRenderDetail": {
     "class": "dev.felix.hostilehumans.client.render.DroppedItemRenderDetail",

@@ -10,6 +10,7 @@ import dev.felix.hostilehumans.soldier.HostileBeaconFoodPolicy;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -61,6 +63,7 @@ public final class HumanEquipmentDrops {
         }
         List<ItemStack> owned = snapshot.stacks();
 
+        Map<Item, List<ItemStack>> packed = new LinkedHashMap<>();
         for (ItemStack stack : owned) {
             double chance = dropChance(stack, gunDropChance);
             int kept = snapshot.hired() ? stack.getCount() : 0;
@@ -74,13 +77,16 @@ public final class HumanEquipmentDrops {
             if (kept <= 0) {
                 continue;
             }
-            ItemStack result = stack.copy();
-            result.setCount(kept);
-            ItemEntity drop = new ItemEntity(
-                    human.level(), human.getX(), human.getY() + 0.35D, human.getZ(), result
-            );
-            drop.setDefaultPickUpDelay();
-            drops.add(drop);
+            pack(packed.computeIfAbsent(stack.getItem(), ignored -> new ArrayList<>()), stack.copyWithCount(kept));
+        }
+        for (List<ItemStack> group : packed.values()) {
+            for (ItemStack stack : group) {
+                ItemEntity drop = new ItemEntity(
+                        human.level(), human.getX(), human.getY() + 0.35D, human.getZ(), stack
+                );
+                drop.setDefaultPickUpDelay();
+                drops.add(drop);
+            }
         }
 
         // Apply the beacon rule once to the complete final event collection,
@@ -89,6 +95,23 @@ public final class HumanEquipmentDrops {
         if (snapshot.hostileBeacon() && !snapshot.hired()) {
             filterHostileBeaconDrops(human, drops);
         }
+    }
+
+    private static void pack(List<ItemStack> group, ItemStack remaining) {
+        int capacity = Math.max(1, Math.min(64, remaining.getMaxStackSize()));
+        if (capacity == 1 && remaining.getCount() == 1) {
+            group.add(remaining);
+            return;
+        }
+        for (ItemStack stack : group) {
+            int transferred = Math.min(remaining.getCount(),
+                    Math.min(stack.getMaxStackSize(), capacity) - stack.getCount());
+            if (transferred <= 0 || !ItemEntity.areMergable(remaining.copyWithCount(transferred), stack)) continue;
+            stack.grow(transferred);
+            remaining.shrink(transferred);
+            if (remaining.isEmpty()) return;
+        }
+        while (!remaining.isEmpty()) group.add(remaining.split(Math.min(remaining.getCount(), capacity)));
     }
 
     private static List<ItemStack> collectOwned(Human human) {

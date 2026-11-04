@@ -4239,3 +4239,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控，基线 d4a3df6f95065bb27e8b750032ea8fcf2e902642；沿用 module-architecture 工作树。范围为客户端掉落渲染、绑带绘制和拾取查询；共享渲染文件由主控接入。
 - 掉落物保留原模型，仅压缩同一堆叠的重复绘制。绑带在远距档继续渲染。主动与脚边拾取限制候选量，脚边复用查询预算。
 - Python 静态检查 532 项，跳过 16 项；已对照本地 Forge 映射核查渲染方法与查询重载，未运行 Gradle 或进游戏。
+
+## 独立掉落物的渲染和服务端合并
+- 主控，基线 aa39f28e45ac606817a34ea591463abb0c7f1299；module-architecture 工作树。以独立掉落实体密度缩减远处绘制，撤回堆叠副本缩减。原版合并查询按物品类型预筛，人类自有掉落按原版兼容条件在生成前整理。
