@@ -70,8 +70,17 @@ public final class RecruitmentCombatTest {
         check(roster.enterPeaceful() && roster.count(owner, 1) == 3,
                 "Peaceful retains hired soldiers and their slots");
         check(roster.move(c, owner, 1, -1), "hired soldiers can still be reordered in Peaceful");
+        check(roster.wildCleanupGeneration() == 0, "Peaceful does not invalidate unloaded wild humans");
+        roster.beginWildCleanup();
+        check(roster.wildCleanupGeneration() == 1 && roster.count(owner, 1) == 3,
+                "explicit cleanup advances the marker and preserves the hired roster");
         CompoundTag rosterNbt = roster.save(new CompoundTag());
         RecruitmentLedger restored = RecruitmentLedger.load(rosterNbt);
+        check(restored.wildCleanupGeneration() == 1, "explicit cleanup marker survives reload");
+        var oldPeacefulNbt = new CompoundTag();
+        oldPeacefulNbt.putLong("peaceful_generation", 8);
+        check(RecruitmentLedger.load(oldPeacefulNbt).wildCleanupGeneration() == 0,
+                "legacy Peaceful transitions must not become explicit cleanup requests");
         check(restored.count(owner, 1) == 3
                         && restored.soldiers(owner).get(2).id().equals(c)
                         && restored.soldiers(owner).get(1).id().equals(higherTier),

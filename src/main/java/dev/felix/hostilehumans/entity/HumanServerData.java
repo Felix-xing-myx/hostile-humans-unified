@@ -21,7 +21,6 @@ import net.minecraftforge.server.ServerLifecycleHooks;
 public final class HumanServerData extends SavedData implements HumanServerDataCleanup {
     public static final String HUMAN_MOBS_TAG = "HumanMobs";
     private final Map<UUID, HumanData> humans = new LinkedHashMap<>();
-    private final Set<UUID> wildHumans = new LinkedHashSet<>();
     private final ListTag unreadableRecords = new ListTag();
     private final dev.felix.hostilehumans.soldier.OwnerIndex ownership = new dev.felix.hostilehumans.soldier.OwnerIndex();
 
@@ -57,8 +56,6 @@ public final class HumanServerData extends SavedData implements HumanServerDataC
         UUID id = Objects.requireNonNull(human.getUUID());
         humans.put(id, human);
         ownership.assign(id, human.getOwnerUUID());
-        if (human.hasOwner()) wildHumans.remove(id);
-        else wildHumans.add(id);
     }
     public HumanData getHumanMob(UUID id) { return id == null ? null : humans.get(id); }
     public Entity getHumanMobEntity(UUID id, ServerLevel level) {
@@ -113,19 +110,10 @@ public final class HumanServerData extends SavedData implements HumanServerDataC
     public void syncHumanData(HumanData human) { HumansServerDataClientSync.syncHumanData(human); }
     @Override public boolean hhu$removeHuman(UUID id) {
         if (id == null || humans.remove(id) == null) return false;
-        wildHumans.remove(id);
         UUID owner = ownership.assign(id, null);
         setDirty();
         if (owner != null) syncHumanData(owner);
         return true;
-    }
-    /** Peaceful removes wild Humans without losing hired soldiers' saved locations. */
-    public void clearWildHumans() {
-        for (UUID id : new ArrayList<>(wildHumans)) {
-            HumanData human = humans.get(id);
-            if (human != null && !human.hasOwner()) hhu$removeHuman(id);
-            else wildHumans.remove(id);
-        }
     }
     @Override public CompoundTag save(CompoundTag tag) {
         ListTag list = new ListTag();

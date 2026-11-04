@@ -28,6 +28,7 @@ public final class MonitorCombatSession implements dev.felix.hostilehumans.behav
     private LivingEntity selectedTarget;
     private ActionCoordinator.Token airAction;
     private boolean airBetterCombat;
+    private boolean peaceful;
     public MonitorCombatSession(Human human) { this.human = human; arrows = new MonitorArrowActions(human); loadout = new MonitorLoadout(human); }
     public MonitorLoadout loadout() { return loadout; }
 
@@ -55,6 +56,12 @@ public final class MonitorCombatSession implements dev.felix.hostilehumans.behav
     }
     public void tick(boolean enabled, boolean attack, boolean use, boolean reload, boolean supply) {
         if (!enabled) { suspend(); return; }
+        if (human.level().getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL) {
+            if (!peaceful) suspend();
+            peaceful = true;
+            return;
+        }
+        peaceful = false;
         var held = human.getMainHandItem();
         if (held != weapon) {
             suspend(); weapon = held;

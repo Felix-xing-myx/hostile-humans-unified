@@ -20,7 +20,7 @@ public final class RecruitmentLedger extends SavedData {
     private final Map<UUID, RosterView> orderedByOwner = new HashMap<>();
     private final Map<UUID, UUID> pendingDismissals = new HashMap<>();
     private long nextSortOrder;
-    private long peacefulGeneration;
+    private long wildCleanupGeneration;
     private boolean peacefulActive;
 
     public static RecruitmentLedger get(MinecraftServer server) {
@@ -55,7 +55,7 @@ public final class RecruitmentLedger extends SavedData {
                 ledger.pendingDismissals.put(tag.getUUID("human"), tag.getUUID("owner"));
             }
         }
-        ledger.peacefulGeneration = Math.max(0L, root.getLong("peaceful_generation"));
+        ledger.wildCleanupGeneration = Math.max(0L, root.getLong("wild_cleanup_generation"));
         ledger.peacefulActive = root.getBoolean("peaceful_active");
         return ledger;
     }
@@ -181,15 +181,19 @@ public final class RecruitmentLedger extends SavedData {
         if (pendingDismissals.remove(human) != null) setDirty();
     }
 
-    public long peacefulGeneration() {
-        return peacefulGeneration;
+    public long wildCleanupGeneration() {
+        return wildCleanupGeneration;
     }
 
-    /** A Peaceful transition invalidates old wild Humans, not hired records. */
+    public void beginWildCleanup() {
+        wildCleanupGeneration++;
+        setDirty();
+    }
+
+    /** Report whether this is a new Peaceful transition. */
     public boolean enterPeaceful() {
         if (peacefulActive) return false;
         peacefulActive = true;
-        peacefulGeneration++;
         setDirty();
         return true;
     }
@@ -239,7 +243,7 @@ public final class RecruitmentLedger extends SavedData {
             dismissals.add(tag);
         });
         root.put("pending_dismissals", dismissals);
-        root.putLong("peaceful_generation", peacefulGeneration);
+        root.putLong("wild_cleanup_generation", wildCleanupGeneration);
         root.putBoolean("peaceful_active", peacefulActive);
         return root;
     }

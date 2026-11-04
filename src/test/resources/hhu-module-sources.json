@@ -3594,5 +3594,9 @@
   "WildArmorWear": {
     "class": "dev.felix.hostilehumans.inventory.WildArmorWear",
     "path": "src/main/java/dev/felix/hostilehumans/inventory/WildArmorWear.java"
+  },
+  "WildHumanCleanupItem": {
+    "class": "dev.felix.hostilehumans.soldier.WildHumanCleanupItem",
+    "path": "src/main/java/dev/felix/hostilehumans/soldier/WildHumanCleanupItem.java"
   }
 }

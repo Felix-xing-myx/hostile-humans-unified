@@ -55,7 +55,8 @@ public final class NaturalHumanSpawnRules {
         if (!isNaturalAttempt(spawnType)) {
             return Mob.checkMobSpawnRules(type, level, spawnType, pos, random);
         }
-        if (!UnifiedConfig.get().spawn().enabled() || !isTierUnlocked(level, pos, tier(type))) return false;
+        if (level.getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL
+                || !UnifiedConfig.get().spawn().enabled() || !isTierUnlocked(level, pos, tier(type))) return false;
         if (!isUnlitLand(level, pos) || !Mob.checkMobSpawnRules(type, level, spawnType, pos, random)) {
             return false;
         }
@@ -108,7 +109,8 @@ public final class NaturalHumanSpawnRules {
                                                 BlockPos pos, RandomSource random) {
         if (!isNaturalAttempt(spawnType)) return true;
         var config = UnifiedConfig.get().spawn();
-        if (!config.enabled() || !isBattleUnlocked(level, pos)) return false;
+        if (level.getDifficulty() == net.minecraft.world.Difficulty.PEACEFUL
+                || !config.enabled() || !isBattleUnlocked(level, pos)) return false;
         long now = level.getLevel().getGameTime();
         if (clock(level).cooling(now)) return false;
         boolean allowed = random.nextDouble() < config.battleChance()

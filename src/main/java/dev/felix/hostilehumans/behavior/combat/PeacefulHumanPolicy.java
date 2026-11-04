@@ -21,9 +21,9 @@ import net.minecraft.world.entity.Entity;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 
-/** Removes wild Humans in Peaceful while keeping hired soldiers non-combatant. */
+/** Keeps Peaceful non-combatant; only an explicit cleanup removes unowned humans. */
 public final class PeacefulHumanPolicy {
-    private static final String GENERATION = HumanRuntime.MOD_ID + ":peaceful_generation";
+    private static final String GENERATION = HumanRuntime.MOD_ID + ":wild_cleanup_generation";
     private static final Set<Human> ASYNC_NEW_JOINS =
             Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
 
@@ -38,79 +38,71 @@ public final class PeacefulHumanPolicy {
             ledger.leavePeaceful();
             return;
         }
-        if (!ledger.enterPeaceful()) {
-            // Also repair old wild index entries after loading a Peaceful save.
-            if (server.overworld().getGameTime() % 200 == 0) {
-                HumanServerData stale = HumanServerData.get();
-                if (stale != null) stale.clearWildHumans();
-            }
-            return;
-        }
+        if (!ledger.enterPeaceful()) return;
         HiredHumanRecall.cancelAll(server);
-        HumanServerData data = HumanServerData.get();
-        for (ServerLevel level : server.getAllLevels()) {
-            ArrayList<Human> loaded = new ArrayList<>();
-            for (Entity entity : level.getAllEntities()) {
-                if (entity instanceof Human human) loaded.add(human);
-            }
-            for (Human human : loaded) {
-                reconcileLoaded(server, human);
-                if (human.hasOwner()) {
-                    markRetained(human, ledger);
-                    suppressCombat(human);
-                    if (data != null && human.isAlive()) data.updateOrRegisterHumanMob(human);
-                }
-                else purge(server, human);
-            }
-        }
-        if (data != null) data.clearWildHumans();
+        for (ServerLevel level : server.getAllLevels())
+            for (Entity entity : level.getAllEntities())
+                if (entity instanceof Human human) suppressCombat(human);
     }
 
     public static boolean onJoin(EntityJoinLevelEvent event, Human human) {
         if (!(event.getLevel() instanceof ServerLevel level)) return true;
         MinecraftServer server = level.getServer();
         if (!server.isSameThread()) {
-            // World generation may publish a join off-thread. Never access SavedData
-            // there; the first server tick reconciles before this Human's AI runs.
+            // World generation may publish off-thread. Reconcile before this human's first AI tick.
             if (!event.loadedFromDisk()) ASYNC_NEW_JOINS.add(human);
             return true;
         }
-        RecruitmentLedger ledger = RecruitmentLedger.get(server);
-        if (!event.loadedFromDisk()) {
-            human.getPersistentData().putLong(GENERATION, ledger.peacefulGeneration());
-        }
-        reconcileLoaded(server, human);
-        if (!human.hasOwner() && (level.getDifficulty() == Difficulty.PEACEFUL
-                || (event.loadedFromDisk()
-                && human.getPersistentData().getLong(GENERATION) < ledger.peacefulGeneration()))) {
-            purge(server, human);
+        if (reconcilePresence(level, human, !event.loadedFromDisk(), true)) {
             event.setCanceled(true);
             return false;
         }
-        if (human.hasOwner()) markRetained(human, ledger);
-        if (level.getDifficulty() == Difficulty.PEACEFUL) suppressCombat(human);
         return true;
     }
 
     /** Called before AI so a late difficulty change or dismissal cannot attack once. */
     public static boolean beforeHumanTick(Human human) {
         if (!(human.level() instanceof ServerLevel level)) return false;
-        MinecraftServer server = level.getServer();
-        RecruitmentLedger ledger = RecruitmentLedger.get(server);
-        boolean newlyJoinedAsync = ASYNC_NEW_JOINS.remove(human);
-        if (newlyJoinedAsync) {
-            human.getPersistentData().putLong(GENERATION, ledger.peacefulGeneration());
-        }
-        if (ledger.pendingDismissalOwner(human.getUUID()) != null
-                || human.tickCount % 20 == 0) reconcileLoaded(server, human);
-        if (!human.hasOwner() && (level.getDifficulty() == Difficulty.PEACEFUL
-                || human.getPersistentData().getLong(GENERATION) < ledger.peacefulGeneration())) {
+        boolean fresh = ASYNC_NEW_JOINS.remove(human);
+        return reconcilePresence(level, human, fresh, fresh);
+    }
+
+    private static boolean reconcilePresence(ServerLevel level, Human human, boolean fresh, boolean joining) {
+        var server = level.getServer();
+        var ledger = RecruitmentLedger.get(server);
+        long generation = ledger.wildCleanupGeneration();
+        long previous = human.getPersistentData().getLong(GENERATION);
+        // Mark hired humans before processing any pending dismissal. They were protected at cleanup.
+        if (fresh || human.hasOwner()) {
+            if (previous != generation) human.getPersistentData().putLong(GENERATION, generation);
+        } else if (previous < generation) {
             purge(server, human);
             return true;
         }
-        if (human.hasOwner()) markRetained(human, ledger);
+        if (joining || ledger.pendingDismissalOwner(human.getUUID()) != null || human.tickCount % 20 == 0)
+            reconcileLoaded(server, human);
         if (level.getDifficulty() == Difficulty.PEACEFUL) suppressCombat(human);
         return false;
+    }
+
+    public static int clearUnhired(MinecraftServer server) {
+        var ledger = RecruitmentLedger.get(server);
+        ledger.beginWildCleanup();
+        int count = 0;
+        for (ServerLevel level : server.getAllLevels()) {
+            var removals = new ArrayList<Human>();
+            for (Entity entity : level.getAllEntities()) {
+                if (!(entity instanceof Human human) || human.isRemoved()) continue;
+                if (human.hasOwner()) human.getPersistentData().putLong(GENERATION, ledger.wildCleanupGeneration());
+                else removals.add(human);
+            }
+            for (Human human : removals) {
+                if (human.isRemoved() || human.hasOwner()) continue;
+                purge(server, human);
+                count++;
+            }
+        }
+        return count;
     }
 
     public static void reconcileLoaded(MinecraftServer server, Human human) {
@@ -156,12 +148,6 @@ public final class PeacefulHumanPolicy {
         if (human.getTarget() != null || human.getLastHurtByMob() != null
                 || human.getLastHurtMob() != null || human.getPersistentAngerTarget() != null) {
             human.forgetSoldierTarget();
-        }
-    }
-
-    private static void markRetained(Human human, RecruitmentLedger ledger) {
-        if (human.getPersistentData().getLong(GENERATION) < ledger.peacefulGeneration()) {
-            human.getPersistentData().putLong(GENERATION, ledger.peacefulGeneration());
         }
     }
 }

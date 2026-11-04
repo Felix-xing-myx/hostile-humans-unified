@@ -71,6 +71,8 @@ public final class ContentRegistry {
             () -> new dev.felix.hostilehumans.soldier.PatrolCommandBatonItem(new Item.Properties().rarity(Rarity.UNCOMMON)));
     public static final RegistryObject<Item> CREATIVE_SOLDIER_CONTROLLER = ITEMS.register("creative_soldier_controller",
             () -> new dev.felix.hostilehumans.soldier.CreativeSoldierControllerItem(new Item.Properties().rarity(Rarity.EPIC)));
+    public static final RegistryObject<Item> WILD_HUMAN_CLEANUP = ITEMS.register("wild_human_cleanup",
+            () -> new dev.felix.hostilehumans.soldier.WildHumanCleanupItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     public static final RegistryObject<Item> NATURAL_STATE_TOOL = ITEMS.register("natural_state_tool",
             () -> new NaturalStateToolItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
     public static final RegistryObject<Item> ATTRIBUTE_OBSERVER = ITEMS.register("attribute_observer",

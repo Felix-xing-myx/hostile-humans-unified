@@ -58,7 +58,7 @@
 | `progression` | 成长、专精、经验与属性 | 27 |
 | `settlement` | 据点区域几何、模板变换与维度实例索引 | 39 |
 | `settlement/client` | 据点结构作者表单、管理与岗位指派 | 7 |
-| `soldier` | 雇佣、小队、命令、召回和对白 | 57 |
+| `soldier` | 雇佣、小队、命令、召回和对白 | 58 |
 | `world` | 自然出生和生成实体 | 3 |
 
 ## 修改时的联动检查
@@ -298,7 +298,7 @@
 
 ### soldier
 
-`BodyguardMovementGoal`、`BodyguardPolicy`、`BodyguardProtection`、`CommandHealthCodec`、`CommandHealthSnapshot`、`CommandRateLimit`、`CommandView`、`CreativeSoldierControllerItem`、`GarrisonSettings`、`HiredHumanAmmoWarning`、`HiredHumanHealthWarning`、`HiredHumanRecall`、`HostileBeaconFoodPolicy`、`HumanCommandNetwork`、`HumanSignalItem`、`NaturalRoute`、`NaturalState`、`NaturalStateCommand`、`NaturalStateToolItem`、`OfflineSoldierDeathReports`、`OrderConfiguration`、`OrderDistances`、`OwnerIndex`、`OwnerOfflinePolicy`、`PatrolCommandBatonItem`、`PatrolControlService`、`PatrolRouteEditor`、`PatrolRoutePolicy`、`PatrolRoutes`、`PatrolToolNetwork`、`RecruitmentConfigClient`、`RecruitmentConfigNetwork`、`RecruitmentContractItem`、`RecruitmentLedger`、`RecruitmentPayment`、`RecruitmentPolicy`、`RecruitmentTermsCache`、`SignalPolicy`、`SoldierChatBudget`、`SoldierCombatMemory`、`SoldierCombatMode`、`SoldierCommandFeedback`、`SoldierDialogue`、`SoldierMessageDispatcher`、`SoldierOrder`、`SoldierOrderGoal`、`SoldierRecallAnchor`、`SoldierRecallCharmItem`、`SoldierRecallProtection`、`SoldierRosterAudit`、`SoldierRosterItem`、`SoldierRosterNetwork`、`SquadCommandNetwork`、`SquadCommandTokenItem`、`SquadCommands`、`SquadData`、`TemporarySupportFollowGoal`
+`BodyguardMovementGoal`、`BodyguardPolicy`、`BodyguardProtection`、`CommandHealthCodec`、`CommandHealthSnapshot`、`CommandRateLimit`、`CommandView`、`CreativeSoldierControllerItem`、`GarrisonSettings`、`HiredHumanAmmoWarning`、`HiredHumanHealthWarning`、`HiredHumanRecall`、`HostileBeaconFoodPolicy`、`HumanCommandNetwork`、`HumanSignalItem`、`NaturalRoute`、`NaturalState`、`NaturalStateCommand`、`NaturalStateToolItem`、`OfflineSoldierDeathReports`、`OrderConfiguration`、`OrderDistances`、`OwnerIndex`、`OwnerOfflinePolicy`、`PatrolCommandBatonItem`、`PatrolControlService`、`PatrolRouteEditor`、`PatrolRoutePolicy`、`PatrolRoutes`、`PatrolToolNetwork`、`RecruitmentConfigClient`、`RecruitmentConfigNetwork`、`RecruitmentContractItem`、`RecruitmentLedger`、`RecruitmentPayment`、`RecruitmentPolicy`、`RecruitmentTermsCache`、`SignalPolicy`、`SoldierChatBudget`、`SoldierCombatMemory`、`SoldierCombatMode`、`SoldierCommandFeedback`、`SoldierDialogue`、`SoldierMessageDispatcher`、`SoldierOrder`、`SoldierOrderGoal`、`SoldierRecallAnchor`、`SoldierRecallCharmItem`、`SoldierRecallProtection`、`SoldierRosterAudit`、`SoldierRosterItem`、`SoldierRosterNetwork`、`SquadCommandNetwork`、`SquadCommandTokenItem`、`SquadCommands`、`SquadData`、`TemporarySupportFollowGoal`、`WildHumanCleanupItem`
 
 ### world
 

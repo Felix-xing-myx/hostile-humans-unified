@@ -1470,8 +1470,15 @@ PotionRangedAttackMob, StaticCombatGoalHost {
         return this.meleeAttackGoal.hhu$tryImmediateCounterattack(target);
     }
 
+    @Override
     protected boolean shouldDespawnInPeaceful() {
-        return !this.hasOwner();
+        return false;
+    }
+
+    @Override
+    public boolean removeWhenFarAway(double distance) {
+        return level().getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
+                && super.removeWhenFarAway(distance);
     }
 
     @Override

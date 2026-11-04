@@ -1213,7 +1213,8 @@
         "SquadCommandTokenItem",
         "SquadCommands",
         "SquadData",
-        "TemporarySupportFollowGoal"
+        "TemporarySupportFollowGoal",
+        "WildHumanCleanupItem"
       ]
     },
     "world": {
