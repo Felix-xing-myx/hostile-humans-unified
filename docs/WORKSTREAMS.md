@@ -4291,3 +4291,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 设施绑定区域诊断和本地化
 - 主控，基线 7a32ff3，module-architecture 工作树。依据实际方块和模板坐标区分未画区、水平边界、高度、扣除区和重叠，常见草稿与登记原因使用中英资源。
+
+## 设施摆放指引
+- 主控，基线 a5f9f91，module-architecture 工作树。各类设施物品提示放置区域、前置和打开方式；选中无外圈的草稿时绑定棒先提示。

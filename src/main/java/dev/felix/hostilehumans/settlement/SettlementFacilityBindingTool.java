@@ -49,7 +49,9 @@ public final class SettlementFacilityBindingTool extends Item {
         info.setChanged();
         BINDINGS.put(player, new Binding(player.level().dimension(), point.immutable(),
                 info.selectionIdentity(), region, facilityIndex, revision));
-        tell(player, "ready");
+        boolean hasOuter = author.regions().stream().anyMatch(
+                candidate -> candidate.layer() == SettlementRegion.Layer.OUTER && !candidate.includes().isEmpty());
+        tell(player, hasOuter ? "ready" : "prepare_outer");
         return SettlementNetwork.SELECTION_READY;
     }
 
