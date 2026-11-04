@@ -2,6 +2,7 @@ package dev.felix.hostilehumans.settlement.client;
 
 import com.mojang.math.Axis;
 import dev.felix.hostilehumans.client.ui.framework.UiRect;
+import dev.felix.hostilehumans.client.ui.framework.UiDraw;
 import dev.felix.hostilehumans.settlement.RegionBox;
 import dev.felix.hostilehumans.settlement.SettlementCodec;
 import net.minecraft.client.gui.Font;
@@ -24,15 +25,16 @@ final class SettlementMap {
 
     static void render(GuiGraphics g, Font font, UiRect area, CompoundTag data, int mx, int my) {
         var bounds = data.getList("map_bounds", Tag.TAG_COMPOUND);
-        if (bounds.isEmpty() || area.width() < 48 || area.height() < 66) return;
+        if (bounds.isEmpty() || area.width() < 48 || area.height() < 65) return;
         RegionBox extent = null;
         for (Tag entry : bounds) {
             var box = SettlementCodec.box(((CompoundTag) entry).getIntArray("box"));
             extent = extent == null ? box : extent.union(box);
         }
-        g.drawString(font, data.getString("name"), area.x() + 4, area.y() + 3, CAPTURE, false);
+        g.drawString(font, font.plainSubstrByWidth(data.getString("name"), area.width() - 36),
+                area.x() + 4, area.y() + 3, CAPTURE, false);
         g.drawString(font, "N ↑", area.right() - 28, area.y() + 3, CAPTURE, false);
-        var plot = new UiRect(area.x() + 2, area.y() + 15, area.width() - 4, area.height() - 45);
+        var plot = new UiRect(area.x() + 2, area.y() + 15, area.width() - 4, area.height() - (data.getBoolean("map_limited") ? 55 : 44));
         g.fill(plot.x(), plot.y(), plot.right(), plot.bottom(), 0xff111d24);
         double scale = Math.min((plot.width() - 14) / (double) extent.sizeX(),
                 (plot.height() - 12) / (double) extent.sizeZ());
@@ -120,7 +122,7 @@ final class SettlementMap {
             int x2 = Math.max(x1 + 1, x(box.maxX() + 1D));
             int y2 = Math.max(y1 + 1, y(box.maxZ() + 1D));
             if (shade) g.fill(x1, y1, x2, y2, color & 0x30ffffff);
-            g.renderOutline(x1, y1, x2 - x1, y2 - y1, color);
+            UiDraw.outline(g, x1, y1, x2 - x1, y2 - y1, color);
         }
     }
 }

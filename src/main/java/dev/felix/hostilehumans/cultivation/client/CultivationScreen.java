@@ -319,6 +319,13 @@ public final class CultivationScreen extends PanelScreen {
                                 number(soldier.used()))));
         if (!soldier.reason().isEmpty())
             content.add(text(Component.literal(soldier.reason()), () -> theme().danger()));
+        if (soldier.breakthroughReady()) {
+            content.add(group("breakthrough_node"));
+            content.add(muted(text("breakthrough_cost")));
+            content.add(request("breakthrough", text("breakthrough"),
+                    CultivationNetwork.Action.CONFIRM_BREAKTHROUGH,
+                    snapshot.account().stock() > 0 || snapshot.account().creditMicro() >= dev.felix.hostilehumans.cultivation.CultivationRules.UNIT));
+        }
         if (soldier.cycle() != null) {
             var cycle = soldier.cycle();
             content.add(
@@ -492,13 +499,6 @@ public final class CultivationScreen extends PanelScreen {
                                         text("expand_primary"),
                                         CultivationNetwork.Action.EXPAND_PRIMARY,
                                         !soldier.expanded()))));
-        if (soldier.breakthroughReady()) {
-            content.add(group("breakthrough_node"));
-            content.add(muted(text("breakthrough_cost")));
-            content.add(request("breakthrough", text("breakthrough"),
-                    CultivationNetwork.Action.CONFIRM_BREAKTHROUGH,
-                    snapshot.account().stock() > 0 || snapshot.account().creditMicro() >= dev.felix.hostilehumans.cultivation.CultivationRules.UNIT));
-        }
         content.add(group("attributes"));
         double[] values = soldier.values(), lower = soldier.lower(), upper = soldier.upper();
         double[] success = chosen == null ? null : chosen.successValues(),
