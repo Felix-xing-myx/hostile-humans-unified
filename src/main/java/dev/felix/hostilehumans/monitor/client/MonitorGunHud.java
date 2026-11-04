@@ -14,6 +14,8 @@ import java.util.Locale;
 
 /** Session-owned read-only telemetry. Never borrows the real player's inventory or upstream HUD caches. */
 public final class MonitorGunHud {
+    /** Reserved width of the fire-mode word; wide enough for "全自动" and "RELOAD". */
+    private static final int MODE_SLOT = 36;
     private static MonitorWeaponSnapshot snapshot;
     private MonitorGunHud() {}
     public static Human viewed() {
@@ -51,32 +53,16 @@ public final class MonitorGunHud {
         return cut + ellipsis;
     }
 
-    /**
-     * Rounds-per-trigger pictogram: one to three right chevrons drawn from 1px strips, the same
-     * "speed" language as a fast-forward mark. One for single, two for burst, three for automatic.
-     * Pack art is deliberately not used - the native fire-mode texture could not be shown crisply at
-     * this size, and blocks on their own read as placeholders rather than as an indicator.
-     */
-    private static int modeIcon(GuiGraphics g,String mode,int x,int y,int rowHeight,UiTheme theme) {
+    /** Localised fire-mode word; unknown modes keep the raw packet value. */
+    private static String modeLabel(String mode) {
         String kind=mode==null?"":mode.toUpperCase(Locale.ROOT);
-        int arrows=switch(kind) {
-            case "AUTO" -> 3;
-            case "BURST" -> 2;
-            case "SEMI", "SINGLE" -> 1;
-            default -> 0;
+        String key=switch(kind) {
+            case "AUTO" -> "human_monitor.gun.mode.auto";
+            case "BURST" -> "human_monitor.gun.mode.burst";
+            case "SEMI", "SINGLE" -> "human_monitor.gun.mode.semi";
+            default -> "";
         };
-        if(arrows==0)return 0;
-        int height=7, stroke=2, gap=arrows>=3?1:2, chevronW=height/2+stroke;
-        int width=arrows*chevronW+(arrows-1)*gap;
-        int top=y+Math.max(0,(rowHeight-height)/2);
-        for(int arrow=0;arrow<arrows;arrow++) {
-            int originX=x+arrow*(chevronW+gap);
-            for(int row=0;row<height;row++) {
-                int offset=height/2-Math.abs(row-height/2);
-                UiDraw.rect(g,originX+offset,top+row,stroke,1,theme.text());
-            }
-        }
-        return width;
+        return key.isEmpty()?(mode==null?"":mode):Component.translatable(key).getString();
     }
 
     /** Keeps the tail of a right aligned label so a clipped "弹匣 120" still shows the count. */
@@ -150,20 +136,12 @@ public final class MonitorGunHud {
         g.pose().pushPose();try {g.pose().translate(columnRight-reserveWidth,y+24,0);g.pose().scale(reserveScale,reserveScale,1);g.drawString(font,reserveText,0,0,theme.muted(),false);}
         finally{g.pose().popPose();}
         UiDraw.ruleFade(g,x+4,y+36,pw-8,theme.edge());
-        // Caption row: fire mode, then the gun name across the rest of the width.
-        String mode=value.reloading()?Component.translatable("human_monitor.gun.reloading").getString():data.energy()?"FE":data.mode();
-        // Prefer the pack's own mark; the chevron pictogram is only a fallback when it is missing.
-        int modeWidth=0;
-        if(!value.reloading() && data.backend().equals("tacz"))
-            modeWidth=dev.felix.hostilehumans.client.ui.gun.TaczMonitorHud.mode(g,data.mode(),x+3,y+37,12);
-        if(modeWidth<=0 && !value.reloading())
-            modeWidth=modeIcon(g,data.mode(),x+3,y+37,12,theme);
-        if(modeWidth<=0) {
-            String shown=font.plainSubstrByWidth(mode,26);
-            g.drawString(font,shown,x+3,y+39,theme.text(),false);
-            modeWidth=Math.max(18,font.width(shown));
-        }
-        int nameX=x+3+modeWidth+4;
+        // Caption row: the fire mode is a localised word in a fixed-width slot, so the name below
+        // never shifts when the mode changes or the weapon starts reloading.
+        String mode=value.reloading()?Component.translatable("human_monitor.gun.reloading").getString()
+                :data.energy()?"FE":modeLabel(data.mode());
+        g.drawString(font,font.plainSubstrByWidth(mode,MODE_SLOT),x+3,y+39,theme.text(),false);
+        int nameX=x+3+MODE_SLOT+4;
         int nameRoom=Math.max(20,columnRight-nameX);
         String name=fitWithEllipsis(font,held.getHoverName().getString(),(int)(nameRoom/.85F));
         g.pose().pushPose();try {g.pose().translate(nameX,y+39,0);g.pose().scale(.85F,.85F,1);g.drawString(font,name,0,0,theme.muted(),false);}

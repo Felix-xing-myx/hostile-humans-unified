@@ -82,21 +82,12 @@ def slab(d, ox, oy, name, amount, reserve, mode_label, capacity):
     # hairline
     d.rectangle([(x + 4) * S, (y + 36) * S, (x + PW - 4) * S, (y + 37) * S], fill=rgba(EDGE, 1))
     # caption row: native mode art (18x12 box here), then the name
-    # Rounds-per-trigger chevrons, same primitives as MonitorGunHud.modeIcon().
-    kind = mode_label.upper()
-    arrows = 3 if kind == "AUTO" else 2 if kind == "BURST" else 1
-    height, stroke = 7, 2
-    gap = 1 if arrows >= 3 else 2
-    chev_w = height // 2 + stroke
-    top = y + 37 + max(0, (12 - height) // 2)
-    for a in range(arrows):
-        ox = x + 3 + a * (chev_w + gap)
-        for row in range(height):
-            off = height // 2 - abs(row - height // 2)
-            d.rectangle([(ox + off) * S, (top + row) * S,
-                         (ox + off + stroke) * S - 1, (top + row) * S + S - 1], fill=rgba(TEXT, 1))
-    mode_w = arrows * chev_w + (arrows - 1) * gap
-    name_x = x + 3 + mode_w + 4
+    # Fire mode is a localised word in a fixed 36px slot; the name column never moves.
+    MODE_SLOT = 36
+    mode_words = {"AUTO": "全自动", "SEMI": "单点", "BURST": "连发", "RELOAD": "装填中"}
+    mode_text = mode_words.get(mode_label.upper(), mode_label)
+    d.text(((x + 3) * S, (y + 39) * S), clip(mode_text, MODE_SLOT), font=FONT, fill=rgba(TEXT, 1))
+    name_x = x + 3 + MODE_SLOT + 4
     room = max(20, col_right - name_x)
     small = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc", int(9 * S * .85))
     d.text((name_x * S, (y + 39) * S), fit_ellipsis(name, int(room / .85)), font=small, fill=rgba(MUTED, 1))
@@ -110,7 +101,7 @@ ann = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc",
 note = lambda ty, text: d.text((158 * S, ty * S), text, font=ann, fill=rgba(ACCENT, 1))
 note(26, "上带：枪图 54x30 ｜ 18 / 30 ｜ 弹匣(右下)")
 note(52, "灰线 y36")
-note(62, "下带：射击模式图标 + 名称（整行）")
+note(62, "下带：射击模式文字（固定列）+ 名称")
 slab(d, 20, 78, "M4 卡宾枪（长名字）", "100%", "弹匣 12", "BURST", "")
 slab(d, 20, 138, "M249 班用机枪", "07", "弹匣 120", "SEMI", "/ 150")
 slab(d, 20, 198, "M4A1 卡宾枪（消音器改装型）", "30", "弹匣 3", "AUTO", "/ 30")
