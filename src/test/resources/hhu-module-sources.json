@@ -115,6 +115,10 @@
     "class": "dev.felix.hostilehumans.perception.BattlePerceptionDetail",
     "path": "src/main/java/dev/felix/hostilehumans/perception/BattlePerceptionDetail.java"
   },
+  "BattlePerceptionMetrics": {
+    "class": "dev.felix.hostilehumans.perception.BattlePerceptionMetrics",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/BattlePerceptionMetrics.java"
+  },
   "BeaconReportPolicy": {
     "class": "dev.felix.hostilehumans.perception.BeaconReportPolicy",
     "path": "src/main/java/dev/felix/hostilehumans/perception/BeaconReportPolicy.java"

@@ -5,6 +5,7 @@ import dev.felix.hostilehumans.navigation.LongRangeNavigation;
 import dev.felix.hostilehumans.navigation.OptionalPathBudget;
 import dev.felix.hostilehumans.navigation.OptionalPathBudget.Kind;
 import dev.felix.hostilehumans.perception.PerceptionBudget;
+import dev.felix.hostilehumans.perception.BattlePerceptionMetrics;
 import dev.felix.hostilehumans.performance.AdaptiveActivityBudget;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,8 @@ final class GlobalBudgetSnapshot {
         rows.add("perception|遮挡复核 · " + PerceptionBudget.usage(server,dimension,"occlusion"));
         rows.add("perception|线索投递 · " + PerceptionBudget.usage(server,dimension,"notices"));
         rows.add("perception|声源采样 · " + PerceptionBudget.usage(server,dimension,"sources"));
+        rows.add("perception|团战实际工作 · 上个完整 20 tick");
+        for (String line : BattlePerceptionMetrics.summary(player.serverLevel())) rows.add("perception|" + line);
         rows.add("navigation|普通导航 · " + BasicNavigationBudget.usage(server));
         rows.add("navigation|扩展寻路 · " + LongRangeNavigation.usage(server));
         rows.add("navigation|战斗选点 · " + OptionalPathBudget.usage(server,Kind.FIRING_LANE));

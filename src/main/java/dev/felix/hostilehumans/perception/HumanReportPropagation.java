@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -28,10 +29,14 @@ final class HumanReportPropagation {
         if(p==null || !dimension.equals(p.dimension) || now<p.tick || now-p.tick>=ttl
                 ||p.from.distanceToSqr(from)>movedSquared ||p.to.distanceToSqr(to)>movedSquared) {
             if(!PerceptionBudget.claim(sender,"rays",1,":report:"+receiver.getUUID()))return null;
+            if (reduced && sender.level() instanceof ServerLevel level)
+                BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.REPORT_CLIP, 1);
             var hit=sender.level().clip(new ClipContext(from,to,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,sender));
             p=new Probe(now,from,to,hit.getType()==HitResult.Type.MISS,dimension);
             cache.remove(receiver.getUUID());cache.put(receiver.getUUID(),p);
             while(cache.size()>64)cache.remove(cache.keySet().iterator().next());
+        } else if (reduced && sender.level() instanceof ServerLevel level) {
+            BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.REPORT_CACHE, 1);
         }
         return withinRange(sender.distanceTo(receiver),HumanTargetSharing.range(sender),p.clear,c.number("sharing.wall_range_factor"));
     }

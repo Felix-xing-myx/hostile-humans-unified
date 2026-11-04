@@ -53,7 +53,7 @@
 | `network` | 共用实体数据网络 | 3 |
 | `observer` | 诊断快照、观察名单与网络 | 18 |
 | `observer/client` | 观察详情、图层与属性界面 | 4 |
-| `perception` | 视觉、声音、识别与目标记忆 | 41 |
+| `perception` | 视觉、声音、识别与目标记忆 | 42 |
 | `performance` | 共享配额与活动分档 | 8 |
 | `progression` | 成长、专精、经验与属性 | 27 |
 | `settlement` | 据点区域几何、模板变换与维度实例索引 | 28 |
@@ -278,7 +278,7 @@
 
 ### perception
 
-`AttentionFacingPolicy`、`BattleNeighborhood`、`BattlePerceptionDetail`、`BeaconReportPolicy`、`BeaconReportingService`、`BodyVisibilitySamples`、`CachedOcclusionProof`、`HearingRelevance`、`HumanAttention`、`HumanAwareness`、`HumanLookAtPlayerGoal`、`HumanLootVision`、`HumanPerception`、`HumanReportPropagation`、`HumanSensoryEvents`、`HumanTargetSharing`、`HumanTurnControl`、`IdleSurvey`、`IncomingHitResponseGoal`、`InvestigateSoundGoal`、`NearVisionPolicy`、`NearestAttackableTargetGoalCustom`、`NearestAttackableTargetGoalWithHumanLimiter`、`NegativeObservationSweep`、`PerceptionBudget`、`PerceptionConfig`、`PerceptionCoordinationPolicy`、`PerceptionDebugCodec`、`PerceptionDebugSnapshot`、`PerceptionDiscoveryPolicy`、`PerceptionInvestigationGoal`、`PerceptionPolicy`、`PerceptionTargetGoal`、`RecognitionEvidence`、`SoundExclusionMemory`、`SoundInvestigationMemory`、`TargetReportLedger`、`ThreatScorePolicy`、`TurnGesture`、`TurnResponse`、`VisualOcclusionMemory`
+`AttentionFacingPolicy`、`BattleNeighborhood`、`BattlePerceptionDetail`、`BattlePerceptionMetrics`、`BeaconReportPolicy`、`BeaconReportingService`、`BodyVisibilitySamples`、`CachedOcclusionProof`、`HearingRelevance`、`HumanAttention`、`HumanAwareness`、`HumanLookAtPlayerGoal`、`HumanLootVision`、`HumanPerception`、`HumanReportPropagation`、`HumanSensoryEvents`、`HumanTargetSharing`、`HumanTurnControl`、`IdleSurvey`、`IncomingHitResponseGoal`、`InvestigateSoundGoal`、`NearVisionPolicy`、`NearestAttackableTargetGoalCustom`、`NearestAttackableTargetGoalWithHumanLimiter`、`NegativeObservationSweep`、`PerceptionBudget`、`PerceptionConfig`、`PerceptionCoordinationPolicy`、`PerceptionDebugCodec`、`PerceptionDebugSnapshot`、`PerceptionDiscoveryPolicy`、`PerceptionInvestigationGoal`、`PerceptionPolicy`、`PerceptionTargetGoal`、`RecognitionEvidence`、`SoundExclusionMemory`、`SoundInvestigationMemory`、`TargetReportLedger`、`ThreatScorePolicy`、`TurnGesture`、`TurnResponse`、`VisualOcclusionMemory`
 
 ### performance
 

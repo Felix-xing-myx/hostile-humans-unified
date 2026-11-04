@@ -4246,3 +4246,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 ## 团战共享候选与感知降频
 - 主控，基线 ae22ab8f0311bee5623012a151e1b308b732661a，module-architecture 工作树。团战同 tick 复用空间候选，前线常规新敌发现限制 24 格，已有记录探测至少间隔 8 tick。发送者在候选阶段复用通报距离，移除收件人重复权限校验，实际投递仍核查。
 - Python 静态检查 532 项，其中 16 项跳过；未编译或测团战 TPS。
+
+## 团战通报去重与 F8 实际工作计数
+- 主控，基线 1ccbc72，module-architecture 工作树。一次轮询复用个人证据与威胁结果，空来源不收集同伴。F8 按维度显示上一完整 20 tick 的实际工作。Python 静态检查 532 项、跳过 16 项；尚无 Java 和实机数据。

@@ -2,7 +2,6 @@ package dev.felix.hostilehumans.perception;
 
 import dev.felix.hostilehumans.entity.Human;
 
-import dev.felix.hostilehumans.behavior.combat.HumanThreatAssessment;
 import dev.felix.hostilehumans.faction.HumanFactions;
 import dev.felix.hostilehumans.faction.HumanRelations;
 import dev.felix.hostilehumans.inventory.HumanInventorySession;
@@ -33,7 +32,9 @@ public final class HumanTargetSharing {
     private static final Map<Human, LinkedHashMap<UUID, Lease>> INBOX = new WeakHashMap<>();
     private static final Map<Human,Long> RECEIVED_AT = new WeakHashMap<>();
     private static final Map<Human, TargetReportLedger> SEEN = new WeakHashMap<>();
-    record Evidence(UUID target, Vec3 position, boolean confirmed) {}
+    record Evidence(UUID target, Vec3 position, boolean confirmed, Threat threat) {
+        Evidence(UUID target, Vec3 position, boolean confirmed) { this(target, position, confirmed, Threat.NONE); }
+    }
     /** Shared immutable origin and deadline: forwarding never creates a fresh authority. */
     private record Report(UUID origin, Evidence evidence, long created, long positionAt, Threat threat) {}
     public record Threat(double intrinsic,double priority) { static final Threat NONE=new Threat(0,0); }
@@ -207,7 +208,7 @@ public final class HumanTargetSharing {
         for (Human receiver : nearby) if (!seen(receiver, target)) return true;
         return false;
     }
-    private static Report outgoing(Human sender,List<Human> nearby,long now) {
+    private static Report outgoing(Human sender,List<Human> nearby,long now,Evidence evidence) {
         Report best=OUTBOX.get(sender);
         if(best!=null&&(now>=best.created()+LOCK_TICKS||!sender.getUUID().equals(best.origin())
                 ||!HumanPerception.personalDynamic(sender,resolve(sender,best.evidence().target()))))best=null;
@@ -221,15 +222,14 @@ public final class HumanTargetSharing {
                     ||!receiverContext(sender,lease)||!HumanPerception.sharingAllowed(sender,target))continue;
             refresh(sender,lease,target,now);
             if(lease.window.frozenAt<0&&lease.linkReady)
-                best=new Report(lease.report.origin(),new Evidence(lease.target,lease.position,true),
+                best=new Report(lease.report.origin(),new Evidence(lease.target,lease.position,true,lease.report.threat()),
                         lease.report.created(),lease.positionAt,lease.report.threat());
         }
-        Evidence evidence=HumanPerception.sharingEvidence(sender);
         if(evidence!=null&&evidence.confirmed()&&hasRecipient(nearby,evidence.target())){
             LivingEntity target=resolve(sender,evidence.target());
             if(target!=null){
                 Report personal=new Report(sender.getUUID(),evidence,now,now,
-                        new Threat(HumanThreatAssessment.intrinsic(sender,target),HumanThreatAssessment.priority(sender,target)));
+                        evidence.threat());
                 if((best==null||rank(personal)>rank(best))&&admit(sender,personal,now)){
                     OUTBOX.put(sender,personal);best=personal;
                 }
@@ -242,7 +242,8 @@ public final class HumanTargetSharing {
     }
 
     static boolean readyToBroadcast(Human sender) {
-        return sender.getPersistentData().getInt(SEND) <= 0 && available(sender);
+        return sender.getPersistentData().getInt(SEND) <= 0 && available(sender)
+                && (OUTBOX.containsKey(sender) || INBOX.containsKey(sender) || HumanPerception.hasSharingInput(sender));
     }
 
     /** Invoked only with the existing budgeted candidate query's bounded nearest friendly list. */
@@ -254,9 +255,11 @@ public final class HumanTargetSharing {
             nearby = nearby.subList(0, FRONTLINE_NEIGHBORS);
         if (reduced) sender.getPersistentData().putInt(SEND, FRONTLINE_INTERVAL);
         if (nearby.isEmpty()) return;
-        long now=HumanPerception.now(sender);Report report=outgoing(sender,nearby,now);
+        long now=HumanPerception.now(sender);
+        Evidence personal=HumanPerception.sharingEvidence(sender);
+        Report report=outgoing(sender,nearby,now,personal);
         if (report == null && reduced) return;
-        Evidence evidence=report==null?HumanPerception.sharingEvidence(sender):report.evidence();
+        Evidence evidence=report==null?personal:report.evidence();
         if(evidence==null)return;
         if(report==null&&(sender.getPersistentData().getInt(CLUE_SEND)>0
                 ||evidence.target()!=null&&seen(sender,evidence.target())))return;
@@ -290,6 +293,8 @@ public final class HumanTargetSharing {
             }
             delivered++;
         }
+        if (reduced && delivered > 0 && sender.level() instanceof ServerLevel level)
+            BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.REPORT_DELIVERY, delivered);
         // Polling is bounded even when every neighbour already knows this target.
         sender.getPersistentData().putInt(SEND,reduced ? FRONTLINE_INTERVAL : RELAY_INTERVAL);
         if(report==null&&delivered>0)sender.getPersistentData().putInt(CLUE_SEND,COOLDOWN);

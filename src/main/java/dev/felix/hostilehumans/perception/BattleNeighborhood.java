@@ -53,16 +53,21 @@ public final class BattleNeighborhood {
                     Mth.floor(center.z / CELL), padding);
             var snapshot = frame.snapshots.get(cell);
             if (snapshot == null && frame.snapshots.size() < MAX_CELLS) {
+                BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.WORLD_QUERY, 1);
                 snapshot = snapshot(level, cell);
                 frame.snapshots.put(cell, snapshot);
+            } else if (snapshot != null && snapshot.size() < MAX_SNAPSHOT) {
+                BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.SHARED_QUERY, 1);
             }
             if (snapshot != null && snapshot.size() < MAX_SNAPSHOT) {
+                BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.CANDIDATE_VISIT, snapshot.size());
                 for (LivingEntity entity : snapshot)
                     if (entity.level() == level && !entity.isRemoved() && entity.getBoundingBox().intersects(area))
                         visitor.accept(entity);
                 return;
             }
         }
+        if (share) BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.WORLD_QUERY, 1);
         level.getEntities().get(EntityTypeTest.forClass(LivingEntity.class), area, entity -> {
             visitor.accept(entity);
             return AbortableIterationConsumer.Continuation.CONTINUE;

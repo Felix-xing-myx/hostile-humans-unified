@@ -175,15 +175,23 @@ public final class HumanPerception {
     static boolean sharingAllowed(Human h,LivingEntity target){
         return target!=null&&valid(h,target)&&SoldierCombatMode.allowsTarget(h,target);
     }
+    static boolean hasSharingInput(Human h) {
+        State state = STATES.get(h);
+        return state != null && (!state.tracks.isEmpty() || state.focusHurt || !state.clues.isEmpty()
+                || state.look != null && now(h) < state.directionProtectedUntil);
+    }
+
     static HumanTargetSharing.Evidence sharingEvidence(Human h){
         State s=STATES.get(h);if(s==null||!(h.level() instanceof ServerLevel level))return null;
         LivingEntity best=null;double highest=Double.NEGATIVE_INFINITY;
+        HumanTargetSharing.Threat threat=HumanTargetSharing.Threat.NONE;
         for(Track t:s.tracks.values())if(level.getEntity(t.id) instanceof LivingEntity target
                 &&personalDynamic(h,target)&&!HumanTargetSharing.seen(h,t.id)){
-            double rank=HumanThreatAssessment.intrinsic(h,target)+HumanThreatAssessment.priority(h,target);
-            if(rank>highest){best=target;highest=rank;}
+            double intrinsic=HumanThreatAssessment.intrinsic(h,target), priority=HumanThreatAssessment.priority(h,target);
+            double rank=intrinsic+priority;
+            if(rank>highest){best=target;highest=rank;threat=new HumanTargetSharing.Threat(intrinsic,priority);}
         }
-        if(best!=null)return new HumanTargetSharing.Evidence(best.getUUID(),best.position(),true);
+        if(best!=null)return new HumanTargetSharing.Evidence(best.getUUID(),best.position(),true,threat);
         long now=now(h);
         for(Track t:s.tracks.values())if(t.visible&&t.position!=null&&t.checked>=0&&now-t.checked<=20
                 &&level.getEntity(t.id) instanceof LivingEntity target&&sharingAllowed(h,target))
@@ -636,6 +644,8 @@ public final class HumanPerception {
         Vec3 eye=h.getEyePosition(),towardEye=eye.subtract(point);
         // Surface samples can lie exactly on the floor/adjacent wall. Test the approach side of the surface.
         Vec3 end=towardEye.lengthSqr()>1.e-8?point.add(towardEye.normalize().scale(1.e-4)):point;
+        if (!cacheBlocked && h.level() instanceof ServerLevel level)
+            BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.VISION_CLIP, 1);
         BlockHitResult hit=h.level().clip(new ClipContext(eye,end,ClipContext.Block.COLLIDER,ClipContext.Fluid.NONE,h));
         boolean clear=hit.getType()==HitResult.Type.MISS;
         if(!clear&&cacheBlocked)VisualOcclusionMemory.blockedRay(h,target,hit,point);
