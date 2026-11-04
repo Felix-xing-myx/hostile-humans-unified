@@ -77,8 +77,7 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         this.addLayer(new dev.felix.hostilehumans.faction.visual.FactionVisualLayer<>(this, false, false));
         // Wrap only layers owned by this renderer. Other mods may add their own layers.
         this.layers.replaceAll(layer -> {
-            boolean decorative = layer instanceof ArrowLayer || layer instanceof BeeStingerLayer
-                    || layer instanceof dev.felix.hostilehumans.faction.visual.FactionVisualLayer;
+            boolean decorative = layer instanceof ArrowLayer || layer instanceof BeeStingerLayer;
             boolean equipment = layer instanceof ItemInHandLayer || layer instanceof HumanoidArmorLayer
                     || layer instanceof CustomHeadLayer || layer instanceof ElytraLayer;
             if (!decorative && !equipment) return layer;

@@ -4234,3 +4234,8 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控；基线 ecf186f6c799ff0f6848f8aa613e6ff4e6c6e446；worktrees/module-architecture，audit/module-architecture。独占 build.gradle，维护目录同步调整 release.py、回归入口与发布指南。
 - 以 Gradle 输入和成功产物追踪十项联动检查；原生后坐力曲线使用隔离类路径，其余保留完整运行类路径。支持 --full-validation，记录复用任务。发布入口处理 Windows 中文路径并复用未变化文件。
 - Python CLI、临时盘符和增量镜像检查通过，PowerShell 语法检查通过。未运行 Gradle，实际任务复用和耗时待下次构建验证。
+
+## 密集掉落物和远距阵营辨识
+- 主控，基线 d4a3df6f95065bb27e8b750032ea8fcf2e902642；沿用 module-architecture 工作树。范围为客户端掉落渲染、绑带绘制和拾取查询；共享渲染文件由主控接入。
+- 掉落物保留原模型，仅压缩同一堆叠的重复绘制。绑带在远距档继续渲染。主动与脚边拾取限制候选量，脚边复用查询预算。
+- Python 静态检查 532 项，跳过 16 项；已对照本地 Forge 映射核查渲染方法与查询重载，未运行 Gradle 或进游戏。

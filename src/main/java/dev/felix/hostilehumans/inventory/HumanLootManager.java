@@ -261,9 +261,9 @@ public final class HumanLootManager {
 
         ItemEntity advance(int budget, Predicate<ItemEntity> skip, Consumer<ItemEntity> reject) {
             if (selection == null) {
-                Iterator<ItemEntity> initial = query(pileArea == null ? searchArea : pileArea);
+                Iterator<ItemEntity> initial = query(pileArea == null ? searchArea : pileArea, skip, pileArea != null);
                 if (initial == null) return null;
-                selection = new PileFirstSelection<>(initial, pileArea != null, () -> query(searchArea), ItemEntity::getUUID,
+                selection = new PileFirstSelection<>(initial, pileArea != null, () -> query(searchArea, skip, false), ItemEntity::getUUID,
                         item -> item.position().distanceToSqr(selectionCenter) <= selectionRadiusSqr);
             }
             // The backpack can change between batches; values never cross a tick.
@@ -283,10 +283,10 @@ public final class HumanLootManager {
             });
         }
 
-        private Iterator<ItemEntity> query(AABB area) {
+        private Iterator<ItemEntity> query(AABB area, Predicate<ItemEntity> skip, boolean pileOnly) {
             if (!PerceptionBudget.claim(human, "queries", 1, ":loot-query")) return null;
-            return human.level().getEntitiesOfClass(ItemEntity.class, area,
-                    item -> item.isAlive() && !item.getItem().isEmpty()).iterator();
+            return nearbyCandidates(human, area, 64, item -> !skip.test(item)
+                    && (!pileOnly || item.position().distanceToSqr(selectionCenter) <= selectionRadiusSqr)).iterator();
         }
 
         private boolean eligible(ItemEntity item) {
@@ -298,6 +298,16 @@ public final class HumanLootManager {
 
     static boolean isWorthCollecting(Human human, ItemEntity item) {
         return isEligibleForPickup(human, item) && benefit(human, item.getItem()) > 0.0D;
+    }
+
+    static List<ItemEntity> nearbyCandidates(Human human, AABB area, int limit, Predicate<ItemEntity> filter) {
+        if (!(human.level() instanceof net.minecraft.server.level.ServerLevel level)) return List.of();
+        List<ItemEntity> items = new ArrayList<>();
+        level.getEntities(net.minecraft.world.level.entity.EntityTypeTest.forClass(ItemEntity.class), area,
+                item -> item.isAlive() && !item.hasPickUpDelay() && !item.getItem().isEmpty()
+                        && SoldierOrder.allowsLootPosition(human, item.getX(), item.getZ()) && filter.test(item),
+                items, limit);
+        return items;
     }
 
     static boolean isEligibleForPickup(Human human, ItemEntity item) {

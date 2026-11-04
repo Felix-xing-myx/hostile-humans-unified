@@ -57,6 +57,7 @@
     "SettlementTemplatePlacementMixin"
   ],
   "client": [
+    "DroppedItemRenderAmountMixin",
     "MonitorPredictionEntityAccess",
     "MonitorPredictionConstructionMixin",
     "HumanMonitorInputMixin",

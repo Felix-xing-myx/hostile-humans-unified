@@ -5,7 +5,7 @@ import dev.felix.hostilehumans.entity.HumanEntity;
 import dev.felix.hostilehumans.entity.HumanData;
 import dev.felix.hostilehumans.entity.Human;
 
-import dev.felix.hostilehumans.inventory.HumanLootManager;
+import dev.felix.hostilehumans.perception.PerceptionBudget;
 import java.util.List;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -50,15 +50,21 @@ extends HumanAbility {
                     this.ticker = 0;
                     return;
                 }
-                HumanData humanMobData;
-                List<ItemEntity> itemEntities = this.level.getEntities((EntityTypeTest)EntityType.ITEM, new AABB(this.humanEntity.blockPosition()).inflate((double)radius), entity -> true);
+                AABB area = new AABB(this.humanEntity.blockPosition()).inflate(radius);
                 if (this.humanEntity instanceof Human human) {
-                    for (ItemEntity itemEntity : itemEntities) {
-                        HumanLootManager.tryCollectNearby(human, itemEntity);
+                    if (!PerceptionBudget.claim(human, "queries", 1, ":nearby-loot-query")) {
+                        this.ticker = TICK_RATE;
+                        return;
+                    }
+                    for (ItemEntity itemEntity : HumanLootManager.nearbyCandidates(human, area, 12,
+                            item -> human.distanceToSqr(item) <= 6.25D)) {
+                        if (HumanLootManager.tryCollectNearby(human, itemEntity)) break;
                     }
                     this.ticker = 0;
                     return;
                 }
+                HumanData humanMobData;
+                List<ItemEntity> itemEntities = this.level.getEntities((EntityTypeTest)EntityType.ITEM, area, entity -> true);
                 if (!itemEntities.isEmpty() && (humanMobData = this.humanEntity.getData()) != null) {
                     for (ItemEntity itemEntity : itemEntities) {
                         if (itemEntity.isRemoved() || !itemEntity.isAlive() || !this.humanEntity.isAlive() || this.humanEntity.isDeadOrDying() || !humanMobData.storeInventoryItem(itemEntity.getItem())) continue;
