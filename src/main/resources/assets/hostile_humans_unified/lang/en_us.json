@@ -1,4 +1,13 @@
 {
+  "gui.hostile_humans_unified.economy.task_objective": "Objective · %s",
+  "gui.hostile_humans_unified.economy.task_delivery_target": "Deliver %s × %s",
+  "gui.hostile_humans_unified.economy.task_target_faction": "Target faction · %s",
+  "gui.hostile_humans_unified.economy.task_deadline": "Time limit · %s",
+  "gui.hostile_humans_unified.economy.task_origin": "Accepted at · %s",
+  "gui.hostile_humans_unified.economy.objective.DELIVERY": "Item delivery",
+  "gui.hostile_humans_unified.economy.objective.KILL_ROAMER": "Defeat roamers",
+  "gui.hostile_humans_unified.economy.objective.KILL_FACTION": "Defeat hostile faction members",
+  "gui.hostile_humans_unified.economy.objective.KILL_BOSS": "Defeat hostile faction bosses",
   "gui.hostile_humans_unified.settlement.kind.BROKER_STATION": "Broker station",
   "gui.hostile_humans_unified.settlement.help.kind.BROKER_STATION": "Requires an outer region. Once registered, faction brokers can share the same station.",
   "gui.hostile_humans_unified.settlement.broker_factions_help": "Select at least one faction served by this station.",

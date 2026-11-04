@@ -1,4 +1,13 @@
 {
+  "gui.hostile_humans_unified.economy.task_objective": "目标 · %s",
+  "gui.hostile_humans_unified.economy.task_delivery_target": "交付 %s × %s",
+  "gui.hostile_humans_unified.economy.task_target_faction": "目标阵营 · %s",
+  "gui.hostile_humans_unified.economy.task_deadline": "时限 · %s",
+  "gui.hostile_humans_unified.economy.task_origin": "接取地点 · %s",
+  "gui.hostile_humans_unified.economy.objective.DELIVERY": "物资交付",
+  "gui.hostile_humans_unified.economy.objective.KILL_ROAMER": "击杀流浪者",
+  "gui.hostile_humans_unified.economy.objective.KILL_FACTION": "击杀敌对阵营成员",
+  "gui.hostile_humans_unified.economy.objective.KILL_BOSS": "击杀敌对阵营头目",
   "gui.hostile_humans_unified.settlement.kind.BROKER_STATION": "中介站",
   "gui.hostile_humans_unified.settlement.help.kind.BROKER_STATION": "需要外圈。登记后，多个阵营的中介可以在同一站内办理业务。",
   "gui.hostile_humans_unified.settlement.broker_factions_help": "选择本站可办理业务的阵营，至少选一个。",

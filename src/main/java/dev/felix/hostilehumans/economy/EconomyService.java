@@ -579,7 +579,9 @@ public final class EconomyService implements EconomyNetwork.Backend {
                                 "invalid task publication context/arguments");
                     reason =
                             action == EconomyView.Action.ACCEPT_TASK
-                                    ? EconomyTasks.accept(draft, context.currency(), p, c.entry())
+                                    ? EconomyTasks.accept(draft, context.currency(), p, c.entry(),
+                                            context.test() ? "" : SettlementIndex.get(player.serverLevel())
+                                                    .taskBoardSite(context.anchor()).name())
                                     : action == EconomyView.Action.DELIVER_TASK
                                             ? EconomyTasks.deliver(
                                                     draft,
@@ -691,7 +693,7 @@ public final class EconomyService implements EconomyNetwork.Backend {
                         tasking(s.context)
                                 ? EconomyTasks.rows(draft, currency, p, enabled).stream()
                                         .filter(row -> taskLane(s.context, row.kind()))
-                                        .toList()
+                                        .limit(64).toList()
                                 : List.of(),
                         permit,
                         exchanges(player, s, draft, inventory, p),

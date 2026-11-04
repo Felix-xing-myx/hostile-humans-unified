@@ -177,7 +177,16 @@ public final class EconomyView {
             boolean canAccept,
             boolean canDeliver,
             boolean canClaim,
-            String reason) {}
+            String reason,
+            String objective, String item, String targetFaction, long deadline, long timeLimit,
+            boolean accepted, String siteName) {
+        public TaskRow(String id, String title, String kind, String status, int progress, int target,
+                int nominalStanding, int availableStanding, long rewardCopper, boolean canAccept,
+                boolean canDeliver, boolean canClaim, String reason) {
+            this(id, title, kind, status, progress, target, nominalStanding, availableStanding,
+                    rewardCopper, canAccept, canDeliver, canClaim, reason, "", "", "", 0, 0, false, "");
+        }
+    }
 
     public record PermitRow(
             boolean known,
@@ -357,6 +366,13 @@ public final class EconomyView {
             b.writeBoolean(row.canDeliver());
             b.writeBoolean(row.canClaim());
             b.writeUtf(row.reason(), 256);
+            b.writeUtf(row.objective(), 32);
+            b.writeUtf(row.item(), 256);
+            b.writeUtf(row.targetFaction(), 256);
+            b.writeLong(row.deadline());
+            b.writeLong(row.timeLimit());
+            b.writeBoolean(row.accepted());
+            b.writeUtf(row.siteName(), 96);
         }
         var r = p.permit();
         b.writeBoolean(r.known());
@@ -438,7 +454,8 @@ public final class EconomyView {
                             b.readBoolean(),
                             b.readBoolean(),
                             b.readBoolean(),
-                            b.readUtf(256)));
+                            b.readUtf(256), b.readUtf(32), b.readUtf(256), b.readUtf(256),
+                            b.readLong(), b.readLong(), b.readBoolean(), b.readUtf(96)));
         var permit =
                 new PermitRow(
                         b.readBoolean(),

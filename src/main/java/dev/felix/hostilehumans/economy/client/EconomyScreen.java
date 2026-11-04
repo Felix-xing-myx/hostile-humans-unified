@@ -581,7 +581,8 @@ public final class EconomyScreen extends PanelScreen {
                                 "task." + row.id(),
                                 Component.literal(row.title())
                                         .append(" · ")
-                                        .append(named("status", row.status())),
+                                        .append(named("status", row.status()))
+                                        .append(" · ").append(row.progress() + "/" + row.target()),
                                 !pending.busy(),
                                 row.id().equals(taskId),
                                 () -> {
@@ -603,6 +604,22 @@ public final class EconomyScreen extends PanelScreen {
                                     "task_state",
                                     named("kind", row.kind()),
                                     named("status", row.status()))));
+            if (!row.objective().isEmpty()) {
+                detail.add(muted(text("task_objective", named("objective", row.objective()))));
+                if (row.objective().equals("DELIVERY")) {
+                    var id = net.minecraft.resources.ResourceLocation.tryParse(row.item());
+                    var item = id == null ? null : net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(id);
+                    detail.add(muted(text("task_delivery_target",
+                            item == null ? Component.literal(row.item()) : item.getDescription(), row.target())));
+                } else if (!row.targetFaction().isEmpty()) {
+                    var target = Currency.faction(row.targetFaction()).map(EconomyScreen::currency)
+                            .orElseGet(() -> Component.literal(row.targetFaction()));
+                    detail.add(muted(text("task_target_faction", target)));
+                }
+            }
+            if (row.deadline() > 0) detail.add(muted(text("task_deadline", remaining(row.deadline()))));
+            else if (row.timeLimit() > 0) detail.add(muted(text("task_deadline", text("seconds", (row.timeLimit() + 19) / 20))));
+            if (!row.siteName().isEmpty()) detail.add(muted(text("task_origin", row.siteName())));
             detail.add(muted(text("task_progress", row.progress(), row.target())));
             detail.add(
                     node(

@@ -106,14 +106,34 @@ public final class EconomyTasks {
             boolean enabled) {
         boolean test = policy.revision() < 0;
         var result = new ArrayList<EconomyView.TaskRow>();
-        for (var configured : policy.tasks())
+        var definitions = new LinkedHashMap<String, EconomyPolicy.Task>();
+        String prefix = currency.key() + "|";
+        var saved = tasks(draft, test);
+        for (String key : saved.getAllKeys().stream().sorted().toList()) {
+            if (!key.startsWith(prefix)) continue;
+            String id = key.substring(prefix.length());
+            try {
+                var row = accepted(draft, currency, id, test);
+                var task = definition(row);
+                if (task.id().equals(id) && !row.getString("status").equals("CLAIMED"))
+                    definitions.put(id, task);
+            } catch (RuntimeException unknown) {
+                // Preserve unreadable saved entries without advertising a transaction.
+            }
+        }
+        var offered = new HashSet<String>();
+        for (var task : policy.tasks()) {
+            offered.add(task.id());
+            definitions.putIfAbsent(task.id(), task);
+        }
+        for (var configured : definitions.values())
             try {
                 var row = accepted(draft, currency, configured.id(), test);
                 var task = row == null ? configured : definition(row);
                 String status = status(draft, currency, task, row, test);
                 boolean open = status.equals("ACTIVE") || status.equals("READY");
                 boolean completed = row != null && row.getInt("claims") > 0 && task.once();
-                boolean eligible = enabled && eligible(draft, currency, task, false, test);
+                boolean eligible = enabled && offered.contains(task.id()) && eligible(draft, currency, task, false, test);
                 int nominal =
                         task.kind() == EconomyPolicy.TaskKind.ATONEMENT_ONE
                                 ? Math.max(0, -99 - draft.standing(currency.faction()))
@@ -154,7 +174,10 @@ public final class EconomyTasks {
                                                 ? "one-time completion retained"
                                                 : "accepted definitions retained; rewards capped at"
                                                       + " current remaining quota")
-                                        : policy.reason()));
+                                        : policy.reason(),
+                                task.objective().name(), task.item().toString(), task.targetFaction(),
+                                row == null ? 0 : row.getLong("deadline"), task.timeLimit(), row != null,
+                                row == null ? "" : row.getString("site_name")));
             } catch (RuntimeException unknown) {
                 result.add(
                         new EconomyView.TaskRow(
@@ -176,7 +199,7 @@ public final class EconomyTasks {
     }
 
     public static String accept(
-            FactionEconomyLedger.Draft draft, Currency currency, EconomyPolicy policy, String id) {
+            FactionEconomyLedger.Draft draft, Currency currency, EconomyPolicy policy, String id, String siteName) {
         boolean test = policy.revision() < 0;
         var task =
                 policy.tasks().stream()
@@ -199,6 +222,7 @@ public final class EconomyTasks {
         row.putString("source", test ? "creative_test" : "formal");
         row.putString("id", task.id());
         row.putString("title", task.title());
+        row.putString("site_name", siteName);
         row.putString("kind", task.kind().name());
         row.putString("objective", task.objective().name());
         row.putString("item", task.item().toString());
