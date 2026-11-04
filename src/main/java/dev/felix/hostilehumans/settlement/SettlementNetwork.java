@@ -498,6 +498,19 @@ public final class SettlementNetwork {
         var data = instance == null ? new CompoundTag() : view(player, instance);
         if (info != null) {
             data.put("author", info.author());
+            var groups = new ListTag();
+            SettlementBuildingCatalog.entries(player.getServer()).entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(entry -> {
+                        var definition = entry.getValue().generation();
+                        var row = new CompoundTag();
+                        row.putString("id", entry.getKey().toString());
+                        row.putString("group", definition.rules().group());
+                        row.putInt("spacing", definition.group().spacing());
+                        row.putInt("separation", definition.group().separation());
+                        groups.add(row);
+                    });
+            data.put("generation_groups", groups);
             data.putString("module", info.module());
             try {
                 data.put(

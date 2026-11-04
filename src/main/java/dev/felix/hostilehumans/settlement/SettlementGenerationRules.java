@@ -10,22 +10,28 @@ public record SettlementGenerationRules(
         boolean enabled, String group, int weight, String dimension,
         List<String> allowedBiomes, List<String> excludedBiomes,
         Placement placement, int minY, int maxY, int maxSlope,
-        Water water, Terrain terrain, int minimumDay) {
+        Water water, Terrain terrain, int minimumDay, int spacing, int separation) {
     public enum Placement { SURFACE, UNDERGROUND }
     public enum Water { ANY, DRY, WATER }
     public enum Terrain { NONE, BEARD_THIN, BEARD_BOX }
 
     public static final SettlementGenerationRules DEFAULT = new SettlementGenerationRules(
             false, "hostile_humans_unified:default", 1, "minecraft:overworld",
-            List.of(), List.of(), Placement.SURFACE, -64, 319, 8, Water.DRY, Terrain.NONE, 0);
+            List.of(), List.of(), Placement.SURFACE, -64, 319, 8, Water.DRY, Terrain.NONE, 0, 32, 8);
 
     public SettlementGenerationRules {
+        // Older pack JSON has neither field.
+        if (spacing == 0 && separation == 0) {
+            spacing = 32;
+            separation = 8;
+        }
         requireId(group);
         requireId(dimension);
         allowedBiomes = checkedSelectors(allowedBiomes);
         excludedBiomes = checkedSelectors(excludedBiomes);
         if (weight < 1 || weight > 1000 || minY < -2048 || maxY > 2047 || minY > maxY
                 || maxSlope < 0 || maxSlope > 64 || minimumDay < 0
+                || spacing < 2 || spacing > 4096 || separation < 1 || separation >= spacing
                 || placement == null || water == null || terrain == null)
             throw new IllegalArgumentException("invalid natural generation rule");
     }
@@ -57,7 +63,7 @@ public record SettlementGenerationRules(
                 selectors(tag, "excluded_biomes"), Placement.valueOf(tag.getString("placement")),
                 tag.getInt("min_y"), tag.getInt("max_y"), tag.getInt("max_slope"),
                 Water.valueOf(tag.getString("water")), Terrain.valueOf(tag.getString("terrain")),
-                tag.getInt("minimum_day"));
+                tag.getInt("minimum_day"), tag.getInt("spacing"), tag.getInt("separation"));
     }
 
     public CompoundTag write() {
@@ -76,6 +82,8 @@ public record SettlementGenerationRules(
         tag.putString("water", water.name());
         tag.putString("terrain", terrain.name());
         tag.putInt("minimum_day", minimumDay);
+        tag.putInt("spacing", spacing);
+        tag.putInt("separation", separation);
         return tag;
     }
 }

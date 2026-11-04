@@ -35,7 +35,7 @@ public final class SettlementScreen extends PanelScreen {
     private static final List<String> GENERATION_TEXT =
             List.of("group", "dimension", "allowed_biomes", "excluded_biomes");
     private static final List<String> GENERATION_NUMBERS =
-            List.of("weight", "min_y", "max_y", "max_slope", "minimum_day");
+            List.of("weight", "min_y", "max_y", "max_slope", "minimum_day", "spacing", "separation");
     private List<InputValue<String>> generationText = List.of();
     private List<InputValue<Integer>> generationNumbers = List.of();
     private CompoundTag generation = new CompoundTag();
@@ -611,6 +611,10 @@ public final class SettlementScreen extends PanelScreen {
         generation = author.getCompound("generation").copy();
         if (generation.isEmpty())
             generation = dev.felix.hostilehumans.settlement.SettlementGenerationRules.DEFAULT.write();
+        else if (generation.getInt("spacing") == 0 && generation.getInt("separation") == 0) {
+            generation.putInt("spacing", 32);
+            generation.putInt("separation", 8);
+        }
         generationText = GENERATION_TEXT.stream()
                 .map(key -> string(generation.getString(key), key.endsWith("_biomes") ? 4096 : 128,
                         !key.endsWith("_biomes")))
@@ -620,7 +624,9 @@ public final class SettlementScreen extends PanelScreen {
                 InputValue.integer(generation.getInt("min_y"), -2048, 2047),
                 InputValue.integer(generation.getInt("max_y"), -2048, 2047),
                 InputValue.integer(generation.getInt("max_slope"), 0, 64),
-                InputValue.integer(generation.getInt("minimum_day"), 0, Integer.MAX_VALUE));
+                InputValue.integer(generation.getInt("minimum_day"), 0, Integer.MAX_VALUE),
+                InputValue.integer(generation.getInt("spacing"), 2, 4096),
+                InputValue.integer(generation.getInt("separation"), 1, 4095));
     }
 
     private UiLayout.Node generationEditor() {
@@ -638,6 +644,15 @@ public final class SettlementScreen extends PanelScreen {
                 value -> generation.putBoolean("enabled", Boolean.parseBoolean(value))));
         for (int i = 0; i < GENERATION_TEXT.size(); i++)
             nodes.add(input("generation." + GENERATION_TEXT.get(i), generationText.get(i)));
+        nodes.add(muted(text("generation.group_scope")));
+        String group = generationText.get(0).text();
+        var peers = snapshot.data().getList("generation_groups", Tag.TAG_COMPOUND);
+        for (int i = 0; i < peers.size(); i++) {
+            var peer = peers.getCompound(i);
+            if (peer.getString("group").equals(group))
+                nodes.add(muted(text("generation.group_source", peer.getString("id"),
+                        peer.getInt("spacing"), peer.getInt("separation"))));
+        }
         nodes.add(generationChoices("placement", List.of("SURFACE", "UNDERGROUND")));
         nodes.add(generationChoices("water", List.of("ANY", "DRY", "WATER")));
         nodes.add(generationChoices("terrain", List.of("NONE", "BEARD_THIN", "BEARD_BOX")));

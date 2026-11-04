@@ -1,4 +1,8 @@
 {
+  "gui.hostile_humans_unified.settlement.generation.spacing": "生成组间距（区块）",
+  "gui.hostile_humans_unified.settlement.generation.separation": "生成组最小间隔（区块）",
+  "gui.hostile_humans_unified.settlement.generation.group_scope": "同一组的分享包必须使用相同间距。下方列出当前服务器已安装的同组建筑。",
+  "gui.hostile_humans_unified.settlement.generation.group_source": "已安装 %s：间距 %s，最小间隔 %s",
   "gui.hostile_humans_unified.settlement.validate_generation": "校验已保存的生成规则",
   "gui.hostile_humans_unified.settlement.placement_progress": "正在放置 %s，已处理 %s / %s 条记录。",
   "gui.hostile_humans_unified.settlement.placement_partial": "已中止放置 %s，世界可能已部分改动。",

@@ -86,6 +86,13 @@ final class SettlementBuildingPack {
                 || draft.size().z() > SettlementWorldgenResources.MAX_HORIZONTAL_SIDE)
             return "this draft can only be placed manually";
         var rules = draft.generation();
+        var proposed = groupFor(rules);
+        for (var peer : SettlementBuildingCatalog.entries(player.getServer()).entrySet()) {
+            if (peer.getKey().toString().equals(draft.template())) continue;
+            var definition = peer.getValue().generation();
+            if (definition.rules().group().equals(rules.group()) && !definition.group().equals(proposed))
+                return "generation group spacing differs from installed building " + peer.getKey();
+        }
         var dimension = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION,
                 new ResourceLocation(rules.dimension()));
         if (player.getServer().getLevel(dimension) == null) return "unknown generation dimension: " + rules.dimension();
@@ -120,7 +127,7 @@ final class SettlementBuildingPack {
                 return "save the current draft as NBT before exporting its building pack";
             var manifest = new Manifest(1, id.toString(), digest(bytes));
             var generation = new Generation(1, savedAuthor.generation(),
-                    new Group(32, 8, savedAuthor.generation().group().hashCode() & Integer.MAX_VALUE));
+                    groupFor(savedAuthor.generation()));
             var output = exportFile(id);
             if (!overwrite && Files.exists(output)) return "building pack already exists";
             Files.createDirectories(output.getParent());
@@ -145,6 +152,10 @@ final class SettlementBuildingPack {
             HumanRuntime.LOGGER.warn("Could not export building pack {}", id, error);
             return "could not export building pack: " + error.getMessage();
         }
+    }
+
+    private static Group groupFor(SettlementGenerationRules rules) {
+        return new Group(rules.spacing(), rules.separation(), rules.group().hashCode() & Integer.MAX_VALUE);
     }
 
     static Contents read(InputStream input) throws IOException {

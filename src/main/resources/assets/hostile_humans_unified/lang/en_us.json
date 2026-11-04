@@ -1,4 +1,8 @@
 {
+  "gui.hostile_humans_unified.settlement.generation.spacing": "Group spacing (chunks)",
+  "gui.hostile_humans_unified.settlement.generation.separation": "Group minimum separation (chunks)",
+  "gui.hostile_humans_unified.settlement.generation.group_scope": "Packs in the same group must use the same spacing. Installed members of this group are listed below.",
+  "gui.hostile_humans_unified.settlement.generation.group_source": "Installed %s: spacing %s, separation %s",
   "gui.hostile_humans_unified.settlement.validate_generation": "Validate saved rules",
   "gui.hostile_humans_unified.settlement.placement_progress": "Placing %s: %s / %s entries.",
   "gui.hostile_humans_unified.settlement.placement_partial": "Placement of %s interrupted. The world may have been partially modified.",
