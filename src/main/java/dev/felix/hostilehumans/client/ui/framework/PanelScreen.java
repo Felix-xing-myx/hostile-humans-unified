@@ -173,6 +173,10 @@ public abstract class PanelScreen extends Screen {
         return UiLayout.leaf(row::measureHeight, row::place);
     }
 
+    protected UiLayout.Node node(PanelListRow row) {
+        return UiLayout.leaf(row::measureHeight, row::place);
+    }
+
     protected UiLayout.Node node(PanelKeyValue row) {
         return UiLayout.leaf(row::measureHeight, row::place);
     }

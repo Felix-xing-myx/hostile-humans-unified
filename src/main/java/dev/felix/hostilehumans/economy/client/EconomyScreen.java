@@ -259,7 +259,7 @@ public final class EconomyScreen extends PanelScreen {
         content.add(
                 switch (tab) {
                     case "offers" -> offers();
-                    case "tasks" -> tasks();
+                    case "tasks" -> UiLayout.column(0, List.of());
                     case "standing" -> standings();
                     case "permit" -> broker();
                     default -> wallets();
@@ -302,6 +302,47 @@ public final class EconomyScreen extends PanelScreen {
             button.active = !pending.busy();
             controls.put("tab." + page, button);
         }
+        if (!"tasks".equals(tab)) return;
+        var factions = snapshot.metadata().getList("task_factions", net.minecraft.nbt.Tag.TAG_STRING);
+        if (factions.size() > 1)
+            for (var value : factions)
+                Currency.faction(value.getAsString())
+                        .ifPresent(
+                                selected ->
+                                        chip(
+                                                "task_faction." + selected.key(),
+                                                currency(selected),
+                                                selected.faction().equals(snapshot.faction()),
+                                                () ->
+                                                        send(
+                                                                EconomyView.Action.SELECT_TASK_FACTION,
+                                                                new EconomyView.Command(
+                                                                        EconomyView.NONE,
+                                                                        "",
+                                                                        selected,
+                                                                        selected,
+                                                                        Currency.Denomination.COPPER,
+                                                                        0,
+                                                                        -1,
+                                                                        0,
+                                                                        false))));
+        if (!overviewTasks())
+            for (String filter : List.of("all", "available", "deliver", "claim"))
+                chip(
+                        "taskFilter." + filter,
+                        text("filter." + filter),
+                        taskFilter.equals(filter),
+                        () -> {
+                            taskFilter = filter;
+                            refresh();
+                        });
+    }
+
+    private void chip(String id, Component label, boolean selected, Runnable run) {
+        PanelButton button = band(new PanelButton(label, b -> run.run(), this::theme));
+        button.selected(selected);
+        button.active = !pending.busy();
+        controls.put(id, button);
     }
 
     private UiLayout.Node wallets() {
@@ -570,128 +611,147 @@ public final class EconomyScreen extends PanelScreen {
         return row.issuer() + "|" + row.id();
     }
 
-    private UiLayout.Node tasks() {
-        boolean overview = snapshot.page() == EconomyView.Page.WALLET;
-        List<UiLayout.Node> nodes = new ArrayList<>(), filters = new ArrayList<>();
-        var factions = snapshot.metadata().getList("task_factions", net.minecraft.nbt.Tag.TAG_STRING);
-        if (factions.size() > 1) {
-            List<UiLayout.Node> selectors = new ArrayList<>();
-            for (var value : factions) Currency.faction(value.getAsString()).ifPresent(selected ->
-                    selectors.add(action("task_faction." + selected.key(), currency(selected),
-                            !pending.busy(), selected.faction().equals(snapshot.faction()),
-                            () -> send(EconomyView.Action.SELECT_TASK_FACTION, new EconomyView.Command(
-                                    EconomyView.NONE, "", selected, selected, Currency.Denomination.COPPER,
-                                    0, -1, 0, false)))));
-            nodes.add(UiLayout.grid(2, 4, selectors));
-        }
-        for (String filter : List.of("all", "available", "deliver", "claim"))
-            filters.add(
-                    action(
-                            "taskFilter." + filter,
-                            text("filter." + filter),
-                            !pending.busy(),
-                            taskFilter.equals(filter),
-                            () -> {
-                                taskFilter = filter;
-                                refresh();
-                            }));
-        if (!overview) nodes.add(UiLayout.grid(4, 4, 70, filters));
-        List<UiLayout.Node> list = new ArrayList<>();
-        for (var row : snapshot.tasks())
-            if (matches(row))
-                list.add(
-                        action(
-                                "task." + taskKey(row),
-                                Component.literal(row.title())
-                                        .append(" · ")
-                                        .append(named("status", row.status()))
-                                        .append(" · ").append(row.progress() + "/" + row.target())
-                                        .append(overview ? Component.literal(" · ").append(
-                                                Currency.faction(row.issuer()).map(EconomyScreen::currency)
-                                                        .orElseGet(() -> Component.literal(row.issuer()))) : Component.empty()),
-                                !pending.busy(),
-                                taskKey(row).equals(taskId),
-                                () -> {
-                                    taskId = taskKey(row);
+    /** The wallet page shows the player's own commissions; a station board shows its offers. */
+    private boolean overviewTasks() {
+        return snapshot.page() == EconomyView.Page.WALLET;
+    }
+
+    private EconomyView.TaskRow selectedTask() {
+        return snapshot.tasks().stream()
+                .filter(task -> taskKey(task).equals(taskId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Override
+    protected int splitWidth() {
+        return "tasks".equals(tab) ? 280 : 0;
+    }
+
+    private UiLayout.Node taskRow(EconomyView.TaskRow row) {
+        String key = taskKey(row);
+        Component metadata =
+                named("status", row.status())
+                        .copy()
+                        .append(" · ")
+                        .append(named("kind", row.kind()));
+        if (overviewTasks())
+            metadata =
+                    metadata.copy()
+                            .append(" · ")
+                            .append(
+                                    Currency.faction(row.issuer())
+                                            .map(EconomyScreen::currency)
+                                            .orElseGet(() -> Component.literal(row.issuer())));
+        String value = row.target() > 0 ? row.progress() + "/" + row.target() : "";
+        PanelListRow button =
+                body(
+                        new PanelListRow(
+                                row.title(),
+                                metadata.getString(),
+                                value,
+                                row.progress(),
+                                row.target(),
+                                row.canClaim() ? 0xFF8FC7A6 : row.canAccept() ? theme().accent() : 0xFF4A5560,
+                                Component.literal(row.title()).append(". ").append(metadata),
+                                b -> {
+                                    if (pending.busy()) return;
+                                    taskId = key;
                                     refresh();
-                                }));
-        List<UiLayout.Node> detail = new ArrayList<>();
-        var row =
-                snapshot.tasks().stream()
-                        .filter(task -> taskKey(task).equals(taskId))
-                        .findFirst()
-                        .orElse(null);
-        if (row == null) detail.add(muted(text("no_tasks")));
-        else {
-            detail.add(text(Component.literal(row.title()), () -> theme().accent()));
-            detail.add(
-                    muted(
-                            text(
-                                    "task_state",
-                                    named("kind", row.kind()),
-                                    named("status", row.status()))));
-            if (!row.objective().isEmpty()) {
-                detail.add(muted(text("task_objective", named("objective", row.objective()))));
-                if (row.objective().equals("DELIVERY")) {
-                    var id = net.minecraft.resources.ResourceLocation.tryParse(row.item());
-                    var item = id == null ? null : net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(id);
-                    detail.add(muted(text("task_delivery_target",
-                            item == null ? Component.literal(row.item()) : item.getDescription(), row.target())));
-                } else if (!row.targetFaction().isEmpty()) {
-                    var target = Currency.faction(row.targetFaction()).map(EconomyScreen::currency)
-                            .orElseGet(() -> Component.literal(row.targetFaction()));
-                    detail.add(muted(text("task_target_faction", target)));
-                }
+                                },
+                                this::theme));
+        button.selected(key.equals(taskId));
+        controls.put("task." + key, button);
+        return node(button);
+    }
+
+    @Override
+    protected void buildLeft(List<UiLayout.Node> out) {
+        // Split layouts skip buildContent(), so the control map is cleared here instead.
+        controls.clear();
+        boolean any = false;
+        for (var row : snapshot.tasks())
+            if (matches(row)) {
+                out.add(taskRow(row));
+                any = true;
             }
-            if (row.deadline() > 0) detail.add(muted(text("task_deadline", remaining(row.deadline()))));
-            else if (row.timeLimit() > 0) detail.add(muted(text("task_deadline", text("seconds", (row.timeLimit() + 19) / 20))));
-            if (!row.siteName().isEmpty()) detail.add(muted(text("task_origin", row.siteName())));
-            detail.add(muted(text("task_progress", row.progress(), row.target())));
-            detail.add(
-                    node(
-                            body(
-                                    new PanelMeter(
-                                            () -> row.progress(),
-                                            () -> row.target(),
-                                            () -> theme().accent()))));
-            var issuer = Currency.faction(row.issuer()).or(() -> Currency.faction(snapshot.faction()));
-            if (row.nominalStanding() != 0 || row.availableStanding() != 0)
-                detail.add(rewardIcon(net.minecraft.world.item.Items.BOOK,
-                        text("task_standing_reward", row.nominalStanding(), row.availableStanding())));
-            if (row.rewardCopper() > 0 && issuer.isPresent())
-                detail.add(rewardIcon(dev.felix.hostilehumans.economy.EconomyContent.coin(
-                        issuer.get(), Currency.Denomination.COPPER), text("task_coin_reward", row.rewardCopper())));
-            if (row.kind().equals("INITIATION"))
-                detail.add(rewardIcon(net.minecraft.world.item.Items.PAPER, text("task_permit_reward")));
-            detail.add(muted(text("price_currency", issuer.map(EconomyScreen::currency).orElseGet(this::priceCurrency))));
-            if (overview) detail.add(muted(text("task_process_at_board")));
-            else {
-                detail.add(muted(Component.literal(row.reason())));
-                detail.add(
-                        action(
-                                "accept",
-                                text("accept"),
-                                !pending.busy() && row.canAccept(),
-                                false,
-                                () -> send(EconomyView.Action.ACCEPT_TASK, taskCommand(row.id()))));
-                detail.add(
-                        action(
-                                "deliver",
-                                text("deliver"),
-                                !pending.busy() && row.canDeliver(),
-                                false,
-                                () -> send(EconomyView.Action.DELIVER_TASK, taskCommand(row.id()))));
-                detail.add(
-                        action(
-                                "claim",
-                                text("claim"),
-                                !pending.busy() && row.canClaim(),
-                                false,
-                                () -> send(EconomyView.Action.CLAIM_TASK, taskCommand(row.id()))));
+        if (!any) out.add(muted(text("no_tasks")));
+    }
+
+    @Override
+    protected void buildRight(List<UiLayout.Node> out) {
+        var row = selectedTask();
+        if (row == null) {
+            out.add(muted(text("no_tasks")));
+            return;
+        }
+        out.add(text(Component.literal(row.title()), () -> theme().accent()));
+        out.add(muted(text("task_state", named("kind", row.kind()), named("status", row.status()))));
+        if (!row.objective().isEmpty()) {
+            out.add(muted(text("task_objective", named("objective", row.objective()))));
+            if (row.objective().equals("DELIVERY")) {
+                var id = net.minecraft.resources.ResourceLocation.tryParse(row.item());
+                var item =
+                        id == null
+                                ? null
+                                : net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(id);
+                out.add(
+                        muted(
+                                text(
+                                        "task_delivery_target",
+                                        item == null
+                                                ? Component.literal(row.item())
+                                                : item.getDescription(),
+                                        row.target())));
+            } else if (!row.targetFaction().isEmpty()) {
+                var target =
+                        Currency.faction(row.targetFaction())
+                                .map(EconomyScreen::currency)
+                                .orElseGet(() -> Component.literal(row.targetFaction()));
+                out.add(muted(text("task_target_faction", target)));
             }
         }
-        nodes.add(UiLayout.row(12, List.of(UiLayout.column(6, list), UiLayout.column(6, detail))));
-        return UiLayout.column(6, nodes);
+        if (row.deadline() > 0) out.add(muted(text("task_deadline", remaining(row.deadline()))));
+        else if (row.timeLimit() > 0)
+            out.add(muted(text("task_deadline", text("seconds", (row.timeLimit() + 19) / 20))));
+        if (!row.siteName().isEmpty()) out.add(muted(text("task_origin", row.siteName())));
+        out.add(muted(text("task_progress", row.progress(), row.target())));
+        out.add(
+                node(
+                        body(
+                                new PanelMeter(
+                                        () -> row.progress(),
+                                        () -> row.target(),
+                                        () -> theme().accent()))));
+        var issuer = Currency.faction(row.issuer()).or(() -> Currency.faction(snapshot.faction()));
+        if (row.nominalStanding() != 0 || row.availableStanding() != 0)
+            out.add(
+                    rewardIcon(
+                            net.minecraft.world.item.Items.BOOK,
+                            text(
+                                    "task_standing_reward",
+                                    row.nominalStanding(),
+                                    row.availableStanding())));
+        if (row.rewardCopper() > 0 && issuer.isPresent())
+            out.add(
+                    rewardIcon(
+                            dev.felix.hostilehumans.economy.EconomyContent.coin(
+                                    issuer.get(), Currency.Denomination.COPPER),
+                            text("task_coin_reward", row.rewardCopper())));
+        if (row.kind().equals("INITIATION"))
+            out.add(rewardIcon(net.minecraft.world.item.Items.PAPER, text("task_permit_reward")));
+        out.add(
+                muted(
+                        text(
+                                "price_currency",
+                                issuer.map(EconomyScreen::currency).orElseGet(this::priceCurrency))));
+        if (overviewTasks()) out.add(muted(text("task_process_at_board")));
+        else out.add(muted(Component.literal(row.reason())));
+    }
+
+    @Override
+    protected Component bandStatus() {
+        return pending.busy() ? text("pending") : Component.empty();
     }
 
     private UiLayout.Node rewardIcon(net.minecraft.world.item.Item item, Component label) {
@@ -825,6 +885,18 @@ public final class EconomyScreen extends PanelScreen {
 
     @Override
     protected void buildFooter() {
+        if ("tasks".equals(tab) && !overviewTasks()) {
+            var row = selectedTask();
+            if (row != null) {
+                footer(text("accept"), b -> send(EconomyView.Action.ACCEPT_TASK, taskCommand(row.id())))
+                        .active = !pending.busy() && row.canAccept();
+                footer(text("deliver"), b -> send(EconomyView.Action.DELIVER_TASK, taskCommand(row.id())))
+                        .active = !pending.busy() && row.canDeliver();
+                footer(text("claim"), b -> send(EconomyView.Action.CLAIM_TASK, taskCommand(row.id())))
+                        .active = !pending.busy() && row.canClaim();
+                footerSpacer();
+            }
+        }
         footer(Component.translatable("gui.done"), b -> onClose());
         footer(text("refresh"), b -> send(EconomyView.Action.REFRESH, EconomyView.Command.empty()))
                         .active =
