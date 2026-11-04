@@ -3,6 +3,7 @@ package dev.felix.hostilehumans.economy.client;
 import dev.felix.hostilehumans.client.ui.framework.InputValue;
 import dev.felix.hostilehumans.client.ui.framework.PanelButton;
 import dev.felix.hostilehumans.client.ui.framework.PanelGeometry;
+import dev.felix.hostilehumans.client.ui.framework.PanelListRow;
 import dev.felix.hostilehumans.client.ui.framework.PanelMeter;
 import dev.felix.hostilehumans.client.ui.framework.PanelScreen;
 import dev.felix.hostilehumans.client.ui.framework.PendingAction;
