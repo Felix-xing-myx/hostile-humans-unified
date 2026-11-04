@@ -405,7 +405,7 @@ final class SettlementTemplateFiles {
                     author.faction(), author.tier(), author.revision(), dimensions,
                     new TemplateTransform.Cell(-carrier.x(), -carrier.y(), -carrier.z()),
                     author.regions().stream().map(r -> r.transform(shift)).toList(),
-                    author.facilities().stream().map(f -> f.transform(shift)).toList());
+                    author.facilities().stream().map(f -> f.transform(shift)).toList(), author.generation());
             tag.put(SettlementInformationBlockEntity.AUTHOR, SettlementCodec.template(normalized));
             tag.remove("selection_identity");
             tag.remove("settlement_instance");

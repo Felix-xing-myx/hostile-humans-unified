@@ -64,7 +64,8 @@ public final class SettlementCodec {
                 cell(tag, "size"),
                 cell(tag, "origin_offset"),
                 regions(tag.getList("regions", Tag.TAG_COMPOUND)),
-                facilities(tag.getList("facilities", Tag.TAG_COMPOUND)));
+                facilities(tag.getList("facilities", Tag.TAG_COMPOUND)),
+                SettlementGenerationRules.read(tag.getCompound("generation")));
     }
 
     public static CompoundTag template(SettlementTemplate value) {
@@ -80,6 +81,8 @@ public final class SettlementCodec {
         cell(tag, "origin_offset", value.originOffset());
         tag.put("regions", regions(value.regions()));
         tag.put("facilities", facilities(value.facilities()));
+        if (!value.generation().equals(SettlementGenerationRules.DEFAULT))
+            tag.put("generation", value.generation().write());
         return tag;
     }
 

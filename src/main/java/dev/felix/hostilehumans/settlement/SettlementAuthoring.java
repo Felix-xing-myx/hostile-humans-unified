@@ -240,7 +240,7 @@ public final class SettlementAuthoring {
                                 Math.negateExact(local.y()),
                                 Math.negateExact(local.z())),
                         a.regions(),
-                        a.facilities());
+                        a.facilities(), a.generation());
         info.author(SettlementCodec.template(author));
         return "refreshed author data from authoritative index";
     }
@@ -385,7 +385,7 @@ public final class SettlementAuthoring {
     private static String saveGeometry(SettlementInformationBlockEntity info, SettlementTemplate author,
             List<SettlementRegion> regions, List<SettlementFacility> facilities) {
         var updated = new SettlementTemplate(author.template(), author.module(), author.kind(), author.faction(),
-                author.tier(), author.revision(), author.size(), author.originOffset(), regions, facilities);
+                author.tier(), author.revision(), author.size(), author.originOffset(), regions, facilities, author.generation());
         return commit(info, info.revision(), SettlementCodec.template(updated));
     }
 
@@ -405,7 +405,7 @@ public final class SettlementAuthoring {
                     List.of(bounds), region.excludes()));
             var updated = new SettlementTemplate(author.template(), author.module(), author.kind(),
                     author.faction(), author.tier(), author.revision(), size, author.originOffset(),
-                    regions, author.facilities());
+                    regions, author.facilities(), author.generation());
             return commit(info, revision, SettlementCodec.template(updated));
         }
         return "select an existing outer region";
@@ -431,7 +431,7 @@ public final class SettlementAuthoring {
         var updated = new SettlementTemplate(author.template(), author.module(), author.kind(),
                 author.faction(), author.tier(), author.revision(), size, cell(origin.subtract(carrier)),
                 author.regions().stream().map(r -> r.transform(shift)).toList(),
-                author.facilities().stream().map(f -> f.transform(shift)).toList());
+                author.facilities().stream().map(f -> f.transform(shift)).toList(), author.generation());
         return commit(info, info.revision(), SettlementCodec.template(updated));
     }
 

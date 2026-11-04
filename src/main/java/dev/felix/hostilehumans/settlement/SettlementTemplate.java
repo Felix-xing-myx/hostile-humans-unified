@@ -21,7 +21,8 @@ public record SettlementTemplate(
         TemplateTransform.Cell size,
         TemplateTransform.Cell originOffset,
         List<SettlementRegion> regions,
-        List<SettlementFacility> facilities) {
+        List<SettlementFacility> facilities,
+        SettlementGenerationRules generation) {
     public enum Kind {
         ROOT,
         ATTACHMENT,
@@ -29,6 +30,13 @@ public record SettlementTemplate(
     }
 
     public static final int SCHEMA = 1;
+
+    public SettlementTemplate(String template, String module, Kind kind, String faction,
+            int tier, int revision, TemplateTransform.Cell size, TemplateTransform.Cell originOffset,
+            List<SettlementRegion> regions, List<SettlementFacility> facilities) {
+        this(template, module, kind, faction, tier, revision, size, originOffset,
+                regions, facilities, SettlementGenerationRules.DEFAULT);
+    }
 
     public SettlementTemplate {
         if (ResourceLocation.tryParse(template) == null
@@ -52,6 +60,7 @@ public record SettlementTemplate(
         faction = FactionDefinitions.find(faction).id().toString();
         regions = List.copyOf(regions);
         facilities = List.copyOf(facilities);
+        java.util.Objects.requireNonNull(generation);
         if (regions.size() > SettlementLimits.value(SettlementLimits.REGIONS)
                 || facilities.size() > 128)
             throw new IllegalArgumentException("template list limit");
@@ -144,6 +153,6 @@ public record SettlementTemplate(
                 size,
                 originOffset,
                 regions,
-                facilities);
+                facilities, generation);
     }
 }

@@ -1,3 +1,7 @@
+## Natural generation author draft
+
+The author tab persists a validated portable rule in the information block. Revision updates, geometry changes and normalized template export preserve it. Group publication, pack loading and world generation are separate work.
+
 ## Building library remote export
 
 Instance exports queue an immutable file snapshot for the exporting player. Packets are bounded, incoming bytes are hashed and checked before publication, and the download command retries a server copy without replacing an existing different client file. Dedicated multiplayer and LAN still need runtime acceptance.

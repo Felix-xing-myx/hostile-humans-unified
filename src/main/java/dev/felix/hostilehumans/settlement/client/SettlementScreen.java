@@ -32,6 +32,14 @@ public final class SettlementScreen extends PanelScreen {
     private final Map<String, AbstractWidget> controls = new HashMap<>();
     private SettlementNetwork.Snapshot snapshot, editBase;
     private CompoundTag author;
+    private static final List<String> GENERATION_TEXT =
+            List.of("group", "dimension", "allowed_biomes", "excluded_biomes");
+    private static final List<String> GENERATION_NUMBERS =
+            List.of("weight", "min_y", "max_y", "max_slope", "minimum_day");
+    private List<InputValue<String>> generationText = List.of();
+    private List<InputValue<Integer>> generationNumbers = List.of();
+    private CompoundTag generation = new CompoundTag();
+
     private InputValue<String> template,
             module,
             faction,
@@ -183,6 +191,7 @@ public final class SettlementScreen extends PanelScreen {
                 transformDirty && editBase != null && editBase.token().equals(value.token());
         editBase = value;
         author = value.data().getCompound("author").copy();
+        resetGenerationDraft();
         localChanged = false;
         error = "";
         template = string(author.getString("template"), 256, true);
@@ -281,6 +290,8 @@ public final class SettlementScreen extends PanelScreen {
 
     private boolean dirty() {
         return localChanged
+                || changed(generationText)
+                || changed(generationNumbers)
                 || template.dirty()
                 || module.dirty()
                 || faction.dirty()
@@ -482,6 +493,20 @@ public final class SettlementScreen extends PanelScreen {
         payload.putString("kind", kind);
         payload.putIntArray("size", integers(size));
         payload.putIntArray("origin_offset", integers(offset));
+        if (!valid(generationText) || !valid(generationNumbers)) return null;
+        var rules = generation.copy();
+        for (int i = 0; i < GENERATION_TEXT.size(); i++)
+            rules.putString(GENERATION_TEXT.get(i), generationText.get(i).value().orElse(""));
+        for (int i = 0; i < GENERATION_NUMBERS.size(); i++)
+            rules.putInt(GENERATION_NUMBERS.get(i), generationNumbers.get(i).value().orElseThrow());
+        try {
+            var parsed = dev.felix.hostilehumans.settlement.SettlementGenerationRules.read(rules);
+            if (parsed.equals(dev.felix.hostilehumans.settlement.SettlementGenerationRules.DEFAULT))
+                payload.remove("generation");
+            else payload.put("generation", parsed.write());
+        } catch (IllegalArgumentException invalid) {
+            return null;
+        }
         return payload;
     }
 
@@ -530,7 +555,7 @@ public final class SettlementScreen extends PanelScreen {
     }
 
     private static final List<String> PAGES =
-            List.of("template", "regions", "facilities", "transfer", "management");
+            List.of("template", "regions", "facilities", "generation", "transfer", "management");
 
     @Override
     protected void buildBand() {
@@ -573,12 +598,50 @@ public final class SettlementScreen extends PanelScreen {
                     switch (tab) {
                         case "regions" -> regionEditor();
                         case "facilities" -> facilityEditor();
+                        case "generation" -> generationEditor();
                         case "transfer" -> transfer();
                         case "management" -> management();
                         default -> identity();
                     });
         } else root.add(management());
         return UiLayout.column(6, root);
+    }
+
+    private void resetGenerationDraft() {
+        generation = author.getCompound("generation").copy();
+        if (generation.isEmpty())
+            generation = dev.felix.hostilehumans.settlement.SettlementGenerationRules.DEFAULT.write();
+        generationText = GENERATION_TEXT.stream()
+                .map(key -> string(generation.getString(key), key.endsWith("_biomes") ? 4096 : 128,
+                        !key.endsWith("_biomes")))
+                .toList();
+        generationNumbers = List.of(
+                InputValue.integer(generation.getInt("weight"), 1, 1000),
+                InputValue.integer(generation.getInt("min_y"), -2048, 2047),
+                InputValue.integer(generation.getInt("max_y"), -2048, 2047),
+                InputValue.integer(generation.getInt("max_slope"), 0, 64),
+                InputValue.integer(generation.getInt("minimum_day"), 0, Integer.MAX_VALUE));
+    }
+
+    private UiLayout.Node generationEditor() {
+        List<UiLayout.Node> nodes = new ArrayList<>();
+        nodes.add(muted(text("generation.help")));
+        nodes.add(choices("generation.enabled", List.of("false", "true"),
+                Boolean.toString(generation.getBoolean("enabled")),
+                value -> generation.putBoolean("enabled", Boolean.parseBoolean(value))));
+        for (int i = 0; i < GENERATION_TEXT.size(); i++)
+            nodes.add(input("generation." + GENERATION_TEXT.get(i), generationText.get(i)));
+        nodes.add(generationChoices("placement", List.of("SURFACE", "UNDERGROUND")));
+        nodes.add(generationChoices("water", List.of("ANY", "DRY", "WATER")));
+        nodes.add(generationChoices("terrain", List.of("NONE", "BEARD_THIN", "BEARD_BOX")));
+        for (int i = 0; i < GENERATION_NUMBERS.size(); i++)
+            nodes.add(input("generation." + GENERATION_NUMBERS.get(i), generationNumbers.get(i)));
+        return UiLayout.column(6, nodes);
+    }
+
+    private UiLayout.Node generationChoices(String key, List<String> values) {
+        return choices("generation." + key, values, generation.getString(key),
+                value -> generation.putString(key, value));
     }
 
     private boolean namedTemplate() {
