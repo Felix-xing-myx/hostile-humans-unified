@@ -1,4 +1,8 @@
 {
+  "gui.hostile_humans_unified.settlement.placement_progress": "正在放置 %s，已处理 %s / %s 条记录。",
+  "gui.hostile_humans_unified.settlement.placement_partial": "已中止放置 %s，世界可能已部分改动。",
+  "gui.hostile_humans_unified.settlement.placement_cancelled": "已取消放置 %s。",
+  "gui.hostile_humans_unified.settlement.placement_result": "模板放置结果：%s",
   "gui.hostile_humans_unified.settlement.capture_progress": "模板 %s 正在采集，已完成 %s / %s 批。",
   "gui.hostile_humans_unified.settlement.capture_cancelled": "模板 %s 采集中止，未发布文件。",
   "gui.hostile_humans_unified.settlement.capture_failed": "模板 %s 采集失败：%s",

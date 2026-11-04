@@ -1,3 +1,7 @@
+## Large template placement batches
+
+Large previews send a bounded sample. Confirmation drives vanilla block and entity batches, placing the information block last. Owner, dimension, permission and loaded destination checks stop interrupted jobs and report partial writes. Integrated build and in-world validation remain pending.
+
 ## Large template capture
 
 Template volume is configurable and capture beyond the former ceiling uses bounded vanilla capture tiles with merged palettes and translated entity positions. Interrupted captures do not publish a file. The NBT reader accounts for the larger coordinate lists. Placement slicing and stress validation remain open.

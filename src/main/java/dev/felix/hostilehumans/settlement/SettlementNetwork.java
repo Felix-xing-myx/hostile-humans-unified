@@ -274,6 +274,7 @@ public final class SettlementNetwork {
                     if (event.getEntity() instanceof ServerPlayer player) {
                         SettlementTemplateTransfer.cancel(player);
                         SettlementTemplateFiles.cancelCapture(player);
+                        SettlementTemplateFiles.cancelPlacement(player, false);
                     }
                 });
     }
@@ -534,6 +535,7 @@ public final class SettlementNetwork {
                 || !(event.player instanceof ServerPlayer player)) return;
         SettlementTemplateTransfer.tick(player);
         SettlementTemplateFiles.tickCapture(player);
+        SettlementTemplateFiles.tickPlacement(player);
         if (player.tickCount % 20 != 0) return;
         SettlementTemplateFiles.tick(player);
         SettlementSelectionTool.tick(player);

@@ -35,10 +35,12 @@ final class SettlementTemplateFiles {
             boolean overwrite, ResourceLocation id, RegionBox bounds, TemplateTransform.Cell size,
             SettlementTemplateCapture capture) {}
     private static final int PREVIEW_TICKS = 600;
+    private static final Map<ServerPlayer, PlacementJob> PLACEMENTS = new WeakHashMap<>();
+    private record PlacementJob(Placement preview, SettlementTemplatePlacement work) {}
     private static final Map<ServerPlayer, Placement> PENDING = new WeakHashMap<>();
 
     private record Placement(ServerLevel level, UUID wandToken, ResourceLocation id, BlockPos origin,
-            StructurePlaceSettings settings, StructureTemplate template, RegionBox bounds, int entityEntries, boolean authorCarrier, long expires) {}
+            StructurePlaceSettings settings, StructureTemplate template, CompoundTag largeData, RegionBox bounds, int entityEntries, boolean authorCarrier, long expires) {}
 
     private SettlementTemplateFiles() {}
 
@@ -229,10 +231,12 @@ final class SettlementTemplateFiles {
         boolean authorCarrier = sanitize(data, size, rotation, mirror, instanceFile || fromPack) != null;
         if (entities) validateEntityPositions(data, size, origin, settings, bounds);
         SettlementHumanTemplates.prepareFile(data, null, null);
-        var copy = manager.readStructure(data);
-        var ghosts = previewBlocks(level, data, origin, settings);
+        boolean large = volume(size) > LARGE_TEMPLATE_THRESHOLD;
+        var copy = large ? null : manager.readStructure(data);
+        var ghosts = previewBlocks(level, data, origin, settings, large);
         int count = entityEntries(data);
-        PENDING.put(player, new Placement(level, wandToken, id, origin, settings, copy, bounds, count, authorCarrier,
+        PENDING.put(player, new Placement(level, wandToken, id, origin, settings, copy, large ? data : null,
+                bounds, count, authorCarrier,
                 level.getGameTime() + previewTicks));
         player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                 entities ? "gui.hostile_humans_unified.settlement.preview_entity_count"
@@ -279,7 +283,7 @@ final class SettlementTemplateFiles {
     }
 
     private static List<SettlementPreview.Ghost> previewBlocks(ServerLevel level, CompoundTag data,
-            BlockPos origin, StructurePlaceSettings settings) {
+            BlockPos origin, StructurePlaceSettings settings, boolean sampled) {
         var registry = level.registryAccess().registryOrThrow(Registries.BLOCK).asLookup();
         var palette = data.getList("palette", Tag.TAG_COMPOUND).stream()
                 .map(tag -> NbtUtils.readBlockState(registry, (CompoundTag) tag))
@@ -287,7 +291,8 @@ final class SettlementTemplateFiles {
                 .toList();
         var blocks = data.getList("blocks", Tag.TAG_COMPOUND);
         var ghosts = new java.util.ArrayList<SettlementPreview.Ghost>();
-        for (int i = 0; i < blocks.size(); i++) {
+        int stride = sampled ? Math.max(1, (blocks.size() + 511) / 512) : 1;
+        for (int i = 0; i < blocks.size(); i += stride) {
             var entry = blocks.getCompound(i);
             int stateId = entry.getInt("state");
             if (stateId < 0 || stateId >= palette.size()) continue;
@@ -329,6 +334,7 @@ final class SettlementTemplateFiles {
     }
 
     static String confirm(ServerPlayer player, UUID wandToken) {
+        if (!PLACEMENTS.isEmpty()) throw new IllegalArgumentException("a large template placement is already in progress");
         var pending = ownedPreview(player, wandToken);
         if (pending == null)
             throw new IllegalArgumentException("no valid template placement preview");
@@ -338,9 +344,18 @@ final class SettlementTemplateFiles {
         checkExistingInformationBlocks(pending.level(), bounds);
         // Placement can mutate the world before it fails. Never retry the same preview.
         cancel(player);
+        if (pending.largeData() != null) {
+            PLACEMENTS.put(player, new PlacementJob(pending,
+                    new SettlementTemplatePlacement(pending.largeData(), pending.level(), pending.origin(), pending.settings())));
+            return "large template placement started: " + pending.id();
+        }
         if (!pending.template().placeInWorld(pending.level(), pending.origin(), pending.origin(),
                 pending.settings(), pending.level().getRandom(), Block.UPDATE_ALL))
             throw new IllegalArgumentException("template placement failed; create a new preview before retrying");
+        return placed(player, pending);
+    }
+
+    private static String placed(ServerPlayer player, Placement pending) {
         if (!pending.settings().isIgnoreEntities())
             player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                     "gui.hostile_humans_unified.settlement.placement_entity_count", pending.entityEntries()));
@@ -352,7 +367,7 @@ final class SettlementTemplateFiles {
         var current = ownedPreview(player, wandToken);
         if (current != null)
             PENDING.put(player, new Placement(current.level(), current.wandToken(), current.id(), current.origin(), current.settings(),
-                    current.template(), current.bounds(), current.entityEntries(), current.authorCarrier(), current.level().getGameTime() + ticks));
+                    current.template(), current.largeData(), current.bounds(), current.entityEntries(), current.authorCarrier(), current.level().getGameTime() + ticks));
     }
 
     static boolean hasPreview(ServerPlayer player, UUID wandToken) {
@@ -366,6 +381,8 @@ final class SettlementTemplateFiles {
 
     static void cancelCommand(ServerPlayer player) {
         if (ownedPreview(player, null) != null) cancel(player);
+        cancelCapture(player);
+        cancelPlacement(player, true);
     }
 
     static void cancelWand(ServerPlayer player, UUID wandToken) {
@@ -378,6 +395,39 @@ final class SettlementTemplateFiles {
 
     static void cancel(ServerPlayer player) {
         if (PENDING.remove(player) != null) SettlementNetwork.preview(player, SettlementPreview.EMPTY_PLACEMENT);
+    }
+
+    static void cancelPlacement(ServerPlayer player, boolean notify) {
+        var job = PLACEMENTS.remove(player);
+        if (job == null) return;
+        if (notify) captureMessage(player, job.work().started() ? "placement_partial" : "placement_cancelled",
+                job.preview().id());
+        if (job.work().started())
+            dev.felix.hostilehumans.bootstrap.HumanRuntime.LOGGER.warn("Interrupted large building placement {}", job.preview().id());
+    }
+
+    static void tickPlacement(ServerPlayer player) {
+        var job = PLACEMENTS.get(player);
+        if (job == null) return;
+        var preview = job.preview();
+        var bounds = preview.bounds();
+        var corner = new BlockPos(bounds.minX(), bounds.minY(), bounds.minZ());
+        if (player.serverLevel() != preview.level() || !player.canUseGameMasterBlocks()
+                || player.distanceToSqr(Vec3.atCenterOf(corner)) > 4096) {
+            cancelPlacement(player, true);
+            return;
+        }
+        try {
+            if (job.work().advance()) {
+                PLACEMENTS.remove(player);
+                captureMessage(player, "placement_result", placed(player, preview));
+            } else if (player.tickCount % 20 == 0) {
+                captureMessage(player, "placement_progress", preview.id(), job.work().completed(), job.work().total());
+            }
+        } catch (RuntimeException failure) {
+            cancelPlacement(player, true);
+            dev.felix.hostilehumans.bootstrap.HumanRuntime.LOGGER.warn("Could not place building template {}", preview.id(), failure);
+        }
     }
 
     static void cancelCapture(ServerPlayer player) {

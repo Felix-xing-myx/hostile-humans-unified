@@ -1,4 +1,8 @@
 {
+  "gui.hostile_humans_unified.settlement.placement_progress": "Placing %s: %s / %s entries.",
+  "gui.hostile_humans_unified.settlement.placement_partial": "Placement of %s interrupted. The world may have been partially modified.",
+  "gui.hostile_humans_unified.settlement.placement_cancelled": "Placement of %s cancelled.",
+  "gui.hostile_humans_unified.settlement.placement_result": "Template placement result: %s",
   "gui.hostile_humans_unified.settlement.capture_progress": "Capturing %s: %s / %s batches.",
   "gui.hostile_humans_unified.settlement.capture_cancelled": "Capture cancelled for %s. No file published.",
   "gui.hostile_humans_unified.settlement.capture_failed": "Capture failed for %s: %s",
