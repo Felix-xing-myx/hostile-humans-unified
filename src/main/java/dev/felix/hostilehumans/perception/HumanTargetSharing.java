@@ -80,9 +80,11 @@ public final class HumanTargetSharing {
                 &&!NavigationDebugService.controls(human)&&!HumanInventorySession.isEditing(human);
     }
     static boolean peers(Human a, Human b) {
-        return a!=b&&available(a)&&available(b)
-                &&a.level()==b.level()&&a.distanceToSqr(b)<=Math.pow(range(a),2)
-                &&HumanFactions.same(a,b)
+        return peers(a, b, range(a));
+    }
+    static boolean peers(Human a, Human b, double range) {
+        return a!=b&&a.level()==b.level()&&a.distanceToSqr(b)<=range*range
+                &&HumanFactions.same(a,b)&&available(a)&&available(b)
                 &&(!HumanFactions.enabled()||HumanFactions.id(a).equals(HumanFactions.id(b)))
                 &&Objects.equals(HumanRelations.effectiveOwner(a),HumanRelations.effectiveOwner(b))
                 &&HumanRelations.allied(a,b)&&HumanRelations.allied(b,a);
@@ -142,7 +144,6 @@ public final class HumanTargetSharing {
             Boolean audible=HumanReportPropagation.link(sender,receiver);
             lease.linkReady=Boolean.TRUE.equals(audible);
             if(audible==null){
-                lease.nextRefresh = now + LINK_REFRESH_TICKS;
                 return; // No fresh coordinates or relay authority while geometry is waiting.
             }
             legal=audible;
@@ -202,21 +203,21 @@ public final class HumanTargetSharing {
     }
     private static double rank(Lease lease) { return lease.window.frozenAt<0?rank(lease.report):Double.NEGATIVE_INFINITY; }
     private static double rank(Report report) { return report.threat().intrinsic()+report.threat().priority(); }
-    private static boolean hasRecipient(Human sender, List<Human> nearby, UUID target) {
-        for (Human receiver : nearby) if (!seen(receiver, target) && peers(sender, receiver)) return true;
+    private static boolean hasRecipient(List<Human> nearby, UUID target) {
+        for (Human receiver : nearby) if (!seen(receiver, target)) return true;
         return false;
     }
     private static Report outgoing(Human sender,List<Human> nearby,long now) {
         Report best=OUTBOX.get(sender);
         if(best!=null&&(now>=best.created()+LOCK_TICKS||!sender.getUUID().equals(best.origin())
                 ||!HumanPerception.personalDynamic(sender,resolve(sender,best.evidence().target()))))best=null;
-        if(best!=null&&!hasRecipient(sender,nearby,best.evidence().target()))best=null;
+        if(best!=null&&!hasRecipient(nearby,best.evidence().target()))best=null;
         var inbox=INBOX.get(sender);
         if(inbox!=null)for(Lease lease:inbox.values()){
             LivingEntity target=resolve(sender,lease.target);
             if(target==null||lease.window.frozenAt>=0||now>=lease.window.until
                     ||best!=null&&rank(lease.report)<=rank(best)
-                    ||!hasRecipient(sender,nearby,lease.target)
+                    ||!hasRecipient(nearby,lease.target)
                     ||!receiverContext(sender,lease)||!HumanPerception.sharingAllowed(sender,target))continue;
             refresh(sender,lease,target,now);
             if(lease.window.frozenAt<0&&lease.linkReady)
@@ -224,7 +225,7 @@ public final class HumanTargetSharing {
                         lease.report.created(),lease.positionAt,lease.report.threat());
         }
         Evidence evidence=HumanPerception.sharingEvidence(sender);
-        if(evidence!=null&&evidence.confirmed()&&hasRecipient(sender,nearby,evidence.target())){
+        if(evidence!=null&&evidence.confirmed()&&hasRecipient(nearby,evidence.target())){
             LivingEntity target=resolve(sender,evidence.target());
             if(target!=null){
                 Report personal=new Report(sender.getUUID(),evidence,now,now,

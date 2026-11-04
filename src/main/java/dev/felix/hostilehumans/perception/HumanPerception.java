@@ -47,7 +47,7 @@ public final class HumanPerception {
         boolean marked; long visual=-1, liveUntil=-1, familiarUntil=-1, positionAt=-1, checked=-1, defenseUntil=-1;
         final RecognitionEvidence evidence=new RecognitionEvidence();
         BodyVisibilitySamples.Point bodySample;
-        long lookAfter;
+        long lookAfter, frontlineProbe = Long.MIN_VALUE;
         Vec3 position, eye; boolean visible;
         String refresh="", denied="";
         Track(UUID id){this.id=id;}
@@ -437,25 +437,29 @@ public final class HumanPerception {
         if(now>=s.nextCandidates && PerceptionBudget.claim(h,"queries",1,":candidates")){
             boolean measureBattle = BattlePerceptionDetail.measure(h);
             double movementRadius = reduced ? BattlePerceptionDetail.LOCAL_RADIUS : HumanAwareness.movementRadius();
-            double r=Math.max(HumanTargetSharing.range(h),Math.max(range(h),movementRadius));
+            boolean collectPeers = HumanTargetSharing.readyToBroadcast(h);
+            double shareRange = collectPeers ? HumanTargetSharing.range(h) : 0;
+            double visionRange = reduced && !urgentScan ? BattlePerceptionDetail.LOCAL_RADIUS : range(h);
+            double r=Math.max(shareRange,Math.max(visionRange,movementRadius));
             if (measureBattle) r = Math.max(r, BattlePerceptionDetail.LOCAL_RADIUS);
             int cap=AdaptiveActivityBudget.candidates(h,c().integer("budgets.candidates"));long epoch=now/Math.max(1,interval);
             Comparator<LivingEntity> nearest=Comparator.comparingDouble(h::distanceToSqr);
             Comparator<LivingEntity> rotating=Comparator.comparingLong(e->candidateRank(e.getUUID(),epoch));
             BoundedSelection<LivingEntity> close=new BoundedSelection<>((cap+1)/2,nearest);
             BoundedSelection<LivingEntity> discovery=new BoundedSelection<>(cap,rotating);
-            boolean collectPeers = HumanTargetSharing.readyToBroadcast(h);
             Comparator<Human> friendOrder=Comparator.<Human>comparingDouble(h::distanceToSqr).thenComparing(Entity::getUUID);
             BoundedSelection<Human> friends=new BoundedSelection<>(HumanTargetSharing.peerLimit(h,cap),friendOrder);
             BoundedSelection<LivingEntity> sounds=new BoundedSelection<>(cap*4,HumanAwareness.movementOrder(h));
             int[] localHumans = measureBattle ? new int[2] : null; // All nearby humans and the hostile subset, excluding self.
             // Stream the loaded spatial section: unrelated entities cannot hide later enemies.
-            level.getEntities().get(net.minecraft.world.level.entity.EntityTypeTest.forClass(LivingEntity.class),
-                    h.getBoundingBox().inflate(r), e->{
+            BattleNeighborhood.visit(level, h.getBoundingBox().inflate(r), measureBattle && !urgentScan, e->{
                         if(e!=h&&e.isAlive()){
-                            if(collectPeers&&e instanceof Human friendly&&HumanTargetSharing.peers(h,friendly))friends.offer(friendly);
+                            if(collectPeers&&e instanceof Human friendly&&HumanTargetSharing.peers(h,friendly,shareRange))friends.offer(friendly);
                             boolean hostile = enemy(h,e);
-                            if (hostile) { close.offer(e); discovery.offer(e); }
+                            if (hostile && (!reduced || urgentScan
+                                    || h.distanceToSqr(e) <= BattlePerceptionDetail.LOCAL_RADIUS_SQUARED)) {
+                                close.offer(e); discovery.offer(e);
+                            }
                             if (measureBattle && e instanceof Human
                                     && (localHumans[0] < 7 || localHumans[1] < 2)
                                     && h.distanceToSqr(e) <= BattlePerceptionDetail.LOCAL_RADIUS_SQUARED) {
@@ -464,7 +468,6 @@ public final class HumanPerception {
                             }
                             if ((!reduced || BattlePerceptionDetail.closeHuman(h,e)) && HumanAwareness.movementCandidate(h,e)) sounds.offer(e);
                         }
-                        return net.minecraft.util.AbortableIterationConsumer.Continuation.CONTINUE;
                     });
             if (measureBattle) BattlePerceptionDetail.sample(h, now, localHumans[0], localHumans[1]);
             if (collectPeers) HumanTargetSharing.broadcast(h,friends.values());
@@ -552,7 +555,10 @@ public final class HumanPerception {
         if(!enemy(h,e))return false;
         Track t=s.tracks.get(e.getUUID());if(t!=null&&t.checked==now)return false;
         boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
-        if (simplifiedVision(h,s,e,now)) return frontlinePoint(h,e,familiar,now) != null;
+        if (simplifiedVision(h,s,e,now)) {
+            if (t != null && t.frontlineProbe != Long.MIN_VALUE && now >= t.frontlineProbe && now - t.frontlineProbe < 8) return false;
+            return frontlinePoint(h,e,familiar,now) != null;
+        }
         var box=e.getBoundingBox();double visibility=e.getVisibilityPercent(h);long mask=0;int index=0;
         List<Vec3> eligibleSamples=new ArrayList<>();
         for(var sample:BodyVisibilitySamples.of(box.minX,box.minY,box.minZ,box.maxX,box.maxY,box.maxZ)){
@@ -707,6 +713,7 @@ public final class HumanPerception {
         VisualProbe probe;
         if (simple) {
             if (!fast) return;
+            if (t != null) t.frontlineProbe = now;
             Vec3 point = frontlinePoint(h,e,familiar,now);
             boolean clear = point != null && clearVisualRay(h,s,e,point,now,false);
             probe = new VisualProbe(clear ? point : null, true,
@@ -723,6 +730,7 @@ public final class HumanPerception {
         t.visible=true;t.denied=probe.reason;t.name=bounded(e.getName().getString(),64);t.position=e.position();t.eye=probe.visiblePoint;t.positionAt=now;
         t.bodySample=fraction(e.getBoundingBox(),probe.visiblePoint);
         t.checked=now;
+        if (simple) t.frontlineProbe = now;
         boolean live=t.marked&&PerceptionPolicy.live(now,t.liveUntil);
         if(live){t.visual=now;t.liveUntil=now+c().integer("memory.dynamic_ticks");t.familiarUntil=now+c().integer("memory.familiar_ticks");t.refresh="目视";
             s.alertUntil=now+c().integer("observation.alert_ticks");}

@@ -4242,3 +4242,7 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 独立掉落物的渲染和服务端合并
 - 主控，基线 aa39f28e45ac606817a34ea591463abb0c7f1299；module-architecture 工作树。以独立掉落实体密度缩减远处绘制，撤回堆叠副本缩减。原版合并查询按物品类型预筛，人类自有掉落按原版兼容条件在生成前整理。
+
+## 团战共享候选与感知降频
+- 主控，基线 ae22ab8f0311bee5623012a151e1b308b732661a，module-architecture 工作树。团战同 tick 复用空间候选，前线常规新敌发现限制 24 格，已有记录探测至少间隔 8 tick。发送者在候选阶段复用通报距离，移除收件人重复权限校验，实际投递仍核查。
+- Python 静态检查 532 项，其中 16 项跳过；未编译或测团战 TPS。

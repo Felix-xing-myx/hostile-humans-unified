@@ -107,6 +107,10 @@
     "class": "dev.felix.hostilehumans.navigation.BasicNavigationBudget",
     "path": "src/main/java/dev/felix/hostilehumans/navigation/BasicNavigationBudget.java"
   },
+  "BattleNeighborhood": {
+    "class": "dev.felix.hostilehumans.perception.BattleNeighborhood",
+    "path": "src/main/java/dev/felix/hostilehumans/perception/BattleNeighborhood.java"
+  },
   "BattlePerceptionDetail": {
     "class": "dev.felix.hostilehumans.perception.BattlePerceptionDetail",
     "path": "src/main/java/dev/felix/hostilehumans/perception/BattlePerceptionDetail.java"

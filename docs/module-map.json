@@ -1003,6 +1003,7 @@
       "source_root": "src/main/java/dev/felix/hostilehumans/perception",
       "classes": [
         "AttentionFacingPolicy",
+        "BattleNeighborhood",
         "BattlePerceptionDetail",
         "BeaconReportPolicy",
         "BeaconReportingService",
