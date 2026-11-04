@@ -512,11 +512,12 @@ public final class HumanPerception {
         if (reduced && !urgentScan && s.deferredVisualRays > 0
                 && !PerceptionBudget.prepareVisualRetry(h, Math.min(rays, s.deferredVisualRays))) {
             BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.VISION_RETRY_SKIPPED, 1);
-            resumeBodies(h,s,level,now,interval,probeLimit);
+            if (!s.pendingBodies.isEmpty()) resumeBodies(h,s,level,now,interval,probeLimit,new VisionFrame(h));
             describe(h,s);
             return;
         }
         s.deferredVisualRays=0;
+        var vision = new VisionFrame(h);
         s.geometrySkipped=0;s.occlusionSkipped=0;
         List<LivingEntity> checks=new ArrayList<>();
         LivingEntity main=h.getTarget();
@@ -533,26 +534,26 @@ public final class HumanPerception {
                 Track track=s.tracks.get(id);
                 if(track!=null&&(track.marked||track.evidence.active()))continue;
                 if(nearestUnknown!=null&&h.distanceToSqr(e)>=h.distanceToSqr(nearestUnknown))continue;
-                if(eligibleVisual(h,s,e,now))nearestUnknown=e;
+                if(eligibleVisual(h,s,e,now,vision))nearestUnknown=e;
             }
             if(nearestUnknown!=null)checks.add(nearestUnknown);
         }
         // Reserve a periodic refresh, not every slot: two recognitions still run in alternating rounds.
-        if(checks.size()<rays&&(s.focusHurt||s.priorityFocus)&&s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity hitFocus&&eligibleVisual(h,s,hitFocus,now))checks.add(hitFocus);
-        if(checks.size()<rays&&!checks.contains(main)&&canTarget(h,main)&&eligibleVisual(h,s,main,now)&&PerceptionDiscoveryPolicy.maintainMain(visualRound,rays))checks.add(main);
+        if(checks.size()<rays&&(s.focusHurt||s.priorityFocus)&&s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity hitFocus&&eligibleVisual(h,s,hitFocus,now,vision))checks.add(hitFocus);
+        if(checks.size()<rays&&!checks.contains(main)&&canTarget(h,main)&&eligibleVisual(h,s,main,now,vision)&&PerceptionDiscoveryPolicy.maintainMain(visualRound,rays))checks.add(main);
         List<Track> identifying=s.tracks.values().stream().filter(t->t.evidence.active()).toList();
         for(int i=0;i<identifying.size()&&checks.size()<rays;i++){
             Track t=identifying.get(dev.felix.hostilehumans.perception.PerceptionCoordinationPolicy.nextIndex(s.recognitionCursor++,identifying.size()));
-            if(level.getEntity(t.id) instanceof LivingEntity e&&!checks.contains(e)&&eligibleVisual(h,s,e,now))checks.add(e);
+            if(level.getEntity(t.id) instanceof LivingEntity e&&!checks.contains(e)&&eligibleVisual(h,s,e,now,vision))checks.add(e);
         }
-        if(s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity focus&&!checks.contains(focus)&&checks.size()<rays&&eligibleVisual(h,s,focus,now))checks.add(focus);
+        if(s.focus!=null&&level.getEntity(s.focus) instanceof LivingEntity focus&&!checks.contains(focus)&&checks.size()<rays&&eligibleVisual(h,s,focus,now,vision))checks.add(focus);
         int inspected=0;
         while(checks.size()<rays&&inspected++<s.candidates.size()){
             if(s.candidates.isEmpty())break;UUID id=s.candidates.get(Math.floorMod(s.candidateCursor++,s.candidates.size()));
-            if(level.getEntity(id) instanceof LivingEntity e&&!checks.contains(e)&&eligibleVisual(h,s,e,now))checks.add(e);
+            if(level.getEntity(id) instanceof LivingEntity e&&!checks.contains(e)&&eligibleVisual(h,s,e,now,vision))checks.add(e);
         }
         if(checks.isEmpty()){
-            resumeBodies(h,s,level,now,interval,probeLimit);
+            resumeBodies(h,s,level,now,interval,probeLimit,vision);
             PerceptionBudget.cancel(h,"rays","");
             s.nextScan=now+interval;s.scanStatus="本轮无可见几何候选或处于遮挡退避";describe(h,s);return;
         }
@@ -563,19 +564,19 @@ public final class HumanPerception {
             s.candidateCursor=candidateCursorBefore;s.recognitionCursor=recognitionCursorBefore;
             s.scanStatus="等待视觉检测配额";s.reason=s.scanStatus;
             // Body reservations already admitted for this tick may still be usable.
-            resumeBodies(h,s,level,now,interval,probeLimit);
+            resumeBodies(h,s,level,now,interval,probeLimit,vision);
             describe(h,s);return;
         }
         s.scanStatus="已执行服务器视觉采样";s.scanAt=now;
         s.nextScan=now+(stable && recognizing(s)==0 ? Math.max(interval, 12) : interval);
         s.scanStatus=checks.isEmpty()?"本轮无符合敌对许可的视觉候选":"已执行服务器视觉采样："+Math.min(rays,checks.size())+"个候选";
         int evidenceInterval=dev.felix.hostilehumans.perception.PerceptionCoordinationPolicy.evidenceInterval(PerceptionDiscoveryPolicy.evidenceInterval(interval,rays),(int)recognizing(s),rays,canTarget(h,main));
-        resumeBodies(h,s,level,now,interval,probeLimit);
-        for(LivingEntity e:checks.subList(0,Math.min(rays,checks.size())))check(h,s,e,now,evidenceInterval,true);
+        resumeBodies(h,s,level,now,interval,probeLimit,vision);
+        for(LivingEntity e:checks.subList(0,Math.min(rays,checks.size())))check(h,s,e,now,evidenceInterval,true,vision);
         if(s.focus==null)startNext(h,s,now);
         describe(h,s);
     }
-    private static int resumeBodies(Human h,State s,ServerLevel level,long now,int interval,int limit){
+    private static int resumeBodies(Human h,State s,ServerLevel level,long now,int interval,int limit,VisionFrame vision){
         int resumed=0;List<UUID> bodies=List.copyOf(s.pendingBodies);
         for(int i=0;i<bodies.size()&&resumed<Math.max(1,limit);i++){
             UUID id=bodies.get(Math.floorMod(s.bodyResumeCursor++,bodies.size()));
@@ -583,31 +584,31 @@ public final class HumanPerception {
                 s.pendingBodies.remove(id);
                 s.bodySweeps.remove(id);
                 PerceptionBudget.cancelBodyRays(h,id);
-            } else if(level.getEntity(id) instanceof LivingEntity e&&eligibleVisual(h,s,e,now)){
-                check(h,s,e,now,interval,false);resumed++;
+            } else if(level.getEntity(id) instanceof LivingEntity e&&eligibleVisual(h,s,e,now,vision)){
+                check(h,s,e,now,interval,false,vision);resumed++;
             }else{s.pendingBodies.remove(id);PerceptionBudget.cancelBodyRays(h,id);}
         }
         return resumed;
     }
-    private static boolean eligibleVisual(Human h,State s,LivingEntity e,long now){
+    private static boolean eligibleVisual(Human h,State s,LivingEntity e,long now,VisionFrame vision){
         if(!enemy(h,e))return false;
         Track t=s.tracks.get(e.getUUID());if(t!=null&&t.checked==now)return false;
         boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
         if (simplifiedVision(h,s,e,now)) {
             if (t != null && t.frontlineProbe != Long.MIN_VALUE && now >= t.frontlineProbe && now - t.frontlineProbe < 8) return false;
-            return frontlinePoint(h,e,familiar,now) != null;
+            return frontlinePoint(h,e,familiar,now,vision) != null;
         }
-        var box=e.getBoundingBox();var vision=new VisionFrame(h,e.getVisibilityPercent(h),familiar);long mask=0;int index=0;
+        var box=e.getBoundingBox();double visibility=e.getVisibilityPercent(h);long mask=0;int index=0;
         List<Vec3> eligibleSamples=new ArrayList<>();
         for(var sample:BodyVisibilitySamples.of(box.minX,box.minY,box.minZ,box.maxX,box.maxY,box.maxZ)){
             Vec3 point=new Vec3(sample.x(),sample.y(),sample.z());
-            if(vision.contains(point)){eligibleSamples.add(point);mask|=1L<<index;}
+            if(vision.contains(point,visibility,familiar)){eligibleSamples.add(point);mask|=1L<<index;}
             index++;
         }
         Vec3 primary=e.getEyePosition();
         if(t!=null&&t.bodySample!=null){var f=t.bodySample;
             primary=new Vec3(box.minX+box.getXsize()*f.x(),box.minY+box.getYsize()*f.y(),box.minZ+box.getZsize()*f.z());}
-        if(vision.contains(primary)){
+        if(vision.contains(primary,visibility,familiar)){
             if(!eligibleSamples.contains(primary))eligibleSamples.add(primary);
             mask|=1L<<BodyVisibilitySamples.MAX_POINTS;
         }
@@ -633,16 +634,16 @@ public final class HumanPerception {
     }
 
     /** Use one of two coarse aim points and never claim a body sweep for this sample. */
-    private static Vec3 frontlinePoint(Human h, LivingEntity target, boolean familiar, long now) {
+    private static Vec3 frontlinePoint(Human h, LivingEntity target, boolean familiar, long now, VisionFrame vision) {
         var eye = target.getEyePosition();
         var center = target.getBoundingBox().getCenter();
         int period = AdaptiveActivityBudget.interval(h,c().integer("budgets.active_interval_ticks"),false);
         boolean preferCenter = (Math.floorDiv(now, period) & 1L) == 0;
         var primary = preferCenter ? center : eye;
         var secondary = preferCenter ? eye : center;
-        var vision = new VisionFrame(h, target.getVisibilityPercent(h), familiar);
-        if (vision.contains(primary)) return primary;
-        return vision.contains(secondary) ? secondary : null;
+        double visibility = target.getVisibilityPercent(h);
+        if (vision.contains(primary, visibility, familiar)) return primary;
+        return vision.contains(secondary, visibility, familiar) ? secondary : null;
     }
 
     private static long candidateRank(UUID id,long epoch){
@@ -653,24 +654,21 @@ public final class HumanPerception {
     private static long recognizing(State s){return s.tracks.values().stream().filter(t->t.evidence.active()).count();}
     private record VisualProbe(Vec3 visiblePoint,boolean complete,String reason) {}
     /** Item discovery shares actual head orientation and the near cylinder, without enemy bonuses. */
-    static boolean withinLootVision(Human h,Vec3 point){return new VisionFrame(h,1.0D,false).contains(point);}
+    static boolean withinLootVision(Human h,Vec3 point){return new VisionFrame(h).contains(point,1.0D,false);}
 
-    /** Observer geometry and effective range are shared across one body's sample points. */
+    /** Observer geometry and effective range are shared across the current visual scan. */
     private static final class VisionFrame {
         private final Vec3 eye, forward, horizontal;
-        private final double x, y, z, maxRangeSquared, near, below, above, nearAngle;
-        private final boolean familiar;
+        private final double x, y, z, range, near, below, above, nearAngle, familiarNearAngle;
         private final double angleMultiplier, angleCap, middle, far, nearFull, middleFull, farFull;
 
-        VisionFrame(Human observer, double visibility, boolean familiar) {
-            this.familiar = familiar;
+        VisionFrame(Human observer) {
             eye = observer.getEyePosition();
             forward = Vec3.directionFromRotation(observer.getXRot(), observer.getYHeadRot()).normalize();
             horizontal = Vec3.directionFromRotation(0, observer.getYHeadRot());
             AABB body = observer.getBoundingBox();
             x = observer.getX(); y = body.minY; z = observer.getZ();
-            double maxRange = Math.max(2, range(observer) * visibility);
-            maxRangeSquared = maxRange * maxRange;
+            range = range(observer);
             var config = c();
             near = config.number("vision.near_distance");
             below = -config.number("vision.near_below_feet");
@@ -682,21 +680,23 @@ public final class HumanPerception {
             nearFull = config.number("vision.near_full_angle");
             middleFull = config.number("vision.middle_full_angle");
             farFull = config.number("vision.far_full_angle");
-            nearAngle = angleAt(near);
+            nearAngle = angleAt(near, false);
+            familiarNearAngle = angleAt(near, true);
         }
 
-        boolean contains(Vec3 point) {
+        boolean contains(Vec3 point, double visibility, boolean familiar) {
             double dx = point.x - eye.x, dy = point.y - eye.y, dz = point.z - eye.z;
             double distanceSquared = dx * dx + dy * dy + dz * dz;
-            if (distanceSquared > maxRangeSquared) return false;
+            double maxRange = Math.max(2, range * visibility);
+            if (distanceSquared > maxRange * maxRange) return false;
             double horizontalX = point.x - x, horizontalZ = point.z - z;
             if (NearVisionPolicy.owns(horizontalX, point.y - y, horizontalZ, near, below, above))
-                return NearVisionPolicy.inSector(horizontalX, horizontalZ, horizontal.x, horizontal.z, nearAngle);
+                return NearVisionPolicy.inSector(horizontalX, horizontalZ, horizontal.x, horizontal.z, familiar ? familiarNearAngle : nearAngle);
             double distance = Math.sqrt(distanceSquared);
             return distance < 1.e-4 || (forward.x * dx + forward.y * dy + forward.z * dz) / distance
-                    > Math.cos(angleAt(distance));
+                    > Math.cos(angleAt(distance, familiar));
         }
-        private double angleAt(double distance) {
+        private double angleAt(double distance, boolean familiar) {
             return PerceptionPolicy.halfAngle(distance, familiar, angleMultiplier, angleCap,
                     near, middle, far, nearFull, middleFull, farFull);
         }
@@ -719,17 +719,17 @@ public final class HumanPerception {
         while(s.rays.size()>8)s.rays.removeFirst();
         return clear;
     }
-    private static VisualProbe bodyVisibility(Human h,State s,LivingEntity e,Track track,boolean familiar,long now,boolean fast){
+    private static VisualProbe bodyVisibility(Human h,State s,LivingEntity e,Track track,boolean familiar,long now,boolean fast,VisionFrame vision){
         NegativeObservationSweep sweep=s.bodySweeps.computeIfAbsent(e.getUUID(),k->new NegativeObservationSweep());
         while(s.bodySweeps.size()>c().integer("budgets.candidates")+c().integer("memory.maximum_targets"))s.bodySweeps.remove(s.bodySweeps.keySet().iterator().next());
-        AABB box=e.getBoundingBox();var vision=new VisionFrame(h,e.getVisibilityPercent(h),familiar);
+        AABB box=e.getBoundingBox();double visibility=e.getVisibilityPercent(h);
         Vec3 primary=e.getEyePosition();
         if(track!=null&&track.bodySample!=null){
             var f=track.bodySample;
             primary=new Vec3(box.minX+box.getXsize()*f.x(),box.minY+box.getYsize()*f.y(),box.minZ+box.getZsize()*f.z());
         }
         // The ordinary candidate reservation already pays for this one fast ray.
-        if(fast&&vision.contains(primary)&&clearVisualRay(h,s,e,primary,now)){
+        if(fast&&vision.contains(primary,visibility,familiar)&&clearVisualRay(h,s,e,primary,now)){
             s.pendingBodies.remove(e.getUUID());
             PerceptionBudget.cancelBodyRays(h,e.getUUID());
             sweep.reset();return new VisualProbe(primary,true,"身体部位无遮挡");
@@ -737,7 +737,7 @@ public final class HumanPerception {
         List<Vec3> samples=new ArrayList<>();long sampleMask=0;int sampleIndex=0;
         for(var point:BodyVisibilitySamples.of(box.minX,box.minY,box.minZ,box.maxX,box.maxY,box.maxZ)){
             Vec3 candidate=new Vec3(point.x(),point.y(),point.z());
-            if(vision.contains(candidate)){samples.add(candidate);sampleMask|=1L<<sampleIndex;}
+            if(vision.contains(candidate,visibility,familiar)){samples.add(candidate);sampleMask|=1L<<sampleIndex;}
             sampleIndex++;
         }
         if(samples.isEmpty()){
@@ -769,7 +769,7 @@ public final class HumanPerception {
         boolean complete=sweep.negative(samples.size(),start,count,sampleMask);
         if(complete){
             List<Vec3> cacheSamples=new ArrayList<>(samples);long cacheMask=sampleMask;
-            if(vision.contains(primary)){
+            if(vision.contains(primary,visibility,familiar)){
                 if(!cacheSamples.contains(primary))cacheSamples.add(primary);
                 cacheMask|=1L<<BodyVisibilitySamples.MAX_POINTS;
             }
@@ -783,28 +783,28 @@ public final class HumanPerception {
                 Math.max(0,Math.min(1,(point.y-box.minY)/Math.max(1.e-8,box.getYsize()))),
                 Math.max(0,Math.min(1,(point.z-box.minZ)/Math.max(1.e-8,box.getZsize()))));
     }
-    private static void check(Human h,State s,LivingEntity e,long now,int interval,boolean fast){
+    private static void check(Human h,State s,LivingEntity e,long now,int interval,boolean fast,VisionFrame vision){
         long sample = BattlePerceptionMetrics.startSample(h);
         try {
-            checkVisualEvidence(h,s,e,now,interval,fast);
+            checkVisualEvidence(h,s,e,now,interval,fast,vision);
         } finally {
             BattlePerceptionMetrics.finishSample(h, sample,
                     BattlePerceptionMetrics.Work.VISION_SAMPLES, BattlePerceptionMetrics.Work.VISION_NS);
         }
     }
 
-    private static void checkVisualEvidence(Human h,State s,LivingEntity e,long now,int interval,boolean fast){
+    private static void checkVisualEvidence(Human h,State s,LivingEntity e,long now,int interval,boolean fast,VisionFrame vision){
         if(!enemy(h,e))return;Track t=s.tracks.get(e.getUUID());boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
         boolean simple = simplifiedVision(h,s,e,now);
         VisualProbe probe;
         if (simple) {
             if (!fast) return;
             if (t != null) t.frontlineProbe = now;
-            Vec3 point = frontlinePoint(h,e,familiar,now);
+            Vec3 point = frontlinePoint(h,e,familiar,now,vision);
             boolean clear = point != null && clearVisualRay(h,s,e,point,now,false);
             probe = new VisualProbe(clear ? point : null, true,
                     clear ? "团战快速目视" : "团战采样点未见");
-        } else probe=bodyVisibility(h,s,e,t,familiar,now,fast);
+        } else probe=bodyVisibility(h,s,e,t,familiar,now,fast,vision);
         if(probe.visiblePoint==null){
             if(t!=null){t.denied=probe.reason;if(probe.complete){t.visible=false;t.evidence.miss(now);}}
             if(!probe.complete){s.scanStatus=probe.reason;s.reason=probe.reason;}

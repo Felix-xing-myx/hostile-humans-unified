@@ -55,7 +55,7 @@ public final class GunRangePolicy {
         if(HumanCombatDirector.strategies(human).extendedGunRange(identity.core(),identity.enabled()))
             base=new Band(Math.floor(base.minimum()*1.2),Math.floor(base.maximum()*1.2),
                     Math.floor(base.retreatResume()*1.2),Math.floor(base.fireRange()*1.3));
-        return limited(base,GunSupport.get().maximumProjectileReach(weapon));
+        return limited(base,nativeReach);
     }
     public static double firingReach(dev.felix.hostilehumans.entity.Human human,net.minecraft.world.item.ItemStack weapon) {
         return forWeapon(human,weapon).fireRange();

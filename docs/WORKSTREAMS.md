@@ -4265,3 +4265,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 ## 3.15.2 服务端团战基线抽样
 - 主控，基线 18fe2e6，module-architecture 工作树。对运行中的约定测试实例执行 20 秒 JFR（维护目录 maintenance-tools/hhu-perf-baseline-20261104.jfr）。561 条 Server thread 执行样本中，感知 tick 243、视觉范围函数 203、感知配置读取 142、ItemEntity 51、友军共享 5、通报几何 0；计数可重叠，不代表独占 CPU 时间。
 - 感知配置发布时统一解析和钳制，热路径直接读不可变数值；同一身体采样的视角参数只读取一次。Python 检查 532 项，跳过 16 项。尚未运行 Gradle 或新版对照采样。
+
+## 复用同一轮视觉扫描的观察者参数
+- 主控，基线 8aadd54，module-architecture 工作树。根据 3.15.2 JFR 中的视距和枪械范围调用热点，一轮视觉扫描共享眼位、朝向、视距及视角配置；目标的实际可见度、熟悉度和遮挡分别判定。枪械范围计算复用已读取的原生射程。Python 检查 532 项（16 跳过）；未构建或实机复测。
