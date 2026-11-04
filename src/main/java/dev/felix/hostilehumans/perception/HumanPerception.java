@@ -494,7 +494,7 @@ public final class HumanPerception {
                             }
                             if (measureBattle && e instanceof Human
                                     && (localHumans[0] < BattlePerceptionDetail.ENTRY_NEIGHBORS
-                                        || localHumans[1] < BattlePerceptionDetail.HOSTILE_NEIGHBORS) && local) {
+                                        || localHumans[1] < BattlePerceptionDetail.ENTRY_HOSTILES) && local) {
                                 localHumans[0]++;
                                 if (hostile) localHumans[1]++;
                             }

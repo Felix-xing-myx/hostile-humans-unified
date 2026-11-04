@@ -913,12 +913,11 @@ public final class AdaptiveCombatGoal extends Goal {
         nextCrowdScanTick = human.tickCount + AdaptiveActivityBudget.interval(human,6,human.hurtTime>0);
         // Crowd pressure already requires confirmed knowledge; do not query the world again.
         var crowdBox=human.getBoundingBox().inflate(6.0D,4.0D,6.0D);
-        List<LivingEntity> closeEnemies=HumanPerception.knownDynamicTargets(human).stream()
-                .filter(entity->crowdBox.intersects(entity.getBoundingBox())&&isCrowdEnemy(entity)).toList();
         LivingEntity nearest = null;
         double nearestDistanceSqr = Double.MAX_VALUE;
         int immediateThreats = 0;
-        for (LivingEntity candidate : closeEnemies) {
+        for (LivingEntity candidate : HumanPerception.knownDynamicTargets(human)) {
+            if (!crowdBox.intersects(candidate.getBoundingBox()) || !isCrowdEnemy(candidate)) continue;
             double distanceSqr = human.distanceToSqr(candidate);
             if (distanceSqr <= 9.0D) immediateThreats++;
             if (distanceSqr < nearestDistanceSqr && distanceSqr <= 36.0D

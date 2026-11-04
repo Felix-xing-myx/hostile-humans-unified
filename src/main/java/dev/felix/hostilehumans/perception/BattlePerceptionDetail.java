@@ -18,7 +18,8 @@ final class BattlePerceptionDetail {
     static final double LOCAL_RADIUS_SQUARED = LOCAL_RADIUS * LOCAL_RADIUS;
     private static final double STEP_RADIUS_SQUARED = 6 * 6;
     static final int FRONTLINE_VISUAL_PERIOD = 8;
-    static final int ENTRY_NEIGHBORS = 7, EXIT_NEIGHBORS = 5, HOSTILE_NEIGHBORS = 2;
+    static final int ENTRY_NEIGHBORS = 12, ENTRY_HOSTILES = 4;
+    private static final int RETAIN_NEIGHBORS = 9, RETAIN_HOSTILES = 3;
     private static final int LOCAL_SAMPLE_TTL = 40;
     private static final double SAMPLE_MOVEMENT_LIMIT_SQUARED = LOCAL_RADIUS_SQUARED / 4;
     private static final Map<Human, Sample> FRONTLINES = new WeakHashMap<>();
@@ -43,8 +44,10 @@ final class BattlePerceptionDetail {
     }
 
     static void sample(Human h, long now, int humans, int enemies) {
-        int minimum = reduced(h) ? EXIT_NEIGHBORS : ENTRY_NEIGHBORS;
-        if (humans >= minimum && enemies >= HOSTILE_NEIGHBORS)
+        boolean alreadyReduced = reduced(h);
+        int minimum = alreadyReduced ? RETAIN_NEIGHBORS : ENTRY_NEIGHBORS;
+        int minimumHostiles = alreadyReduced ? RETAIN_HOSTILES : ENTRY_HOSTILES;
+        if (humans >= minimum && enemies >= minimumHostiles)
             FRONTLINES.put(h, new Sample(h.level().dimension(), h.position(), now + LOCAL_SAMPLE_TTL));
         else FRONTLINES.remove(h);
     }
