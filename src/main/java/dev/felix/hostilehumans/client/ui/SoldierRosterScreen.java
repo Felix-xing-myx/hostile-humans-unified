@@ -7,7 +7,6 @@ import dev.felix.hostilehumans.client.ui.framework.PanelGeometry;
 import dev.felix.hostilehumans.client.ui.framework.PanelGroup;
 import dev.felix.hostilehumans.client.ui.framework.PanelHealth;
 import dev.felix.hostilehumans.client.ui.framework.PanelMeter;
-import dev.felix.hostilehumans.client.ui.framework.PanelPageSlider;
 import dev.felix.hostilehumans.client.ui.framework.PanelRosterRow;
 import dev.felix.hostilehumans.client.ui.framework.PanelScreen;
 import dev.felix.hostilehumans.client.ui.framework.PanelText;
@@ -56,7 +55,6 @@ public final class SoldierRosterScreen extends PanelScreen {
     private String result = "", draftName = "";
     private long dismissConfirmUntil, recallConfirmUntil;
     private PanelEditBox squadName;
-    private PanelPageSlider pageSlider;
 
     private SoldierRosterScreen(
             UUID token,
@@ -175,11 +173,6 @@ public final class SoldierRosterScreen extends PanelScreen {
     }
 
     @Override
-    protected String faction() {
-        return selectedEntry == null ? "" : selectedEntry.faction();
-    }
-
-    @Override
     protected int splitWidth() {
         return LIST_WIDTH;
     }
@@ -271,7 +264,6 @@ public final class SoldierRosterScreen extends PanelScreen {
     protected void buildLeft(List<UiLayout.Node> out) {
         controls.clear();
         squadName = null;
-        pageSlider = null;
         List<UiLayout.Node> quotas = new ArrayList<>();
         for (int i = 0; i < 4; i++)
             quotas.add(
@@ -288,28 +280,6 @@ public final class SoldierRosterScreen extends PanelScreen {
         for (var entry : shown) out.add(node(row(entry)));
         if (shown.isEmpty())
             out.add(muted(requestedPage >= 0 ? ui("loading") : cmd("empty_roster")));
-        if (maxPage() > 0) {
-            out.add(
-                    pair(
-                            action(
-                                    "previous",
-                                    Component.literal("◀"),
-                                    displayedPage() > 0,
-                                    false,
-                                    () -> requestPage(displayedPage() - 1)),
-                            action(
-                                    "next",
-                                    Component.literal("▶"),
-                                    displayedPage() < maxPage(),
-                                    false,
-                                    () -> requestPage(displayedPage() + 1))));
-            pageSlider =
-                    body(
-                            new PanelPageSlider(
-                                    displayedPage(), maxPage(), this::requestPage, this::theme));
-            controls.put("page", pageSlider);
-            out.add(node(pageSlider));
-        }
     }
 
     private PanelRosterRow row(SoldierRosterNetwork.Entry entry) {
@@ -705,14 +675,19 @@ public final class SoldierRosterScreen extends PanelScreen {
         retryTicks = 0;
         retries = 0;
         SoldierRosterNetwork.request(token, 8, NONE, target);
-        refresh(true);
+        refresh(false);
+        scrollTo(-1, 0);
     }
 
     @Override
     public boolean mouseScrolled(double x, double y, double delta) {
-        if (pageSlider != null && pageSlider.isMouseOver(x, y) && delta != 0) {
-            if (!pageSlider.editing()) requestPage(displayedPage() + (delta > 0 ? -1 : 1));
-            return true;
+        var list = PanelGeometry.split(bodyRect, splitWidth())[0];
+        if (delta != 0 && list.contains(x, y)) {
+            int direction = delta > 0 ? -1 : 1;
+            if (!canScrollLeft(direction)) {
+                if (requestedPage < 0) requestPage(displayedPage() + direction);
+                return true;
+            }
         }
         return super.mouseScrolled(x, y, delta);
     }

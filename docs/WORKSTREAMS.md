@@ -4413,3 +4413,7 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 ## 枪械推进、侧移与背包供弹计时
 
 - 主控，基线 7fb7365，沿用 settlement-service-panels 工作树。枪械中枢的推进指令不会被地形射界停火位覆盖，通用侧移按 16～40 tick 分段，移动前复用射界判定。TaCZ 和 JEG 的虚拟弹匣共用基准时长并沿用装填会话倍率。
+
+## 对讲机名册主题与翻页
+
+- 主控，基线 1e52eb6。对讲机使用通用主题，左栏到达页边缘后继续滚轮切页，保留服务端分页及右栏独立滚动。静态回归 522 项通过、16 项跳过。

@@ -478,6 +478,11 @@ public abstract class PanelScreen extends Screen {
         relayout();
     }
 
+    protected final boolean canScrollLeft(int direction) {
+        return direction < 0 ? scrollLeft > 0
+                : scrollLeft < PanelGeometry.clampScroll(Integer.MAX_VALUE, leftHeight, leftViewport.height());
+    }
+
     protected final void scrollTo(int side, int value) {
         if (side < 0)
             scrollLeft = PanelGeometry.clampScroll(value, leftHeight, leftViewport.height());
