@@ -28,6 +28,8 @@ import dev.felix.hostilehumans.entity.HumanFood;
 
 import dev.felix.hostilehumans.bootstrap.HumanRuntime;
 import dev.felix.hostilehumans.behavior.combat.melee.BetterCombatMeleeCombat;
+import dev.felix.hostilehumans.faction.HumanFactions;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.ai.goal.Goal;
 import dev.felix.hostilehumans.behavior.combat.ranged.RangedWeaponCustody;
 import dev.felix.hostilehumans.navigation.ShoreSeekingPolicy;
@@ -155,6 +157,22 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 ? (getUsedItemHand() == InteractionHand.MAIN_HAND ? 1 : 2) : 0;
         entityData.set(NPC_SHIELD_HAND, (byte) hand);
     }
+    @Override
+    protected Component getTypeName() {
+        Component typeName = super.getTypeName();
+        if (this instanceof FactionBossHuman || getTier() == HumanTier.ROAMER) {
+            return typeName;
+        }
+        String faction = HumanFactions.shortId(this);
+        return switch (faction) {
+            case "crimson", "azure", "verdant", "ashen" -> Component.translatable(
+                    "entity.hostile_humans_unified.faction_human_name",
+                    Component.translatable("entity.hostile_humans_unified.faction_name." + faction),
+                    typeName);
+            default -> typeName;
+        };
+    }
+
     public String hhu$getFaction() { return entityData.get(FACTION_ID); }
     public boolean hhu$isBoss() { return entityData.get(FACTION_BOSS); }
     public void hhu$syncIdentity(String faction, boolean boss) {
