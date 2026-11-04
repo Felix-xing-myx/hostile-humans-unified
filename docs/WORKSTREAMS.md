@@ -4368,3 +4368,9 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控；基线5cdf9e838d6ff50602a6ed942e23b7bde812ec77；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：Building packs, worldgen rules, portable exports and large templates。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.4。
 
 - 3.15.4完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致079677e3edd6fdf11e0553b79f64dea1a95aefe7c06479fa1a5fdcbca93252ed；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.4-20261104-145622。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.4.
+
+
+## 3.15.6 构建同步
+- 主控；基线e2f2125d64e69adfbf904b3782ff785f38254108；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：玩家总览与据点委托板共用分栏界面，包含本地 main 已合入的委托、建筑模板目录和团战调度优化。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.6。
+
+- 3.15.6完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致2c1ff7b989f08d3bc6d07620a59f42540e32e5a85be0cddd5811a59625b9e998；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.6-20261104-162818。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.6.
