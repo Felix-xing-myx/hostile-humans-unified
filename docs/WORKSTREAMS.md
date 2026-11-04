@@ -4268,3 +4268,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 复用同一轮视觉扫描的观察者参数
 - 主控，基线 8aadd54，module-architecture 工作树。根据 3.15.2 JFR 中的视距和枪械范围调用热点，一轮视觉扫描共享眼位、朝向、视距及视角配置；目标的实际可见度、熟悉度和遮挡分别判定。枪械范围计算复用已读取的原生射程。Python 检查 532 项（16 跳过）；未构建或实机复测。
+
+## 同轮复用视觉身体采样
+- 主控，基线 e4e3d77，module-architecture 工作树。候选几何与补查共用同轮身体采样和遮挡证明点；身体或已见采样点变化时重算。同轮已确认目标不重复进行快速射线。Python 检查 532 项（16 跳过），未构建或复测。

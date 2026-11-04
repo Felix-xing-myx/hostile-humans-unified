@@ -598,20 +598,9 @@ public final class HumanPerception {
             if (t != null && t.frontlineProbe != Long.MIN_VALUE && now >= t.frontlineProbe && now - t.frontlineProbe < 8) return false;
             return frontlinePoint(h,e,familiar,now,vision) != null;
         }
-        var box=e.getBoundingBox();double visibility=e.getVisibilityPercent(h);long mask=0;int index=0;
-        List<Vec3> eligibleSamples=new ArrayList<>();
-        for(var sample:BodyVisibilitySamples.of(box.minX,box.minY,box.minZ,box.maxX,box.maxY,box.maxZ)){
-            Vec3 point=new Vec3(sample.x(),sample.y(),sample.z());
-            if(vision.contains(point,visibility,familiar)){eligibleSamples.add(point);mask|=1L<<index;}
-            index++;
-        }
-        Vec3 primary=e.getEyePosition();
-        if(t!=null&&t.bodySample!=null){var f=t.bodySample;
-            primary=new Vec3(box.minX+box.getXsize()*f.x(),box.minY+box.getYsize()*f.y(),box.minZ+box.getZsize()*f.z());}
-        if(vision.contains(primary,visibility,familiar)){
-            if(!eligibleSamples.contains(primary))eligibleSamples.add(primary);
-            mask|=1L<<BodyVisibilitySamples.MAX_POINTS;
-        }
+        BodyGeometry geometry = vision.body(e, t, familiar, h);
+        List<Vec3> eligibleSamples = geometry.proofSamples();
+        long mask = geometry.proofMask();
         if(eligibleSamples.isEmpty()){
             s.geometrySkipped++;if(t!=null){t.visible=false;t.evidence.miss(now);t.denied="身体未进入有效视野";}
             s.pendingBodies.remove(e.getUUID());PerceptionBudget.cancelBodyRays(h,e.getUUID());return false;
@@ -656,6 +645,20 @@ public final class HumanPerception {
     /** Item discovery shares actual head orientation and the near cylinder, without enemy bonuses. */
     static boolean withinLootVision(Human h,Vec3 point){return new VisionFrame(h).contains(point,1.0D,false);}
 
+    private record BodyGeometry(AABB box, Vec3 primary, boolean familiar, boolean primaryVisible,
+                                List<Vec3> samples, long sampleMask) {
+        List<Vec3> proofSamples() {
+            if (!primaryVisible || samples.contains(primary)) return samples;
+            var combined = new ArrayList<>(samples);
+            combined.add(primary);
+            return combined;
+        }
+
+        long proofMask() {
+            return primaryVisible ? sampleMask | 1L << BodyVisibilitySamples.MAX_POINTS : sampleMask;
+        }
+    }
+
     /** Observer geometry and effective range are shared across the current visual scan. */
     private static final class VisionFrame {
         private final Vec3 eye, forward, horizontal;
@@ -696,6 +699,38 @@ public final class HumanPerception {
             return distance < 1.e-4 || (forward.x * dx + forward.y * dy + forward.z * dz) / distance
                     > Math.cos(angleAt(distance, familiar));
         }
+        private Map<LivingEntity, BodyGeometry> bodies;
+
+        BodyGeometry body(LivingEntity target, Track track, boolean familiar, Human observer) {
+            AABB box = target.getBoundingBox();
+            Vec3 primary = target.getEyePosition();
+            if (track != null && track.bodySample != null) {
+                var point = track.bodySample;
+                primary = new Vec3(box.minX + box.getXsize() * point.x(),
+                        box.minY + box.getYsize() * point.y(), box.minZ + box.getZsize() * point.z());
+            }
+            if (bodies == null) bodies = new IdentityHashMap<>();
+            BodyGeometry existing = bodies.get(target);
+            if (existing != null && existing.familiar() == familiar && existing.box().equals(box)
+                    && existing.primary().equals(primary)) return existing;
+
+            double visibility = target.getVisibilityPercent(observer);
+            List<Vec3> samples = new ArrayList<>();
+            long mask = 0;
+            int index = 0;
+            for (var sample : BodyVisibilitySamples.of(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)) {
+                Vec3 point = new Vec3(sample.x(), sample.y(), sample.z());
+                if (contains(point, visibility, familiar)) {
+                    samples.add(point);
+                    mask |= 1L << index;
+                }
+                index++;
+            }
+            var geometry = new BodyGeometry(box, primary, familiar, contains(primary, visibility, familiar), samples, mask);
+            bodies.put(target, geometry);
+            return geometry;
+        }
+
         private double angleAt(double distance, boolean familiar) {
             return PerceptionPolicy.halfAngle(distance, familiar, angleMultiplier, angleCap,
                     near, middle, far, nearFull, middleFull, farFull);
@@ -722,24 +757,15 @@ public final class HumanPerception {
     private static VisualProbe bodyVisibility(Human h,State s,LivingEntity e,Track track,boolean familiar,long now,boolean fast,VisionFrame vision){
         NegativeObservationSweep sweep=s.bodySweeps.computeIfAbsent(e.getUUID(),k->new NegativeObservationSweep());
         while(s.bodySweeps.size()>c().integer("budgets.candidates")+c().integer("memory.maximum_targets"))s.bodySweeps.remove(s.bodySweeps.keySet().iterator().next());
-        AABB box=e.getBoundingBox();double visibility=e.getVisibilityPercent(h);
-        Vec3 primary=e.getEyePosition();
-        if(track!=null&&track.bodySample!=null){
-            var f=track.bodySample;
-            primary=new Vec3(box.minX+box.getXsize()*f.x(),box.minY+box.getYsize()*f.y(),box.minZ+box.getZsize()*f.z());
-        }
+        BodyGeometry geometry = vision.body(e, track, familiar, h);
+        Vec3 primary = geometry.primary();
         // The ordinary candidate reservation already pays for this one fast ray.
-        if(fast&&vision.contains(primary,visibility,familiar)&&clearVisualRay(h,s,e,primary,now)){
+        if(fast&&geometry.primaryVisible()&&clearVisualRay(h,s,e,primary,now)){
             s.pendingBodies.remove(e.getUUID());
             PerceptionBudget.cancelBodyRays(h,e.getUUID());
             sweep.reset();return new VisualProbe(primary,true,"身体部位无遮挡");
         }
-        List<Vec3> samples=new ArrayList<>();long sampleMask=0;int sampleIndex=0;
-        for(var point:BodyVisibilitySamples.of(box.minX,box.minY,box.minZ,box.maxX,box.maxY,box.maxZ)){
-            Vec3 candidate=new Vec3(point.x(),point.y(),point.z());
-            if(vision.contains(candidate,visibility,familiar)){samples.add(candidate);sampleMask|=1L<<sampleIndex;}
-            sampleIndex++;
-        }
+        List<Vec3> samples=geometry.samples();long sampleMask=geometry.sampleMask();
         if(samples.isEmpty()){
             sweep.reset();
             s.pendingBodies.remove(e.getUUID());
@@ -768,11 +794,7 @@ public final class HumanPerception {
         }
         boolean complete=sweep.negative(samples.size(),start,count,sampleMask);
         if(complete){
-            List<Vec3> cacheSamples=new ArrayList<>(samples);long cacheMask=sampleMask;
-            if(vision.contains(primary,visibility,familiar)){
-                if(!cacheSamples.contains(primary))cacheSamples.add(primary);
-                cacheMask|=1L<<BodyVisibilitySamples.MAX_POINTS;
-            }
+            List<Vec3> cacheSamples=geometry.proofSamples();long cacheMask=geometry.proofMask();
             VisualOcclusionMemory.negative(h,e,now,cacheMask,cacheSamples);
         }
         return new VisualProbe(null,complete,complete?"身体视野采样均被方块遮挡":"身体采样尚未完成");
@@ -794,7 +816,7 @@ public final class HumanPerception {
     }
 
     private static void checkVisualEvidence(Human h,State s,LivingEntity e,long now,int interval,boolean fast,VisionFrame vision){
-        if(!enemy(h,e))return;Track t=s.tracks.get(e.getUUID());boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
+        if(!enemy(h,e))return;Track t=s.tracks.get(e.getUUID());if(t!=null&&t.checked==now)return;boolean familiar=t!=null&&t.marked&&(now<t.familiarUntil||now<t.liveUntil);
         boolean simple = simplifiedVision(h,s,e,now);
         VisualProbe probe;
         if (simple) {
