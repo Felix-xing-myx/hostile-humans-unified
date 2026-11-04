@@ -626,7 +626,9 @@ public final class EconomyScreen extends PanelScreen {
 
     @Override
     protected int splitWidth() {
-        return "tasks".equals(tab) ? 280 : 0;
+        if (!"tasks".equals(tab)) return 0;
+        int available = PanelGeometry.body(frame, true).width();
+        return Math.max(1, Math.min(280, available / 2));
     }
 
     private UiLayout.Node taskRow(EconomyView.TaskRow row) {
