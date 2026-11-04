@@ -199,7 +199,18 @@ public final class EconomyTasks {
                                 false,
                                 "unknown task payload retained"));
             }
+        // Keep actionable accepted commissions visible when old records and new offers
+        // share the same bounded board snapshot.
+        result.sort(Comparator.comparingInt(EconomyTasks::displayPriority));
         return List.copyOf(result);
+    }
+
+    private static int displayPriority(EconomyView.TaskRow row) {
+        return switch (row.status()) {
+            case "READY" -> 0;
+            case "ACTIVE" -> 1;
+            default -> row.canAccept() ? 2 : 3;
+        };
     }
 
     public static String accept(
