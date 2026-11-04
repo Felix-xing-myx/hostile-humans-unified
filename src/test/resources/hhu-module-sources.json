@@ -2679,6 +2679,14 @@
     "class": "dev.felix.hostilehumans.settlement.SettlementAuthoring",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementAuthoring.java"
   },
+  "SettlementBuildingCatalog": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementBuildingCatalog",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementBuildingCatalog.java"
+  },
+  "SettlementBuildingPack": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementBuildingPack",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementBuildingPack.java"
+  },
   "SettlementCodec": {
     "class": "dev.felix.hostilehumans.settlement.SettlementCodec",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementCodec.java"
@@ -2710,6 +2718,10 @@
   "SettlementGeneration": {
     "class": "dev.felix.hostilehumans.settlement.SettlementGeneration",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementGeneration.java"
+  },
+  "SettlementGenerationRules": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementGenerationRules",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementGenerationRules.java"
   },
   "SettlementGhostRenderer": {
     "class": "dev.felix.hostilehumans.settlement.client.SettlementGhostRenderer",
@@ -2746,6 +2758,10 @@
   "SettlementNetwork": {
     "class": "dev.felix.hostilehumans.settlement.SettlementNetwork",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementNetwork.java"
+  },
+  "SettlementPackStructure": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementPackStructure",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementPackStructure.java"
   },
   "SettlementPages": {
     "class": "dev.felix.hostilehumans.settlement.SettlementPages",
@@ -2795,6 +2811,14 @@
     "class": "dev.felix.hostilehumans.settlement.SettlementTemplate",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementTemplate.java"
   },
+  "SettlementTemplateCapture": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementTemplateCapture",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementTemplateCapture.java"
+  },
+  "SettlementTemplateDownloadClient": {
+    "class": "dev.felix.hostilehumans.settlement.client.SettlementTemplateDownloadClient",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/client/SettlementTemplateDownloadClient.java"
+  },
   "SettlementTemplateFiles": {
     "class": "dev.felix.hostilehumans.settlement.SettlementTemplateFiles",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementTemplateFiles.java"
@@ -2803,9 +2827,17 @@
     "class": "dev.felix.hostilehumans.settlement.SettlementTemplateLibrary",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementTemplateLibrary.java"
   },
+  "SettlementTemplatePlacement": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementTemplatePlacement",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementTemplatePlacement.java"
+  },
   "SettlementTemplatePlacementMixin": {
     "class": "dev.felix.hostilehumans.mixin.SettlementTemplatePlacementMixin",
     "path": "src/main/java/dev/felix/hostilehumans/mixin/SettlementTemplatePlacementMixin.java"
+  },
+  "SettlementTemplateTransfer": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementTemplateTransfer",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementTemplateTransfer.java"
   },
   "SettlementWandPlacement": {
     "class": "dev.felix.hostilehumans.settlement.SettlementWandPlacement",
@@ -2814,6 +2846,14 @@
   "SettlementWandScreen": {
     "class": "dev.felix.hostilehumans.settlement.client.SettlementWandScreen",
     "path": "src/main/java/dev/felix/hostilehumans/settlement/client/SettlementWandScreen.java"
+  },
+  "SettlementWorldgenPack": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementWorldgenPack",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementWorldgenPack.java"
+  },
+  "SettlementWorldgenResources": {
+    "class": "dev.felix.hostilehumans.settlement.SettlementWorldgenResources",
+    "path": "src/main/java/dev/felix/hostilehumans/settlement/SettlementWorldgenResources.java"
   },
   "ShieldAdvancePolicy": {
     "class": "dev.felix.hostilehumans.behavior.combat.defense.ShieldAdvancePolicy",
@@ -3138,6 +3178,10 @@
   "StaticCombatGoalHost": {
     "class": "dev.felix.hostilehumans.behavior.StaticCombatGoalHost",
     "path": "src/main/java/dev/felix/hostilehumans/behavior/StaticCombatGoalHost.java"
+  },
+  "StructureManagerLevelAccessor": {
+    "class": "dev.felix.hostilehumans.mixin.StructureManagerLevelAccessor",
+    "path": "src/main/java/dev/felix/hostilehumans/mixin/StructureManagerLevelAccessor.java"
   },
   "SupplyInventoryPolicy": {
     "class": "dev.felix.hostilehumans.inventory.SupplyInventoryPolicy",

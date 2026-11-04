@@ -4341,3 +4341,7 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 实例建筑库与建筑包第一阶段
 - 主控，基线 0b60339，module-architecture 工作树。新导出转入实例库，放置查找沿用旧存档和内置来源作为回退。26 个旧自然结构指向空群系标签，保留模板。Python 静态检查 532 项，跳过 16 项。多人传输、包导入和生成编辑、大结构仍待继续；完成全套后构建同步。
+
+
+## 3.15.4 构建同步
+- 主控；基线5cdf9e838d6ff50602a6ed942e23b7bde812ec77；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：Building packs, worldgen rules, portable exports and large templates。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.4。
