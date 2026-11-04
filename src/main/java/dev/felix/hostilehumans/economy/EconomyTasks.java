@@ -257,6 +257,8 @@ public final class EconomyTasks {
                 || task.objective() != EconomyPolicy.Objective.DELIVERY)
             throw new IllegalArgumentException("task delivery unavailable");
         int remaining = task.count() - row.getInt("progress");
+        if (!ForgeRegistries.ITEMS.containsKey(task.item()))
+            throw new IllegalArgumentException("delivery item is unavailable");
         inventory.consume(ForgeRegistries.ITEMS.getValue(task.item()), remaining);
         row.putInt("progress", task.count());
         row.putString("status", "READY");
@@ -309,6 +311,21 @@ public final class EconomyTasks {
         return "task claimed once: standing +" + actual + ", copper +" + cash;
     }
 
+    static boolean matchesKill(EconomyPolicy.Task task, Currency currency, String victimFaction, boolean boss) {
+        return switch (task.objective()) {
+            case DELIVERY -> false;
+            case KILL_ROAMER -> victimFaction.isEmpty() && !boss;
+            case KILL_FACTION, KILL_BOSS -> {
+                if (task.objective() == EconomyPolicy.Objective.KILL_BOSS && !boss) yield false;
+                if (!StandingAccess.enemies(currency.faction(), victimFaction)) yield false;
+                if (task.targetFaction().isEmpty()) yield true;
+                var target = dev.felix.hostilehumans.faction.FactionDefinitions.id(task.targetFaction());
+                yield target != null && target.equals(
+                        dev.felix.hostilehumans.faction.FactionDefinitions.id(victimFaction));
+            }
+        };
+    }
+
     /**
      * Confirmed actual deaths only; caller deduplicates victim UUID and supplies canonical
      * responsibility.
@@ -339,30 +356,7 @@ public final class EconomyTasks {
                             var task = definition(row);
                             if (!status(draft, currency, task, row, test).equals("ACTIVE"))
                                 continue;
-                            boolean match =
-                                    switch (task.objective()) {
-                                        case DELIVERY -> false;
-                                        case KILL_ROAMER -> victimFaction.isEmpty() && !boss;
-                                        case KILL_FACTION ->
-                                                StandingAccess.enemies(
-                                                                currency.faction(), victimFaction)
-                                                        && (task.targetFaction().isEmpty()
-                                                                || dev.felix.hostilehumans.economy
-                                                                        .Currency.faction(
-                                                                                task
-                                                                                        .targetFaction())
-                                                                        .equals(
-                                                                                dev.felix
-                                                                                        .hostilehumans
-                                                                                        .economy
-                                                                                        .Currency
-                                                                                        .faction(
-                                                                                                victimFaction)));
-                                        case KILL_BOSS ->
-                                                boss
-                                                        && StandingAccess.enemies(
-                                                                currency.faction(), victimFaction);
-                                    };
+                            boolean match = matchesKill(task, currency, victimFaction, boss);
                             if (match) {
                                 int progress = Math.min(task.count(), row.getInt("progress") + 1);
                                 row.putInt("progress", progress);

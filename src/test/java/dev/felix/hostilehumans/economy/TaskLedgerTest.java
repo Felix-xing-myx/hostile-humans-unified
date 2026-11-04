@@ -22,6 +22,22 @@ public final class TaskLedgerTest {
     }
 
     public static void main(String[] args) throws Exception {
+        var task = new EconomyPolicy.Task("test:roamer", "Roamer", EconomyPolicy.TaskKind.BASIC,
+                EconomyPolicy.Objective.KILL_ROAMER, null, "", 1, 50, 10, 25, 0, false);
+        require(EconomyTasks.matchesKill(task, Currency.AZURE, "", false), "ordinary roamer counts");
+        require(!EconomyTasks.matchesKill(task, Currency.AZURE, "", true), "boss is not a roamer");
+        require(!EconomyTasks.matchesKill(task, Currency.AZURE, Currency.CRIMSON.faction(), false),
+                "faction member does not count as a roamer");
+        require(EconomyService.taskLane(EconomyView.Page.TASKS, true, false, "ATONEMENT_ONE"),
+                "station board owns atonement");
+        require(!EconomyService.taskLane(EconomyView.Page.TASKS, false, false, "ATONEMENT_ONE"),
+                "ordinary board cannot offer station-only tasks");
+        require(!EconomyService.taskLane(EconomyView.Page.BROKER, true, false, "ATONEMENT_ONE"),
+                "broker block cannot settle tasks even inside station");
+        require(!EconomyService.taskLane(EconomyView.Page.WALLET, false, false, "BASIC"),
+                "player overview cannot settle tasks");
+        require(EconomyService.taskLane(EconomyView.Page.TASKS, false, false, "BASIC"),
+                "ordinary board can offer basic tasks");
         var account = new CompoundTag();
         String id = "test:same_id";
         TaskLedger.instances(account, true)

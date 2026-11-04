@@ -314,10 +314,14 @@ public final class EconomyService implements EconomyNetwork.Backend {
     }
 
     private static boolean taskLane(Context c, String kind) {
-        if (c.test()) return true;
-        if (c.page() != EconomyView.Page.TASKS) return false;
+        return taskLane(c.page(), c.station(), c.test(), kind);
+    }
+
+    static boolean taskLane(EconomyView.Page page, boolean station, boolean test, String kind) {
+        if (test) return page == EconomyView.Page.TEST;
+        if (page != EconomyView.Page.TASKS) return false;
         return switch (kind) {
-            case "INITIATION", "ATONEMENT_ONE", "ATONEMENT_TWO" -> c.station();
+            case "INITIATION", "ATONEMENT_ONE", "ATONEMENT_TWO" -> station;
             case "BASIC", "DAILY", "BOUNTY" -> true;
             default -> false;
         };

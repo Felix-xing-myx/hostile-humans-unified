@@ -63,7 +63,8 @@ public final class EconomyProtocolTest {
                                         false,
                                         false,
                                         true,
-                                        "ready")),
+                                        "ready", "DELIVERY", "minecraft:bread", "", 25000, 1200,
+                                        true, "Test station", Currency.ASHEN.faction())),
                         new EconomyView.PermitRow(
                                 true, true, 24000, 0, 100, true, false, 1500, false, true, "fixed"),
                         List.of(

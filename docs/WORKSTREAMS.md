@@ -2,6 +2,9 @@
 
 基线 359fe0474ccfebcfc5856411b0b4e2777063a0b0，主控负责 worktrees/settlement-task-hub 的 feature/settlement-task-hub。首批范围为放置棒、模板解析与委托板选项卡，后续接入目录分页、建筑类型、任务服务与玩家总面板。放置棒选定与预览统一使用服务端模板来源解析；委托板前端只显示委托页，原服务端会话权限继续生效。首批仅静态检查。
 
+实现提交：080e81f、aa84993、85da747、3cfb118、6e60636、66199d1。已接任务与任务表分离，客户端可查看目标、来源与奖励；站点阵营与所有资金事务由服务端核对。已加入站点存档、路由、击杀过滤和详情协议回归。Python 静态回归通过；Java 回归与游戏内验收待进行。
+
+
 ## Large template placement batches
 
 Large previews send a bounded sample. Confirmation drives vanilla block and entity batches, placing the information block last. Owner, dimension, permission and loaded destination checks stop interrupted jobs and report partial writes. Integrated build and in-world validation remain pending.
