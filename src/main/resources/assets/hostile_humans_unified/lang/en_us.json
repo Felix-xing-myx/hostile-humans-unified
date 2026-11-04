@@ -1,4 +1,5 @@
 {
+  "gui.hostile_humans_unified.settlement.validate_generation": "Validate saved rules",
   "gui.hostile_humans_unified.settlement.placement_progress": "Placing %s: %s / %s entries.",
   "gui.hostile_humans_unified.settlement.placement_partial": "Placement of %s interrupted. The world may have been partially modified.",
   "gui.hostile_humans_unified.settlement.placement_cancelled": "Placement of %s cancelled.",

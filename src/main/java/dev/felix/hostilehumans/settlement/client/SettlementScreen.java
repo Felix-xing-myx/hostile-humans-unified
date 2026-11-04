@@ -627,6 +627,8 @@ public final class SettlementScreen extends PanelScreen {
         List<UiLayout.Node> nodes = new ArrayList<>();
         nodes.add(muted(text("generation.help")));
         nodes.add(muted(text("building_pack.help")));
+        nodes.add(action("validate_generation", text("validate_generation"), editable() && !dirty(), false,
+                () -> send(snapshot, SettlementNetwork.Action.VALIDATE_GENERATION, new CompoundTag())));
         nodes.add(action("export_building_pack", text("export_building_pack"), editable() && !dirty(), false,
                 () -> exportBuildingPack(false)));
         nodes.add(action("replace_building_pack", text("replace_building_pack"), editable() && !dirty(), false,

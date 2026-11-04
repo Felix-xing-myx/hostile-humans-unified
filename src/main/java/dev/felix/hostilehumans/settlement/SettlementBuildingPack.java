@@ -74,6 +74,34 @@ final class SettlementBuildingPack {
         return file;
     }
 
+    static String validateDraft(ServerPlayer player, net.minecraft.core.BlockPos anchor, int revision) {
+        var information = SettlementAuthoring.information(player, anchor);
+        if (information == null || information.revision() != revision) return "author unavailable or stale";
+        var draft = SettlementCodec.template(information.author());
+        draft.validateForPublication();
+        SettlementTemplateFiles.checkSize(draft.size());
+        if (!draft.generation().enabled()) return "valid draft for manual placement";
+        if (draft.kind() == SettlementTemplate.Kind.ATTACHMENT
+                || draft.size().x() > SettlementWorldgenResources.MAX_HORIZONTAL_SIDE
+                || draft.size().z() > SettlementWorldgenResources.MAX_HORIZONTAL_SIDE)
+            return "this draft can only be placed manually";
+        var rules = draft.generation();
+        var dimension = net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION,
+                new ResourceLocation(rules.dimension()));
+        if (player.getServer().getLevel(dimension) == null) return "unknown generation dimension: " + rules.dimension();
+        var registry = player.serverLevel().registryAccess()
+                .registryOrThrow(net.minecraft.core.registries.Registries.BIOME);
+        for (var selector : java.util.stream.Stream.concat(rules.allowedBiomes().stream(),
+                rules.excludedBiomes().stream()).toList()) {
+            boolean known = selector.startsWith("#")
+                    ? registry.getTag(net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.BIOME,
+                            new ResourceLocation(selector.substring(1)))).isPresent()
+                    : registry.containsKey(new ResourceLocation(selector));
+            if (!known) return "unknown generation biome selector: " + selector;
+        }
+        return "natural generation rules are valid";
+    }
+
     static String export(ServerPlayer player, net.minecraft.core.BlockPos anchor, int revision, boolean overwrite) {
         var information = SettlementAuthoring.information(player, anchor);
         if (information == null || information.revision() != revision) return "author unavailable or stale";
