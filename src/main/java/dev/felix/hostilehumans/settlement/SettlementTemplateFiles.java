@@ -93,6 +93,12 @@ final class SettlementTemplateFiles {
         var size = author.size();
         checkSize(size);
         var bounds = new RegionBox(0, 0, 0, size.x() - 1, size.y() - 1, size.z() - 1).transform(transform);
+        for (var facility : author.facilities()) {
+            if (facility.type() == SettlementFacility.Type.ENTRANCE || facility.type() == SettlementFacility.Type.POST) continue;
+            var cell = transform.apply(facility.position());
+            if (!bounds.contains(cell.x() + .5, cell.y(), cell.z() + .5))
+                return "facility outside structure capture: " + facility.id();
+        }
         checkArea(level, bounds);
         var id = new ResourceLocation(author.template());
         if (id.getPath().equals("untitled")) return "set a template ID and save the author draft first";

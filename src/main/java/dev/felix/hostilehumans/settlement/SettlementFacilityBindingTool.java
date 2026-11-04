@@ -80,7 +80,8 @@ public final class SettlementFacilityBindingTool extends Item {
                 return InteractionResult.CONSUME;
             }
             if (player.serverLevel().getBlockState(point).is(dev.felix.hostilehumans.economy.EconomyContent.TASK_BOARD.get())) {
-                tell(player, "task_board");
+                if (binding.facilityIndex() >= 0) throw new Problem("wrong_type");
+                publishTaskBoard(player, info, point);
                 return InteractionResult.CONSUME;
             }
             String result = SettlementAuthoring.bindFacility(player, info, point, binding.region(), binding.facilityIndex());
@@ -90,13 +91,7 @@ public final class SettlementFacilityBindingTool extends Item {
             }
             BINDINGS.put(player, new Binding(binding.dimension(), binding.position(), binding.identity(),
                     binding.region(), -1, info.revision()));
-            CompoundTag options = new CompoundTag();
-            var index = SettlementIndex.get(player.serverLevel());
-            var instance = info.instance() == null ? null : index.find(info.instance());
-            var published = info.instance() == null
-                    ? SettlementAuthoring.importNew(player, binding.position(), info.revision(), options)
-                    : instance == null ? new SettlementIndex.Result(false, "linked instance unavailable", null)
-                    : SettlementAuthoring.update(player, binding.position(), info.revision(), instance.revision(), options);
+            var published = publish(player, info);
             if (published.changed()) tell(player, "registered");
             else tell(player, "draft_only", localize(published.reason()));
         } catch (Problem bad) {
@@ -105,6 +100,40 @@ public final class SettlementFacilityBindingTool extends Item {
             player.displayClientMessage(localize(bad.getMessage()), true);
         }
         return InteractionResult.CONSUME;
+    }
+
+    private static SettlementIndex.Result publish(ServerPlayer player, SettlementInformationBlockEntity info) {
+        var options = new CompoundTag();
+        if (info.instance() == null)
+            return SettlementAuthoring.importNew(player, info.getBlockPos(), info.revision(), options);
+        var instance = SettlementIndex.get(player.serverLevel()).find(info.instance());
+        if (instance == null) return new SettlementIndex.Result(false, "linked instance unavailable", null);
+        return SettlementAuthoring.update(player, info.getBlockPos(), info.revision(), instance.revision(), options);
+    }
+
+    private static void publishTaskBoard(ServerPlayer player, SettlementInformationBlockEntity info, BlockPos point) {
+        var author = SettlementCodec.template(info.author());
+        var local = SettlementAuthoring.currentTransform(player, info).unapply(SettlementAuthoring.cell(point));
+        boolean outer = false;
+        for (var region : author.regions()) {
+            if (!region.contains(local.x() + .5, local.y(), local.z() + .5)) continue;
+            if (region.layer() == SettlementRegion.Layer.INNER) throw new Problem("task_board_inner");
+            outer = true;
+        }
+        if (!outer) throw new Problem("task_board_draft");
+        var index = SettlementIndex.get(player.serverLevel());
+        var current = index.query(point.getX() + .5, point.getY(), point.getZ() + .5);
+        if (current.unknown()) throw new IllegalArgumentException("unknown region");
+        if (current.hits().stream().anyMatch(hit -> !hit.instance().equals(info.instance())))
+            throw new Problem("task_board_overlap");
+        var published = publish(player, info);
+        if (!published.changed() && !"already imported".equals(published.reason())) {
+            tell(player, "task_board_publish_failed", localize(published.reason()));
+            return;
+        }
+        var site = index.taskBoardSite(point);
+        if (!site.id().equals(info.instance())) throw new Problem("task_board_overlap");
+        tell(player, "task_board_ready");
     }
 
     static Component message(String key, Object... args) {
@@ -116,6 +145,8 @@ public final class SettlementFacilityBindingTool extends Item {
         if (reason.startsWith("rejected: ")) return localize(reason.substring("rejected: ".length()));
         String emptyRegion = "add an include box or remove the empty region: ";
         if (reason.startsWith(emptyRegion)) return message("empty_region", reason.substring(emptyRegion.length()));
+        String outsideCapture = "facility outside structure capture: ";
+        if (reason.startsWith(outsideCapture)) return message("outside_capture", reason.substring(outsideCapture.length()));
         return switch (reason) {
             case "author unavailable or stale", "missing or stale author", "missing or stale author link",
                     "author revision changed" -> message("bind_first");
@@ -130,6 +161,10 @@ public final class SettlementFacilityBindingTool extends Item {
             case "instance has conflicting control facilities", "duplicate template control" -> message("duplicate_control");
             case "dimension instance limit", "instance spatial index limit", "template total box/extent limit" -> message("index_limit");
             case "unknown index schema; retained read-only", "unknown existing author schema; preserve payload" -> message("unknown_schema");
+            case "task board has no registered outer courtyard" -> message("task_board_unregistered");
+            case "task board inside inner courtyard" -> message("task_board_inner");
+            case "task board overlaps settlements" -> message("task_board_overlap");
+            case "unknown region", "unknown task board instance" -> message("task_board_unknown");
             case "no typed facility at this block", "facility not registered" -> message("unregistered");
             default -> Component.literal(reason);
         };

@@ -156,27 +156,13 @@ public final class EconomyService implements EconomyNetwork.Backend {
                     page == EconomyView.Page.TEST);
         }
         var index = SettlementIndex.get(player.serverLevel());
+        if (page == EconomyView.Page.TASKS) {
+            var site = index.taskBoardSite(anchor);
+            return new Context(page, anchor.immutable(), player.level().dimension().location().toString(),
+                    Currency.faction(site.faction()).orElseThrow(), site.id(), "", false);
+        }
         var query = index.query(anchor.getX() + .5, anchor.getY(), anchor.getZ() + .5);
         if (query.unknown()) throw new IllegalArgumentException("unknown region");
-        if (page == EconomyView.Page.TASKS) {
-            if (query.hits().isEmpty()
-                    || query.hits().stream()
-                            .anyMatch(hit -> hit.layer() != SettlementRegion.Layer.OUTER)
-                    || query.hits().stream().map(SettlementIndex.Hit::instance).distinct().count()
-                            != 1)
-                throw new IllegalArgumentException("task board requires one known outer courtyard");
-            UUID id = query.hits().get(0).instance();
-            var site = index.find(id);
-            if (site == null) throw new IllegalArgumentException("unknown task board instance");
-            return new Context(
-                    page,
-                    anchor.immutable(),
-                    player.level().dimension().location().toString(),
-                    Currency.faction(site.faction()).orElseThrow(),
-                    id,
-                    "",
-                    false);
-        }
         var type =
                 page == EconomyView.Page.SUPPLY
                         ? SettlementFacility.Type.SUPPLY

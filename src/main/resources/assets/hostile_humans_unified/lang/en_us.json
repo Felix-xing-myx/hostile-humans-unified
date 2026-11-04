@@ -1,4 +1,12 @@
 {
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_draft": "The board is outside this draft module’s outer courtyard. Select the correct module and include the board’s height.",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_inner": "The task board is inside an inner region. Move it to a position covered only by the outer region.",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_overlap": "The task board overlaps another registered settlement. Adjust the regions or move the board.",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_unregistered": "No registered outer courtyard at this board. Select the information block with the wand, then use it on the board.",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_unknown": "The board’s registered settlement could not be verified. Check the settlement index in the author editor.",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_ready": "The board now belongs to the registered settlement. Put away the wand and right-click to open tasks.",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_publish_failed": "The board is inside the draft courtyard, but registration failed: %s",
+  "item.hostile_humans_unified.settlement_facility_tool.outside_capture": "Facility %s is outside the structure capture bounds. Expand the capture box to include the physical block.",
   "item.hostile_humans_unified.settlement_facility_tool.prepare_outer": "Information block selected. Draw the outer region first, including the height of the facility.",
   "gui.hostile_humans_unified.settlement.help.facility.broker_open": "Right-click after placing. Brokerage uses the faction of the block.",
   "gui.hostile_humans_unified.settlement.help.facility.task_open": "Register the settlement first. The board uses the outer region automatically; right-click after placing.",

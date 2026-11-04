@@ -1,4 +1,12 @@
 {
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_draft": "委托板不在这个信息方块草稿的外圈内。请确认选中正确模块，外圈包含委托板所在高度。",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_inner": "委托板所在方块被内圈覆盖。请移到只属于外圈的位置。",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_overlap": "委托板所在位置与另一个正式据点重叠。请调整区域或移动委托板。",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_unregistered": "委托板所在位置没有已登记的外圈。请用绑定棒选中信息方块，再右键委托板登记。",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_unknown": "无法确认委托板的正式据点，请在作者编辑器检查据点索引。",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_ready": "委托板已归属正式据点。换下绑定棒，右键打开委托界面。",
+  "item.hostile_humans_unified.settlement_facility_tool.task_board_publish_failed": "委托板位于草稿外圈，但正式登记未成功：%s",
+  "item.hostile_humans_unified.settlement_facility_tool.outside_capture": "设施 %s 在建筑保存范围之外。请先扩展白色保存框，让模板能保存实体方块。",
   "item.hostile_humans_unified.settlement_facility_tool.prepare_outer": "已选信息方块。请先用建筑框选器画好外圈，并覆盖设施高度。",
   "gui.hostile_humans_unified.settlement.help.facility.broker_open": "放好后直接右键，经纪业务按方块阵营开放。",
   "gui.hostile_humans_unified.settlement.help.facility.task_open": "前置：先登记据点。任务板按外圈自动归属，放好后直接右键。",

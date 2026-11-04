@@ -125,6 +125,21 @@ public final class SettlementIndex extends SavedData {
         return new Query(result, uncertain());
     }
 
+    /** Task boards inherit the unique registered outer courtyard at their block. */
+    public SettlementInstance taskBoardSite(BlockPos anchor) {
+        var query = query(anchor.getX() + .5, anchor.getY(), anchor.getZ() + .5);
+        if (query.unknown()) throw new IllegalArgumentException("unknown region");
+        if (query.hits().isEmpty()) throw new IllegalArgumentException("task board has no registered outer courtyard");
+        if (query.hits().stream().anyMatch(hit -> hit.layer() == SettlementRegion.Layer.INNER))
+            throw new IllegalArgumentException("task board inside inner courtyard");
+        UUID id = query.hits().get(0).instance();
+        if (query.hits().stream().anyMatch(hit -> !hit.instance().equals(id)))
+            throw new IllegalArgumentException("task board overlaps settlements");
+        var site = find(id);
+        if (site == null || site.incomplete()) throw new IllegalArgumentException("unknown task board instance");
+        return site;
+    }
+
     public Located facility(UUID id, String stableId) {
         SettlementInstance instance = find(id);
         if (instance == null || stableId == null) return null;

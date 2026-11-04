@@ -4294,3 +4294,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 设施摆放指引
 - 主控，基线 a5f9f91，module-architecture 工作树。各类设施物品提示放置区域、前置和打开方式；选中无外圈的草稿时绑定棒先提示。
+
+## 委托板发布与结构捕获一致性
+- 主控，基线 9c0be98，module-architecture 工作树。委托板从绑定棒校验并发布归属，正式玩家入口共用索引检查；结构导出拦截白框之外的显式设施。Python 检查 532 项，跳过 16 项；未运行 Gradle。
