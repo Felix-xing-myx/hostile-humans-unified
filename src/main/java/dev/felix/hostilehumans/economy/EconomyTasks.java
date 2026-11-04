@@ -121,19 +121,23 @@ public final class EconomyTasks {
                 // Preserve unreadable saved entries without advertising a transaction.
             }
         }
-        var offered = new HashSet<String>();
+        var offered = new HashMap<String, EconomyPolicy.Task>();
         for (var task : policy.tasks()) {
-            offered.add(task.id());
+            offered.put(task.id(), task);
             definitions.putIfAbsent(task.id(), task);
         }
         for (var configured : definitions.values())
             try {
                 var row = accepted(draft, currency, configured.id(), test);
-                var task = row == null ? configured : definition(row);
-                String status = status(draft, currency, task, row, test);
+                var savedTask = row == null ? configured : definition(row);
+                String status = status(draft, currency, savedTask, row, test);
                 boolean open = status.equals("ACTIVE") || status.equals("READY");
-                boolean completed = row != null && row.getInt("claims") > 0 && task.once();
-                boolean eligible = enabled && offered.contains(task.id()) && eligible(draft, currency, task, false, test);
+                var offer = offered.get(configured.id());
+                boolean completed = row != null && row.getInt("claims") > 0
+                        && (savedTask.once() || offer != null && offer.once());
+                boolean canAccept = enabled && offer != null && !open && !completed
+                        && eligible(draft, currency, offer, false, test);
+                var task = canAccept ? offer : savedTask;
                 int nominal =
                         task.kind() == EconomyPolicy.TaskKind.ATONEMENT_ONE
                                 ? Math.max(0, -99 - draft.standing(currency.faction()))
@@ -164,7 +168,7 @@ public final class EconomyTasks {
                                 nominal,
                                 available,
                                 task.copperReward() * factor(draft, currency, task, test) / 100,
-                                eligible && !open && !completed,
+                                canAccept,
                                 enabled
                                         && status.equals("ACTIVE")
                                         && task.objective() == EconomyPolicy.Objective.DELIVERY,

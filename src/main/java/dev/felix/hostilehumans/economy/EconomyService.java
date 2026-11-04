@@ -576,6 +576,9 @@ public final class EconomyService implements EconomyNetwork.Backend {
                                                             && taskLane(context, row.kind())))
                         throw new IllegalArgumentException(
                                 "invalid task publication context/arguments");
+                    if (action == EconomyView.Action.ACCEPT_TASK && p.tasks().stream().noneMatch(task ->
+                            task.id().equals(c.entry()) && taskLane(context, task.kind().name())))
+                        throw new IllegalArgumentException("current task definition is not offered by this board");
                     reason =
                             action == EconomyView.Action.ACCEPT_TASK
                                     ? EconomyTasks.accept(draft, context.currency(), p, c.entry(),
