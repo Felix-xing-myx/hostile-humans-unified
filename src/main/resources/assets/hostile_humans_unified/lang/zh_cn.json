@@ -1,4 +1,9 @@
 {
+  "gui.hostile_humans_unified.settlement.template_search": "搜索模板 ID",
+  "gui.hostile_humans_unified.settlement.template_search_apply": "搜索或刷新",
+  "gui.hostile_humans_unified.settlement.template_page": "第 %s / %s 页",
+  "gui.hostile_humans_unified.settlement.template_previous": "上一页",
+  "gui.hostile_humans_unified.settlement.template_next": "下一页",
   "gui.hostile_humans_unified.settlement.generation.spacing": "生成组间距（区块）",
   "gui.hostile_humans_unified.settlement.generation.separation": "生成组最小间隔（区块）",
   "gui.hostile_humans_unified.settlement.generation.group_scope": "同一组的分享包必须使用相同间距。下方列出当前服务器已安装的同组建筑。",

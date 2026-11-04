@@ -58,7 +58,6 @@ final class SettlementTemplateLibrary {
                     .filter(java.util.Objects::nonNull)
                     .filter(id -> id.toString().length() <= 256)
                     .sorted()
-                    .limit(256)
                     .toList();
         }
     }

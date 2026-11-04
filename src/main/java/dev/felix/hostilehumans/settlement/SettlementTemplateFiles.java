@@ -95,7 +95,9 @@ final class SettlementTemplateFiles {
         return manager.get(id).isPresent() ? new TemplateSource("pack", null, null) : null;
     }
 
-    static ListTag list(ServerLevel level) {
+    record CatalogPage(ListTag rows, int page, int pages) {}
+
+    static CatalogPage list(ServerLevel level, String query, int requestedPage) {
         var manager = level.getStructureManager();
         var result = new ListTag();
         var catalog = new java.util.TreeMap<ResourceLocation, String>();
@@ -115,14 +117,19 @@ final class SettlementTemplateFiles {
         } catch (IOException error) {
             dev.felix.hostilehumans.bootstrap.HumanRuntime.LOGGER.warn("Could not read the settlement template library", error);
         }
-        catalog.entrySet().stream()
+        var matches = catalog.entrySet().stream()
+                .filter(entry -> entry.getKey().toString().contains(query))
                 .sorted(java.util.Comparator.comparingInt(entry -> switch (entry.getValue()) {
                     case "instance" -> 0;
                     case "world" -> 1;
                     case "building_pack" -> 2;
                     default -> 3;
                 }))
-                .limit(32)
+                .toList();
+        int pageSize = 16;
+        int pages = Math.max(1, (matches.size() + pageSize - 1) / pageSize);
+        int page = Math.max(0, Math.min(requestedPage, pages - 1));
+        matches.stream().skip((long) page * pageSize).limit(pageSize)
                 .forEach(entry -> {
                     var row = new CompoundTag();
                     row.putString("id", entry.getKey().toString());
@@ -132,7 +139,7 @@ final class SettlementTemplateFiles {
                     row.putString("source", entry.getValue());
                     result.add(row);
                 });
-        return result;
+        return new CatalogPage(result, page, pages);
     }
 
     static String save(ServerPlayer player, BlockPos position, int revision, boolean entities,

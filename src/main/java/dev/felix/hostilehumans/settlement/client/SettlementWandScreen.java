@@ -21,7 +21,9 @@ public final class SettlementWandScreen extends PanelScreen {
     private record Options(String id, int turns, Mirror mirror, boolean entities) {}
     private static final WeakHashMap<ClientLevel, Options> LAST = new WeakHashMap<>();
 
-    private final SettlementWandPlacement.View view;
+    private SettlementWandPlacement.View view;
+    private final InputValue<String> search = InputValue.text("", 128, false);
+    private String appliedSearch = "";
     private final ClientLevel level;
     private final InputValue<String> template;
     private int turns;
@@ -56,6 +58,7 @@ public final class SettlementWandScreen extends PanelScreen {
         if (mc.screen instanceof SettlementWandScreen screen && screen.view.token().equals(update.token())) {
             if (update.armed()) screen.closeScreen();
             else {
+                if (update.pages() > 0) screen.view = update;
                 screen.awaiting = false;
                 screen.error = update.reason();
                 screen.rebuildWidgets();
@@ -88,6 +91,19 @@ public final class SettlementWandScreen extends PanelScreen {
         nodes.add(button(text(listOpen ? "hide_templates" : "show_templates"), listOpen,
                 () -> { listOpen = !listOpen; rebuildWidgets(); }));
         if (listOpen) {
+            nodes.add(field(text("template_search"), search));
+            nodes.add(button(text("template_search_apply"), false, () -> {
+                appliedSearch = search.text();
+                requestPage(0);
+            }));
+            if (view.pages() > 1) {
+                nodes.add(note(text("template_page", view.page() + 1, view.pages())));
+                List<UiLayout.Node> paging = new ArrayList<>();
+                if (view.page() > 0) paging.add(button(text("template_previous"), false, () -> requestPage(view.page() - 1)));
+                if (view.page() + 1 < view.pages())
+                    paging.add(button(text("template_next"), false, () -> requestPage(view.page() + 1)));
+                nodes.add(UiLayout.row(6, paging));
+            }
             if (view.choices().isEmpty()) nodes.add(note(text("templates_empty")));
             for (int i = 0; i < view.choices().size(); i++) {
                 var row = view.choices().getCompound(i);
@@ -117,6 +133,10 @@ public final class SettlementWandScreen extends PanelScreen {
                 entities, () -> { entities = !entities; rebuildWidgets(); }));
         nodes.add(note(text("place_entities_help")));
         return UiLayout.column(6, nodes);
+    }
+
+    private void requestPage(int page) {
+        SettlementNetwork.requestWandCatalog(new SettlementWandPlacement.CatalogRequest(view.token(), appliedSearch, page));
     }
 
     private UiLayout.Node adjustmentContent(List<UiLayout.Node> nodes) {

@@ -42,7 +42,23 @@ public final class SettlementWandPlacement {
         }
     }
 
-    public record View(UUID token, boolean armed, String reason, ListTag choices, Request adjustment) {
+    public record CatalogRequest(UUID token, String query, int page) {
+        void encode(FriendlyByteBuf buf) {
+            buf.writeUUID(token);
+            buf.writeUtf(query, 128);
+            buf.writeVarInt(page);
+        }
+
+        static CatalogRequest decode(FriendlyByteBuf buf) {
+            return new CatalogRequest(buf.readUUID(), buf.readUtf(128), buf.readVarInt());
+        }
+    }
+
+    public record View(UUID token, boolean armed, String reason, ListTag choices, Request adjustment,
+            int page, int pages) {
+        View(UUID token, boolean armed, String reason, ListTag choices, Request adjustment) {
+            this(token, armed, reason, choices, adjustment, 0, 0);
+        }
         View(UUID token, boolean armed, String reason, ListTag choices) {
             this(token, armed, reason, choices, null);
         }
@@ -55,6 +71,8 @@ public final class SettlementWandPlacement {
             buf.writeNbt(data);
             buf.writeBoolean(adjustment != null);
             if (adjustment != null) adjustment.encode(buf);
+            buf.writeVarInt(page);
+            buf.writeVarInt(pages);
         }
 
         static View decode(FriendlyByteBuf buf) {
@@ -64,7 +82,7 @@ public final class SettlementWandPlacement {
             var data = buf.readNbt();
             return new View(token, armed, reason, data == null ? new ListTag()
                     : data.getList("choices", net.minecraft.nbt.Tag.TAG_COMPOUND),
-                    buf.readBoolean() ? Request.decode(buf) : null);
+                    buf.readBoolean() ? Request.decode(buf) : null, buf.readVarInt(), buf.readVarInt());
         }
     }
 
@@ -84,11 +102,23 @@ public final class SettlementWandPlacement {
             return;
         }
         var level = player.serverLevel();
-        var choices = SettlementTemplateFiles.list(level);
         cancel(player);
         var token = UUID.randomUUID();
         SESSIONS.put(player, new Session(token, level, level.getGameTime() + SESSION_TICKS, null, null));
-        SettlementNetwork.wandView(player, new View(token, false, "", choices));
+        catalog(player, new CatalogRequest(token, "", 0));
+    }
+
+    static void catalog(ServerPlayer player, CatalogRequest request) {
+        var session = current(player);
+        if (session == null || !session.token().equals(request.token()) || session.placement() != null || !holding(player)) {
+            SettlementNetwork.wandView(player, new View(request.token(), false, "wand_session_expired", new ListTag()));
+            return;
+        }
+        var level = session.level();
+        var query = request.query().strip().toLowerCase(java.util.Locale.ROOT);
+        var result = SettlementTemplateFiles.list(level, query, request.page());
+        SESSIONS.put(player, new Session(session.token(), level, level.getGameTime() + SESSION_TICKS, null, null));
+        SettlementNetwork.wandView(player, new View(session.token(), false, "", result.rows(), null, result.page(), result.pages()));
     }
 
     static void arm(ServerPlayer player, Request request) {

@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 public final class SettlementNetwork {
     private static final UUID NONE = new UUID(0, 0);
     private static final int NBT_LIMIT = 1048576;
-    private static final String VERSION = "14";
+    private static final String VERSION = "15";
     public static final String AUTHOR_FILE_TAB = "author file tab";
     private static final int SESSION_TICKS = 1200;
     public static final String SELECTION_READY = "selection mode updated";
@@ -162,6 +162,10 @@ public final class SettlementNetwork {
         Connection.CHANNEL.sendToServer(request);
     }
 
+    public static void requestWandCatalog(SettlementWandPlacement.CatalogRequest request) {
+        Connection.CHANNEL.sendToServer(request);
+    }
+
     static void wandView(ServerPlayer player, SettlementWandPlacement.View view) {
         Connection.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), view);
     }
@@ -270,6 +274,16 @@ public final class SettlementNetwork {
                     context.enqueueWork(() -> templateReceiver.accept(chunk));
                     context.setPacketHandled(true);
                 }, Optional.of(NetworkDirection.PLAY_TO_CLIENT));
+        Connection.CHANNEL.registerMessage(9, SettlementWandPlacement.CatalogRequest.class,
+                SettlementWandPlacement.CatalogRequest::encode, SettlementWandPlacement.CatalogRequest::decode,
+                (request, supplier) -> {
+                    var context = supplier.get();
+                    context.enqueueWork(() -> {
+                        var player = context.getSender();
+                        if (player != null && throttle(player)) SettlementWandPlacement.catalog(player, request);
+                    });
+                    context.setPacketHandled(true);
+                }, Optional.of(NetworkDirection.PLAY_TO_SERVER));
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
                 (net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) -> {
                     if (event.getEntity() instanceof ServerPlayer player) {
