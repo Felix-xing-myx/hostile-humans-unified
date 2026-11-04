@@ -326,18 +326,22 @@ public final class SettlementNetwork {
                         instanceof SettlementControlBlock block)
                 || !instance.faction().endsWith(":" + block.faction())) return null;
         String found = null;
-        for (var module : instance.modules())
-            for (var f : module.facilities())
-                if (f.type() == SettlementFacility.Type.CONTROL
-                        && f.position()
-                                .equals(
-                                        new TemplateTransform.Cell(
-                                                position.getX(),
-                                                position.getY(),
-                                                position.getZ()))) {
-                    if (found != null) return null;
-                    found = module.key() + "/" + f.id();
-                }
+        var level = player.serverLevel();
+        var point = new TemplateTransform.Cell(position.getX(), position.getY(), position.getZ());
+        for (var module : instance.modules()) {
+            for (var facility : module.facilities()) {
+                if (facility.type() != SettlementFacility.Type.CONTROL
+                        || !facility.position().equals(point)) continue;
+                if (found != null) return null;
+                // Validate the live carrier when loaded without forcing distant chunks to load.
+                var carrier = module.informationBlock();
+                if (level.hasChunkAt(carrier)
+                        && (!(level.getBlockEntity(carrier) instanceof SettlementInformationBlockEntity info)
+                                || !id.equals(info.instance()) || !module.key().equals(info.module())))
+                    return null;
+                found = module.key() + "/" + facility.id();
+            }
+        }
         return found;
     }
 
