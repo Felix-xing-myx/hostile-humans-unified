@@ -17,12 +17,21 @@ final class HumanReportPropagation {
     private static final Map<Human,LinkedHashMap<UUID,Probe>> CACHE=new WeakHashMap<>();
     private HumanReportPropagation() { }
     static Boolean link(Human sender,Human receiver) {
-        long now=HumanPerception.now(sender);var c=PerceptionConfig.get();
+        var c=PerceptionConfig.get();
+        double distance = sender.distanceTo(receiver), range = HumanTargetSharing.range(sender);
+        double wallFactor = c.number("sharing.wall_range_factor");
+        if (!withinRange(distance, range, true, wallFactor)) return false;
+        boolean reduced = BattlePerceptionDetail.measure(sender);
+        if (withinRange(distance, range, false, wallFactor)) {
+            if (reduced && sender.level() instanceof ServerLevel level)
+                BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.REPORT_DIRECT, 1);
+            return true;
+        }
+        long now=HumanPerception.now(sender);
         Vec3 from=sender.getEyePosition(),to=receiver.getEyePosition();
         var cache=CACHE.computeIfAbsent(sender,k->new LinkedHashMap<>());
         Probe p=cache.get(receiver.getUUID());
         String dimension=sender.level().dimension().location().toString();
-        boolean reduced = BattlePerceptionDetail.measure(sender);
         int ttl = c.integer("sharing.occlusion_cache_ticks");
         if (reduced) ttl = Math.max(ttl, 16);
         double movedSquared = reduced ? 4 : .25;
@@ -38,7 +47,7 @@ final class HumanReportPropagation {
         } else if (reduced && sender.level() instanceof ServerLevel level) {
             BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.REPORT_CACHE, 1);
         }
-        return withinRange(sender.distanceTo(receiver),HumanTargetSharing.range(sender),p.clear,c.number("sharing.wall_range_factor"));
+        return p.clear;
     }
     static boolean withinRange(double distance,double range,boolean clear,double factor) {
         if(!Double.isFinite(distance+range+factor) || distance<0 || range<=0)return false;

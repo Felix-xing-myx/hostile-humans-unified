@@ -567,17 +567,17 @@ public final class HumanPerception {
             if (t != null && t.frontlineProbe != Long.MIN_VALUE && now >= t.frontlineProbe && now - t.frontlineProbe < 8) return false;
             return frontlinePoint(h,e,familiar,now) != null;
         }
-        var box=e.getBoundingBox();double visibility=e.getVisibilityPercent(h);long mask=0;int index=0;
+        var box=e.getBoundingBox();var vision=new VisionFrame(h,e.getVisibilityPercent(h),familiar);long mask=0;int index=0;
         List<Vec3> eligibleSamples=new ArrayList<>();
         for(var sample:BodyVisibilitySamples.of(box.minX,box.minY,box.minZ,box.maxX,box.maxY,box.maxZ)){
             Vec3 point=new Vec3(sample.x(),sample.y(),sample.z());
-            if(withinVision(h,point,familiar,visibility)){eligibleSamples.add(point);mask|=1L<<index;}
+            if(vision.contains(point)){eligibleSamples.add(point);mask|=1L<<index;}
             index++;
         }
         Vec3 primary=e.getEyePosition();
         if(t!=null&&t.bodySample!=null){var f=t.bodySample;
             primary=new Vec3(box.minX+box.getXsize()*f.x(),box.minY+box.getYsize()*f.y(),box.minZ+box.getZsize()*f.z());}
-        if(withinVision(h,primary,familiar,visibility)){
+        if(vision.contains(primary)){
             if(!eligibleSamples.contains(primary))eligibleSamples.add(primary);
             mask|=1L<<BodyVisibilitySamples.MAX_POINTS;
         }
@@ -610,9 +610,9 @@ public final class HumanPerception {
         boolean preferCenter = (Math.floorDiv(now, period) & 1L) == 0;
         var primary = preferCenter ? center : eye;
         var secondary = preferCenter ? eye : center;
-        double visibility = target.getVisibilityPercent(h);
-        if (withinVision(h,primary,familiar,visibility)) return primary;
-        return withinVision(h,secondary,familiar,visibility) ? secondary : null;
+        var vision = new VisionFrame(h, target.getVisibilityPercent(h), familiar);
+        if (vision.contains(primary)) return primary;
+        return vision.contains(secondary) ? secondary : null;
     }
 
     private static long candidateRank(UUID id,long epoch){
@@ -623,19 +623,42 @@ public final class HumanPerception {
     private static long recognizing(State s){return s.tracks.values().stream().filter(t->t.evidence.active()).count();}
     private record VisualProbe(Vec3 visiblePoint,boolean complete,String reason) {}
     /** Item discovery shares actual head orientation and the near cylinder, without enemy bonuses. */
-    static boolean withinLootVision(Human h,Vec3 point){return withinVision(h,point,false,1.0D);}
-    private static boolean withinVision(Human h,Vec3 point,boolean familiar,double visibility){
-        Vec3 delta=point.subtract(h.getEyePosition());double distance=delta.length();
-        if(distance>Math.max(2,range(h)*visibility))return false;
-        AABB body=h.getBoundingBox();double dx=point.x-h.getX(),dz=point.z-h.getZ();
-        double near=c().number("vision.near_distance");
-        if(NearVisionPolicy.owns(dx,point.y-body.minY,dz,near,-c().number("vision.near_below_feet"),
-                body.getYsize()+c().number("vision.near_above_head"))){
-            Vec3 forward=Vec3.directionFromRotation(0,h.getYHeadRot());
-            return NearVisionPolicy.inSector(dx,dz,forward.x,forward.z,halfAngle(near,familiar));
+    static boolean withinLootVision(Human h,Vec3 point){return new VisionFrame(h,1.0D,false).contains(point);}
+
+    /** Observer geometry and effective range are shared across one body's sample points. */
+    private static final class VisionFrame {
+        private final Vec3 eye, forward, horizontal;
+        private final double x, y, z, maxRangeSquared, near, below, above, nearAngle;
+        private final boolean familiar;
+
+        VisionFrame(Human observer, double visibility, boolean familiar) {
+            this.familiar = familiar;
+            eye = observer.getEyePosition();
+            forward = Vec3.directionFromRotation(observer.getXRot(), observer.getYHeadRot()).normalize();
+            horizontal = Vec3.directionFromRotation(0, observer.getYHeadRot());
+            AABB body = observer.getBoundingBox();
+            x = observer.getX(); y = body.minY; z = observer.getZ();
+            double maxRange = Math.max(2, range(observer) * visibility);
+            maxRangeSquared = maxRange * maxRange;
+            near = c().number("vision.near_distance");
+            below = -c().number("vision.near_below_feet");
+            above = body.getYsize() + c().number("vision.near_above_head");
+            nearAngle = halfAngle(near, familiar);
         }
-        return distance<1.e-4||Vec3.directionFromRotation(h.getXRot(),h.getYHeadRot()).normalize().dot(delta.scale(1/distance))>Math.cos(halfAngle(distance,familiar));
+
+        boolean contains(Vec3 point) {
+            double dx = point.x - eye.x, dy = point.y - eye.y, dz = point.z - eye.z;
+            double distanceSquared = dx * dx + dy * dy + dz * dz;
+            if (distanceSquared > maxRangeSquared) return false;
+            double horizontalX = point.x - x, horizontalZ = point.z - z;
+            if (NearVisionPolicy.owns(horizontalX, point.y - y, horizontalZ, near, below, above))
+                return NearVisionPolicy.inSector(horizontalX, horizontalZ, horizontal.x, horizontal.z, nearAngle);
+            double distance = Math.sqrt(distanceSquared);
+            return distance < 1.e-4 || (forward.x * dx + forward.y * dy + forward.z * dz) / distance
+                    > Math.cos(halfAngle(distance, familiar));
+        }
     }
+
     private static boolean clearVisualRay(Human h,State s,LivingEntity target,Vec3 point,long now){
         return clearVisualRay(h,s,target,point,now,true);
     }
@@ -656,14 +679,14 @@ public final class HumanPerception {
     private static VisualProbe bodyVisibility(Human h,State s,LivingEntity e,Track track,boolean familiar,long now,boolean fast){
         NegativeObservationSweep sweep=s.bodySweeps.computeIfAbsent(e.getUUID(),k->new NegativeObservationSweep());
         while(s.bodySweeps.size()>c().integer("budgets.candidates")+c().integer("memory.maximum_targets"))s.bodySweeps.remove(s.bodySweeps.keySet().iterator().next());
-        AABB box=e.getBoundingBox();double visibility=e.getVisibilityPercent(h);
+        AABB box=e.getBoundingBox();var vision=new VisionFrame(h,e.getVisibilityPercent(h),familiar);
         Vec3 primary=e.getEyePosition();
         if(track!=null&&track.bodySample!=null){
             var f=track.bodySample;
             primary=new Vec3(box.minX+box.getXsize()*f.x(),box.minY+box.getYsize()*f.y(),box.minZ+box.getZsize()*f.z());
         }
         // The ordinary candidate reservation already pays for this one fast ray.
-        if(fast&&withinVision(h,primary,familiar,visibility)&&clearVisualRay(h,s,e,primary,now)){
+        if(fast&&vision.contains(primary)&&clearVisualRay(h,s,e,primary,now)){
             s.pendingBodies.remove(e.getUUID());
             PerceptionBudget.cancelBodyRays(h,e.getUUID());
             sweep.reset();return new VisualProbe(primary,true,"身体部位无遮挡");
@@ -671,7 +694,7 @@ public final class HumanPerception {
         List<Vec3> samples=new ArrayList<>();long sampleMask=0;int sampleIndex=0;
         for(var point:BodyVisibilitySamples.of(box.minX,box.minY,box.minZ,box.maxX,box.maxY,box.maxZ)){
             Vec3 candidate=new Vec3(point.x(),point.y(),point.z());
-            if(withinVision(h,candidate,familiar,visibility)){samples.add(candidate);sampleMask|=1L<<sampleIndex;}
+            if(vision.contains(candidate)){samples.add(candidate);sampleMask|=1L<<sampleIndex;}
             sampleIndex++;
         }
         if(samples.isEmpty()){
@@ -703,7 +726,7 @@ public final class HumanPerception {
         boolean complete=sweep.negative(samples.size(),start,count,sampleMask);
         if(complete){
             List<Vec3> cacheSamples=new ArrayList<>(samples);long cacheMask=sampleMask;
-            if(withinVision(h,primary,familiar,visibility)){
+            if(vision.contains(primary)){
                 if(!cacheSamples.contains(primary))cacheSamples.add(primary);
                 cacheMask|=1L<<BodyVisibilitySamples.MAX_POINTS;
             }

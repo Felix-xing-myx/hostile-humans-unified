@@ -7,7 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 
 /** Counts actual work in fixed 20-tick windows without retaining entities. */
 public final class BattlePerceptionMetrics {
-    enum Work { WORLD_QUERY, SHARED_QUERY, CANDIDATE_VISIT, VISION_CLIP, REPORT_CLIP, REPORT_CACHE, REPORT_DELIVERY }
+    enum Work { WORLD_QUERY, SHARED_QUERY, CANDIDATE_VISIT, VISION_CLIP, REPORT_CLIP, REPORT_CACHE, REPORT_DIRECT, REPORT_DELIVERY }
     private static final Map<ServerLevel, Window> LEVELS = new WeakHashMap<>();
     private static final class Window {
         long epoch = Long.MIN_VALUE;
@@ -45,6 +45,7 @@ public final class BattlePerceptionMetrics {
                 "前线视觉 · 射线 " + counts[Work.VISION_CLIP.ordinal()],
                 "团战通报 · 射线 " + counts[Work.REPORT_CLIP.ordinal()]
                         + " · 联络缓存 " + counts[Work.REPORT_CACHE.ordinal()]
+                        + " · 近距直达 " + counts[Work.REPORT_DIRECT.ordinal()]
                         + " · 投递 " + counts[Work.REPORT_DELIVERY.ordinal()]);
     }
 }

@@ -4249,3 +4249,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 团战通报去重与 F8 实际工作计数
 - 主控，基线 1ccbc72，module-architecture 工作树。一次轮询复用个人证据与威胁结果，空来源不收集同伴。F8 按维度显示上一完整 20 tick 的实际工作。Python 静态检查 532 项、跳过 16 项；尚无 Java 和实机数据。
+
+## 消除可判定联络射线与重复视锥计算
+- 主控，基线 3923eb3，module-architecture 工作树。声音在隔墙可达范围以内或完整范围以外时无需射线；近距直达进入 F8 计数。视觉按一次身体几何采样复用观察者朝向、眼位和属性距离。Python 检查 532 项（16 跳过），未运行 Gradle 或团战实测。
