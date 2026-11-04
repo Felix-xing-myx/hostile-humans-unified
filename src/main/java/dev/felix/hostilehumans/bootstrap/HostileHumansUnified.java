@@ -25,6 +25,8 @@ public class HostileHumansUnified {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         IEventBus forgeEventBus = MinecraftForge.EVENT_BUS;
         modEventBus.addListener(NetworkHandler::registerNetworkHandler);
+        dev.felix.hostilehumans.settlement.SettlementPackStructure.TYPES.register(modEventBus);
+        dev.felix.hostilehumans.settlement.SettlementPackStructure.PIECES.register(modEventBus);
         ModEntityType.ENTITIES.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         UnifiedCreativeTab.TABS.register(modEventBus);

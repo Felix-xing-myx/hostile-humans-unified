@@ -15,7 +15,7 @@ import net.minecraft.resources.ResourceLocation;
 final class SettlementWorldgenResources {
     private static final Gson JSON = new Gson();
     private static final String NAMESPACE = HumanRuntime.MOD_ID;
-    private static final int MAX_CHUNKS_FROM_START = 8;
+    static final int MAX_HORIZONTAL_SIDE = 112;
 
     private record GroupKey(String id, SettlementBuildingPack.Group placement, JsonArray entries) {}
 
@@ -71,7 +71,7 @@ final class SettlementWorldgenResources {
             var size = author.size();
             // Vanilla creates references only within eight chunks of the start. Allow one
             // extra chunk of rounding for an origin that is not on a chunk boundary.
-            int maxSide = (MAX_CHUNKS_FROM_START - 1) * 16;
+            int maxSide = MAX_HORIZONTAL_SIDE;
             if (size.x() > maxSide || size.z() > maxSide)
                 throw new IllegalArgumentException("world generation footprint exceeds " + maxSide + " blocks per horizontal axis");
             return author;

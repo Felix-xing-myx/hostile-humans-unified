@@ -1,3 +1,7 @@
+## Native building-pack structure and site checks
+
+The custom type constructs a persisted vanilla template piece and uses the installed biome registry for candidate scheduling. A scoped adapter supplies the actual dimension for site checks and bypasses the legacy fixed-height gate only for this type. Generated data still needs to be exposed by a server data-pack source.
+
 ## Building pack registry resource compilation
 
 Approved pack entries compile into stable structure IDs, weighted random-spread structure sets, NBT and optional loot resources. The compiler rejects standalone attachment modules and bounds horizontal footprints to 112 blocks per axis. Publication awaits the native structure type and site checks.
