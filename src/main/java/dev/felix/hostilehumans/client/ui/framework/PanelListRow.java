@@ -71,7 +71,7 @@ public final class PanelListRow extends PanelButton {
 
         var font = Minecraft.getInstance().font;
         int x = getX() + 9, y = getY() + 5;
-        UiDraw.rect(g, x, y + 3, 3, 3, tone >= 0 ? tone : t.accent());
+        UiDraw.rect(g, x, y + 3, 3, 3, tone);
         g.drawString(font, clippedTitle, x + 7, y, selected() ? t.accent() : t.text(), false);
         if (!clippedValue.isEmpty())
             g.drawString(

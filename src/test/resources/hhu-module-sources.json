@@ -2111,6 +2111,10 @@
     "class": "dev.felix.hostilehumans.client.ui.framework.PanelKeyValue",
     "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelKeyValue.java"
   },
+  "PanelListRow": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelListRow",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelListRow.java"
+  },
   "PanelMeter": {
     "class": "dev.felix.hostilehumans.client.ui.framework.PanelMeter",
     "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelMeter.java"

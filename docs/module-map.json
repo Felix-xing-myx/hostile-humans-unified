@@ -348,6 +348,7 @@
         "PanelGroup",
         "PanelHealth",
         "PanelKeyValue",
+        "PanelListRow",
         "PanelMeter",
         "PanelPageSlider",
         "PanelRosterRow",
