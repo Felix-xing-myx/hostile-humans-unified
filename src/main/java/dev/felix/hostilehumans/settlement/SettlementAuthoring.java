@@ -439,7 +439,7 @@ public final class SettlementAuthoring {
             BlockPos point, String preferredRegion, int facilityIndex) {
         var author = SettlementCodec.template(info.author());
         if (facilityIndex >= author.facilities().size())
-            throw new IllegalArgumentException("selected facility missing");
+            throw new SettlementFacilityBindingTool.Problem("missing_facility");
         var selected = facilityIndex < 0 ? null : author.facilities().get(facilityIndex);
         var block = player.serverLevel().getBlockState(point).getBlock();
         SettlementFacility.Type type;
@@ -447,7 +447,7 @@ public final class SettlementAuthoring {
             type = SettlementFacility.Type.CONTROL;
             var faction = author.faction();
             if (!faction.equals(dev.felix.hostilehumans.bootstrap.HumanRuntime.MOD_ID + ":" + control.faction()))
-                throw new IllegalArgumentException("control block faction does not match the template");
+                throw new SettlementFacilityBindingTool.Problem("wrong_faction");
         } else if (block == dev.felix.hostilehumans.faction.FactionContent.TRIBUTE_CHEST.get()) {
             type = SettlementFacility.Type.SUPPLY;
         } else if (block == dev.felix.hostilehumans.economy.EconomyContent.TRADER.get()) {
@@ -458,30 +458,46 @@ public final class SettlementAuthoring {
                 || selected.type() == SettlementFacility.Type.POST)) {
             type = selected.type();
         } else {
-            throw new IllegalArgumentException("select a control, supply, trader or training block");
+            throw new SettlementFacilityBindingTool.Problem("wrong_block");
         }
-        if (!allowsFacility(author, type)) throw new IllegalArgumentException("facility unavailable for this building type or tier");
+        if (!allowsFacility(author, type)) throw new SettlementFacilityBindingTool.Problem("wrong_tier");
         if (selected != null && selected.type() != type)
-            throw new IllegalArgumentException("selected block does not match this facility type");
+            throw new SettlementFacilityBindingTool.Problem("wrong_type");
         var local = currentTransform(player, info).unapply(cell(point));
-        var candidates = author.regions().stream()
-                .filter(r -> r.contains(local.x() + .5, local.y(), local.z() + .5))
-                .filter(r -> switch (type) {
-                    case SUPPLY, TRADER -> r.layer() == SettlementRegion.Layer.OUTER;
-                    case TRAINING -> r.layer() == SettlementRegion.Layer.INNER && author.tier() >= 2;
-                    default -> true;
-                }).toList();
+        var requiredLayer = switch (type) {
+            case SUPPLY, TRADER -> SettlementRegion.Layer.OUTER;
+            case TRAINING -> SettlementRegion.Layer.INNER;
+            default -> null;
+        };
+        var compatible = author.regions().stream()
+                .filter(r -> requiredLayer == null || r.layer() == requiredLayer).toList();
+        var candidates = compatible.stream()
+                .filter(r -> r.contains(local.x() + .5, local.y(), local.z() + .5)).toList();
         var region = candidates.stream().filter(r -> r.id().equals(preferredRegion)).findFirst()
                 .orElse(preferredRegion.isEmpty() && candidates.size() == 1 ? candidates.get(0) : null);
-        if (region == null) throw new IllegalArgumentException(candidates.isEmpty()
-                ? "no eligible region at this block"
-                : "choose an eligible region: " + candidates.stream().map(SettlementRegion::id).toList());
+        if (region == null) {
+            var layer = SettlementFacilityBindingTool.message(requiredLayer == null ? "layer_any"
+                    : requiredLayer == SettlementRegion.Layer.OUTER ? "layer_outer" : "layer_inner");
+            if (!candidates.isEmpty())
+                throw new SettlementFacilityBindingTool.Problem("choose_region",
+                        String.join(", ", candidates.stream().map(SettlementRegion::id).toList()));
+            if (compatible.stream().allMatch(r -> r.includes().isEmpty()))
+                throw new SettlementFacilityBindingTool.Problem("no_region", layer);
+            boolean insideHeight = compatible.stream().flatMap(r -> r.includes().stream())
+                    .anyMatch(box -> box.contains(local.x() + .5, box.minY(), local.z() + .5)
+                            && local.y() >= box.minY() && local.y() <= box.maxY());
+            boolean insideFootprint = compatible.stream().flatMap(r -> r.includes().stream())
+                    .anyMatch(box -> box.contains(local.x() + .5, box.minY(), local.z() + .5));
+            String position = point.getX() + ", " + point.getY() + ", " + point.getZ();
+            throw new SettlementFacilityBindingTool.Problem(insideHeight ? "excluded_region"
+                    : insideFootprint ? "wrong_height" : "outside_region", layer, position);
+        }
         var facilities = new ArrayList<>(author.facilities());
         var existing = facilities.stream().filter(f -> f.type() == type
                 && (type == SettlementFacility.Type.CONTROL || f.position().equals(local))).findFirst();
         if (selected != null) {
             if (existing.isPresent() && !existing.get().id().equals(selected.id()))
-                throw new IllegalArgumentException("another facility already uses this position");
+                throw new SettlementFacilityBindingTool.Problem("position_used");
             existing = java.util.Optional.of(selected);
         }
         String id = existing.map(SettlementFacility::id).orElseGet(

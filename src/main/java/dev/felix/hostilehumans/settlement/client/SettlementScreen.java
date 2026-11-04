@@ -559,7 +559,7 @@ public final class SettlementScreen extends PanelScreen {
         if (!snapshot.reason().equals(SettlementNetwork.AUTHOR_FILE_TAB)) root.add(muted(snapshot.reason().equals("settlement selection tool required")
                 ? text("need_selection_tool")
                 : snapshot.reason().equals("settlement facility binding tool required")
-                        ? text("need_facility_tool") : Component.literal(snapshot.reason())));
+                        ? text("need_facility_tool") : dev.felix.hostilehumans.settlement.SettlementFacilityBindingTool.localize(snapshot.reason())));
         if (pending.busy()) root.add(text(text("pending"), () -> theme().accent()));
         if (!error.isEmpty()) root.add(text(text(error), () -> theme().danger()));
         if (snapshot.author()) {

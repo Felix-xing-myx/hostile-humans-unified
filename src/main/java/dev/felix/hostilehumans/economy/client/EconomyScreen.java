@@ -95,7 +95,7 @@ public final class EconomyScreen extends PanelScreen {
                 && !(mc.screen instanceof EconomyScreen)
                 && value.acknowledgedRequest().equals(EconomyView.NONE)) {
             if (mc.player != null)
-                mc.player.displayClientMessage(text("invalid", value.reason()), false);
+                mc.player.displayClientMessage(text("invalid", dev.felix.hostilehumans.settlement.SettlementFacilityBindingTool.localize(value.reason())), false);
             return;
         }
         if (mc.screen instanceof EconomyScreen s && s.snapshot.token().equals(value.token())) {
@@ -103,7 +103,7 @@ public final class EconomyScreen extends PanelScreen {
                 s.pending.acknowledge(value.acknowledgedRequest());
                 s.serverClosed = true;
                 if (mc.player != null)
-                    mc.player.displayClientMessage(text("invalid", value.reason()), false);
+                    mc.player.displayClientMessage(text("invalid", dev.felix.hostilehumans.settlement.SettlementFacilityBindingTool.localize(value.reason())), false);
                 s.onClose();
                 return;
             }

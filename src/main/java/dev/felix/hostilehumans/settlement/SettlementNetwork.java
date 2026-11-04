@@ -669,7 +669,7 @@ public final class SettlementNetwork {
                                                     || mode == SettlementSelectionTool.Mode.MOVE_FACILITY;
                                             if (facility ? !SettlementFacilityBindingTool.hasTool(player)
                                                     : !SettlementSelectionTool.hasTool(player))
-                                                yield facility ? "settlement facility binding tool required" : SettlementSelectionTool.NEED_TOOL;
+                                                yield facility ? SettlementFacilityBindingTool.NEED_TOOL : SettlementSelectionTool.NEED_TOOL;
                                             int revision = request.authorRevision();
                                             if (data.contains("author", Tag.TAG_COMPOUND)) {
                                                 var saved = SettlementAuthoring.save(player, at, revision, data.getCompound("author"));

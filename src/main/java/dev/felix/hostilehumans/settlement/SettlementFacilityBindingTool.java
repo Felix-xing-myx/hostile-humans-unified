@@ -20,6 +20,13 @@ import net.minecraft.world.level.Level;
 public final class SettlementFacilityBindingTool extends Item {
     private record Binding(ResourceKey<Level> dimension, BlockPos position, UUID identity,
                            String region, int facilityIndex, int revision) {}
+    static final String NEED_TOOL = "settlement facility binding tool required";
+
+    static final class Problem extends IllegalArgumentException {
+        final Component message;
+        Problem(String key, Object... args) { message = SettlementFacilityBindingTool.message(key, args); }
+    }
+
     private static final Map<ServerPlayer, Binding> BINDINGS = new WeakHashMap<>();
 
     public SettlementFacilityBindingTool(Properties properties) {
@@ -59,7 +66,7 @@ public final class SettlementFacilityBindingTool extends Item {
             if (player.serverLevel().getBlockEntity(point) instanceof SettlementInformationBlockEntity info) {
                 SettlementAuthoring.initialize(player, point);
                 String result = bind(player, point, "", -1, info.revision());
-                if (!SettlementNetwork.SELECTION_READY.equals(result)) player.displayClientMessage(Component.literal(result), true);
+                if (!SettlementNetwork.SELECTION_READY.equals(result)) player.displayClientMessage(localize(result), true);
                 return InteractionResult.CONSUME;
             }
             var binding = BINDINGS.get(player);
@@ -76,7 +83,7 @@ public final class SettlementFacilityBindingTool extends Item {
             }
             String result = SettlementAuthoring.bindFacility(player, info, point, binding.region(), binding.facilityIndex());
             if (!result.startsWith("saved author revision ")) {
-                player.displayClientMessage(Component.literal(result), true);
+                player.displayClientMessage(localize(result), true);
                 return InteractionResult.CONSUME;
             }
             BINDINGS.put(player, new Binding(binding.dimension(), binding.position(), binding.identity(),
@@ -89,16 +96,45 @@ public final class SettlementFacilityBindingTool extends Item {
                     : instance == null ? new SettlementIndex.Result(false, "linked instance unavailable", null)
                     : SettlementAuthoring.update(player, binding.position(), info.revision(), instance.revision(), options);
             if (published.changed()) tell(player, "registered");
-            else tell(player, "draft_only", published.reason());
+            else tell(player, "draft_only", localize(published.reason()));
+        } catch (Problem bad) {
+            player.displayClientMessage(bad.message, true);
         } catch (IllegalArgumentException bad) {
-            player.displayClientMessage(Component.literal(bad.getMessage()), true);
+            player.displayClientMessage(localize(bad.getMessage()), true);
         }
         return InteractionResult.CONSUME;
     }
 
+    static Component message(String key, Object... args) {
+        return Component.translatable("item.hostile_humans_unified.settlement_facility_tool." + key, args);
+    }
+
+    public static Component localize(String reason) {
+        if (reason == null) return message("rejected");
+        if (reason.startsWith("rejected: ")) return localize(reason.substring("rejected: ".length()));
+        String emptyRegion = "add an include box or remove the empty region: ";
+        if (reason.startsWith(emptyRegion)) return message("empty_region", reason.substring(emptyRegion.length()));
+        return switch (reason) {
+            case "author unavailable or stale", "missing or stale author", "missing or stale author link",
+                    "author revision changed" -> message("bind_first");
+            case "invalid facility selection" -> message("missing_facility");
+            case "template name required before facility binding" -> message("name_first");
+            case "ordinary buildings do not support facilities", "ordinary building has no protected instance" -> message("ordinary");
+            case "only a protected ROOT creates an instance", "missing root instance" -> message("root_first");
+            case "linked instance unavailable", "module reference mismatch", "bound module unavailable",
+                    "bound instance unavailable; restore it or use a fresh author block" -> message("instance_missing");
+            case "define an outer region with a capture box before publishing the settlement" -> message("no_region", message("layer_outer"));
+            case "instance revision changed", "already linked; explicitly update or export this instance" -> message("refresh_author");
+            case "instance has conflicting control facilities", "duplicate template control" -> message("duplicate_control");
+            case "dimension instance limit", "instance spatial index limit", "template total box/extent limit" -> message("index_limit");
+            case "unknown index schema; retained read-only", "unknown existing author schema; preserve payload" -> message("unknown_schema");
+            case "no typed facility at this block", "facility not registered" -> message("unregistered");
+            default -> Component.literal(reason);
+        };
+    }
+
     private static void tell(ServerPlayer player, String key, Object... args) {
-        player.displayClientMessage(Component.translatable(
-                "item.hostile_humans_unified.settlement_facility_tool." + key, args), true);
+        player.displayClientMessage(message(key, args), true);
     }
 
     @Override

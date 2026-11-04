@@ -4288,3 +4288,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 - 主控；基线74ed5d584af1dafa8192477b75411c5e81e15cb6；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：Facility wand, frontline performance, dropped items and distant armor。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.3-verified。
 
 - 3.15.3完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致d66b65074239a1f42a2027ab50c9a1d462103dc54a6be51474a4af7adca7a3f5；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.3-20261104-132741。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.3-verified.
+
+## 设施绑定区域诊断和本地化
+- 主控，基线 7a32ff3，module-architecture 工作树。依据实际方块和模板坐标区分未画区、水平边界、高度、扣除区和重叠，常见草稿与登记原因使用中英资源。
