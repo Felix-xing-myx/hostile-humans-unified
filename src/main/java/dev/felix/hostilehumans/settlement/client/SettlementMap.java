@@ -36,8 +36,9 @@ final class SettlementMap {
         g.drawString(font, "N ↑", area.right() - 28, area.y() + 3, CAPTURE, false);
         var plot = new UiRect(area.x() + 2, area.y() + 15, area.width() - 4, area.height() - (data.getBoolean("map_limited") ? 55 : 44));
         g.fill(plot.x(), plot.y(), plot.right(), plot.bottom(), 0xff111d24);
+        int arrowInset = Math.min(6, (plot.height() - 1) / 2);
         double scale = Math.min((plot.width() - 14) / (double) extent.sizeX(),
-                (plot.height() - 12) / (double) extent.sizeZ());
+                (plot.height() - 2 * arrowInset) / (double) extent.sizeZ());
         var projection = new Projection(extent, scale,
                 plot.x() + (plot.width() - extent.sizeX() * scale) / 2,
                 plot.y() + (plot.height() - extent.sizeZ() * scale) / 2);
@@ -67,7 +68,9 @@ final class SettlementMap {
                 int y = projection.y(marker.getDouble("z"));
                 g.fill(x - 2, y - 2, x + 3, y + 3, 0xff0a1015);
                 g.fill(x - 1, y - 1, x + 2, y + 2, marker.getBoolean("friendly") ? FRIENDLY : OTHER);
-                if (Math.abs(mx - x) <= 5 && Math.abs(my - y) <= 5) {
+                if (my >= plot.y() && my < plot.bottom()
+                        && mx >= plot.x() && mx < plot.right()
+                        && Math.abs(mx - x) <= 5 && Math.abs(my - y) <= 5) {
                     int distance = (mx - x) * (mx - x) + (my - y) * (my - y);
                     if (distance < nearest) {
                         nearest = distance;
@@ -77,7 +80,7 @@ final class SettlementMap {
             }
             var self = data.getCompound("map_self");
             int x = Math.max(plot.x() + 6, Math.min(plot.right() - 6, projection.x(self.getDouble("x"))));
-            int y = Math.max(plot.y() + 6, Math.min(plot.bottom() - 6, projection.y(self.getDouble("z"))));
+            int y = Math.max(plot.y() + arrowInset, Math.min(plot.bottom() - arrowInset - 1, projection.y(self.getDouble("z"))));
             g.pose().pushPose();
             try {
                 g.pose().translate(x, y, 0);
