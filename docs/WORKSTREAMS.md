@@ -4405,3 +4405,7 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 ## 控制台地表与创造委托测试
 
 - 主控，基线 0521839，工作树 settlement-service-panels。地表由服务器采样、客户端使用资源包模型纹理绘制。委托板接入独立测试池并复用实际交付、击杀和领奖入口。
+
+## 远距战斗动画
+
+- 主控，基线 9a8c87e，复用 settlement-service-panels 工作树。简化档只控制主体材质和箭、蜂刺装饰，武器动作、持握、举盾和 Better Combat 共用正常渲染链路。

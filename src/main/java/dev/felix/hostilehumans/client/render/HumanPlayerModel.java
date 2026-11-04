@@ -21,10 +21,6 @@ final class HumanPlayerModel extends PlayerModel<Human> {
     private static final double MAX_STEP_DISTANCE_SQR = 0.49D;
     private final Map<Human, StanceState> stances = new WeakHashMap<>();
     private final ModelPart[] restParts;
-    private HumanRenderDetail.Level detail = HumanRenderDetail.Level.FULL;
-
-    void detail(HumanRenderDetail.Level value) { detail = value; }
-    boolean fullDetail() { return detail == HumanRenderDetail.Level.FULL; }
     private final boolean armsOnly;
     private final SpectatorMeleePresentation spectatorMelee;
     private float renderStanceYawDegrees;
@@ -51,7 +47,6 @@ final class HumanPlayerModel extends PlayerModel<Human> {
 
     float updateStance(Human human, float partialTick, float bodyYaw) {
         renderStanceYawDegrees = 0.0F;
-        if (!fullDetail()) return 0.0F;
         if (!human.isAlive() || HumanShieldPresentation.active(human) || !isRangedStance(human)
                 || human.isVisuallySwimming() || human.isFallFlying()) {
             // In particular, a ranged-to-melee weapon swap must never retain
@@ -141,12 +136,6 @@ final class HumanPlayerModel extends PlayerModel<Human> {
         // Keyframes modify pivots as well as rotations. Vanilla setupAnim does
         // not restore every pivot/axis, so a reused model needs its rest pose.
         for (ModelPart part : restParts) part.resetPose();
-        if (!fullDetail()) {
-            super.setupAnim(human, limbSwing, limbSwingAmount, ageInTicks, aimYaw, headPitch);
-            if (detail == HumanRenderDetail.Level.REDUCED) HumanShieldPresentation.apply(human,this);
-            this.hat.copyFrom(this.head);
-            return;
-        }
         boolean customMeleeAnimation = BetterCombatNpcAnimator.prepare(human)
                 || BetterCombatNpcAnimator.shouldSuppressVanillaSwing(human);
         float vanillaAttackTime = this.attackTime;

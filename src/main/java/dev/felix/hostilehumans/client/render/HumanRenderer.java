@@ -14,8 +14,6 @@ import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.layers.ArrowLayer;
 import net.minecraft.client.renderer.entity.layers.BeeStingerLayer;
-import net.minecraft.client.renderer.entity.layers.CustomHeadLayer;
-import net.minecraft.client.renderer.entity.layers.ElytraLayer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
@@ -77,16 +75,11 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         this.addLayer(new dev.felix.hostilehumans.faction.visual.FactionVisualLayer<>(this, false, false));
         // Wrap only layers owned by this renderer. Other mods may add their own layers.
         this.layers.replaceAll(layer -> {
-            boolean decorative = layer instanceof ArrowLayer || layer instanceof BeeStingerLayer;
-            // Armor and faction bands follow the visible body at every detail level.
-            boolean equipment = layer instanceof ItemInHandLayer
-                    || layer instanceof CustomHeadLayer || layer instanceof ElytraLayer;
-            if (!decorative && !equipment) return layer;
+            if (!(layer instanceof ArrowLayer) && !(layer instanceof BeeStingerLayer)) return layer;
             return new RenderLayer<Human, PlayerModel<Human>>(this) {
                 @Override public void render(PoseStack pose, MultiBufferSource buffers, int light, Human human,
                         float limb, float amount, float partial, float age, float yaw, float pitch) {
-                    if (detail == HumanRenderDetail.Level.DISTANT
-                            || decorative && detail != HumanRenderDetail.Level.FULL) return;
+                    if (detail != HumanRenderDetail.Level.FULL) return;
                     layer.render(pose, buffers, light, human, limb, amount, partial, age, yaw, pitch);
                 }
             };
@@ -151,7 +144,7 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         // Turn the model as one player-like unit: shoulders, torso, legs,
         // armor and held items share the same smoothly interpolated yaw.
         p_117803_.mulPose(Axis.YP.rotationDegrees(-stanceYaw));
-        if (detail == HumanRenderDetail.Level.FULL) BetterCombatNpcAnimator.applyBodyTransform(p_117802_, p_117803_, p_117806_,
+        BetterCombatNpcAnimator.applyBodyTransform(p_117802_, p_117803_, p_117806_,
                 armsOnly ? SpectatorMeleePresentation.bodyMotionWeight(p_117802_) : 1);
     }
 
@@ -164,28 +157,21 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     public void render(Human human, float pEntityYaw, float pPartialTicks, @NotNull PoseStack pMatrixStack, @NotNull MultiBufferSource pBuffer, int pPackedLight) {
         var previous = detail;
         detail = HumanRenderDetail.select(human,armsOnly);
-        var playerModel = (HumanPlayerModel) this.model;
-        playerModel.detail(detail);
         try {
             renderHuman(human,pEntityYaw,pPartialTicks,pMatrixStack,pBuffer,pPackedLight);
         } finally {
             detail = previous;
-            playerModel.detail(previous);
         }
     }
 
     private void renderHuman(Human human, float pEntityYaw, float pPartialTicks, PoseStack pMatrixStack,
             MultiBufferSource pBuffer, int pPackedLight) {
-        if (detail == HumanRenderDetail.Level.FULL) ScgunsNpcAnimator.beginRender(human);
+        ScgunsNpcAnimator.beginRender(human);
         PlayerModel<Human> playerModel = this.model;
         playerModel.crouching = human.isCrouching();
-        HumanoidModel.ArmPose mainPose = HumanoidModel.ArmPose.EMPTY;
-        HumanoidModel.ArmPose offPose = HumanoidModel.ArmPose.EMPTY;
-        if (detail != HumanRenderDetail.Level.DISTANT) {
-            InteractionHand shieldHand = HumanShieldPresentation.activeHand(human);
-            mainPose = getArmPose(human, InteractionHand.MAIN_HAND, shieldHand);
-            offPose = getArmPose(human, InteractionHand.OFF_HAND, shieldHand);
-        }
+        InteractionHand shieldHand = HumanShieldPresentation.activeHand(human);
+        HumanoidModel.ArmPose mainPose = getArmPose(human, InteractionHand.MAIN_HAND, shieldHand);
+        HumanoidModel.ArmPose offPose = getArmPose(human, InteractionHand.OFF_HAND, shieldHand);
         if (mainPose.isTwoHanded() && offPose != HumanoidModel.ArmPose.BLOCK) {
             offPose = human.getOffhandItem().isEmpty()
                     ? HumanoidModel.ArmPose.EMPTY : HumanoidModel.ArmPose.ITEM;

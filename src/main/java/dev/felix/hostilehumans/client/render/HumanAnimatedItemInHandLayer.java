@@ -36,10 +36,6 @@ final class HumanAnimatedItemInHandLayer extends ItemInHandLayer<Human, PlayerMo
                                      MultiBufferSource buffer, int packedLight) {
         if (item.isEmpty()) return;
         Human human = (Human) entity;
-        if (getParentModel() instanceof HumanPlayerModel model && !model.fullDetail()) {
-            super.renderArmWithItem(entity,item,displayContext,arm,poseStack,buffer,packedLight);
-            return;
-        }
         // Hide only the physical offhand item, never the supporting arm or shared world model.
         if (spectator && arm != human.getMainArm() && !HumanSpectatorPresentation.showOffhandItem(human)) return;
         poseStack.pushPose();

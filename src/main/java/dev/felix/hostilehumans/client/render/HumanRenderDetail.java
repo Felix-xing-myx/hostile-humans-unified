@@ -8,10 +8,10 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-/** Render-only level of detail, using the previous frame's rendered population. */
+/** Cosmetic render detail, using the previous frame's rendered population. */
 @Mod.EventBusSubscriber(modid = HumanRuntime.MOD_ID, value = Dist.CLIENT)
 public final class HumanRenderDetail {
-    enum Level { FULL, REDUCED, DISTANT }
+    enum Level { FULL, REDUCED }
     private static int rendered, pressure;
 
     private HumanRenderDetail() {}
@@ -40,8 +40,6 @@ public final class HumanRenderDetail {
         rendered++;
         double distance = client.gameRenderer.getMainCamera().getPosition().distanceToSqr(human.position());
         int near = pressure == 2 ? 12 : pressure == 1 ? 18 : 32;
-        int far = pressure == 2 ? 36 : pressure == 1 ? 48 : 72;
-        if (distance < near * near) return Level.FULL;
-        return distance < far * far ? Level.REDUCED : Level.DISTANT;
+        return distance < near * near ? Level.FULL : Level.REDUCED;
     }
 }
