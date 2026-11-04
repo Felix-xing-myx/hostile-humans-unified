@@ -31,10 +31,10 @@ public final class ReloadPaymentLedgerTest {
                 "ordinary magazine keeps its native capacity semantics");
         check(GunReloadPolicy.capacityCheckedRounds(30, true, true, true) == 30,
                 "open bolts do not invent chamber capacity");
-        check(GunReloadPolicy.inventoryFeedDurationTicks(0.5D, 0.5D) == 20,
-                "inventory feeding uses pack duration, not a stall recovery timeout");
-        check(GunReloadPolicy.inventoryFeedDurationTicks(Double.NaN, -2.0D) == 1,
-                "invalid inventory-feed timing remains bounded");
+        check(GunReloadPolicy.inventoryFeedDurationTicks("tacz:minigun") == 160,
+                "M134 base reload is eight seconds");
+        check(GunReloadPolicy.inventoryFeedDurationTicks("addon:other") == 100,
+                "Other inventory-fed weapons use five seconds");
         var observed = new ReloadPaymentLedger<Object, Object>();
         check(observed.begin(holder, gun, 100, () -> true, () -> true, () -> true), "observation fixture starts paid cycle");
         check(observed.peekWeapon(holder, 99) == gun && observed.peekWeapon(holder, 100) == null, "peek respects deadline");

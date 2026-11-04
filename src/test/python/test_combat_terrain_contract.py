@@ -122,12 +122,13 @@ class CombatTerrainContract(unittest.TestCase):
         self.assertNotIn("findLateralPath", local)
         self.assertNotIn("moveTo(", local)
         self.assertNotIn("approachTarget(", local)
-        self.assertIn("mob.tickCount + 32", local)
-        self.assertNotIn("mob.tickCount + 12", local)
+        self.assertIn("STRAFE_MIN_TICKS = 16, STRAFE_MAX_TICKS = 40", gun)
+        self.assertIn("nextInt(STRAFE_MAX_TICKS - STRAFE_MIN_TICKS + 1)", local)
+        self.assertIn("strafeLegStartTick + STRAFE_MIN_TICKS", local)
         self.assertIn("clearDirectStrafe();", local)
         self.assertIn("HumanAttention.movement", local)
         self.assertIn("MovementContinuity.cancelStep", local)
-        clear = gun.split("private void clearDirectStrafe()",1)[1].split("private double strafeLegDisplacementSqr",1)[0]
+        clear = gun.split("private void clearDirectStrafe()",1)[1].split("private boolean movingOutward",1)[0]
         self.assertIn("mob.getMoveControl().strafe(0.0F, 0.0F)",clear)
         source = read(COMBAT / "RangedTerrainCombat.java")
         guard = source.split("public static boolean strafeFacingTarget", 1)[1].split("private static boolean tryStrafe", 1)[0]

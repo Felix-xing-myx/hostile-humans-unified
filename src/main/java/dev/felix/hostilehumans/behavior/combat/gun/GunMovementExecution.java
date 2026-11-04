@@ -37,8 +37,8 @@ public final class GunMovementExecution<T extends PathfinderMob> {
     private int nextApproachPathTick;
     private int manualStrafeUntilTick;
     private int strafeLegStartTick;
-    private double strafeLegStartX;
-    private double strafeLegStartZ;
+    private static final int STRAFE_MIN_TICKS = 16, STRAFE_MAX_TICKS = 40;
+    private int nextStrafeProbeTick;
     private double strafeAnchorX;
     private double strafeAnchorZ;
     private double strafeAnchorTargetX;
@@ -61,8 +61,7 @@ public final class GunMovementExecution<T extends PathfinderMob> {
         seekingFiringPosition = false;
         strafeDirection = mob.getRandom().nextBoolean() ? 1.0F : -1.0F;
         strafeLegStartTick = mob.tickCount;
-        strafeLegStartX = mob.getX();
-        strafeLegStartZ = mob.getZ();
+        nextStrafeProbeTick = mob.tickCount;
         nextFiringPositionTick = mob.tickCount;
         nextApproachPathTick = mob.tickCount;
         movementTarget = mob.getTarget();
@@ -128,14 +127,15 @@ public final class GunMovementExecution<T extends PathfinderMob> {
                     && HumanAmmo.canUseGun(human, mob.getMainHandItem()));
             RangedFiringMemory.observe(human,target,!obscured && distance*distance<=firingRangeSqr(range)
                     && HumanAmmo.canUseGun(human,mob.getMainHandItem()),firingRangeSqr(range));
-            if(RangedFiringMemory.recover(human,target,1.0D)) {
+            if(plan.mode() != GunPositioning.Mode.APPROACH && RangedFiringMemory.recover(human,target,1.0D)) {
                 clearLateralInputPreservingNavigation();
                 approachingTarget=false;seekingFiringPosition=true;
                 return;
             }
             if (CombatTerrainNavigation.hasWork(human, target)) stopLateralMovement();
             var terrain = CombatTerrainNavigation.update(human, target, 1.0D,
-                    GunRangePolicy.directFiringMovement(obscured,distance*distance,firingRangeSqr(range))
+                    plan.mode() != GunPositioning.Mode.APPROACH
+                            && GunRangePolicy.directFiringMovement(obscured,distance*distance,firingRangeSqr(range))
                             && HumanAmmo.canUseGun(human, mob.getMainHandItem()));
             if (terrain == CombatTerrainNavigation.Decision.EXHAUSTED)
                 RangedEngagement.failure(human, target, RangedEngagement.Failure.TERRAIN_EXHAUSTED);
@@ -283,7 +283,7 @@ public final class GunMovementExecution<T extends PathfinderMob> {
                 || target.position().distanceToSqr(strafeAnchorTargetX, target.getY(),
                         strafeAnchorTargetZ) > 36.0D
                 || strafeAnchorDistanceSqr() > anchorRadius * anchorRadius * 4.0D) {
-            manualStrafeUntilTick = 0;
+            if (!strafeAnchorSet) manualStrafeUntilTick = 0;
             strafeAnchorX = mob.getX();
             strafeAnchorZ = mob.getZ();
             strafeAnchorTargetX = target.getX();
@@ -303,33 +303,29 @@ public final class GunMovementExecution<T extends PathfinderMob> {
             MovementContinuity.cancelStep(human);
             HumanAttention.movement(human,human.getX(),human.getZ(),true);
         }
-        if (manualStrafeUntilTick > 0 && mob.tickCount >= manualStrafeUntilTick) {
-            manualStrafeUntilTick = 0;
-            strafeDirection = -strafeDirection;
-        }
-        if (manualStrafeUntilTick == 0) {
-            strafeLegStartTick = mob.tickCount;
-            strafeLegStartX = mob.getX();
-            strafeLegStartZ = mob.getZ();
-            manualStrafeUntilTick = mob.tickCount + 32;
-        }
-        if (mob.tickCount - strafeLegStartTick >= 8
-                && (strafeAnchorDistanceSqr() >= anchorRadius * anchorRadius
-                || mob.horizontalCollision || strafeLegDisplacementSqr() < 0.16D)) {
-            strafeDirection = -strafeDirection;
-            strafeLegStartTick = mob.tickCount;
-            strafeLegStartX = mob.getX();
-            strafeLegStartZ = mob.getZ();
+        int now = mob.tickCount;
+        if (manualStrafeUntilTick == 0 || now >= manualStrafeUntilTick) {
+            if (manualStrafeUntilTick != 0) strafeDirection = -strafeDirection;
+            strafeLegStartTick = now;
+            manualStrafeUntilTick = now + STRAFE_MIN_TICKS
+                    + mob.getRandom().nextInt(STRAFE_MAX_TICKS - STRAFE_MIN_TICKS + 1);
+            nextStrafeProbeTick = now;
         }
         if (mob instanceof Human human) {
-            MovementSpeedController.limit(human,MovementSpeedController.Limit.RANGED,
-                    GunCombatProfile.of(human,human.getMainHandItem()).movement(),true);
-            strafing = RangedTerrainCombat.strafeFacingTarget(human,target,radialStrafeInput(target,range),strafeDirection);
-            if(!strafing) {
-                MovementSpeedController.limit(human,MovementSpeedController.Limit.RANGED,1,false);
-                // A rejected local step is not permission to chase the target.
-                // The hub chose STRAFE; retain the firing lane and retry next
-                // tick. Only APPROACH/SEARCH_WINDOW may install a chase route.
+            if (now < nextStrafeProbeTick) return;
+            boolean atAnchorEdge = strafeAnchorDistanceSqr() >= anchorRadius * anchorRadius
+                    && now - strafeLegStartTick >= STRAFE_MIN_TICKS
+                    && movingOutward(target);
+            strafing = !atAnchorEdge && RangedTerrainCombat.strafeFacingTarget(
+                    human, target, radialStrafeInput(target, range), strafeDirection, true);
+            if (strafing) {
+                MovementSpeedController.limit(human, MovementSpeedController.Limit.RANGED,
+                        GunCombatProfile.of(human, human.getMainHandItem()).movement(), true);
+            } else {
+                // Hold the current firing position before reconsidering the opposite direction.
+                manualStrafeUntilTick = Math.min(manualStrafeUntilTick,
+                        Math.max(now + 6, strafeLegStartTick + STRAFE_MIN_TICKS));
+                nextStrafeProbeTick = manualStrafeUntilTick;
             }
         } else {
             mob.lookAt(target, 30.0F, 30.0F);
@@ -346,10 +342,10 @@ public final class GunMovementExecution<T extends PathfinderMob> {
         strafing = false;
     }
 
-    private double strafeLegDisplacementSqr() {
-        double dx = mob.getX() - strafeLegStartX;
-        double dz = mob.getZ() - strafeLegStartZ;
-        return dx * dx + dz * dz;
+    private boolean movingOutward(LivingEntity target) {
+        double dx = target.getX() - mob.getX(), dz = target.getZ() - mob.getZ();
+        return ((mob.getX() - strafeAnchorX) * dz - (mob.getZ() - strafeAnchorZ) * dx)
+                * strafeDirection > 0;
     }
 
     private double strafeAnchorDistanceSqr() {

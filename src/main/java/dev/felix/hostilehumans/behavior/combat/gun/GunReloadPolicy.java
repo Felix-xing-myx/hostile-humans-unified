@@ -8,10 +8,9 @@ public final class GunReloadPolicy {
         return Math.max(0, magazineRounds) + (inventoryFeed && chambered && !openBolt ? 1 : 0);
     }
 
-    public static int inventoryFeedDurationTicks(double feedSeconds, double cooldownSeconds) {
-        double feed = Double.isFinite(feedSeconds) ? Math.max(0.0D, feedSeconds) : 0.0D;
-        double cooldown = Double.isFinite(cooldownSeconds) ? Math.max(0.0D, cooldownSeconds) : 0.0D;
-        return (int) Math.max(1L, Math.min(72000L, (long) Math.ceil((feed + cooldown) * 20.0D)));
+    /** Base work for an NPC virtual magazine, before foreground/background reload modifiers. */
+    public static int inventoryFeedDurationTicks(String weaponId) {
+        return "tacz:minigun".equals(weaponId) ? 160 : 100;
     }
 
     public static boolean shouldIdleTopOff(int loaded, int capacity, boolean inCombat,

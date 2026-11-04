@@ -16,14 +16,18 @@ public final class JegReloadPlan {
         int missing = capacity - loaded;
         if (missing <= 0) return List.of();
         var reload = gun.getReloads();
-        int extra = Math.max(0, reload.getAdditionalReloadTimer());
-        int interval = Math.max(1, GunEnchantmentHelper.getReloadInterval(stack,
-                reload.getReloadTimer() + (loaded == 0 ? extra : 0)));
         ReloadType type = reload.getReloadType();
-        if (type == ReloadType.MAG_FED || type == ReloadType.INVENTORY_FED || type == ReloadType.SINGLE_ITEM) {
+        boolean inventoryFed = type == ReloadType.INVENTORY_FED;
+        int extra = Math.max(0, reload.getAdditionalReloadTimer());
+        int base = inventoryFed
+                ? dev.felix.hostilehumans.behavior.combat.gun.GunReloadPolicy.inventoryFeedDurationTicks(
+                        String.valueOf(net.minecraftforge.registries.ForgeRegistries.ITEMS.getKey(stack.getItem())))
+                : reload.getReloadTimer() + (loaded == 0 ? extra : 0);
+        int interval = Math.max(1, GunEnchantmentHelper.getReloadInterval(stack, base));
+        if (inventoryFed || type == ReloadType.MAG_FED || type == ReloadType.SINGLE_ITEM) {
             int quick = stack.getEnchantmentLevel(ModEnchantments.QUICK_HANDS.get());
             interval = Math.max(1, Math.round(interval * (quick >= 2 ? .5F : quick == 1 ? .75F : 1F)));
-            return List.of(new Step(interval + 1, missing));
+            return List.of(new Step(inventoryFed ? interval : interval + 1, missing));
         }
         if (type != ReloadType.MANUAL) return List.of(); // Unknown reload contracts fail closed.
         List<Step> result = new ArrayList<>();

@@ -103,7 +103,7 @@ public final class RangedTerrainCombat {
             Vec3 toward = target.position().subtract(human.position());
             yaw = (float) Math.toDegrees(Math.atan2(toward.z, toward.x)) - 90;
         }
-        tryStrafe(human, forward, right, yaw, false);
+        tryStrafe(human, forward, right, yaw, false, null);
     }
     private static boolean isArrowMovement(Human human) {
         return RangedWeaponCustody.isBowOrCrossbow(human.getMainHandItem())
@@ -112,6 +112,11 @@ public final class RangedTerrainCombat {
 
     /** Open-band gun movement shares bow/crossbow step safety, without a navigation route. */
     public static boolean strafeFacingTarget(Human human, LivingEntity target, float forward, float right) {
+        return strafeFacingTarget(human, target, forward, right, false);
+    }
+
+    public static boolean strafeFacingTarget(Human human, LivingEntity target,
+                                               float forward, float right, boolean keepLane) {
         if (target == null || !HumanPerception.canTarget(human, target)
                 || HumanTargetCoordinator.suspended(human) || human.isFleeing
                 || human.isInLava() || human.explosionThreat != null
@@ -119,10 +124,10 @@ public final class RangedTerrainCombat {
                 || human.isShoreTransitionPending() || !human.getNavigation().isDone()) return false;
         Vec3 toward = target.position().subtract(human.position());
         float yaw = (float) Math.toDegrees(Math.atan2(toward.z, toward.x)) - 90.0F;
-        return tryStrafe(human, forward, right, yaw, true);
+        return tryStrafe(human, forward, right, yaw, true, keepLane ? target : null);
     }
 
-    private static boolean tryStrafe(Human human, float forward, float right, float facingYaw, boolean gunMovement) {
+    private static boolean tryStrafe(Human human, float forward, float right, float facingYaw, boolean gunMovement, LivingEntity firingTarget) {
         if (forward == 0 && right == 0) {
             human.clearRangedStrafeMotion(); human.setXxa(0); human.setZza(0);
             if (human.getNavigation().isDone()) human.getMoveControl().strafe(0, 0);
@@ -135,7 +140,10 @@ public final class RangedTerrainCombat {
             human.clearRangedStrafeMotion(); return false;
         }
         double yaw = Math.toRadians(facingYaw);
-        float[][] choices = {{forward, right}, {forward, -right}, {forward, 0}, {0, right}, {0, -right}};
+        float[][] choices = firingTarget == null
+                ? new float[][] {{forward, right}, {forward, -right}, {forward, 0}, {0, right}, {0, -right}}
+                : forward == 0 ? new float[][] {{0, right}}
+                : new float[][] {{forward, right}, {0, right}};
         boolean retainedFloor=false;
         for (float[] choice : choices) {
             if (choice[0] == 0 && choice[1] == 0) continue;
@@ -146,7 +154,9 @@ public final class RangedTerrainCombat {
             if(!RangedFiringMemory.keepsFiringFloor(human,direction)){retainedFloor=true;continue;}
             if ((!gunMovement || SoldierOrder.allowsCombatPosition(human, human.position().add(direction)))
                     && HumanTerrainSafety.safeStep(human, direction)
-                    && human.level().noCollision(human, human.getBoundingBox().expandTowards(direction))) {
+                    && human.level().noCollision(human, human.getBoundingBox().expandTowards(direction))
+                    && (firingTarget == null || RangedShotClearance.fromPosition(
+                            human, human.position().add(direction), firingTarget))) {
                 if (gunMovement || arrowMovement) {
                     human.setYRot(facingYaw);
                     human.setYBodyRot(facingYaw);
@@ -160,7 +170,7 @@ public final class RangedTerrainCombat {
         human.clearRangedStrafeMotion();
         human.setZza(0);
         LivingEntity target = human.getTarget();
-        if (target != null && !retainedFloor) {
+        if (target != null && !retainedFloor && firingTarget == null) {
             State state = state(human, target);
             if (RangedTerrainPolicy.shouldReportBlockedSteps(++state.blockedSteps))
                 CombatTerrainNavigation.failed(human, target);

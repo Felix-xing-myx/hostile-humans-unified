@@ -108,9 +108,8 @@ public final class TaczHumanReloadTransactions {
                 reload.getFeed() == null ? 0 : reload.getFeed().getEmptyTime(),
                 reload.getCooldown() == null ? 0 : reload.getCooldown().getEmptyTime());
         boolean empty = occupied == 0;
-        int feedDelay = GunReloadPolicy.inventoryFeedDurationTicks(
-                reload.getFeed() == null ? 0 : empty ? reload.getFeed().getEmptyTime() : reload.getFeed().getTacticalTime(),
-                reload.getCooldown() == null ? 0 : empty ? reload.getCooldown().getEmptyTime() : reload.getCooldown().getTacticalTime());
+        int feedDelay = inventoryFeed ? GunReloadPolicy.inventoryFeedDurationTicks(gunId.toString()) : 0;
+        int reloadDeadline = Math.max(recoveryDelay, feedDelay);
         java.util.function.BooleanSupplier validStart=() -> GENERATIONS.getOrDefault(data,0L)==generation
                 &&!PAYMENTS.startingCancelled(data)&&authority.validSource()
                 &&java.util.Objects.equals(gunId,gun.getGunId(weapon))&&authority.validSource()
@@ -119,7 +118,7 @@ public final class TaczHumanReloadTransactions {
         boolean started;
         try {
             started = PAYMENTS.begin(data, weapon,
-                    human.level().getGameTime() + GunCombatProfile.reloadHardLimit(human, weapon, recoveryDelay),
+                    human.level().getGameTime() + GunCombatProfile.reloadHardLimit(human, weapon, reloadDeadline),
                     validStart,
                     () -> HumanAmmo.canReload(human, weapon)&&validStart.getAsBoolean()
                             &&gun.getCurrentAmmoCount(weapon)==loaded&&gun.hasBulletInBarrel(weapon)==chambered,
@@ -165,7 +164,7 @@ public final class TaczHumanReloadTransactions {
                     : empty ? reload.getCooldown().getEmptyTime() : reload.getCooldown().getTacticalTime();
             int visualTail = inventoryFeed ? 0
                     : (int) Math.max(0, Math.min(72000, Math.ceil((visualCooldown - visualFeed) * 20)));
-            int visualFeedTicks = (int) Math.max(0, Math.min(72000, Math.ceil(visualFeed * 20)));
+            int visualFeedTicks = inventoryFeed ? feedDelay : (int) Math.max(0, Math.min(72000, Math.ceil(visualFeed * 20)));
             double rate=GunCombatProfile.reloadWork(human,weapon);
             clock.rate=rate;
             TaczReloadVisualTimeline.begin(human, gunId.toString(),

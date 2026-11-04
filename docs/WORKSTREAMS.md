@@ -4409,3 +4409,7 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 ## 远距战斗动画
 
 - 主控，基线 9a8c87e，复用 settlement-service-panels 工作树。简化档只控制主体材质和箭、蜂刺装饰，武器动作、持握、举盾和 Better Combat 共用正常渲染链路。
+
+## 枪械推进、侧移与背包供弹计时
+
+- 主控，基线 7fb7365，沿用 settlement-service-panels 工作树。枪械中枢的推进指令不会被地形射界停火位覆盖，通用侧移按 16～40 tick 分段，移动前复用射界判定。TaCZ 和 JEG 的虚拟弹匣共用基准时长并沿用装填会话倍率。
