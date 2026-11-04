@@ -22,11 +22,16 @@ public record SettlementTemplate(
         TemplateTransform.Cell originOffset,
         List<SettlementRegion> regions,
         List<SettlementFacility> facilities,
-        SettlementGenerationRules generation) {
+        SettlementGenerationRules generation, List<String> brokerFactions) {
     public enum Kind {
         ROOT,
         ATTACHMENT,
-        ORDINARY
+        ORDINARY,
+        BROKER_STATION;
+
+        public boolean root() {
+            return this == ROOT || this == BROKER_STATION;
+        }
     }
 
     public static final int SCHEMA = 1;
@@ -36,6 +41,12 @@ public record SettlementTemplate(
             List<SettlementRegion> regions, List<SettlementFacility> facilities) {
         this(template, module, kind, faction, tier, revision, size, originOffset,
                 regions, facilities, SettlementGenerationRules.DEFAULT);
+    }
+
+    public SettlementTemplate(String template, String module, Kind kind, String faction,
+            int tier, int revision, TemplateTransform.Cell size, TemplateTransform.Cell originOffset,
+            List<SettlementRegion> regions, List<SettlementFacility> facilities, SettlementGenerationRules generation) {
+        this(template, module, kind, faction, tier, revision, size, originOffset, regions, facilities, generation, List.of());
     }
 
     public SettlementTemplate {
@@ -58,6 +69,15 @@ public record SettlementTemplate(
                 || originOffset == null)
             throw new IllegalArgumentException("invalid template identity, faction or size");
         faction = FactionDefinitions.find(faction).id().toString();
+        brokerFactions = List.copyOf(brokerFactions);
+        if (kind == Kind.BROKER_STATION) {
+            if (brokerFactions.isEmpty() || brokerFactions.size() > dev.felix.hostilehumans.economy.Currency.values().length
+                    || new HashSet<>(brokerFactions).size() != brokerFactions.size()
+                    || brokerFactions.stream().anyMatch(id -> dev.felix.hostilehumans.economy.Currency.faction(id)
+                            .filter(currency -> currency.faction().equals(id)).isEmpty()))
+                throw new IllegalArgumentException("select one or more supported broker factions");
+            brokerFactions = brokerFactions.stream().sorted().toList();
+        } else if (!brokerFactions.isEmpty()) throw new IllegalArgumentException("broker factions require a broker station");
         regions = List.copyOf(regions);
         facilities = List.copyOf(facilities);
         java.util.Objects.requireNonNull(generation);
@@ -130,7 +150,7 @@ public record SettlementTemplate(
     }
 
     void validateForPublication() {
-        if (kind == Kind.ROOT && regions.stream().noneMatch(
+        if (kind.root() && regions.stream().noneMatch(
                 region -> region.layer() == SettlementRegion.Layer.OUTER && !region.includes().isEmpty()))
             throw new IllegalArgumentException("define an outer region with a capture box before publishing the settlement");
         for (var region : regions)
@@ -153,6 +173,6 @@ public record SettlementTemplate(
                 size,
                 originOffset,
                 regions,
-                facilities, generation);
+                facilities, generation, brokerFactions);
     }
 }

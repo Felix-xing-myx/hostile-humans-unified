@@ -154,6 +154,16 @@ public final class SettlementPersistenceTest {
         net.minecraft.core.registries.BuiltInRegistries.bootStrap();
         var a = author(SettlementTemplate.Kind.ROOT, "crimson", 1);
         buildingPackRoundTrip(a);
+        var station = new SettlementTemplate(a.template(), a.module(), SettlementTemplate.Kind.BROKER_STATION,
+                a.faction(), a.tier(), a.revision(), a.size(), a.originOffset(), a.regions(), a.facilities(),
+                a.generation(), java.util.Arrays.stream(dev.felix.hostilehumans.economy.Currency.values())
+                        .map(dev.felix.hostilehumans.economy.Currency::faction).toList());
+        check(SettlementCodec.template(SettlementCodec.template(station)).equals(station), "broker station codec");
+        var stationIndex = new SettlementIndex();
+        var stationId = UUID.randomUUID();
+        var stationModule = new SettlementModule("broker", station, transform(100), new BlockPos(100, 64, 100));
+        check(stationIndex.importModule(stationId, "Broker", stationModule, 0).changed(), "station registers as root");
+        check(stationIndex.find(stationId).brokerFactions().size() == 4, "station preserves all served factions");
         check(a.faction().equals("hostile_humans_unified:crimson"), "canonical faction ID");
         check(
                 SettlementCodec.template(SettlementCodec.template(a)).equals(a),

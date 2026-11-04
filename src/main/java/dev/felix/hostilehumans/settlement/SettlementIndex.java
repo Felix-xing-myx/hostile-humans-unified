@@ -161,7 +161,7 @@ public final class SettlementIndex extends SavedData {
             return new Result(false, "ordinary building has no protected instance", null);
         SettlementInstance old = find(id);
         if (old == null
-                && (expected != 0 || module.author().kind() != SettlementTemplate.Kind.ROOT))
+                && (expected != 0 || !module.author().kind().root()))
             return new Result(false, "missing root instance", null);
         if (old != null) {
             var identical =
@@ -176,7 +176,7 @@ public final class SettlementIndex extends SavedData {
                 return new Result(false, "already imported", old);
             if (old.revision() != expected)
                 return new Result(false, "instance revision changed", old);
-            if (module.author().kind() == SettlementTemplate.Kind.ROOT
+            if (module.author().kind().root()
                     && module.author().tier() != old.tier())
                 return new Result(
                         false,

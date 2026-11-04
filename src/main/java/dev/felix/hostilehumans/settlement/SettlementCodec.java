@@ -65,7 +65,8 @@ public final class SettlementCodec {
                 cell(tag, "origin_offset"),
                 regions(tag.getList("regions", Tag.TAG_COMPOUND)),
                 facilities(tag.getList("facilities", Tag.TAG_COMPOUND)),
-                SettlementGenerationRules.read(tag.getCompound("generation")));
+                SettlementGenerationRules.read(tag.getCompound("generation")),
+                tag.getList("broker_factions", Tag.TAG_STRING).stream().map(Tag::getAsString).toList());
     }
 
     public static CompoundTag template(SettlementTemplate value) {
@@ -83,6 +84,11 @@ public final class SettlementCodec {
         tag.put("facilities", facilities(value.facilities()));
         if (!value.generation().equals(SettlementGenerationRules.DEFAULT))
             tag.put("generation", value.generation().write());
+        if (!value.brokerFactions().isEmpty()) {
+            var factions = new ListTag();
+            for (String id : value.brokerFactions()) factions.add(net.minecraft.nbt.StringTag.valueOf(id));
+            tag.put("broker_factions", factions);
+        }
         return tag;
     }
 

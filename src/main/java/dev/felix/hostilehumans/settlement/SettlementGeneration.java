@@ -163,9 +163,7 @@ public final class SettlementGeneration {
                                 modules.sort(
                                         Comparator.comparingInt(
                                                 m ->
-                                                        m.author().kind()
-                                                                        == SettlementTemplate.Kind
-                                                                                .ROOT
+                                                        m.author().kind().root()
                                                                 ? 0
                                                                 : 1));
                                 var index = SettlementIndex.get(level);

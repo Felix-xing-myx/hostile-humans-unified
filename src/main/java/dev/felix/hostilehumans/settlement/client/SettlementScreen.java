@@ -491,6 +491,9 @@ public final class SettlementScreen extends PanelScreen {
         payload.putString("faction", faction.value().orElseThrow());
         payload.putInt("tier", tier.value().orElseThrow());
         payload.putString("kind", kind);
+        if (kind.equals("BROKER_STATION")) {
+            if (payload.getList("broker_factions", Tag.TAG_STRING).isEmpty()) return null;
+        } else payload.remove("broker_factions");
         payload.putIntArray("size", integers(size));
         payload.putIntArray("origin_offset", integers(offset));
         if (!valid(generationText) || !valid(generationNumbers)) return null;
@@ -719,7 +722,7 @@ public final class SettlementScreen extends PanelScreen {
 
     private UiLayout.Node identity() {
         List<UiLayout.Node> nodes = new ArrayList<>();
-        nodes.add(choices("kind", List.of("ORDINARY", "ROOT", "ATTACHMENT"), kind, v -> kind = v));
+        nodes.add(choices("kind", List.of("ORDINARY", "ROOT", "ATTACHMENT", "BROKER_STATION"), kind, v -> kind = v));
         nodes.add(muted(text("help.kind." + kind)));
         nodes.add(input("template_id", template));
         nodes.add(muted(text("bind_bounds_help")));
@@ -732,6 +735,25 @@ public final class SettlementScreen extends PanelScreen {
             nodes.add(choices("tier_choice", List.of("1", "2", "3"), tier.text(), tier::set));
         } else {
             addFileSaveControls(nodes);
+        }
+        if (kind.equals("BROKER_STATION")) {
+            nodes.add(muted(text("broker_factions_help")));
+            var factions = author.getList("broker_factions", Tag.TAG_STRING);
+            for (var currency : dev.felix.hostilehumans.economy.Currency.values()) {
+                String id = currency.faction();
+                boolean selected = factions.stream().anyMatch(value -> value.getAsString().equals(id));
+                nodes.add(action("broker_faction." + id, factionLabel(id), editable(), selected, () -> {
+                    var chosen = new java.util.TreeSet<String>();
+                    factions.forEach(value -> chosen.add(value.getAsString()));
+                    if (selected) chosen.remove(id);
+                    else chosen.add(id);
+                    var list = new ListTag();
+                    chosen.forEach(value -> list.add(net.minecraft.nbt.StringTag.valueOf(value)));
+                    author.put("broker_factions", list);
+                    localChanged = true;
+                    refresh();
+                }));
+            }
         }
         nodes.add(action("advanced_author", text("advanced_author"), editable(), advancedAuthor,
                 () -> { advancedAuthor = !advancedAuthor; refresh(); }));

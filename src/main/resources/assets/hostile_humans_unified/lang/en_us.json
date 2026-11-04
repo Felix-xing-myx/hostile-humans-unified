@@ -1,4 +1,7 @@
 {
+  "gui.hostile_humans_unified.settlement.kind.BROKER_STATION": "Broker station",
+  "gui.hostile_humans_unified.settlement.help.kind.BROKER_STATION": "Requires an outer region. Once registered, faction brokers can share the same station.",
+  "gui.hostile_humans_unified.settlement.broker_factions_help": "Select at least one faction served by this station.",
   "gui.hostile_humans_unified.settlement.template_search": "Search template IDs",
   "gui.hostile_humans_unified.settlement.template_search_apply": "Search or refresh",
   "gui.hostile_humans_unified.settlement.template_page": "Page %s / %s",

@@ -36,7 +36,7 @@ public record SettlementInstance(
         for (var m : modules) {
             if (!keys.add(m.key()) || !m.author().faction().equals(faction))
                 throw new IllegalArgumentException("module identity/faction conflict");
-            if (m.author().kind() == SettlementTemplate.Kind.ROOT) {
+            if (m.author().kind().root()) {
                 if (m.author().tier() != tier)
                     throw new IllegalArgumentException("root/instance tier conflict");
                 roots++;
@@ -55,6 +55,11 @@ public record SettlementInstance(
             throw new IllegalArgumentException("instance requires exactly one root module");
         if (controls > 1)
             throw new IllegalArgumentException("instance has conflicting control facilities");
+    }
+
+    public List<String> brokerFactions() {
+        return modules.stream().filter(module -> module.author().kind().root())
+                .findFirst().orElseThrow().author().brokerFactions();
     }
 
     public SettlementInstance rename(String next) {

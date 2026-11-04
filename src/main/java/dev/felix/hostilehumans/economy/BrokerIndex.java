@@ -60,7 +60,12 @@ public final class BrokerIndex extends SavedData {
                 || !(level.getBlockState(pos).getBlock() instanceof EconomyBrokerBlock broker)
                 || broker.currency() != currency) return false;
         var region = SettlementIndex.get(level).query(pos.getX() + .5, pos.getY(), pos.getZ() + .5);
-        return !region.unknown() && region.hits().isEmpty();
+        if (region.unknown()) return false;
+        if (region.hits().isEmpty()) return true;
+        var site = region.hits().get(0).instance();
+        if (region.hits().stream().anyMatch(hit -> !hit.instance().equals(site))) return false;
+        var instance = SettlementIndex.get(level).find(site);
+        return instance != null && !instance.incomplete() && instance.brokerFactions().contains(currency.faction());
     }
 
     public boolean excludesSpawn(ServerLevel level, double x, double y, double z) {
