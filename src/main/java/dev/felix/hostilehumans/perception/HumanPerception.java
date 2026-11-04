@@ -74,9 +74,10 @@ public final class HumanPerception {
         final LinkedHashMap<UUID,NegativeObservationSweep> bodySweeps=new LinkedHashMap<>();
         final LinkedHashSet<UUID> pendingBodies=new LinkedHashSet<>();
         long reactionHandled=Long.MIN_VALUE;
-        long alertUntil=-1, tick=-1, nextScan, focusStarted, focusLastVisible=-1, directionStarted, nextPriorityFocus;
+        net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> lootGroupDimension;
+        long lootGroupUntil, alertUntil=-1, tick=-1, nextScan, focusStarted, focusLastVisible=-1, directionStarted, nextPriorityFocus;
         UUID focus; Vec3 look; boolean focusHurt, unfamiliarFocus, priorityFocus;
-        int candidateCursor,recognitionCursor,bodyResumeCursor; List<UUID> candidates=List.of(); long nextCandidates; boolean stableNeighborhood;
+        int candidateCursor,recognitionCursor,bodyResumeCursor,deferredVisualRays; List<UUID> candidates=List.of(); long nextCandidates; boolean stableNeighborhood;
         String decision="闲置观察",reason="等待视觉或声音证据",lookOwner="自然观察";
         String scanStatus="尚未执行视觉检测";long scanAt=-1;
         String soundPolicy="暂无声音输入";int geometrySkipped,occlusionSkipped;long soundGlanceUntil;
@@ -202,6 +203,12 @@ public final class HumanPerception {
             return new HumanTargetSharing.Evidence(clue.source,clue.position,false);
         return null;
     }
+    static boolean groupedLoot(Human human) {
+        State state = STATES.get(human);
+        return state != null && now(human) < state.lootGroupUntil
+                && human.level().dimension().equals(state.lootGroupDimension);
+    }
+
     private static boolean attentionLocked(State s,long now){
         return s.focus!=null||now<s.directionProtectedUntil;
     }
@@ -449,6 +456,8 @@ public final class HumanPerception {
             double shareRange = collectPeers ? HumanTargetSharing.range(h) : 0;
             double visionRange = reduced && !urgentScan ? BattlePerceptionDetail.LOCAL_RADIUS : range(h);
             double r=Math.max(shareRange,Math.max(visionRange,movementRadius));
+            boolean sampleLootGroup = dev.felix.hostilehumans.inventory.SoldierPickupPolicy.canCollectNow(h);
+            if (sampleLootGroup) r = Math.max(r, 12);
             if (measureBattle) r = Math.max(r, BattlePerceptionDetail.LOCAL_RADIUS);
             int cap=AdaptiveActivityBudget.candidates(h,c().integer("budgets.candidates"));long epoch=now/Math.max(1,interval);
             Comparator<LivingEntity> nearest=Comparator.comparingDouble(h::distanceToSqr);
@@ -459,10 +468,13 @@ public final class HumanPerception {
             BoundedSelection<Human> friends=new BoundedSelection<>(HumanTargetSharing.peerLimit(h,cap),friendOrder);
             BoundedSelection<LivingEntity> sounds=new BoundedSelection<>(cap*4,HumanAwareness.movementOrder(h));
             int[] localHumans = measureBattle ? new int[2] : null; // All nearby humans and the hostile subset, excluding self.
+            int[] nearbyAllies = {0};
             // Stream the loaded spatial section: unrelated entities cannot hide later enemies.
             BattleNeighborhood.visit(level, h.getBoundingBox().inflate(r), measureBattle && !urgentScan, e->{
                         if(e!=h&&e.isAlive()){
                             if(collectPeers&&e instanceof Human friendly&&HumanTargetSharing.peers(h,friendly,shareRange))friends.offer(friendly);
+                            if (sampleLootGroup && nearbyAllies[0] < 4 && e instanceof Human ally
+                                    && h.distanceToSqr(ally) <= 144 && HumanRelations.allied(h,ally)) nearbyAllies[0]++;
                             boolean hostile = enemy(h,e);
                             if (hostile && (!reduced || urgentScan
                                     || h.distanceToSqr(e) <= BattlePerceptionDetail.LOCAL_RADIUS_SQUARED)) {
@@ -477,6 +489,10 @@ public final class HumanPerception {
                             if ((!reduced || BattlePerceptionDetail.closeHuman(h,e)) && HumanAwareness.movementCandidate(h,e)) sounds.offer(e);
                         }
                     });
+            if (sampleLootGroup) {
+                s.lootGroupDimension = level.dimension();
+                s.lootGroupUntil = nearbyAllies[0] >= 4 ? now + 40 : now;
+            }
             if (measureBattle) BattlePerceptionDetail.sample(h, now, localHumans[0], localHumans[1]);
             if (collectPeers) HumanTargetSharing.broadcast(h,friends.values());
             HumanAwareness.sampleMovement(h,sounds.values());
@@ -488,6 +504,14 @@ public final class HumanPerception {
         if(now<s.nextScan){describe(h,s);return;}
         int probeLimit=urgentScan?c().integer("budgets.rays_per_human"):AdaptiveActivityBudget.probes(h,c().integer("budgets.rays_per_human"));
         int rays=Math.min(probeLimit, PerceptionBudget.maxRayBatch(h));
+        if (reduced && !urgentScan && s.deferredVisualRays > 0
+                && !PerceptionBudget.prepareVisualRetry(h, Math.min(rays, s.deferredVisualRays))) {
+            BattlePerceptionMetrics.add(level, BattlePerceptionMetrics.Work.VISION_RETRY_SKIPPED, 1);
+            resumeBodies(h,s,level,now,interval,probeLimit);
+            describe(h,s);
+            return;
+        }
+        s.deferredVisualRays=0;
         s.geometrySkipped=0;s.occlusionSkipped=0;
         List<LivingEntity> checks=new ArrayList<>();
         LivingEntity main=h.getTarget();
@@ -529,6 +553,7 @@ public final class HumanPerception {
         }
         rays=checks.size(); // Reserve only actual eligible work, never an empty/default batch.
         if(!PerceptionBudget.claim(h,"rays",rays)){
+            s.deferredVisualRays=rays;
             // A rejected reservation did not execute these candidates. Do not skip them.
             s.candidateCursor=candidateCursorBefore;s.recognitionCursor=recognitionCursorBefore;
             s.scanStatus="等待视觉检测配额";s.reason=s.scanStatus;

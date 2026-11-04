@@ -46,6 +46,23 @@ public final class PerceptionBudget {
         return Limits.read(state.config, "rays").maxBatch("rays");
     }
 
+    /**
+     * A denied visual retry can keep its place without rebuilding candidate geometry.
+     * A positive result only allows preparation; the real claim still accounts for work.
+     */
+    static boolean prepareVisualRetry(Entity actor, int amount) {
+        MinecraftServer server = actor.level().getServer();
+        if (server == null || amount <= 0) return true;
+        State state = currentState(server);
+        var queue = state.queues.get("rays");
+        if (queue == null) return true;
+        String dimension = actor.level().dimension().location().toString();
+        Key key = new Key(actor.getUUID(), "rays:" + dimension);
+        if (queue.canClaimFull(state.tick, key, dimension, amount)) return true;
+        claim(actor, "rays", amount); // Preserve the same deferred demand and faction ordering.
+        return false;
+    }
+
     private static State currentState(MinecraftServer server) {
         State state = SERVERS.computeIfAbsent(server, key -> new State());
         state.beginTick(server.getTickCount());

@@ -4252,3 +4252,6 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 消除可判定联络射线与重复视锥计算
 - 主控，基线 3923eb3，module-architecture 工作树。声音在隔墙可达范围以内或完整范围以外时无需射线；近距直达进入 F8 计数。视觉按一次身体几何采样复用观察者朝向、眼位和属性距离。Python 检查 532 项（16 跳过），未运行 Gradle 或团战实测。
+
+## 等待视觉额度与群体拾取简化
+- 主控，基线 e87173a，module-architecture 工作树。已排队视觉工作先检查可执行性再重复筛选。闲置拾取借用现有候选查询，在 12 格内有 4 名友军时按中心单点、每人每 tick 两条射线处理。

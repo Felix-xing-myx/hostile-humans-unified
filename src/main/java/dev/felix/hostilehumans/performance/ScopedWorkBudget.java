@@ -57,6 +57,13 @@ public final class ScopedWorkBudget<K, S> {
         return amount;
     }
 
+    /** Observes the current grant or available capacity without reserving new work. */
+    public boolean canClaimFull(long currentTick, K key, S scope, int amount) {
+        beginTick(currentTick);
+        Grant<S> grant = grants.get(key);
+        return grant == null ? fits(scope, amount) : Objects.equals(grant.scope(), scope) && grant.amount() >= amount;
+    }
+
     /** Drops deferred work and returns only capacity that has not been claimed. */
     public void cancel(K key) {
         waiting.remove(key);

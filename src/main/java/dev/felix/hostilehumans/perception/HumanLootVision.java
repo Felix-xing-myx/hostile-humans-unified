@@ -26,9 +26,10 @@ public final class HumanLootVision {
     }
     private static final class Probe {
         Vec3 item, eye; float yaw, pitch;
+        final boolean grouped;
         int cursor, completeTick = Integer.MIN_VALUE;
         Sight result;
-        Probe(Human h,ItemEntity item){snapshot(h,item);}
+        Probe(Human h,ItemEntity item,boolean grouped){this.grouped=grouped;snapshot(h,item);}
         void snapshot(Human h,ItemEntity e){item=e.position();eye=h.getEyePosition();yaw=h.getYHeadRot();pitch=h.getXRot();}
         boolean compatible(Human h,ItemEntity e){return item.distanceToSqr(e.position())<.01
                 &&eye.distanceToSqr(h.getEyePosition())<4
@@ -53,18 +54,22 @@ public final class HumanLootVision {
         if(h.level().isClientSide||!item.isAlive()||item.level()!=h.level())return Sight.HIDDEN;
         State s=STATES.computeIfAbsent(h,k->new State());
         if(s.tick!=h.tickCount){s.tick=h.tickCount;s.rays=0;s.seen.values().removeIf(v->h.tickCount-v.tick>600);}
+        boolean idlePickup=SoldierPickupPolicy.canCollectNow(h);
+        boolean grouped=idlePickup&&HumanPerception.groupedLoot(h);
+        int limit=grouped?2:RAYS_PER_HUMAN_TICK;
         Probe p=s.probes.get(item.getUUID());
+        if(p!=null&&p.grouped!=grouped)p=null;
         if(p!=null&&p.completeTick==h.tickCount&&p.exact(h,item))return p.result;
-        if(p==null||p.result!=null||!p.compatible(h,item)){p=new Probe(h,item);s.probes.put(item.getUUID(),p);}
+        if(p==null||p.result!=null||!p.compatible(h,item)){p=new Probe(h,item,grouped);s.probes.put(item.getUUID(),p);}
         while(s.probes.size()>MAX_RECORDS)s.probes.remove(s.probes.keySet().iterator().next());
         var b=item.getBoundingBox();Vec3 center=b.getCenter();
-        Vec3[] points={center,new Vec3(center.x,b.maxY-.01,center.z),
+        Vec3[] points=grouped?new Vec3[]{center}:new Vec3[]{center,new Vec3(center.x,b.maxY-.01,center.z),
                 new Vec3(b.minX+.01,center.y,b.minZ+.01),new Vec3(b.maxX-.01,center.y,b.maxZ-.01)};
         while(p.cursor<points.length){
             Vec3 point=points[p.cursor];
-            boolean nearby=SoldierPickupPolicy.canCollectNow(h)&&nearbyGround(h.position(),point);
+            boolean nearby=idlePickup&&nearbyGround(h.position(),point);
             if(!nearby&&!HumanPerception.withinLootVision(h,point)){p.cursor++;continue;}
-            if(s.rays>=RAYS_PER_HUMAN_TICK||!PerceptionBudget.claim(h,"rays",1,":loot:"+item.getUUID()+":"+p.cursor))return Sight.DEFERRED;
+            if(s.rays>=limit||!PerceptionBudget.claim(h,"rays",1,":loot:"+item.getUUID()+":"+p.cursor))return Sight.DEFERRED;
             s.rays++;p.cursor++;
             Vec3 toEye=h.getEyePosition().subtract(point);
             Vec3 end=toEye.lengthSqr()>1.e-8?point.add(toEye.normalize().scale(1.e-4)):point;

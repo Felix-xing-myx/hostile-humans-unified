@@ -8,7 +8,10 @@ class PerceptionPriorityContract(unittest.TestCase):
         code=source("HumanPerception")
         scan=code.split("if(now<s.nextScan)",1)[1].split("private static int resumeBodies",1)[0]
         grant = scan.index('PerceptionBudget.claim(h,"rays",rays)')
-        self.assertNotIn("resumeBodies(h,s", scan[:scan.index("if(checks.isEmpty())")])
+        prepare = scan.index("s.deferredVisualRays=0;")
+        retry = scan[:prepare]
+        self.assertLess(retry.index("!PerceptionBudget.prepareVisualRetry"), retry.index("resumeBodies(h,s"))
+        self.assertNotIn("resumeBodies(h,s", scan[prepare:scan.index("if(checks.isEmpty())")])
         self.assertIn("resumeBodies(h,s", scan[grant:])
         self.assertLess(scan.index("eligibleVisual(h,s"),scan.index('PerceptionBudget.claim(h,"rays",rays)'))
         self.assertLess(scan.index("if(checks.isEmpty())"),scan.index('PerceptionBudget.claim(h,"rays",rays)'))
