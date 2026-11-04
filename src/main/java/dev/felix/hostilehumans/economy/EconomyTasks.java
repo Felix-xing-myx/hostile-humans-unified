@@ -177,7 +177,7 @@ public final class EconomyTasks {
                                         : policy.reason(),
                                 task.objective().name(), task.item().toString(), task.targetFaction(),
                                 row == null ? 0 : row.getLong("deadline"), task.timeLimit(), row != null,
-                                row == null ? "" : row.getString("site_name")));
+                                row == null ? "" : row.getString("site_name"), currency.faction()));
             } catch (RuntimeException unknown) {
                 result.add(
                         new EconomyView.TaskRow(

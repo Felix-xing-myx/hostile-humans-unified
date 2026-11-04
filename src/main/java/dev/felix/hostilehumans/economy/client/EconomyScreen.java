@@ -53,7 +53,7 @@ public final class EconomyScreen extends PanelScreen {
         if (quote > 0 && quote <= 4096) quantity.set(Integer.toString(quote));
         if (!snapshot.wallets().isEmpty()) wallet = snapshot.wallets().get(0).id();
         if (!snapshot.offers().isEmpty()) offerId = snapshot.offers().get(0).id();
-        if (!snapshot.tasks().isEmpty()) taskId = snapshot.tasks().get(0).id();
+        if (!snapshot.tasks().isEmpty()) taskId = taskKey(snapshot.tasks().get(0));
     }
 
     private static Component text(String key, Object... args) {
@@ -234,7 +234,8 @@ public final class EconomyScreen extends PanelScreen {
         content.add(muted(Component.literal(snapshot.reason())));
         if (pending.busy()) content.add(text(text("pending"), () -> theme().accent()));
         var metadata = snapshot.metadata();
-        if (metadata.contains("true_standing") && metadata.contains("remaining_standing"))
+        if (snapshot.page() != EconomyView.Page.WALLET
+                && metadata.contains("true_standing") && metadata.contains("remaining_standing"))
             content.add(
                     muted(
                             text(
@@ -259,6 +260,7 @@ public final class EconomyScreen extends PanelScreen {
                 switch (tab) {
                     case "offers" -> offers();
                     case "tasks" -> tasks();
+                    case "standing" -> standings();
                     case "permit" -> broker();
                     default -> wallets();
                 });
@@ -267,6 +269,7 @@ public final class EconomyScreen extends PanelScreen {
 
     /** Visible tabs for the current snapshot; the band renders this and the body switches on it. */
     private List<String> tabIds() {
+        if (snapshot.page() == EconomyView.Page.WALLET) return List.of("wallets", "standing", "tasks");
         if (snapshot.page() == EconomyView.Page.TASKS) return List.of("tasks");
         if (snapshot.page() == EconomyView.Page.BROKER) return List.of("permit");
         List<String> tabs = new ArrayList<>();
@@ -289,7 +292,7 @@ public final class EconomyScreen extends PanelScreen {
             PanelButton button =
                     band(
                             new PanelButton(
-                                    text("tab." + page),
+                                    text(page.equals("tasks") && snapshot.page() == EconomyView.Page.WALLET ? "tab.my_tasks" : "tab." + page),
                                     b -> {
                                         tab = page;
                                         refresh();
@@ -548,7 +551,26 @@ public final class EconomyScreen extends PanelScreen {
                 false);
     }
 
+    private UiLayout.Node standings() {
+        List<UiLayout.Node> rows = new ArrayList<>();
+        for (var tag : snapshot.metadata().getList("standing_overview", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            var row = (net.minecraft.nbt.CompoundTag) tag;
+            var label = Currency.faction(row.getString("faction")).map(EconomyScreen::currency)
+                    .orElseGet(() -> Component.literal(row.getString("faction")));
+            rows.add(muted(row.getBoolean("known") ? row.getBoolean("enabled")
+                    ? text("standing_overview", label, row.getInt("true"), row.getInt("effective"))
+                    : text("standing_overview_disabled", label, row.getInt("true"))
+                    : text("standing_overview_unknown", label)));
+        }
+        return UiLayout.column(6, rows);
+    }
+
+    private static String taskKey(EconomyView.TaskRow row) {
+        return row.issuer() + "|" + row.id();
+    }
+
     private UiLayout.Node tasks() {
+        boolean overview = snapshot.page() == EconomyView.Page.WALLET;
         List<UiLayout.Node> nodes = new ArrayList<>(), filters = new ArrayList<>();
         var factions = snapshot.metadata().getList("task_factions", net.minecraft.nbt.Tag.TAG_STRING);
         if (factions.size() > 1) {
@@ -572,27 +594,30 @@ public final class EconomyScreen extends PanelScreen {
                                 taskFilter = filter;
                                 refresh();
                             }));
-        nodes.add(UiLayout.grid(4, 4, 70, filters));
+        if (!overview) nodes.add(UiLayout.grid(4, 4, 70, filters));
         List<UiLayout.Node> list = new ArrayList<>();
         for (var row : snapshot.tasks())
             if (matches(row))
                 list.add(
                         action(
-                                "task." + row.id(),
+                                "task." + taskKey(row),
                                 Component.literal(row.title())
                                         .append(" · ")
                                         .append(named("status", row.status()))
-                                        .append(" · ").append(row.progress() + "/" + row.target()),
+                                        .append(" · ").append(row.progress() + "/" + row.target())
+                                        .append(overview ? Component.literal(" · ").append(
+                                                Currency.faction(row.issuer()).map(EconomyScreen::currency)
+                                                        .orElseGet(() -> Component.literal(row.issuer()))) : Component.empty()),
                                 !pending.busy(),
-                                row.id().equals(taskId),
+                                taskKey(row).equals(taskId),
                                 () -> {
-                                    taskId = row.id();
+                                    taskId = taskKey(row);
                                     refresh();
                                 }));
         List<UiLayout.Node> detail = new ArrayList<>();
         var row =
                 snapshot.tasks().stream()
-                        .filter(task -> task.id().equals(taskId))
+                        .filter(task -> taskKey(task).equals(taskId))
                         .findFirst()
                         .orElse(null);
         if (row == null) detail.add(muted(text("no_tasks")));
@@ -628,39 +653,58 @@ public final class EconomyScreen extends PanelScreen {
                                             () -> row.progress(),
                                             () -> row.target(),
                                             () -> theme().accent()))));
-            detail.add(
-                    muted(
-                            text(
-                                    "task_rewards",
-                                    row.nominalStanding(),
-                                    row.availableStanding(),
-                                    row.rewardCopper())));
-            detail.add(muted(text("price_currency", priceCurrency())));
-            detail.add(muted(Component.literal(row.reason())));
-            detail.add(
-                    action(
-                            "accept",
-                            text("accept"),
-                            !pending.busy() && row.canAccept(),
-                            false,
-                            () -> send(EconomyView.Action.ACCEPT_TASK, taskCommand(row.id()))));
-            detail.add(
-                    action(
-                            "deliver",
-                            text("deliver"),
-                            !pending.busy() && row.canDeliver(),
-                            false,
-                            () -> send(EconomyView.Action.DELIVER_TASK, taskCommand(row.id()))));
-            detail.add(
-                    action(
-                            "claim",
-                            text("claim"),
-                            !pending.busy() && row.canClaim(),
-                            false,
-                            () -> send(EconomyView.Action.CLAIM_TASK, taskCommand(row.id()))));
+            var issuer = Currency.faction(row.issuer()).or(() -> Currency.faction(snapshot.faction()));
+            if (row.nominalStanding() != 0 || row.availableStanding() != 0)
+                detail.add(rewardIcon(net.minecraft.world.item.Items.BOOK,
+                        text("task_standing_reward", row.nominalStanding(), row.availableStanding())));
+            if (row.rewardCopper() > 0 && issuer.isPresent())
+                detail.add(rewardIcon(dev.felix.hostilehumans.economy.EconomyContent.coin(
+                        issuer.get(), Currency.Denomination.COPPER), text("task_coin_reward", row.rewardCopper())));
+            if (row.kind().equals("INITIATION"))
+                detail.add(rewardIcon(net.minecraft.world.item.Items.PAPER, text("task_permit_reward")));
+            detail.add(muted(text("price_currency", issuer.map(EconomyScreen::currency).orElseGet(this::priceCurrency))));
+            if (overview) detail.add(muted(text("task_process_at_board")));
+            else {
+                detail.add(muted(Component.literal(row.reason())));
+                detail.add(
+                        action(
+                                "accept",
+                                text("accept"),
+                                !pending.busy() && row.canAccept(),
+                                false,
+                                () -> send(EconomyView.Action.ACCEPT_TASK, taskCommand(row.id()))));
+                detail.add(
+                        action(
+                                "deliver",
+                                text("deliver"),
+                                !pending.busy() && row.canDeliver(),
+                                false,
+                                () -> send(EconomyView.Action.DELIVER_TASK, taskCommand(row.id()))));
+                detail.add(
+                        action(
+                                "claim",
+                                text("claim"),
+                                !pending.busy() && row.canClaim(),
+                                false,
+                                () -> send(EconomyView.Action.CLAIM_TASK, taskCommand(row.id()))));
+            }
         }
         nodes.add(UiLayout.row(12, List.of(UiLayout.column(6, list), UiLayout.column(6, detail))));
         return UiLayout.column(6, nodes);
+    }
+
+    private UiLayout.Node rewardIcon(net.minecraft.world.item.Item item, Component label) {
+        return node(body(new dev.felix.hostilehumans.client.ui.framework.PanelText(label, () -> theme().muted()) {
+            @Override public int measureHeight(int width) {
+                return Math.max(18, super.measureHeight(width - 20));
+            }
+
+            @Override protected void renderWidget(net.minecraft.client.gui.GuiGraphics graphics, int mouseX,
+                    int mouseY, float partialTick) {
+                super.renderWidget(graphics, mouseX, mouseY, partialTick);
+                graphics.renderItem(new net.minecraft.world.item.ItemStack(item), getX() + getWidth() - 16, getY());
+            }
+        }));
     }
 
     private Component remaining(long deadline) {

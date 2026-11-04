@@ -67,12 +67,7 @@ public final class EconomyService implements EconomyNetwork.Backend {
                 throw new IllegalArgumentException("explicit creative test ended");
             return;
         }
-        if (c.page() == EconomyView.Page.WALLET) {
-            if (WalletInventory.slots(player).stream()
-                    .noneMatch(s -> s.read().get().getItem() instanceof WalletItem))
-                throw new IllegalArgumentException("wallet no longer carried");
-            return;
-        }
+        if (c.page() == EconomyView.Page.WALLET) return;
         if (!player.level().dimension().location().toString().equals(c.dimension())
                 || player.distanceToSqr(
                                 c.anchor().getX() + .5,
@@ -611,6 +606,21 @@ public final class EconomyService implements EconomyNetwork.Backend {
         var score = StandingAccess.snapshot(player, currency.faction());
         var metadata = new CompoundTag();
         metadata.putLong("server_game_time", now(player));
+        if (s.context.page() == EconomyView.Page.WALLET) {
+            var standings = new net.minecraft.nbt.ListTag();
+            for (Currency faction : Currency.values()) {
+                var state = StandingAccess.snapshot(player, faction.faction());
+                var row = new CompoundTag();
+                row.putString("faction", faction.faction());
+                row.putBoolean("known", state.known());
+                row.putBoolean("enabled", state.enabled());
+                row.putInt("true", state.value());
+                if (state.known() && state.enabled())
+                    row.putInt("effective", StandingAccess.effective(player, faction.faction()));
+                standings.add(row);
+            }
+            metadata.put("standing_overview", standings);
+        }
         if (s.context.station()) {
             var factions = new net.minecraft.nbt.ListTag();
             var site = SettlementIndex.get(player.serverLevel()).find(s.context.instance());
@@ -690,7 +700,13 @@ public final class EconomyService implements EconomyNetwork.Backend {
                                 ? inventory.wallets() : List.of(),
                         s.context.page() == EconomyView.Page.TASKS ? List.of() : funds,
                         offers(player, s, draft, inventory, p),
-                        tasking(s.context)
+                        s.context.page() == EconomyView.Page.WALLET
+                                ? Arrays.stream(Currency.values()).flatMap(faction ->
+                                        EconomyTasks.rows(draft, faction, p, false).stream()
+                                                .filter(EconomyView.TaskRow::accepted)
+                                                .filter(row -> !row.status().equals("CLAIMED"))
+                                                .limit(64)).toList()
+                                : tasking(s.context)
                                 ? EconomyTasks.rows(draft, currency, p, enabled).stream()
                                         .filter(row -> taskLane(s.context, row.kind()))
                                         .limit(64).toList()

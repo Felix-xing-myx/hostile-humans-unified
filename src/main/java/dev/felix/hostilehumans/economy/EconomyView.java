@@ -179,12 +179,12 @@ public final class EconomyView {
             boolean canClaim,
             String reason,
             String objective, String item, String targetFaction, long deadline, long timeLimit,
-            boolean accepted, String siteName) {
+            boolean accepted, String siteName, String issuer) {
         public TaskRow(String id, String title, String kind, String status, int progress, int target,
                 int nominalStanding, int availableStanding, long rewardCopper, boolean canAccept,
                 boolean canDeliver, boolean canClaim, String reason) {
             this(id, title, kind, status, progress, target, nominalStanding, availableStanding,
-                    rewardCopper, canAccept, canDeliver, canClaim, reason, "", "", "", 0, 0, false, "");
+                    rewardCopper, canAccept, canDeliver, canClaim, reason, "", "", "", 0, 0, false, "", "");
         }
     }
 
@@ -235,7 +235,7 @@ public final class EconomyView {
                     || wallets.size() > 64
                     || funds.size() > 4
                     || offers.size() > 64
-                    || tasks.size() > 64
+                    || tasks.size() > (page == Page.WALLET ? 256 : 64)
                     || exchanges.size() > 12
                     || permit == null
                     || acknowledgedRequest == null)
@@ -373,6 +373,7 @@ public final class EconomyView {
             b.writeLong(row.timeLimit());
             b.writeBoolean(row.accepted());
             b.writeUtf(row.siteName(), 96);
+            b.writeUtf(row.issuer(), 128);
         }
         var r = p.permit();
         b.writeBoolean(r.known());
@@ -439,7 +440,7 @@ public final class EconomyView {
                             b.readVarInt(),
                             b.readBoolean()));
         var tasks = new java.util.ArrayList<TaskRow>();
-        for (int i = 0, n = size(b, 64); i < n; i++)
+        for (int i = 0, n = size(b, page == Page.WALLET ? 256 : 64); i < n; i++)
             tasks.add(
                     new TaskRow(
                             b.readUtf(128),
@@ -455,7 +456,7 @@ public final class EconomyView {
                             b.readBoolean(),
                             b.readBoolean(),
                             b.readUtf(256), b.readUtf(32), b.readUtf(256), b.readUtf(256),
-                            b.readLong(), b.readLong(), b.readBoolean(), b.readUtf(96)));
+                            b.readLong(), b.readLong(), b.readBoolean(), b.readUtf(96), b.readUtf(128)));
         var permit =
                 new PermitRow(
                         b.readBoolean(),

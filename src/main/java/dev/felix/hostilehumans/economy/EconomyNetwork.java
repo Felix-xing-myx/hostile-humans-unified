@@ -17,7 +17,7 @@ import java.util.function.*;
  * Transport only: typed rows, explicit request acknowledgements and a server-owned service seam.
  */
 public final class EconomyNetwork {
-    public static final String VERSION = "3";
+    public static final String VERSION = "4";
 
     public record Request(
             UUID requestId,

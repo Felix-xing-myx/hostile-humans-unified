@@ -31,6 +31,10 @@ public final class StandingAccess {
         return FactionDefinitions.enemies(first, second);
     }
 
+    public static int effective(ServerPlayer player, String faction) {
+        return StandingEffects.effectiveStanding(faction, false, player);
+    }
+
     public static Snapshot snapshot(ServerPlayer player, String faction) {
         return snapshot(
                 player == null ? null : player.getServer(),

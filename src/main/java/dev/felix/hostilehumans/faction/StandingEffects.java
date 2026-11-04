@@ -67,7 +67,7 @@ public final class StandingEffects {
     static int effectiveStanding(Human human, Player player) {
         return effectiveStanding(HumanFactions.id(human), human.getTier() == HumanTier.ROAMER, player);
     }
-    private static int effectiveStanding(String faction, boolean roamer, Player player) {
+    static int effectiveStanding(String faction, boolean roamer, Player player) {
         int standing = trueStanding(faction, roamer, player);
         if (!UnifiedConfig.get().featureEnabled("standing", true) || roamer) return standing;
         IdentityBands.Selection band = IdentityBands.selected(player);
