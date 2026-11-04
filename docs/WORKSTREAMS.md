@@ -1,3 +1,7 @@
+## 手动放置模板恢复设施绑定
+
+基线 `2a28ace`，主控在 `worktrees/restore-template-facilities` 负责。已确认 NBT 导出保留设施和分区，放置入口只写入方块与实体，缺少新世界实例登记。普通与分批放置均在成功完成后共用手动登记入口，按变换后的几何登记 ROOT 和中介站。保留普通建筑与附件的原入口。
+
 ## 普通战斗与局部团战调度优化
 
 基线 `415f5ac1bf63b436fb8c947dea030ae284a1111e`。主控负责 `worktrees/battle-strategy-performance` 的 `perf/battle-strategy-performance`，范围为感知前线调度、战斗目标及战术、近战站位与追击、装备查询和诊断。现有前端工作树有独立修改。

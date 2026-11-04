@@ -27,7 +27,7 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlac
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.Vec3;
 
-/** Vanilla template files; dimension-local settlement registration is a separate operation. */
+/** Vanilla template files and completion of confirmed manual placements. */
 final class SettlementTemplateFiles {
     private static final long LARGE_TEMPLATE_THRESHOLD = 262_144;
     private static final Map<ServerPlayer, CaptureJob> CAPTURES = new WeakHashMap<>();
@@ -40,7 +40,7 @@ final class SettlementTemplateFiles {
     private static final Map<ServerPlayer, Placement> PENDING = new WeakHashMap<>();
 
     private record Placement(ServerLevel level, UUID wandToken, ResourceLocation id, BlockPos origin,
-            StructurePlaceSettings settings, StructureTemplate template, CompoundTag largeData, RegionBox bounds, int entityEntries, boolean authorCarrier, long expires) {}
+            StructurePlaceSettings settings, StructureTemplate template, CompoundTag largeData, RegionBox bounds, int entityEntries, SettlementTemplate author, long expires) {}
 
     private SettlementTemplateFiles() {}
 
@@ -266,7 +266,7 @@ final class SettlementTemplateFiles {
             data.put("palette", palettes.getList(0).copy());
             data.remove("palettes");
         }
-        boolean authorCarrier = sanitize(data, size, rotation, mirror, source.authorRequired()) != null;
+        var author = sanitize(data, size, rotation, mirror, source.authorRequired());
         if (entities) validateEntityPositions(data, size, origin, settings, bounds);
         SettlementHumanTemplates.prepareFile(data, null, null);
         boolean large = volume(size) > LARGE_TEMPLATE_THRESHOLD;
@@ -274,7 +274,7 @@ final class SettlementTemplateFiles {
         var ghosts = previewBlocks(level, data, origin, settings, large);
         int count = entityEntries(data);
         PENDING.put(player, new Placement(level, wandToken, id, origin, settings, copy, large ? data : null,
-                bounds, count, authorCarrier,
+                bounds, count, author,
                 level.getGameTime() + previewTicks));
         player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                 entities ? "gui.hostile_humans_unified.settlement.preview_entity_count"
@@ -397,15 +397,35 @@ final class SettlementTemplateFiles {
         if (!pending.settings().isIgnoreEntities())
             player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                     "gui.hostile_humans_unified.settlement.placement_entity_count", pending.entityEntries()));
-        return "placed " + pending.id() + (pending.authorCarrier()
-                ? "; open its information block to register the new site" : "");
+        String message = "placed " + pending.id();
+        var author = pending.author();
+        if (author == null || author.kind() == SettlementTemplate.Kind.ORDINARY) return message;
+        if (!author.kind().root()) return message + "; attach it to an existing settlement from its information block";
+
+        // Preview has already rotated/mirrored the author metadata into coordinates relative to
+        // the placement's minimum corner. Vanilla rotates the actual blocks, so only translate here.
+        var bounds = pending.bounds();
+        var offset = author.originOffset();
+        var position = new BlockPos(bounds.minX() - offset.x(), bounds.minY() - offset.y(), bounds.minZ() - offset.z());
+        try {
+            if (!pending.level().hasChunkAt(position)
+                    || !(pending.level().getBlockEntity(position) instanceof SettlementInformationBlockEntity info)
+                    || !info.author().equals(SettlementCodec.template(author)))
+                return message + "; settlement registration failed: placed information block is missing or changed";
+            var transform = SettlementAuthoring.explicitTransform(author, position, new CompoundTag());
+            var result = SettlementAuthoring.registerRoot(pending.level(), info, author, transform, "");
+            return message + (result.changed() ? "; registered as a new settlement"
+                    : "; settlement registration failed: " + result.reason());
+        } catch (RuntimeException invalid) {
+            return message + "; settlement registration failed: " + invalid.getMessage();
+        }
     }
 
     static void keepPreview(ServerPlayer player, int ticks, UUID wandToken) {
         var current = ownedPreview(player, wandToken);
         if (current != null)
             PENDING.put(player, new Placement(current.level(), current.wandToken(), current.id(), current.origin(), current.settings(),
-                    current.template(), current.largeData(), current.bounds(), current.entityEntries(), current.authorCarrier(), current.level().getGameTime() + ticks));
+                    current.template(), current.largeData(), current.bounds(), current.entityEntries(), current.author(), current.level().getGameTime() + ticks));
     }
 
     static boolean hasPreview(ServerPlayer player, UUID wandToken) {

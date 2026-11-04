@@ -2,6 +2,7 @@ package dev.felix.hostilehumans.settlement;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.ArrayList;
@@ -104,43 +105,33 @@ public final class SettlementAuthoring {
             return new SettlementIndex.Result(false, "missing or stale author", null);
         try {
             var author = SettlementCodec.template(info.author());
-            if (!author.kind().root())
-                return new SettlementIndex.Result(
-                        false, "only a protected ROOT creates an instance", null);
-            var index = SettlementIndex.get(player.serverLevel());
-            UUID id = UUID.randomUUID();
-            String key = UUID.randomUUID().toString();
-            var old = info.instance() == null ? null : index.find(info.instance());
-            if (old != null) {
-                var same =
-                        old.modules().stream()
-                                .filter(
-                                        m ->
-                                                m.key().equals(info.module())
-                                                        && m.informationBlock().equals(position))
-                                .findFirst()
-                                .orElse(null);
-                if (same != null)
-                    return new SettlementIndex.Result(
-                            false,
-                            "already linked; explicitly update or export this instance",
-                            old);
-            }
-            var transform = explicitTransform(author, position, options);
-            String name = options.getString("name");
-            if (name.isBlank())
-                name =
-                        author.faction().substring(author.faction().indexOf(':') + 1)
-                                + " "
-                                + id.toString().substring(0, 8);
-            var result =
-                    index.importModule(
-                            id, name, new SettlementModule(key, author, transform, position), 0);
-            if (result.instance() != null) info.bind(result.instance().id(), key);
-            return result;
+            return registerRoot(player.serverLevel(), info, author,
+                    explicitTransform(author, position, options), options.getString("name"));
         } catch (RuntimeException bad) {
             return new SettlementIndex.Result(false, "rejected: " + bad.getMessage(), null);
         }
+    }
+
+    /** A confirmed template placement and an explicit author import create the same runtime binding. */
+    static SettlementIndex.Result registerRoot(ServerLevel level, SettlementInformationBlockEntity info,
+            SettlementTemplate author, TemplateTransform transform, String name) {
+        if (!author.kind().root())
+            return new SettlementIndex.Result(false, "only a protected ROOT creates an instance", null);
+
+        var index = SettlementIndex.get(level);
+        var position = info.getBlockPos();
+        var old = info.instance() == null ? null : index.find(info.instance());
+        if (old != null && old.modules().stream().anyMatch(
+                module -> module.key().equals(info.module()) && module.informationBlock().equals(position)))
+            return new SettlementIndex.Result(false, "already linked; explicitly update or export this instance", old);
+
+        UUID id = UUID.randomUUID();
+        String key = UUID.randomUUID().toString();
+        if (name.isBlank())
+            name = author.faction().substring(author.faction().indexOf(':') + 1) + " " + id.toString().substring(0, 8);
+        var result = index.importModule(id, name, new SettlementModule(key, author, transform, position), 0);
+        if (result.changed()) info.bind(id, key);
+        return result;
     }
 
     public static SettlementIndex.Result join(
