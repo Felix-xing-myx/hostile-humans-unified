@@ -39,6 +39,7 @@ final class SettlementBuildingPack {
             if (schema != 1 || id == null || !id.toString().equals(template) || template.length() > 256
                     || sha256 == null || !sha256.matches("[0-9a-f]{64}"))
                 throw new IllegalArgumentException("invalid building pack manifest");
+            SettlementTemplateLibrary.validateId(id);
         }
     }
 

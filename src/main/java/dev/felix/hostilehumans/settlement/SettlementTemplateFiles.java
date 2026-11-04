@@ -34,7 +34,7 @@ final class SettlementTemplateFiles {
     private static final Map<ServerPlayer, Placement> PENDING = new WeakHashMap<>();
 
     private record Placement(ServerLevel level, UUID wandToken, ResourceLocation id, BlockPos origin,
-            StructurePlaceSettings settings, StructureTemplate template, RegionBox bounds, int entityEntries, long expires) {}
+            StructurePlaceSettings settings, StructureTemplate template, RegionBox bounds, int entityEntries, boolean authorCarrier, long expires) {}
 
     private SettlementTemplateFiles() {}
 
@@ -60,11 +60,14 @@ final class SettlementTemplateFiles {
         var manager = level.getStructureManager();
         var result = new ListTag();
         var catalog = new java.util.TreeMap<ResourceLocation, String>();
+        var installed = SettlementBuildingCatalog.entries(level.getServer());
+        for (var id : installed.keySet()) catalog.put(id, "building_pack");
         try (var templates = manager.listTemplates()) {
             templates.distinct().filter(id -> id.toString().length() <= 256).forEach(id -> {
                 boolean world = Files.isRegularFile(manager.getPathToGeneratedStructure(id, ".nbt"));
                 if (world || id.getNamespace().equals("hostile_humans_unified"))
-                    catalog.put(id, world ? "world" : "pack");
+                    if (world) catalog.put(id, "world");
+                    else catalog.putIfAbsent(id, "pack");
             });
         }
         try {
@@ -76,13 +79,16 @@ final class SettlementTemplateFiles {
                 .sorted(java.util.Comparator.comparingInt(entry -> switch (entry.getValue()) {
                     case "instance" -> 0;
                     case "world" -> 1;
-                    default -> 2;
+                    case "building_pack" -> 2;
+                    default -> 3;
                 }))
                 .limit(32)
                 .forEach(entry -> {
                     var row = new CompoundTag();
                     row.putString("id", entry.getKey().toString());
-                    row.putBoolean("world", !entry.getValue().equals("pack"));
+                    row.putBoolean("world", entry.getValue().equals("world") || entry.getValue().equals("instance"));
+                    row.putBoolean("generation", entry.getValue().equals("building_pack")
+                            && SettlementBuildingCatalog.generationEnabled(level.getServer(), entry.getKey()));
                     row.putString("source", entry.getValue());
                     result.add(row);
                 });
@@ -114,7 +120,8 @@ final class SettlementTemplateFiles {
         if (id.getPath().equals("untitled")) return "set a template ID and save the author draft first";
         var manager = level.getStructureManager();
         var path = SettlementTemplateLibrary.path(id);
-        if (!overwrite && (Files.exists(path) || manager.get(id).isPresent()))
+        if (!overwrite && (Files.exists(path) || manager.get(id).isPresent()
+                || SettlementBuildingCatalog.entries(level.getServer()).containsKey(id)))
             return "template ID already exists; choose a new ID or explicitly replace the instance file";
         if (overwrite && !Files.isRegularFile(path)) return "only an existing instance file can be replaced";
         var template = new StructureTemplate();
@@ -167,11 +174,15 @@ final class SettlementTemplateFiles {
         var level = player.serverLevel();
         var manager = level.getStructureManager();
         var path = SettlementTemplateLibrary.path(id);
+        var pack = SettlementBuildingCatalog.entries(level.getServer()).get(id);
+        boolean instanceFile = Files.isRegularFile(path);
+        boolean worldFile = Files.isRegularFile(manager.getPathToGeneratedStructure(id, ".nbt"));
+        boolean fromPack = !instanceFile && !worldFile && pack != null;
         StructureTemplate original;
         try {
-            original = Files.isRegularFile(path)
-                    ? manager.readStructure(SettlementTemplateLibrary.read(path))
-                    : manager.get(id).orElseThrow(() -> new IllegalArgumentException("template not found: " + id));
+            if (instanceFile) original = manager.readStructure(SettlementTemplateLibrary.read(path));
+            else if (fromPack) original = manager.readStructure(SettlementTemplateLibrary.read(pack.template()));
+            else original = manager.get(id).orElseThrow(() -> new IllegalArgumentException("template not found: " + id));
         } catch (IOException error) {
             throw new IllegalArgumentException("instance template could not be read: " + id, error);
         }
@@ -191,13 +202,13 @@ final class SettlementTemplateFiles {
             data.put("palette", palettes.getList(0).copy());
             data.remove("palettes");
         }
-        sanitize(data, size, rotation, mirror);
+        boolean authorCarrier = sanitize(data, size, rotation, mirror, instanceFile || fromPack) != null;
         if (entities) validateEntityPositions(data, size, origin, settings, bounds);
         SettlementHumanTemplates.prepareFile(data, null, null);
         var copy = manager.readStructure(data);
         var ghosts = previewBlocks(level, data, origin, settings);
         int count = entityEntries(data);
-        PENDING.put(player, new Placement(level, wandToken, id, origin, settings, copy, bounds, count,
+        PENDING.put(player, new Placement(level, wandToken, id, origin, settings, copy, bounds, count, authorCarrier,
                 level.getGameTime() + previewTicks));
         player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                 entities ? "gui.hostile_humans_unified.settlement.preview_entity_count"
@@ -309,14 +320,15 @@ final class SettlementTemplateFiles {
         if (!pending.settings().isIgnoreEntities())
             player.sendSystemMessage(net.minecraft.network.chat.Component.translatable(
                     "gui.hostile_humans_unified.settlement.placement_entity_count", pending.entityEntries()));
-        return "placed " + pending.id() + "; open its information block to register the new site";
+        return "placed " + pending.id() + (pending.authorCarrier()
+                ? "; open its information block to register the new site" : "");
     }
 
     static void keepPreview(ServerPlayer player, int ticks, UUID wandToken) {
         var current = ownedPreview(player, wandToken);
         if (current != null)
             PENDING.put(player, new Placement(current.level(), current.wandToken(), current.id(), current.origin(), current.settings(),
-                    current.template(), current.bounds(), current.entityEntries(), current.level().getGameTime() + ticks));
+                    current.template(), current.bounds(), current.entityEntries(), current.authorCarrier(), current.level().getGameTime() + ticks));
     }
 
     static boolean hasPreview(ServerPlayer player, UUID wandToken) {
@@ -369,6 +381,11 @@ final class SettlementTemplateFiles {
     /** Clean copied carriers and normalize authored geometry to the placed structure's minimum corner. */
     private static SettlementTemplate sanitize(CompoundTag data, TemplateTransform.Cell size,
             Rotation rotation, Mirror mirror) {
+        return sanitize(data, size, rotation, mirror, true);
+    }
+
+    private static SettlementTemplate sanitize(CompoundTag data, TemplateTransform.Cell size,
+            Rotation rotation, Mirror mirror, boolean requireCarrier) {
         var localBounds = new RegionBox(0, 0, 0, size.x() - 1, size.y() - 1, size.z() - 1);
         var zero = SettlementAuthoring.cell(BlockPos.ZERO);
         var orientation = new TemplateTransform(zero, zero, TemplateTransform.Mirror.valueOf(mirror.name()),
@@ -421,7 +438,8 @@ final class SettlementTemplateFiles {
             tag.remove("settlement_instance");
             tag.remove("settlement_module");
         }
-        if (carriers != 1) throw new IllegalArgumentException("author templates require exactly one information block");
+        if (carriers > 1 || requireCarrier && carriers == 0)
+            throw new IllegalArgumentException("author templates require exactly one information block");
         return carrierAuthor;
     }
 }

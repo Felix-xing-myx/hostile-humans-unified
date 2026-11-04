@@ -93,7 +93,13 @@ public final class SettlementWandScreen extends PanelScreen {
                 var row = view.choices().getCompound(i);
                 String id = row.getString("id");
                 nodes.add(button(Component.literal(id).append(" ? ")
-                                .append(text(row.getString("source").equals("instance") ? "template_instance" : row.getBoolean("world") ? "template_world" : "template_pack")),
+                                .append(text(switch (row.getString("source")) {
+                                    case "instance" -> "template_instance";
+                                    case "world" -> "template_world";
+                                    case "building_pack" -> row.getBoolean("generation")
+                                            ? "template_building_pack_enabled" : "template_building_pack";
+                                    default -> "template_pack";
+                                })),
                         id.equals(template.text()), () -> { template.set(id); listOpen = false; rebuildWidgets(); }));
             }
         }

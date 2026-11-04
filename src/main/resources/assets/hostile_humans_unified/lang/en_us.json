@@ -34,6 +34,8 @@
   "gui.hostile_humans_unified.settlement.download.busy": "Template transfer is busy: %s. Retry with /hh settlement template download.",
   "gui.hostile_humans_unified.settlement.download.denied": "Template download requires creative mode and operator permission: %s",
   "gui.hostile_humans_unified.settlement.download.local": "This instance already holds the template: %s",
+  "gui.hostile_humans_unified.settlement.template_building_pack": "Installed building pack",
+  "gui.hostile_humans_unified.settlement.template_building_pack_enabled": "Building pack approved for generation",
   "gui.hostile_humans_unified.settlement.template_instance": "Instance library",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_changed": "The board now belongs to a different settlement. Close and reopen the board.",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_missing": "The task board at the original position was removed or replaced.",

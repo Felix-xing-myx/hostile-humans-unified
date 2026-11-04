@@ -34,6 +34,8 @@
   "gui.hostile_humans_unified.settlement.download.busy": "模板回传忙碌：%s。可用 /hh settlement template download 重试。",
   "gui.hostile_humans_unified.settlement.download.denied": "下载模板需要创造模式和管理权限：%s",
   "gui.hostile_humans_unified.settlement.download.local": "当前实例已保存模板：%s",
+  "gui.hostile_humans_unified.settlement.template_building_pack": "已安装建筑包",
+  "gui.hostile_humans_unified.settlement.template_building_pack_enabled": "已许可自然生成的建筑包",
   "gui.hostile_humans_unified.settlement.template_instance": "实例建筑库",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_changed": "委托板归属的据点已变化，请关闭并重新打开界面。",
   "item.hostile_humans_unified.settlement_facility_tool.task_board_missing": "原位置的委托板已移除或被替换。",

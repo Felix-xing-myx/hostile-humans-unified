@@ -1,3 +1,7 @@
+## Installed building pack catalog
+
+Bundled and external archives share startup validation, duplicate and aggregate size limits. The placement wand reads the catalog, while an explicit enable list supplies the generation consumer. Legacy templates without author carriers can be placed manually.
+
 ## Building pack archive
 
 Author sessions publish the saved NBT revision with a bounded ZIP manifest, checksum and generation definition. The same archive reader validates template size, identity and carrier layout. Server discovery and world-generation registration still need integration.
