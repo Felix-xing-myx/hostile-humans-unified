@@ -1,7 +1,87 @@
 # Hostile Humans Unified — 更新日志 / Changelog
 
 
-## 未发布
+## 3.15.17 — 2026-11-05
+
+- 战利品草稿按世界/服务器本地缓存，双击清空，补底部分页、切池保留滚动、醒目的提交/副本入口与JEI子界面Esc安全返回。
+- 雇佣改为阵营自身货币，流浪者接受任意一种；蓝队铜币等值基价20/200/2000/20000，按真实汇率与声望折扣整笔换算，复用钱包事务。
+- 赤獠重击独立伤害倍率1.2→1.35；钱包移除重复余额组，驻守追击按钮改图标状态表达。
+- 建筑区域线框改为世界宽度并支持不手持时持续显示；控制台地图补生物群系染色；创造委托测试列表重开保留。
+- 新增只读开发者物品清单，集中展示工具图标、用途和操作；补开发诊断提示中英本地化。
+
+
+- 蓝队结阵抗性改为成员剩余不超过5秒时提前集体续至20秒，覆盖范围内未临期成员；保留更高级、无限与更长效果。
+
+- 闪避视觉峰值调至0.6格，主体延至12tick，采用加速、回程缓冲与小幅回摆曲线；残影尾部后休息10tick，两次开始最早25tick。
+
+- 监控 HUD 的射击模式词改用弱化色和与枪名一致的0.85倍字重绘制，固定列宽避免切换模式时名称左右跳动。
+
+
+## 3.15.15 — 2026-11-05
+
+- 战利品编配器增加独立使用帮助页与高级编辑说明入口，按六个主题解释抽取池、权重、数量、原始层级及绑定保存；保留编辑草稿，日常页面不堆叠长篇说明。
+
+- 修复旧版非空阵营能力分配表缺少蓝队条目时，结阵抗性没有自动接入的问题；按阵营补全缺失默认分配，保留显式空列表、全空分配表和自定义列表，不修改实例配置。
+
+- 灰鸦闪避动画在完整播放（含残影尾部）后冷却0.5秒，两次开始最早相隔22tick（1.1秒），伤害闪避概率仍逐次生效；视觉横移峰值0.58降至0.42格。
+- 闪避残影改为捕获单次人物及装备绘制，覆盖皮肤、盔甲、阵营绑带、盾牌和持物的标准模型材质，不反复调用装备动画与渲染器。
+
+- 战利品编配器显示物品本地化／英文名、模组前缀和原生图标；中文、英文、ID及@模组自动分页搜索，常用规则键增加中英文别名。
+- 可选JEI公开接口接入物品幽灵拖入／快捷选择，编辑页紧凑预留两侧与搜索栏，未安装JEI时保留完整内置选物功能。
+
+- 监视／接管HUD平时置于聊天消息之上，打开聊天时切换为聊天栏在前；通过原生绘制阶段与缓冲边界协调，保留聊天和现有透明样式。
+
+## 3.15.13 — 2026-11-05
+
+- 修复灰鸦闪避闪烁期间，附魔装备本体与光效复用隐藏绘制对象而触发 Duplicate delegates 的客户端崩溃。
+
+## 3.15.12 — 2026-11-05
+
+- 新增战利品编配器：原生与模组表检索、普通池/物品表单、无损高级规则树、自建表保存应用与标准资源导出；支持原版延迟容器、双箱绑定与模板保存。
+
+- 修复任务列表简介与进度条重叠裁字，卡片按字体行高和进度条自动留足高度。
+
+- 简化训练中心流程，将当前步骤主按钮固定在底部，分离物资页，突破仅在服务端确认可突破时提供条件说明及二次确认。
+
+- 修复训练中心物资输入框在服务器数据刷新时丢失焦点；公共表单重建保留输入光标与选区。
+
+- 靛磐新增结阵抗性，5格内至少两名其他同阵营人类时，为自身和范围内成员赋予20秒抗性提升Ⅰ；持有效果期间暂停检测。
+
+- 重做灰鸦闪避表现，使用全身横向平移、短促闪烁和更宽的淡色残影，移除绕脚倾转。
+
+- TaCZ装填等待保留战斗策略的瞄准意图，避免持续取消瞄准导致装填后重新进入开镜过渡。
+
+## 3.15.11 — 2026-11-05
+
+- 提高灰鸦闪避的第三人称姿态优先级，改善拖影轮廓与深度混合。
+
+- 赤獠重击附带的减速改为缓慢Ⅱ，持续3秒。
+- 监控 HUD 用本地化文字显示射击模式，固定标签列宽。
+
+## 3.15.10 — 2026-11-05
+
+- 灰鸦闪避默认调为10%／20%／30%，背负盾的非穿甲物理减伤调为10%。成功闪避时添加横向摆身与渐隐拖影，连续触发继承当前摆幅和速度。
+- 苍隼近战虚弱改为持续3秒，每名苍隼独立冷却4.5秒。
+
+- 人类瞬间治疗Ⅰ／Ⅱ基础治疗下调为6／12点。再生专精只作用于基础治疗，最大生命百分比加成独立结算。
+
+## 3.15.9 — 2026-11-05
+
+- 灰鸦副手盾也提供背部显示与被动防护，副手仍优先合格的双持武器。
+- 精简建筑信息方块的作者选项卡，将重复操作归还对应工具。
+
+- 灰鸦一至三阶闪避默认15%／25%／35%，逐次伤害抽签，音效仍限频。关闭主动盾防，背包盾提供15%普通物理减伤，并按格位依次磨损。
+
+- 苍隼核心枪装填耗时改为通用的70%。贴身时有弹枪械先射击，打空后允许换近战并后台装填，近战命中附加10秒虚弱。
+- 赤獠直接武器命中有25%概率重击，伤害额外乘1.2，并附加5秒缓慢与暴击音效。
+- 靛磐持枪副手盾默认减伤提高至16%；持盾推进接受可用盾并让普通追击保留移动权。
+
+- 人类瞬间治疗Ⅰ恢复 8 点加最大生命的 6%，Ⅱ恢复 16 点加最大生命的 12%。
+
+## 3.15.8 — 2026-11-04
+
+- 撤退参考实际脱身效果，接入近战反击、限时枪械回射和短期治疗评估。
+- 高压举盾区分重击与持续压力，实际格挡后动态冷却。主动盾挡削减一半穿甲，盾耐久默认系数为 0.0027。
 
 - 处理低威胁敌人时，显著更高的真实伤害来源优先获得回看、视觉采样和识别后的换敌复核。
 
@@ -1616,3 +1696,82 @@ This release consolidates equipment, configuration, personal progression, soldie
 - 修复人类监视器退出或目标失效后导航快照残留；运行中的观察实体离开世界时释放观察编号。监控模式隐藏左上角诊断HUD，保留场景标记和F8详情。
 
 - 新增归巢护符：已雇佣士兵背包携带已标记护符时可在普通致命伤后尝试安全回传，成功消耗1个，恢复25%生命并改为落点驻守；仅创造获取，未接入合成/交易/生成。
+
+
+---
+
+## 1.4.13 — 并入前史（原版 Hostile Humans 发布说明）
+
+以下为并入前的原版 Hostile Humans 1.4.13 发布说明，来自维护目录根部的 `hostile_humans_1.4.13更新日志.txt`，随 `hostile_humans_1.4.13.jar` 一同保存。原文未改，只整理为日志格式。该版本早于 Hostile Humans Unified 3.0.0，是现有资料中最早的更新记录；1.4.13 之前的版本没有留下记录。
+
+### 简体中文
+
+**新增**
+
+- 已移植到 1.20.1 版本。
+- 现在，人类会注意并回应各种声音，比如方块的破碎声、方块的放置声、各种门的开关声、爆炸声，以及玩家或人类受到伤害时的声音。
+- 现在，你可以利用数据包为人类提供各种类型的盔甲。具体操作方式请参阅常见问题解答。
+- 人类不会被困在船上。
+- 现在人类也可以在水中游泳了，所以再也不能通过待在水中来躲避人类了。
+- 现在，如果人类被困在蜘蛛网里，他们就会把蜘蛛网弄断。
+- 二级人类可以在水下饮用「水呼吸药水」；现在，人类在爬梯子时，也可以打开上方的活板门。
+- 人类不再只专注于一个目标。在战斗中，如果有其他敌人来攻击，他们可以随时更换攻击目标。
+- 当玩家死亡时，掉落的盔甲会遭到损坏。这样一来，玩家就不会在击败二级人类敌人后还拥有完好无损的钻石级盔甲了。
+- 现在，人类造成的延迟时间稍长了一些，不再只是半秒而已。
+- 新的配置选项包括：人类可以进行治疗的次数限制、是否禁止战斗事件的触发或指定可以触发的事件类型；如果安装了「路标」模组，那么是否不允许相关建筑与路标一同出现等等。
+- 现在，人类中有 20% 的人在夜间会睡在床上。
+- 现在，二级人类在攻击你之前，有极小的几率能吃到被施了魔法的金苹果，或者有较小的几率能喝到某种药剂。
+- 人类在受到适度伤害后就会立刻恢复体力，而不会等到生命值只剩 1 点时才去治疗。一级人类总是会战斗到最后一刻，或者选择逃跑，然后再去恢复体力。
+- 重新设计了自愈系统，之前的自愈效果几乎微乎其微，只能恢复 1 点生命值而已。
+- 现在，人类可以正确地与门进行互动了。
+- 现在，人类在挥棒攻击时不再像僵尸那样动作迟缓，而是更像真正的球员那样进行攻击。
+- 已修复人类在与非玩家怪物战斗时拥有超高速移动的漏洞。
+
+**更改与修复内容**
+
+- 女性角色的皮肤问题已得到修复，其中一些角色的手臂部位存在纹理损坏的问题。
+- 修复了人类无法拾取「不死图腾」的问题（不过，如果人类身上有护盾的话，他们仍然无法拾取该图腾）。
+- 修复了人类在使用药水后仍手握药水的错误。现在，人类在使用药水后，空药水瓶也会被丢弃。
+- 已修复了这样一个问题：拥有护盾的人类角色没有像普通玩家那样的冷却时间限制。
+- 1.20.1 测试版中的各种漏洞修复：修复了放置 TNT 时人类角色无法移动的问题；人类不再攻击那些躺在床上的玩家了；人类现在能够正确地用盾牌进行阻挡了；人类不再能通过暴击伤害立即杀死对手了；修复了人类角色在恢复生命值后会朝玩家方向移动，但在几秒钟内不会进行攻击的问题；解决了人类忘记如何正确重新装填弩箭的问题；修复了第一层级人类饮用药水的问题；不知为何，二级人类使用弱化药水的设定被修复了；解决人类在从水中上浮到空中时被抛向天空的问题；解决人类在跑步跳跃时身体向后翻转的问题。
+
+**兼容性相关的更改**
+
+- 村民姓名：现在，当有人被杀死时，系统会始终显示杀死该人的具体姓名，而不会再只是简单标注为「被人类杀死」。
+- 修复了小屋中浮动的路标问题。
+
+### English
+
+**New**
+
+- Ported to 1.20.1!
+- Humans now pay attention and sometimes go to sounds, such as block breaking, block placing, various door types closing and opening, explosions, and a player or human taking damage.
+- You can now give humans any type of armor you want with a datapack; check the FAQ for how it works.
+- Humans can't get stuck in a boat.
+- Humans can now swim in water, so you can no longer cheese humans by being in water.
+- Humans break cobwebs if stuck in them now.
+- Tier 2 humans have a chance to drink a Water Breathing Potion while underwater; humans can now open trap doors above them when going up ladders.
+- Humans no longer focus only one target; they can now switch targets during a fight if something else is attacking them.
+- Upon death, dropped armor will be damaged. This fixes players having full perfect diamond armor after fighting tier 2 humans.
+- Humans now block a bit longer instead of only half a second.
+- New config options, such as how many times a human can heal, an option to disable battle events or specify which type of event can spawn, and whether structures should NOT spawn with waystones when the Waystones mod is installed.
+- Humans now have a 20% chance to sleep on a bed during the night.
+- Tier 2 humans now have a rare chance to eat an enchanted golden apple or a semi-rare chance to take a potion before attacking upon seeing you.
+- Humans heal as soon as they are decently hurt instead of waiting until the last second with one heart. Tier 1 humans always fight to the death or run away and then heal.
+- Reworked the self-healing system; before they barely healed one heart.
+- Humans can now properly interact with doors.
+- Humans now vary their swing attack; instead of being slow like a zombie, they attack more like an actual player.
+- Fixed humans having super speed when fighting non-player mobs.
+
+**Changes and fixes**
+
+- Women skins have been fixed; some of them had broken textures on their arms.
+- Fixed humans not picking up the Totem of Undying (they won't pick it up if they have shields though).
+- Fixed humans still holding a potion in their hand after using it. Humans now also drop an empty bottle if they used a potion.
+- Fixed axes not giving humans with a shield a cooldown like players have.
+- Fixed 1.20.1 beta issues: humans freezing when TNT is placed; humans attacking players lying down in bed; humans not blocking with shields properly; humans instantly killing players with crit damage; humans healing then going towards the player but not fighting for a couple of seconds; humans forgetting how to fully reload a crossbow; tier 1 humans drinking potions; tier 2 humans drinking a weakness potion; humans being thrown into the sky when going from air from swimming; humans turning around on themselves when run jumping.
+
+**Compatibility related changes**
+
+- Villager Names: deaths now always state the name of the human that killed you instead of sometimes saying "killed by Human".
+- Fixed Cottage having a floating waystone.
