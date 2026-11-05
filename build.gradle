@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'net.minecraftforge.gradle' version '6.0.54'
 }
-version = '3.15.7'
+version = '3.15.17'
 group = 'dev.felix.hostilehumans'
 base { archivesName = 'hostile-humans-unified-1.20.1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -27,6 +27,19 @@ def jegApiJar = file(findProperty('jegApiJar') ?: new File(workspaceRootDir, '..
 def scgunsApiJar = file(findProperty('scgunsApiJar') ?: new File(workspaceRootDir, '../game/.minecraft/versions/1.20.1-Forge_47.4.21/mods/ScorchedGuns-0.5.5-1.20.1.jar'))
 // Scorched Guns' public sound network uses its required Framework API.
 def frameworkApiJar = file(findProperty('frameworkApiJar') ?: new File(workspaceRootDir, '../game/.minecraft/versions/1.20.1-Forge_47.4.21/mods/framework-forge-1.20.1-0.8.0.jar'))
+// Public JEI interfaces only. Explicit inputs work without JEI installed in the runtime instance.
+def jeiApiJar = findProperty('jeiApiJar') ? file(findProperty('jeiApiJar')) : {
+    def mods = new File(workspaceRootDir, '../game/.minecraft/versions/1.20.1-Forge_47.4.21/mods')
+    def candidates = (mods.listFiles() ?: []).findAll { candidate ->
+        if (!candidate.name.endsWith('.jar')) return false
+        def zip = new java.util.zip.ZipFile(candidate)
+        try { return zip.getEntry('mezz/jei/api/IModPlugin.class') != null }
+        finally { zip.close() }
+    }
+    if (candidates.size() != 1) throw new GradleException('Supply -PjeiApiJar=<JEI 15 API or full JAR path>; runtime JEI remains optional.')
+    candidates.first()
+}()
+
 [
         taczApiJar: taczApiJar,
         curiosApiJar: curiosApiJar,
@@ -35,7 +48,8 @@ def frameworkApiJar = file(findProperty('frameworkApiJar') ?: new File(workspace
         scgunsApiJar: scgunsApiJar,
         jegApiJar: jegApiJar,
         geckoApiJar: geckoApiJar,
-        frameworkApiJar: frameworkApiJar
+        frameworkApiJar: frameworkApiJar,
+        jeiApiJar: jeiApiJar
 ].each { label, apiJar ->
     if (!apiJar.isFile()) {
         throw new GradleException("Missing ${label} at ${apiJar}. Supply -P${label}=<path-to-jar>; see README.md.")
@@ -55,6 +69,7 @@ dependencies {
     compileOnly files(jegApiJar)
     compileOnly files(geckoApiJar)
     compileOnly files(frameworkApiJar)
+    compileOnly files(jeiApiJar)
 }
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'

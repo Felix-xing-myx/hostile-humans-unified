@@ -258,6 +258,9 @@
         "ClientAnimationCompatibility",
         "ClientRenderer",
         "DebugWorldLines",
+        "DodgeGeometryCapture",
+        "DodgeRenderTypes",
+        "DodgeTrailLayer",
         "DroppedItemRenderDetail",
         "EmfAnimationCompat",
         "HumanAnimatedItemInHandLayer",
@@ -277,6 +280,7 @@
         "JegNativePose",
         "JegNpcAnimator",
         "PlayerAnimatorModelBridge",
+        "RenderVisibilityMask",
         "ScgunsMachineGunPose",
         "ScgunsNativePose",
         "ScgunsNpcAnimator",
@@ -347,6 +351,7 @@
         "PanelGeometry",
         "PanelGroup",
         "PanelHealth",
+        "PanelItemRow",
         "PanelKeyValue",
         "PanelListRow",
         "PanelMeter",
@@ -422,6 +427,13 @@
         "JegReloadPlan",
         "JegSounds",
         "JegThrowables"
+      ]
+    },
+    "compat.jei": {
+      "purpose": "JEI公开界面注册与战利品编辑幽灵物品拖入；可选客户端适配",
+      "source_root": "src/main/java/dev/felix/hostilehumans/compat/jei",
+      "classes": [
+        "LootAuthoringJeiPlugin"
       ]
     },
     "compat.maid": {
@@ -547,6 +559,20 @@
         "HumanProjectileRelations"
       ]
     },
+    "developer": {
+      "purpose": "开发者只读工具清单物品；不授予编辑权限",
+      "classes": [
+        "DeveloperGuideItem"
+      ],
+      "source_root": "src/main/java/dev/felix/hostilehumans/developer"
+    },
+    "developer.client": {
+      "purpose": "工具图标、用途和操作顺序的客户端清单",
+      "classes": [
+        "DeveloperGuideScreen"
+      ],
+      "source_root": "src/main/java/dev/felix/hostilehumans/developer/client"
+    },
     "economy": {
       "purpose": "币值、钱包与原子交易、通行及任务经济接入",
       "source_root": "src/main/java/dev/felix/hostilehumans/economy",
@@ -593,6 +619,7 @@
       "source_root": "src/main/java/dev/felix/hostilehumans/entity",
       "classes": [
         "AggressionMode",
+        "DodgeMotion",
         "FactionBossHuman",
         "Human",
         "HumanAbility",
@@ -672,6 +699,7 @@
         "IdentityBands",
         "PassageCodec",
         "PassagePermit",
+        "RecruitmentPricing",
         "StandingAccess",
         "StandingCommands",
         "StandingEffects",
@@ -687,7 +715,8 @@
       "classes": [
         "DodgeAbility",
         "FactionAbilities",
-        "FactionAbility"
+        "FactionAbility",
+        "GroupResistanceAbility"
       ]
     },
     "faction.visual": {
@@ -735,6 +764,31 @@
       "source_root": "src/main/java/dev/felix/hostilehumans/item",
       "classes": [
         "VanillaPotionStacks"
+      ]
+    },
+    "loot": {
+      "purpose": "服务端战利品表库、无损JSON校验、数据包发布和容器绑定",
+      "source_root": "src/main/java/dev/felix/hostilehumans/loot",
+      "classes": [
+        "LootContainers",
+        "LootDocuments",
+        "LootEditorNetwork",
+        "LootEditorTool",
+        "LootLibrary",
+        "LootLibraryDefaults",
+        "LootLibraryPack",
+        "LootSimpleDraft"
+      ]
+    },
+    "loot.client": {
+      "purpose": "战利品表检索、树状编辑与容器绑定作者界面",
+      "source_root": "src/main/java/dev/felix/hostilehumans/loot/client",
+      "classes": [
+        "LootDisplayText",
+        "LootDraftCache",
+        "LootEditorReturn",
+        "LootEditorScreen",
+        "LootItemCatalog"
       ]
     },
     "mixin": {

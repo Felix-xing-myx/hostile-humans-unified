@@ -18,15 +18,16 @@
 | `behavior/combat/throwable` | 真实投掷物事务与投掷策略 | 7 |
 | `bootstrap` | 统一启动与注册 | 11 |
 | `client` | 客户端会话与注册 | 2 |
-| `client/render` | 实体模型、动画与第一人称呈现 | 39 |
+| `client/render` | 实体模型、动画与第一人称呈现 | 43 |
 | `client/render/tacz` | 可选TaCZ原生第一人称模型、只读骨骼采样与共用换弹片段/声音计划；不操作玩家或服务端弹药 | 19 |
 | `client/ui` | 共用界面样式及指挥/背包界面 | 10 |
-| `client/ui/framework` | 统一客户端主题、原生控件树、布局、绘图与会话适配 | 25 |
+| `client/ui/framework` | 统一客户端主题、原生控件树、布局、绘图与会话适配 | 26 |
 | `client/ui/gun` | 可选枪械监视HUD的原生资源与命中反馈适配，不借用真实玩家物品或上游全局HUD状态 | 2 |
 | `common` | 无游戏依赖的通用集合/缓存 | 6 |
 | `compat` | 可选联动的安全检测和公共桥 | 7 |
 | `compat/firstaid` | 对应可选模组的独立适配 | 3 |
 | `compat/jeg` | 对应可选模组的独立适配 | 10 |
+| `compat/jei` | JEI公开界面注册与战利品编辑幽灵物品拖入；可选客户端适配 | 1 |
 | `compat/maid` | 对应可选模组的独立适配 | 3 |
 | `compat/scguns` | 对应可选模组的独立适配 | 17 |
 | `compat/spartan` | 对应可选模组的独立适配 | 2 |
@@ -35,15 +36,19 @@
 | `cultivation` | 服务器培养候选、周期、账本、训练权限和协议 | 22 |
 | `cultivation/client` | 培养客户端表单、席位与13维候选比较 | 2 |
 | `damage` | 统一伤害流程与关系过滤 | 8 |
+| `developer` | 开发者只读工具清单物品；不授予编辑权限 | 1 |
+| `developer/client` | 工具图标、用途和操作顺序的客户端清单 | 1 |
 | `economy` | 币值、钱包与原子交易、通行及任务经济接入 | 27 |
 | `economy/client` | 钱包、整批报价、通行与基础任务的客户端操作页 | 2 |
-| `entity` | 人类实体、数据与同步 | 19 |
+| `entity` | 人类实体、数据与同步 | 20 |
 | `equipment` | 出生装备、装备池及补给配置 | 31 |
-| `faction` | 阵营身份、关系、声望与数据定义 | 25 |
-| `faction/ability` | 可复用阵营能力 | 3 |
+| `faction` | 阵营身份、关系、声望与数据定义 | 26 |
+| `faction/ability` | 可复用阵营能力 | 4 |
 | `faction/visual` | 身份绑带外观数据、同步与呈现 | 7 |
 | `inventory` | 真实背包、交换、拾取与装备保护 | 21 |
 | `item` | 通用物品规则 | 1 |
+| `loot` | 服务端战利品表库、无损JSON校验、数据包发布和容器绑定 | 8 |
+| `loot/client` | 战利品表检索、树状编辑与容器绑定作者界面 | 5 |
 | `mixin` | 原版/可选模组注入接入；只转交所属功能模块 | 91 |
 | `monitor` | 监控会话、接管与声音接收 | 17 |
 | `monitor/client` | 监控HUD、输入与摄像机 | 16 |
@@ -138,7 +143,7 @@
 
 ### client.render
 
-`BackShieldPose`、`BetterCombatNpcAnimator`、`ClientAnimationCompatibility`、`ClientRenderer`、`DebugWorldLines`、`DroppedItemRenderDetail`、`EmfAnimationCompat`、`HumanAnimatedItemInHandLayer`、`HumanBackpackLayer`、`HumanCameraView`、`HumanGunPresentation`、`HumanPlayerModel`、`HumanRenderDetail`、`HumanRenderer`、`HumanShieldPresentation`、`HumanSpectatorCamera`、`HumanSpectatorGunView`、`HumanSpectatorMotion`、`HumanSpectatorPresentation`、`HumanSpectatorProjection`、`HumanSpectatorView`、`JegNativePose`、`JegNpcAnimator`、`PlayerAnimatorModelBridge`、`ScgunsMachineGunPose`、`ScgunsNativePose`、`ScgunsNpcAnimator`、`ShieldBlockPose`、`SpawnerEntityRenderer`、`SpectatorArmMask`、`SpectatorAudioListener`、`SpectatorMeleePresentation`、`SpectatorMotionTrack`、`SpectatorSkinTextures`、`TaczAnimationPolicy`、`TaczNativeAnimation`、`TaczNpcAnimator`、`TaczNpcEffects`、`TaczReloadPlayback`
+`BackShieldPose`、`BetterCombatNpcAnimator`、`ClientAnimationCompatibility`、`ClientRenderer`、`DebugWorldLines`、`DodgeGeometryCapture`、`DodgeRenderTypes`、`DodgeTrailLayer`、`DroppedItemRenderDetail`、`EmfAnimationCompat`、`HumanAnimatedItemInHandLayer`、`HumanBackpackLayer`、`HumanCameraView`、`HumanGunPresentation`、`HumanPlayerModel`、`HumanRenderDetail`、`HumanRenderer`、`HumanShieldPresentation`、`HumanSpectatorCamera`、`HumanSpectatorGunView`、`HumanSpectatorMotion`、`HumanSpectatorPresentation`、`HumanSpectatorProjection`、`HumanSpectatorView`、`JegNativePose`、`JegNpcAnimator`、`PlayerAnimatorModelBridge`、`RenderVisibilityMask`、`ScgunsMachineGunPose`、`ScgunsNativePose`、`ScgunsNpcAnimator`、`ShieldBlockPose`、`SpawnerEntityRenderer`、`SpectatorArmMask`、`SpectatorAudioListener`、`SpectatorMeleePresentation`、`SpectatorMotionTrack`、`SpectatorSkinTextures`、`TaczAnimationPolicy`、`TaczNativeAnimation`、`TaczNpcAnimator`、`TaczNpcEffects`、`TaczReloadPlayback`
 
 ### client.render.tacz
 
@@ -150,7 +155,7 @@
 
 ### client.ui.framework
 
-`InputValue`、`PanelButton`、`PanelCheck`、`PanelDisclosure`、`PanelEditBox`、`PanelGeometry`、`PanelGroup`、`PanelHealth`、`PanelKeyValue`、`PanelListRow`、`PanelMeter`、`PanelPageSlider`、`PanelRosterRow`、`PanelScreen`、`PanelSessionView`、`PanelSlider`、`PanelText`、`PendingAction`、`RosterPageCache`、`UiColor`、`UiDraw`、`UiLayout`、`UiRect`、`UiTheme`、`UiThemes`
+`InputValue`、`PanelButton`、`PanelCheck`、`PanelDisclosure`、`PanelEditBox`、`PanelGeometry`、`PanelGroup`、`PanelHealth`、`PanelItemRow`、`PanelKeyValue`、`PanelListRow`、`PanelMeter`、`PanelPageSlider`、`PanelRosterRow`、`PanelScreen`、`PanelSessionView`、`PanelSlider`、`PanelText`、`PendingAction`、`RosterPageCache`、`UiColor`、`UiDraw`、`UiLayout`、`UiRect`、`UiTheme`、`UiThemes`
 
 ### client.ui.gun
 
@@ -171,6 +176,10 @@
 ### compat.jeg
 
 `JegCompat`、`JegGunIdentity`、`JegGunTypes`、`JegIntegration`、`JegMonitorInput`、`JegMonitorRecoilAdapter`、`JegMonitorWeapons`、`JegReloadPlan`、`JegSounds`、`JegThrowables`
+
+### compat.jei
+
+`LootAuthoringJeiPlugin`
 
 ### compat.maid
 
@@ -204,6 +213,14 @@
 
 `DamagePartition`、`DamagePipelineState`、`HealthLossReceipt`、`HumanDamageEvents`、`HumanDamagePipeline`、`HumanMeleeDamage`、`HumanOwnerProtection`、`HumanProjectileRelations`
 
+### developer
+
+`DeveloperGuideItem`
+
+### developer.client
+
+`DeveloperGuideScreen`
+
 ### economy
 
 `BrokerIndex`、`CuriosWalletAccess`、`Currency`、`CurrencyItem`、`EconomyBrokerBlock`、`EconomyBrokerEntity`、`EconomyContent`、`EconomyEvents`、`EconomyNetwork`、`EconomyPolicy`、`EconomyRecovery`、`EconomyService`、`EconomyTables`、`EconomyTaskBoardBlock`、`EconomyTasks`、`EconomyTraderBlock`、`EconomyView`、`InventoryTransaction`、`MoneyMath`、`MoneyRate`、`ParleyFlagItem`、`TaskLedger`、`WalletBalance`、`WalletCodec`、`WalletInventory`、`WalletItem`、`WalletPayloadCodec`
@@ -214,7 +231,7 @@
 
 ### entity
 
-`AggressionMode`、`FactionBossHuman`、`Human`、`HumanAbility`、`HumanData`、`HumanEntity`、`HumanFood`、`HumanHelper`、`HumanManagerEventHandler`、`HumanMobEntityData`、`HumanServerData`、`HumanServerDataCleanup`、`HumanTier`、`HumanUtil`、`HumansClientData`、`HumansDataSync`、`HumansServerDataClientSync`、`PotionRangedAttackMob`、`TierThreeHuman`
+`AggressionMode`、`DodgeMotion`、`FactionBossHuman`、`Human`、`HumanAbility`、`HumanData`、`HumanEntity`、`HumanFood`、`HumanHelper`、`HumanManagerEventHandler`、`HumanMobEntityData`、`HumanServerData`、`HumanServerDataCleanup`、`HumanTier`、`HumanUtil`、`HumansClientData`、`HumansDataSync`、`HumansServerDataClientSync`、`PotionRangedAttackMob`、`TierThreeHuman`
 
 ### equipment
 
@@ -222,11 +239,11 @@
 
 ### faction
 
-`BadgePolicy`、`EncounterCooldown`、`FactionAuthoringCommands`、`FactionContent`、`FactionDefinitions`、`FactionEconomyLedger`、`FactionPassage`、`FactionRecruitment`、`FactionRules`、`FactionStandingData`、`HumanFactions`、`HumanRelations`、`HumanRelationshipPolicy`、`IdentityBadgeItem`、`IdentityBandItem`、`IdentityBands`、`PassageCodec`、`PassagePermit`、`StandingAccess`、`StandingCommands`、`StandingEffects`、`StandingIncidents`、`StandingPolicy`、`StandingQuota`、`StandingReward`
+`BadgePolicy`、`EncounterCooldown`、`FactionAuthoringCommands`、`FactionContent`、`FactionDefinitions`、`FactionEconomyLedger`、`FactionPassage`、`FactionRecruitment`、`FactionRules`、`FactionStandingData`、`HumanFactions`、`HumanRelations`、`HumanRelationshipPolicy`、`IdentityBadgeItem`、`IdentityBandItem`、`IdentityBands`、`PassageCodec`、`PassagePermit`、`RecruitmentPricing`、`StandingAccess`、`StandingCommands`、`StandingEffects`、`StandingIncidents`、`StandingPolicy`、`StandingQuota`、`StandingReward`
 
 ### faction.ability
 
-`DodgeAbility`、`FactionAbilities`、`FactionAbility`
+`DodgeAbility`、`FactionAbilities`、`FactionAbility`、`GroupResistanceAbility`
 
 ### faction.visual
 
@@ -239,6 +256,14 @@
 ### item
 
 `VanillaPotionStacks`
+
+### loot
+
+`LootContainers`、`LootDocuments`、`LootEditorNetwork`、`LootEditorTool`、`LootLibrary`、`LootLibraryDefaults`、`LootLibraryPack`、`LootSimpleDraft`
+
+### loot.client
+
+`LootDisplayText`、`LootDraftCache`、`LootEditorReturn`、`LootEditorScreen`、`LootItemCatalog`
 
 ### mixin
 

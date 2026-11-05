@@ -39,7 +39,7 @@
 
 - 当前基线为 Minecraft 1.20.1、Forge 47.4.16、Java 17；每次以 `gradle.properties`、`build.gradle` 和实际环境重新核对。Java 路径为 `D:\Java\17`，使用仓库的 `gradlew.bat`。
 - 没有用户的“构建”要求，不运行 Gradle 构建或会触发编译的验证任务。已有授权后按修改选择验证；自动检查不能替代游戏内验收。
-- `build.gradle` 的八个 compileOnly API 默认路径依赖工作树位置。独立工作树显式传入完整参数；公共 API JAR 只读，不复制整套实例，不提交 API JAR、构建缓存、日志、存档或凭据。
+- `build.gradle` 的九个 compileOnly API 默认路径依赖工作树位置。独立工作树显式传入完整参数；公共 API JAR 只读，不复制整套实例，不提交 API JAR、构建缓存、日志、存档或凭据。
 - PowerShell 构建参考（仅在用户要求构建后执行；额外测试按任务选择）：
 
 ```powershell
@@ -52,7 +52,8 @@ $env:JAVA_HOME = 'D:\Java\17'
   '-PscgunsApiJar=E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\ScorchedGuns-0.5.5-1.20.1.jar' `
   '-PjegApiJar=E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\JustEnoughGuns-0.14.5-1.20.1.jar' `
   '-PgeckoApiJar=E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\geckolib-forge-1.20.1-4.8.4.jar' `
-  '-PframeworkApiJar=E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\framework-forge-1.20.1-0.8.0.jar'
+  '-PframeworkApiJar=E:\MC\game\.minecraft\versions\1.20.1-Forge_47.4.21\mods\framework-forge-1.20.1-0.8.0.jar' `
+  '-PjeiApiJar=<JEI 15公开API或完整JAR的绝对路径>'
 ```
 
 ## Obsidian 机制与数值知识库（持续维护）

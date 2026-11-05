@@ -25,3 +25,6 @@ Arcana混合封装会继续读取嵌套`META-INF/mod.jar`中的真实modId声明
 
 
 版本和CHANGELOG已由主控整理时使用`--snapshot`：核对目标版本高于上次发行且与当前源码一致，仍备份、校验、构建和同步，但不暂存、提交或合并已有WIP。源码必须在构建前完成版本与日志；`deploy`继续读取发行状态，无需再次传此选项。传统自动升版模式仍保留用于干净的既有维护流程。
+
+
+战利品作者工具的JEI适配增加 `-PjeiApiJar` compileOnly输入。本地辅助脚本读取release-settings.json的jei_api只读缓存（完整参数传入并按内容哈希生成ASCII别名），不要求运行实例安装JEI。公共工作树构建应显式提供API路径；常规UI无JEI类型引用，缺席回归只排除compat.jei适配模块，并确认JEI类不在运行classpath。
