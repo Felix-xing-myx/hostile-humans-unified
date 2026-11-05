@@ -1,21 +1,32 @@
 {
   "faction_abilities": {
-    "_description": "可复用阵营被动能力；definitions定义能力，assignments按完整阵营ID分配；空数组禁用该阵营能力 / Reusable passive faction abilities",
+    "_description": "可复用阵营被动能力；definitions定义能力，assignments按完整阵营ID分配；缺失阵营继承默认分配，空数组禁用该阵营，assignments空对象禁用全部 / Missing factions inherit defaults; [] disables one faction; empty assignments disables all",
     "definitions": {
       "dodge": {
         "type": "dodge",
         "chance_by_tier": {
           "roamer": 0,
-          "tier1": 0.1,
-          "tier2": 0.18,
-          "tier3": 0.28
+          "tier1": 0.10,
+          "tier2": 0.20,
+          "tier3": 0.30
         },
         "sound_cooldown_ticks": 24
+      },
+      "group_resistance": {
+        "type": "group_resistance",
+        "radius": 5,
+        "minimum_other_members": 2,
+        "duration_ticks": 400,
+        "refresh_below_ticks": 100,
+        "check_interval_ticks": 20
       }
     },
     "assignments": {
       "hostile_humans_unified:ashen": [
         "dodge"
+      ],
+      "hostile_humans_unified:azure": [
+        "group_resistance"
       ]
     }
   },
@@ -1995,15 +2006,15 @@
     "armor_penetration_enabled": true,
     "armor_penetration_curve": 1.0,
     "passive_shield_before_armor": true,
-    "shield_durability_rate_per_damage": 0.0015,
+    "shield_durability_rate_per_damage": 0.0027,
     "_说明_armor_penetration_enabled_中文": "启用人类攻击的统一穿甲比例转换，仅直接武器/弹射攻击；不转换环境和持续伤害。",
     "_description_armor_penetration_enabled_en": "Enable shared penetration conversion for direct Human weapon/projectile attacks, excluding environment and damage over time.",
     "_说明_armor_penetration_curve_中文": "穿甲转换指数，默认1为线性；应用上限45%。此项是可调实现默认。",
     "_description_armor_penetration_curve_en": "Penetration conversion exponent, default 1 (linear), capped at 45%; adjustable implementation default.",
     "_说明_passive_shield_before_armor_中文": "被动盾普通段在护甲前结算（true，默认）或护甲后结算（false）；穿甲段均跳过。",
     "_description_passive_shield_before_armor_en": "Apply passive shield to normal damage before armor (true, default) or after armor (false); penetration bypasses it.",
-    "_说明_shield_durability_rate_per_damage_中文": "每点实际格挡伤害按盾最大耐久追加的损耗系数，默认0.0015（0.15%）；仍汇总霰弹并计基础损耗。",
-    "_description_shield_durability_rate_per_damage_en": "Additional maximum-shield-durability wear per blocked damage, default 0.0015 (0.15%); retains pellet aggregation and base wear."
+    "_说明_shield_durability_rate_per_damage_中文": "每点实际格挡伤害按盾最大耐久追加的损耗系数，默认0.0027（0.27%）；仍汇总霰弹并计基础损耗。",
+    "_description_shield_durability_rate_per_damage_en": "Additional maximum-shield-durability wear per blocked damage, default 0.0027 (0.27%); retains pellet aggregation and base wear."
   },
   "equipment_integration": {
     "_说明_中文": "武器装备自动导入总开关。只控制启动时是否向装备池追加已安装模组的默认联动装备，不控制动画兼容和物品使用。修改后重启生效。",
@@ -2676,8 +2687,8 @@
     "_说明_critical_health_ratio_中文": "恢复动作使用的危急生命比例，0.05–0.75；实际不高于撤退阈值。战斗硬撤退底线由 low_health_combat 两个条件优先决定。",
     "_description_critical_health_ratio_en": "Critical recovery-action ratio, 0.05–0.75; capped at the retreat threshold. The two low_health_combat conditions take priority for forced combat retreat.",
     "critical_health_ratio": 0.12,
-    "_说明_resume_health_ratio_中文": "实际生命恢复到35%以上后恢复战斗；至少高于逃跑阈值0.05。缓存食物/再生收益决定何时允许逃跑中进食，不代替实际恢复完成。",
-    "_description_resume_health_ratio_en": "Resume after actual health reaches the 35% threshold. Projected healing guides retreat food timing only.",
+    "_说明_resume_health_ratio_中文": "默认恢复参考线35%，至少高于逃跑阈值0.05。短期可兑现治疗与近期失血参与解除撤退，解除后仍可在掩体恢复。",
+    "_description_resume_health_ratio_en": "Default recovery reference is 35%. Near-term restoration and recent health loss can end forced retreat without immediately re-entering combat.",
     "resume_health_ratio": 0.35,
     "_说明_low_health_combat_中文": "低血量搏斗策略，四阶文件分别设置。硬撤退须自身生命严格低于 critical_health_ratio × 最大生命且严格低于 critical_absolute_health 点；默认同时低于15%和25点。唯一有效对手同时低于其30%最大生命和30点时按 finish_chance 搏斗。试探按窗口内实际回血和实际受伤判断，不用尚未到账的预计恢复；食物仍走原进食动作，不免费回血。",
     "_description_low_health_combat_en": "Per-rank low-health combat. Forced retreat requires own health strictly below both critical_health_ratio times maximum health and critical_absolute_health points (default 15% and 25 points). A sole valid opponent below both 30% of its maximum health and 30 points enables finish_chance. Trials compare actual healing and damage within the observation window, not projected recovery. Food retains its normal use action and grants no free healing.",
@@ -3414,8 +3425,8 @@
   "shield_pressure": {
     "damage_reduction": 0.2,
     "_description_damage_reduction": "实际高压举盾期间所有普通伤害结算剩余扣血的额外减免比例；护甲/抗性/吸收后乘算，不影响其他举盾或盔甲耐久 / Final health damage reduction during active pressure guard",
-    "_说明_中文": "本能高压防御，只统计可盾防生物/弹体攻击的真实扣血。每次扣血立即更新指数衰减受伤DPS，默认平滑0.5秒，达到最大生命22%/秒即请求举盾；不等待窗口或命中次数。环境、绕盾、取消及零扣血不计。当前一瓶药先完成，保留枪械与导航。安静1秒或最长6秒结束，之后固定冷却3.5秒。",
-    "_description_en": "Event-driven shieldable health-loss DPS. Exponential smoothing 10 ticks, threshold 22% maximum health per second. No hit-count or settlement wait. Finish the current potion; preserve firearm and navigation. End after 20 quiet ticks or 120 active ticks, then 70 ticks mandatory cooldown.",
+    "_说明_中文": "单次可格挡失血达18%紧急举盾。持续高压须达到受伤DPS门槛，并满足低血、不同方向受击或缺少反击机会。短防最多2秒，持续枪火掩护默认最多6秒。实际结束后动态冷却，默认最多3.5秒。当前一瓶药先完成。",
+    "_description_en": "Request immediately after a shieldable hit costs 18% of maximum health. Sustained damage also requires low health, crossfire, or no counterattack opportunity. Gunfire cover can last up to six seconds by default. Cooldown scales with active guard duration.",
     "enabled": true,
     "_说明_dps_smoothing_ticks_中文": "受伤DPS指数衰减时间常数，默认10tick（0.5秒），范围1–100。是平滑尺度，不是等待时间；每次伤害立即更新。",
     "_description_dps_smoothing_ticks_en": "Exponential incoming DPS time constant, default 10 ticks; not a startup wait. Range 1–100.",
@@ -3429,8 +3440,8 @@
     "_说明_quiet_ticks_中文": "触发后，距离最后一次实际扣血或成功格挡达到此tick数才解除；默认20 tick（1秒）。无效攻击不会续期。",
     "_description_quiet_ticks_en": "Release after this many ticks without actual health loss or a successful block; default 20 ticks. Invalid hits do not extend pressure.",
     "quiet_ticks": 20,
-    "_说明_cooldown_ticks_中文": "实际高压举盾结束后的固定冷却，默认70tick（3.5秒），范围1–400。",
-    "_description_cooldown_ticks_en": "Mandatory cooldown after active pressure guard ends, 70 ticks (3.5 seconds).",
+    "_说明_cooldown_ticks_中文": "实际高压举盾结束后的动态冷却上限，默认70tick（3.5秒），范围1–400。",
+    "_description_cooldown_ticks_en": "Maximum dynamic cooldown after active pressure guard ends, default 70 ticks (3.5 seconds).",
     "cooldown_ticks": 70
   },
   "activity_budget": {

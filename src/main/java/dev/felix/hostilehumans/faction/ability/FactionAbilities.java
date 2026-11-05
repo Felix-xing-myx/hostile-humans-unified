@@ -13,7 +13,8 @@ import net.minecraftforge.event.entity.living.LivingAttackEvent;
 
 /** One capability registry and one server event boundary. Assignment is independent of AI doctrine. */
 public final class FactionAbilities {
-    private static final Map<String, Function<JsonObject, FactionAbility>> TYPES = Map.of("dodge", DodgeAbility::new);
+    private static final Map<String, Function<JsonObject, FactionAbility>> TYPES = Map.of(
+            "dodge", DodgeAbility::new, "group_resistance", GroupResistanceAbility::new);
     private final Map<String, List<FactionAbility>> assignments;
 
     public FactionAbilities(JsonObject config) {
@@ -47,6 +48,13 @@ public final class FactionAbilities {
         return abilities.isEmpty() ? "未分配阵营能力" : abilities.stream().map(a -> a.describe(h))
                 .collect(java.util.stream.Collectors.joining("；"));
     }
+    public static void tick(Human human) {
+        if (human.level().isClientSide || !human.isAlive() || human.isRemoved() || !HumanFactions.enabled()) return;
+        for (FactionAbility ability : UnifiedConfig.get().factionAbilities().forFaction(HumanFactions.id(human))) {
+            ability.tick(human);
+        }
+    }
+
     public static void incoming(LivingAttackEvent event) {
         if (event.isCanceled() || !(event.getEntity() instanceof Human h) || h.level().isClientSide
                 || !h.isAlive() || h.isRemoved() || !Float.isFinite(event.getAmount()) || event.getAmount() <= 0

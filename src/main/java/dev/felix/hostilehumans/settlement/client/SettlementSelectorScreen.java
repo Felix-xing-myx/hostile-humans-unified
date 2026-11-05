@@ -52,6 +52,8 @@ public final class SettlementSelectorScreen extends PanelScreen {
             nodes.add(text(text("selector_setup"), () -> theme().muted()));
             return UiLayout.column(6, nodes);
         }
+        nodes.add(option(text("selector_persistent", text(SettlementPreviewClient.selectionVisible?"selector_on":"selector_off")),
+                SettlementPreviewClient.selectionVisible,()->{SettlementPreviewClient.selectionVisible=!SettlementPreviewClient.selectionVisible;rebuildWidgets();}));
         nodes.add(text(text("selector_workflow"), () -> theme().muted()));
         nodes.add(action("selector_capture", "BOUNDS", "", false, -1));
         if (binding.getBoolean("outer")) {

@@ -12,8 +12,13 @@ public final class PotionRecoveryPolicy {
     static boolean urgentInstantHealing(double actualHealthRatio) { return actualHealthRatio < 0.50D; }
     static int instantHealingUseDuration(int originalTicks) { return Math.min(20, Math.max(1, originalTicks)); }
     static final int REGENERATION_INTERVAL_TICKS = 10;
-    static int instantHealingAmount(double exposure) {
-        return Double.isFinite(exposure) ? (int) Math.floor(8.0D * Math.max(0.0D, Math.min(1.0D, exposure)) + 0.5D) : 0;
+    static float instantHealingAmount(int amplifier, float maximumHealth, double exposure, double regenerationMultiplier) {
+        if (!Double.isFinite(exposure) || exposure <= 0) return 0;
+        double strength = Math.min(1, exposure);
+        double base = Math.floor((amplifier >= 1 ? 12 : 6) * strength + .5);
+        double bonus = Float.isFinite(maximumHealth) && maximumHealth > 0
+                ? maximumHealth * (amplifier >= 1 ? .12 : .06) * strength : 0;
+        return (float) (base * regenerationMultiplier + bonus);
     }
     static float regenerationStep(int amplifier) { return amplifier >= 1 ? 1.0F : 0.5F; }
 

@@ -21,6 +21,6 @@ public final class CreativeSoldierControllerItem extends Item {
         return InteractionResult.CONSUME;
     }
     @Override public void appendHoverText(ItemStack stack,net.minecraft.world.level.Level level,java.util.List<net.minecraft.network.chat.Component> lines,net.minecraft.world.item.TooltipFlag flag){
-        lines.add(net.minecraft.network.chat.Component.translatable("patrol_tool.controller_help"));
+        lines.add(net.minecraft.network.chat.Component.translatable("developer_guide.hover"));
     }
 }

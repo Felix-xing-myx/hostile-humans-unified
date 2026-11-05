@@ -114,7 +114,9 @@ public final class PickupPolicyWiringTest {
                 && calls("dev/felix/hostilehumans/faction/FactionRecruitment", "hire",
                 "dev/felix/hostilehumans/faction/FactionRecruitment", "quote")
                 && calls("dev/felix/hostilehumans/faction/FactionRecruitment", "hire",
-                "dev/felix/hostilehumans/soldier/RecruitmentPayment", "pay"),
+                "dev/felix/hostilehumans/economy/InventoryTransaction", "debit")
+                && calls("dev/felix/hostilehumans/faction/FactionRecruitment", "hire",
+                "dev/felix/hostilehumans/economy/InventoryTransaction", "publish"),
                 "actual hiring uses one faction quote and authoritative payment transaction");
         check(!calls("dev/felix/hostilehumans/soldier/RecruitmentContractItem", "appendHoverText",
                 "dev/felix/hostilehumans/config/UnifiedConfig", "get")

@@ -15,6 +15,14 @@ class GunMeleeProtectionContract(unittest.TestCase):
         self.assertIn("meleePrepTickCount = -1;", block)
         self.assertNotIn("meleePrepTickCount = 0;", source)
 
+    def test_reload_recovery_preserves_callers_aim_intent(self):
+        source = (PKG / "TaczGunMechanics.java").read_text(encoding="utf-8")
+        recovery = source.split("static void handleShootResult(", 1)[1].split("private static", 1)[0]
+        self.assertNotIn("operator.aim(", recovery)
+        transactions = (PKG / "TaczHumanReloadTransactions.java").read_text(encoding="utf-8")
+        self.assertIn("data.reloadStateType = ReloadState.StateType.NOT_RELOADING;", transactions)
+        self.assertIn("data.reloadTimestamp = -1L;", transactions)
+
     def test_optional_native_event_is_independent_of_integration_toggle(self):
         source = (PKG / "GunMeleeProtection.java").read_text(encoding="utf-8")
         self.assertIn('ModList.get().isLoaded("tacz")', source)

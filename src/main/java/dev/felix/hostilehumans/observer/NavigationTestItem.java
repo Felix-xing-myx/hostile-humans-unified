@@ -22,6 +22,6 @@ public final class NavigationTestItem extends Item {
         return InteractionResultHolder.sidedSuccess(player.getItemInHand(hand), level.isClientSide);
     }
     @Override public void appendHoverText(ItemStack stack, Level level, List<Component> lines, TooltipFlag flag) {
-        lines.add(Component.translatable("navigation_debug.tool_tip"));
+        lines.add(Component.translatable("developer_guide.hover"));
     }
 }

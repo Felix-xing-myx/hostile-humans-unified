@@ -166,11 +166,11 @@ public final class NavigationLegendScreen extends PanelScreen {
                         label("focus", focus.slot() + 1, s.name())));
         rows.add(new Row(-1, label("readonly")));
         if (HumanMonitorClient.active())
-            rows.add(new Row(-1, Component.literal("监视器：仅显示当前目标；无需头盔或指针，退出后恢复原观察名单")));
+            rows.add(new Row(-1, label("monitor_hint")));
         else if (NavigationDebugClient.spectatorAttached())
-            rows.add(new Row(-1, Component.literal("旁观附身：仅显示指针已标记的人类；显示开关有效，退出后恢复原多选焦点")));
+            rows.add(new Row(-1, label("spectator_hint")));
         if (s.capacityTruncated())
-            rows.add(new Row(-1, Component.literal("因网络容量截断部分诊断细节；观察实体、焦点与动作权限数据保留")));
+            rows.add(new Row(-1, label("capacity_hint")));
         if (page != 6) {
             rows.add(new Row(-1, label("state", p.awareness(), p.decision())));
             rows.add(new Row(-1, label("reason", p.reason())));
@@ -280,10 +280,10 @@ public final class NavigationLegendScreen extends PanelScreen {
                                                 : "尚无协调器")
                                         + " · 采样tick "
                                         + snapshot.tick())));
-        rows.add(new Row(-1, Component.literal("移动执行桥: " + snapshot.bridge())));
+        rows.add(new Row(-1, label("movement_bridge",snapshot.bridge())));
         if (snapshot.bridge().equals("unbound"))
-            rows.add(new Row(-1, Component.literal("unbound：以下仅显示原GoalSelector运行状态，尚无移动权限归属保证")));
-        if (snapshot.actions().isEmpty()) rows.add(new Row(-1, Component.literal("当前协调动作：无")));
+            rows.add(new Row(-1, label("unbound_hint")));
+        if (snapshot.actions().isEmpty()) rows.add(new Row(-1, label("no_actions")));
         for (var action : snapshot.actions()) {
             String kind =
                     action.lease()
@@ -398,7 +398,7 @@ public final class NavigationLegendScreen extends PanelScreen {
                                             + feedback.status()
                                             + " · "
                                             + feedback.reason())));
-        if (snapshot.truncated()) rows.add(new Row(-1, Component.literal("动作/Goal/进度/反馈已按协议上限截断")));
+        if (snapshot.truncated()) rows.add(new Row(-1, label("action_truncated")));
     }
 
     private static String progressNumber(double value) {

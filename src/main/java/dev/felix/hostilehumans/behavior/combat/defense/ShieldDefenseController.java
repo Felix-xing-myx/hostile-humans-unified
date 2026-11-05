@@ -68,9 +68,10 @@ public final class ShieldDefenseController {
                 && startingActions != null && startingActions.running(startingToken);
     }
     private boolean allowsShieldOwner(Owner requested) {
+        if (!HumanCombatDirector.strategies(human).allowsOrdinaryShield()) return false;
         if (requested == Owner.MANUAL) return dev.felix.hostilehumans.behavior.combat.HumanCombatAuthority.live(human)
                 && dev.felix.hostilehumans.inventory.ControlledEquipmentPolicy.defenseAllowed(human);
-        return requested == Owner.PRESSURE || HumanCombatDirector.strategies(human).allowsOrdinaryShield();
+        return true;
     }
     /** Explicit held shield only: no auto selection, borrowed shield or autonomous facing. */
     public void tickManualGuard(boolean held) {
@@ -104,7 +105,13 @@ public final class ShieldDefenseController {
         return true;
     }
     private boolean pressureWaitingForDrink;
-    private int deferredPressureGraceUntil = Integer.MIN_VALUE;
+    private int emergencyUntil = Integer.MIN_VALUE;
+    private int lastPressureContact = Integer.MIN_VALUE;
+    private final float[] guardedLoss = new float[20];
+    private final int[] guardedLossTick = new int[20];
+    private final java.util.Map<Integer, Integer> blockedBullets = new java.util.HashMap<>();
+    private int crossfireUntil = Integer.MIN_VALUE;
+    private String pressureReason = "idle";
     private boolean defendingGunfire;
     private final GuardedRangedCharge guardedCharge = new GuardedRangedCharge();
     private final ShieldAdvancePolicy advance = new ShieldAdvancePolicy();
@@ -114,7 +121,7 @@ public final class ShieldDefenseController {
     public boolean tickAdvance(boolean eligible, int effectiveTicks) {
         boolean allowed = allowsShieldOwner(Owner.ADVANCE) && config.enabled() && eligible && !human.isFleeing && canBlockWithShield()
                 && (owner == null || owner == Owner.ADVANCE) && shieldResourcesAvailable()
-                && !shouldSuppressRecovery() && meleeBearings().isEmpty()
+                && !shouldSuppressRecovery()
                 && !RecoverySupplies.hasHandCustody(human) && !human.hhu$hasPendingMeleeAttack();
         boolean requested = advance.observe(allowed, effectiveTicks, human.getRandom()::nextDouble);
         if (owner == Owner.ADVANCE && (!advance.active() || !ownsCurrentShield())) {
@@ -169,11 +176,19 @@ public final class ShieldDefenseController {
     public boolean defenseOwnsFacing() { return ownsCurrentShield(); }
     /** Actual pressure shield execution only; preparation/cooldown and other guard owners grant no bonus. */
     public double pressureDamageMultiplier() {
-        boolean executing = owner == Owner.PRESSURE && ownsCurrentShield() && human.isAlive() && !human.isRemoved()
+        boolean executing = pressureCycleActive && owner == Owner.PRESSURE && ownsCurrentShield() && human.isAlive() && !human.isRemoved()
                 && !human.isNoAi() && !human.isSleeping() && !HumanInventorySession.isEditing(human)
                 && !NavigationDebugService.controls(human);
         return UnifiedConfig.get().shieldPressure().damageMultiplier(executing);
     }
+    public dev.felix.hostilehumans.behavior.ActionProgressSnapshot pressureProgress() {
+        int remaining = pressureCycle.remainingCooldown(human.tickCount);
+        if (!pressureCycleActive && remaining == 0) return null;
+        return new dev.felix.hostilehumans.behavior.ActionProgressSnapshot(
+                "pressure_guard", "", pressureCycle.duration(human.tickCount),
+                pressureCycleActive ? -1 : remaining, pressureReason);
+    }
+
     public double defenseSpeedFactor() { return ownsCurrentShield() ? (owner == Owner.ADVANCE ? .8D : config.shieldUseSpeedMultiplier()) : 1; }
     public double defenseKnockbackFloor() { return ownsCurrentShield() ? (owner == Owner.ADVANCE ? .85D : .7D) : 0; }
     private void detectDefense() {
@@ -258,26 +273,54 @@ public final class ShieldDefenseController {
     /** Actual shieldable combat health loss; defense does not require offensive identity/permission. */
     public void recordPressureDamage(DamageSource source, float damage) {
         if (human.level().isClientSide || !Float.isFinite(damage) || damage <= 0) return;
-        var direct = source.getDirectEntity();
         var attacker = source.getEntity();
         // Feeling damage is not offensive knowledge. Ownerless arrows may create pressure too.
         if (attacker instanceof LivingEntity living && isValidThreat(living)) CloseRangedTactics.damage(human, damage);
+        int now = human.tickCount;
+        if (pressureCycleActive) {
+            int slot = now % guardedLoss.length;
+            if (guardedLossTick[slot] != now) guardedLoss[slot] = 0;
+            guardedLossTick[slot] = now;
+            guardedLoss[slot] += damage;
+        }
         if (source.is(net.minecraft.tags.DamageTypeTags.BYPASSES_SHIELD)
-                || !(attacker instanceof LivingEntity) && !(direct instanceof Projectile)) return;
+                || !dev.felix.hostilehumans.damage.HumanDamagePipeline.physical(source)) return;
         ShieldPressureConfig rules = UnifiedConfig.get().shieldPressure();
         updatePressureCycle();
-        if (!recoveryPressure.active(human.tickCount, rules) && !pressureCycle.attempting()) pressureFacing.clear();
-        if (owner == Owner.COMBAT) defensePressureTick = human.tickCount;
-        if (pressureCycleActive) recoveryPressure.executingEvent(human.tickCount, rules);
-        recoveryPressure.record(human.tickCount, damage, human.getMaxHealth(), rules);
-        if (RecoverySupplies.isDrinkingPotion(human) && !pressureCycle.attempting()
-                && recoveryPressure.active(human.tickCount, rules)) pressureWaitingForDrink = true;
-        pressureCycle.damage(human.tickCount, damage, human.getMaxHealth(), rules);
-        recordPressureDirection(source, damage);
+        if (!recoveryPressure.active(now, rules) && !pressureCycle.attempting()) pressureFacing.clear();
+        if (owner == Owner.COMBAT) defensePressureTick = now;
+        if (!rules.enabled() || !allowsShieldOwner(Owner.PRESSURE) || pressureCycle.attempting()) return;
+        lastPressureContact = now;
+        if (damage >= human.getMaxHealth() * .18F) emergencyUntil = now + 20;
+        recoveryPressure.record(now, damage, human.getMaxHealth(), rules);
+        recordPressureDirection(source, damage, true);
+        if (RecoverySupplies.isDrinkingPotion(human) && pressureRequested(rules))
+            pressureWaitingForDrink = true;
+    }
+
+    private boolean hasCounterOpportunity() {
+        LivingEntity target = human.getTarget();
+        if (target == null || !isValidThreat(target) || !human.getSensing().hasLineOfSight(target)) return false;
+        if (dev.felix.hostilehumans.behavior.combat.melee.MeleeCombatRange.canReachTarget(human, target)) return true;
+        ItemStack weapon = human.getMainHandItem();
+        var guns = dev.felix.hostilehumans.behavior.combat.gun.GunSupport.get();
+        double distance = human.distanceTo(target);
+        boolean ranged = guns.isGun(weapon)
+                ? guns.hasLoadedAmmo(weapon) && distance <= dev.felix.hostilehumans.behavior.combat.gun.GunRangePolicy.firingReach(human, weapon)
+                : (RangedWeaponCustody.isBowOrCrossbow(weapon) || weapon.getItem() instanceof net.minecraft.world.item.TridentItem)
+                    && distance <= 36;
+        return ranged && dev.felix.hostilehumans.behavior.combat.ranged.RangedShotClearance.canShoot(human, target);
+    }
+
+    private boolean pressureRequested(ShieldPressureConfig rules) {
+        return rules.enabled() && (human.tickCount < emergencyUntil
+                || recoveryPressure.damageRatioPerSecond(human.tickCount, rules) >= rules.dpsRatio()
+                && (human.getHealth() <= human.getMaxHealth() * .45F
+                    || human.tickCount < crossfireUntil || !hasCounterOpportunity()));
     }
 
     /** Direction-only input shared by actual damage and successful shield blocks. */
-    private void recordPressureDirection(DamageSource source, float damage) {
+    private void recordPressureDirection(DamageSource source, float damage, boolean actualDamage) {
         // A moving projectile provides arrival direction, never its owner's remote coordinates.
         var direct = source.getDirectEntity();
         var attacker = source.getEntity();
@@ -286,19 +329,23 @@ public final class ShieldDefenseController {
             direction = direct.getDeltaMovement().scale(-1);
         else if (!source.is(net.minecraft.tags.DamageTypeTags.IS_PROJECTILE) && direct != null && direct == attacker)
             direction = direct.position().subtract(human.position());
-        if (direction != null && Double.isFinite(direction.x) && Double.isFinite(direction.z)
-                && direction.horizontalDistanceSqr() > 1.0E-8)
-            pressureSources.record(attacker != null ? attacker.getUUID() : direct.getUUID(), human.tickCount,
-                    (float)Math.toDegrees(Math.atan2(direction.z, direction.x)) - 90, damage, human.getMaxHealth());
+        if (direction == null || !Double.isFinite(direction.x) || !Double.isFinite(direction.z)
+                || direction.horizontalDistanceSqr() <= 1.0E-8) return;
+        float yaw = (float) Math.toDegrees(Math.atan2(direction.z, direction.x)) - 90;
+        if (actualDamage) crossfireUntil = Math.max(crossfireUntil, pressureSources.crossfireExpiry(human.tickCount, yaw));
+        pressureSources.record(attacker != null ? attacker.getUUID() : direct.getUUID(), human.tickCount,
+                yaw, damage, human.getMaxHealth(), actualDamage);
     }
 
     public boolean shouldSuppressRecovery() {
         updatePressureCycle();
         if (!pressureDefenseAvailable()) { pressureWaitingForDrink = false; return false; }
         if (RecoverySupplies.isDrinkingPotion(human)) return false;
-        return !pressureCycle.attempting() && (pressureWaitingForDrink
-                || human.tickCount < deferredPressureGraceUntil
-                || recoveryPressure.active(human.tickCount, UnifiedConfig.get().shieldPressure()));
+        boolean attacking = human.hhu$hasPendingMeleeAttack()
+                || human.isUsingItem() && RangedWeaponCustody.isBowOrCrossbow(human.getUseItem());
+        return !pressureCycle.attempting() && (owner == Owner.PRESSURE && ownsCurrentShield()
+                || (human.tickCount < emergencyUntil || !attacking)
+                && (pressureWaitingForDrink || pressureRequested(UnifiedConfig.get().shieldPressure())));
     }
 
     boolean isPressureBreakAttempt() {
@@ -309,26 +356,44 @@ public final class ShieldDefenseController {
     private void updatePressureCycle() {
         if (human.level().isClientSide) return;
         if (!pressureDefenseAvailable()) {
-            if (pressureCycleActive) endPressureExecution();
+            if (pressureCycleActive) {
+                pressureReason = "shield_unavailable";
+                endPressureExecution();
+            }
             clearDeferredPressure();
             return;
         }
         ShieldPressureConfig rules = UnifiedConfig.get().shieldPressure();
-        if (pressureCycle.update(human.tickCount, pressureWaitingForDrink || human.tickCount < deferredPressureGraceUntil
-                || recoveryPressure.active(human.tickCount, rules), rules)) {
-            recoveryPressure.clear();
-            clearDeferredPressure();
-            pressureFacing.clear(); pressureSources.clear();
+        int now = human.tickCount;
+        int duration = pressureCycle.duration(now);
+        boolean continueGuard = true;
+        if (pressureCycleActive && duration >= 16 && duration % 4 == 0) {
+            blockedBullets.values().removeIf(tick -> now - tick >= 20);
+            float loss = 0;
+            for (int i = 0; i < guardedLoss.length; i++)
+                if (now - guardedLossTick[i] < 20) loss += guardedLoss[i];
+            boolean gunCover = blockedBullets.size() >= 2;
+            boolean counter = hasCounterOpportunity() && !human.isFleeing && !gunCover;
+            continueGuard = !counter && now - (long) lastPressureContact < rules.quietTicks()
+                    && loss < human.getMaxHealth() * .10F
+                    && (gunCover || duration < 40 && human.isFleeing);
+            if (!continueGuard) pressureReason = counter ? "counter_available" : "cover_ended";
+        }
+        if (pressureCycle.update(now, continueGuard, rules)) {
+            if (continueGuard) pressureReason = "guard_limit";
+            endPressureExecution();
+            pressureFacing.clear();
+            pressureSources.clear();
         }
     }
 
     private void clearDeferredPressure() {
         pressureWaitingForDrink = false;
-        deferredPressureGraceUntil = Integer.MIN_VALUE;
     }
 
     private boolean pressureDefenseAvailable() {
-        return !human.level().isClientSide && config.enabled() && human.isAlive() && human.shieldCoolDown <= 0
+        return !human.level().isClientSide && allowsShieldOwner(Owner.PRESSURE)
+                && config.enabled() && human.isAlive() && human.shieldCoolDown <= 0
                 && !dev.felix.hostilehumans.behavior.combat.HumanCombatAuthority.bound(human)
                 && !HumanInventorySession.isEditing(human)
                 && human.explosionThreat == null
@@ -338,7 +403,15 @@ public final class ShieldDefenseController {
     public boolean wantsHighPressureGuard() { return shouldSuppressRecovery() && hasAvailableShield() && human.shieldCoolDown <= 0; }
     private void endPressureExecution() {
         pressureCycle.ended(human.tickCount, UnifiedConfig.get().shieldPressure());
+        if (pressureCycleActive) {
+            human.getPersistentData().putInt("hostile_humans_unified:pressure_cooldown",
+                    pressureCycle.remainingCooldown(human.tickCount));
+            human.getPersistentData().putString("hostile_humans_unified:pressure_reason", pressureReason);
+        }
         pressureCycleActive = false;
+        emergencyUntil = crossfireUntil = Integer.MIN_VALUE;
+        blockedBullets.clear();
+        java.util.Arrays.fill(guardedLoss, 0);
         recoveryPressure.clear();
         clearDeferredPressure();
     }
@@ -357,13 +430,15 @@ public final class ShieldDefenseController {
 
     /** Movement is independent from a strike: only our live advance guard may keep pursuing.
      * Ordinary/projectile/pressure guards retain their existing movement executors. */
+    public boolean advancing() { return owner == Owner.ADVANCE && advance.active() && ownsCurrentShield(); }
+
     public boolean permitsMeleeMovement() {
         return !blocksMeleeAttack() || owner == Owner.ADVANCE && advance.active()
                 && ownsCurrentShield() && !shouldSuppressRecovery();
     }
 
     private boolean wantsCombatNow(LivingEntity threat, IncomingArrow incomingArrow) {
-        if (!allowsShieldOwner(Owner.COMBAT) || wantsHighPressureGuard() || owner == Owner.PRESSURE || owner == Owner.PROJECTILE) return false;
+        if (advancing() || !allowsShieldOwner(Owner.COMBAT) || wantsHighPressureGuard() || owner == Owner.PRESSURE || owner == Owner.PROJECTILE) return false;
         if (human.isFleeing || !canBlockWithShield() || isHoldingTaczGun()
                 || RecoverySupplies.hasActiveUse(human)) return false;
         if (human.isUsingItem() && !SpartanEquipmentCompat.isShield(human.getUseItem())
@@ -522,7 +597,10 @@ public final class ShieldDefenseController {
     void tickPressureReaction() {
         if (owner != Owner.PRESSURE || !ownsCurrentShield()) return;
         guardedCharge.tick(human);
+        if (!pressureCycleActive) pressureReason = human.tickCount < emergencyUntil ? "heavy_hit" : "sustained_damage";
+        if (!human.isBlocking()) return;
         pressureCycle.guarded(human.tickCount);
+        human.getPersistentData().putString("hostile_humans_unified:pressure_reason", pressureReason);
         pressureCycleActive = true;
         facePressure();
     }
@@ -530,7 +608,6 @@ public final class ShieldDefenseController {
         if (owner != Owner.PRESSURE) return;
         release(Owner.PRESSURE);
         pressureWaitingForDrink = false;
-        deferredPressureGraceUntil = Integer.MIN_VALUE;
         endPressureExecution();
         if (!recoveryPressure.active(human.tickCount, UnifiedConfig.get().shieldPressure())) { pressureFacing.clear(); pressureSources.clear(); }
     }
@@ -610,18 +687,19 @@ public final class ShieldDefenseController {
         return true;
     }
 
-    public static void onShieldBlock(net.minecraftforge.event.entity.living.ShieldBlockEvent event) {
-        if (!event.isCanceled() && event.getBlockedDamage() > 0.0F && event.getEntity() instanceof Human defender)
-            defender.hhu$shieldDefense().observeAttack(event.getDamageSource(), true, event.getBlockedDamage());
-    }
-
     /** Only an observed attacker is remembered; no omniscient scan of every archer. */
     public void observeAttack(DamageSource source, boolean blocked) { observeAttack(source, blocked, 0); }
     public void observeAttack(DamageSource source, boolean blocked, float damage) {
         if (human.level().isClientSide) return;
         if (blocked) {
             observeBlockedHit();
-            recordPressureDirection(source, damage);
+            lastPressureContact = human.tickCount;
+            if (pressureCycleActive && source.getDirectEntity() != null
+                    && dev.felix.hostilehumans.damage.HumanDamagePipeline.nativeBullet(source)) {
+                blockedBullets.values().removeIf(tick -> human.tickCount - tick >= 20);
+                blockedBullets.putIfAbsent(source.getDirectEntity().getId(), human.tickCount);
+            }
+            recordPressureDirection(source, damage, false);
         }
         if (source.getEntity() instanceof LivingEntity attacker
                 && !HumanRelations.allied(human, attacker)
@@ -858,10 +936,7 @@ public final class ShieldDefenseController {
                     || !human.isUsingItem() || human.getUsedItemHand() != hand || human.getUseItem() != candidate) return;
             owner = requestedOwner; ownedShield = candidate;
             leaseActions = actions; lease = requested; admitted = true;
-            if (pressureWaitingForDrink && requestedOwner == Owner.PRESSURE) {
-                deferredPressureGraceUntil = human.tickCount + 20;
-                pressureWaitingForDrink = false;
-            }
+            if (requestedOwner == Owner.PRESSURE) pressureWaitingForDrink = false;
         } finally {
             try {
                 if (!admitted) {

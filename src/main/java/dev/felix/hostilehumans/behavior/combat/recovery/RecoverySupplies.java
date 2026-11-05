@@ -303,7 +303,7 @@ public final class RecoverySupplies {
         return false;
     }
     /** Expected already queued restoration in this horizon, excluding unused food inventory. */
-    static double pendingHealingWithin(Human human, int ticks) {
+    public static double pendingHealingWithin(Human human, int ticks) {
         double food = Math.min(Math.max(0, human.getPersistentData().getFloat(PENDING_HEAL)),
                 ticks / Math.max(1D, CombatAiConfig.forHuman(human).gradualHealIntervalTicks()));
         var state = human.getPersistentData().getCompound(HumanRuntime.MOD_ID + ":first_aid");
@@ -313,7 +313,24 @@ public final class RecoverySupplies {
         var regeneration = human.getEffect(MobEffects.REGENERATION);
         double regen = regeneration == null ? 0 : Math.min(ticks, regeneration.getDuration() == -1 ? ticks : regeneration.getDuration())
                 / 20D * (regeneration.getAmplifier() >= 1 ? 2 : 1);
-        return food + scheduled + regen;
+        double potion = 0;
+        ItemStack active = human.getUseItem();
+        if (human.isUsingItem() && active.is(Items.POTION) && human.getUseItemRemainingTicks() <= ticks) {
+            for (MobEffectInstance effect : PotionUtils.getMobEffects(active)) {
+                if (effect.getEffect() == MobEffects.HEAL && !human.isInvertedHealAndHarm())
+                    potion += HumanRecoveryEffects.instantHealingAmount(human, effect.getAmplifier(), 1);
+                if (effect.getEffect() == MobEffects.REGENERATION && newEffectBenefit(human, effect)) {
+                    int afterDrink = ticks - human.getUseItemRemainingTicks();
+                    double newRegen = Math.min(afterDrink, effect.getDuration()) / 20D * (effect.getAmplifier() >= 1 ? 2 : 1);
+                    double alreadyCounted = regeneration == null ? 0 : Math.min(afterDrink,
+                            regeneration.getDuration() == -1 ? afterDrink
+                                    : Math.max(0, regeneration.getDuration() - human.getUseItemRemainingTicks()))
+                            / 20D * (regeneration.getAmplifier() >= 1 ? 2 : 1);
+                    potion += Math.max(0, newRegen - alreadyCounted);
+                }
+            }
+        }
+        return food + scheduled + regen + potion;
     }
 
     public static boolean hasPendingGradualHealing(Human human) {

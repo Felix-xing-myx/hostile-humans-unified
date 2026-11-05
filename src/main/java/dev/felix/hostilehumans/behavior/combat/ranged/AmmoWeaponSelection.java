@@ -57,6 +57,9 @@ public final class AmmoWeaponSelection {
         boolean gun = GunSupport.get().isGun(stack);
         boolean bow = !gun && RangedWeaponCustody.isBowOrCrossbow(stack);
         boolean melee = !gun && !bow && HumanLootManager.isDedicatedMeleeWeapon(stack);
+        if ((bow || gun && !GunSupport.get().hasLoadedAmmo(stack))
+                && HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())
+                && dev.felix.hostilehumans.behavior.combat.HumanCombatDirector.mobileMeleeThreat(human)) return 0;
         int fallback = rank(gun, gun && usableGun(human, stack), bow, arrows,
                 melee || stack.getItem() instanceof TridentItem);
         if (fallback == 0) return 0;

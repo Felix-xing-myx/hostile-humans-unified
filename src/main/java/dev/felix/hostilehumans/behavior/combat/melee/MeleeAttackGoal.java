@@ -207,6 +207,7 @@ extends Goal {
             // Movement probes share one hitbox result; a committed swing checks again at its own gate.
             boolean inStrikeRange = !holdingPosition && canStrike(livingEntity);
             boolean spacing = !holdingPosition && this.mob instanceof Human human
+                    && !human.hhu$shieldDefense().advancing()
                     && !dev.felix.hostilehumans.behavior.combat.melee.PursuitJumpAttack.active(human)
                     && !dev.felix.hostilehumans.navigation.CombatTerrainNavigation.hasWork(human, livingEntity)
                     && MeleeSpacing.control(human, livingEntity, frontline, inStrikeRange);

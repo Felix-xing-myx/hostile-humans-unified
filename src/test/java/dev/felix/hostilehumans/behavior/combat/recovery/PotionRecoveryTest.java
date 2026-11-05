@@ -43,11 +43,18 @@ public final class PotionRecoveryTest {
         var restarted = new PotionRecoveryPolicy.Clock(1001, 10);
         check(!restarted.pulse(1010, 10) && restarted.pulse(1011, 10), "new buff gets a fresh clock");
         check(PotionRecoveryPolicy.REGENERATION_INTERVAL_TICKS == 10, "regeneration is independent of food interval");
-        check(PotionRecoveryPolicy.instantHealingAmount(1) == 8, "full instant healing totals eight");
-        check(PotionRecoveryPolicy.instantHealingAmount(.5) == 4, "splash preserves exposure falloff");
-        check(PotionRecoveryPolicy.instantHealingAmount(2) == 8, "exposure cannot exceed full healing");
-        check(PotionRecoveryPolicy.instantHealingAmount(-1) == 0
-                && PotionRecoveryPolicy.instantHealingAmount(Double.NaN) == 0, "invalid exposures cannot heal");
+        check(PotionRecoveryPolicy.instantHealingAmount(0, 100, 1, 1) == 12, "healing I adds six percent");
+        check(PotionRecoveryPolicy.instantHealingAmount(1, 100, 1, 1) == 24, "healing II adds twelve percent");
+        check(PotionRecoveryPolicy.instantHealingAmount(1, 100, .5, 1) == 12, "splash scales both portions");
+        check(PotionRecoveryPolicy.instantHealingAmount(0, 100, 2, 1) == 12, "exposure caps at full strength");
+        check(Math.abs(PotionRecoveryPolicy.instantHealingAmount(0, 20, 1, 1) - 7.2F) < .0001F,
+                "the bonus preserves fractional health");
+        check(PotionRecoveryPolicy.instantHealingAmount(1, 100, 1, 1.5) == 30,
+                "regeneration scales the twelve-point base but not the twelve-point bonus");
+        check(PotionRecoveryPolicy.instantHealingAmount(0, 100, -1, 1) == 0
+                && PotionRecoveryPolicy.instantHealingAmount(1, 100, Double.NaN, 1) == 0, "invalid exposures cannot heal");
+        check(PotionRecoveryPolicy.instantHealingAmount(1, 400, 1, 3) == 84,
+                "boss-sized health adds exactly forty-eight bonus healing at high regeneration");
         for(int amplifier=0;amplifier<=1;amplifier++){
             var cadence = new PotionRecoveryPolicy.Clock(0, PotionRecoveryPolicy.REGENERATION_INTERVAL_TICKS);
             float total=0;

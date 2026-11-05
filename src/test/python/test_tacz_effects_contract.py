@@ -72,6 +72,6 @@ class TaczEffectsContract(unittest.TestCase):
         self.assertIn('defender.isDamageSourceBlocked(normalSource)', active)
         self.assertIn('HumanDamagePipeline.markCustomShield(defender, normalSource,', active)
         self.assertIn('gunSetting("shield_damage_multiplier", .5)', active)
-        self.assertEqual(active.count('event.setBaseAmount('), 1)
+        self.assertNotIn('event.setBaseAmount(', active)
         self.assertEqual(active.count('ShieldDurability.damageShield('), 1)
         self.assertNotIn('setDamageSource(', active)

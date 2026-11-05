@@ -39,9 +39,11 @@ public class HumanRenderer
 extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     private final EntityRendererProvider.Context context;
     // Presentation only: collision dimensions retain their independent server-side scale.
+    private static final float BASE_MODEL_SCALE = 0.9375F;
     private static final float BOSS_MODEL_SCALE = 1.15F;
     private final boolean armsOnly;
     private HumanRenderer spectatorArms;
+    private DodgeTrailLayer.Frame dodgeFrame;
     private HumanRenderDetail.Level detail = HumanRenderDetail.Level.FULL;
 
     public HumanRenderer(EntityRendererProvider.Context context) {
@@ -100,9 +102,13 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
     }
 
     protected void scale(Human p_117798_, PoseStack p_117799_, float p_117800_) {
-        float size = 0.9375F * (armsOnly ? 1.0F
-                : dev.felix.hostilehumans.faction.HumanFactions.isBoss(p_117798_) ? BOSS_MODEL_SCALE : 1.0F);
+        float size = armsOnly ? BASE_MODEL_SCALE : bodyScale(p_117798_);
         p_117799_.scale(size, size, size);
+    }
+
+    static float bodyScale(Human human) {
+        return BASE_MODEL_SCALE * (dev.felix.hostilehumans.faction.HumanFactions.isBoss(human)
+                ? BOSS_MODEL_SCALE : 1.0F);
     }
 
     protected void renderNameTag(Human human, Component p_117809_, PoseStack p_117810_, MultiBufferSource p_117811_, int p_117812_) {
@@ -144,8 +150,10 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
         // Turn the model as one player-like unit: shoulders, torso, legs,
         // armor and held items share the same smoothly interpolated yaw.
         p_117803_.mulPose(Axis.YP.rotationDegrees(-stanceYaw));
-        BetterCombatNpcAnimator.applyBodyTransform(p_117802_, p_117803_, p_117806_,
-                armsOnly ? SpectatorMeleePresentation.bodyMotionWeight(p_117802_) : 1);
+        var dodge = armsOnly ? null : p_117802_.hhu$dodgeMotion();
+        float attackBodyWeight = armsOnly ? SpectatorMeleePresentation.bodyMotionWeight(p_117802_)
+                : dodge == null ? 1 : dodge.attackBodyWeight(p_117802_.tickCount, p_117806_);
+        BetterCombatNpcAnimator.applyBodyTransform(p_117802_, p_117803_, p_117806_, attackBodyWeight);
     }
 
     @NotNull
@@ -156,10 +164,28 @@ extends HumanoidMobRenderer<Human, PlayerModel<Human>> {
 
     public void render(Human human, float pEntityYaw, float pPartialTicks, @NotNull PoseStack pMatrixStack, @NotNull MultiBufferSource pBuffer, int pPackedLight) {
         var previous = detail;
+        var previousDodge = dodgeFrame;
         detail = HumanRenderDetail.select(human,armsOnly);
+        dodgeFrame = armsOnly ? null : DodgeTrailLayer.frame(human, pPartialTicks, pMatrixStack);
+        pMatrixStack.pushPose();
+        DodgeGeometryCapture trail = null;
         try {
-            renderHuman(human,pEntityYaw,pPartialTicks,pMatrixStack,pBuffer,pPackedLight);
+            MultiBufferSource visible = pBuffer;
+            if (dodgeFrame != null) {
+                // The complete model, armor and held objects share this render-only translation.
+                var axis = dodgeFrame.axis();
+                float offset = dodgeFrame.offset();
+                pMatrixStack.translate(axis.x() * offset, 0, axis.z() * offset);
+                visible = DodgeTrailLayer.blinkBuffers(human, pPartialTicks, pBuffer);
+                if (!human.isInvisible()) { trail = new DodgeGeometryCapture(visible, dodgeFrame); visible = trail; }
+            }
+            renderHuman(human,pEntityYaw,pPartialTicks,pMatrixStack,visible,pPackedLight);
+            if (trail != null) trail.replay(pBuffer, human.hhu$dodgeMotion(), human.tickCount, pPartialTicks,
+                    detail == HumanRenderDetail.Level.FULL);
         } finally {
+            if (trail != null) trail.close();
+            pMatrixStack.popPose();
+            dodgeFrame = previousDodge;
             detail = previous;
         }
     }

@@ -71,7 +71,7 @@ class CloseRangedTacticsContract(unittest.TestCase):
         shield = (PKG / 'ShieldDefenseController.java').read_text(encoding='utf-8')
         damage = shield.split('public void recordPressureDamage(', 1)[1].split('public boolean shouldSuppressRecovery', 1)[0]
         self.assertIn('if (attacker instanceof LivingEntity living && isValidThreat(living)) CloseRangedTactics.damage(human, damage);', damage)
-        self.assertIn('recoveryPressure.record(human.tickCount, damage, human.getMaxHealth(), rules)', damage)
+        self.assertIn('recoveryPressure.record(now, damage, human.getMaxHealth(), rules)', damage)
         human = (PKG.parents[2] / 'dev/felix/hostilehumans/entity/Human.java').read_text(encoding='utf-8')
         self.assertIn('Math.max(0.0F, previousHealth - this.getHealth())', human)
         code = (PKG / 'CloseRangedTactics.java').read_text(encoding='utf-8')

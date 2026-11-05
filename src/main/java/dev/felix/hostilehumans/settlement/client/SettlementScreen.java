@@ -71,7 +71,7 @@ public final class SettlementScreen extends PanelScreen {
             java.util.LinkedHashMap<net.minecraft.core.BlockPos, AuthorView>> AUTHOR_VIEWS =
             new java.util.WeakHashMap<>();
     private final net.minecraft.client.multiplayer.ClientLevel authorLevel;
-    private boolean exclude, localChanged, serverClosed, transformDirty, templateEntities, currentRegionOnly, advancedAuthor;
+    private boolean exclude, localChanged, serverClosed, transformDirty, templateEntities, advancedAuthor;
     private long confirmUntil;
 
     private SettlementScreen(SettlementNetwork.Snapshot snapshot) {
@@ -544,7 +544,7 @@ public final class SettlementScreen extends PanelScreen {
         if (changed(pivot)) transformDirty = true;
         if (snapshot.author())
             for (String key : List.of("import", "join", "update", "save_template_file",
-                    "replace_template_file", "bounds_as_outer", "pick_facility")) {
+                    "replace_template_file", "bounds_as_outer")) {
                 var button = controls.get(key);
                 if (button != null)
                     button.active =
@@ -640,14 +640,8 @@ public final class SettlementScreen extends PanelScreen {
 
     private UiLayout.Node generationEditor() {
         List<UiLayout.Node> nodes = new ArrayList<>();
+        nodes.add(heading(text("section.generation")));
         nodes.add(muted(text("generation.help")));
-        nodes.add(muted(text("building_pack.help")));
-        nodes.add(action("validate_generation", text("validate_generation"), editable() && !dirty(), false,
-                () -> send(snapshot, SettlementNetwork.Action.VALIDATE_GENERATION, new CompoundTag())));
-        nodes.add(action("export_building_pack", text("export_building_pack"), editable() && !dirty(), false,
-                () -> exportBuildingPack(false)));
-        nodes.add(action("replace_building_pack", text("replace_building_pack"), editable() && !dirty(), false,
-                () -> confirm("replace_building_pack", () -> exportBuildingPack(true))));
         nodes.add(choices("generation.enabled", List.of("false", "true"),
                 Boolean.toString(generation.getBoolean("enabled")),
                 value -> generation.putBoolean("enabled", Boolean.parseBoolean(value))));
@@ -667,6 +661,14 @@ public final class SettlementScreen extends PanelScreen {
         nodes.add(generationChoices("terrain", List.of("NONE", "BEARD_THIN", "BEARD_BOX")));
         for (int i = 0; i < GENERATION_NUMBERS.size(); i++)
             nodes.add(input("generation." + GENERATION_NUMBERS.get(i), generationNumbers.get(i)));
+        nodes.add(heading(text("section.pack")));
+        nodes.add(muted(text("building_pack.help")));
+        nodes.add(action("validate_generation", text("validate_generation"), editable() && !dirty(), false,
+                () -> send(snapshot, SettlementNetwork.Action.VALIDATE_GENERATION, new CompoundTag())));
+        nodes.add(action("export_building_pack", text("export_building_pack"), editable() && !dirty(), false,
+                () -> exportBuildingPack(false)));
+        nodes.add(action("replace_building_pack", text("replace_building_pack"), editable() && !dirty(), false,
+                () -> confirm("replace_building_pack", () -> exportBuildingPack(true))));
         return UiLayout.column(6, nodes);
     }
 
@@ -686,7 +688,7 @@ public final class SettlementScreen extends PanelScreen {
         payload.putString("mode", mode);
         payload.putString("region", regionId);
         payload.putBoolean("exclude", exclude);
-        payload.putBoolean("current_only", currentRegionOnly);
+        payload.putBoolean("current_only", false);
         payload.putInt("box_index", mode.equals("MOVE_FACILITY") ? facilityIndex : boxIndex);
         var base = snapshot;
         if (dirty()) {
@@ -716,23 +718,31 @@ public final class SettlementScreen extends PanelScreen {
         send(snapshot, SettlementNetwork.Action.SAVE_TEMPLATE_FILE, payload);
     }
 
+    private UiLayout.Node advancedToggle() {
+        return action("advanced_author", text("advanced_author"), editable(), advancedAuthor, () -> {
+            advancedAuthor = !advancedAuthor;
+            refresh();
+        });
+    }
+
     private UiLayout.Node identity() {
         List<UiLayout.Node> nodes = new ArrayList<>();
+        nodes.add(heading(text("section.identity")));
         nodes.add(choices("kind", List.of("ORDINARY", "ROOT", "ATTACHMENT", "BROKER_STATION"), kind, v -> kind = v));
         nodes.add(muted(text("help.kind." + kind)));
         nodes.add(input("template_id", template));
+        nodes.add(heading(text("section.capture")));
         nodes.add(muted(text("bind_bounds_help")));
         nodes.add(action("capture_bounds", text("capture_bounds"), editable() && namedTemplate(), false,
                 () -> beginWorldEdit("BOUNDS", "")));
         if (!kind.equals("ORDINARY")) {
+            nodes.add(heading(text("section.allegiance")));
             var registeredFactions = snapshot.data().getList("faction_ids", Tag.TAG_STRING)
                     .stream().map(Tag::getAsString).toList();
             nodes.add(field(text("faction"), faction, registeredFactions, UiThemes::factionName));
             nodes.add(muted(text("help.faction")));
             nodes.add(muted(text("help.tier")));
             nodes.add(choices("tier_choice", List.of("1", "2", "3"), tier.text(), tier::set));
-        } else {
-            addFileSaveControls(nodes);
         }
         if (kind.equals("BROKER_STATION")) {
             nodes.add(muted(text("broker_factions_help")));
@@ -753,8 +763,7 @@ public final class SettlementScreen extends PanelScreen {
                 }));
             }
         }
-        nodes.add(action("advanced_author", text("advanced_author"), editable(), advancedAuthor,
-                () -> { advancedAuthor = !advancedAuthor; refresh(); }));
+        nodes.add(advancedToggle());
         if (advancedAuthor) {
             nodes.add(input("module_id", module));
             nodes.add(heading(text("size")));
@@ -767,6 +776,7 @@ public final class SettlementScreen extends PanelScreen {
 
     private UiLayout.Node regionEditor() {
         List<UiLayout.Node> list = new ArrayList<>();
+        list.add(heading(text("section.region_list")));
         list.add(muted(text("region_tool_help")));
         for (int i = 0; i < regions().size(); i++) {
             final int index = i;
@@ -814,13 +824,7 @@ public final class SettlementScreen extends PanelScreen {
         List<UiLayout.Node> detail = new ArrayList<>();
         if (region() == null) detail.add(muted(text("create_outer_help")));
         else {
-            detail.add(
-                    action(
-                            "selection",
-                            text("world_selection"),
-                            editable(),
-                            false,
-                            () -> beginWorldEdit("ADD", region().getString("id"))));
+            detail.add(heading(text("section.region_details")));
             detail.add(input("region_id", regionId));
             detail.add(input("region_name", regionName));
             if (layer.equals("OUTER") && !kind.equals("ORDINARY"))
@@ -832,100 +836,99 @@ public final class SettlementScreen extends PanelScreen {
                         })));
             detail.add(muted(text("help.layer")));
             detail.add(choices("layer", List.of("OUTER", "INNER"), layer, v -> layer = v));
-            detail.add(muted(text("coordinates_hint")));
-            detail.add(
-                    UiLayout.grid(
-                            2,
-                            6,
-                            List.of(
-                                    action(
-                                            "includes",
-                                            text("includes"),
-                                            editable(),
-                                            !exclude,
-                                            () -> {
-                                                if (applyBox()) {
-                                                    exclude = false;
-                                                    boxIndex = 0;
-                                                    loadBox();
-                                                    refresh();
-                                                }
-                                            }),
-                                    action(
-                                            "excludes",
-                                            text("excludes"),
-                                            editable(),
-                                            exclude,
-                                            () -> {
-                                                if (applyBox()) {
-                                                    exclude = true;
-                                                    boxIndex = 0;
-                                                    loadBox();
-                                                    refresh();
-                                                }
-                                            }))));
-            List<UiLayout.Node> boxList = new ArrayList<>();
-            for (int i = 0; i < boxes().size(); i++) {
-                final int index = i;
-                int[] a = boxes().getIntArray(i);
-                boxList.add(
+            detail.add(advancedToggle());
+            if (advancedAuthor) {
+                detail.add(muted(text("coordinates_hint")));
+                detail.add(
+                        UiLayout.grid(
+                                2,
+                                6,
+                                List.of(
+                                        action(
+                                                "includes",
+                                                text("includes"),
+                                                editable(),
+                                                !exclude,
+                                                () -> {
+                                                    if (applyBox()) {
+                                                        exclude = false;
+                                                        boxIndex = 0;
+                                                        loadBox();
+                                                        refresh();
+                                                    }
+                                                }),
+                                        action(
+                                                "excludes",
+                                                text("excludes"),
+                                                editable(),
+                                                exclude,
+                                                () -> {
+                                                    if (applyBox()) {
+                                                        exclude = true;
+                                                        boxIndex = 0;
+                                                        loadBox();
+                                                        refresh();
+                                                    }
+                                                }))));
+                List<UiLayout.Node> boxList = new ArrayList<>();
+                for (int i = 0; i < boxes().size(); i++) {
+                    final int index = i;
+                    int[] a = boxes().getIntArray(i);
+                    boxList.add(
+                            action(
+                                    "box." + i,
+                                    text("box", i + 1, Arrays.toString(a)),
+                                    editable(),
+                                    boxIndex == i,
+                                    () -> {
+                                        if (applyBox()) {
+                                            boxIndex = index;
+                                            loadBox();
+                                            refresh();
+                                        }
+                                    }));
+                }
+                detail.add(UiLayout.column(4, boxList));
+                if (!box.isEmpty()) detail.add(coords("box_coord", box));
+                detail.add(
                         action(
-                                "box." + i,
-                                text("box", i + 1, Arrays.toString(a)),
-                                editable(),
-                                boxIndex == i,
+                                "addBox",
+                                text("add_box"),
+                                editable()
+                                        && region().getList("include", Tag.TAG_INT_ARRAY).size()
+                                                        + region().getList("exclude", Tag.TAG_INT_ARRAY)
+                                                                .size()
+                                                < 64,
+                                false,
                                 () -> {
-                                    if (applyBox()) {
-                                        boxIndex = index;
-                                        loadBox();
-                                        refresh();
-                                    }
+                                    if (!applyBox()) return;
+                                    ListTag all = boxes();
+                                    all.add(new IntArrayTag(new int[] {0, 0, 0, 0, 0, 0}));
+                                    region().put(exclude ? "exclude" : "include", all);
+                                    boxIndex = all.size() - 1;
+                                    localChanged = true;
+                                    loadBox();
+                                    refresh();
+                                }));
+                detail.add(
+                        action(
+                                "removeBox",
+                                text("remove_box"),
+                                editable() && !boxes().isEmpty() && (exclude || boxes().size() > 1),
+                                false,
+                                () -> {
+                                    boxes().remove(boxIndex);
+                                    boxIndex = 0;
+                                    localChanged = true;
+                                    loadBox();
+                                    refresh();
                                 }));
             }
-            detail.add(UiLayout.column(4, boxList));
-            if (!box.isEmpty()) detail.add(coords("box_coord", box));
-            detail.add(
-                    action(
-                            "addBox",
-                            text("add_box"),
-                            editable()
-                                    && region().getList("include", Tag.TAG_INT_ARRAY).size()
-                                                    + region().getList("exclude", Tag.TAG_INT_ARRAY)
-                                                            .size()
-                                            < 64,
-                            false,
-                            () -> {
-                                if (!applyBox()) return;
-                                ListTag all = boxes();
-                                all.add(new IntArrayTag(new int[] {0, 0, 0, 0, 0, 0}));
-                                region().put(exclude ? "exclude" : "include", all);
-                                boxIndex = all.size() - 1;
-                                localChanged = true;
-                                loadBox();
-                                refresh();
-                            }));
-            detail.add(
-                    action(
-                            "removeBox",
-                            text("remove_box"),
-                            editable() && !boxes().isEmpty() && (exclude || boxes().size() > 1),
-                            false,
-                            () -> {
-                                boxes().remove(boxIndex);
-                                boxIndex = 0;
-                                localChanged = true;
-                                loadBox();
-                                refresh();
-                            }));
-            detail.add(
-                    action(
-                            "applyRegion",
-                            text("apply_local"),
-                            editable(),
-                            false,
-                            () -> {
-                                if (applyRegion()) refresh();
-                            }));
+            if (advancedAuthor) {
+                detail.add(action("bind_world_facility", text("bind_world_facility"),
+                        editable(), false,
+                        () -> beginWorldEdit("FACILITY", region().getString("id"))));
+            }
             String selectedId = region().getString("id");
             String removeId = "removeRegion." + selectedId;
             var references = new ArrayList<String>();
@@ -936,6 +939,7 @@ public final class SettlementScreen extends PanelScreen {
             }
             if (!references.isEmpty())
                 detail.add(muted(text("region_remove_facilities", String.join(", ", references))));
+            detail.add(heading(text("section.remove")));
             detail.add(action(removeId, text("remove_region"),
                     editable() && references.isEmpty(), false,
                     () -> confirm(removeId, () -> {
@@ -945,30 +949,14 @@ public final class SettlementScreen extends PanelScreen {
                         loadRegion();
                         refresh();
                     })));
-            detail.add(action("region_preview_scope", text(currentRegionOnly ? "preview_current" : "preview_all"),
-                    editable(), currentRegionOnly, () -> { currentRegionOnly = !currentRegionOnly; refresh(); }));
-            detail.add(action("region_preview_depth", text(SettlementPreviewClient.throughWalls
-                            ? "preview_through" : "preview_depth"),
-                    editable(), SettlementPreviewClient.throughWalls,
-                    () -> { SettlementPreviewClient.throughWalls = !SettlementPreviewClient.throughWalls; refresh(); }));
-            detail.add(action("replace_world_selection", text("replace_world_selection"),
-                    editable(), false,
-                    () -> beginWorldEdit("REPLACE", region().getString("id"))));
-            detail.add(action("edit_world_box", text("edit_world_box"),
-                    editable() && boxIndex < boxes().size(), false,
-                    () -> beginWorldEdit("EDIT", region().getString("id"))));
-            detail.add(action("bind_world_facility", text("bind_world_facility"),
-                    editable(), false,
-                    () -> beginWorldEdit("FACILITY", region().getString("id"))));
         }
         return UiLayout.row(12, List.of(UiLayout.column(6, list), UiLayout.column(6, detail)));
     }
 
     private UiLayout.Node facilityEditor() {
         List<UiLayout.Node> list = new ArrayList<>();
+        list.add(heading(text("section.facility_list")));
         list.add(muted(text("facility_tool_help")));
-        list.add(action("pick_facility", text("pick_facility"), editable(), false,
-                () -> beginWorldEdit("FACILITY", "")));
         for (int i = 0; i < facilities().size(); i++) {
             final int index = i;
             var f = facilities().getCompound(i);
@@ -986,30 +974,34 @@ public final class SettlementScreen extends PanelScreen {
                                 }
                             }));
         }
-        list.add(
-                action(
-                        "addFacility",
-                        text("add_facility"),
-                        editable() && facilities().size() < 128 && region() != null,
-                        false,
-                        () -> {
-                            if (!applyFacility()) return;
-                            CompoundTag f = new CompoundTag();
-                            f.putString("id", "facility_" + facilities().size());
-                            f.putString("type", "POST");
-                            f.putString("region", region().getString("id"));
-                            f.putIntArray("position", new int[] {0, 0, 0});
-                            ListTag all = facilities();
-                            all.add(f);
-                            author.put("facilities", all);
-                            facilityIndex = all.size() - 1;
-                            localChanged = true;
-                            loadFacility();
-                            refresh();
-                        }));
+        list.add(advancedToggle());
+        if (advancedAuthor) {
+            list.add(
+                    action(
+                            "addFacility",
+                            text("add_facility"),
+                            editable() && facilities().size() < 128 && region() != null,
+                            false,
+                            () -> {
+                                if (!applyFacility()) return;
+                                CompoundTag f = new CompoundTag();
+                                f.putString("id", "facility_" + facilities().size());
+                                f.putString("type", "POST");
+                                f.putString("region", region().getString("id"));
+                                f.putIntArray("position", new int[] {0, 0, 0});
+                                ListTag all = facilities();
+                                all.add(f);
+                                author.put("facilities", all);
+                                facilityIndex = all.size() - 1;
+                                localChanged = true;
+                                loadFacility();
+                                refresh();
+                            }));
+        }
         List<UiLayout.Node> detail = new ArrayList<>();
         if (facilities().isEmpty()) detail.add(muted(text("no_facility")));
         else {
+            detail.add(heading(text("section.facility_details")));
             detail.add(input("facility_id", facilityId));
             detail.add(input("facility_region", facilityRegion));
             detail.add(muted(text("help.facility." + facilityType)));
@@ -1019,18 +1011,12 @@ public final class SettlementScreen extends PanelScreen {
                             List.of("CONTROL", "ENTRANCE", "SUPPLY", "TRADER", "POST", "TRAINING"),
                             facilityType,
                             v -> facilityType = v));
-            detail.add(coords("position", facilityPosition));
-            detail.add(action("move_facility", text("move_facility"), editable(), false,
-                    () -> beginWorldEdit("MOVE_FACILITY", facilities().getCompound(facilityIndex).getString("region"))));
-            detail.add(
-                    action(
-                            "applyFacility",
-                            text("apply_local"),
-                            editable(),
-                            false,
-                            () -> {
-                                if (applyFacility()) refresh();
-                            }));
+            if (advancedAuthor) {
+                detail.add(coords("position", facilityPosition));
+                detail.add(action("move_facility", text("move_facility"), editable(), false,
+                        () -> beginWorldEdit("MOVE_FACILITY", facilities().getCompound(facilityIndex).getString("region"))));
+            }
+            detail.add(heading(text("section.remove")));
             detail.add(
                     action(
                             "removeFacility",
@@ -1080,8 +1066,13 @@ public final class SettlementScreen extends PanelScreen {
 
     private UiLayout.Node transfer() {
         List<UiLayout.Node> nodes = new ArrayList<>();
+        nodes.add(heading(text("section.file")));
         addFileSaveControls(nodes);
         if (kind.equals("ORDINARY") && snapshot.instance().equals(NONE)) return UiLayout.column(6, nodes);
+        nodes.add(muted(text("section.placement_help")));
+        nodes.add(advancedToggle());
+        if (!advancedAuthor) return UiLayout.column(6, nodes);
+        nodes.add(heading(text("section.registration")));
         nodes.add(muted(text("transfer_hint")));
         nodes.add(input("instance_name", displayName));
         nodes.add(
@@ -1122,6 +1113,7 @@ public final class SettlementScreen extends PanelScreen {
                                 send(snapshot, SettlementNetwork.Action.IMPORT_NEW, payload);
                             else fail("invalid_input");
                         }));
+        nodes.add(heading(text("section.instance_tools")));
         nodes.add(input("target", target));
         nodes.add(input("target_revision", targetRevision));
         nodes.add(input("restore_module", restoreModule));

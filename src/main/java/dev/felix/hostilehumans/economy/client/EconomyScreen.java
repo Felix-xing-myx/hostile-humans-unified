@@ -380,11 +380,6 @@ public final class EconomyScreen extends PanelScreen {
             detail.add(muted(text("no_wallet")));
             return UiLayout.column(6, detail);
         }
-        List<UiLayout.Node> balances = new ArrayList<>();
-        for (Currency value : Currency.values())
-            balances.add(factionBalance(value, selected.known()
-                    ? Component.literal(Long.toString(selected.amount(value))) : text("unknown")));
-        detail.add(UiLayout.grid(2, 6, balances));
         detail.add(currencyChoice(false));
         List<UiLayout.Node> faces = new ArrayList<>();
         for (var face : Currency.Denomination.values())

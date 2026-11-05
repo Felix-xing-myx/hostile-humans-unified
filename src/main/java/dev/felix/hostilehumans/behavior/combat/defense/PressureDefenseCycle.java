@@ -6,7 +6,8 @@ final class PressureDefenseCycle {
     private int cooldownUntil = Integer.MIN_VALUE;
     boolean update(int now, boolean pressured, ShieldPressureConfig config) {
         if (!config.enabled()) { clear(); return false; }
-        if (guardSince != Integer.MIN_VALUE && (!pressured || now - guardSince >= config.maxGuardTicks())) {
+        if (guardSince != Integer.MIN_VALUE && (now - guardSince >= config.maxGuardTicks()
+                || now - guardSince >= 16 && (now - guardSince) % 4 == 0 && !pressured)) {
             ended(now, config);
             return true;
         }
@@ -16,11 +17,12 @@ final class PressureDefenseCycle {
     void guarded(int now) { if (!attempting() && guardSince == Integer.MIN_VALUE) guardSince = now; }
     void ended(int now, ShieldPressureConfig config) {
         if (guardSince == Integer.MIN_VALUE) return;
+        int duration = Math.max(0, now - guardSince);
         guardSince = Integer.MIN_VALUE;
-        cooldownUntil = now + config.cooldownTicks();
+        cooldownUntil = now + Math.min(config.cooldownTicks(), 10 + (duration + 1) / 2);
     }
-    /** Damage during cooldown cannot shorten the mandatory interval. */
-    void damage(int now, float damage, float maximumHealth, ShieldPressureConfig config) { }
+    int duration(int now) { return guardSince == Integer.MIN_VALUE ? 0 : now - guardSince; }
+    int remainingCooldown(int now) { return attempting() ? Math.max(0, cooldownUntil - now) : 0; }
     boolean attempting() { return cooldownUntil != Integer.MIN_VALUE; }
     void clear() { guardSince = cooldownUntil = Integer.MIN_VALUE; }
 }

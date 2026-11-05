@@ -10,7 +10,7 @@ class DodgeEffectSpeedContract(unittest.TestCase):
         self.assertIn('HumanOwnerProtection.blocksDamage(h, source)',dodge)
         self.assertIn('HumanRuntime.shouldBlockHumanDamage(other, h)',dodge)
     def test_dodge_reuses_existing_physical_damage_compatibility(self):
-        self.assertIn('HumanDamagePipeline.physical(source)',code('DodgeAbility'))
+        self.assertNotIn('HumanDamagePipeline.physical(source)',code('DodgeAbility'))
         self.assertIn('nativeBullet(source)',code('HumanDamagePipeline'))
     def test_observer_does_not_run_randomness_or_change_ability(self):
         ability=code('DodgeAbility')
@@ -18,6 +18,27 @@ class DodgeEffectSpeedContract(unittest.TestCase):
         self.assertNotIn('getRandom',observe)
         self.assertNotIn('computeIfAbsent',observe)
         self.assertIn('FactionAbilities.describe(h)',code('HumanPerception'))
+    def test_dodge_presentation_moves_the_complete_frame_without_moving_entity(self):
+        renderer = code('HumanRenderer')
+        trail = code('DodgeTrailLayer')
+        motion = code('DodgeMotion')
+        self.assertNotIn('LEAN_DEGREES', trail)
+        self.assertNotIn('MODEL_FOOT_Y', trail)
+        self.assertIn('pMatrixStack.translate(axis.x() * offset, 0, axis.z() * offset)', renderer)
+        self.assertIn('new DodgeGeometryCapture(visible, dodgeFrame)', renderer)
+        self.assertIn('trail.replay(pBuffer',renderer)
+        self.assertIn('new RenderVisibilityMask(original', trail)
+        mask=code('RenderVisibilityMask')
+        self.assertIn('new DiscardedVertices()',mask)
+        self.assertNotIn('HiddenVertex.INSTANCE',trail+mask)
+        self.assertIn('.setWriteMaskState(COLOR_WRITE)',code('DodgeRenderTypes'))
+        self.assertIn('frame.origin().transformDirection(direction)',code('DodgeGeometryCapture'))
+        for source in (trail, motion, code('DodgeGeometryCapture')):
+            for mutation in ('setPos(', 'setDeltaMovement(', 'teleportTo('):
+                self.assertNotIn(mutation, source)
+        dodge = code('DodgeAbility')
+        self.assertLess(dodge.index('broadcastEntityEvent'), dodge.index('LAST_SOUND.get(h)'))
+
     def test_effects_come_from_real_attribute_contract_not_item_names(self):
         speed=code('MovementSpeedController')
         self.assertIn('human.getActiveEffects()',speed)

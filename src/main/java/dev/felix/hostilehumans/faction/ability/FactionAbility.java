@@ -8,7 +8,9 @@ import net.minecraft.world.damagesource.DamageSource;
 interface FactionAbility {
     record IncomingAttack(Human human, DamageSource source, float amount) {}
     /** True consumes this incoming attack. No health, durability or pressure is fabricated. */
-    boolean evade(IncomingAttack attack);
+    default boolean evade(IncomingAttack attack) { return false; }
+    /** Server passive tick, independent of AI orders and action ownership. */
+    default void tick(Human human) { }
     /** Read-only server diagnostics, never rolls or changes an ability. */
     default String describe(Human human) { return "能力等待事件"; }
 }

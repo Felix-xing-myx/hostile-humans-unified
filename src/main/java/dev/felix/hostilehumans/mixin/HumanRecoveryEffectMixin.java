@@ -15,13 +15,13 @@ public abstract class HumanRecoveryEffectMixin {
     @Inject(method = "m_6742_(Lnet/minecraft/world/entity/LivingEntity;I)V",
             at = @At("HEAD"), cancellable = true, remap = false, require = 1)
     private void hostileHumansUnified$replaceRecoveryTick(LivingEntity target, int amplifier, CallbackInfo callback) {
-        if (HumanRecoveryEffects.replaceTick((MobEffect) (Object) this, target)) callback.cancel();
+        if (HumanRecoveryEffects.replaceTick((MobEffect) (Object) this, target, amplifier)) callback.cancel();
     }
 
     @Inject(method = "m_19461_(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/LivingEntity;ID)V",
             at = @At("HEAD"), cancellable = true, remap = false, require = 1)
     private void hostileHumansUnified$replaceInstantHealing(Entity source, Entity indirectSource,
             LivingEntity target, int amplifier, double exposure, CallbackInfo callback) {
-        if (HumanRecoveryEffects.replaceInstant((MobEffect) (Object) this, target, exposure)) callback.cancel();
+        if (HumanRecoveryEffects.replaceInstant((MobEffect) (Object) this, target, amplifier, exposure)) callback.cancel();
     }
 }

@@ -140,11 +140,11 @@ public final class FactionDefinitions extends SimplePreparableReloadListener<Fac
         ResourceLocation item = id(UnifiedConfig.string(hire, "item", "minecraft:iron_ingot"));
         if (item == null) throw new IllegalArgumentException("Invalid hiring item " + key);
         List<Integer> costs = new ArrayList<>();
-        JsonArray configured = hire.has("costs") ? hire.getAsJsonArray("costs") : JsonParser.parseString("[8,16,32]").getAsJsonArray();
+        JsonArray configured = hire.has("costs") ? hire.getAsJsonArray("costs") : JsonParser.parseString("[200,2000,20000]").getAsJsonArray();
         if (configured.size() != 3) throw new IllegalArgumentException("Three hiring costs required " + key);
         for (JsonElement value : configured) {
             int cost = value.getAsBigDecimal().intValueExact();
-            if (cost < 0 || cost > 4096) throw new IllegalArgumentException("Invalid hiring cost " + key);
+            if (cost < 0 || cost > 1_000_000_000) throw new IllegalArgumentException("Invalid hiring cost " + key);
             costs.add(cost);
         }
         String style = UnifiedConfig.string(root, "band_style", "base"), aggression = UnifiedConfig.string(root, "aggression", "aggressive");

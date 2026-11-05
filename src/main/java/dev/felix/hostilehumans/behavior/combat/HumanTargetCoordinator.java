@@ -40,7 +40,10 @@ public final class HumanTargetCoordinator {
     public static LivingEntity counterfire(Human h,LivingEntity target){
         // Null is rejection, even when the old Mob target happens to equal this request.
         if(suspended(h)||!h.isFleeing||h.explosionThreat!=null||!HumanPerception.canTarget(h,target))return null;
-        if(h.getTarget()!=null)return h.getTarget()==target?target:null;
+        LivingEntity current = h.getTarget();
+        if (current == target) return target;
+        if (current != null && (h.hhu$hasPendingMeleeAttack()
+                || !dev.felix.hostilehumans.behavior.combat.retreat.RetreatLastStand.active(h))) return null;
         if(BodyguardProtection.isBodyguard(h)&&BodyguardProtection.owner(h)!=null){
             BodyguardProtection.update(h);if(BodyguardProtection.attack(h)!=target)return null;
         }

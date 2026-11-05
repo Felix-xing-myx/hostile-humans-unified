@@ -43,6 +43,30 @@ public final class ShieldDurability {
             wear(human, shield, InteractionHand.OFF_HAND, incomingDamage);
     }
 
+    public static void damageBackShield(Human human, GunnerShieldProtection.BackShield selected, float incomingDamage) {
+        if (selected.backpackSlot() >= 0) {
+            damageBackpackShield(human, selected.backpackSlot(), selected.stack(), incomingDamage);
+            return;
+        }
+        ItemStack shield = selected.stack();
+        if (human.level().isClientSide || human.getOffhandItem() != shield || !shield.isDamageableItem()) return;
+        applyWear(human, shield, EquipmentSlot.OFFHAND, incomingDamage, true);
+        if (shield.isEmpty() && human.getOffhandItem() == shield)
+            human.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+    }
+
+    private static void damageBackpackShield(Human human, int slot, ItemStack shield, float incomingDamage) {
+        var data = human.getData();
+        if (human.level().isClientSide || data == null || slot < 0 || slot >= data.getInventoryItemsSize()) return;
+        if (data.getInventoryItem(slot) != shield
+                || !GunnerShieldProtection.isUsableShield(shield) || !shield.isDamageableItem()) return;
+        int before = shield.getDamageValue();
+        applyWear(human, shield, EquipmentSlot.OFFHAND, incomingDamage, false);
+        if (data.getInventoryItem(slot) != shield) return;
+        if (shield.isEmpty()) data.setInventoryItem(slot, ItemStack.EMPTY);
+        else if (shield.getDamageValue() != before) data.markInventoryDirty();
+    }
+
     public static void damageShield(Human human, float blockedDamage) {
         InteractionHand hand = human.getUsedItemHand();
         ItemStack shield = human.getItemInHand(hand);
@@ -50,12 +74,12 @@ public final class ShieldDurability {
     }
 
     static int wearCost(double damage, int maximumDurability) {
-        return wearCost(damage, maximumDurability, .0015);
+        return wearCost(damage, maximumDurability, .0027);
     }
 
     static int wearCost(double damage, int maximumDurability, double rate) {
         if (!Double.isFinite(damage) || damage <= 0 || maximumDurability <= 0) return 0;
-        if (!Double.isFinite(rate) || rate < 0) rate = .0015;
+        if (!Double.isFinite(rate) || rate < 0) rate = .0027;
         return (int) Math.min(Integer.MAX_VALUE, 1.0D + Math.floor(damage * (1.0D + rate * maximumDurability)));
     }
 
@@ -119,23 +143,27 @@ public final class ShieldDurability {
         ItemStack shield = entry.shield;
         InteractionHand hand = entry.hand;
         if (shield.isEmpty() || !shield.isDamageableItem()) return;
-        int cost = wearCost(entry.damage, shield.getMaxDamage(),
-                UnifiedConfig.get().damage("shield_durability_rate_per_damage", .0015));
-        if (cost == 0) return;
         EquipmentSlot slot = hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
+        applyWear(human, shield, slot, entry.damage, true);
+        if (shield.isEmpty() && human.getItemInHand(hand) == shield) {
+            human.setItemSlot(slot, ItemStack.EMPTY);
+            // A broken passive offhand shield must not interrupt main-hand gun use/reload.
+            if (human.isUsingItem() && human.getUsedItemHand() == hand) human.stopUsingItem();
+        }
+    }
+
+    private static void applyWear(Human human, ItemStack shield, EquipmentSlot slot, double damage, boolean held) {
+        int cost = wearCost(damage, shield.getMaxDamage(),
+                UnifiedConfig.get().damage("shield_durability_rate_per_damage", .0027));
+        if (cost == 0) return;
         ItemStack before = shield.copy();
         // Keep native/custom durability and Unbreaking rolls; do not write Damage directly.
         // Prevent integer overflow when native damage is added to existing wear.
         cost = Math.min(cost, Integer.MAX_VALUE - Math.max(0, before.getDamageValue()));
         shield.hurtAndBreak(cost, human, broken -> {
             EquipmentBreakSounds.playNow(human, slot, before);
-            human.broadcastBreakEvent(slot);
+            if (held) human.broadcastBreakEvent(slot);
         });
-        if (shield.isEmpty() && human.getItemInHand(hand) == shield) {
-            human.setItemSlot(slot, ItemStack.EMPTY);
-            // A broken passive offhand shield must not interrupt main-hand gun use/reload.
-            if (human.isUsingItem() && human.getUsedItemHand() == hand) human.stopUsingItem();
-        }
     }
 }
 

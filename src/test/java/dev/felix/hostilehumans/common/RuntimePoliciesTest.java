@@ -24,6 +24,11 @@ public final class RuntimePoliciesTest {
         if (!condition) throw new AssertionError("check " + checks);
     }
     public static void main(String[] args) {
+        dev.felix.hostilehumans.client.render.RenderVisibilityMaskTest.main(args);
+        dev.felix.hostilehumans.entity.DodgeMotionTest.main(args);
+        dev.felix.hostilehumans.client.render.DodgeGeometryCaptureTest.main(args);
+        dev.felix.hostilehumans.loot.LootAuthoringTest.main(args);
+        dev.felix.hostilehumans.faction.RecruitmentPricingTest.main(args);
         SoftSpeedLimitTest.main(args);
         ActionCoordinatorTest.main(args);
         RouteExecutionLeaseTest.main(args);

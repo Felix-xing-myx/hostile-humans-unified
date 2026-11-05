@@ -85,14 +85,17 @@ public final class CombatPressurePolicyTest {
         cycle.guarded(0);
         check(!cycle.update(119, true, pressure), "guard waits six seconds");
         check(cycle.update(120, true, pressure) && cycle.attempting(), "max duration starts cooldown");
-        cycle.damage(121, 100, 100, pressure);
         check(cycle.attempting(), "fresh damage cannot break cooldown");
         cycle.update(189, true, pressure);
         check(cycle.attempting(), "cooldown lasts seventy ticks");
         cycle.update(190, true, pressure);
         check(!cycle.attempting(), "cooldown ends at exact boundary");
         cycle.guarded(200);
-        check(cycle.update(201, false, pressure) && cycle.attempting(), "quiet exit also starts cooldown");
+        check(!cycle.update(215, false, pressure), "first sixteen ticks are protected");
+        check(cycle.update(216, false, pressure) && cycle.remainingCooldown(216) == 18,
+                "brief guard incurs eighteen ticks of cooldown");
+        cycle.ended(218, pressure);
+        check(cycle.remainingCooldown(218) == 16, "repeat end cannot restart cooldown");
         cycle.clear();
         check(!cycle.update(500, true, pressure) && !cycle.attempting(), "waiting drink has no guard deadline");
         DamagePressureTracker burst = new DamagePressureTracker();

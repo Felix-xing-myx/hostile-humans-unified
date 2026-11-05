@@ -36,7 +36,8 @@ public final class ShieldPickupPolicy {
     }
 
     private static boolean canEquipEmptyHand(Human human) {
-        return human.getOffhandItem().isEmpty() && !human.isUsingItem()
+        return !dev.felix.hostilehumans.behavior.combat.HumanCombatDirector.strategies(human).usesBackpackShield()
+                && human.getOffhandItem().isEmpty() && !human.isUsingItem()
                 && !RecoverySupplies.hasActiveUse(human);
     }
 

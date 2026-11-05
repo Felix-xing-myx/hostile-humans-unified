@@ -15,7 +15,7 @@ public final class RetreatRecoveryPolicy {
     }
 
     public static boolean shouldForceRetreat(Human human) {
-        return human.getHealth() / Math.max(1.0F, human.getMaxHealth())
+        return !LowHealthCombatController.recovering(human) && human.getHealth() / Math.max(1.0F, human.getMaxHealth())
                 < CombatAiConfig.forHuman(human).retreatHealthRatio();
     }
 
@@ -33,11 +33,10 @@ public final class RetreatRecoveryPolicy {
         EscapeFood state = FOOD_ESCAPE.get(human);
         double distance = human.distanceToSqr(threat);
         if (distance >= 9) state.separated = true;
-        double eventual = RecoverySupplies.projectedHealth(human);
-        var regeneration = human.getEffect(net.minecraft.world.effect.MobEffects.REGENERATION);
-        if (regeneration != null) eventual += regeneration.getDuration() / 20.0
-                * (regeneration.getAmplifier() >= 1 ? 2 : 1);
-        boolean sufficient = eventual > human.getMaxHealth() * CombatAiConfig.forHuman(human).resumeHealthRatio();
+        double incoming = LowHealthCombatController.recentLoss(human, 20);
+        if (incoming > 0 && distance < 9 && human.getSensing().hasLineOfSight(threat)) return false;
+        boolean sufficient = human.getHealth() + RecoverySupplies.pendingHealingWithin(human, 40) - incoming
+                >= human.getMaxHealth() * CombatAiConfig.forHuman(human).resumeHealthRatio();
         return foodOpportunity(distance, sufficient, human.tickCount-state.since, state.separated);
     }
     public static boolean foodOpportunity(double distanceSqr, boolean sufficient, int elapsed, boolean separated) {

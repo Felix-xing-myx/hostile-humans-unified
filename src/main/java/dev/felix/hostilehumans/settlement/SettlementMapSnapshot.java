@@ -77,7 +77,8 @@ final class SettlementMapSnapshot {
         int stride = (int) Math.max(1L, (Math.max(extent.sizeX(), extent.sizeZ()) + 63) / 64);
         int columns = (int) ((extent.sizeX() + stride - 1) / stride);
         int rows = (int) ((extent.sizeZ() + stride - 1) / stride);
-        int[] tiles = new int[columns * rows];
+        int[] tiles = new int[columns * rows], tints = new int[columns * rows];
+        java.util.Arrays.fill(tints,-1);
         var pos = new net.minecraft.core.BlockPos.MutableBlockPos();
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < columns; col++) {
@@ -94,6 +95,14 @@ final class SettlementMapSnapshot {
                         if (state.isAir()) continue;
                         highest = y;
                         tiles[row * columns + col] = net.minecraft.world.level.block.Block.getId(state);
+                        var biome=level.getBiome(pos).value();
+                        if(state.is(net.minecraft.tags.BlockTags.LEAVES))tints[row*columns+col]=biome.getFoliageColor();
+                        else if(state.is(net.minecraft.world.level.block.Blocks.WATER))tints[row*columns+col]=biome.getWaterColor();
+                        else if(state.is(net.minecraft.world.level.block.Blocks.GRASS_BLOCK)
+                                ||state.getBlock() instanceof net.minecraft.world.level.block.TallGrassBlock
+                                ||state.getBlock() instanceof net.minecraft.world.level.block.DoublePlantBlock
+                                ||state.is(net.minecraft.world.level.block.Blocks.VINE)
+                                ||state.is(net.minecraft.world.level.block.Blocks.SUGAR_CANE))tints[row*columns+col]=biome.getGrassColor(x,z);
                         break;
                     }
                 }
@@ -103,6 +112,7 @@ final class SettlementMapSnapshot {
         result.putInt("stride", stride);
         result.putInt("columns", columns);
         result.putIntArray("tiles", tiles);
+        result.putIntArray("tints",tints);
         return result;
     }
 

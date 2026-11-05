@@ -58,8 +58,10 @@ class ShieldControllerContract(unittest.TestCase):
 
     def test_warning_and_actual_block_feedback(self):
         source = (PKG / "ShieldDefenseController.java").read_text(encoding="utf-8")
-        self.assertIn("ShieldBlockEvent event", source)
-        self.assertIn("!event.isCanceled() && event.getBlockedDamage() > 0.0F", source)
+        pipeline = (PKG / "HumanDamagePipeline.java").read_text(encoding="utf-8")
+        self.assertIn("ShieldBlockEvent event", pipeline)
+        self.assertIn("event.isCanceled()", pipeline)
+        self.assertIn("observeAttack(source, true, blocked)", pipeline)
         self.assertIn("!human.getSensing().hasLineOfSight(shooter)", source)
         self.assertIn("shooter.isUsingItem()", source)
         blocked = source.split("public void observeBlockedHit()", 1)[1].split("private LivingEntity preparingKnownShot", 1)[0]
@@ -93,7 +95,7 @@ class ShieldControllerContract(unittest.TestCase):
         self.assertIn('40, "高压平滑盾面", true', attention)
         controller = (PKG / "ShieldDefenseController.java").read_text(encoding="utf-8")
         block = controller.split("public void observeAttack(", 1)[1].split("public void observeBlockedHit", 1)[0]
-        self.assertLess(block.index("recordPressureDirection(source, damage)"), block.index("rememberedShooter ="))
+        self.assertLess(block.index("recordPressureDirection(source, damage, false)"), block.index("rememberedShooter ="))
 
 
 if __name__ == "__main__":

@@ -9,13 +9,32 @@ public final class DamagePipelineState {
     private double fraction;
     private java.lang.ref.WeakReference<Object> customFirst, customSecond;
     private int customTick;
+    private float customNormalMultiplier;
+    private boolean customBlock;
+    private long nextMobileWeaknessTick;
+
+    boolean tryStartMobileWeakness(long now) {
+        if (now < nextMobileWeaknessTick) return false;
+        nextMobileWeaknessTick = now + 90;
+        return true;
+    }
+
+    public float beginCustomShield(Object candidate, int tick) {
+        boolean normal = customFirst != null && customFirst.get() == candidate;
+        customBlock = consumeCustomShield(candidate, tick);
+        return !customBlock ? 1 : normal ? customNormalMultiplier : .5F;
+    }
+
+    public boolean customBlock() { return customBlock; }
+    public void end() { clear(); customBlock = false; }
     public void begin() { sequence++; clear(); }
     public void clear() { source = null; fraction = 0; }
     /** Native TaCZ has two hurt calls after one successful custom percentage block. */
-    public void markCustomShield(Object first, Object second, int tick) {
+    public void markCustomShield(Object first, Object second, int tick, float normalMultiplier) {
         customFirst = new java.lang.ref.WeakReference<>(first);
         customSecond = new java.lang.ref.WeakReference<>(second);
         customTick = tick;
+        customNormalMultiplier = normalMultiplier;
     }
     public boolean consumeCustomShield(Object candidate, int tick) {
         if (tick != customTick) { customFirst = null; customSecond = null; return false; }

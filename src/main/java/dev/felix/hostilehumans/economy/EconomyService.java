@@ -56,6 +56,16 @@ public final class EconomyService implements EconomyNetwork.Backend {
         return player.getServer().overworld().getGameTime();
     }
 
+    private static String boardKey(ServerPlayer player,BlockPos pos){return player.level().dimension().location()+"/"+pos.asLong();}
+    private static boolean rememberedTestBoard(ServerPlayer player,BlockPos pos){
+        return player.getPersistentData().getCompound("hostile_humans_unified:test_boards").getBoolean(boardKey(player,pos));
+    }
+    private static void rememberTestBoard(ServerPlayer player,BlockPos pos){
+        var data=player.getPersistentData();var boards=data.getCompound("hostile_humans_unified:test_boards");
+        if(boards.size()>=128&&!boards.contains(boardKey(player,pos)))boards.remove(boards.getAllKeys().stream().sorted().findFirst().orElse(""));
+        boards.putBoolean(boardKey(player,pos),true);data.put("hostile_humans_unified:test_boards",boards);
+    }
+
     private static EconomyPolicy policy(Context context) {
         if (!context.test()) return EconomyTables.current();
         return context.page() == EconomyView.Page.TASKS ? EconomyTables.boardTest() : EconomyTables.test();
@@ -161,7 +171,7 @@ public final class EconomyService implements EconomyNetwork.Backend {
             var served = site.brokerFactions();
             var factionId = served.isEmpty() ? site.faction() : served.get(0);
             return new Context(page, anchor.immutable(), player.level().dimension().location().toString(),
-                    Currency.faction(factionId).orElseThrow(), site.id(), "", false, !served.isEmpty());
+                    Currency.faction(factionId).orElseThrow(), site.id(), "", player.isCreative() && rememberedTestBoard(player,anchor), !served.isEmpty());
         }
         var query = index.query(anchor.getX() + .5, anchor.getY(), anchor.getZ() + .5);
         if (query.unknown()) throw new IllegalArgumentException("unknown region");
@@ -272,6 +282,7 @@ public final class EconomyService implements EconomyNetwork.Backend {
                 if (!player.isCreative() || s.context.page() != EconomyView.Page.TASKS)
                     throw new IllegalArgumentException("creative task board required");
                 var c = s.context;
+                rememberTestBoard(player,c.anchor());
                 s.context = new Context(c.page(), c.anchor(), c.dimension(), c.currency(),
                         c.instance(), c.facility(), true, c.station());
                 s.quote = EconomyView.Command.empty();

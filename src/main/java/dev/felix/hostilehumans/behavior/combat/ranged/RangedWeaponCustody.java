@@ -9,6 +9,7 @@ import dev.felix.hostilehumans.behavior.combat.CombatAiConfig;
 import dev.felix.hostilehumans.behavior.combat.CombatWeaponPolicy;
 import dev.felix.hostilehumans.behavior.combat.HumanCombatDirector;
 import dev.felix.hostilehumans.behavior.combat.WeaponTransitionPolicy;
+import dev.felix.hostilehumans.behavior.combat.gun.GunCustody;
 import dev.felix.hostilehumans.behavior.combat.gun.GunSupport;
 import dev.felix.hostilehumans.behavior.combat.retreat.RetreatLastStand;
 import dev.felix.hostilehumans.bootstrap.HumanRuntime;
@@ -194,7 +195,7 @@ public final class RangedWeaponCustody {
             return isActive(human);
         }
         ItemStack held = human.getMainHandItem();
-        if (HumanCombatDirector.keepsRangedDistance(human, held)) return false;
+        if (HumanCombatDirector.mobileCloseDefense(human) && !HumanCombatDirector.mobileMeleeThreat(human)) return false;
         if (!isBowOrCrossbow(held)) {
             return false;
         }
@@ -236,6 +237,8 @@ public final class RangedWeaponCustody {
     }
 
     public static boolean restorePreferred(Human human, String reason) {
+        if (!reason.equals("owner_inventory_open") && HumanCombatDirector.mobileMeleeThreat(human)
+                && HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())) return false;
         if (!reason.equals("owner_inventory_open") && RetreatLastStand.permitsMelee(human)
                 && HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())) return false;
         boolean keepDistance = HumanCombatDirector.strategies(human).keepsRangedDistance()
@@ -319,7 +322,8 @@ public final class RangedWeaponCustody {
 
     private static boolean shouldReturnToRanged(Human human) {
         LivingTarget state = targetState(human);
-        if (HumanCombatDirector.strategies(human).keepsRangedDistance() && HumanAmmo.hasArrows(human)) return true;
+        if (HumanCombatDirector.mobileCloseDefense(human) && HumanAmmo.hasArrows(human))
+            return !HumanCombatDirector.mobileMeleeThreat(human);
         if (RangedTerrainCombat.holdsMelee(human)) return false;
         if (state.valid() && CloseRangedTactics.keepDefense(human)) return false;
         return !state.valid() || state.distanceSqr() > RANGED_RETURN_DISTANCE_SQR;
@@ -340,6 +344,10 @@ public final class RangedWeaponCustody {
 
     /** Read-only preview of the same weapon restorePreferred will choose. */
     public static ItemStack preferredForClearance(Human human) {
+        if (HumanCombatDirector.mobileCloseDefense(human) && GunCustody.isCloseDefenseActive(human)) {
+            ItemStack gun = GunCustody.primary(human);
+            if (!gun.isEmpty()) return gun;
+        }
         if (isBowOrCrossbow(human.getMainHandItem()) || GunSupport.isGunItem(human.getMainHandItem())
                 || !isActive(human)) return human.getMainHandItem();
         int slot = findBestStoredRangedSlot(human);

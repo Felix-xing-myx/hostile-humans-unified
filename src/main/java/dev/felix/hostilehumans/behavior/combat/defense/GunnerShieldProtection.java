@@ -33,14 +33,44 @@ public final class GunnerShieldProtection {
                 || shield.getUseAnimation() == UseAnim.BLOCK);
     }
 
+    public static final double BACKPACK_MULTIPLIER = .90;
+
+    /** The lowest occupied shield slot owns both passive protection and its presentation. */
+    private static int backpackShieldSlot(Human human) {
+        var data = human.getData();
+        if (data == null) return -1;
+        for (int slot = 0; slot < data.getInventoryItemsSize(); slot++) {
+            if (isUsableShield(data.getInventoryItem(slot))) return slot;
+        }
+        return -1;
+    }
+
+    public record BackShield(ItemStack stack, int backpackSlot) { }
+
+    public static BackShield backShield(Human human) {
+        if (!dev.felix.hostilehumans.behavior.combat.HumanCombatDirector.strategies(human).usesBackpackShield()) return null;
+        ItemStack offhand = human.getOffhandItem();
+        if (isUsableShield(offhand)) return new BackShield(offhand, -1);
+        int slot = backpackShieldSlot(human);
+        return slot < 0 ? null : new BackShield(human.getData().getInventoryItem(slot), slot);
+    }
+
+    public static BackShield backShield(Human human, DamageSource source) {
+        return eligiblePhysicalDamage(source) ? backShield(human) : null;
+    }
+
+    private static boolean eligiblePhysicalDamage(DamageSource source) {
+        return !source.is(TRUE_DAMAGE) && !source.is(DamageTypeTags.BYPASSES_ARMOR) && HumanDamagePipeline.physical(source);
+    }
+
     public static double multiplier(LivingEntity target, DamageSource source) {
         if (!(target instanceof Human human) || human.level().isClientSide
                 || !GunSupport.isGunItem(human.getMainHandItem())
-                || !isUsableShield(human.getOffhandItem()) || source.is(TRUE_DAMAGE)
-                || source.is(DamageTypeTags.BYPASSES_ARMOR) || !HumanDamagePipeline.physical(source)) return 1;
+                || !isUsableShield(human.getOffhandItem()) || !eligiblePhysicalDamage(source)
+                || dev.felix.hostilehumans.behavior.combat.HumanCombatDirector.strategies(human).usesBackpackShield()) return 1;
         double reduction = UnifiedConfig.get().gunSetting("offhand_shield_damage_reduction", .1);
         if (!Double.isFinite(reduction) || reduction <= 0.0D) return 1;
-        reduction = Math.min(1.0D, reduction);
+        reduction = Math.min(1.0D, reduction + dev.felix.hostilehumans.behavior.combat.HumanCombatDirector.strategies(human).passiveGunShieldBonus());
         return 1 - reduction;
     }
 

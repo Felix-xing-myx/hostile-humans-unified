@@ -22,6 +22,8 @@ public final class LowHealthCombatController {
         final ArrayDeque<Sample> samples = new ArrayDeque<>();
         int scanTick = Integer.MIN_VALUE;
         boolean alone;
+        int recoveryUntil;
+        int lastHeavyHit = Integer.MIN_VALUE;
         UUID scannedTarget;
     }
     private static final Map<Human, State> STATES = new WeakHashMap<>();
@@ -36,8 +38,33 @@ public final class LowHealthCombatController {
         if (human.level().isClientSide || !Float.isFinite(healed) || !Float.isFinite(damaged)
                 || (healed <= 0.0F && damaged <= 0.0F)) return;
         State state = STATES.computeIfAbsent(human, ignored -> new State());
+        if (damaged >= human.getMaxHealth() * .18F) state.lastHeavyHit = human.tickCount;
         state.samples.addLast(new Sample(human.tickCount, Math.max(0, healed), Math.max(0, damaged), attacker));
         prune(state, human.tickCount, 400);
+    }
+
+    public static double recentLoss(Human human, int ticks) {
+        State state = STATES.get(human);
+        if (state == null) return 0;
+        double loss = 0;
+        for (var iterator = state.samples.descendingIterator(); iterator.hasNext();) {
+            Sample sample = iterator.next();
+            if (human.tickCount - sample.tick() >= ticks) break;
+            loss += sample.damaged();
+        }
+        return loss;
+    }
+
+    public static void recovered(Human human) {
+        STATES.computeIfAbsent(human, ignored -> new State()).recoveryUntil = human.tickCount + 40;
+    }
+
+    public static boolean recovering(Human human) {
+        State state = STATES.get(human);
+        return state != null && human.tickCount < state.recoveryUntil
+                && (long) human.tickCount - state.lastHeavyHit >= 20
+                && (recentLoss(human, 20) < human.getMaxHealth() * .10
+                    || RecoverySupplies.pendingHealingWithin(human, 40) > 0);
     }
 
     public static boolean shouldHoldGround(Human human, LivingEntity requestedThreat) {
@@ -45,6 +72,7 @@ public final class LowHealthCombatController {
         CombatAiConfig ai = CombatAiConfig.forHuman(human);
         if (!ai.enabled()) return false;
         State state = STATES.computeIfAbsent(human, ignored -> new State());
+        if (recovering(human)) return true;
         double ratio = human.getHealth() / Math.max(1.0F, human.getMaxHealth());
         if (ratio < ai.retreatHealthRatio() || human.isFleeing) {
             state.decision.reset(); return false;

@@ -101,13 +101,13 @@ public final class GunCombatPolicyTest {
         check(calls("dev/felix/hostilehumans/behavior/combat/HumanCombatDirector", "keepsRangedDistance", "usableGun")
                 && calls("dev/felix/hostilehumans/behavior/combat/HumanCombatDirector", "keepsRangedDistance", "hasArrows"),
                 "range intent uses actual ammunition, including reloadable or in-progress guns");
-        check(calls("dev/felix/hostilehumans/behavior/combat/gun/GunCustody", "beginCloseMeleeCounter", "keepsRangedDistance")
+        check(calls("dev/felix/hostilehumans/behavior/combat/gun/GunCustody", "beginCloseMeleeCounter", "mobileMeleeThreat")
                 && calls("dev/felix/hostilehumans/behavior/combat/gun/GunCustody", "restorePrimaryGun", "keepsRangedDistance")
                 && calls("dev/felix/hostilehumans/behavior/combat/gun/GunCustody", "tick", "keepsRangedDistance"),
-                "gun entry and both old-lease reload paths honor distance intent");
-        check(calls("dev/felix/hostilehumans/behavior/combat/ranged/RangedWeaponCustody", "beginCloseMelee", "keepsRangedDistance")
+                "gun entry checks the close threat while reload leases retain distance intent");
+        check(calls("dev/felix/hostilehumans/behavior/combat/ranged/RangedWeaponCustody", "beginCloseMelee", "mobileMeleeThreat")
                 && calls("dev/felix/hostilehumans/behavior/combat/ranged/RangedWeaponCustody", "restorePreferred", "keepsRangedDistance")
-                && calls("dev/felix/hostilehumans/behavior/combat/ranged/RangedWeaponCustody", "shouldReturnToRanged", "keepsRangedDistance")
+                && calls("dev/felix/hostilehumans/behavior/combat/ranged/RangedWeaponCustody", "shouldReturnToRanged", "mobileMeleeThreat")
                 && calls("dev/felix/hostilehumans/behavior/combat/melee/TridentHybridGoal", "tick", "keepsRangedDistance"),
                 "bows, old bow leases and hybrid tridents share the faction distance intent");
         check(calls("dev/felix/hostilehumans/behavior/combat/gun/GunMovementExecution", "clearDirectStrafe", "strafe"),

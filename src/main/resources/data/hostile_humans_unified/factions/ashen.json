@@ -27,14 +27,16 @@
   ],
   "band_style": "base",
   "hire": {
-    "item": "minecraft:bone",
+    "item": "hostile_humans_unified:coin_ashen_copper",
     "costs": [
-      12,
-      24,
-      48
+      200,
+      2000,
+      20000
     ],
     "friendly_discount": 0.9,
-    "ally_discount": 0.8
+    "ally_discount": 0.8,
+    "_description_costs_en": "Tier I-III base Azure copper equivalents; convert at the current faction exchange coefficient before payment.",
+    "_说明_costs_中文": "一至三阶雇佣蓝队铜币等值基价；付款前按当前阵营汇率换算，不是本币数量。"
   },
   "gun_specialization": {
     "pistol": 1.1,

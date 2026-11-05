@@ -15,13 +15,17 @@ public final class CombatStrategySetTest {
         var green = CombatStrategySet.forFaction("verdant");
         var red = CombatStrategySet.forFaction("crimson");
         var gray = CombatStrategySet.forFaction("ashen");
-        check(blue.shieldAdvance(true, true) && !gray.shieldAdvance(true, true), "only blue shield advances");
+        check(blue.shieldAdvance() && !green.shieldAdvance() && !red.shieldAdvance() && !gray.shieldAdvance(),
+                "only blue can advance with a shield");
+        check(blue.passiveGunShieldBonus() == .06 && green.passiveGunShieldBonus() == 0,
+                "blue adds six percentage points to passive firearm protection");
+        check(red.heavyStrike() && !blue.heavyStrike() && !green.heavyStrike() && !gray.heavyStrike(),
+                "only red has the heavy strike");
         check(gray.dualWield() && !red.dualWield(), "only gray admits dual-wield capability");
         for (var strategy : new CombatStrategySet[]{defaults, blue, green, red, gray}) {
             for (boolean core : new boolean[]{false, true}) for (boolean enabled : new boolean[]{false, true}) {
                 if (!core || !enabled) {
                     check(strategy.ranged(core, enabled) == CombatStrategySet.RangedStyle.DEFAULT, "no ranged bonus without live core capability");
-                    check(!strategy.shieldAdvance(core, enabled), "no shield advance without live core capability");
                     check(!strategy.reinforcedJump(core, enabled), "no jump bonus without live core capability");
                     check(!strategy.extendedGunRange(core, enabled), "no gun range extension without live core capability");
                 }

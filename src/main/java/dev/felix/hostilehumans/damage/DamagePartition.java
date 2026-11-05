@@ -11,8 +11,11 @@ public final class DamagePartition {
         return Math.min(.45, Math.pow(linear, Double.isFinite(exponent) && exponent > 0 ? exponent : 1));
     }
     public static double afterBlockFraction(double incoming, double fraction, double blocked) {
+        return afterBlockFraction(incoming, fraction, blocked, 0);
+    }
+    public static double afterBlockFraction(double incoming, double fraction, double blocked, double blockedPiercing) {
         double remaining = incoming - blocked;
-        return remaining > 0 ? Math.min(1, incoming * fraction / remaining) : 0;
+        return remaining > 0 ? Math.min(1, Math.max(0, incoming * fraction - blockedPiercing) / remaining) : 0;
     }
     public static float armor(float incoming, double fraction, double passiveMultiplier,
                               boolean passiveBeforeArmor, DoubleUnaryOperator nativeArmor) {

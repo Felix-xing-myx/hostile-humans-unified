@@ -110,7 +110,8 @@ final class SettlementMap {
         if (columns <= 0 || stride <= 0) return;
         var renderer = net.minecraft.client.Minecraft.getInstance().getBlockRenderer();
         var sprites = new java.util.HashMap<Integer, net.minecraft.client.renderer.texture.TextureAtlasSprite>();
-        int[] tiles = terrain.getIntArray("tiles");
+        var tintedStates=new java.util.HashMap<Integer,Boolean>();
+        int[] tiles = terrain.getIntArray("tiles"), tints=terrain.getIntArray("tints");
         for (int i = 0; i < tiles.length; i++) {
             if (tiles[i] == 0) continue;
             int x = projection.extent().minX() + i % columns * stride;
@@ -124,9 +125,15 @@ final class SettlementMap {
                 var model = renderer.getBlockModel(state);
                 var topFaces = model.getQuads(state, net.minecraft.core.Direction.UP,
                         net.minecraft.util.RandomSource.create(0));
+                tintedStates.put(id,!topFaces.isEmpty()&&topFaces.get(0).isTinted());
                 return topFaces.isEmpty() ? model.getParticleIcon() : topFaces.get(0).getSprite();
             });
-            graphics.blit(left, top, 0, right - left, bottom - top, sprite);
+            var state=net.minecraft.world.level.block.Block.stateById(tiles[i]);
+            boolean tinted=tintedStates.getOrDefault(tiles[i],false);
+            int tint=tinted?(i<tints.length&&tints[i]>=0?tints[i]:net.minecraft.client.Minecraft.getInstance().getBlockColors().getColor(state,null,null,0)):0xffffff;
+            if(tint<0)tint=0xffffff;
+            graphics.blit(left,top,0,right-left,bottom-top,sprite,
+                    ((tint>>16)&255)/255F,((tint>>8)&255)/255F,(tint&255)/255F,1F);
         }
     }
 

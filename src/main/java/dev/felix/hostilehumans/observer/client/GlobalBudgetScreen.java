@@ -87,9 +87,33 @@ public final class GlobalBudgetScreen extends PanelScreen {
             if (split <= 0) continue;
             String section = row.substring(0, split);
             if (section.equals(TABS[page]) || section.equals("all"))
-                messages.add(Component.literal(row.substring(split + 1)));
+                messages.add(localizedRow(row.substring(split + 1)));
         }
         return messages;
+    }
+
+    private static Component localizedRow(String row){
+        int split=row.indexOf(" · ");if(split<0)return Component.literal(row);
+        String key=switch(row.substring(0,split)){
+            case "活动档位" -> "activity";
+            case "平均服务器 tick 耗时" -> "tick_time";
+            case "服务器采样 tick" -> "tick";
+            case "当前维度（首列）" -> "dimension";
+            case "邻域查询" -> "queries";
+            case "感知射线" -> "rays";
+            case "遮挡复核" -> "occlusion";
+            case "线索投递" -> "notices";
+            case "声源采样" -> "sources";
+            case "团战实际工作" -> "battle";
+            case "普通导航" -> "navigation";
+            case "扩展寻路" -> "long_range";
+            case "战斗选点" -> "combat";
+            case "紧急避险" -> "retreat";
+            case "连续性补救" -> "continuity";
+            case "增强路径跟随" -> "following";
+            default -> "";
+        };
+        return key.isEmpty()?Component.literal(row):Component.translatable("navigation_debug.global.row."+key).append(row.substring(split));
     }
 
     @Override protected void buildFooter() {

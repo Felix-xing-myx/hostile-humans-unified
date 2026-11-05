@@ -38,7 +38,8 @@ public final class CultivationScreen extends PanelScreen {
     private boolean automatic, primaryDirty;
     private String expanded = "", factionFilter = "";
     private int tierFilter = -1;
-    private long cancelUntil;
+    private long cancelUntil, breakthroughUntil, primaryUntil;
+    private boolean resourcePage, advanced;
 
     private CultivationScreen(CultivationSnapshot snapshot) {
         super(text("title"), PanelGeometry.Size.L);
@@ -66,10 +67,16 @@ public final class CultivationScreen extends PanelScreen {
     private void accept(CultivationSnapshot next) {
         CultivationNetwork.Request ack = pending.request();
         boolean matched = pending.acknowledge(next.acknowledgedRequest());
+        var before = selected();
         if (next.revision() >= snapshot.revision()) snapshot = next;
         var soldier = selected();
+        if (before != null && (soldier == null || before.revision() != soldier.revision())) {
+            breakthroughUntil = primaryUntil = 0;
+            previewTarget = NONE;
+            previewMode = null;
+        }
         if (matched && ack != null && ack.target().equals(selected)) {
-            if (ack.action() == CultivationNetwork.Action.PREVIEW) {
+            if (ack.action() == CultivationNetwork.Action.PREVIEW && next.reason().isEmpty()) {
                 previewTarget = selected;
                 previewMode = ack.mode();
             }
@@ -104,7 +111,9 @@ public final class CultivationScreen extends PanelScreen {
         primaryDirty = false;
         candidate = 0;
         expanded = "";
-        cancelUntil = 0;
+        cancelUntil = breakthroughUntil = primaryUntil = 0;
+        previewTarget = NONE;
+        previewMode = null;
     }
 
     private void refresh() {
@@ -251,7 +260,29 @@ public final class CultivationScreen extends PanelScreen {
     }
 
     @Override
+    protected void buildBand() {
+        var training = band(new PanelButton(text("training_tab"), b -> {
+            resourcePage = false;
+            refresh();
+        }, this::theme));
+        training.selected(!resourcePage);
+        var resources = band(new PanelButton(text("resources_tab"), b -> {
+            resourcePage = true;
+            refresh();
+        }, this::theme));
+        resources.selected(resourcePage);
+    }
+
+    @Override
     protected void buildRight(List<UiLayout.Node> content) {
+        if (!resourcePage) {
+            if (snapshot.testMode()) content.add(text(text("test_mode"), () -> theme().danger()));
+            if (!snapshot.reason().isEmpty())
+                content.add(text(Component.literal(snapshot.reason()), () -> theme().danger()));
+            if (pending.busy()) content.add(muted(text("pending")));
+            content.add(detail());
+            return;
+        }
         if (snapshot.testMode()) content.add(text(text("test_mode"), () -> theme().danger()));
         content.add(
                 muted(
@@ -298,9 +329,9 @@ public final class CultivationScreen extends PanelScreen {
                     .filter(soldier -> soldier.id().equals(seat.soldier()))
                     .map(CultivationSnapshot.SoldierView::name).filter(value -> !value.isBlank())
                     .findFirst().orElse(seat.soldier().toString().substring(0, 8));
-            content.add(muted(text("seat", seat.index() + 1, name, seat.status())));
+            content.add(muted(text("seat", seat.index() + 1, name, text("status." + seat.status()))));
         }
-        content.add(detail());
+        content.add(muted(text("resource_help")));
     }
 
     private UiLayout.Node detail() {
@@ -321,18 +352,18 @@ public final class CultivationScreen extends PanelScreen {
             content.add(text(Component.literal(soldier.reason()), () -> theme().danger()));
         if (soldier.breakthroughReady()) {
             content.add(group("breakthrough_node"));
+            content.add(muted(text("breakthrough_requirements")));
             content.add(muted(text("breakthrough_cost")));
-            content.add(request("breakthrough", text("breakthrough"),
-                    CultivationNetwork.Action.CONFIRM_BREAKTHROUGH,
-                    snapshot.account().stock() > 0 || snapshot.account().creditMicro() >= dev.felix.hostilehumans.cultivation.CultivationRules.UNIT));
+            if (!canPay(1)) content.add(text(text("supplies_missing"), () -> theme().danger()));
+            content.add(muted(text("breakthrough_footer")));
         }
-        if (soldier.cycle() != null) {
+        if (cycleLocked(soldier)) {
             var cycle = soldier.cycle();
             content.add(
                     muted(
                             text(
                                     "cycle",
-                                    cycle.status(),
+                                    text("status." + cycle.status()),
                                     cycle.elapsedMillis() / 1000,
                                     cycle.durationMillis() / 1000,
                                     cycle.reason())));
@@ -343,21 +374,10 @@ public final class CultivationScreen extends PanelScreen {
                                             () -> cycle.elapsedMillis(),
                                             () -> cycle.durationMillis(),
                                             () -> theme().accent()))));
-            content.add(
-                    UiLayout.grid(
-                            2,
-                            6,
-                            List.of(
-                                    request(
-                                            "pause",
-                                            text("pause"),
-                                            CultivationNetwork.Action.PAUSE,
-                                            true),
-                                    request(
-                                            "resume",
-                                            text("resume"),
-                                            CultivationNetwork.Action.RESUME,
-                                            true))));
+            boolean paused = cycle.status().equals("PAUSED");
+            if (paused || cycle.status().equals("ACTIVE") || cycle.status().equals("MOVING"))
+                content.add(request(paused ? "resume" : "pause", text(paused ? "resume" : "pause"),
+                        paused ? CultivationNetwork.Action.RESUME : CultivationNetwork.Action.PAUSE, true));
             content.add(
                     action(
                             "cancel",
@@ -376,8 +396,10 @@ public final class CultivationScreen extends PanelScreen {
                                     refresh();
                                 }
                             }));
+            return UiLayout.column(6, content);
         }
         content.add(group("allocation"));
+        content.add(muted(text("selection_help")));
         content.add(muted(text("primary", primary.size(), soldier.expanded() ? 5 : 3)));
         List<UiLayout.Node> choices = new ArrayList<>();
         for (var dimension : SpecialtyAttributes.Dimension.values()) {
@@ -397,18 +419,17 @@ public final class CultivationScreen extends PanelScreen {
                                 }
                                 previewMode = null;
                                 previewTarget = NONE;
+                                primaryUntil = 0;
                                 refresh();
                             }));
         }
         content.add(UiLayout.grid(3, 4, 65, choices));
         content.add(muted(text("primary_cost")));
-        boolean dirty = !new HashSet<>(primary).equals(new HashSet<>(soldier.primary()));
-        content.add(
-                request(
-                        "setPrimary",
-                        text("set_primary"),
-                        CultivationNetwork.Action.SET_PRIMARY,
-                        dirty && !primary.isEmpty()));
+        boolean dirty = primaryChanged(soldier);
+        if (dirty) {
+            content.add(muted(text("selection_footer")));
+            if (!canPay(1)) content.add(text(text("supplies_missing"), () -> theme().danger()));
+        }
         content.add(
                 UiLayout.grid(
                         2,
@@ -421,6 +442,7 @@ public final class CultivationScreen extends PanelScreen {
                                         mode == CultivationNetwork.Mode.GROW,
                                         () -> {
                                             mode = CultivationNetwork.Mode.GROW;
+                                            breakthroughUntil = primaryUntil = 0;
                                             refresh();
                                         }),
                                 action(
@@ -430,11 +452,13 @@ public final class CultivationScreen extends PanelScreen {
                                         mode == CultivationNetwork.Mode.REDISTRIBUTE,
                                         () -> {
                                             mode = CultivationNetwork.Mode.REDISTRIBUTE;
+                                            breakthroughUntil = primaryUntil = 0;
                                             refresh();
                                         }))));
-        content.add(request("preview", text("preview"), CultivationNetwork.Action.PREVIEW, !dirty));
+        content.add(muted(text(previewReady() ? "candidate_help" : "preview_footer")));
+        if (previewReady() && soldier.candidates().isEmpty()) content.add(muted(text("no_candidates")));
         List<UiLayout.Node> candidates = new ArrayList<>();
-        for (var c : soldier.candidates())
+        for (var c : previewReady() ? soldier.candidates() : List.<CultivationSnapshot.CandidateView>of())
             candidates.add(
                     action(
                             "candidate." + c.index(),
@@ -452,7 +476,8 @@ public final class CultivationScreen extends PanelScreen {
                             }));
         content.add(UiLayout.grid(3, 4, 65, candidates));
         CultivationSnapshot.CandidateView chosen = null;
-        for (var c : soldier.candidates()) if (c.index() == candidate) chosen = c;
+        if (previewReady())
+            for (var c : soldier.candidates()) if (c.index() == candidate) chosen = c;
         if (chosen != null)
             content.add(
                     muted(
@@ -464,6 +489,14 @@ public final class CultivationScreen extends PanelScreen {
                                     chosen.durationMillis() / 1000,
                                     number(chosen.successBudget()),
                                     number(chosen.failureBudget()))));
+        if (chosen != null && !canPay(chosen.materialCost()))
+            content.add(text(text("supplies_missing"), () -> theme().danger()));
+        content.add(action("advanced", text(advanced ? "advanced_close" : "advanced_open"), true, advanced, () -> {
+            advanced = !advanced;
+            refresh();
+        }));
+        if (!advanced) return UiLayout.column(6, content);
+        content.add(muted(text("advanced_help")));
         content.add(group("execution"));
         content.add(
                 action(
@@ -475,15 +508,6 @@ public final class CultivationScreen extends PanelScreen {
                             automatic = !automatic;
                             refresh();
                         }));
-        content.add(
-                request(
-                        "start",
-                        text("start"),
-                        CultivationNetwork.Action.START,
-                        chosen != null
-                                && !dirty
-                                && previewTarget.equals(selected)
-                                && previewMode == mode));
         content.add(
                 UiLayout.grid(
                         2,
@@ -539,22 +563,75 @@ public final class CultivationScreen extends PanelScreen {
                 .replaceFirst("\\.$", "");
     }
 
+    private boolean primaryChanged(CultivationSnapshot.SoldierView soldier) {
+        return !new HashSet<>(primary).equals(new HashSet<>(soldier.primary()));
+    }
+
+    private boolean previewReady() {
+        var soldier = selected();
+        return soldier != null && !primaryChanged(soldier)
+                && previewTarget.equals(selected) && previewMode == mode;
+    }
+
+    private static boolean cycleLocked(CultivationSnapshot.SoldierView soldier) {
+        return soldier.cycle() != null && !soldier.cycle().status().equals("COMPLETED")
+                && !soldier.cycle().status().equals("CANCELLED");
+    }
+
+    private boolean canPay(double cost) {
+        return snapshot.account().stock() + snapshot.account().creditMicro() / 1000000.0 >= cost;
+    }
+
+    private void confirm(CultivationNetwork.Action action) {
+        long now = System.currentTimeMillis();
+        long until = action == CultivationNetwork.Action.CONFIRM_BREAKTHROUGH ? breakthroughUntil : primaryUntil;
+        if (now < until) {
+            breakthroughUntil = primaryUntil = 0;
+            send(action);
+        } else {
+            if (action == CultivationNetwork.Action.CONFIRM_BREAKTHROUGH) breakthroughUntil = now + 5000;
+            else primaryUntil = now + 5000;
+            refresh();
+        }
+    }
+
     @Override
     protected void buildFooter() {
         footer(Component.translatable("gui.done"), b -> onClose());
-        footer(
-                text(pending.busy() ? "retry" : "refresh"),
-                b -> {
-                    if (pending.busy()) CultivationNetwork.send(pending.request());
-                    else send(CultivationNetwork.Action.REFRESH);
-                });
+        footerSpacer();
+        if (pending.busy()) {
+            footer(text("retry"), b -> CultivationNetwork.send(pending.request()));
+            return;
+        }
+        var soldier = selected();
+        if (!resourcePage && soldier != null && !cycleLocked(soldier)) {
+            if (soldier.breakthroughReady() && mode == CultivationNetwork.Mode.GROW) {
+                footer(text(System.currentTimeMillis() < breakthroughUntil ? "breakthrough_confirm" : "breakthrough"),
+                        b -> confirm(CultivationNetwork.Action.CONFIRM_BREAKTHROUGH)).selected(true).active = canPay(1);
+            } else if (primaryChanged(soldier)) {
+                footer(text(System.currentTimeMillis() < primaryUntil ? "primary_confirm" : "set_primary"),
+                        b -> confirm(CultivationNetwork.Action.SET_PRIMARY)).selected(true).active = !primary.isEmpty() && canPay(1);
+            } else if (!previewReady()) {
+                footer(text("preview"), b -> send(CultivationNetwork.Action.PREVIEW)).selected(true);
+            } else {
+                CultivationSnapshot.CandidateView chosen = soldier.candidates().stream()
+                        .filter(c -> c.index() == candidate).findFirst().orElse(null);
+                footer(text("start"), b -> send(CultivationNetwork.Action.START)).selected(true).active = chosen != null
+                        && canPay(chosen.materialCost());
+            }
+        }
+        footer(text("refresh"), b -> send(CultivationNetwork.Action.REFRESH));
     }
 
     @Override
     public void tick() {
         super.tick();
-        if (cancelUntil > 0 && System.currentTimeMillis() >= cancelUntil) {
-            cancelUntil = 0;
+        long now = System.currentTimeMillis();
+        if (cancelUntil > 0 && now >= cancelUntil || breakthroughUntil > 0 && now >= breakthroughUntil
+                || primaryUntil > 0 && now >= primaryUntil) {
+            if (now >= cancelUntil) cancelUntil = 0;
+            if (now >= breakthroughUntil) breakthroughUntil = 0;
+            if (now >= primaryUntil) primaryUntil = 0;
             refresh();
         }
     }

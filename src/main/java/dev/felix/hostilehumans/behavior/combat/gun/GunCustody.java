@@ -79,7 +79,7 @@ public final class GunCustody {
         gun.getOrCreateTag().putString(PRIMARY_OWNER,human.getUUID().toString());
         tag.putUUID(PRIMARY_HANDLE,handle.identity());
     }
-    private static ItemStack primary(Human human) {
+    public static ItemStack primary(Human human) {
         var tag=human.getPersistentData();
         if(tag.hasUUID(PRIMARY_HANDLE)) return HumanEquipmentExchange.locate(human,
                 new HumanEquipmentExchange.Handle(tag.getUUID(PRIMARY_HANDLE),human.getUUID()));
@@ -109,10 +109,16 @@ public final class GunCustody {
         var target=human.getTarget();
         if(!GunSupport.get().isGun(gun)||target==null||!target.isAlive()
                 ||human.distanceToSqr(target)>WeaponTransitionPolicy.GUN_ENTER*WeaponTransitionPolicy.GUN_ENTER||human.isUsingItem()) return false;
-        if (!lastStand && HumanCombatDirector.keepsRangedDistance(human, gun)) return false;
+        boolean mobile = HumanCombatDirector.mobileCloseDefense(human);
+        if (!lastStand && mobile && (!HumanCombatDirector.mobileMeleeThreat(human)
+                || GunSupport.get().hasLoadedAmmo(gun))) return false;
         boolean forced=WeaponTransitionPolicy.holdsMelee(human.distanceToSqr(target), false,
                 GunCombatProfile.shouldForceMelee(human,gun));
-        if(!lastStand && !forced && (GunSupport.get().hasLoadedAmmo(gun)||!GunSupport.get().isReloading(human,gun))) return false;
+        if (!lastStand && !mobile && !forced
+                && (GunSupport.get().hasLoadedAmmo(gun) || !GunSupport.get().isReloading(human, gun))) return false;
+        if (!lastStand && mobile && dev.felix.hostilehumans.behavior.combat.ranged.HumanAmmo.canReload(human, gun)
+                && !GunSupport.get().isReloading(human, gun)
+                && !GunSupport.get().beginReload(human, gun)) return false;
         ItemStack melee=HumanLootManager.bestOwnedMeleeWeapon(human);
         if(melee.isEmpty()) return false;
         registerPrimaryGun(human,gun);
@@ -138,10 +144,13 @@ public final class GunCustody {
                     human.distanceToSqr(target), true, GunCombatProfile.shouldForceMelee(human,gun));
             boolean melee=HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem());
             if(isActive(human)&&melee&&(human.hhu$hasPendingMeleeAttack()||human.swinging)) return false;
-            if(isActive(human)&&close&&melee) return false;
+            if (isActive(human) && close && melee && (!HumanCombatDirector.mobileCloseDefense(human)
+                    || !GunSupport.get().hasLoadedAmmo(gun) || GunSupport.get().isReloading(human, gun)
+                    || human.isFleeing)) return false;
             if(isActive(human)&&melee&&GunSupport.get().isReloading(human,gun)
                     && !HumanCombatDirector.keepsRangedDistance(human, gun)) return false;
-            if(!AmmoWeaponSelection.mayRestore(human,gun)) return false;
+            if (!(HumanCombatDirector.mobileMeleeThreat(human) && GunSupport.get().hasLoadedAmmo(gun))
+                    && !AmmoWeaponSelection.mayRestore(human,gun)) return false;
         }
         if(human.getMainHandItem()==gun) { clearLease(human); return true; }
         var tag=human.getPersistentData();
@@ -179,13 +188,16 @@ public final class GunCustody {
                     return;
                 }
             }
-            if(close&&HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())) return;
+            if (close && HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())
+                    && (!HumanCombatDirector.mobileCloseDefense(human) || !GunSupport.get().hasLoadedAmmo(gun)
+                        || GunSupport.get().isReloading(human, gun) || human.isFleeing)) return;
             if(HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())
                     &&reloadMelee) return;
             // A busy hand is transient; retain the original handle and retry.
             restorePrimaryGun(human,"reload_or_target_completed");
             return;
         }
+        if (HumanCombatDirector.mobileMeleeThreat(human) && beginCloseMeleeCounter(human)) return;
         AmmoWeaponSelection.tick(human);
         ItemStack held=human.getMainHandItem();
         if(GunSupport.get().isGun(held)) {

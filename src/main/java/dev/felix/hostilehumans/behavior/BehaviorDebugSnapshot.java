@@ -90,7 +90,11 @@ public record BehaviorDebugSnapshot(long tick, boolean authorityPresent, long se
         List<ActionProgressSnapshot> progress = new ArrayList<>();
         progress.addAll(RecoverySupplies.progress(human));
         var shield = human.hhu$peekShieldDefense();
-        if (shield != null) progress.addAll(shield.rangedChargeProgress());
+        if (shield != null) {
+            var pressure = shield.pressureProgress();
+            if (pressure != null) progress.add(pressure);
+            progress.addAll(shield.rangedChargeProgress());
+        }
         progress.addAll(GunSupport.get().reloadProgress(human));
         if (human.isUsingItem() && progress.stream().noneMatch(p -> p.kind().equals("recovery"))) {
             var item = human.getUseItem();

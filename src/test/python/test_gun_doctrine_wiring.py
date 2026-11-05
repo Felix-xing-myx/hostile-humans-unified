@@ -60,7 +60,7 @@ class GunDoctrineWiring(unittest.TestCase):
 
     def test_arithmetic_continuity_for_faction_and_silent_rates(self):
         # Independent arithmetic oracle for the confirmed duration/speed contract.
-        for duration, silent in ((1, 2), (1 / .7, 2), (.7, 2), (1, 1.2)):
+        for duration, silent in ((1, 2), (.7, 2), (1, 1.2)):
             normal_rate = 1 / duration
             silent_rate = 1 / (duration * silent)
             self.assertAlmostEqual(silent_rate * silent, normal_rate)

@@ -39,6 +39,6 @@ class RangedMeleeContinuityContract(unittest.TestCase):
     def test_restore_respects_existing_custody_and_attack_completion(self):
         source = (PKG / 'RangedHybridMeleeGoal.java').read_text(encoding='utf-8')
         self.assertIn('RangedWeaponCustody.restorePreferred(human, "close_defense_separated")', source)
-        self.assertIn('if (!RangedWeaponCustody.isActive(human)) return;', source)
+        self.assertIn('if (!ownsCloseDefense(human)) return;', source)
         self.assertIn('human.getSensing().hasLineOfSight(target)', source)
         self.assertIn('!human.hhu$hasPendingMeleeAttack() && !human.swinging', source)

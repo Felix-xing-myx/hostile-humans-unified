@@ -257,10 +257,9 @@ public final class TaczIntegration implements GunSupport {
                 // 50% reduction at its own damage event; native AP sources stay intact.
                 defender.hhu$shieldDefense().observeAttack(normalSource, true, event.getBaseAmount());
                 ShieldDurability.damageShield(defender, event.getBaseAmount());
-                event.setBaseAmount(event.getBaseAmount() * (float) Math.min(1,
-                        UnifiedConfig.get().gunSetting("shield_damage_multiplier", .5)));
                 HumanDamagePipeline.markCustomShield(defender, normalSource,
-                        event.getDamageSource(GunDamageSourcePart.ARMOR_PIERCING));
+                        event.getDamageSource(GunDamageSourcePart.ARMOR_PIERCING),
+                        (float) Math.max(0, Math.min(1, UnifiedConfig.get().gunSetting("shield_damage_multiplier", .5))));
             }
         }
     }

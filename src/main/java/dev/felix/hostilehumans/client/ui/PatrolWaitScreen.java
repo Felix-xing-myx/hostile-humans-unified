@@ -118,11 +118,10 @@ public final class PatrolWaitScreen extends PanelScreen {
                 modes.add(node(button));
             }
             content.add(UiLayout.grid(3, 4, 96, modes));
-            PanelCheck chase =
+            PanelButton chase =
                     body(
-                            new PanelCheck(
-                                    text(c.chase() ? "chase_on" : "chase_off"),
-                                    c.chase(),
+                            new PanelButton(
+                                    Component.literal(c.chase() ? "➜ " : "◆ ").append(text(c.chase() ? "chase_on" : "chase_off")),
                                     b -> {
                                         if (pending) return;
                                         pending = true;

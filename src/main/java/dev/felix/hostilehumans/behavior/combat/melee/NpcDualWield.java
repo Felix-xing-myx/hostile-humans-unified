@@ -150,7 +150,8 @@ public final class NpcDualWield {
                     && HumanLootManager.isDedicatedMeleeWeapon(human.getOffhandItem())) {
                 // Only the offhand is reconciled; using the main hand must not indefinitely block cleanup.
                 var result = HumanEquipmentExchange.stow(human, EquipmentSlot.OFFHAND);
-                if (result == HumanEquipmentExchange.Result.NO_CAPACITY)
+                if (result == HumanEquipmentExchange.Result.NO_CAPACITY
+                        && !HumanCombatDirector.strategies(human).usesBackpackShield())
                     HumanEquipmentExchange.request(human, "dual:non-melee-offhand", List.of(
                             new HumanEquipmentExchange.Need(EquipmentSlot.OFFHAND,
                                     item -> item != human.getItemBySlot(EquipmentSlot.MAINHAND) && SpartanEquipmentCompat.isShield(item))));
@@ -174,7 +175,8 @@ public final class NpcDualWield {
             ItemStack desired = selected;
             HumanEquipmentExchange.request(human, "dual:daily-offhand", List.of(
                     new HumanEquipmentExchange.Need(EquipmentSlot.OFFHAND, item -> item == desired)));
-        } else if (!offhand.isEmpty() && offhand.getFoodProperties(human) == null) {
+        } else if (!offhand.isEmpty() && offhand.getFoodProperties(human) == null
+                && !(HumanCombatDirector.strategies(human).usesBackpackShield() && SpartanEquipmentCompat.isShield(offhand))) {
             // A full backpack is a normal refusal, never permission to discard equipment.
             HumanEquipmentExchange.stow(human, EquipmentSlot.OFFHAND);
         }

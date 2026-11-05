@@ -144,6 +144,14 @@ public final class AdaptiveCombatGoal extends Goal {
     private int nextTerrainJumpTick;
     private int retreatAimTicks;
     private int retreatStartedTick;
+    private int retreatCoveredSince = -1;
+    private int retreatBurstUntil;
+    private int retreatBurstRounds;
+    private ItemStack retreatBurstWeapon = ItemStack.EMPTY;
+    private LivingEntity retreatBurstTarget;
+    private int nextRetreatBurstTick;
+    private boolean retreatPauseMovement;
+    private double activePathSpeed = 1;
     private int retreatStagnantTicks;
     private int nextRetreatMeleeTick;
     private int nextRetreatTridentTick;
@@ -205,7 +213,7 @@ public final class AdaptiveCombatGoal extends Goal {
         }
 
         // The independent high-pressure reaction leaves native combat/retreat in charge of movement.
-        if (shields.wantsHighPressureGuard()) return false;
+        if (shields.wantsHighPressureGuard() || shields.advancing()) return false;
 
         // Preserve the committed upswing; emergency recovery above may still preempt it.
         if (human.hhu$hasPendingMeleeAttack()) return false;
@@ -278,7 +286,7 @@ public final class AdaptiveCombatGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        if(IncomingHitResponseGoal.wantsResponse(human)&&phase!=Phase.RETREAT)return false;
+        if ((IncomingHitResponseGoal.wantsResponse(human) || shields.advancing()) && phase != Phase.RETREAT) return false;
         // Pressure owns only hands/facing/attack; it never replaces retreat's navigation session.
         if (phase == Phase.DEFEND && (shields.wantsHighPressureGuard() || !shields.ownsCombatDefense())) return false;
         if (BodyguardProtection.isBodyguard(human)) {
@@ -295,17 +303,16 @@ public final class AdaptiveCombatGoal extends Goal {
                 && (CombatTerrainNavigation.hasWork(human, threat) || usesWeaponLedFrontline(threat))) return false;
         if ((!HumanPerception.canTarget(human,threat)
                 && !(phase == Phase.DEFEND && (shields.awaitingProjectile() || shields.wantsHighPressureGuard())))
-                || phaseTicks <= 0) {
+                || phaseTicks <= 0 && !(phase == Phase.RETREAT && human.hhu$hasPendingMeleeAttack())) {
             return false;
         }
-        if (phase == Phase.RETREAT && recoveredFromRetreat()) {
-            // Recovery belongs to the independent restorative executor; stopping movement does not cancel it.
-            // An item-use session must not keep a healed soldier fleeing.
+        if (phase == Phase.RETREAT && retreatSafe() && !shouldRecoverInCover() && !RecoverySupplies.hasActiveUse(human)
+                && !human.hhu$hasPendingMeleeAttack()) {
+            LowHealthCombatController.recovered(human);
             return false;
         }
         return switch (phase) {
-            case RETREAT -> !retreatSafe()
-                    || RecoverySupplies.hasActiveUse(human);
+            case RETREAT -> true;
             case PRESSURE, UNSTUCK -> phaseTicks > 0
                     && !RangedWeaponCustody.controlsMainHand(human);
             case DEFEND, FLANK -> phaseTicks > 0;
@@ -334,6 +341,8 @@ public final class AdaptiveCombatGoal extends Goal {
                 phaseTicks = 200;
                 retreatAimTicks = 0;
                 retreatStartedTick = human.tickCount;
+                retreatCoveredSince = -1;
+                retreatBurstUntil = retreatBurstRounds = nextRetreatBurstTick = 0;
                 retreatStagnantTicks = 0;
                 nextRetreatTridentTick = human.tickCount + 12;
                 lastRetreatPosition = human.position();
@@ -368,6 +377,8 @@ public final class AdaptiveCombatGoal extends Goal {
 
     @Override
     public void stop() {
+        resumeRetreatMovement();
+        finishRetreatBurst();
         RetreatLastStand.clear(human);
         if (!HumanPerception.canTarget(human,threat) && activePath != null
                 && human.getNavigation().getPath() == activePath) human.getNavigation().stop();
@@ -551,8 +562,21 @@ public final class AdaptiveCombatGoal extends Goal {
 
 
     private void tickRetreat() {
+        resumeRetreatMovement();
         MovementSpeedController.retreat(human, true);
-        if (retreatSafe() && !RecoverySupplies.hasActiveUse(human)) {
+        if (threat != null && !human.getSensing().hasLineOfSight(threat)) {
+            if (retreatCoveredSince < 0) retreatCoveredSince = human.tickCount;
+        } else retreatCoveredSince = -1;
+        if (shouldRecoverInCover()) {
+            finishRetreatBurst();
+            if (MovementContinuity.ownsRoute(human, activePath)) human.getNavigation().stop();
+            activePath = null;
+            MovementSpeedController.retreat(human, false);
+            human.getPersistentData().putString("hostile_humans_unified:ai_phase", "retreat_cover_recovery");
+            return;
+        }
+        if (retreatSafe() && !RecoverySupplies.hasActiveUse(human) && !human.hhu$hasPendingMeleeAttack()) {
+            LowHealthCombatController.recovered(human);
             RetreatLastStand.clear(human);
             phaseTicks = 0;
             human.getPersistentData().putString("hostile_humans_unified:ai_phase", "retreat_safe_to_return");
@@ -566,6 +590,10 @@ public final class AdaptiveCombatGoal extends Goal {
                 || human.getNavigation().getPath() != activePath;
         RetreatLastStand.observe(human, threat, routeUnavailable);
         boolean counterfiring = tickRetreatCounterattack();
+        if (!counterfiring) human.getPersistentData().putString("hostile_humans_unified:ai_phase",
+                RetreatLastStand.active(human) ? "retreat_no_counter_window" : "retreat");
+        if (!counterfiring && retreatBurstUntil != 0) finishRetreatBurst();
+        if (retreatPauseMovement) return;
         boolean pathFailed = routeUnavailable || retreatStagnantTicks >= 10 || RetreatLastStand.active(human);
         boolean routeNeedsExtension = RetreatRouteContinuity.needsExtension(human, threat);
         if (human.getNavigation().isDone()) repathTicks = Math.min(repathTicks, 5);
@@ -577,6 +605,13 @@ public final class AdaptiveCombatGoal extends Goal {
             planRetreat();
         }
         MovementContinuity.escapeWhilePlanning(human, threat);
+    }
+
+    private void resumeRetreatMovement() {
+        if (!retreatPauseMovement) return;
+        retreatPauseMovement = false;
+        if (activePath != null && human.getNavigation().getPath() == activePath)
+            human.getNavigation().setSpeedModifier(activePathSpeed);
     }
 
     private boolean retreatSafe() {
@@ -592,13 +627,25 @@ public final class AdaptiveCombatGoal extends Goal {
                 quietTicks, human.tickCount - retreatStartedTick);
     }
 
+    private boolean shouldRecoverInCover() {
+        return retreatCoveredSince >= 0 && human.tickCount - retreatCoveredSince >= 20
+                && healthRatio() < config.resumeHealthRatio()
+                && LowHealthCombatController.recentLoss(human, 20) == 0
+                && (RecoverySupplies.hasActiveUse(human) || RecoverySupplies.pendingHealingWithin(human, 40) > 0)
+                && !human.hhu$hasPendingMeleeAttack();
+    }
+
     private boolean recoveredFromRetreat() {
-        // Real health, not predicted food/regeneration, must meet the resume
-        // threshold. Also avoid handing off straight into native low-HP escape.
-        return LowHealthCombatController.shouldHoldGround(human, threat)
-                || (!HumanUtil.isLowHp(human)
-                && RetreatRecoveryPolicy.canResumeAfterHealing(healthRatio(),
-                        config.resumeHealthRatio(), human.tickCount - retreatStartedTick));
+        if (human.tickCount - retreatStartedTick < 20) return false;
+        if (retreatCoveredSince >= 0 && human.tickCount - retreatCoveredSince >= 20
+                && LowHealthCombatController.recentLoss(human, 20) == 0) return true;
+        double loss = LowHealthCombatController.recentLoss(human, 20);
+        double healing = RecoverySupplies.pendingHealingWithin(human, 40);
+        return healthRatio() >= config.resumeHealthRatio()
+                || healing > 0 && healing >= loss * 2
+                    && human.getHealth() + healing - loss * 2 >= human.getMaxHealth() * config.resumeHealthRatio()
+                    && (threat == null || human.distanceToSqr(threat) >= 9
+                        || !human.getSensing().hasLineOfSight(threat));
     }
 
     private boolean tickRetreatCounterattack() {
@@ -611,7 +658,21 @@ public final class AdaptiveCombatGoal extends Goal {
             return false;
         }
         double distanceSqr = human.distanceToSqr(threat);
-        if (RetreatLastStand.active(human)) {
+        boolean pinned = RetreatLastStand.active(human);
+        if (!pinned || human.isUsingItem() || shields.shouldSuppressRecovery())
+            finishRetreatBurst();
+        ItemStack held = human.getMainHandItem();
+        boolean loadedGun = GunSupport.get().isGun(held) && GunSupport.get().hasLoadedAmmo(held);
+        if (pinned && loadedGun && distanceSqr <= Math.pow(GunRangePolicy.firingReach(human, held), 2)
+                && !human.isUsingItem() && !RecoverySupplies.hasActiveUse(human)
+                && !human.hhu$hasPendingMeleeAttack() && !shields.shouldSuppressRecovery()
+                && RangedShotClearance.canShoot(human, threat)
+                && (distanceSqr > 4 || human.tickCount >= nextRetreatBurstTick)) {
+            if (tickPinnedGunfire(held)) return true;
+        }
+        if (pinned && distanceSqr <= 36 && HumanTargetCoordinator.counterfire(human, threat) == threat
+                && RetreatLastStand.permitsMelee(human)
+                && (!human.isUsingItem() || human.hhu$hasPendingMeleeAttack())) {
             // Keep retreat's route and repathing alive. A melee action only borrows hands/attack/facing.
             setRetreatBackpedaling(false);
             gunOperator.aim(false);
@@ -638,7 +699,7 @@ public final class AdaptiveCombatGoal extends Goal {
                 AmmoWeaponSelection.hasUsableGun(human), crowdPressureActive(),
                 human.getSensing().hasLineOfSight(threat), distanceSqr
         );
-        if (crowdCounterfire) {
+        if (!pinned && crowdCounterfire) {
             prepareCrowdRetreatGun();
             ItemStack crowdWeapon = human.getMainHandItem();
             if (dev.felix.hostilehumans.behavior.combat.gun.GunSupport.get().isGun(crowdWeapon)) {
@@ -668,7 +729,7 @@ public final class AdaptiveCombatGoal extends Goal {
             return true;
         }
 
-        if (dev.felix.hostilehumans.behavior.combat.gun.GunSupport.get().isGun(weapon)
+        if (!pinned && GunSupport.get().isGun(weapon)
                 && CombatPressurePolicy.shouldUseRetreatCounterfire(
                 distanceSqr, retreatTicks, 2.0D, 64.0D, 12
         )) {
@@ -683,6 +744,46 @@ public final class AdaptiveCombatGoal extends Goal {
         return false;
     }
 
+    private boolean tickPinnedGunfire(ItemStack weapon) {
+        int now = human.tickCount;
+        if (now < nextRetreatBurstTick) return false;
+        if (retreatBurstUntil == 0) {
+            retreatBurstUntil = now + 12;
+            retreatBurstRounds = 0;
+            retreatBurstWeapon = weapon;
+            retreatBurstTarget = threat;
+        }
+        if (now >= retreatBurstUntil || weapon != retreatBurstWeapon || threat != retreatBurstTarget) {
+            finishRetreatBurst();
+            return false;
+        }
+        String fireMode = GunSupport.get().hud(weapon).mode();
+        if (!tickRetreatGunfire(weapon)) {
+            finishRetreatBurst();
+            return false;
+        }
+        if (activePath != null && human.getNavigation().getPath() == activePath) {
+            human.getNavigation().setSpeedModifier(0);
+            retreatPauseMovement = true;
+        }
+        human.getPersistentData().putString("hostile_humans_unified:ai_phase", "retreat_gun_counterattack");
+        if (human.getPersistentData().getLong("hostile_humans_unified:last_gunshot_game_time")
+                == human.level().getGameTime()) retreatBurstRounds++;
+        if (retreatBurstRounds >= (fireMode.toLowerCase(java.util.Locale.ROOT).contains("auto") ? 4 : 1)) {
+            finishRetreatBurst();
+        }
+        return true;
+    }
+
+    private void finishRetreatBurst() {
+        if (retreatBurstUntil == 0) return;
+        retreatBurstUntil = retreatBurstRounds = retreatAimTicks = 0;
+        retreatBurstWeapon = ItemStack.EMPTY;
+        retreatBurstTarget = null;
+        nextRetreatBurstTick = human.tickCount + 8;
+        gunOperator.aim(false);
+    }
+
     private boolean tickRetreatGunfire(ItemStack weapon) {
         if(threat==null||HumanTargetCoordinator.counterfire(human,threat)!=threat){
             setRetreatBackpedaling(false);
@@ -690,9 +791,14 @@ public final class AdaptiveCombatGoal extends Goal {
             retreatAimTicks=0;
             return false;
         }
+        if (!RangedShotClearance.canShoot(human, threat)) {
+            gunOperator.aim(false);
+            retreatAimTicks = 0;
+            return false;
+        }
         HumanAttention.retreatAim(human);
         GunAttackMovementState.markAttackActive(human);
-        boolean safeBackpedal = hasSafeBackpedalStep();
+        boolean safeBackpedal = human.getNavigation().isDone() && hasSafeBackpedalStep();
         if (safeBackpedal) {
             setRetreatBackpedaling(true);
             // Keep a valid escape path while shooting. Only use a manual
@@ -811,12 +917,19 @@ public final class AdaptiveCombatGoal extends Goal {
     private boolean urgentTargetSuggestion;
     private LivingEntity resolveThreat() {
         urgentTargetSuggestion=false;
+        if (phase == Phase.RETREAT && human.hhu$hasPendingMeleeAttack() && isValidThreat(threat)) return threat;
         LivingEntity current = human.getTarget();
         boolean newHit = human.getLastHurtByMob() != null
                 && human.getLastHurtByMobTimestamp() != lastProcessedHurtTimestamp;
         if (!newHit && usesWeaponLedFrontline(current) && !human.isFleeing
                 && HumanPerception.canTarget(human, current)) return current;
         LivingEntity suggested=proposeThreat();
+        if (phase == Phase.RETREAT && human.isFleeing && !human.hhu$hasPendingMeleeAttack()
+                && !BodyguardProtection.isBodyguard(human)) {
+            LivingEntity attacker = human.getLastHurtByMob();
+            if (isValidThreat(attacker) && human.tickCount - human.getLastHurtByMobTimestamp() < 20
+                    && human.getSensing().hasLineOfSight(attacker)) return attacker;
+        }
         LivingEntity assigned=HumanTargetCoordinator.select(human,suggested,"现有战术压力建议",urgentTargetSuggestion);
         // Survival direction is local knowledge, not permission to reacquire during escape.
         return assigned!=null?assigned:human.isFleeing&&isValidThreat(suggested)?suggested:null;
@@ -1550,6 +1663,7 @@ public final class AdaptiveCombatGoal extends Goal {
         Path path = plan.path();
         if (!RetreatPathSafety.tryMove(human, path, speed)) return false;
         activePath = path;
+        activePathSpeed = speed;
         return true;
     }
 
@@ -1562,6 +1676,7 @@ public final class AdaptiveCombatGoal extends Goal {
         }
         if (!RetreatPathSafety.tryMove(human, path, speed)) return false;
         activePath = path;
+        activePathSpeed = speed;
         return true;
     }
 

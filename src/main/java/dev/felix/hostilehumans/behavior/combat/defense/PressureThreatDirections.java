@@ -9,15 +9,28 @@ import java.util.UUID;
 final class PressureThreatDirections {
     static final int MEMORY_TICKS = 40, MAX_HITS = 64;
     static final double MINIMUM_SHARE = .02;
-    private record Hit(UUID source, int tick, float yaw, double share) { }
+    private record Hit(UUID source, int tick, float yaw, double share, boolean actualDamage) { }
     private final ArrayDeque<Hit> hits = new ArrayDeque<>();
     void record(UUID source, int now, float yaw, double damage, double maximumHealth) {
+        record(source, now, yaw, damage, maximumHealth, true);
+    }
+
+    void record(UUID source, int now, float yaw, double damage, double maximumHealth, boolean actualDamage) {
         if (source == null || !Float.isFinite(yaw) || !Double.isFinite(damage) || damage <= 0
                 || !Double.isFinite(maximumHealth) || maximumHealth <= 0) return;
         expire(now);
         if (hits.size() == MAX_HITS) hits.removeFirst();
-        hits.addLast(new Hit(source, now, ShieldDefensePolicy.wrap(yaw), damage / maximumHealth));
+        hits.addLast(new Hit(source, now, ShieldDefensePolicy.wrap(yaw), damage / maximumHealth, actualDamage));
     }
+    int crossfireExpiry(int now, float yaw) {
+        for (var iterator = hits.descendingIterator(); iterator.hasNext();) {
+            Hit hit = iterator.next();
+            if (now - hit.tick() >= 20) break;
+            if (hit.actualDamage() && Math.abs(ShieldDefensePolicy.wrap(hit.yaw() - yaw)) >= 60) return hit.tick() + 20;
+        }
+        return Integer.MIN_VALUE;
+    }
+
     Float yaw(int now, float current) {
         expire(now);
         // Aggregate each source's recent damage, but retain its latest observed arrival direction.
@@ -25,7 +38,7 @@ final class PressureThreatDirections {
         for (Hit hit : hits) {
             Hit previous = sources.get(hit.source());
             sources.put(hit.source(), new Hit(hit.source(), hit.tick(), hit.yaw(),
-                    hit.share() + (previous == null ? 0 : previous.share())));
+                    hit.share() + (previous == null ? 0 : previous.share()), hit.actualDamage()));
         }
         var significant = sources.values().stream().filter(hit -> hit.share() >= MINIMUM_SHARE).toList();
         if (significant.isEmpty()) return null;

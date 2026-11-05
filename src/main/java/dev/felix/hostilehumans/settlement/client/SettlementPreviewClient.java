@@ -24,6 +24,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = HumanRuntime.MOD_ID, value = Dist.CLIENT)
 public final class SettlementPreviewClient {
     static boolean throughWalls = true;
+    static boolean selectionVisible = true;
     private static SettlementPreview selection = SettlementPreview.EMPTY;
     private static SettlementPreview placement = SettlementPreview.EMPTY_PLACEMENT;
 
@@ -31,7 +32,11 @@ public final class SettlementPreviewClient {
 
     public static void accept(SettlementPreview value) {
         if (value.task().equals("place")) placement = value;
-        else selection = value;
+        else {
+            if(!value.dimension().equals(selection.dimension()) || !value.boxes().isEmpty() &&
+                    (selection.boxes().isEmpty() || !value.boxes().get(0).bounds().equals(selection.boxes().get(0).bounds())))selectionVisible=true;
+            selection = value;
+        }
     }
 
     @SubscribeEvent
@@ -76,13 +81,11 @@ public final class SettlementPreviewClient {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
         var mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null || mc.options.hideGui) return;
-        var mainHand = mc.player.getMainHandItem();
-        var preview = isPreviewTool(selection, mainHand)
-                || !isPreviewTool(placement, mainHand) && isPreviewTool(selection, mc.player.getOffhandItem())
-                ? selection : placement;
-        if (!preview.dimension().equals(mc.level.dimension().location().toString())
-                || preview.toolOnly()
-                        && !(isPreviewTool(preview, mc.player.getMainHandItem()) || isPreviewTool(preview, mc.player.getOffhandItem()))) return;
+        boolean placing=!placement.dimension().isEmpty() && (mc.player.getMainHandItem().getItem() instanceof SettlementPlacementTool
+                || mc.player.getOffhandItem().getItem() instanceof SettlementPlacementTool);
+        var preview=placing?placement:selection;
+        if(!placing&&!selectionVisible)return;
+        if(!preview.dimension().equals(mc.level.dimension().location().toString()))return;
 
         Vec3 camera = event.getCamera().getPosition();
         var poses = event.getPoseStack();
@@ -110,16 +113,16 @@ public final class SettlementPreviewClient {
         }
         // Same geometric edge, separate color-only passes, widest first.
         for (var layer : layers.entrySet()) {
-            var type = layer.getKey().renderType(throughWalls);
+            var type = DebugWorldLines.authorVolume(throughWalls);
             var lines = buffers.getBuffer(type);
             try {
                 for (var entry : layer.getValue()) {
                     if (entry.box().distanceToSqr(camera) > 192 * 192) continue;
                     int rgb = entry.rgb();
-                    LevelRenderer.renderLineBox(poses, lines,
+                    DebugWorldLines.worldBox(poses, lines,
                             entry.box().move(-camera.x, -camera.y, -camera.z),
                             ((rgb >> 16) & 255) / 255F, ((rgb >> 8) & 255) / 255F,
-                            (rgb & 255) / 255F, 1F);
+                            (rgb & 255) / 255F, 1F, layer.getKey().worldWidth());
                 }
             } finally {
                 buffers.endBatch(type);

@@ -1,7 +1,6 @@
 package dev.felix.hostilehumans.behavior.combat.retreat;
 
 import dev.felix.hostilehumans.entity.Human;
-import dev.felix.hostilehumans.behavior.combat.retreat.RetreatEscapeProgress;
 
 import dev.felix.hostilehumans.behavior.combat.HumanTargetCoordinator;
 import dev.felix.hostilehumans.behavior.combat.gun.GunCustody;
@@ -19,7 +18,7 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
-/** Retreat owns movement throughout. This short-lived substate only admits a normal melee action against its known close threat. */
+/** Detects failed escape and grants a short-lived counter window against the known retreat threat. */
 public final class RetreatLastStand {
     static final double THREAT_DISTANCE_SQR = 36;
     static final int LEASE_TICKS = 2;
@@ -28,6 +27,9 @@ public final class RetreatLastStand {
         java.lang.ref.WeakReference<LivingEntity> threat;
         long updated;
         boolean active;
+        int windowStart, hiddenSince = -1;
+        double baselineDistance;
+        boolean routeThreatened;
         State(LivingEntity threat) { this.threat = new java.lang.ref.WeakReference<>(threat); }
     }
     private static final Map<Human, State> STATES = new WeakHashMap<>();
@@ -40,16 +42,52 @@ public final class RetreatLastStand {
         State state = STATES.get(human);
         if (state == null) {
             state = new State(threat); STATES.put(human, state);
+            state.windowStart = human.tickCount;
+            state.baselineDistance = human.distanceTo(threat);
         } else if (state.threat.get() != threat) {
             if (state.active) cancelAttack(human);
+            state.windowStart = human.tickCount;
+            state.baselineDistance = human.distanceTo(threat);
+            state.hiddenSince = -1;
+            state.active = false;
             state.threat = new java.lang.ref.WeakReference<>(threat); // Changing enemies does not erase a stationary retreat's progress history.
         }
         boolean previous = state.active;
         state.updated = human.level().getGameTime();
-        state.active = state.progress.update(state.updated, human.getX(), human.getY(), human.getZ(), routeUnavailable,
-                human.onClimbable() || human.isInWater()) && human.distanceToSqr(threat) <= THREAT_DISTANCE_SQR;
+        if (human.tickCount % 6 == 0) state.routeThreatened = routeThreatened(human, threat);
+        boolean stalled = state.progress.update(state.updated, human.getX(), human.getY(), human.getZ(),
+                routeUnavailable, human.onClimbable() || human.isInWater());
+        int now = human.tickCount;
+        boolean visible = human.getSensing().hasLineOfSight(threat);
+        if (visible) state.hiddenSince = -1;
+        else if (state.hiddenSince < 0) state.hiddenSince = now;
+        double distance = human.distanceTo(threat);
+        boolean separated = distance >= state.baselineDistance + 1.5
+                || state.hiddenSince >= 0 && now - state.hiddenSince >= 10;
+        if (separated && !state.routeThreatened) {
+            state.active = human.hhu$hasPendingMeleeAttack();
+            state.windowStart = now;
+            state.baselineDistance = distance;
+        } else if (visible && (stalled || now - state.windowStart >= 20
+                && LowHealthCombatController.recentLoss(human, 20) > 0)) {
+            state.active = true;
+        }
         if (previous && !state.active) cancelAttack(human);
     }
+    private static boolean routeThreatened(Human human, LivingEntity primary) {
+        var path = human.getNavigation().getPath();
+        if (path == null || path.isDone()) return false;
+        var next = path.getEntityPosAtNode(human, path.getNextNodeIndex());
+        int visited = 0;
+        for (LivingEntity enemy : HumanPerception.knownDynamicTargets(human)) {
+            if (++visited > 16) break;
+            if (enemy != primary && enemy.isAlive() && human.canAttack(enemy)
+                    && human.distanceToSqr(enemy) <= 16 && enemy.distanceToSqr(next) <= 4
+                    && enemy.distanceToSqr(next) < human.distanceToSqr(enemy)) return true;
+        }
+        return false;
+    }
+
     private static boolean context(Human human) {
         return !human.level().isClientSide && human.isFleeing && human.explosionThreat == null
                 && human.isAlive() && !human.isRemoved() && !human.isNoAi()
@@ -60,13 +98,12 @@ public final class RetreatLastStand {
         long now = human.level().getGameTime();
         LivingEntity threat = state == null ? null : state.threat.get();
         return context(human) && state != null && state.active && now >= state.updated && now - state.updated <= LEASE_TICKS
-                && threat != null && threat.isAlive() && human.distanceToSqr(threat) <= THREAT_DISTANCE_SQR
-                && !state.progress.hasProgress(human.getX(), human.getY(), human.getZ(), human.onClimbable() || human.isInWater())
+                && threat != null && threat.isAlive()
                 && HumanPerception.canTarget(human, threat);
     }
     public static boolean permitsMelee(Human human) {
         State state = STATES.get(human);
-        return active(human) && state.threat.get() == human.getTarget() && human.canAttack(human.getTarget());
+        return active(human) && state.threat.get() == human.getTarget() && human.distanceToSqr(human.getTarget()) <= THREAT_DISTANCE_SQR && human.canAttack(human.getTarget());
     }
     public static boolean prepareWeapon(Human human) {
         if (!permitsMelee(human) || human.isUsingItem() || RecoverySupplies.hasActiveUse(human)

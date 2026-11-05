@@ -134,7 +134,7 @@ class SuppressiveShieldReloadContract(unittest.TestCase):
         self.assertNotIn('isUsingItem()', passive)
         self.assertIn('source.is(TRUE_DAMAGE)', passive)
         self.assertIn('source.is(DamageTypeTags.BYPASSES_ARMOR)', passive)
-        self.assertIn('!HumanDamagePipeline.physical(source)', passive)
+        self.assertIn('&& HumanDamagePipeline.physical(source)', passive)
         pipeline = source('HumanDamagePipeline.java')
         self.assertEqual(pipeline.count('GunnerShieldProtection.multiplier(target, source)'), 1)
         self.assertIn('!Float.isFinite(amount) || amount <= 0', pipeline)

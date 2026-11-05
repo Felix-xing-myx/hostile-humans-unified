@@ -139,14 +139,28 @@ PotionRangedAttackMob, StaticCombatGoalHost {
     private static final net.minecraft.network.syncher.EntityDataAccessor<Byte> NPC_SHIELD_HAND =
             net.minecraft.network.syncher.SynchedEntityData.defineId(Human.class, net.minecraft.network.syncher.EntityDataSerializers.BYTE);
 
+    private static final net.minecraft.network.syncher.EntityDataAccessor<ItemStack> BACKPACK_SHIELD =
+            net.minecraft.network.syncher.SynchedEntityData.defineId(Human.class, net.minecraft.network.syncher.EntityDataSerializers.ITEM_STACK);
+
     @Override protected void defineSynchedData() {
         super.defineSynchedData();
         entityData.define(FACTION_ID, "");
         entityData.define(FACTION_BOSS, false);
         entityData.define(NPC_SHIELD_HAND, (byte) 0);
+        entityData.define(BACKPACK_SHIELD, ItemStack.EMPTY);
     }
     /** Presentation snapshot only: 0 lowered, 1 main hand, 2 offhand. Not a client-side defense decision. */
     public int getNpcShieldHand() { return entityData.get(NPC_SHIELD_HAND); }
+
+    public ItemStack getBackpackShieldPresentation() { return entityData.get(BACKPACK_SHIELD); }
+
+    private void syncBackpackShieldPresentation() {
+        if (level().isClientSide || Math.floorMod(tickCount + getId(), 5) != 0) return;
+        var selected = dev.felix.hostilehumans.behavior.combat.defense.GunnerShieldProtection.backShield(this);
+        ItemStack shield = selected == null ? ItemStack.EMPTY : selected.stack();
+        if (!ItemStack.matches(getBackpackShieldPresentation(), shield))
+            entityData.set(BACKPACK_SHIELD, shield.copy());
+    }
 
     private void syncShieldPresentation() {
         if (level().isClientSide) return;
@@ -338,7 +352,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
                 human,
                 meleeAttackGoal,
                 () -> hhu$isMeleeMode(human),
-                () -> RangedWeaponCustody.isActive(human)
+                () -> dev.felix.hostilehumans.behavior.combat.ranged.RangedHybridMeleeGoal.ownsCloseDefense(human)
         ));
         hhu$staticCombatGoalsInstalled = true;
     
@@ -2168,6 +2182,7 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             --this.shieldUpTicks;
         }
         syncShieldPresentation();
+        syncBackpackShieldPresentation();
     }
 
     private void setRangedFacingYaw(float yaw) {
@@ -2210,8 +2225,14 @@ PotionRangedAttackMob, StaticCombatGoalHost {
 
     @Override
     public void heal(float amount) {
+        hhu$healResolvedAmount(level().isClientSide ? amount
+                : dev.felix.hostilehumans.progression.EffectiveAttributes.healing(this, amount));
+    }
+
+    /** Settles healing whose attribute modifiers have already been applied. */
+    public void hhu$healResolvedAmount(float amount) {
         float before = this.getHealth();
-        super.heal(this.level().isClientSide ? amount : dev.felix.hostilehumans.progression.EffectiveAttributes.healing(this, amount));
+        super.heal(amount);
         dev.felix.hostilehumans.behavior.combat.retreat.LowHealthCombatController.recordHealing(this,
                 Math.max(0.0F, this.getHealth() - before));
     }
@@ -2762,6 +2783,25 @@ PotionRangedAttackMob, StaticCombatGoalHost {
             switchNavigation(desired);
             this.setSwimming(false);
         }
+    }
+
+    public static final byte DODGE_VISUAL_EVENT = 100;
+    private DodgeMotion dodgeMotion;
+
+    @Override
+    public void handleEntityEvent(byte event) {
+        if (event == DODGE_VISUAL_EVENT) {
+            if (level().isClientSide) {
+                if (dodgeMotion == null) dodgeMotion = new DodgeMotion();
+                dodgeMotion.trigger(tickCount);
+            }
+            return;
+        }
+        super.handleEntityEvent(event);
+    }
+
+    public DodgeMotion hhu$dodgeMotion() {
+        return dodgeMotion;
     }
 
     static class HumanMoveControl

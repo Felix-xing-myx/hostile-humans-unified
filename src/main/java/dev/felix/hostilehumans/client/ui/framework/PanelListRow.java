@@ -14,6 +14,7 @@ import java.util.function.Supplier;
  */
 public final class PanelListRow extends PanelButton {
     public static final int HEIGHT = 30, VALUE = 40;
+    private static final int PADDING = 5, LINE_GAP = 3, BAR_GAP = 5, BAR_HEIGHT = 3;
 
     private final String title, metadata, value;
     private final double progress, target;
@@ -44,16 +45,11 @@ public final class PanelListRow extends PanelButton {
         var font = Minecraft.getInstance().font;
         int valueWidth = value.isEmpty() ? 0 : Math.min(VALUE, font.width(value)) + 6;
         clippedTitle =
-                font.plainSubstrByWidth(title, Math.max(1, width - 18 - valueWidth));
+                font.plainSubstrByWidth(title, Math.max(1, width - 24 - valueWidth));
         clippedValue = value.isEmpty() ? "" : font.plainSubstrByWidth(value, VALUE);
-        clippedMetadata = font.plainSubstrByWidth(metadata, Math.max(1, width - 18));
-        return HEIGHT;
-    }
-
-    @Override
-    public void place(UiRect b) {
-        super.place(b);
-        setHeight(HEIGHT);
+        clippedMetadata = font.plainSubstrByWidth(metadata, Math.max(1, width - 24));
+        int textHeight = PADDING * 2 + font.lineHeight * 2 + LINE_GAP;
+        return Math.max(HEIGHT, textHeight + (target > 0 ? BAR_GAP + BAR_HEIGHT : 0));
     }
 
     @Override
@@ -70,7 +66,7 @@ public final class PanelListRow extends PanelButton {
         if (isFocused()) UiDraw.outline(g, getX(), getY(), width, height, t.accent());
 
         var font = Minecraft.getInstance().font;
-        int x = getX() + 9, y = getY() + 5;
+        int x = getX() + 9, y = getY() + PADDING;
         UiDraw.rect(g, x, y + 3, 3, 3, tone);
         g.drawString(font, clippedTitle, x + 7, y, selected() ? t.accent() : t.text(), false);
         if (!clippedValue.isEmpty())
@@ -81,10 +77,11 @@ public final class PanelListRow extends PanelButton {
                     y,
                     t.muted(),
                     false);
-        g.drawString(font, clippedMetadata, x + 7, y + 12, t.muted(), false);
+        g.drawString(font, clippedMetadata, x + 7, y + font.lineHeight + LINE_GAP, t.muted(), false);
         if (target > 0) {
             int barX = getX() + 9, barW = Math.max(20, width - 18);
-            UiDraw.meter(g, barX, getY() + height - 7, barW, 3, progress, target, t.accent(), true);
+            UiDraw.meter(g, barX, getY() + height - PADDING - BAR_HEIGHT, barW, BAR_HEIGHT,
+                    progress, target, t.accent(), true);
         }
     }
 }

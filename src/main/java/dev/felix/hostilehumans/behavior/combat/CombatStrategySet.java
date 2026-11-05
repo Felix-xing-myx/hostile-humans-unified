@@ -7,7 +7,7 @@ import java.util.Objects;
 public record CombatStrategySet(RangedStyle ranged, GunStyle gun, boolean reinforcedJump,
                          boolean dualWield, boolean shieldAdvance, ShieldStyle shield) {
     public enum RangedStyle { DEFAULT, FORTIFIED, MOBILE, VOLLEY, ADVANCE }
-    public enum ShieldStyle { STANDARD, PRESSURE_ONLY }
+    public enum ShieldStyle { STANDARD, BACKPACK }
     public enum GunStyle { DEFAULT, FORTIFIED, MOBILE, ASSAULT, MELEE_ASSAULT }
 
     private static final CombatStrategySet DEFAULT = new CombatStrategySet(
@@ -16,7 +16,7 @@ public record CombatStrategySet(RangedStyle ranged, GunStyle gun, boolean reinfo
             "azure", new CombatStrategySet(RangedStyle.FORTIFIED, GunStyle.FORTIFIED, false, false, true, ShieldStyle.STANDARD),
             "verdant", new CombatStrategySet(RangedStyle.MOBILE, GunStyle.MOBILE, false, false, false, ShieldStyle.STANDARD),
             "crimson", new CombatStrategySet(RangedStyle.VOLLEY, GunStyle.ASSAULT, true, false, false, ShieldStyle.STANDARD),
-            "ashen", new CombatStrategySet(RangedStyle.ADVANCE, GunStyle.MELEE_ASSAULT, true, true, false, ShieldStyle.PRESSURE_ONLY));
+            "ashen", new CombatStrategySet(RangedStyle.ADVANCE, GunStyle.MELEE_ASSAULT, true, true, false, ShieldStyle.BACKPACK));
 
     public CombatStrategySet {
         Objects.requireNonNull(ranged);
@@ -35,9 +35,14 @@ public record CombatStrategySet(RangedStyle ranged, GunStyle gun, boolean reinfo
     /** Faction movement intent, independent of core-weapon bonuses. */
     public boolean keepsRangedDistance() { return ranged == RangedStyle.MOBILE; }
 
+    public boolean heavyStrike() { return ranged == RangedStyle.VOLLEY; }
+
+    public double passiveGunShieldBonus() { return gun == GunStyle.FORTIFIED ? .06 : 0; }
+
+    public boolean usesBackpackShield() { return shield == ShieldStyle.BACKPACK; }
+
     public boolean allowsOrdinaryShield() { return shield == ShieldStyle.STANDARD; }
 
     public boolean reinforcedJump(boolean core, boolean enabled) { return reinforcedJump && core && enabled; }
-    boolean shieldAdvance(boolean core, boolean enabled) { return shieldAdvance && core && enabled; }
     public boolean extendedGunRange(boolean core, boolean enabled) { return gun == GunStyle.MOBILE && core && enabled; }
 }

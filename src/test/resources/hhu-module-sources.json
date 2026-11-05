@@ -507,9 +507,33 @@
     "class": "dev.felix.hostilehumans.progression.DefenseAttributes",
     "path": "src/main/java/dev/felix/hostilehumans/progression/DefenseAttributes.java"
   },
+  "DeveloperGuideItem": {
+    "class": "dev.felix.hostilehumans.developer.DeveloperGuideItem",
+    "path": "src/main/java/dev/felix/hostilehumans/developer/DeveloperGuideItem.java"
+  },
+  "DeveloperGuideScreen": {
+    "class": "dev.felix.hostilehumans.developer.client.DeveloperGuideScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/developer/client/DeveloperGuideScreen.java"
+  },
   "DodgeAbility": {
     "class": "dev.felix.hostilehumans.faction.ability.DodgeAbility",
     "path": "src/main/java/dev/felix/hostilehumans/faction/ability/DodgeAbility.java"
+  },
+  "DodgeGeometryCapture": {
+    "class": "dev.felix.hostilehumans.client.render.DodgeGeometryCapture",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/DodgeGeometryCapture.java"
+  },
+  "DodgeMotion": {
+    "class": "dev.felix.hostilehumans.entity.DodgeMotion",
+    "path": "src/main/java/dev/felix/hostilehumans/entity/DodgeMotion.java"
+  },
+  "DodgeRenderTypes": {
+    "class": "dev.felix.hostilehumans.client.render.DodgeRenderTypes",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/DodgeRenderTypes.java"
+  },
+  "DodgeTrailLayer": {
+    "class": "dev.felix.hostilehumans.client.render.DodgeTrailLayer",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/DodgeTrailLayer.java"
   },
   "DoorInteractHumanGoal": {
     "class": "dev.felix.hostilehumans.navigation.DoorInteractHumanGoal",
@@ -790,6 +814,10 @@
   "GlobalBudgetSnapshot": {
     "class": "dev.felix.hostilehumans.observer.GlobalBudgetSnapshot",
     "path": "src/main/java/dev/felix/hostilehumans/observer/GlobalBudgetSnapshot.java"
+  },
+  "GroupResistanceAbility": {
+    "class": "dev.felix.hostilehumans.faction.ability.GroupResistanceAbility",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/ability/GroupResistanceAbility.java"
   },
   "GrowthCombat": {
     "class": "dev.felix.hostilehumans.progression.GrowthCombat",
@@ -1595,9 +1623,65 @@
     "class": "dev.felix.hostilehumans.navigation.LongRangeNavigation",
     "path": "src/main/java/dev/felix/hostilehumans/navigation/LongRangeNavigation.java"
   },
+  "LootAuthoringJeiPlugin": {
+    "class": "dev.felix.hostilehumans.compat.jei.LootAuthoringJeiPlugin",
+    "path": "src/main/java/dev/felix/hostilehumans/compat/jei/LootAuthoringJeiPlugin.java"
+  },
+  "LootContainers": {
+    "class": "dev.felix.hostilehumans.loot.LootContainers",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/LootContainers.java"
+  },
+  "LootDisplayText": {
+    "class": "dev.felix.hostilehumans.loot.client.LootDisplayText",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/client/LootDisplayText.java"
+  },
+  "LootDocuments": {
+    "class": "dev.felix.hostilehumans.loot.LootDocuments",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/LootDocuments.java"
+  },
+  "LootDraftCache": {
+    "class": "dev.felix.hostilehumans.loot.client.LootDraftCache",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/client/LootDraftCache.java"
+  },
+  "LootEditorNetwork": {
+    "class": "dev.felix.hostilehumans.loot.LootEditorNetwork",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/LootEditorNetwork.java"
+  },
+  "LootEditorReturn": {
+    "class": "dev.felix.hostilehumans.loot.client.LootEditorReturn",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/client/LootEditorReturn.java"
+  },
+  "LootEditorScreen": {
+    "class": "dev.felix.hostilehumans.loot.client.LootEditorScreen",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/client/LootEditorScreen.java"
+  },
+  "LootEditorTool": {
+    "class": "dev.felix.hostilehumans.loot.LootEditorTool",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/LootEditorTool.java"
+  },
+  "LootItemCatalog": {
+    "class": "dev.felix.hostilehumans.loot.client.LootItemCatalog",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/client/LootItemCatalog.java"
+  },
+  "LootLibrary": {
+    "class": "dev.felix.hostilehumans.loot.LootLibrary",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/LootLibrary.java"
+  },
+  "LootLibraryDefaults": {
+    "class": "dev.felix.hostilehumans.loot.LootLibraryDefaults",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/LootLibraryDefaults.java"
+  },
+  "LootLibraryPack": {
+    "class": "dev.felix.hostilehumans.loot.LootLibraryPack",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/LootLibraryPack.java"
+  },
   "LootRetryPolicy": {
     "class": "dev.felix.hostilehumans.inventory.LootRetryPolicy",
     "path": "src/main/java/dev/felix/hostilehumans/inventory/LootRetryPolicy.java"
+  },
+  "LootSimpleDraft": {
+    "class": "dev.felix.hostilehumans.loot.LootSimpleDraft",
+    "path": "src/main/java/dev/felix/hostilehumans/loot/LootSimpleDraft.java"
   },
   "LowHealthCombatConfig": {
     "class": "dev.felix.hostilehumans.behavior.combat.retreat.LowHealthCombatConfig",
@@ -2107,6 +2191,10 @@
     "class": "dev.felix.hostilehumans.client.ui.framework.PanelHealth",
     "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelHealth.java"
   },
+  "PanelItemRow": {
+    "class": "dev.felix.hostilehumans.client.ui.framework.PanelItemRow",
+    "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelItemRow.java"
+  },
   "PanelKeyValue": {
     "class": "dev.felix.hostilehumans.client.ui.framework.PanelKeyValue",
     "path": "src/main/java/dev/felix/hostilehumans/client/ui/framework/PanelKeyValue.java"
@@ -2459,6 +2547,10 @@
     "class": "dev.felix.hostilehumans.soldier.RecruitmentPolicy",
     "path": "src/main/java/dev/felix/hostilehumans/soldier/RecruitmentPolicy.java"
   },
+  "RecruitmentPricing": {
+    "class": "dev.felix.hostilehumans.faction.RecruitmentPricing",
+    "path": "src/main/java/dev/felix/hostilehumans/faction/RecruitmentPricing.java"
+  },
   "RecruitmentTermsCache": {
     "class": "dev.felix.hostilehumans.soldier.RecruitmentTermsCache",
     "path": "src/main/java/dev/felix/hostilehumans/soldier/RecruitmentTermsCache.java"
@@ -2470,6 +2562,10 @@
   "ReloadPaymentLedger": {
     "class": "dev.felix.hostilehumans.behavior.combat.gun.ReloadPaymentLedger",
     "path": "src/main/java/dev/felix/hostilehumans/behavior/combat/gun/ReloadPaymentLedger.java"
+  },
+  "RenderVisibilityMask": {
+    "class": "dev.felix.hostilehumans.client.render.RenderVisibilityMask",
+    "path": "src/main/java/dev/felix/hostilehumans/client/render/RenderVisibilityMask.java"
   },
   "RetreatEscapeProgress": {
     "class": "dev.felix.hostilehumans.behavior.combat.retreat.RetreatEscapeProgress",

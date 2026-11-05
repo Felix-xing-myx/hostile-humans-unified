@@ -35,6 +35,7 @@ public abstract class PanelScreen extends Screen {
     private final List<PanelButton> footer = new ArrayList<>();
     private int footerSpacer = -1;
     private final Map<InputValue<?>, PanelEditBox> inputs = new IdentityHashMap<>();
+    private PanelEditBox rebuildingInput;
     private final Set<InputValue<?>> usedInputs =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<AbstractWidget> leftSide =
@@ -86,6 +87,17 @@ public abstract class PanelScreen extends Screen {
     /** Fixed width of the left column; 0 selects a single column layout. */
     protected int splitWidth() {
         return 0;
+    }
+
+    /** Optional side-by-side auxiliary UI; defaults to the existing full viewport. */
+    protected int leftGutter() { return 0; }
+    protected int rightGutter() { return 0; }
+    protected int bottomGutter() { return 0; }
+
+    private UiRect reservedFrame() {
+        int left = Math.max(0, leftGutter()), right = Math.max(0, rightGutter()), bottom = Math.max(0, bottomGutter());
+        UiRect available = PanelGeometry.frame(size, Math.max(1, width - left - right), Math.max(1, height - bottom));
+        return new UiRect(available.x() + left, available.y(), available.width(), available.height());
     }
 
     protected void buildLeft(List<UiLayout.Node> out) {}
@@ -283,11 +295,29 @@ public abstract class PanelScreen extends Screen {
     }
 
     @Override
+    protected void rebuildWidgets() {
+        PanelEditBox input = getFocused() instanceof PanelEditBox edit && inputs.containsValue(edit) ? edit : null;
+        PanelEditBox previous = rebuildingInput;
+        rebuildingInput = input;
+        try {
+            // Screen.rebuildWidgets clears focus before invoking init.
+            super.rebuildWidgets();
+        } finally {
+            if (input != null && input != getFocused()) input.setFocused(false);
+            rebuildingInput = previous;
+        }
+    }
+
+    @Override
     protected void init() {
+        PanelEditBox editing = rebuildingInput != null ? rebuildingInput
+                : getFocused() instanceof PanelEditBox edit ? edit : null;
         InputValue<?> focused = null;
         for (var entry : inputs.entrySet())
-            if (entry.getValue() == getFocused()) {
+            if (entry.getValue() == editing) {
                 focused = entry.getKey();
+                // Keep place() from resetting the caret and selection during the rebuild.
+                editing.setFocused(true);
                 break;
             }
         body.clear();
@@ -300,7 +330,7 @@ public abstract class PanelScreen extends Screen {
         content = null;
         leftContent = null;
         rightContent = null;
-        frame = PanelGeometry.frame(size, width, height);
+        frame = reservedFrame();
         if (splitWidth() > 0) {
             buildSide = -1;
             List<UiLayout.Node> left = new ArrayList<>();
@@ -324,11 +354,14 @@ public abstract class PanelScreen extends Screen {
             setFocused(input);
             input.setFocused(true);
             revealFocus();
+        } else if (editing != null) {
+            // Tab changes and disabled/removed fields must not retain a detached editor.
+            editing.setFocused(false);
         }
     }
 
     protected final void relayout() {
-        frame = PanelGeometry.frame(size, width, height);
+        frame = reservedFrame();
         headerText = headerStatus();
         bandText = bandStatus();
         boolean hasBand = !band.isEmpty() || !bandText.getString().isBlank();
@@ -401,6 +434,9 @@ public abstract class PanelScreen extends Screen {
         return Math.max(1, frame.width() - reserved);
     }
 
+    /** Optional trailing action; earlier filter tabs keep their normal flow. */
+    protected boolean rightAlignBandLast(){return false;}
+
     private void layoutBand() {
         if (bandRect.height() <= 0) return;
         int x = bandRect.x() + 6;
@@ -414,6 +450,7 @@ public abstract class PanelScreen extends Screen {
                             ? font.width(button.getMessage()) + 14
                             : widget.getWidth();
             int w = Math.max(1, Math.min(preferred, Math.max(1, limit - x)));
+            if(rightAlignBandLast() && widget==band.get(band.size()-1))x=Math.max(x,limit-w);
             widget.setX(x);
             widget.setY(bandRect.y() + (BAND_HEIGHT - 20) / 2);
             widget.setWidth(w);

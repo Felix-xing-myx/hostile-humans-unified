@@ -20,6 +20,9 @@ public final class DamagePartitionTest {
         close(DamagePartition.armor(25,remainder,.9,true,x->0),25,"shield remainder does not get converted twice");
         close(DamagePartition.afterBlockFraction(100,.25,30),25.0/70,"partial foreign block preserves P");
         close(DamagePartition.afterBlockFraction(100,0,100),0,"fully blocked hit");
+        double shielded = DamagePartition.afterBlockFraction(20,.45,15.5,4.5);
+        close(DamagePartition.armor(4.5F,shielded,1,true,x->0),4.5,"active shield leaves half the piercing unarmored");
+        close(DamagePartition.afterBlockFraction(20,.45,9.5,4.5),4.5/10.5,"partial shield preserves the surviving normal damage");
         var receipt = new DamagePipelineState();
         Object first = new Object(), second = new Object();
         receipt.begin(); receipt.record(first,10,1);
@@ -33,16 +36,22 @@ public final class DamagePartitionTest {
         close(receipt.consume(first,10,.25),.25,"cancel/return cleanup");
         receipt.record(first,10,1); // Simulate an exception before the armor seam, then a new hit.
         receipt.begin(); close(receipt.consume(first,10,.25),.25,"exception cannot leak into next hit");
-        receipt.markCustomShield(first, second, 20);
+        receipt.markCustomShield(first, second, 20, .7F);
         receipt.begin(); // TaCZ starts its normal hurt after its own Pre hook.
-        close(receipt.consumeCustomShield(first,20) ? 1 : 0,1,"native custom block survives hurt begin");
+        close(receipt.beginCustomShield(first,20),.7,"normal segment uses configured multiplier");
+        check(receipt.customBlock(),"native custom block survives hurt begin");
         close(receipt.consumeCustomShield(first,20) ? 1 : 0,0,"normal part not blocked twice");
         receipt.clear(); receipt.begin();
-        close(receipt.consumeCustomShield(second,20) ? 1 : 0,1,"separate AP hurt consumes its own source");
-        receipt.markCustomShield(first,second,20);
+        close(receipt.beginCustomShield(second,20),.5,"separate AP hurt uses fixed half");
+        receipt.end();
+        check(!receipt.customBlock(),"active receipt is cleared on hurt return");
+        receipt.markCustomShield(first,second,20,.7F);
         close(receipt.consumeCustomShield(first,21) ? 1 : 0,0,"native shield receipt expires");
         close(receipt.consumeCustomShield(second,20) ? 1 : 0,0,"expiry invalidates both parts");
         System.out.println("DamagePartitionTest passed");
+    }
+    private static void check(boolean condition, String label) {
+        if (!condition) throw new AssertionError(label);
     }
     private static void close(double actual, double expected, String label) {
         if (Math.abs(actual-expected)>1e-4) throw new AssertionError(label+": "+actual+" != "+expected);

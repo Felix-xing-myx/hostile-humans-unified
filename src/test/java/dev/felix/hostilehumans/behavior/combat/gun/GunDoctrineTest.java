@@ -6,16 +6,16 @@ public final class GunDoctrineTest {
         var green=GunDoctrine.style("verdant","sniper",true);
         check(green.spread()==.6&&green.movement()==.80,"green core precision and movement");
         near(GunDoctrine.workPerTick(1,2,false),1/1.4,"common human reload duration scales once");
-        near(GunDoctrine.workPerTick(green.reloadDuration(),2,false),.7/1.4,"green strategy multiplies the new baseline");
+        near(GunDoctrine.workPerTick(green.reloadDuration(),2,false),1/(1.4*.7),"green strategy multiplies the new baseline");
         var nonCoreGreen = GunDoctrine.style("verdant", "pistol", false);
         check(!nonCoreGreen.advance() && !nonCoreGreen.forceMelee(), "green non-core retains spacing");
         check(nonCoreGreen.movement()==.4 && nonCoreGreen.spread()==1 && nonCoreGreen.reloadDuration()==1,
                 "non-core spacing retains normal numerical modifiers");
         var blue=GunDoctrine.style("azure","mg",true);
         near(GunDoctrine.workPerTick(blue.reloadDuration(),2,false),1/(1.4*.7),"blue duration multiplies the new baseline");
-        near(GunDoctrine.workPerTick(green.reloadDuration(),2,true),.7/(1.4*2),"background penalty multiplies once");
+        near(GunDoctrine.workPerTick(green.reloadDuration(),2,true),1/(1.4*.7*2),"background penalty multiplies once");
         near(GunDoctrine.workPerTick(1,1.2,true),1/(1.4*1.2),"red close guns retain their background strategy");
-        check(GunDoctrine.reloadHardLimit(600,green.reloadDuration(),2)>=2400,
+        check(GunDoctrine.reloadHardLimit(600,green.reloadDuration(),2)>=1176,
                 "deadline permits slowed green background work instead of cancelling a healthy reload");
         check(GunDoctrine.reloadHardLimit(216000,100,100)==216000,"hard deadline remains bounded");
         check(blue.spread()==.7&&blue.movement()==.2,"blue core precision and movement");

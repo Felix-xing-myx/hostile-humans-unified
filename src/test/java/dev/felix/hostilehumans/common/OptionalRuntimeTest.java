@@ -34,7 +34,7 @@ import java.util.List;
 public final class OptionalRuntimeTest {
     public static void main(String[] args) throws Exception {
         ClassLoader loader = OptionalRuntimeTest.class.getClassLoader();
-        for (String type : List.of("com.tacz.guns.api.item.IGun",
+        for (String type : List.of("com.tacz.guns.api.item.IGun", "mezz.jei.api.IModPlugin",
                 "com.github.tartaricacid.touhoulittlemaid.entity.passive.EntityMaid",
                 "top.theillusivec4.curios.api.CuriosApi",
                 "ichttt.mods.firstaid.api.healing.ItemHealing", "top.ribs.scguns.item.GunItem")) {
@@ -47,6 +47,7 @@ public final class OptionalRuntimeTest {
             for (Path file : paths.filter(p -> p.toString().endsWith(".class")).sorted().toList()) {
                 String name = root.relativize(file).toString().replace('\\', '.').replace('/', '.').replaceAll("\\.class$", "");
                 // These adapters are deliberately loadable only with their dependency installed.
+                if (name.startsWith("dev.felix.hostilehumans.compat.jei.")) continue;
                 if (name.matches(".*\\.(JegIntegration|JegMonitorRecoilAdapter|JegReloadPlan|JegSounds|JegNativePose|JegGunIdentity|JegNpcMuzzleFlashMixin|FirstAidApiBridge|TaczMonitorHud|TaczMonitorRecoil|TaczHearingBridge|TaczNpcEffects|TaczNativePresentation|TaczPresentationResources|NativeReloadAudio|NativeAnimationWeight|TaczMonitorAudio|TaczMonitorShotSoundClient|TaczMonitorShotSoundMixin|TaczMonitorWeapons|TaczNativeOptics|TaczScopeAimMixin|TaczGunMechanics|TaczNpcMagazine|ScgunsIntegration|ScgunsMonitorRecoilAdapter|ScgunsSounds|ScgunsReloadTiming|ScgunsNativePose|ScgunsMachineGunPose|ScgunsMedicalBridge|ScgunsGunIdentity|ScgunsRaidBridge|ScgunsThrowableAdapter|ScgunsThrowableDamage|JegThrowables|TaczIntegration|TaczGunItemIdentity|TaczHumanReloadTransactions|TaczHumanReloadMixin|TaczHumanShootMixin|TaczHumanGunScriptMixin|TaczReloadSoundClient|TaczMaidIntegration|TouhouMaidCompat|MaidTargetRules|TravelersBackpack|HumanBackpackLayer|CuriosWalletAccess|CuriosBandAccess)(\\$.*)?")) continue;
                 try {
                     Class<?> type = Class.forName(name, false, loader);
@@ -67,6 +68,6 @@ public final class OptionalRuntimeTest {
         vanilla.control(null).clearSprintLock();
         vanilla.control(null).shoot(null, null, 0, 0);
         vanilla.registerEvents();
-        System.out.println("OptionalRuntimeTest: linked " + loaded + " core classes without TaCZ, Curios, Maid First Aid Scorched Guns or JEG; vanilla adapter passed");
+        System.out.println("OptionalRuntimeTest: linked " + loaded + " core classes without JEI, TaCZ, Curios, Maid First Aid Scorched Guns or JEG; vanilla adapter passed");
     }
 }

@@ -11,9 +11,13 @@ import dev.felix.hostilehumans.faction.HumanFactions;
 import java.util.Locale;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiEvent;
+import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -35,10 +39,40 @@ public final class HumanMonitorScreen {
             default -> { }
         }
     }
-    @SubscribeEvent public static void render(RenderGuiEvent.Post event) {
+    /** Passive chat has finished drawing; drain its queued geometry before placing our HUD above it. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void render(RenderGuiEvent.Post event) {
+        if (Minecraft.getInstance().screen instanceof ChatScreen) return;
+        renderHud(event.getGuiGraphics());
+    }
+
+    /** Focused chat owns the foreground, so draw exactly once, before the native chat overlay. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void renderBelowFocusedChat(RenderGuiOverlayEvent.Pre event) {
+        if (!(Minecraft.getInstance().screen instanceof ChatScreen)
+                || !event.getOverlay().id().equals(VanillaGuiOverlay.CHAT_PANEL.id())) return;
+        renderHud(event.getGuiGraphics());
+    }
+
+    private static void renderHud(GuiGraphics g) {
         var client = Minecraft.getInstance(); var state = HumanMonitorClient.state();
-        if (state == null || client.options.hideGui || client.screen != null) return;
-        GuiGraphics g = event.getGuiGraphics(); var font = client.font;
+        if (state == null || client.options.hideGui
+                || client.screen != null && !(client.screen instanceof ChatScreen)) return;
+        // Separate batches matter here: native chat text, background and our controls use
+        // different RenderTypes. Explicit boundaries preserve painter order without a global Z hack.
+        g.flush();
+        g.pose().pushPose();
+        try {
+            renderContents(g);
+        } finally {
+            g.pose().popPose();
+            g.flush();
+        }
+    }
+
+    private static void renderContents(GuiGraphics g) {
+        var client = Minecraft.getInstance(); var state = HumanMonitorClient.state();
+        var font = client.font;
         var layout=MonitorHudLayout.of(client.getWindow().getGuiScaledWidth(),client.getWindow().getGuiScaledHeight(),MonitorGunHud.visible());
         int width=layout.commandWidth(),x=layout.commandX(),y=layout.commandY();
         String faction=client.level!=null&&client.level.getEntity(state.entityId()) instanceof Human human

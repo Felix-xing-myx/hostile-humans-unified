@@ -31,11 +31,28 @@ final class HumanAnimatedItemInHandLayer extends ItemInHandLayer<Human, PlayerMo
     }
 
     @Override
+    public void render(PoseStack poses, MultiBufferSource buffer, int light, Human human,
+                       float limbSwing, float limbSwingAmount, float partialTick, float age,
+                       float headYaw, float headPitch) {
+        super.render(poses, buffer, light, human, limbSwing, limbSwingAmount, partialTick, age, headYaw, headPitch);
+        ItemStack shield = human.getBackpackShieldPresentation();
+        if (spectator || shield.isEmpty()) return;
+        poses.pushPose();
+        try {
+            renderBackShield(human, shield, BackShieldPose.resolve(human, shield),
+                    human.getMainArm().getOpposite(), poses, buffer, light);
+        } finally {
+            poses.popPose();
+        }
+    }
+
+    @Override
     protected void renderArmWithItem(LivingEntity entity, ItemStack item, ItemDisplayContext displayContext,
                                      HumanoidArm arm, PoseStack poseStack,
                                      MultiBufferSource buffer, int packedLight) {
         if (item.isEmpty()) return;
         Human human = (Human) entity;
+        if (!human.getBackpackShieldPresentation().isEmpty() && SpartanEquipmentCompat.isShield(item)) return;
         // Hide only the physical offhand item, never the supporting arm or shared world model.
         if (spectator && arm != human.getMainArm() && !HumanSpectatorPresentation.showOffhandItem(human)) return;
         poseStack.pushPose();

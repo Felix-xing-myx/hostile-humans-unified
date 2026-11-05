@@ -3,7 +3,6 @@ package dev.felix.hostilehumans.faction.ability;
 import dev.felix.hostilehumans.entity.Human;
 
 import dev.felix.hostilehumans.bootstrap.HumanRuntime;
-import dev.felix.hostilehumans.damage.HumanDamagePipeline;
 import dev.felix.hostilehumans.damage.HumanOwnerProtection;
 import dev.felix.hostilehumans.progression.TierAttributes;
 
@@ -13,7 +12,6 @@ import java.util.WeakHashMap;
 import dev.felix.hostilehumans.audio.ModSoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.DamageTypeTags;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.Difficulty;
 
 /** Event-only dodge. Shared immutable chance table, listener-local sound throttling. */
@@ -22,6 +20,7 @@ final class DodgeAbility implements FactionAbility {
     // Share the audio gate across definitions; one Human must not play multiple dodge cues.
     // This is server-event state only, with weak keys so unloaded Humans are not retained.
     private static final Map<Human, Long> LAST_SOUND = new WeakHashMap<>();
+    private static final Map<Human, Long> LAST_VISUAL = new WeakHashMap<>();
     private final Map<String, Double> chances;
     private final int soundCooldown;
     private static final class Observation {
@@ -57,23 +56,23 @@ final class DodgeAbility implements FactionAbility {
         Human h = hit.human(); var source = hit.source();
         Observation o = observations.computeIfAbsent(h, ignored -> new Observation()); o.seen++;
         o.chance = chances.getOrDefault(TierAttributes.key(h), 0.0);
-        if (!(source.getEntity() instanceof LivingEntity attacker) || attacker == h) {
-            o.reason = "无直接活体攻击者"; return false;
-        }
         // Political neutrality is not damage immunity. Reuse the actual incoming protection contract.
-        if (HumanOwnerProtection.blocksDamage(h, source) || attacker instanceof Human other
+        if (HumanOwnerProtection.blocksDamage(h, source) || source.getEntity() instanceof Human other
                 && (h.level().getDifficulty() == Difficulty.PEACEFUL || HumanRuntime.shouldBlockHumanDamage(other, h))) {
             o.reason = "攻击本已受伤害保护过滤"; return false;
         }
-        if (!HumanDamagePipeline.physical(source) || source.is(DamageTypeTags.IS_FALL)
-                || source.is(DamageTypeTags.IS_EXPLOSION) || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
-            o.reason = "环境、持续或非闪避伤害"; return false;
+        if (source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            o.reason = "绕过无敌的强制伤害"; return false;
         }
         if (o.chance <= 0) { o.reason = "本阶概率为零"; return false; }
         o.eligible++;
         if (h.getRandom().nextDouble() >= o.chance) { o.reason = "本次抽签未触发"; return false; }
         o.dodged++; o.reason = "本次攻击已闪避";
         long now = h.level().getGameTime();
+        Long visual=LAST_VISUAL.get(h);
+        if(visual==null||now<visual||now-visual>=dev.felix.hostilehumans.entity.DodgeMotion.MIN_REPLAY_TICKS){
+            h.level().broadcastEntityEvent(h, Human.DODGE_VISUAL_EVENT);LAST_VISUAL.put(h,now);
+        } else o.reason="本次攻击已闪避（动画播放／冷却中）";
         Long lastSound = LAST_SOUND.get(h);
         if (lastSound == null || now < lastSound || now - lastSound >= soundCooldown) {
             h.level().playSound(null, h.getX(), h.getY(), h.getZ(), ModSoundEvents.DODGE.get(),

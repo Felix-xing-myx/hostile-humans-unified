@@ -49,9 +49,10 @@ class SpeedHearingAbilitiesContract(unittest.TestCase):
         self.assertIn('event.setCanceled(true)', entry)
         self.assertIn('!HumanFactions.enabled()', entry)
         dodge = source('DodgeAbility')
-        for excluded in ('IS_FALL', 'IS_EXPLOSION', 'BYPASSES_INVULNERABILITY'):
-            self.assertIn(excluded, dodge)
-        self.assertIn('HumanDamagePipeline.physical(source)', dodge)
+        self.assertIn('BYPASSES_INVULNERABILITY', dodge)
+        for ordinary in ('IS_FALL', 'IS_EXPLOSION', 'HumanDamagePipeline.physical(source)'):
+            self.assertNotIn(ordinary, dodge)
+        self.assertLess(dodge.index('h.getRandom().nextDouble()'), dodge.index('LAST_SOUND.get(h)'))
         for excluded in ('IS_FIRE', 'IS_DROWNING', 'INDIRECT_MAGIC', 'WITHER'):
             self.assertIn(excluded, source('HumanDamagePipeline'))
         self.assertIn('ModSoundEvents.DODGE.get()', dodge)
@@ -75,8 +76,9 @@ class SpeedHearingAbilitiesContract(unittest.TestCase):
     def test_default_assignment_and_chances(self):
         config = json.loads((ROOT/'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8'))
         abilities = config['faction_abilities']
-        self.assertEqual(abilities['assignments'], {'hostile_humans_unified:ashen': ['dodge']})
-        self.assertEqual(abilities['definitions']['dodge']['chance_by_tier'], {'roamer': 0, 'tier1': .10, 'tier2': .18, 'tier3': .28})
+        self.assertEqual(abilities['assignments'], {'hostile_humans_unified:ashen': ['dodge'],
+                                                    'hostile_humans_unified:azure': ['group_resistance']})
+        self.assertEqual(abilities['definitions']['dodge']['chance_by_tier'], {'roamer': 0, 'tier1': .10, 'tier2': .20, 'tier3': .30})
         self.assertEqual(config['perception']['hearing']['bowshot_radius'], 24)
         self.assertEqual(config['perception']['hearing']['crossbowshot_radius'], 28)
 

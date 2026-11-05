@@ -54,7 +54,10 @@ public final class TaczGunMechanics {
         }
 
         if (result == ShootResult.NO_AMMO || result == ShootResult.IS_RELOADING) {
-            operator.aim(false);
+            // The caller owns aim intent. Native reload state already blocks
+            // shots and the presentation hides ADS during reload. Clearing aim
+            // here drained native aimingProgress on every failed shot request,
+            // adding a fresh aim-in transition after an accelerated reload.
             if (result == ShootResult.NO_AMMO && mob instanceof Human human
                     && (human.isUsingItem() || !HumanAmmo.canReload(human, weapon))) {
                 // Eating/blocking and exhausted reserves are ordinary waiting states.

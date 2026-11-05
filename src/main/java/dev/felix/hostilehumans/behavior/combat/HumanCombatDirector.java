@@ -49,6 +49,17 @@ public final class HumanCombatDirector {
         return weapon.getItem() instanceof net.minecraft.world.item.TridentItem;
     }
 
+    public static boolean mobileCloseDefense(Human human) {
+        return strategies(human).keepsRangedDistance();
+    }
+
+    public static boolean mobileMeleeThreat(Human human) {
+        LivingEntity target = human.getTarget();
+        return mobileCloseDefense(human) && target != null && HumanPerception.canTarget(human, target)
+                && human.getSensing().hasLineOfSight(target)
+                && human.distanceToSqr(target) <= MeleeCombatRange.reachSqr(human, target);
+    }
+
     public static boolean prefersRangedSeparation(Human human) {
         var identity = EquipmentArchetypes.describe(human, RangedWeaponCustody.preferredForClearance(human));
         var style = strategies(human).ranged(identity.core(), identity.enabled());
@@ -86,6 +97,10 @@ public final class HumanCombatDirector {
         State state = STATES.computeIfAbsent(human, ignored -> new State());
         LivingEntity target = human.getTarget();
         var strategy = strategies(human);
+        if (strategy.usesBackpackShield() && Math.floorMod(human.tickCount + human.getId(), 10) == 0) {
+            if (SpartanEquipmentCompat.isShield(human.getMainHandItem()))
+                dev.felix.hostilehumans.inventory.HumanEquipmentExchange.stow(human, net.minecraft.world.entity.EquipmentSlot.MAINHAND);
+        }
         boolean gun = GunSupport.isGunItem(human.getMainHandItem());
         boolean targetAllowed = HumanPerception.canTarget(human, target);
         if (!targetAllowed || human.isFleeing || gun
@@ -111,14 +126,11 @@ public final class HumanCombatDirector {
         List<Projectile> projectiles = state.lastProjectiles != Integer.MIN_VALUE
                 && human.tickCount - state.lastProjectiles <= 6 ? state.projectiles : List.of();
         shields.observeDefenseSnapshot(near, projectiles);
-        boolean advance = false;
-        if (shield && strategy.shieldAdvance() && targetAllowed && !human.isFleeing && human.onGround()
+        boolean advance = shield && strategy.shieldAdvance() && targetAllowed && !human.isFleeing
+                && (human.onGround() || shields.advancing()) && !human.isInWater() && !human.isInLava()
                 && HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem())
-                && human.distanceToSqr(target) > MeleeCombatRange.reachSqr(human,target)
-                && !SoldierOrder.isHoldingPosition(human)) {
-            var capability = EquipmentArchetypes.describe(human, heldShield);
-            advance = strategy.shieldAdvance(capability.core(), capability.enabled());
-        }
+                && !MeleeCombatRange.canReachTarget(human, target)
+                && !SoldierOrder.isHoldingPosition(human);
         shields.tickAdvance(advance, 1);
     }
     private static List<LivingEntity> nearbyDefenseTargets(Human human, LivingEntity target, boolean targetAllowed) {

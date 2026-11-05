@@ -65,7 +65,7 @@ class ShieldDefenseMovementTests(unittest.TestCase):
     def test_retreat_priority_survives_pressure_and_melee_guard(self):
         goal = (JAVA / 'AdaptiveCombatGoal.java').read_text(encoding='utf-8')
         use = goal.split('public boolean canUse()', 1)[1].split('private boolean shouldEnterRetreat', 1)[0]
-        self.assertLess(use.index('shouldEnterRetreat(currentThreat)'), use.index('if (shields.wantsHighPressureGuard()) return false'))
+        self.assertLess(use.index('shouldEnterRetreat(currentThreat)'), use.index('if (shields.wantsHighPressureGuard() || shields.advancing()) return false'))
         continuation = goal.split('public boolean canContinueToUse()', 1)[1].split('public void start()', 1)[0]
         self.assertIn('phase == Phase.DEFEND && shouldEnterRetreat(threat)', continuation)
         self.assertNotIn('if (shields.wantsHighPressureGuard()) return false', continuation)

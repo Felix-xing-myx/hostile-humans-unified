@@ -38,12 +38,17 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
         this.human = human;
     }
 
+    public static boolean ownsCloseDefense(Human human) {
+        return RangedWeaponCustody.isActive(human) || HumanCombatDirector.mobileCloseDefense(human)
+                && dev.felix.hostilehumans.behavior.combat.gun.GunCustody.isCloseDefenseActive(human);
+    }
+
     @Override
     public boolean canUse() {
         if (human.isFleeing || RangedTerrainCombat.isTerrainMelee(human)) return false;
-        if (RangedWeaponCustody.isActive(human) && human.getMainHandItem().isEmpty()
+        if (ownsCloseDefense(human) && human.getMainHandItem().isEmpty()
                 && isValidTarget(human.getTarget())) HumanLootManager.equipMeleeFallback(human);
-        return RangedWeaponCustody.isActive(human)
+        return ownsCloseDefense(human)
                 && (human.getMainHandItem().isEmpty()
                 || HumanLootManager.isDedicatedMeleeWeapon(human.getMainHandItem()))
                 && isValidTarget(human.getTarget());
@@ -73,7 +78,7 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
         releaseSeparation();
         cycle.interrupt();
         super.stop();
-        if (!RangedWeaponCustody.isActive(human)) {
+        if (!ownsCloseDefense(human)) {
             PursuitNavigation.clear(human);
             cycle.reset();
             sessionTarget = null;
@@ -93,7 +98,7 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
         }
         boolean maySeparate = HumanCombatDirector.prefersRangedSeparation(human)
                 && !SoldierOrder.isHoldingPosition(human)
-                && !CloseRangedTactics.keepDefense(human)
+                && (HumanCombatDirector.mobileCloseDefense(human) || !CloseRangedTactics.keepDefense(human))
                 && !human.isInWater() && !human.isInLava() && !human.isSeekingShore()
                 && !human.isShoreTransitionPending() && !human.onClimbable()
                 && (cycle.separating() || (!human.hhu$hasPendingMeleeAttack() && !human.swinging))
@@ -124,7 +129,7 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
             }
         }
         if (cycle.separating() && tickSeparation(target)) {
-            if (!RangedWeaponCustody.isActive(human)) return;
+            if (!ownsCloseDefense(human)) return;
             human.getLookControl().setLookAt(target, 45, 35);
             MeleeCombatRange.faceTarget(human, target);
             tickAttackOnly(target);
@@ -140,7 +145,9 @@ public final class RangedHybridMeleeGoal extends MeleeAttackGoal {
         if (!WeaponTransitionPolicy.holdsBowMelee(human.distanceToSqr(target), true) && human.getSensing().hasLineOfSight(target)) {
             stopOwnedSeparationRoute();
             // Custody restores the bow only after any already-committed attack ends.
-            RangedWeaponCustody.restorePreferred(human, "close_defense_separated");
+            if (dev.felix.hostilehumans.behavior.combat.gun.GunCustody.isCloseDefenseActive(human))
+                dev.felix.hostilehumans.behavior.combat.gun.GunCustody.restorePrimaryGun(human, "close_defense_separated");
+            else RangedWeaponCustody.restorePreferred(human, "close_defense_separated");
             return true;
         }
         if (!MovementContinuity.ownsRoute(human, separationRoute) || human.getNavigation().isDone()) {

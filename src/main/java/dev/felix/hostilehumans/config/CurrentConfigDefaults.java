@@ -9,7 +9,7 @@ public final class CurrentConfigDefaults {
     private CurrentConfigDefaults() { }
 
     static boolean userMap(String path) {
-        return path.equals("faction_abilities.assignments") || path.endsWith("food.enchanted_golden_apple_counts") || path.endsWith("_archetype_weights")
+        return path.endsWith("food.enchanted_golden_apple_counts") || path.endsWith("_archetype_weights")
                 || path.endsWith("equipment_archetypes") || path.endsWith("faction_armor")
                 || path.equals("scguns.medical_supplies") || path.matches("recruitment\\.payment_by_tier\\.(roamer|tier1|tier2|tier3)")
                 || path.endsWith(".gun_whitelist")
@@ -21,7 +21,10 @@ public final class CurrentConfigDefaults {
         for (var entry : defaults.entrySet()) {
             String key = entry.getKey(), child = path.isEmpty() ? key : path + "." + key;
             if (!data.has(key)) data.add(key, entry.getValue().deepCopy());
-            else if (!userMap(child) && data.get(key).isJsonObject() && entry.getValue().isJsonObject())
+            // Ability lists are explicit per faction; an empty whole map still disables all.
+            // Old nonempty maps inherit newly introduced factions without replacing custom lists.
+            else if (!userMap(child) && data.get(key).isJsonObject() && entry.getValue().isJsonObject()
+                    && !(child.equals("faction_abilities.assignments") && data.getAsJsonObject(key).size() == 0))
                 fill(data.getAsJsonObject(key), entry.getValue().getAsJsonObject(), child);
         }
     }

@@ -34,12 +34,12 @@ class PressureBreakoutContract(unittest.TestCase):
         self.assertIn('guardSince = now', guarded)
         ended = cycle.split('void ended(', 1)[1].split('/** Damage', 1)[0]
         self.assertIn('if (guardSince == Integer.MIN_VALUE) return', ended)
-        self.assertIn('cooldownUntil = now + config.cooldownTicks()', ended)
+        self.assertIn('cooldownUntil = now + Math.min(config.cooldownTicks(), 10 + (duration + 1) / 2)', ended)
         self.assertIn('now - guardSince >= config.maxGuardTicks()', cycle)
         self.assertIn('now >= cooldownUntil', cycle)
         self.assertNotIn('attemptDamage', cycle)
         # Real damage cannot shorten or reset the mandatory end cooldown.
-        self.assertIn('void damage(int now, float damage, float maximumHealth, ShieldPressureConfig config) { }', cycle)
+        self.assertEqual(cycle.count('cooldownUntil = now +'), 1)
 
     def test_pressure_has_own_owner_no_counter_and_waits_for_real_drink(self):
         shield = source('ShieldDefenseController')
@@ -53,8 +53,8 @@ class PressureBreakoutContract(unittest.TestCase):
         self.assertNotIn('nextInt', tick)
         self.assertIn('RecoverySupplies.isDrinkingPotion(human)', shield)
         self.assertIn('pressureWaitingForDrink = true', shield)
-        self.assertIn('deferredPressureGraceUntil = human.tickCount + 20', shield)
-        self.assertIn('!pressureCycle.attempting() && (pressureWaitingForDrink', shield)
+        self.assertIn('pressureWaitingForDrink || pressureRequested(', shield)
+        self.assertIn('!pressureCycle.attempting() && (owner == Owner.PRESSURE && ownsCurrentShield()', shield)
         record = shield.split('public void recordPressureDamage(', 1)[1].split('private void recordPressureDirection', 1)[0]
         self.assertLess(record.index('BYPASSES_SHIELD'), record.index('recoveryPressure.record('))
-        self.assertIn('recordPressureDirection(source, damage)', record)
+        self.assertIn('recordPressureDirection(source, damage, true)', record)

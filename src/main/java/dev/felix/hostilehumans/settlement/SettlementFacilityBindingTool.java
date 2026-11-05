@@ -181,6 +181,6 @@ public final class SettlementFacilityBindingTool extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, Level level, java.util.List<Component> lines, TooltipFlag flags) {
-        lines.add(Component.translatable("item.hostile_humans_unified.settlement_facility_tool.help"));
+        lines.add(Component.translatable("developer_guide.hover"));
     }
 }

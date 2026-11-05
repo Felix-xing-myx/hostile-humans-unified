@@ -24,7 +24,6 @@ import dev.felix.hostilehumans.behavior.combat.HumanTargeting;
 import dev.felix.hostilehumans.behavior.combat.PeacefulHumanPolicy;
 import dev.felix.hostilehumans.behavior.combat.defense.GunMeleeProtection;
 import dev.felix.hostilehumans.behavior.combat.defense.GunnerShieldProtection;
-import dev.felix.hostilehumans.behavior.combat.defense.ShieldDefenseController;
 import dev.felix.hostilehumans.behavior.combat.defense.ShieldDurability;
 import dev.felix.hostilehumans.behavior.combat.gun.FirearmCompatConfig;
 import dev.felix.hostilehumans.behavior.combat.gun.GunCustody;
@@ -195,6 +194,7 @@ public final class HumanRuntime {
         FactionContent.register(modBus);
         dev.felix.hostilehumans.economy.EconomyContent.register(modBus);
         dev.felix.hostilehumans.settlement.SettlementContent.register(modBus);
+        dev.felix.hostilehumans.loot.LootEditorNetwork.register();
         dev.felix.hostilehumans.cultivation.CultivationContent.register(modBus);
         CultivationSettlementIntegration.install();
         ContentRegistry.ITEMS.register(modBus);
@@ -232,7 +232,6 @@ public final class HumanRuntime {
         MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, HumanRuntime::onHumanFriendlyFire);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanRuntime::onLivingHurt);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOW, FactionAbilities::incoming);
-        MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, ShieldDefenseController::onShieldBlock);
         // Apply final passive mitigation before our health-loss observers.
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, GunnerShieldProtection::onDamage);
         MinecraftForge.EVENT_BUS.addListener(EventPriority.LOWEST, HumanRuntime::onSoldierDamage);
@@ -355,6 +354,7 @@ public final class HumanRuntime {
                 }
             }
             RecoverySupplies.tickEffects(human);
+            FactionAbilities.tick(human);
             // Keep effects/lifetimes ticking; exclude order, rescue and combat writers only during a test.
             if (NavigationDebugService.controls(human) || HumanMonitorControl.controls(human)
                     || dev.felix.hostilehumans.cultivation.CultivationService.holds(human)) return;
@@ -621,7 +621,9 @@ public final class HumanRuntime {
                 event.setCanceled(true);
                 return;
             }
-            event.setAmount(HumanDamageScaling.outgoing(humanAttacker, event.getSource(), event.getAmount()));
+            float scaled = HumanDamageScaling.outgoing(humanAttacker, event.getSource(), event.getAmount());
+            event.setAmount(dev.felix.hostilehumans.damage.HumanDamagePipeline.factionAttackDamage(
+                    humanAttacker, event.getEntity(), event.getSource(), scaled));
             return;
         }
 
@@ -641,6 +643,7 @@ public final class HumanRuntime {
         if (event.getEntity() instanceof Human defender && !defender.level().isClientSide && event.getAmount() > 0)
             event.setAmount(event.getAmount() * (float) defender.hhu$shieldDefense().pressureDamageMultiplier());
         if (event.getAmount() > 0.0F && event.getSource().getEntity() instanceof Human attacker) {
+            dev.felix.hostilehumans.damage.HumanDamagePipeline.factionAttackEffects(attacker, event.getEntity(), event.getSource());
             SoldierCombatMode.refreshAuthorizedFight(attacker, event.getEntity());
         }
         if (event.getAmount() > 0.0F && event.getEntity() instanceof Player owner

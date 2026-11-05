@@ -17,13 +17,25 @@ class ShieldDurabilityContract(unittest.TestCase):
         self.assertNotIn('hasOwner()', source)
         # The percentage is configurable at settlement; the native enchanted transaction remains shared.
         apply = source.split('private static void applyWear(', 1)[1]
-        self.assertIn('wearCost(entry.damage, shield.getMaxDamage(),', apply)
-        self.assertIn('damage("shield_durability_rate_per_damage", .0015)', apply)
+        self.assertIn('wearCost(damage, shield.getMaxDamage(),', apply)
+        self.assertIn('damage("shield_durability_rate_per_damage", .0027)', apply)
         self.assertIn('damage * (1.0D + rate * maximumDurability)', source)
         self.assertIn('!Double.isFinite(rate) || rate < 0', source)
         self.assertIn('Integer.MAX_VALUE - Math.max(0, before.getDamageValue())', apply)
         defaults = json.loads((ROOT / 'src/main/resources/defaults/hostile_humans_unified.json').read_text(encoding='utf-8'))
-        self.assertEqual(defaults['damage']['shield_durability_rate_per_damage'], .0015)
+        self.assertEqual(defaults['damage']['shield_durability_rate_per_damage'], .0027)
+
+    def test_backpack_shield_charges_one_real_slot_per_hit(self):
+        protection = (PKG / 'GunnerShieldProtection.java').read_text(encoding='utf-8')
+        self.assertIn('BACKPACK_MULTIPLIER = .90', protection)
+        self.assertIn('if (isUsableShield(data.getInventoryItem(slot))) return slot;', protection)
+        pipeline = (PKG / 'HumanDamagePipeline.java').read_text(encoding='utf-8')
+        self.assertIn('ShieldDurability.damageBackShield(human, backShield, normal)', pipeline)
+        source = (PKG / 'ShieldDurability.java').read_text(encoding='utf-8')
+        backpack = source.split('private static void damageBackpackShield', 1)[1].split('public static void damageShield', 1)[0]
+        self.assertIn('applyWear(human, shield, EquipmentSlot.OFFHAND, incomingDamage, false)', backpack)
+        self.assertIn('data.setInventoryItem(slot, ItemStack.EMPTY)', backpack)
+        self.assertNotIn('wear(human,', backpack)
 
     def test_window_aggregates_hits_instead_of_dropping_them(self):
         source = (PKG / 'ShieldDurability.java').read_text(encoding='utf-8')
@@ -31,7 +43,7 @@ class ShieldDurabilityContract(unittest.TestCase):
         self.assertIn('entry.shield == shield', source)
         self.assertIn('entry.damage + damage', source)
         self.assertIn('now + WEAR_WINDOW_TICKS', source)
-        self.assertIn('wearCost(entry.damage, shield.getMaxDamage(),', source)
+        self.assertIn('wearCost(damage, shield.getMaxDamage(),', source)
         self.assertIn('if (!all && now < entry.due) return false;', source)
         self.assertIn('settle(human, Long.MAX_VALUE, true)', source)
         self.assertLess(source.index('PENDING.remove(human)'), source.index('applyWear(human, entry)'))

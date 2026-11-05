@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -22,13 +23,15 @@ public abstract class LivingEntityDamagePipelineMixin implements DamagePipelineS
     @Override public DamagePipelineState hostileHumansUnified$damageState() { return hostileHumansUnified$damageState; }
     @Shadow(remap = false) protected abstract float m_21161_(DamageSource source, float amount);
 
-    @Inject(method = "m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z", at = @At("HEAD"), remap = false)
-    private void hostileHumansUnified$beginDamage(DamageSource source, float amount, CallbackInfoReturnable<Boolean> ci) {
-        hostileHumansUnified$damageState.begin();
+    @ModifyVariable(method = "m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z",
+            at = @At("HEAD"), argsOnly = true, ordinal = 0, remap = false)
+    private float hostileHumansUnified$customShieldAmount(float amount, DamageSource source) {
+        LivingEntity entity = (LivingEntity) (Object) this;
+        return HumanDamagePipeline.beginDamage(entity, source, amount, hostileHumansUnified$damageState);
     }
     @Inject(method = "m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z", at = @At("RETURN"), remap = false)
     private void hostileHumansUnified$endDamage(DamageSource source, float amount, CallbackInfoReturnable<Boolean> ci) {
-        hostileHumansUnified$damageState.clear();
+        hostileHumansUnified$damageState.end();
     }
     @Redirect(method = "m_6469_(Lnet/minecraft/world/damagesource/DamageSource;F)Z", remap = false,
             at = @At(value = "INVOKE", target = "Lnet/minecraftforge/common/ForgeHooks;onShieldBlock(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/damagesource/DamageSource;F)Lnet/minecraftforge/event/entity/living/ShieldBlockEvent;"), require = 1, allow = 1)
