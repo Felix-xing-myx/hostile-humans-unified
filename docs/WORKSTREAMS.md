@@ -4426,3 +4426,208 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 ## 高伤害来向观察
 
 - 主控，基线 939888f，沿用 settlement-service-panels。复用实际伤害窗口与观察队列，优先复核对低威胁交战者造成显著伤害的来向，确认后走主目标调度。
+
+
+## 生存战术、动态盾防与耐久
+
+- 基线 `4f60f9c`。主控在 `feature/settlement-service-panels` 工作树接入撤退实际脱身判断、已知攻击者反击、枪械限时回射、短期治疗预估和解除撤退防抖。
+- 高压举盾按紧急失血与持续压力条件启动，按实际格挡时长计算动态冷却。成功主动盾防拆分普通与穿甲伤害，TaCZ 分段继续使用现有伤害入口与一次磨损计费。盾耐久默认系数改为 0.0027。
+- 静态回归通过。Java 编译、游戏与联动验收待构建授权。测试实例显式耐久系数仍为 0.0015。
+
+
+## 3.15.8 构建同步
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：生存战术与高压盾防，含此前未发布改动。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.8。
+
+- 3.15.8完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致3f3e89471760bbcb39d100087fee1c5cbfd8f61d7393092cbfea1dafa74c0a74；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.8-20261104-232734。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.8.
+
+
+## 3.15.9 构建同步
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：阵营战术、瞬疗和建筑作者界面。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.9。
+
+- 3.15.9完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致676276b6efeb95651faf4c427b8e05800d180fc058a4448ec3cc8869dc4ecabb；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.9-20261105-002350。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.9.
+
+
+## 灰鸦闪避表现与苍隼近战虚弱
+
+- 主控在 `worktrees/settlement-service-panels` 的 `feature/settlement-service-panels` 接入既有未提交战术改动，基线 `4f60f9c2ab2d82fed96cef9907040cd348a9dcf4`。保留原暂存状态，无交付提交。
+- 闪避成功通过 Human 实体事件通知追踪客户端。实体与渲染共享接入由主控负责，第三人称姿态和皮肤拖影归渲染层，音效和闪避判定保持独立。苍隼虚弱在现有伤害效果入口按攻击者记录冷却。
+- 核对事件位置、冷却归属、知识库和差异格式。未编译、未部署，游戏内需验证连续闪避的观感与护甲叠层。
+
+- 3.15.10 深化闪避表现：衔接位置与速度，按短曝光采样历史平移和倾角。使用皮肤轮廓，远距减少采样，避免重放装备层。构建与部署记录见维护目录 maintenance-tools/releases/3.15.10。
+
+
+## 3.15.10 构建同步
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：Refine dodge motion blur, update faction balance and instant healing。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.10。
+
+- 3.15.10完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致29073a743b59a5b16476457c797c47463d0e013006fa39fc370f0986b2e8988e；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.10-20261105-005702。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.10.
+
+- 3.15.11 发布快照：灰鸦闪避减弱 Better Combat 整身摆动并使用独立混合层，赤獠重击改为缓慢Ⅱ 3 秒。动作状态优先级、重触发与恢复检查通过；构建部署见维护目录 maintenance-tools/releases/3.15.11。
+
+
+## 3.15.11 构建同步
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：Dodge animation priority and Red Fang heavy strike slowness。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.11。
+
+- 3.15.11 快照追加前端分支 ui/monitor-hud-pass 的 f560c5d、67449da、835b052。按路径核对并叠加差异，保留既有未提交内容，重新验证合并后的发布输入。
+
+- 3.15.11完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致0e5619ef45b2e768ecaab4b385b9169843e7692b89bdf08d096dc817e5f70c85；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.11-20261105-013435。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.11.
+
+
+## TaCZ加速装填后的瞄准交接
+
+- 主控，基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4，工作树settlement-service-panels，分支feature/settlement-service-panels。范围TaczGunMechanics、既有枪械保护回归、知识库枪械页。保留其他WIP和暂存区。
+- 检查实际1.1.8原生字节码：reloadStateType禁止装填时出弹；tickAimingProgress独立积累开镜进度；成功事务已清除reloadTimestamp及reloadStateType。AI恢复入口在每次IS_RELOADING/NO_AMMO后取消瞄准，会排空瞄准进度，移除该越权写入。保留原装填完整脚本及必要拉栓、射速、掏枪冷却。
+- 修复明确存在的重复取消瞄准，完整长时间停顿是否还包含其他条件需游戏内复测。未编译、未部署。
+
+
+## 灰鸦闪身表现重做
+
+- 主控，基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4，工作树settlement-service-panels，分支feature/settlement-service-panels。编辑HumanRenderer、DodgeTrailLayer、DodgeMotion和对应知识库，保留其他WIP及空暂存区。
+- 移除根节点绕脚滚转，改为整个渲染帧沿观察画面横移，峰值0.58格、9tick回位。用原始与当前模型矩阵换算拖影位移，兼容首领缩放、攻击姿态和本体平移。两次可见性缺口只屏蔽本体顶点，残影始终保留。残影使用人体皮肤轮廓，不重放装备渲染器。
+- 连续动作保留四段有界历史，覆盖2.5tick曝光；实体事件仍在音效限频之前触发。未编译、未部署，游戏内观感需确认。
+
+
+## 靛磐结阵抗性
+
+- 主控，基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4，工作树settlement-service-panels，分支feature/settlement-service-panels。新增GroupResistanceAbility，公共接口FactionAbility.tick与FactionAbilities.tick，主控接入HumanRuntime。保留其他WIP和空暂存区。
+- 默认5格三维范围内两名其他同阵营人类，为全部范围内成员和自身赋予400tick抗性Ⅰ。已有任意抗性立即跳过扫描和续期，未持有者每20tick按实体错峰检测。使用现有配置能力注册和阵营分配，可复用于其他阵营；不占用战斗资源。旧assignments按原语义保留，实例不改配置。
+- 知识库同步蓝队、公共能力和冷却表及生成附录。验证为静态/Python范围，未编译、未构建部署。
+
+
+## 训练中心物资输入焦点
+
+- 主控，基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4，工作树settlement-service-panels，分支feature/settlement-service-panels。范围PanelScreen公共表单重建、输入焦点回归和界面知识库，保留其他WIP与空暂存区。
+- 核对Minecraft 1.20.1 Screen.rebuildWidgets字节码，clearFocus先于init。CultivationScreen.accept会触发重建，controls只保存按钮，不含field输入。公共底座在重建前捕获原编辑器，重建布局时保持编辑状态，输入仍使用时恢复焦点；移除或禁用时释放，保留原草稿、光标和选择范围。
+- 静态核查和Python回归，未编译、未部署。游戏内需在训练状态更新期间持续编辑并检查选择文本、切页和禁用状态。
+
+
+## 训练面板流程精简
+
+- 主控，基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4，工作树settlement-service-panels，分支feature/settlement-service-panels。范围CultivationScreen、双语文案与正式训练手册，保留其他WIP与空暂存区。
+- 训练和物资/席位分为两页；底部主操作按草稿、预览、启动状态变化并高亮。主属性收费保存与突破各有五秒二次确认，突破仍由服务端breakthroughReady裁定，客户端不推算属性边界。周期状态只显示对应的暂停/继续；高级操作默认折叠。预览回执失败不被视为可用，属性版本变化时使旧预览及确认失效。未改训练费用、周期及服务器权限。
+- 静态审查与现有Python回归，未Java编译、未构建部署。待游戏内检查小窗口、长中文、滚动后的固定操作台、二次确认及真实扣费。
+
+
+## 任务列表文字裁切
+
+- 主控，基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4，工作树settlement-service-panels，分支feature/settlement-service-panels。范围PanelListRow公共列表卡片与界面知识库，保留其他WIP和空暂存区。
+- 原30px固定行高下第二行从17px起，进度条23px起，两者重叠。改为按font.lineHeight计量两行，进度条独立留5px间隔；默认带进度条39px，无条31px。移除place重新压回30px的覆盖，使滚动内容、点击区域和绘制高度一致，横向留足右边距。
+- 现有Python回归、差异检查，未编译部署，游戏内需检查任务简介、列表末项和不同GUI缩放。
+
+
+## 战利品表作者工具
+
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；工作树settlement-service-panels；分支feature/settlement-service-panels。范围新增loot模块、独立客户端面板、ModItems注册与文档。保留全部既有WIP和空暂存区，共享注册文件由主控顺序接入。
+- 使用原生战利品表、服务端资源目录和数据包加载；其他来源只读复制，玩家自建表独立命名空间。容器适配集中，原生容器通过未展开NBT读写，避免预览时生成奖励。界面请求限长、权限、距离及版本校验；保存与重载区分。无构建指令，不运行Gradle。
+
+- 功能已接入：独立必选作者数据包、原生ID/资源读取、自建表保存与显式重载、版本冲突及绑定指纹、原生双箱容器适配；新增32px工具图标。UI精简为表库/常用编辑/高级规则，底部保存并应用和绑定固定，四列池选项、物品名称搜索、复杂条件保留、脏草稿离开确认。正常挂机无超时。知识库正式新增战利品作者手册与入口。
+- 用户随后授权完善后构建同步。主控以3.15.12一并验证此前未发布的TaCZ交接、灰鸦表现、结阵抗性、训练焦点/流程和任务行高，保留全部已有WIP，实例配置不改。
+
+
+## 3.15.12 构建同步
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：战利品作者工具、无损规则编辑与容器绑定；集成待发布表现、训练及恢复交接修复。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.12。
+
+- 3.15.12完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致75b497002d0624a268557130f40c9f470bdc686edf4c0d5b3fd0f185fb5330f6；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.12-20261105-160055。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.12.
+
+
+## 3.15.12灰鸦闪避时附魔装备崩溃修复
+
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；工作树settlement-service-panels；分支feature/settlement-service-panels。仅改渲染可见性过滤、对应回归与记录；保留既有WIP和空暂存区。
+- 证据：测试实例crash-2026-11-05_18.14.38-client.txt；灰鸦三阶头目渲染期间，ItemRenderer组合本体与光效时VertexMultiConsumer.Double抛Duplicate delegates。DodgeTrailLayer在闪烁时给所有隐藏通道返回同一HiddenVertex.INSTANCE，违反原生组合要求，并非武器/存档损坏。
+- 新增局部RenderVisibilityMask统一过滤。可见残影保留原buffer，隐藏请求各获独立无GPU资源的discard consumer。无需改原版、附魔光效或第三方渲染器，也不捕获吞掉渲染异常。原生组合回归先重现重复delegate异常，再验证双通道、多通道及可见/隐藏混合组合。作为上轮构建交付的故障修复，沿用构建同步授权，版本3.15.13，实例配置保持不变。
+
+
+## 3.15.13 构建同步
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：修复灰鸦闪烁时附魔装备绘制 Duplicate delegates 崩溃；新增原版多通道组合回归。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.13。
+
+- 3.15.13完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致cdd6154afbaca06f8975bfa011526ba316e453e3e06b6c051515905d721ab1ed；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.13-20261105-182109。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.13.
+
+
+## 接管HUD与聊天前后层级
+
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；工作树settlement-service-panels；分支feature/settlement-service-panels；范围HumanMonitorScreen与监视器正式文档。保留既有WIP及空暂存区。
+- 核对Forge 1.20.1 ForgeGui.renderChat/VanillaGuiOverlay.CHAT_PANEL和原生ChatComponent绘制：聊天背景与文本使用独立深度和批次，GuiGraphics.flush负责结束当前批次。被动HUD在RenderGuiEvent.Post最低优先级绘制；ChatScreen打开时改在CHAT_PANEL.Pre绘制，Post明确跳过。每次HUD绘制前后flush并成对保护姿态，避免重复绘制、残留批次和全局Z覆盖。未取消或重绘聊天，不改变输入与接管控制。
+- 本轮仅源码及静态/Python核查，未收到本次UI改动的构建同步指令，不执行Gradle、不部署。实际聊天透明叠加和T/ESC切换需游戏验收。
+
+
+## 战利品编辑的本地化、图标与JEI选物
+
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；工作树settlement-service-panels；分支feature/settlement-service-panels。范围loot.client显示/搜索、公共物品行控件与右侧留白接口、独立compat.jei、compileOnly输入、对应手册。保留已有前端和其他WIP，所有共享文件由主控顺序接入。
+- 公开JEI IGuiHandlerRegistration/IGhostIngredientHandler适配；仅引用物品注册ID，不取走背包、拖入不提交服务器。客户端按当前语言与en_us资源缓存物品名称，资源重载失效；原始JSON与注册ID不翻译。普通选择不依赖JEI。未获得本轮构建指令，不运行Gradle。
+
+- 已完成客户端目录缓存、本地化／英文与命名空间显示、分页自动搜索、原生图标行、常用键名别名、手动ID折叠、选中状态高亮与玩家副手类型选取。公开JEI IGuiProperties/typed ghost（官方标注since12.2）及15.25+快捷选择接入；拖入仅改变本地ID草稿，拒绝离开视口或等待中的选择。用户补充左右JEI区域后，将公共留白接口扩展为左右／底部，工具总侧边预算至多232、左右2:3，底部26，随窗口缩放，不改JEI全局设置。
+- 明确JEI只是compileOnly依赖；维护缓存80ece8bd42497c94cbcab5d9b82594a53831b249bb33e1ff6dcf568a4b7a637b来自实际安装JEI15.62.0.216，只读保留。更新构建参数和缺席链接回归，核心UI无JEI类型引用。已用javap核对安装JAR公开方法声明、官方1.20.1接口源码；尚未Java编译或游戏联动验收。
+
+- 深查示例物品变体：纯ID会丢失TaCZ枪ID、药水、附魔书数据，因此选定JEI/副手示例时保留<=16KiB的NBT，以标准set_nbt写入；复用末尾无条件函数，无数据不生成空函数。静态预览只处理无条件set_nbt，不运行奖励函数。只在加入/更新条目时生效，未发送库存操作。普通注册项查询按物品类型，具体数据变体由JEI或手持示例选择。补纯JVM数据保留/限长/避免函数累积回归，留待授权构建执行。此前“仅ID/不复制NBT”的初版接入已被这套标准函数方式替代。
+
+- 继续补齐同ID示例检索：JEI公开IIngredientManager.getAllIngredients(ITEM_STACK)经Java Supplier接入本地目录，按类型+NBT去重，最多32000示例，名称查询同样覆盖这些示例；实际类型在JEI有示例时替换其默认空白示例，避免通用枪的无数据占位。JEI runtime不可用/重新可用时清缓存，核心接口不出现JEI类型。
+
+- 收尾核查：移除高级页无效的“收起ID”切换、未修改且已生效的表不再允许重复保存重载；统一公共留白计算，避免init/relayout分歧。541项Python检查525通过16跳过，七份默认值附录一致、200页知识库链接检查无断链；双语字段齐全、JEI引用仅位于可选模块。未运行Gradle/Java编译、JEI实机操作或同步。
+
+
+## 灰鸦闪避播放冷却与全装备残影
+
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；工作树settlement-service-panels；分支feature/settlement-service-panels；范围DodgeMotion、DodgeAbility视觉事件、HumanRenderer单次绘制接入及独立DodgeGeometryCapture/DodgeRenderTypes、对应回归与手册。保留所有UI/JEI和其他未提交内容，不碰暂存区。
+- 源码峰值原为0.58格，本轮0.42格（下降27.6%），回摆0.035降至0.025。主体9tick、拖影尾至11.5tick，完整表现结束后10tick休息，下次最早22tick触发；活动中事件不重启动作。服务端视觉广播与客户端播放分别守门，伤害每次闪避随机判定和24tick音效限频不变。
+- 原先仅重画皮肤层，替换成捕获本次原生模型/装备绘制的顶点，实际人物只渲染一次，残影重放几何。保留护甲/绑带/盾/持物自身UV、颜色、光照与覆盖数据，不重复执行动画/枪械渲染器，不捕获名字、轮廓、光效通道。闪烁先mask再capture，隐藏通道仍独立消费者，残影输出不经过mask。
+- 只读材质桥集中读取1.20.1 CompositeRenderType.state / CompositeState.textureState / EmptyTextureStateShard.cutoutTexture；已核对official及SRG m_173265_/f_110576_/m_142706_，无新增Mixin或AT。支持标准NEW_ENTITY/BLOCK的三角/四边形；自定义非复合材质不可解析时保留正常渲染并跳过该材质残影，不强制读私有字段或使游戏崩溃。缓存有界，顶点数组池至多16份、单材质4096/单帧24576顶点，完整图元截断；详细/简化5/3曝光样本，不逐顶点创建对象。
+- 新增纯运动时钟及原生材质捕获回归（含附魔双消费者、闪烁保留装备残影、普通模型只绘制一次）。本轮无新构建指令，Java/游戏验收尚未执行。
+
+- 收尾：541项Python静态合同检查525通过16跳过，差异空白检查通过；新增Java运动/原生材质回归尚未执行。知识库更新为当前规则，清除旧的无视觉冷却/只拖皮肤表述。普通盔甲、绑带、原版/斯巴达盾和枪械需构建后逐项游戏复测。
+
+- 后续按用户调整：闪避视觉改为两次触发起点至少相隔10tick（0.5秒），不再等待完整尾部后额外休息；服务端广播与客户端仍读取同一常量，实际免伤和音效限频不变。边界用例同步为第9tick拒绝、第10tick允许。未运行编译或构建。
+
+### 蓝队结阵抗性旧配置接入修复
+- 主控负责；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4，feature/settlement-service-panels工作树，保留全部既有修改。范围CurrentConfigDefaults、FactionAbilitiesTest、默认配置说明及知识库。
+- 实例global.json只有ashen→dodge旧分配，默认group_resistance定义虽补齐，assignments被整体视为用户映射而跳过补全，azure因而没有能力。能力tick入口与5格内另两名同阵营成员、400tick抗性Ⅰ施加规则保持不变。
+- 非空assignments改为按缺失阵营继承默认，已存在列表完全保留（包括[]）；整个{}仍明确禁用全部。仅内存合并，不修改实例文件。增加旧配置继承、显式禁用、自定义分配及输入JSON不变的原生回归用例。
+- 尚未执行Java编译、构建、同步或游戏内验收；静态与Python核查见本轮结果。
+
+### 战利品编辑器面向玩家的帮助
+- 基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4，feature/settlement-service-panels工作树，主控单独维护LootEditorScreen、zh/en语言文本、LOOT_AUTHORING与正式知识库；不改服务端战利品规则和协议。
+- 六主题只读帮助独立标签，编辑页短入口、高级树当前池／条目说明；复用自动换行与滚动。返回保留草稿、路径和表单值，帮助隐藏提交与绑定，无JEI投放区域，不触发服务器写操作。
+- 尚未编译、构建同步或游戏内验收；需实际核查小分辨率／JEI布局、中文换行与返回草稿。本轮执行Python及静态语言键检查。
+
+
+## 3.15.14 构建同步
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：闪避动画限频与全装备残影、蓝队结阵旧配置接入、战利品本地化/JEI与使用帮助、接管聊天层级。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.14。
+
+- 构建中收到用户纠正：恢复完整动画及残影尾部结束后休息0.5秒，两次开始最早22tick。撤销之前10tick开始间隔规则；修改源码触发发布输入变更保护，旧构建不得同步，修正后重新构建。
+
+- 3.15.14首次构建：主源码与测试编译通过，runtimePoliciesTest新增原生材质测试因缺少注册表初始化失败，其余任务完成；未部署。补齐与现有盾牌材质测试一致的独立JVM初始化，连同用户恢复的22tick间隔以3.15.15重新验证，保留原失败日志。
+
+
+## 3.15.15 构建同步
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：全装备闪避残影与结束后0.5秒冷却、蓝队结阵配置接入、战利品本地化/JEI/帮助及接管HUD层级。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.15。
+
+- 3.15.15完成：完整build/check+lootScreeningTest、单轮Python/默认附录/Wiki/KaTeX通过；构建/dist/实例SHA-256一致8fdd1152bd6ce4002e1265427e3761fd3f5fb2b90afba40f3641931dd0411ca3；备份E:\MC\Create-Delight\HostileHumansUnified-维护\备份\release-3.15.15-20261105-193049。实例全部配置未修改/删除，未启动游戏、未游戏验收或推送。完整记录E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.15.
+
+### 闪避动作放缓与曲线调整
+- 主控，基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；原工作树及分支不变，保留全部WIP。范围DodgeMotion及边界用例、日志和知识库。
+- 用户要求峰值0.6格、动作稍慢：主体12tick、3tick到峰、7tick回程缓冲点、9tick微回摆、12tick收稳；回程Hermite速度连续，起止五次平滑。残影3tick，末尾10tick休息，最早25tick再次开始。攻击姿态融合与闪烁按归一化阶段拉长；伤害概率、音效限频、真实位置及碰撞不变。
+- 本轮不构建或同步；已补曲线边界、幅度及间隔检查，Java用例待下次明确构建授权。
+
+### 蓝队结阵抗性提前集体续期
+- 主控，基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4，原工作树／分支；范围GroupResistanceAbility、默认参数、FactionAbilitiesTest、日志及知识库。
+- 任一成员效果≤100tick（或无效果）在原20tick错峰周期检查，满足原5格内另两名同阵营成员时，统一延长本次成员抗性Ⅰ至400tick，包括剩余>100tick者。不延长或覆盖更高级抗性、不覆盖无限、不缩短≥400tick效果；人数不足自然到期。
+- 使用既有能力tick与原生addEffect同步，无新增扫描调度器。新增refresh_below_ticks默认100，旧配置运行时补全，实例文件不改。边界用例覆盖100/101、集体300→400、强效／无限／长效保护。本轮未执行Java编译、构建同步或游戏验收。
+
+
+## 2026-11-05 作者工具交互、经济与诊断整合
+
+- 主控单人实施，无子Agent。基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；工作树settlement-service-panels / feature/settlement-service-panels，保留既有WIP，无暂存/提交/推送。
+- 文件范围：loot/client草稿缓存与JEI返回、settlement预览与地图、economy面板/测试列表、faction统一雇佣定价、developer只读清单、observer提示双语和公共资源。公共类由主控顺序修改。
+- 草稿缓存只保存本地文档，不恢复服务端令牌/权限；外部表复制及发布仍走现有服务端修订校验。JEI嵌套界面保留原屏幕与异步应答，Esc返回。
+- 雇佣费用使用阵营定义的蓝队铜币等值基价与现有MoneyMath/InventoryTransaction；流浪者仅单币种足额付款。新定价边界回归覆盖四阶和四种分数汇率。
+- 先前未构建的12tick/0.6格曲线闪避（含尾部与冷却，最早25tick再次开始）、蓝队任意成员临期触发全体统一续至20秒，一并纳入3.15.16。
+- 静态：git diff --check和541项Python检查通过（16跳过）。首轮Java主码/测试码编译通过；后续集成改动由正式发行完整build/check及lootScreeningTest复核。游戏内JEI、工具交互与多人付款尚需实测。
+- 知识库相关正文已更新，批量编辑前备份于维护目录备份/knowledge-authoring-20261105-214824；实例配置不改。
+
+
+## 3.15.16 构建同步
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：战利品草稿缓存与JEI安全返回、建筑持续世界线框/染色、阵营货币雇佣、开发工具清单及战术数值。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.16。
+
+- 3.15.16完整构建编译成功，唯一失败为PickupPolicyWiringTest仍要求旧RecruitmentPayment.pay；按新钱包事务更新为同时验证InventoryTransaction.debit/publish，没有绕过付款。该版未部署，失败日志留存。改用3.15.17再次完整构建。
+
+
+## 3.15.17 构建同步
+- 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：战利品草稿缓存与JEI安全返回、建筑持续世界线框/染色、阵营货币雇佣、开发工具清单及战术数值。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.17。
