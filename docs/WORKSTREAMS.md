@@ -4631,3 +4631,12 @@ Baseline1dd9be7 owner vnext_orders tree ../worktrees/vnext-detail-navigation bra
 
 ## 3.15.17 构建同步
 - 主控；基线4f60f9c2ab2d82fed96cef9907040cd348a9dcf4；复用构建工作树E:\MC\Create-Delight\HostileHumansUnified-维护\worktrees\ui-builder-3150，分支release/local-build；范围：战利品草稿缓存与JEI安全返回、建筑持续世界线框/染色、阵营货币雇佣、开发工具清单及战术数值。输入及既有WIP逐文件备份，已有实例配置不修改/删除。完整回归，日志集中在E:\MC\Create-Delight\HostileHumansUnified-维护\maintenance-tools\releases\3.15.17。
+
+## 3.15.8–3.15.17 源码回灌 main
+
+- 需求（2026-11-06）：把已部署 3.15.17 的最新源码提交到 `main`，盾耐久系数以 0.0027 为准；补齐 3.15.8–3.15.17 的协作与发行记录。
+- 原因：3.15.8–3.15.17 的源码此前只存在于构建工作树 `worktrees/ui-builder-3150` 的未提交改动中，`main` 停在 3.15.7。`release.py` 只镜像相对上一版变化的文件，长期复用构建树会让未变化文件保留旧副本，形成构建树与 `main` 的双向漂移。
+- 处理：逐文件比对构建树与 `main`（排除 `logs/`、`__pycache__/`、构建缓存），导入 100 个更新文件和 34 个新增文件；`lang`、`docs/UI_FRAME.md`、`build.gradle` 经核对均为 `main` 的超集，`CHANGELOG.md` 保留 `main` 版本并合入 3.15.8–3.15.17 日志。导入清单与前后哈希在 `备份/source-import-3.15.17-20261106-004830/import-manifest.json`。
+- 提交：`20d2152` 源码/资源/测试/工具；`e5a097d` JEI 第九个编译 API、项目文档与版本 3.15.17；`a7678e5` 工作记录；`b74d8f0` 更新日志。
+- 验证：`export_knowledge_defaults.py --check` 通过（7 份附录）；Python 541 项通过、16 项跳过；`git diff --check` 通过；133 个导入文件与构建树逐文件一致。未运行 Gradle/Java 编译，未构建、未部署、未启动游戏、未 push。
+- 未解决：构建树未清理，后续发布仍从 `ui-builder-3150` 复用；下一次 `--snapshot` 前需把 `project/build.gradle` 版本升到 3.15.18。构建树内 `ai.resume_health_ratio` 的中文说明是旧文案，已随导入与已部署产物保持一致，是否恢复较新措辞由主控决定。
